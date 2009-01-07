@@ -67,7 +67,8 @@ create_httpd_config() {
 	fi
 	
 	# let's configure the common parts for both CC and NC
-	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|"  >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+#	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|"  >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" |sed "s|EUCA_USER|$EUCA_USER|" >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
 
 	# let's configure the CC 
 	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $CC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/httpd-cc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|"|sed "s|\(StartServers\).*|\1 5|"|sed "s|\(MinSpareServers\).*|\1 5|"|sed "s|\(MaxSpareServers\).*|\1 10|"|sed "s|\(MaxClients\).*|\1 25|" >  $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
@@ -199,7 +200,7 @@ echo "or we can install it for you."
 				exit 1
 			fi
 		fi
-		(/bin/bash ant -f cloud.xml run > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
+		(su $EUCA_USER -c "/bin/bash ant -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
 		echo "$!" > $EUCALYPTUS/var/run/eucalyptus/cloud.pid
 		echo -n " CLC"
 	fi
@@ -239,6 +240,19 @@ fi
 START_CLOUD="`echo $START_CLOUD | tr 'a-z' 'A-Z'`"
 START_CC="`echo $START_CC | tr 'a-z' 'A-Z'`"
 START_NC="`echo $START_NC | tr 'a-z' 'A-Z'`"
+HTTPD="/usr/sbin/apache2"
+HTTPD_HOME="/tmp/"
+if [ -z "$EUCA_USER" ] ; then
+	EUCA_USER="eucalyptus"
+fi
+# set up eucalyptus var locations to be owned by EUCA_USER
+for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ ; do
+    chown -R $EUCA_USER:$EUCA_USER $y
+done
+if [ -x "$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap" ]; then
+    chown root:$EUCA_USER $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
+    chmod 4050 $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
+fi
 
 # let's find our dependencies
 for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
