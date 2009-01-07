@@ -1,10 +1,32 @@
-#!/usr/bin/perl
+#!/usr/bin/perl 
+
+delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
+$ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 
 $table = shift @ARGV;
+if ($table =~ /^([ &:#-\@\w.]+)$/) {
+    $table = $1; #data is now untainted
+} else {
+    exit(1);
+}
+
 $rulefile = shift @ARGV;
+if ($rulefile =~ /^([ &:#-\@\w.]+)$/) {
+    $rulefile = $1; #data is now untainted
+} else {
+    exit(1);
+}
+
 if (!$table || !$rulefile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile) {exit 1;}
 
+if ($table eq "nat") {
+#    system("cp $rulefile $rulefile.save.input");
+}
 $rc = system("iptables-save -t $table > $rulefile.orig");
+if ($table eq "nat") {
+#    system("cp $rulefile.orig $rulefile.save.saved");
+}
+
 $rc = $rc>>8;
 if ($rc) {
     exit(1);
@@ -47,8 +69,16 @@ if (!-f "$rulefile.new") {
     unlink("$rulefile.orig");
     exit(1);
 }
+
+
 $rc = system("iptables-restore < $rulefile.new");
 $rc = $rc>>8;
+
+if ($table eq "nat") {
+#    system("cp $rulefile.new $rulefile.save.torestore");
+#    system("iptables-save > $rulefile.save.final");
+}
+
 unlink("$rulefile.orig");
 unlink("$rulefile.new");
 exit($rc);
