@@ -122,6 +122,7 @@
         <untar src="${deps.dir}/${deps.deploy}.tar" dest="${euca.var.dir}"/>
         <untar src="${deps.dir}/${deps.lib}.tar" dest="${euca.lib.dir}"/>
         <mkdir dir="${euca.conf.dir}"/>
+	<chmod dir="${euca.conf.dir}" perm="0755"/>
         <mkdir dir="${euca.var.dir}/"/>
         <mkdir dir="${euca.var.dir}/webapps"/>
         <mkdir dir="${euca.var.dir}/db"/>
