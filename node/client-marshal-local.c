@@ -1,0 +1,45 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "handlers.h"
+#include "client-marshal.h"
+
+ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir) 
+{
+    ncStub * st;
+    
+    if ((st = malloc (sizeof(ncStub))) != NULL) {
+        /* nothing to do */
+    } 
+    
+    return (st);
+}
+
+int ncStubDestroy (ncStub * st)
+{
+    free (st);
+    return (0);
+}
+
+/************************** stubs **************************/
+
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, ncInstance **outInstPtr)
+{
+    return doRunInstance (meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, privMac, pubMac, vlan, outInstPtr);
+}
+
+int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState)
+{
+    return doTerminateInstance (meta, instanceId, shutdownState, previousState);
+}
+
+int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
+{
+    return doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);
+}
+
+int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, ncResource **outRes)
+{
+    return doDescribeResource (meta, resourceType, outRes);
+}

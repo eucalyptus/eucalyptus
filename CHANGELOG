@@ -1,0 +1,87 @@
+*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+
+- Added new networking subsystem that no longer depends on VDE
+- Added support for elastic IP assignment and security using the 'MANAGED'
+  networking mode
+- Cluster controller scheduling policy can now be configured in
+  eucalyptus.conf (ROUNDROBIN and GREEDY currently supported)
+- Cluster controller now handles concurrent requests (no longer have to
+  restrict apache to allow only one connection at a time)
+- Added Walrus: a Amazon S3 interface compatible storage manager. Walrus handles 
+  storage of user data as well as filesystem images, kernels, and ramdisks. 
+- Support for new operations: 
+  - Reboot instance and get console output.
+- Node Controller improvements:
+  - Retrieval of images from Walrus instead of NFS-mounted file system
+  - New caching and cleanup code, including start-time integrity checks
+  - On-the-fly script-based generation of libvirt XML configuration
+  - Script-based discovery of node resources (no assumptions about stat)
+  - MAX_CORES overrides actual number of cores both down and up
+  - Moved libvirt errors to nc.log and suppressed harmless ones
+  - Serialized some Xen invocations to guard against non-determinism
+  - Added proper swap creation, also "ephemeral" disk support
+  - More robust instance state reporting to Cluster Controller
+- Web interface improvements:
+  - Added cloud/Walrus configuration, including clusters and VM types
+  - Revamped 'credentials' tab with new options to edit user information
+    and hide/show "secret" strings
+  - Editing of user information for the administrator, including
+    confirmation dialog for deletion of users
+  - User-initiated password recovery mechanism
+  - Fixed a couple of bugs: ' ' in username, spurious double additions
+- Revamped logging throughout, with five levels a la log4j
+- Cloud Controller:
+  - User, Cluster, and System keys are now stored in PKCS#12 keystores and have moved to var/eucalyptus/keys
+  - Configuration is handled entirely through the web interface
+    - Clusters dynamically added/started/stopped
+    - Webservices operations complete up to EC2 2008-05-05 (w/o EBS):
+    - "Elastic IP" address support
+    - Image registration and attribute manipulation
+    - GetConsole and RebootInstances support
+    - Working Security Groups support for clusters in MANAGED network mode
+    - see website for additional details, extensions, and caveats:
+      http://eucalyptus.cs.ucsb.edu/wiki/API_v1.4
+  - Instance Metadata service (including userData)
+  - Workaround to use standard tools for registering kernels & ramdisks
+
+
+*Mon Jul 28 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Removed cloud, cluster controller and node controller and created their
+  own packages.
+- Added the possibility of installing Eucalyptus from RPMs (without
+  ROCKS).
+- Implemented caching of the instances.
+- More robust checking for running instances.
+- Fix the instance ID naming collision.
+
+*Tue Jul 01 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Added WS-security for internal communication
+- Added URL Query Interface for interacting with Eucalyptus
+- Cluster Controller improvements:
+   - Instance caching added to improve performance under
+     certain conditions
+   - Thread locks removed to improve performance
+   - NC resource information gathered asynchronously to
+     improve scheduler performance
+- Network control improvements:
+   - Added ability to configure 'public' instance interface
+     network parameters (instead of hardcoded 10. network)
+   - Lots of reliability changes
+- Cloud Controller improvements:
+   - Pure in-memory database
+   - Image registration over WS interface
+   - Improved build procedure
+- Web interface improvements:
+    - For all users (query interface credentials, listing of
+      available images)
+    - For the administrator (addition, approval, disabling,
+      and deletion of users; disabling of images)
+- Numerous bug fixes, improving stability and performance.
+   In particular, but not limited to:
+   - Recovering Cloud Controller system state
+   - Timeout-related error reporting
+   - Slimmer log files, with timestamps
+
+*Sat May 21 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- first release of eucalyptus
+

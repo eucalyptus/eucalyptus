@@ -1,0 +1,11 @@
+package edu.ucsb.eucalyptus;
+
+import java.util.List;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+
+query "list instances" (String userName)
+  vm : VmInstance( ownerId == userName )
+end
+query "describe instances" (String userName, List ids)
+  vm : VmInstance( ownerId == userName, instanceId memberOf ids )
+end

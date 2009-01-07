@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+# Pushes key to the nodes
+
+EUCALYPTUS=
+KEYS=
+CONF=
+VERBOSE="Y"
+HOSTS=""
+RSYNC=`which rsync`
+SCP=`which scp`
+
+if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
+	CONF=$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+fi
+
+usage() {
+	echo "$0: [-c <conf_file>][-f][host1 ... host2]"
+	echo
+	echo "     -c <conf>   read configuration from <conf>"
+	echo "     -q          run rsync in asynchrous mode"
+	echo
+	exit 1
+}
+
+while [ "$#" -gt 0 ]; do
+	if [ "$1" = "-c" ]; then
+		shift;
+		if [ "$#" -lt 1 ]; then
+			usage
+			exit 1
+		fi
+		CONF="$1"
+		shift
+		continue
+	fi
+	if [ "$1" = "-q" ]; then
+		VERBOSE="N"
+		shift
+		continue
+	fi
+	if [ "$1" = "-h" ]; then
+		usage
+		exit 1
+	fi
+	HOSTS="${HOSTS} ${1}"
+	shift
+done
+
+# we need the configuration
+if [ -z "${CONF}" -o ! -f "${CONF}" ]; then
+	echo "I need a configuration file"
+	exit 1
+else 
+	echo "Using ${CONF} as configuration"
+fi
+. ${CONF}
+if [ -z "$EUCALYPTUS" ]; then
+	echo "I don't know where eucalyptus is"
+	exit 1
+fi
+
+# let's do it
+if [ -z "$NODES" -a -z "$HOSTS" ]; then
+	echo "No nodes to operate on!"
+	exit 0
+fi
+if [ -z "$HOSTS" ]; then
+	HOSTS="$NODES"
+fi
+for x in `echo $HOSTS`; do 
+	if [ "$VERBOSE" = "Y" ]; then
+		if [ -n "$RSYNC" ]; then
+			$RSYNC -avz -e ssh $EUCALYPTUS/var/eucalyptus/keys $x:$EUCALYPTUS/var/eucalyptus  > /dev/null 
+		else
+			$SCP -r $EUCALYPTUS/var/eucalyptus/keys $x:$EUCALYPTUS/var/eucalyptus
+		fi
+	else
+		if [ -n "$RSYNC" ]; then
+			($RSYNC -az -e ssh $EUCALYPTUS/var/eucalyptus/keys $x:$EUCALYPTUS/var/eucalyptus  > /dev/null &)
+		else
+			($SCP -r $EUCALYPTUS/var/eucalyptus/keys $x:$EUCALYPTUS/var/eucalyptus &)
+		fi
+	fi
+done
+

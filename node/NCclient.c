@@ -1,0 +1,298 @@
+#include <stdio.h>
+#include <unistd.h> /* getopt */
+#include "data.h"
+#include "client-marshal.h"
+#include <misc.h>
+
+#define NC_ENDPOINT "/axis2/services/EucalyptusNC"
+#define WALRUS_ENDPOINT "/services/Walrus"
+#define DEFAULT_WALRUS_HOSTPORT "localhost:8773"
+#define DEFAULT_NC_HOSTPORT "localhost:9091"
+#define DEFAULT_MAC_ADDR "aa:bb:cc:dd:ee:ff"
+#define BUFSIZE 1024
+char debug = 0;
+
+void usage (void) 
+{ 
+    fprintf (stderr, "usage: NCclient [command] [options]\n"
+        "\tcommands:\t\t\trequired options:\n"
+             "\t\trunInstance\t\t[-i -r -m -k -a]\n"
+             "\t\tterminateInstance\t[-i]\n"
+             "\t\tdescribeInstances\n"
+             "\t\tdescribeResource\n"
+        "\toptions:\n"
+             "\t\t-d \t\t- print debug output\n"
+             "\t\t-h \t\t- this help information\n"
+             "\t\t-w [host:port] \t- Walrus endpoint\n"
+             "\t\t-n [host:port] \t- NC endpoint\n"
+             "\t\t-i [str] \t- instance ID\n"
+             "\t\t-e [str] \t- reservation ID\n"
+             "\t\t-m [id:path] \t- id and manifest path of disk image\n"
+             "\t\t-k [id:path] \t- id and manifest path of kernel image\n"
+             "\t\t-r [id:path] \t- id and manifest path of ramdisk image\n"
+             "\t\t-a [address] \t- MAC address for instance to use\n"
+             "\t\t-c [number] \t- number of instances to start\n"
+        );
+
+    exit (1);
+}
+
+#define CHECK_PARAM(par, name) if (par==NULL) { fprintf (stderr, "ERROR: no %s specified (try -h)\n", name); exit (1); } 
+
+int main (int argc, char **argv) 
+{
+	char * nc_hostport = DEFAULT_NC_HOSTPORT;
+    char * walrus_hostport = DEFAULT_WALRUS_HOSTPORT;
+    char * instance_id = NULL;
+    char * image_id = NULL;
+    char * image_manifest = NULL;
+    char * kernel_id = NULL;
+    char * kernel_manifest = NULL;
+    char * ramdisk_id = NULL;
+    char * ramdisk_manifest = NULL;
+    char * reservation_id = NULL;
+    char * mac_addr = strdup (DEFAULT_MAC_ADDR);
+	char * command = NULL;
+    int count = 1;
+	int ch;
+    
+	while ((ch = getopt(argc, argv, "d:n:w:i:m:k:r:e:a:c:h")) != -1) {
+		switch (ch) {
+        case 'c':
+            count = atoi (optarg);
+            break;
+        case 'd':
+            debug = 1;
+            break;
+        case 'n':
+            nc_hostport = optarg; 
+            break;
+        case 'w':
+            walrus_hostport = optarg; 
+            break;
+        case 'i':
+            instance_id = optarg; 
+            break;
+        case 'm':
+            image_id = strtok (optarg, ":");
+            image_manifest = strtok (NULL, ":");
+            if (image_id==NULL || image_manifest==NULL) {
+                fprintf (stderr, "ERROR: could not parse image [id:manifest] paramters (try -h)\n");
+                exit (1);
+            }
+            break;
+        case 'k':
+            kernel_id = strtok (optarg, ":");
+            kernel_manifest = strtok (NULL, ":");
+            if (kernel_id==NULL || kernel_manifest==NULL) {
+                fprintf (stderr, "ERROR: could not parse kernel [id:manifest] paramters (try -h)\n");
+                exit (1);
+            }
+            break;
+        case 'r':
+            ramdisk_id = strtok (optarg, ":");
+            ramdisk_manifest = strtok (NULL, ":");
+            if (ramdisk_id==NULL || ramdisk_manifest==NULL) {
+                fprintf (stderr, "ERROR: could not parse ramdisk [id:manifest] paramters (try -h)\n");
+                exit (1);
+            }
+            break;
+        case 'e':
+            reservation_id = optarg;
+            break;
+        case 'a':
+            mac_addr = optarg;
+            break;
+        case 'h':
+            usage (); // will exit
+        case '?':
+        default:
+            fprintf (stderr, "ERROR: unknown parameter (try -h)\n");
+            exit (1);
+		}
+	}
+	argc -= optind;
+	argv += optind;
+    
+	if (argc>0) {
+		command = argv[0];
+        if (argc>1) {
+            fprintf (stderr, "WARNING: too many parameters, using first one as command\n");
+        }
+	} else {
+        fprintf (stderr, "ERROR: command not specified (try -h)\n");
+        exit (1);
+    }
+    
+    ncMetadata meta = { "correlate-me-please", "eucalyptus" };
+    ncInstParams params = { 64, 64, 1 };
+    ncStub * stub;
+    char configFile[1024], policyFile[1024];
+    char *euca_home;
+    int rc, use_wssec;
+    char *tmpstr;
+    
+    euca_home = getenv("EUCALYPTUS");
+    if (!euca_home) {
+        snprintf(configFile, 1024, "/etc/eucalyptus/eucalyptus.conf");
+        snprintf(policyFile, 1024, "/var/eucalyptus/keys/nc-client-policy.xml");
+    } else {
+        snprintf(configFile, 1024, "%s/etc/eucalyptus/eucalyptus.conf", euca_home);
+        snprintf(policyFile, 1024, "%s/var/eucalyptus/keys/nc-client-policy.xml", euca_home);
+    }
+    rc = get_conf_var(configFile, "ENABLE_WS_SECURITY", &tmpstr);
+    if (rc != 1) {
+        logprintf("ERROR: parsing config file (%s) for ENABLE_WS_SECURITY\n",configFile);
+        exit(1);
+    } else {
+        if (!strcmp(tmpstr, "Y")) {
+            use_wssec = 1;
+        } else {
+            use_wssec = 0;
+        }
+    }
+    
+    char nc_url [BUFSIZE];
+    snprintf (nc_url, BUFSIZE, "http://%s%s", nc_hostport, NC_ENDPOINT);
+    if (debug) printf ("connecting to NC at %s\n", nc_url);
+    stub = ncStubCreate (nc_url, "NCclient.log", NULL);
+    if (!stub) {
+        fprintf (stderr, "ERROR: failed to connect to Web service\n");
+        exit (2);
+    }
+    
+    if (use_wssec) {
+        if (debug) printf ("using policy file %s\n", policyFile);
+        rc = InitWSSEC(stub->env, stub->stub, policyFile);
+        if (rc) {
+            fprintf (stderr, "ERROR: cannot initialize WS-SEC policy from %s\n", policyFile);
+            exit(1);
+        } 
+    }
+    
+    char * image_url = NULL;
+    if (image_manifest) {
+        char t [BUFSIZE];
+        snprintf (t, BUFSIZE, "http://%s%s/%s", walrus_hostport, WALRUS_ENDPOINT, image_manifest);
+        image_url = strdup (t);
+    }
+
+    char * kernel_url = NULL;
+    if (kernel_manifest) {
+        char t [BUFSIZE];
+        snprintf (t, BUFSIZE, "http://%s%s/%s", walrus_hostport, WALRUS_ENDPOINT, kernel_manifest);
+        kernel_url = strdup (t);
+    }
+
+    char * ramdisk_url = NULL;
+    if (ramdisk_manifest) {
+        char t [BUFSIZE];
+        snprintf (t, BUFSIZE, "http://%s%s/%s", walrus_hostport, WALRUS_ENDPOINT, ramdisk_manifest);
+        ramdisk_url = strdup (t);
+    }
+
+    /***********************************************************/
+    if (!strcmp (command, "runInstance")) {
+        CHECK_PARAM(image_id, "image ID and manifest path");
+        CHECK_PARAM(kernel_id, "kernel ID and manifest path");
+
+        char *privMac, *pubMac;
+        int vlan = 3;
+        privMac = strdup (mac_addr);
+        mac_addr [0] = 'b';
+        mac_addr [1] = 'b';
+        pubMac = strdup (mac_addr);
+
+        /* generate random IDs if they weren't specified*/
+#define C rand()%26 + 97
+
+        while (count--) {
+            char * iid, * rid;
+
+            char ibuf [8];
+            if (instance_id==NULL || count>1) {
+                snprintf (ibuf, 8, "i-%c%c%c%c%c", C, C, C, C, C);
+                iid = ibuf;
+            } else {
+                iid = instance_id;
+            }
+
+            char rbuf [8];
+            if (reservation_id==NULL || count>1) {
+                snprintf (rbuf, 8, "r-%c%c%c%c%c", C, C, C, C, C);
+                rid = rbuf;
+            } else {
+                rid = reservation_id;
+            }
+            
+            ncInstance * outInst;
+            int rc = ncRunInstanceStub(stub, &meta, 
+                                       iid, rid,
+                                       &params, 
+                                       image_id, image_url, 
+                                       kernel_id, kernel_url, 
+                                       ramdisk_id, ramdisk_url, 
+                                       "", /* key */
+                                       privMac, pubMac, vlan, 
+                                       &outInst);
+            if (rc != 0) {
+                printf("ncRunInstance() failed: instanceId=%s error=%d\n", instance_id, rc);
+                exit(1);
+            }
+            printf("instanceId=%s stateCode=%d stateName=%s\n", outInst->instanceId, outInst->stateCode, outInst->stateName);
+            free_instance(&outInst);
+        }
+    
+        /***********************************************************/
+    } else if (!strcmp(command, "terminateInstance")) {
+        CHECK_PARAM(instance_id, "instance ID");
+        
+        int shutdownState, previousState;
+        int rc = ncTerminateInstanceStub (stub, &meta, instance_id, &shutdownState, &previousState);
+        if (rc != 0) {
+            printf("ncTerminateInstance() failed: error=%d\n", rc);
+            exit(1);
+        }
+        printf("shutdownState=%d, previousState=%d\n", shutdownState, previousState);
+
+        /***********************************************************/
+    } else if (!strcmp(command, "describeInstances")) {
+        /* TODO: pull out of argv[] requested instanceIDs */
+        ncInstance ** outInsts;
+        int outInstsLen, i;
+        int rc = ncDescribeInstancesStub(stub, &meta, NULL, 0, &outInsts, &outInstsLen);
+        if (rc != 0) {
+            printf("ncDescribeInstances() failed: error=%d\n", rc);
+            exit(1);
+        }
+        for (i=0; i<outInstsLen; i++) {
+            printf("instanceId=%s state=%s time=%d\n", outInsts[i]->instanceId, outInsts[i]->stateName, outInsts[i]->launchTime);
+            free_instance(&(outInsts[i]));
+        }
+        /* TODO: fix free(outInsts); */
+
+    /***********************************************************/
+    } else if (!strcmp(command, "describeResource")) {
+        char * type = NULL;
+        ncResource *outRes;
+        
+        int rc = ncDescribeResourceStub(stub, &meta, type, &outRes);
+        if (rc != 0) {
+            printf("ncDescribeResource() failed: error=%d\n", rc);
+            exit(1);
+        }
+        printf ("node status=[%s] memory=%d/%d disk=%d/%d cores=%d/%d subnets=[%s]\n", 
+                outRes->nodeStatus, 
+                outRes->memorySizeMax, outRes->memorySizeAvailable,
+                outRes->diskSizeMax, outRes->diskSizeAvailable,
+                outRes->numberOfCoresMax, outRes->numberOfCoresAvailable,
+                outRes->publicSubnets);
+        
+    /***********************************************************/
+    } else {
+        fprintf (stderr, "ERROR: command %s unknown (try -h)\n", command);
+        exit (1);
+    }
+    
+    exit(0);
+}

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions 
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" 
+    xmlns:ns1="http://schemas.xmlsoap.org/soap/http" 
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+    xmlns:tns="http://eucalyptus.ucsb.edu/" 
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+    name="EucalyptusGL" 
+    targetNamespace="http://eucalyptus.ucsb.edu/">
+
+  <wsdl:types>
+    <xs:schema 
+	attributeFormDefault="qualified" 
+	elementFormDefault="qualified" 
+	targetNamespace="http://eucalyptus.ucsb.edu/" 
+	xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	xmlns:tns="http://eucalyptus.ucsb.edu/">
+
+      <xs:complexType abstract="true" name="eucalyptusMessage">
+        <xs:sequence>
+          <xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>
+          <xs:element nillable="false" minOccurs="0" name="userId" type="xs:string"/>
+          <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="statusMessage" type="xs:string"/>
+          <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="return" type="xs:boolean"/>
+        </xs:sequence>
+      </xs:complexType>
+      
+      <xs:complexType name="getLogsType">
+        <xs:complexContent> 
+          <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="getLogsResponseType">
+        <xs:complexContent> 
+          <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
+	      <xs:element minOccurs="0" name="CCLog" type="xs:string"/>
+	      <xs:element minOccurs="0" name="NCLog" type="xs:string"/>
+	      <xs:element minOccurs="0" name="httpdLog" type="xs:string"/>
+	      <xs:element minOccurs="0" name="axis2Log" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="getKeysType">
+        <xs:complexContent> 
+          <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
+	    </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="getKeysResponseType">
+        <xs:complexContent> 
+          <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
+	      <xs:element minOccurs="0" name="CCcert" type="xs:string"/>
+	      <xs:element minOccurs="0" name="NCcert" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:element name="GetLogs" nillable="true" type="tns:getLogsType"/>
+      <xs:element name="GetLogsResponse" nillable="true" type="tns:getLogsResponseType"/>
+
+      <xs:element name="GetKeys" nillable="true" type="tns:getKeysType"/>
+      <xs:element name="GetKeysResponse" nillable="true" type="tns:getKeysResponseType"/>
+    </xs:schema>
+  </wsdl:types>
+  
+  <wsdl:message name="GetLogsResponse">
+    <wsdl:part element="tns:GetLogsResponse" name="GetLogsResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="GetKeysResponse">
+    <wsdl:part element="tns:GetKeysResponse" name="GetKeysResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="GetLogs">
+    <wsdl:part element="tns:GetLogs" name="GetLogs">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="GetKeys">
+    <wsdl:part element="tns:GetKeys" name="GetKeys">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:portType name="EucalyptusGL">
+
+    <wsdl:operation name="GetKeys">
+      <wsdl:input message="tns:GetKeys" name="GetKeys">
+      </wsdl:input>
+      <wsdl:output message="tns:GetKeysResponse" name="GetKeysResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="GetLogs">
+      <wsdl:input message="tns:GetLogs" name="GetLogs">
+      </wsdl:input>
+      <wsdl:output message="tns:GetLogsResponse" name="GetLogsResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+  </wsdl:portType>
+
+  <wsdl:binding name="EucalyptusGLSoapBinding" type="tns:EucalyptusGL">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <wsdl:operation name="GetKeys">
+      <soap:operation soapAction="EucalyptusGL#GetKeys" style="document"/>
+      <wsdl:input name="GetKeys">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="GetKeysResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="GetLogs">
+      <soap:operation soapAction="EucalyptusGL#GetLogs" style="document"/>
+      <wsdl:input name="GetLogs">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="GetLogsResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+  </wsdl:binding>
+
+  <wsdl:service name="EucalyptusGL">
+    <wsdl:port binding="tns:EucalyptusGLSoapBinding" name="EucalyptusGLPort">
+      <soap:address location="http://cc:9090/axis2/services/EucalyptusGL"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

@@ -1,0 +1,41 @@
+Summary:      Elastic Utility Computing Architecture - libvirt libraries
+Name:         euca-libvirt
+Version:      1.4
+Release:      1
+License:      BSD
+Group:        Applications/System
+Source:       http://eucalyptus.cs.ucsb.edu/dependencies/1.4/euca-libvirt.tgz
+URL:          http://eucalyptus.cs.ucsb.edu
+Provides:     euca-libvirt
+
+%description
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This is the packaging of the libraries of libvirt for Eucalyptus.
+
+%prep
+%setup -n euca-libvirt-%{version}
+
+%build
+
+%install
+mkdir /opt/euca-libvirt
+mv * /opt/euca-libvirt
+
+%clean
+rm -rf /opt/euca-libvirt
+rm -rf $RPM_BUILD_DIR/euca-libvirt-%{version}
+
+
+%files
+/opt/euca-libvirt
+
+%changelog
+*Mon Dec  8 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Upgraded to libvirt 0.4.6
+
+*Sat May 12 2008 mayhem group (virtual@pompone.cs.ucsb.edu)
+- packaging of libvirt needed for eucalyptus node controller

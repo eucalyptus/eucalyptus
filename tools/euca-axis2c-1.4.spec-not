@@ -1,0 +1,50 @@
+Summary:      Elastic Utility Computing Architecture - axis2c/rampartc
+Name:         euca-axis2c
+Version:      1.4
+Release:      1
+License:      Apache
+Group:        Applications/System
+Source:       http://eucalyptus.cs.ucsb.edu/dependencies/1.4/axis2c-1.4.tgz
+URL:          http://eucalyptus.cs.ucsb.edu
+Provides:     euca-axis2c
+
+%description
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This is the packaging of the axis2c and rampartc for Eucalyptus.
+
+%prep
+%setup -n euca-axis2c-%{version}
+
+%build
+
+%install
+mkdir /opt/euca-axis2c
+mv * /opt/euca-axis2c
+
+%clean
+rm -rf /opt/euca-axis2c
+rm -rf $RPM_BUILD_DIR/euca-axis2c-%{version}
+
+%files
+%doc /opt/euca-axis2c/AUTHORS
+%doc /opt/euca-axis2c/COPYING
+%doc /opt/euca-axis2c/CREDITS
+%doc /opt/euca-axis2c/LICENSE
+%doc /opt/euca-axis2c/NEWS
+%doc /opt/euca-axis2c/NOTICE
+/opt/euca-axis2c
+
+%postun
+rm -rf /opt/euca-axis2c
+
+%changelog
+
+*Tue Dec  9 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- packaged version 1.5.0
+
+*Sat May 20 2008 mayhem group (virtual@pompone.cs.ucsb.edu)
+- packaging of axis2c needed for eucalyptus node controller

@@ -1,0 +1,14 @@
+package edu.ucsb.eucalyptus;
+
+import java.util.List;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.VmInfo;
+import edu.ucsb.eucalyptus.constants.VmState;
+
+rule "touch"
+when
+  VmInfo( $id : instanceId )
+  $vm: VmInstance( instanceId == $id, state == VmState.PENDING )
+then
+  $vm.touch()
+end

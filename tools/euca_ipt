@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+
+$table = shift @ARGV;
+$rulefile = shift @ARGV;
+if (!$table || !$rulefile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile) {exit 1;}
+
+$rc = system("iptables-save -t $table > $rulefile.orig");
+$rc = $rc>>8;
+if ($rc) {
+    exit(1);
+}
+
+$outbuf = "";
+open(FH, "$rulefile.orig");
+while(<FH>) {
+    chomp;
+    my $line = $_;
+    $line =~ s/\s+$//g;
+    $line =~ s/^\s+//g;
+    if ($line eq "COMMIT") {
+	# time to load the input rules
+	open (RFH, "$rulefile");
+	while(<RFH>) {
+	    chomp;
+	    my $line = $_;
+	    $line =~ s/\s+$//g;
+	    $line =~ s/^\s+//g;
+	    if ($line ne "" && !$rulehash{$line}) {
+		$buf .= "$line\n";
+		$rulehash{$line} = 1;
+	    }
+	}
+	close(RFH);
+    }
+    if ($line ne "" && !$rulehash{$line}) {
+	$buf .= "$line\n";
+	$rulehash{$line} = 1;
+    }
+
+}
+close(FH);
+
+open (OFH, ">$rulefile.new");
+print OFH "$buf\n";
+close(OFH);
+if (!-f "$rulefile.new") {
+    unlink("$rulefile.orig");
+    exit(1);
+}
+$rc = system("iptables-restore < $rulefile.new");
+$rc = $rc>>8;
+unlink("$rulefile.orig");
+unlink("$rulefile.new");
+exit($rc);

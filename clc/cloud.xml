@@ -1,0 +1,110 @@
+<!--
+  ~ Software License Agreement (BSD License)
+  ~
+  ~ Copyright (c) 2008, Regents of the University of California
+  ~ All rights reserved.
+  ~
+  ~ Redistribution and use of this software in source and binary forms, with or
+  ~ without modification, are permitted provided that the following conditions
+  ~ are met:
+  ~
+  ~ * Redistributions of source code must retain the above
+  ~   copyright notice, this list of conditions and the
+  ~   following disclaimer.
+  ~
+  ~ * Redistributions in binary form must reproduce the above
+  ~   copyright notice, this list of conditions and the
+  ~   following disclaimer in the documentation and/or other
+  ~   materials provided with the distribution.
+  ~
+  ~ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  ~ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  ~ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  ~ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  ~ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  ~ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  ~ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  ~ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  ~ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  ~ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  ~ POSSIBILITY OF SUCH DAMAGE.
+  ~
+  ~ Author: Chris Grzegorczyk grze@cs.ucsb.edu
+  -->
+
+<project name="eucalyptus-exec" basedir=".">
+    <!--================================== euca defines ==================================-->
+    <property environment="localenv"/>
+    <property name="euca.home.0" value="${localenv.EUCALYPTUS}"/>
+    <condition property="euca.home" value="/opt/eucalyptus" else="${localenv.EUCALYPTUS}">
+        <contains string="${euca.home.0}" substring="localenv"/>
+    </condition>
+    <fail message="EUCALYPTUS environment variable" unless="localenv.EUCALYPTUS"/>
+    <property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d"/>
+    <property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus"/>
+    <property name="euca.var.dir" value="${euca.home}/var/eucalyptus"/>
+    <property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus"/>
+    <propertyset id="euca-props">
+        <propertyref prefix="euca"/>
+    </propertyset>
+    <!--================================== other vars ==================================-->
+    <property name="jvm.heap" value="1g"/>
+    <property name="security.policy" value="${euca.conf.dir}/security.policy"/>
+    <property name="libpath" value="${euca.lib.dir}/lib"/>
+    <!--================================== classpaths ==================================-->
+    <path id="runtimeclasspath">
+        <pathelement path="${euca.conf.dir}"/>
+        <pathelement path="${euca.var.dir}/keys"/>
+        <pathelement path="${euca.lib.dir}/opt/ant-1.7.1.jar"/>
+        <pathelement path="${euca.lib.dir}/eucalyptus-transport.jar"/>
+        <fileset dir="${euca.lib.dir}">
+            <include name="**/*.jar"/>
+            <exclude name="**/gwt-dev-mac.jar"/>
+            <exclude name="**/gwt-dev-linux.jar"/>
+        </fileset>
+    </path>
+    <!--================================== EXEC TARGETS ==================================-->
+    <target name="run" description="--> run Eucalyptus (for production)." if="localenv.EUCALYPTUS">
+        <java classname="edu.ucsb.eucalyptus.Main" fork="true" failonerror="true" dir="${euca.home}">
+            <jvmarg value="-server"/>
+            <jvmarg value="-Xmx${jvm.heap}"/>
+            <jvmarg value="-Xms${jvm.heap}"/>
+            <jvmarg value="-XX:+UseConcMarkSweepGC"/>
+            <jvmarg value="-Djava.security.policy=${security.policy}"/>
+            <jvmarg value="-Djava.library.path=${libpath}"/>
+	    <syspropertyset refid="euca-props"/>
+            <classpath refid="runtimeclasspath"/>
+        </java>
+    </target>
+    <target name="debug" description="--> debug Eucalyptus (for debugging)." if="localenv.EUCALYPTUS">
+        <java classname="edu.ucsb.eucalyptus.Main" fork="true" failonerror="true" dir="${euca.home}">
+            <jvmarg value="-Xdebug"/>
+            <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"/>
+            <jvmarg value="-server"/>
+            <jvmarg value="-Xmx${jvm.heap}"/>
+            <jvmarg value="-Xms${jvm.heap}"/>
+            <jvmarg value="-XX:+UseConcMarkSweepGC"/>
+            <jvmarg value="-Djava.security.policy=${security.policy}"/>
+            <jvmarg value="-Djava.library.path=${libpath}"/>
+            <syspropertyset refid="euca-props"/>
+            <classpath refid="runtimeclasspath"/>
+        </java>
+    </target>
+    <!--================================== JCE TARGET ==================================-->
+    <property name="jce.md5" value="b94923af60a5b4659a8df2847fe1ab6d"/>
+    <target name="check-jce">
+        <checksum algorithm="md5" file="${java.home}/lib/security/US_export_policy.jar" property="${jce.md5}" verifyProperty="hasJce"/>
+        <fail message="JCE Unlimited Strength policy is required">
+            <condition>
+                <isfalse value="${hasJce}"/>
+            </condition>
+        </fail>
+    </target>
+    <property name="jce.url" value="ftp://ftp.su.se/pub/buildit/source-archive/jce_policy-6.zip"/>
+    <target name="install-jce" description="--> Does the jce_policy install">
+        <property name="jce.zip" value="/tmp/euca_here.zip"/>
+        <get src="${jce.url}" dest="${jce.zip}"/>
+        <exec command="find ${java.home}/ -d -name security -exec unzip -o -j ${jce.zip} -d {} ;"/>
+        <delete file="${jce.zip}"/>
+    </target>
+</project>

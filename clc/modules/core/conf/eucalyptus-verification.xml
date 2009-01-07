@@ -1,0 +1,91 @@
+<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0"
+      xmlns:euca="http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0"
+      xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
+       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
+       http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0 http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0/euca.xsd">
+
+    <model name="eucalyptus-verification">
+
+        <default-service-exception-strategy>
+            <outbound-endpoint ref="ReplyQueueWS"/>
+        </default-service-exception-strategy>
+
+        <service name="StartVerify">
+            <inbound>
+                <inbound-endpoint ref="StartVerifyWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.VmAdmissionControl"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="ImageVerifyWS"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
+        <service name="FinishedVerify">
+            <inbound>
+                <inbound-endpoint ref="FinishedVerifyWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.VmAdmissionControl"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="UpdateSystemWS"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
+        <service name="ImageVerify">
+            <inbound>
+                <inbound-endpoint ref="ImageVerifyWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.ImageManager"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="KeyPairVerifyWS"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
+        <service name="KeyPairVerify">
+            <inbound>
+                <inbound-endpoint ref="KeyPairVerifyWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.KeyPairBroker"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="VmTypeVerifyWS"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
+        <service name="VmTypeVerify">
+            <inbound>
+                <inbound-endpoint ref="VmTypeVerifyWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.cloud.cluster.VmTypeVerify"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="GroupsVerifyWS"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
+        <service name="GroupsVerify">
+            <inbound>
+                <inbound-endpoint ref="GroupsVerifyWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.GroupManager"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="FinishedVerifyWS"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
+    </model>
+</mule>

@@ -1,0 +1,56 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <libvirt/libvirt.h>
+#include <libvirt/virterror.h>
+#include "misc.h"
+
+#define MAXDOMS 1024
+
+static void print_libvirt_error (void)
+{
+    virError * verr = virGetLastError();
+    if ( verr!=NULL ) {
+        fprintf (stderr, "libvirt error: %s (code=%d)\n", verr->message, verr->code);
+        virResetLastError();
+    }
+}
+
+int main (int argc, char * argv[] )
+{
+        virConnectPtr conn = NULL;
+        int dom_ids [MAXDOMS];
+        int num_doms = 0;
+
+        logfile (NULL, EUCAFATAL); /* suppress all messages */
+		
+        /* check that commands that NC needs are there */
+
+        if ( system("perl --version") ) {
+            fprintf (stderr, "error: could not run perl\n");
+            exit (1);
+        }
+
+        if ( system("xm info") ) {
+            fprintf (stderr, "error: could not run xm info\n");
+            exit (1);
+        }
+
+        /* check that libvirt can query the hypervisor */
+        conn = virConnectOpen (NULL); /* NULL means local hypervisor */
+        if (conn == NULL) {
+            print_libvirt_error ();
+            fprintf (stderr, "error: failed to connect to hypervisor\n");
+            exit (1);
+        }
+        
+        num_doms = virConnectListDomains (conn, dom_ids, MAXDOMS);
+        if (num_doms < 0) {
+            print_libvirt_error ();
+            fprintf (stderr, "error: failed to query running domains\n");
+            exit (1);
+        }
+
+        return 0;
+}
+
+

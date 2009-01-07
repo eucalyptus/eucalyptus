@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ Software License Agreement (BSD License)
+  ~
+  ~ Copyright (c) 2008, Regents of the University of California
+  ~ All rights reserved.
+  ~
+  ~ Redistribution and use of this software in source and binary forms, with or
+  ~ without modification, are permitted provided that the following conditions
+  ~ are met:
+  ~
+  ~ * Redistributions of source code must retain the above
+  ~   copyright notice, this list of conditions and the
+  ~   following disclaimer.
+  ~
+  ~ * Redistributions in binary form must reproduce the above
+  ~   copyright notice, this list of conditions and the
+  ~   following disclaimer in the documentation and/or other
+  ~   materials provided with the distribution.
+  ~
+  ~ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  ~ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  ~ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  ~ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  ~ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  ~ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  ~ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  ~ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  ~ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  ~ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  ~ POSSIBILITY OF SUCH DAMAGE.
+  ~
+  ~ Author: Chris Grzegorczyk grze@cs.ucsb.edu
+  -->
+
+<xsd:schema xmlns="http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:mule="http://www.mulesource.org/schema/mule/core/2.0"
+            targetNamespace="http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0"
+            elementFormDefault="qualified"
+            attributeFormDefault="unqualified">
+
+  <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
+  <xsd:import namespace="http://www.springframework.org/schema/beans" schemaLocation="http://www.springframework.org/schema/beans"/>
+  <xsd:import namespace="http://www.mulesource.org/schema/mule/core/2.0" schemaLocation="http://www.mulesource.org/schema/mule/core/2.0/mule.xsd"/>
+
+  <xsd:element name="connector" type="axis2ConnectorType" substitutionGroup="mule:abstract-connector">
+    <xsd:annotation>
+      <xsd:documentation>
+        axis2 webservices
+      </xsd:documentation>
+    </xsd:annotation>
+  </xsd:element>
+
+  <xsd:complexType name="axis2ConnectorType">
+    <xsd:complexContent>
+      <xsd:extension base="mule:connectorType">
+        <xsd:attribute name="default-conf" type="xsd:string"/>
+        <xsd:attribute name="default-wssec-policy" type="xsd:string"/>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:element name="inbound-endpoint" type="axis2InboundEndpointType" substitutionGroup="mule:abstract-inbound-endpoint"/>
+  <xsd:complexType name="axis2InboundEndpointType">
+    <xsd:complexContent>
+      <xsd:extension base="mule:inboundEndpointType">
+        <xsd:sequence>
+          <xsd:group ref="mule:defaultEndpointElements"/>
+        </xsd:sequence>
+        <xsd:attributeGroup ref="inboundPropertyAttributes"/>
+        <xsd:attributeGroup ref="generalPropertyAttributes"/>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:element name="outbound-endpoint" type="axis2OutboundEndpointType" substitutionGroup="mule:abstract-outbound-endpoint"/>
+  <xsd:complexType name="axis2OutboundEndpointType">
+    <xsd:complexContent>
+      <xsd:extension base="mule:outboundEndpointType">
+        <xsd:sequence>
+          <xsd:group ref="mule:defaultEndpointElements"/>
+        </xsd:sequence>
+        <xsd:attributeGroup ref="outboundPropertyAttributes"/>
+        <xsd:attributeGroup ref="generalPropertyAttributes"/>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:element name="endpoint" type="axis2GlobalEndpointType" substitutionGroup="mule:abstract-global-endpoint"/>
+  <xsd:complexType name="axis2GlobalEndpointType">
+    <xsd:complexContent>
+      <xsd:extension base="mule:globalEndpointType">
+        <xsd:sequence>
+          <xsd:group ref="mule:defaultEndpointElements"/>
+        </xsd:sequence>
+        <xsd:attributeGroup ref="inboundPropertyAttributes"/>
+        <xsd:attributeGroup ref="generalPropertyAttributes"/>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:attributeGroup name="inboundPropertyAttributes">
+    <xsd:attribute name="overloaded-method" type="xsd:string"/>
+    <xsd:attribute name="wsdl" type="xsd:string"/>
+    <xsd:attribute name="authenticator-class" type="xsd:string"/>
+    <xsd:attribute name="http-query-support" type="xsd:boolean" default="false"/>
+    <xsd:attribute name="mep" default="IN_ONLY">
+      <xsd:simpleType>
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="IN_OUT"/>
+          <xsd:enumeration value="IN_ONLY"/>
+          <xsd:enumeration value="ROBUST_IN_ONLY"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+    </xsd:attribute>
+  </xsd:attributeGroup>
+
+  <xsd:attributeGroup name="outboundPropertyAttributes">
+    <xsd:attribute name="timeout" type="xsd:int"/>
+    <xsd:attribute name="min-idle" type="xsd:int"/>
+    <xsd:attribute name="max-idle" type="xsd:int"/>
+    <xsd:attribute name="max-active" type="xsd:int"/>
+    <xsd:attribute name="cache-http-client" type="xsd:boolean"/>
+  </xsd:attributeGroup>
+
+  <xsd:attributeGroup name="generalPropertyAttributes">
+    <xsd:attribute name="namespace" type="xsd:string"/>
+    <xsd:attribute name="wssec-flow">
+      <xsd:simpleType>
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="NONE"/>
+          <xsd:enumeration value="IN_OUT"/>
+          <xsd:enumeration value="IN_ONLY"/>
+          <xsd:enumeration value="OUT_ONLY"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+    </xsd:attribute>
+    <xsd:attribute name="wssec-policy" type="xsd:string"/>
+    <xsd:attribute name="conf" type="xsd:string"/>
+  </xsd:attributeGroup>
+
+</xsd:schema>
+

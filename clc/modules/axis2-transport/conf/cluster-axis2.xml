@@ -1,0 +1,172 @@
+<!--
+  ~ Software License Agreement (BSD License)
+  ~
+  ~ Copyright (c) 2008, Regents of the University of California
+  ~ All rights reserved.
+  ~
+  ~ Redistribution and use of this software in source and binary forms, with or
+  ~ without modification, are permitted provided that the following conditions
+  ~ are met:
+  ~
+  ~ * Redistributions of source code must retain the above
+  ~   copyright notice, this list of conditions and the
+  ~   following disclaimer.
+  ~
+  ~ * Redistributions in binary form must reproduce the above
+  ~   copyright notice, this list of conditions and the
+  ~   following disclaimer in the documentation and/or other
+  ~   materials provided with the distribution.
+  ~
+  ~ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  ~ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  ~ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  ~ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  ~ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  ~ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  ~ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  ~ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  ~ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  ~ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  ~ POSSIBILITY OF SUCH DAMAGE.
+  ~
+  ~ Author: Chris Grzegorczyk grze@cs.ucsb.edu
+  -->
+
+<axisconfig name="euca-axis">
+  <parameter name="hotdeployment">false</parameter>
+  <parameter name="hotupdate">false</parameter>
+  <parameter name="enableMTOM">false</parameter>
+  <parameter name="enableSwA">false</parameter>
+  <parameter name="ConfigContextTimeoutInterval">30000</parameter>
+  <parameter name="sendStacktraceDetailsWithFaults">true</parameter>
+  <parameter name="DrillDownToRootCauseForFaultReason">true</parameter>
+  <parameter name="userName">mayhem</parameter>
+  <parameter name="password">zoomzoom</parameter>
+  <!--To override repository/modules you need to uncomment following parameter and value SHOULD be absolute file path-->
+  <!--<parameter name="ModulesDirectory">deploy/modules</parameter>-->
+  <parameter name="contextRoot">/</parameter>
+  <parameter name="servicePath">services</parameter>
+  <parameter name="restPath">rest</parameter>
+  <parameter name="enableREST" locked="false">true</parameter>
+  <!--<parameter name="httpFrontendHostUrl">https://someotherhost/context</parameter>-->
+  <messageFormatters>
+    <messageFormatter contentType="application/x-www-form-urlencoded" class="org.apache.axis2.transport.http.XFormURLEncodedFormatter"/>
+    <messageFormatter contentType="multipart/form-data" class="org.apache.axis2.transport.http.MultipartFormDataFormatter"/>
+    <messageFormatter contentType="application/xml" class="org.apache.axis2.transport.http.ApplicationXMLFormatter"/>
+  </messageFormatters>
+  <messageBuilders>
+    <messageBuilder contentType="application/xml" class="org.apache.axis2.builder.ApplicationXMLBuilder"/>
+    <messageBuilder contentType="application/x-www-form-urlencoded" class="org.apache.axis2.builder.XFormURLEncodedBuilder"/>
+    <messageBuilder contentType="multipart/form-data" class="org.apache.axis2.builder.MultipartFormDataBuilder"/>
+  </messageBuilders>
+  <transportSender name="http" class="org.apache.axis2.transport.http.CommonsHTTPTransportSender">
+    <parameter name="PROTOCOL">HTTP/1.1</parameter>
+  </transportSender>
+  <transportSender name="https" class="org.apache.axis2.transport.http.CommonsHTTPTransportSender">
+    <parameter name="PROTOCOL">HTTP/1.1</parameter>
+  </transportSender>
+  <module ref="addressing"/>
+  <module ref="rampart"/>
+
+
+  <!-- ================================================= -->
+  <!-- Phases  -->
+  <!-- ================================================= -->
+  <phaseOrder type="InFlow">
+      <!--  System predefined phases       -->
+      <phase name="Transport">
+          <handler name="RequestURIBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.RequestURIBasedDispatcher">
+              <order phase="Transport"/>
+          </handler>
+          <handler name="SOAPActionBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.SOAPActionBasedDispatcher">
+              <order phase="Transport"/>
+          </handler>
+      </phase>
+      <phase name="Addressing">
+           <handler name="AddressingBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.AddressingBasedDispatcher">
+               <order phase="Addressing"/>
+          </handler>
+      </phase>
+      <phase name="Security"/>
+      <phase name="PreDispatch"/>
+      <phase name="Dispatch" class="org.apache.axis2.engine.DispatchPhase">
+          <handler name="RequestURIBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.RequestURIBasedDispatcher"/>
+          <handler name="SOAPActionBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.SOAPActionBasedDispatcher"/>
+          <handler name="RequestURIOperationDispatcher"
+                   class="org.apache.axis2.dispatchers.RequestURIOperationDispatcher"/>
+          <handler name="SOAPMessageBodyBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.SOAPMessageBodyBasedDispatcher"/>
+          <handler name="HTTPLocationBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.HTTPLocationBasedDispatcher"/>
+          <handler name="GenericProviderDispatcher"
+                   class="org.apache.axis2.jaxws.dispatchers.GenericProviderDispatcher"/>
+          <handler name="MustUnderstandValidationDispatcher"
+                   class="org.apache.axis2.jaxws.dispatchers.MustUnderstandValidationDispatcher"/>
+      </phase>
+      <phase name="RMPhase"/>
+      <!--  System predefined phases       -->
+      <!--   After Postdispatch phase module author or service author can add any phase he want      -->
+      <phase name="OperationInPhase">
+          <handler name="MustUnderstandChecker"
+                   class="org.apache.axis2.jaxws.dispatchers.MustUnderstandChecker">
+              <order phase="OperationInPhase"/>
+          </handler>
+      </phase>
+      <phase name="soapmonitorPhase"/>
+  </phaseOrder>
+  <phaseOrder type="OutFlow">
+      <!--      entities can add his own phases to this area  -->
+      <phase name="soapmonitorPhase"/>
+      <phase name="OperationOutPhase"/>
+      <!--system predefined phase-->
+      <!--these phase will run irrespective of the service-->
+      <phase name="RMPhase"/>
+      <phase name="PolicyDetermination"/>
+      <phase name="MessageOut"/>
+      <phase name="Security"/>
+  </phaseOrder>
+  <phaseOrder type="InFaultFlow">
+      <phase name="Addressing">
+           <handler name="AddressingBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.AddressingBasedDispatcher">
+               <order phase="Addressing"/>
+          </handler>
+      </phase>
+      <phase name="Security"/>
+      <phase name="PreDispatch"/>
+      <phase name="Dispatch" class="org.apache.axis2.engine.DispatchPhase">
+          <handler name="RequestURIBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.RequestURIBasedDispatcher"/>
+          <handler name="SOAPActionBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.SOAPActionBasedDispatcher"/>
+          <handler name="RequestURIOperationDispatcher"
+                   class="org.apache.axis2.dispatchers.RequestURIOperationDispatcher"/>
+          <handler name="SOAPMessageBodyBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.SOAPMessageBodyBasedDispatcher"/>
+          <handler name="HTTPLocationBasedDispatcher"
+                   class="org.apache.axis2.dispatchers.HTTPLocationBasedDispatcher"/>
+          <handler name="GenericProviderDispatcher"
+                   class="org.apache.axis2.jaxws.dispatchers.GenericProviderDispatcher"/>
+          <handler name="MustUnderstandValidationDispatcher"
+                   class="org.apache.axis2.jaxws.dispatchers.MustUnderstandValidationDispatcher"/>
+      </phase>
+      <phase name="RMPhase"/>
+      <!--      entities can add his own phases to this area  -->
+      <phase name="OperationInFaultPhase"/>
+      <phase name="soapmonitorPhase"/>
+  </phaseOrder>
+  <phaseOrder type="OutFaultFlow">
+      <!--      entities can add his own phases to this area  -->
+      <phase name="soapmonitorPhase"/>
+      <phase name="OperationOutFaultPhase"/>
+      <phase name="RMPhase"/>
+      <phase name="PolicyDetermination"/>
+      <phase name="MessageOut"/>
+      <phase name="Security"/>
+  </phaseOrder>
+</axisconfig>

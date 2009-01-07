@@ -1,0 +1,131 @@
+body {
+    background-color: white;
+    color: black;
+    font-family: Arial, sans-serif;
+    font-size: medium;
+    margin: 0px;
+}
+.euca-greeting-normal {
+    color: black;
+}
+.euca-greeting-warning {
+    color: orange;
+}
+.euca-greeting-error {
+    color: red;
+}
+.euca-greeting-disabled {
+	color: gray;
+	font-size: medium;
+}
+.euca-greeting-pending {
+    color: orange;
+    text-decoration: blink;
+}
+.euca-login-panel {
+    border: solid;
+    border-width: 1px;
+    border-color: #FF6600;
+    background: #FFCC33;
+    padding: 20px 20px 20px 20px;
+}
+.euca-remember-text {
+    font-size: x-small;
+    font-style: italic;
+}
+
+.euca-section-header {
+    padding: 5px 5px 5px 5px;
+    font-weight: bold;
+    font-size: large;
+    text-align: center;
+}
+
+.euca-top-bar {
+    background: #FFCC33;
+    padding: 10px 10px 10px 10px;
+    font-weight: bold;
+    font-size: large;
+    text-align: left;
+}
+
+.highlighted {
+    border: solid;
+    border-width: 5px;
+    border-color: red;
+}
+
+.euca-error-hint {
+    font-size: x-small;
+    font-style: italic;
+    color: red;
+}
+
+.gwt-TabBar {
+    background-color: #FFFF66;
+    font-size: smaller;
+}
+
+.gwt-TabBar .gwt-TabBarFirst {
+    height: 100%;
+    padding-left: 3px;
+}
+
+.gwt-TabBar .gwt-TabBarRest {
+    padding-right: 3px;
+}
+
+.gwt-TabBar .gwt-TabBarItem {
+    padding: 4px;
+    cursor: pointer;
+    width: 100px;
+    text-align: center;
+}
+
+.gwt-TabBar .gwt-TabBarItem-selected {
+    background-color: white;
+    margin-top: 6px;
+    padding: 4px;
+    cursor: default;
+    width: 100px;
+    text-align: center;
+}
+
+.gwt-TabBarItem:hover {
+    font-weight: bold;
+}
+
+.euca-text {
+    font-size: smaller;
+}
+
+.euca-button {
+    cursor: pointer;
+}
+
+.euca-table {
+    border-spacing: 0;
+    padding: 4px;
+}
+
+.euca-action-link {
+    font-size: x-small;
+	text-decoration: underline;
+	cursor: pointer;
+	color: blue;
+}
+
+.euca-table-heading-row {
+    font-weight: bold;
+    font-size: smaller;
+}
+
+.euca-table-odd-row {
+    font-size: smaller;
+    background: white;
+}
+
+.euca-table-even-row {
+    font-size: smaller;
+    background: #FFFF66;
+}

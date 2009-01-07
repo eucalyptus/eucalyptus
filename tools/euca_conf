@@ -1,0 +1,176 @@
+#!/bin/bash
+#
+# $Id: euca_conf,v 1.7 2008-12-24 18:28:07 nurmi Exp $
+
+FILE="$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
+EUCALYPTUS=""
+START_CC=""
+START_NC=""
+CC_PORT=""
+NC_PORT=""
+CLOUD=""
+CLOUD_PORT=""
+CLOUD_SSL_PORT=""
+NAME=""
+INSTANCE=""
+
+usage () {
+	echo "$0 [options] [<file>]"
+	echo
+	echo "   -help                       this message"
+	echo "   -d <dir>                    point EUCALYPTUS to <dir>"
+	echo "   -cc {Y|N}                   enable/disable CC"
+	echo "   -nc {Y|N}                   enable/disable NC"
+	echo "   -cloud {Y|N}                enable/disable Cloud Controller"
+	echo "   -nodes \"host host ...\"    list of NCs"
+	echo "   -ccp <port>                 set CC port"
+	echo "   -ncp <port>                 set NC port"
+	echo "   -instances <path>           set the INSTANCE path"
+	echo "   -cloudp <port1> <port2>     set the 2 cloud ports"
+	echo "   -name <var>                 returns the value or <name>"
+	echo "where <file> is the configuration file ($FILE by default)"
+	echo
+}
+
+# 3 paramenter: the file, the variable name, the new value
+change_var_value () {
+	cp $1 /tmp/euca-tmp.$$
+	sed "s<\(${2}\).*<\1=\"${3}\"<" /tmp/euca-tmp.$$ > $1
+	rm -f /tmp/euca-tmp.$$
+}
+
+if [ $# -eq 0 ]; then
+	usage
+	exit 1
+fi
+
+# let's parse the command line
+while [ $# -gt 0 ]; do
+	if [ "$1" = "-h" -o "$1" = "-help" -o "$1" = "?" -o "$1" = "--help" ]; then
+		usage
+		exit 1
+	fi
+
+	if [ $# -eq 1 ]; then
+		# we dont have options with no argument, so it has to be
+		# the file
+		FILE="$1"
+		break
+	fi
+
+	# all other parameters requires at least 1 argument
+	if [ $# -lt 2 ]; then
+		usage
+		exit 1
+	fi
+
+	# now let's parse the command line
+	if [ "$1" = "-d" ]; then
+		if [ ! -d "${2}" ]; then
+			echo "Is $2 where Eucalyptus is installed?"
+			exit 1
+		fi
+		EUCALYPTUS="${2}"
+		#FILE="$EUCALYPTUS/$FILE"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "-name" ]; then
+		if [ -n "$NAME" ]; then
+			echo "Only one -name can be specified!"
+			exit 1
+		fi
+		NAME="$2"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "-cloud" ]; then
+		START_CLOUD="$2"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "-cc" ]; then
+		START_CC="$2"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "-nc" ]; then
+		START_NC="$2"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "-nodes" ]; then
+		NODES="${2}"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "-ccp" ]; then
+		CC_PORT="$2"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "-ncp" ]; then
+		NC_PORT="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "-instances" ]; then
+		INSTANCE="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "-cloudp" ]; then
+		if [ $# -lt 3 ]; then
+			echo "We need 2 ports for cloud controller"
+			exit 1
+		fi
+		CLOUD_PORT="$2"
+		CLOUD_SSL_PORT="$3"
+		shift; shift; shift
+		continue
+	fi
+	usage 
+	exit 1
+done
+
+# some basic check
+if [ -z "${FILE}" -o ! -f "${FILE}" ]; then
+	echo "Is <$FILE> a valid eucalyptus configuration file?"
+	exit 1
+fi
+
+# let's change the value
+if [ -n "$EUCALYPTUS" ]; then
+	change_var_value $FILE EUCALYPTUS "${EUCALYPTUS}"
+fi
+if [ -n "$START_CLOUD" ]; then
+	change_var_value $FILE START_CLOUD "${START_CLOUD}"
+fi
+if [ -n "$START_CC" ]; then
+	change_var_value $FILE START_CC "${START_CC}"
+fi
+if [ -n "$START_NC" ]; then
+	change_var_value $FILE START_NC "${START_NC}"
+fi
+if [ -n "$CC_PORT" ]; then
+	change_var_value $FILE CC_PORT "${CC_PORT}"
+fi
+if [ -n "$NC_PORT" ]; then
+	change_var_value $FILE NC_PORT "${NC_PORT}"
+fi
+if [ -n "$CLOUD_PORT" ]; then
+	change_var_value $FILE CLOUD_PORT "${CLOUD_PORT}"
+fi
+if [ -n "$CLOUD_SSL_PORT" ]; then
+	change_var_value $FILE CLOUD_SSL_PORT "${CLOUD_SSL_PORT}"
+fi
+if [ -n "$INSTANCE" ]; then
+	change_var_value $FILE INSTANCE_PATH "${INSTANCE}"
+fi
+if [ -n "$NODES" ]; then
+	change_var_value $FILE NODES "${NODES}"
+fi
+if [ -n "$NAME" ]; then
+	VALUE=`cat $FILE |grep $NAME|cut -f 2 -d =|tr  '"' ' '`
+	echo $VALUE
+fi

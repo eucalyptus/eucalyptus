@@ -1,0 +1,315 @@
+Installing Eucalyptus from source
+---------------------------------
+
+Eucalyptus cloud setup consists of three components: the cloud controller
+[ClC], the cluster controller(s) [CCs], and node controller(s) [NCs].
+Typically, a ClC and a CC will run on the head node of a cluster, while an
+NC will run on each of the compute nodes.  It is possible, however, to run
+all components on a single machine. To have a fully functional Eucalyptus
+installation you'll need at least one of each component.  
+
+Note that some of the commands below require root privileges.  Please,
+check section 2.f below for the list of software that Eucalyptus requires.
+
+For the most up-to-date instructions, please visit the Eucalyptus web page
+(http://eucalyptus.cs.ucsb.edu).
+
+1. Download Eucalyptus
+----------------------
+
+Download 
+
+- eucalyptus-<version>-src.tar.gz (Eucalyptus source)
+- eucalyptus-<version>-src-deps.tar.gz (Eucalyptus dependencies)
+- euca-ttylinux.tgz (a test VM image)
+
+from the Eucalyptus Web site:
+
+  http://eucalyptus.cs.ucsb.edu/
+
+Unpack the Eucalyptus source:
+
+; tar zvxf eucalyptus-<version>-src.tar.gz
+
+Now you should have a directory eucalyptus-<version>. To simplify the
+remainder of the installation, define EUCALYPTUS_SRC environment
+variable to be the top of the source tree of eucalyptus and the 
+variable EUCALYPTUS to be the directory where eucalyptus will be 
+installed:
+
+; cd eucalyptus-<version>
+; export EUCALYPTUS_SRC=`pwd`
+; export EUCALYPTUS=/opt/eucalyptus
+
+
+2. Dependencies
+---------------
+
+Unpack the dependencies and create the directory you'll use to install
+them:
+
+; cd $EUCALYPTUS_SRC
+; tar zvxf ../eucalyptus-<version>-src-deps.tar.gz 
+; mkdir -p $EUCALYPTUS/packages/
+
+Install the dependencies as follows:
+
+a. Axis2
+
+; cd $EUCALYPTUS/packages
+; tar zxvf $EUCALYPTUS_SRC/eucalyptus-src-deps/axis2-1.4.tgz
+
+
+b. Apache (Httpd)
+
+The Eucalyptus node and cloud controller depend on Apache 2. We rely
+on running apache as root, therefore we recommend that apache 2 be
+installed separately from the webserver that might be included as part
+of your distribution.
+
+; cd $EUCALYPTUS_SRC/eucalyptus-src-deps/
+; tar zvxf httpd-2.2.8.tar.gz
+; cd httpd-2.2.8
+; CFLAGS="-DBIG_SECURITY_HOLE" ./configure --prefix=$EUCALYPTUS/packages/httpd-2.2.8 --with-included-apr
+; make ; make install
+
+
+c. Axis2/C
+
+; export AXIS2C_HOME=$EUCALYPTUS/packages/axis2c-1.5.0
+; cd $EUCALYPTUS_SRC/eucalyptus-src-deps/
+; tar zvxf axis2c-src-1.5.0.tar.gz
+; cd axis2c-src-1.5.0
+; ./configure --with-apache2=$EUCALYPTUS/packages/httpd-2.2.8/include --prefix=${AXIS2C_HOME}
+; make ; make install
+
+
+d. Rampart/C
+
+; export AXIS2C_HOME=$EUCALYPTUS/packages/axis2c-1.5.0
+; export LD_LIBRARY_PATH=${AXIS2C_HOME}/lib:$LD_LIBRARY_PATH
+; cd $EUCALYPTUS_SRC/eucalyptus-src-deps/
+; tar zvxf rampartc-src-1.2.0.tar.gz
+; cd rampartc-src-1.2.0
+; ./configure --prefix=${AXIS2C_HOME} --enable-static=no --with-axis2=${AXIS2C_HOME}/include/axis2-1.5.0
+; make ; make install
+
+Now edit the file $AXIS2C_HOME/axis2.xml: search for "Security" and change
+
+  <!--phase name="Security"/-->
+
+to
+
+  <phase name="Security"/>
+
+and save the file.
+
+
+e. Libvirt
+
+; cd $EUCALYPTUS_SRC/eucalyptus-src-deps/
+; tar zvxf libvirt-0.4.6.tar.gz
+; cd libvirt-0.4.6
+; ./configure --prefix=$EUCALYPTUS/packages/libvirt-0.4.6 --without-storage-disk --without-storage-iscsi --without-storage-fs --without-storage-lvm --without-libvirtd --without-remote --without-lxc --without-kvm --without-qemu --without-sasl --without-openvz
+; make ; make install
+
+
+f. Other software
+
+Additionally, the following dependencies need to be met:
+
+- Java Development Kit (JDK), version 1.6 or above
+- Apache ant, version 1.6 or above
+- GNU C compiler
+- Make
+- iptables
+- vconfig
+- bridge-utils
+
+NOTE: The Eucalyptus dependencies may, in turn, depend on libraries or
+packages not present in your installation: Please, refer to the 
+documentation of the dependent package for help (e.g., see apache.org
+Web site for help with compiling the httpd server).
+
+Furthermore, you are required to have functioning EC2 command-line
+tools from Amazon.  The latest version of these tools that we support
+are 'ec2-api-tools-1.3-30349' and 'ec2-ami-tools-1.3-26357' (See Amazon's
+site for download and installation instructions.)
+
+3. Building Eucalyptus
+----------------------
+
+; cd $EUCALYPTUS_SRC
+; ./configure --with-axis2=$EUCALYPTUS/packages/axis2-1.4 --with-axis2c=$EUCALYPTUS/packages/axis2c-1.5.0 --with-libvirt=$EUCALYPTUS/packages/libvirt-0.4.6/ --enable-debug --prefix=$EUCALYPTUS
+; make ; make install
+
+
+4. Setting Up Eucalyptus
+------------------------
+
+NOTE: we provide the 'euca_conf' script as a convenience for setting
+up the configuration file located in
+'$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf'.  Expert users may edit
+this file manually instead of using 'euca_conf'.
+
+To configure eucalyptus you need to specify where eucalyptus is installed
+and which services to start (cloud, cluster controller and/or node
+controller):
+
+; $EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS -cc Y -cloud Y -nc N $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+
+On the cluster controller add a list of hostnames on which you plan to run
+node controllers
+
+; $EUCALYPTUS/usr/sbin/euca_conf -nodes "<hostname1> ... <hostnamen>" $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+
+Manually edit '$EUCALYPTUS/etc/eucalyptus/eucalytpus.conf' and, in
+particular, pay attention to the networking settings.  By default
+Eucalyptus will assume that you already have a DHCP server configured
+to serve IP addresses to VMs that start on cluster nodes (this mode is
+called SYSTEM in the configuration file). If that is not your setup,
+you have a choice between STATIC and MANAGED modes.  See the brief
+explanation in the comments of the configuration file for these modes,
+or consult the Eucalyptus documentation online.
+
+At this point you're ready to push the software out to your nodes.  If
+you installed Eucalyptus in it's own directory, you can just sync the
+entire package to all of the hosts listed above using whatever
+mechanism you typically use to push changes to nodes (rsync, for instance)
+
+; rsync -a $EUCALYPTUS/ hostname1:$EUCALYPTUS/
+; rsync -a $EUCALYPTUS/ hostname2:$EUCALYPTUS/
+...
+
+On each compute node, create a local directory where VM images are placed
+at VM run-time.  Instruct the nodes to run only the node controller, and
+point it to the path of VM images. This path is used to store temporary VM
+images and it's important it's empty (everything in it will be removed!).
+
+; for x in hostname1 hostname2 ... hostnameN ; do \
+ 	ssh $x "mkdir -p /usr/local/instances/; $EUCALYPTUS/usr/sbin/euca_conf -cc N -cloud N -nc Y -instances /usr/local/instances $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
+; done
+
+Finally, ensure that the networking settings in 'eucalyptus.conf' on each
+of your nodes is configured properly (VNET_INTERFACE and VNET_BRIDGE).
+
+
+5. Running Eucalyptus 
+------------------------
+
+To start eucalyptus run
+
+; $EUCALYPTUS/etc/init.d/eucalyptus start
+
+on each of your systems running eucalyptus.  To stop it, you would run
+
+; $EUCALYPTUS/etc/init.d/eucalyptus stop
+
+If you want to have eucalyptus started automatically when the machines is
+(re)booted, you can add the following symlink
+
+; ln -sf $EUCALYPTUS/etc/init.d/eucalyptus /etc/init.d/eucalyptus
+
+and add the symlink to the distribution's booting process. For example if
+you have update-rc.d available you can
+
+; update-rc.d eucalyptus defaults
+
+or if you have chkconfig available you can
+
+; chkconfig eucalyptus on
+
+
+6. First-time runtime configuration
+-----------------------------------
+
+To configure eucalyptus, after you started all components, you should
+login to
+
+  https://localhost:8443
+
+where you should substitute localhost with the name of the host running the
+cloud controller. (WARNING: on some machines it may take few minutes after
+the starting of the Cloud Controller for the URL to be responsive the first
+time you run Eucalyptus.) You will be prompted for a user/password which
+are set to admin/admin.  Upon logging in you will be guided through three
+first-time tasks:
+
+1. You will be forced to change the admin password.
+2. You will be asked to set the admin's email address.
+3. You will be asked to confirm the URL of the Walrus service
+   (the storage component of Eucalyptus) which should start 
+   with the hostname or IP address of the cluster head node 
+   where you are installing the ClC.
+
+After completing the first-time tasks, you will see the 'Configuration'
+tab.  At the very least, to enable Eucalyptus, you will need to add a
+cluster by clicking the 'Add Cluster' button.  For a single-cluster
+installation, the hostname is likely to be the one of the head node.  Be
+sure to click 'Save clusters' before continuing.  This generates 
+cryptographic keys that you will need to manually propagate to all
+nodes (see instructions below).
+
+Click the 'Credentials' tab and download your certificates via the
+'Download certificates' button.  You will be able to use these x509
+certificates with Amazon EC2 tools and third-party tools like
+rightscale.com.
+
+Create a directory, for example $HOME/.eucalyptus,
+
+; mkdir $HOME/.eucalyptus
+
+unpack the credentials into it, and source 'eucarc':
+
+; . $HOME/.eucalyptus/eucarc
+
+Note that you will have to source this file every time you intend
+to use the EC2 command-line tools.
+
+To finish the first-time configuration, propagate the cryptographic keys to
+all nodes:
+
+; $EUCALYPTUS/usr/sbin/euca_sync_key -c $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf 
+
+This command uses rsync and ssh for key propagation, so you may be
+prompted for the password of each of your cluster nodes.
+
+
+7. Adding images to Eucalyptus
+------------------------------
+
+First off, be sure to source the 'eucarc' file before running the commands
+below.  
+
+To run VMs, one must add a root disk image, a kernel, and, optionally, a
+ramdisk for the kernel.  Each is added to Walrus separately, using three
+EC2 commands.  The following example uses the test image that we provide.
+Unpack it to any directory:
+
+; tar zxvf euca-ttylinux.tgz
+
+Add the root filesystem image to Walrus:
+
+; ec2-bundle-image -i ttylinux.img 
+; ec2-upload-bundle -b image-bukkit -m /tmp/ttylinux.img.manifest.xml
+; ec2-register image-bukkit/ttylinux.img.manifest.xml
+
+then the kernel
+
+; ec2-bundle-image -i vmlinuz-2.6.16.33-xen --kernel true
+; ec2-upload-bundle -b kernel-bukkit -m /tmp/vmlinuz-2.6.16.33-xen.manifest.xml
+; ec2-register kernel-bukkit/vmlinuz-2.6.16.33-xen.manifest.xml
+
+Although our test image does not require a ramdisk, one can be added 
+in the manner similar to the kernel by using "--ramdisk true" flag.
+
+Once you have registered at least one kernel and one ramdisk, you can go
+back to the administrative interface (https://<cloudmanager>:8443), on the
+'Configuration' tab and add the eki-xxxxxxxx and eri-xxxxxxxx as the
+defaults kernel/ramdisk to be used when no kernel is specified.
+
+Now you should be able to run all the EC2 commands.
+
+---
+Please see http://eucalyptus.cs.ucsb.edu for more info, downloads,
+mailing lists and discussion forums.

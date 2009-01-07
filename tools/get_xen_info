@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+# This helper script prints out relevant information for the node
+# controller in the form VAR=VALUE.  Here's an example of output that NC
+# expects in v1.4:
+#
+# total_memory=16378
+# free_memory=2817
+# nr_cpus=8
+# nr_nodes=1
+# dom0-min-mem=196
+
+RE='s/\s*:\s*/=/'
+xm info | grep total_memory | sed $RE
+xm info | grep free_memory | sed $RE
+xm info | grep nr_cpus | sed $RE
+xm info | grep nr_nodes | sed $RE
+cat /etc/xen/xend-config.sxp | perl -n -e "/dom0-min-mem\s+(\w+)\s*\)/ and print \"dom0-min-mem=\$1\n\""
