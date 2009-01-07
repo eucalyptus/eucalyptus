@@ -583,11 +583,11 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   }
   
   /* force dhcpd to reload the conf */
-  snprintf (buf, 512, "kill `cat %s/euca-dhcp.pid`", vnetconfig->path);
+  snprintf (buf, 512, "%s/usr/share/eucalyptus/euca_rootwrap kill `cat %s/euca-dhcp.pid`", vnetconfig->eucahome, vnetconfig->path);
   logprintfl(EUCADEBUG, "executing: %s\n", buf);
   rc = system (buf);
   
-  snprintf (buf, 512, "kill -9 `cat %s/euca-dhcp.pid`", vnetconfig->path);
+  snprintf (buf, 512, "%s/usr/share/eucalyptus/euca_rootwrap kill -9 `cat %s/euca-dhcp.pid`", vnetconfig->eucahome, vnetconfig->path);
   logprintfl(EUCADEBUG, "executing: %s\n", buf);
   rc = system (buf);
   usleep(250000);
