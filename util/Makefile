@@ -1,13 +1,16 @@
 # Makefile for eucalyptus/util
 # 
-# $Id: Makefile,v 1.5 2008-12-24 18:28:07 nurmi Exp $
+# $Id: Makefile,v 1.6 2009-01-06 21:42:52 nurmi Exp $
 #
 
 include ../Makedefs
 
-all: misc.o data.o euca_auth.o ipc.o
+all: misc.o data.o euca_auth.o ipc.o euca_rootwrap
 
-build: all
+build: all 
+
+euca_rootwrap:
+	$(CC) $(CFLAGS) $(INCLUDES) -o euca_rootwrap euca_rootwrap.c
 
 test: test.c ipc.o misc.o
 	$(CC) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o misc.o -lpthread $(LIBS)
@@ -16,11 +19,12 @@ test: test.c ipc.o misc.o
 	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
 clean:
-	rm -rf *~ *.o test
+	rm -rf *~ *.o test euca_rootwrap
 
 distclean:
 
 install:
+	@$(INSTALL) -m 0755 euca_rootwrap $(datarootdir)/eucalyptus
 
 deploy:
 

@@ -10,6 +10,15 @@
 #define DONOTHING 0
 #define EVENTLOG 0
 
+adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *assignAddress, const axutil_env_t *env) {
+
+  return(NULL);
+}
+adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *unassignAddress, const axutil_env_t *env) {
+
+  return(NULL);
+}
+
 adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, const axutil_env_t *env) {
   adb_StopNetworkResponse_t *ret=NULL;
   adb_stopNetworkResponseType_t *snrt=NULL;

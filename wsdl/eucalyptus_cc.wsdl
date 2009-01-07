@@ -33,6 +33,7 @@
 	  <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	  <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
 	  <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="volumes" type="tns:volumeType"/>
 	</xs:sequence>
       </xs:complexType>
      
@@ -41,6 +42,15 @@
 	  <xs:element minOccurs="0" name="instanceType" type="tns:virtualMachineType"/>
 	  <xs:element minOccurs="0" name="maxInstances" type="xs:int"/>
 	  <xs:element minOccurs="0" name="availableInstances" type="xs:int"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="volumeType">
+	<xs:sequence>
+	  <xs:element minOccurs="0" name="volumeId" type="xs:string"/>
+	  <xs:element minOccurs="0" name="remoteDev" type="xs:string"/>
+	  <xs:element minOccurs="0" name="localDev" type="xs:string"/>
+	  <xs:element minOccurs="0" name="state" type="xs:string"/>
 	</xs:sequence>
       </xs:complexType>
 
@@ -130,6 +140,51 @@
 	</xs:complexContent>
       </xs:complexType>
       
+      <xs:complexType name="attachVolumeType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="localDev" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="attachVolumeResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="detachVolumeType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="localDev" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="force" type="xs:boolean"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="detachVolumeResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
       <xs:complexType name="getConsoleOutputType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
@@ -350,6 +405,12 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:element name="AttachVolume" nillable="true" type="tns:attachVolumeType"/>
+      <xs:element name="AttachVolumeResponse" nillable="true" type="tns:attachVolumeResponseType"/>
+
+      <xs:element name="DetachVolume" nillable="true" type="tns:detachVolumeType"/>
+      <xs:element name="DetachVolumeResponse" nillable="true" type="tns:detachVolumeResponseType"/>
+
       <xs:element name="GetConsoleOutput" nillable="true" type="tns:getConsoleOutputType"/>
       <xs:element name="GetConsoleOutputResponse" nillable="true" type="tns:getConsoleOutputResponseType"/>
 
@@ -394,6 +455,16 @@
     </xs:schema>
   </wsdl:types>
   
+  <wsdl:message name="AttachVolumeResponse">
+    <wsdl:part element="tns:AttachVolumeResponse" name="AttachVolumeResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DetachVolumeResponse">
+    <wsdl:part element="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+    </wsdl:part>
+  </wsdl:message>
+
   <wsdl:message name="GetConsoleOutputResponse">
     <wsdl:part element="tns:GetConsoleOutputResponse" name="GetConsoleOutputResponse">
     </wsdl:part>
@@ -458,6 +529,16 @@
 
   <wsdl:message name="RunInstancesResponse">
     <wsdl:part element="tns:RunInstancesResponse" name="RunInstancesResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="AttachVolume">
+    <wsdl:part element="tns:AttachVolume" name="AttachVolume">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DetachVolume">
+    <wsdl:part element="tns:DetachVolume" name="DetachVolume">
     </wsdl:part>
   </wsdl:message>
 
@@ -529,6 +610,20 @@
 -->
 
   <wsdl:portType name="EucalyptusCC">
+
+    <wsdl:operation name="AttachVolume">
+      <wsdl:input message="tns:AttachVolume" name="AttachVolume">
+      </wsdl:input>
+      <wsdl:output message="tns:AttachVolumeResponse" name="AttachVolumeResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DetachVolume">
+      <wsdl:input message="tns:DetachVolume" name="DetachVolume">
+      </wsdl:input>
+      <wsdl:output message="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+      </wsdl:output>
+    </wsdl:operation>
 
     <wsdl:operation name="GetConsoleOutput">
       <wsdl:input message="tns:GetConsoleOutput" name="GetConsoleOutput">
@@ -626,6 +721,26 @@
 
   <wsdl:binding name="EucalyptusCCSoapBinding" type="tns:EucalyptusCC">
     <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <wsdl:operation name="AttachVolume">
+      <soap:operation soapAction="EucalyptusCC#AttachVolume" style="document"/>
+      <wsdl:input name="AttachVolume">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="AttachVolumeResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DetachVolume">
+      <soap:operation soapAction="EucalyptusCC#DetachVolume" style="document"/>
+      <wsdl:input name="DetachVolume">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DetachVolumeResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
 
     <wsdl:operation name="GetConsoleOutput">
       <soap:operation soapAction="EucalyptusCC#GetConsoleOutput" style="document"/>
