@@ -24,6 +24,7 @@ void test_command (char * command)
 int main (int argc, char **argv) 
 {
     printf ("=====> testing misc.c\n");
+
     test_command("date");
     test_command("ls / -l | sort");
     test_command("/foo");
