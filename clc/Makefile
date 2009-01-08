@@ -3,15 +3,13 @@
 # $Id: Makefile,v 1.5 2008-12-24 18:28:07 nurmi Exp $
 #
 
-include ../Makedefs
-
 all: build
 
 deps:
 	$(ANT) deps
 
-build: deps
-	ANT_OPTS="-Xmx512m" $(ANT) build
+build: 
+	make -C modules/storage-controller/c
 
 run: install 
 	$(ANT) run
