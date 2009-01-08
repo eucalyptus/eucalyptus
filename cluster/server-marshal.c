@@ -10,13 +10,104 @@
 #define DONOTHING 0
 #define EVENTLOG 0
 
-adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *assignAddress, const axutil_env_t *env) {
+adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *attachVolume, const axutil_env_t *env) {
+  adb_AttachVolumeResponse_t *ret=NULL;
+  adb_attachVolumeResponseType_t *avrt=NULL;
+  
+  adb_attachVolumeType_t *avt=NULL;
+  
+  int rc;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  char *volumeId, *instanceId, *remoteDev, *localDev, *cid;
+  ncMetadata ccMeta;
+  
+  avt = adb_AttachVolume_get_AttachVolume(attachVolume, env);
+  
+  ccMeta.correlationId = adb_attachVolumeType_get_correlationId(avt, env);
+  ccMeta.userId = adb_attachVolumeType_get_userId(avt, env);
+  
+  cid = adb_attachVolumeType_get_correlationId(avt, env);
+  
+  volumeId = adb_attachVolumeType_get_volumeId(avt, env);
+  instanceId = adb_attachVolumeType_get_instanceId(avt, env);
+  remoteDev = adb_attachVolumeType_get_remoteDev(avt, env);
+  localDev = adb_attachVolumeType_get_localDev(avt, env);
 
-  return(NULL);
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doAttachVolume(&ccMeta, volumeId, instanceId, remoteDev, localDev);
+    if (rc) {
+      logprintf("ERROR: doAttachVolume() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  
+  avrt = adb_attachVolumeResponseType_create(env);
+  adb_attachVolumeResponseType_set_return(avrt, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_attachVolumeResponseType_set_statusMessage(avrt, env, statusMessage);
+  }
+
+  adb_attachVolumeResponseType_set_correlationId(avrt, env, ccMeta.correlationId);
+  adb_attachVolumeResponseType_set_userId(avrt, env, ccMeta.userId);
+  
+  ret = adb_AttachVolumeResponse_create(env);
+  adb_AttachVolumeResponse_set_AttachVolumeResponse(ret, env, avrt);
+
+  return(ret);
 }
-adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *unassignAddress, const axutil_env_t *env) {
 
-  return(NULL);
+adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume, const axutil_env_t *env) {
+  adb_DetachVolumeResponse_t *ret=NULL;
+  adb_detachVolumeResponseType_t *dvrt=NULL;
+  
+  adb_detachVolumeType_t *dvt=NULL;
+  
+  int rc;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  char *volumeId, *instanceId, *remoteDev, *localDev, *cid;
+  int force;
+  ncMetadata ccMeta;
+  
+  dvt = adb_DetachVolume_get_DetachVolume(detachVolume, env);
+  
+  ccMeta.correlationId = adb_detachVolumeType_get_correlationId(dvt, env);
+  ccMeta.userId = adb_detachVolumeType_get_userId(dvt, env);
+  
+  cid = adb_detachVolumeType_get_correlationId(dvt, env);
+  
+  volumeId = adb_detachVolumeType_get_volumeId(dvt, env);
+  instanceId = adb_detachVolumeType_get_instanceId(dvt, env);
+  remoteDev = adb_detachVolumeType_get_remoteDev(dvt, env);
+  localDev = adb_detachVolumeType_get_localDev(dvt, env);
+  force = adb_detachVolumeType_get_force(dvt, env);
+
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doDetachVolume(&ccMeta, volumeId, instanceId, remoteDev, localDev, force);
+    if (rc) {
+      logprintf("ERROR: doDetachVolume() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  
+  dvrt = adb_detachVolumeResponseType_create(env);
+  adb_detachVolumeResponseType_set_return(dvrt, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_detachVolumeResponseType_set_statusMessage(dvrt, env, statusMessage);
+  }
+
+  adb_detachVolumeResponseType_set_correlationId(dvrt, env, ccMeta.correlationId);
+  adb_detachVolumeResponseType_set_userId(dvrt, env, ccMeta.userId);
+  
+  ret = adb_DetachVolumeResponse_create(env);
+  adb_DetachVolumeResponse_set_DetachVolumeResponse(ret, env, dvrt);
+
+  return(ret);
 }
 
 adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, const axutil_env_t *env) {

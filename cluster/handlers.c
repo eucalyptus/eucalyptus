@@ -33,6 +33,13 @@ sem_t *instanceCacheLock=NULL;
 vnetConfig *vnetconfig=NULL;
 sem_t *vnetConfigLock=NULL;
 
+int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
+  return(0);
+}
+int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force) {
+  return(0);
+}
+
 int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *protocol, int minPort, int maxPort) {
   int rc, i, destVlan, slashnet, fail;
   char *destUserName;
