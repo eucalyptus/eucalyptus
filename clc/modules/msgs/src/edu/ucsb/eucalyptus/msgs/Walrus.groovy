@@ -390,6 +390,13 @@ public class SetBucketLoggingStatusType extends WalrusRequestType {
 public class SetBucketLoggingStatusResponseType extends WalrusResponseType {
 }
 
+public class UpdateWalrusConfigurationType extends WalrusRequestType {
+    String bucketRootDirectory;
+}
+
+public class UpdateWalrusConfigurationResponseType extends WalrusResponseType {
+}
+
 public class GetDecryptedImageType extends WalrusDataRequestType {
 }
 

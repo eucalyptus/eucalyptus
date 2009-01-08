@@ -42,11 +42,17 @@ import java.io.*;
 public class FileSystemStorageManager implements StorageManager {
 
     public static final String FILE_SEPARATOR = "/";
-    public FileSystemStorageManager() {
+    private String rootDirectory;
+    public FileSystemStorageManager(String rootDirectory) {
+        this.rootDirectory = rootDirectory;
+    }
+
+    public void setRootDirectory(String rootDirectory) {
+        this.rootDirectory = rootDirectory;
     }
 
     public void createBucket(String bucket) throws IOException {
-        File bukkit = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket);
+        File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);
         if(!bukkit.exists()) {
             if(!bukkit.mkdirs()) {
                 throw new IOException(bucket);
@@ -60,14 +66,14 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     public void deleteBucket(String bucket) throws IOException {
-        File bukkit = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket);
+        File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);
         if(!bukkit.delete()) {
             throw new IOException(bucket);
         }
     }
 
     public void createObject(String bucket, String object) throws IOException {
-        File objectFile = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+        File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
         if (!objectFile.exists()) {
             if (!objectFile.createNewFile()) {
                 throw new IOException(object);
@@ -76,7 +82,7 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     public int readObject(String bucket, String object, byte[] bytes, long offset) throws IOException {
-        return readObject(WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object, bytes, offset);
+        return readObject(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object, bytes, offset);
     }
 
     public int readObject(String path, byte[] bytes, long offset) throws IOException {
@@ -94,7 +100,7 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     public void deleteObject(String bucket, String object) throws IOException {
-        File objectFile = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+        File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
         if (objectFile.exists()) {
             if(!objectFile.delete()) {
                 throw new IOException(object);
@@ -112,7 +118,7 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     public void putObject(String bucket, String object, byte[] base64Data, boolean append) throws IOException {
-        File objectFile = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+        File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
         if (!objectFile.exists()) {
             objectFile.createNewFile();
         }
@@ -122,14 +128,14 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     public void renameObject(String bucket, String oldName, String newName) throws IOException {
-        File oldObjectFile = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + oldName);
-        File newObjectFile = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + newName);
+        File oldObjectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + oldName);
+        File newObjectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + newName);
         if (!oldObjectFile.renameTo(newObjectFile)) {
             throw new IOException(oldName);
         }
     }
 
     public String getObjectPath(String bucket, String object) {
-        return WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
+        return rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
     }
 }

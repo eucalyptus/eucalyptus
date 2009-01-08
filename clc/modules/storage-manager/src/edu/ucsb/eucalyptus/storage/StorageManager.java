@@ -60,4 +60,6 @@ public interface StorageManager {
     public void renameObject(String bucket, String oldName, String newName) throws IOException;
 
     public String getObjectPath(String bucket, String object);
+
+    public void setRootDirectory(String rootDirectory);    
 }

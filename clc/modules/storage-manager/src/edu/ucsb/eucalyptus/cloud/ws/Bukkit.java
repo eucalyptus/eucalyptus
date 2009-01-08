@@ -67,7 +67,7 @@ public class Bukkit {
     static boolean shouldEnforceUsageLimits = true;
 
     static {
-        storageManager = new FileSystemStorageManager();
+        storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
         String limits = System.getProperty(WalrusProperties.USAGE_LIMITS_PROPERTY);
         if(limits != null) {
             shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
@@ -1940,6 +1940,15 @@ public class Bukkit {
 
     public RemoveSnapshotResponseType RemoveSnapshot(RemoveSnapshotType request) throws EucalyptusCloudException {
         RemoveSnapshotResponseType reply = (RemoveSnapshotResponseType) request.getReply();
+
+        return reply;
+    }
+
+    public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) {
+        UpdateWalrusConfigurationResponseType reply = (UpdateWalrusConfigurationResponseType) request.getReply();
+        String rootDir = request.getBucketRootDirectory();
+        if(rootDir != null)
+            storageManager.setRootDirectory(rootDir);
 
         return reply;
     }
