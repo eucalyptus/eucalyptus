@@ -243,7 +243,7 @@ START_NC="`echo $START_NC | tr 'a-z' 'A-Z'`"
 HTTPD="/usr/sbin/apache2"
 HTTPD_HOME="/tmp/"
 if [ -z "$EUCA_USER" ] ; then
-	EUCA_USER="eucalyptus"
+	EUCA_USER="root"
 fi
 # set up eucalyptus var locations to be owned by EUCA_USER
 for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ ; do

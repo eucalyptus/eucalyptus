@@ -24,7 +24,7 @@ install: deploy
 	@if test -e $(etcdir)/eucalyptus/eucalyptus.conf ; then \
 		cp $(etcdir)/eucalyptus/eucalyptus.conf $(etcdir)/eucalyptus/eucalyptus.conf.old ; fi
 	@$(INSTALL) -m 644 eucalyptus.conf $(etcdir)/eucalyptus
-	@$(INSTALL) -m 755 add_key.sh $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 add_key.pl $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 gen_libvirt_xml $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 get_xen_info $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_ipt $(datarootdir)/eucalyptus

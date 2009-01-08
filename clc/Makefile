@@ -24,7 +24,7 @@ distclean: clean
 
 install: build
 	$(ANT) install
-	@$(INSTALL) -m 640 cloud.xml $(etcdir)/eucalyptus
+	@$(INSTALL) -m 644 cloud.xml $(etcdir)/eucalyptus
 
 deploy:
 
