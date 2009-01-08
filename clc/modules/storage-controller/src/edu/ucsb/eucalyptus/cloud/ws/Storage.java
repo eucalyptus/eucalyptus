@@ -99,6 +99,10 @@ public class Storage {
         VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
         if(foundVolumeInfo != null) {
             List<String> returnValues = ebsManager.getVolume(volumeId);
+            reply.setVolumeId(foundVolumeInfo.getVolumeId());
+            reply.setSize(foundVolumeInfo.getSize().toString());
+            reply.setStatus(foundVolumeInfo.getStatus());
+            reply.setSnapshotId(foundVolumeInfo.getSnapshotId());
             reply.setMajorNumber(returnValues.get(0));
             reply.setMinorNumber(returnValues.get(1));
         } else {
@@ -266,6 +270,8 @@ public class Storage {
         volumeInfo.setAttachmentSet(new ArrayList<edu.ucsb.eucalyptus.cloud.entities.AttachedVolumeInfo>());
         volumeInfo.setCreateTime(new Date());
         volumeInfo.setTransferred(Boolean.FALSE);
+        if(snapshotId != null)
+            volumeInfo.setSnapshotId(snapshotId);
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
         db.add(volumeInfo);
         db.commit();

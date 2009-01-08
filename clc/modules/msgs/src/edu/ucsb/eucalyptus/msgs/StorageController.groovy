@@ -33,11 +33,11 @@ package edu.ucsb.eucalyptus.msgs
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 public class StorageResponseType extends EucalyptusMessage {
-    StorageResponseType() {}
+    def StorageResponseType() {}
 }
 
 public class StorageRequestType extends EucalyptusMessage {
-    StorageRequestType() {}
+    def StorageRequestType() {}
 }
 
 public class GetVolumeType extends StorageRequestType {
@@ -45,6 +45,11 @@ public class GetVolumeType extends StorageRequestType {
 }
 
 public class GetVolumeResponseType extends StorageResponseType {
+    String volumeId;
+    String size;
+    String status;
+    String createTime;
+    String snapshotId;
     //These fields are implementation specific. Major and minor device numbers for AoE
     String majorNumber;
     String minorNumber;

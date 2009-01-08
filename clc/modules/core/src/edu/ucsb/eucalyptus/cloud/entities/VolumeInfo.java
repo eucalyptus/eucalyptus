@@ -69,6 +69,8 @@ public class VolumeInfo {
     private String volumeBucket;
     @Column(name = "volume_key")
     private String volumeKey;
+    @Column(name = "snapshot_id")
+    private String snapshotId;
     @Column(name = "transferred")
     private Boolean transferred;
     
@@ -157,6 +159,14 @@ public class VolumeInfo {
 
     public void setVolumeKey(String volumeKey) {
         this.volumeKey = volumeKey;
+    }
+
+    public String getSnapshotId() {
+        return snapshotId;
+    }
+
+    public void setSnapshotId(String snapshotId) {
+        this.snapshotId = snapshotId;
     }
 
     public Boolean getTransferred() {
