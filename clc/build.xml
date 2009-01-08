@@ -70,9 +70,13 @@
     <target name="build-walrus-ws" depends="build-transport">
         <ant dir="modules/storage-manager" inheritall="false"/>
     </target>
+    <target name="build-ebs-ws" depends="build-transport">
+        <ant dir="modules/storage-controller" inheritall="false"/>
+    </target>
     <target name="build-eucalyptus" depends="build-core,build-www,build-eucalyptus-ws"/>
     <target name="build-walrus" depends="build-walrus-ws"/>
-    <target name="build" depends="build-eucalyptus,build-walrus"/>
+    <target name="build-ebs" depends="build-ebs-ws"/>
+    <target name="build" depends="build-eucalyptus,build-walrus,build-ebs"/>
     <!--================================== clean targets ==================================-->
     <target name="clean-msgs">
         <ant dir="modules/msgs" inheritall="false" target="clean"/>
@@ -96,9 +100,13 @@
     <target name="clean-walrus-ws" depends="clean-transport">
         <ant dir="modules/storage-manager" inheritall="false" target="clean"/>
     </target>
-    <target name="clean-eucalyptus" depends="clean-core,clean-www,clean-eucalyptus-ws"/>
+    <target name="clean-ebs-ws" depends="clean-transport">
+        <ant dir="modules/storage-controller" inheritall="false" target="clean"/>
+    </target>
+     <target name="clean-eucalyptus" depends="clean-core,clean-www,clean-eucalyptus-ws"/>
     <target name="clean-walrus" depends="clean-walrus-ws"/>
-    <target name="clean" depends="clean-eucalyptus,clean-walrus">
+    <target name="clean-ebs" depends="clean-ebs-ws"/>
+    <target name="clean" depends="clean-eucalyptus,clean-walrus,clean-ebs">
         <delete dir="${target.dir}"/>
     </target>
     <target name="distclean" depends="clean">
@@ -142,6 +150,7 @@
         <ant dir="modules/group-manager" inheritall="false" target="install"/>
         <ant dir="modules/key-manager" inheritall="false" target="install"/>
         <ant dir="modules/storage-manager" inheritall="false" target="install"/>
+        <ant dir="modules/storage-controller" inheritall="false" target="install"/>
     </target>
     <!--================================== DEPS TARGET ==================================-->
     <available property="has.deps" filepath="${basedir}/lib/jibx/" file="jibx-run.jar"/>
