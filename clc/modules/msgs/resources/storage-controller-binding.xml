@@ -39,13 +39,6 @@
     <mapping class="edu.ucsb.eucalyptus.msgs.StorageRequestType" abstract="true">
     </mapping>
 
-    <mapping name="GetImage" class="edu.ucsb.eucalyptus.msgs.GetImageType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
-        <value name="ManifestPath" field="manifestPath"/>
-    </mapping>
-
-    <mapping name="GetImageResponse" class="edu.ucsb.eucalyptus.msgs.GetImageResponseType">
-    </mapping>
-
     <mapping name="GetVolume" class="edu.ucsb.eucalyptus.msgs.GetVolumeType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
         <value name="VolumeId" field="volumeId"/>
     </mapping>

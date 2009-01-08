@@ -40,13 +40,6 @@ public class StorageRequestType extends EucalyptusMessage {
     StorageRequestType() {}
 }
 
-public class GetImageType extends StorageRequestType {
-    String manifestPath;
-}
-
-public class GetImageResponseType extends StorageResponseType {
-}
-
 public class GetVolumeType extends StorageRequestType {
     String volumeId;
 }

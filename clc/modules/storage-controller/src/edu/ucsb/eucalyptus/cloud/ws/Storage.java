@@ -78,32 +78,15 @@ public class Storage {
     static ElasticBlockManager ebsManager;
 
     static {
-        imageStorageManager = null;//new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
-        volumeStorageManager = null;//new FileSystemStorageManager(StorageProperties.volumeRootDirectory);
-        snapshotStorageManager = null;//new FileSystemStorageManager(StorageProperties.snapshotRootDirectory);
+        imageStorageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
+        volumeStorageManager = new FileSystemStorageManager(StorageProperties.volumeRootDirectory);
+        snapshotStorageManager = new FileSystemStorageManager(StorageProperties.snapshotRootDirectory);
         ebsManager = new LVM2Manager();
         ebsManager.initVolumeManager(StorageProperties.volumeRootDirectory, StorageProperties.snapshotRootDirectory);
     }
 
     //For unit testing
     public Storage() {}
-
-
-    public GetImageResponseType GetImage(GetImageType request) throws EucalyptusCloudException {
-        GetImageResponseType reply = (GetImageResponseType) request.getReply();
-        String manifestPath = request.getManifestPath();
-        //create HTTP request for Walrus
-
-        String key = manifestPath;
-        String randomKey = manifestPath + "." + Hashes.getRandom(10);
-
-        LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
-
-        HttpReader reader = new HttpReader(manifestPath, getQueue, null, "GetDecryptedImage", "");
-        reader.start();
-
-        return reply;
-    }
 
 
     public GetVolumeResponseType GetVolume(GetVolumeType request) throws EucalyptusCloudException {
