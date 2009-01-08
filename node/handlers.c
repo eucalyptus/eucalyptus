@@ -225,7 +225,6 @@ void * monitoring_thread (void *arg)
 
             /* query Xen for current state, if any */
             refresh_instance_info (instance);
-
             /* don't touch running threads */
             if (instance->state!=BOOTING && 
                 instance->state!=SHUTOFF &&
@@ -872,7 +871,6 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
     sem_p (inst_sem);
     if (instIdsLen == 0) { /* describe all instances */
         int total = total_instances (&global_instances);
-
         if ( total ) {
             ncInstance * instance;
             int i, k = 0;
