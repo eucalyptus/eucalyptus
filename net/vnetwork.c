@@ -606,7 +606,11 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   //  rc = system (buf);
   
   if (strncmp(vnetconfig->dhcpuser, "root", 32) && vnetconfig->path && strncmp(vnetconfig->path, "/", 1024) && strstr(vnetconfig->path, "eucalyptus/net")) {
-    snprintf(buf, 512, "%s/usr/share/eucalyptus/euca_rootwrap chown -R %s:%s %s", vnetconfig->eucahome, vnetconfig->dhcpuser, vnetconfig->dhcpuser, vnetconfig->path);
+    snprintf(buf, 512, "%s/usr/share/eucalyptus/euca_rootwrap chgrp -R %s %s", vnetconfig->eucahome, vnetconfig->dhcpuser, vnetconfig->path);
+    logprintfl(EUCADEBUG, "executing: %s\n", buf);
+    rc = system(buf);
+    
+    snprintf(buf, 512, "%s/usr/share/eucalyptus/euca_rootwrap chmod -R 0775 %s", vnetconfig->eucahome, vnetconfig->path);
     logprintfl(EUCADEBUG, "executing: %s\n", buf);
     rc = system(buf);
   }
@@ -727,9 +731,9 @@ int vnetStartNetworkLinuxVlan(vnetConfig *vnetconfig, int vlan, char *userName, 
     rc = system(cmd);
 
     snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s 0.0.0.0 up", vnetconfig->eucahome, newbrname);
-    system(cmd);
+    rc = system(cmd);
     snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s up", vnetconfig->eucahome, newdevname);
-    system(cmd);
+    rc = system(cmd);
 
   } else if (vlan > 0 && (vnetconfig->role == CC || vnetconfig->role == CLC)) {
     char *newip, *netmask;
@@ -999,7 +1003,7 @@ int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netN
 
 
 int fill_arp(char *subnet) {
-  int pid, status;
+  int pid, status, rc;
 
   if (!subnet) return(1);
   
@@ -1009,13 +1013,13 @@ int fill_arp(char *subnet) {
     char cmd[1024];
     int sid;
     sid = setsid();
-    chdir("/");
+    rc = chdir("/");
     close(0);
     close(1);
     close(2);
     snprintf(arga, 1024, "%s.255", subnet);
     snprintf(cmd, 1024, "ping -b -c 1 %s", arga);
-    system(cmd);
+    rc = system(cmd);
     exit(0);
     exit(execlp("ping", "ping", "-b", "-c", "1", arga, NULL));
   }
