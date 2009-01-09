@@ -3,29 +3,36 @@
 delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
 $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 
-$MOUNT=untaint(`which mount`);
-$UMOUNT=untaint(`which umount`);
+#$MOUNT=untaint(`which mount`);
+#$UMOUNT=untaint(`which umount`);
+#$MOUNT=untaint("/tmp/euca_mountwrap");
+#$UMOUNT=untaint("/tmp/euca_mountwrap");
 $MKDIR=untaint(`which mkdir`);
 $RMDIR=untaint(`which rmdir`);
 $CHOWN=untaint(`which chown`);
 $CHMOD=untaint(`which chmod`);
 $MKTEMP=untaint(`which mktemp`);
 $TUNE2FS=untaint(`which tune2fs`);
+$LOSETUP=untaint(`which losetup`);
 
 # check binaries
-if (!-x $MOUNT || !-x $UMOUNT || !-x $MKDIR || !-x $RMDIR || !-x $CHOWN || !-x $CHMOD || !-x $MKTEMP) {
+if (!-x $MKDIR || !-x $RMDIR || !-x $CHOWN || !-x $CHMOD || !-x $MKTEMP || !-x $LOSETUP) {
     print STDERR "add_key cannot find all required binaries\n";
     do_exit(1);
 }
 
 # check input params
+$mounter = untaint(shift @ARGV);
 $img = untaint(shift @ARGV);
 $key = untaint(shift @ARGV);
 $tmpfile = "";
-if (!-f "$key" || !-f "$img") {
-    print STDERR "add_key cannot verify inputs: key=$key img=$img\n";
+$loopdev = "";
+
+if (!-f "$key" || !-f "$img" || !-x "$mounter") {
+    print STDERR "add_key cannot verify inputs: mounter=$mounter key=$key img=$img\n";
     do_exit(1);
 }
+
 
 if (system("$TUNE2FS -c 0 -i 0 $img >/dev/null 2>&1")) {
     print STDERR "cmd: $TUNE2FS -c 0 -i 0 $img\n";
@@ -40,12 +47,16 @@ if (! -d "$tmpfile") {
 
 $attached = 0;
 for ($i=0; $i<10 && !$attached; $i++) {
-    if (!system("$MOUNT -o loop $img $tmpfile")) {
-	$attached = 1;
+    $loopdev=untaint(`$LOSETUP -f`);
+    $rc = system("$LOSETUP $loopdev $img");
+    if ($loopdev ne "" && !$rc) {
+	if (!system("$mounter mount $loopdev $tmpfile")) {
+	    $attached = 1;
+	}
     }
 }
 if (!$attached) {
-    print STDERR "cannot mount: $MOUNT -o loop $img $tmpfile\n";
+    print STDERR "cannot mount: $mounter -o loop $img $tmpfile\n";
     do_exit(1);
 }
 
@@ -76,17 +87,18 @@ close(OFH);
 
 system("$CHOWN root $tmpfile/root/.ssh/authorized_keys");
 system("$CHMOD 0600 $tmpfile/root/.ssh/authorized_keys");
-
 do_exit(0);
 
 sub do_exit() {
     $e = shift;
 
-    if (-d "$tmpfile") {
-	system("$UMOUNT $tmpfile");
-	system("$RMDIR $tmpfile");
+    if ($tmpfile ne "") {
+	system("$mounter umount $tmpfile");
+	if ($loopdev ne "") {
+	    system("$LOSETUP -d $loopdev");
+	    system("$RMDIR $tmpfile");
+	}
     }
-    
     exit($e);
 }
 
