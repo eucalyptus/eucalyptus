@@ -19,8 +19,8 @@ START_CC="N"
 START_NC="N"
 START_CLOUD="N"
 NAME=eucalyptus
-JAVA_HOME="@JAVA_HOME@"
 BRCTL="`which brctl`"
+ANT="`which ant`"
 
 # if we are on rocks we need the rocks binaries 
 [ -e /etc/profile.d/rocks-binaries.sh ] && . /etc/profile.d/rocks-binaries.sh
@@ -30,8 +30,15 @@ if [ -z "$EUCALYPTUS" ] ; then
 	EUCALYPTUS="@prefix@"
 fi
 export EUCALYPTUS
-export JAVA_HOME
 
+check_java() {
+	java_min_version="1.6.0"
+	java_version=`java -version 2>&1 | grep "java version" | sed -e 's/.*java version "\(.*\)".*/\1/'`
+	if [ `expr $java_version ">=" $java_min_version` -eq 0 ]; then
+		echo "Eucalyptus needs java version >= $java_min_version"
+		exit 1
+	fi
+}
 enable_service() {
 	for x in ${1}; do 
 		# do we have a disabled service?
@@ -181,8 +188,11 @@ do_start() {
 	fi
 	# and starts the cloud 
 	if [ "$START_CLOUD" = "Y" ]; then
+		# let's be sure we have java
+		check_java
+
 		cd $EUCALYPTUS/etc/eucalyptus
-		if ! ant -f cloud.xml check-jce 2> /dev/null > /dev/null ; then
+		if ! $ANT -f cloud.xml check-jce 2> /dev/null > /dev/null ; then
 echo
 echo "     *** WARNING ***"
 echo "Your java installation misses unlimited strength crypto policy."
@@ -193,13 +203,13 @@ echo "or we can install it for you."
 			echo -n "Do you want to install now [y/n]?"
 			read ANS
 			if [ "$ANS" = "Y" -o "$ANS" = "y" ]; then
-				ant -f cloud.xml install-jce 2> /dev/null > /dev/null
+				$ANT -f cloud.xml install-jce 2> /dev/null > /dev/null
 			else 
 				echo"Eucalptus needs unlimited strength crypto policy."
 				exit 1
 			fi
 		fi
-		(/bin/bash ant -f cloud.xml run > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
+		(/bin/bash $ANT -f cloud.xml run > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
 		echo "$!" > $EUCALYPTUS/var/run/eucalyptus/cloud.pid
 		echo -n " CLC"
 	fi
