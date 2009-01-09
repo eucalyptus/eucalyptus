@@ -3,8 +3,6 @@
 # 
 # An easy way to build a roll
 
-#include ../Makedefs
-
 URL_BASE=http://eucalyptus.cs.ucsb.edu/dependencies/1.4/CentOS/RPMS
 
 all: get_rpm
