@@ -10,6 +10,9 @@
 
 # Do NOT "set -e"
 
+# if we are on rocks we need the rocks binaries 
+[ -e /etc/profile.d/rocks-binaries.sh ] && . /etc/profile.d/rocks-binaries.sh
+
 # I just wanted to set PATH to be the system PATH, but if a user install
 # eucalyptus manually, it may have binaries in a non-standard position:
 # hence we need to keep the PATH we receive.
@@ -19,11 +22,8 @@ START_CC="N"
 START_NC="N"
 START_CLOUD="N"
 NAME=eucalyptus
-BRCTL="`which brctl`"
-ANT="`which ant`"
-
-# if we are on rocks we need the rocks binaries 
-[ -e /etc/profile.d/rocks-binaries.sh ] && . /etc/profile.d/rocks-binaries.sh
+BRCTL="`which brctl 2> /dev/null`"
+ANT="`which ant 2> /dev/null`"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then

@@ -21,7 +21,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= @VERSION@-1, jdk 
+Requires:     eucalyptus >= @VERSION@, jdk 
 Group:        Applications/System
 
 %description cloud
@@ -34,7 +34,7 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= @VERSION@-1, euca-httpd, euca-axis2c, iptables, bridge-utils, dhcp, eucalytpus-gl >= @VERSION@-1
+Requires:     eucalyptus >= @VERSION@, euca-httpd, euca-axis2c, iptables, bridge-utils, eucalyptus-gl, dhcp
 Group:        Applications/System
 
 %description cc
@@ -47,7 +47,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= @VERSION@-1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl >= @VERSION@-1
+Requires:     eucalyptus >= @VERSION@, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl
 Group:        Applications/System
 
 %description nc
