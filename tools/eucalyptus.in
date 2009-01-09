@@ -205,7 +205,7 @@ echo "or we can install it for you."
 			if [ "$ANS" = "Y" -o "$ANS" = "y" ]; then
 				$ANT -f cloud.xml install-jce 2> /dev/null > /dev/null
 			else 
-				echo"Eucalptus needs unlimited strength crypto policy."
+				echo "Eucalptus needs unlimited strength crypto policy."
 				exit 1
 			fi
 		fi

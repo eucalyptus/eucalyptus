@@ -38,6 +38,12 @@ change_var_value () {
 	sed "s<\(${2}\).*<\1=\"${3}\"<" /tmp/euca-tmp.$$ > $1
 	rm -f /tmp/euca-tmp.$$
 }
+# comment lines macting $2 ($1 is the file)
+comment () {
+	cp $1 /tmp/euca-tmp.$$
+	sed "s<[[:blank:]]*\(${2}.*\)<#\1<" /tmp/euca-tmp.$$ > $1
+	rm -f /tmp/euca-tmp.$$
+}
 
 if [ $# -eq 0 ]; then
 	usage
