@@ -50,7 +50,7 @@ public class StorageController {
 
 
     @OverloadedWebserviceMethod( actions = {
-			"CreateVolume", "GetVolume", "DescribeVolumes", "CreateSnapshot", "DescribeSnapshots", "DeleteSnapshot"} )
+			"CreateStorageVolume", "GetStorageVolume", "DeleteStorageVolume", "DescribeStorageVolumes", "CreateStorageSnapshot", "DescribeStorageSnapshots", "DeleteStorageSnapshot"} )
 
 	public EucalyptusMessage handle( EucalyptusMessage msg )
 	{

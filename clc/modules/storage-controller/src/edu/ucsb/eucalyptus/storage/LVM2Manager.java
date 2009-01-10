@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.storage;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.ws.Storage;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.util.StorageProperties;
 import edu.ucsb.eucalyptus.keys.Hashes;
@@ -219,7 +220,7 @@ public class LVM2Manager implements ElasticBlockManager {
         lvmVolumeInfo.setPvName(loDevName);
         lvmVolumeInfo.setVgName(vgName);
         lvmVolumeInfo.setLvName(lvName);
-        lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+        lvmVolumeInfo.setStatus(Storage.Status.available.toString());
         lvmVolumeInfo.setSize(size);
 
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
@@ -233,7 +234,7 @@ public class LVM2Manager implements ElasticBlockManager {
         LVMVolumeInfo foundSnapshotInfo = db.getUnique(lvmVolumeInfo);
         if(foundSnapshotInfo != null) {
             String status = foundSnapshotInfo.getStatus();
-            if(status.equals(StorageProperties.Status.available.toString())) {
+            if(status.equals(Storage.Status.available.toString())) {
                 String vgName = "vg-" + Hashes.getRandom(4);
                 String lvName = "lv-" + Hashes.getRandom(4);
                 lvmVolumeInfo = new LVMVolumeInfo();
@@ -262,7 +263,7 @@ public class LVM2Manager implements ElasticBlockManager {
                 lvmVolumeInfo.setPvName(loDevName);
                 lvmVolumeInfo.setVgName(vgName);
                 lvmVolumeInfo.setLvName(lvName);
-                lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+                lvmVolumeInfo.setStatus(Storage.Status.available.toString());
                 lvmVolumeInfo.setSize(size);
                 db.add(lvmVolumeInfo);
                 db.commit();
@@ -350,7 +351,7 @@ public class LVM2Manager implements ElasticBlockManager {
             snapshotInfo.setPvName(loDevName);
             snapshotInfo.setVgName(vgName);
             snapshotInfo.setLvName(lvName);
-            snapshotInfo.setStatus(StorageProperties.Status.available.toString());
+            snapshotInfo.setStatus(Storage.Status.available.toString());
             snapshotInfo.setVbladePid(-1);
             snapshotInfo.setSize(size);
             db.add(snapshotInfo);
@@ -441,7 +442,7 @@ public class LVM2Manager implements ElasticBlockManager {
             lvmVolumeInfo.setLoFileName(snapshotFileName);
             lvmVolumeInfo.setMajorNumber(-1);
             lvmVolumeInfo.setMinorNumber(-1);
-            lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+            lvmVolumeInfo.setStatus(Storage.Status.available.toString());
             db.add(lvmVolumeInfo);
         }
         db.commit();

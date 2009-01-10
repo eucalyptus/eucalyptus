@@ -35,11 +35,6 @@
 package edu.ucsb.eucalyptus.storage;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
-import edu.ucsb.eucalyptus.msgs.GetVolumeResponseType;
-
-import java.io.IOException;
 import java.util.List;
 
 public interface ElasticBlockManager {

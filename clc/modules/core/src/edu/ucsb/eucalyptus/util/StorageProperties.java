@@ -34,8 +34,16 @@
 
 package edu.ucsb.eucalyptus.util;
 
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
+import org.apache.log4j.Logger;
+
 public class StorageProperties {
 
+    private static Logger LOG = Logger.getLogger( StorageProperties.class );
+
+    public static final String SERVICE_NAME = "StorageController";
+    public static String STORAGE_REF = "vm://StorageInternal";
     public static final String EUCALYPTUS_OPERATION = "EucaOperation";
     public static final String EUCALYPTUS_HEADER = "EucaHeader";
     public static String volumeRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
@@ -46,7 +54,22 @@ public class StorageProperties {
     public static final long KB = 1024;
     public static final int TRANSFER_CHUNK_SIZE = 8192;
 
-    public enum Status {
-        creating, available, pending, completed
-    }    
+
+    public static void update() {
+        try {
+            SystemConfiguration systemConfiguration = EucalyptusProperties.getSystemConfiguration();
+            //bucketRootDirectory = systemConfiguration.getStorageDir();
+            UpdateStorageConfigurationType updateConfig = new UpdateStorageConfigurationType();
+            updateConfig.setVolumeRootDirectory(volumeRootDirectory);
+            updateConfig.setSnapshotRootDirectory(snapshotRootDirectory);
+            Messaging.send(STORAGE_REF, updateConfig );
+        } catch(Exception ex) {
+            LOG.warn(ex.getMessage());
+        }
+    }
+
+    static {
+        update();
+    }
+
 }

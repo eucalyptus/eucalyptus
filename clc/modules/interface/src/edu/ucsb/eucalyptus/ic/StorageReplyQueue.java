@@ -38,6 +38,7 @@ import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.WalrusBucketErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.StorageErrorMessageType;
 import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 import edu.ucsb.eucalyptus.util.ReplyCoordinator;
 import org.apache.log4j.Logger;
@@ -73,17 +74,24 @@ public class StorageReplyQueue {
             Throwable ex = muleMsg.getException().getCause();
             EucalyptusMessage errMsg;
 
-
-
-            /* if ( ex instanceof NoSuchBucketException )
+            if ( ex instanceof NoSuchVolumeException )
             {
-                errMsg = new WalrusBucketErrorMessageType( ( ( NoSuchBucketException ) ex ).getBucketName(), "NoSuchBucket", "The specified bucket was not found", HttpStatus.SC_NOT_FOUND, msg.getCorrelationId(), ipAddr);
+                errMsg = new StorageErrorMessageType( "NoSuchVolume", "Volume not found", HttpStatus.SC_NOT_FOUND, msg.getCorrelationId());
                 errMsg.setCorrelationId( msg.getCorrelationId() );
             }
-            else
-            {*/
-            errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage());
-            //}
+            else if ( ex instanceof VolumeInUseException )
+            {
+                errMsg = new StorageErrorMessageType( "VolumeInUse", "Volume in use", HttpStatus.SC_FORBIDDEN, msg.getCorrelationId());
+                errMsg.setCorrelationId( msg.getCorrelationId() );
+            }
+            else if ( ex instanceof NoSuchSnapshotException )
+            {
+                errMsg = new StorageErrorMessageType( "NoSuchSnapshot", "Snapshot not found", HttpStatus.SC_NOT_FOUND, msg.getCorrelationId());
+                errMsg.setCorrelationId( msg.getCorrelationId() );
+            } else
+            {
+                errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage());
+            }
             replies.putMessage( errMsg );
         }
         catch ( Exception e )

@@ -39,18 +39,21 @@
     <mapping class="edu.ucsb.eucalyptus.msgs.StorageRequestType" abstract="true">
     </mapping>
 
-    <mapping name="GetVolume" class="edu.ucsb.eucalyptus.msgs.GetVolumeType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
+    <mapping class="edu.ucsb.eucalyptus.msgs.StorageResponseType" abstract="true">
+    </mapping>
+
+    <mapping name="GetStorageVolume" class="edu.ucsb.eucalyptus.msgs.GetStorageVolumeType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
         <value name="VolumeId" field="volumeId"/>
     </mapping>
 
-    <mapping name="GetVolumeResponse" class="edu.ucsb.eucalyptus.msgs.GetVolumeResponseType">
+    <mapping name="GetStorageVolumeResponse" class="edu.ucsb.eucalyptus.msgs.GetStorageVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.StorageResponseType">
     </mapping>
 
-    <mapping name="DeleteVolume" class="edu.ucsb.eucalyptus.msgs.DeleteVolumeType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
+    <mapping name="DeleteStorageVolume" class="edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
         <value name="VolumeId" field="volumeId"/>
     </mapping>
 
-    <mapping name="DeleteVolumeResponse" class="edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType">
+    <mapping name="DeleteStorageVolumeResponse" class="edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.StorageResponseType">
     </mapping>
 
 </binding>

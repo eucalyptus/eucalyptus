@@ -40,17 +40,75 @@ public class StorageRequestType extends EucalyptusMessage {
     def StorageRequestType() {}
 }
 
-public class GetVolumeType extends StorageRequestType {
+
+public class StorageErrorMessageType extends EucalyptusMessage {
+    def StorageErrorMessageType() {
+    }
+
+    def StorageErrorMessageType(String code, String message, Integer httpCode, String requestId) {
+        this.code = code;
+        this.message = message;
+        this.requestId = requestId;
+        this.httpCode = httpCode;
+    }
+    public String toString() {
+        return "StrorageErrorMessage:" + message;
+    }
+}
+
+public class GetStorageVolumeType extends StorageRequestType {
     String volumeId;
 }
 
-public class GetVolumeResponseType extends StorageResponseType {
+public class GetStorageVolumeResponseType extends StorageResponseType {
     String volumeId;
     String size;
     String status;
     String createTime;
     String snapshotId;
     //These fields are implementation specific. Major and minor device numbers for AoE
-    String majorNumber;
-    String minorNumber;
+    String actualDeviceName;
+}
+
+public class UpdateStorageConfigurationType extends StorageRequestType {
+    String volumeRootDirectory;
+    String snapshotRootDirectory;
+}
+
+public class UpdateStorageConfigurationResponseType extends StorageResponseType {
+}
+
+public class CreateStorageVolumeType extends StorageRequestType {
+    String volumeId;
+    String size;
+    String snapshotId;
+}
+
+public class CreateStorageVolumeResponseType extends StorageResponseType {
+    String size;
+    String snapshotId;
+    String status;
+    String createTime;
+}
+
+public class CreateStorageSnapshotType extends StorageRequestType {
+    String volumeId;
+    String snapshotId;
+}
+public class CreateStorageSnapshotResponseType extends StorageResponseType {
+    Snapshot snapshot;
+}
+
+public class DeleteStorageVolumeType extends StorageRequestType {
+  String volumeId;
+}
+
+public class DeleteStorageVolumeResponseType extends StorageResponseType {
+}
+
+public class DeleteStorageSnapshotType extends StorageRequestType {
+    String snapshotId;
+}
+
+public class DeleteStorageSnapshotResponseType extends StorageResponseType {    
 }

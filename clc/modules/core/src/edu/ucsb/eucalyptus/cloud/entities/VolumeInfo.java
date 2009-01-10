@@ -73,15 +73,6 @@ public class VolumeInfo {
     private String snapshotId;
     @Column(name = "transferred")
     private Boolean transferred;
-    
-    @OneToMany( cascade = CascadeType.ALL )
-    @JoinTable(
-            name = "volume_has_attachments",
-            joinColumns = { @JoinColumn( name = "volume_id" ) },
-            inverseJoinColumns = @JoinColumn( name = "attached_volume_id" )
-    )
-    @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-    private List<AttachedVolumeInfo> attachmentSet = new ArrayList<AttachedVolumeInfo>();
 
     public VolumeInfo() {}
     
@@ -127,14 +118,6 @@ public class VolumeInfo {
 
     public void setCreateTime(Date createTime) {
         this.createTime = createTime;
-    }
-
-    public List<AttachedVolumeInfo> getAttachmentSet() {
-        return attachmentSet;
-    }
-
-    public void setAttachmentSet(ArrayList<AttachedVolumeInfo> attachmentSet) {
-        this.attachmentSet = attachmentSet;
     }
 
     public String getZone() {

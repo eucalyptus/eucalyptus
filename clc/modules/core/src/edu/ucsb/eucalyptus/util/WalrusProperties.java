@@ -60,7 +60,7 @@ public class WalrusProperties {
             IMAGE_CACHE_SIZE = systemConfiguration.getStorageMaxCacheSizeInMB() * M;
             UpdateWalrusConfigurationType updateConfig = new UpdateWalrusConfigurationType();
             updateConfig.setBucketRootDirectory(bucketRootDirectory);
-            Messaging.send( WalrusProperties.WALRUS_REF, updateConfig );
+            Messaging.send( WALRUS_REF, updateConfig );
         } catch(Exception ex) {
             LOG.warn(ex.getMessage());
         }

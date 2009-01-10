@@ -32,38 +32,31 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.cloud;
 
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import junit.framework.TestCase;
+public class NoSuchSnapshotException extends EucalyptusCloudException {
 
-import java.util.ArrayList;
+  String snapshot;
 
-public class CreateSnapshotTest extends TestCase {
+    public NoSuchSnapshotException()
+  {
+    super( "Not Found" );
+  }
+  public NoSuchSnapshotException(String snapshot)
+  {
+    super(snapshot);
+    this.snapshot = snapshot;
+  }
+  public String getSnapshotName() {
+      return snapshot;
+  }
 
-    static Storage storage;
-    public void testCreateSnapshot() throws Throwable {
-
-        storage = new Storage();
-
-        String userId = "admin";
-
-        String volumeId = "vol-Fl0GZFFnm1U.";
-        String snapshotId = "snap-" + Hashes.getRandom(10);
-
-        CreateStorageSnapshotType createSnapshotRequest = new CreateStorageSnapshotType();
-        createSnapshotRequest.setUserId(userId);
-        createSnapshotRequest.setVolumeId(volumeId);
-        createSnapshotRequest.setSnapshotId(snapshotId);
-        CreateStorageSnapshotResponseType createSnapshotResponse = storage.CreateStorageSnapshot(createSnapshotRequest);
-        System.out.println(createSnapshotResponse);
-
-        while(true);
-    }
-
-    public CreateSnapshotTest() {
-        super();
-    }
-
+  public NoSuchSnapshotException(Throwable ex)
+  {
+    super("Not Found", ex);
+  }
+  public NoSuchSnapshotException(String message, Throwable ex)
+  {
+    super(message,ex);
+  }
 }
