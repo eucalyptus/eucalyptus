@@ -1097,9 +1097,9 @@ int vnetLoadIPTables(vnetConfig *vnetconfig) {
     rc = system(cmd);
   }
 
-  snprintf(file, 1023, "%s/usr/share/eucalyptus/euca_rootwrap %s/iptables-state", vnetconfig->eucahome, vnetconfig->path);
+  snprintf(file, 1023, "%s/iptables-state", vnetconfig->path);
   if (stat(file, &statbuf) == 0) {
-    snprintf(cmd, 255, "iptables-restore < %s", file);
+    snprintf(cmd, 255, "%s/usr/share/eucalyptus/euca_rootwrap iptables-restore < %s", vnetconfig->eucahome, file);
     rc = system(cmd);
   }
   return(WEXITSTATUS(rc));

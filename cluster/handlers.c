@@ -34,10 +34,153 @@ vnetConfig *vnetconfig=NULL;
 sem_t *vnetConfigLock=NULL;
 
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
-  return(0);
+  int i, j, rc, start, stop, k, done, ret=0;
+  ccInstance *myInstance, *out;
+  ncStub *ncs;
+  time_t op_start, op_timer;
+  
+  i = j = 0;
+  myInstance = NULL;
+  op_start = time(NULL);
+  op_timer = OP_TIMEOUT;
+  
+  rc = init_config();
+  if (rc) {
+    return(1);
+  }
+  logprintfl(EUCADEBUG,"AttachVolume(): called\n");
+  
+  rc = find_instanceCacheId(instanceId, &myInstance);
+  if (!rc) {
+    // found the instance in the cache
+    start = myInstance->ncHostIdx;
+    stop = start+1;
+    if (myInstance) free(myInstance);
+  } else {
+    start = 0;
+    stop = config->numResources;
+  }
+  
+  sem_wait(configLock);
+  for (j=start; j<stop; j++) {
+    // read the instance ids
+    logprintfl(EUCAINFO,"AttachVolume(): calling attach volume (%s) on (%s)\n", instanceId, config->resourcePool[j].hostname);
+    if (1) {
+      int pid, status;
+      pid = fork();
+      if (pid == 0) {
+	ncs = ncStubCreate(config->resourcePool[j].ncService, NULL, NULL);
+	if (config->use_wssec) {
+	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
+	}
+	logprintfl(EUCADEBUG, "would call attachVol on NC: %s\n",  config->resourcePool[j].hostname);
+	rc = 0;
+	//rc = ncTerminateInstanceStub(ncs, ccMeta, instId, &shutdownState, &previousState);
+	if (!rc) {
+	  ret = 0;
+	} else {
+	  ret = 1;
+	}
+	exit(ret);
+      } else {
+	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
+	rc = timewait(pid, &status, op_timer / ((stop-start) - (j - start)));
+	rc = WEXITSTATUS(status);
+	logprintfl(EUCADEBUG,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
+      }
+    }
+    sem_post(configLock);
+    
+    if (!rc) {
+      ret = 0;
+    } else {
+      logprintfl(EUCAERROR, "failed to attach volume '%s'\n", instanceId);
+      ret = 1;
+    }
+  }
+  
+  //rc = refresh_resources(ccMeta, OP_TIMEOUT - (time(NULL) - op_start));
+  
+  logprintfl(EUCADEBUG,"AttachVolume(): done.\n");
+  
+  shawn();
+  
+  return(ret);
 }
+
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force) {
-  return(0);
+  int i, j, rc, start, stop, k, done, ret=0;
+  ccInstance *myInstance, *out;
+  ncStub *ncs;
+  time_t op_start, op_timer;
+  
+  i = j = 0;
+  myInstance = NULL;
+  op_start = time(NULL);
+  op_timer = OP_TIMEOUT;
+  
+  rc = init_config();
+  if (rc) {
+    return(1);
+  }
+  logprintfl(EUCADEBUG,"DetachVolume(): called\n");
+  
+  rc = find_instanceCacheId(instanceId, &myInstance);
+  if (!rc) {
+    // found the instance in the cache
+    start = myInstance->ncHostIdx;
+    stop = start+1;
+    if (myInstance) free(myInstance);
+  } else {
+    start = 0;
+    stop = config->numResources;
+  }
+  
+  sem_wait(configLock);
+  for (j=start; j<stop; j++) {
+    // read the instance ids
+    logprintfl(EUCAINFO,"DetachVolume(): calling dettach volume (%s) on (%s)\n", instanceId, config->resourcePool[j].hostname);
+    if (1) {
+      int pid, status;
+      pid = fork();
+      if (pid == 0) {
+	ncs = ncStubCreate(config->resourcePool[j].ncService, NULL, NULL);
+	if (config->use_wssec) {
+	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
+	}
+	logprintfl(EUCADEBUG, "would call dettachVol on NC: %s\n",  config->resourcePool[j].hostname);
+	rc = 0;
+	//rc = ncTerminateInstanceStub(ncs, ccMeta, instId, &shutdownState, &previousState);
+	if (!rc) {
+	  ret = 0;
+	} else {
+	  ret = 1;
+	}
+	exit(ret);
+      } else {
+	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
+	rc = timewait(pid, &status, op_timer / ((stop-start) - (j - start)));
+	rc = WEXITSTATUS(status);
+	logprintfl(EUCADEBUG,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
+      }
+    }
+    sem_post(configLock);
+    
+    if (!rc) {
+      ret = 0;
+    } else {
+      logprintfl(EUCAERROR, "failed to dettach volume '%s'\n", instanceId);
+      ret = 1;
+    }
+  }
+  
+  //rc = refresh_resources(ccMeta, OP_TIMEOUT - (time(NULL) - op_start));
+  
+  logprintfl(EUCADEBUG,"DetachVolume(): done.\n");
+  
+  shawn();
+  
+  return(ret);
 }
 
 int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *protocol, int minPort, int maxPort) {
@@ -641,7 +784,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	  find_instanceCacheId(myInstance->instanceId, &cacheInstance);
 	  if (cacheInstance) {
 	    logprintfl(EUCADEBUG, "\t%s in cache\n", myInstance->instanceId, myInstance->userData);
-
+	    
 	    memcpy(myInstance, cacheInstance, sizeof(ccInstance));
 	  }
 	  

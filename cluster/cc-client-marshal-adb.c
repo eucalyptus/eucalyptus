@@ -309,6 +309,83 @@ int cc_stopNetwork(int vlan, char *netName, axutil_env_t *env, axis2_stub_t *stu
   return(0);
 }
 
+int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, axutil_env_t *env, axis2_stub_t *stub) {
+  int i;
+  char meh[32];
+  adb_AttachVolume_t *input;
+  adb_AttachVolumeResponse_t *output;
+  adb_attachVolumeType_t *sn;
+  adb_attachVolumeResponseType_t *snrt;
+
+  sn = adb_attachVolumeType_create(env);
+  input = adb_AttachVolume_create(env);
+  
+  adb_attachVolumeType_set_userId(sn, env, "eucalyptus");
+  {
+    char cidstr[9];
+    bzero(cidstr, 9);
+    srand(time(NULL)+getpid());
+    for (i=0; i<8; i++) {
+      cidstr[i] = rand()%26+'a';
+    }
+    adb_attachVolumeType_set_correlationId(sn, env, cidstr);
+  }
+  adb_attachVolumeType_set_instanceId(sn, env, instanceId);
+  adb_attachVolumeType_set_volumeId(sn, env, volumeId);
+  adb_attachVolumeType_set_remoteDev(sn, env, remoteDev);
+  adb_attachVolumeType_set_localDev(sn, env, localDev);
+  
+  adb_AttachVolume_set_AttachVolume(input, env, sn);
+
+  output = axis2_stub_op_EucalyptusCC_AttachVolume(stub, env, input);
+  if (!output) {
+    printf("ERROR: attachVolume returned NULL\n");
+    return(1);
+  }
+  snrt = adb_AttachVolumeResponse_get_AttachVolumeResponse(output, env);
+  printf("attachVolume returned status %d\n", adb_attachVolumeResponseType_get_return(snrt, env));
+  return(0);
+}
+
+int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force, axutil_env_t *env, axis2_stub_t *stub) {
+  int i;
+  char meh[32];
+  adb_DetachVolume_t *input;
+  adb_DetachVolumeResponse_t *output;
+  adb_detachVolumeType_t *sn;
+  adb_detachVolumeResponseType_t *snrt;
+
+  sn = adb_detachVolumeType_create(env);
+  input = adb_DetachVolume_create(env);
+  
+  adb_detachVolumeType_set_userId(sn, env, "eucalyptus");
+  {
+    char cidstr[9];
+    bzero(cidstr, 9);
+    srand(time(NULL)+getpid());
+    for (i=0; i<8; i++) {
+      cidstr[i] = rand()%26+'a';
+    }
+    adb_detachVolumeType_set_correlationId(sn, env, cidstr);
+  }
+  adb_detachVolumeType_set_instanceId(sn, env, instanceId);
+  adb_detachVolumeType_set_volumeId(sn, env, volumeId);
+  adb_detachVolumeType_set_remoteDev(sn, env, remoteDev);
+  adb_detachVolumeType_set_localDev(sn, env, localDev);
+  adb_detachVolumeType_set_force(sn, env, force);
+  
+  adb_DetachVolume_set_DetachVolume(input, env, sn);
+
+  output = axis2_stub_op_EucalyptusCC_DetachVolume(stub, env, input);
+  if (!output) {
+    printf("ERROR: detachVolume returned NULL\n");
+    return(1);
+  }
+  snrt = adb_DetachVolumeResponse_get_DetachVolumeResponse(output, env);
+  printf("detachVolume returned status %d\n", adb_detachVolumeResponseType_get_return(snrt, env));
+  return(0);
+}
+
 int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
   char meh[32];
