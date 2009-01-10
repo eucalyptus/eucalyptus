@@ -116,6 +116,20 @@ mkdir -p $INSTANCE_PATH
 
 /opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus -instances "${INSTANCE_PATH}" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 
+# now let's be sure we use MANAGED: let's comment out the default
+TMP=`mktemp`
+cp /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf $TMP
+sed "s|[[:blank:]]*\(VNET_MODE.*\)|#\1|" $TMP > /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf 
+rm -f $TMP
+
+# and now let's add the MANAGED mode lines
+cp /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf $TMP
+echo >> $TMP
+echo "# Added for Rocks" >> $TMP
+echo "VNET_MODE=\"MANAGED\"" >> $TMP
+cp $TMP /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+rm -f $TMP
+
 # start the services
 /etc/init.d/eucalyptus start
 </post>
