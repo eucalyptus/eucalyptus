@@ -71,7 +71,7 @@ create_httpd_config() {
 	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" |sed "s|EUCA_USER|$EUCA_USER|" >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
 
 	# let's configure the CC 
-	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $CC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/httpd-cc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|"|sed "s|\(StartServers\).*|\1 5|"|sed "s|\(MinSpareServers\).*|\1 5|"|sed "s|\(MaxSpareServers\).*|\1 10|"|sed "s|\(MaxClients\).*|\1 25|" >  $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
+	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $CC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/httpd-cc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|"|sed "s|\(StartServers\).*|\1 5|"|sed "s|\(MinSpareServers\).*|\1 5|"|sed "s|\(MaxSpareServers\).*|\1 10|"|sed "s|\(MaxClients\).*|\1 25|" |sed "s|\(MinSpareThreads\).*|\1 5|" | sed "s|\(MaxSpareThreads\).*|\1 10|" | sed "s|\(ThreadsPerChild\).*|\1 25|">  $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
 
 	# and the NC
 	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $NC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/httpd-nc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" >  $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
@@ -247,7 +247,9 @@ if [ -z "$EUCA_USER" ] ; then
 fi
 # set up eucalyptus var locations to be owned by EUCA_USER
 for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
-    chown -R $EUCA_USER:$EUCA_USER $y
+    if [ $y != "/" -a -d $y ]; then
+	chown -R $EUCA_USER:$EUCA_USER $y
+    fi
 done
 if [ -x "$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap" ]; then
     chown root:$EUCA_USER $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
