@@ -105,7 +105,6 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
                     sig.initVerify(publicKey);
                     sig.update(data.getBytes());
-                    String decoded = new String(Base64.decode(signature));
                     valid = sig.verify(Base64.decode(signature));
                 } else {
                     LOG.warn ("WalrusQuerySecurityHandler(): certificate not found in keystore");

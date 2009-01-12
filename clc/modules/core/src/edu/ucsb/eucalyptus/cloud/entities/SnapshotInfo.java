@@ -61,8 +61,6 @@ public class SnapshotInfo {
     Date startTime;
     @Column(name = "progress")
     String progress;
-    @Column(name = "transferred")
-    private Boolean transferred;
 
     public SnapshotInfo() {}
 
@@ -118,11 +116,4 @@ public class SnapshotInfo {
         this.progress = progress;
     }
 
-    public Boolean getTransferred() {
-        return transferred;
-    }
-
-    public void setTransferred(Boolean transferred) {
-        this.transferred = transferred;
-    }
 }

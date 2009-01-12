@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.cloud.*;
+import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.keys.*;
 import edu.ucsb.eucalyptus.msgs.*;
@@ -48,6 +49,7 @@ import org.apache.tools.tar.*;
 
 import javax.crypto.*;
 import javax.crypto.spec.*;
+import javax.ejb.*;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
@@ -1867,7 +1869,7 @@ public class Bukkit {
         EntityWrapper<WalrusVolumeInfo> db = new EntityWrapper<WalrusVolumeInfo>();
         WalrusVolumeInfo volumeInfo = new WalrusVolumeInfo(volumeId);
         List<WalrusVolumeInfo> foundVolumeInfos = db.query(volumeInfo);
-        WalrusVolumeInfo foundVolumeInfo = null;
+        WalrusVolumeInfo foundVolumeInfo;
 
         if(foundVolumeInfos.size() == 0) {
             foundVolumeInfo = volumeInfo;
@@ -1899,38 +1901,6 @@ public class Bukkit {
         return reply;
     }
 
-    public GetSnapshotInfoResponseType GetSnapshotInfo(GetSnapshotInfoType request) throws EucalyptusCloudException {
-        GetSnapshotInfoResponseType reply = (GetSnapshotInfoResponseType)request.getReply();
-        String snapshotId = request.getKey();
-
-        EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
-        WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
-        List<WalrusSnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
-        db.commit();
-        if(foundSnapshotInfos.size() > 0) {
-            WalrusSnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);
-            String volumeId = foundSnapshotInfo.getVolumeId();
-            WalrusVolumeInfo volumeInfo = new WalrusVolumeInfo(volumeId);
-            EntityWrapper<WalrusVolumeInfo> db2 = new EntityWrapper<WalrusVolumeInfo>();
-            List<WalrusVolumeInfo> foundVolumeInfos = db2.query(volumeInfo);
-            if(foundVolumeInfos.size() > 0) {
-                WalrusVolumeInfo foundVolumeInfo = foundVolumeInfos.get(0);
-                List<String> snapshotNames = reply.getSnapshotSet();
-                snapshotNames.add(volumeId);
-                for(WalrusSnapshotInfo snapInfo: foundVolumeInfo.getSnapshotSet()) {
-                    snapshotNames.add(snapInfo.getSnapshotId());
-                }
-                db2.commit();
-            } else {
-                db2.rollback();
-                throw new EucalyptusCloudException();
-            }
-        } else {
-            throw new EucalyptusCloudException();
-        }
-        return reply;
-    }
-
     public GetSnapshotResponseType GetSnapshot(GetSnapshotType request) throws EucalyptusCloudException {
         GetSnapshotResponseType reply = (GetSnapshotResponseType) request.getReply();
         String snapshotId = request.getKey();
@@ -1938,8 +1908,42 @@ public class Bukkit {
         return reply;
     }
 
+    public GetSnapshotInfoResponseType GetSnapshotInfo(GetSnapshotInfoType request) throws EucalyptusCloudException {
+        GetSnapshotInfoResponseType reply = (GetSnapshotInfoResponseType) request.getReply();
+        String bucketName = request.getBucket();
+        String snapshotId = request.getKey();
+        ArrayList<String> snapshotSet = reply.getSnapshotSet();
+
+        EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
+        WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+        List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+
+        if(snapshotInfos.size() > 0) {
+            WalrusSnapshotInfo foundSnapshotInfo = snapshotInfos.get(0);
+            EntityWrapper<WalrusVolumeInfo> dbVol = db.recast(WalrusVolumeInfo.class);
+            try {
+                WalrusVolumeInfo volumeInfo = dbVol.getUnique(new WalrusVolumeInfo(foundSnapshotInfo.getVolumeId()));
+                List<WalrusSnapshotInfo> walrusSnapshotInfos = volumeInfo.getSnapshotSet();
+                for(WalrusSnapshotInfo walrusSnapshotInfo : walrusSnapshotInfos) {
+                    snapshotSet.add(walrusSnapshotInfo.getSnapshotId());
+                }
+            } catch(Exception ex) {
+                dbVol.rollback();
+                db.rollback();
+                throw new NoSuchEntityException(foundSnapshotInfo.getVolumeId());
+            }
+            dbVol.commit();
+        } else {
+            db.rollback();
+            throw new NoSuchEntityException(snapshotId);
+        }
+        db.commit();
+        return reply;
+    }
+
     public RemoveSnapshotResponseType RemoveSnapshot(RemoveSnapshotType request) throws EucalyptusCloudException {
         RemoveSnapshotResponseType reply = (RemoveSnapshotResponseType) request.getReply();
+        String snapshotId = request.getKey();
 
         return reply;
     }

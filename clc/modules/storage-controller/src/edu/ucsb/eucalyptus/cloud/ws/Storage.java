@@ -155,8 +155,6 @@ public class Storage {
         return reply;
     }
 
-
-
     public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
         CreateStorageSnapshotResponseType reply = ( CreateStorageSnapshotResponseType ) request.getReply();
         String volumeId = request.getVolumeId();
@@ -457,9 +455,11 @@ public class Storage {
                 snapshotFileName = returnValues.get(1);
                 EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
                 VolumeInfo volumeInfo = new VolumeInfo(volumeId);
-                VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
+                List <VolumeInfo> volumeInfos = db.query(volumeInfo);
+
                 boolean shouldTransferVolume = false;
-                if(foundVolumeInfo != null) {
+                if(volumeInfos.size() > 0) {
+                    VolumeInfo foundVolumeInfo = volumeInfos.get(0);
                     if(!foundVolumeInfo.getTransferred()) {
                         //transfer volume to Walrus
                         volumeBucket = StorageProperties.snapshotBucket;
@@ -477,8 +477,6 @@ public class Storage {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     SnapshotInfo foundSnapshotInfo = db2.getUnique(snapshotInfo);
                     if(foundSnapshotInfo != null) {
-                        assert(foundSnapshotInfo.getTransferred());
-                        foundSnapshotInfo.setTransferred(Boolean.TRUE);
                         transferSnapshot(shouldTransferVolume);
                     }
                     db2.commit();
@@ -563,7 +561,7 @@ public class Storage {
                 method.setRequestHeader(StorageProperties.EUCALYPTUS_HEADER, eucaHeader);
             }
             try {
-                //TODO: Get credentials for CC from keystore
+                //TODO: Get credentials for SC from keystore
 
                 PrivateKey ccPrivateKey = (PrivateKey) keyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
                 X509Certificate cert = keyStore.getCertificate(EucalyptusProperties.NAME);
@@ -649,8 +647,6 @@ public class Storage {
         }
 
         public void run() {
-
-            byte[] bytes = new byte[transferChunkSize];
             try {
                 ((PutMethodWithProgress)method).setOutFile(file);
                 ((PutMethodWithProgress)method).setCallBack(callback);
