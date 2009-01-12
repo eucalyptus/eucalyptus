@@ -246,7 +246,7 @@ if [ -z "$EUCA_USER" ] ; then
 	EUCA_USER="root"
 fi
 # set up eucalyptus var locations to be owned by EUCA_USER
-for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ ; do
+for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
     chown -R $EUCA_USER:$EUCA_USER $y
 done
 if [ -x "$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap" ]; then
