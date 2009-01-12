@@ -26,7 +26,7 @@ install: deploy
 	@$(INSTALL) -m 644 eucalyptus.conf $(etcdir)/eucalyptus
 	@$(INSTALL) -m 755 add_key.pl $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 gen_libvirt_xml $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 get_xen_info.pl $(datarootdir)/eucalyptus/get_xen_info
+	@$(INSTALL) -m 755 get_xen_info $(datarootdir)/eucalyptus/get_xen_info
 	@$(INSTALL) -m 755 euca_ipt $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_conf $(sbindir)
 	@$(INSTALL) -m 755 euca_sync_key $(sbindir)
