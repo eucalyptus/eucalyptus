@@ -193,7 +193,7 @@ fi
 
 %preun 
 if [ "$1" = "0" ]; then
-	chkconfig --del eucalyptus
+	chkconfig --del eucalyptus || true
 fi
 
 %postun
