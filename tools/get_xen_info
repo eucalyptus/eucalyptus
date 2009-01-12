@@ -1,18 +1,41 @@
-#!/bin/bash
-#
-# This helper script prints out relevant information for the node
-# controller in the form VAR=VALUE.  Here's an example of output that NC
-# expects in v1.4:
-#
-# total_memory=16378
-# free_memory=2817
-# nr_cpus=8
-# nr_nodes=1
-# dom0-min-mem=196
+#!/usr/bin/perl
 
-RE='s/\s*:\s*/=/'
-xm info | grep total_memory | sed $RE
-xm info | grep free_memory | sed $RE
-xm info | grep nr_cpus | sed $RE
-xm info | grep nr_nodes | sed $RE
-cat /etc/xen/xend-config.sxp | perl -n -e "/dom0-min-mem\s+(\w+)\s*\)/ and print \"dom0-min-mem=\$1\n\""
+delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
+$ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
+
+chomp($str = untaint(`xm info | grep total_memory`));
+$str =~ s/\s+:\s+/=/g;
+print "$str\n";
+
+chomp($str = untaint(`xm info | grep free_memory`));
+$str =~ s/\s+:\s+/=/g;
+print "$str\n";
+
+chomp($str = untaint(`xm info | grep nr_cpus`));
+$str =~ s/\s+:\s+/=/g;
+print "$str\n";
+
+chomp($str = untaint(`xm info | grep nr_nodes`));
+$str =~ s/\s+:\s+/=/g;
+print "$str\n";
+
+open(FH, "/etc/xen/xend-config.sxp");
+while(<FH>) {
+    chomp;
+    if ($_ =~ /\(dom0-min-mem (\d+)\)/) {
+	print "dom0-min-mem=$1\n";
+    }
+}
+close(FH);
+exit 0;
+
+sub untaint() {
+    $str = shift;
+    if ($str =~ /^([ &:#-\@\w.]+)$/) {
+	$str = $1; #data is now untainted
+    } else {
+	print STDERR "inputs are tainted\n";
+	$str = "";
+    }
+    return($str);
+}
