@@ -86,6 +86,7 @@ public class CreateStorageVolumeType extends StorageRequestType {
 
 public class CreateStorageVolumeResponseType extends StorageResponseType {
     String size;
+    String volumeId;
     String snapshotId;
     String status;
     String createTime;
@@ -96,7 +97,11 @@ public class CreateStorageSnapshotType extends StorageRequestType {
     String snapshotId;
 }
 public class CreateStorageSnapshotResponseType extends StorageResponseType {
-    Snapshot snapshot;
+    String snapshotId;
+    String volumeId;
+    String status;
+    String startTime;
+    String progress;
 }
 
 public class DeleteStorageVolumeType extends StorageRequestType {
@@ -111,4 +116,39 @@ public class DeleteStorageSnapshotType extends StorageRequestType {
 }
 
 public class DeleteStorageSnapshotResponseType extends StorageResponseType {    
+}
+
+public class StorageVolume extends EucalyptusData {
+
+  String volumeId;
+  String size;
+  String snapshotId;
+  String status;
+  String createTime;
+  def StorageVolume() {}
+  def StorageVolume(String volumeId) {
+      this.volumeId = volumeId;
+  }
+}
+
+public class DescribeStorageVolumesType extends StorageRequestType {
+  ArrayList<String> volumeSet = new ArrayList<String>();
+}
+public class DescribeStorageVolumesResponseType extends StorageResponseType {
+  ArrayList<StorageVolume> volumeSet = new ArrayList<StorageVolume>();
+}
+
+public class StorageSnapshot extends EucalyptusData {
+  String snapshotId;
+  String volumeId;
+  String status;
+  String startTime;
+  String progress;
+}
+
+public class DescribeStorageSnapshotsType extends StorageRequestType {
+  ArrayList<String> snapshotSet = new ArrayList<String>();
+}
+public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
+  ArrayList<StorageSnapshot> snapshotSet = new ArrayList<Snapshot>();
 }

@@ -32,44 +32,30 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.cloud;
 
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import junit.framework.TestCase;
+public class VolumeAlreadyExistsException extends EucalyptusCloudException {
 
-import java.util.ArrayList;
+  String volume;
+  public VolumeAlreadyExistsException()
+  {
+    super( "Already Exists" );
+  }
+  public VolumeAlreadyExistsException(String volume)
+  {
+    super(volume);
+    this.volume = volume;
+  }
+  public String getVolumeName() {
+      return volume;
+  }
 
-public class VolumeTest extends TestCase {
-
-    static Storage storage;
-    public void testVolume() throws Throwable {
-
-        storage = new Storage();
-
-        String userId = "admin";
-        String volumeId = "vol-" + Hashes.getRandom(10);
-
-        CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();
-        createVolumeRequest.setUserId(userId);
-        createVolumeRequest.setVolumeId(volumeId);
-        createVolumeRequest.setSize("1");
-        CreateStorageVolumeResponseType createVolumeResponse = storage.CreateStorageVolume(createVolumeRequest);
-        System.out.println(createVolumeResponse); 
-        Thread.sleep(1000);
-        DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
-        describeVolumesRequest.setUserId(userId);
-        ArrayList<String> volumeSet = new ArrayList<String>();
-        volumeSet.add(volumeId);
-        describeVolumesRequest.setVolumeSet(volumeSet);
-        DescribeStorageVolumesResponseType describeVolumesResponse = storage.DescribeStorageVolumes(describeVolumesRequest);
-        StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
-        System.out.println(vol);
-        while(true);     
-    }
-
-    public VolumeTest() {
-        super();
-    }
-
+  public VolumeAlreadyExistsException(Throwable ex)
+  {
+    super("Already Exists", ex);
+  }
+  public VolumeAlreadyExistsException(String message, Throwable ex)
+  {
+    super(message,ex);
+  }
 }

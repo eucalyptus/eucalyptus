@@ -47,7 +47,6 @@ import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
-import edu.ucsb.eucalyptus.cloud.entities.AttachedVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
 import org.apache.log4j.Logger;
@@ -106,8 +105,9 @@ public class Storage {
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
         VolumeInfo volumeInfo = new VolumeInfo();
         volumeInfo.setVolumeId(volumeId);
-        VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
-        if(foundVolumeInfo != null) {
+        List <VolumeInfo> volumeInfos = db.query(volumeInfo);
+        if(volumeInfos.size() > 0) {
+            VolumeInfo foundVolumeInfo = volumeInfos.get(0);
             List<String> returnValues = ebsManager.getVolume(volumeId);
             reply.setVolumeId(foundVolumeInfo.getVolumeId());
             reply.setSize(foundVolumeInfo.getSize().toString());
@@ -163,9 +163,10 @@ public class Storage {
         String snapshotId = request.getSnapshotId();
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
         VolumeInfo volumeInfo = new VolumeInfo(volumeId);
-        VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
+        List<VolumeInfo> volumeInfos = db.query(volumeInfo);
 
-        if(foundVolumeInfo != null) {
+        if(volumeInfos.size() > 0) {
+            VolumeInfo foundVolumeInfo = volumeInfos.get(0);
             //check status
             if(foundVolumeInfo.getStatus().equals(Status.available.toString())) {
                 //create snapshot
@@ -173,7 +174,8 @@ public class Storage {
                 edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo snapshotInfo = new edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo(snapshotId);
                 snapshotInfo.setUserName(foundVolumeInfo.getUserName());
                 snapshotInfo.setVolumeId(volumeId);
-                snapshotInfo.setStartTime(new Date());
+                Date startTime = new Date();
+                snapshotInfo.setStartTime(startTime);
                 snapshotInfo.setProgress("0%");
                 snapshotInfo.setStatus(Status.creating.toString());
                 db2.add(snapshotInfo);
@@ -183,19 +185,24 @@ public class Storage {
                 ebsManager.createSnapshot(volumeId, snapshotId);
                 Snapshotter snapshotter = new Snapshotter(volumeId, snapshotId);
                 snapshotter.run();
-                reply.setSnapshot(convertSnapshotInfo(snapshotInfo));
+                reply.setSnapshotId(snapshotId);
+                reply.setVolumeId(volumeId);
+                reply.setStatus(snapshotInfo.getStatus());
+                reply.setStartTime(DateUtils.format(startTime.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+                reply.setProgress(snapshotInfo.getProgress());
             } else {
                 db.rollback();
-                throw new EucalyptusCloudException();
+                throw new VolumeNotReadyException(volumeId);
             }
         } else {
-            throw new EucalyptusCloudException();
+            db.rollback();
+            throw new NoSuchVolumeException(volumeId);
         }
         return reply;
     }
 
-    public DescribeSnapshotsResponseType DescribeSnapshots( DescribeSnapshotsType request ) throws EucalyptusCloudException {
-        DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply();
+    public DescribeStorageSnapshotsResponseType DescribeStorageSnapshots( DescribeStorageSnapshotsType request ) throws EucalyptusCloudException {
+        DescribeStorageSnapshotsResponseType reply = ( DescribeStorageSnapshotsResponseType ) request.getReply();
         List<String> snapshotSet = request.getSnapshotSet();
         ArrayList<SnapshotInfo> snapshotInfos = new ArrayList<SnapshotInfo>();
         EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
@@ -208,11 +215,10 @@ public class Storage {
             }
         }
 
-        ArrayList<Snapshot> snapshots = new ArrayList<Snapshot>();
+        ArrayList<StorageSnapshot> snapshots = reply.getSnapshotSet();
         for(SnapshotInfo snapshotInfo: snapshotInfos) {
             snapshots.add(convertSnapshotInfo(snapshotInfo));
         }
-        reply.setSnapshotSet(snapshots);
         return reply;
     }
 
@@ -275,6 +281,12 @@ public class Storage {
         }
 
         VolumeInfo volumeInfo = new VolumeInfo(volumeId);
+        EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
+        List<VolumeInfo> volumeInfos = db.query(volumeInfo);
+        if(volumeInfos.size() > 0) {
+            db.rollback();
+            throw new VolumeAlreadyExistsException(volumeId);
+        }
         volumeInfo.setUserName(userId);
         volumeInfo.setSize(sizeAsInt);
         volumeInfo.setStatus(Status.creating.toString());
@@ -285,11 +297,11 @@ public class Storage {
             volumeInfo.setSnapshotId(snapshotId);
             reply.setSnapshotId(snapshotId);
         }
-        EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
+        db.add(volumeInfo);
+        reply.setVolumeId(volumeId);
         reply.setCreateTime(DateUtils.format(creationDate.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
         reply.setSize(size);
         reply.setStatus(volumeInfo.getStatus());
-        db.add(volumeInfo);
         db.commit();
 
         //create volume asynchronously
@@ -383,8 +395,8 @@ public class Storage {
     }
 
 
-    public DescribeVolumesResponseType DescribeVolumes(DescribeVolumesType request) throws EucalyptusCloudException {
-        DescribeVolumesResponseType reply = (DescribeVolumesResponseType) request.getReply();
+    public DescribeStorageVolumesResponseType DescribeStorageVolumes(DescribeStorageVolumesType request) throws EucalyptusCloudException {
+        DescribeStorageVolumesResponseType reply = (DescribeStorageVolumesResponseType) request.getReply();
         List<String> volumeSet = request.getVolumeSet();
         ArrayList<VolumeInfo> volumeInfos = new ArrayList<VolumeInfo>();
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
@@ -397,43 +409,31 @@ public class Storage {
             }
         }
 
-        ArrayList<Volume> volumes = new ArrayList<Volume>();
+        ArrayList<StorageVolume> volumes = reply.getVolumeSet();
         for(VolumeInfo volumeInfo: volumeInfos) {
             volumes.add(convertVolumeInfo(volumeInfo));
         }
-        reply.setVolumeSet(volumes);
         return reply;
     }
 
 
-    private AttachedVolume convertAttachedVolumeInfo(AttachedVolumeInfo attachedVolInfo) {
-        AttachedVolume attachedVolume = new AttachedVolume();
-        attachedVolume.setVolumeId(attachedVolInfo.getVolumeId());
-        attachedVolume.setInstanceId(attachedVolInfo.getInstanceId());
-        attachedVolume.setDevice(attachedVolInfo.getDevice());
-        attachedVolume.setStatus(attachedVolInfo.getStatus());
-        attachedVolume.setAttachTime(attachedVolInfo.getAttachTime());
-        return attachedVolume;
-    }
-
-    private Volume convertVolumeInfo(VolumeInfo volInfo) {
-        Volume volume = new Volume();
+    private StorageVolume convertVolumeInfo(VolumeInfo volInfo) {
+        StorageVolume volume = new StorageVolume();
         volume.setVolumeId(volInfo.getVolumeId());
         volume.setStatus(volInfo.getStatus());
-        volume.setCreateTime(volInfo.getCreateTime());
-        volume.setAvailabilityZone(volInfo.getZone());
+        volume.setCreateTime(DateUtils.format(volInfo.getCreateTime().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
         volume.setSize(String.valueOf(volInfo.getSize()));
-        volume.setSnapshotId("");
+        volume.setSnapshotId(volInfo.getSnapshotId());
         return volume;
     }
 
-    private Snapshot convertSnapshotInfo(SnapshotInfo snapInfo) {
-        Snapshot snapshot = new Snapshot();
+    private StorageSnapshot convertSnapshotInfo(SnapshotInfo snapInfo) {
+        StorageSnapshot snapshot = new StorageSnapshot();
         snapshot.setVolumeId(snapInfo.getVolumeId());
         snapshot.setStatus(snapInfo.getStatus());
         snapshot.setSnapshotId(snapInfo.getSnapshotId());
         snapshot.setProgress(snapInfo.getProgress());
-        snapshot.setStartTime(snapInfo.getStartTime());
+        snapshot.setStartTime(DateUtils.format(snapInfo.getStartTime().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
         return snapshot;
     }
 
