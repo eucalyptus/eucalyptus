@@ -251,7 +251,7 @@ for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS
 done
 if [ -x "$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap" ]; then
     chown root:$EUCA_USER $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
-    chmod 4050 $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
+    chmod 4750 $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
 fi
 
 # let's find our dependencies
