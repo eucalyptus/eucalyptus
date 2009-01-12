@@ -67,9 +67,4 @@ public class StorageProperties {
             LOG.warn(ex.getMessage());
         }
     }
-
-    static {
-        update();
-    }
-
 }
