@@ -16,6 +16,7 @@
       <xs:sequence>
 	<xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>
 	<xs:element nillable="false" minOccurs="0" name="userId" type="xs:string"/>
+	<xs:element nillable="false" minOccurs="0" maxOccurs="1" name="return" type="xs:boolean"/>
 	<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="statusMessage" type="xs:int"/>
       </xs:sequence>
     </xs:complexType>
@@ -34,7 +35,7 @@
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">
 	  <xs:sequence>
-	    <xs:element name="instances" minOccurs="0" maxOccurs="unbounded" type="tns:ncInstanceType" />
+	    <xs:element name="instances" minOccurs="0" maxOccurs="unbounded" type="tns:instanceType" />
 	  </xs:sequence>
 	</xs:extension>
       </xs:complexContent>
@@ -52,14 +53,59 @@
 
     <xs:complexType name="ncRebootInstanceResponseType">
       <xs:complexContent>
-	<xs:extension base="tns:eucalyptusMessage">
-	  <xs:sequence>
-	    <xs:element name="status" type="xs:boolean" />
-	  </xs:sequence>
-	</xs:extension>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element name="status" type="xs:boolean" />
+	      </xs:sequence>
+	    </xs:extension>
       </xs:complexContent>
     </xs:complexType>
-
+    
+    <xs:complexType name="ncAttachVolumeType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="localDev" type="xs:string"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncAttachVolumeResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncDetachVolumeType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="localDev" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="force" type="xs:boolean"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncDetachVolumeResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
     <xs:complexType name="ncGetConsoleOutputType">
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">
@@ -146,6 +192,9 @@
 	    <xs:element name="privateMacAddress" type="xs:string"/>
 	    <xs:element name="reservationId" type="xs:string"/>
 	    <xs:element name="vlan" type="xs:int"/>
+	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
+	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
+	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 	  </xs:sequence>
 	</xs:extension>
       </xs:complexContent>
@@ -155,29 +204,39 @@
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">
 	  <xs:sequence>
-	    <xs:element minOccurs="0" name="instance" type="tns:ncInstanceType"/>
+	    <xs:element minOccurs="0" name="instance" type="tns:instanceType"/>
 	  </xs:sequence>
 	</xs:extension>
       </xs:complexContent>
     </xs:complexType>
     
-    <xs:complexType name="ncInstanceType">
+    <xs:complexType name="instanceType">
       <xs:sequence>
-	<xs:element name="instanceId" type="xs:string"/>
-	<xs:element name="instanceType" type="tns:virtualMachineType"/>
-	<xs:element name="imageId" type="xs:string"/>
-	<xs:element name="kernelId" type="xs:string"/>
-	<xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
-	<xs:element name="imageURL" type="xs:string"/>
-	<xs:element name="kernelURL" type="xs:string"/>
-	<xs:element minOccurs="0" name="ramdiskURL" type="xs:string"/>
-	<xs:element name="stateCode" type="xs:string"/>
-	<xs:element name="stateName" type="xs:string"/>
-	<xs:element name="userId" type="xs:string"/>
-	<xs:element name="keyName" type="xs:string"/>
-	<xs:element minOccurs="0" name="launchTime" type="xs:dateTime" />
-	<xs:element name="reservationId" type="xs:string"/>
-	<xs:element name="netParams" type="tns:netConfigType" minOccurs="0" maxOccurs="1"/>
+        <!-- passed into RunInstances -->
+	    <xs:element minOccurs="1" name="reservationId" type="xs:string"/>
+	    <xs:element minOccurs="1" name="instanceId" type="xs:string"/>
+	    <xs:element minOccurs="1" name="imageId" type="xs:string"/>
+	    <xs:element minOccurs="1" name="kernelId" type="xs:string"/>
+	    <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
+	    <xs:element minOccurs="1" name="userId" type="xs:string"/> <!-- == owner ID in CC -->
+	    <xs:element minOccurs="1" name="keyName" type="xs:string"/>
+	    <xs:element minOccurs="1" name="instanceType" type="tns:virtualMachineType"/>
+	    <xs:element minOccurs="0" maxOccurs="1"  name="netParams" type="tns:netConfigType"/>
+
+        <!-- reported by NC -->
+	    <xs:element minOccurs="1" name="stateName" type="xs:string"/>
+	    <xs:element minOccurs="0" name="launchTime" type="xs:dateTime" />
+
+        <!-- passed into RunInstances for safekeeping by NC -->
+	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
+	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
+	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
+
+        <!-- updated by NC upon Attach/DetachVolume -->
+        <xs:element minOccurs="0" maxOccurs="64" name="volumes" type="tns:volumeType"/>
+
+        <!-- unused in NC, used by CC -->
+	    <xs:element minOccurs="0" name="serviceTag" type="xs:string"/> 
       </xs:sequence>
     </xs:complexType>
     
@@ -189,6 +248,15 @@
 	<xs:element name="privateIp" type="xs:string"/>
 	<xs:element name="publicIp" type="xs:string"/>
       </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="volumeType">
+	  <xs:sequence>
+	    <xs:element minOccurs="0" name="volumeId" type="xs:string"/>
+	    <xs:element minOccurs="0" name="remoteDev" type="xs:string"/>
+	    <xs:element minOccurs="0" name="localDev" type="xs:string"/>
+	    <xs:element minOccurs="0" name="state" type="xs:string"/>
+	  </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="ncStartNetworkType">
@@ -224,6 +292,12 @@
 
     <xs:element name="ncRebootInstance" nillable="true" type="tns:ncRebootInstanceType"/>
     <xs:element name="ncRebootInstanceResponse" nillable="true" type="tns:ncRebootInstanceResponseType"/>
+
+    <xs:element name="ncAttachVolume" nillable="true" type="tns:ncAttachVolumeType"/>
+    <xs:element name="ncAttachVolumeResponse" nillable="true" type="tns:ncAttachVolumeResponseType"/>
+    
+    <xs:element name="ncDetachVolume" nillable="true" type="tns:ncDetachVolumeType"/>
+    <xs:element name="ncDetachVolumeResponse" nillable="true" type="tns:ncDetachVolumeResponseType"/>
 
     <xs:element name="ncGetConsoleOutput" nillable="true" type="tns:ncGetConsoleOutputType"/>
     <xs:element name="ncGetConsoleOutputResponse" nillable="true" type="tns:ncGetConsoleOutputResponseType"/>
@@ -262,6 +336,16 @@
   </wsdl:part>
 </wsdl:message>
 
+<wsdl:message name="ncAttachVolumeResponse">
+  <wsdl:part element="tns:ncAttachVolumeResponse" name="ncAttachVolumeResponse">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncDetachVolumeResponse">
+  <wsdl:part element="tns:ncDetachVolumeResponse" name="ncDetachVolumeResponse">
+  </wsdl:part>
+</wsdl:message>
+
 <wsdl:message name="ncGetConsoleOutputResponse">
   <wsdl:part element="tns:ncGetConsoleOutputResponse" name="ncGetConsoleOutputResponse">
   </wsdl:part>
@@ -294,6 +378,16 @@
 
 <wsdl:message name="ncRebootInstance">
   <wsdl:part element="tns:ncRebootInstance" name="ncRebootInstance">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncAttachVolume">
+  <wsdl:part element="tns:ncAttachVolume" name="ncAttachVolume">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncDetachVolume">
+  <wsdl:part element="tns:ncDetachVolume" name="ncDetachVolume">
   </wsdl:part>
 </wsdl:message>
 
@@ -341,6 +435,20 @@
     <wsdl:input message="tns:ncRebootInstance" name="ncRebootInstance">
     </wsdl:input>
     <wsdl:output message="tns:ncRebootInstanceResponse" name="ncRebootInstanceResponse">
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncAttachVolume">
+    <wsdl:input message="tns:ncAttachVolume" name="ncAttachVolume">
+    </wsdl:input>
+    <wsdl:output message="tns:ncAttachVolumeResponse" name="ncAttachVolumeResponse">
+    </wsdl:output>
+  </wsdl:operation>
+  
+  <wsdl:operation name="ncDetachVolume">
+    <wsdl:input message="tns:ncDetachVolume" name="ncDetachVolume">
+    </wsdl:input>
+    <wsdl:output message="tns:ncDetachVolumeResponse" name="ncDetachVolumeResponse">
     </wsdl:output>
   </wsdl:operation>
 
@@ -413,6 +521,26 @@
     </wsdl:output>
   </wsdl:operation>
 
+  <wsdl:operation name="ncAttachVolume">
+    <soap:operation soapAction="EucalyptusNC#ncAttachVolume" style="document"/>
+    <wsdl:input name="ncAttachVolume">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncAttachVolumeResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+  
+  <wsdl:operation name="ncDetachVolume">
+    <soap:operation soapAction="EucalyptusNC#ncDetachVolume" style="document"/>
+    <wsdl:input name="ncDetachVolume">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncDetachVolumeResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+  
   <wsdl:operation name="ncGetConsoleOutput">
     <soap:operation soapAction="EucalyptusNC#ncGetConsoleOutput" style="document"/>
     <wsdl:input name="ncGetConsoleOutput">

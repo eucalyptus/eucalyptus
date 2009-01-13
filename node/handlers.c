@@ -645,7 +645,14 @@ void * startup_thread (void * arg)
     return NULL;
 }
 
-int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, ncInstance **outInst)
+int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, 
+                   char *imageId, char *imageURL, 
+                   char *kernelId, char *kernelURL, 
+                   char *ramdiskId, char *ramdiskURL, 
+                   char *keyName, 
+                   char *privMac, char *pubMac, int vlan, 
+                   char *userData, char *launchIndex, char **groupNames, int groupNamesSize, 
+                   ncInstance **outInst)
 {
     ncInstance * instance = NULL;
     * outInst = NULL;
@@ -737,7 +744,7 @@ int doRebootInstance(ncMetadata *meta, char *instanceId) {
   return(WEXITSTATUS(rc));
 }
 
-int doncGetConsoleOutput(ncMetadata *meta, char *instanceId, char **consoleOutput) {
+int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **consoleOutput) {
   char *output;
   char cmd[256];
   int pid, status, rc, bufsize, fd;
@@ -981,7 +988,7 @@ int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource **outRe
     return 0;
 }
 
-int doncStartNetwork(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan) {
+int doStartNetwork(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan) {
   int rc, ret, i, status, error;
   char *brname;
 
@@ -1004,4 +1011,14 @@ int doncStartNetwork(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen,
   }
   logprintfl (EUCAINFO, "StartNetwork(): done\n");
   return(ret);
+}
+
+int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
+{
+    return 0;
+}
+
+int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+{
+    return 0;
 }

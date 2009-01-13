@@ -22,6 +22,13 @@ typedef struct ncNetConf_t {
   char publicMac[32], privateMac[32], publicIp[32], privateIp[32];
 } ncNetConf;
 
+typedef struct ncVolume_t {
+    char volumeId[CHAR_BUFFER_SIZE];
+    char remoteDev[CHAR_BUFFER_SIZE];
+    char localDev[CHAR_BUFFER_SIZE];
+    char stateName[CHAR_BUFFER_SIZE];
+} ncVolume;
+
 typedef struct ncInstance_t {
     char instanceId[CHAR_BUFFER_SIZE];
     char imageId[CHAR_BUFFER_SIZE];
@@ -48,8 +55,17 @@ typedef struct ncInstance_t {
     ncInstParams params;
     ncNetConf ncnet;
     pthread_t tcb;
-} ncInstance;
 
+    /* passed into NC via runInstances for safekeeping */
+    char userData[CHAR_BUFFER_SIZE*10];
+    char launchIndex[CHAR_BUFFER_SIZE];
+    char groupNames[64][CHAR_BUFFER_SIZE];
+    int groupNamesSize;
+
+    /* updated by NC upon Attach/DetachVolume */
+    ncVolume volumes[64];
+    int volumesSize;
+} ncInstance;
 
 typedef struct ncResource_t {
     char nodeStatus[CHAR_BUFFER_SIZE];

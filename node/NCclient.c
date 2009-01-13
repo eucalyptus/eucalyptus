@@ -234,6 +234,7 @@ int main (int argc, char **argv)
                                        ramdisk_id, ramdisk_url, 
                                        "", /* key */
                                        privMac, pubMac, vlan, 
+                                       NULL, NULL, NULL, 0, /* CC stuff */
                                        &outInst);
             if (rc != 0) {
                 printf("ncRunInstance() failed: instanceId=%s error=%d\n", instance_id, rc);

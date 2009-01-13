@@ -24,9 +24,9 @@ int ncStubDestroy (ncStub * st)
 
 /************************** stubs **************************/
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, ncInstance **outInstPtr)
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
-    return doRunInstance (meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, privMac, pubMac, vlan, outInstPtr);
+    return doRunInstance (meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, privMac, pubMac, vlan, userData, launchIndex, groupNames, groupNamesSize, outInstPtr);
 }
 
 int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState)
@@ -42,4 +42,14 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
 int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, ncResource **outRes)
 {
     return doDescribeResource (meta, resourceType, outRes);
+}
+
+int ncAttachVolume (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
+{
+    return doAttachVolume (meta, instanceId, volumeId, remoteDev, localDev);
+}
+
+int ncDetachVolume (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+{
+    return doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force);
 }
