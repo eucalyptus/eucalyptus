@@ -1,0 +1,57 @@
+<?xml version="1.0" standalone="no"?>
+
+<kickstart>
+
+
+	<description>
+	EUCALYPTUS is an open source service overlay that implements
+	elastic computing using existing resources. The goal of
+	EUCALYPTUS is to allow sites with existing clusters and server
+	infrastructure to co-host an elastic computing service that is
+	interface-compatible with Amazon's EC2.
+	</description>
+
+	<copyright>
+	Copyright (c) 2000 - 2008 The Regents of the University of California.
+	</copyright>
+
+	<changelog>
+	$Log: eucalyptus.xml,v $
+	Revision 1.8  2008-07-30 01:38:59  graziano
+	adjusting the order of the packages to be installed
+
+	Revision 1.7  2008-07-29 01:36:44  graziano
+	Let's be sure we leave the configuration file in the better shape we can.
+	Modified the rolls postinstall to accomodate the missing socat and the
+	new way to configure eucalyptus.
+
+	Revision 1.6  2008-05-26 21:56:41  graziano
+	we need out apache2 compile with -DBIG_SECURITY_HOLE to run as root.
+	Added dependency for the roll.
+
+	Revision 1.5  2008-05-21 04:36:28  graziano
+	Let's try to make different installations for compute and frontend: step
+	towards having more rpms.
+
+	Revision 1.4  2008-05-20 03:50:07  graziano
+	Put ant jce in the right spot. Added the call to put the runlevels. Added
+	xen-libs to the package list. Added stubs for euca for cluster controller
+	management.
+
+	Revision 1.3  2008-05-12 19:04:01  graziano
+	added some eucalyptus descriptions: waiting for rich for the copyright
+	part.
+
+	Revision 1.2  2008-05-11 23:07:34  graziano
+	Modified the copyright (removed for now). Added euca-libvirt and euca-vde
+	into the roll.
+
+	Revision 1.1.1.1  2008-05-11 23:01:22  graziano
+	I need a place to put the roll source tree
+
+	</changelog>
+<post>
+<!-- Do any configuration here -->
+</post>
+
+</kickstart>

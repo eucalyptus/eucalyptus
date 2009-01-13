@@ -1,7 +1,7 @@
 Summary:      Elastic Utility Computing Architecture
 Name:         eucalyptus
 Version:      @VERSION@
-Release:      1
+Release:      2
 License:      BSD
 Group:        Applications/System
 Requires:     vconfig, euca-libvirt
@@ -21,7 +21,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus = @VERSION@-%{release}, jdk 
+Requires:     eucalyptus >= @VERSION@, jdk 
 Group:        Applications/System
 
 %description cloud
@@ -34,7 +34,7 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus = @VERSION@-%{release}, euca-httpd, euca-axis2c, iptables, bridge-utils, dhcp
+Requires:     eucalyptus >= @VERSION@, euca-httpd, euca-axis2c, iptables, bridge-utils, eucalyptus-gl, dhcp
 Group:        Applications/System
 
 %description cc
@@ -47,7 +47,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus = @VERSION@-%{release}, euca-httpd, euca-axis2c, bridge-utils
+Requires:     eucalyptus >= @VERSION@, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl
 Group:        Applications/System
 
 %description nc
@@ -58,11 +58,27 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 
 This package contains the node controller part of eucalyptus.
 
+%package gl
+Summary:      Elastic Utility Computing Architecture - cloud controller
+Requires:     eucalyptus, euca-httpd, euca-axis2c
+Group:        Applications/System
+
+%description gl
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains the internal log service of eucalyptus.
+
 %prep
 %setup -n eucalyptus
 
 %build
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --with-libvirt=/opt/euca-libvirt/ --enable-debug --prefix=/opt/eucalyptus
+cd clc
+make deps
+cd ..
 make
 
 %install
@@ -100,6 +116,7 @@ rm -f /etc/init.d/eucalyptus
 /opt/eucalyptus/etc/eucalyptus/cloud.d
 /opt/eucalyptus/etc/eucalyptus/cloud.xml
 /opt/eucalyptus/usr/share/eucalyptus/axis2
+/opt/eucalyptus/usr/share/eucalyptus/drools
 /opt/eucalyptus/usr/share/eucalyptus/hibernate
 /opt/eucalyptus/usr/share/eucalyptus/jetty
 /opt/eucalyptus/usr/share/eucalyptus/jibx
@@ -117,6 +134,9 @@ rm -f /etc/init.d/eucalyptus
 
 %files nc
 /opt/euca-axis2c/services/EucalyptusNC
+
+%files gl
+/opt/euca-axis2c/services/EucalyptusGL
 
 %pre
 if [ -x /etc/init.d/eucalyptus ]; 
@@ -173,7 +193,7 @@ fi
 
 %preun 
 if [ "$1" = "0" ]; then
-	chkconfig --del eucalyptus
+	chkconfig --del eucalyptus || true
 fi
 
 %postun
@@ -208,6 +228,10 @@ if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
 	fi
 	/opt/eucalyptus/usr/sbin/euca_conf -nc "N" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 fi
+
+%changelog gl
+*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Added new service
 
 %changelog cloud
 *Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
