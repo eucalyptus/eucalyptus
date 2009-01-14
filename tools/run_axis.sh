@@ -18,31 +18,29 @@ else
     echo using default port $PORT for Web service endpoint
 fi
 
-# get full path of this script
-SCRIPT_DIR=`dirname "$0"`
-if [ "${SCRIPT_DIR:0:1}" != "/" ]; then
-    SCRIPT_DIR="$PWD/$SCRIPT_DIR"
+if [ -z $EUCALYPTUS ]; then
+    echo ERROR: please, set EUCALYPTUS environment variable
+    exit 1
 fi
-# remove the trailing "/.", if there
-SCRIPT_DIR=${SCRIPT_DIR/%\/./}
 
-# assume top-level directory is one level up
-# (TODO: won't work if path ends with /..)
-EUCALYPTUS_DIR=`dirname $SCRIPT_DIR` 
-source $EUCALYPTUS_DIR/Makedefs # to get environment variables
+if [ -z $AXIS2C_HOME ]; then
+    echo ERROR: please, set AXIS2C_HOME environment variable
+    exit 1
+fi
+
+if [ -z $LIBVIRT_HOME ]; then
+    echo ERROR: please, set LIBVIRT_HOME environment variable
+    exit 1
+fi
+
 
 LIB="LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$AXIS2C_HOME/lib:$LIBVIRT_HOME/lib"
 echo adding AXIS2C and LIBVIRT to library path:
 echo "  $LIB"
 export $LIB
 
-EUCALYPTUS="/home/dmitrii/Desktop/eucalyptus/deployed"
-echo setting environment variable EUCALYPTUS:
-echo "  EUCALYPTUS=$EUCALYPTUS"
-export EUCALYPTUS
 
 CMD="$AXIS2C_HOME/bin/axis2_http_server -p $PORT -r $AXIS2C_HOME -f $AXIS2C_HOME/logs/axis2-port$PORT.log -l $LOG_LEVEL"
-echo changing directory to /tmp
 
 while (true); do 
     echo executing the Axis2 server

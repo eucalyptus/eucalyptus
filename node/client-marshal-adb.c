@@ -8,6 +8,8 @@
 #include "client-marshal.h"
 #include "misc.h"
 
+#define NULL_ERROR_MSG "() failed (check NC host, port, and credentials)\n"
+
 ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir) 
 {
     axutil_env_t * env = NULL;
@@ -179,7 +181,7 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
         adb_ncRunInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncRunInstance(stub, env, input);
         
         if (!output) {
-            logprintfl(EUCAERROR, "ERROR: RunInstance returned NULL\n");
+            logprintfl (EUCAERROR, "ERROR: RunInstance" NULL_ERROR_MSG);
             status = -1;
             
         } else {
@@ -219,7 +221,7 @@ int ncGetConsoleOutputStub (ncStub *st, ncMetadata *meta, char *instanceId, char
     {
         adb_ncGetConsoleOutputResponse_t * output = axis2_stub_op_EucalyptusNC_ncGetConsoleOutput(stub, env, input);
         if (!output) {
-            logprintfl(EUCAERROR, "ERROR: GetConsoleOutputInstance returned NULL\n");
+            logprintfl (EUCAERROR, "ERROR: GetConsoleOutputInstance" NULL_ERROR_MSG);
             * consoleOutput = NULL;
             status = -1;
             
@@ -259,7 +261,7 @@ int ncRebootInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId)
         adb_ncRebootInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncRebootInstance(stub, env, input);
         
         if (!output) {
-            logprintfl(EUCAERROR, "ERROR: RebootInstanceInstance returned NULL\n");
+            logprintfl (EUCAERROR, "ERROR: RebootInstanceInstance" NULL_ERROR_MSG);
             status = -1;
             
         } else {
@@ -296,7 +298,7 @@ int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instId, int *sh
         adb_ncTerminateInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncTerminateInstance(stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: TerminateInstance returned NULL\n");
+            logprintfl (EUCAERROR, "ERROR: TerminateInstance" NULL_ERROR_MSG);
             status = -1;
             
         } else {
@@ -341,7 +343,7 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
         adb_ncDescribeInstancesResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeInstances(stub, env, input);
         
         if (!output) {
-            logprintfl(EUCAERROR, "ERROR: DescribeInstances returned NULL\n");
+            logprintfl (EUCAERROR, "ERROR: DescribeInstances" NULL_ERROR_MSG);
             status = -1;
 
         } else {
@@ -355,7 +357,7 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
             if (* outInstsLen) {
                 * outInsts = malloc (sizeof(* outInstsLen));
                 if ( * outInsts == NULL ) { 
-                    logprintfl(EUCAERROR, "ERROR: out of memory in ncDescribeInstancesStub()\n");
+                    logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeInstancesStub()\n");
                     * outInstsLen = 0;
                     status = 2;
                 } else {
@@ -393,7 +395,7 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
         adb_ncDescribeResourceResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeResource(stub, env, input);
         
         if (!output) {
-            logprintfl(EUCAERROR, "ERROR: DescribeResource returned NULL\n");
+            logprintfl (EUCAERROR, "ERROR: DescribeResource" NULL_ERROR_MSG);
             status = -1;
 
         } else {
@@ -414,7 +416,7 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
                 (char *)adb_ncDescribeResourceResponseType_get_publicSubnets(response, env));
 
             if (!res) {
-                logprintfl(EUCAERROR, "ERROR: out of memory in ncDescribeResourceStub()\n");
+                logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeResourceStub()\n");
                 status = 2;
             }
             * outRes = res;
@@ -451,7 +453,7 @@ int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char **peers, int peersLe
         adb_ncStartNetworkResponse_t * output = axis2_stub_op_EucalyptusNC_ncStartNetwork (stub, env, input);
         
         if (!output) {
-            logprintfl(EUCAERROR, "ERROR: StartNetwork returned NULL\n");
+            logprintfl (EUCAERROR, "ERROR: StartNetwork" NULL_ERROR_MSG);
             status = -1;
 
         } else {
@@ -495,7 +497,7 @@ int ncAttachVolume (ncStub *st, ncMetadata *meta, char *instanceId, char *volume
         adb_ncAttachVolumeResponse_t * output = axis2_stub_op_EucalyptusNC_ncAttachVolume (stub, env, input);
         
         if (!output) {
-            logprintfl(EUCAERROR, "ERROR: AttachVolume returned NULL\n");
+            logprintfl (EUCAERROR, "ERROR: AttachVolume" NULL_ERROR_MSG);
             status = -1;
 
         } else {
@@ -535,7 +537,7 @@ int ncDetachVolume (ncStub *st, ncMetadata *meta, char *instanceId, char *volume
         adb_ncDetachVolumeResponse_t * output = axis2_stub_op_EucalyptusNC_ncDetachVolume (stub, env, input);
         
         if (!output) {
-            logprintfl(EUCAERROR, "ERROR: DetachVolume returned NULL\n");
+            logprintfl (EUCAERROR, "ERROR: DetachVolume" NULL_ERROR_MSG);
             status = -1;
 
         } else {
@@ -573,7 +575,7 @@ int ncDetachVolume (ncStub *st, ncMetadata *meta, char *instanceId, char *volume
         adb_ncOPERATIONResponse_t * output = axis2_stub_op_EucalyptusNC_ncOPERATION (stub, env, input);
         
         if (!output) {
-            logprintfl(EUCAERROR, "ERROR: OPERATION returned NULL\n");
+            logprintfl (EUCAERROR, "ERROR: OPERATION" NULL_ERROR_MSG);
             status = -1;
 
         } else {

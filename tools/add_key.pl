@@ -24,12 +24,12 @@ if (!-x $MKDIR || !-x $RMDIR || !-x $CHOWN || !-x $CHMOD || !-x $MKTEMP || !-x $
 # check input params
 $mounter = untaint(shift @ARGV);
 $img = untaint(shift @ARGV);
-$key = untaint(shift @ARGV);
+$key = shift @ARGV; # untaint later
 $tmpfile = "";
 $loopdev = "";
 
-if (!-f "$key" || !-f "$img" || !-x "$mounter") {
-    print STDERR "add_key cannot verify inputs: mounter=$mounter key=$key img=$img\n";
+if (!-f "$img" || !-x "$mounter") {
+    print STDERR "add_key cannot verify inputs: mounter=$mounter img=$img\n";
     do_exit(1);
 }
 
@@ -37,6 +37,17 @@ if (!-f "$key" || !-f "$img" || !-x "$mounter") {
 if (system("$TUNE2FS -c 0 -i 0 $img >/dev/null 2>&1")) {
     print STDERR "cmd: $TUNE2FS -c 0 -i 0 $img\n";
 #    do_exit(1);
+}
+
+# without a key, add_key.pl just runs tune2fs
+if (not defined($key)) {
+    do_exit(0);
+}
+
+$key = untaint($key);
+if (!-f "$key") {
+    print STDERR "add_key cannot verify inputs: key=$key\n";
+    do_exit(1);
 }
 
 chomp($tmpfile = untaint(`$MKTEMP -d`));
