@@ -44,12 +44,12 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
     return doDescribeResource (meta, resourceType, outRes);
 }
 
-int ncAttachVolume (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
+int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
 {
     return doAttachVolume (meta, instanceId, volumeId, remoteDev, localDev);
 }
 
-int ncDetachVolume (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
     return doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force);
 }

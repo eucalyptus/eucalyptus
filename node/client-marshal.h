@@ -21,7 +21,7 @@ int ncTerminateInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, i
 int ncDescribeInstancesStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
 int ncDescribeResourceStub  (ncStub *stub, ncMetadata *meta, char *resourceType, ncResource **outRes);
 int ncStartNetworkStub  (ncStub *stub, ncMetadata *meta, char **peers, int peersLen, int port, int vlan, char **outStatus);
-int ncAttachVolume (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-int ncDetachVolume (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
+int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
 
 #endif

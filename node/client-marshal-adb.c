@@ -8,7 +8,7 @@
 #include "client-marshal.h"
 #include "misc.h"
 
-#define NULL_ERROR_MSG "() failed (check NC host, port, and credentials)\n"
+#define NULL_ERROR_MSG "() could not be invoked (check NC host, port, and credentials)\n"
 
 ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir) 
 {
@@ -473,7 +473,7 @@ int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char **peers, int peersLe
     return status;
 }
 
-int ncAttachVolume (ncStub *st, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev) 
+int ncAttachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev) 
 {
     axutil_env_t * env  = st->env;
     axis2_stub_t * stub = st->stub;
@@ -491,6 +491,7 @@ int ncAttachVolume (ncStub *st, ncMetadata *meta, char *instanceId, char *volume
     adb_ncAttachVolumeType_set_volumeId(request, env, volumeId);
     adb_ncAttachVolumeType_set_remoteDev(request, env, remoteDev);
     adb_ncAttachVolumeType_set_localDev(request, env, localDev);
+    adb_ncAttachVolume_set_ncAttachVolume(input, env, request);
 
     int status = 0;
     { // do it
@@ -512,7 +513,7 @@ int ncAttachVolume (ncStub *st, ncMetadata *meta, char *instanceId, char *volume
     return status;
 }
 
-int ncDetachVolume (ncStub *st, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
     axutil_env_t * env  = st->env;
     axis2_stub_t * stub = st->stub;
@@ -531,6 +532,7 @@ int ncDetachVolume (ncStub *st, ncMetadata *meta, char *instanceId, char *volume
     adb_ncDetachVolumeType_set_remoteDev(request, env, remoteDev);
     adb_ncDetachVolumeType_set_localDev(request, env, localDev);
     adb_ncDetachVolumeType_set_force(request, env, force);
+    adb_ncDetachVolume_set_ncDetachVolume(input, env, request);
 
     int status = 0;
     { // do it
@@ -569,6 +571,7 @@ int ncDetachVolume (ncStub *st, ncMetadata *meta, char *instanceId, char *volume
     
     // TODO: set op-specific input fields
     // e.g. adb_ncOPERATIONType_set_Z(request, env, Z);
+    adb_ncOPERATION_set_ncOPERATION(input, env, request);
 
     int status = 0;
     { // do it

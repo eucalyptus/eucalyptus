@@ -16,7 +16,7 @@ void usage (void)
 { 
     fprintf (stderr, "usage: NCclient [command] [options]\n"
         "\tcommands:\t\t\trequired options:\n"
-             "\t\trunInstance\t\t[-i -r -m -k -a]\n"
+             "\t\trunInstance\t\t[-m -k]\n"
              "\t\tterminateInstance\t[-i]\n"
              "\t\tdescribeInstances\n"
              "\t\tdescribeResource\n"
@@ -52,11 +52,15 @@ int main (int argc, char **argv)
     char * ramdisk_manifest = NULL;
     char * reservation_id = NULL;
     char * mac_addr = strdup (DEFAULT_MAC_ADDR);
+    char * volume_id = NULL;
+    char * remote_dev = NULL;
+    char * local_dev = NULL;
+    int force = 0;
 	char * command = NULL;
     int count = 1;
 	int ch;
     
-	while ((ch = getopt(argc, argv, "d:n:w:i:m:k:r:e:a:c:h")) != -1) {
+	while ((ch = getopt(argc, argv, "d:n:w:i:m:k:r:e:a:c:h:V:R:L:F")) != -1) {
 		switch (ch) {
         case 'c':
             count = atoi (optarg);
@@ -102,6 +106,18 @@ int main (int argc, char **argv)
             break;
         case 'a':
             mac_addr = optarg;
+            break;
+        case 'V':
+            volume_id = optarg;
+            break;
+        case 'R':
+            remote_dev = optarg;
+            break;
+        case 'L':
+            local_dev = optarg;
+            break;
+        case 'F':
+            force = 1;
             break;
         case 'h':
             usage (); // will exit
@@ -288,6 +304,31 @@ int main (int argc, char **argv)
                 outRes->diskSizeMax, outRes->diskSizeAvailable,
                 outRes->numberOfCoresMax, outRes->numberOfCoresAvailable,
                 outRes->publicSubnets);
+    /***********************************************************/
+    } else if (!strcmp(command, "attachVolume")) {
+        CHECK_PARAM(instance_id, "instance ID");
+        CHECK_PARAM(volume_id, "volume ID");
+        CHECK_PARAM(remote_dev, "remote dev");
+        CHECK_PARAM(local_dev, "local dev");
+        
+        int rc = ncAttachVolumeStub (stub, &meta, instance_id, volume_id, remote_dev, local_dev);
+        if (rc != 0) {
+            printf("ncAttachVolume() failed: error=%d\n", rc);
+            exit(1);
+        }
+
+    /***********************************************************/
+    } else if (!strcmp(command, "detachVolume")) {
+        CHECK_PARAM(instance_id, "instance ID");
+        CHECK_PARAM(volume_id, "volume ID");
+        CHECK_PARAM(remote_dev, "remote dev");
+        CHECK_PARAM(local_dev, "local dev");
+        
+        int rc = ncDetachVolumeStub (stub, &meta, instance_id, volume_id, remote_dev, local_dev, force);
+        if (rc != 0) {
+            printf("ncDetachVolume() failed: error=%d\n", rc);
+            exit(1);
+        }
         
     /***********************************************************/
     } else {

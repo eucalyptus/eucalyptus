@@ -450,8 +450,9 @@ adb_ncTerminateInstanceResponse_t* ncTerminateInstanceMarshal (adb_ncTerminateIn
             adb_ncTerminateInstanceResponseType_set_userId(output, env, userId);
 
             // set operation-specific fields in output
-            char s[128];
+            adb_ncTerminateInstanceResponseType_set_instanceId(output, env, instanceId);
             // TODO: change the WSDL to use the name/code pair
+            char s[128];
             snprintf (s, 128, "%d", shutdownState);
             adb_ncTerminateInstanceResponseType_set_shutdownState(output, env, s);
             snprintf (s, 128, "%d", previousState);

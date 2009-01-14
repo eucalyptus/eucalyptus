@@ -1016,10 +1016,108 @@ int doStartNetwork(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, i
 
 int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
 {
-    return 0;
+    ncInstance *instance;
+    int error;
+    int ret = OK;
+
+    error = init_config();
+    if (error) {
+        return error;
+    }
+
+    logprintfl (EUCAINFO, "doAttachVolume() invoked (id=%s vol=%s remote=%s local=%s)\n", instanceId, volumeId, remoteDev, localDev);
+    sem_p (inst_sem); 
+    instance = find_instance(&global_instances, instanceId);
+    sem_v (inst_sem);
+    if ( instance == NULL ) 
+        return NOT_FOUND;
+
+    /* try attaching to the Xen domain */
+    virConnectPtr conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
+    if (conn == NULL) {
+        logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
+        ret = ERROR;
+
+    } else {
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        if (dom) {
+
+            char xml [1024];
+            snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDev);
+
+            /* protect Xen calls, just in case */
+            sem_p (xen_sem);
+            int err = virDomainAttachDevice (dom, xml);
+            sem_v (xen_sem);
+            if (err) {
+                logprintfl (EUCAERROR, "AttachVolume() failed (err=%d) XML=%s\n", err, xml);
+                ret = ERROR;
+            } else {
+                logprintfl (EUCAINFO, "attached %s to %s in domain %s\n", remoteDev, localDev, instanceId);
+            }
+            virDomainFree(dom);
+        } else {
+            if (instance->state != BOOTING) {
+                logprintfl (EUCAWARN, "warning: domain %s not running on hypervisor, cannot attach device\n", instanceId);
+            }
+            ret = ERROR;
+        }
+        virConnectClose (conn);
+    }
+
+    return ret;
 }
 
 int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
-    return 0;
+    ncInstance *instance;
+    int error;
+    int ret = OK;
+
+    error = init_config();
+    if (error) {
+        return error;
+    }
+
+    logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
+    sem_p (inst_sem); 
+    instance = find_instance(&global_instances, instanceId);
+    sem_v (inst_sem);
+    if ( instance == NULL ) 
+        return NOT_FOUND;
+
+    /* try attaching to the Xen domain */
+    virConnectPtr conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
+    if (conn == NULL) {
+        logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
+        ret = ERROR;
+
+    } else {
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        if (dom) {
+
+            char xml [1024];
+            snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDev);
+
+            /* protect Xen calls, just in case */
+            sem_p (xen_sem);
+            int err = virDomainDetachDevice (dom, xml);
+            sem_v (xen_sem);
+            if (err) {
+                logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
+                ret = ERROR;
+            } else {
+                logprintfl (EUCAINFO, "detached %s as %s in domain %s\n", remoteDev, localDev, instanceId);
+            }
+            virDomainFree(dom);
+        } else {
+            if (instance->state != BOOTING) {
+                logprintfl (EUCAWARN, "warning: domain %s not running on hypervisor, cannot detach device\n", instanceId);
+            }
+            ret = ERROR;
+        }
+        virConnectClose (conn);
+    }
+
+    return ret;
 }
