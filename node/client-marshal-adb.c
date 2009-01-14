@@ -127,9 +127,11 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         groupNames, groupNamesSize
         );
     
-    axutil_date_time_t * dt = adb_instanceType_get_launchTime(instance, env);            
-    outInst->launchTime = datetime_to_unix (dt, env);
-    axutil_date_time_free(dt, env);
+    axutil_date_time_t * dt = adb_instanceType_get_launchTime(instance, env);
+    if (dt!=NULL) {
+        outInst->launchTime = datetime_to_unix (dt, env);
+        axutil_date_time_free(dt, env);
+    }
 
     return outInst;
 }

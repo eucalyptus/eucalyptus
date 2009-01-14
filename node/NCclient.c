@@ -20,6 +20,8 @@ void usage (void)
              "\t\tterminateInstance\t[-i]\n"
              "\t\tdescribeInstances\n"
              "\t\tdescribeResource\n"
+             "\t\tattachVolume\t\t[-i -V -R -L]\n"
+             "\t\tdetachVolume\t\t[-i -V -R -L]\n"
         "\toptions:\n"
              "\t\t-d \t\t- print debug output\n"
              "\t\t-h \t\t- this help information\n"
@@ -32,6 +34,13 @@ void usage (void)
              "\t\t-r [id:path] \t- id and manifest path of ramdisk image\n"
              "\t\t-a [address] \t- MAC address for instance to use\n"
              "\t\t-c [number] \t- number of instances to start\n"
+             "\t\t-V [name] \t- name of the volume (for reference)\n"
+             "\t\t-R [device] \t- remote/source device (e.g. /dev/etherd/e0.0)\n"
+             "\t\t-L [device] \t- local/target device (e.g. hda)\n"
+             "\t\t-F \t\t- force VolumeDetach\n"
+             "\t\t-U [string] \t- user data to store with instance\n"
+             "\t\t-I [string] \t- launch index to store with instance\n"
+             "\t\t-G [str:str: ] \t- group names to store with instance\n"
         );
 
     exit (1);
@@ -56,11 +65,15 @@ int main (int argc, char **argv)
     char * remote_dev = NULL;
     char * local_dev = NULL;
     int force = 0;
+    char * user_data = NULL;
+    char * launch_index = NULL;
+    char ** group_names = NULL;
+    int group_names_size = 0;
 	char * command = NULL;
     int count = 1;
 	int ch;
     
-	while ((ch = getopt(argc, argv, "d:n:w:i:m:k:r:e:a:c:h:V:R:L:F")) != -1) {
+	while ((ch = getopt(argc, argv, "hdn:w:i:m:k:r:e:a:c:h:V:R:L:FU:I:G:")) != -1) {
 		switch (ch) {
         case 'c':
             count = atoi (optarg);
@@ -119,6 +132,29 @@ int main (int argc, char **argv)
         case 'F':
             force = 1;
             break;
+        case 'U':
+            user_data = optarg;
+            break;
+        case 'I':
+            launch_index = optarg;
+            break;
+        case 'G':
+        {
+            int i;
+            group_names_size = 1;
+            for (i=0; optarg[i]; i++) 
+                if (optarg[i]==':')
+                    group_names_size++;
+            group_names = malloc (sizeof(char *) * group_names_size);
+            if (group_names==NULL) {
+                fprintf (stderr, "ERROR: out of memory for group_names[]\n");
+                exit (1);
+            }
+            group_names [0] = strtok (optarg, ":");
+            for (i=1; i<group_names_size; i++)
+                group_names[i] = strtok (NULL, ":");
+            break;
+        }
         case 'h':
             usage (); // will exit
         case '?':
@@ -250,7 +286,7 @@ int main (int argc, char **argv)
                                        ramdisk_id, ramdisk_url, 
                                        "", /* key */
                                        privMac, pubMac, vlan, 
-                                       NULL, NULL, NULL, 0, /* CC stuff */
+                                       user_data, launch_index, group_names, group_names_size, /* CC stuff */
                                        &outInst);
             if (rc != 0) {
                 printf("ncRunInstance() failed: instanceId=%s error=%d\n", instance_id, rc);
@@ -283,8 +319,36 @@ int main (int argc, char **argv)
             exit(1);
         }
         for (i=0; i<outInstsLen; i++) {
-            printf("instanceId=%s state=%s time=%d\n", outInsts[i]->instanceId, outInsts[i]->stateName, outInsts[i]->launchTime);
-            free_instance(&(outInsts[i]));
+            ncInstance * inst = outInsts[i];
+            printf("instanceId=%s state=%s time=%d\n", inst->instanceId, inst->stateName, inst->launchTime);
+            if (debug) {
+                printf ("              userData=%s launchIndex=%s groupNames=", inst->userData, inst->launchIndex);
+                if (inst->groupNamesSize>0) {
+                    int j;
+                    for (j=0; j<inst->groupNamesSize; j++) {
+                        if (j>0) 
+                            printf (":");
+                        printf ("%s", inst->groupNames[j]);
+                    }
+                } else {
+                    printf ("(none)");
+                }
+                printf ("\n");
+                
+                printf ("              attached volumes: ");
+                if (inst->volumesSize>0) {
+                    int j;
+                    for (j=0; j<inst->volumesSize; j++) {
+                        if (j>0)
+                            printf ("                                ");
+                        printf ("%s %s %s\n", inst->volumes[j].volumeId, inst->volumes[j].remoteDev, inst->volumes[j].localDev);
+                    }
+                } else {
+                    printf ("(none)\n");
+                }
+
+                free_instance(&(outInsts[i]));
+            }
         }
         /* TODO: fix free(outInsts); */
 
@@ -304,6 +368,7 @@ int main (int argc, char **argv)
                 outRes->diskSizeMax, outRes->diskSizeAvailable,
                 outRes->numberOfCoresMax, outRes->numberOfCoresAvailable,
                 outRes->publicSubnets);
+
     /***********************************************************/
     } else if (!strcmp(command, "attachVolume")) {
         CHECK_PARAM(instance_id, "instance ID");

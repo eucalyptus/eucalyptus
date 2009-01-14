@@ -313,8 +313,7 @@ adb_ncDescribeInstancesResponse_t* ncDescribeInstancesMarshal (adb_ncDescribeIns
                 // set operation-specific fields in output
                 for (i=0; i<outInstsLen; i++) {
                     adb_instanceType_t * instance = adb_instanceType_create(env);
-                    ncInstance * outInst = outInsts[i];
-                    copy_instance_to_adb (instance, env, outInst); // copy all values outInst->instance
+                    copy_instance_to_adb (instance, env, outInsts[i]); // copy all values outInst->instance
 
                     /* TODO: should we free_instance(&outInst) here or not? currently you only have to free outInsts[] */
                     adb_ncDescribeInstancesResponseType_add_instances(output, env, instance);

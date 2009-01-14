@@ -47,12 +47,12 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
         strncpy(inst->launchIndex, launchIndex, CHAR_BUFFER_SIZE);
     }
 
+    inst->groupNamesSize = groupNamesSize;
     if (groupNames && groupNamesSize) {
         int i;
         for (i=0; groupNames[i] && i<groupNamesSize; i++) {
             strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
         }
-        inst->groupNamesSize = groupNamesSize;
     }
     
     if (ncnet != NULL) {
