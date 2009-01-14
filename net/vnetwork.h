@@ -85,9 +85,14 @@ int vnetGetPublicIP(vnetConfig *vnetconfig, char *ip, char **dstip, int *allocat
 int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst);
 int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst);
 
-// linux vlan/vtun driver
-int vnetStartNetworkLinuxVlan(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
-int vnetStopNetworkLinuxVlan(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
+int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
+int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
+
+// linux managed mode driver
+int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
+int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
+
+
 
 // helper functions
 int vnetSaveIPTables(vnetConfig *vnetconfig);

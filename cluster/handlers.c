@@ -412,9 +412,9 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
     
     rc = vnetStartNetwork(vnetconfig, vlan, ccMeta->userId, netName, &brname);
     
-    if (brname) {
-      vnetAddDev(vnetconfig, brname);
-    }
+    //    if (brname) {
+      //      vnetAddDev(vnetconfig, brname);
+    //    }
     
     sem_post(vnetConfigLock);
     
@@ -588,7 +588,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout) {
 
   sem_wait(configLock);
   for (i=0; i<config->numResources; i++) {
-    pipe(filedes);
+    rc = pipe(filedes);
 
     logprintfl(EUCADEBUG, "calling %s\n", config->resourcePool[i].ncService);
     pid = fork();
@@ -689,7 +689,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
       int filedes[2];
       int len, j;
       
-      pipe(filedes);
+      rc = pipe(filedes);
       pid = fork();
       if (pid == 0) {
 	close(filedes[0]);
@@ -701,16 +701,16 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	
     	if (!rc) {
 	  len = ncOutInstsLen;
-	  write(filedes[1], &len, sizeof(int));
+	  rc = write(filedes[1], &len, sizeof(int));
 	  for (j=0; j<len; j++) {
 	    ncInstance *inst;
 	    inst = ncOutInsts[j];
-	    write(filedes[1], inst, sizeof(ncInstance));
+	    rc = write(filedes[1], inst, sizeof(ncInstance));
 	  }
 	  ret = 0;
 	} else {
 	  len = 0;
-	  write(filedes[1], &len, sizeof(int));
+	  rc = write(filedes[1], &len, sizeof(int));
 	  ret = 1;
 	}
 	close(filedes[1]);
@@ -1019,7 +1019,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       }
     } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
       foundnet = 1;
-    } else if (!strcmp(vnetconfig->mode, "MANAGED")) {
+    } else if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
       
       // add the mac address to the virtual network
       rc = vnetAddHost(vnetconfig, mac, NULL, vlan);
@@ -1057,7 +1057,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	sem_wait(vnetConfigLock);
 	
 	vnetDisableHost(vnetconfig, mac, NULL, 0);
-	if (!strcmp(vnetconfig->mode, "MANAGED")) {
+	if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
 	  vnetDelHost(vnetconfig, mac, NULL, vlan);
 	}
 	
@@ -1070,7 +1070,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	logprintfl(EUCAINFO, "\tscheduler decided to run instance '%s' on resource '%s'\n", instId, res->ncService);
 	outInst=NULL;
 	
-	pipe(filedes);
+	rc = pipe(filedes);
 	pid = fork();
 	if (pid == 0) {
 	  close(filedes[0]);
@@ -1082,7 +1082,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  logprintfl(EUCAINFO,"\tasking for virtual hardware (mem/disk/cores): %d/%d/%d\n", ncvm.memorySize, ncvm.diskSize, ncvm.numberOfCores);
 	  rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, mac, mac, vlan, &outInst);
 	  if (!rc) {
-	    write(filedes[1], outInst, sizeof(ncInstance));
+	    rc = write(filedes[1], outInst, sizeof(ncInstance));
 	    ret = 0;
 	  } else {
 	    ret = 1;
@@ -1115,7 +1115,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  // couldn't run this VM, remove networking information from system
 	  sem_wait(vnetConfigLock);
 	  vnetDisableHost(vnetconfig, mac, NULL, 0);
-	  if (!strcmp(vnetconfig->mode, "MANAGED")) {
+	  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
 	    vnetDelHost(vnetconfig, mac, NULL, vlan);
 	  }
 	  sem_post(vnetConfigLock);
@@ -1231,7 +1231,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
     if (1) {
       int pid, status, ret, rbytes, len;
       int filedes[2];
-      pipe(filedes);
+      rc = pipe(filedes);
       pid = fork();
       if (pid == 0) {
 	close(filedes[0]);
@@ -1243,8 +1243,8 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
 	rc = ncGetConsoleOutputStub(ncs, meta, instId, &consoleOutput);
 	if (!rc) {
 	  len = strlen(consoleOutput) + 1;
-	  write(filedes[1], &len, sizeof(int));
-	  write(filedes[1], consoleOutput, sizeof(char) * len);
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = write(filedes[1], consoleOutput, sizeof(char) * len);
 	  ret = 0;
 	} else {
 	  ret = 1;
@@ -1408,7 +1408,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
       sem_wait(vnetConfigLock);
       
       vnetDisableHost(vnetconfig, myInstance->ccnet.privateMac, NULL, 0);
-      if (!strcmp(vnetconfig->mode, "MANAGED")) {
+      if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
 	vnetDelHost(vnetconfig, myInstance->ccnet.privateMac, NULL, myInstance->ccnet.vlan);
       }
       
@@ -1428,7 +1428,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
       if (1) {
 	int pid, status, ret, rbytes;
 	int filedes[2];
-	pipe(filedes);
+	rc = pipe(filedes);
 	pid = fork();
 	if (pid == 0) {
 	  close(filedes[0]);
@@ -1477,7 +1477,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 }
 
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname) {
-  int shd;
+  int shd, rc;
   sem_t *thelock;
   
   // create a lock and grab it
@@ -1488,7 +1488,7 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, c
   shd = shm_open(bufname, O_CREAT | O_RDWR | O_EXCL, 0644);
   if (shd >= 0) {
     // if this is the first process to create the config, init to 0
-    ftruncate(shd, bytes);
+    rc = ftruncate(shd, bytes);
   } else {
     shd = shm_open(bufname, O_CREAT | O_RDWR, 0644);
   }
@@ -1670,14 +1670,14 @@ int init_config(void) {
 	initFail = 1;
       } else {
       }
-    } else if (!strcmp(pubmode, "MANAGED")) {
+    } else if (!strcmp(pubmode, "MANAGED") || !strcmp(pubmode, "MANAGED-NOVLAN")) {
       numaddrs = getConfString(configFile, "VNET_ADDRSPERNET");
       pubSubnet = getConfString(configFile, "VNET_SUBNET");
       pubSubnetMask = getConfString(configFile, "VNET_NETMASK");
       pubDNS = getConfString(configFile, "VNET_DNS");
       pubips = getConfString(configFile, "VNET_PUBLICIPS");
       if (!pubSubnet || !pubSubnetMask || !pubDNS || !numaddrs) {
-	logprintfl(EUCAFATAL,"in 'MANAGED' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");
+	logprintfl(EUCAFATAL,"in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");
 	initFail = 1;
       }
     }
