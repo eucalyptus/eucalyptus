@@ -651,7 +651,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, ncIn
                    char *ramdiskId, char *ramdiskURL, 
                    char *keyName, 
                    char *privMac, char *pubMac, int vlan, 
-                   char *userData, char *launchIndex, char **groupNames, int groupNamesSize, 
+                   char *userData, char *launchIndex, char **groupNames, int groupNamesSize,
                    ncInstance **outInst)
 {
     ncInstance * instance = NULL;
@@ -696,7 +696,8 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, ncIn
                                         instance_state_names[PENDING], 
                                         PENDING, 
                                         meta->userId, 
-                                        &ncnet, keyName))) {
+                                        &ncnet, keyName,
+                                        userData, launchIndex, groupNames, groupNamesSize))) {
         logprintfl (EUCAFATAL, "Error: could not allocate instance struct\n");
         return 2;
     }

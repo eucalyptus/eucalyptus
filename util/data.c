@@ -30,7 +30,8 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
                                 char *kernelId, char *kernelURL, 
                                 char *ramdiskId, char *ramdiskURL,
                                 char *stateName, int stateCode, char *userId, 
-                                ncNetConf *ncnet, char *keyName)
+                                ncNetConf *ncnet, char *keyName,
+                                char *userData, char *launchIndex, char **groupNames, int groupNamesSize)
 {
     ncInstance * inst;
 
@@ -38,6 +39,22 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
      * strings that are empty unless set */
     if (!(inst = calloc(1, sizeof(ncInstance)))) return NULL; 
 
+    if (userData) {
+        strncpy(inst->userData, userData, CHAR_BUFFER_SIZE*10);
+    }
+
+    if (launchIndex) {
+        strncpy(inst->launchIndex, launchIndex, CHAR_BUFFER_SIZE);
+    }
+
+    if (groupNames && groupNamesSize) {
+        int i;
+        for (i=0; groupNames[i] && i<groupNamesSize; i++) {
+            strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
+        }
+        inst->groupNamesSize = groupNamesSize;
+    }
+    
     if (ncnet != NULL) {
       memcpy(&(inst->ncnet), ncnet, sizeof(ncNetConf));
     }

@@ -98,7 +98,13 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 32);
         strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 32);
     }
-            
+
+    int i, groupNamesSize = adb_instanceType_sizeof_groupNames (instance, env);
+    char * groupNames [EUCA_MAX_GROUPS];
+    for (i = 0; i<EUCA_MAX_GROUPS && i<groupNamesSize; i++) {
+        groupNames[i] = adb_instanceType_get_groupNames_at (instance, env, i);
+    }
+
     ncInstance * outInst = allocate_instance(
         (char *)adb_instanceType_get_instanceId(instance, env),
         (char *)adb_instanceType_get_reservationId(instance, env),
@@ -113,7 +119,10 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         0,
         (char *)adb_instanceType_get_userId(instance, env), 
         &ncnet, 
-        (char *)adb_instanceType_get_keyName(instance, env)
+        (char *)adb_instanceType_get_keyName(instance, env),
+        (char *)adb_instanceType_get_userData(instance, env),
+        (char *)adb_instanceType_get_launchIndex(instance, env),
+        groupNames, groupNamesSize
         );
     
     axutil_date_time_t * dt = adb_instanceType_get_launchTime(instance, env);            

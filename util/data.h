@@ -59,11 +59,11 @@ typedef struct ncInstance_t {
     /* passed into NC via runInstances for safekeeping */
     char userData[CHAR_BUFFER_SIZE*10];
     char launchIndex[CHAR_BUFFER_SIZE];
-    char groupNames[64][CHAR_BUFFER_SIZE];
+    char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE];
     int groupNamesSize;
 
     /* updated by NC upon Attach/DetachVolume */
-    ncVolume volumes[64];
+    ncVolume volumes[EUCA_MAX_VOLUMES];
     int volumesSize;
 } ncInstance;
 
@@ -102,12 +102,13 @@ ncMetadata * allocate_metadata(char *correlationId, char *userId);
 void free_metadata(ncMetadata ** meta);
 
 ncInstance * allocate_instance(char *instanceId, char *reservationId, 
-	ncInstParams *params, 
-	char *imageId, char *imageURL, 
-	char *kernelId, char *kernelURL, 
-	char *ramdiskId, char *ramdiskURL, 
-	char *stateName, int stateCode, char *userId, 
-	ncNetConf *ncnet, char *keyName);
+                               ncInstParams *params, 
+                               char *imageId, char *imageURL, 
+                               char *kernelId, char *kernelURL, 
+                               char *ramdiskId, char *ramdiskURL, 
+                               char *stateName, int stateCode, char *userId, 
+                               ncNetConf *ncnet, char *keyName,
+                               char *userData, char *launchIndex, char **groupNames, int groupNamesSize);
 void free_instance (ncInstance ** inst);
 
 ncResource * allocate_resource(char *nodeStatus, 

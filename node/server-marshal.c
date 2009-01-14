@@ -207,7 +207,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     axis2_char_t * userData = adb_ncRunInstanceType_get_userData(input, env);
     axis2_char_t * launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
     int groupNamesSize = adb_ncRunInstanceType_sizeof_groupNames(input, env);
-    char ** groupNames = malloc(sizeof(char *) * groupNamesSize);
+    char ** groupNames = calloc (groupNamesSize, sizeof(char *));
     if (groupNames==NULL) {
         logprintfl (EUCAERROR, "ERROR: out of memory in ncRunInstancesMarshall()\n");
         adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_FALSE);

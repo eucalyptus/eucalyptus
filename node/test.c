@@ -60,7 +60,7 @@ int main (int argc, char **argv)
 
         free_instance (NULL);
         free_instance (&inst);
-        inst = allocate_instance ("i1", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL);
+        inst = allocate_instance ("i1", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0);
         assert(inst!=NULL);
         free_instance (&inst);
         assert(inst==NULL);
@@ -80,7 +80,7 @@ int main (int argc, char **argv)
         for (i=0; i<INSTS; i++) {
             char id[10];
             sprintf(id, "i-%d", i);
-            inst = Insts[i] = allocate_instance(id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL);
+            inst = Insts[i] = allocate_instance(id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0);
             assert (inst!=NULL);
             n = add_instance(&bag, inst);
             assert (n==0);
