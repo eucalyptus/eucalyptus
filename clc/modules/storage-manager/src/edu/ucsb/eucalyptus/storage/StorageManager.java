@@ -37,8 +37,12 @@ package edu.ucsb.eucalyptus.storage;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 
 import java.io.IOException;
+import java.util.List;
 
 public interface StorageManager {
+    
+    public void initialize();
+    
     public void createBucket(String bucket) throws IOException;
 
 	public boolean isEmpty(String bucket);
@@ -61,5 +65,7 @@ public interface StorageManager {
 
     public String getObjectPath(String bucket, String object);
 
-    public void setRootDirectory(String rootDirectory);    
+    public void setRootDirectory(String rootDirectory);
+
+    public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet);
 }

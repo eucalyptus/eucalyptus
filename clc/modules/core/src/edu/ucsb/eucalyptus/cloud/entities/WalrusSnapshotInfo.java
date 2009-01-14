@@ -39,10 +39,6 @@ import org.hibernate.annotations.*;
 import javax.persistence.*;
 import javax.persistence.Entity;
 import javax.persistence.Table;
-import javax.persistence.CascadeType;
-import java.util.Date;
-import java.util.ArrayList;
-import java.util.List;
 
 
 @Entity
@@ -57,6 +53,10 @@ public class WalrusSnapshotInfo {
     private String snapshotId;
     @Column(name = "volume_name")
     private String volumeId;
+    @Column(name ="snapshot_vgname")
+    private String vgName;
+    @Column(name ="snapshot_lvname")
+    private String lvName;
 
     public WalrusSnapshotInfo() {}
 
@@ -83,5 +83,21 @@ public class WalrusSnapshotInfo {
 
     public void setVolumeId(String volumeId) {
         this.volumeId = volumeId;
+    }
+
+    public String getVgName() {
+        return vgName;
+    }
+
+    public void setVgName(String vgName) {
+        this.vgName = vgName;
+    }
+
+    public String getLvName() {
+        return lvName;
+    }
+
+    public void setLvName(String lvName) {
+        this.lvName = lvName;
     }
 }

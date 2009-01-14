@@ -38,18 +38,31 @@ import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.util.WalrusProperties;
 
 import java.io.*;
+import java.util.List;
+import java.util.ArrayList;
 
 public class FileSystemStorageManager implements StorageManager {
 
     public static final String FILE_SEPARATOR = "/";
+    public static final String lvmRootDirectory = "/dev";
+    private static boolean initialized = false;
+
     private String rootDirectory;
     public FileSystemStorageManager(String rootDirectory) {
         this.rootDirectory = rootDirectory;
     }
 
+    public void initialize() {
+        if(!initialized) {
+            System.loadLibrary("fsstorage");
+            initialized = true;
+        }
+    }
+
     public void setRootDirectory(String rootDirectory) {
         this.rootDirectory = rootDirectory;
     }
+
 
     public void createBucket(String bucket) throws IOException {
         File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);
@@ -138,4 +151,39 @@ public class FileSystemStorageManager implements StorageManager {
     public String getObjectPath(String bucket, String object) {
         return rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
     }
+
+    public native String removeLoopback(String loDevName);
+
+    public native String createLoopback(String fileName);
+
+    public native String removeLogicalVolume(String lvName);
+
+    public native String reduceVolumeGroup(String vgName, String pvName);
+
+    public native String removePhysicalVolume(String loDevName);
+
+    public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet) {
+        //load the snapshot set
+        ArrayList<String> loDevices = new ArrayList<String>();
+        String snapshotLoDev = null;
+        for(String snapshot : snapshotSet) {
+            String loDevName = createLoopback(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + snapshot);
+            if(snapshot.equals(snapshotId))
+                snapshotLoDev = loDevName;
+            loDevices.add(loDevName);
+        }
+        //now remove the snapshot
+        String absoluteLVName = lvmRootDirectory + FILE_SEPARATOR + vgName + FILE_SEPARATOR + lvName;
+        String returnValue = removeLogicalVolume(absoluteLVName);
+        //TODO: error checking
+        returnValue = reduceVolumeGroup(vgName, snapshotLoDev);
+        //TODO: error checking
+        returnValue = removePhysicalVolume(snapshotLoDev);
+
+        //unload the snapshots
+        for(String loDevice : loDevices) {
+            returnValue = removeLoopback(loDevice);
+        }
+    }
+
 }

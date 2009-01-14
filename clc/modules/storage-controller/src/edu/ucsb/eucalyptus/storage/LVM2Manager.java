@@ -62,7 +62,7 @@ public class LVM2Manager implements ElasticBlockManager {
         volumeRootDirectory = volumeRoot;
         snapshotRootDirectory = snapshotRoot;                                                            
         if(!initialized) {
-        //    System.loadLibrary("lvm2control");
+            System.loadLibrary("lvm2control");
             try {
                 hostName = InetAddress.getLocalHost().getHostName();
                 EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
@@ -324,11 +324,11 @@ public class LVM2Manager implements ElasticBlockManager {
     }
 
 
-    public void createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException {
+    public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException {
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
         LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
         LVMVolumeInfo foundLVMVolumeInfo = db.getUnique(lvmVolumeInfo);
-
+        ArrayList<String> returnValues = new ArrayList<String>();
         if(foundLVMVolumeInfo != null) {
             LVMVolumeInfo snapshotInfo = new LVMVolumeInfo(snapshotId);
             snapshotInfo.setSnapshotOf(volumeId);
@@ -354,9 +354,12 @@ public class LVM2Manager implements ElasticBlockManager {
             snapshotInfo.setStatus(Storage.Status.available.toString());
             snapshotInfo.setVbladePid(-1);
             snapshotInfo.setSize(size);
+            returnValues.add(vgName);
+            returnValues.add(lvName);
             db.add(snapshotInfo);
         }
         db.commit();
+        return returnValues;
     }
 
     public List<String> prepareForTransfer(String volumeId, String snapshotId) throws EucalyptusCloudException {
@@ -392,7 +395,6 @@ public class LVM2Manager implements ElasticBlockManager {
         LVMVolumeInfo foundLVMVolumeInfo = db.getUnique(lvmVolumeInfo);
 
         if(foundLVMVolumeInfo != null) {
-            //remove aoe export
             String loDevName = foundLVMVolumeInfo.getLoDevName();
             String vgName = foundLVMVolumeInfo.getVgName();
             String lvName = foundLVMVolumeInfo.getLvName();

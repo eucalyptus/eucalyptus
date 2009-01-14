@@ -32,29 +32,31 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.storage;
+package edu.ucsb.eucalyptus.cloud;
 
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import java.util.List;
+public class SnapshotInUseException extends EucalyptusCloudException {
 
-public interface ElasticBlockManager {
-    public void initVolumeManager(String volumeRoot, String snapshotRoot);
+  String snapshot;
 
-    public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
+    public SnapshotInUseException()
+  {
+    super( "In Use" );
+  }
+  public SnapshotInUseException(String snapshot)
+  {
+    super(snapshot);
+    this.snapshot = snapshot;
+  }
+  public String getSnapshotName() {
+      return snapshot;
+  }
 
-    public List<String> prepareForTransfer(String volumeId, String snapshotId) throws EucalyptusCloudException;
-
-    public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
-
-    public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException;
-
-    public List<String> getStatus(List<String> volumeSet) throws EucalyptusCloudException;
-
-    public void deleteVolume(String volumeId) throws EucalyptusCloudException;
-
-    public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-    public List<String> getVolume(String volumeId) throws EucalyptusCloudException;
-
-    public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames);
+  public SnapshotInUseException(Throwable ex)
+  {
+    super("In Use", ex);
+  }
+  public SnapshotInUseException(String message, Throwable ex)
+  {
+    super(message,ex);
+  }
 }

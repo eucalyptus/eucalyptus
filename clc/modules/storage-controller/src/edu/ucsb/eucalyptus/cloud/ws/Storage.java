@@ -53,6 +53,7 @@ import org.apache.log4j.Logger;
 import org.apache.commons.httpclient.*;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
+import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.xml.security.utils.Base64;
 import org.apache.tools.ant.util.DateUtils;
 
@@ -180,8 +181,8 @@ public class Storage {
                 db2.commit();
                 db.commit();
                 //snapshot asynchronously
-                ebsManager.createSnapshot(volumeId, snapshotId);
-                Snapshotter snapshotter = new Snapshotter(volumeId, snapshotId);
+                List<String> returnValues = ebsManager.createSnapshot(volumeId, snapshotId);
+                Snapshotter snapshotter = new Snapshotter(volumeId, snapshotId, returnValues);
                 snapshotter.run();
                 reply.setSnapshotId(snapshotId);
                 reply.setVolumeId(volumeId);
@@ -227,39 +228,35 @@ public class Storage {
         String snapshotId = request.getSnapshotId();
 
         EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
-        SnapshotInfo snapshotInfo = new SnapshotInfo();
-        snapshotInfo.setSnapshotId(snapshotId);
-        SnapshotInfo foundSnapshotInfo = null;
-        try {
-            foundSnapshotInfo = db.getUnique(snapshotInfo);
-        } catch (Exception ex) {
-            db.rollback();
-            ex.printStackTrace();
-        }
-        reply.set_return(Boolean.FALSE);
-        if(foundSnapshotInfo != null) {
+        SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
+        List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+
+        reply.set_return(true);
+        if(snapshotInfos.size() > 0) {
+            SnapshotInfo  foundSnapshotInfo = snapshotInfos.get(0);
             if(foundSnapshotInfo.getStatus().equals(Status.available.toString())) {
                 try {
                     ebsManager.deleteSnapshot(snapshotId);
                     snapshotStorageManager.deleteObject("", snapshotId);
                     db.delete(foundSnapshotInfo);
-                    reply.set_return(Boolean.TRUE);
                     db.commit();
-                    //TODO: Asynchronously tell Walrus to get rid of this snapshot.
                     //If there are multiple obsolete snapshots, they will have to be copied over to have a
                     //consistent view of the volume and its snapshots (for new volume creation).
                     //But this requires the current volume to be transferred to Walrus again (the state after lvremove).
+                    HttpWriter httpWriter = new HttpWriter("DELETE", null, StorageProperties.snapshotBucket, snapshotId, "DeleteSnapshot", null);
+                    httpWriter.run();
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
             } else {
                 //snapshot is still in progress.
+                reply.set_return(false);
                 db.rollback();
-                throw new EucalyptusCloudException();
+                throw new SnapshotInUseException(snapshotId);
             }
         } else {
+            //the SC knows nothing about this snapshot. It should be deleted directly from Walrus
             db.rollback();
-            throw new NoSuchSnapshotException(snapshotId);
         }
         return reply;
     }
@@ -387,6 +384,7 @@ public class Storage {
             snapshotFileNames.add(snapshotPath);
             File file = new File(snapshotPath);
             HttpReader snapshotReader = new HttpReader(walrusSnapshotPath, null, file, "GetSnapshot", "");
+            //TODO: this needs to be synchronous
             snapshotReader.start();
         }
         return snapshotSet;
@@ -442,10 +440,12 @@ public class Storage {
         private String volumeKey;
         private String volumeFileName;
         private String snapshotFileName;
+        private List<String> snapshotValues;
 
-        public Snapshotter(String volumeId, String snapshotId) {
+        public Snapshotter(String volumeId, String snapshotId, List<String> snapshotValues) {
             this.volumeId = volumeId;
             this.snapshotId = snapshotId;
+            this.snapshotValues = snapshotValues;
         }
 
         public void run() {
@@ -477,6 +477,7 @@ public class Storage {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     SnapshotInfo foundSnapshotInfo = db2.getUnique(snapshotInfo);
                     if(foundSnapshotInfo != null) {
+                        //TODO: Need to transfer snapshotValues!
                         transferSnapshot(shouldTransferVolume);
                     }
                     db2.commit();
@@ -499,10 +500,10 @@ public class Storage {
             SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
             HttpWriter httpWriter;
             if(shouldTransferVolume) {
-                httpWriter = new HttpWriter(volumeFile, StorageProperties.TRANSFER_CHUNK_SIZE, callback, volumeBucket, volumeKey, "StoreSnapshot", null);
+                httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeKey, "StoreSnapshot", null);
                 httpWriter.run();
             }
-            httpWriter = new HttpWriter(snapshotFile, StorageProperties.TRANSFER_CHUNK_SIZE, callback, volumeBucket, snapshotId, "StoreSnapshot", volumeKey);
+            httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", volumeKey);
             httpWriter.run();
         }
     }
@@ -553,6 +554,8 @@ public class Storage {
                 method = new PutMethodWithProgress(addr);
             } else if(httpVerb.equals("GET")) {
                 method = new GetMethod(addr);
+            } else if(httpVerb.equals("DELETE")) {
+                method = new DeleteMethod(addr);
             }
             method.setRequestHeader("Authorization", "Euca");
             method.setRequestHeader("Date", date);
@@ -611,13 +614,9 @@ public class Storage {
             }
 
             byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
-            int nb = 0;
-            while (true) {
-                nb = inputStream.read(buffer);
-                if (nb == -1) {
-                    break;
-                }
-                out.write(buffer, 0, nb);
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) > 0) {
+                out.write(buffer, 0, bytesRead);
                 callback.run();
             }
             inputStream.close();
@@ -633,17 +632,19 @@ public class Storage {
         private HttpClient httpClient;
         private HttpMethodBase method;
         private File file;
-        private int transferChunkSize;
         private CallBack callback;
 
-        public HttpWriter(File file, int transferChunkSize, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader) {
+
+        public HttpWriter(String httpVerb, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader) {
             httpClient = new HttpClient();
-            this.file = file;
-            this.transferChunkSize = transferChunkSize;
             this.callback = callback;
-            String httpVerb = "PUT";
             String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + bucket + "/" + key;
             method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
+        }
+
+        public HttpWriter(String httpVerb, File file, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader) {
+            this(httpVerb, callback, bucket, key, eucaOperation, eucaHeader);
+            this.file = file;
         }
 
         public void run() {

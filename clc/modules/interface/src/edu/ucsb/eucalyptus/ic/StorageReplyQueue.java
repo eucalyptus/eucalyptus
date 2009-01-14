@@ -99,6 +99,11 @@ public class StorageReplyQueue {
                 errMsg = new StorageErrorMessageType( "VolumeNotReady", "Volume not ready yet", HttpStatus.SC_CONFLICT, msg.getCorrelationId());
                 errMsg.setCorrelationId( msg.getCorrelationId() );
             }
+            else if ( ex instanceof SnapshotInUseException )
+            {
+                errMsg = new StorageErrorMessageType( "SnapshotInUse", "Snapshot in use", HttpStatus.SC_CONFLICT, msg.getCorrelationId());
+                errMsg.setCorrelationId( msg.getCorrelationId() );
+            }
             else
             {
                 errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage());

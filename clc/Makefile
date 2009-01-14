@@ -10,6 +10,7 @@ deps:
 
 build: 
 	make -C modules/storage-controller/c
+	make -C modules/storage-manager/c
 
 run: install 
 	$(ANT) run

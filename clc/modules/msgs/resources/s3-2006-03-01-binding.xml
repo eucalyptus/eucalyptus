@@ -342,25 +342,22 @@
     <mapping name="StoreSnapshot" class="edu.ucsb.eucalyptus.msgs.StoreSnapshotType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
         <value name="VolumeId" field="volumeId"/>
+        <collection field="snapshotValues" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String" >
+            <structure name="SnapshotValue">
+                <value name="snapshotValue" />
+            </structure >
+        </collection >
     </mapping>
 
     <mapping name="StoreSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.StoreSnapshotResponseType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 
-    <mapping name="GetSnapshot" class="edu.ucsb.eucalyptus.msgs.GetSnapshotType">
+    <mapping name="DeleteWalrusSnapshot" class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
     </mapping>
 
-    <mapping name="GetSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.GetSnapshotResponseType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
-    </mapping>
-
-    <mapping name="RemoveSnapshot" class="edu.ucsb.eucalyptus.msgs.RemoveSnapshotType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
-    </mapping>
-
-    <mapping name="RemoveSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.RemoveSnapshotResponseType">
+    <mapping name="DeleteWalrusSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotResponseType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 

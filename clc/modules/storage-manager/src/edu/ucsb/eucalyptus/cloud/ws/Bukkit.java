@@ -49,7 +49,6 @@ import org.apache.tools.tar.*;
 
 import javax.crypto.*;
 import javax.crypto.spec.*;
-import javax.ejb.*;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
@@ -1865,7 +1864,8 @@ public class Bukkit {
         StoreSnapshotResponseType reply = (StoreSnapshotResponseType) request.getReply();
         String volumeId = request.getVolumeId();
         String snapshotId = request.getKey();
-
+        String bucketName = request.getBucket();
+        List<String> snapshotValues = request.getSnapshotValues();
         EntityWrapper<WalrusVolumeInfo> db = new EntityWrapper<WalrusVolumeInfo>();
         WalrusVolumeInfo volumeInfo = new WalrusVolumeInfo(volumeId);
         List<WalrusVolumeInfo> foundVolumeInfos = db.query(volumeInfo);
@@ -1873,25 +1873,44 @@ public class Bukkit {
 
         if(foundVolumeInfos.size() == 0) {
             foundVolumeInfo = volumeInfo;
+            foundVolumeInfo.setBucketName(bucketName);
             db.add(foundVolumeInfo);
         } else {
             foundVolumeInfo = foundVolumeInfos.get(0);
         }
 
         WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(volumeId, snapshotId);
-//read and store it
+        snapshotInfo.setVgName(snapshotValues.get(0));
+        snapshotInfo.setLvName(snapshotValues.get(1));
+        //read and store it
         List<WalrusSnapshotInfo> snapshotSet = foundVolumeInfo.getSnapshotSet();
         for(WalrusSnapshotInfo snapInfo: snapshotSet) {
             if(snapInfo.getSnapshotId().equals(snapshotId)) {
                 db.rollback();
-                throw new EucalyptusCloudException();
+                throw new EntityAlreadyExistsException(snapshotId);
             }
         }
         snapshotSet.add(snapshotInfo);
         db.commit();
-//convert to a PutObject request
+        //convert to a PutObject request
+        //Make sure the bucket exists
+
+        String userId = request.getUserId();
+        CreateBucketType createBucketRequest = new CreateBucketType();
+        createBucketRequest.setUserId(userId);
+        createBucketRequest.setBucket(bucketName);
+        try {
+            CreateBucket(createBucketRequest);
+        } catch(EucalyptusCloudException ex) {
+            if(!(ex instanceof BucketAlreadyExistsException || ex instanceof BucketAlreadyOwnedByYouException)) {
+                db.rollback();
+                throw ex;
+            }
+        }
+
         PutObjectType putObjectRequest = new PutObjectType();
-        putObjectRequest.setBucket(request.getBucket());
+        putObjectRequest.setUserId(userId);
+        putObjectRequest.setBucket(bucketName);
         putObjectRequest.setKey(snapshotId);
         putObjectRequest.setRandomKey(request.getRandomKey());
         PutObjectResponseType putObjectResponseType = PutObject(putObjectRequest);
@@ -1901,16 +1920,8 @@ public class Bukkit {
         return reply;
     }
 
-    public GetSnapshotResponseType GetSnapshot(GetSnapshotType request) throws EucalyptusCloudException {
-        GetSnapshotResponseType reply = (GetSnapshotResponseType) request.getReply();
-        String snapshotId = request.getKey();
-
-        return reply;
-    }
-
     public GetSnapshotInfoResponseType GetSnapshotInfo(GetSnapshotInfoType request) throws EucalyptusCloudException {
         GetSnapshotInfoResponseType reply = (GetSnapshotInfoResponseType) request.getReply();
-        String bucketName = request.getBucket();
         String snapshotId = request.getKey();
         ArrayList<String> snapshotSet = reply.getSnapshotSet();
 
@@ -1922,8 +1933,11 @@ public class Bukkit {
             WalrusSnapshotInfo foundSnapshotInfo = snapshotInfos.get(0);
             EntityWrapper<WalrusVolumeInfo> dbVol = db.recast(WalrusVolumeInfo.class);
             try {
-                WalrusVolumeInfo volumeInfo = dbVol.getUnique(new WalrusVolumeInfo(foundSnapshotInfo.getVolumeId()));
+                String volumeId = foundSnapshotInfo.getVolumeId();
+                WalrusVolumeInfo volumeInfo = dbVol.getUnique(new WalrusVolumeInfo(volumeId));
                 List<WalrusSnapshotInfo> walrusSnapshotInfos = volumeInfo.getSnapshotSet();
+                //the volume is the snapshot at time 0
+                snapshotSet.add(volumeId);
                 for(WalrusSnapshotInfo walrusSnapshotInfo : walrusSnapshotInfos) {
                     snapshotSet.add(walrusSnapshotInfo.getSnapshotId());
                 }
@@ -1941,11 +1955,77 @@ public class Bukkit {
         return reply;
     }
 
-    public RemoveSnapshotResponseType RemoveSnapshot(RemoveSnapshotType request) throws EucalyptusCloudException {
-        RemoveSnapshotResponseType reply = (RemoveSnapshotResponseType) request.getReply();
+    public DeleteWalrusSnapshotResponseType DeleteWalrusSnapshot(DeleteWalrusSnapshotType request) throws EucalyptusCloudException {
+        DeleteWalrusSnapshotResponseType reply = (DeleteWalrusSnapshotResponseType) request.getReply();
         String snapshotId = request.getKey();
 
+        //Load the entire snapshot tree and then remove the snapshot
+        EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
+        WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+        List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+
+        //Delete is idempotent.
+        reply.set_return(true);
+        if(snapshotInfos.size() > 0) {
+            WalrusSnapshotInfo foundSnapshotInfo = snapshotInfos.get(0);
+            String volumeId = foundSnapshotInfo.getVolumeId();
+
+            EntityWrapper<WalrusVolumeInfo> dbVol = db.recast(WalrusVolumeInfo.class);
+            WalrusVolumeInfo volumeInfo = new WalrusVolumeInfo(volumeId);
+            List<WalrusVolumeInfo> volumeInfos = dbVol.query(volumeInfo);
+
+            if(volumeInfos.size() > 0) {
+                WalrusVolumeInfo foundVolumeInfo = volumeInfos.get(0);
+                String bucketName = foundVolumeInfo.getBucketName();
+                List<WalrusSnapshotInfo> snapshotSet = foundVolumeInfo.getSnapshotSet();
+                ArrayList<String> snapshotIds = new ArrayList<String>();
+                snapshotIds.add(volumeId);
+                WalrusSnapshotInfo snapshotSetSnapInfo = null;
+                for(WalrusSnapshotInfo snapInfo : snapshotSet) {
+                    String snapId = snapInfo.getSnapshotId();
+                    snapshotIds.add(snapId);
+                    if(snapId.equals(foundSnapshotInfo.getSnapshotId()))
+                        snapshotSetSnapInfo = snapInfo;
+                }
+                //delete from the database
+                if(snapshotSetSnapInfo != null)
+                    snapshotSet.remove(snapshotSetSnapInfo);
+                db.delete(foundSnapshotInfo);
+                dbVol.commit();
+                //remove the snapshot in the background
+                SnapshotDeleter snapshotDeleter = new SnapshotDeleter(bucketName, foundSnapshotInfo.getSnapshotId(),
+                        foundSnapshotInfo.getVgName(), foundSnapshotInfo.getLvName(), snapshotIds);
+                snapshotDeleter.start();
+            } else {
+                dbVol.rollback();
+                db.rollback();
+                throw new NoSuchVolumeException(volumeId);
+            }
+        }
+        db.commit();
         return reply;
+    }
+
+
+    private class SnapshotDeleter extends Thread {
+        private String bucketName;
+        private List<String> snapshotSet;
+        private String snapshotId;
+        private String vgName;
+        private String lvName;
+
+        public SnapshotDeleter(String bucketName, String snapshotId, String vgName, String lvName, List<String> snapshotSet) {
+            this.bucketName = bucketName;
+            this.snapshotSet = snapshotSet;
+            this.snapshotId = snapshotId;
+            this.vgName = vgName;
+            this.lvName = lvName;
+            storageManager.initialize();
+        }
+
+        public void run() {
+               storageManager.deleteSnapshot(bucketName, snapshotId, vgName, lvName, snapshotSet);
+        }
     }
 
     public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) {

@@ -52,6 +52,8 @@ public class WalrusVolumeInfo {
     @GeneratedValue
     @Column(name = "walrus_volume_id")
     private Long id = -1l;
+    @Column(name = "bucket_name")
+    private String bucketName;
     @Column(name = "volume_name")
     private String volumeId;
 
@@ -84,5 +86,13 @@ public class WalrusVolumeInfo {
 
     public void setSnapshotSet(List<WalrusSnapshotInfo> snapshotSet) {
         this.snapshotSet = snapshotSet;
+    }
+
+    public String getBucketName() {
+        return bucketName;
+    }
+
+    public void setBucketName(String bucketName) {
+        this.bucketName = bucketName;
     }
 }
