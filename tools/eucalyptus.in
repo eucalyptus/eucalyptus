@@ -210,7 +210,7 @@ echo "or we can install it for you."
 				exit 1
 			fi
 		fi
-		(su $EUCA_USER -c "/bin/bash $ANT-f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
+		(su $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
 		echo "$!" > $EUCALYPTUS/var/run/eucalyptus/cloud.pid
 		echo -n " CLC"
 	fi
