@@ -15,6 +15,6 @@ $(LVM2_SO):
 clean:
 	rm -f $(LVM2_SO) *.o *~* *#*  
 
-deploy:
+install:
 	mkdir -p $(EUCALYPTUS)/usr/share/eucalyptus/lib 
 	cp $(LIBDIR)/$(LVM2_SO) $(EUCALYPTUS)/usr/share/eucalyptus/lib

@@ -15,6 +15,6 @@ $(FS_STORE_SO):
 clean:
 	rm -f $(FS_STORE_SO) *.o *~* *#*  
 
-deploy:
+install:
 	mkdir -p $(EUCALYPTUS)/usr/share/eucalyptus/lib 
 	cp $(LIBDIR)/$(FS_STORE_SO) $(EUCALYPTUS)/usr/share/eucalyptus/lib

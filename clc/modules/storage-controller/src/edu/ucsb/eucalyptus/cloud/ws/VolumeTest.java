@@ -49,6 +49,7 @@ public class VolumeTest extends TestCase {
 
         String userId = "admin";
         String volumeId = "vol-" + Hashes.getRandom(10);
+        volumeId = volumeId.replaceAll(".", "x");
 
         CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();
         createVolumeRequest.setUserId(userId);
