@@ -34,15 +34,29 @@
 
 #include <edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
+
+#define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
+
 
 jstring run_command(JNIEnv *env, char *cmd, int outfd) {
 	FILE* fd;
 	int pid;
 	char readbuffer[256];
+    char absolute_cmd[256];
+
+    char* home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    if (!home) {
+        home = strdup (""); /* root by default */
+    } else {
+        home = strdup (home);
+    }
+
+    snprintf(absolute_cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap/%s", home, cmd);
 
 	bzero(readbuffer, 256);
-	fd = popen(cmd, "r");
+	fd = popen(absolute_cmd, "r");
 	if(fgets(readbuffer, 256, fd)) {
 	    char* ptr = strchr(readbuffer, '\n');
 	    if(ptr != NULL) {
