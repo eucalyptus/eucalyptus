@@ -1701,7 +1701,6 @@ int init_config(void) {
 	mac = strtok_r(toka, "=", &ptrb);
 	ip = strtok_r(NULL, "=", &ptrb);
 	if (mac && ip) {
-	  logprintfl(EUCADEBUG, "%08X %s %s %d\n", vnetconfig, mac, ip, 0);
 	  vnetAddHost(vnetconfig, mac, ip, 0);
 	}
 	toka = strtok_r(NULL, " ", &ptra);
