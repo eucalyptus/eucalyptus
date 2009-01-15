@@ -124,8 +124,8 @@ AC_CHECK_LIB([omxmlsec],[main],,AC_MSG_ERROR([Cannot find libomxmlsec!]))
 AC_CHECK_LIB([oxstokens],[main],,AC_MSG_ERROR([Cannot find liboxstokens!]))
 AC_CHECK_LIB([pthread],[main])
 AC_CHECK_LIB([rt],[main])
-AC_CHECK_LIB([virt],[main],,AC_MSG_ERROR([Cannot find libvirt!]))
-AC_CHECK_LIB([curl],[main],,AC_MSG_ERROR([Cannot find libcurl!]))
+AC_CHECK_LIB([virt],[main],true,AC_MSG_ERROR([Cannot find libvirt!]))
+AC_CHECK_LIB([curl],[main],true,AC_MSG_ERROR([Cannot find libcurl!]))
 
 # Checks for header files.
 AC_HEADER_DIRENT
