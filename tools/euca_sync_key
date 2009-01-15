@@ -2,7 +2,6 @@
 #
 # Pushes key to the nodes
 
-EUCALYPTUS=
 KEYS=
 CONF=
 VERBOSE="Y"

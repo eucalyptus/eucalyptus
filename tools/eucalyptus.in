@@ -10,6 +10,9 @@
 
 # Do NOT "set -e"
 
+# if we are on rocks we need the rocks binaries 
+[ -e /etc/profile.d/rocks-binaries.sh ] && . /etc/profile.d/rocks-binaries.sh
+
 # I just wanted to set PATH to be the system PATH, but if a user install
 # eucalyptus manually, it may have binaries in a non-standard position:
 # hence we need to keep the PATH we receive.
@@ -19,19 +22,23 @@ START_CC="N"
 START_NC="N"
 START_CLOUD="N"
 NAME=eucalyptus
-JAVA_HOME="@JAVA_HOME@"
-BRCTL="`which brctl`"
-
-# if we are on rocks we need the rocks binaries 
-[ -e /etc/profile.d/rocks-binaries.sh ] && . /etc/profile.d/rocks-binaries.sh
+BRCTL="`which brctl 2> /dev/null`"
+ANT="`which ant 2> /dev/null`"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
 	EUCALYPTUS="@prefix@"
 fi
 export EUCALYPTUS
-export JAVA_HOME
 
+check_java() {
+	java_min_version="1.6.0"
+	java_version=`java -version 2>&1 | grep "java version" | sed -e 's/.*java version "\(.*\)".*/\1/'`
+	if [ `expr $java_version ">=" $java_min_version` -eq 0 ]; then
+		echo "Eucalyptus needs java version >= $java_min_version"
+		exit 1
+	fi
+}
 enable_service() {
 	for x in ${1}; do 
 		# do we have a disabled service?
@@ -67,10 +74,11 @@ create_httpd_config() {
 	fi
 	
 	# let's configure the common parts for both CC and NC
-	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|"  >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+#	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|"  >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" |sed "s|EUCA_USER|$EUCA_USER|" >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
 
 	# let's configure the CC 
-	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $CC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/httpd-cc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|"|sed "s|\(StartServers\).*|\1 5|"|sed "s|\(MinSpareServers\).*|\1 5|"|sed "s|\(MaxSpareServers\).*|\1 10|"|sed "s|\(MaxClients\).*|\1 25|" >  $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
+	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $CC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/httpd-cc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|"|sed "s|\(StartServers\).*|\1 5|"|sed "s|\(MinSpareServers\).*|\1 5|"|sed "s|\(MaxSpareServers\).*|\1 10|"|sed "s|\(MaxClients\).*|\1 25|" |sed "s|\(MinSpareThreads\).*|\1 5|" | sed "s|\(MaxSpareThreads\).*|\1 10|" | sed "s|\(ThreadsPerChild\).*|\1 25|">  $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
 
 	# and the NC
 	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $NC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/httpd-nc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" >  $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
@@ -181,8 +189,11 @@ do_start() {
 	fi
 	# and starts the cloud 
 	if [ "$START_CLOUD" = "Y" ]; then
+		# let's be sure we have java
+		check_java
+
 		cd $EUCALYPTUS/etc/eucalyptus
-		if ! ant -f cloud.xml check-jce 2> /dev/null > /dev/null ; then
+		if ! $ANT -f cloud.xml check-jce 2> /dev/null > /dev/null ; then
 echo
 echo "     *** WARNING ***"
 echo "Your java installation misses unlimited strength crypto policy."
@@ -193,13 +204,13 @@ echo "or we can install it for you."
 			echo -n "Do you want to install now [y/n]?"
 			read ANS
 			if [ "$ANS" = "Y" -o "$ANS" = "y" ]; then
-				ant -f cloud.xml install-jce 2> /dev/null > /dev/null
+				$ANT -f cloud.xml install-jce 2> /dev/null > /dev/null
 			else 
-				echo"Eucalptus needs unlimited strength crypto policy."
+				echo "Eucalptus needs unlimited strength crypto policy."
 				exit 1
 			fi
 		fi
-		(/bin/bash ant -f cloud.xml run > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
+		(su $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
 		echo "$!" > $EUCALYPTUS/var/run/eucalyptus/cloud.pid
 		echo -n " CLC"
 	fi
@@ -239,6 +250,21 @@ fi
 START_CLOUD="`echo $START_CLOUD | tr 'a-z' 'A-Z'`"
 START_CC="`echo $START_CC | tr 'a-z' 'A-Z'`"
 START_NC="`echo $START_NC | tr 'a-z' 'A-Z'`"
+HTTPD="/usr/sbin/apache2"
+HTTPD_HOME="/tmp/"
+if [ -z "$EUCA_USER" ] ; then
+	EUCA_USER="root"
+fi
+# set up eucalyptus var locations to be owned by EUCA_USER
+for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
+    if [ $y != "/" -a -d $y ]; then
+	chown -R $EUCA_USER:$EUCA_USER $y
+    fi
+done
+if [ -x "$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap" ]; then
+    chown root:$EUCA_USER $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
+    chmod 4750 $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
+fi
 
 # let's find our dependencies
 for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do

@@ -62,7 +62,7 @@ int scInitConfig (void)
             free (s); 
         }
     }
-    snprintf(add_key_command_path, BUFSIZE, EUCALYPTUS_ADD_KEY, home);
+    snprintf(add_key_command_path, BUFSIZE, EUCALYPTUS_ADD_KEY, home, home, home);
     
     /* we need to have valid path */
     if (check_directory(sc_instance_path)) {

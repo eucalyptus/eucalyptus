@@ -107,7 +107,7 @@ static void refresh_instance_info (ncInstance * instance)
         return;
     
     /* try to get domain state from Xen */
-    virConnectPtr conn = virConnectOpen (NULL); /* NULL means local hypervisor */
+    virConnectPtr conn = virConnectOpen ("xen:///"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAERROR, "warning: failed to connect to hypervisor\n");
         return;
@@ -225,7 +225,6 @@ void * monitoring_thread (void *arg)
 
             /* query Xen for current state, if any */
             refresh_instance_info (instance);
-
             /* don't touch running threads */
             if (instance->state!=BOOTING && 
                 instance->state!=SHUTOFF &&
@@ -342,8 +341,8 @@ int init_config (void) {
     }
 
     /* set up paths of Eucalyptus commands NC relies on */
-    snprintf (gen_libvirt_xml_command_path, BUFSIZE, EUCALYPTUS_GEN_LIBVIRT_XML, home);
-    snprintf (get_xen_info_command_path,    BUFSIZE, EUCALYPTUS_GET_XEN_INFO,    home);
+    snprintf (gen_libvirt_xml_command_path, BUFSIZE, EUCALYPTUS_GEN_LIBVIRT_XML, home, home);
+    snprintf (get_xen_info_command_path,    BUFSIZE, EUCALYPTUS_GET_XEN_INFO,    home, home);
     
     /* "adopt" currently running Xen instances */
     {
@@ -355,7 +354,7 @@ int init_config (void) {
         virSetErrorFunc (NULL, libvirt_error_handler);
 
         /* check with Xen */
-        conn = virConnectOpen(NULL); /* NULL means local hypervisor */
+        conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
         if (conn == NULL) {
             logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
             free(home);
@@ -572,7 +571,7 @@ void * startup_thread (void * arg)
     char *brname=NULL;
     int error;
     
-    conn = virConnectOpen(NULL); /* NULL means local hypervisor */
+    conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAFATAL, "failed to connect to hypervisor to start instance %s, abandoning it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
@@ -827,7 +826,7 @@ int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdownState,
     if ( instance == NULL ) return NOT_FOUND;
 
     /* try stopping the Xen domain */
-    virConnectPtr conn = virConnectOpen(NULL); /* NULL means local hypervisor */
+    virConnectPtr conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
     } else {
@@ -872,7 +871,6 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
     sem_p (inst_sem);
     if (instIdsLen == 0) { /* describe all instances */
         int total = total_instances (&global_instances);
-
         if ( total ) {
             ncInstance * instance;
             int i, k = 0;
