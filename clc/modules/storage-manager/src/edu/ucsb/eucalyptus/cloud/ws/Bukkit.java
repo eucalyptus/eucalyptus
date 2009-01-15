@@ -1893,6 +1893,7 @@ public class Bukkit {
         snapshotInfo.setSnapshotSetId(bucketName);
         snapshotInfo.setVgName(snapshotValues.get(0));
         snapshotInfo.setLvName(snapshotValues.get(1));
+        snapshotInfo.setTransferred(false);
         EntityWrapper<WalrusSnapshotInfo> dbSnap = db.recast(WalrusSnapshotInfo.class);
         snapshotInfos.add(snapshotInfo);
         dbSnap.add(snapshotInfo);
@@ -1918,6 +1919,7 @@ public class Bukkit {
             }
         }
 
+        //put happens synchronously
         PutObjectType putObjectRequest = new PutObjectType();
         putObjectRequest.setUserId(userId);
         putObjectRequest.setBucket(bucketName);
@@ -1927,6 +1929,14 @@ public class Bukkit {
         reply.setEtag(putObjectResponseType.getEtag());
         reply.setLastModified(putObjectResponseType.getLastModified());
         reply.setStatusMessage(putObjectResponseType.getStatusMessage());
+
+        //change state 
+        snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+        dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
+        WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
+        foundSnapshotInfo.setTransferred(true);
+        dbSnap.commit();
+        
         return reply;
     }
 
@@ -1977,6 +1987,10 @@ public class Bukkit {
         reply.set_return(true);
         if(snapshotInfos.size() > 0) {
             WalrusSnapshotInfo foundSnapshotInfo = snapshotInfos.get(0);
+            if(!foundSnapshotInfo.getTransferred()) {
+                db.rollback();
+                throw new SnapshotInUseException(snapshotId);
+            }
             String snapshotSetId = foundSnapshotInfo.getSnapshotSetId();
 
             EntityWrapper<WalrusSnapshotSet> dbSet = db.recast(WalrusSnapshotSet.class);

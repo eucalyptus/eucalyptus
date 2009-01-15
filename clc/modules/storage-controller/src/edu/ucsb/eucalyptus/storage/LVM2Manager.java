@@ -62,7 +62,7 @@ public class LVM2Manager implements ElasticBlockManager {
         volumeRootDirectory = volumeRoot;
         snapshotRootDirectory = snapshotRoot;                                                            
         if(!initialized) {
-            System.loadLibrary("lvm2control");
+          //  System.loadLibrary("lvm2control");
             try {
                 hostName = InetAddress.getLocalHost().getHostName();
                 EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();

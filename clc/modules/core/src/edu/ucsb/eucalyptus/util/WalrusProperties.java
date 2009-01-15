@@ -108,4 +108,12 @@ public class WalrusProperties {
     public enum WalrusInternalOperations {
         GetDecryptedImage
     }
+
+    public enum StorageOperations {
+        StoreSnapshot, DeleteSnapshot, GetSnapshotInfo
+    }
+
+    public enum StorageParameters {
+        SnapshotVgName, SnapshotLvName
+    }
 }

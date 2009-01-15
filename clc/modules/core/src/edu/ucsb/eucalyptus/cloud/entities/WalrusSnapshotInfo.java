@@ -57,6 +57,8 @@ public class WalrusSnapshotInfo {
     private String vgName;
     @Column(name ="snapshot_lvname")
     private String lvName;
+    @Column(name ="transferred")
+    private Boolean transferred;
 
     public WalrusSnapshotInfo() {}
 
@@ -94,5 +96,13 @@ public class WalrusSnapshotInfo {
 
     public void setLvName(String lvName) {
         this.lvName = lvName;
+    }
+
+    public Boolean getTransferred() {
+        return transferred;
+    }
+
+    public void setTransferred(Boolean transferred) {
+        this.transferred = transferred;
     }
 }

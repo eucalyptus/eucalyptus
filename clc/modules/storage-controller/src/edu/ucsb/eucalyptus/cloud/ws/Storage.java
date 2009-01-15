@@ -382,8 +382,12 @@ public class Storage {
             snapshotFileNames.add(snapshotPath);
             File file = new File(snapshotPath);
             HttpReader snapshotReader = new HttpReader(walrusSnapshotPath, null, file, "GetSnapshot", "");
-            //TODO: this needs to be synchronous
             snapshotReader.start();
+            try {
+                snapshotReader.join();
+            } catch(Exception ex) {
+                ex.printStackTrace();
+            }
         }
         return snapshotSet;
     }
@@ -476,7 +480,6 @@ public class Storage {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     SnapshotInfo foundSnapshotInfo = db2.getUnique(snapshotInfo);
                     if(foundSnapshotInfo != null) {
-                        //TODO: Need to transfer snapshotValues!
                         transferSnapshot(shouldTransferVolume, snapshotValues);
                     }
                     db2.commit();
@@ -504,10 +507,21 @@ public class Storage {
             if(shouldTransferVolume) {
                 httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeKey, "StoreSnapshot", null, httpParamaters);
                 httpWriter.run();
+                try {
+                    httpWriter.join();
+                } catch(Exception ex) {
+                    ex.printStackTrace();
+                    return;
+                }
             }
             httpParamaters.remove("VolumeId");
             httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
             httpWriter.run();
+            try {
+                httpWriter.join();
+            } catch(Exception ex) {
+                ex.printStackTrace();
+            }
         }
     }
 
@@ -654,7 +668,7 @@ public class Storage {
                 addr += "?" + paramKey;
                 String value = httpParameters.get(paramKey);
                 if(value != null)
-                     addr += "=" + value;
+                    addr += "=" + value;
             }
             method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
         }
