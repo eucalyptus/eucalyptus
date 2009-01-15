@@ -51,8 +51,8 @@ public class WalrusSnapshotInfo {
     private Long id = -1l;
     @Column(name ="snapshot_name")
     private String snapshotId;
-    @Column(name = "volume_name")
-    private String volumeId;
+    @Column(name = "snapshotset_id")
+    private String snapshotSetId;
     @Column(name ="snapshot_vgname")
     private String vgName;
     @Column(name ="snapshot_lvname")
@@ -64,11 +64,6 @@ public class WalrusSnapshotInfo {
         this.snapshotId = snapshotId;
     }
 
-    public WalrusSnapshotInfo(String volumeId, String snapshotId) {
-        this.volumeId = volumeId;
-        this.snapshotId = snapshotId;
-    }
-
     public String getSnapshotId() {
         return snapshotId;
     }
@@ -77,12 +72,12 @@ public class WalrusSnapshotInfo {
         this.snapshotId = snapshotId;
     }
 
-    public String getVolumeId() {
-        return volumeId;
+    public String getSnapshotSetId() {
+        return snapshotSetId;
     }
 
-    public void setVolumeId(String volumeId) {
-        this.volumeId = volumeId;
+    public void setSnapshotSetId(String snapshotSetId) {
+        this.snapshotSetId = snapshotSetId;
     }
 
     public String getVgName() {

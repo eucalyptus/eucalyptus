@@ -429,7 +429,6 @@ public class FlushCachedImageResponseType extends WalrusDataResponseType {
 }
 
 public class StoreSnapshotType extends WalrusDataRequestType {
-  String volumeId;
   ArrayList<String> snapshotValues = new ArrayList<String>();
 }
 

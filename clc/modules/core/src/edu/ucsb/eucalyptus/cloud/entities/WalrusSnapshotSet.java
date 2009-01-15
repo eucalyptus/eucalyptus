@@ -45,39 +45,38 @@ import java.util.List;
 
 
 @Entity
-@Table( name = "WalrusVolumes" )
+@Table( name = "WalrusSnapshotSet" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class WalrusVolumeInfo {
+public class WalrusSnapshotSet {
     @Id
     @GeneratedValue
-    @Column(name = "walrus_volume_id")
+    @Column(name = "walrus_snapshot_set_id")
     private Long id = -1l;
-    @Column(name = "bucket_name")
-    private String bucketName;
-    @Column(name = "volume_name")
-    private String volumeId;
+   //same as the bucket name
+    @Column(name = "snapshotset_id")
+    private String snapshotSetId;
 
     @OneToMany( cascade = CascadeType.ALL )
     @JoinTable(
-            name = "volume_has_snapshots",
-            joinColumns = { @JoinColumn( name = "walrus_volume_id" ) },
+            name = "snapshotset_has_snapshots",
+            joinColumns = { @JoinColumn( name = "walrus_snapshot_set_id" ) },
             inverseJoinColumns = @JoinColumn( name = "walrus_snapshot_id" )
     )
     @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
     private List<WalrusSnapshotInfo> snapshotSet = new ArrayList<WalrusSnapshotInfo>();
 
-    public WalrusVolumeInfo() {}
+    public WalrusSnapshotSet() {}
 
-    public WalrusVolumeInfo(String volumeId) {
-        this.volumeId = volumeId;
+    public WalrusSnapshotSet(String snapshotSetId) {
+        this.snapshotSetId = snapshotSetId;
     }
 
-    public String getVolumeId() {
-        return volumeId;
+    public String getSnapshotSetId() {
+        return snapshotSetId;
     }
 
-    public void setVolumeId(String volumeId) {
-        this.volumeId = volumeId;
+    public void setSnapshotSetId(String snapshotSetId) {
+        this.snapshotSetId = snapshotSetId;
     }
 
     public List<WalrusSnapshotInfo> getSnapshotSet() {
@@ -86,13 +85,5 @@ public class WalrusVolumeInfo {
 
     public void setSnapshotSet(List<WalrusSnapshotInfo> snapshotSet) {
         this.snapshotSet = snapshotSet;
-    }
-
-    public String getBucketName() {
-        return bucketName;
-    }
-
-    public void setBucketName(String bucketName) {
-        this.bucketName = bucketName;
     }
 }

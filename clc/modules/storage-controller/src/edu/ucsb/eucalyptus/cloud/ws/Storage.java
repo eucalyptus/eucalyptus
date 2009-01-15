@@ -57,9 +57,7 @@ import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.xml.security.utils.Base64;
 import org.apache.tools.ant.util.DateUtils;
 
-import java.util.List;
-import java.util.Date;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.io.*;
 import java.security.Signature;
@@ -462,7 +460,8 @@ public class Storage {
                     VolumeInfo foundVolumeInfo = volumeInfos.get(0);
                     if(!foundVolumeInfo.getTransferred()) {
                         //transfer volume to Walrus
-                        volumeBucket = StorageProperties.snapshotBucket;
+                        volumeBucket = "snapset-" + Hashes.getRandom(12);
+                        volumeBucket = volumeBucket.replaceAll(".", "x");
                         volumeKey = volumeId + Hashes.getRandom(4);
                         foundVolumeInfo.setVolumeBucket(volumeBucket);
                         foundVolumeInfo.setVolumeKey(volumeKey);
@@ -478,7 +477,7 @@ public class Storage {
                     SnapshotInfo foundSnapshotInfo = db2.getUnique(snapshotInfo);
                     if(foundSnapshotInfo != null) {
                         //TODO: Need to transfer snapshotValues!
-                        transferSnapshot(shouldTransferVolume);
+                        transferSnapshot(shouldTransferVolume, snapshotValues);
                     }
                     db2.commit();
                 } else {
@@ -490,7 +489,7 @@ public class Storage {
             }
         }
 
-        private void transferSnapshot(boolean shouldTransferVolume) {
+        private void transferSnapshot(boolean shouldTransferVolume, List<String> snapshotValues) {
             long size = 0;
             File volumeFile = new File(volumeFileName);
             File snapshotFile = new File(snapshotFileName);
@@ -498,12 +497,16 @@ public class Storage {
             assert(snapshotFile.exists() && volumeFile.exists());
             size += shouldTransferVolume ? snapshotFile.length() + volumeFile.length() : snapshotFile.length();
             SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
+            Map<String, String> httpParamaters = new HashMap<String, String>();
+            httpParamaters.put("SnapshotVgName", snapshotValues.get(0));
+            httpParamaters.put("SnapshotLvName", snapshotValues.get(1));
             HttpWriter httpWriter;
             if(shouldTransferVolume) {
-                httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeKey, "StoreSnapshot", null);
+                httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeKey, "StoreSnapshot", null, httpParamaters);
                 httpWriter.run();
             }
-            httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", volumeKey);
+            httpParamaters.remove("VolumeId");
+            httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
             httpWriter.run();
         }
     }
@@ -642,9 +645,18 @@ public class Storage {
             method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
         }
 
-        public HttpWriter(String httpVerb, File file, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader) {
-            this(httpVerb, callback, bucket, key, eucaOperation, eucaHeader);
-            this.file = file;
+        public HttpWriter(String httpVerb, File file, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters) {
+            httpClient = new HttpClient();
+            this.callback = callback;
+            String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + bucket + "/" + key;
+            Set<String> paramKeySet = httpParameters.keySet();
+            for(String paramKey : paramKeySet) {
+                addr += "?" + paramKey;
+                String value = httpParameters.get(paramKey);
+                if(value != null)
+                     addr += "=" + value;
+            }
+            method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
         }
 
         public void run() {
