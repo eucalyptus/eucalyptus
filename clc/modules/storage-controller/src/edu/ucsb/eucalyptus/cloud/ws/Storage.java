@@ -316,6 +316,7 @@ public class Storage {
         }
 
         public void run() {
+            boolean success = true;
             if(snapshotId != null) {
                 EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
                 try {
@@ -338,6 +339,7 @@ public class Storage {
                     size = ebsManager.createVolume(volumeId, snapshotId, size);
                     db.commit();
                 } catch(Exception ex) {
+                    success = false;
                     db.rollback();
                     ex.printStackTrace();
                 }
@@ -346,6 +348,7 @@ public class Storage {
                     assert(size > 0);
                     ebsManager.createVolume(volumeId, size);
                 } catch(Exception ex) {
+                    success = false;
                     ex.printStackTrace();
                 }
             }
@@ -354,7 +357,10 @@ public class Storage {
                 VolumeInfo volumeInfo = new VolumeInfo(volumeId);
                 VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
                 if(foundVolumeInfo != null) {
-                    foundVolumeInfo.setStatus(Status.available.toString());
+                    if(success)
+                        foundVolumeInfo.setStatus(Status.available.toString());
+                    else
+                        foundVolumeInfo.setStatus(Status.failed.toString());
                     if(snapshotId != null) {
                         foundVolumeInfo.setSize(size);
                     }
@@ -762,6 +768,6 @@ public class Storage {
     }
 
     public enum Status {
-        creating, available, pending, completed
+        creating, available, pending, completed, failed
     }
 }

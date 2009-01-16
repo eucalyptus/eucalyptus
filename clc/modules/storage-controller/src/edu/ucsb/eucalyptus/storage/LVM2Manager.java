@@ -60,7 +60,7 @@ public class LVM2Manager implements ElasticBlockManager {
 
     public void initVolumeManager(String volumeRoot, String snapshotRoot) {
         volumeRootDirectory = volumeRoot;
-        snapshotRootDirectory = snapshotRoot;                                                            
+        snapshotRootDirectory = snapshotRoot;
         if(!initialized) {
             System.loadLibrary("lvm2control");
             try {
@@ -114,8 +114,8 @@ public class LVM2Manager implements ElasticBlockManager {
     public native String resumeDevice(String deviceName);
 
     public native String duplicateLogicalVolume(String oldLvName, String newLvName);
-    
-    public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) {
+
+    public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
         int majorNumber = -1;
         int minorNumber = -1;
         LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
@@ -138,7 +138,9 @@ public class LVM2Manager implements ElasticBlockManager {
         }
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
         int pid = aoeExport(iface, absoluteLVName, majorNumber, minorNumber);
-        //TODO: do error checking
+        if(pid < 0) {
+            throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface);
+        }
         lvmVolumeInfo.setVbladePid(pid);
         lvmVolumeInfo.setMajorNumber(majorNumber);
         lvmVolumeInfo.setMinorNumber(minorNumber);
@@ -156,44 +158,55 @@ public class LVM2Manager implements ElasticBlockManager {
             ex.printStackTrace();
         }
     }
-    public String createDuplicateLoopback(String oldRawFileName, String rawFileName) {
+
+    public String createDuplicateLoopback(String oldRawFileName, String rawFileName) throws EucalyptusCloudException {
         dupFile(oldRawFileName, rawFileName);
-        //TODO: do error checking
-        String loDevName = losetup(rawFileName);
-        //TODO: do error checking
-        return loDevName;
+        return createLoopback(rawFileName);
     }
 
-    public String createLoopback(String fileName, int size) {
+    public String createLoopback(String fileName, int size) throws EucalyptusCloudException {
         String returnValue = createEmptyFile(fileName, size);
-        //TODO: do error checking
-        String loDevName = losetup(fileName);
-        //TODO: do error checking
-        return loDevName;
+        return createLoopback(fileName);
     }
 
-    public String createLoopback(String fileName) {
+    public String createLoopback(String fileName) throws EucalyptusCloudException {
         String loDevName = losetup(fileName);
+        if(loDevName.length() == 0) {
+            throw new EucalyptusCloudException("Could not create loopback device for " + fileName +
+                    ". Please check the max loop value and permissions");
+        }
         return loDevName;
     }
 
     //creates a logical volume (and a new physical volume and volume group)
-    public void createLogicalVolume(String loDevName, String vgName, String lvName) {
+    public void createLogicalVolume(String loDevName, String vgName, String lvName) throws EucalyptusCloudException {
         String returnValue = createPhysicalVolume(loDevName);
-        //TODO: do error checking
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to create physical volume for " + loDevName);
+        }
         returnValue = createVolumeGroup(loDevName, vgName);
-        //TODO: do error checking
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to create volume group " + vgName + " for " + loDevName);
+        }
         returnValue = createLogicalVolume(vgName, lvName);
-        //TODO: do error checking
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to create logical volume " + lvName + " in volume group " + vgName);
+        }
     }
 
-    public  void createSnapshotLogicalVolume(String loDevName, String vgName, String lvName, String snapLvName) {
+    public  void createSnapshotLogicalVolume(String loDevName, String vgName, String lvName, String snapLvName) throws EucalyptusCloudException {
         String returnValue = createPhysicalVolume(loDevName);
-        //TODO: do error checking
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to create physical volume for " + loDevName);
+        }
         returnValue = extendVolumeGroup(loDevName, vgName);
-        //TODO: do error checking
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to extend volume group " + vgName + " for " + loDevName);
+        }
         returnValue = createSnapshotLogicalVolume(lvName, snapLvName);
-        //TODO: do error checking
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to create snapshot logical volume " + snapLvName + " for volume " + lvName);
+        }
     }
 
     public void createVolume(String volumeId, int size) throws EucalyptusCloudException {
@@ -308,13 +321,18 @@ public class LVM2Manager implements ElasticBlockManager {
 
             aoeUnexport(foundLVMVolumeInfo.getVbladePid());
             String returnValue = removeLogicalVolume(absoluteLVName);
-            //TODO: error checking
+            if(returnValue.length() == 0) {
+                throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
+            }
             returnValue = removeVolumeGroup(vgName);
-            //TODO: error checking
+            if(returnValue.length() == 0) {
+                throw new EucalyptusCloudException("Unable to remove volume group " + vgName);
+            }
             returnValue = removePhysicalVolume(loDevName);
-            //TODO: error checking
+            if(returnValue.length() == 0) {
+                throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
+            }
             returnValue = removeLoopback(loDevName);
-            //TODO: error checking
             db.delete(foundLVMVolumeInfo);
             db.commit();
         }  else {
@@ -401,13 +419,18 @@ public class LVM2Manager implements ElasticBlockManager {
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
             String returnValue = removeLogicalVolume(absoluteLVName);
-            //TODO: error checking
+            if(returnValue.length() == 0) {
+                throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
+            }
             returnValue = reduceVolumeGroup(vgName, loDevName);
-            //TODO: error checking
+            if(returnValue.length() == 0) {
+                throw new EucalyptusCloudException("Unable to reduce volume group " + vgName + " logical volume: " + loDevName);
+            }
             returnValue = removePhysicalVolume(loDevName);
-            //TODO: error checking
-            returnValue = removeLoopback(loDevName);
-            //TODO: error checking
+            if(returnValue.length() == 0) {
+                throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
+            }
+            returnValue = removeLoopback(loDevName);            
             db.delete(foundLVMVolumeInfo);
             db.commit();
         }  else {
@@ -433,7 +456,7 @@ public class LVM2Manager implements ElasticBlockManager {
         return returnValues;
     }
 
-    public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) {
+    public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException {
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
         assert(snapshotSet.size() == snapshotFileNames.size());
         int i = 0;

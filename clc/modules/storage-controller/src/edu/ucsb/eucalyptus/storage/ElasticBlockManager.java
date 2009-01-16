@@ -56,5 +56,5 @@ public interface ElasticBlockManager {
 
     public List<String> getVolume(String volumeId) throws EucalyptusCloudException;
 
-    public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames);
+    public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
 }
