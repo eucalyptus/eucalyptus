@@ -183,6 +183,18 @@ int main(int argc, char **argv) {
 	printf("cc_unassignNetwork() failed\n");
 	exit(1);
       }
+    } else if (!strcmp(argv[2], "attachVolume")) {
+      rc = cc_attachVolume(argv[3], argv[4], argv[5], argv[6], env, stub);
+      if (rc != 0) {
+	printf("cc_attachVolume() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "detachVolume")) {
+      rc = cc_detachVolume(argv[3], argv[4], argv[5], argv[6], atoi(argv[7]), env, stub);
+      if (rc != 0) {
+	printf("cc_unassignNetwork() failed\n");
+	exit(1);
+      }
     } else if (!strcmp(argv[2], "describePublicAddresses")) {
       rc = cc_describePublicAddresses(env, stub);
       if (rc != 0) {

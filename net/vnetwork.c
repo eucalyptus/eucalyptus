@@ -56,7 +56,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
       if (numberofaddrs) numaddrs = atoi(numberofaddrs);
       
       numaddrs-=1;
-      if (!strcmp(mode, "MANAGED")) {
+      if (!strcmp(mode, "MANAGED") || !strcmp(mode, "MANAGED-NOVLAN")) {
 	// set up iptables
 	logprintfl(EUCADEBUG, "flushing 'filter' table\n");
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", "-F");
@@ -72,7 +72,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", "-A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT");
 	
-	slashnet = (int)log2((double)(0xFFFFFFFF - nm)) + 1;
+	slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - nm)) + 1);
 	snprintf(cmd, 256, "-A FORWARD -d ! %s/%d -j ACCEPT", network, slashnet);
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
 
@@ -351,6 +351,7 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   char rule[1024], newrule[1024], srcNet[32], dstNet[32];
   char *tmp;
 
+  logprintfl(EUCADEBUG, "vnetTableRule(): input: %s,%s,%s,%s,%s,%s,%d,%d\n",destUserName, destName, sourceUserName, sourceNet,sourceNetName,protocol,minPort,maxPort);
   if (param_check("vnetTableRule", vnetconfig, type, destUserName, destName, sourceNet, sourceUserName, sourceNetName)) return(1);
   
   destVlan = vnetGetVlan(vnetconfig, destUserName, destName);
@@ -359,7 +360,7 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
     return(1);
   }
   
-  slashnet = 32 - (int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[destVlan].nm)+1)));
+  slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[destVlan].nm)+1))));
   tmp = hex2dot(vnetconfig->networks[destVlan].nw);
   snprintf(dstNet, 32, "%s/%d", tmp, slashnet);
   free(tmp);
@@ -379,6 +380,7 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
     snprintf(srcNet, 32, "%s", sourceNet);
   }
   
+
   if (!strcmp(type, "firewall-open")) {
     snprintf(rule, 1024, "-A %s-%s", destUserName, destName);
     //    snprintf(rule, 1024, "iptables -A %s-%s", destUserName, destName);
@@ -527,6 +529,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig) {
   
   fprintf(fp, "# automatically generated config file for DHCP server\ndefault-lease-time 1200;\nmax-lease-time 1200;\nddns-update-style none;\n\n");
   
+  fprintf(fp, "shared-network euca {\n");
   for (i=0; i<NUMBER_OF_VLANS; i++) {
     if (vnetconfig->networks[i].numhosts > 0) {
       network = hex2dot(vnetconfig->networks[i].nw);
@@ -551,7 +554,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig) {
       }
     }
   }
-
+  fprintf(fp, "}\n");
   fclose (fp);
   
   return(0);
@@ -681,14 +684,14 @@ int check_bridge(char *brname) {
   return(1);
 }
 
-int vnetStartNetworkLinuxVlan(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname) {
+int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname) {
   char cmd[1024], newdevname[32], newbrname[32];
   int rc;
 
   // check input params...
   if (!vnetconfig || !outbrname) {
     if (!vnetconfig) {
-      logprintfl(EUCAERROR, "bad input params to vnetStartNetworkLinuxVlan()\n");
+      logprintfl(EUCAERROR, "bad input params to vnetStartNetworkManaged()\n");
       return(1);
     } else {
       return(0);
@@ -698,120 +701,204 @@ int vnetStartNetworkLinuxVlan(vnetConfig *vnetconfig, int vlan, char *userName, 
   *outbrname = NULL;
   
   if (vnetconfig->role == NC && vlan > 0) {
+
     // first, create tagged interface
-    snprintf(newdevname, 32, "%s.%d", vnetconfig->pubInterface, vlan);
-    
-    rc = check_device(newdevname);
-    if (rc) {
-      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, vnetconfig->pubInterface, vlan);
-      rc = system(cmd);
-      if (rc != 0) {
-	// failed to create vlan tagged device
-	logprintfl(EUCAERROR, "cannot create new vlan device %s.%d\n", vnetconfig->pubInterface, vlan);
-	return(1);
-      }
-    }
-    
-    // create new bridge
-    snprintf(newbrname, 32, "eucabr%d", vlan);
-    *outbrname = strdup(newbrname);
-
-    rc = check_bridge(newbrname);
-    if (rc) {
-      // bridge does not yet exist
-      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap brctl addbr %s", vnetconfig->eucahome, newbrname);
-      rc = system(cmd);
+    if (!strcmp(vnetconfig->mode, "MANAGED")) {
+      snprintf(newdevname, 32, "%s.%d", vnetconfig->pubInterface, vlan);
+      rc = check_device(newdevname);
       if (rc) {
-	logprintfl(EUCAERROR, "could not create new bridge %s\n", newbrname);
-	return(1);
-      }      
+	snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, vnetconfig->pubInterface, vlan);
+	rc = system(cmd);
+	if (rc != 0) {
+	  // failed to create vlan tagged device
+	  logprintfl(EUCAERROR, "cannot create new vlan device %s.%d\n", vnetconfig->pubInterface, vlan);
+	  return(1);
+	}
+      }
+
+      // create new bridge
+      snprintf(newbrname, 32, "eucabr%d", vlan);
+      *outbrname = strdup(newbrname);
+      rc = check_bridge(newbrname);
+      if (rc) {
+	// bridge does not yet exist
+	snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap brctl addbr %s", vnetconfig->eucahome, newbrname);
+	rc = system(cmd);
+	if (rc) {
+	  logprintfl(EUCAERROR, "could not create new bridge %s\n", newbrname);
+	  return(1);
+	}      
+      }
+      
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, newbrname, newdevname);
+      rc = system(cmd);
+      
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s 0.0.0.0 up", vnetconfig->eucahome, newbrname);
+      rc = system(cmd);
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s up", vnetconfig->eucahome, newdevname);
+      rc = system(cmd);
+      
+    } else {
+      snprintf(newbrname, 32, "%s", vnetconfig->bridgedev);
     }
-
-    snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, newbrname, newdevname);
-    rc = system(cmd);
-
-    snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s 0.0.0.0 up", vnetconfig->eucahome, newbrname);
-    rc = system(cmd);
-    snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s up", vnetconfig->eucahome, newdevname);
-    rc = system(cmd);
-
+    
+    *outbrname = strdup(newbrname);
   } else if (vlan > 0 && (vnetconfig->role == CC || vnetconfig->role == CLC)) {
-    char *newip, *netmask;
+    //    char *newip, *netmask;
 
     rc = vnetSetVlan(vnetconfig, vlan, userName, netName);
     rc = vnetCreateChain(vnetconfig, userName, netName);
     
-    snprintf(newdevname, 32, "%s.%d", vnetconfig->pubInterface, vlan);
-    rc = check_device(newdevname);
-    if (rc) {
-      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, vnetconfig->pubInterface, vlan);
-      rc = system(cmd);
+    if (!strcmp(vnetconfig->mode, "MANAGED")) {
+      snprintf(newdevname, 32, "%s.%d", vnetconfig->pubInterface, vlan);
+      rc = check_device(newdevname);
       if (rc) {
-	logprintfl(EUCAERROR, "could not tag %s with vlan %d\n", vnetconfig->pubInterface, vlan);
-	return(1);
+	snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, vnetconfig->pubInterface, vlan);
+	rc = system(cmd);
+	if (rc) {
+	  logprintfl(EUCAERROR, "could not tag %s with vlan %d\n", vnetconfig->pubInterface, vlan);
+	  return(1);
+	}
       }
+    } else {
+      snprintf(newdevname, 32, "%s", vnetconfig->pubInterface);
     }
     
-    newip = hex2dot(vnetconfig->networks[vlan].router);
-    netmask = hex2dot(vnetconfig->networks[vlan].nm);
-
-    snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, newdevname, newip, netmask);
-    rc = system(cmd);
+    rc = vnetAddGatewayIP(vnetconfig, vlan, newdevname);
     if (rc) {
+      return(rc);
+    }
+    /*
+      newip = hex2dot(vnetconfig->networks[vlan].router);
+      netmask = hex2dot(vnetconfig->networks[vlan].nm);
+      
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, newdevname, newip, netmask);
+      rc = system(cmd);
+      if (rc) {
       logprintfl(EUCAERROR, "could not bring up new device %s with ip %s\n", newdevname, newip);
       if (newip) free(newip);
       if (netmask) free(netmask);
       return(1);
-    }
+      }
+      if (newip) free(newip);
+      if (netmask) free(netmask);
+    */
+    
     *outbrname = strdup(newdevname);
-    if (newip) free(newip);
-    if (netmask) free(netmask);
   }
   return(0);
 }
 
-int vnetStopNetworkLinuxVlan(vnetConfig *vnetconfig, int vlan, char *userName, char *netName) {
+int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
+  char *newip, *broadcast;
+  int rc, slashnet;
+  char cmd[1024];
+
+  newip = hex2dot(vnetconfig->networks[vlan].router);
+  broadcast = hex2dot(vnetconfig->networks[vlan].bc);
+  
+  //  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, devname, newip, netmask);
+  slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
+  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add %s/%d broadcast %s dev %s", vnetconfig->eucahome, newip, slashnet, broadcast, devname);
+  //  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add %s/%d dev %s", vnetconfig->eucahome, newip, slashnet, devname);
+  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+  rc = system(cmd);
+  if (rc) {
+    logprintfl(EUCAERROR, "could not bring up new device %s with ip %s\n", devname, newip);
+    if (newip) free(newip);
+    if (broadcast) free(broadcast);
+    return(1);
+  }
+  if (newip) free(newip);
+  if (broadcast) free(broadcast);
+
+  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s up", vnetconfig->eucahome, devname);
+  rc = system(cmd);
+  if (rc) {
+    logprintfl(EUCAERROR, "could not bring up interface '%s'\n", devname);
+    return(1);
+  }
+  return(0);
+}
+
+int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
+  char *newip, *broadcast;
+  int rc;
+  int slashnet;
+  char cmd[1024];
+  
+  newip = hex2dot(vnetconfig->networks[vlan].router);
+  broadcast = hex2dot(vnetconfig->networks[vlan].bc);
+  
+  //  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, devname, newip, netmask);
+  slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
+  //slashnet = 16;
+  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr del %s/%d broadcast %s dev %s", vnetconfig->eucahome, newip, slashnet, broadcast, devname);
+  //  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr del %s/%d dev %s", vnetconfig->eucahome, newip, slashnet, devname);
+  if (newip) free(newip);
+  if (broadcast) free(broadcast);
+  
+  rc = system(cmd);
+  if (rc) {
+    logprintfl(EUCAERROR, "could not bring up new device %s with ip %s\n", devname, newip);
+    return(1);
+  }
+  return(0);
+}
+
+int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName) {
   char cmd[1024], newdevname[32], newbrname[32];
   int rc, ret;
   
   ret = 0;
   if (vnetconfig->role == NC) {
-    snprintf(newbrname, 32, "eucabr%d", vlan);
     
-    snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s down", vnetconfig->eucahome, newbrname);
-    rc = system(cmd);
-    if (rc) {
-      logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
-      ret = 1;
+    if (!strcmp(vnetconfig->mode, "MANAGED")) {
+      snprintf(newbrname, 32, "eucabr%d", vlan);
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s down", vnetconfig->eucahome, newbrname);
+      rc = system(cmd);
+      if (rc) {
+	logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
+	ret = 1;
+      }
     }
+
   }
   
-  snprintf(newdevname, 32, "%s.%d", vnetconfig->pubInterface, vlan);
-
-  rc = check_device(newdevname);
-  if (!rc) {
-    snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s down", vnetconfig->eucahome, newdevname);
-    rc = system(cmd);
-    if (rc) {
-      logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
-      //    return(1);
-      ret=1;
-    }
+  if (!strcmp(vnetconfig->mode, "MANAGED")) {
+    snprintf(newdevname, 32, "%s.%d", vnetconfig->pubInterface, vlan);
+    rc = check_device(newdevname);
+    if (!rc) {
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s down", vnetconfig->eucahome, newdevname);
+      rc = system(cmd);
+      if (rc) {
+	logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
+	//    return(1);
+	ret=1;
+      }
   
-    snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap vconfig rem %s", vnetconfig->eucahome, newdevname);
-    rc = system(cmd);
-    if (rc) {
-      logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
-      ret = 1;
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap vconfig rem %s", vnetconfig->eucahome, newdevname);
+      rc = system(cmd);
+      if (rc) {
+	logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
+	ret = 1;
+      }
     }
+  } else {
+    snprintf(newdevname, 32, "%s", vnetconfig->pubInterface);
   }
-
-  if ((vnetconfig->role == CC || vnetconfig->role == CLC) && !strcmp(vnetconfig->mode, "MANAGED")) {
-    rc = vnetDelDev(vnetconfig, newdevname);
-    if (rc) {
-      logprintfl(EUCAERROR, "could not remove '%s' from list of interfaces\n", newdevname);
+  
+  if ((vnetconfig->role == CC || vnetconfig->role == CLC)) {
+    
+    if (!strcmp(vnetconfig->mode, "MANAGED")) {
+      rc = vnetDelDev(vnetconfig, newdevname);
+      if (rc) {
+	logprintfl(EUCAERROR, "could not remove '%s' from list of interfaces\n", newdevname);
+      }
+    } else {
+      rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname);
     }
-
+    
     if (userName && netName) {
       rc = vnetDeleteChain(vnetconfig, userName, netName);
       if (rc) {
@@ -825,6 +912,8 @@ int vnetStopNetworkLinuxVlan(vnetConfig *vnetconfig, int vlan, char *userName, c
 }
 
 int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname) {
+  int rc;
+
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
     if (outbrname) {
       if (vnetconfig->role == NC) {
@@ -833,9 +922,15 @@ int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *net
 	*outbrname = strdup(vnetconfig->pubInterface);
       }
     }
-    return(0);
+    rc = 0;
+  } else {
+    rc = vnetStartNetworkManaged(vnetconfig, vlan, userName, netName, outbrname);
   }
-  return(vnetStartNetworkLinuxVlan(vnetconfig, vlan, userName, netName, outbrname));
+  
+  if (vnetconfig->role != NC && *outbrname) {
+    vnetAddDev(vnetconfig, *outbrname);
+  }
+  return(rc);
 }
 
 int vnetGetPublicIP(vnetConfig *vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno) {
@@ -926,7 +1021,7 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
   int rc=0;
   char cmd[256];
 
-  if ((vnetconfig->role == CC || vnetconfig->role == CLC) && !strcmp(vnetconfig->mode, "MANAGED")) {
+  if ((vnetconfig->role == CC || vnetconfig->role == CLC) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
 
     snprintf(cmd, 255, "-A PREROUTING -d %s -j DNAT --to %s", src, dst);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
@@ -973,7 +1068,7 @@ int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
   int rc=0, count;
   char cmd[256];
   
-  if ((vnetconfig->role == CC || vnetconfig->role == CLC) && !strcmp(vnetconfig->mode, "MANAGED")) {
+  if ((vnetconfig->role == CC || vnetconfig->role == CLC) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
 
     snprintf(cmd, 255, "-D PREROUTING -d %s -j DNAT --to %s", src, dst);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
@@ -998,7 +1093,7 @@ int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netN
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
     return(0);
   }
-  return(vnetStopNetworkLinuxVlan(vnetconfig, vlan, userName, netName));
+  return(vnetStopNetworkManaged(vnetconfig, vlan, userName, netName));
 }
 
 
@@ -1097,9 +1192,9 @@ int vnetLoadIPTables(vnetConfig *vnetconfig) {
     rc = system(cmd);
   }
 
-  snprintf(file, 1023, "%s/usr/share/eucalyptus/euca_rootwrap %s/iptables-state", vnetconfig->eucahome, vnetconfig->path);
+  snprintf(file, 1023, "%s/iptables-state", vnetconfig->path);
   if (stat(file, &statbuf) == 0) {
-    snprintf(cmd, 255, "iptables-restore < %s", file);
+    snprintf(cmd, 255, "%s/usr/share/eucalyptus/euca_rootwrap iptables-restore < %s", vnetconfig->eucahome, file);
     rc = system(cmd);
   }
   return(WEXITSTATUS(rc));

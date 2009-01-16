@@ -1,0 +1,137 @@
+<?xml version="1.0" standalone="no"?>
+
+<kickstart>
+
+
+	<description>
+	EUCALYPTUS is an open source service overlay that implements
+	elastic computing using existing resources. The goal of
+	EUCALYPTUS is to allow sites with existing clusters and server
+	infrastructure to co-host an elastic computing service that is
+	interface-compatible with Amazon's EC2.
+	</description>
+
+	<copyright>
+	Copyright (c) 2000 - 2008 The Regents of the University of California.
+	</copyright>
+
+	<changelog>
+	$Log: eucalyptus-compute.xml,v $
+	Revision 1.15  2008-12-09 21:24:33  graziano
+	More tweaking for the new euca_conf
+
+	Revision 1.14  2008-07-30 02:06:37  graziano
+	moved euca_conf to sbin. We need to create the instance path even when
+	the nc is not running.
+
+	Revision 1.13  2008-07-29 06:35:41  graziano
+	forgot -d option for euca_conf in the postinstall for the roll.
+
+	Revision 1.12  2008-07-29 06:29:43  graziano
+	Compatected a bit the roll postinstall. Added creation of the path to the
+	compute node.
+
+	Revision 1.11  2008-07-29 01:36:44  graziano
+	Let's be sure we leave the configuration file in the better shape we can.
+	Modified the rolls postinstall to accomodate the missing socat and the
+	new way to configure eucalyptus.
+
+	Revision 1.10  2008-07-27 21:08:03  graziano
+	getting ready for the rolls
+
+	Revision 1.9  2008-07-26 07:11:32  graziano
+	Squashed the last  few pesky error: got some workable RPMs out of it.
+	Moved euca_conf in the same directory as add_key.sh, and rearranged the
+	spec file to pick it up. Adjusted the rolls to use all the new eucalyptus
+	rpms.
+
+	Revision 1.8  2008-07-26 05:29:43  graziano
+	Moved to 1.2. Split the eucalyptus package in 4: eucalyptus, -cloud, -cc
+	and -nc, started to rework the roll to accomodate that. Adjusted the
+	dependencies to be more sane. euca_conf could be use to finish the setup
+	(creating repositories and adding default cluster). euca_sync_key can now
+	sync single hosts. The init.d script check to see if the configuration
+	file has indeed been configured, and removed the sync_key script from
+	there.
+
+	Revision 1.7  2008-07-23 20:23:20  graziano
+	First cut at moving to /opt/eucalyptus. CLeaned up the postinstall script
+	in the rolls and the init.d: we just use whatever directory is in
+	/etc/default/eucalyptus (not hardcoded /opt/eucalyptus ...).
+
+	Revision 1.6  2008-07-02 03:14:28  graziano
+	need to export EUCALYPTUS variable before calling ant
+
+	Revision 1.5  2008-07-02 01:35:02  graziano
+	we need to source /etc/default/eucalyptus ...
+
+	Revision 1.4  2008-07-02 00:42:18  graziano
+	we cannot start after having installed the RPM since we didn't configure
+	yet what to start. We can start after the roll got installed though.
+
+	Revision 1.3  2008-07-01 21:57:10  graziano
+	moving the rocks command into the roll's postinstall
+
+	Revision 1.2  2008-05-26 21:56:41  graziano
+	we need out apache2 compile with -DBIG_SECURITY_HOLE to run as root.
+	Added dependency for the roll.
+
+	Revision 1.1  2008-05-21 04:36:28  graziano
+	Let's try to make different installations for compute and frontend: step
+	towards having more rpms.
+
+	Revision 1.4  2008-05-20 03:50:07  graziano
+	Put ant jce in the right spot. Added the call to put the runlevels. Added
+	xen-libs to the package list. Added stubs for euca for cluster controller
+	management.
+
+	Revision 1.3  2008-05-12 19:04:01  graziano
+	added some eucalyptus descriptions: waiting for rich for the copyright
+	part.
+
+	Revision 1.2  2008-05-11 23:07:34  graziano
+	Modified the copyright (removed for now). Added euca-libvirt and euca-vde
+	into the roll.
+
+	Revision 1.1.1.1  2008-05-11 23:01:22  graziano
+	I need a place to put the roll source tree
+
+	</changelog>
+
+	<package>euca-libvirt</package>
+	<package>euca-axis2c</package>
+	<package>euca-httpd</package>
+	<package>xen-libs</package>
+	<package>eucalyptus</package>
+	<package>eucalyptus-gl</package>
+	<package>eucalyptus-nc</package>
+<post>
+# let's set defaults path for ROCKS V installations
+if [ -d /state/partition1 ]; then
+	INSTANCE_PATH="/state/partition1/eucalyptus/instances"
+else
+	INSTANCE_PATH="/usr/local/eucalyptus/instances"
+fi
+mkdir -p $INSTANCE_PATH
+
+/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus -instances "${INSTANCE_PATH}" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+
+# now let's be sure we use MANAGED: let's comment out the default
+TMP=`mktemp`
+cp /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf $TMP
+sed "s|[[:blank:]]*\(VNET_MODE.*\)|#\1|" $TMP > /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf 
+rm -f $TMP
+
+# and now let's add the MANAGED mode lines
+cp /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf $TMP
+echo >> $TMP
+echo "# Added for Rocks" >> $TMP
+echo "VNET_MODE=\"MANAGED\"" >> $TMP
+cp $TMP /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+rm -f $TMP
+
+# start the services
+/etc/init.d/eucalyptus start
+</post>
+
+</kickstart>
