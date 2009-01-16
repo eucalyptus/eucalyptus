@@ -252,3 +252,48 @@ int total_instances (bunchOfInstances **headp)
     else return 0;
 }
 
+ncVolume * find_volume (ncInstance * instance, char *volumeId) 
+{
+    ncVolume * v = instance->volumes;
+    int i;
+
+    for (i=0; i<EUCA_MAX_VOLUMES; i++) {
+        /* TODO */
+    }
+
+    return v;
+}
+
+ncVolume * add_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev)
+{
+    ncVolume * v = find_volume (instance, volumeId);
+
+    if ( v == NULL) {
+        return NULL; /* out of room */
+    }
+
+    if ( ! strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE) ) {
+        return NULL; /* already there */
+    } else {
+        /* TODO */
+    }
+
+    return v;
+}
+
+ncVolume * free_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev)
+{
+    ncVolume * v = find_volume (instance, volumeId);
+    
+    if ( v == NULL) {
+        return NULL; /* not there (and out of room) */
+    }
+
+    if ( strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE) ) {
+        return NULL; /* not there */
+    } else {
+        /* TODO */
+    }
+    
+    return v;
+}
