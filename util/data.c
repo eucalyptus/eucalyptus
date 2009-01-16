@@ -54,6 +54,7 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
             strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
         }
     }
+    inst->volumesSize = 0;
     
     if (ncnet != NULL) {
       memcpy(&(inst->ncnet), ncnet, sizeof(ncNetConf));
@@ -252,14 +253,24 @@ int total_instances (bunchOfInstances **headp)
     else return 0;
 }
 
-ncVolume * find_volume (ncInstance * instance, char *volumeId) 
+/* 
+ * finds a matching volume 
+ * OR returns a pointer to the next empty volume slot 
+ * OR if full, returns NULL
+ */
+static ncVolume * find_volume (ncInstance * instance, char *volumeId) 
 {
     ncVolume * v = instance->volumes;
-    int i;
 
-    for (i=0; i<EUCA_MAX_VOLUMES; i++) {
-        /* TODO */
+    int i;
+    for (i=0; i<EUCA_MAX_VOLUMES; i++, v++) {
+        if ( ! strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE) )
+            break;
+        if ( ! strnlen (v->volumeId, CHAR_BUFFER_SIZE) )
+            break;
     }
+    if (i==EUCA_MAX_VOLUMES)
+        v = NULL;
 
     return v;
 }
@@ -275,7 +286,10 @@ ncVolume * add_volume (ncInstance * instance, char *volumeId, char *remoteDev, c
     if ( ! strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE) ) {
         return NULL; /* already there */
     } else {
-        /* TODO */
+        strncpy (v->volumeId, volumeId, CHAR_BUFFER_SIZE);
+        strncpy (v->remoteDev, remoteDev, CHAR_BUFFER_SIZE);
+        strncpy (v->localDev, localDev , CHAR_BUFFER_SIZE);
+        instance->volumesSize++;
     }
 
     return v;
@@ -291,8 +305,17 @@ ncVolume * free_volume (ncInstance * instance, char *volumeId, char *remoteDev, 
 
     if ( strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE) ) {
         return NULL; /* not there */
+
     } else {
-        /* TODO */
+        ncVolume * last_v = instance->volumes+EUCA_MAX_VOLUMES;
+        int slots_left = last_v - v;
+
+        /* shift the remaining entries up, empty or not */
+        if (slots_left)
+            memmove (v, v+1, slots_left);
+        /* empty the last one */
+        bzero (last_v, sizeof(ncVolume));
+        instance->volumesSize--;
     }
     
     return v;

@@ -133,6 +133,16 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         axutil_date_time_free(dt, env);
     }
 
+    outInst->volumesSize = adb_instanceType_sizeof_volumes (instance, env);
+    if (outInst->volumesSize > 0) {
+        for (i=0; i<EUCA_MAX_VOLUMES && i<outInst->volumesSize; i++) {
+            adb_volumeType_t * volume = adb_instanceType_get_volumes_at (instance, env, i);
+            strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
+            strncpy (outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev (volume, env), CHAR_BUFFER_SIZE);
+            strncpy (outInst->volumes[i].localDev, adb_volumeType_get_localDev (volume, env), CHAR_BUFFER_SIZE);
+        }
+    }
+
     return outInst;
 }
 
