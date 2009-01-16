@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include "ipc.h"
 #include "misc.h"
+#include "data.h"
 
 #define ITER 160*4
 
@@ -125,17 +126,28 @@ void test_sem_pthreads (void)
     sem_free (s);
 }
 
+#define EXIT { fprintf (stderr, "error on line %d\n", __LINE__); exit (1); }
+
 int main (int argc, char * argv[])
 {
-    if ( diff ("/etc/motd", "/etc/motd") != 0 ) return 1;
-    if ( diff ("/etc/passwd", "/etc/motd") == 0 ) return 2;
+    if ( diff ("/etc/motd", "/etc/motd") != 0 ) EXIT
+    if ( diff ("/etc/passwd", "/etc/motd") == 0 ) EXIT
 
     char * s = strdup("jolly old jolly old time...");
     char ** sp = &s;
-    if ( strcmp ( replace_string ( sp, "old", "new"), "jolly new jolly new time..." ) ) return 3;
-    if ( run ( "ls", "/", "/etc", ">/dev/null", NULL ) ) return 4;
+    if ( strcmp ( replace_string ( sp, "old", "new"), "jolly new jolly new time..." ) ) EXIT
+    if ( run ( "ls", "/", "/etc", ">/dev/null", NULL ) ) EXIT
 
-    /* testing the semaphores */
+    ncInstance inst;
+    bzero (&inst, sizeof (ncInstance));
+    ncVolume * v1 = add_volume (&inst, "v1", "r1", "l1"); if (v1==NULL) EXIT
+    if (inst.volumesSize!=1) EXIT
+    ncVolume * v2 = add_volume (&inst, "v2", "r2", "l2"); if (v2==NULL) EXIT
+    
+    printf ("all tests passed!\n");
+    if (argc==0) return 0;
+
+    /* "visual" testing of the semaphores */
     test_sem_fork ();
     test_sem_pthreads ();
 
