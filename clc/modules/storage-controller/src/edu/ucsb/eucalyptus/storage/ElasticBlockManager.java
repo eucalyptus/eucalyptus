@@ -38,8 +38,10 @@ import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import java.util.List;
 
 public interface ElasticBlockManager {
-    public void initVolumeManager(String volumeRoot, String snapshotRoot);
+    public void initVolumeManager();
 
+    public void reload();
+        
     public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
 
     public List<String> prepareForTransfer(String volumeId, String snapshotId) throws EucalyptusCloudException;

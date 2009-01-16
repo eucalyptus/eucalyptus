@@ -76,14 +76,16 @@ public class Storage {
 
     private static final String ETHERD_PREFIX = "/dev/etherd/e";
     static {
-        volumeStorageManager = new FileSystemStorageManager(StorageProperties.volumeRootDirectory);
-        snapshotStorageManager = new FileSystemStorageManager(StorageProperties.snapshotRootDirectory);
+        volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
+        snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         ebsManager = new LVM2Manager();
-        ebsManager.initVolumeManager(StorageProperties.volumeRootDirectory, StorageProperties.snapshotRootDirectory);
+        ebsManager.initVolumeManager();
+        ebsManager.reload();
     }
 
     //For unit testing
     public Storage() {}
+
 
     public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) {
         UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
@@ -330,8 +332,9 @@ public class Storage {
                         ebsManager.loadSnapshots(snapshotSet, snapshotFileNames);
                     } else {
                         if(!foundSnapshotInfo.getStatus().equals(Status.available.toString())) {
+                            success = false;
                             db.rollback();
-                            throw new EucalyptusCloudException();
+                            LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
                         }
                     }
 
@@ -369,7 +372,7 @@ public class Storage {
                     throw new EucalyptusCloudException();
                 }
                 db.commit();
-            } catch(EucalyptusCloudException ex) {
+            } catch(EucalyptusCloudException ex) {                
                 ex.printStackTrace();
             }
         }

@@ -47,10 +47,6 @@ import java.net.InetAddress;
 
 public class LVM2Manager implements ElasticBlockManager {
 
-    //Location where LVM stores VGs and LVs
-    //TODO: make these configurable
-    public static String volumeRootDirectory;
-    public static String snapshotRootDirectory;
     public static final String lvmRootDirectory = "/dev";
     public static final String PATH_SEPARATOR = "/";
     public static final String iface = "wlan0";
@@ -58,9 +54,7 @@ public class LVM2Manager implements ElasticBlockManager {
     public static String hostName = "localhost";
     public static final int MAX_LOOP_DEVICES = 256;
 
-    public void initVolumeManager(String volumeRoot, String snapshotRoot) {
-        volumeRootDirectory = volumeRoot;
-        snapshotRootDirectory = snapshotRoot;
+    public void initVolumeManager() {
         if(!initialized) {
             System.loadLibrary("lvm2control");
             try {
@@ -83,6 +77,10 @@ public class LVM2Manager implements ElasticBlockManager {
 
     public native String losetup(String fileName);
 
+    public native String losetup(String absoluteFileName, String loDevName);
+
+    public native String getLoopback(String loDevName);
+    
     public native String createEmptyFile(String fileName, int size);
 
     public native String createPhysicalVolume(String loDevName);
@@ -178,6 +176,10 @@ public class LVM2Manager implements ElasticBlockManager {
         return loDevName;
     }
 
+    public String createLoopback(String absoluteFileName, String loDevName) {
+        return losetup(absoluteFileName, loDevName);
+    }
+
     //creates a logical volume (and a new physical volume and volume group)
     public void createLogicalVolume(String loDevName, String vgName, String lvName) throws EucalyptusCloudException {
         String returnValue = createPhysicalVolume(loDevName);
@@ -210,14 +212,14 @@ public class LVM2Manager implements ElasticBlockManager {
     }
 
     public void createVolume(String volumeId, int size) throws EucalyptusCloudException {
-        File volumeDir = new File(StorageProperties.volumeRootDirectory);
+        File volumeDir = new File(StorageProperties.storageRootDirectory);
         volumeDir.mkdirs();
 
         String vgName = "vg-" + Hashes.getRandom(4);
         String lvName = "lv-" + Hashes.getRandom(4);
         LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo();
 
-        String rawFileName = StorageProperties.volumeRootDirectory + "/" + volumeId;
+        String rawFileName = StorageProperties.storageRootDirectory + "/" + volumeId;
         //create file and attach to loopback device
         String loDevName = createLoopback(rawFileName, size);
         //create physical volume, volume group and logical volume
@@ -229,7 +231,6 @@ public class LVM2Manager implements ElasticBlockManager {
         }
         lvmVolumeInfo.setVolumeId(volumeId);
         lvmVolumeInfo.setLoDevName(loDevName);
-        lvmVolumeInfo.setLoFileName(rawFileName);
         lvmVolumeInfo.setPvName(loDevName);
         lvmVolumeInfo.setVgName(vgName);
         lvmVolumeInfo.setLvName(lvName);
@@ -252,9 +253,9 @@ public class LVM2Manager implements ElasticBlockManager {
                 String lvName = "lv-" + Hashes.getRandom(4);
                 lvmVolumeInfo = new LVMVolumeInfo();
 
-                String rawFileName = StorageProperties.volumeRootDirectory + "/" + volumeId;
+                String rawFileName = StorageProperties.storageRootDirectory + "/" + volumeId;
                 //create file and attach to loopback device
-                File snapshotFile = new File(foundSnapshotInfo.getLoFileName());
+                File snapshotFile = new File(StorageProperties.storageRootDirectory + PATH_SEPARATOR + foundSnapshotInfo.getVolumeId());
                 assert(snapshotFile.exists());
                 size = (int)(snapshotFile.length() / StorageProperties.GB);
                 String loDevName = createLoopback(rawFileName, size);
@@ -272,7 +273,6 @@ public class LVM2Manager implements ElasticBlockManager {
                 }
                 lvmVolumeInfo.setVolumeId(volumeId);
                 lvmVolumeInfo.setLoDevName(loDevName);
-                lvmVolumeInfo.setLoFileName(rawFileName);
                 lvmVolumeInfo.setPvName(loDevName);
                 lvmVolumeInfo.setVgName(vgName);
                 lvmVolumeInfo.setLvName(lvName);
@@ -315,8 +315,7 @@ public class LVM2Manager implements ElasticBlockManager {
             //remove aoe export
             String loDevName = foundLVMVolumeInfo.getLoDevName();
             String vgName = foundLVMVolumeInfo.getVgName();
-            String lvName = foundLVMVolumeInfo.getLvName();
-            String fileName = foundLVMVolumeInfo.getLoFileName();
+            String lvName = foundLVMVolumeInfo.getLvName();            
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
             aoeUnexport(foundLVMVolumeInfo.getVbladePid());
@@ -350,7 +349,7 @@ public class LVM2Manager implements ElasticBlockManager {
         if(foundLVMVolumeInfo != null) {
             LVMVolumeInfo snapshotInfo = new LVMVolumeInfo(snapshotId);
             snapshotInfo.setSnapshotOf(volumeId);
-            File snapshotDir = new File(StorageProperties.snapshotRootDirectory);
+            File snapshotDir = new File(StorageProperties.storageRootDirectory);
             snapshotDir.mkdirs();
 
             String vgName = foundLVMVolumeInfo.getVgName();
@@ -358,14 +357,13 @@ public class LVM2Manager implements ElasticBlockManager {
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + foundLVMVolumeInfo.getLvName();
 
             int size = foundLVMVolumeInfo.getSize();
-            String rawFileName = StorageProperties.snapshotRootDirectory + "/" + snapshotId;
+            String rawFileName = StorageProperties.storageRootDirectory + "/" + snapshotId;
             //create file and attach to loopback device
             String loDevName = createLoopback(rawFileName, size);
             //create physical volume, volume group and logical volume
             createSnapshotLogicalVolume(loDevName, vgName, absoluteLVName, lvName);
 
             snapshotInfo.setLoDevName(loDevName);
-            snapshotInfo.setLoFileName(rawFileName);
             snapshotInfo.setPvName(loDevName);
             snapshotInfo.setVgName(vgName);
             snapshotInfo.setLvName(lvName);
@@ -388,12 +386,12 @@ public class LVM2Manager implements ElasticBlockManager {
 
         if(foundLVMVolumeInfo != null) {
 
-            returnValues.add(foundLVMVolumeInfo.getLoFileName());
+            returnValues.add(StorageProperties.storageRootDirectory + PATH_SEPARATOR + foundLVMVolumeInfo.getVolumeId());
             String dmDeviceName = foundLVMVolumeInfo.getVgName().replaceAll("-", "--") + "-" + foundLVMVolumeInfo.getLvName().replaceAll("-", "--");
             lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
             foundLVMVolumeInfo = db.getUnique(lvmVolumeInfo);
             if(foundLVMVolumeInfo != null) {
-                String snapshotRawFileName = foundLVMVolumeInfo.getLoFileName();
+                String snapshotRawFileName = StorageProperties.storageRootDirectory + PATH_SEPARATOR + foundLVMVolumeInfo.getVolumeId();
                 String dupSnapshotDeltaFileName = snapshotRawFileName + "." + Hashes.getRandom(4);
                 String returnValue = suspendDevice(dmDeviceName);
                 dupFile(snapshotRawFileName, dupSnapshotDeltaFileName);
@@ -464,12 +462,26 @@ public class LVM2Manager implements ElasticBlockManager {
             String loDevName = createLoopback(snapshotFileName);
             LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotSet.get(i++));
             lvmVolumeInfo.setLoDevName(loDevName);
-            lvmVolumeInfo.setLoFileName(snapshotFileName);
             lvmVolumeInfo.setMajorNumber(-1);
             lvmVolumeInfo.setMinorNumber(-1);
             lvmVolumeInfo.setStatus(Storage.Status.available.toString());
             db.add(lvmVolumeInfo);
         }
         db.commit();
+    }
+
+    public void reload() {
+        EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+        LVMVolumeInfo volumeInfo = new LVMVolumeInfo();
+        List<LVMVolumeInfo> volumeInfos = db.query(volumeInfo);
+        for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
+            String loDevName = foundVolumeInfo.getLoDevName();
+            String loFileName = foundVolumeInfo.getVolumeId();
+            String absoluteLoFileName = StorageProperties.storageRootDirectory + PATH_SEPARATOR + loFileName;
+            String returnValue = getLoopback(loDevName);
+            if(!returnValue.contains(loFileName)) {
+                createLoopback(absoluteLoFileName, loDevName);
+            }
+        }
     }
 }

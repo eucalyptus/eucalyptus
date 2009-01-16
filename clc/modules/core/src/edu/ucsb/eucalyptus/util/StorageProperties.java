@@ -47,7 +47,8 @@ public class StorageProperties {
     public static final String EUCALYPTUS_OPERATION = "EucaOperation";
     public static final String EUCALYPTUS_HEADER = "EucaHeader";
     public static String volumeRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
-    public static String snapshotRootDirectory = BaseDirectory.VAR.toString() + "/snapshots";
+    public static String snapshotRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
+    public static String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
     public static final String snapshotBucket = "snapshots";
     public static final long GB = 1024*1024*1024;
     public static final long MB = 1024*1024;

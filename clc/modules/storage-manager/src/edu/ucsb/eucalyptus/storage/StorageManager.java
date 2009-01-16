@@ -42,7 +42,7 @@ import java.util.List;
 public interface StorageManager {
     
     public void initialize();
-    
+
     public void createBucket(String bucket) throws IOException;
 
 	public boolean isEmpty(String bucket);
