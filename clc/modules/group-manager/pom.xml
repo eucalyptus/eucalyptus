@@ -1,0 +1,41 @@
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>eucalyptus</groupId>
+    <artifactId>security-groups-manager</artifactId>
+    <version>1.4</version>
+    <name>Eucalyptus Security Groups Manager</name>
+    <build>
+        <directory>../../target</directory>
+        <outputDirectory>${pom.basedir}/build</outputDirectory>
+        <finalName>${project.groupId}-${project.artifactId}-${project.version}</finalName>
+        <sourceDirectory>${pom.basedir}/src</sourceDirectory>
+        <resources>
+            <resource>
+                <directory>${pom.basedir}/resources</directory>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.0.2</version>
+                <configuration>
+                    <source>1.5</source>
+                    <target>1.5</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <dependencies>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>msgs</artifactId>
+            <version>1.4</version>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>core</artifactId>
+            <version>1.4</version>
+        </dependency>
+    </dependencies>
+</project>
