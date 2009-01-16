@@ -1080,7 +1080,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  }
 	  logprintfl(EUCAINFO,"\tclient (%s) running instance: %s %s %s %s %d %s\n", res->ncService, instId, amiId, mac, mac, vlan, keyName);
 	  logprintfl(EUCAINFO,"\tasking for virtual hardware (mem/disk/cores): %d/%d/%d\n", ncvm.memorySize, ncvm.diskSize, ncvm.numberOfCores);
-	  rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, mac, mac, vlan, &outInst);
+	  rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, mac, mac, vlan, NULL, NULL, NULL, 0, &outInst);
 	  if (!rc) {
 	    rc = write(filedes[1], outInst, sizeof(ncInstance));
 	    ret = 0;
