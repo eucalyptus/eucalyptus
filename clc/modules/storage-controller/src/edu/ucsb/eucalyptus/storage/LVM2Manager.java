@@ -42,14 +42,18 @@ import edu.ucsb.eucalyptus.keys.Hashes;
 import java.io.*;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.nio.channels.FileChannel;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.Inet6Address;
 
 public class LVM2Manager implements ElasticBlockManager {
 
     public static final String lvmRootDirectory = "/dev";
     public static final String PATH_SEPARATOR = "/";
-    public static final String iface = "wlan0";
+    public static String iface = "wlan0";
     public static boolean initialized = false;
     public static String hostName = "localhost";
     public static final int MAX_LOOP_DEVICES = 256;
@@ -57,8 +61,24 @@ public class LVM2Manager implements ElasticBlockManager {
     public void initVolumeManager() {
         if(!initialized) {
             System.loadLibrary("lvm2control");
+
             try {
                 hostName = InetAddress.getLocalHost().getHostName();
+                NetworkInterface inface = NetworkInterface.getByName(iface);
+                if(inface == null) {
+                    List<NetworkInterface> ifaces = null;
+                    try {
+                        ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
+                    } catch ( SocketException e1 ) {}
+                    for ( NetworkInterface ifc : ifaces )
+                        try {
+                            if ( !ifc.isLoopback() && !ifc.isVirtual() && ifc.isUp() ) {
+                                iface = ifc.getName();
+                                break;
+                            }
+                        } catch ( SocketException e1 ) {}
+                }
+
                 EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
                 LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
                 List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
@@ -80,7 +100,7 @@ public class LVM2Manager implements ElasticBlockManager {
     public native String losetup(String absoluteFileName, String loDevName);
 
     public native String getLoopback(String loDevName);
-    
+
     public native String createEmptyFile(String fileName, int size);
 
     public native String createPhysicalVolume(String loDevName);
@@ -315,7 +335,7 @@ public class LVM2Manager implements ElasticBlockManager {
             //remove aoe export
             String loDevName = foundLVMVolumeInfo.getLoDevName();
             String vgName = foundLVMVolumeInfo.getVgName();
-            String lvName = foundLVMVolumeInfo.getLvName();            
+            String lvName = foundLVMVolumeInfo.getLvName();
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
             aoeUnexport(foundLVMVolumeInfo.getVbladePid());
@@ -428,7 +448,7 @@ public class LVM2Manager implements ElasticBlockManager {
             if(returnValue.length() == 0) {
                 throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
             }
-            returnValue = removeLoopback(loDevName);            
+            returnValue = removeLoopback(loDevName);
             db.delete(foundLVMVolumeInfo);
             db.commit();
         }  else {
