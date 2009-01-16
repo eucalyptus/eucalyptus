@@ -75,7 +75,8 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 	}
 	logprintfl(EUCADEBUG, "would call attachVol on NC: %s\n",  config->resourcePool[j].hostname);
 	rc = 0;
-	//rc = ncTerminateInstanceStub(ncs, ccMeta, instId, &shutdownState, &previousState);
+	// here
+	rc = ncAttachVolumeStub(ncs, ccMeta, instanceId, volumeId, remoteDev, localDev);
 	if (!rc) {
 	  ret = 0;
 	} else {
@@ -150,7 +151,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 	}
 	logprintfl(EUCADEBUG, "would call dettachVol on NC: %s\n",  config->resourcePool[j].hostname);
 	rc = 0;
-	//rc = ncTerminateInstanceStub(ncs, ccMeta, instId, &shutdownState, &previousState);
+	rc = ncDetachVolumeStub(ncs, ccMeta, instanceId, volumeId, remoteDev, localDev, force);
 	if (!rc) {
 	  ret = 0;
 	} else {
