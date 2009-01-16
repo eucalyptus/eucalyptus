@@ -35,15 +35,27 @@
 #include <edu_ucsb_eucalyptus_storage_LVM2Manager.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
+
+#define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
 static const char* blockSize = "1G";
 jstring run_command(JNIEnv *env, char *cmd, int outfd) {
 	FILE* fd;
 	int pid;
 	char readbuffer[256];
+	char absolute_cmd[256];
+    char* home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    if (!home) {
+        home = strdup (""); /* root by default */
+    } else {
+        home = strdup (home);
+    }
+
+    snprintf(absolute_cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap %s", home, cmd);
 
 	bzero(readbuffer, 256);
-	fd = popen(cmd, "r");
+	fd = popen(absolute_cmd, "r");
 	if(fgets(readbuffer, 256, fd)) {
 	    char* ptr = strchr(readbuffer, '\n');
 	    if(ptr != NULL) {
@@ -58,7 +70,7 @@ int run_command_and_get_pid(char *cmd, char **args) {
     int fd[2];
     pipe(fd);
     int pid = -1;
-    
+
     if ((pid = fork()) == -1) {
         perror("Could not run command");
         return -1;
@@ -153,19 +165,29 @@ JNIEXPORT jint JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_aoeExport
 	const jbyte* if_name = (*env)->GetStringUTFChars(env, iface, NULL);
 	char major_str[4];
 	char minor_str[4];
-    char *args[6];
+    char *args[7];
+    char rootwrap[256];
+    char* home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    if (!home) {
+        home = strdup (""); /* root by default */
+    } else {
+        home = strdup (home);
+    }
+
+    snprintf(rootwrap, 256, "%s/usr/share/eucalyptus/euca_rootwrap", home);
 
     snprintf(major_str, 4, "%d", major);
     snprintf(minor_str, 4, "%d", minor);
 
-    args[0] = "vblade";
-    args[1] = major_str;
-    args[2] = minor_str;
-    args[3] = (char *) if_name;
-    args[4] = (char *) lv_name;
-    args[5] = (char *) NULL;
+    args[0] = rootwrap;
+    args[1] = "vblade";
+    args[2] = major_str;
+    args[3] = minor_str;
+    args[4] = (char *) if_name;
+    args[5] = (char *) lv_name;
+    args[6] = (char *) NULL;
 
-    int pid = run_command_and_get_pid("vblade", args);
+    int pid = run_command_and_get_pid(rootwrap, args);
 	(*env)->ReleaseStringUTFChars(env, lvName, lv_name);
 	(*env)->ReleaseStringUTFChars(env, iface, if_name);
 	return pid;

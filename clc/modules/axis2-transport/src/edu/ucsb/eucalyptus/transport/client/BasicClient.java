@@ -139,15 +139,15 @@ public class BasicClient implements Client {
   public OMElement sync( OMElement omMsg ) throws AxisFault {
     this.activate();
     OMElement omResponse = null;
-    LOG.trace( "--------------------------------------------------------------------------------------" );
+  /*  LOG.trace( "--------------------------------------------------------------------------------------" );
     LOG.trace( "Sending to " + this.getUri() );
     LOG.trace( omMsg.toString() );
     LOG.trace( "--------------------------------------------------------------------------------------" );
-    try {
+   */ try {
       this.serviceClient.getOptions().setAction( omMsg.getLocalName() );
       omResponse = this.serviceClient.sendReceive( omMsg );
-      LOG.trace( "Received to " + this.getUri() );
-      LOG.trace( omResponse.toString() );
+     // LOG.trace( "Received to " + this.getUri() );
+     // LOG.trace( omResponse.toString() );
     }
     catch ( AxisFault axisFault ) {
       LOG.error( axisFault );

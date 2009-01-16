@@ -465,7 +465,7 @@ public class Storage {
                     if(!foundVolumeInfo.getTransferred()) {
                         //transfer volume to Walrus
                         volumeBucket = "snapset-" + Hashes.getRandom(12);
-                        volumeBucket = volumeBucket.replaceAll(".", "x");
+                        volumeBucket = volumeBucket.replaceAll("\\.", "x");
                         volumeKey = volumeId + Hashes.getRandom(4);
                         foundVolumeInfo.setVolumeBucket(volumeBucket);
                         foundVolumeInfo.setVolumeKey(volumeKey);

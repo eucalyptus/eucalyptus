@@ -53,7 +53,8 @@ jstring run_command(JNIEnv *env, char *cmd, int outfd) {
         home = strdup (home);
     }
 
-    snprintf(absolute_cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap/%s", home, cmd);
+    snprintf(absolute_cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap %s", home, cmd);
+    fprintf(stdout, "cmd: %s\n", absolute_cmd);
 
 	bzero(readbuffer, 256);
 	fd = popen(absolute_cmd, "r");
