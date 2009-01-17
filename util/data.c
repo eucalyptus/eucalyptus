@@ -263,7 +263,7 @@ static ncVolume * find_volume (ncInstance * instance, char *volumeId)
     ncVolume * v = instance->volumes;
 
     int i;
-    for (i=0; i<EUCA_MAX_VOLUMES; i++, v++) {
+    for (i=0; i<EUCA_MAX_VOLUMES; i++,v++) {
         if ( ! strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE) )
             break;
         if ( ! strnlen (v->volumeId, CHAR_BUFFER_SIZE) )
@@ -305,14 +305,14 @@ ncVolume * free_volume (ncInstance * instance, char *volumeId, char *remoteDev, 
 
     if ( strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE) ) {
         return NULL; /* not there */
-
+	
     } else {
         ncVolume * last_v = instance->volumes+(EUCA_MAX_VOLUMES-1);
         int slots_left = last_v - v;
-
         /* shift the remaining entries up, empty or not */
         if (slots_left)
             memmove (v, v+1, slots_left*sizeof(ncVolume));
+        
         /* empty the last one */
         bzero (last_v, sizeof(ncVolume));
         instance->volumesSize--;

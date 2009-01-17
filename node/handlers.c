@@ -1036,7 +1036,7 @@ int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
     sem_p (inst_sem);
     volume = add_volume (instance, volumeId, remoteDev, localDev);
     sem_v (inst_sem);
-    if ( volume = NULL ) {
+    if ( volume == NULL ) {
         logprintfl (EUCAFATAL, "ERROR: Failed to save the volume record, aborting volume attachment\n");
         return ERROR;
     }
@@ -1057,7 +1057,7 @@ int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
-//            int err = virDomainAttachDevice (dom, xml);
+	    //            int err = virDomainAttachDevice (dom, xml);
             sem_v (xen_sem);
             if (err) {
                 logprintfl (EUCAERROR, "AttachVolume() failed (err=%d) XML=%s\n", err, xml);
@@ -1074,7 +1074,6 @@ int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
         }
         virConnectClose (conn);
     }
-
     return ret;
 }
 
@@ -1114,7 +1113,6 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
     } else {
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
         if (dom) {
-
             int err = 0;
             char xml [1024];
             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDev);
@@ -1138,6 +1136,5 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
         }
         virConnectClose (conn);
     }
-
     return ret;
 }

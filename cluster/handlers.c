@@ -75,7 +75,8 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 	}
 	logprintfl(EUCADEBUG, "would call attachVol on NC: %s\n",  config->resourcePool[j].hostname);
 	rc = 0;
-	//rc = ncTerminateInstanceStub(ncs, ccMeta, instId, &shutdownState, &previousState);
+	// here
+	rc = ncAttachVolumeStub(ncs, ccMeta, instanceId, volumeId, remoteDev, localDev);
 	if (!rc) {
 	  ret = 0;
 	} else {
@@ -150,7 +151,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 	}
 	logprintfl(EUCADEBUG, "would call dettachVol on NC: %s\n",  config->resourcePool[j].hostname);
 	rc = 0;
-	//rc = ncTerminateInstanceStub(ncs, ccMeta, instId, &shutdownState, &previousState);
+	rc = ncDetachVolumeStub(ncs, ccMeta, instanceId, volumeId, remoteDev, localDev, force);
 	if (!rc) {
 	  ret = 0;
 	} else {
@@ -778,36 +779,40 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	  
 	  myInstance = &(out[numInsts-1]);
 	  bzero(myInstance, sizeof(ccInstance));
-	  strncpy(myInstance->instanceId, ncOutInsts[j]->instanceId, 16);
-	  
+	  //	  strncpy(myInstance->instanceId, ncOutInsts[j]->instanceId, 16);
 	  cacheInstance=NULL;
-	  find_instanceCacheId(myInstance->instanceId, &cacheInstance);
+	  find_instanceCacheId(ncOutInsts[j]->instanceId, &cacheInstance);
 	  if (cacheInstance) {
-	    logprintfl(EUCADEBUG, "\t%s in cache\n", myInstance->instanceId, myInstance->userData);
-	    
+	    logprintfl(EUCADEBUG, "\t%s in cache\n", ncOutInsts[j]->instanceId);
 	    memcpy(myInstance, cacheInstance, sizeof(ccInstance));
 	  }
 	  
+	  rc = ccInstance_to_ncInstance(myInstance, ncOutInsts[j]);
+
+	  /*
 	  strncpy(myInstance->keyName, ncOutInsts[j]->keyName, 1024);
 	  strncpy(myInstance->ownerId, ncOutInsts[j]->userId, 16);
 	  strncpy(myInstance->reservationId, ncOutInsts[j]->reservationId, 16);  
 	  strncpy(myInstance->amiId, ncOutInsts[j]->imageId, 16);
+	  strncpy(myInstance->kernelId, ncOutInsts[j]->kernelId, 16);
+	  strncpy(myInstance->ramdiskId, ncOutInsts[j]->ramdiskId, 16);
 	  strncpy(myInstance->state, ncOutInsts[j]->stateName, 16);
-	  //	  myInstance->stateCode = ncOutInsts[j]->stateCode;
 	  myInstance->ts = ncOutInsts[j]->launchTime;
 	  
-	  // instance info that the CC maintains
-	  myInstance->ncHostIdx = i;
-	  strncpy(myInstance->serviceTag, config->resourcePool[i].ncService, 64);
-	  memcpy(&(myInstance->ccvm), &ccvm, sizeof(virtualMachine));
-
 	  myInstance->ccnet.vlan = ncOutInsts[j]->ncnet.vlan;
 	  strncpy(myInstance->ccnet.publicIp, ncOutInsts[j]->ncnet.publicIp, 24);
 	  strncpy(myInstance->ccnet.privateIp, ncOutInsts[j]->ncnet.privateIp, 24);
 	  strncpy(myInstance->ccnet.publicMac, ncOutInsts[j]->ncnet.publicMac, 24);
 	  strncpy(myInstance->ccnet.privateMac, ncOutInsts[j]->ncnet.privateMac, 24);
+	  */
 
-	  if (cacheInstance) {
+	  // instance info that the CC maintains
+	  myInstance->ncHostIdx = i;
+	  strncpy(myInstance->serviceTag, config->resourcePool[i].ncService, 64);
+	  memcpy(&(myInstance->ccvm), &ccvm, sizeof(virtualMachine));
+	  
+	  /*
+	    if (cacheInstance) {
 	    // see if I remember the IPs
 	    memcpy(&(myInstance->ccvm), &(cacheInstance->ccvm), sizeof(virtualMachine));
 	    
@@ -820,6 +825,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	      strncpy(myInstance->ccnet.privateIp, cacheInstance->ccnet.privateIp, 24);
 	    }
 	  }
+	  */
 	  
 	  {
 	    char *ip;
@@ -855,6 +861,29 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 
   shawn();
       
+  return(0);
+}
+
+int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
+  int i;
+  
+  strncpy(dst->instanceId, src->instanceId, 16);
+  strncpy(dst->reservationId, src->reservationId, 16);
+  strncpy(dst->ownerId, src->userId, 16);
+  strncpy(dst->amiId, src->imageId, 16);
+  strncpy(dst->kernelId, src->kernelId, 16);
+  strncpy(dst->ramdiskId, src->ramdiskId, 16);
+  strncpy(dst->launchIndex, src->launchIndex, 64);
+  strncpy(dst->userData, src->userData, 64);
+  for (i=0; i<src->groupNamesSize || i >= 64; i++) {
+    snprintf(dst->groupNames[i], 32, "%s", src->groupNames[i]);
+  }
+  strncpy(dst->state, src->stateName, 16);
+  dst->ccnet.vlan = src->ncnet.vlan;
+  strncpy(dst->ccnet.publicMac, src->ncnet.publicMac, 24);
+  strncpy(dst->ccnet.privateMac, src->ncnet.privateMac, 24);
+  if (strcmp(src->ncnet.publicIp, "0.0.0.0") || dst->ccnet.publicIp[0] == '\0') strncpy(dst->ccnet.publicIp, src->ncnet.publicIp, 16);
+  if (strcmp(src->ncnet.privateIp, "0.0.0.0") || dst->ccnet.privateIp[0] == '\0') strncpy(dst->ccnet.privateIp, src->ncnet.privateIp, 16);
   return(0);
 }
 
@@ -1080,7 +1109,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  }
 	  logprintfl(EUCAINFO,"\tclient (%s) running instance: %s %s %s %s %d %s\n", res->ncService, instId, amiId, mac, mac, vlan, keyName);
 	  logprintfl(EUCAINFO,"\tasking for virtual hardware (mem/disk/cores): %d/%d/%d\n", ncvm.memorySize, ncvm.diskSize, ncvm.numberOfCores);
-	  rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, mac, mac, vlan, &outInst);
+	  rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, mac, mac, vlan, userData, launchIndex, netNames, netNamesLen, &outInst);
 	  if (!rc) {
 	    rc = write(filedes[1], outInst, sizeof(ncInstance));
 	    ret = 0;
@@ -1129,10 +1158,20 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  bzero(myInstance, sizeof(ccInstance));
 	  
 	  // stuff from NC
+	  rc = ccInstance_to_ncInstance(myInstance, outInst);
+
+	  /*
 	  strncpy(myInstance->instanceId, outInst->instanceId, 16);
 	  strncpy(myInstance->reservationId, outInst->reservationId, 16);
 	  strncpy(myInstance->ownerId, outInst->userId, 16);
 	  strncpy(myInstance->amiId, outInst->imageId, 16);
+	  strncpy(myInstance->kernelId, outInst->kernelId, 16);
+	  strncpy(myInstance->ramdiskId, outInst->ramdiskId, 16);
+	  strncpy(myInstance->launchIndex, outInst->launchIndex, 64);
+	  strncpy(myInstance->userData, outInst->userData, 64);
+	  for (i=0; i<outInst->groupNamesSize || i >= 64; i++) {
+	    snprintf(myInstance->groupNames[i], 32, "%s", outInst->groupNames[i]);
+	  }
 	  strncpy(myInstance->state, outInst->stateName, 16);
 	  myInstance->ccnet.vlan = outInst->ncnet.vlan;
 	  strncpy(myInstance->ccnet.publicMac, outInst->ncnet.publicMac, 24);
@@ -1144,20 +1183,28 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  }
 	  
 	  if (strcmp(privip, "0.0.0.0")) {
-	    strncpy(myInstance->ccnet.privateIp, privip, 16);
+	  strncpy(myInstance->ccnet.privateIp, privip, 16);
 	  } else {
-	    strncpy(myInstance->ccnet.privateIp, outInst->ncnet.privateIp, 16);
-	  }
+	  strncpy(myInstance->ccnet.privateIp, outInst->ncnet.privateIp, 16);
+	    }
+	  */
 	  
 	  // instance info that CC has
 	  myInstance->ts = time(NULL);
+	  if (strcmp(pubip, "0.0.0.0")) {
+	    strncpy(myInstance->ccnet.publicIp, pubip, 16);
+	  }
+	  if (strcmp(privip, "0.0.0.0")) {
+	    strncpy(myInstance->ccnet.privateIp, privip, 16);
+	  }
 	  myInstance->ncHostIdx = resid;
 	  if (ccvm) memcpy(&(myInstance->ccvm), ccvm, sizeof(virtualMachine));
 	  if (config->resourcePool[resid].ncService) strncpy(myInstance->serviceTag, config->resourcePool[resid].ncService, 64);
-	  if (kernelId) strncpy(myInstance->kernelId, kernelId, 16);
-	  if (ramdiskId) strncpy(myInstance->ramdiskId, ramdiskId, 16);
-	  if (userData) strncpy(myInstance->userData, userData, 64);
-	  if (launchIndex) strncpy(myInstance->launchIndex, launchIndex, 64);
+	  //	  if (kernelId) strncpy(myInstance->kernelId, kernelId, 16);
+	  //	  if (ramdiskId) strncpy(myInstance->ramdiskId, ramdiskId, 16);
+	  //	  if (userData) strncpy(myInstance->userData, userData, 64);
+	  //	  if (launchIndex) strncpy(myInstance->launchIndex, launchIndex, 64);
+	  /*
 	  {
 	    int i;
 	    for (i=0; i<netNamesLen; i++) {
@@ -1165,12 +1212,13 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	      if (netNames[i]) snprintf(myInstance->groupNames[i], 32, "%s", netNames[i]);
 	    }
 	  }
+	  */
 	  // start up DHCP
 	  rc = vnetKickDHCP(vnetconfig);
 	  if (rc) {
 	    logprintfl(EUCAERROR, "cannot start DHCP daemon, please check your network settings\n");
 	  }
-
+	  
 	  // add the instance to the cache, and continue on
 	  add_instanceCache(myInstance->instanceId, myInstance);
 	  free_instance(&outInst);
