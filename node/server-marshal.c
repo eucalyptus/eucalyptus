@@ -493,7 +493,8 @@ adb_ncAttachVolumeResponse_t* ncAttachVolumeMarshal (adb_ncAttachVolume_t* ncAtt
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doAttachVolume() failed error=%d\n", error);
             adb_ncAttachVolumeResponseType_set_return(output, env, AXIS2_FALSE);
-
+            adb_ncAttachVolumeResponseType_set_correlationId(output, env, correlationId);
+            adb_ncAttachVolumeResponseType_set_userId(output, env, userId);
         } else {
             // set standard fields in output
             adb_ncAttachVolumeResponseType_set_return(output, env, AXIS2_TRUE);
@@ -537,7 +538,8 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doDetachVolume() failed error=%d\n", error);
             adb_ncDetachVolumeResponseType_set_return(output, env, AXIS2_FALSE);
-
+            adb_ncDetachVolumeResponseType_set_correlationId(output, env, correlationId);
+            adb_ncDetachVolumeResponseType_set_userId(output, env, userId);
         } else {
             // set standard fields in output
             adb_ncDetachVolumeResponseType_set_return(output, env, AXIS2_TRUE);
