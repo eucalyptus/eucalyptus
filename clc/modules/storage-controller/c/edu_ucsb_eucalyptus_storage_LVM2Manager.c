@@ -53,7 +53,7 @@ jstring run_command(JNIEnv *env, char *cmd, int outfd) {
     }
 
     snprintf(absolute_cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap %s", home, cmd);
-
+    fprintf(stderr, "command: %s\n", absolute_cmd);
 	bzero(readbuffer, 256);
 	fd = popen(absolute_cmd, "r");
 	if(fgets(readbuffer, 256, fd)) {
@@ -84,6 +84,17 @@ int run_command_and_get_pid(char *cmd, char **args) {
         close(fd[1]);
    }
    return pid;
+}
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getAoEStatus
+  (JNIEnv *env, jobject obj, jstring processId) {
+    const jbyte* pid = (*env)->GetStringUTFChars(env, processId, NULL);
+
+    char command[128];
+	snprintf(command, 128, "cat /proc/%s/cmdline", pid);
+	jstring returnValue = run_command(env, command, 1);	
+    (*env)->ReleaseStringUTFChars(env, processId, pid);
+    return returnValue;
 }
 
 JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createSnapshot

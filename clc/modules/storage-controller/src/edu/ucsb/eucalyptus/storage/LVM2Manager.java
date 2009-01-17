@@ -133,6 +133,8 @@ public class LVM2Manager implements ElasticBlockManager {
 
     public native String duplicateLogicalVolume(String oldLvName, String newLvName);
 
+    public native String getAoEStatus(String pid);
+
     public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
         int majorNumber = -1;
         int minorNumber = -1;
@@ -156,7 +158,8 @@ public class LVM2Manager implements ElasticBlockManager {
         }
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
         int pid = aoeExport(iface, absoluteLVName, majorNumber, minorNumber);
-        if(pid < 0) {
+        String returnValue = getAoEStatus(String.valueOf(pid));
+        if(pid < 0 || (!returnValue.contains("vblade"))) {
             throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface);
         }
         lvmVolumeInfo.setVbladePid(pid);
@@ -502,6 +505,14 @@ public class LVM2Manager implements ElasticBlockManager {
             if(!returnValue.contains(loFileName)) {
                 createLoopback(absoluteLoFileName, loDevName);
             }
+            int pid = foundVolumeInfo.getVbladePid();
+            returnValue = getAoEStatus(String.valueOf(pid));
+            if(!returnValue.contains("vblade")) {
+                String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
+                pid = aoeExport(iface, absoluteLVName, foundVolumeInfo.getMajorNumber(), foundVolumeInfo.getMinorNumber());
+                foundVolumeInfo.setVbladePid(pid);
+            }
         }
+        db.commit();
     }
 }
