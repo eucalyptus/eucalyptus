@@ -128,24 +128,79 @@ void test_sem_pthreads (void)
 
 #define EXIT { fprintf (stderr, "error on line %d\n", __LINE__); exit (1); }
 
+static void test_volumes (void)
+{
+    int i, j;
+    char id [100];
+    ncInstance inst;
+    ncVolume * vols [EUCA_MAX_VOLUMES+1];
+
+    for (j=0; j<10; j++) {
+        int pivot = random()%EUCA_MAX_VOLUMES;
+        printf ("testing volumes iteration=%d pivot=%d\n", j, pivot);
+        bzero (&inst, sizeof (ncInstance));
+        for (i=0; i<EUCA_MAX_VOLUMES; i++) {
+            snprintf (id, 100, "v%06d", i);
+            vols [i] = add_volume (&inst, id, "remote", "local");
+            if (vols [i] == NULL) {
+                fprintf (stderr, "error on add iteration %i-%i\n", i, j);
+                EXIT;
+            }
+            if (inst.volumesSize!=i+1) {
+                fprintf (stderr, "error on add iteration %i-%i\n", i, j);
+                EXIT;
+            }
+        }
+
+        snprintf (id, 100, "v%06d", i);
+        vols [i] = add_volume (&inst, id, "remote", "local");
+        if (vols [i] != NULL) EXIT;
+        if (inst.volumesSize!=EUCA_MAX_VOLUMES) EXIT;
+        
+        ncVolume * v = vols [pivot];
+        strncpy (id, v->volumeId, 100);
+        ncVolume * v2 = free_volume (&inst, id, "remote", "local");
+        if (v2 != v) EXIT;
+        if (inst.volumesSize!=EUCA_MAX_VOLUMES-1) EXIT;
+        v = add_volume (&inst, id, "remote", "local");
+        if (v == NULL) EXIT;
+        if (inst.volumesSize!=EUCA_MAX_VOLUMES) EXIT;
+        v2 = free_volume (&inst, id, "remote", "local");
+        if (v2 != v) EXIT;
+        if (inst.volumesSize!=EUCA_MAX_VOLUMES-1) EXIT;
+        v = add_volume (&inst, id, "remote", "local");
+        if (v == NULL) EXIT;
+        if (inst.volumesSize!=EUCA_MAX_VOLUMES) EXIT;
+
+        for (i=0; i<EUCA_MAX_VOLUMES; i++) {
+            snprintf (id, 100, "v%06d", i);
+            v = free_volume (&inst, id, "remote", "local");
+            if (v == NULL) {
+                fprintf (stderr, "error on free iteration %i-%i\n", i, j);
+                EXIT;
+            }
+            if (inst.volumesSize!=EUCA_MAX_VOLUMES-i-1) {
+                fprintf (stderr, "error on free iteration %i-%i\n", i, j);
+                EXIT;
+            }
+        }
+    }
+}
+
 int main (int argc, char * argv[])
 {
-    if ( diff ("/etc/motd", "/etc/motd") != 0 ) EXIT
-    if ( diff ("/etc/passwd", "/etc/motd") == 0 ) EXIT
+    if ( diff ("/etc/motd", "/etc/motd") != 0 ) EXIT;
+    if ( diff ("/etc/passwd", "/etc/motd") == 0 ) EXIT;
 
     char * s = strdup("jolly old jolly old time...");
     char ** sp = &s;
-    if ( strcmp ( replace_string ( sp, "old", "new"), "jolly new jolly new time..." ) ) EXIT
-    if ( run ( "ls", "/", "/etc", ">/dev/null", NULL ) ) EXIT
+    if ( strcmp ( replace_string ( sp, "old", "new"), "jolly new jolly new time..." ) ) EXIT;
+    if ( run ( "ls", "/", "/etc", ">/dev/null", NULL ) ) EXIT;
 
-    ncInstance inst;
-    bzero (&inst, sizeof (ncInstance));
-    ncVolume * v1 = add_volume (&inst, "v1", "r1", "l1"); if (v1==NULL) EXIT
-    if (inst.volumesSize!=1) EXIT
-    ncVolume * v2 = add_volume (&inst, "v2", "r2", "l2"); if (v2==NULL) EXIT
-    
+    test_volumes ();
+
     printf ("all tests passed!\n");
-    if (argc==0) return 0;
+    if (argc==1) return 0;
 
     /* "visual" testing of the semaphores */
     test_sem_fork ();

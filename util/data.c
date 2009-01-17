@@ -307,12 +307,12 @@ ncVolume * free_volume (ncInstance * instance, char *volumeId, char *remoteDev, 
         return NULL; /* not there */
 
     } else {
-        ncVolume * last_v = instance->volumes+EUCA_MAX_VOLUMES;
+        ncVolume * last_v = instance->volumes+(EUCA_MAX_VOLUMES-1);
         int slots_left = last_v - v;
 
         /* shift the remaining entries up, empty or not */
         if (slots_left)
-            memmove (v, v+1, slots_left);
+            memmove (v, v+1, slots_left*sizeof(ncVolume));
         /* empty the last one */
         bzero (last_v, sizeof(ncVolume));
         instance->volumesSize--;
