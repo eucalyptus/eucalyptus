@@ -243,7 +243,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeLog
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, lvName, lv_name);
-    return (*env)->NewStringUTF(env, returnValue);
+    return returnValue;
 }
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeVolumeGroup
@@ -255,7 +255,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeVol
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, vgName, vg_name);
-    return (*env)->NewStringUTF(env, returnValue);
+    return returnValue;
 }
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removePhysicalVolume
@@ -267,7 +267,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removePhy
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, pvName, pv_name);
-    return (*env)->NewStringUTF(env, returnValue);
+    return returnValue;
 }
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeLoopback
@@ -279,7 +279,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeLoo
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, loDevName, lo_dev_name);
-    return (*env)->NewStringUTF(env, returnValue);
+    return returnValue;
 }
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createSnapshotLogicalVolume

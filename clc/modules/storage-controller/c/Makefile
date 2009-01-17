@@ -1,6 +1,7 @@
 LIBDIR=../lib
 LVM2_SO=liblvm2control.so
-CFLAGS=-g -fpic -I. -I../h 
+PLATFORM=linux
+CFLAGS=-g -fpic -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/$(PLATFORM) -I. -I../h 
 WARN=-Wall -Wno-unused-variable
 
 all: $(LVM2_SO) 

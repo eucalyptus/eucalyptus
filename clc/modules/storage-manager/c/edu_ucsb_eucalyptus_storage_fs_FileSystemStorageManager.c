@@ -91,7 +91,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageM
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, lvName, lv_name);
-    return (*env)->NewStringUTF(env, returnValue);
+    return returnValue;
 }
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_removePhysicalVolume
@@ -103,7 +103,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageM
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, pvName, pv_name);
-    return (*env)->NewStringUTF(env, returnValue);
+    return returnValue;
 }
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_removeLoopback
@@ -115,7 +115,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageM
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, loDevName, lo_dev_name);
-    return (*env)->NewStringUTF(env, returnValue);
+    return returnValue;
 }
 
 JNIEXPORT jstring Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_reduceVolumeGroup 
