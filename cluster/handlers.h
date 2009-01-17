@@ -110,6 +110,7 @@ int find_instanceCacheId(char *instanceId, ccInstance **out);
 int find_instanceCacheIP(char *ip, ccInstance **out);
 void print_instanceCache(void);
 void invalidate_instanceCache(void);
+int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src);
 
 int init_config(void);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname);
