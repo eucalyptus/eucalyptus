@@ -58,6 +58,7 @@ public class StorageProperties {
 
     public static void update() {
         try {
+            //TODO: This assumes that the SC shares the database with the front end. This is NOT true. Fix this thru message passing.
             SystemConfiguration systemConfiguration = EucalyptusProperties.getSystemConfiguration();
             //bucketRootDirectory = systemConfiguration.getStorageDir();
             UpdateStorageConfigurationType updateConfig = new UpdateStorageConfigurationType();

@@ -515,4 +515,22 @@ public class LVM2Manager implements ElasticBlockManager {
         }
         db.commit();
     }
+
+    public List<String> getSnapshotValues(String snapshotId) throws EucalyptusCloudException {
+        ArrayList<String> returnValues = new ArrayList<String>();
+
+        EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+        LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
+        List<LVMVolumeInfo> lvmVolumeInfos = db.query(lvmVolumeInfo);
+        if(lvmVolumeInfos.size() > 0) {
+            LVMVolumeInfo foundLVMVolumeInfo = lvmVolumeInfos.get(0);
+            returnValues.add(foundLVMVolumeInfo.getVgName());
+            returnValues.add(foundLVMVolumeInfo.getLvName());
+        } else {
+            db.rollback();
+            throw new EucalyptusCloudException("could not locate LVMVolumeInfo for " + snapshotId);
+        }
+        db.commit();
+        return returnValues;
+    }
 }

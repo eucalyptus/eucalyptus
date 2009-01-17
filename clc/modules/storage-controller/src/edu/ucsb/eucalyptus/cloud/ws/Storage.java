@@ -75,6 +75,7 @@ public class Storage {
     static ElasticBlockManager ebsManager;
 
     private static final String ETHERD_PREFIX = "/dev/etherd/e";
+
     static {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
@@ -182,7 +183,7 @@ public class Storage {
                 db.commit();
                 //snapshot asynchronously
                 List<String> returnValues = ebsManager.createSnapshot(volumeId, snapshotId);
-                Snapshotter snapshotter = new Snapshotter(volumeId, snapshotId, returnValues);
+                Snapshotter snapshotter = new Snapshotter(volumeId, snapshotId);
                 snapshotter.run();
                 reply.setSnapshotId(snapshotId);
                 reply.setVolumeId(volumeId);
@@ -372,21 +373,22 @@ public class Storage {
                     throw new EucalyptusCloudException();
                 }
                 db.commit();
-            } catch(EucalyptusCloudException ex) {                
+            } catch(EucalyptusCloudException ex) {
                 ex.printStackTrace();
             }
         }
     }
 
     private List<String> getSnapshots(String snapshotId, List<String> snapshotFileNames) {
-        String walrusSnapshotPath = WalrusProperties.URL_PROPERTY + "/" + StorageProperties.snapshotBucket + "/" + snapshotId;
+        //TODO: fix this
+        String walrusSnapshotPath = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + StorageProperties.snapshotBucket + "/" + snapshotId;
         HttpReader reader = new HttpReader(walrusSnapshotPath, null, null, "GetSnapshotInfo", "");
         String snapshotDescription = reader.getResponseAsString();
         XMLParser parser = new XMLParser(snapshotDescription);
         //read the list of snapshots and issue requests to walrus to get all deltas
         List<String> snapshotSet = parser.getValues("/GetSnapshotInfoResponse/SnapshotId");
         for(String snapshot: snapshotSet) {
-            walrusSnapshotPath = WalrusProperties.URL_PROPERTY + "/" + StorageProperties.snapshotBucket + "/" + snapshot;
+            walrusSnapshotPath = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + StorageProperties.snapshotBucket + "/" + snapshot;
             String snapshotPath = StorageProperties.snapshotRootDirectory + "/" + snapshot;
             snapshotFileNames.add(snapshotPath);
             File file = new File(snapshotPath);
@@ -448,15 +450,12 @@ public class Storage {
         private String volumeId;
         private String snapshotId;
         private String volumeBucket;
-        private String volumeKey;
         private String volumeFileName;
         private String snapshotFileName;
-        private List<String> snapshotValues;
 
-        public Snapshotter(String volumeId, String snapshotId, List<String> snapshotValues) {
+        public Snapshotter(String volumeId, String snapshotId) {
             this.volumeId = volumeId;
             this.snapshotId = snapshotId;
-            this.snapshotValues = snapshotValues;
         }
 
         public void run() {
@@ -475,13 +474,10 @@ public class Storage {
                         //transfer volume to Walrus
                         volumeBucket = "snapset-" + Hashes.getRandom(12);
                         volumeBucket = volumeBucket.replaceAll("\\.", "x");
-                        volumeKey = volumeId + Hashes.getRandom(4);
                         foundVolumeInfo.setVolumeBucket(volumeBucket);
-                        foundVolumeInfo.setVolumeKey(volumeKey);
                         foundVolumeInfo.setTransferred(Boolean.TRUE);
                         shouldTransferVolume = true;
                     } else {
-                        volumeKey = foundVolumeInfo.getVolumeKey();
                         volumeBucket = foundVolumeInfo.getVolumeBucket();
                     }
                     db.commit();
@@ -489,7 +485,7 @@ public class Storage {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     SnapshotInfo foundSnapshotInfo = db2.getUnique(snapshotInfo);
                     if(foundSnapshotInfo != null) {
-                        transferSnapshot(shouldTransferVolume, snapshotValues);
+                        transferSnapshot(shouldTransferVolume);
                     }
                     db2.commit();
                 } else {
@@ -501,7 +497,7 @@ public class Storage {
             }
         }
 
-        private void transferSnapshot(boolean shouldTransferVolume, List<String> snapshotValues) {
+        private void transferSnapshot(boolean shouldTransferVolume) {
             long size = 0;
             File volumeFile = new File(volumeFileName);
             File snapshotFile = new File(snapshotFileName);
@@ -510,11 +506,18 @@ public class Storage {
             size += shouldTransferVolume ? snapshotFile.length() + volumeFile.length() : snapshotFile.length();
             SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
             Map<String, String> httpParamaters = new HashMap<String, String>();
-            httpParamaters.put("SnapshotVgName", snapshotValues.get(0));
-            httpParamaters.put("SnapshotLvName", snapshotValues.get(1));
             HttpWriter httpWriter;
             if(shouldTransferVolume) {
-                httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeKey, "StoreSnapshot", null, httpParamaters);
+                try {
+                    List<String> returnValues = ebsManager.getSnapshotValues(volumeId);
+                    if(returnValues.size() > 0) {
+                        httpParamaters.put("SnapshotVgName", returnValues.get(0));
+                        httpParamaters.put("SnapshotLvName", returnValues.get(1));
+                    }
+                } catch(Exception ex) {
+                    LOG.warn(ex, ex);
+                }
+                httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeId, "StoreSnapshot", null, httpParamaters);
                 httpWriter.run();
                 try {
                     httpWriter.join();
@@ -523,7 +526,15 @@ public class Storage {
                     return;
                 }
             }
-            httpParamaters.remove("VolumeId");
+            try {
+                List<String> returnValues = ebsManager.getSnapshotValues(snapshotId);
+                if(returnValues.size() > 0) {
+                    httpParamaters.put("SnapshotVgName", returnValues.get(0));
+                    httpParamaters.put("SnapshotLvName", returnValues.get(1));
+                }
+            } catch(Exception ex) {
+                LOG.warn(ex, ex);
+            }
             httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
             httpWriter.run();
             try {

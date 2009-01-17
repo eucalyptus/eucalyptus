@@ -49,7 +49,7 @@ public class CreateSnapshotTest extends TestCase {
 
         String userId = "admin";
 
-        String volumeId = "vol-Fl0GZFFnm1U.";
+        String volumeId = "vol-HxKG9D7x_oLL_wxx";
         String snapshotId = "snap-" + Hashes.getRandom(10);
 
         CreateStorageSnapshotType createSnapshotRequest = new CreateStorageSnapshotType();
