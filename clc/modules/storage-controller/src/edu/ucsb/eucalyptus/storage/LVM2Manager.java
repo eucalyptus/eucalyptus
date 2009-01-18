@@ -417,6 +417,10 @@ public class LVM2Manager implements ElasticBlockManager {
                 String snapshotRawFileName = StorageProperties.storageRootDirectory + PATH_SEPARATOR + foundLVMVolumeInfo.getVolumeId();
                 String dupSnapshotDeltaFileName = snapshotRawFileName + "." + Hashes.getRandom(4);
                 String returnValue = suspendDevice(dmDeviceName);
+                if(!returnValue.contains(foundLVMVolumeInfo.getVgName())) {
+                    db.rollback();
+                    throw new EucalyptusCloudException("Could not suspend device " + dmDeviceName);
+                }
                 dupFile(snapshotRawFileName, dupSnapshotDeltaFileName);
                 returnValue = resumeDevice(dmDeviceName);
                 returnValues.add(dupSnapshotDeltaFileName);
@@ -506,11 +510,13 @@ public class LVM2Manager implements ElasticBlockManager {
                 createLoopback(absoluteLoFileName, loDevName);
             }
             int pid = foundVolumeInfo.getVbladePid();
-            returnValue = getAoEStatus(String.valueOf(pid));
-            if(!returnValue.contains("vblade")) {
-                String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
-                pid = aoeExport(iface, absoluteLVName, foundVolumeInfo.getMajorNumber(), foundVolumeInfo.getMinorNumber());
-                foundVolumeInfo.setVbladePid(pid);
+            if(foundVolumeInfo.getVbladePid() > 0) {
+                returnValue = getAoEStatus(String.valueOf(pid));
+                if(!returnValue.contains("vblade")) {
+                    String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
+                    pid = aoeExport(iface, absoluteLVName, foundVolumeInfo.getMajorNumber(), foundVolumeInfo.getMinorNumber());
+                    foundVolumeInfo.setVbladePid(pid);
+                }
             }
         }
         db.commit();

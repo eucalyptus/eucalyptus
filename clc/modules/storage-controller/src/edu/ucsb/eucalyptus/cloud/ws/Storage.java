@@ -54,8 +54,10 @@ import org.apache.commons.httpclient.*;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.methods.DeleteMethod;
+import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
 import org.apache.xml.security.utils.Base64;
 import org.apache.tools.ant.util.DateUtils;
+import org.bouncycastle.util.encoders.UrlBase64;
 
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -176,7 +178,7 @@ public class Storage {
                 snapshotInfo.setVolumeId(volumeId);
                 Date startTime = new Date();
                 snapshotInfo.setStartTime(startTime);
-                snapshotInfo.setProgress("0%");
+                snapshotInfo.setProgress("0");
                 snapshotInfo.setStatus(Status.creating.toString());
                 db2.add(snapshotInfo);
                 db2.commit();
@@ -244,7 +246,7 @@ public class Storage {
                     //If there are multiple obsolete snapshots, they will have to be copied over to have a
                     //consistent view of the volume and its snapshots (for new volume creation).
                     //But this requires the current volume to be transferred to Walrus again (the state after lvremove).
-                    HttpWriter httpWriter = new HttpWriter("DELETE", null, StorageProperties.snapshotBucket, snapshotId, "DeleteSnapshot", null);
+                    HttpWriter httpWriter = new HttpWriter("DELETE", StorageProperties.snapshotBucket, snapshotId, "DeleteSnapshot", null);
                     httpWriter.run();
                 } catch (IOException ex) {
                     ex.printStackTrace();
@@ -393,9 +395,9 @@ public class Storage {
             snapshotFileNames.add(snapshotPath);
             File file = new File(snapshotPath);
             HttpReader snapshotReader = new HttpReader(walrusSnapshotPath, null, file, "GetSnapshot", "");
-            snapshotReader.start();
+            snapshotReader.run();
             try {
-                snapshotReader.join();
+                //snapshotReader.join();
             } catch(Exception ex) {
                 ex.printStackTrace();
             }
@@ -499,6 +501,7 @@ public class Storage {
 
         private void transferSnapshot(boolean shouldTransferVolume) {
             long size = 0;
+
             File volumeFile = new File(volumeFileName);
             File snapshotFile = new File(snapshotFileName);
 
@@ -520,7 +523,7 @@ public class Storage {
                 httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeId, "StoreSnapshot", null, httpParamaters);
                 httpWriter.run();
                 try {
-                    httpWriter.join();
+                    //httpWriter.join();
                 } catch(Exception ex) {
                     ex.printStackTrace();
                     return;
@@ -538,10 +541,74 @@ public class Storage {
             httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
             httpWriter.run();
             try {
-                httpWriter.join();
+                //  httpWriter.join();
             } catch(Exception ex) {
                 ex.printStackTrace();
             }
+        }
+    }
+
+    public void transferSnapshot(String volumeId, String snapshotId, String dupSnapshotId, boolean shouldTransferVolume) throws EucalyptusCloudException {
+        long size = 0;
+        String volumeFileName = StorageProperties.storageRootDirectory + "/" + volumeId;
+        String snapshotFileName = StorageProperties.storageRootDirectory + "/" + snapshotId;
+        File volumeFile = new File(volumeFileName);
+        File snapshotFile = new File(snapshotFileName);
+
+        String volumeBucket = "";
+
+        EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
+        VolumeInfo volumeInfo = new VolumeInfo(volumeId);
+        List <VolumeInfo> volumeInfos = db.query(volumeInfo);
+
+        if(volumeInfos.size() > 0) {
+            VolumeInfo foundVolumeInfo = volumeInfos.get(0);
+            volumeBucket = foundVolumeInfo.getVolumeBucket();
+        } else {
+            db.rollback();
+            throw new EucalyptusCloudException();
+        }
+        db.commit();
+
+        assert(snapshotFile.exists() && volumeFile.exists());
+        size += shouldTransferVolume ? snapshotFile.length() + volumeFile.length() : snapshotFile.length();
+        SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
+        Map<String, String> httpParamaters = new HashMap<String, String>();
+        HttpWriter httpWriter;
+        if(shouldTransferVolume) {
+            try {
+                List<String> returnValues = ebsManager.getSnapshotValues(volumeId);
+                if(returnValues.size() > 0) {
+                    httpParamaters.put("SnapshotVgName", returnValues.get(0));
+                    httpParamaters.put("SnapshotLvName", returnValues.get(1));
+                }
+            } catch(Exception ex) {
+                LOG.warn(ex, ex);
+            }
+            httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeId, "StoreSnapshot", null, httpParamaters);
+            httpWriter.run();
+            try {
+                // httpWriter.join();
+            } catch(Exception ex) {
+                ex.printStackTrace();
+                return;
+            }
+        }
+        try {
+            List<String> returnValues = ebsManager.getSnapshotValues(snapshotId);
+            if(returnValues.size() > 0) {
+                httpParamaters.put("SnapshotVgName", returnValues.get(0));
+                httpParamaters.put("SnapshotLvName", returnValues.get(1));
+            }
+        } catch(Exception ex) {
+            LOG.warn(ex, ex);
+        }
+        httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
+        httpWriter.run();
+        try {
+            //       httpWriter.join();
+        } catch(Exception ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -555,7 +622,7 @@ public class Storage {
 
         public SnapshotProgressCallback(String snapshotId, long size, int chunkSize) {
             this.snapshotId = snapshotId;
-            progressTick = (int) (chunkSize / size) * 100;
+            progressTick = (int) (((long)chunkSize / size) * 100);
         }
 
         public void run() {
@@ -574,7 +641,7 @@ public class Storage {
         }
     }
 
-    class HttpTransfer extends Thread {
+    class HttpTransfer { //extends Thread {
         public HttpMethodBase constructHttpMethod(String verb, String addr, String eucaOperation, String eucaHeader) {
             AbstractKeyStore keyStore = null;
             try {
@@ -596,6 +663,8 @@ public class Storage {
             }
             method.setRequestHeader("Authorization", "Euca");
             method.setRequestHeader("Date", date);
+            //method.setRequestHeader("Content-Length", "500");
+            method.setRequestHeader("Expect", "100-continue");
             method.setRequestHeader(StorageProperties.EUCALYPTUS_OPERATION, eucaOperation);
             if(eucaHeader != null) {
                 method.setRequestHeader(StorageProperties.EUCALYPTUS_HEADER, eucaHeader);
@@ -612,8 +681,8 @@ public class Storage {
                 sign.update(data.getBytes());
                 byte[] sig = sign.sign();
 
-                method.setRequestHeader("EucaCert", new String(Base64.encode(ccPublicKey.toString().getBytes()))); // or maybe cert instead of ccPublicKey?
-                method.setRequestHeader("EucaSignature", new String(Base64.encode(sig)));
+                method.setRequestHeader("EucaCert", new String(UrlBase64.encode(ccPublicKey.toString().getBytes()))); // or maybe cert instead of ccPublicKey?
+                method.setRequestHeader("EucaSignature", new String(UrlBase64.encode(sig)));
             } catch(Exception ex) {
                 ex.printStackTrace();
             }
@@ -639,25 +708,27 @@ public class Storage {
             this.callback = callback;
         }
 
+        @Override
         protected boolean writeRequestBody(HttpState state, HttpConnection conn) throws IOException {
             if(null != getRequestHeader("expect") && getStatusCode() != HttpStatus.SC_CONTINUE) {
                 return false;
             }
-            OutputStream out = conn.getRequestOutputStream();
 
-            InputStream inputStream = null;
-            if (outFile != null) {
+            InputStream inputStream;
+            if (outFile != null) {                
                 inputStream = new FileInputStream(outFile);
-            }
 
-            byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) > 0) {
-                out.write(buffer, 0, bytesRead);
-                callback.run();
+
+                byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) > 0) {
+                    conn.write(buffer, 0, bytesRead);
+                    //callback.run();
+                }
+                inputStream.close();
+            } else{
+                return false;
             }
-            inputStream.close();
-            out.close();
             return true;
         }
 
@@ -669,40 +740,75 @@ public class Storage {
         private HttpClient httpClient;
         private HttpMethodBase method;
         private File file;
-        private CallBack callback;
 
-
-        public HttpWriter(String httpVerb, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader) {
+        public HttpWriter(String httpVerb, String bucket, String key, String eucaOperation, String eucaHeader) {
             httpClient = new HttpClient();
-            this.callback = callback;
             String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + bucket + "/" + key;
             method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
         }
 
         public HttpWriter(String httpVerb, File file, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters) {
             httpClient = new HttpClient();
-            this.callback = callback;
             String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + bucket + "/" + key;
             Set<String> paramKeySet = httpParameters.keySet();
+            boolean first = true;
             for(String paramKey : paramKeySet) {
-                addr += "?" + paramKey;
+                if(!first) {
+                    addr += "&";
+                } else {
+                    addr += "?";
+                }
+                first = false;
+                addr += paramKey;
                 String value = httpParameters.get(paramKey);
                 if(value != null)
                     addr += "=" + value;
             }
             method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
-        }
+            method.setRequestHeader("Content-Length", String.valueOf(file.length()));
+            ((PutMethodWithProgress)method).setOutFile(file);
+            ((PutMethodWithProgress)method).setCallBack(callback);
 
-        public void run() {
-            try {
-                ((PutMethodWithProgress)method).setOutFile(file);
-                ((PutMethodWithProgress)method).setCallBack(callback);
-                httpClient.executeMethod(method);
+            /*try {
+                PutInputStreamRequestEntity inputRequestEntity = new PutInputStreamRequestEntity(new FileInputStream(file));
 
+                ((PutMethodWithProgress)method).setRequestEntity(inputRequestEntity);
             } catch (Exception ex) {
                 ex.printStackTrace();
-            } finally {
+            } */
+            this.file = file;
+        }
+
+        private class PutInputStreamRequestEntity extends InputStreamRequestEntity {
+            public PutInputStreamRequestEntity(FileInputStream stream) {
+                super(stream);
+            }
+
+            /* @Override
+            public void writeRequest(OutputStream out) throws IOException {
+                InputStream content = this.getContent();
+                byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
+                int bytesRead;
+
+                if(content != null) {
+                    while((bytesRead = content.read(buffer)) > 0) {
+                        out.write(buffer, 0, bytesRead);
+                    }
+                }
+            }*/
+
+            @Override public long getContentLength() {
+                return 100;
+            }
+        }
+        public void run() {
+            try {
+                httpClient.executeMethod(method);
+                String response = method.getResponseBodyAsString();
+                System.out.println(response);
                 method.releaseConnection();
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         }
     }

@@ -36,9 +36,16 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
 import junit.framework.TestCase;
 
 import java.util.ArrayList;
+import java.util.Date;
+
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpMethodBase;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.methods.PutMethod;
 
 public class CreateSnapshotTest extends TestCase {
 
@@ -49,10 +56,11 @@ public class CreateSnapshotTest extends TestCase {
 
         String userId = "admin";
 
-        String volumeId = "vol-HxKG9D7x_oLL_wxx";
+        String volumeId = "vol-yCqCbrweuVviYQxx";
         String snapshotId = "snap-" + Hashes.getRandom(10);
 
         CreateStorageSnapshotType createSnapshotRequest = new CreateStorageSnapshotType();
+
         createSnapshotRequest.setUserId(userId);
         createSnapshotRequest.setVolumeId(volumeId);
         createSnapshotRequest.setSnapshotId(snapshotId);
@@ -60,6 +68,33 @@ public class CreateSnapshotTest extends TestCase {
         System.out.println(createSnapshotResponse);
 
         while(true);
+    }
+
+    public void testTransferSnapshot() throws Throwable {
+        storage = new Storage();
+
+
+        String volumeId = "vol-yCqCbrweuVviYQxx";
+        String snapshotId = "snap-zVl2kZJmjhxnEg..";
+        String dupSnapshotId = "snap-zVl2kZJmjhxnEg...SrZ5iA..";
+
+        storage.transferSnapshot(volumeId, snapshotId, dupSnapshotId, true);
+        while(true);
+    }
+
+    public void testSendDummy() throws Throwable {
+        HttpClient httpClient = new HttpClient();
+        String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/meh/ttt.wsl?gg=vol&hh=snap";
+
+        HttpMethodBase method = new PutMethod(addr);
+        method.setRequestHeader("Authorization", "Euca");
+        method.setRequestHeader("Date", (new Date()).toString());
+        method.setRequestHeader("Expect", "100-continue");
+
+        httpClient.executeMethod(method);
+        String responseString = method.getResponseBodyAsString();
+        System.out.println(responseString);
+        method.releaseConnection();
     }
 
     public CreateSnapshotTest() {
