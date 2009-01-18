@@ -29,6 +29,7 @@
 #define CONFIG_NC_SERVICE "NC_SERVICE"
 #define CONFIG_NC_PORT "NC_PORT"
 #define CONFIG_NODES "NODES"
+#define CONFIG_HYPERVISOR "HYPERVISOR"
 
 /* name of the administrative user within Eucalyptus */
 #define EUCALYPTUS_ADMIN "eucalyptus"

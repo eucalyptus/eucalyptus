@@ -5,6 +5,7 @@
 #include <pthread.h>
 
 #include <server-marshal.h>
+#define HANDLERS_FANOUT
 #include <handlers.h>
 #include <misc.h>
 

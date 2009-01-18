@@ -11,6 +11,7 @@ SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
 WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 NC_LIBS 		= $(LIBS) -lvirt -lcurl
+NC_HANDLERS=handlers_xen.o
 
 all: server client clientlib test_nc test
 
@@ -53,8 +54,8 @@ server: $(SERVICE_SO)
 ../util/euca_auth.o: ../util/euca_auth.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util
 
-$(SERVICE_SO): generated/stubs ../storage/storage.o ../net/vnetwork.o ../util/misc.o ../util/data.o server-marshal.o handlers.o $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o
-	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o ../storage/*.o ../net/*.o ../util/*.o 
+$(SERVICE_SO): generated/stubs ../storage/storage.o ../net/vnetwork.o ../util/misc.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o
+	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) ../storage/*.o ../net/*.o ../util/*.o 
 
 clientlib: generated/stubs ../util/data.o client-marshal-adb.o
 
@@ -63,8 +64,8 @@ client: $(CLIENT) $(CLIENT)_local
 $(CLIENT): generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(AXIS2C_HOME)/lib/libaxutil.so $(CLIENT).c
 	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../storage/*.o ../net/*.o $(CLIENT).c 
 
-$(CLIENT)_local: generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(CLIENT).c ../util/euca_auth.o
-	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o ../storage/*.o ../net/*.o handlers.o $(CLIENT).c $(NC_LIBS)
+$(CLIENT)_local: generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o
+	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o ../storage/*.o ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS)
 
 test: test.c ../util/misc.o ../util/data.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../util/data.o
