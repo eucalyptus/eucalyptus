@@ -1864,7 +1864,8 @@ public class Bukkit {
         StoreSnapshotResponseType reply = (StoreSnapshotResponseType) request.getReply();
         String snapshotId = request.getKey();
         String bucketName = request.getBucket();
-        List<String> snapshotValues = request.getSnapshotValues();
+        String snapshotVgName = request.getSnapshotvgname();
+        String snapshotLvName = request.getSnapshotlvname();
         boolean createBucket = false;
 
         EntityWrapper<WalrusSnapshotSet> db = new EntityWrapper<WalrusSnapshotSet>();
@@ -1891,8 +1892,8 @@ public class Bukkit {
         WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
         //create a snapshot set
         snapshotInfo.setSnapshotSetId(bucketName);
-        snapshotInfo.setVgName(snapshotValues.get(0));
-        snapshotInfo.setLvName(snapshotValues.get(1));
+        snapshotInfo.setVgName(snapshotVgName);
+        snapshotInfo.setLvName(snapshotLvName);
         snapshotInfo.setTransferred(false);
         EntityWrapper<WalrusSnapshotInfo> dbSnap = db.recast(WalrusSnapshotInfo.class);
         snapshotInfos.add(snapshotInfo);

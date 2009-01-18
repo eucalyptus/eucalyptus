@@ -105,6 +105,9 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.HEAD.toString(), "GetObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.GET.toString() + "extended", "GetObjectExtended");
 
+        //For Storage Controller
+        newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString() + WalrusProperties.StorageParameters.SnapshotLvName.toString(), "StoreSnapshot");
+        newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString() + WalrusProperties.StorageParameters.SnapshotVgName.toString(), "StoreSnapshot");
 
         return newMap;
     }
@@ -342,15 +345,6 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         if(headers.containsKey(StorageProperties.EUCALYPTUS_OPERATION)) {
             operationName = headers.get(StorageProperties.EUCALYPTUS_OPERATION);
             if(operationName.equals(WalrusProperties.StorageOperations.StoreSnapshot.toString())) {
-                //get http params and add that to snapshot values
-                ArrayList<String> snapshotValues = new ArrayList<String>();
-                Set<String> paramKeySet = params.keySet();
-                for(String paramKey : paramKeySet) {
-                    if(paramKey.equals(WalrusProperties.StorageParameters.SnapshotVgName.toString()) ||
-                            paramKey.equals(WalrusProperties.StorageParameters.SnapshotLvName.toString()))
-                                snapshotValues.add(params.get(paramKey));
-                }
-                operationParams.put("SnapshotValues", snapshotValues);
             }
         } else {
             operationName = operationMap.get(operationKey);

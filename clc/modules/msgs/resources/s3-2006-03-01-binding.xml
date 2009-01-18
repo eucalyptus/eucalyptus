@@ -341,11 +341,8 @@
 
     <mapping name="StoreSnapshot" class="edu.ucsb.eucalyptus.msgs.StoreSnapshotType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
-        <collection field="snapshotValues" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String" >
-            <structure name="SnapshotValue">
-                <value name="snapshotValue" />
-            </structure >
-        </collection >
+        <value name="SnapshotVgName" field="snapshotvgname"/>
+        <value name="SnapshotLvName" field="snapshotlvname"/>
     </mapping>
 
     <mapping name="StoreSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.StoreSnapshotResponseType">
