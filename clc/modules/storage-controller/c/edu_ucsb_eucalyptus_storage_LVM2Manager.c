@@ -361,3 +361,15 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_duplicate
 	(*env)->ReleaseStringUTFChars(env, newLvName, lv_name);
     return returnValue;
 }
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_enableLogicalVolume
+  (JNIEnv *env, jobject obj, jstring absoluteLvName) {
+    const jbyte* lv_name = (*env)->GetStringUTFChars(env, absoluteLvName, NULL);
+	char command[256];
+
+	snprintf(command, 256, "lvchange -ay %s", lv_name);
+    jstring returnValue = run_command(env, command, 1);
+
+    (*env)->ReleaseStringUTFChars(env, absoluteLvName, lv_name);
+    return returnValue;
+}

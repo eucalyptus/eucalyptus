@@ -135,6 +135,8 @@ public class LVM2Manager implements ElasticBlockManager {
 
     public native String getAoEStatus(String pid);
 
+    public native String enableLogicalVolume(String absoluteLvName);
+
     public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
         int majorNumber = -1;
         int minorNumber = -1;
@@ -509,11 +511,16 @@ public class LVM2Manager implements ElasticBlockManager {
             if(!returnValue.contains(loFileName)) {
                 createLoopback(absoluteLoFileName, loDevName);
             }
+        }
+        //now enable them
+        for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
             int pid = foundVolumeInfo.getVbladePid();
             if(foundVolumeInfo.getVbladePid() > 0) {
-                returnValue = getAoEStatus(String.valueOf(pid));
+                //enable logical volumes
+                String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
+                enableLogicalVolume(absoluteLVName);
+                String returnValue = getAoEStatus(String.valueOf(pid));
                 if(!returnValue.contains("vblade")) {
-                    String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
                     pid = aoeExport(iface, absoluteLVName, foundVolumeInfo.getMajorNumber(), foundVolumeInfo.getMinorNumber());
                     foundVolumeInfo.setVbladePid(pid);
                 }

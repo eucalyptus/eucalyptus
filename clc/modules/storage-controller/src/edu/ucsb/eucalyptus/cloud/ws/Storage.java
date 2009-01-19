@@ -663,7 +663,6 @@ public class Storage {
             }
             method.setRequestHeader("Authorization", "Euca");
             method.setRequestHeader("Date", date);
-            //method.setRequestHeader("Content-Length", "500");
             method.setRequestHeader("Expect", "100-continue");
             method.setRequestHeader(StorageProperties.EUCALYPTUS_OPERATION, eucaOperation);
             if(eucaHeader != null) {
@@ -681,7 +680,7 @@ public class Storage {
                 sign.update(data.getBytes());
                 byte[] sig = sign.sign();
 
-                method.setRequestHeader("EucaCert", new String(UrlBase64.encode(ccPublicKey.toString().getBytes()))); // or maybe cert instead of ccPublicKey?
+               // method.setRequestHeader("EucaCert", new String(UrlBase64.encode(ccPublicKey.toString().getBytes()))); // or maybe cert instead of ccPublicKey?
                 method.setRequestHeader("EucaSignature", new String(UrlBase64.encode(sig)));
             } catch(Exception ex) {
                 ex.printStackTrace();
