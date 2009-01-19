@@ -430,7 +430,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             try {
                 putQueue.put(WalrusDataMessage.StartOfData(dataLength));
 
-                int bytesRead = 0;
+                int bytesRead;
                 while ((bytesRead = in.read(bytes)) > 0) {
                     putQueue.put(WalrusDataMessage.DataMessage(bytes, bytesRead));
                 }

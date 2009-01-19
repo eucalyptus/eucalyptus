@@ -370,11 +370,10 @@ public class Bukkit {
                 LinkedBlockingQueue<WalrusDataMessage> putQueue = messenger.getQueue(key, randomKey);
 
                 try {
-                    WalrusDataMessage dataMessage = null;
+                    WalrusDataMessage dataMessage;
                     String tempObjectName = objectName;
                     MessageDigest digest = null;
                     long size = 0;
-                    int offset = 0;
                     while ((dataMessage = putQueue.take())!=null) {
                         if(WalrusDataMessage.isStart(dataMessage)) {
                             tempObjectName = objectName + "." + Hashes.getRandom(12);
@@ -1900,7 +1899,6 @@ public class Bukkit {
         dbSnap.add(snapshotInfo);
 
         //read and store it
-        dbSnap.commit();
         db.commit();
         //convert to a PutObject request
         //Make sure the bucket exists
@@ -1962,11 +1960,9 @@ public class Bukkit {
                     snapshotSet.add(walrusSnapshotInfo.getSnapshotId());
                 }
             } catch(Exception ex) {
-                dbSet.rollback();
                 db.rollback();
                 throw new NoSuchEntityException(snapshotId);
             }
-            dbSet.commit();
         } else {
             db.rollback();
             throw new NoSuchEntityException(snapshotId);
@@ -2014,13 +2010,11 @@ public class Bukkit {
                 if(snapshotSetSnapInfo != null)
                     snapshotSet.remove(snapshotSetSnapInfo);
                 db.delete(foundSnapshotInfo);
-                dbSet.commit();
                 //remove the snapshot in the background
                 SnapshotDeleter snapshotDeleter = new SnapshotDeleter(bucketName, foundSnapshotInfo.getSnapshotId(),
                         foundSnapshotInfo.getVgName(), foundSnapshotInfo.getLvName(), snapshotIds);
                 snapshotDeleter.start();
             } else {
-                dbSet.rollback();
                 db.rollback();
                 throw new NoSuchSnapshotException(snapshotId);
             }
