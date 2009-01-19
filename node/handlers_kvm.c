@@ -40,22 +40,25 @@ static int cores_max      = 0;
 static char config_network_path [BUFSIZE];
 static int  config_network_port = NC_NET_PORT_DEFAULT;
 
+/* for kvm driver, we need the instance path */
+static char config_instance_path [BUFSIZE] = "";
+
 static char * admin_user_id = EUCALYPTUS_ADMIN;
-static char gen_libvirt_xml_command_path [BUFSIZE] = "";
-static char get_xen_info_command_path [BUFSIZE] = "";
+static char gen_kvm_libvirt_xml_command_path [BUFSIZE] = "";
+static char get_kvm_info_command_path [BUFSIZE] = "";
 
 #define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
 #define SWAP_SIZE 512 /* for now, the only possible swap size, in MBs */
 #define MAXDOMS 1024 /* max number of running domains on node */
 
-vnetConfig *vnetconfig = NULL;
-sem * xen_sem; /* semaphore for serializing domain creation */
-sem * inst_sem; /* semaphore for guarding access to global instance structs */
-bunchOfInstances * global_instances = NULL; /* will be initiated upon first call */
+extern vnetConfig *vnetconfig;
+extern sem * xen_sem; /* semaphore for serializing domain creation */
+extern sem * inst_sem; /* semaphore for guarding access to global instance structs */
+extern bunchOfInstances * global_instances; /* will be initiated upon first call */
 
-const int unbooted_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any unbooted and SHUTOFF domains will be cleaned up */
-const int teardown_state_duration = 60; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
-const int monitoring_period_duration = 5; /* how frequently we check on instances */
+extern const int unbooted_cleanup_threshold; /* after this many seconds any unbooted and SHUTOFF domains will be cleaned up */
+extern const int teardown_state_duration; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
+extern const int monitoring_period_duration; /* how frequently we check on instances */
 
 static void libvirt_error_handler (void * userData, virErrorPtr error)
 {
@@ -107,7 +110,7 @@ static void refresh_instance_info (ncInstance * instance)
         return;
     
     /* try to get domain state from Xen */
-    virConnectPtr conn = virConnectOpen ("xen:///"); /* NULL means local hypervisor */
+    virConnectPtr conn = virConnectOpen ("qemu:///system"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAERROR, "warning: failed to connect to hypervisor\n");
         return;
@@ -294,7 +297,7 @@ static int init_config (void)
     static int configInit=0;
     struct stat mystat;
     char config [BUFSIZE];
-    char *brname, *s, *home, *pubInterface, *bridge, *mode;
+    char *brname, *s, *home, *pubInterface, *bridge, *mode, *inst_path;
     int error, rc;
 
     if (configInit>0) { /* 0 => hasn't run, -1 => failed, 1 => ok */
@@ -347,8 +350,8 @@ static int init_config (void)
     }
 
     /* set up paths of Eucalyptus commands NC relies on */
-    snprintf (gen_libvirt_xml_command_path, BUFSIZE, EUCALYPTUS_GEN_LIBVIRT_XML, home, home);
-    snprintf (get_xen_info_command_path,    BUFSIZE, EUCALYPTUS_GET_XEN_INFO,    home, home);
+    snprintf (gen_kvm_libvirt_xml_command_path, BUFSIZE, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, home, home);
+    snprintf (get_kvm_info_command_path,    BUFSIZE, EUCALYPTUS_GET_KVM_INFO,    home, home);
     
     /* "adopt" currently running Xen instances */
     {
@@ -360,7 +363,7 @@ static int init_config (void)
         virSetErrorFunc (NULL, libvirt_error_handler);
 
         /* check with Xen */
-        conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
+        conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
         if (conn == NULL) {
             logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
             free(home);
@@ -446,6 +449,15 @@ static int init_config (void)
 
     vnetInit(vnetconfig, mode, home, config_network_path, NC, pubInterface, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge);
     
+    inst_path = getConfString(config, "INSTANCE_PATH");
+    if (inst_path) {
+      snprintf (config_instance_path, BUFSIZE, "%s", inst_path);
+    } else {
+      logprintfl(EUCAFATAL, "INSTANCE_PATH not defined in config, cannot continue\n");
+      return(1);
+    }
+
+
     /* cleanup from previous runs and verify integrity of instances
      * directory */
     sem_p (inst_sem);
@@ -483,10 +495,10 @@ static int init_config (void)
         }
 
         /* xm info will be used for memory and cores */
-        s = system_output (get_xen_info_command_path);
+        s = system_output (get_kvm_info_command_path);
 #define GET_VALUE(name,var) \
         if (get_value (s, name, &var)) { \
-            logprintfl (EUCAFATAL, "error: did not find %s in output from %s\n", name, get_xen_info_command_path); \
+            logprintfl (EUCAFATAL, "error: did not find %s in output from %s\n", name, get_kvm_info_command_path); \
             free (s); \
             return ERROR; \
         }
@@ -494,34 +506,27 @@ static int init_config (void)
         /* calculate mem_max */
         {
             long long total_memory = 0;
-            long long free_memory  = 0;
-            long long dom0_min_mem = 0;
             
             GET_VALUE("total_memory", total_memory);
-            GET_VALUE("free_memory", free_memory);
-            GET_VALUE("dom0-min-mem", dom0_min_mem);
             
-            mem_max = total_memory - 32 - dom0_min_mem;
-            if (config_max_mem 
-                && mem_max>config_max_mem) 
-                mem_max = config_max_mem; /* reduce if the number exceeds config limits */
+            mem_max = total_memory - 256;
+            if (config_max_mem && mem_max>config_max_mem) 
+	      mem_max = config_max_mem; /* reduce if the number exceeds config limits */
             logprintfl (EUCAINFO, "Maximum memory available = %lld\n", mem_max);
         }
 
         /* calculate cores_max */
         {
-             long long nr_cpus; 
-             long long nr_nodes; 
+             long long nr_cores; 
          
-             GET_VALUE("nr_cpus", nr_cpus);
-             GET_VALUE("nr_nodes", nr_nodes);
+             GET_VALUE("nr_cores", nr_cores);
             
-             cores_max = (int)nr_cpus * (int)nr_nodes; 
+             cores_max = (int)nr_cores; 
              /* unlike with disk or memory limits, use the limit as the
               * number of cores, regardless of whether the actual number
               * of cores is bigger or smaller */
              if (config_max_cores) 
-                 cores_max = config_max_cores; 
+	       cores_max = config_max_cores; 
              logprintfl (EUCAINFO, "Maximum cores available = %d\n", cores_max);
         }
     }
@@ -542,13 +547,13 @@ static int get_instance_xml (char *userId, char *instanceId, int ramdisk, char *
 
     /* TODO: add --ephemeral? */
     if (ramdisk) {
-        snprintf (buf, BUFSIZE, "%s --ramdisk", gen_libvirt_xml_command_path);
+        snprintf (buf, BUFSIZE, "%s --ramdisk", gen_kvm_libvirt_xml_command_path);
     } else {
-        snprintf (buf, BUFSIZE, "%s", gen_libvirt_xml_command_path);
+        snprintf (buf, BUFSIZE, "%s", gen_kvm_libvirt_xml_command_path);
     }
     * xml = system_output (buf);
     if ( ( * xml ) == NULL ) {
-        logprintfl (EUCAFATAL, "%s: %s\n", gen_libvirt_xml_command_path, strerror (errno));
+        logprintfl (EUCAFATAL, "%s: %s\n", gen_kvm_libvirt_xml_command_path, strerror (errno));
         return ERROR;
     }
     
@@ -568,7 +573,7 @@ static int get_instance_xml (char *userId, char *instanceId, int ramdisk, char *
     return 0;
 }
 
-void * startup_thread (void * arg)
+void * kvm_startup_thread (void * arg)
 {
     ncInstance * instance = (ncInstance *)arg;
     virConnectPtr conn = NULL;
@@ -577,7 +582,7 @@ void * startup_thread (void * arg)
     char *brname=NULL;
     int error;
     
-    conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
+    conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAFATAL, "failed to connect to hypervisor to start instance %s, abandoning it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
@@ -598,7 +603,7 @@ void * startup_thread (void * arg)
                                  instance->kernelId, instance->kernelURL, 
                                  instance->ramdiskId, instance->ramdiskURL, 
                                  instance->instanceId, instance->keyName, 
-                                 &disk_path, xen_sem, 0);
+                                 &disk_path, xen_sem, 1);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
@@ -727,7 +732,7 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
 
     /* do the potentially long tasks in a thread */
 
-    if ( pthread_create (&(instance->tcb), NULL, startup_thread, (void *)instance) ) {
+    if ( pthread_create (&(instance->tcb), NULL, kvm_startup_thread, (void *)instance) ) {
         logprintfl (EUCAFATAL, "failed to spawn a VM startup thread\n");
         sem_p (inst_sem);
         remove_instance (&global_instances, instance);
@@ -742,84 +747,134 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
 }
 
 static int doRebootInstance(ncMetadata *meta, char *instanceId) {
-  char cmd[256];
-  int rc;
+  char xml_path[1024], cmd[256];
+  char *xml;
+  struct stat statbuf;
+  
+  int rc, fd;
+  virConnectPtr conn = NULL;
+  virDomainPtr dom = NULL;
+  ncInstance *instance;
+  
+  logprintfl(EUCAINFO, "doRebootInstances() invoked\n");
+  
+  // for KVM, must stop and restart the instance
+  
+  sem_p (inst_sem); 
+  instance = find_instance(&global_instances, instanceId);
+  sem_v (inst_sem);
+  if ( instance == NULL ) {
+    logprintf(EUCAERROR, "cannot find instance %s\n", instanceId);
+    return 1;
+  }
+  
+  snprintf(xml_path, 1024, "%s/%s/%s/libvirt.xml", config_instance_path, meta->userId, instanceId);
+  
+  rc = stat(xml_path, &statbuf);
+  if (rc < 0) {
+    logprintfl(EUCAERROR, "cannot stat XML file '%s'\n", xml_path);
+    return(1);
+  }
+  
+  xml = malloc(statbuf.st_size + 1);
+  if (xml == NULL) {
+    logprintfl(EUCAERROR, "malloc() failed '%d'\n", statbuf.st_size+1);
+    return(1);
+  }
+  
+  fd = open(xml_path, O_RDONLY);
+  if (fd < 0) {
+    logprintfl(EUCAERROR, "cannot open file for read '%s'\n", xml_path);
+    if (xml) free(xml);
+    return(1);
+  }
+  bzero (xml, statbuf.st_size+1);
+  rc = read(fd, xml, statbuf.st_size);
+  close(fd);
+  
+  //  logprintfl(EUCAINFO, "reboot(): xml: %s\n", xml);
+  
+  conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
+  if (conn == NULL) {
+    logprintfl (EUCAFATAL, "failed to connect to hypervisor to restart instance %s, abandoning it\n", instance->instanceId);
+    change_state (instance, SHUTOFF);
+    if (xml) free(xml);
+    return 1;
+  }
 
-  snprintf(cmd, 256, "xm reboot %s", instanceId);
-  rc = system(cmd);
+  sem_p (xen_sem);
+  dom = virDomainLookupByName(conn, instanceId);
+  sem_v (xen_sem);
 
-  return(WEXITSTATUS(rc));
+  if (!dom) {
+    virConnectClose(conn);
+    return(1);
+  }
+
+  sem_p (xen_sem);
+  rc = virDomainShutdown (dom);
+  sem_v (xen_sem);
+  if (rc) {
+    virDomainFree(dom);
+    virConnectClose(conn);
+    return(1);
+  }
+
+  // domain is now shut down
+
+  sem_p (xen_sem); 
+  dom = virDomainCreateLinux (conn, xml, 0);
+  sem_v (xen_sem);
+  if (xml) free(xml);
+  
+  if (!dom) {
+    logprintfl (EUCAFATAL, "Failed to create libvirt dom for instance %s\n", instance->instanceId);
+    change_state (instance, SHUTOFF);
+    virConnectClose(conn);
+    return(1);
+  }
+
+  virDomainFree(dom);
+  virConnectClose(conn);
+  return(rc);
 }
 
 static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **consoleOutput) {
-  char *output;
-  char cmd[256];
-  int pid, status, rc, bufsize, fd;
-  char filename[1024];  
+  char *console_output;
+  char console_file[1024];
+  int rc, fd;
+  struct stat statbuf;
 
-  fprintf(stderr, "getconsoleoutput called\n");
+  *consoleOutput = NULL;
 
-  bufsize = sizeof(char) * 1024 * 64;
-  output = malloc(bufsize);
-  bzero(output, bufsize);
-
-  snprintf(filename, 1024, "/tmp/consoleOutput.%s", instanceId);
-  
-  pid = fork();
-  if (pid == 0) {
-    int fd;
-    fd = open(filename, O_WRONLY | O_TRUNC | O_CREAT, 0644);
-    if (fd < 0) {
-      // error
-    } else {
-      dup2(fd, 2);
-      dup2(2, 1);
-      close(0);
-      rc = execl("/usr/sbin/xm", "/usr/sbin/xm", "console", instanceId, NULL);
-      fprintf(stderr, "execl() failed\n");
-      close(fd);
-    }
-    exit(0);
-  } else {
-    int count;
-    fd_set rfds;
-    struct timeval tv;
-    struct stat statbuf;
-    
-    count=0;
-    while(count < 10000 && stat(filename, &statbuf) < 0) {count++;}
-    fd = open(filename, O_RDONLY);
-    if (fd < 0) {
-      logprintfl (EUCAERROR, "ERROR: could not open consoleOutput file %s for reading\n", filename);
-    } else {
-      FD_ZERO(&rfds);
-      FD_SET(fd, &rfds);
-      tv.tv_sec = 0;
-      tv.tv_usec = 500000;
-      rc = select(1, &rfds, NULL, NULL, &tv);
-      bzero(output, bufsize);
-      
-      count = 0;
-      rc = 1;
-      while(rc && count < 1000) {
-	rc = read(fd, output, bufsize-1);
-	count++;
-      }
-      close(fd);
-    }
-    kill(pid, 9);
-    wait(&status);
+  // for KVM, read the console output from a file, encode it, and return
+  console_output = malloc(64 * 1024);
+  if (console_output == NULL) {
+    return(1);
   }
   
-  unlink(filename);
+  snprintf(console_file, 1024, "%s/%s/%s/console.log", config_instance_path, meta->userId, instanceId);
   
-  if (output[0] == '\0') {
-    snprintf(output, bufsize, "EMPTY");
+  rc = stat(console_file, &statbuf);
+  if (rc < 0) {
+    logprintfl(EUCAERROR, "cannot stat console_output file '%s'\n", console_file);
+    if (console_output) free(console_output);
+    return(1);
   }
   
-  *consoleOutput = base64_enc((unsigned char *)output, strlen(output));
-  free(output);
+  fd = open(console_file, O_RDONLY);
+  if (fd < 0) {
+    logprintfl(EUCAERROR, "cannot open '%s' read-only\n", console_file);
+    if (console_output) free(console_output);
+    return(1);
+  }
   
+  bzero(console_output, 64*1024);
+  rc = read(fd, console_output, (64*1024)-1);
+  close(fd);
+  
+  *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
+  if (console_output) free(console_output);
   return(0);
 }
 
@@ -840,7 +895,7 @@ static int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdow
     if ( instance == NULL ) return NOT_FOUND;
 
     /* try stopping the Xen domain */
-    virConnectPtr conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
+    virConnectPtr conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
     } else {
@@ -1048,7 +1103,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     }
 
     /* try attaching to the Xen domain */
-    virConnectPtr conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
+    virConnectPtr conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
         ret = ERROR;
@@ -1111,7 +1166,7 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     }
 
     /* try attaching to the Xen domain */
-    virConnectPtr conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
+    virConnectPtr conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
         ret = ERROR;
@@ -1145,8 +1200,8 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     return ret;
 }
 
-struct handlers xen_libvirt_handlers = {
-    .name = "xen",
+struct handlers kvm_libvirt_handlers = {
+    .name = "kvm",
     .doInitialize        = doInitialize,
     .doDescribeInstances = doDescribeInstances,
     .doRunInstance       = doRunInstance,

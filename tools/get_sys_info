@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+
+delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
+$ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
+
+$total_memory=0;
+open(FH, "/proc/meminfo");
+while(<FH>) {
+    chomp;
+    if ($_ =~ /MemTotal:\s+(\d+).*/) {
+	$total_memory=int($1 / 1000);
+    }
+}
+close(FH);
+print "total_memory=$total_memory\n";
+
+$nr_cores = 0;
+open(FH, "/proc/cpuinfo");
+while(<FH>) {
+    chomp;
+    if ($_ =~ /processor\s+:\s+\d+/) {
+	$nr_cores++;
+    }
+}
+close(FH);
+print "nr_cores=$nr_cores\n";
+
+exit 0;
+
+sub untaint() {
+    $str = shift;
+    if ($str =~ /^([ &:#-\@\w.]+)$/) {
+	$str = $1; #data is now untainted
+    } else {
+	print STDERR "inputs are tainted\n";
+	$str = "";
+    }
+    return($str);
+}

@@ -23,10 +23,12 @@
 
 // declarations of available handlers
 extern struct handlers xen_libvirt_handlers;
+extern struct handlers kvm_libvirt_handlers;
 
 // a NULL-terminated array of available handlers
 static struct handlers * available_handlers [] = {
     &xen_libvirt_handlers,
+    &kvm_libvirt_handlers,
     NULL
 };
 
