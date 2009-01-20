@@ -1971,6 +1971,34 @@ public class Bukkit {
         return reply;
     }
 
+    public GetSnapshotResponseType GetSnapshot(GetSnapshotType request) throws EucalyptusCloudException {
+        GetSnapshotResponseType reply = (GetSnapshotResponseType) request.getReply();
+        String snapshotId = request.getKey();
+        EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
+        WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+        List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+
+        if(snapshotInfos.size() > 0) {
+            WalrusSnapshotInfo foundSnapshotInfo = snapshotInfos.get(0);
+            GetObjectType getObjectType = new GetObjectType();
+            getObjectType.setUserId(request.getUserId());
+            getObjectType.setGetData(true);
+            getObjectType.setInlineData(false);
+            getObjectType.setGetMetaData(false);
+            getObjectType.setBucket(foundSnapshotInfo.getSnapshotSetId());
+            getObjectType.setKey(snapshotId);
+            db.commit();
+            GetObjectResponseType getObjectResponse = GetObject(getObjectType);
+            reply.setEtag(getObjectResponse.getEtag());
+            reply.setLastModified(getObjectResponse.getLastModified());
+            reply.setSize(getObjectResponse.getSize());
+        } else {
+            db.rollback();
+            throw new NoSuchSnapshotException(snapshotId);
+        }
+        return reply;
+    }
+
     public DeleteWalrusSnapshotResponseType DeleteWalrusSnapshot(DeleteWalrusSnapshotType request) throws EucalyptusCloudException {
         DeleteWalrusSnapshotResponseType reply = (DeleteWalrusSnapshotResponseType) request.getReply();
         String snapshotId = request.getKey();

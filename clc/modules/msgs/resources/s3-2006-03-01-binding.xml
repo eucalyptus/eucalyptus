@@ -350,6 +350,14 @@
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 
+    <mapping name="GetSnapshot" class="edu.ucsb.eucalyptus.msgs.GetSnapshotType">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
+    </mapping>
+
+    <mapping name="GetSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.GetSnapshotResponseType">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
+    </mapping>
+
     <mapping name="DeleteWalrusSnapshot" class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
     </mapping>

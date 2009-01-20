@@ -451,3 +451,9 @@ public class GetSnapshotInfoType extends WalrusRequestType {
 public class GetSnapshotInfoResponseType extends WalrusResponseType {
     ArrayList<String> snapshotSet = new ArrayList<String>();
 }
+
+public class GetSnapshotType extends WalrusDataRequestType {
+}
+
+public class GetSnapshotResponseType extends WalrusDataResponseType {
+}
