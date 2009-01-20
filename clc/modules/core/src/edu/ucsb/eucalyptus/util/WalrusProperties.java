@@ -113,6 +113,10 @@ public class WalrusProperties {
         StoreSnapshot, DeleteSnapshot, GetSnapshotInfo
     }
 
+    public enum InfoOperations {
+        GetSnapshotInfo
+    }
+    
     public enum StorageParameters {
         SnapshotVgName, SnapshotLvName
     }

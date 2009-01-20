@@ -67,9 +67,10 @@ public class VolumeInfo {
     private String volumeBucket;
     @Column(name = "volume_key")
     private String volumeKey;
+    @Column(name = "snapshot_id")
+    private String snapshotId;
     @Column(name = "transferred")
     private Boolean transferred;
-
     @OneToMany( cascade = CascadeType.ALL )
     @JoinTable(
             name = "volume_has_attachments",
@@ -157,6 +158,14 @@ public class VolumeInfo {
         this.volumeKey = volumeKey;
     }
 
+    public String getSnapshotId() {
+        return snapshotId;
+    }
+
+    public void setSnapshotId(String snapshotId) {
+        this.snapshotId = snapshotId;
+    }
+
     public Boolean getTransferred() {
         return transferred;
     }
@@ -165,29 +174,29 @@ public class VolumeInfo {
         this.transferred = transferred;
     }
 
-  @Override
-  public boolean equals( final Object o ) {
-    if ( this == o ) return true;
-    if ( o == null || getClass() != o.getClass() ) return false;
+    @Override
+    public boolean equals( final Object o ) {
+        if ( this == o ) return true;
+        if ( o == null || getClass() != o.getClass() ) return false;
 
-    VolumeInfo that = ( VolumeInfo ) o;
+        VolumeInfo that = ( VolumeInfo ) o;
 
-    if ( !volumeId.equals( that.volumeId ) ) return false;
+        if ( !volumeId.equals( that.volumeId ) ) return false;
 
-    return true;
-  }
+        return true;
+    }
 
-  @Override
-  public int hashCode() {
-    return volumeId.hashCode();
-  }
+    @Override
+    public int hashCode() {
+        return volumeId.hashCode();
+    }
 
-  public Volume getAsVolume() {
-    Volume ret = new Volume();
-    ret.setAvailabilityZone( this.getZone() );
-    ret.setStatus( "creating" );
-    ret.setCreateTime( this.getCreateTime() );
-    return ret;
-  }
+    public Volume getAsVolume() {
+        Volume ret = new Volume();
+        ret.setAvailabilityZone( this.getZone() );
+        ret.setStatus( "creating" );
+        ret.setCreateTime( this.getCreateTime() );
+        return ret;
+    }
 
 }

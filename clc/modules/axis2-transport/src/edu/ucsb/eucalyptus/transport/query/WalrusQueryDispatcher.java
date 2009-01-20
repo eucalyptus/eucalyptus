@@ -105,10 +105,6 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.HEAD.toString(), "GetObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.GET.toString() + "extended", "GetObjectExtended");
 
-        //For Storage Controller
-        newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString() + WalrusProperties.StorageParameters.SnapshotLvName.toString(), "StoreSnapshot");
-        newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString() + WalrusProperties.StorageParameters.SnapshotVgName.toString(), "StoreSnapshot");
-
         return newMap;
     }
 
@@ -178,6 +174,29 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         Map<String, String> headers = httpRequest.getHeaders();
         String operationKey = "";
         Map<String, String> params = httpRequest.getParameters();
+        String operationName = null;
+        if(headers.containsKey(StorageProperties.EUCALYPTUS_OPERATION)) {
+            String value = headers.get(StorageProperties.EUCALYPTUS_OPERATION);
+            for(WalrusProperties.WalrusInternalOperations operation: WalrusProperties.WalrusInternalOperations.values()) {
+                if(value.toLowerCase().equals(operation.toString().toLowerCase())) {
+                    operationName = operation.toString();
+                    walrusInternalOperation = true;
+                    break;
+                }
+            }
+
+            if(!walrusInternalOperation) {
+                for(WalrusProperties.StorageOperations operation: WalrusProperties.StorageOperations.values()) {
+                    if(value.toLowerCase().equals(operation.toString().toLowerCase())) {
+                        operationName = operation.toString();
+                        walrusInternalOperation = true;
+                        break;
+                    }
+                }
+            }
+
+        }
+
         if(target == null) {
             //target = service
             operationKey = SERVICE + verb;
@@ -194,71 +213,72 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             operationKey = OBJECT + verb;
             operationParams.put("Bucket", target[0]);
             operationParams.put("Key", target[1]);
+        }
 
-            if(headers.containsKey(StorageProperties.EUCALYPTUS_OPERATION)) {
-                String value = headers.get(StorageProperties.EUCALYPTUS_OPERATION);
-                for(WalrusProperties.WalrusInternalOperations operation: WalrusProperties.WalrusInternalOperations.values()) {
-                    if(value.toLowerCase().equals(operation.toString().toLowerCase())) {
-                        walrusInternalOperation = true;
-                        break;
+        if(!params.containsKey(OperationParameter.acl.toString())) {
+            if (verb.equals(HTTPVerb.PUT.toString())) {
+                messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
+                InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
+                BufferedInputStream bufferedIn = new BufferedInputStream(in);
+                String key = target[0] + "." + target[1];
+                String randomKey = key + "." + Hashes.getRandom(10);
+                LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
+                int dataLength = 0;
+                try {
+                    dataLength = bufferedIn.available();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+
+                Writer writer = new Writer(bufferedIn, dataLength, putQueue);
+                writer.start();
+
+                operationParams.put("ContentLength", (new Long(dataLength).toString()));
+                operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
+            } else if(verb.equals(HTTPVerb.GET.toString())) {
+                messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.TRUE);
+                if(!walrusInternalOperation) {
+
+                    operationParams.put("GetData", Boolean.TRUE);
+                    operationParams.put("InlineData", Boolean.FALSE);
+                    operationParams.put("GetMetaData", Boolean.FALSE);
+
+                    Iterator<String> iterator = headers.keySet().iterator();
+                    boolean isExtendedGet = false;
+                    while(iterator.hasNext()) {
+                        String key = iterator.next();
+                        for(WalrusProperties.ExtendedGetHeaders header: WalrusProperties.ExtendedGetHeaders.values()) {
+                            if(key.toLowerCase().equals(header.toString().toLowerCase())) {
+                                String value = headers.get(key);
+                                isExtendedGet = true;
+                                parseExtendedGetHeaders(operationParams, header.toString(), value);
+                            }
+                        }
+
+                    }
+                    if(isExtendedGet) {
+                        operationKey += "extended";
+                        //only supported through SOAP
+                        operationParams.put("ReturnCompleteObjectOnConditionFailure", Boolean.FALSE);
+                    }
+                } else {
+                    for(WalrusProperties.InfoOperations operation : WalrusProperties.InfoOperations.values()) {
+                        if(operation.toString().equals(operationName)) {
+                            messageContext.removeProperty(WalrusProperties.STREAMING_HTTP_GET);
+                            break;
+                        }
                     }
                 }
-            }
-
-            if(!params.containsKey(OperationParameter.acl.toString())) {
-                if (verb.equals(HTTPVerb.PUT.toString())) {
-                    messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
-                    InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
-                    BufferedInputStream bufferedIn = new BufferedInputStream(in);
-                    String key = target[0] + "." + target[1];
-                    String randomKey = key + "." + Hashes.getRandom(10);
-                    LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
-                    int dataLength = 0;
-                    try {
-                        dataLength = bufferedIn.available();
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
-
-                    Writer writer = new Writer(bufferedIn, dataLength, putQueue);
-                    writer.start();
-
-                    operationParams.put("ContentLength", (new Long(dataLength).toString()));
-                    operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
-                } else if(verb.equals(HTTPVerb.GET.toString())) {
-                    messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.TRUE);
-                    if(!walrusInternalOperation) {
-                        operationParams.put("GetData", Boolean.TRUE);
-                        operationParams.put("InlineData", Boolean.FALSE);
-                        operationParams.put("GetMetaData", Boolean.FALSE);
-
-                        Iterator<String> iterator = headers.keySet().iterator();
-                        boolean isExtendedGet = false;
-                        while(iterator.hasNext()) {
-                            String key = iterator.next();
-                            for(WalrusProperties.ExtendedGetHeaders header: WalrusProperties.ExtendedGetHeaders.values()) {
-                                if(key.toLowerCase().equals(header.toString().toLowerCase())) {
-                                    String value = headers.get(key);
-                                    isExtendedGet = true;
-                                    parseExtendedGetHeaders(operationParams, header.toString(), value);
-                                }
-                            }
-
-                        }
-                        if(isExtendedGet) {
-                            operationKey += "extended";
-                            //only supported through SOAP
-                            operationParams.put("ReturnCompleteObjectOnConditionFailure", Boolean.FALSE);
-                        }
-                    }
-                } else if(verb.equals(HTTPVerb.HEAD.toString())) {
-                    messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.FALSE);
+            } else if(verb.equals(HTTPVerb.HEAD.toString())) {
+                messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.FALSE);
+                if(!walrusInternalOperation) {
                     operationParams.put("GetData", Boolean.FALSE);
                     operationParams.put("InlineData", Boolean.FALSE);
                     operationParams.put("GetMetaData", Boolean.FALSE);
                 }
             }
         }
+
 
         if (verb.equals(HTTPVerb.PUT.toString()) && params.containsKey(OperationParameter.acl.toString())) {
             //read ACL
@@ -341,12 +361,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             params.remove(key);
         }
 
-        String operationName;
-        if(headers.containsKey(StorageProperties.EUCALYPTUS_OPERATION)) {
-            operationName = headers.get(StorageProperties.EUCALYPTUS_OPERATION);
-            if(operationName.equals(WalrusProperties.StorageOperations.StoreSnapshot.toString())) {
-            }
-        } else {
+        if(!headers.containsKey(StorageProperties.EUCALYPTUS_OPERATION)) {
             operationName = operationMap.get(operationKey);
         }
         httpRequest.setBindingArguments(operationParams);

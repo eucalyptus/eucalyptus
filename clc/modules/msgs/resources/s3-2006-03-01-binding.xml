@@ -16,7 +16,7 @@
   ~ * Redistributions in binary form must reproduce the above
   ~   copyright notice, this list of conditions and the
   ~   following disclaimer in the documentation and/or other
-  ~   materials provided with the distribution.
+  ~   materials provided with the distribution.                                                                                                 walrus
   ~
   ~ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
   ~ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -358,8 +358,9 @@
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 
-    <mapping name="GetSnapshotInfo" class="edu.ucsb.eucalyptus.msgs.GetSnapshotInfoType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
+    <mapping name="GetSnapshotInfo" class="edu.ucsb.eucalyptus.msgs.GetSnapshotInfoType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+        <value name="Bucket" field="bucket"/>
+        <value name="Key" field="key"/>
     </mapping>
 
     <mapping name="GetSnapshotInfoResponse" class="edu.ucsb.eucalyptus.msgs.GetSnapshotInfoResponseType">
@@ -368,7 +369,6 @@
                 <value name="snapshotId" />
             </structure >
         </collection >
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 
 </binding>
