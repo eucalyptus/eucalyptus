@@ -35,13 +35,16 @@
 package edu.ucsb.eucalyptus.transport.config;
 
 import edu.ucsb.eucalyptus.transport.*;
-import org.apache.axis2.*;
+import org.apache.axis2.AxisFault;
 import org.apache.axis2.description.*;
 
 import java.lang.reflect.Method;
+import java.util.*;
 
 public class Axis2ServiceBuilder
 {
+  public static Map<String,Boolean> disabledOperations = new HashMap<String,Boolean>();
+
   public static AxisService getAxisService( Axis2MessageReceiver msgReceiver ) throws AxisFault
   {
     String className = msgReceiver.getProperties().getServiceClass().getCanonicalName();
@@ -72,4 +75,5 @@ public class Axis2ServiceBuilder
     }
     return axisService;
   }
+
 }

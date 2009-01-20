@@ -45,6 +45,7 @@ import org.mule.api.service.Service;
 import org.mule.api.transport.Connector;
 import org.mule.transport.*;
 
+import javax.xml.namespace.QName;
 import java.util.Map;
 
 public class Axis2MessageReceiver extends AbstractMessageReceiver {
@@ -73,6 +74,10 @@ public class Axis2MessageReceiver extends AbstractMessageReceiver {
     {
       throw new ConnectException( axisFault, this );
     }
+  }
+
+  public void removeOperation( String operationName ) {
+    this.axisService.removeOperation( new QName( operationName ) );
   }
 
   public void doStart()
