@@ -81,6 +81,7 @@ public class UpdateStorageConfigurationResponseType extends StorageResponseType 
 public class CreateStorageVolumeType extends StorageRequestType {
     String volumeId;
     String size;
+    String snapshotSetName;
     String snapshotId;
 }
 
@@ -94,6 +95,7 @@ public class CreateStorageVolumeResponseType extends StorageResponseType {
 
 public class CreateStorageSnapshotType extends StorageRequestType {
     String volumeId;
+    String snapshotSetName;
     String snapshotId;
 }
 public class CreateStorageSnapshotResponseType extends StorageResponseType {
@@ -112,6 +114,7 @@ public class DeleteStorageVolumeResponseType extends StorageResponseType {
 }
 
 public class DeleteStorageSnapshotType extends StorageRequestType {
+    String snapshotSetName;
     String snapshotId;
 }
 

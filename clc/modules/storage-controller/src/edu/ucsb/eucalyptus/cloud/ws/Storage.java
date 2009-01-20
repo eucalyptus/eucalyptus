@@ -161,6 +161,7 @@ public class Storage {
 
     public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
         CreateStorageSnapshotResponseType reply = ( CreateStorageSnapshotResponseType ) request.getReply();
+        String snapshotSet = request.getSnapshotSetName();
         String volumeId = request.getVolumeId();
         String snapshotId = request.getSnapshotId();
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
@@ -185,7 +186,7 @@ public class Storage {
                 db.commit();
                 //snapshot asynchronously
                 List<String> returnValues = ebsManager.createSnapshot(volumeId, snapshotId);
-                Snapshotter snapshotter = new Snapshotter(volumeId, snapshotId);
+                Snapshotter snapshotter = new Snapshotter(snapshotSet, volumeId, snapshotId);
                 snapshotter.run();
                 reply.setSnapshotId(snapshotId);
                 reply.setVolumeId(volumeId);
@@ -228,6 +229,7 @@ public class Storage {
     public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
         DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
+        String snapshotBucket = request.getSnapshotSetName();
         String snapshotId = request.getSnapshotId();
 
         EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
@@ -246,7 +248,7 @@ public class Storage {
                     //If there are multiple obsolete snapshots, they will have to be copied over to have a
                     //consistent view of the volume and its snapshots (for new volume creation).
                     //But this requires the current volume to be transferred to Walrus again (the state after lvremove).
-                    HttpWriter httpWriter = new HttpWriter("DELETE", StorageProperties.snapshotBucket, snapshotId, "DeleteSnapshot", null);
+                    HttpWriter httpWriter = new HttpWriter("DELETE", snapshotBucket, snapshotId, "DeleteSnapshot", null);
                     httpWriter.run();
                 } catch (IOException ex) {
                     ex.printStackTrace();
@@ -267,6 +269,7 @@ public class Storage {
     public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
         CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
+        String snapshotBucket = request.getSnapshotSetName();
         String snapshotId = request.getSnapshotId();
         String userId = request.getUserId();
         String volumeId = request.getVolumeId();
@@ -303,7 +306,7 @@ public class Storage {
         db.commit();
 
         //create volume asynchronously
-        VolumeCreator volumeCreator = new VolumeCreator(volumeId, snapshotId, sizeAsInt);
+        VolumeCreator volumeCreator = new VolumeCreator(volumeId, snapshotBucket, snapshotId, sizeAsInt);
         volumeCreator.start();
 
         return reply;
@@ -311,11 +314,13 @@ public class Storage {
 
     public class VolumeCreator extends Thread {
         private String volumeId;
+        private String snapshotBucket;
         private String snapshotId;
         private int size;
 
-        public VolumeCreator(String volumeId, String snapshotId, int size) {
+        public VolumeCreator(String volumeId, String snapshotBucket, String snapshotId, int size) {
             this.volumeId = volumeId;
+            this.snapshotBucket = snapshotBucket;
             this.snapshotId = snapshotId;
             this.size = size;
         }
@@ -331,7 +336,7 @@ public class Storage {
                         //retrieve the snapshot (tree) from Walrus.
                         //"load" it locally and add to SnapshotInfos
                         ArrayList<String> snapshotFileNames = new ArrayList<String>();
-                        List<String> snapshotSet = getSnapshots(snapshotId, snapshotFileNames);
+                        List<String> snapshotSet = getSnapshots(snapshotBucket, snapshotId, snapshotFileNames);
                         ebsManager.loadSnapshots(snapshotSet, snapshotFileNames);
                     } else {
                         if(!foundSnapshotInfo.getStatus().equals(Status.available.toString())) {
@@ -381,17 +386,19 @@ public class Storage {
         }
     }
 
-    private List<String> getSnapshots(String snapshotId, List<String> snapshotFileNames) {
+    private List<String> getSnapshots(String snapshotBucket, String snapshotId, List<String> snapshotFileNames) {
         //TODO: fix this
-        String walrusSnapshotPath = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + StorageProperties.snapshotBucket + "/" + snapshotId;
+
+        String walrusSnapshotPath = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + snapshotBucket + "/" + snapshotId;
         HttpReader reader = new HttpReader(walrusSnapshotPath, null, null, "GetSnapshotInfo", "");
         String snapshotDescription = reader.getResponseAsString();
         XMLParser parser = new XMLParser(snapshotDescription);
         //read the list of snapshots and issue requests to walrus to get all deltas
-        List<String> snapshotSet = parser.getValues("/GetSnapshotInfoResponse/SnapshotId");
+        String bucketName = parser.getValue("/GetSnapshotInfoResponse/Bucket");
+        List<String> snapshotSet = parser.getValues("/GetSnapshotInfoResponse/snapshotId");
         for(String snapshot: snapshotSet) {
-            walrusSnapshotPath = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + StorageProperties.snapshotBucket + "/" + snapshot;
-            String snapshotPath = StorageProperties.snapshotRootDirectory + "/" + snapshot;
+            walrusSnapshotPath = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + bucketName + "/" + snapshot;
+            String snapshotPath = StorageProperties.storageRootDirectory + "/" + snapshot;
             snapshotFileNames.add(snapshotPath);
             File file = new File(snapshotPath);
             HttpReader snapshotReader = new HttpReader(walrusSnapshotPath, null, file, "GetSnapshot", "");
@@ -455,7 +462,8 @@ public class Storage {
         private String volumeFileName;
         private String snapshotFileName;
 
-        public Snapshotter(String volumeId, String snapshotId) {
+        public Snapshotter(String volumeBucket, String volumeId, String snapshotId) {
+            this.volumeBucket = volumeBucket;
             this.volumeId = volumeId;
             this.snapshotId = snapshotId;
         }
@@ -474,8 +482,6 @@ public class Storage {
                     VolumeInfo foundVolumeInfo = volumeInfos.get(0);
                     if(!foundVolumeInfo.getTransferred()) {
                         //transfer volume to Walrus
-                        volumeBucket = "snapset-" + Hashes.getRandom(12);
-                        volumeBucket = volumeBucket.replaceAll("\\.", "x");
                         foundVolumeInfo.setVolumeBucket(volumeBucket);
                         foundVolumeInfo.setTransferred(Boolean.TRUE);
                         shouldTransferVolume = true;
