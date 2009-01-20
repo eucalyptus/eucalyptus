@@ -31,11 +31,15 @@
             <groupId>org.apache.ant</groupId>
             <artifactId>ant</artifactId>
             <version>1.7.1</version>
-            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>eucalyptus</groupId>
             <artifactId>msgs</artifactId>
+            <version>1.4</version>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>transport</artifactId>
             <version>1.4</version>
         </dependency>
         <dependency>

@@ -13,6 +13,7 @@
     <orderEntry type="module" module-name="msgs" />
     <orderEntry type="module" module-name="core" />
     <orderEntry type="module" module-name="axis2-transport" />
+    <orderEntry type="module" module-name="cluster-manager" />
   </component>
   <component name="RSpecModuleSettingsStorage">
     <RSPEC_MODULE_SETTINGS_STORAGE_ID NAME="RSPEC_SUPPORT_TYPE" VALUE="NONE" />

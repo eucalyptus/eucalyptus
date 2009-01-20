@@ -50,7 +50,7 @@
         <dependency>
             <groupId>bouncycastle</groupId>
             <artifactId>bcprov-jdk16</artifactId>
-            <version>140</version>
+            <version>139</version>
         </dependency>
         <dependency>
             <groupId>org.mortbay.jetty</groupId>

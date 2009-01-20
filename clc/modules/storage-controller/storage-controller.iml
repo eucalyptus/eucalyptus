@@ -12,6 +12,7 @@
     <orderEntry type="module" module-name="axis2-transport" />
     <orderEntry type="module" module-name="interface" />
     <orderEntry type="library" name="eucalyptus-deps" level="project" />
+    <orderEntryProperties />
   </component>
 </module>
 
