@@ -440,7 +440,7 @@ public class Bukkit {
                             try {
                                 storageManager.putObject(bucketName, tempObjectName, data, true);
                             } catch (IOException ex) {
-
+                                LOG.warn(ex, ex);
                             }
                             //calculate md5 on the fly
                             size += data.length;
@@ -1275,7 +1275,7 @@ public class Bukkit {
                         for(CertificateInfo certInfo: certInfos) {
                             String alias = certInfo.getCertAlias();
                             try {
-                                X509Certificate cert = (X509Certificate) userKeyStore.getCertificate(alias);
+                                X509Certificate cert = userKeyStore.getCertificate(alias);
                                 PublicKey publicKey = cert.getPublicKey();
                                 sigVerifier.initVerify(publicKey);
                                 sigVerifier.update((machineConfiguration + image).getBytes());
@@ -1935,7 +1935,7 @@ public class Bukkit {
         WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
         foundSnapshotInfo.setTransferred(true);
         dbSnap.commit();
-        
+
         return reply;
     }
 

@@ -46,6 +46,7 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
+import org.apache.commons.httpclient.methods.HeadMethod;
 
 public class CreateSnapshotTest extends TestCase {
 
@@ -95,6 +96,21 @@ public class CreateSnapshotTest extends TestCase {
         String responseString = method.getResponseBodyAsString();
         System.out.println(responseString);
         method.releaseConnection();
+    }
+
+    public void testGetSnapshotInfo() throws Throwable {
+        HttpClient httpClient = new HttpClient();
+        String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/snapset-FuXLn1MUHJ66BkK0/snap-zVl2kZJmjhxnEg..";
+
+        HttpMethodBase method = new GetMethod(addr);
+        method.setRequestHeader("Authorization", "Euca");
+        method.setRequestHeader("Date", (new Date()).toString());
+        method.setRequestHeader("Expect", "100-continue");
+        method.setRequestHeader("EucaOperation", "GetSnapshotInfo");
+        httpClient.executeMethod(method);
+        String responseString = method.getResponseBodyAsString();
+        System.out.println(responseString);
+        method.releaseConnection();         
     }
 
     public CreateSnapshotTest() {
