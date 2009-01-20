@@ -47,5 +47,10 @@
             <artifactId>core</artifactId>
             <version>1.4</version>
         </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>interface</artifactId>
+            <version>1.4</version>
+        </dependency>
     </dependencies>
 </project>
