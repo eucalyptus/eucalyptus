@@ -2061,6 +2061,8 @@ public class Bukkit {
                 reply.setLastModified(getObjectResponse.getLastModified());
                 reply.setSize(getObjectResponse.getSize());
                 request.setRandomKey(getObjectType.getRandomKey());
+                request.setBucket(snapshotSetId);
+                request.setKey(volumeKey);
             } else {
                 db.rollback();
                 throw new EucalyptusCloudException("Could not find snapshot set");
