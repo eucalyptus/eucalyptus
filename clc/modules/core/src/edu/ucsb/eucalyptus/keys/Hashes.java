@@ -154,7 +154,7 @@ public class Hashes {
 
     public static String getRandom(int size) {
         SecureRandom random = new SecureRandom();
-        random.setSeed( System.currentTimeMillis() );
+        random.setSeed( System.nanoTime() );
         byte[] randomBytes = new byte[size];
         random.nextBytes(randomBytes);
         return new String(UrlBase64.encode(randomBytes));

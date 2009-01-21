@@ -161,7 +161,6 @@ public class Storage {
 
     public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
         CreateStorageSnapshotResponseType reply = ( CreateStorageSnapshotResponseType ) request.getReply();
-        String snapshotSet = request.getSnapshotSetName();
         String volumeId = request.getVolumeId();
         String snapshotId = request.getSnapshotId();
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
@@ -185,7 +184,8 @@ public class Storage {
                 db2.commit();
                 db.commit();
                 //snapshot asynchronously
-                List<String> returnValues = ebsManager.createSnapshot(volumeId, snapshotId);
+                String snapshotSet = "snapset-" + UUID.randomUUID();
+                ebsManager.createSnapshot(volumeId, snapshotId);
                 Snapshotter snapshotter = new Snapshotter(snapshotSet, volumeId, snapshotId);
                 snapshotter.run();
                 reply.setSnapshotId(snapshotId);
@@ -229,7 +229,6 @@ public class Storage {
     public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
         DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
-        String snapshotBucket = request.getSnapshotSetName();
         String snapshotId = request.getSnapshotId();
 
         EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
@@ -248,7 +247,7 @@ public class Storage {
                     //If there are multiple obsolete snapshots, they will have to be copied over to have a
                     //consistent view of the volume and its snapshots (for new volume creation).
                     //But this requires the current volume to be transferred to Walrus again (the state after lvremove).
-                    HttpWriter httpWriter = new HttpWriter("DELETE", snapshotBucket, snapshotId, "DeleteSnapshot", null);
+                    HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteSnapshot", null);
                     httpWriter.run();
                 } catch (IOException ex) {
                     ex.printStackTrace();
@@ -269,7 +268,6 @@ public class Storage {
     public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
         CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
-        String snapshotBucket = request.getSnapshotSetName();
         String snapshotId = request.getSnapshotId();
         String userId = request.getUserId();
         String volumeId = request.getVolumeId();
@@ -306,7 +304,7 @@ public class Storage {
         db.commit();
 
         //create volume asynchronously
-        VolumeCreator volumeCreator = new VolumeCreator(volumeId, snapshotBucket, snapshotId, sizeAsInt);
+        VolumeCreator volumeCreator = new VolumeCreator(volumeId, "snapset", snapshotId, sizeAsInt);
         volumeCreator.start();
 
         return reply;
@@ -314,13 +312,13 @@ public class Storage {
 
     public class VolumeCreator extends Thread {
         private String volumeId;
-        private String snapshotBucket;
+        private String snapshotSetName;
         private String snapshotId;
         private int size;
 
-        public VolumeCreator(String volumeId, String snapshotBucket, String snapshotId, int size) {
+        public VolumeCreator(String volumeId, String snapshotSetName, String snapshotId, int size) {
             this.volumeId = volumeId;
-            this.snapshotBucket = snapshotBucket;
+            this.snapshotSetName = snapshotSetName;
             this.snapshotId = snapshotId;
             this.size = size;
         }
@@ -335,19 +333,20 @@ public class Storage {
                     if(foundSnapshotInfo == null) {
                         //retrieve the snapshot (tree) from Walrus.
                         //"load" it locally and add to SnapshotInfos
-                        ArrayList<String> snapshotFileNames = new ArrayList<String>();
-                        List<String> snapshotSet = getSnapshots(snapshotBucket, snapshotId, snapshotFileNames);
-                        ebsManager.loadSnapshots(snapshotSet, snapshotFileNames);
+                        //ArrayList<String> snapshotFileNames = new ArrayList<String>();
+                        //List<String> snapshotSet = getSnapshots(snapshotSetName, snapshotId, snapshotFileNames);
+                        String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
+                        //ebsManager.loadSnapshots(snapshotSet, snapshotFileNames);
+                        size = ebsManager.createVolume(volumeId, volumePath);
+
                     } else {
                         if(!foundSnapshotInfo.getStatus().equals(Status.available.toString())) {
                             success = false;
                             db.rollback();
                             LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
                         }
+                        size = ebsManager.createVolume(volumeId, snapshotId, size);
                     }
-
-                    //create new volume from snapshot volume
-                    size = ebsManager.createVolume(volumeId, snapshotId, size);
                     db.commit();
                 } catch(Exception ex) {
                     success = false;
@@ -386,10 +385,21 @@ public class Storage {
         }
     }
 
-    private List<String> getSnapshots(String snapshotBucket, String snapshotId, List<String> snapshotFileNames) {
-        //TODO: fix this
+    private String getVolume(String volumeId, String snapshotBucket, String snapshotId) throws EucalyptusCloudException {
+        String walrusSnapshotPath = snapshotBucket + "/" + snapshotId;
+        String volumePath = StorageProperties.storageRootDirectory + "/" + volumeId;
+        File file = new File(volumePath);
+        if(!file.exists()) {
+            HttpReader volumeReader = new HttpReader(walrusSnapshotPath, null, file, "GetVolume", "");
+            volumeReader.run();
+        } else {
+            throw new EucalyptusCloudException("volume file already exists");
+        }
+        return volumePath;
+    }
 
-        String walrusSnapshotPath = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + snapshotBucket + "/" + snapshotId;
+    private List<String> getSnapshots(String snapshotBucket, String snapshotId, List<String> snapshotFileNames) {
+        String walrusSnapshotPath = snapshotBucket + "/" + snapshotId;
         HttpReader reader = new HttpReader(walrusSnapshotPath, null, null, "GetSnapshotInfo", "");
         String snapshotDescription = reader.getResponseAsString();
         XMLParser parser = new XMLParser(snapshotDescription);
@@ -397,19 +407,21 @@ public class Storage {
         String bucketName = parser.getValue("/GetSnapshotInfoResponse/Bucket");
         List<String> snapshotSet = parser.getValues("/GetSnapshotInfoResponse/snapshotId");
         for(String snapshot: snapshotSet) {
-            walrusSnapshotPath = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + bucketName + "/" + snapshot;
-            String snapshotPath = StorageProperties.storageRootDirectory + "/" + snapshot;
+            walrusSnapshotPath = bucketName + "/" + snapshot;
+            String snapshotPath = StorageProperties.storageRootDirectory + "/" + snapshot + Hashes.getRandom(10);
             snapshotFileNames.add(snapshotPath);
             File file = new File(snapshotPath);
             HttpReader snapshotReader = new HttpReader(walrusSnapshotPath, null, file, "GetSnapshot", "");
             snapshotReader.run();
-            try {
-                //snapshotReader.join();
-            } catch(Exception ex) {
-                ex.printStackTrace();
-            }
         }
         return snapshotSet;
+    }
+
+
+    public void GetSnapshots(String snapshotBucket, String snapshotId) throws EucalyptusCloudException {
+        ArrayList<String> snapshotFileNames = new ArrayList<String>();
+        List<String> snapshotSet = getSnapshots(snapshotBucket, snapshotId, snapshotFileNames);
+        ebsManager.loadSnapshots(snapshotSet, snapshotFileNames);
     }
 
 
@@ -647,7 +659,8 @@ public class Storage {
         }
     }
 
-    class HttpTransfer { //extends Thread {
+    //All HttpTransfer operations should be called asynchronously. The operations themselves are synchronous.
+    class HttpTransfer {
         public HttpMethodBase constructHttpMethod(String verb, String addr, String eucaOperation, String eucaHeader) {
             AbstractKeyStore keyStore = null;
             try {
@@ -686,7 +699,7 @@ public class Storage {
                 sign.update(data.getBytes());
                 byte[] sig = sign.sign();
 
-               // method.setRequestHeader("EucaCert", new String(UrlBase64.encode(ccPublicKey.toString().getBytes()))); // or maybe cert instead of ccPublicKey?
+                // method.setRequestHeader("EucaCert", new String(UrlBase64.encode(ccPublicKey.toString().getBytes()))); // or maybe cert instead of ccPublicKey?
                 method.setRequestHeader("EucaSignature", new String(UrlBase64.encode(sig)));
             } catch(Exception ex) {
                 ex.printStackTrace();
@@ -720,7 +733,7 @@ public class Storage {
             }
 
             InputStream inputStream;
-            if (outFile != null) {                
+            if (outFile != null) {
                 inputStream = new FileInputStream(outFile);
 
 
@@ -839,7 +852,14 @@ public class Storage {
         public String getResponseAsString() {
             try {
                 httpClient.executeMethod(method);
-                return method.getResponseBodyAsString();
+                InputStream inputStream = method.getResponseBodyAsStream();
+                String responseString = "";
+                byte[] bytes = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
+                int bytesRead;
+                while((bytesRead = inputStream.read(bytes)) > 0) {
+                    responseString += new String(bytes, 0 , bytesRead);
+                }
+                return responseString;
             } catch(Exception ex) {
                 ex.printStackTrace();
             } finally {
@@ -854,10 +874,11 @@ public class Storage {
                 httpClient.executeMethod(method);
                 InputStream httpIn = method.getResponseBodyAsStream();
                 int bytesRead;
-                FileOutputStream outStream = new FileOutputStream(file);
+                BufferedOutputStream bufferedOut = new BufferedOutputStream(new FileOutputStream(file));
                 while((bytesRead = httpIn.read(bytes)) > 0) {
-                    outStream.write(bytes, 0, bytesRead);
+                    bufferedOut.write(bytes, 0, bytesRead);
                 }
+                bufferedOut.close();
             } catch (Exception ex) {
                 ex.printStackTrace();
             } finally {

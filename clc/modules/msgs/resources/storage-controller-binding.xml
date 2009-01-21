@@ -44,7 +44,6 @@
      <mapping name="CreateStorageVolume" class="edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
         <value name="VolumeId" field="volumeId"/>
         <value name="Size" field="size"/>
-         <value name="SnapshotSetName" field="snapshotSetName"/>
         <value name="SnapshotId" field="snapshotId"/>
     </mapping>
 
@@ -77,7 +76,6 @@
     </mapping>
 
     <mapping name="CreateStorageSnapshot" class="edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
-        <value name="SnapshotSetName" field="snapshotSetName"/>
         <value name="VolumeId" field="volumeId"/>
         <value name="SnapshotId" field="snapshotId"/>
     </mapping>
@@ -91,7 +89,6 @@
     </mapping>
 
     <mapping name="DeleteStorageSnapshot" class="edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
-        <value name="SnapshotSetName" field="snapshotSetName"/>
         <value name="SnapshotId" field="snapshotId"/>
     </mapping>
 

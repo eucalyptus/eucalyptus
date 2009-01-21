@@ -37,10 +37,5 @@
             <artifactId>core</artifactId>
             <version>1.4</version>
         </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>cluster-manager</artifactId>
-            <version>1.4</version>
-        </dependency>
     </dependencies>
 </project>

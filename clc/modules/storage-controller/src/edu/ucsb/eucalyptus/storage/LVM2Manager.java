@@ -267,6 +267,38 @@ public class LVM2Manager implements ElasticBlockManager {
         db.commit();
     }
 
+    public int createVolume(String volumeId, String volumePath) throws EucalyptusCloudException {
+        File volumeDir = new File(StorageProperties.storageRootDirectory);
+        volumeDir.mkdirs();
+
+        String vgName = "vg-" + Hashes.getRandom(4);
+        String lvName = "lv-" + Hashes.getRandom(4);
+        LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo();
+
+        int size = (int)(new File(volumePath).length() / StorageProperties.GB);
+        //create file and attach to loopback device
+        String loDevName = createLoopback(volumePath);
+        //create physical volume, volume group and logical volume
+        createLogicalVolume(loDevName, vgName, lvName);
+        //export logical volume
+        int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
+        if(vbladePid < 0) {
+            throw new EucalyptusCloudException();
+        }
+        lvmVolumeInfo.setVolumeId(volumeId);
+        lvmVolumeInfo.setLoDevName(loDevName);
+        lvmVolumeInfo.setPvName(loDevName);
+        lvmVolumeInfo.setVgName(vgName);
+        lvmVolumeInfo.setLvName(lvName);
+        lvmVolumeInfo.setStatus(Storage.Status.available.toString());
+        lvmVolumeInfo.setSize(size);
+
+        EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+        db.add(lvmVolumeInfo);
+        db.commit();
+        return size;
+    }
+
     public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException {
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
         LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);

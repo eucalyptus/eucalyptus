@@ -48,6 +48,8 @@ public interface ElasticBlockManager {
 
     public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
 
+    public int createVolume(String volumeId, String volumePath) throws EucalyptusCloudException;
+
     public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException;
 
     public List<String> getStatus(List<String> volumeSet) throws EucalyptusCloudException;
