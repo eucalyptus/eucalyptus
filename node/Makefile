@@ -11,7 +11,7 @@ SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
 WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 NC_LIBS 		= $(LIBS) -lvirt -lcurl
-NC_HANDLERS=handlers_xen.o
+NC_HANDLERS=handlers_xen.o handlers_kvm.o
 
 all: server client clientlib test_nc test
 
