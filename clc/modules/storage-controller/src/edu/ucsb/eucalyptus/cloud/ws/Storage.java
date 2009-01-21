@@ -60,6 +60,7 @@ import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.UrlBase64;
 
 import java.util.*;
+import java.util.zip.GZIPOutputStream;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.io.*;
 import java.security.Signature;
@@ -264,7 +265,11 @@ public class Storage {
 
     public void DeleteWalrusSnapshot(String snapshotId) {
         HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
-        httpWriter.run();
+        try {
+            httpWriter.run();
+        } catch(Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
@@ -541,9 +546,8 @@ public class Storage {
                     LOG.warn(ex, ex);
                 }
                 httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeId, "StoreSnapshot", null, httpParamaters);
-                httpWriter.run();
                 try {
-                    //httpWriter.join();
+                    httpWriter.run();
                 } catch(Exception ex) {
                     ex.printStackTrace();
                     return;
@@ -559,9 +563,8 @@ public class Storage {
                 LOG.warn(ex, ex);
             }
             httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
-            httpWriter.run();
             try {
-                //  httpWriter.join();
+                httpWriter.run();
             } catch(Exception ex) {
                 ex.printStackTrace();
             }
@@ -606,9 +609,8 @@ public class Storage {
                 LOG.warn(ex, ex);
             }
             httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeId, "StoreSnapshot", null, httpParamaters);
-            httpWriter.run();
             try {
-                // httpWriter.join();
+                httpWriter.run();
             } catch(Exception ex) {
                 ex.printStackTrace();
                 return;
@@ -624,9 +626,8 @@ public class Storage {
             LOG.warn(ex, ex);
         }
         httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
-        httpWriter.run();
         try {
-            //       httpWriter.join();
+            httpWriter.run();
         } catch(Exception ex) {
             ex.printStackTrace();
         }
@@ -738,13 +739,15 @@ public class Storage {
             if (outFile != null) {
                 inputStream = new FileInputStream(outFile);
 
-
+                GZIPOutputStream gzipOutStream = new GZIPOutputStream(conn.getRequestOutputStream());
                 byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
                 int bytesRead;
                 while ((bytesRead = inputStream.read(buffer)) > 0) {
-                    conn.write(buffer, 0, bytesRead);
+                    //conn.write(buffer, 0, bytesRead);
+                    gzipOutStream.write(buffer, 0, bytesRead);
                     //callback.run();
                 }
+                gzipOutStream.close();
                 inputStream.close();
             } else{
                 return false;
@@ -789,39 +792,10 @@ public class Storage {
             ((PutMethodWithProgress)method).setOutFile(file);
             ((PutMethodWithProgress)method).setCallBack(callback);
 
-            /*try {
-                PutInputStreamRequestEntity inputRequestEntity = new PutInputStreamRequestEntity(new FileInputStream(file));
-
-                ((PutMethodWithProgress)method).setRequestEntity(inputRequestEntity);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            } */
             this.file = file;
         }
 
-        private class PutInputStreamRequestEntity extends InputStreamRequestEntity {
-            public PutInputStreamRequestEntity(FileInputStream stream) {
-                super(stream);
-            }
-
-            /* @Override
-            public void writeRequest(OutputStream out) throws IOException {
-                InputStream content = this.getContent();
-                byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
-                int bytesRead;
-
-                if(content != null) {
-                    while((bytesRead = content.read(buffer)) > 0) {
-                        out.write(buffer, 0, bytesRead);
-                    }
-                }
-            }*/
-
-            @Override public long getContentLength() {
-                return 100;
-            }
-        }
-        public void run() {
+        public void run() throws EucalyptusCloudException {
             try {
                 httpClient.executeMethod(method);
                 String response = method.getResponseBodyAsString();
@@ -829,6 +803,7 @@ public class Storage {
                 method.releaseConnection();
             } catch (Exception ex) {
                 ex.printStackTrace();
+                throw new EucalyptusCloudException("error transferring");
             }
         }
     }
