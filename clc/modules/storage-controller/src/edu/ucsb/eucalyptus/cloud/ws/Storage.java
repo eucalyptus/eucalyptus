@@ -244,10 +244,7 @@ public class Storage {
                     snapshotStorageManager.deleteObject("", snapshotId);
                     db.delete(foundSnapshotInfo);
                     db.commit();
-                    //If there are multiple obsolete snapshots, they will have to be copied over to have a
-                    //consistent view of the volume and its snapshots (for new volume creation).
-                    //But this requires the current volume to be transferred to Walrus again (the state after lvremove).
-                    HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteSnapshot", null);
+                    HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
                     httpWriter.run();
                 } catch (IOException ex) {
                     ex.printStackTrace();
@@ -263,6 +260,11 @@ public class Storage {
             db.rollback();
         }
         return reply;
+    }
+
+    public void DeleteWalrusSnapshot(String snapshotId) {
+        HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
+        httpWriter.run();
     }
 
     public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
@@ -421,7 +423,7 @@ public class Storage {
     public void GetSnapshots(String volumeId, String snapshotSetName, String snapshotId) throws EucalyptusCloudException {
         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
         //ebsManager.loadSnapshots(snapshotSet, snapshotFileNames);
-        int size = ebsManager.createVolume(volumeId, volumePath);        
+        int size = ebsManager.createVolume(volumeId, volumePath);
     }
 
 
