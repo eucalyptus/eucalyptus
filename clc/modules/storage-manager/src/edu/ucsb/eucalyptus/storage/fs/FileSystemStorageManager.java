@@ -35,11 +35,12 @@
 package edu.ucsb.eucalyptus.storage.fs;
 
 import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.util.WalrusProperties;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 
 import java.io.*;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.UUID;
 
 public class FileSystemStorageManager implements StorageManager {
 
@@ -162,12 +163,20 @@ public class FileSystemStorageManager implements StorageManager {
 
     public native String removePhysicalVolume(String loDevName);
 
-    public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet) {
+    public native String createVolumeFromLv(String lvName, String volumeKey);
+
+    public native String enableLogicalVolume(String lvName);
+
+    public native String disableLogicalVolume(String lvName);
+
+    public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet) throws EucalyptusCloudException {
         //load the snapshot set
         ArrayList<String> loDevices = new ArrayList<String>();
         String snapshotLoDev = null;
         for(String snapshot : snapshotSet) {
             String loDevName = createLoopback(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + snapshot);
+            if(loDevName.length() == 0)
+                throw new EucalyptusCloudException("could not create loopback device for " + snapshot);
             if(snapshot.equals(snapshotId))
                 snapshotLoDev = loDevName;
             loDevices.add(loDevName);
@@ -186,4 +195,42 @@ public class FileSystemStorageManager implements StorageManager {
         }
     }
 
+    public String createVolume(String bucket, List<String> snapshotSet, List<String> vgNames, List<String> lvNames, String snapshotId, String snapshotVgName, String snapshotLvName) throws EucalyptusCloudException {
+        String snapshotLoDev = null;
+        ArrayList<String> loDevices = new ArrayList<String>();
+        for(String snapshot : snapshotSet) {
+            String loDevName = createLoopback(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + snapshot);
+            if(loDevName.length() == 0)
+                throw new EucalyptusCloudException("could not create loopback device for " + snapshot);
+            if(snapshot.equals(snapshotId))
+                snapshotLoDev = loDevName;
+            loDevices.add(loDevName);
+        }
+
+        //enable them
+        int i = 0;
+        ArrayList<String> absoluteLvNames = new ArrayList<String>();
+        String snapshotAbsoluteLvName = null;
+        for(String snapshot : snapshotSet) {
+            String absoluteLvName = lvmRootDirectory + FILE_SEPARATOR + vgNames.get(i) + FILE_SEPARATOR + lvNames.get(i);
+            String returnValue = enableLogicalVolume(absoluteLvName);
+            if(snapshotId == snapshot)
+                snapshotAbsoluteLvName = absoluteLvName;
+            absoluteLvNames.add(absoluteLvName);
+            ++i;
+        }
+
+        String volumeKey = "walrusvol-" + UUID.randomUUID();
+        String volumePath = rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + volumeKey;
+        String returnValue = createVolumeFromLv(snapshotAbsoluteLvName, volumePath);
+        for(String absoluteLvName : absoluteLvNames) {
+            returnValue = disableLogicalVolume(absoluteLvName);
+        }
+
+        //unload the snapshots
+        for(String loDevice : loDevices) {
+            returnValue = removeLoopback(loDevice);
+        }
+        return volumeKey;
+    }
 }

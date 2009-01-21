@@ -67,5 +67,7 @@ public interface StorageManager {
 
     public void setRootDirectory(String rootDirectory);
 
-    public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet);
+    public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet) throws EucalyptusCloudException;
+
+    public String createVolume(String bucket, List<String> snapshotSet, List<String> vgNames, List<String> lvNames, String snapshotId, String snapshotVgName, String snapshotLvName) throws EucalyptusCloudException;
 }

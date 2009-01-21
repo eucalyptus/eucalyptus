@@ -882,7 +882,7 @@ public class Bukkit {
     public GetObjectResponseType GetObject(GetObjectType request) throws EucalyptusCloudException {
         GetObjectResponseType reply = (GetObjectResponseType) request.getReply();
         String bucketName = request.getBucket();
-        String objectName = request.getKey();   
+        String objectName = request.getKey();
         String userId = request.getUserId();
 
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
@@ -1982,23 +1982,47 @@ public class Bukkit {
 
         if(snapshotInfos.size() > 0) {
             WalrusSnapshotInfo foundSnapshotInfo = snapshotInfos.get(0);
-            GetObjectType getObjectType = new GetObjectType();
-            getObjectType.setUserId(request.getUserId());
-            getObjectType.setGetData(true);
-            getObjectType.setInlineData(false);
-            getObjectType.setGetMetaData(false);
-            getObjectType.setBucket(foundSnapshotInfo.getSnapshotSetId());
-            getObjectType.setKey(snapshotId);
-            db.commit();
-            GetObjectResponseType getObjectResponse = GetObject(getObjectType);
-            reply.setEtag(getObjectResponse.getEtag());
-            reply.setLastModified(getObjectResponse.getLastModified());
-            reply.setSize(getObjectResponse.getSize());
-            request.setRandomKey(getObjectType.getRandomKey());
+            String snapshotSetId = foundSnapshotInfo.getSnapshotSetId();
+            EntityWrapper<WalrusSnapshotSet> dbSet = db.recast(WalrusSnapshotSet.class);
+            WalrusSnapshotSet snapSet = new WalrusSnapshotSet(snapshotSetId);
+            List<WalrusSnapshotSet> snapshotSets = dbSet.query(snapSet);
+            if(snapshotSets.size() > 0) {
+                WalrusSnapshotSet snapshotSet = snapshotSets.get(0);
+                List<WalrusSnapshotInfo> snapshots = snapshotSet.getSnapshotSet();
+                ArrayList<String> snapshotIds = new ArrayList<String>();
+                ArrayList<String> vgNames = new ArrayList<String>();
+                ArrayList<String> lvNames = new ArrayList<String>();
+                for(WalrusSnapshotInfo snap : snapshots) {
+                    snapshotIds.add(snap.getSnapshotId());
+                    vgNames.add(snap.getVgName());
+                    lvNames.add(snap.getLvName());
+                }
+                String volumeKey = storageManager.createVolume(snapshotSetId, snapshotIds, vgNames, lvNames, snapshotId, foundSnapshotInfo.getVgName(), foundSnapshotInfo.getLvName());
+
+                GetObjectType getObjectType = new GetObjectType();
+                getObjectType.setUserId(request.getUserId());
+                getObjectType.setGetData(true);
+                getObjectType.setInlineData(false);
+                getObjectType.setGetMetaData(false);
+                getObjectType.setBucket(snapshotSetId);
+                getObjectType.setKey(snapshotId);
+                db.commit();
+                GetObjectResponseType getObjectResponse = GetObject(getObjectType);
+                reply.setEtag(getObjectResponse.getEtag());
+                reply.setLastModified(getObjectResponse.getLastModified());
+                reply.setSize(getObjectResponse.getSize());
+                request.setRandomKey(getObjectType.getRandomKey());
+
+
+            } else {
+                db.rollback();
+                throw new EucalyptusCloudException("Could not find snapshot set");
+            }
         } else {
             db.rollback();
             throw new NoSuchSnapshotException(snapshotId);
         }
+
         return reply;
     }
 
@@ -2072,7 +2096,11 @@ public class Bukkit {
         }
 
         public void run() {
-            storageManager.deleteSnapshot(bucketName, snapshotId, vgName, lvName, snapshotSet);
+            try {
+                storageManager.deleteSnapshot(bucketName, snapshotId, vgName, lvName, snapshotSet);
+            } catch(EucalyptusCloudException ex) {
+                LOG.warn(ex, ex);
+            }
         }
     }
 

@@ -418,10 +418,10 @@ public class Storage {
     }
 
 
-    public void GetSnapshots(String snapshotBucket, String snapshotId) throws EucalyptusCloudException {
-        ArrayList<String> snapshotFileNames = new ArrayList<String>();
-        List<String> snapshotSet = getSnapshots(snapshotBucket, snapshotId, snapshotFileNames);
-        ebsManager.loadSnapshots(snapshotSet, snapshotFileNames);
+    public void GetSnapshots(String volumeId, String snapshotSetName, String snapshotId) throws EucalyptusCloudException {
+        String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
+        //ebsManager.loadSnapshots(snapshotSet, snapshotFileNames);
+        int size = ebsManager.createVolume(volumeId, volumePath);        
     }
 
 

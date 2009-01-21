@@ -131,3 +131,41 @@ JNIEXPORT jstring Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_r
 	(*env)->ReleaseStringUTFChars(env, vgName, vg_name);
 	return returnValue;
 }
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_enableLogicalVolume
+  (JNIEnv *env, jobject obj, jstring lvName) {
+    const jbyte* lv_name = (*env)->GetStringUTFChars(env, lvName, NULL);
+	char command[256];
+
+	snprintf(command, 256, "lvchange -ay %s", lv_name);
+    jstring returnValue = run_command(env, command, 1);
+
+    (*env)->ReleaseStringUTFChars(env, lvName, lv_name);
+    return returnValue;
+}
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_disableLogicalVolume
+  (JNIEnv *env, jobject obj, jstring lvName) {
+    const jbyte* lv_name = (*env)->GetStringUTFChars(env, lvName, NULL);
+	char command[256];
+
+	snprintf(command, 256, "lvchange -an %s", lv_name);
+    jstring returnValue = run_command(env, command, 1);
+
+    (*env)->ReleaseStringUTFChars(env, lvName, lv_name);
+    return returnValue;
+}
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_createVolumeFromLv
+  (JNIEnv *env, jobject obj, jstring lvName, jstring volumePath) {
+    const jbyte* lv_name = (*env)->GetStringUTFChars(env, lvName, NULL);
+    const jbyte* volume_path = (*env)->GetStringUTFChars(env, volumePath, NULL);
+	char command[256];
+
+	snprintf(command, 256, "dd if=%s of=%s", lv_name, volume_path);
+	jstring returnValue = run_command(env, command, 1);
+
+    (*env)->ReleaseStringUTFChars(env, lvName, lv_name);
+    (*env)->ReleaseStringUTFChars(env, volumePath, volume_path);    
+    return returnValue;
+}
