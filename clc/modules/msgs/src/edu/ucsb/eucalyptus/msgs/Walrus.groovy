@@ -437,10 +437,12 @@ public class StoreSnapshotType extends WalrusDataRequestType {
 public class StoreSnapshotResponseType extends WalrusDataResponseType {
 }
 
-public class DeleteWalrusSnapshotType extends WalrusDataRequestType {
+public class DeleteWalrusSnapshotType extends WalrusRequestType {
+    String bucket;
+    String key;
 }
 
-public class DeleteWalrusSnapshotResponseType extends WalrusDataResponseType {
+public class DeleteWalrusSnapshotResponseType extends WalrusResponseType {
 }
 
 public class GetSnapshotInfoType extends WalrusRequestType {

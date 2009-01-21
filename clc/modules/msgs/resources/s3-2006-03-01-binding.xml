@@ -359,11 +359,12 @@
     </mapping>
 
     <mapping name="DeleteWalrusSnapshot" class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
+        <value name="Bucket" field="bucket"/>
+        <value name="Key" field="key"/>
+        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 
     <mapping name="DeleteWalrusSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotResponseType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 
     <mapping name="GetSnapshotInfo" class="edu.ucsb.eucalyptus.msgs.GetSnapshotInfoType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
