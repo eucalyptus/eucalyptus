@@ -75,6 +75,12 @@ public class FileSystemStorageManager implements StorageManager {
         }
     }
 
+    public long getSize(String bucket, String object) {
+        File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+        if(objectFile.exists())
+            return objectFile.length();
+        return -1;
+    }
 
     public boolean isEmpty(String bucket) {
         return true;  //To change body of implemented methods use File | Settings | File Templates.

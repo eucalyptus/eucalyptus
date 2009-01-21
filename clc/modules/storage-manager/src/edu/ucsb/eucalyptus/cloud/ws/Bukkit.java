@@ -564,6 +564,51 @@ public class Bukkit {
         return reply;
     }
 
+    private void AddObject (String userId, String bucketName, String key) throws EucalyptusCloudException {
+
+        AccessControlListType accessControlList = new AccessControlListType();
+        if (accessControlList == null) {
+            accessControlList = new AccessControlListType();
+        }
+
+        EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+        BucketInfo bucketInfo = new BucketInfo(bucketName);
+        List<BucketInfo> bucketList = db.query(bucketInfo);
+
+        if(bucketList.size() > 0) {
+            BucketInfo bucket = bucketList.get(0);
+            if (bucket.canWrite(userId)) {
+                List<ObjectInfo> objectInfos = bucket.getObjects();
+                for (ObjectInfo objectInfo: objectInfos) {
+                    if (objectInfo.getObjectName().equals(key)) {
+                        //key (object) exists.
+                        db.rollback();
+                        throw new EucalyptusCloudException("object already exists " + key);
+                    }
+                }
+                //write object to bucket
+                ObjectInfo objectInfo = new ObjectInfo(key);
+                List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+                objectInfo.addGrants(userId, grantInfos, accessControlList);
+                objectInfo.setGrants(grantInfos);
+                objectInfos.add(objectInfo);
+
+                objectInfo.setObjectName(key);
+                objectInfo.setOwnerId(userId);
+                objectInfo.setSize(storageManager.getSize(bucketName, key));
+                objectInfo.setEtag("");
+                objectInfo.setLastModified(new Date());
+            } else {
+                db.rollback();
+                throw new AccessDeniedException(bucketName);
+            }
+        }   else {
+            db.rollback();
+            throw new NoSuchBucketException(bucketName);
+        }
+        db.commit();
+    }
+
     public DeleteObjectResponseType DeleteObject (DeleteObjectType request) throws EucalyptusCloudException {
         DeleteObjectResponseType reply = (DeleteObjectResponseType) request.getReply();
         String bucketName = request.getBucket();
@@ -1977,6 +2022,7 @@ public class Bukkit {
     public GetVolumeResponseType GetVolume(GetVolumeType request) throws EucalyptusCloudException {
         GetVolumeResponseType reply = (GetVolumeResponseType) request.getReply();
         String snapshotId = request.getKey();
+        String userId = request.getUserId();
         EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
         WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
         List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
@@ -2000,6 +2046,8 @@ public class Bukkit {
                 }
                 String volumeKey = storageManager.createVolume(snapshotSetId, snapshotIds, vgNames, lvNames, snapshotId, foundSnapshotInfo.getVgName(), foundSnapshotInfo.getLvName());
 
+                AddObject(userId, snapshotSetId, volumeKey);
+
                 GetObjectType getObjectType = new GetObjectType();
                 getObjectType.setUserId(request.getUserId());
                 getObjectType.setGetData(true);
@@ -2013,8 +2061,6 @@ public class Bukkit {
                 reply.setLastModified(getObjectResponse.getLastModified());
                 reply.setSize(getObjectResponse.getSize());
                 request.setRandomKey(getObjectType.getRandomKey());
-
-
             } else {
                 db.rollback();
                 throw new EucalyptusCloudException("Could not find snapshot set");

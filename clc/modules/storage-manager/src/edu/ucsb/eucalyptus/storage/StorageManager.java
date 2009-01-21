@@ -47,6 +47,8 @@ public interface StorageManager {
 
 	public boolean isEmpty(String bucket);
 
+    public long getSize(String bucket, String object);
+
     public void deleteBucket(String bucket) throws IOException;
 
     public void createObject(String bucket, String object) throws IOException;
