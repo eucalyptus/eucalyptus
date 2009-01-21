@@ -180,12 +180,16 @@ public class FileSystemStorageManager implements StorageManager {
         //load the snapshot set
         ArrayList<String> loDevices = new ArrayList<String>();
         String snapshotLoDev = null;
+        String snapshotFileName = null;
         for(String snapshot : snapshotSet) {
-            String loDevName = createLoopback(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + snapshot);
+            String fileName = rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + snapshot;
+            String loDevName = createLoopback(fileName);
             if(loDevName.length() == 0)
                 throw new EucalyptusCloudException("could not create loopback device for " + snapshot);
-            if(snapshot.equals(snapshotId))
+            if(snapshot.equals(snapshotId)) {
                 snapshotLoDev = loDevName;
+                snapshotFileName = fileName;
+            }
             loDevices.add(loDevName);
         }
         //now remove the snapshot
@@ -199,6 +203,13 @@ public class FileSystemStorageManager implements StorageManager {
         //unload the snapshots
         for(String loDevice : loDevices) {
             returnValue = removeLoopback(loDevice);
+        }
+
+        //remove the snapshot backing store
+        try {
+            deleteObject("", snapshotFileName);
+        } catch(Exception ex) {
+            throw new EucalyptusCloudException("could not delete snapshot file " + snapshotFileName);
         }
     }
 

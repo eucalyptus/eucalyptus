@@ -110,7 +110,7 @@ public class WalrusProperties {
     }
 
     public enum StorageOperations {
-        StoreSnapshot, DeleteSnapshot, GetSnapshotInfo, GetVolume
+        StoreSnapshot, DeleteWalrusSnapshot, GetSnapshotInfo, GetVolume
     }
 
     public enum InfoOperations {
