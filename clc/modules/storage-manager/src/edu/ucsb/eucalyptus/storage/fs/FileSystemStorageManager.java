@@ -36,6 +36,7 @@ package edu.ucsb.eucalyptus.storage.fs;
 
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.keys.Hashes;
 
 import java.io.*;
 import java.util.List;
@@ -214,13 +215,13 @@ public class FileSystemStorageManager implements StorageManager {
         for(String snapshot : snapshotSet) {
             String absoluteLvName = lvmRootDirectory + FILE_SEPARATOR + vgNames.get(i) + FILE_SEPARATOR + lvNames.get(i);
             String returnValue = enableLogicalVolume(absoluteLvName);
-            if(snapshotId == snapshot)
+            if(snapshotId.equals(snapshot))
                 snapshotAbsoluteLvName = absoluteLvName;
             absoluteLvNames.add(absoluteLvName);
             ++i;
         }
 
-        String volumeKey = "walrusvol-" + UUID.randomUUID();
+        String volumeKey = "walrusvol-" + Hashes.getRandom(16);
         String volumePath = rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + volumeKey;
         String returnValue = createVolumeFromLv(snapshotAbsoluteLvName, volumePath);
         for(String absoluteLvName : absoluteLvNames) {

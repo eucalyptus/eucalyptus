@@ -73,6 +73,7 @@ public class Bukkit {
         if(limits != null) {
             shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
         }
+        storageManager.initialize();
     }
 
     //For unit testing
@@ -2005,7 +2006,7 @@ public class Bukkit {
                 getObjectType.setInlineData(false);
                 getObjectType.setGetMetaData(false);
                 getObjectType.setBucket(snapshotSetId);
-                getObjectType.setKey(snapshotId);
+                getObjectType.setKey(volumeKey);
                 db.commit();
                 GetObjectResponseType getObjectResponse = GetObject(getObjectType);
                 reply.setEtag(getObjectResponse.getEtag());
@@ -2092,7 +2093,6 @@ public class Bukkit {
             this.snapshotId = snapshotId;
             this.vgName = vgName;
             this.lvName = lvName;
-            storageManager.initialize();
         }
 
         public void run() {
