@@ -79,6 +79,12 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	snprintf(cmd, 256, "-A POSTROUTING -d ! %s/%d -j MASQUERADE", network, slashnet);
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
+	snprintf(cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 dev %s", vnetconfig->eucahome, vnetconfig->pubInterface);
+	rc = system(cmd);
+	
+	snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to 169.254.169.254:8773", network, slashnet);
+	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
 	for (vlan=2; vlan<NUMBER_OF_VLANS; vlan++) {
