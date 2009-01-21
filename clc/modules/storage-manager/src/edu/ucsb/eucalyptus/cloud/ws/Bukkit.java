@@ -1973,8 +1973,8 @@ public class Bukkit {
         return reply;
     }
 
-    public GetSnapshotResponseType GetSnapshot(GetSnapshotType request) throws EucalyptusCloudException {
-        GetSnapshotResponseType reply = (GetSnapshotResponseType) request.getReply();
+    public GetVolumeResponseType GetVolume(GetVolumeType request) throws EucalyptusCloudException {
+        GetVolumeResponseType reply = (GetVolumeResponseType) request.getReply();
         String snapshotId = request.getKey();
         EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
         WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
