@@ -449,6 +449,7 @@ public class GetSnapshotInfoType extends WalrusRequestType {
 }
 
 public class GetSnapshotInfoResponseType extends WalrusResponseType {
+    String bucket;
     ArrayList<String> snapshotSet = new ArrayList<String>();
 }
 

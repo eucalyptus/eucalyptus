@@ -373,10 +373,9 @@
 
     <mapping name="GetSnapshotInfoResponse" class="edu.ucsb.eucalyptus.msgs.GetSnapshotInfoResponseType">
         <collection field="snapshotSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String" >
-            <structure name="SnapshotId">
                 <value name="snapshotId" />
-            </structure >
         </collection >
+        <value name="Bucket" field="bucket"/>
     </mapping>
 
 </binding>

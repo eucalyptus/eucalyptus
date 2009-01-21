@@ -882,7 +882,7 @@ public class Bukkit {
     public GetObjectResponseType GetObject(GetObjectType request) throws EucalyptusCloudException {
         GetObjectResponseType reply = (GetObjectResponseType) request.getReply();
         String bucketName = request.getBucket();
-        String objectName = request.getKey();
+        String objectName = request.getKey();   
         String userId = request.getUserId();
 
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
@@ -1955,6 +1955,8 @@ public class Bukkit {
                 String snapshotSetId = foundSnapshotInfo.getSnapshotSetId();
                 WalrusSnapshotSet snapshotSetInfo = dbSet.getUnique(new WalrusSnapshotSet(snapshotSetId));
                 List<WalrusSnapshotInfo> walrusSnapshotInfos = snapshotSetInfo.getSnapshotSet();
+                //bucket name
+                reply.setBucket(snapshotSetId);
                 //the volume is the snapshot at time 0
                 for(WalrusSnapshotInfo walrusSnapshotInfo : walrusSnapshotInfos) {
                     snapshotSet.add(walrusSnapshotInfo.getSnapshotId());
@@ -1992,6 +1994,7 @@ public class Bukkit {
             reply.setEtag(getObjectResponse.getEtag());
             reply.setLastModified(getObjectResponse.getLastModified());
             reply.setSize(getObjectResponse.getSize());
+            request.setRandomKey(getObjectType.getRandomKey());
         } else {
             db.rollback();
             throw new NoSuchSnapshotException(snapshotId);
