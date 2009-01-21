@@ -36,7 +36,7 @@ package edu.ucsb.eucalyptus.transport;
 
 import edu.ucsb.eucalyptus.transport.config.*;
 import org.apache.axis2.AxisFault;
-import org.apache.axis2.description.AxisService;
+import org.apache.axis2.description.*;
 import org.apache.log4j.Logger;
 import org.mule.api.component.JavaComponent;
 import org.mule.api.endpoint.InboundEndpoint;
@@ -46,7 +46,7 @@ import org.mule.api.transport.Connector;
 import org.mule.transport.*;
 
 import javax.xml.namespace.QName;
-import java.util.Map;
+import java.util.*;
 
 public class Axis2MessageReceiver extends AbstractMessageReceiver {
 
@@ -55,8 +55,7 @@ public class Axis2MessageReceiver extends AbstractMessageReceiver {
   private Axis2InProperties properties;
 
   @SuppressWarnings( "unchecked" )
-  public Axis2MessageReceiver( Connector connector, Service service, InboundEndpoint endpoint ) throws CreateException
-  {
+  public Axis2MessageReceiver( Connector connector, Service service, InboundEndpoint endpoint ) throws CreateException {
     super( connector, service, endpoint );
     Class serviceClass = ( ( JavaComponent ) this.getService().getComponent() ).getObjectType();
     if ( !endpoint.getProperties().containsKey( Key.WSSEC_POLICY.getKey() ) )
@@ -64,26 +63,30 @@ public class Axis2MessageReceiver extends AbstractMessageReceiver {
     this.properties = new Axis2InProperties( serviceClass, ( Map<String, String> ) endpoint.getProperties(), ( ( Axis2Connector ) connector ).getAxisConfig() );
   }
 
-  public void doConnect() throws ConnectException
-  {
-    try
-    {
+  public void doConnect() throws ConnectException {
+    try {
       this.axisService = Axis2ServiceBuilder.getAxisService( this );
     }
-    catch ( AxisFault axisFault )
-    {
+    catch ( AxisFault axisFault ) {
       throw new ConnectException( axisFault, this );
     }
   }
 
-  public void removeOperation( String operationName ) {
+  private Map<String,AxisOperation> disabledOperations = new HashMap<String, AxisOperation>();
+
+  public void disableOperation( String operationName ) {
+    this.disabledOperations.put( operationName, this.axisService.getOperation( new QName( operationName ) ) );
     this.axisService.removeOperation( new QName( operationName ) );
   }
 
-  public void doStart()
-  {
-    try
-    {
+  public void enableOperation( String operationName ) {
+    AxisOperation op = this.disabledOperations.remove( operationName );
+    this.axisService.addOperation( op );
+  }
+
+
+  public void doStart() {
+    try {
       Axis2Connector connector = ( Axis2Connector ) this.getConnector();
       this.axisService.setActive( true );
       connector.getAxisConfig().deployService( this.axisService );
@@ -92,8 +95,7 @@ public class Axis2MessageReceiver extends AbstractMessageReceiver {
     catch ( AxisFault axisFault ) {}
   }
 
-  public Axis2InProperties getProperties()
-  {
+  public Axis2InProperties getProperties() {
     return this.properties;
   }
 
