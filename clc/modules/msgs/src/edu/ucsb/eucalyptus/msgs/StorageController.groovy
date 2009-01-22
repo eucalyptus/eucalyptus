@@ -56,6 +56,12 @@ public class StorageErrorMessageType extends EucalyptusMessage {
     }
 }
 
+public class InitializeStorageManagerType extends StorageRequestType {
+}
+
+public class InitializeStorageManagerResponseType extends StorageResponseType {    
+}
+
 public class GetStorageVolumeType extends StorageRequestType {
     String volumeId;
 }

@@ -84,6 +84,12 @@ public class Bukkit {
     //For unit testing
     public Bukkit () {}
 
+    public InitializeWalrusResponseType InitializeWalrus(InitializeWalrusType request) {
+        InitializeWalrusResponseType reply = (InitializeWalrusResponseType) request.getReply();
+        initializeForEBS();
+        return reply;
+    }
+
     public CreateBucketResponseType CreateBucket(CreateBucketType request) throws EucalyptusCloudException {
         CreateBucketResponseType reply = (CreateBucketResponseType) request.getReply();
         String userId = request.getUserId();
@@ -1981,11 +1987,11 @@ public class Bukkit {
         reply.setStatusMessage(putObjectResponseType.getStatusMessage());
 
         //change state 
-       /* snapshotInfo = new WalrusSnapshotInfo(snapshotId);
-        dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
-        WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
-        foundSnapshotInfo.setTransferred(true);
-        dbSnap.commit();  */
+        /* snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+      dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
+      WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
+      foundSnapshotInfo.setTransferred(true);
+      dbSnap.commit();  */
 
         return reply;
     }

@@ -51,6 +51,12 @@ public class WalrusRequestType extends EucalyptusMessage {
     }
 }
 
+public class InitializeWalrusType extends WalrusRequestType {
+}
+
+public class InitializeWalrusResponseType extends WalrusResponseType {    
+}
+
 public class CanonicalUserType extends EucalyptusData {
     String ID;
     String DisplayName;
