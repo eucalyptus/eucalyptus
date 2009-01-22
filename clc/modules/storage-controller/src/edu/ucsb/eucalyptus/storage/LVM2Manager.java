@@ -188,7 +188,9 @@ public class LVM2Manager implements ElasticBlockManager {
     }
 
     public String createLoopback(String fileName, int size) throws EucalyptusCloudException {
-        String returnValue = createEmptyFile(fileName, size);
+        createEmptyFile(fileName, size);
+        if(!(new File(fileName).exists()))
+            throw new EucalyptusCloudException("Unable to create file " + fileName);
         return createLoopback(fileName);
     }
 

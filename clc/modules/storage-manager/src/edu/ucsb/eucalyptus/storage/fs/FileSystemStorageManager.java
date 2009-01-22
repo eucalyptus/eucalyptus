@@ -195,10 +195,17 @@ public class FileSystemStorageManager implements StorageManager {
         //now remove the snapshot
         String absoluteLVName = lvmRootDirectory + FILE_SEPARATOR + vgName + FILE_SEPARATOR + lvName;
         String returnValue = removeLogicalVolume(absoluteLVName);
-        //TODO: error checking
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
+        }
         returnValue = reduceVolumeGroup(vgName, snapshotLoDev);
-        //TODO: error checking
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to remove volume group " + vgName);
+        }
         returnValue = removePhysicalVolume(snapshotLoDev);
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to remove physical volume " + snapshotLoDev);
+        }
 
         //unload the snapshots
         for(String loDevice : loDevices) {
@@ -231,7 +238,8 @@ public class FileSystemStorageManager implements StorageManager {
         String snapshotAbsoluteLvName = null;
         for(String snapshot : snapshotSet) {
             String absoluteLvName = lvmRootDirectory + FILE_SEPARATOR + vgNames.get(i) + FILE_SEPARATOR + lvNames.get(i);
-            String returnValue = enableLogicalVolume(absoluteLvName);
+            if(i == 0)
+                enableLogicalVolume(absoluteLvName);
             if(snapshotId.equals(snapshot))
                 snapshotAbsoluteLvName = absoluteLvName;
             absoluteLvNames.add(absoluteLvName);
@@ -240,14 +248,17 @@ public class FileSystemStorageManager implements StorageManager {
 
         String volumeKey = "walrusvol-" + Hashes.getRandom(16);
         String volumePath = rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + volumeKey;
-        String returnValue = createVolumeFromLv(snapshotAbsoluteLvName, volumePath);
+        createVolumeFromLv(snapshotAbsoluteLvName, volumePath);
+        if(!(new File(volumePath).exists()))
+            throw new EucalyptusCloudException("Unable to create file " + volumePath);
+
         for(String absoluteLvName : absoluteLvNames) {
-            returnValue = disableLogicalVolume(absoluteLvName);
+            String returnValue = disableLogicalVolume(absoluteLvName);
         }
 
         //unload the snapshots
         for(String loDevice : loDevices) {
-            returnValue = removeLoopback(loDevice);
+            String returnValue = removeLoopback(loDevice);
         }
         return volumeKey;
     }
