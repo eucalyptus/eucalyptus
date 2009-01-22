@@ -1911,7 +1911,7 @@ public class Bukkit {
         String bucketName = request.getBucket();
         String snapshotVgName = request.getSnapshotvgname();
         String snapshotLvName = request.getSnapshotlvname();
-        boolean createBucket = false;
+        boolean createBucket = true;
 
         EntityWrapper<WalrusSnapshotSet> db = new EntityWrapper<WalrusSnapshotSet>();
         WalrusSnapshotSet snapshotSet = new WalrusSnapshotSet(bucketName);
@@ -1926,7 +1926,7 @@ public class Bukkit {
             foundSnapshotSet = snapshotSets.get(0);
         }
 
-        List<WalrusSnapshotInfo> snapshotInfos = foundSnapshotSet.getSnapshotSet();
+/*        List<WalrusSnapshotInfo> snapshotInfos = foundSnapshotSet.getSnapshotSet();
         for(WalrusSnapshotInfo snapInfo: snapshotInfos) {
             if(snapInfo.getSnapshotId().equals(snapshotId)) {
                 db.rollback();
@@ -1942,7 +1942,7 @@ public class Bukkit {
         snapshotInfo.setTransferred(false);
         EntityWrapper<WalrusSnapshotInfo> dbSnap = db.recast(WalrusSnapshotInfo.class);
         snapshotInfos.add(snapshotInfo);
-        dbSnap.add(snapshotInfo);
+        dbSnap.add(snapshotInfo); */
 
         //read and store it
         db.commit();
@@ -1976,11 +1976,11 @@ public class Bukkit {
         reply.setStatusMessage(putObjectResponseType.getStatusMessage());
 
         //change state 
-        snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+       /* snapshotInfo = new WalrusSnapshotInfo(snapshotId);
         dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
         WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
         foundSnapshotInfo.setTransferred(true);
-        dbSnap.commit();
+        dbSnap.commit();  */
 
         return reply;
     }

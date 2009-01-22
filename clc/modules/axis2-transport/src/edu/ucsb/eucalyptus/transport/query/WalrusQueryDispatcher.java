@@ -49,6 +49,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class WalrusQueryDispatcher extends GenericHttpDispatcher implements RESTfulDispatcher {
@@ -219,18 +220,28 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             if (verb.equals(HTTPVerb.PUT.toString())) {
                 messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
                 InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
-                BufferedInputStream bufferedIn = new BufferedInputStream(in);
+                InputStream inStream = in;
+                if(!operationName.equals(WalrusProperties.StorageOperations.StoreSnapshot.toString())) {
+                    inStream = new BufferedInputStream(in);
+                } else {
+                    try {
+                        inStream = new GZIPInputStream(in);
+                    } catch(Exception ex) {
+                        LOG.warn(ex, ex);
+                        return null;
+                    }
+                }
                 String key = target[0] + "." + target[1];
                 String randomKey = key + "." + Hashes.getRandom(10);
                 LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
                 int dataLength = 0;
                 try {
-                    dataLength = bufferedIn.available();
+                    dataLength = inStream.available();
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
 
-                Writer writer = new Writer(bufferedIn, dataLength, putQueue);
+                Writer writer = new Writer(inStream, dataLength, putQueue);
                 writer.start();
 
                 operationParams.put("ContentLength", (new Long(dataLength).toString()));
@@ -429,10 +440,10 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
     class Writer extends Thread {
 
-        private BufferedInputStream in;
+        private InputStream in;
         private long dataLength;
         private LinkedBlockingQueue<WalrusDataMessage> putQueue;
-        public Writer(BufferedInputStream in, long dataLength, LinkedBlockingQueue<WalrusDataMessage> putQueue) {
+        public Writer(InputStream in, long dataLength, LinkedBlockingQueue<WalrusDataMessage> putQueue) {
             this.in = in;
             this.dataLength = dataLength;
             this.putQueue = putQueue;
