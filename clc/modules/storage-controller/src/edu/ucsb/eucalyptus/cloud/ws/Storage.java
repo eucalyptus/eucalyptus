@@ -82,18 +82,24 @@ public class Storage {
     static {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
-        ebsManager = new LVM2Manager();
-        //NOTE: initializeForEBS MUST be called before exercizing any storage/EBS functionality        
+        //NOTE: initializeForEBS MUST be called before exercizing any storage/EBS functionality
         //initializeForEBS();
     }
 
     public static void initializeForEBS() {
+        ebsManager = new LVM2Manager();
         ebsManager.initVolumeManager();
         ebsManager.reload();
     }
+
     //For unit testing
     public Storage() {}
 
+    public InitializeStorageManagerResponseType InitializeStorageManager(InitializeStorageManagerType request) {
+        InitializeStorageManagerResponseType reply = (InitializeStorageManagerResponseType) request.getReply();
+        initializeForEBS();
+        return reply;
+    }
 
     public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) {
         UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
@@ -768,7 +774,7 @@ public class Storage {
                 byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
                 int bytesRead;
                 int numberProcessed = 0;
-                while ((bytesRead = inputStream.read(buffer)) > 0) {                    
+                while ((bytesRead = inputStream.read(buffer)) > 0) {
                     gzipOutStream.write(buffer, 0, bytesRead);
                     if(++numberProcessed >= callback.getUpdateThreshold()) {
                         callback.run();
