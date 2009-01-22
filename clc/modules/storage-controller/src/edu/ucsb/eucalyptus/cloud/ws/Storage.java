@@ -83,10 +83,14 @@ public class Storage {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         ebsManager = new LVM2Manager();
+        //NOTE: initializeForEBS MUST be called before exercizing any storage/EBS functionality        
+        //initializeForEBS();
+    }
+
+    public static void initializeForEBS() {
         ebsManager.initVolumeManager();
         ebsManager.reload();
     }
-
     //For unit testing
     public Storage() {}
 

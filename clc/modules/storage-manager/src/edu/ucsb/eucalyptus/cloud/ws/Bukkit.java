@@ -73,6 +73,11 @@ public class Bukkit {
         if(limits != null) {
             shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
         }
+        //NOTE: initializeForEBS MUST be called before exercizing any storage/EBS functionality
+        //initializeForEBS();
+    }
+
+    public static void initializeForEBS() {
         storageManager.initialize();
     }
 
