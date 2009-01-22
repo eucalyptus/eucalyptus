@@ -22,8 +22,8 @@
 
 static size_t write_data   (void *buffer, size_t size, size_t nmemb, void *userp);
 static size_t write_header (void *buffer, size_t size, size_t nmemb, void *userp);
-static int total_wrote;
-static int total_calls;
+static long long total_wrote;
+static long long total_calls;
 
 /* downloads a decrypted image from Walrus based on the manifest URL,
  * saves it to outfile */
@@ -50,7 +50,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 		return code;
 	} 
 
-	FILE * fp = fopen (outfile, "w");
+	FILE * fp = fopen64 (outfile, "w");
 	if (fp==NULL) {
 		logprintfl (EUCAERROR, "walrus_request(): failed to open %s for writing\n", outfile);
 		return code;
@@ -119,10 +119,10 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 
 	curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers); /* register headers */
 
-	total_wrote = total_calls = 0;
+	total_wrote = total_calls = 0L;
     logprintfl (EUCADEBUG, "walrus_request(): writing %s/%s output to %s\n", verb, walrus_op, outfile);
 	result = curl_easy_perform (curl); /* do it */
-    logprintfl (EUCADEBUG, "walrus_request(): wrote %d bytes in %d writes\n", total_wrote, total_calls);
+    logprintfl (EUCADEBUG, "walrus_request(): wrote %l bytes in %l writes\n", total_wrote, total_calls);
 	fclose (fp);
 	
     int remove_outfile = 0;

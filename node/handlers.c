@@ -33,7 +33,7 @@ static struct handlers * available_handlers [] = {
 };
 
 // the chosen handlers
-static struct handlers * handlers = NULL;
+static struct handlers * H = NULL;
 
 static int init (void)
 {
@@ -79,23 +79,23 @@ static int init (void)
         logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
         return 1;
     }
-    struct handlers ** h = available_handlers;
-    while ( *(h++) ) {
+    struct handlers ** h; 
+    for (h = available_handlers; *h; h++ ) {
         if (! strncmp ((*h)->name, hypervisor, CHAR_BUFFER_SIZE) ) { 
             // the name matches!
-            handlers = * h; 
+            H = * h; 
             break;
         }
     }
-    if (!handlers) {
+    if (H==NULL) {
         logprintfl (EUCAFATAL, "requested hypervisor type (%s) is not available\n", hypervisor);
         free (hypervisor);
         return 1;
     }
     free (hypervisor);
 
-    if (handlers->doInitialize)
-        if (handlers->doInitialize())
+    if (H->doInitialize)
+        if (H->doInitialize())
             return 1;
     
     initialized = 1;
@@ -105,53 +105,53 @@ static int init (void)
 int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
 {
     if (init()) return 1;
-    return handlers->doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);
+    return H->doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);
 }
 
 int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
     if (init()) return 1;
-    return handlers->doRunInstance (meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, privMac, pubMac, vlan, userData, launchIndex, groupNames, groupNamesSize, outInst);
+    return H->doRunInstance (meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, privMac, pubMac, vlan, userData, launchIndex, groupNames, groupNamesSize, outInst);
 }
 
 int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState)
 {
     if (init()) return 1;
-    return handlers->doTerminateInstance (meta, instanceId, shutdownState, previousState);
+    return H->doTerminateInstance (meta, instanceId, shutdownState, previousState);
 }
 
 int doRebootInstance (ncMetadata *meta, char *instanceId) 
 {
     if (init()) return 1;
-    return handlers->doRebootInstance (meta, instanceId);
+    return H->doRebootInstance (meta, instanceId);
 }
 
 int doGetConsoleOutput (ncMetadata *meta, char *instanceId, char **consoleOutput) 
 {
     if (init()) return 1;
-    return handlers->doGetConsoleOutput (meta, instanceId, consoleOutput);
+    return H->doGetConsoleOutput (meta, instanceId, consoleOutput);
 }
 
 int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource **outRes)
 {
     if (init()) return 1;
-    return handlers->doDescribeResource (meta, resourceType, outRes);
+    return H->doDescribeResource (meta, resourceType, outRes);
 }
 
 int doStartNetwork (ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan)
 {
     if (init()) return 1;
-    return handlers->doStartNetwork (ccMeta, remoteHosts, remoteHostsLen, port, vlan);
+    return H->doStartNetwork (ccMeta, remoteHosts, remoteHostsLen, port, vlan);
 }
 
 int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
 {
     if (init()) return 1;
-    return handlers->doAttachVolume (meta, instanceId, volumeId, remoteDev, localDev);
+    return H->doAttachVolume (meta, instanceId, volumeId, remoteDev, localDev);
 }
 
 int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
     if (init()) return 1;
-    return handlers->doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force);
+    return H->doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force);
 }
