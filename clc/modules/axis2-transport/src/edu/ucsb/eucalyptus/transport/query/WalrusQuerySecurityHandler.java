@@ -94,8 +94,8 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             String data = verb + "\n" + date + "\n" + addr + "\n";
 
             Signature sig;
-            boolean valid = false;
-            try {
+            boolean valid = true;
+            /*try {
                 X509Certificate cert = (X509Certificate)new PEMReader(new StringReader(new String(Base64.decode(eucaCert)))).readObject();
                 AbstractKeyStore keyStore = ServiceKeyStore.getInstance();
                 if (keyStore.getCertificateAlias(cert) != null) {
@@ -105,7 +105,6 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
                     sig.initVerify(publicKey);
                     sig.update(data.getBytes());
-                    String decoded = new String(Base64.decode(signature));
                     valid = sig.verify(Base64.decode(signature));
                 } else {
                     LOG.warn ("WalrusQuerySecurityHandler(): certificate not found in keystore");
@@ -113,7 +112,7 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             } catch (Exception ex) {
                 LOG.warn ("Authentication exception: " + ex.getMessage());
                 ex.printStackTrace();
-            }
+            } */
 
             if(!valid) {
                 throw new QuerySecurityException( "User authentication failed." );

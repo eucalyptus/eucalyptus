@@ -50,7 +50,7 @@
     <!--================================== other vars ==================================-->
     <property name="jvm.heap" value="1g"/>
     <property name="security.policy" value="${euca.conf.dir}/security.policy"/>
-    <property name="libpath" value="${euca.lib.dir}/lib"/>
+    <property name="libpath" value="${euca.home}/usr/lib"/>
     <!--================================== classpaths ==================================-->
     <path id="runtimeclasspath">
         <pathelement path="${euca.conf.dir}"/>

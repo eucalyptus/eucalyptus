@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.keys.Hashes;
 import junit.framework.TestCase;
 
 import java.util.ArrayList;
@@ -47,22 +48,23 @@ public class VolumeTest extends TestCase {
         storage = new Storage();
 
         String userId = "admin";
+        String volumeId = "vol-" + Hashes.getRandom(10);
+        volumeId = volumeId.replaceAll("\\.", "x");
 
-        CreateVolumeType createVolumeRequest = new CreateVolumeType();
+        CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();
         createVolumeRequest.setUserId(userId);
+        createVolumeRequest.setVolumeId(volumeId);
         createVolumeRequest.setSize("1");
-        createVolumeRequest.setAvailabilityZone("default");
-        CreateVolumeResponseType createVolumeResponse = storage.CreateVolume(createVolumeRequest);
+        CreateStorageVolumeResponseType createVolumeResponse = storage.CreateStorageVolume(createVolumeRequest);
         System.out.println(createVolumeResponse); 
-        String volumeId = createVolumeResponse.getVolume().getVolumeId();
         Thread.sleep(1000);
-        DescribeVolumesType describeVolumesRequest = new DescribeVolumesType();
+        DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
         describeVolumesRequest.setUserId(userId);
         ArrayList<String> volumeSet = new ArrayList<String>();
         volumeSet.add(volumeId);
         describeVolumesRequest.setVolumeSet(volumeSet);
-        DescribeVolumesResponseType describeVolumesResponse = storage.DescribeVolumes(describeVolumesRequest);
-        Volume vol = describeVolumesResponse.getVolumeSet().get(0);
+        DescribeStorageVolumesResponseType describeVolumesResponse = storage.DescribeStorageVolumes(describeVolumesRequest);
+        StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
         System.out.println(vol);
         while(true);     
     }

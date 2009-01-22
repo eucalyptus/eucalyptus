@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.keys.Hashes;
 import junit.framework.TestCase;
 
 import java.util.ArrayList;
@@ -49,24 +50,23 @@ public class CreateVolumeFromSnapshotTest extends TestCase {
         String userId = "admin";
 
         String snapshotId = "snap-7d_CtRujsYM.";
-
-        CreateVolumeType createVolumeFromSnapshotRequest = new CreateVolumeType();
+        String volumeId = "vol-" + Hashes.getRandom(10);
+        CreateStorageVolumeType createVolumeFromSnapshotRequest = new CreateStorageVolumeType();
+        createVolumeFromSnapshotRequest.setVolumeId(volumeId);
         createVolumeFromSnapshotRequest.setUserId(userId);
-        createVolumeFromSnapshotRequest.setAvailabilityZone("default");
         createVolumeFromSnapshotRequest.setSnapshotId(snapshotId);
-        CreateVolumeResponseType createVolumeFromSnapshotResponse = storage.CreateVolume(createVolumeFromSnapshotRequest);
+        CreateStorageVolumeResponseType createVolumeFromSnapshotResponse = storage.CreateStorageVolume(createVolumeFromSnapshotRequest);
         System.out.println(createVolumeFromSnapshotResponse);
-        String volumeId = createVolumeFromSnapshotResponse.getVolume().getVolumeId();
-        DeleteSnapshotType deleteSnapshotRequest = new DeleteSnapshotType();
+        DeleteStorageSnapshotType deleteSnapshotRequest = new DeleteStorageSnapshotType();
         deleteSnapshotRequest.setUserId(userId);
         deleteSnapshotRequest.setSnapshotId(snapshotId);
-        DeleteSnapshotResponseType deleteSnapshotResponseType = storage.DeleteSnapshot(deleteSnapshotRequest);
+        DeleteStorageSnapshotResponseType deleteSnapshotResponseType = storage.DeleteStorageSnapshot(deleteSnapshotRequest);
         System.out.println(deleteSnapshotResponseType);
 
-        DeleteVolumeType deleteVolumeRequest = new DeleteVolumeType();
+        DeleteStorageVolumeType deleteVolumeRequest = new DeleteStorageVolumeType();
         deleteVolumeRequest.setUserId(userId);
         deleteVolumeRequest.setVolumeId(volumeId);
-        DeleteVolumeResponseType deleteVolumeResponse = storage.DeleteVolume(deleteVolumeRequest);
+        DeleteStorageVolumeResponseType deleteVolumeResponse = storage.DeleteStorageVolume(deleteVolumeRequest);
         System.out.println(deleteVolumeResponse);
     }
 

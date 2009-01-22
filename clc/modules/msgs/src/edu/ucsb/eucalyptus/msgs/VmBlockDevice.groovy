@@ -1,7 +1,5 @@
 package edu.ucsb.eucalyptus.msgs
 
-import org.hibernate.annotations.Entity
-import javax.persistence.Embeddable
 import edu.ucsb.eucalyptus.annotation.HttpParameterMapping
 
 public class BlockVolumeMessage extends EucalyptusMessage {}

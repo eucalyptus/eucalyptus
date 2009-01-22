@@ -42,19 +42,6 @@ import java.util.ArrayList;
 public class StorageTest extends TestCase {
 
 	static Storage storage;
-	public void testGetImage() throws Throwable {
-
-		storage = new Storage();
-        String userId = "admin";
-        String manifestPath = "s1skl3eill12100/ttylinux.img.manifest.xml";
-
-        GetImageType getImageRequest = new GetImageType();
-        getImageRequest.setManifestPath(manifestPath);
-        getImageRequest.setUserId(userId);
-
-        GetImageResponseType getImageReply = storage.GetImage(getImageRequest);
-        System.out.println(getImageReply);
-	}
 
 	public StorageTest() {
 		super();

@@ -2,7 +2,6 @@
 #
 # $Id: Makefile,v 1.5 2008-12-24 18:28:07 nurmi Exp $
 #
-
 include ../Makedefs
 
 all: build
@@ -10,8 +9,9 @@ all: build
 deps:
 	$(ANT) deps
 
-build: deps
-	ANT_OPTS="-Xmx512m" $(ANT) build
+build: 
+	make -C modules/storage-controller/c
+	make -C modules/storage-manager/c
 
 run: install 
 	$(ANT) run
@@ -24,7 +24,9 @@ distclean: clean
 
 install: build
 	$(ANT) install
-	@$(INSTALL) -m 644 cloud.xml $(etcdir)/eucalyptus
+	@$(INSTALL) -m 640 cloud.xml $(etcdir)/eucalyptus
+	make -C modules/storage-controller/c install
+	make -C modules/storage-manager/c install
 
 deploy:
 

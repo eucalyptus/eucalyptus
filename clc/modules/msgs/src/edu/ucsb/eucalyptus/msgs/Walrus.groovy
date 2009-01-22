@@ -303,7 +303,7 @@ public class PrefixEntry extends EucalyptusData {
     String prefix;
 
     def PrefixEntry() {}
-    
+
     def PrefixEntry(String prefix) {
         this.prefix = prefix;
     }
@@ -390,6 +390,13 @@ public class SetBucketLoggingStatusType extends WalrusRequestType {
 public class SetBucketLoggingStatusResponseType extends WalrusResponseType {
 }
 
+public class UpdateWalrusConfigurationType extends WalrusRequestType {
+    String bucketRootDirectory;
+}
+
+public class UpdateWalrusConfigurationResponseType extends WalrusResponseType {
+}
+
 public class GetDecryptedImageType extends WalrusDataRequestType {
 }
 
@@ -422,27 +429,34 @@ public class FlushCachedImageResponseType extends WalrusDataResponseType {
 }
 
 public class StoreSnapshotType extends WalrusDataRequestType {
-    String volumeId;
+    String contentLength;
+    String snapshotvgname;
+    String snapshotlvname;
 }
 
 public class StoreSnapshotResponseType extends WalrusDataResponseType {
 }
 
-public class RemoveSnapshotType extends WalrusDataRequestType {
+public class DeleteWalrusSnapshotType extends WalrusRequestType {
+    String bucket;
+    String key;
 }
 
-public class RemoveSnapshotResponseType extends WalrusDataResponseType {
+public class DeleteWalrusSnapshotResponseType extends WalrusResponseType {
 }
 
-public class GetSnapshotType extends WalrusDataRequestType {
+public class GetSnapshotInfoType extends WalrusRequestType {
+    String bucket;
+    String key;
 }
 
-public class GetSnapshotResponseType extends WalrusDataResponseType {
-}
-
-public class GetSnapshotInfoType extends WalrusDataRequestType {
-}
-
-public class GetSnapshotInfoResponseType extends WalrusDataResponseType {
+public class GetSnapshotInfoResponseType extends WalrusResponseType {
+    String bucket;
     ArrayList<String> snapshotSet = new ArrayList<String>();
+}
+
+public class GetVolumeType extends WalrusDataRequestType {
+}
+
+public class GetVolumeResponseType extends WalrusDataResponseType {
 }

@@ -1,0 +1,19 @@
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>eucalyptus</groupId>
+    <artifactId>cloud</artifactId>
+    <version>1.4</version>
+    <packaging>pom</packaging>
+    <name>Eucalyptus</name>
+    <modules>
+        <module>modules/msgs</module>
+        <module>modules/axis2-transport</module>
+        <module>modules/core</module>
+        <module>modules/interface</module>
+        <module>modules/image-manager</module>
+        <module>modules/group-manager</module>
+        <module>modules/cluster-manager</module>
+        <module>modules/www</module>
+        <module>modules/storage-manager</module>
+    </modules>
+</project>

@@ -35,9 +35,18 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
 import junit.framework.TestCase;
 
 import java.util.ArrayList;
+import java.util.Date;
+
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpMethodBase;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.methods.PutMethod;
+import org.apache.commons.httpclient.methods.HeadMethod;
 
 public class CreateSnapshotTest extends TestCase {
 
@@ -48,17 +57,60 @@ public class CreateSnapshotTest extends TestCase {
 
         String userId = "admin";
 
+        String volumeId = "vol-yCqCbrweuVviYQxx";
+        String snapshotId = "snap-" + Hashes.getRandom(10);
 
-        String volumeId = "vol-Fl0GZFFnm1U.";
+        CreateStorageSnapshotType createSnapshotRequest = new CreateStorageSnapshotType();
 
-        CreateSnapshotType createSnapshotRequest = new CreateSnapshotType();
         createSnapshotRequest.setUserId(userId);
         createSnapshotRequest.setVolumeId(volumeId);
-        CreateSnapshotResponseType createSnapshotResponse = storage.CreateSnapshot(createSnapshotRequest);
+        createSnapshotRequest.setSnapshotId(snapshotId);
+        CreateStorageSnapshotResponseType createSnapshotResponse = storage.CreateStorageSnapshot(createSnapshotRequest);
         System.out.println(createSnapshotResponse);
-        String snapshotId = createSnapshotResponse.getSnapshot().getSnapshotId();
 
         while(true);
+    }
+
+    public void testTransferSnapshot() throws Throwable {
+        storage = new Storage();
+
+
+        String volumeId = "vol-yCqCbrweuVviYQxx";
+        String snapshotId = "snap-zVl2kZJmjhxnEg..";
+        String dupSnapshotId = "snap-zVl2kZJmjhxnEg...SrZ5iA..";
+
+        storage.transferSnapshot(volumeId, snapshotId, dupSnapshotId, true);
+        while(true);
+    }
+
+    public void testSendDummy() throws Throwable {
+        HttpClient httpClient = new HttpClient();
+        String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/meh/ttt.wsl?gg=vol&hh=snap";
+
+        HttpMethodBase method = new PutMethod(addr);
+        method.setRequestHeader("Authorization", "Euca");
+        method.setRequestHeader("Date", (new Date()).toString());
+        method.setRequestHeader("Expect", "100-continue");
+
+        httpClient.executeMethod(method);
+        String responseString = method.getResponseBodyAsString();
+        System.out.println(responseString);
+        method.releaseConnection();
+    }
+
+    public void testGetSnapshotInfo() throws Throwable {
+        HttpClient httpClient = new HttpClient();
+        String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/snapset-FuXLn1MUHJ66BkK0/snap-zVl2kZJmjhxnEg..";
+
+        HttpMethodBase method = new GetMethod(addr);
+        method.setRequestHeader("Authorization", "Euca");
+        method.setRequestHeader("Date", (new Date()).toString());
+        method.setRequestHeader("Expect", "100-continue");
+        method.setRequestHeader("EucaOperation", "GetSnapshotInfo");
+        httpClient.executeMethod(method);
+        String responseString = method.getResponseBodyAsString();
+        System.out.println(responseString);
+        method.releaseConnection();         
     }
 
     public CreateSnapshotTest() {

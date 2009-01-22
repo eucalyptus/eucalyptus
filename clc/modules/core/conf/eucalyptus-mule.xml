@@ -60,5 +60,11 @@
         <spring:import resource="classpath:walrus-model.xml"/>
     </spring:beans>
 
+    <!--===========  This enables block storage ===========-->
+    <spring:beans>
+        <spring:import resource="classpath:storage-services.xml"/>
+        <spring:import resource="classpath:storage-model.xml"/>
+    </spring:beans>
+
 </mule>
 

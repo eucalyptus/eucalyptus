@@ -35,15 +35,27 @@
 #include <edu_ucsb_eucalyptus_storage_LVM2Manager.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
+
+#define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
 static const char* blockSize = "1G";
 jstring run_command(JNIEnv *env, char *cmd, int outfd) {
 	FILE* fd;
 	int pid;
 	char readbuffer[256];
+	char absolute_cmd[256];
+    char* home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    if (!home) {
+        home = strdup (""); /* root by default */
+    } else {
+        home = strdup (home);
+    }
 
+    snprintf(absolute_cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap %s", home, cmd);
+    fprintf(stderr, "command: %s\n", absolute_cmd);
 	bzero(readbuffer, 256);
-	fd = popen(cmd, "r");
+	fd = popen(absolute_cmd, "r");
 	if(fgets(readbuffer, 256, fd)) {
 	    char* ptr = strchr(readbuffer, '\n');
 	    if(ptr != NULL) {
@@ -58,7 +70,7 @@ int run_command_and_get_pid(char *cmd, char **args) {
     int fd[2];
     pipe(fd);
     int pid = -1;
-    
+
     if ((pid = fork()) == -1) {
         perror("Could not run command");
         return -1;
@@ -74,6 +86,17 @@ int run_command_and_get_pid(char *cmd, char **args) {
    return pid;
 }
 
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getAoEStatus
+  (JNIEnv *env, jobject obj, jstring processId) {
+    const jbyte* pid = (*env)->GetStringUTFChars(env, processId, NULL);
+
+    char command[128];
+	snprintf(command, 128, "cat /proc/%s/cmdline", pid);
+	jstring returnValue = run_command(env, command, 1);	
+    (*env)->ReleaseStringUTFChars(env, processId, pid);
+    return returnValue;
+}
+
 JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createSnapshot
 (JNIEnv *env, jobject obj, jstring snapshotId) {
 	const jbyte *snapshot_id;
@@ -81,18 +104,40 @@ JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createSnapsh
 	(*env)->ReleaseStringUTFChars(env, snapshotId, snapshot_id);
 }
 
-JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_losetup
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_losetup__Ljava_lang_String_2
 (JNIEnv *env, jobject obj, jstring fileName) {
-	char *args[4];
 	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
 
-	char command[128];
-	snprintf(command, 128, "losetup -sf %s", filename);
+	char command[512];
+	snprintf(command, 512, "losetup -sf %s", filename);
 	jstring returnValue = run_command(env, command, 1);
 	(*env)->ReleaseStringUTFChars(env, fileName, filename);
 	return returnValue;
 }
 
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_losetup__Ljava_lang_String_2Ljava_lang_String_2
+  (JNIEnv *env, jobject obj, jstring fileName, jstring loDevName) {
+	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
+    const jbyte* lodevname = (*env)->GetStringUTFChars(env, loDevName, NULL);
+
+	char command[512];
+	snprintf(command, 512, "losetup %s %s", lodevname, filename);
+	jstring returnValue = run_command(env, command, 1);
+	(*env)->ReleaseStringUTFChars(env, fileName, filename);
+	(*env)->ReleaseStringUTFChars(env, loDevName, lodevname);
+	return returnValue;
+}
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getLoopback
+  (JNIEnv *env, jobject obj, jstring loDevName) {
+	const jbyte* lodevname = (*env)->GetStringUTFChars(env, loDevName, NULL);
+
+	char command[128];
+	snprintf(command, 128, "losetup -s %s", lodevname);
+	jstring returnValue = run_command(env, command, 1);
+	(*env)->ReleaseStringUTFChars(env, loDevName, lodevname);
+	return returnValue;
+}
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createEmptyFile
 (JNIEnv *env, jobject obj, jstring fileName, jint size) {
@@ -153,19 +198,29 @@ JNIEXPORT jint JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_aoeExport
 	const jbyte* if_name = (*env)->GetStringUTFChars(env, iface, NULL);
 	char major_str[4];
 	char minor_str[4];
-    char *args[6];
+    char *args[7];
+    char rootwrap[256];
+    char* home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    if (!home) {
+        home = strdup (""); /* root by default */
+    } else {
+        home = strdup (home);
+    }
+
+    snprintf(rootwrap, 256, "%s/usr/share/eucalyptus/euca_rootwrap", home);
 
     snprintf(major_str, 4, "%d", major);
     snprintf(minor_str, 4, "%d", minor);
 
-    args[0] = "vblade";
-    args[1] = major_str;
-    args[2] = minor_str;
-    args[3] = (char *) if_name;
-    args[4] = (char *) lv_name;
-    args[5] = (char *) NULL;
+    args[0] = rootwrap;
+    args[1] = "vblade";
+    args[2] = major_str;
+    args[3] = minor_str;
+    args[4] = (char *) if_name;
+    args[5] = (char *) lv_name;
+    args[6] = (char *) NULL;
 
-    int pid = run_command_and_get_pid("vblade", args);
+    int pid = run_command_and_get_pid(rootwrap, args);
 	(*env)->ReleaseStringUTFChars(env, lvName, lv_name);
 	(*env)->ReleaseStringUTFChars(env, iface, if_name);
 	return pid;
@@ -188,7 +243,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeLog
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, lvName, lv_name);
-    return (*env)->NewStringUTF(env, returnValue);
+    return returnValue;
 }
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeVolumeGroup
@@ -200,7 +255,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeVol
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, vgName, vg_name);
-    return (*env)->NewStringUTF(env, returnValue);
+    return returnValue;
 }
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removePhysicalVolume
@@ -212,7 +267,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removePhy
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, pvName, pv_name);
-    return (*env)->NewStringUTF(env, returnValue);
+    return returnValue;
 }
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeLoopback
@@ -224,7 +279,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeLoo
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, loDevName, lo_dev_name);
-    return (*env)->NewStringUTF(env, returnValue);
+    return returnValue;
 }
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createSnapshotLogicalVolume
@@ -304,5 +359,17 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_duplicate
 
 	(*env)->ReleaseStringUTFChars(env, oldLvName, old_lv_name);
 	(*env)->ReleaseStringUTFChars(env, newLvName, lv_name);
+    return returnValue;
+}
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_enableLogicalVolume
+  (JNIEnv *env, jobject obj, jstring absoluteLvName) {
+    const jbyte* lv_name = (*env)->GetStringUTFChars(env, absoluteLvName, NULL);
+	char command[256];
+
+	snprintf(command, 256, "lvchange -ay %s", lv_name);
+    jstring returnValue = run_command(env, command, 1);
+
+    (*env)->ReleaseStringUTFChars(env, absoluteLvName, lv_name);
     return returnValue;
 }

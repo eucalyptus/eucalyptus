@@ -70,14 +70,30 @@ public class UserInfo {
 	)
 	@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 	private List<CertificateInfo> certificates = new ArrayList<CertificateInfo>();
-	@OneToMany( cascade = CascadeType.ALL )
-	@JoinTable(
-			name = "user_has_sshkeys",
-			joinColumns = { @JoinColumn( name = "user_id" ) },
-			inverseJoinColumns = @JoinColumn( name = "ssh_keypair_id" )
-	)
-	@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-	private List<SSHKeyPair> keyPairs = new ArrayList<SSHKeyPair>();
+  @OneToMany( cascade = CascadeType.ALL )
+  @JoinTable(
+      name = "user_has_sshkeys",
+      joinColumns = { @JoinColumn( name = "user_id" ) },
+      inverseJoinColumns = @JoinColumn( name = "ssh_keypair_id" )
+  )
+  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  private List<SSHKeyPair> keyPairs = new ArrayList<SSHKeyPair>();
+  @OneToMany( cascade = CascadeType.ALL )
+  @JoinTable(
+      name = "user_has_volumes",
+      joinColumns = { @JoinColumn( name = "user_id" ) },
+      inverseJoinColumns = @JoinColumn( name = "volume_id" )
+  )
+  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  private List<VolumeInfo> volumes = new ArrayList<VolumeInfo>();
+  @OneToMany( cascade = CascadeType.ALL )
+  @JoinTable(
+      name = "user_has_volumes",
+      joinColumns = { @JoinColumn( name = "user_id" ) },
+      inverseJoinColumns = @JoinColumn( name = "volume_id" )
+  )
+  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  private List<SnapshotInfo> snapshots = new ArrayList<SnapshotInfo>();
 	@OneToMany( cascade = CascadeType.ALL )
 	@JoinTable(
 			name = "user_has_network_groups",
@@ -124,7 +140,23 @@ public class UserInfo {
 		this.userName = userName;
 	}
 
-	public String getQueryId()
+  public List<VolumeInfo> getVolumes() {
+    return volumes;
+  }
+
+  public void setVolumes( final List<VolumeInfo> volumes ) {
+    this.volumes = volumes;
+  }
+
+  public List<SnapshotInfo> getSnapshots() {
+    return snapshots;
+  }
+
+  public void setSnapshots( final List<SnapshotInfo> snapshots ) {
+    this.snapshots = snapshots;
+  }
+
+  public String getQueryId()
 	{
 		return queryId;
 	}

@@ -52,7 +52,7 @@ public class Walrus {
             "GetObjectExtended", "DeleteObject", "GetDecryptedImage",
             "CheckImage", "CacheImage", "FlushCachedImage",
             "GetBucketLocation", "GetBucketLoggingStatus", "SetBucketLoggingStatus", "CopyObject",
-            "StoreSnapshot", "GetSnaphot", "RemoveSnapshot"} )
+            "StoreSnapshot", "GetVolume", "GetSnapshotInfo", "DeleteWalrusSnapshot"} )
 
 	public EucalyptusMessage handle( EucalyptusMessage msg )
 	{
