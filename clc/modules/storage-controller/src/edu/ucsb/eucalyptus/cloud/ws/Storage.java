@@ -635,15 +635,19 @@ public class Storage {
 
     public interface CallBack {
         void run();
+        int getUpdateThreshold();
+        void finish();
     }
 
     public class SnapshotProgressCallback implements CallBack {
         private String snapshotId;
         private int progressTick;
+        private int updateThreshold;
 
         public SnapshotProgressCallback(String snapshotId, long size, int chunkSize) {
             this.snapshotId = snapshotId;
-            progressTick = (int) (((long)chunkSize / size) * 100);
+            progressTick = 1; //minimum percent update
+            updateThreshold = (int)((size / 100) / chunkSize);
         }
 
         public void run() {
@@ -659,6 +663,23 @@ public class Storage {
                 ex.printStackTrace();
             }
             db.commit();
+        }
+
+        public void finish() {
+            EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
+            SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
+            try {
+                SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
+                foundSnapshotInfo.setProgress(String.valueOf(100));
+            } catch (Exception ex) {
+                db.rollback();
+                ex.printStackTrace();
+            }
+            db.commit();
+        }
+
+        public int getUpdateThreshold() {
+            return updateThreshold;
         }
     }
 
@@ -677,7 +698,7 @@ public class Storage {
 
             HttpMethodBase method = null;
             if(httpVerb.equals("PUT")) {
-                method = new PutMethodWithProgress(addr);
+                method = new  PutMethodWithProgress(addr);
             } else if(httpVerb.equals("GET")) {
                 method = new GetMethod(addr);
             } else if(httpVerb.equals("DELETE")) {
@@ -742,12 +763,16 @@ public class Storage {
                 GZIPOutputStream gzipOutStream = new GZIPOutputStream(conn.getRequestOutputStream());
                 byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
                 int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) > 0) {
-                    //conn.write(buffer, 0, bytesRead);
+                int numberProcessed = 0;
+                while ((bytesRead = inputStream.read(buffer)) > 0) {                    
                     gzipOutStream.write(buffer, 0, bytesRead);
-                    //callback.run();
+                    if(++numberProcessed >= callback.getUpdateThreshold()) {
+                        callback.run();
+                        numberProcessed = 0;
+                    }
                 }
-                gzipOutStream.close();
+                callback.finish();
+                gzipOutStream.finish();
                 inputStream.close();
             } else{
                 return false;
