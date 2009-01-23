@@ -18,15 +18,15 @@ For the most up-to-date instructions, please visit the Eucalyptus web page
 1. Download Eucalyptus
 ----------------------
 
-Download 
+From the Eucalyptus Web site:
+
+  http://eucalyptus.cs.ucsb.edu/
+
+you need to download 
 
 - eucalyptus-<version>-src.tar.gz (Eucalyptus source)
 - eucalyptus-<version>-src-deps.tar.gz (Eucalyptus dependencies)
 - euca-ttylinux.tgz (a test VM image)
-
-from the Eucalyptus Web site:
-
-  http://eucalyptus.cs.ucsb.edu/
 
 Unpack the Eucalyptus source:
 
@@ -41,6 +41,17 @@ installed:
 ; cd eucalyptus-<version>
 ; export EUCALYPTUS_SRC=`pwd`
 ; export EUCALYPTUS=/opt/eucalyptus
+
+Now you have to download the cloud dependencies: you can either
+
+; cd $EUCALYPTUS_SRC/clc
+; ant deps
+
+or you can download by hand with the following commands
+
+; mkdir lib
+; wget -O - http://eucalyptus.cs.ucsb.edu/dependencies/<version>/cloud-lib.tar.gz | tar -C lib -xzf - 
+; wget -O - http://eucalyptus.cs.ucsb.edu/dependencies/<version>/cloud-deploy.tar.gz | tar -xzf -
 
 
 2. Dependencies
