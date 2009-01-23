@@ -46,7 +46,7 @@
                     <finalName>${project.groupId}-${project.artifactId}-${project.version}</finalName>
                 </configuration>
                 <executions>
-                    <execution>
+                    <execution>p
                         <phase>package</phase>
                         <goals>
                             <goal>jar</goal>
@@ -107,14 +107,14 @@
                     <target>1.5</target>
                 </configuration>
             </plugin>
-	    <plugin>
-                <groupId>org.apache.geronimo.javamail</groupId>
-                <artifactId>geronimo-javamail_1.4_provider</artifactId>
-		<version>1.6</version>
-	    </plugin>
         </plugins>
     </build>
     <dependencies>
+        <dependency>
+                <groupId>org.apache.geronimo.javamail</groupId>
+                <artifactId>geronimo-javamail_1.4_provider</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>eucalyptus</groupId>
             <artifactId>msgs</artifactId>
