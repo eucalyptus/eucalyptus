@@ -58,10 +58,12 @@ public class LVM2Manager implements ElasticBlockManager {
     public static String hostName = "localhost";
     public static final int MAX_LOOP_DEVICES = 256;
 
+    public StorageExportManager exportManager;
+
     public void initVolumeManager() {
         if(!initialized) {
             System.loadLibrary("lvm2control");
-
+            exportManager = new AOEManager();
             try {
                 hostName = InetAddress.getLocalHost().getHostName();
                 NetworkInterface inface = NetworkInterface.getByName(iface);
@@ -113,10 +115,6 @@ public class LVM2Manager implements ElasticBlockManager {
 
     public native String createSnapshotLogicalVolume(String lvName, String snapLvName);
 
-    public native int aoeExport(String iface, String lvName, int major, int minor);
-
-    public native void aoeUnexport(int vbladePid);
-
     public native String removeLogicalVolume(String lvName);
 
     public native String removeVolumeGroup(String vgName);
@@ -159,7 +157,7 @@ public class LVM2Manager implements ElasticBlockManager {
             ex.printStackTrace();
         }
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-        int pid = aoeExport(iface, absoluteLVName, majorNumber, minorNumber);
+        int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
         String returnValue = getAoEStatus(String.valueOf(pid));
         if(pid < 0 || (!returnValue.contains("vblade"))) {
             throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface);
@@ -377,7 +375,7 @@ public class LVM2Manager implements ElasticBlockManager {
             String lvName = foundLVMVolumeInfo.getLvName();
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
-            aoeUnexport(foundLVMVolumeInfo.getVbladePid());
+            exportManager.unexportVolume(foundLVMVolumeInfo.getVbladePid());
             String returnValue = removeLogicalVolume(absoluteLVName);
             if(returnValue.length() == 0) {
                 throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
@@ -555,7 +553,7 @@ public class LVM2Manager implements ElasticBlockManager {
                 enableLogicalVolume(absoluteLVName);
                 String returnValue = getAoEStatus(String.valueOf(pid));
                 if(!returnValue.contains("vblade")) {
-                    pid = aoeExport(iface, absoluteLVName, foundVolumeInfo.getMajorNumber(), foundVolumeInfo.getMinorNumber());
+                    pid = exportManager.exportVolume(iface, absoluteLVName, foundVolumeInfo.getMajorNumber(), foundVolumeInfo.getMinorNumber());
                     foundVolumeInfo.setVbladePid(pid);
                 }
             }
