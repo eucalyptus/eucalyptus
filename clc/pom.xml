@@ -324,6 +324,11 @@
                 <version>${xstream.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.apache.geronimo.javamail</groupId>
+                <artifactId>geronimo-javamail_1.4_provider</artifactId>
+                <version>1.6</version>
+            </dependency>
 
 
             <!--groovy build help-->
