@@ -7,7 +7,7 @@
  * Redistribution and use of this software in source and binary forms, with or
  * without modification, are permitted provided that the following conditions
  * are met:
- *
+ *               a
  * * Redistributions of source code must retain the above
  *   copyright notice, this list of conditions and the
  *   following disclaimer.
@@ -214,83 +214,83 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             operationKey = OBJECT + verb;
             operationParams.put("Bucket", target[0]);
             operationParams.put("Key", target[1]);
-        }
 
-        if(!params.containsKey(OperationParameter.acl.toString())) {
-            if (verb.equals(HTTPVerb.PUT.toString())) {
-                messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
-                InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
-                InputStream inStream = in;
-                if(!operationName.equals(WalrusProperties.StorageOperations.StoreSnapshot.toString())) {
-                    inStream = new BufferedInputStream(in);
-                } else {
-                    try {
-                        inStream = new GZIPInputStream(in);
-                    } catch(Exception ex) {
-                        LOG.warn(ex, ex);
-                        return null;
+
+            if(!params.containsKey(OperationParameter.acl.toString())) {
+                if (verb.equals(HTTPVerb.PUT.toString())) {
+                    messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
+                    InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
+                    InputStream inStream = in;
+                    if(!operationName.equals(WalrusProperties.StorageOperations.StoreSnapshot.toString())) {
+                        inStream = new BufferedInputStream(in);
+                    } else {
+                        try {
+                            inStream = new GZIPInputStream(in);
+                        } catch(Exception ex) {
+                            LOG.warn(ex, ex);
+                            return null;
+                        }
                     }
-                }
-                String key = target[0] + "." + target[1];
-                String randomKey = key + "." + Hashes.getRandom(10);
-                LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
-                int dataLength = 0;
-                try {
-                    dataLength = inStream.available();
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
+                    String key = target[0] + "." + target[1];
+                    String randomKey = key + "." + Hashes.getRandom(10);
+                    LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
+                    int dataLength = 0;
+                    try {
+                        dataLength = inStream.available();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
 
-                Writer writer = new Writer(inStream, dataLength, putQueue);
-                writer.start();
+                    Writer writer = new Writer(inStream, dataLength, putQueue);
+                    writer.start();
 
-                operationParams.put("ContentLength", (new Long(dataLength).toString()));
-                operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
-            } else if(verb.equals(HTTPVerb.GET.toString())) {
-                messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.TRUE);
-                if(!walrusInternalOperation) {
+                    operationParams.put("ContentLength", (new Long(dataLength).toString()));
+                    operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
+                } else if(verb.equals(HTTPVerb.GET.toString())) {
+                    messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.TRUE);
+                    if(!walrusInternalOperation) {
 
-                    operationParams.put("GetData", Boolean.TRUE);
-                    operationParams.put("InlineData", Boolean.FALSE);
-                    operationParams.put("GetMetaData", Boolean.FALSE);
+                        operationParams.put("GetData", Boolean.TRUE);
+                        operationParams.put("InlineData", Boolean.FALSE);
+                        operationParams.put("GetMetaData", Boolean.FALSE);
 
-                    Iterator<String> iterator = headers.keySet().iterator();
-                    boolean isExtendedGet = false;
-                    while(iterator.hasNext()) {
-                        String key = iterator.next();
-                        for(WalrusProperties.ExtendedGetHeaders header: WalrusProperties.ExtendedGetHeaders.values()) {
-                            if(key.toLowerCase().equals(header.toString().toLowerCase())) {
-                                String value = headers.get(key);
-                                isExtendedGet = true;
-                                parseExtendedGetHeaders(operationParams, header.toString(), value);
+                        Iterator<String> iterator = headers.keySet().iterator();
+                        boolean isExtendedGet = false;
+                        while(iterator.hasNext()) {
+                            String key = iterator.next();
+                            for(WalrusProperties.ExtendedGetHeaders header: WalrusProperties.ExtendedGetHeaders.values()) {
+                                if(key.toLowerCase().equals(header.toString().toLowerCase())) {
+                                    String value = headers.get(key);
+                                    isExtendedGet = true;
+                                    parseExtendedGetHeaders(operationParams, header.toString(), value);
+                                }
+                            }
+
+                        }
+                        if(isExtendedGet) {
+                            operationKey += "extended";
+                            //only supported through SOAP
+                            operationParams.put("ReturnCompleteObjectOnConditionFailure", Boolean.FALSE);
+                        }
+                    } else {
+                        for(WalrusProperties.InfoOperations operation : WalrusProperties.InfoOperations.values()) {
+                            if(operation.toString().equals(operationName)) {
+                                messageContext.removeProperty(WalrusProperties.STREAMING_HTTP_GET);
+                                break;
                             }
                         }
-
                     }
-                    if(isExtendedGet) {
-                        operationKey += "extended";
-                        //only supported through SOAP
-                        operationParams.put("ReturnCompleteObjectOnConditionFailure", Boolean.FALSE);
+                } else if(verb.equals(HTTPVerb.HEAD.toString())) {
+                    messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.FALSE);
+                    if(!walrusInternalOperation) {
+                        operationParams.put("GetData", Boolean.FALSE);
+                        operationParams.put("InlineData", Boolean.FALSE);
+                        operationParams.put("GetMetaData", Boolean.FALSE);
                     }
-                } else {
-                    for(WalrusProperties.InfoOperations operation : WalrusProperties.InfoOperations.values()) {
-                        if(operation.toString().equals(operationName)) {
-                            messageContext.removeProperty(WalrusProperties.STREAMING_HTTP_GET);
-                            break;
-                        }
-                    }
-                }
-            } else if(verb.equals(HTTPVerb.HEAD.toString())) {
-                messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.FALSE);
-                if(!walrusInternalOperation) {
-                    operationParams.put("GetData", Boolean.FALSE);
-                    operationParams.put("InlineData", Boolean.FALSE);
-                    operationParams.put("GetMetaData", Boolean.FALSE);
                 }
             }
+
         }
-
-
         if (verb.equals(HTTPVerb.PUT.toString()) && params.containsKey(OperationParameter.acl.toString())) {
             //read ACL
             try {

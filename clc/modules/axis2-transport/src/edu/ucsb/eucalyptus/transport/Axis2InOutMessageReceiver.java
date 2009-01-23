@@ -48,6 +48,7 @@ import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.AxisOperation;
 import org.apache.axis2.receivers.AbstractInOutMessageReceiver;
 import org.apache.axis2.transport.http.server.AxisHttpResponse;
+import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.axis2.util.JavaUtils;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
@@ -57,6 +58,7 @@ import org.apache.rampart.RampartMessageData;
 import org.apache.tools.ant.util.DateUtils;
 import org.apache.ws.security.WSSecurityEngineResult;
 import org.apache.ws.security.handler.*;
+import org.apache.commons.httpclient.HttpStatus;
 import org.jibx.runtime.JiBXException;
 import org.mule.DefaultMuleMessage;
 import org.mule.api.*;
@@ -125,6 +127,12 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
             newMsgContext.setProperty( "messageType", "application/walrus" );
             return;
         }
+
+   /*     if(message.getPayload() instanceof WalrusDeleteResponseType) {
+            msgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_NO_CONTENT);
+            newMsgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_NO_CONTENT);
+            return;
+        } */
 
         Boolean putType = (Boolean) msgContext.getProperty(WalrusProperties.STREAMING_HTTP_PUT);
         Boolean getType = (Boolean) msgContext.getProperty(WalrusProperties.STREAMING_HTTP_GET);
@@ -254,15 +262,15 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
 
     private void verifyUser( MessageContext msgContext, EucalyptusMessage msg ) throws EucalyptusCloudException
     {
-      Vector<WSHandlerResult> wsResults = ( Vector<WSHandlerResult> ) msgContext.getProperty( WSHandlerConstants.RECV_RESULTS );
-      for ( WSHandlerResult wsResult : wsResults )
-        if ( wsResult.getResults() != null )
-          for ( WSSecurityEngineResult engResult : ( Vector<WSSecurityEngineResult> ) wsResult.getResults() )
-            if ( engResult.containsKey( WSSecurityEngineResult.TAG_X509_CERTIFICATE ) )
-            {
-              X509Certificate cert = ( X509Certificate ) engResult.get( WSSecurityEngineResult.TAG_X509_CERTIFICATE );
-              msg = this.msgReceiver.getProperties().getAuthenticator().authenticate( cert, msg );
-            }
+        Vector<WSHandlerResult> wsResults = ( Vector<WSHandlerResult> ) msgContext.getProperty( WSHandlerConstants.RECV_RESULTS );
+        for ( WSHandlerResult wsResult : wsResults )
+            if ( wsResult.getResults() != null )
+                for ( WSSecurityEngineResult engResult : ( Vector<WSSecurityEngineResult> ) wsResult.getResults() )
+                    if ( engResult.containsKey( WSSecurityEngineResult.TAG_X509_CERTIFICATE ) )
+                    {
+                        X509Certificate cert = ( X509Certificate ) engResult.get( WSSecurityEngineResult.TAG_X509_CERTIFICATE );
+                        msg = this.msgReceiver.getProperties().getAuthenticator().authenticate( cert, msg );
+                    }
     }
 
 }
