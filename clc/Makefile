@@ -19,6 +19,10 @@ run: install
 
 clean:
 	$(ANT) clean
+	rm -rf modules/storage-controller/h/ modules/storage-controller/lib/ modules/storage-manager/h/ modules/storage-manager/lib/ modules/www/webapps/ target  modules/msgs/resources/msgs-binding.xml
+
+
+
 
 distclean: clean
 	$(ANT) distclean
