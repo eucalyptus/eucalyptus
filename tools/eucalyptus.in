@@ -95,7 +95,7 @@ do_start() {
 		# we have a program to test xen and more for the NC
 		if [ ! -x $EUCALYPTUS/usr/sbin/euca_test_nc ]; then
 			echo "Cannot check Node Controller: missing euca_test_nc."
-		elif ! $EUCALYPTUS/usr/sbin/euca_test_nc > $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log 2>&1 ; then
+		elif ! $EUCALYPTUS/usr/sbin/euca_test_nc $HYPERVISOR > $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log 2>&1 ; then
 			echo "Node Controller cannot be started: errors in $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log"
 			exit 1
 		fi
