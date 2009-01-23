@@ -158,11 +158,33 @@
                             <finalName>eucalyptus-cloud-${euca.version}</finalName>
                             <descriptors>
                                 <descriptor>bin-assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>distribution-package</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>cloud</finalName>
+                            <descriptors>
                                 <descriptor>lib-assembly.xml</descriptor>
                                 <descriptor>modules-assembly.xml</descriptor>
                             </descriptors>
                         </configuration>
                     </execution>
+                    <!--<execution>-->
+                                           <!--<id>service-module-list-generation</id>-->
+                                           <!--<phase>process-resources</phase>-->
+                                           <!--<configuration>-->
+                                               <!--<tasks>-->
+                                                   <!--<mkdir dir="deps"/>-->
+                                                   <!--<mkdir dir="dist"/>-->
+
+                                                   <!--<copy file="../../target/eucalyptus-cloud-${euca.version}-bin.tar.gz"-->
+                                                         <!--tofile="target/tmp-repository/modules/soapmonitor-${soapmonitor.mar.version}.mar"/>-->
                 </executions>
             </plugin>
         </plugins>
