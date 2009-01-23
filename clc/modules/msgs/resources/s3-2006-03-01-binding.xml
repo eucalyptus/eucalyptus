@@ -151,7 +151,7 @@
         <value name="BucketName" field="bucket"/>
     </mapping>
 
-    <mapping name="DeleteBucket" class="edu.ucsb.eucalyptus.msgs.DeleteBucketType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+    <mapping name="DeleteBucket" class="edu.ucsb.eucalyptus.msgs.DeleteBucketType">
         <value name="Bucket" field="bucket"/>
     </mapping>
 
@@ -262,7 +262,8 @@
     </mapping>
 
     <mapping name="DeleteObject" class="edu.ucsb.eucalyptus.msgs.DeleteObjectType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
+        <value name="Bucket" field="bucket"/>
+        <value name="Key" field="key"/>
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 

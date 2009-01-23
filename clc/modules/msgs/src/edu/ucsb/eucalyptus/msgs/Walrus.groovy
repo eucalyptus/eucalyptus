@@ -51,6 +51,12 @@ public class WalrusRequestType extends EucalyptusMessage {
     }
 }
 
+public class WalrusDeleteType extends WalrusRequestType {
+}
+
+public class WalrusDeleteResponseType extends WalrusResponseType {    
+}
+
 public class InitializeWalrusType extends WalrusRequestType {
 }
 
@@ -189,11 +195,11 @@ public class CreateBucketResponseType extends WalrusResponseType {
     String bucket;
 }
 
-public class DeleteBucketType extends WalrusRequestType {
+public class DeleteBucketType extends WalrusDeleteType {
     String bucket;
 }
 
-public class DeleteBucketResponseType extends WalrusResponseType {
+public class DeleteBucketResponseType extends WalrusDeleteResponseType {
     Status status;
 }
 
@@ -267,10 +273,12 @@ public class PutObjectInlineType extends WalrusDataRequestType {
     String base64Data;
 }
 
-public class DeleteObjectType extends WalrusDataRequestType {
+public class DeleteObjectType extends WalrusDeleteType {
+    String bucket;
+    String key;
 }
 
-public class DeleteObjectResponseType extends WalrusResponseType {
+public class DeleteObjectResponseType extends WalrusDeleteResponseType {
     String code;
     String description;
 }
