@@ -53,6 +53,7 @@
         <mkdir dir="h"/>
         <javah classpath="${build.dir}" destdir="h" force="yes">
             <class name="edu.ucsb.eucalyptus.storage.LVM2Manager"/>
+            <class name="edu.ucsb.eucalyptus.storage.AOEManager"/>
         </javah>
     </target>
 

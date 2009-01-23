@@ -229,9 +229,10 @@ JNIEXPORT jint JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_aoeExport
 JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_aoeUnexport
   (JNIEnv *env, jobject obj, jint vblade_pid) {
     //TODO: blind kill. Hope for the best.
-    char command[128];
-    snprintf(command, 128, "kill -9 %d", vblade_pid);
-    system(command);
+   char command[128];
+
+   snprintf(command, 128, "kill -9 %s", vblade_pid);
+   run_command(env, command, 1);
 }
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeLogicalVolume
