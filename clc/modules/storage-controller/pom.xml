@@ -32,6 +32,11 @@
             <version>${euca.version}</version>
         </dependency>
         <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>storage-manager</artifactId>
+            <version>${euca.version}</version>
+        </dependency>
+         <dependency>
             <groupId>org.apache.ant</groupId>
             <artifactId>ant</artifactId>
         </dependency>
