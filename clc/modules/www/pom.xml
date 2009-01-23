@@ -107,6 +107,11 @@
                     <target>1.5</target>
                 </configuration>
             </plugin>
+	    <plugin>
+                <groupId>org.apache.geronimo.javamail</groupId>
+                <artifactId>geronimo-javamail_1.4_provider</artifactId>
+		<version>1.6</version>
+	    </plugin>
         </plugins>
     </build>
     <dependencies>
