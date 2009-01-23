@@ -9,7 +9,7 @@ all: build
 deps:
 	$(ANT) deps
 
-build: 
+build: deps
 	ANT_OPTS="-Xmx512m" $(ANT) build
 	make -C modules/storage-controller/c
 	make -C modules/storage-manager/c
