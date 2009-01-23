@@ -1,37 +1,19 @@
 <project>
+    <parent>
+        <groupId>eucalyptus</groupId>
+        <artifactId>cloud</artifactId>
+        <version>1</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
     <modelVersion>4.0.0</modelVersion>
     <groupId>eucalyptus</groupId>
     <artifactId>www</artifactId>
-    <version>1.4</version>
+    <version>${euca.version}</version>
     <name>Eucalyptus Web Site</name>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>gwt-maven</id>
-            <url>http://gwt-maven.googlecode.com/svn/trunk/mavenrepo</url>
-        </pluginRepository>
-    </pluginRepositories>
-    <repositories>
-        <repository>
-            <id>gwt-maven</id>
-            <url>
-                http://gwt-maven.googlecode.com/svn/trunk/mavenrepo/
-            </url>
-        </repository>
-    </repositories>
     <properties>
-        <gwtVersion>1.5.3</gwtVersion>
         <gwt.module.name>edu.ucsb.eucalyptus.admin.EucalyptusWebInterface</gwt.module.name>
     </properties>
     <build>
-        <directory>${pom.basedir}/www-build</directory>
-        <outputDirectory>${pom.basedir}/build</outputDirectory>
-        <finalName>${project.groupId}-${project.artifactId}-${project.version}</finalName>
-        <sourceDirectory>${pom.basedir}/src</sourceDirectory>
-        <resources>
-            <resource>
-                <directory>${pom.basedir}/resources</directory>
-            </resource>
-        </resources>
         <plugins>
             <plugin>
                 <groupId>com.totsp.gwt</groupId>
@@ -45,7 +27,7 @@
                     <runTarget>${gwt.module.name}/EucalyptusWebInterface.html</runTarget>
                     <noServer>false</noServer>
                     <extraJvmArgs>-Xmx512m</extraJvmArgs>
-                    <gwtVersion>${gwtVersion}</gwtVersion>
+                    <gwtVersion>${gwt.version}</gwtVersion>
                 </configuration>
                 <executions>
                     <execution>
@@ -105,7 +87,7 @@
                                 <artifactItem>
                                     <groupId>com.google.gwt</groupId>
                                     <artifactId>gwt-dev</artifactId>
-                                    <version>${gwtVersion}</version>
+                                    <version>${gwt.version}</version>
                                     <classifier>${platform}-libs</classifier>
                                     <type>zip</type>
                                     <overWrite>false</overWrite>
@@ -128,21 +110,33 @@
     </build>
     <dependencies>
         <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>msgs</artifactId>
+            <version>${euca.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>core</artifactId>
+            <version>${euca.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>cluster-manager</artifactId>
+            <version>${euca.version}</version>
+        </dependency>        
+        <dependency>
             <groupId>com.google.gwt</groupId>
             <artifactId>gwt-servlet</artifactId>
-            <version>${gwtVersion}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>com.google.gwt</groupId>
             <artifactId>gwt-user</artifactId>
-            <version>${gwtVersion}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.gwt</groupId>
             <artifactId>gwt-dev</artifactId>
-            <version>${gwtVersion}</version>
             <classifier>${platform}-libs</classifier>
             <type>zip</type>
             <scope>provided</scope>
@@ -150,62 +144,8 @@
         <dependency>
             <groupId>com.google.gwt</groupId>
             <artifactId>gwt-dev</artifactId>
-            <version>${gwtVersion}</version>
             <classifier>${platform}</classifier>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>msgs</artifactId>
-            <version>1.4</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>core</artifactId>
-            <version>1.4</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>cluster-manager</artifactId>
-            <version>1.4</version>
-        </dependency>
     </dependencies>
-    <profiles>
-        <profile>
-            <id>gwt-dev-windows</id>
-            <properties>
-                <platform>windows</platform>
-            </properties>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-                <os>
-                    <family>windows</family>
-                </os>
-            </activation>
-        </profile>
-        <profile>
-            <id>gwt-dev-mac</id>
-            <properties>
-                <platform>mac</platform>
-            </properties>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-                <os>
-                    <family>mac</family>
-                </os>
-            </activation>
-        </profile>
-        <profile>
-            <id>gwt-dev-linux</id>
-            <properties>
-                <platform>linux</platform>
-            </properties>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-                <os>
-                    <name>linux</name>
-                </os>
-            </activation>
-        </profile>
-    </profiles>
 </project>

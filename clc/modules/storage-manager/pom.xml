@@ -1,51 +1,39 @@
 <project>
+    <parent>
+        <groupId>eucalyptus</groupId>
+        <artifactId>cloud</artifactId>
+        <version>1</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
     <modelVersion>4.0.0</modelVersion>
     <groupId>eucalyptus</groupId>
     <artifactId>storage-manager</artifactId>
-    <version>1.4</version>
+    <version>${euca.version}</version>
     <name>Walrus</name>
-    <build>
-        <directory>../../target</directory>
-        <outputDirectory>${pom.basedir}/build</outputDirectory>
-        <finalName>${project.groupId}-${project.artifactId}-${project.version}</finalName>
-        <sourceDirectory>${pom.basedir}/src</sourceDirectory>
-        <resources>
-            <resource>
-                <directory>${pom.basedir}/resources</directory>
-            </resource>
-        </resources>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.0.2</version>
-                <configuration>
-                    <source>1.5</source>
-                    <target>1.5</target>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
     <dependencies>
-        <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-            <version>1.7.1</version>
-        </dependency>
         <dependency>
             <groupId>eucalyptus</groupId>
             <artifactId>msgs</artifactId>
-            <version>1.4</version>
+            <version>${euca.version}</version>
         </dependency>
         <dependency>
             <groupId>eucalyptus</groupId>
             <artifactId>transport</artifactId>
-            <version>1.4</version>
+            <version>${euca.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>interface</artifactId>
+            <version>${euca.version}</version>
         </dependency>
         <dependency>
             <groupId>eucalyptus</groupId>
             <artifactId>core</artifactId>
-            <version>1.4</version>
+            <version>${euca.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
         </dependency>
     </dependencies>
 </project>
