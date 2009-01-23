@@ -6,7 +6,7 @@
     </formats>
     <dependencySets>
         <dependencySet>
-            <outputDirectory>lib</outputDirectory>
+            <outputDirectory></outputDirectory>
             <excludes>
                 <exclude>org.apache.ant:ant-nodeps:jar:1.7.0</exclude>
                 <exclude>backport-util-concurrent:backport-util-concurrent:jar</exclude>

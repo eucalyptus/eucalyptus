@@ -1,5 +1,5 @@
 <assembly>
-    <id>modules</id>
+    <id>deploy</id>
     <includeBaseDirectory>false</includeBaseDirectory>
     <formats>
         <format>tar.gz</format>
