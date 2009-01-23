@@ -149,7 +149,7 @@
                 <artifactId>maven-assembly-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>distribution-package</id>
+                        <id>destdir-package</id>
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
@@ -162,7 +162,7 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>distribution-package</id>
+                        <id>deps-package</id>
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
