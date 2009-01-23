@@ -36,7 +36,8 @@ package edu.ucsb.eucalyptus;
 
 import edu.ucsb.eucalyptus.ic.HttpServer;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.Messaging;
 import org.apache.log4j.Logger;
 import org.mule.MuleServer;
 

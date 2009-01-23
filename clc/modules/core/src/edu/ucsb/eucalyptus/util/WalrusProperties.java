@@ -34,9 +34,9 @@
 
 package edu.ucsb.eucalyptus.util;
 
-import org.apache.log4j.Logger;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
+import org.apache.log4j.Logger;
 
 public class WalrusProperties {
     private static Logger LOG = Logger.getLogger( WalrusProperties.class );

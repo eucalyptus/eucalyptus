@@ -1,9 +1,11 @@
 package edu.ucsb.eucalyptus.keys;
 
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.SubDirectory;
 import org.apache.log4j.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 

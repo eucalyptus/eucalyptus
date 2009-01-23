@@ -35,14 +35,20 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.*;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.Messaging;
 import org.apache.axis2.AxisFault;
 import org.apache.log4j.Logger;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class GroupManager {
 

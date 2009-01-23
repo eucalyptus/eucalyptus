@@ -35,7 +35,8 @@
 package edu.ucsb.eucalyptus.transport.auth;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.keys.*;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 

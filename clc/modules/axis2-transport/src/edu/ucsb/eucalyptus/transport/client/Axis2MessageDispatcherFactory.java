@@ -37,9 +37,11 @@ package edu.ucsb.eucalyptus.transport.client;
 import edu.ucsb.eucalyptus.transport.Axis2MessageDispatcher;
 import edu.ucsb.eucalyptus.transport.config.Axis2OutProperties;
 import org.apache.log4j.Logger;
-import org.mule.api.*;
+import org.mule.api.DefaultMuleException;
+import org.mule.api.MuleException;
 import org.mule.api.endpoint.OutboundEndpoint;
-import org.mule.api.transport.*;
+import org.mule.api.transport.MessageDispatcher;
+import org.mule.api.transport.MessageDispatcherFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

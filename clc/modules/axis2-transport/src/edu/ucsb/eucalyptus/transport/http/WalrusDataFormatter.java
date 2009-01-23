@@ -1,5 +1,9 @@
 package edu.ucsb.eucalyptus.transport.http;
 
+import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
+import edu.ucsb.eucalyptus.util.WalrusDataMessage;
+import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.apache.axiom.om.OMOutputFormat;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.context.MessageContext;
@@ -10,11 +14,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 import java.util.concurrent.LinkedBlockingQueue;
-
-import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
-import edu.ucsb.eucalyptus.util.WalrusDataMessage;
-import edu.ucsb.eucalyptus.util.WalrusProperties;
-import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
 
 public class WalrusDataFormatter implements MessageFormatter {
 

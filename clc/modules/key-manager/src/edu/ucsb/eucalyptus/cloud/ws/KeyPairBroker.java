@@ -35,15 +35,20 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.keys.*;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.SSHKeyPair;
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.keys.KeyTool;
 import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.axis2.AxisFault;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.util.encoders.Base64;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPublicKey;

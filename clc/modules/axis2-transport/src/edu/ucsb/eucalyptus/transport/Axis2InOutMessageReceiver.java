@@ -37,35 +37,39 @@ package edu.ucsb.eucalyptus.transport;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.transport.binding.*;
+import edu.ucsb.eucalyptus.transport.binding.Binding;
+import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 import edu.ucsb.eucalyptus.transport.http.Axis2HttpWorker;
-import edu.ucsb.eucalyptus.transport.query.*;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.transport.query.GenericHttpDispatcher;
+import edu.ucsb.eucalyptus.transport.query.HttpRequest;
+import edu.ucsb.eucalyptus.util.BindingUtil;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.apache.axiom.om.OMElement;
-import org.apache.axiom.soap.*;
+import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.AxisOperation;
 import org.apache.axis2.receivers.AbstractInOutMessageReceiver;
 import org.apache.axis2.transport.http.server.AxisHttpResponse;
-import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.axis2.util.JavaUtils;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
 import org.apache.log4j.Logger;
 import org.apache.neethi.Policy;
 import org.apache.rampart.RampartMessageData;
-import org.apache.tools.ant.util.DateUtils;
 import org.apache.ws.security.WSSecurityEngineResult;
-import org.apache.ws.security.handler.*;
-import org.apache.commons.httpclient.HttpStatus;
+import org.apache.ws.security.handler.WSHandlerConstants;
+import org.apache.ws.security.handler.WSHandlerResult;
 import org.jibx.runtime.JiBXException;
 import org.mule.DefaultMuleMessage;
-import org.mule.api.*;
+import org.mule.api.MuleException;
+import org.mule.api.MuleMessage;
 import org.mule.config.ExceptionHelper;
 
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.List;
+import java.util.Vector;
 
 public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
 

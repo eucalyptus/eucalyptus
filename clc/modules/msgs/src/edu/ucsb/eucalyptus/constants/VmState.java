@@ -34,7 +34,8 @@
 
 package edu.ucsb.eucalyptus.constants;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public enum VmState {
   PENDING("pending",0),

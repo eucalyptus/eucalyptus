@@ -1,8 +1,8 @@
 package edu.ucsb.eucalyptus.transport.client;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import org.apache.axis2.AxisFault;
 import org.apache.axiom.om.OMElement;
+import org.apache.axis2.AxisFault;
 
 public interface Client {
 

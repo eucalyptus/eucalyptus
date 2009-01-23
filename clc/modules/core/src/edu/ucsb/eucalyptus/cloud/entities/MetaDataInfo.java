@@ -34,17 +34,10 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import org.hibernate.annotations.*;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.*;
-import javax.persistence.Entity;
-import javax.persistence.Table;
-import javax.persistence.CascadeType;
-import java.util.List;
-import java.util.ArrayList;
-
-import edu.ucsb.eucalyptus.msgs.AccessControlListType;
-import edu.ucsb.eucalyptus.msgs.Grant;
 
 @Entity
 @Table( name = "MetaData" )

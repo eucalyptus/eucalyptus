@@ -34,12 +34,17 @@
 
 package edu.ucsb.eucalyptus.admin.client;
 
-import com.google.gwt.core.client.*;
-import com.google.gwt.user.client.*;
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.user.client.Cookies;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
 
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.

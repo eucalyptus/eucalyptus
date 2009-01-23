@@ -37,20 +37,12 @@ package edu.ucsb.eucalyptus.ic;
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.WalrusBucketErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.StorageErrorMessageType;
 import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 import edu.ucsb.eucalyptus.util.ReplyCoordinator;
-import org.apache.log4j.Logger;
 import org.apache.http.HttpStatus;
+import org.apache.log4j.Logger;
 import org.mule.message.ExceptionMessage;
-
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.InetAddress;
-import java.net.Inet6Address;
-import java.util.List;
-import java.util.Collections;
 
 public class StorageReplyQueue {
 

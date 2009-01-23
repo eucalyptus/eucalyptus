@@ -37,7 +37,8 @@ package edu.ucsb.eucalyptus.transport.binding;
 import org.apache.log4j.Logger;
 import org.jibx.runtime.JiBXException;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class BindingManager {
 

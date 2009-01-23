@@ -35,16 +35,19 @@
 package edu.ucsb.eucalyptus.transport.client;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.transport.config.*;
+import edu.ucsb.eucalyptus.transport.config.Axis2OutProperties;
+import edu.ucsb.eucalyptus.transport.config.Mep;
 import edu.ucsb.eucalyptus.transport.util.Defaults;
 import org.apache.axiom.om.OMElement;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.addressing.EndpointReference;
-import org.apache.axis2.client.*;
+import org.apache.axis2.client.Options;
+import org.apache.axis2.client.ServiceClient;
 import org.apache.axis2.description.AxisOperation;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.axis2.wsdl.WSDLConstants;
-import org.apache.commons.httpclient.*;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
 import org.apache.log4j.Logger;
 
 public class BasicClient implements Client {

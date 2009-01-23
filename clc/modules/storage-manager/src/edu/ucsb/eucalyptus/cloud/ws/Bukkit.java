@@ -35,9 +35,10 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.keys.*;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.keys.UserKeyStore;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
@@ -45,16 +46,25 @@ import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
 import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
-import org.apache.tools.tar.*;
+import org.apache.tools.tar.TarEntry;
+import org.apache.tools.tar.TarInputStream;
 
-import javax.crypto.*;
-import javax.crypto.spec.*;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.nio.channels.*;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.security.*;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
 

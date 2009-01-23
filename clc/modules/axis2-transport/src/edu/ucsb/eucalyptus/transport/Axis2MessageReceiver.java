@@ -34,19 +34,24 @@
 
 package edu.ucsb.eucalyptus.transport;
 
-import edu.ucsb.eucalyptus.transport.config.*;
+import edu.ucsb.eucalyptus.transport.config.Axis2InProperties;
+import edu.ucsb.eucalyptus.transport.config.Axis2ServiceBuilder;
+import edu.ucsb.eucalyptus.transport.config.Key;
 import org.apache.axis2.AxisFault;
-import org.apache.axis2.description.*;
+import org.apache.axis2.description.AxisOperation;
+import org.apache.axis2.description.AxisService;
 import org.apache.log4j.Logger;
 import org.mule.api.component.JavaComponent;
 import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.lifecycle.CreateException;
 import org.mule.api.service.Service;
 import org.mule.api.transport.Connector;
-import org.mule.transport.*;
+import org.mule.transport.AbstractMessageReceiver;
+import org.mule.transport.ConnectException;
 
 import javax.xml.namespace.QName;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Axis2MessageReceiver extends AbstractMessageReceiver {
 

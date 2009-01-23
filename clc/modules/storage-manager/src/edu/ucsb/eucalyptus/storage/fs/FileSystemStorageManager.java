@@ -34,14 +34,13 @@
 
 package edu.ucsb.eucalyptus.storage.fs;
 
-import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.storage.StorageManager;
 
 import java.io.*;
-import java.util.List;
 import java.util.ArrayList;
-import java.util.UUID;
+import java.util.List;
 
 public class FileSystemStorageManager implements StorageManager {
 

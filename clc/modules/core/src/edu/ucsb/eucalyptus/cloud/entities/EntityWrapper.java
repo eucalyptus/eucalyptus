@@ -37,10 +37,16 @@ package edu.ucsb.eucalyptus.cloud.entities;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
-import org.hibernate.criterion.*;
+import org.hibernate.criterion.Example;
+import org.hibernate.criterion.MatchMode;
 
-import javax.persistence.*;
-import java.sql.*;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 
 public class EntityWrapper<TYPE> {

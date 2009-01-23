@@ -3,16 +3,24 @@ package edu.ucsb.eucalyptus;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.keys.*;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.util.BaseDirectory;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.SubDirectory;
+import edu.ucsb.eucalyptus.util.UserManagement;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.encoders.UrlBase64;
 
-import java.io.*;
-import java.security.*;
+import java.io.File;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 public class StartupChecks {
 

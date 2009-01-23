@@ -34,20 +34,14 @@
 
 package edu.ucsb.eucalyptus.transport.query;
 
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.HandlerDescription;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.HashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class StorageQueryDispatcher extends GenericHttpDispatcher implements RESTfulDispatcher {
 

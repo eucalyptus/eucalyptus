@@ -3,8 +3,8 @@ package edu.ucsb.eucalyptus.admin.client;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
 
-import java.util.*;
-import java.lang.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 

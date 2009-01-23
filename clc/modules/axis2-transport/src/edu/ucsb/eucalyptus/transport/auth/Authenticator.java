@@ -34,8 +34,8 @@
 
 package edu.ucsb.eucalyptus.transport.auth;
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 import java.security.cert.X509Certificate;
 

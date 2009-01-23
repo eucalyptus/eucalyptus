@@ -35,13 +35,13 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.msgs.Volume;
-import org.hibernate.annotations.*;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import javax.persistence.CascadeType;
 import javax.persistence.*;
-import javax.persistence.Entity;
-import javax.persistence.Table;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 @Entity
 @Table( name = "Volumes" )

@@ -1,9 +1,7 @@
 package edu.ucsb.eucalyptus.msgs
 
-import edu.ucsb.eucalyptus.annotation.HttpParameterMapping
-import edu.ucsb.eucalyptus.util.InstanceDefaults
 import edu.ucsb.eucalyptus.annotation.HttpEmbedded
-
+import edu.ucsb.eucalyptus.annotation.HttpParameterMapping
 
 public class VmControlMessage extends EucalyptusMessage {}
 /** *******************************************************************************/

@@ -35,12 +35,12 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.keys.Hashes;
-import org.hibernate.*;
-import org.hibernate.annotations.*;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.*;
-import javax.persistence.Entity;
-import javax.persistence.Table;
 import java.util.List;
 import java.util.zip.Adler32;
 

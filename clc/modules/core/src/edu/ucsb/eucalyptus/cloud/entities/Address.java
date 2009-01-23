@@ -3,12 +3,12 @@ package edu.ucsb.eucalyptus.cloud.entities;
 import edu.ucsb.eucalyptus.constants.HasName;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.*;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.*;
-import javax.persistence.Entity;
-import javax.persistence.Table;
-import java.util.concurrent.locks.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Entity
 @Table( name = "addresses" )

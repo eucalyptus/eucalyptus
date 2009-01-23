@@ -35,12 +35,12 @@
 package edu.ucsb.eucalyptus.util;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import org.apache.log4j.Logger;
 
-import java.lang.reflect.Constructor;
-import java.net.*;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 public class EucalyptusProperties {
 

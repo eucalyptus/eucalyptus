@@ -40,7 +40,9 @@ import edu.ucsb.eucalyptus.admin.client.*;
 import edu.ucsb.eucalyptus.util.BaseDirectory;
 import org.apache.log4j.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.*;
 
 /**

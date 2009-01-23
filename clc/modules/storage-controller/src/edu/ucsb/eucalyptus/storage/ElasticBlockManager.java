@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.storage;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+
 import java.util.List;
 
 public interface ElasticBlockManager {

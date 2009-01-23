@@ -38,10 +38,10 @@ import sun.net.smtp.SmtpClient;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.util.UUID;
-import java.io.*;
 
 public class ServletUtils extends HttpServlet {
 
@@ -62,11 +62,6 @@ public class ServletUtils extends HttpServlet {
     }
 
     public static String getRequestUrl(HttpServletRequest req) {
-        //HttpSession hsession = getThreadLocalRequest().getSession();
-        //return hsession.getServletContext().getRealPath();
-        //return "http://localhost:8888/EucalyptusWebInterface/EucalyptusWebInterface.html"; // TODO: find this
-        //return ServletRequest.getRequestURL();
-        //return GWT.getModuleBaseURL();
         String scheme = req.getScheme();             // http
         String serverName = req.getServerName();     // hostname.com
         int serverPort = req.getServerPort();        // 80

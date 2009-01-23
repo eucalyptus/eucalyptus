@@ -34,7 +34,8 @@
 
 package edu.ucsb.eucalyptus.transport.config;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public enum Key {
 

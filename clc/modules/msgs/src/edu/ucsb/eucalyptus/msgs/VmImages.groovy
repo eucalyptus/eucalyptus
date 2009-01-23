@@ -2,7 +2,6 @@ package edu.ucsb.eucalyptus.msgs
 
 import edu.ucsb.eucalyptus.annotation.HttpParameterMapping
 
-
 public class VmImageMessage extends EucalyptusMessage {}
 /** *******************************************************************************/
 public class DeregisterImageResponseType extends VmImageMessage {
