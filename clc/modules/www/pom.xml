@@ -58,6 +58,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
                 <configuration>
+                    <packagingExcludes>WEB-INF/lib/*.jar</packagingExcludes>
                     <outputDirectory>${pom.basedir}/webapps</outputDirectory>
                     <warName>root</warName>
                     <warSourceDirectory>${pom.basedir}/www-build/${gwt.module.name}/</warSourceDirectory>
@@ -123,7 +124,7 @@
             <groupId>eucalyptus</groupId>
             <artifactId>cluster-manager</artifactId>
             <version>${euca.version}</version>
-        </dependency>        
+        </dependency>
         <dependency>
             <groupId>com.google.gwt</groupId>
             <artifactId>gwt-servlet</artifactId>
