@@ -16,6 +16,7 @@
         <module>modules/image-manager</module>
         <module>modules/www</module>
         <module>modules/storage-manager</module>
+        <module>modules/storage-controller</module>
         <module>modules/distribution</module>
     </modules>
     <developers>
@@ -23,6 +24,13 @@
             <name>Chris Grzegorczyk</name>
             <id>chris.grze</id>
             <email>chris.grze@gmail.com</email>
+            <organization>Eucalyptus</organization>
+            <url>http://eucalyptus.cs.ucsb.edu/</url>
+        </developer>
+        <developer>
+            <name>Sunil Soman</name>
+            <id>sunil.soman</id>
+            <email>sunils@cs.ucsb.edu</email>
             <organization>Eucalyptus</organization>
             <url>http://eucalyptus.cs.ucsb.edu/</url>
         </developer>
