@@ -44,8 +44,8 @@ import edu.ucsb.eucalyptus.util.BindingUtil;
 import edu.ucsb.eucalyptus.util.WalrusProperties;
 import groovy.lang.GroovyObject;
 import org.apache.axiom.om.OMElement;
-import org.apache.log4j.Logger;
 import org.apache.axis2.context.MessageContext;
+import org.apache.log4j.Logger;
 import org.jibx.runtime.JiBXException;
 
 import java.lang.reflect.Field;

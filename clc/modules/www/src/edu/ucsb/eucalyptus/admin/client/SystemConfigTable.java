@@ -3,9 +3,6 @@ package edu.ucsb.eucalyptus.admin.client;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
 
-import java.util.*;
-import java.lang.*;
-
 public class SystemConfigTable extends VerticalPanel {
 
 	private static Label c_status = new Label ();

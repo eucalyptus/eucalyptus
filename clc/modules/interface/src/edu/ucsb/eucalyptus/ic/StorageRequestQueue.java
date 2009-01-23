@@ -34,7 +34,7 @@
 
 package edu.ucsb.eucalyptus.ic;
 
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import org.apache.log4j.Logger;
 
 public class StorageRequestQueue

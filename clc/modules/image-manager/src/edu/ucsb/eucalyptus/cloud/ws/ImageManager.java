@@ -35,22 +35,34 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.*;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.keys.*;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.keys.UserKeyStore;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 
 import javax.crypto.Cipher;
-import javax.xml.parsers.*;
-import javax.xml.xpath.*;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 import java.io.ByteArrayInputStream;
-import java.net.*;
-import java.security.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.Adler32;
 
 public class ImageManager {

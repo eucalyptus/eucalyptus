@@ -34,7 +34,8 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.msgs.GetDecryptedImageResponseType;
+import edu.ucsb.eucalyptus.msgs.GetDecryptedImageType;
 import junit.framework.TestCase;
 
 public class BukkitImageTest extends TestCase {

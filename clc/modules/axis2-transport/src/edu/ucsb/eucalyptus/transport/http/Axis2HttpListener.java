@@ -34,18 +34,24 @@
 
 package edu.ucsb.eucalyptus.transport.http;
 
-import org.apache.log4j.Logger;
-import org.apache.axis2.context.*;
-import org.apache.axis2.*;
+import org.apache.axis2.AxisFault;
+import org.apache.axis2.Constants;
 import org.apache.axis2.addressing.EndpointReference;
+import org.apache.axis2.context.ConfigurationContext;
+import org.apache.axis2.context.MessageContext;
+import org.apache.axis2.context.SessionContext;
 import org.apache.axis2.description.TransportInDescription;
 import org.apache.axis2.engine.ListenerManager;
 import org.apache.axis2.transport.TransportListener;
-import org.apache.axis2.transport.http.server.*;
-import org.apache.axis2.transport.http.*;
+import org.apache.axis2.transport.http.HTTPConstants;
+import org.apache.axis2.transport.http.server.HttpFactory;
+import org.apache.axis2.transport.http.server.SessionManager;
+import org.apache.axis2.transport.http.server.SimpleHttpServer;
+import org.apache.log4j.Logger;
 
-import java.util.*;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * User: decker

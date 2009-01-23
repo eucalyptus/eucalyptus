@@ -1,11 +1,10 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.util.BindingUtil;
-import org.hibernate.annotations.*;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.*;
-import javax.persistence.Entity;
-import javax.persistence.Table;
 
 @Entity
 @Table( name = "clusters" )

@@ -37,7 +37,9 @@ package edu.ucsb.eucalyptus.util;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
-import org.mule.api.*;
+import org.mule.api.MuleEvent;
+import org.mule.api.MuleException;
+import org.mule.api.MuleMessage;
 import org.mule.module.client.MuleClient;
 
 public class Messaging {

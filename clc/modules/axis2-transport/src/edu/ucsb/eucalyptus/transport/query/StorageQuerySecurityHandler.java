@@ -35,14 +35,16 @@
 package edu.ucsb.eucalyptus.transport.query;
 
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.keys.*;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 import org.bouncycastle.openssl.PEMReader;
 
 import java.io.StringReader;
-import java.security.*;
+import java.security.PublicKey;
+import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.Map;
 

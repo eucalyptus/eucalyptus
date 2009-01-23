@@ -35,17 +35,21 @@
 package edu.ucsb.eucalyptus.transport.auth;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.UserKeyStore;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import edu.ucsb.eucalyptus.keys.*;
 import org.hibernate.Session;
-import org.hibernate.criterion.*;
+import org.hibernate.criterion.Example;
+import org.hibernate.criterion.MatchMode;
 
 import javax.persistence.EntityManager;
-import java.util.List;
+import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
-import java.security.*;
+import java.util.List;
 
 public class UserAuthentication extends CertAuthentication {
 

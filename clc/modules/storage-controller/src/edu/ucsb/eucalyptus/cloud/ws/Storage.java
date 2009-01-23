@@ -35,38 +35,36 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.storage.ElasticBlockManager;
-import edu.ucsb.eucalyptus.storage.LVM2Manager;
-import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
-import edu.ucsb.eucalyptus.util.*;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
-import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
-import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
+import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
+import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.storage.ElasticBlockManager;
+import edu.ucsb.eucalyptus.storage.LVM2Manager;
+import edu.ucsb.eucalyptus.storage.StorageManager;
+import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
-import org.apache.log4j.Logger;
+import edu.ucsb.eucalyptus.util.*;
 import org.apache.commons.httpclient.*;
+import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
-import org.apache.commons.httpclient.methods.DeleteMethod;
-import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
-import org.apache.xml.security.utils.Base64;
+import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.UrlBase64;
 
-import java.util.*;
-import java.util.zip.GZIPOutputStream;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.io.*;
-import java.security.Signature;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Signature;
 import java.security.cert.X509Certificate;
+import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.zip.GZIPOutputStream;
 
 
 public class Storage {

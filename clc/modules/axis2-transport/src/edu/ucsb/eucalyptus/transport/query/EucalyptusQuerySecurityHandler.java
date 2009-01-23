@@ -38,7 +38,8 @@ import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import org.apache.log4j.Logger;
 
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Map;
 
 public class EucalyptusQuerySecurityHandler extends HMACQuerySecurityHandler {
 

@@ -34,7 +34,6 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.XMLParser;
 import junit.framework.TestCase;
 

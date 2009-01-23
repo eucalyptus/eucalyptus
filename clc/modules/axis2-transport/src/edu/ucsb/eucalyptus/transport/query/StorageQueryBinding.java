@@ -37,23 +37,23 @@ package edu.ucsb.eucalyptus.transport.query;
 import edu.ucsb.eucalyptus.annotation.HttpEmbedded;
 import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.msgs.AccessControlListType;
-import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.transport.binding.Binding;
 import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 import edu.ucsb.eucalyptus.util.BindingUtil;
 import groovy.lang.GroovyObject;
 import org.apache.axiom.om.OMElement;
-import org.apache.log4j.Logger;
 import org.apache.axis2.context.MessageContext;
+import org.apache.log4j.Logger;
 import org.jibx.runtime.JiBXException;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class StorageQueryBinding implements QueryBinding {
 

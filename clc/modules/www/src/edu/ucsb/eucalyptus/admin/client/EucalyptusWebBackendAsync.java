@@ -34,9 +34,10 @@
 
 package edu.ucsb.eucalyptus.admin.client;
 
-import com.google.gwt.user.client.rpc.*;
+import com.google.gwt.user.client.rpc.AsyncCallback;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.

@@ -34,8 +34,8 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 
 import java.util.ArrayList;

@@ -35,16 +35,14 @@
 package edu.ucsb.eucalyptus.transport.query;
 
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.keys.*;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
+import edu.ucsb.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;
-import org.apache.xml.security.utils.Base64;
-import org.bouncycastle.openssl.PEMReader;
 
-import java.io.StringReader;
-import java.security.*;
-import java.security.cert.X509Certificate;
-import java.util.*;
+import java.security.Signature;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
 

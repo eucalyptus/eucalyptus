@@ -35,9 +35,9 @@
 package edu.ucsb.eucalyptus.ic;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import org.apache.log4j.Logger;
 import org.mule.api.MuleException;
 import org.mule.module.client.MuleClient;

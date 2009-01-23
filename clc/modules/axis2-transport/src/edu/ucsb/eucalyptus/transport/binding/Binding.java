@@ -36,14 +36,17 @@ package edu.ucsb.eucalyptus.transport.binding;
 
 import org.apache.axiom.om.*;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
-import org.apache.axiom.soap.*;
+import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.jibx.JiBXDataSource;
 import org.apache.log4j.Logger;
 import org.jibx.runtime.*;
-import org.jibx.runtime.impl.*;
+import org.jibx.runtime.impl.StAXReaderWrapper;
+import org.jibx.runtime.impl.UnmarshallingContext;
 
-import javax.xml.stream.*;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamReader;
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.Method;
 

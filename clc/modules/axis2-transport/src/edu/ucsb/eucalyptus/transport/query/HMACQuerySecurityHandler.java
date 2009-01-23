@@ -34,14 +34,16 @@
 
 package edu.ucsb.eucalyptus.transport.query;
 
-import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.text.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public abstract class HMACQuerySecurityHandler implements QuerySecurityHandler {

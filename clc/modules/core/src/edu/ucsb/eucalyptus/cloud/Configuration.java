@@ -35,12 +35,17 @@
 package edu.ucsb.eucalyptus.cloud;
 
 import com.thoughtworks.xstream.XStream;
-import com.thoughtworks.xstream.annotations.*;
-import edu.ucsb.eucalyptus.util.*;
+import com.thoughtworks.xstream.annotations.XStreamAlias;
+import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
+import com.thoughtworks.xstream.annotations.XStreamOmitField;
+import edu.ucsb.eucalyptus.util.BaseDirectory;
 import org.apache.log4j.Logger;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.util.Calendar;
 
 @XStreamAlias( "eucalyptus" )
 public class Configuration {

@@ -36,23 +36,38 @@
 package edu.ucsb.eucalyptus.transport.http;
 
 import edu.ucsb.eucalyptus.util.Messaging;
-import org.apache.axiom.soap.*;
+import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axiom.soap.impl.llom.soap11.SOAP11Factory;
-import org.apache.axis2.*;
+import org.apache.axis2.AxisFault;
+import org.apache.axis2.Constants;
 import org.apache.axis2.builder.BuilderUtil;
-import org.apache.axis2.context.*;
-import org.apache.axis2.engine.*;
-import org.apache.axis2.transport.*;
-import org.apache.axis2.transport.http.*;
-import org.apache.axis2.transport.http.server.*;
-import org.apache.http.*;
+import org.apache.axis2.context.ConfigurationContext;
+import org.apache.axis2.context.MessageContext;
+import org.apache.axis2.engine.AxisEngine;
+import org.apache.axis2.engine.Handler;
+import org.apache.axis2.transport.RequestResponseTransport;
+import org.apache.axis2.transport.TransportUtils;
+import org.apache.axis2.transport.http.HTTPConstants;
+import org.apache.axis2.transport.http.HTTPTransportReceiver;
+import org.apache.axis2.transport.http.HTTPTransportUtils;
+import org.apache.axis2.transport.http.server.AxisHttpRequest;
+import org.apache.axis2.transport.http.server.AxisHttpResponse;
+import org.apache.axis2.transport.http.server.HttpUtils;
+import org.apache.axis2.transport.http.server.Worker;
+import org.apache.http.Header;
+import org.apache.http.HttpException;
+import org.apache.http.HttpStatus;
+import org.apache.http.MethodNotSupportedException;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EncodingUtils;
 import org.apache.log4j.Logger;
 import org.mule.transport.NullPayload;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 public class Axis2HttpWorker implements Worker {
 

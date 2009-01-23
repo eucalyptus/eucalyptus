@@ -33,9 +33,8 @@
  */
 package edu.ucsb.eucalyptus.util;
 
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Iterator;
+import java.util.concurrent.LinkedBlockingQueue;
 
 // A concurrent hash map that holds a map of queues, which can be used for passing data
 // Currently, the queues are a LinkedBlockingQueue and producers/consumers do not timeout.

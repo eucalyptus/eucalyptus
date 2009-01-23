@@ -35,7 +35,6 @@
 package edu.ucsb.eucalyptus.admin.server;
 
 import java.io.UnsupportedEncodingException;
-
 import java.security.SecureRandom;
 
 /**

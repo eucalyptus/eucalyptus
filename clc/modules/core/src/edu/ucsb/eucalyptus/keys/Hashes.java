@@ -36,11 +36,13 @@ package edu.ucsb.eucalyptus.keys;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.openssl.PEMWriter;
+import org.bouncycastle.util.encoders.UrlBase64;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.security.*;
-import java.io.*;
 
 public class Hashes {
     private static Logger LOG = Logger.getLogger( Hashes.class );

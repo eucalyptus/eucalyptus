@@ -36,13 +36,12 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import org.hibernate.annotations.*;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import javax.persistence.CascadeType;
 import javax.persistence.*;
-import javax.persistence.Entity;
-import javax.persistence.Table;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.Adler32;
 
 @Entity

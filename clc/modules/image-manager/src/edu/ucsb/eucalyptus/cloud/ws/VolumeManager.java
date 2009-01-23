@@ -36,7 +36,10 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
-import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.log4j.Logger;
 

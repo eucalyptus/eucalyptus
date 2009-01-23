@@ -34,20 +34,9 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.util.WalrusProperties;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
 import junit.framework.TestCase;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.UUID;
-
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpMethodBase;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.methods.PutMethod;
-import org.apache.commons.httpclient.methods.HeadMethod;
 
 public class DeleteSnapshotTest extends TestCase {
 

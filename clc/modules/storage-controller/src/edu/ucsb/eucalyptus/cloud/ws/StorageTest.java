@@ -34,10 +34,7 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
-
-import java.util.ArrayList;
 
 public class StorageTest extends TestCase {
 

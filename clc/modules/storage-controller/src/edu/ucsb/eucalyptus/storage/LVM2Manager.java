@@ -35,19 +35,23 @@
 package edu.ucsb.eucalyptus.storage;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
+import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.ws.Storage;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.util.StorageProperties;
 import edu.ucsb.eucalyptus.keys.Hashes;
-import java.io.*;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.nio.channels.FileChannel;
+import edu.ucsb.eucalyptus.util.StorageProperties;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.net.Inet6Address;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class LVM2Manager implements ElasticBlockManager {
 

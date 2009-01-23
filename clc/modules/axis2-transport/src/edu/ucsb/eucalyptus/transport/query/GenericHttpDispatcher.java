@@ -40,7 +40,9 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.addressing.EndpointReference;
 import org.apache.axis2.context.MessageContext;
-import org.apache.axis2.description.*;
+import org.apache.axis2.description.AxisOperation;
+import org.apache.axis2.description.AxisService;
+import org.apache.axis2.description.HandlerDescription;
 import org.apache.axis2.dispatchers.RequestURIBasedDispatcher;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.log4j.Logger;
@@ -49,7 +51,8 @@ import org.apache.rampart.RampartMessageData;
 
 import java.io.InputStream;
 import java.net.URL;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class GenericHttpDispatcher extends RequestURIBasedDispatcher {
 

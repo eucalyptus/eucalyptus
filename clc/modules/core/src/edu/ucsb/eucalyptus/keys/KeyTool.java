@@ -35,14 +35,18 @@
 package edu.ucsb.eucalyptus.keys;
 
 import org.apache.log4j.Logger;
-import org.bouncycastle.asn1.x509.*;
+import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
 
 import javax.security.auth.x500.X500Principal;
-import java.io.*;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.math.BigInteger;
-import java.security.*;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
 

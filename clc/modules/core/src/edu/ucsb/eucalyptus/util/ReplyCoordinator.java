@@ -34,7 +34,8 @@
 
 package edu.ucsb.eucalyptus.util;
 
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.ConcurrentHashMap;

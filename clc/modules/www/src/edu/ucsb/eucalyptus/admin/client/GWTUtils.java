@@ -34,8 +34,6 @@
 
 package edu.ucsb.eucalyptus.admin.client;
 
-import com.google.gwt.user.client.DOM;
-import com.google.gwt.user.client.ui.*;
 import java.util.HashMap;
 
 public final class GWTUtils {

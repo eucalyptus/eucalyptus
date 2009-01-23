@@ -35,22 +35,22 @@
 package edu.ucsb.eucalyptus.transport.query;
 
 import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
 import edu.ucsb.eucalyptus.msgs.Grant;
-import edu.ucsb.eucalyptus.msgs.AccessControlListType;
+import edu.ucsb.eucalyptus.util.*;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.HandlerDescription;
-import org.apache.log4j.Logger;
 import org.apache.commons.lang.time.DateUtils;
+import org.apache.log4j.Logger;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.zip.GZIPInputStream;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.zip.GZIPInputStream;
 
 public class WalrusQueryDispatcher extends GenericHttpDispatcher implements RESTfulDispatcher {
 

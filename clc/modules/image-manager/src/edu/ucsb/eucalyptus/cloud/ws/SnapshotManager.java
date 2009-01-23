@@ -34,8 +34,8 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.msgs.*;
 
 public class SnapshotManager {
 

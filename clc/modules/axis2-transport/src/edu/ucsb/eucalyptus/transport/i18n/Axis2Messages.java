@@ -34,7 +34,6 @@
 
 package edu.ucsb.eucalyptus.transport.i18n;
 
-import org.mule.config.i18n.Message;
 import org.mule.config.i18n.MessageFactory;
 
 public class Axis2Messages extends MessageFactory
