@@ -1,0 +1,19 @@
+<assembly>
+    <id>modules</id>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <formats>
+        <format>tar.gz</format>
+    </formats>
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>modules</outputDirectory>
+            <includes>
+                <include>org.apache.axis2:addressing:mar</include>
+                <include>org.apache.rampart:rahas:mar</include>
+                <include>org.apache.axis2:mex:mar</include>
+                <include>org.apache.rampart:rampart:mar</include>
+            </includes>
+        </dependencySet>
+    </dependencySets>
+</assembly>
+

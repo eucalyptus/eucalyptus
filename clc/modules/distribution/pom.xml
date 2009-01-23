@@ -158,6 +158,8 @@
                             <finalName>eucalyptus-cloud-${euca.version}</finalName>
                             <descriptors>
                                 <descriptor>bin-assembly.xml</descriptor>
+                                <descriptor>lib-assembly.xml</descriptor>
+                                <descriptor>modules-assembly.xml</descriptor>
                             </descriptors>
                         </configuration>
                     </execution>

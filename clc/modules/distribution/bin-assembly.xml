@@ -3,7 +3,7 @@
     <includeBaseDirectory>true</includeBaseDirectory>
     <baseDirectory>eucalyptus-cloud-${euca.version}</baseDirectory>
     <formats>
-        <format>zip</format>
+        <format>tar.gz</format>
     </formats>
 
     <fileSets>
@@ -12,6 +12,13 @@
             <outputDirectory>usr/share/eucalyptus</outputDirectory>
             <includes>
                 <include>**/*.jar</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>../</directory>
+            <outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>
+            <includes>
+                <include>cloud.xml</include>
             </includes>
         </fileSet>
         <fileSet>
