@@ -29,7 +29,7 @@ distclean: clean
 
 install: build
 	$(ANT) install
-	@$(INSTALL) -m 640 cloud.xml $(etcdir)/eucalyptus
+	@$(INSTALL) -m 644 cloud.xml $(etcdir)/eucalyptus
 	make -C modules/storage-controller/c install
 	make -C modules/storage-manager/c install
 
