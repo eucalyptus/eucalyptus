@@ -221,7 +221,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                     messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
                     InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
                     InputStream inStream = in;
-                    if(!operationName.equals(WalrusProperties.StorageOperations.StoreSnapshot.toString())) {
+                    if((!walrusInternalOperation) || (!WalrusProperties.StorageOperations.StoreSnapshot.toString().equals(operationName))) {
                         inStream = new BufferedInputStream(in);
                     } else {
                         try {
