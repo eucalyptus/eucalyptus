@@ -14,17 +14,17 @@
         <module>modules/key-manager</module>
         <module>modules/cluster-manager</module>
         <module>modules/image-manager</module>
-<!--        <module>modules/www</module> -->
+        <module>modules/www</module>
         <module>modules/storage-manager</module>
         <module>modules/distribution</module>
     </modules>
     <developers>
         <developer>
-            <name>Saminda Abeyruwan</name>
-            <id>saminda</id>
-            <email>saminda AT wso2.com</email>
-            <organization>WSO2</organization>
-            <url>http://www.apache.org/~azeez</url>
+            <name>Chris Grzegorczyk</name>
+            <id>chris.grze</id>
+            <email>chris.grze@gmail.com</email>
+            <organization>Eucalyptus</organization>
+            <url>http://eucalyptus.cs.ucsb.edu/</url>
         </developer>
     </developers>
 
