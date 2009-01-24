@@ -372,7 +372,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             params.remove(key);
         }
 
-        if(!headers.containsKey(StorageProperties.EUCALYPTUS_OPERATION)) {
+        if(!walrusInternalOperation) {
             operationName = operationMap.get(operationKey);
         }
         httpRequest.setBindingArguments(operationParams);
