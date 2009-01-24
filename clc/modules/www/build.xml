@@ -80,7 +80,7 @@
         <delete dir="${gwt.class.dir}"/>
         <delete dir="${gwt.war.build.dir}"/>
         <java classpathref="gwtcompilerclasspath" fork="true" failonerror="true" classname="com.google.gwt.dev.GWTCompiler">
-            <jvmarg value="-Xmx512m"/>
+            <jvmarg value="-Xmx1024m"/>
             <arg line="-out ${gwt.build.dir}"/>
             <!--<arg line="-style DETAILED"/>-->
             <arg line="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface"/>

@@ -36,12 +36,20 @@ package edu.ucsb.eucalyptus.transport.query;
 
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
+import org.bouncycastle.util.encoders.UrlBase64;
+import org.bouncycastle.openssl.PEMReader;
 
 import java.security.Signature;
+import java.security.PublicKey;
+import java.security.cert.X509Certificate;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
+import java.io.StringReader;
 
 public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
@@ -91,9 +99,12 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             String data = verb + "\n" + date + "\n" + addr + "\n";
 
             Signature sig;
-            boolean valid = true;
-            /*try {
-                X509Certificate cert = (X509Certificate)new PEMReader(new StringReader(new String(Base64.decode(eucaCert)))).readObject();
+            boolean valid = false;
+            try {
+                byte[] bytes = Base64.decode(eucaCert);
+                String certString = new String(bytes);
+                PEMReader pemReader = new PEMReader(new StringReader(certString));
+                X509Certificate cert = (X509Certificate) pemReader.readObject();
                 AbstractKeyStore keyStore = ServiceKeyStore.getInstance();
                 if (keyStore.getCertificateAlias(cert) != null) {
                     //cert found in keystore
@@ -109,7 +120,7 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             } catch (Exception ex) {
                 LOG.warn ("Authentication exception: " + ex.getMessage());
                 ex.printStackTrace();
-            } */
+            }
 
             if(!valid) {
                 throw new QuerySecurityException( "User authentication failed." );
