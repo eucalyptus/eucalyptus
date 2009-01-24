@@ -52,6 +52,7 @@
                     <includes>
                         <includes>*-binding.xml</includes>
                     </includes>
+                    <validate>false</validate>
                     <verbose>false</verbose>
                 </configuration>
                 <executions>
