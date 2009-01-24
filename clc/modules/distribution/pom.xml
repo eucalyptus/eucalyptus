@@ -190,9 +190,9 @@
                         </goals>
                         <configuration>
                             <tasks>
-                                <mkdir dir="${parent.relativePath}/deps"/>
-                                <move todir="${parent.relativePath}/deps">
-                                    <fileset dir="${parent.relativePath}/target">
+                                <mkdir dir="../../deps"/>
+                                <move todir="../../deps">
+                                    <fileset dir="../../target">
                                         <include name="**/cloud-*.tar.gz"/>
                                     </fileset>
                                 </move>
