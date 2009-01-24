@@ -61,8 +61,13 @@
                     <outputDirectory>${pom.basedir}/webapps</outputDirectory>
                     <warName>root</warName>
                     <warSourceDirectory>${pom.basedir}/www-build/${gwt.module.name}/</warSourceDirectory>
-                    <warSourceExcludes><exclude>**/*.jar</exclude></warSourceExcludes>
-                    <packagingExcludes><exclude>**/*.jar</exclude></packagingExcludes>
+                    <overlays>
+                        <overlay>
+                            <excludes>
+                            <exclude>**/*.jar</exclude>
+                            </excludes>
+                        </overlay>
+                    </overlays>
                     <webXml>${pom.basedir}/conf/gwt-web.xml</webXml>
                 </configuration>
                 <executions>
