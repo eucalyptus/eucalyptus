@@ -673,7 +673,7 @@ public class Bukkit {
                 }
             } else {
                 db.rollback();
-                throw new AccessDeniedException(objectName);
+                throw new NoSuchEntityException(objectName);
             }
         } else {
             db.rollback();
