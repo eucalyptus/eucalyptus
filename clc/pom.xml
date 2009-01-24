@@ -16,8 +16,8 @@
         <module>modules/image-manager</module>
         <module>modules/storage-manager</module>
         <module>modules/storage-controller</module>
-	<module>modules/storage-manager/native</module>
-	<module>modules/storage-controller/native</module>
+        <module>modules/storage-manager/native</module>
+        <module>modules/storage-controller/native</module>
         <module>modules/distribution</module>
     </modules>
     <developers>
@@ -87,16 +87,16 @@
                 <enabled>true</enabled>
             </snapshots>
         </pluginRepository>
-         <pluginRepository>
-             <id>codehaus-plugins-snapshots</id>
-             <url>http://snapshots.repository.codehaus.org/</url>
-             <snapshots>
-                 <enabled>true</enabled>
-             </snapshots>
-             <releases>
-                 <enabled>false</enabled>
-             </releases>
-         </pluginRepository>
+        <pluginRepository>
+            <id>codehaus-plugins-snapshots</id>
+            <url>http://snapshots.repository.codehaus.org/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+        </pluginRepository>
         <pluginRepository>
             <id>gwt-maven</id>
             <url>http://gwt-maven.googlecode.com/svn/trunk/mavenrepo</url>
@@ -186,7 +186,6 @@
             </dependency>
 
 
-
             <dependency>
                 <groupId>org.mortbay.jetty</groupId>
                 <artifactId>jetty</artifactId>
@@ -197,7 +196,6 @@
                 <artifactId>jetty-gwt</artifactId>
                 <version>${jetty.version}</version>
             </dependency>
-
 
 
             <dependency>
@@ -287,6 +285,12 @@
                 <groupId>org.apache.ant</groupId>
                 <artifactId>ant</artifactId>
                 <version>${ant.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.santuario</groupId>
+                <artifactId>xmlsec</artifactId>
+                <version>1.4.1</version>
             </dependency>
 
             <!--GWT-->
@@ -396,7 +400,7 @@
         </resources>
         <plugins>
             <plugin>
-                 <inherited>true</inherited>
+                <inherited>true</inherited>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
