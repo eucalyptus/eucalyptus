@@ -1512,7 +1512,7 @@ public class Bukkit {
         }
     }
 
-    private void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
+    private synchronized void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
         EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
         ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
         List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
@@ -1531,10 +1531,7 @@ public class Bukkit {
 //decrypt, unzip, untar image in the background
             ImageCacher imageCacher = new ImageCacher(bucketName, manifestKey, decryptedImageKey);
             imageCacher.run();
-        } else {
-            db.rollback();
-            throw new ImageAlreadyExistsException(manifestKey);
-        }
+        } 
     }
 
     public CacheImageResponseType CacheImage(CacheImageType request) throws EucalyptusCloudException {
