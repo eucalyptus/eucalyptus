@@ -64,7 +64,7 @@
                     <overlays>
                         <overlay>
                             <excludes>
-                            <exclude>**/*.jar</exclude>
+                                <exclude>**/*.jar</exclude>
                             </excludes>
                         </overlay>
                     </overlays>
@@ -104,14 +104,6 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.5</source>
-                    <target>1.5</target>
-                </configuration>
             </plugin>
         </plugins>
     </build>
