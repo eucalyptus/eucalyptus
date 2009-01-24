@@ -188,11 +188,12 @@
                         <phase>package</phase>
                         <configuration>
                             <tasks>
-                                <mkdir dir="deps"/>
-                                <mkdir dir="dist"/>
-
-                                <copy file="../../target/eucalyptus-cloud-${euca.version}-bin.tar.gz"
-                                      tofile="target/tmp-repository/modules/soapmonitor-${soapmonitor.mar.version}.mar"/>
+                                <mkdir dir="${parent.pom.directory}/deps"/>
+                                <move todir="${parent.pom.directory}/deps">
+                                    <fileset dir="${parent.pom.directory}/target">
+                                        <include name="**/cloud-*.tar.gz"/>
+                                    </fileset>
+                                </move>
                             </tasks>
                         </configuration>
                     </execution>

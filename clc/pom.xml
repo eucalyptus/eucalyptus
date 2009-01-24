@@ -342,7 +342,6 @@
                 <artifactId>gmaven-runtime-1.5</artifactId>
                 <version>1.0-rc-4</version>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
     <profiles>
