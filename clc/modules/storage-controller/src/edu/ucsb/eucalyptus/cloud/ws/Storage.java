@@ -55,16 +55,16 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
-import org.bouncycastle.util.encoders.UrlBase64;
+import org.bouncycastle.util.encoders.Base64;
 
 import java.io.*;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPOutputStream;
+import java.net.URL;
 
 
 public class Storage {
@@ -702,8 +702,16 @@ public class Storage {
             }
             String date = new Date().toString();
             String httpVerb = verb;
-            String data = httpVerb + "\n" + date + "\n" + addr + "\n";
+            String addrPath = null;
+            try {
+                java.net.URI addrUri = new URL(addr).toURI();
+                addrPath = addrUri.getPath().toString() + "?" + addrUri.getQuery().toString();
+            } catch(Exception ex) {
+                ex.printStackTrace();
+            }
+            String data = httpVerb + "\n" + date + "\n" + addrPath + "\n";
 
+            System.out.println(data);
             HttpMethodBase method = null;
             if(httpVerb.equals("PUT")) {
                 method = new  PutMethodWithProgress(addr);
@@ -724,15 +732,15 @@ public class Storage {
 
                 PrivateKey ccPrivateKey = (PrivateKey) keyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
                 X509Certificate cert = keyStore.getCertificate(EucalyptusProperties.NAME);
-                PublicKey ccPublicKey = cert.getPublicKey();
+                byte[] pemCertBytes = Hashes.getPemBytes(cert);
 
                 Signature sign = Signature.getInstance("SHA1withRSA");
                 sign.initSign(ccPrivateKey);
                 sign.update(data.getBytes());
                 byte[] sig = sign.sign();
 
-                // method.setRequestHeader("EucaCert", new String(UrlBase64.encode(ccPublicKey.toString().getBytes()))); // or maybe cert instead of ccPublicKey?
-                method.setRequestHeader("EucaSignature", new String(UrlBase64.encode(sig)));
+                method.setRequestHeader("EucaCert", new String(Base64.encode(pemCertBytes))); // or maybe cert instead of ccPublicKey?
+                method.setRequestHeader("EucaSignature", new String(Base64.encode(sig)));
             } catch(Exception ex) {
                 ex.printStackTrace();
             }
