@@ -36,7 +36,6 @@ package edu.ucsb.eucalyptus.transport.query;
 
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
-import edu.ucsb.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;
 
 import java.security.Signature;
@@ -84,7 +83,7 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
         //this.checkParameters( hdrs );
         //:: check the signature :://
 
-        if(hdrs.containsKey(StorageProperties.EUCALYPTUS_OPERATION)) {
+        if(hdrs.containsKey(StorageQuerySecurityHandler.StorageSecurityParameters.EucaSignature)) {
             //possible internal request -- perform authentication using internal credentials
             String date =  (String) hdrs.remove( SecurityParameter.Date);
             String eucaCert = (String) hdrs.remove(StorageQuerySecurityHandler.StorageSecurityParameters.EucaCert);
