@@ -42,16 +42,11 @@
     <modulesSets>
         <moduleSet>
             <sources>
-                <filesSets>
-                    <fileSet>
-                        <includeModuleDirectory>false</includeModuleDirectory>
-                        <directory>conf</directory>
-                        <outputDirectory>etc/eucalyptus/cloud.d</outputDirectory>
-                        <includes>
-                            <include>**/*</include>
-                        </includes>
-                    </fileSet>
-                </filesSets>
+                <includeModuleDirectory>false</includeModuleDirectory>
+                <includes>
+                    <include>**/*</include>
+                </includes>
+                <outputDirectory>etc/eucalyptus/cloud.d</outputDirectory>
             </sources>
         </moduleSet>
     </modulesSets>
