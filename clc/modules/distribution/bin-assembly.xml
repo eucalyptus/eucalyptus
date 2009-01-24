@@ -31,10 +31,10 @@
             </includes>
         </fileSet>
         <fileSet>
-            <directory>../</directory>
+            <directory>../**/conf</directory>
             <outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>
             <includes>
-                <include>**/conf/*</include>
+                <include>**/*</include>
             </includes>
         </fileSet>
         <fileSet>
