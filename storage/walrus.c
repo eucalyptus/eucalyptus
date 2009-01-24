@@ -122,7 +122,11 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers); /* register headers */
 
 	total_wrote = total_calls = 0;
-    logprintfl (EUCADEBUG, "walrus_request(): writing %s/%s output to %s\n", verb, walrus_op, outfile);
+	if (walrus_op) {
+	  logprintfl (EUCADEBUG, "walrus_request(): writing %s/%s output to %s\n", verb, walrus_op, outfile);
+	} else {
+	  logprintfl (EUCADEBUG, "walrus_request(): writing %s output to %s\n", verb, outfile);
+	}
 	result = curl_easy_perform (curl); /* do it */
     logprintfl (EUCADEBUG, "walrus_request(): wrote %d bytes in %d writes\n", total_wrote, total_calls);
 	fclose (fp);
