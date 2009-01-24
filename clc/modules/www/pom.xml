@@ -58,10 +58,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
                 <configuration>
-                    <warSourceExcludes>WEB-INF/lib/*.jar</warSourceExcludes>
                     <outputDirectory>${pom.basedir}/webapps</outputDirectory>
                     <warName>root</warName>
                     <warSourceDirectory>${pom.basedir}/www-build/${gwt.module.name}/</warSourceDirectory>
+                    <warSourceExcludes>${pom.basedir}/www-build/${gwt.module.name}/WEB-INF/lib/*.jar</warSourceExcludes>
+                    <packagingExcludes>${pom.basedir}/www-build/${gwt.module.name}/WEB-INF/lib/*.jar</packagingExcludes>
                     <webXml>${pom.basedir}/conf/gwt-web.xml</webXml>
                 </configuration>
                 <executions>
