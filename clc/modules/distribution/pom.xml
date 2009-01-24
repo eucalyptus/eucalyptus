@@ -168,7 +168,7 @@
                             <goal>single</goal>
                         </goals>
                         <configuration>
-                            <finalName>cloud</finalName>
+                            <finalName>../../deps/cloud</finalName>
                             <descriptors>
                                 <descriptor>lib-assembly.xml</descriptor>
                                 <descriptor>modules-assembly.xml</descriptor>
