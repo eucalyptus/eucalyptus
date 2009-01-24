@@ -1516,7 +1516,7 @@ public class Bukkit {
         }
     }
 
-    private synchronized void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
+    private void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
         EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
         ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
         List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
