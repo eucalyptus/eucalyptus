@@ -140,6 +140,56 @@
             <groupId>com.thoughtworks.xstream</groupId>
             <artifactId>xstream</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>msgs</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>transport</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>cluster-manager</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>image-manager</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>interface</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>key-manager</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>libfsstorage</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>liblvm2control</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>security-groups-manager</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>storage-controller</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>storage-manager</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
