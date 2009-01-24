@@ -708,10 +708,10 @@ public class Storage {
                 addrPath = addrUri.getPath().toString() + "?" + addrUri.getQuery().toString();
             } catch(Exception ex) {
                 ex.printStackTrace();
+                return null;
             }
             String data = httpVerb + "\n" + date + "\n" + addrPath + "\n";
 
-            System.out.println(data);
             HttpMethodBase method = null;
             if(httpVerb.equals("PUT")) {
                 method = new  PutMethodWithProgress(addr);
