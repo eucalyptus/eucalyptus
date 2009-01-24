@@ -180,17 +180,19 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
-                <!--<version>1.1</version>-->
+                <version>1.1</version>
                 <executions>
-
                     <execution>
                         <id>move-the-deps-for-ant</id>
                         <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
                         <configuration>
                             <tasks>
-                                <mkdir dir="${parent.pom.directory}/deps"/>
-                                <move todir="${parent.pom.directory}/deps">
-                                    <fileset dir="${parent.pom.directory}/target">
+                                <mkdir dir="../../deps"/>
+                                <move todir="../../deps">
+                                    <fileset dir="../../target">
                                         <include name="**/cloud-*.tar.gz"/>
                                     </fileset>
                                 </move>
