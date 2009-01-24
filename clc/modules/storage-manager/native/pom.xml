@@ -1,0 +1,73 @@
+<project>
+    <parent>
+        <groupId>eucalyptus</groupId>
+        <artifactId>cloud</artifactId>
+        <version>1</version>
+        <relativePath>../../../pom.xml</relativePath>
+    </parent>
+    <artifactId>libfsstorage</artifactId>
+    <packaging>so</packaging>
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>eucalyptus</groupId>
+    <version>${euca.version}</version>
+    <name>Eucalyptus Storage Manager Native</name>
+    <dependencies>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>storage-manager</artifactId>
+            <version>${euca.version}</version>
+        </dependency>
+    </dependencies>
+
+<build>
+  <directory>../../../target</directory> 
+  <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>native-maven-plugin</artifactId>
+	<extensions>true</extensions>
+        <configuration>
+	  <compilerStartOptions>
+            <compilerStartOption>-fpic</compilerStartOption>
+          </compilerStartOptions>
+          
+          <sources>
+            <source>
+	      <directory>./</directory>
+	      <includes>
+	        <include>*.c</include>
+	      </includes>
+            </source>  
+            <source>
+              <directory>../include</directory>
+            </source>            
+          </sources>
+            
+          <linkerStartOptions>
+            <linkerStartOption>-shared</linkerStartOption>
+          </linkerStartOptions>
+                    
+        </configuration>
+
+	<executions>
+         <execution>
+           <id>javah</id>
+           <phase>generate-sources</phase>
+           <configuration>
+	     <outputDirectory>../include</outputDirectory>
+             <classNames>
+               <className>edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager</className>
+ </classNames>
+           </configuration>
+           <goals>
+             <goal>javah</goal>
+           </goals>
+         </execution>
+       </executions>
+
+      </plugin>
+    </plugins>    
+  </build>
+  
+</project>
