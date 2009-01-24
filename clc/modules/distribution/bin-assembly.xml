@@ -127,7 +127,6 @@
                 <exclude>javax.mail:mail:jar</exclude>
                 <exclude>javax.servlet:servlet-api:jar</exclude>
                 <exclude>javax.transaction:jta:jar</exclude>
-                <exclude>eucalyptus:distribution:pom</exclude>
             </excludes>
         </dependencySet>
         <dependencySet>
