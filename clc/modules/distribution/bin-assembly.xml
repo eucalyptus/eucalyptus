@@ -44,7 +44,7 @@
             <sources>
                 <includeModuleDirectory>false</includeModuleDirectory>
                 <includes>
-                    <include>**/*</include>
+                    <include>conf/*</include>
                 </includes>
                 <outputDirectory>etc/eucalyptus/cloud.d</outputDirectory>
             </sources>
