@@ -180,11 +180,13 @@
             <groupId>eucalyptus</groupId>
             <artifactId>libfsstorage</artifactId>
             <version>${euca.version}</version>
+            <type>so</type>
         </dependency>
         <dependency>
             <groupId>eucalyptus</groupId>
             <artifactId>liblvm2control</artifactId>
             <version>${euca.version}</version>
+            <type>so</type>
         </dependency>
         <dependency>
             <groupId>eucalyptus</groupId>
