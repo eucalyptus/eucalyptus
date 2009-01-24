@@ -31,90 +31,27 @@
             </includes>
         </fileSet>
         <fileSet>
-            <directory>../**/conf</directory>
-            <outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>
+            <directory>../www/webapps</directory>
+            <outputDirectory>var/eucalyptus/webapps</outputDirectory>
             <includes>
-                <include>**/*</include>
+                <include>root.war</include>
             </includes>
         </fileSet>
-        <fileSet>
-            <directory>../www/</directory>
-            <outputDirectory>var/eucalyptus/</outputDirectory>
-            <includes>
-                <include>**/webapps/*</include>
-            </includes>
-        </fileSet>
-        <!--<fileSet>-->
-            <!--<directory>../core/conf</directory>-->
-            <!--<outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>-->
-            <!--<includes>-->
-                <!--<include>**/*</include>-->
-            <!--</includes>-->
-        <!--</fileSet>-->
-        <!--<fileSet>-->
-            <!--<directory>../axis2-transport/conf</directory>-->
-            <!--<outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>-->
-            <!--<includes>-->
-                <!--<include>**/*</include>-->
-            <!--</includes>-->
-        <!--</fileSet>-->
-        <!--<fileSet>-->
-            <!--<directory>../interface/conf</directory>-->
-            <!--<outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>-->
-            <!--<includes>-->
-                <!--<include>**/*</include>-->
-            <!--</includes>-->
-        <!--</fileSet>-->
-        <!--<fileSet>-->
-            <!--<directory>../cluster-manager/conf</directory>-->
-            <!--<outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>-->
-            <!--<includes>-->
-                <!--<include>**/*</include>-->
-            <!--</includes>-->
-        <!--</fileSet>-->
-        <!--<fileSet>-->
-            <!--<directory>../group-manager/conf</directory>-->
-            <!--<outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>-->
-            <!--<includes>-->
-                <!--<include>**/*</include>-->
-            <!--</includes>-->
-        <!--</fileSet>-->
-        <!--<fileSet>-->
-            <!--<directory>../image-manager/conf</directory>-->
-            <!--<outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>-->
-            <!--<includes>-->
-                <!--<include>**/*</include>-->
-            <!--</includes>-->
-        <!--</fileSet>-->
-        <!--<fileSet>-->
-            <!--<directory>../key-manager/conf</directory>-->
-            <!--<outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>-->
-            <!--<includes>-->
-                <!--<include>**/*</include>-->
-            <!--</includes>-->
-        <!--</fileSet>-->
-        <!--<fileSet>-->
-            <!--<directory>../www/conf</directory>-->
-            <!--<outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>-->
-            <!--<includes>-->
-                <!--<include>**/*</include>-->
-            <!--</includes>-->
-        <!--</fileSet>-->
-        <!--<fileSet>-->
-            <!--<directory>../storage-manager/conf</directory>-->
-            <!--<outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>-->
-            <!--<includes>-->
-                <!--<include>**/*</include>-->
-            <!--</includes>-->
-        <!--</fileSet>-->
-        <!--<fileSet>-->
-            <!--<directory>../storage-controller/conf</directory>-->
-            <!--<outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>-->
-            <!--<includes>-->
-                <!--<include>**/*</include>-->
-            <!--</includes>-->
-        <!--</fileSet>-->
     </fileSets>
+
+    <modulesSets>
+        <moduleSet>
+            <sources>
+                <filesSets>
+                    <fileSet>
+                        <includeModuleDirectory>false</includeModuleDirectory>
+                        <directory>conf</directory>
+                        <outputDirectory>etc/eucalyptus/cloud.d</outputDirectory>
+                    </fileSet>
+                </filesSets>
+            </sources>
+        </moduleSet>
+    </modulesSets>
 
     <dependencySets>
         <dependencySet>
