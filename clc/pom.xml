@@ -14,7 +14,6 @@
         <module>modules/key-manager</module>
         <module>modules/cluster-manager</module>
         <module>modules/image-manager</module>
-        <module>modules/www</module>
         <module>modules/storage-manager</module>
         <module>modules/storage-controller</module>
 	<module>modules/storage-manager/native</module>
