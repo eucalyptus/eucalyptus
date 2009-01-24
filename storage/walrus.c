@@ -88,8 +88,10 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	headers = curl_slist_append (headers, "Authorization: Euca");
 
 	char op_hdr [STRSIZE];
-	snprintf (op_hdr, STRSIZE, "EucaOperation: %s", walrus_op);
-	headers = curl_slist_append (headers, op_hdr);
+	if(walrus_op != NULL) {
+	    snprintf (op_hdr, STRSIZE, "EucaOperation: %s", walrus_op);
+	    headers = curl_slist_append (headers, op_hdr);
+	}
 
 	time_t t = time(NULL);
 	char * date_str = asctime(localtime(&t)); /* points to a static area */
@@ -163,7 +165,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 /* downloads a Walrus object from the URL, saves it to outfile */
 int walrus_object_by_url (const char * url, const char * outfile)
 {
-    return walrus_request (GET_OBJECT_CMD, "GET", url, outfile);
+    return walrus_request (NULL, "GET", url, outfile);
 }
 
 /* downloads a Walrus object from the default Walrus endpoing,
