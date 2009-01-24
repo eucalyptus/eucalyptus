@@ -163,7 +163,7 @@
                     </execution>
                     <execution>
                         <id>deps-package</id>
-                        <phase>package</phase>
+                        <phase>generate-resources</phase>
                         <goals>
                             <goal>single</goal>
                         </goals>
