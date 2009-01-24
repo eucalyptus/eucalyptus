@@ -37,6 +37,13 @@
                 <include>**/conf/*</include>
             </includes>
         </fileSet>
+        <fileSet>
+            <directory>../www/</directory>
+            <outputDirectory>var/eucalyptus/</outputDirectory>
+            <includes>
+                <include>**/webapps/*</include>
+            </includes>
+        </fileSet>
         <!--<fileSet>-->
             <!--<directory>../core/conf</directory>-->
             <!--<outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>-->
