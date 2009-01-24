@@ -81,10 +81,6 @@ public class FileSystemStorageManager implements StorageManager {
         return -1;
     }
 
-    public boolean isEmpty(String bucket) {
-        return true;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
     public void deleteBucket(String bucket) throws IOException {
         File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);
         if(!bukkit.delete()) {
@@ -150,8 +146,10 @@ public class FileSystemStorageManager implements StorageManager {
     public void renameObject(String bucket, String oldName, String newName) throws IOException {
         File oldObjectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + oldName);
         File newObjectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + newName);
-        if (!oldObjectFile.renameTo(newObjectFile)) {
-            throw new IOException(oldName);
+        if(oldObjectFile.exists()) {
+            if (!oldObjectFile.renameTo(newObjectFile)) {
+                throw new IOException(oldName);
+            }
         }
     }
 

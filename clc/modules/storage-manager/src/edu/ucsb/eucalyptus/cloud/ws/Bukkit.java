@@ -155,7 +155,8 @@ public class Bukkit {
                 db.add(bucket);
             } catch (IOException ex) {
                 LOG.warn(ex, ex);
-                //TODO: set exception code in reply
+                db.rollback();
+                throw new EucalyptusCloudException(bucketName);
             }
         }
         db.commit();
@@ -405,8 +406,9 @@ public class Bukkit {
                             try {
                                 storageManager.renameObject(bucketName, tempObjectName, objectName);
                             } catch (IOException ex) {
-                                //TODO: error handling
                                 LOG.warn(ex, ex);
+                                db.rollback();
+                                throw new EucalyptusCloudException(objectName);
                             }
                             md5 = bytesToHex(digest.digest());
                             lastModified = new Date();
@@ -565,8 +567,9 @@ public class Bukkit {
                     lastModified = new Date();
                     foundObject.setLastModified(lastModified);
                 } catch (IOException ex) {
-                    //TODO: set error code
                     LOG.warn(ex, ex);
+                    db.rollback();
+                    throw new EucalyptusCloudException(bucketName);
                 }
             } else {
                 db.rollback();
@@ -662,8 +665,9 @@ public class Bukkit {
                     try {
                         storageManager.deleteObject(bucketName, objectName);
                     } catch (IOException ex) {
-                        //TODO: set error code
+                        db.rollback();
                         LOG.warn(ex, ex);
+                        throw new EucalyptusCloudException(objectName);
                     }
                     reply.setCode("200");
                     reply.setDescription("OK");
@@ -1905,7 +1909,6 @@ public class Bukkit {
                 getQueue.put(WalrusDataMessage.EOF());
             } catch (Exception ex) {
                 LOG.error( ex,ex );
-                //TODO: set error code
             }
             if(semaphore != null) {
                 semaphore.release();
