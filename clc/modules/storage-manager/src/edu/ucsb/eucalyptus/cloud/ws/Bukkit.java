@@ -182,6 +182,18 @@ public class Bukkit {
             if (bucketFound.canWrite(userId)) {
                 List<ObjectInfo> objectInfos = bucketFound.getObjects();
                 if(objectInfos.size() == 0) {
+                    //asychronously flush any images in this bucket
+                    EntityWrapper<ImageCacheInfo> dbIC = db.recast(ImageCacheInfo.class);
+                    ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
+                    searchImageCacheInfo.setBucketName(bucketName);
+                    List<ImageCacheInfo> foundImageCacheInfos = dbIC.query(searchImageCacheInfo);
+
+                    if(foundImageCacheInfos.size() > 0) {
+                        ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
+                        ImageCacheFlusher imageCacheFlusher = new ImageCacheFlusher(bucketName, foundImageCacheInfo.getManifestName());
+                        imageCacheFlusher.start();
+                    }
+
                     db.delete(bucketFound);
                     //Actually remove the bucket from the backing store
                     try {
@@ -1516,7 +1528,7 @@ public class Bukkit {
         }
     }
 
-    private void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
+    private synchronized void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
         EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
         ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
         List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
@@ -1535,7 +1547,7 @@ public class Bukkit {
 //decrypt, unzip, untar image in the background
             ImageCacher imageCacher = new ImageCacher(bucketName, manifestKey, decryptedImageKey);
             imageCacher.run();
-        } 
+        }
     }
 
     public CacheImageResponseType CacheImage(CacheImageType request) throws EucalyptusCloudException {
