@@ -34,17 +34,25 @@
 
 package edu.ucsb.eucalyptus.util;
 
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.entities.*;
 import org.apache.log4j.Logger;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.*;
+import java.util.List;
 
 public class EucalyptusProperties {
 
   private static Logger LOG = Logger.getLogger( EucalyptusProperties.class );
+
+  public static List<String> getDisabledOperations() {
+    if( System.getProperty("euca.ebs.disable") != null ) {
+      return Lists.newArrayList( "CreateVolume", "DeleteVolume", "DescribeVolumes", "AttachVolume", "DetachVolume",
+                                 "CreateSnapshot", "DeleteSnapshot", "DescribeSnapshots" );
+    }
+    return Lists.newArrayList(  );
+  }
 
   public static String NAME = "eucalyptus";
   public static String WWW_NAME = "jetty";

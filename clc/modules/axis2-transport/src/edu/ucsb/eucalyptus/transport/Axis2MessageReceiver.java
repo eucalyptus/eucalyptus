@@ -34,24 +34,20 @@
 
 package edu.ucsb.eucalyptus.transport;
 
-import edu.ucsb.eucalyptus.transport.config.Axis2InProperties;
-import edu.ucsb.eucalyptus.transport.config.Axis2ServiceBuilder;
-import edu.ucsb.eucalyptus.transport.config.Key;
+import edu.ucsb.eucalyptus.transport.config.*;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.axis2.AxisFault;
-import org.apache.axis2.description.AxisOperation;
-import org.apache.axis2.description.AxisService;
+import org.apache.axis2.description.*;
 import org.apache.log4j.Logger;
 import org.mule.api.component.JavaComponent;
 import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.lifecycle.CreateException;
 import org.mule.api.service.Service;
 import org.mule.api.transport.Connector;
-import org.mule.transport.AbstractMessageReceiver;
-import org.mule.transport.ConnectException;
+import org.mule.transport.*;
 
 import javax.xml.namespace.QName;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Axis2MessageReceiver extends AbstractMessageReceiver {
 
@@ -75,6 +71,9 @@ public class Axis2MessageReceiver extends AbstractMessageReceiver {
     catch ( AxisFault axisFault ) {
       throw new ConnectException( axisFault, this );
     }
+    for( Object op : this.axisService.getOperationsNameList() )
+      if( EucalyptusProperties.getDisabledOperations().contains( (String) op ) )
+        this.disableOperation( (String)op );
   }
 
   private Map<String,AxisOperation> disabledOperations = new HashMap<String, AxisOperation>();
