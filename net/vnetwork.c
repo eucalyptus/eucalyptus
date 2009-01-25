@@ -643,22 +643,32 @@ int check_chain(vnetConfig *vnetconfig, char *userName, char *netName) {
 }
 
 int check_device(char *dev) {
-  char rbuf[256], devbuf[256];
+  char rbuf[256], devbuf[256], *ptr;
   FILE *FH=NULL;
   
+  
   if (!dev) return(1);
-
-  snprintf(devbuf, 255, "%s:", dev);
-
+  
   FH = fopen("/proc/net/dev", "r");
   if (!FH) {
     return(1);
   }
   
   while(fgets(rbuf, 256, FH)) {
-    if (strstr(rbuf, devbuf)) {
-      fclose(FH);
-      return(0);
+    ptr = strrchr(rbuf, ':');
+    if (ptr) {
+      *ptr = '\0';
+      ptr = strrchr(rbuf, ' ');
+      if (ptr) {
+        ptr = ptr + 1;
+      } else {
+        ptr = rbuf;
+      }
+      if (!strcmp(ptr, dev)) {
+	// found it
+	fclose(FH);
+	return(0);
+      }
     }
   }
   fclose(FH);
@@ -667,27 +677,7 @@ int check_device(char *dev) {
 }
 
 int check_bridge(char *brname) {
-  char rbuf[256], devbuf[256];
-  FILE *FH=NULL;
-  
-  if (!brname) return(1);
-
-  snprintf(devbuf, 255, "%s:", brname);
-
-  FH = fopen("/proc/net/dev", "r");
-  if (!FH) {
-    return(1);
-  }
-  
-  while(fgets(rbuf, 256, FH)) {
-    if (strstr(rbuf, devbuf)) {
-      fclose(FH);
-      return(0);
-    }
-  }
-  fclose(FH);
-
-  return(1);
+  return(check_device(brname));
 }
 
 int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname) {

@@ -353,7 +353,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
       logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
       rc = system(cmd);
       if (rc) {
-	logprintfl(EUCAWARN,"cmd failed '%s'\n", cmd);
+      	logprintfl(EUCAWARN,"cmd failed '%s'\n", cmd);
       }
     }
     
