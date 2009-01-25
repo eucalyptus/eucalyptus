@@ -32,32 +32,29 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.msgs.GetDecryptedImageResponseType;
-import edu.ucsb.eucalyptus.msgs.GetDecryptedImageType;
+import edu.ucsb.eucalyptus.util.XMLParser;
 import junit.framework.TestCase;
 
-public class BukkitImageTest extends TestCase {
+import java.util.List;
+
+public class XMLParserTest extends TestCase {
 
 
-    public void testGetImage() throws Throwable {
+    public void testParse() throws Throwable {
+        String parseTestString = "<AccessControlPolicy> <AccessControlList> <Grant> <Grantee> <DisplayName>nekro</DisplayName> </Grantee> <Permission>FULL_CONTROL</Permission> </Grant> <Grant> <Grantee> <DisplayName>lolwho</DisplayName> </Grantee> <Permission>NO_U</Permission> </Grant></AccessControlList> </AccessControlPolicy>";
 
-		Bukkit bukkit = new Bukkit();
-        String userId = "admin";
-        String bucket = "s1skl3eill12100";
-        String key = "ttylinux.img.manifest.xml";
+        XMLParser xmlParser = new XMLParser(parseTestString);
 
-        GetDecryptedImageType getImageRequest = new GetDecryptedImageType();
-        getImageRequest.setBucket(bucket);
-        getImageRequest.setKey(key);
-        getImageRequest.setUserId(userId);
+        String ownerDisplayName = xmlParser.getValue("//Owner/DisplayName");
 
-        GetDecryptedImageResponseType getImageReply = bukkit.GetDecryptedImage(getImageRequest);
-        System.out.println(getImageReply);      
+        List<String> displayNames = xmlParser.getValues("//AccessControlList/Grant/Grantee/DisplayName");
+
+        System.out.println(ownerDisplayName);
     }
-    
-    public BukkitImageTest() {
+
+    public XMLParserTest() {
 		super();
 	}
 

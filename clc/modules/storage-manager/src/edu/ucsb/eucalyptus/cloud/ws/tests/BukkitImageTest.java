@@ -32,56 +32,33 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
+import edu.ucsb.eucalyptus.msgs.GetDecryptedImageResponseType;
+import edu.ucsb.eucalyptus.msgs.GetDecryptedImageType;
 import junit.framework.TestCase;
 
-public class ImageCacheTest extends TestCase {
+public class BukkitImageTest extends TestCase {
 
 
     public void testGetImage() throws Throwable {
 
 		Bukkit bukkit = new Bukkit();
         String userId = "admin";
-        String bucket = "halothar1221";
+        String bucket = "s1skl3eill12100";
         String key = "ttylinux.img.manifest.xml";
 
-        CheckImageType checkImageRequest = new CheckImageType();
-        checkImageRequest.setBucket(bucket);
-        checkImageRequest.setKey(key);
-        checkImageRequest.setUserId(userId);
-       // CheckImageResponseType checkImageResponse = bukkit.CheckImage(checkImageRequest);
+        GetDecryptedImageType getImageRequest = new GetDecryptedImageType();
+        getImageRequest.setBucket(bucket);
+        getImageRequest.setKey(key);
+        getImageRequest.setUserId(userId);
 
-       // System.out.println(checkImageResponse);
-
-        CacheImageType cacheImageRequest = new CacheImageType();
-        cacheImageRequest.setBucket(bucket);
-        cacheImageRequest.setKey(key);
-        cacheImageRequest.setUserId(userId);
-        CacheImageResponseType cacheImageResponse = bukkit.CacheImage(cacheImageRequest);
-        System.out.println(cacheImageResponse);
-
-        GetDecryptedImageType getDecryptedImageRequest = new GetDecryptedImageType();
-        getDecryptedImageRequest.setBucket(bucket);
-        getDecryptedImageRequest.setUserId(userId);
-        getDecryptedImageRequest.setKey(key);
-//        GetDecryptedImageResponseType getDecryptedImageResponse = bukkit.GetDecryptedImage(getDecryptedImageRequest);
- //       System.out.println(getDecryptedImageResponse);
-
-        FlushCachedImageType flushCachedImageRequest = new FlushCachedImageType();
-        flushCachedImageRequest.setBucket(bucket);
-        flushCachedImageRequest.setUserId(userId);
-        flushCachedImageRequest.setKey(key);
-        FlushCachedImageResponseType flushCachedImageResponse = bukkit.FlushCachedImage(flushCachedImageRequest);
-        System.out.println(flushCachedImageResponse);
-
-        while(true) {
-            Thread.sleep(5000);
-        }
+        GetDecryptedImageResponseType getImageReply = bukkit.GetDecryptedImage(getImageRequest);
+        System.out.println(getImageReply);      
     }
-
-    public ImageCacheTest() {
+    
+    public BukkitImageTest() {
 		super();
 	}
 

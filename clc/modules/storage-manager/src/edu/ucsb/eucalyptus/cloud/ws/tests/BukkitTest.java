@@ -32,45 +32,51 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
 import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 
-import java.util.ArrayList;
+public class BukkitTest extends TestCase {
 
-public class VolumeTest extends TestCase {
+	static Bukkit bukkit;
+	public void testBukkit() throws Throwable {
 
-    static Storage storage;
-    public void testVolume() throws Throwable {
+		bukkit = new Bukkit();
+		String bucketName = "halo11";
+		String userId = "admin";
 
-        storage = new Storage();
 
-        String userId = "admin";
-        String volumeId = "vol-" + Hashes.getRandom(10);
-        volumeId = volumeId.replaceAll("\\.", "x");
+		CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
+		createBucketRequest.setBucket(bucketName);
+		createBucketRequest.setUserId(userId);
+		AccessControlListType acl = new AccessControlListType();
+		createBucketRequest.setAccessControlList(acl);
+		CreateBucketResponseType reply = bukkit.CreateBucket(createBucketRequest);
+		System.out.println(reply);
 
-        CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();
-        createVolumeRequest.setUserId(userId);
-        createVolumeRequest.setVolumeId(volumeId);
-        createVolumeRequest.setSize("1");
-        CreateStorageVolumeResponseType createVolumeResponse = storage.CreateStorageVolume(createVolumeRequest);
-        System.out.println(createVolumeResponse); 
-        Thread.sleep(1000);
-        DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
-        describeVolumesRequest.setUserId(userId);
-        ArrayList<String> volumeSet = new ArrayList<String>();
-        volumeSet.add(volumeId);
-        describeVolumesRequest.setVolumeSet(volumeSet);
-        DescribeStorageVolumesResponseType describeVolumesResponse = storage.DescribeStorageVolumes(describeVolumesRequest);
-        StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
-        System.out.println(vol);
-        while(true);     
-    }
+		ListAllMyBucketsType listBucketsRequest = new ListAllMyBucketsType();
 
-    public VolumeTest() {
-        super();
-    }
+		listBucketsRequest.setUserId(userId);
+		ListAllMyBucketsResponseType response =  bukkit.ListAllMyBuckets(listBucketsRequest);
+		System.out.println(response);
+
+		GetBucketAccessControlPolicyType acpRequest = new GetBucketAccessControlPolicyType();
+		acpRequest.setBucket(bucketName);
+		acpRequest.setUserId(userId);
+		GetBucketAccessControlPolicyResponseType acpResponse = bukkit.GetBucketAccessControlPolicy(acpRequest);
+		System.out.println(acpResponse);
+
+		DeleteBucketType deleteRequest = new DeleteBucketType();
+		deleteRequest.setUserId(userId);
+		deleteRequest.setBucket(bucketName);
+		DeleteBucketResponseType deleteResponse = bukkit.DeleteBucket(deleteRequest);
+		System.out.println(deleteResponse);
+	}
+
+    public  BukkitTest() {
+		super();
+	}
 
 }

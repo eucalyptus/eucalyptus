@@ -32,37 +32,45 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
+import edu.ucsb.eucalyptus.cloud.ws.Storage;
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 
-public class DeleteSnapshotTest extends TestCase {
+import java.util.ArrayList;
+
+public class VolumeTest extends TestCase {
 
     static Storage storage;
+    public void testVolume() throws Throwable {
 
-
-    public void testDeleteSnapshot() throws Throwable {
         storage = new Storage();
 
-        String snapshotBucket = "snapset-FuXLn1MUHJ66BkK0";
-        String snapshotId = "snap-zVl2kZJmjhxnEg..";
+        String userId = "admin";
+        String volumeId = "vol-" + Hashes.getRandom(10);
+        volumeId = volumeId.replaceAll("\\.", "x");
 
-        DeleteStorageSnapshotType deleteSnapshot = new DeleteStorageSnapshotType();
-        deleteSnapshot.setUserId("admin");
-        deleteSnapshot.setSnapshotId(snapshotId);
-        DeleteStorageSnapshotResponseType deleteSnapshotResponse = storage.DeleteStorageSnapshot(deleteSnapshot);
-        System.out.println(deleteSnapshotResponse);
+        CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();
+        createVolumeRequest.setUserId(userId);
+        createVolumeRequest.setVolumeId(volumeId);
+        createVolumeRequest.setSize("1");
+        CreateStorageVolumeResponseType createVolumeResponse = storage.CreateStorageVolume(createVolumeRequest);
+        System.out.println(createVolumeResponse); 
+        Thread.sleep(1000);
+        DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
+        describeVolumesRequest.setUserId(userId);
+        ArrayList<String> volumeSet = new ArrayList<String>();
+        volumeSet.add(volumeId);
+        describeVolumesRequest.setVolumeSet(volumeSet);
+        DescribeStorageVolumesResponseType describeVolumesResponse = storage.DescribeStorageVolumes(describeVolumesRequest);
+        StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
+        System.out.println(vol);
+        while(true);     
     }
 
-    public void testWalrusDeleteSnapshot() throws Throwable {
-        storage = new Storage();
-        
-        String snapshotId = "snap-zVl2kZJmjhxnEg..";
-        storage.DeleteWalrusSnapshot(snapshotId);        
-    }
-    public DeleteSnapshotTest() {
+    public VolumeTest() {
         super();
     }
 
