@@ -41,4 +41,19 @@
             <artifactId>ant</artifactId>
         </dependency>
     </dependencies>
+    <build>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-clean-plugin</artifactId>
+          <configuration>
+            <fileSets>
+              <fileSet>
+                <directory>webapps</directory>
+              </fileSet>
+            </fileSets> 
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
 </project>
