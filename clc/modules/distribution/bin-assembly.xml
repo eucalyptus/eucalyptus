@@ -23,9 +23,37 @@
                 <include>*.so</include>
             </includes>
         </fileSet>
-        <fileSet>
-            <directory>../</directory>
+         <fileSet>
+            <directory>../core/conf</directory>
             <outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>../axis2-transport/conf</directory>
+            <outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>../cluster-manager/conf</directory>
+            <outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+       <fileSet>
+            <directory>../www/conf</directory>
+            <outputDirectory>etc/eucalyptus/cloud.d/</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>../../</directory>
+            <outputDirectory>etc/eucalyptus/</outputDirectory>
             <includes>
                 <include>cloud.xml</include>
             </includes>
@@ -42,11 +70,11 @@
     <modulesSets>
         <moduleSet>
             <sources>
-                <includeModuleDirectory>false</includeModuleDirectory>
-                <includes>
-                    <include>conf/*</include>
-                </includes>
                 <outputDirectory>etc/eucalyptus/cloud.d</outputDirectory>
+                <includeModuleDirectory>true</includeModuleDirectory>
+                <includes>
+                    <include>../conf/**</include>
+                </includes>
             </sources>
         </moduleSet>
     </modulesSets>
