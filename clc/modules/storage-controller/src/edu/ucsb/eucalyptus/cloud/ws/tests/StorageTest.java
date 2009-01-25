@@ -32,8 +32,9 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.cloud.ws.tests;
 
+import edu.ucsb.eucalyptus.cloud.ws.Storage;
 import junit.framework.TestCase;
 
 public class StorageTest extends TestCase {

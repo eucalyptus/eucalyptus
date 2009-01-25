@@ -32,50 +32,39 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.cloud.ws.Storage;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
 import junit.framework.TestCase;
 
-public class BukkitTest extends TestCase {
+public class DeleteSnapshotTest extends TestCase {
 
-	static Bukkit bukkit;
-	public void testBukkit() throws Throwable {
-
-		bukkit = new Bukkit();
-		String bucketName = "halo11";
-		String userId = "admin";
+    static Storage storage;
 
 
-		CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
-		createBucketRequest.setBucket(bucketName);
-		createBucketRequest.setUserId(userId);
-		AccessControlListType acl = new AccessControlListType();
-		createBucketRequest.setAccessControlList(acl);
-		CreateBucketResponseType reply = bukkit.CreateBucket(createBucketRequest);
-		System.out.println(reply);
+    public void testDeleteSnapshot() throws Throwable {
+        storage = new Storage();
 
-		ListAllMyBucketsType listBucketsRequest = new ListAllMyBucketsType();
+        String snapshotBucket = "snapset-FuXLn1MUHJ66BkK0";
+        String snapshotId = "snap-zVl2kZJmjhxnEg..";
 
-		listBucketsRequest.setUserId(userId);
-		ListAllMyBucketsResponseType response =  bukkit.ListAllMyBuckets(listBucketsRequest);
-		System.out.println(response);
+        DeleteStorageSnapshotType deleteSnapshot = new DeleteStorageSnapshotType();
+        deleteSnapshot.setUserId("admin");
+        deleteSnapshot.setSnapshotId(snapshotId);
+        DeleteStorageSnapshotResponseType deleteSnapshotResponse = storage.DeleteStorageSnapshot(deleteSnapshot);
+        System.out.println(deleteSnapshotResponse);
+    }
 
-		GetBucketAccessControlPolicyType acpRequest = new GetBucketAccessControlPolicyType();
-		acpRequest.setBucket(bucketName);
-		acpRequest.setUserId(userId);
-		GetBucketAccessControlPolicyResponseType acpResponse = bukkit.GetBucketAccessControlPolicy(acpRequest);
-		System.out.println(acpResponse);
-
-		DeleteBucketType deleteRequest = new DeleteBucketType();
-		deleteRequest.setUserId(userId);
-		deleteRequest.setBucket(bucketName);
-		DeleteBucketResponseType deleteResponse = bukkit.DeleteBucket(deleteRequest);
-		System.out.println(deleteResponse);
-	}
-
-    public  BukkitTest() {
-		super();
-	}
+    public void testWalrusDeleteSnapshot() throws Throwable {
+        storage = new Storage();
+        
+        String snapshotId = "snap-zVl2kZJmjhxnEg..";
+        storage.DeleteWalrusSnapshot(snapshotId);        
+    }
+    public DeleteSnapshotTest() {
+        super();
+    }
 
 }

@@ -32,43 +32,31 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.cloud.ws.tests;
 
+import edu.ucsb.eucalyptus.cloud.ws.Storage;
 import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 
-public class CreateVolumeFromSnapshotTest extends TestCase {
+import java.util.UUID;
+
+public class GetSnapshotTest extends TestCase {
 
     static Storage storage;
-    public void testCreateVolume() throws Throwable {
 
+
+    public void testGetSnapshot() throws Throwable {
         storage = new Storage();
 
-        String userId = "admin";
+        UUID uuid = UUID.randomUUID();
 
-        String snapshotId = "snap-7d_CtRujsYM.";
         String volumeId = "vol-" + Hashes.getRandom(10);
-        CreateStorageVolumeType createVolumeFromSnapshotRequest = new CreateStorageVolumeType();
-        createVolumeFromSnapshotRequest.setVolumeId(volumeId);
-        createVolumeFromSnapshotRequest.setUserId(userId);
-        createVolumeFromSnapshotRequest.setSnapshotId(snapshotId);
-        CreateStorageVolumeResponseType createVolumeFromSnapshotResponse = storage.CreateStorageVolume(createVolumeFromSnapshotRequest);
-        System.out.println(createVolumeFromSnapshotResponse);
-        DeleteStorageSnapshotType deleteSnapshotRequest = new DeleteStorageSnapshotType();
-        deleteSnapshotRequest.setUserId(userId);
-        deleteSnapshotRequest.setSnapshotId(snapshotId);
-        DeleteStorageSnapshotResponseType deleteSnapshotResponseType = storage.DeleteStorageSnapshot(deleteSnapshotRequest);
-        System.out.println(deleteSnapshotResponseType);
-
-        DeleteStorageVolumeType deleteVolumeRequest = new DeleteStorageVolumeType();
-        deleteVolumeRequest.setUserId(userId);
-        deleteVolumeRequest.setVolumeId(volumeId);
-        DeleteStorageVolumeResponseType deleteVolumeResponse = storage.DeleteStorageVolume(deleteVolumeRequest);
-        System.out.println(deleteVolumeResponse);
+        String snapshotBucket = "snapset-FuXLn1MUHJ66BkK0";
+        String snapshotId = "snap-zVl2kZJmjhxnEg..";
+        storage.GetSnapshots(volumeId, snapshotBucket, snapshotId);
     }
 
-    public CreateVolumeFromSnapshotTest() {
+    public GetSnapshotTest() {
         super();
     }
 
