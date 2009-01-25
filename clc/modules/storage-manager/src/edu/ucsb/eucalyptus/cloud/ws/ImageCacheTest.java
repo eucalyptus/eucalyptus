@@ -44,7 +44,7 @@ public class ImageCacheTest extends TestCase {
 
 		Bukkit bukkit = new Bukkit();
         String userId = "admin";
-        String bucket = "aaa11";
+        String bucket = "halothar1221";
         String key = "ttylinux.img.manifest.xml";
 
         CheckImageType checkImageRequest = new CheckImageType();
@@ -59,8 +59,8 @@ public class ImageCacheTest extends TestCase {
         cacheImageRequest.setBucket(bucket);
         cacheImageRequest.setKey(key);
         cacheImageRequest.setUserId(userId);
-        //CacheImageResponseType cacheImageResponse = bukkit.CacheImage(cacheImageRequest);
-        //System.out.println(cacheImageResponse);
+        CacheImageResponseType cacheImageResponse = bukkit.CacheImage(cacheImageRequest);
+        System.out.println(cacheImageResponse);
 
         GetDecryptedImageType getDecryptedImageRequest = new GetDecryptedImageType();
         getDecryptedImageRequest.setBucket(bucket);
