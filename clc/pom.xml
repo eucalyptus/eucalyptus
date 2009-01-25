@@ -394,7 +394,8 @@
         <outputDirectory>build</outputDirectory>
         <finalName>${project.groupId}-${project.artifactId}-${project.version}</finalName>
         <sourceDirectory>src</sourceDirectory>
-        <resources>
+	<testSourceDirectory>src</testSourceDirectory>
+	<resources>
             <resource>
                 <directory>resources</directory>
             </resource>
