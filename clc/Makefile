@@ -10,7 +10,7 @@ deps:
 	$(ANT) deps
 
 build:
-	@if test ! -d deps/cloud-lib.tar.gz; then \
+	@if test ! -e deps/cloud-lib.tar.gz; then \
 		echo "Did you forget to run ant deps?"; exit 1; fi
 	ANT_OPTS="-Xmx512m" $(ANT) build
 
