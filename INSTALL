@@ -71,8 +71,7 @@ G: need to specify the include path for apache2 and apr-1.0
 ; cd $EUCALYPTUS_SRC/eucalyptus-src-deps/
 ; tar zvxf axis2c-src-1.5.0.tar.gz
 ; cd axis2c-src-1.5.0
-; ./configure --prefix=${AXIS2C_HOME} --with-apache2=/usr/include/apache2
---with-apr=/usr/include/apr=1.0
+; ./configure --prefix=${AXIS2C_HOME} --with-apache2=/usr/include/apache2 --with-apr=/usr/include/apr-1.0
 ; make ; make install
 
 
@@ -145,11 +144,13 @@ this file manually instead of using 'euca_conf'.
 
 To configure eucalyptus you need to specify where eucalyptus is installed
 and which services to start (cloud, cluster controller and/or node
-controller), which hypervisor you want to use (kvm or xen). For example to
-start the cluster controller, the cloud controller and to use kvm as
-hypervisor:
+controller) and which hypervisor you want to use (kvm or xen). Moreover for 
+sicurity reasons you need to specify a user which eucalyptus' services
+will run as: we stronly suggest to use 'eucalyptus' as such user.
+For example to start the cluster controller, the cloud controller and to
+use kvm as hypervisor:
 
-; $EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS -cc Y -cloud Y -hypervisor kvm -nc N $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+; $EUCALYPTUS/usr/sbin/euca_conf -user eucalyptus -d $EUCALYPTUS -cc Y -cloud Y -hypervisor kvm -nc N $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
 
 On the cluster controller add a list of hostnames on which you plan to run
 node controllers
