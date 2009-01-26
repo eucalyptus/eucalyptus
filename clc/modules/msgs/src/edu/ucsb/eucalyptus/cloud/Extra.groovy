@@ -93,6 +93,7 @@ public class VmInfo extends EucalyptusData {
   String userData;
   String launchIndex;
   ArrayList<String> groupNames = new ArrayList<String>();
+  ArrayList<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
 
   String placement;
 

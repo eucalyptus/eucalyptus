@@ -125,5 +125,3 @@ public class SnapshotManager {
     return reply;
   }
 }
-"" +
-    ""
