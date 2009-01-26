@@ -207,7 +207,8 @@ echo "or we can install it for you."
 				$ANT -f cloud.xml install-jce 2> /dev/null > /dev/null
 			else 
 				echo "Eucalptus needs unlimited strength crypto policy."
-				exit 1
+				echo "Trying to start anyway, but you may have issues"
+				sleep 5
 			fi
 		fi
 		(su $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
