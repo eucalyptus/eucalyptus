@@ -82,6 +82,12 @@
     <dependencySets>
         <dependencySet>
             <outputDirectory>usr/share/eucalyptus</outputDirectory>
+            <excludes>
+                <exclude>org.apache.axis2:addressing:mar</exclude>
+                 <exclude>org.apache.rampart:rahas:mar</exclude>
+                 <exclude>org.apache.axis2:mex:mar</exclude>
+                 <exclude>org.apache.rampart:rampart:mar</exclude>            
+            </excludes>
         </dependencySet>
         <dependencySet>
             <outputDirectory>var/eucalyptus/modules</outputDirectory>

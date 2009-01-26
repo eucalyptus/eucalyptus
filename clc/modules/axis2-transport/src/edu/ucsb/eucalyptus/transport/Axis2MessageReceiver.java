@@ -71,12 +71,15 @@ public class Axis2MessageReceiver extends AbstractMessageReceiver {
     catch ( AxisFault axisFault ) {
       throw new ConnectException( axisFault, this );
     }
-    for( Object op : this.axisService.getOperationsNameList() )
-      if( EucalyptusProperties.getDisabledOperations().contains( (String) op ) )
-        this.disableOperation( (String)op );
+    Iterator iter = this.axisService.getOperations();
+    while ( iter.hasNext() ) {
+      AxisOperation op = (AxisOperation)iter.next();
+      if ( EucalyptusProperties.getDisabledOperations().contains( op.getName().getLocalPart() ) )
+        this.disableOperation( op.getName().getLocalPart() );
+    }
   }
 
-  private Map<String,AxisOperation> disabledOperations = new HashMap<String, AxisOperation>();
+  private Map<String, AxisOperation> disabledOperations = new HashMap<String, AxisOperation>();
 
   public void disableOperation( String operationName ) {
     this.disabledOperations.put( operationName, this.axisService.getOperation( new QName( operationName ) ) );
@@ -87,7 +90,6 @@ public class Axis2MessageReceiver extends AbstractMessageReceiver {
     AxisOperation op = this.disabledOperations.remove( operationName );
     this.axisService.addOperation( op );
   }
-
 
   public void doStart() {
     try {

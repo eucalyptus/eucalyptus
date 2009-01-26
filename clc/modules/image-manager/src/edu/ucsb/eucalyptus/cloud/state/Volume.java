@@ -1,7 +1,6 @@
 package edu.ucsb.eucalyptus.cloud.state;
 
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.msgs.*;
 import org.hibernate.annotations.*;
 
 import javax.persistence.Entity;
@@ -17,8 +16,6 @@ public class Volume extends AbstractIsomorph {
   private Integer size;
   private String cluster;
   private String parentSnapshot;
-  @Transient
-  private WeakInteraction attachInfo;
 
   public Volume() {
     super( null, null );
@@ -33,7 +30,6 @@ public class Volume extends AbstractIsomorph {
 
   public Volume( String userName, String displayName ) {
     super( userName, displayName );
-    this.attachInfo = new WeakInteraction<VmInstance,InstanceAttachment>();
   }
 
   public String mapState( ) {
@@ -60,21 +56,12 @@ public class Volume extends AbstractIsomorph {
     return vol;
   }
 
-  class InstanceAttachment {
-    private String blockDevice;
-
-  }
-
   public Integer getSize() {
     return size;
   }
 
   public String getCluster() {
     return cluster;
-  }
-
-  public WeakInteraction getAttachInfo() {
-    return attachInfo;
   }
 
   public void setSize( final Integer size ) {

@@ -13,6 +13,10 @@
     <packaging>pom</packaging>
     <dependencies>
         <dependency>
+          <groupId>org.apache.ws.security</groupId>
+          <artifactId>wss4j</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.jibx</groupId>
             <artifactId>jibx-bind</artifactId>
         </dependency>
@@ -34,7 +38,7 @@
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-entitymanager</artifactId>
+            <artifactId>hibernate-ehcache</artifactId>
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>
@@ -56,6 +60,10 @@
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.mortbay.jetty</groupId>
+            <artifactId>jetty-sslengine</artifactId>
+        </dependency>        
         <dependency>
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty-gwt</artifactId>
@@ -96,7 +104,20 @@
             <artifactId>mex</artifactId>
             <type>mar</type>
         </dependency>
-        <dependency>
+         <dependency>
+            <groupId>org.apache.ws.commons.axiom</groupId>
+            <artifactId>axiom-impl</artifactId>
+        </dependency>
+              <dependency>
+                <groupId>org.apache.ws.commons.axiom</groupId>
+                <artifactId>axiom-dom</artifactId>
+            </dependency>
+           <dependency>
+                <groupId>org.apache.ws.commons.axiom</groupId>
+                <artifactId>axiom-api</artifactId>
+            </dependency>
+
+       <dependency>
             <groupId>org.apache.axis2</groupId>
             <artifactId>axis2-kernel</artifactId>
         </dependency>

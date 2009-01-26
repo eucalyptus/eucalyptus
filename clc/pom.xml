@@ -70,7 +70,7 @@
                 <enabled>true</enabled>
             </releases>
             <snapshots>
-                <enabled>true</enabled>
+                <enabled>false</enabled>
             </snapshots>
         </repository>
         <repository>
@@ -78,6 +78,16 @@
             <url>
                 http://gwt-maven.googlecode.com/svn/trunk/mavenrepo/
             </url>
+        </repository>
+        <repository>
+            <id>apache-snapshots</id>
+            <url>http://people.apache.org/repo/m2-snapshot-repository</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
         </repository>
 
     </repositories>
@@ -109,14 +119,13 @@
                 <enabled>true</enabled>
             </snapshots>
             <releases>
-                <enabled>false</enabled>
+                <enabled>true</enabled>
             </releases>
         </pluginRepository>
         <pluginRepository>
             <id>gwt-maven</id>
             <url>http://gwt-maven.googlecode.com/svn/trunk/mavenrepo</url>
         </pluginRepository>
-
     </pluginRepositories>
 
 
@@ -135,6 +144,7 @@
         <bouncycastle.version>136</bouncycastle.version>
         <jetty.version>6.1.14</jetty.version>
         <axis2.version>1.4.1</axis2.version>
+        <axiom.version>1.2.8</axiom.version>
         <axis2.module.version>1.41</axis2.module.version>
         <rampart.version>1.4</rampart.version>
         <wss4j.version>1.5.4</wss4j.version>
@@ -207,6 +217,16 @@
                 <groupId>org.hibernate</groupId>
                 <artifactId>hibernate-ehcache</artifactId>
                 <version>${hibernate.core.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>commons-logging</groupId>
+                        <artifactId>commons-logging</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.hibernate</groupId>
+                        <artifactId>hibernate-testing</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.hibernate</groupId>
@@ -237,6 +257,11 @@
             </dependency>
             <dependency>
                 <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-sslengine</artifactId>
+                <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mortbay.jetty</groupId>
                 <artifactId>jetty-gwt</artifactId>
                 <version>${jetty.version}</version>
             </dependency>
@@ -246,12 +271,6 @@
                 <groupId>org.mule</groupId>
                 <artifactId>mule-core</artifactId>
                 <version>${mule.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>backport-util-concurrent</groupId>
-                        <artifactId>backport-util-concurrent</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.mule.transports</groupId>
@@ -274,7 +293,21 @@
                 <artifactId>mule-module-spring-config</artifactId>
                 <version>${mule.version}</version>
             </dependency>
-
+             <dependency>
+                <groupId>org.apache.ws.commons.axiom</groupId>
+                <artifactId>axiom-impl</artifactId>
+                <version>${axiom.version}</version>
+            </dependency>
+             <dependency>
+                <groupId>org.apache.ws.commons.axiom</groupId>
+                <artifactId>axiom-dom</artifactId>
+                <version>${axiom.version}</version>
+            </dependency>
+           <dependency>
+                <groupId>org.apache.ws.commons.axiom</groupId>
+                <artifactId>axiom-api</artifactId>
+                <version>${axiom.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.apache.axis2</groupId>
@@ -355,6 +388,10 @@
                 <type>mar</type>
                 <version>${rampart.version}</version>
                 <exclusions>
+                    <exclusion>
+                        <groupId>org.apache.rampart</groupId>
+                        <artifactId>rampart-project</artifactId>
+                    </exclusion>
                     <exclusion>
                         <groupId>backport-util-concurrent</groupId>
                         <artifactId>backport-util-concurrent</artifactId>
@@ -632,8 +669,6 @@
                                         <exclude>javax.activation:activation:jar</exclude>
                                         <exclude>javax.servlet:servlet-api</exclude>
                                         <exclude>javax.mail:mail</exclude>
-                                        <exclude>backport-util-concurrent:backport-util-concurrent</exclude>
-
                                         <exclude>org.apache.ant:ant-nodeps:jar:1.7.0</exclude>
                                         <exclude>bcel:bcel:jar:5.1</exclude>
                                     </excludes>

@@ -35,15 +35,16 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
-import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.cloud.cluster.*;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 
-import java.util.List;
+import java.util.*;
 
 public class VolumeManager {
   static String PERSISTENCE_CONTEXT = "eucalyptus.volumes";
@@ -63,10 +64,18 @@ public class VolumeManager {
     if ( !Clusters.getInstance().contains( request.getAvailabilityZone() ) ) {
       throw new EucalyptusCloudException( "Zone does not exist: " + request.getAvailabilityZone() );
     }
-//:: TODO-1.5: if( request.getSnapshotId() != null && !snapshot exists, throw exception :://
 
-
-    EntityWrapper<Volume> db = getEntityWrapper();
+    EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
+    if ( !(request.getSnapshotId() == null )) {
+      String userName = request.isAdministrator()?null:request.getUserId();
+      try {
+        db.recast( Snapshot.class ).getUnique( new Snapshot( userName, request.getSnapshotId() ) );
+      } catch ( EucalyptusCloudException e ) {
+        LOG.debug( e, e );
+        db.rollback();
+        throw new EucalyptusCloudException( "Snapshot does not exist: " + request.getSnapshotId() );
+      }
+    }
     String newId = null;
     while ( true ) {
       newId = Hashes.generateId( request.getUserId(), ID_PREFIX );
@@ -83,7 +92,7 @@ public class VolumeManager {
       scReply = ( CreateStorageVolumeResponseType ) Messaging.send( StorageProperties.STORAGE_REF, scRequest );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
-      db.rollback();      
+      db.rollback();
       throw new EucalyptusCloudException( "Error calling CreateStorageVolume:" + e.getMessage() );
     }
 
@@ -102,7 +111,7 @@ public class VolumeManager {
   public DeleteVolumeResponseType DeleteVolume( DeleteVolumeType request ) throws EucalyptusCloudException {
     DeleteVolumeResponseType reply = ( DeleteVolumeResponseType ) request.getReply();
     reply.set_return( false );
-    EntityWrapper<Volume> db = getEntityWrapper();
+    EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
     try {
       Volume vol = db.getUnique( new Volume( userName, request.getVolumeId() ) );
@@ -136,11 +145,69 @@ public class VolumeManager {
   public AttachVolumeResponseType AttachVolume( AttachVolumeType request ) throws EucalyptusCloudException {
     AttachVolumeResponseType reply = ( AttachVolumeResponseType ) request.getReply();
 
+    VmInstance vm = null;
+    try {
+      vm = VmInstances.getInstance().lookup( request.getInstanceId() );
+    } catch ( NoSuchElementException e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId() );
+    }
+
+    for( VmInstance v : VmInstances.getInstance().listValues() ) {
+      for( AttachedVolume vol : v.getVolumes() ) {
+        if( vol.getVolumeId().equals( request.getVolumeId() ) ) {
+          throw new EucalyptusCloudException( "Volume already attached: " + request.getVolumeId() );
+        }
+      }
+    }
+    //:: TODO-1.5: there is a potential race here :://
+    EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
+    String userName = request.isAdministrator()?null:request.getUserId();
+    try {
+      db.getUnique( new Volume( userName, request.getVolumeId() ) );
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
+      db.rollback();
+      throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId() );
+    }
+    //:: TODO-1.5: dispatch message to the cc backend here :://
     return reply;
   }
 
   public DetachVolumeResponseType DetachVolume( DetachVolumeType request ) throws EucalyptusCloudException {
     DetachVolumeResponseType reply = ( DetachVolumeResponseType ) request.getReply();
+
+    VmInstance vm = null;
+    try {
+      vm = VmInstances.getInstance().lookup( request.getInstanceId() );
+    } catch ( NoSuchElementException e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId() );
+    }
+    //:: TODO-1.5: there is a potential race here :://
+    EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
+    String userName = request.isAdministrator()?null:request.getUserId();
+    try {
+      db.getUnique( new Volume( userName, request.getVolumeId() ) );
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
+      db.rollback();
+      throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId() );
+    }
+    db.commit();
+    AttachedVolume volume = null;
+    for( VmInstance v : VmInstances.getInstance().listValues() ) {
+      for( AttachedVolume vol : v.getVolumes() ) {
+        if( vol.getVolumeId().equals( request.getVolumeId() ) ) {
+          volume = vol;
+        }
+      }
+    }
+    if( volume == null )
+        throw new EucalyptusCloudException( "Volume is not attached: "+ request.getVolumeId() );
+
+    //:: TODO-1.5: dispatch volume detach message to cc backend here :://
+    reply.setDetachedVolume( volume );
     return reply;
   }
 

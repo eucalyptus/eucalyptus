@@ -43,12 +43,13 @@ import org.hibernate.criterion.*;
 import javax.persistence.*;
 import java.sql.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 public class EntityWrapper<TYPE> {
 
   private static Logger LOG = Logger.getLogger( EntityWrapper.class );
 
-  private static Map<String,EntityManagerFactory> emf;
+  private static Map<String,EntityManagerFactory> emf = new ConcurrentSkipListMap<String,EntityManagerFactory>();
 
   public static EntityManagerFactory getEntityManagerFactory( String persistenceContext )
   {

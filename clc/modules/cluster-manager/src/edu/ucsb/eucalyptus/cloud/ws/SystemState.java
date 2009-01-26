@@ -97,6 +97,10 @@ public class SystemState {
         //:: this is ridiculous, throwing away all but 2 pieces of state :://
         vm.getNetworkConfig().setIpAddress( runVm.getNetParams().getIpAddress() );
         vm.setState( VmState.Mapper.get( runVm.getStateName() ) );
+        for( AttachedVolume vol : runVm.getVolumes() ) {
+          vol.setInstanceId( vm.getInstanceId() );
+        }
+        vm.setVolumes( runVm.getVolumes() );
       }
     }
     catch ( NoSuchElementException e ) {

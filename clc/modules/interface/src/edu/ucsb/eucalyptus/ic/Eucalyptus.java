@@ -56,7 +56,8 @@ public class Eucalyptus {
       "EucalyptusErrorMessage", "GetConsoleOutput", "ModifyImageAttribute",
       "RebootInstances", "RegisterImage", "ReleaseAddress",
       "ResetImageAttribute", "RevokeSecurityGroupIngress",
-      "RunInstances", "TerminateInstances", "EucaRegisterImage" } )
+      "RunInstances", "TerminateInstances", "EucaRegisterImage",
+"CreateVolume", "CreateSnapshot", "DeleteVolume", "DeleteSnapshot", "DescribeVolumes","DescribeSnapshots", "AttachVolume","DetachVolume" } )
   public EucalyptusMessage handle( EucalyptusMessage msg )
   {
     LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() )) ;
