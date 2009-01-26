@@ -46,7 +46,6 @@ public class ObjectTest extends TestCase {
 	static Bukkit bukkit;
 	public void testObject() throws Throwable {
 
-		bukkit = new Bukkit();
 		String bucketName = "halo" + Hashes.getRandom(6);
 		String objectName = "key" + Hashes.getRandom(6);
 		String userId = "admin";
@@ -113,8 +112,7 @@ public class ObjectTest extends TestCase {
 		System.out.println(deleteResponse);
 	}
 
-	public ObjectTest() {
-		super();
-	}
-
+    public void setUp() {
+        bukkit = new Bukkit();
+   }        
 }

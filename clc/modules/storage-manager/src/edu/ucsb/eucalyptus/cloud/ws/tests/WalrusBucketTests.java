@@ -34,49 +34,19 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.msgs.*;
+import junit.framework.Test;
 import junit.framework.TestCase;
+import junit.framework.TestSuite;
 
-public class BukkitTest extends TestCase {
-
-	static Bukkit bukkit;
-	public void testBukkit() throws Throwable {
-
-		String bucketName = "halo" + Hashes.getRandom(6);
-		String userId = "admin";
+public class WalrusBucketTests extends TestCase {
 
 
-		CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
-		createBucketRequest.setBucket(bucketName);
-		createBucketRequest.setUserId(userId);
-        createBucketRequest.setEffectiveUserId("eucalyptus");
-		AccessControlListType acl = new AccessControlListType();
-		createBucketRequest.setAccessControlList(acl);
-		CreateBucketResponseType reply = bukkit.CreateBucket(createBucketRequest);
-		System.out.println(reply);
 
-		ListAllMyBucketsType listBucketsRequest = new ListAllMyBucketsType();
+    public static Test suite() {
+        final TestSuite suite = new TestSuite();
 
-		listBucketsRequest.setUserId(userId);
-		ListAllMyBucketsResponseType response =  bukkit.ListAllMyBuckets(listBucketsRequest);
-		System.out.println(response);
-
-		GetBucketAccessControlPolicyType acpRequest = new GetBucketAccessControlPolicyType();
-		acpRequest.setBucket(bucketName);
-		acpRequest.setUserId(userId);
-		GetBucketAccessControlPolicyResponseType acpResponse = bukkit.GetBucketAccessControlPolicy(acpRequest);
-		System.out.println(acpResponse);
-
-		DeleteBucketType deleteRequest = new DeleteBucketType();
-		deleteRequest.setUserId(userId);
-		deleteRequest.setBucket(bucketName);
-		DeleteBucketResponseType deleteResponse = bukkit.DeleteBucket(deleteRequest);
-		System.out.println(deleteResponse);
-	}
-
-    public void setUp() {
-        bukkit = new Bukkit();
+        suite.addTestSuite(BukkitTest.class);
+        suite.addTestSuite(ObjectTest.class);
+        return suite;
     }
 }
