@@ -44,8 +44,6 @@ public class CreateVolumeFromSnapshotTest extends TestCase {
     static Storage storage;
     public void testCreateVolume() throws Throwable {
 
-        storage = new Storage();
-
         String userId = "admin";
 
         String snapshotId = "snap-7d_CtRujsYM.";
@@ -69,8 +67,9 @@ public class CreateVolumeFromSnapshotTest extends TestCase {
         System.out.println(deleteVolumeResponse);
     }
 
-    public CreateVolumeFromSnapshotTest() {
-        super();
+    public void setUp() {
+        storage = new Storage();
     }
+
 
 }

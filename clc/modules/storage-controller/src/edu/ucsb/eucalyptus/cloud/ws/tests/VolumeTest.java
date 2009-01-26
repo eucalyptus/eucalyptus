@@ -46,7 +46,6 @@ public class VolumeTest extends TestCase {
     static Storage storage;
     public void testVolume() throws Throwable {
 
-        storage = new Storage();
 
         String userId = "admin";
         String volumeId = "vol-" + Hashes.getRandom(10);
@@ -67,11 +66,9 @@ public class VolumeTest extends TestCase {
         DescribeStorageVolumesResponseType describeVolumesResponse = storage.DescribeStorageVolumes(describeVolumesRequest);
         StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
         System.out.println(vol);
-        while(true);     
     }
 
-    public VolumeTest() {
-        super();
+    public void setUp() {
+        storage = new Storage();        
     }
-
 }

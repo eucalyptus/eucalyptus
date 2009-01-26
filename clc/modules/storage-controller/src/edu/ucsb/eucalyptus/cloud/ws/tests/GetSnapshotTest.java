@@ -46,18 +46,14 @@ public class GetSnapshotTest extends TestCase {
 
 
     public void testGetSnapshot() throws Throwable {
-        storage = new Storage();
-
-        UUID uuid = UUID.randomUUID();
 
         String volumeId = "vol-" + Hashes.getRandom(10);
         String snapshotBucket = "snapset-FuXLn1MUHJ66BkK0";
         String snapshotId = "snap-zVl2kZJmjhxnEg..";
         storage.GetSnapshots(volumeId, snapshotBucket, snapshotId);
     }
-
-    public GetSnapshotTest() {
-        super();
+    
+    public void setUp() {
+        storage = new Storage();
     }
-
 }
