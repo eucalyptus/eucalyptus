@@ -34,14 +34,13 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import edu.ucsb.eucalyptus.msgs.Volume;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.*;
 
+import javax.persistence.CascadeType;
 import javax.persistence.*;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import javax.persistence.Entity;
+import javax.persistence.Table;
+import java.util.*;
 
 @Entity
 @Table( name = "Volumes" )
@@ -189,14 +188,6 @@ public class VolumeInfo {
     @Override
     public int hashCode() {
         return volumeId.hashCode();
-    }
-
-    public Volume getAsVolume() {
-        Volume ret = new Volume();
-        ret.setAvailabilityZone( this.getZone() );
-        ret.setStatus( "creating" );
-        ret.setCreateTime( this.getCreateTime() );
-        return ret;
     }
 
 }

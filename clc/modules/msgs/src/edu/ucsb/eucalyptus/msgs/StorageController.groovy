@@ -59,7 +59,7 @@ public class StorageErrorMessageType extends EucalyptusMessage {
 public class InitializeStorageManagerType extends StorageRequestType {
 }
 
-public class InitializeStorageManagerResponseType extends StorageResponseType {    
+public class InitializeStorageManagerResponseType extends StorageResponseType {
 }
 
 public class GetStorageVolumeType extends StorageRequestType {
@@ -88,6 +88,16 @@ public class CreateStorageVolumeType extends StorageRequestType {
     String volumeId;
     String size;
     String snapshotId;
+
+  def CreateStorageVolumeType() {
+  }
+
+  def CreateStorageVolumeType(final String volumeId, final String size, final String snapshotId) {
+    this.volumeId = volumeId;
+    this.size = size;
+    this.snapshotId = snapshotId;
+  }
+
 }
 
 public class CreateStorageVolumeResponseType extends StorageResponseType {
@@ -101,6 +111,15 @@ public class CreateStorageVolumeResponseType extends StorageResponseType {
 public class CreateStorageSnapshotType extends StorageRequestType {
     String volumeId;
     String snapshotId;
+
+  def CreateStorageSnapshotType(final String volumeId, final String snapshotId) {
+    this.volumeId = volumeId;
+    this.snapshotId = snapshotId;
+  }
+
+  def CreateStorageSnapshotType() {
+  }
+
 }
 public class CreateStorageSnapshotResponseType extends StorageResponseType {
     String snapshotId;
@@ -112,6 +131,14 @@ public class CreateStorageSnapshotResponseType extends StorageResponseType {
 
 public class DeleteStorageVolumeType extends StorageRequestType {
   String volumeId;
+
+  def DeleteStorageVolumeType() {
+  }
+
+  def DeleteStorageVolumeType(final String volumeId) {
+    this.volumeId = volumeId;
+  }
+
 }
 
 public class DeleteStorageVolumeResponseType extends StorageResponseType {
@@ -119,9 +146,17 @@ public class DeleteStorageVolumeResponseType extends StorageResponseType {
 
 public class DeleteStorageSnapshotType extends StorageRequestType {
     String snapshotId;
+
+  def DeleteStorageSnapshotType() {
+  }
+
+  def DeleteStorageSnapshotType(final String snapshotId) {
+    this.snapshotId = snapshotId;
+  }
+
 }
 
-public class DeleteStorageSnapshotResponseType extends StorageResponseType {    
+public class DeleteStorageSnapshotResponseType extends StorageResponseType {
 }
 
 public class StorageVolume extends EucalyptusData {

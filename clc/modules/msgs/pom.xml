@@ -44,6 +44,29 @@
                 </configuration>
             </plugin>
             <plugin>
+                       <groupId>org.apache.maven.plugins</groupId>
+                       <artifactId>maven-antrun-plugin</artifactId>
+                       <version>1.1</version>
+                       <executions>
+                           <execution>
+                               <id>generate-jibx-binding</id>
+                               <phase>compile</phase>
+                               <goals>
+                                   <goal>run</goal>
+                               </goals>
+                               <configuration>
+                                   <tasks>
+                                       <java classname="GenerateJibxBinding" fork="true">
+                                           <classpath path="${pom.basedir}/build"/>
+                                           <classpath refid="maven.compile.classpath"/>
+                                       </java>
+                                   </tasks>
+                               </configuration>
+                           </execution>
+                       </executions>
+                   </plugin>
+
+            <plugin>
                 <groupId>org.jibx</groupId>
                 <artifactId>maven-jibx-plugin</artifactId>
                 <version>${jibx.version}</version>

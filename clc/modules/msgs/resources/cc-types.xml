@@ -74,7 +74,20 @@
                 <value name="groupNames" type="java.lang.String"/>
             </collection>
         </structure>
+        <structure usage="optional">
+          <collection field="volumes" factory="org.jibx.runtime.Utility.arrayListFactory">
+            <structure name="volumes" map-as="edu.ucsb.eucalyptus.msgs.AttachedVolume"/>
+          </collection>
+        </structure>
     </mapping>
+
+    <mapping class="edu.ucsb.eucalyptus.msgs.AttachedVolume" abstract="true">
+        <value name="volumeId" field="volumeId" usage="required"/>
+        <value name="remoteDev" field="remoteDevice" usage="required"/>
+        <value name="localDev" field="device" usage="required"/>
+        <value name="state" field="status" usage="required"/>
+    </mapping>
+
 
     <mapping class="edu.ucsb.eucalyptus.msgs.VmTypeInfo" abstract="true">
         <value name="name" field="name" usage="required"/>

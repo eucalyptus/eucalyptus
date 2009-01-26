@@ -24,10 +24,12 @@
                     <compileTargets>
                         <value>${gwt.module.name}</value>
                     </compileTargets>
-                    <runTarget>${gwt.module.name}/EucalyptusWebInterface.html</runTarget>
-                    <noServer>false</noServer>
+                    <runTarget>/EucalyptusWebInterface.html</runTarget>
+                    <noServer>true</noServer>
+                    <output>${pom.basedir}/www-build</output>
                     <extraJvmArgs>-Xmx512m</extraJvmArgs>
                     <gwtVersion>${gwt.version}</gwtVersion>
+                    <webXmlServletPathAsIs>true</webXmlServletPathAsIs>
                 </configuration>
                 <executions>
                     <execution>
@@ -111,13 +113,17 @@
                   <include>webapps/**</include>
                 </includes>
               </fileset>
-            </filesets> 
+            </filesets>
           </configuration>
         </plugin>
 
         </plugins>
     </build>
     <dependencies>
+        <dependency>
+            <groupId>org.mortbay.jetty</groupId>
+            <artifactId>jetty-sslengine</artifactId>            
+        </dependency>
         <dependency>
             <groupId>eucalyptus</groupId>
             <artifactId>msgs</artifactId>

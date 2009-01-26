@@ -13,6 +13,10 @@
     <packaging>pom</packaging>
     <dependencies>
         <dependency>
+          <groupId>org.apache.ws.security</groupId>
+          <artifactId>wss4j</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.jibx</groupId>
             <artifactId>jibx-bind</artifactId>
         </dependency>
@@ -34,7 +38,7 @@
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-entitymanager</artifactId>
+            <artifactId>hibernate-ehcache</artifactId>
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>
@@ -56,6 +60,10 @@
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.mortbay.jetty</groupId>
+            <artifactId>jetty-sslengine</artifactId>
+        </dependency>        
         <dependency>
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty-gwt</artifactId>
@@ -96,7 +104,20 @@
             <artifactId>mex</artifactId>
             <type>mar</type>
         </dependency>
-        <dependency>
+         <dependency>
+            <groupId>org.apache.ws.commons.axiom</groupId>
+            <artifactId>axiom-impl</artifactId>
+        </dependency>
+              <dependency>
+                <groupId>org.apache.ws.commons.axiom</groupId>
+                <artifactId>axiom-dom</artifactId>
+            </dependency>
+           <dependency>
+                <groupId>org.apache.ws.commons.axiom</groupId>
+                <artifactId>axiom-api</artifactId>
+            </dependency>
+
+       <dependency>
             <groupId>org.apache.axis2</groupId>
             <artifactId>axis2-kernel</artifactId>
         </dependency>
@@ -139,69 +160,6 @@
         <dependency>
             <groupId>com.thoughtworks.xstream</groupId>
             <artifactId>xstream</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>msgs</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>core</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>transport</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>cluster-manager</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>image-manager</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>interface</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>key-manager</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>libfsstorage</artifactId>
-            <version>${euca.version}</version>
-            <type>so</type>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>liblvm2control</artifactId>
-            <version>${euca.version}</version>
-            <type>so</type>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>security-groups-manager</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>storage-controller</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>storage-manager</artifactId>
-            <version>${euca.version}</version>
         </dependency>
 
     </dependencies>
@@ -268,7 +226,7 @@
                   <include>dist/**</include>
                 </includes>
               </fileset>
-            </filesets> 
+            </filesets>
           </configuration>
         </plugin>
         </plugins>

@@ -72,7 +72,7 @@ public class UserAuthentication extends CertAuthentication {
         throw new EucalyptusCloudException( ex );
       }
 
-      EntityManager em = EntityWrapper.getEntityManagerFactory().createEntityManager();
+      EntityManager em = EntityWrapper.getEntityManagerFactory(EucalyptusProperties.NAME).createEntityManager();
       Session session = ( Session ) em.getDelegate();
       UserInfo searchUser = new UserInfo();
 
