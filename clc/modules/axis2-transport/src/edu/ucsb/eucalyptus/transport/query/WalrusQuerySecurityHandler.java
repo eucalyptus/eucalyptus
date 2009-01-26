@@ -40,7 +40,6 @@ import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.openssl.PEMReader;
 
 import java.security.Signature;

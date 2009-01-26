@@ -36,112 +36,108 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
-import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
-import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.cloud.state.Volume;
+import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 
-import java.util.Date;
-import java.util.zip.Adler32;
+import java.util.List;
 
 public class VolumeManager {
+  private static String PERSISTENCE_CONTEXT = "eucalyptus.volumes";
+
+  static {
+    System.setProperty( PERSISTENCE_CONTEXT, PERSISTENCE_CONTEXT );
+  }
+
+  private static String ID_PREFIX = "vol";
   private static Logger LOG = Logger.getLogger( VolumeManager.class );
 
-  public CreateVolumeResponseType CreateVolume( CreateVolumeType request ) throws EucalyptusCloudException
-  {
-    CreateVolumeResponseType reply = ( CreateVolumeResponseType ) request.getReply();
+  private static EntityWrapper<Volume> getEntityWrapper() {
+    return new EntityWrapper<Volume>( PERSISTENCE_CONTEXT );
+  }
 
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-    UserInfo user = null;
-    try {
-      user = db.getUnique(  new UserInfo( request.getUserId() ) );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback();
-      throw new EucalyptusCloudException( "User does not exist: " + request.getUserId() );
-    }
-
-    if( request.getSnapshotId() != null && !user.getSnapshots().contains( new SnapshotInfo( request.getSnapshotId() ) ) ) {
-      db.rollback();
-      throw new EucalyptusCloudException( "Snapshot does not exist: " + request.getUserId() );
-    }
-
-    if( !Clusters.getInstance().contains( request.getAvailabilityZone() ) ) {
-      db.rollback();
+  public CreateVolumeResponseType CreateVolume( CreateVolumeType request ) throws EucalyptusCloudException {
+    if ( !Clusters.getInstance().contains( request.getAvailabilityZone() ) ) {
       throw new EucalyptusCloudException( "Zone does not exist: " + request.getAvailabilityZone() );
     }
+//:: TODO-1.5: if( request.getSnapshotId() != null && !snapshot exists, throw exception :://
 
+
+    EntityWrapper<Volume> db = getEntityWrapper();
     String newId = null;
-    while( true ) {
-      newId = generateImageId( request.getUserId() );
+    while ( true ) {
+      newId = Hashes.generateId( request.getUserId(), ID_PREFIX );
       try {
-        db.recast( VolumeInfo.class ).getUnique( new VolumeInfo( newId ) );
+        db.getUnique( new Volume( null, newId ) );
         break;
       } catch ( EucalyptusCloudException e ) {}
     }
 
-    //:: try to create the volume on the SC :://
-    VolumeInfo newVol = new VolumeInfo( newId );
-    newVol.setSize( Integer.parseInt( request.getSize() ) );
-    newVol.setCreateTime( new Date() );
-    newVol.setZone( request.getAvailabilityZone() );
-    newVol.setUserName( request.getUserId() );
+    //:: TODO-1.5: there is a race here, forsooth :://
+    CreateStorageVolumeType scRequest = new CreateStorageVolumeType( newId, request.getSize(), request.getSnapshotId() );
+    CreateStorageVolumeResponseType scReply = null;
+    try {
+      scReply = ( CreateStorageVolumeResponseType ) Messaging.send( StorageProperties.STORAGE_REF, scRequest );
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Error calling CreateStorageVolume:" + e.getMessage() );
+    }
 
-    user.getVolumes().add( newVol );
+    Volume newVol = new Volume(
+        request.getUserId(), newId, new Integer( request.getSize() ),
+        request.getAvailabilityZone(), request.getSnapshotId()
+    );
 
+    db.add( newVol );
     db.commit();
-
-    reply.setVolume( newVol.getAsVolume() );
-
+    CreateVolumeResponseType reply = ( CreateVolumeResponseType ) request.getReply();
+    reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume() ) );
     return reply;
   }
 
-  private String generateImageId( final String userId ) {
-    Adler32 hash = new Adler32();
-    String key = userId + System.currentTimeMillis();
-    hash.update( key.getBytes() );
-    String imageId = String.format( "evs-%08X", hash.getValue() );
-    return imageId;
-  }
-
-
-  public DeleteVolumeResponseType DeleteVolume( DeleteVolumeType request ) throws EucalyptusCloudException
-  {
+  public DeleteVolumeResponseType DeleteVolume( DeleteVolumeType request ) throws EucalyptusCloudException {
     DeleteVolumeResponseType reply = ( DeleteVolumeResponseType ) request.getReply();
     EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
     UserInfo user = null;
+    reply.set_return( false );
+    EntityWrapper<Volume> db = getEntityWrapper();
+    String userName = request.isAdministrator() ? null : request.getUserId();
     try {
-      user = db.getUnique(  new UserInfo( request.getUserId() ) );
+      Volume vol = db.getUnique( new Volume( userName, request.getVolumeId() ) );
+      //:: TODO-1.5: state checks and snapshot tree check here :://
+      Messaging.dispatch( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
+      db.delete( vol );
+      db.commit();
     } catch ( EucalyptusCloudException e ) {
-      db.rollback();
-      throw new EucalyptusCloudException( "User does not exist: " + request.getUserId() );
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Error deleting storage volume:" + e.getMessage() );
     }
-
+    reply.set_return( true );
     return reply;
   }
 
-  public DescribeVolumesResponseType DescribeVolumes( DescribeVolumesType request ) throws EucalyptusCloudException
-  {
+  public DescribeVolumesResponseType DescribeVolumes( DescribeVolumesType request ) throws EucalyptusCloudException {
     DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply();
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-    UserInfo user = null;
-    try {
-      user = db.getUnique(  new UserInfo( request.getUserId() ) );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback();
-      throw new EucalyptusCloudException( "User does not exist: " + request.getUserId() );
+    EntityWrapper<Volume> db = getEntityWrapper();
+    String userName = request.isAdministrator() ? null : request.getUserId();
+    List<Volume> volumes = db.query( new Volume( userName, null ) );
+    for ( Volume v : volumes ) {
+      if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
+        reply.getVolumeSet().add( v.morph( new edu.ucsb.eucalyptus.msgs.Volume() ) );
+      }
     }
     return reply;
   }
 
-  public AttachVolumeResponseType AttachVolume( AttachVolumeType request ) throws EucalyptusCloudException
-  {
+  public AttachVolumeResponseType AttachVolume( AttachVolumeType request ) throws EucalyptusCloudException {
     AttachVolumeResponseType reply = ( AttachVolumeResponseType ) request.getReply();
     EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
     UserInfo user = null;
     try {
-      user = db.getUnique(  new UserInfo( request.getUserId() ) );
+      user = db.getUnique( new UserInfo( request.getUserId() ) );
     } catch ( EucalyptusCloudException e ) {
       db.rollback();
       throw new EucalyptusCloudException( "User does not exist: " + request.getUserId() );
@@ -149,13 +145,12 @@ public class VolumeManager {
     return reply;
   }
 
-  public DetachVolumeResponseType DetachVolume( DetachVolumeType request ) throws EucalyptusCloudException
-  {
+  public DetachVolumeResponseType DetachVolume( DetachVolumeType request ) throws EucalyptusCloudException {
     DetachVolumeResponseType reply = ( DetachVolumeResponseType ) request.getReply();
     EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
     UserInfo user = null;
     try {
-      user = db.getUnique(  new UserInfo( request.getUserId() ) );
+      user = db.getUnique( new UserInfo( request.getUserId() ) );
     } catch ( EucalyptusCloudException e ) {
       db.rollback();
       throw new EucalyptusCloudException( "User does not exist: " + request.getUserId() );

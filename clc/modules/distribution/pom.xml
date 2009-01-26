@@ -141,69 +141,6 @@
             <artifactId>xstream</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>msgs</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>core</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>transport</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>cluster-manager</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>image-manager</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>interface</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>key-manager</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>libfsstorage</artifactId>
-            <version>${euca.version}</version>
-            <type>so</type>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>liblvm2control</artifactId>
-            <version>${euca.version}</version>
-            <type>so</type>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>security-groups-manager</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>storage-controller</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eucalyptus</groupId>
-            <artifactId>storage-manager</artifactId>
-            <version>${euca.version}</version>
-        </dependency>
-
     </dependencies>
 
     <build>
@@ -268,7 +205,7 @@
                   <include>dist/**</include>
                 </includes>
               </fileset>
-            </filesets> 
+            </filesets>
           </configuration>
         </plugin>
         </plugins>

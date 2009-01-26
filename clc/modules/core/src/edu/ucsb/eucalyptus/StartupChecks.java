@@ -43,7 +43,8 @@ public class StartupChecks {
     printFail();
     for ( String s : error )
       LOG.fatal( s );
-    EntityWrapper.close();
+    if ( EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME).isOpen() )
+      EntityWrapper.getEntityManagerFactory(EucalyptusProperties.NAME).close();
     System.exit( 0xEC2 );
   }
 

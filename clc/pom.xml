@@ -36,7 +36,21 @@
             <organization>Eucalyptus</organization>
             <url>http://eucalyptus.cs.ucsb.edu/</url>
         </developer>
+        <developer>
+            <name>Dmitrii Zagarodnov</name>
+            <id>dmitrii</id>
+            <email>dmitrii@cs.ucsb.edu</email>
+            <organization>Eucalyptus</organization>
+            <url>http://eucalyptus.cs.ucsb.edu/</url>
+        </developer>
     </developers>
+
+    <distributionManagement>
+        <site>
+            <id>eucalyptus.cs.ucsb.edu</id>
+            <url>file://${basedir}/dist/www/</url>
+        </site>
+    </distributionManagement>
 
     <repositories>
         <repository>
@@ -131,6 +145,18 @@
         <!--deprecated-->
         <xstream.version>1.3.1</xstream.version>
     </properties>
+    <dependencies>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.14</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>3.8.2</version>
+        </dependency>
+    </dependencies>
     <dependencyManagement>
         <dependencies>
             <!--msgs -->
@@ -138,6 +164,12 @@
                 <groupId>org.jibx</groupId>
                 <artifactId>jibx-bind</artifactId>
                 <version>${jibx.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>bcel</groupId>
+                        <artifactId>bcel</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.jibx</groupId>
@@ -159,10 +191,21 @@
                 <groupId>org.hibernate</groupId>
                 <artifactId>hibernate-entitymanager</artifactId>
                 <version>${hibernate.em.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.transaction</groupId>
+                        <artifactId>jta</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.hibernate</groupId>
                 <artifactId>hibernate-core</artifactId>
+                <version>${hibernate.core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate</groupId>
+                <artifactId>hibernate-ehcache</artifactId>
                 <version>${hibernate.core.version}</version>
             </dependency>
             <dependency>
@@ -203,11 +246,23 @@
                 <groupId>org.mule</groupId>
                 <artifactId>mule-core</artifactId>
                 <version>${mule.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>backport-util-concurrent</groupId>
+                        <artifactId>backport-util-concurrent</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.mule.transports</groupId>
                 <artifactId>mule-transport-vm</artifactId>
                 <version>${mule.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.activation</groupId>
+                        <artifactId>activation</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.mule.modules</groupId>
@@ -225,22 +280,110 @@
                 <groupId>org.apache.axis2</groupId>
                 <artifactId>axis2-kernel</artifactId>
                 <version>${axis2.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>backport-util-concurrent</groupId>
+                        <artifactId>backport-util-concurrent</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.servlet</groupId>
+                        <artifactId>servlet-api</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.activation</groupId>
+                        <artifactId>activation</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.mail</groupId>
+                        <artifactId>mail</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.axis2</groupId>
                 <artifactId>axis2-jibx</artifactId>
                 <version>${axis2.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.activation</groupId>
+                        <artifactId>activation</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.mail</groupId>
+                        <artifactId>mail</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.rampart</groupId>
                 <artifactId>rampart-core</artifactId>
                 <version>${rampart.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>bouncycastle</groupId>
+                        <artifactId>bcprov-jdk13</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>backport-util-concurrent</groupId>
+                        <artifactId>backport-util-concurrent</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.servlet</groupId>
+                        <artifactId>servlet-api</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.activation</groupId>
+                        <artifactId>activation</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.mail</groupId>
+                        <artifactId>mail</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.ant</groupId>
+                        <artifactId>ant-nodeps</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.ibm.icu</groupId>
+                        <artifactId>icu4j</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.rampart</groupId>
                 <artifactId>rampart</artifactId>
                 <type>mar</type>
                 <version>${rampart.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>backport-util-concurrent</groupId>
+                        <artifactId>backport-util-concurrent</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.servlet</groupId>
+                        <artifactId>servlet-api</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.activation</groupId>
+                        <artifactId>activation</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.mail</groupId>
+                        <artifactId>mail</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>bouncycastle</groupId>
+                        <artifactId>bcprov-jdk13</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.ant</groupId>
+                        <artifactId>ant-nodeps</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.ibm.icu</groupId>
+                        <artifactId>icu4j</artifactId>
+                    </exclusion>                    
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.axis2</groupId>
@@ -253,6 +396,20 @@
                 <artifactId>rahas</artifactId>
                 <type>mar</type>
                 <version>${rampart.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>backport-util-concurrent</groupId>
+                        <artifactId>backport-util-concurrent</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.servlet</groupId>
+                        <artifactId>servlet-api</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.activation</groupId>
+                        <artifactId>activation</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.axis2</groupId>
@@ -264,6 +421,12 @@
                 <groupId>org.apache.ws.security</groupId>
                 <artifactId>wss4j</artifactId>
                 <version>${wss4j.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>bouncycastle</groupId>
+                        <artifactId>bcprov-jdk13</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
@@ -293,6 +456,12 @@
                 <artifactId>xmlsec</artifactId>
                 <version>1.4.1</version>
             </dependency>
+            <dependency>
+                <groupId>opensaml</groupId>
+                <artifactId>opensaml</artifactId>
+                <version>1.1</version>
+            </dependency>
+
 
             <!--GWT-->
             <dependency>
@@ -409,21 +578,70 @@
                     <target>1.5</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>1.0-alpha-4</version>
+                <executions>
+                    <execution>
+                        <id>ban-deps</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>1.6</version>
+                                </requireJavaVersion>
+                                <requireOS>
+                                    <family>unix</family>
+                                </requireOS>
+                                <bannedDependencies>
+                                    <searchTransitive>true</searchTransitive>
+                                    <excludes>
+                                        <exclude>bouncycastle:bcprov-jdk13</exclude>
+                                        <exclude>javax.transaction:jta</exclude>
+                                        <exclude>javax.activation:activation:jar</exclude>
+                                        <exclude>javax.servlet:servlet-api</exclude>
+                                        <exclude>javax.mail:mail</exclude>
+                                        <exclude>backport-util-concurrent:backport-util-concurrent</exclude>
+
+                                        <exclude>org.apache.ant:ant-nodeps:jar:1.7.0</exclude>
+                                        <exclude>bcel:bcel:jar:5.1</exclude>
+                                    </excludes>
+                                </bannedDependencies>
+                            </rules>
+                            <fail>false</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
-                 <plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-clean-plugin</artifactId>
                     <version>2.3</version>
                 </plugin>
 
-               <plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>2.0.2</version>
                 </plugin>
 
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>2.1</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>1.0-alpha-4</version>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>

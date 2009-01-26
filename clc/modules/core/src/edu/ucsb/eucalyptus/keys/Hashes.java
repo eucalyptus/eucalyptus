@@ -43,6 +43,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.security.*;
+import java.util.zip.Adler32;
 
 public class Hashes {
     private static Logger LOG = Logger.getLogger( Hashes.class );
@@ -161,6 +162,15 @@ public class Hashes {
         random.nextBytes(randomBytes);
         return new String(UrlBase64.encode(randomBytes));
     }
+
+  public static String generateId( final String userId, final String prefix ) {
+    Adler32 hash = new Adler32();
+    String key = userId + System.currentTimeMillis();
+    hash.update( key.getBytes() );
+    String imageId = String.format( "%s-%08X", prefix, hash.getValue() );
+    return imageId;
+  }
+
 
   // borrowing from neil for the time being
   public static byte[] hexToBytes(String data) {

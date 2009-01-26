@@ -600,11 +600,11 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
         } catch (Exception e) {
             throw new SerializableException("Username '" + userName + "' not found");
         }
-		if (! callerRecord.isAdministrator() 
+		if (! callerRecord.isAdministrator()
 		&&  ! callerRecord.getUserName().equals(userName)) {
 				throw new SerializableException ("Operation restricted to owner and administrator");
 		}
-	
+
         /* TODO: Any checks? Reset password expiration? */
 		oldRecord.setRealName (newRecord.getRealName());
 		oldRecord.setEmail (newRecord.getEmail());
@@ -613,7 +613,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 		oldRecord.setAffiliation (newRecord.getAffiliation());
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
-										
+
         EucalyptusManagement.commitWebUser( oldRecord );
 
         return "Account updated";

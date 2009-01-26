@@ -93,6 +93,8 @@ public class Volume extends EucalyptusData {
   public Volume(String volumeId) {
       this.volumeId = volumeId;
   }
+
+
 }
 
 public class AttachedVolume extends EucalyptusData {

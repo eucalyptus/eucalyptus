@@ -82,15 +82,6 @@
     <dependencySets>
         <dependencySet>
             <outputDirectory>usr/share/eucalyptus</outputDirectory>
-            <excludes>
-                <exclude>org.apache.ant:ant-nodeps:jar:1.7.0</exclude>
-                <exclude>backport-util-concurrent:backport-util-concurrent:jar</exclude>
-                <exclude>bcel:bcel:jar:5.1</exclude>
-                <exclude>bouncycastle:bcprov-jdk13:jar</exclude>
-                <exclude>javax.mail:mail:jar</exclude>
-                <exclude>javax.servlet:servlet-api:jar</exclude>
-                <exclude>javax.transaction:jta:jar</exclude>
-            </excludes>
         </dependencySet>
         <dependencySet>
             <outputDirectory>var/eucalyptus/modules</outputDirectory>
