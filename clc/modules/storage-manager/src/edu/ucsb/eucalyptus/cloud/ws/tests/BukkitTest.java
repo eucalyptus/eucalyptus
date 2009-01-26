@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
 import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
+import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 
@@ -43,14 +44,14 @@ public class BukkitTest extends TestCase {
 	static Bukkit bukkit;
 	public void testBukkit() throws Throwable {
 
-		bukkit = new Bukkit();
-		String bucketName = "halo11";
+		String bucketName = "halo" + Hashes.getRandom(6);
 		String userId = "admin";
 
 
 		CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
 		createBucketRequest.setBucket(bucketName);
 		createBucketRequest.setUserId(userId);
+        createBucketRequest.setEffectiveUserId("eucalyptus");
 		AccessControlListType acl = new AccessControlListType();
 		createBucketRequest.setAccessControlList(acl);
 		CreateBucketResponseType reply = bukkit.CreateBucket(createBucketRequest);
@@ -75,8 +76,7 @@ public class BukkitTest extends TestCase {
 		System.out.println(deleteResponse);
 	}
 
-    public  BukkitTest() {
-		super();
-	}
-
+    public void setUp() {
+        bukkit = new Bukkit();
+    }
 }

@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
 import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
+import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 
@@ -45,14 +46,14 @@ public class ObjectTest extends TestCase {
 	static Bukkit bukkit;
 	public void testObject() throws Throwable {
 
-		bukkit = new Bukkit();
-		String bucketName = "halo113";
-		String objectName = "key2";
+		String bucketName = "halo" + Hashes.getRandom(6);
+		String objectName = "key" + Hashes.getRandom(6);
 		String userId = "admin";
 
 		CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
 		createBucketRequest.setBucket(bucketName);
 		createBucketRequest.setUserId(userId);
+        createBucketRequest.setEffectiveUserId("eucalyptus");
 		AccessControlListType acl = new AccessControlListType();
 		createBucketRequest.setAccessControlList(acl);
 		CreateBucketResponseType reply = bukkit.CreateBucket(createBucketRequest);
@@ -61,8 +62,9 @@ public class ObjectTest extends TestCase {
 		PutObjectInlineType putObjectRequest = new PutObjectInlineType();
 		putObjectRequest.setBucket(bucketName);
 		putObjectRequest.setKey(objectName);
-		putObjectRequest.setContentLength("3");
-		putObjectRequest.setBase64Data("lol");
+        String data = "hi here is some data";
+		putObjectRequest.setContentLength(String.valueOf(data.length()));
+		putObjectRequest.setBase64Data(data);
 		putObjectRequest.setUserId(userId);
         ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
         MetaDataEntry metaDataEntry = new MetaDataEntry();
@@ -110,8 +112,7 @@ public class ObjectTest extends TestCase {
 		System.out.println(deleteResponse);
 	}
 
-	public ObjectTest() {
-		super();
-	}
-
+    public void setUp() {
+        bukkit = new Bukkit();
+   }        
 }
