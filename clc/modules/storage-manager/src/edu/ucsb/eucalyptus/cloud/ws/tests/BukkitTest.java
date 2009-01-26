@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
 import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
+import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 
@@ -44,7 +45,7 @@ public class BukkitTest extends TestCase {
 	public void testBukkit() throws Throwable {
 
 		bukkit = new Bukkit();
-		String bucketName = "halo1221";
+		String bucketName = "halo" + Hashes.getRandom(6);
 		String userId = "admin";
 
 

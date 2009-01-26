@@ -45,7 +45,8 @@
         <configuration>
           <includes>
             <include>**/BukkitTest.java</include>
-          </includes>
+            <include>**/ObjectTest.java</include>
+  	 </includes>
           <systemProperties>
             <property>
               <name>euca.home</name>
