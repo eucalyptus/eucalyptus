@@ -111,6 +111,15 @@ public class CreateStorageVolumeResponseType extends StorageResponseType {
 public class CreateStorageSnapshotType extends StorageRequestType {
     String volumeId;
     String snapshotId;
+
+  def CreateStorageSnapshotType(final String volumeId, final String snapshotId) {
+    this.volumeId = volumeId;
+    this.snapshotId = snapshotId;
+  }
+
+  def CreateStorageSnapshotType() {
+  }
+
 }
 public class CreateStorageSnapshotResponseType extends StorageResponseType {
     String snapshotId;
@@ -137,6 +146,14 @@ public class DeleteStorageVolumeResponseType extends StorageResponseType {
 
 public class DeleteStorageSnapshotType extends StorageRequestType {
     String snapshotId;
+
+  def DeleteStorageSnapshotType() {
+  }
+
+  def DeleteStorageSnapshotType(final String snapshotId) {
+    this.snapshotId = snapshotId;
+  }
+
 }
 
 public class DeleteStorageSnapshotResponseType extends StorageResponseType {

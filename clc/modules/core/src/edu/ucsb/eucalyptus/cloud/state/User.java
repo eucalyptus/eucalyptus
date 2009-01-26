@@ -1,7 +1,6 @@
 package edu.ucsb.eucalyptus.cloud.state;
 
 import java.util.concurrent.*;
-import java.util.DoesNotExistException;
 
 public class User {
 

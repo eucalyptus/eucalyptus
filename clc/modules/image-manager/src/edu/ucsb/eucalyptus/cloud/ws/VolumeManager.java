@@ -46,7 +46,7 @@ import org.apache.log4j.Logger;
 import java.util.List;
 
 public class VolumeManager {
-  private static String PERSISTENCE_CONTEXT = "eucalyptus.volumes";
+  static String PERSISTENCE_CONTEXT = "eucalyptus.volumes";
 
   static {
     System.setProperty( PERSISTENCE_CONTEXT, PERSISTENCE_CONTEXT );
@@ -55,7 +55,7 @@ public class VolumeManager {
   private static String ID_PREFIX = "vol";
   private static Logger LOG = Logger.getLogger( VolumeManager.class );
 
-  private static EntityWrapper<Volume> getEntityWrapper() {
+  public static EntityWrapper<Volume> getEntityWrapper() {
     return new EntityWrapper<Volume>( PERSISTENCE_CONTEXT );
   }
 
@@ -83,6 +83,7 @@ public class VolumeManager {
       scReply = ( CreateStorageVolumeResponseType ) Messaging.send( StorageProperties.STORAGE_REF, scRequest );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
+      db.rollback();      
       throw new EucalyptusCloudException( "Error calling CreateStorageVolume:" + e.getMessage() );
     }
 
@@ -100,8 +101,6 @@ public class VolumeManager {
 
   public DeleteVolumeResponseType DeleteVolume( DeleteVolumeType request ) throws EucalyptusCloudException {
     DeleteVolumeResponseType reply = ( DeleteVolumeResponseType ) request.getReply();
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-    UserInfo user = null;
     reply.set_return( false );
     EntityWrapper<Volume> db = getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
@@ -113,6 +112,7 @@ public class VolumeManager {
       db.commit();
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
+      db.rollback();
       throw new EucalyptusCloudException( "Error deleting storage volume:" + e.getMessage() );
     }
     reply.set_return( true );
@@ -129,32 +129,18 @@ public class VolumeManager {
         reply.getVolumeSet().add( v.morph( new edu.ucsb.eucalyptus.msgs.Volume() ) );
       }
     }
+    db.commit();
     return reply;
   }
 
   public AttachVolumeResponseType AttachVolume( AttachVolumeType request ) throws EucalyptusCloudException {
     AttachVolumeResponseType reply = ( AttachVolumeResponseType ) request.getReply();
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-    UserInfo user = null;
-    try {
-      user = db.getUnique( new UserInfo( request.getUserId() ) );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback();
-      throw new EucalyptusCloudException( "User does not exist: " + request.getUserId() );
-    }
+
     return reply;
   }
 
   public DetachVolumeResponseType DetachVolume( DetachVolumeType request ) throws EucalyptusCloudException {
     DetachVolumeResponseType reply = ( DetachVolumeResponseType ) request.getReply();
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-    UserInfo user = null;
-    try {
-      user = db.getUnique( new UserInfo( request.getUserId() ) );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback();
-      throw new EucalyptusCloudException( "User does not exist: " + request.getUserId() );
-    }
     return reply;
   }
 

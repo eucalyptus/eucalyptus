@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.annotations.Cache;
@@ -96,7 +97,7 @@ public class Counters {
     if ( tempId < 0 )
     {
       Counters find = null;
-      EntityManager em = EntityWrapper.getEntityManagerFactory().createEntityManager(  );
+      EntityManager em = EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME).createEntityManager(  );
       Session session = (Session) em.getDelegate();
       List<Counters> found = ( List<Counters> ) session.createSQLQuery( "select * from COUNTERS" ).addEntity( Counters.class ).list();
       if( found.isEmpty() )
@@ -116,7 +117,7 @@ public class Counters {
     }
     else if ( tempId % modulus == 0 )
     {
-      EntityManager em = EntityWrapper.getEntityManagerFactory().createEntityManager(  );
+      EntityManager em = EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME).createEntityManager(  );
       Session session = (Session) em.getDelegate();
       Transaction tx = session.beginTransaction();
       tx.begin();

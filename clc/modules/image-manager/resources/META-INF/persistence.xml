@@ -40,6 +40,7 @@
     <persistence-unit name="${eucalyptus.volumes}" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.ejb.HibernatePersistence</provider>
         <class>edu.ucsb.eucalyptus.cloud.state.Volume</class>
+        <class>edu.ucsb.eucalyptus.cloud.state.Snapshot</class>
         <class>edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph</class>
         <properties>
             <property name="hibernate.connection.provider_class" value="org.hibernate.connection.C3P0ConnectionProvider"/>
