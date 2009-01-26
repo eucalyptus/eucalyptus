@@ -52,8 +52,6 @@ public class CreateSnapshotTest extends TestCase {
     static Storage storage;
     public void testCreateSnapshot() throws Throwable {
 
-        storage = new Storage();
-
         String userId = "admin";
 
         String volumeId = "vol-yCqCbrweuVviYQxx";
@@ -71,9 +69,6 @@ public class CreateSnapshotTest extends TestCase {
     }
 
     public void testTransferSnapshot() throws Throwable {
-        storage = new Storage();
-
-
         String volumeId = "vol-yCqCbrweuVviYQxx";
         String snapshotId = "snap-zVl2kZJmjhxnEg..";
         String dupSnapshotId = "snap-zVl2kZJmjhxnEg...SrZ5iA..";
@@ -112,8 +107,8 @@ public class CreateSnapshotTest extends TestCase {
         method.releaseConnection();         
     }
 
-    public CreateSnapshotTest() {
-        super();
+    public void setUp() {
+        storage = new Storage();
     }
 
 }

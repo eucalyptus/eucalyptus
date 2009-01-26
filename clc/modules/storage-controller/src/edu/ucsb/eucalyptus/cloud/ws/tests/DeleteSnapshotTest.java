@@ -45,7 +45,6 @@ public class DeleteSnapshotTest extends TestCase {
 
 
     public void testDeleteSnapshot() throws Throwable {
-        storage = new Storage();
 
         String snapshotBucket = "snapset-FuXLn1MUHJ66BkK0";
         String snapshotId = "snap-zVl2kZJmjhxnEg..";
@@ -58,13 +57,12 @@ public class DeleteSnapshotTest extends TestCase {
     }
 
     public void testWalrusDeleteSnapshot() throws Throwable {
-        storage = new Storage();
-        
+
         String snapshotId = "snap-zVl2kZJmjhxnEg..";
         storage.DeleteWalrusSnapshot(snapshotId);        
     }
-    public DeleteSnapshotTest() {
-        super();
-    }
 
+    public void setUp() {
+        storage = new Storage();
+    }    
 }
