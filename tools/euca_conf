@@ -13,6 +13,8 @@ CLOUD_PORT=""
 CLOUD_SSL_PORT=""
 NAME=""
 INSTANCE=""
+EUCA_USER=""
+HYPERVISOR=""
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -27,6 +29,8 @@ usage () {
 	echo "   -ncp <port>                 set NC port"
 	echo "   -instances <path>           set the INSTANCE path"
 	echo "   -cloudp <port1> <port2>     set the 2 cloud ports"
+	echo "   -hypervisor <kvm|xen>       set hypervisor to use"
+	echo "   -user <euca_user>           set the user to use"
 	echo "   -name <var>                 returns the value or <name>"
 	echo "where <file> is the configuration file ($FILE by default)"
 	echo
@@ -121,6 +125,20 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "-instances" ]; then
+		INSTANCE="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "-user" ]; then
+		EUCA_USER="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "-hypervisor" ]; then
+		if [ "$2" != "xen" -a "$2" != "kvm" ]; then
+			echo "Only kvm or xen are supported at the moment"
+			exit 1
+		fi
 		INSTANCE="$2"
 		shift; shift
 		continue
