@@ -382,7 +382,7 @@
                     <exclusion>
                         <groupId>com.ibm.icu</groupId>
                         <artifactId>icu4j</artifactId>
-                    </exclusion>                    
+                    </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
@@ -390,6 +390,16 @@
                 <artifactId>addressing</artifactId>
                 <type>mar</type>
                 <version>${axis2.module.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.activation</groupId>
+                        <artifactId>activation</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.mail</groupId>
+                        <artifactId>mail</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.rampart</groupId>
@@ -409,6 +419,14 @@
                         <groupId>javax.activation</groupId>
                         <artifactId>activation</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>bouncycastle</groupId>
+                        <artifactId>bcprov-jdk13</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.mail</groupId>
+                        <artifactId>mail</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
@@ -416,6 +434,12 @@
                 <artifactId>mex</artifactId>
                 <type>mar</type>
                 <version>${axis2.module.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.mail</groupId>
+                        <artifactId>mail</artifactId>
+                    </exclusion>                    
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.ws.security</groupId>
