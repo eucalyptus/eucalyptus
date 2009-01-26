@@ -49,8 +49,8 @@
                listfiles="true"/>
     </target>
     <target name="build-jni" depends="compile-src">
-        <mkdir dir="h"/>
-        <javah classpath="${build.dir}" destdir="h" force="yes">
+        <mkdir dir="include"/>
+        <javah classpath="${build.dir}" destdir="include" force="yes">
             <class name="edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager"/>
         </javah>
     </target>

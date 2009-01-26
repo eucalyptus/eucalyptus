@@ -50,8 +50,8 @@
                listfiles="true"/>
     </target>
     <target name="build-jni" depends="build-jar">
-        <mkdir dir="h"/>
-        <javah classpath="${build.dir}" destdir="h" force="yes">
+        <mkdir dir="include"/>
+        <javah classpath="${build.dir}" destdir="include" force="yes">
             <class name="edu.ucsb.eucalyptus.storage.LVM2Manager"/>
             <class name="edu.ucsb.eucalyptus.storage.AOEManager"/>
         </javah>

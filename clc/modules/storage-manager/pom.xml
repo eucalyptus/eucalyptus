@@ -46,6 +46,40 @@
           <includes>
             <include>**/BukkitTest.java</include>
           </includes>
+          <systemProperties>
+            <property>
+              <name>euca.home</name>
+              <value>${env.EUCALYPTUS}</value>
+            </property>
+ 	    <property>
+	      <name>euca.var.dir</name>
+	      <value>${env.EUCALYPTUS}/var/eucalyptus</value>	
+	    </property>
+ 	    <property>
+	      <name>euca.lib.dir</name>
+	      <value>${env.EUCALYPTUS}/usr/share/eucalyptus</value>	
+	    </property>
+ 	    <property>
+	      <name>euca.conf.dir</name>
+	      <value>${env.EUCALYPTUS}/etc/eucalyptus/cloud.d</value>	
+	    </property>
+ 	    <property>
+	      <name>euca.log.dir</name>
+	      <value>${env.EUCALYPTUS}/var/log/eucalyptus</value>	
+	    </property>
+ 	    <property>
+	      <name>euca.template.dir</name>
+	      <value>${env.EUCALYPTUS}/var/eucalyptus</value>	
+	    </property>
+ 	    <property>
+	      <name>java.library.path</name>
+	      <value>${env.EUCALYPTUS}/usr/lib</value>	
+	    </property>
+	    <property>
+	      <name>java.security.policy</name>
+	      <value>${env.EUCALYPTUS}/etc/eucalyptus/cloud.d/security.policy</value>
+	    </property>
+	  </systemProperties>
         </configuration>
       </plugin>
     </plugins>

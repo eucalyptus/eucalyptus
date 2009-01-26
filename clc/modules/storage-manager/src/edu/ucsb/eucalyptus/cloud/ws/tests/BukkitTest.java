@@ -44,13 +44,14 @@ public class BukkitTest extends TestCase {
 	public void testBukkit() throws Throwable {
 
 		bukkit = new Bukkit();
-		String bucketName = "halo11";
+		String bucketName = "halo1221";
 		String userId = "admin";
 
 
 		CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
 		createBucketRequest.setBucket(bucketName);
 		createBucketRequest.setUserId(userId);
+        createBucketRequest.setEffectiveUserId("eucalyptus");
 		AccessControlListType acl = new AccessControlListType();
 		createBucketRequest.setAccessControlList(acl);
 		CreateBucketResponseType reply = bukkit.CreateBucket(createBucketRequest);
