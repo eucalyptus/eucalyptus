@@ -937,9 +937,8 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
       if (rc) {
 	logprintfl(EUCAERROR, "could not remove '%s' from list of interfaces\n", newdevname);
       }
-    } else {
-      rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname);
-    }
+    } 
+    rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname);
     
     if (userName && netName) {
       rc = vnetDeleteChain(vnetconfig, userName, netName);
