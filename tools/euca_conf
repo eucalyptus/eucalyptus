@@ -139,7 +139,7 @@ while [ $# -gt 0 ]; do
 			echo "Only kvm or xen are supported at the moment"
 			exit 1
 		fi
-		INSTANCE="$2"
+		HYPERVISOR="$2"
 		shift; shift
 		continue
 	fi
