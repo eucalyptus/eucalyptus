@@ -85,6 +85,10 @@ public class Storage {
     }
 
     public static void initializeForEBS() {
+        String walrusAddr = System.getProperty(WalrusProperties.URL_PROPERTY);
+        if(walrusAddr == null) {
+            LOG.warn("Walrus host addr not set");
+        }
         ebsManager = new LVM2Manager();
         ebsManager.initVolumeManager();
         ebsManager.reload();
@@ -732,6 +736,8 @@ public class Storage {
 
                 PrivateKey ccPrivateKey = (PrivateKey) keyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
                 X509Certificate cert = keyStore.getCertificate(EucalyptusProperties.NAME);
+                if(cert == null)
+                    return null;
                 byte[] pemCertBytes = Hashes.getPemBytes(cert);
 
                 Signature sign = Signature.getInstance("SHA1withRSA");
@@ -807,40 +813,44 @@ public class Storage {
 
         public HttpWriter(String httpVerb, String bucket, String key, String eucaOperation, String eucaHeader) {
             httpClient = new HttpClient();
-            String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + bucket + "/" + key;
-            method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
+            String walrusAddr = System.getProperty(WalrusProperties.URL_PROPERTY);
+            if(walrusAddr != null) {
+                String addr = walrusAddr + "/" + bucket + "/" + key;
+                method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
+            }
         }
 
         public HttpWriter(String httpVerb, File file, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters) {
             httpClient = new HttpClient();
-            String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + bucket + "/" + key;
-            Set<String> paramKeySet = httpParameters.keySet();
-            boolean first = true;
-            for(String paramKey : paramKeySet) {
-                if(!first) {
-                    addr += "&";
-                } else {
-                    addr += "?";
+            String walrusAddr = System.getProperty(WalrusProperties.URL_PROPERTY);
+            if(walrusAddr != null) {
+                String addr = walrusAddr + "/" + bucket + "/" + key;
+                Set<String> paramKeySet = httpParameters.keySet();
+                boolean first = true;
+                for(String paramKey : paramKeySet) {
+                    if(!first) {
+                        addr += "&";
+                    } else {
+                        addr += "?";
+                    }
+                    first = false;
+                    addr += paramKey;
+                    String value = httpParameters.get(paramKey);
+                    if(value != null)
+                        addr += "=" + value;
                 }
-                first = false;
-                addr += paramKey;
-                String value = httpParameters.get(paramKey);
-                if(value != null)
-                    addr += "=" + value;
-            }
-            method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
-            method.setRequestHeader("Content-Length", String.valueOf(file.length()));
-            ((PutMethodWithProgress)method).setOutFile(file);
-            ((PutMethodWithProgress)method).setCallBack(callback);
+                method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
+                method.setRequestHeader("Content-Length", String.valueOf(file.length()));
+                ((PutMethodWithProgress)method).setOutFile(file);
+                ((PutMethodWithProgress)method).setCallBack(callback);
 
-            this.file = file;
+                this.file = file;
+            }
         }
 
         public void run() throws EucalyptusCloudException {
             try {
                 httpClient.executeMethod(method);
-                String response = method.getResponseBodyAsString();
-                System.out.println(response);
                 method.releaseConnection();
             } catch (Exception ex) {
                 ex.printStackTrace();

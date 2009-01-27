@@ -66,6 +66,7 @@ public class VolumeTest extends TestCase {
         DescribeStorageVolumesResponseType describeVolumesResponse = storage.DescribeStorageVolumes(describeVolumesRequest);
         StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
         System.out.println(vol);
+        while(true);
     }
 
     public void setUp() {
