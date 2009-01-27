@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
   
   snprintf(endpoint_uri, 256," http://%s/axis2/services/EucalyptusGL", argv[1]);
   //  env =  axutil_env_create_all("/tmp/GLclient.log", AXIS2_LOG_LEVEL_TRACE);
-  env =  axutil_env_create_all(NULL, 0);
+  env =  axutil_env_create_all("/tmp/fooh", AXIS2_LOG_LEVEL_TRACE);
   client_home = AXIS2_GETENV("AXIS2C_HOME");
   if (!client_home) {
     printf("must have AXIS2C_HOME set\n");

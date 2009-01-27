@@ -80,12 +80,13 @@ static int init (void)
         return 1;
     }
     struct handlers ** h = available_handlers;
-    while ( *(h++) ) {
+    while ( *h ) {
         if (! strncmp ((*h)->name, hypervisor, CHAR_BUFFER_SIZE) ) { 
             // the name matches!
             handlers = * h; 
             break;
         }
+	h++;
     }
     if (!handlers) {
         logprintfl (EUCAFATAL, "requested hypervisor type (%s) is not available\n", hypervisor);
