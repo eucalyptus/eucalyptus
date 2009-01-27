@@ -59,7 +59,7 @@ public class SnapshotInfo {
     @Column(name = "start_time")
     Date startTime;
     @Column(name = "progress")
-    String progress;
+    @Transient String progress;
     @Column(name = "transferred")
     private Boolean transferred;
 
