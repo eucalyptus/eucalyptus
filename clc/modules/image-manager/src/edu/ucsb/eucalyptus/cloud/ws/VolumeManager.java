@@ -77,15 +77,18 @@ public class VolumeManager {
       }
     }
     String newId = null;
+    Volume newVol = null;
     while ( true ) {
       newId = Hashes.generateId( request.getUserId(), ID_PREFIX );
       try {
         db.getUnique( new Volume( null, newId ) );
+      } catch ( EucalyptusCloudException e ) {
+        newVol = new Volume( request.getUserId(), newId, new Integer( request.getSize() ),
+                             request.getAvailabilityZone(), request.getSnapshotId() );
+        db.add( newVol );
         break;
-      } catch ( EucalyptusCloudException e ) {}
+      }
     }
-
-    //:: TODO-1.5: there is a race here, forsooth :://
     CreateStorageVolumeType scRequest = new CreateStorageVolumeType( newId, request.getSize(), request.getSnapshotId() );
     CreateStorageVolumeResponseType scReply = null;
     try {
@@ -95,13 +98,6 @@ public class VolumeManager {
       db.rollback();
       throw new EucalyptusCloudException( "Error calling CreateStorageVolume:" + e.getMessage() );
     }
-
-    Volume newVol = new Volume(
-        request.getUserId(), newId, new Integer( request.getSize() ),
-        request.getAvailabilityZone(), request.getSnapshotId()
-    );
-
-    db.add( newVol );
     db.commit();
     CreateVolumeResponseType reply = ( CreateVolumeResponseType ) request.getReply();
     reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume() ) );

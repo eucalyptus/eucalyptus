@@ -233,6 +233,7 @@ public class StartupChecks {
       eucaKeyStore.store();
     }
     catch ( Exception e ) {
+      LOG.fatal(e,e);
       serviceKeyStore.remove();
       userKeyStore.remove();
       eucaKeyStore.remove();

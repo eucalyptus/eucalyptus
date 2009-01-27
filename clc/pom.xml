@@ -352,6 +352,10 @@
                 <artifactId>rampart-core</artifactId>
                 <version>${rampart.version}</version>
                 <exclusions>
+                     <exclusion>
+                        <groupId>opensaml</groupId>
+                        <artifactId>opensaml</artifactId>
+                    </exclusion>
                     <exclusion>
                         <groupId>bouncycastle</groupId>
                         <artifactId>bcprov-jdk13</artifactId>

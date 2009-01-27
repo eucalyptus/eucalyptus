@@ -49,19 +49,20 @@
     <property environment="env"/>
     <path id="gwtclasspath">
         <fileset dir="${lib.dir}">
+            <include name="**/gwt-dev-${osMask}.jar"/>
             <include name="**/*.jar"/>
-            <exclude name="**/gwt-dev-${osMask}.jar"/>
         </fileset>
         <pathelement path="conf"/>
         <fileset dir="${target.dir}">
             <include name="**/*.jar"/>
         </fileset>
-        <fileset dir="${lib.dir}">
-            <include name="**/*.jar"/>
-        </fileset>
-    </path>
+  </path>
     <path id="gwtcompilerclasspath">
-        <path refid="gwtclasspath"/>
+          <fileset dir="${lib.dir}">
+            <include name="**/gwt-dev-${osMask}.jar"/>
+            <exclude name="**/core-3.2.3.v_686_R32x.jar"/>
+        </fileset>
+       <path refid="gwtclasspath"/>
         <fileset dir="${target.dir}">
             <include name="**/*.jar"/>
         </fileset>
