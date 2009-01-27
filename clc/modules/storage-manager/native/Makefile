@@ -1,7 +1,7 @@
 LIBDIR=../lib
 FS_STORE_SO=libfsstorage.so
 PLATFORM=linux
-CFLAGS=-g -fpic -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/$(PLATFORM) -I. -I../h 
+CFLAGS=-g -fpic -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/$(PLATFORM) -I. -I../include
 WARN=-Wall -Wno-unused-variable
 
 all: $(FS_STORE_SO) 

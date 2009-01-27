@@ -14,6 +14,9 @@ build:
 		echo "Did you forget to run ant deps?"; exit 1; fi
 	ANT_OPTS="-Xmx512m" $(ANT) build
 
+	make -C modules/storage-controller/native
+	make -C modules/storage-manager/native
+
 run: install 
 	$(ANT) run
 
@@ -26,6 +29,8 @@ distclean: clean
 install: build
 	$(ANT) install
 	@$(INSTALL) -m 644 cloud.xml $(etcdir)/eucalyptus
+	make -C modules/storage-controller/native install
+	make -C modules/storage-manager/native install
 
 deploy:
 
