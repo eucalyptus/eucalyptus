@@ -194,6 +194,12 @@ fi
 if [ -n "$NODES" ]; then
 	change_var_value $FILE NODES "${NODES}"
 fi
+if [ -n "$HYPERVISOR" ]; then
+	change_var_value $FILE HYPERVISOR "${HYPERVISOR}"
+fi
+if [ -n "$EUCA_USER" ]; then
+	change_var_value $FILE EUCA_USER "${EUCA_USER}"
+fi
 if [ -n "$NAME" ]; then
 	VALUE=`cat $FILE |grep $NAME|cut -f 2 -d =|tr  '"' ' '`
 	echo $VALUE
