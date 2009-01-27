@@ -14,11 +14,9 @@ use FindBin;
 $OUTPUT_AUTOFLUSH = 1; # no output buffering
 
 our $use_ramdisk = 0;
-our $use_ephemeral = 0;
 
 # deal with command-line parameters
 GetOptions('ramdisk'        => sub { $use_ramdisk = 1; },
-           'ephemeral'      => sub { $use_ephemeral = 1; }
 		   ) or exit (1);
 
 print <<EOF;
@@ -44,21 +42,9 @@ print <<EOF;
     <devices>
         <emulator>/usr/bin/kvm</emulator>
         <disk type='file'>
-            <source file='BASEPATH/root'/>
+            <source file='BASEPATH/disk'/>
             <target dev='sda'/>
         </disk>
-EOF
-
-if ( $use_ephemeral ) {
-    print <<EOF;
-        <disk type='file'>
-            <source file='BASEPATH/ephemeral'/>
-            <target dev='sda2'/>
-        </disk>
-EOF
-}
-
-print <<EOF;
         <interface type='bridge'>
             <source bridge='BRIDGEDEV'/>
             <mac address='PRIVMACADDR'/>
