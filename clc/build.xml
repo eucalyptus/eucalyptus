@@ -175,14 +175,14 @@
         <mkdir dir="${deps.lib.dir}"/>
         <!--===========  download the dependency libraries  ===========-->
         <get src="${deps.url}/${deps.lib}.tar.gz" dest="${deps.dir}/${deps.lib}.tar.gz"/>
-<!--
+
         <gunzip src="${deps.dir}/${deps.lib}.tar.gz"/>
         <untar src="${deps.dir}/${deps.lib}.tar" dest="${deps.lib.dir}"/>
--->
+
         <!--===========  download the deployments/modules ===========-->
         <get src="${deps.url}/${deps.deploy}.tar.gz" dest="${deps.dir}/${deps.deploy}.tar.gz"/>
-<!--
+
         <gunzip src="${deps.dir}/${deps.deploy}.tar.gz"/>
--->
+
     </target>
 </project>

@@ -48,7 +48,7 @@
     <!--================================== GWT-ONLY TARGET ==================================-->
     <property environment="env"/>
     <path id="gwtclasspath">
-        <fileset dir="${lib.dir}/jetty">
+        <fileset dir="${lib.dir}">
             <include name="**/*.jar"/>
             <exclude name="**/gwt-dev-${osMask}.jar"/>
         </fileset>

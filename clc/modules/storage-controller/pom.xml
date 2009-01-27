@@ -60,7 +60,7 @@
         <version>2.4.2</version>
         <configuration>
           <excludes>
-            <exclude>**/*Test.java</exclude>
+            <exclude>**/*</exclude>
           </excludes>
           <systemProperties>
             <property>
