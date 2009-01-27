@@ -657,8 +657,8 @@ public class Storage {
 
         public SnapshotProgressCallback(String snapshotId, long size, int chunkSize) {
             this.snapshotId = snapshotId;
-            progressTick = 1; //minimum percent update
-            updateThreshold = (int)((size / 100) / chunkSize);
+            progressTick = 5; //minimum percent update
+            updateThreshold = (int)(((size * progressTick) / 100) / chunkSize);
         }
 
         public void run() {
@@ -682,6 +682,8 @@ public class Storage {
             try {
                 SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
                 foundSnapshotInfo.setProgress(String.valueOf(100));
+                foundSnapshotInfo.setTransferred(true);
+                foundSnapshotInfo.setStatus(Status.available.toString());
             } catch (Exception ex) {
                 db.rollback();
                 ex.printStackTrace();
