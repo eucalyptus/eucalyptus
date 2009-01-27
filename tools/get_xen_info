@@ -3,17 +3,31 @@
 delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
 $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 
+$ret = 0;
+
 chomp($str = untaint(`xm info | grep total_memory`));
 $str =~ s/\s+:\s+/=/g;
-print "$str\n";
+if ($str =~ /.+=\d+/) {
+    print "$str\n";
+} else {
+    $ret = 1;
+}
 
 chomp($str = untaint(`xm info | grep free_memory`));
 $str =~ s/\s+:\s+/=/g;
-print "$str\n";
+if ($str =~ /.+=\d+/) {
+    print "$str\n";
+} else {
+    $ret = 1;
+}
 
 chomp($str = untaint(`xm info | grep nr_cpus`));
 $str =~ s/\s+:\s+/=/g;
-print "$str\n";
+if ($str =~ /.+=\d+/) {
+    print "$str\n";
+} else {
+    $ret = 1;
+}
 
 chomp($str = untaint(`xm info | grep nr_nodes`));
 $str =~ s/\s+:\s+/=/g;
@@ -27,7 +41,7 @@ while(<FH>) {
     }
 }
 close(FH);
-exit 0;
+exit $ret;
 
 sub untaint() {
     $str = shift;

@@ -34,8 +34,9 @@
 
 package edu.ucsb.eucalyptus.util;
 
-import org.apache.log4j.Logger;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
+import org.apache.log4j.Logger;
 
 public class WalrusProperties {
     private static Logger LOG = Logger.getLogger( WalrusProperties.class );
@@ -57,13 +58,12 @@ public class WalrusProperties {
             MAX_BUCKETS_PER_USER = systemConfiguration.getStorageMaxBucketsPerUser();
             MAX_BUCKET_SIZE = systemConfiguration.getStorageMaxBucketSizeInMB() * M;
             IMAGE_CACHE_SIZE = systemConfiguration.getStorageMaxCacheSizeInMB() * M;
+            UpdateWalrusConfigurationType updateConfig = new UpdateWalrusConfigurationType();
+            updateConfig.setBucketRootDirectory(bucketRootDirectory);
+            Messaging.send( WALRUS_REF, updateConfig );
         } catch(Exception ex) {
             LOG.warn(ex.getMessage());
         }
-    }
-
-    static {
-        update();
     }
 
     public static final String URL_PROPERTY = "euca.walrus.url";
@@ -103,5 +103,17 @@ public class WalrusProperties {
 
     public enum WalrusInternalOperations {
         GetDecryptedImage
+    }
+
+    public enum StorageOperations {
+        StoreSnapshot, DeleteWalrusSnapshot, GetSnapshotInfo, GetVolume
+    }
+
+    public enum InfoOperations {
+        GetSnapshotInfo
+    }
+    
+    public enum StorageParameters {
+        SnapshotVgName, SnapshotLvName
     }
 }

@@ -1,4 +1,4 @@
-import java.lang.reflect.Modifier;
+import java.lang.reflect.Modifier
 
 def bindingFile = new File("resources/msgs-binding.xml");
 bindingFile.write("");

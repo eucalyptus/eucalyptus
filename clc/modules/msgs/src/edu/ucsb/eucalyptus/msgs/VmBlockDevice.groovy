@@ -1,7 +1,5 @@
 package edu.ucsb.eucalyptus.msgs
 
-import org.hibernate.annotations.Entity
-import javax.persistence.Embeddable
 import edu.ucsb.eucalyptus.annotation.HttpParameterMapping
 
 public class BlockVolumeMessage extends EucalyptusMessage {}
@@ -39,6 +37,7 @@ public class AttachVolumeType extends BlockVolumeMessage {
   String volumeId;
   String instanceId;
   String device;
+  String remoteDevice;
 }
 public class AttachVolumeResponseType extends BlockVolumeMessage {
 
@@ -49,6 +48,7 @@ public class DetachVolumeType extends BlockVolumeMessage {
   String volumeId;
   String instanceId;
   String device;
+  String remoteDevice;
   Boolean force;
 }
 public class DetachVolumeResponseType extends BlockVolumeMessage {
@@ -95,6 +95,8 @@ public class Volume extends EucalyptusData {
   public Volume(String volumeId) {
       this.volumeId = volumeId;
   }
+
+
 }
 
 public class AttachedVolume extends EucalyptusData {
@@ -102,6 +104,7 @@ public class AttachedVolume extends EucalyptusData {
   String volumeId;
   String instanceId;
   String device;
+  String remoteDevice;
   String status;
   Date attachTime = new Date();
 

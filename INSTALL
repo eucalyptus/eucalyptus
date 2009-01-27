@@ -1,6 +1,7 @@
 Installing Eucalyptus from source
 ---------------------------------
 
+
 Eucalyptus cloud setup consists of three components: the cloud controller
 [ClC], the cluster controller(s) [CCs], and node controller(s) [NCs].
 Typically, a ClC and a CC will run on the head node of a cluster, while an
@@ -18,15 +19,15 @@ For the most up-to-date instructions, please visit the Eucalyptus web page
 1. Download Eucalyptus
 ----------------------
 
-Download 
+From the Eucalyptus Web site:
+
+  http://eucalyptus.cs.ucsb.edu/
+
+you need to download 
 
 - eucalyptus-<version>-src.tar.gz (Eucalyptus source)
 - eucalyptus-<version>-src-deps.tar.gz (Eucalyptus dependencies)
 - euca-ttylinux.tgz (a test VM image)
-
-from the Eucalyptus Web site:
-
-  http://eucalyptus.cs.ucsb.edu/
 
 Unpack the Eucalyptus source:
 
@@ -61,31 +62,17 @@ a. Axis2
 ; tar zxvf $EUCALYPTUS_SRC/eucalyptus-src-deps/axis2-1.4.tgz
 
 
-b. Apache (Httpd)
-
-The Eucalyptus node and cloud controller depend on Apache 2. We rely
-on running apache as root, therefore we recommend that apache 2 be
-installed separately from the webserver that might be included as part
-of your distribution.
-
-; cd $EUCALYPTUS_SRC/eucalyptus-src-deps/
-; tar zvxf httpd-2.2.8.tar.gz
-; cd httpd-2.2.8
-; CFLAGS="-DBIG_SECURITY_HOLE" ./configure --prefix=$EUCALYPTUS/packages/httpd-2.2.8 --with-included-apr
-; make ; make install
-
-
-c. Axis2/C
+b. Axis2/C
 
 ; export AXIS2C_HOME=$EUCALYPTUS/packages/axis2c-1.5.0
 ; cd $EUCALYPTUS_SRC/eucalyptus-src-deps/
 ; tar zvxf axis2c-src-1.5.0.tar.gz
 ; cd axis2c-src-1.5.0
-; ./configure --with-apache2=$EUCALYPTUS/packages/httpd-2.2.8/include --prefix=${AXIS2C_HOME}
+; CFLAGS="-w" ./configure --prefix=${AXIS2C_HOME} --with-apache2=/usr/include/apache2 --with-apr=/usr/include/apr-1.0
 ; make ; make install
 
 
-d. Rampart/C
+c. Rampart/C
 
 ; export AXIS2C_HOME=$EUCALYPTUS/packages/axis2c-1.5.0
 ; export LD_LIBRARY_PATH=${AXIS2C_HOME}/lib:$LD_LIBRARY_PATH
@@ -105,14 +92,12 @@ to
 
 and save the file.
 
+d. Cloud dependencies
 
-e. Libvirt
-
-; cd $EUCALYPTUS_SRC/eucalyptus-src-deps/
-; tar zvxf libvirt-0.4.6.tar.gz
-; cd libvirt-0.4.6
-; ./configure --prefix=$EUCALYPTUS/packages/libvirt-0.4.6 --without-storage-disk --without-storage-iscsi --without-storage-fs --without-storage-lvm --without-libvirtd --without-remote --without-lxc --without-kvm --without-qemu --without-sasl --without-openvz
-; make ; make install
+; cd $EUCALYPTUS_SRC/CLC
+; mkdir deps
+; mv $EUCALYPTUS_SRC/eucalyptus-src-deps/cloud-lib.tar.gz deps
+; mv $EUCALYPTUS_SRC/eucalyptus-src-deps/cloud-deploy.tar.gz deps
 
 
 f. Other software
@@ -121,6 +106,8 @@ Additionally, the following dependencies need to be met:
 
 - Java Development Kit (JDK), version 1.6 or above
 - Apache ant, version 1.6 or above
+- apache2 (httpd) developement files
+- libvrt developement files and libvirtd configured and running properly
 - GNU C compiler
 - Make
 - iptables
@@ -129,8 +116,7 @@ Additionally, the following dependencies need to be met:
 
 NOTE: The Eucalyptus dependencies may, in turn, depend on libraries or
 packages not present in your installation: Please, refer to the 
-documentation of the dependent package for help (e.g., see apache.org
-Web site for help with compiling the httpd server).
+documentation of the dependent package for help.
 
 Furthermore, you are required to have functioning EC2 command-line
 tools from Amazon.  The latest version of these tools that we support
@@ -141,7 +127,7 @@ site for download and installation instructions.)
 ----------------------
 
 ; cd $EUCALYPTUS_SRC
-; ./configure --with-axis2=$EUCALYPTUS/packages/axis2-1.4 --with-axis2c=$EUCALYPTUS/packages/axis2c-1.5.0 --with-libvirt=$EUCALYPTUS/packages/libvirt-0.4.6/ --enable-debug --prefix=$EUCALYPTUS
+; ./configure --with-axis2=$EUCALYPTUS/packages/axis2-1.4 --with-axis2c=$EUCALYPTUS/packages/axis2c-1.5.0 --enable-debug --prefix=$EUCALYPTUS
 ; make ; make install
 
 
@@ -155,9 +141,13 @@ this file manually instead of using 'euca_conf'.
 
 To configure eucalyptus you need to specify where eucalyptus is installed
 and which services to start (cloud, cluster controller and/or node
-controller):
+controller) and which hypervisor you want to use (kvm or xen). Moreover for 
+sicurity reasons you need to specify a user which eucalyptus' services
+will run as: we stronly suggest to use 'eucalyptus' as such user.
+For example to start the cluster controller, the cloud controller and to
+use kvm as hypervisor:
 
-; $EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS -cc Y -cloud Y -nc N $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+; $EUCALYPTUS/usr/sbin/euca_conf -user eucalyptus -d $EUCALYPTUS -cc Y -cloud Y -hypervisor kvm -nc N $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
 
 On the cluster controller add a list of hostnames on which you plan to run
 node controllers
@@ -188,7 +178,7 @@ point it to the path of VM images. This path is used to store temporary VM
 images and it's important it's empty (everything in it will be removed!).
 
 ; for x in hostname1 hostname2 ... hostnameN ; do \
- 	ssh $x "mkdir -p /usr/local/instances/; $EUCALYPTUS/usr/sbin/euca_conf -cc N -cloud N -nc Y -instances /usr/local/instances $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
+ 	ssh $x "mkdir -p /usr/local/instances/; $EUCALYPTUS/usr/sbin/euca_conf -cc N -cloud N -nc Y -hypervisor kvm -instances /usr/local/instances $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
 ; done
 
 Finally, ensure that the networking settings in 'eucalyptus.conf' on each

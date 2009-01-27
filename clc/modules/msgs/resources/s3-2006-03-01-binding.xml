@@ -16,7 +16,7 @@
   ~ * Redistributions in binary form must reproduce the above
   ~   copyright notice, this list of conditions and the
   ~   following disclaimer in the documentation and/or other
-  ~   materials provided with the distribution.
+  ~   materials provided with the distribution.                                                                                                 walrus
   ~
   ~ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
   ~ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -151,7 +151,7 @@
         <value name="BucketName" field="bucket"/>
     </mapping>
 
-    <mapping name="DeleteBucket" class="edu.ucsb.eucalyptus.msgs.DeleteBucketType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+    <mapping name="DeleteBucket" class="edu.ucsb.eucalyptus.msgs.DeleteBucketType">
         <value name="Bucket" field="bucket"/>
     </mapping>
 
@@ -262,7 +262,8 @@
     </mapping>
 
     <mapping name="DeleteObject" class="edu.ucsb.eucalyptus.msgs.DeleteObjectType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
+        <value name="Bucket" field="bucket"/>
+        <value name="Key" field="key"/>
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 
@@ -341,40 +342,42 @@
 
     <mapping name="StoreSnapshot" class="edu.ucsb.eucalyptus.msgs.StoreSnapshotType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
-        <value name="VolumeId" field="volumeId"/>
+        <value name="ContentLength" field="contentLength"/>        
+        <value name="SnapshotVgName" field="snapshotvgname"/>
+        <value name="SnapshotLvName" field="snapshotlvname"/>
     </mapping>
 
     <mapping name="StoreSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.StoreSnapshotResponseType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 
-    <mapping name="GetSnapshot" class="edu.ucsb.eucalyptus.msgs.GetSnapshotType">
+    <mapping name="GetVolume" class="edu.ucsb.eucalyptus.msgs.GetVolumeType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
     </mapping>
 
-    <mapping name="GetSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.GetSnapshotResponseType">
+    <mapping name="GetVolumeResponse" class="edu.ucsb.eucalyptus.msgs.GetVolumeResponseType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 
-    <mapping name="RemoveSnapshot" class="edu.ucsb.eucalyptus.msgs.RemoveSnapshotType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
+    <mapping name="DeleteWalrusSnapshot" class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotType">
+        <value name="Bucket" field="bucket"/>
+        <value name="Key" field="key"/>
+        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 
-    <mapping name="RemoveSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.RemoveSnapshotResponseType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
+    <mapping name="DeleteWalrusSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotResponseType">
     </mapping>
 
-    <mapping name="GetSnapshotInfo" class="edu.ucsb.eucalyptus.msgs.GetSnapshotInfoType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
+    <mapping name="GetSnapshotInfo" class="edu.ucsb.eucalyptus.msgs.GetSnapshotInfoType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+        <value name="Bucket" field="bucket"/>
+        <value name="Key" field="key"/>
     </mapping>
 
     <mapping name="GetSnapshotInfoResponse" class="edu.ucsb.eucalyptus.msgs.GetSnapshotInfoResponseType">
         <collection field="snapshotSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String" >
-            <structure name="SnapshotId">
                 <value name="snapshotId" />
-            </structure >
         </collection >
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
+        <value name="Bucket" field="bucket"/>
     </mapping>
 
 </binding>

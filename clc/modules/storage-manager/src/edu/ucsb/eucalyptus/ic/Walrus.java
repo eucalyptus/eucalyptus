@@ -36,7 +36,9 @@ package edu.ucsb.eucalyptus.ic;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.constants.EventType;
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.transport.OverloadedWebserviceMethod;
 import org.apache.log4j.Logger;
 
@@ -52,7 +54,7 @@ public class Walrus {
             "GetObjectExtended", "DeleteObject", "GetDecryptedImage",
             "CheckImage", "CacheImage", "FlushCachedImage",
             "GetBucketLocation", "GetBucketLoggingStatus", "SetBucketLoggingStatus", "CopyObject",
-            "StoreSnapshot", "GetSnaphot", "RemoveSnapshot"} )
+            "StoreSnapshot", "GetVolume", "GetSnapshotInfo", "DeleteWalrusSnapshot"} )
 
 	public EucalyptusMessage handle( EucalyptusMessage msg )
 	{

@@ -34,22 +34,30 @@
 
 package edu.ucsb.eucalyptus.transport.util;
 
-import edu.ucsb.eucalyptus.transport.*;
-import edu.ucsb.eucalyptus.transport.client.*;
-import edu.ucsb.eucalyptus.transport.config.*;
+import edu.ucsb.eucalyptus.transport.Axis2Connector;
+import edu.ucsb.eucalyptus.transport.Axis2MessageDispatcher;
+import edu.ucsb.eucalyptus.transport.client.Axis2MessageDispatcherFactory;
+import edu.ucsb.eucalyptus.transport.client.ClientFactory;
+import edu.ucsb.eucalyptus.transport.client.ClientPool;
+import edu.ucsb.eucalyptus.transport.config.Axis2OutProperties;
+import edu.ucsb.eucalyptus.transport.config.Key;
+import edu.ucsb.eucalyptus.transport.config.Mep;
 import edu.ucsb.eucalyptus.util.BaseDirectory;
 import org.apache.axis2.AxisFault;
-import org.apache.axis2.context.*;
+import org.apache.axis2.context.ConfigurationContext;
+import org.apache.axis2.context.ConfigurationContextFactory;
 import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
 import org.apache.commons.httpclient.params.HttpConnectionManagerParams;
 import org.apache.log4j.Logger;
 import org.mule.RegistryContext;
-import org.mule.api.endpoint.OutboundEndpoint;
 import org.mule.api.MuleException;
-import org.mule.endpoint.*;
+import org.mule.api.endpoint.OutboundEndpoint;
+import org.mule.endpoint.DefaultOutboundEndpoint;
+import org.mule.endpoint.MuleEndpointURI;
 
 import java.io.File;
-import java.net.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 
 public class Defaults {

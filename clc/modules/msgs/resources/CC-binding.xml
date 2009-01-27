@@ -39,5 +39,27 @@
     <include path="cc-resources.xml"/>
     <include path="cc-vms.xml"/>
     <include path="cc-getlogs.xml"/>
+
+    <mapping name="AttachVolume" class="edu.ucsb.eucalyptus.msgs.AttachVolumeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+      <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <value name="volumeId" field="volumeId" usage="required"/>
+        <value name="instanceId" field="instanceId" usage="required"/>
+        <value name="remoteDev" field="remoteDevice" usage="required"/>
+        <value name="localDev" field="device" usage="required"/>
+    </mapping>
+    <mapping name="AttachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+    </mapping>
+    <mapping name="DetachVolume" class="edu.ucsb.eucalyptus.msgs.DetachVolumeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+      <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <value name="volumeId" field="volumeId" usage="required"/>
+        <value name="instanceId" field="instanceId" usage="required"/>
+        <value name="remoteDev" field="remoteDevice" usage="required"/>
+        <value name="localDev" field="device" usage="required"/>
+        <value name="force" field="force" usage="required"/>
+    </mapping>
+    <mapping name="DetachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+    </mapping>
 </binding>
 

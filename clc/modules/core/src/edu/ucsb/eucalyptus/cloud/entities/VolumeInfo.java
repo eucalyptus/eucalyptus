@@ -36,14 +36,11 @@ package edu.ucsb.eucalyptus.cloud.entities;
 
 import org.hibernate.annotations.*;
 
+import javax.persistence.CascadeType;
 import javax.persistence.*;
 import javax.persistence.Entity;
 import javax.persistence.Table;
-import javax.persistence.CascadeType;
-import java.util.Date;
-import java.util.ArrayList;
-import java.util.List;
-
+import java.util.*;
 
 @Entity
 @Table( name = "Volumes" )
@@ -69,9 +66,10 @@ public class VolumeInfo {
     private String volumeBucket;
     @Column(name = "volume_key")
     private String volumeKey;
+    @Column(name = "snapshot_id")
+    private String snapshotId;
     @Column(name = "transferred")
     private Boolean transferred;
-    
     @OneToMany( cascade = CascadeType.ALL )
     @JoinTable(
             name = "volume_has_attachments",
@@ -82,7 +80,7 @@ public class VolumeInfo {
     private List<AttachedVolumeInfo> attachmentSet = new ArrayList<AttachedVolumeInfo>();
 
     public VolumeInfo() {}
-    
+
     public VolumeInfo(String volumeId) {
         this.volumeId = volumeId;
     }
@@ -159,6 +157,14 @@ public class VolumeInfo {
         this.volumeKey = volumeKey;
     }
 
+    public String getSnapshotId() {
+        return snapshotId;
+    }
+
+    public void setSnapshotId(String snapshotId) {
+        this.snapshotId = snapshotId;
+    }
+
     public Boolean getTransferred() {
         return transferred;
     }
@@ -166,4 +172,22 @@ public class VolumeInfo {
     public void setTransferred(Boolean transferred) {
         this.transferred = transferred;
     }
+
+    @Override
+    public boolean equals( final Object o ) {
+        if ( this == o ) return true;
+        if ( o == null || getClass() != o.getClass() ) return false;
+
+        VolumeInfo that = ( VolumeInfo ) o;
+
+        if ( !volumeId.equals( that.volumeId ) ) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return volumeId.hashCode();
+    }
+
 }

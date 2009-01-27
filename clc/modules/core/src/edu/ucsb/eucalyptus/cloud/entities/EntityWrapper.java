@@ -35,28 +35,30 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.criterion.*;
 
 import javax.persistence.*;
 import java.sql.*;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 public class EntityWrapper<TYPE> {
 
   private static Logger LOG = Logger.getLogger( EntityWrapper.class );
 
-  private static EntityManagerFactory emf = getEntityManagerFactory();
+  private static Map<String,EntityManagerFactory> emf = new ConcurrentSkipListMap<String,EntityManagerFactory>();
 
-  public static EntityManagerFactory getEntityManagerFactory()
+  public static EntityManagerFactory getEntityManagerFactory( String persistenceContext )
   {
     synchronized ( EntityWrapper.class )
     {
-      if ( emf == null )
+      if ( !emf.containsKey( persistenceContext ) )
       {
-        emf = Persistence.createEntityManagerFactory( "eucalyptus" );
-        EntityManager em = emf.createEntityManager();
+        emf.put( persistenceContext,  Persistence.createEntityManagerFactory( persistenceContext ) );
+        EntityManager em = emf.get( persistenceContext ).createEntityManager();
         EntityTransaction tx = em.getTransaction();
         tx.begin();
         Session s = ( Session ) em.getDelegate();
@@ -65,8 +67,6 @@ public class EntityWrapper<TYPE> {
           Connection conn = s.connection();
           Statement stmt = conn.createStatement();
           stmt.execute( "SET WRITE_DELAY 100 MILLIS" );
-//:: TODO-1.4: work around known hsql bug to change LOG_SIZE? :://
-//          stmt.execute( "SET LOG_SIZE 10" );
           conn.commit();
         }
         catch ( SQLException e )
@@ -76,7 +76,7 @@ public class EntityWrapper<TYPE> {
         tx.commit();
         em.close();
       }
-      return emf;
+      return emf.get( persistenceContext );
     }
   }
 
@@ -84,9 +84,14 @@ public class EntityWrapper<TYPE> {
   private Session session;
   private EntityTransaction tx;
 
-  public EntityWrapper()
+  public EntityWrapper( ) {
+    this( EucalyptusProperties.NAME );
+  }
+
+
+  public EntityWrapper( String persistenceContext )
   {
-    this.em = EntityWrapper.getEntityManagerFactory().createEntityManager();
+    this.em = EntityWrapper.getEntityManagerFactory( persistenceContext ).createEntityManager();
     this.session = ( Session ) em.getDelegate();
     this.tx = em.getTransaction();
     tx.begin();
@@ -150,9 +155,4 @@ public class EntityWrapper<TYPE> {
     return session;
   }
 
-  public static void close()
-  {
-    if ( EntityWrapper.getEntityManagerFactory().isOpen() )
-      EntityWrapper.getEntityManagerFactory().close();
-  }
 }

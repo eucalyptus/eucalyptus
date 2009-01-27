@@ -69,7 +69,7 @@ public class VmInstance implements HasName {
   private List<Network> networks = new ArrayList<Network>();
   private VmState state;
   private StringBuffer consoleOutput;
-
+  private List<AttachedVolume> volumes;
   private NetworkConfigType networkConfig;
 
   public VmInstance() {
@@ -267,6 +267,14 @@ public class VmInstance implements HasName {
 
   public void setImageInfo( final VmImageInfo imageInfo ) {
     this.imageInfo = imageInfo;
+  }
+
+  public List<AttachedVolume> getVolumes() {
+    return volumes;
+  }
+
+  public void setVolumes( final List<AttachedVolume> volumes ) {
+    this.volumes = volumes;
   }
 
   public String getByKey( String path ) {

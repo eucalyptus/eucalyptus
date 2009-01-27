@@ -34,7 +34,8 @@
 
 package edu.ucsb.eucalyptus.transport.http;
 
-import org.apache.axis2.transport.http.server.*;
+import org.apache.axis2.transport.http.server.Worker;
+import org.apache.axis2.transport.http.server.WorkerFactory;
 
 public class Axis2HttpWorkerFactory implements WorkerFactory {
 

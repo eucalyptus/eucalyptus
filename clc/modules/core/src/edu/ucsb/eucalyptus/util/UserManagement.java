@@ -34,12 +34,14 @@
 
 package edu.ucsb.eucalyptus.util;
 
-import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.NetworkRulesGroup;
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import org.apache.log4j.Logger;
 
-import java.util.List;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 
 public class UserManagement {
 

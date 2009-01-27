@@ -13,6 +13,8 @@ CLOUD_PORT=""
 CLOUD_SSL_PORT=""
 NAME=""
 INSTANCE=""
+EUCA_USER=""
+HYPERVISOR=""
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -27,6 +29,8 @@ usage () {
 	echo "   -ncp <port>                 set NC port"
 	echo "   -instances <path>           set the INSTANCE path"
 	echo "   -cloudp <port1> <port2>     set the 2 cloud ports"
+	echo "   -hypervisor <kvm|xen>       set hypervisor to use"
+	echo "   -user <euca_user>           set the user to use"
 	echo "   -name <var>                 returns the value or <name>"
 	echo "where <file> is the configuration file ($FILE by default)"
 	echo
@@ -125,6 +129,20 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
+	if [ "$1" = "-user" ]; then
+		EUCA_USER="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "-hypervisor" ]; then
+		if [ "$2" != "xen" -a "$2" != "kvm" ]; then
+			echo "Only kvm or xen are supported at the moment"
+			exit 1
+		fi
+		HYPERVISOR="$2"
+		shift; shift
+		continue
+	fi
 	if [ "$1" = "-cloudp" ]; then
 		if [ $# -lt 3 ]; then
 			echo "We need 2 ports for cloud controller"
@@ -175,6 +193,12 @@ if [ -n "$INSTANCE" ]; then
 fi
 if [ -n "$NODES" ]; then
 	change_var_value $FILE NODES "${NODES}"
+fi
+if [ -n "$HYPERVISOR" ]; then
+	change_var_value $FILE HYPERVISOR "${HYPERVISOR}"
+fi
+if [ -n "$EUCA_USER" ]; then
+	change_var_value $FILE EUCA_USER "${EUCA_USER}"
 fi
 if [ -n "$NAME" ]; then
 	VALUE=`cat $FILE |grep $NAME|cut -f 2 -d =|tr  '"' ' '`

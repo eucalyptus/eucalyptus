@@ -1,7 +1,7 @@
 package edu.ucsb.eucalyptus.cloud
 
-import edu.ucsb.eucalyptus.msgs.*
 import edu.ucsb.eucalyptus.constants.HasName
+import edu.ucsb.eucalyptus.msgs.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
@@ -93,6 +93,7 @@ public class VmInfo extends EucalyptusData {
   String userData;
   String launchIndex;
   ArrayList<String> groupNames = new ArrayList<String>();
+  ArrayList<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
 
   String placement;
 

@@ -34,15 +34,20 @@
 
 package edu.ucsb.eucalyptus.transport.config;
 
-import edu.ucsb.eucalyptus.transport.*;
+import edu.ucsb.eucalyptus.transport.Axis2InOnlyMessageReceiver;
+import edu.ucsb.eucalyptus.transport.Axis2InOutMessageReceiver;
+import edu.ucsb.eucalyptus.transport.Axis2MessageReceiver;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.addressing.AddressingConstants;
-import org.apache.axis2.description.*;
+import org.apache.axis2.description.AxisOperation;
+import org.apache.axis2.description.InOnlyAxisOperation;
+import org.apache.axis2.description.InOutAxisOperation;
 import org.apache.axis2.wsdl.WSDLConstants;
 import org.apache.log4j.Logger;
 
 import javax.xml.namespace.QName;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class Axis2OperationBuilder {
 

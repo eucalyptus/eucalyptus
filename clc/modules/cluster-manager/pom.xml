@@ -1,0 +1,39 @@
+<project>
+    <parent>
+        <groupId>eucalyptus</groupId>
+        <artifactId>cloud</artifactId>
+        <version>1</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>    
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>eucalyptus</groupId>
+    <artifactId>cluster-manager</artifactId>
+    <version>${euca.version}</version>
+    <name>Eucalyptus Cluster Manager</name>
+    <dependencies>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>msgs</artifactId>
+            <version>${euca.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>core</artifactId>
+            <version>${euca.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>transport</artifactId>
+            <version>${euca.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.drools</groupId>
+            <artifactId>drools-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.drools</groupId>
+            <artifactId>drools-compiler</artifactId>
+        </dependency>
+
+    </dependencies>
+</project>

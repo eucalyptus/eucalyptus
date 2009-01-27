@@ -35,17 +35,21 @@
 package edu.ucsb.eucalyptus.transport;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 import edu.ucsb.eucalyptus.transport.client.BasicClient;
-import edu.ucsb.eucalyptus.transport.config.*;
+import edu.ucsb.eucalyptus.transport.config.Axis2OutProperties;
+import edu.ucsb.eucalyptus.transport.config.Key;
+import edu.ucsb.eucalyptus.transport.config.Mep;
 import edu.ucsb.eucalyptus.util.BindingUtil;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.log4j.Logger;
 import org.jibx.runtime.JiBXException;
 import org.mule.DefaultMuleMessage;
-import org.mule.api.*;
+import org.mule.api.MuleEvent;
+import org.mule.api.MuleMessage;
 import org.mule.api.endpoint.OutboundEndpoint;
 import org.mule.api.transformer.TransformerException;
 import org.mule.message.ExceptionMessage;

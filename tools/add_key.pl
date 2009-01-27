@@ -25,12 +25,16 @@ if (!-x $MKDIR || !-x $RMDIR || !-x $CHOWN || !-x $CHMOD || !-x $MKTEMP || !-x $
 $mounter = untaint(shift @ARGV);
 $img = untaint(shift @ARGV);
 $key = shift @ARGV; # untaint later
+$offset = untaint(shift @ARGV);
 $tmpfile = "";
 $loopdev = "";
 
 if (!-f "$img" || !-x "$mounter") {
     print STDERR "add_key cannot verify inputs: mounter=$mounter img=$img\n";
     do_exit(1);
+}
+if ($offset eq "") {
+    $offset = 0;
 }
 
 
@@ -59,7 +63,11 @@ if (! -d "$tmpfile") {
 $attached = 0;
 for ($i=0; $i<10 && !$attached; $i++) {
     $loopdev=untaint(`$LOSETUP -f`);
-    $rc = system("$LOSETUP $loopdev $img");
+    if ($offset != 0) {
+	$rc = system("$LOSETUP $loopdev $img");
+    } else {
+	$rc = system("$LOSETUP -o $offset $loopdev $img");
+    }
     if ($loopdev ne "" && !$rc) {
 	if (!system("$mounter mount $loopdev $tmpfile")) {
 	    $attached = 1;
@@ -67,7 +75,7 @@ for ($i=0; $i<10 && !$attached; $i++) {
     }
 }
 if (!$attached) {
-    print STDERR "cannot mount: $mounter -o loop $img $tmpfile\n";
+    print STDERR "cannot mount: $mounter mount $loopdev $tmpfile\n";
     do_exit(1);
 }
 
@@ -118,7 +126,6 @@ sub untaint() {
     if ($str =~ /^([ &:#-\@\w.]+)$/) {
 	$str = $1; #data is now untainted
     } else {
-	print STDERR "add_key inputs are tainted\n";
 	$str = "";
     }
     return($str);

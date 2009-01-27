@@ -1,7 +1,7 @@
-import edu.ucsb.eucalyptus.cloud.cluster.Allocator
 import edu.ucsb.eucalyptus.cloud.ResourceToken
 import edu.ucsb.eucalyptus.cloud.cluster.ClusterState
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable
+import edu.ucsb.eucalyptus.cloud.cluster.Allocator
 
 public class LeastFullFirst implements Allocator {
 

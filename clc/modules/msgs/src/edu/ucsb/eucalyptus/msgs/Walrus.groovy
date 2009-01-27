@@ -51,6 +51,18 @@ public class WalrusRequestType extends EucalyptusMessage {
     }
 }
 
+public class WalrusDeleteType extends WalrusRequestType {
+}
+
+public class WalrusDeleteResponseType extends WalrusResponseType {    
+}
+
+public class InitializeWalrusType extends WalrusRequestType {
+}
+
+public class InitializeWalrusResponseType extends WalrusResponseType {    
+}
+
 public class CanonicalUserType extends EucalyptusData {
     String ID;
     String DisplayName;
@@ -183,11 +195,11 @@ public class CreateBucketResponseType extends WalrusResponseType {
     String bucket;
 }
 
-public class DeleteBucketType extends WalrusRequestType {
+public class DeleteBucketType extends WalrusDeleteType {
     String bucket;
 }
 
-public class DeleteBucketResponseType extends WalrusResponseType {
+public class DeleteBucketResponseType extends WalrusDeleteResponseType {
     Status status;
 }
 
@@ -261,10 +273,12 @@ public class PutObjectInlineType extends WalrusDataRequestType {
     String base64Data;
 }
 
-public class DeleteObjectType extends WalrusDataRequestType {
+public class DeleteObjectType extends WalrusDeleteType {
+    String bucket;
+    String key;
 }
 
-public class DeleteObjectResponseType extends WalrusResponseType {
+public class DeleteObjectResponseType extends WalrusDeleteResponseType {
     String code;
     String description;
 }
@@ -303,7 +317,7 @@ public class PrefixEntry extends EucalyptusData {
     String prefix;
 
     def PrefixEntry() {}
-    
+
     def PrefixEntry(String prefix) {
         this.prefix = prefix;
     }
@@ -390,6 +404,13 @@ public class SetBucketLoggingStatusType extends WalrusRequestType {
 public class SetBucketLoggingStatusResponseType extends WalrusResponseType {
 }
 
+public class UpdateWalrusConfigurationType extends WalrusRequestType {
+    String bucketRootDirectory;
+}
+
+public class UpdateWalrusConfigurationResponseType extends WalrusResponseType {
+}
+
 public class GetDecryptedImageType extends WalrusDataRequestType {
 }
 
@@ -422,27 +443,34 @@ public class FlushCachedImageResponseType extends WalrusDataResponseType {
 }
 
 public class StoreSnapshotType extends WalrusDataRequestType {
-    String volumeId;
+    String contentLength;
+    String snapshotvgname;
+    String snapshotlvname;
 }
 
 public class StoreSnapshotResponseType extends WalrusDataResponseType {
 }
 
-public class RemoveSnapshotType extends WalrusDataRequestType {
+public class DeleteWalrusSnapshotType extends WalrusRequestType {
+    String bucket;
+    String key;
 }
 
-public class RemoveSnapshotResponseType extends WalrusDataResponseType {
+public class DeleteWalrusSnapshotResponseType extends WalrusResponseType {
 }
 
-public class GetSnapshotType extends WalrusDataRequestType {
+public class GetSnapshotInfoType extends WalrusRequestType {
+    String bucket;
+    String key;
 }
 
-public class GetSnapshotResponseType extends WalrusDataResponseType {
-}
-
-public class GetSnapshotInfoType extends WalrusDataRequestType {
-}
-
-public class GetSnapshotInfoResponseType extends WalrusDataResponseType {
+public class GetSnapshotInfoResponseType extends WalrusResponseType {
+    String bucket;
     ArrayList<String> snapshotSet = new ArrayList<String>();
+}
+
+public class GetVolumeType extends WalrusDataRequestType {
+}
+
+public class GetVolumeResponseType extends WalrusDataResponseType {
 }

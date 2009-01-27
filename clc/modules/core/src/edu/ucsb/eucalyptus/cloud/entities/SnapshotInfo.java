@@ -34,11 +34,10 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import org.hibernate.annotations.*;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.*;
-import javax.persistence.Entity;
-import javax.persistence.Table;
 import java.util.Date;
 
 @Entity
@@ -125,4 +124,21 @@ public class SnapshotInfo {
     public void setTransferred(Boolean transferred) {
         this.transferred = transferred;
     }
+
+  @Override
+  public boolean equals( final Object o ) {
+    if ( this == o ) return true;
+    if ( o == null || getClass() != o.getClass() ) return false;
+
+    SnapshotInfo that = ( SnapshotInfo ) o;
+
+    if ( !snapshotId.equals( that.snapshotId ) ) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    return snapshotId.hashCode();
+  }
 }

@@ -34,15 +34,10 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import org.hibernate.annotations.*;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.*;
-import javax.persistence.Entity;
-import javax.persistence.Table;
-import javax.persistence.CascadeType;
-import java.util.Date;
-import java.util.ArrayList;
-import java.util.List;
 
 
 @Entity
@@ -55,17 +50,18 @@ public class WalrusSnapshotInfo {
     private Long id = -1l;
     @Column(name ="snapshot_name")
     private String snapshotId;
-    @Column(name = "volume_name")
-    private String volumeId;
+    @Column(name = "snapshotset_id")
+    private String snapshotSetId;
+    @Column(name ="snapshot_vgname")
+    private String vgName;
+    @Column(name ="snapshot_lvname")
+    private String lvName;
+    @Column(name ="transferred")
+    private Boolean transferred;
 
     public WalrusSnapshotInfo() {}
 
     public WalrusSnapshotInfo(String snapshotId) {
-        this.snapshotId = snapshotId;
-    }
-
-    public WalrusSnapshotInfo(String volumeId, String snapshotId) {
-        this.volumeId = volumeId;
         this.snapshotId = snapshotId;
     }
 
@@ -77,11 +73,35 @@ public class WalrusSnapshotInfo {
         this.snapshotId = snapshotId;
     }
 
-    public String getVolumeId() {
-        return volumeId;
+    public String getSnapshotSetId() {
+        return snapshotSetId;
     }
 
-    public void setVolumeId(String volumeId) {
-        this.volumeId = volumeId;
+    public void setSnapshotSetId(String snapshotSetId) {
+        this.snapshotSetId = snapshotSetId;
+    }
+
+    public String getVgName() {
+        return vgName;
+    }
+
+    public void setVgName(String vgName) {
+        this.vgName = vgName;
+    }
+
+    public String getLvName() {
+        return lvName;
+    }
+
+    public void setLvName(String lvName) {
+        this.lvName = lvName;
+    }
+
+    public Boolean getTransferred() {
+        return transferred;
+    }
+
+    public void setTransferred(Boolean transferred) {
+        this.transferred = transferred;
     }
 }

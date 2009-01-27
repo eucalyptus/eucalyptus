@@ -48,7 +48,7 @@
     <property name="deps.lib" value="cloud-lib"/>
     <property name="deps.deploy" value="cloud-deploy"/>
     <!--================================== build targets ==================================-->
-    <target name="build-msgs">
+    <target name="build-msgs" depends="untar">
         <ant dir="modules/msgs" inheritall="false"/>
     </target>
     <target name="build-core" depends="build-msgs">
@@ -70,9 +70,13 @@
     <target name="build-walrus-ws" depends="build-transport">
         <ant dir="modules/storage-manager" inheritall="false"/>
     </target>
+    <target name="build-ebs-ws" depends="build-transport">
+        <ant dir="modules/storage-controller" inheritall="false"/>
+    </target>
     <target name="build-eucalyptus" depends="build-core,build-www,build-eucalyptus-ws"/>
     <target name="build-walrus" depends="build-walrus-ws"/>
-    <target name="build" depends="build-eucalyptus,build-walrus"/>
+    <target name="build-ebs" depends="build-ebs-ws"/>
+    <target name="build" depends="build-eucalyptus,build-walrus,build-ebs"/>
     <!--================================== clean targets ==================================-->
     <target name="clean-msgs">
         <ant dir="modules/msgs" inheritall="false" target="clean"/>
@@ -96,9 +100,13 @@
     <target name="clean-walrus-ws" depends="clean-transport">
         <ant dir="modules/storage-manager" inheritall="false" target="clean"/>
     </target>
-    <target name="clean-eucalyptus" depends="clean-core,clean-www,clean-eucalyptus-ws"/>
+    <target name="clean-ebs-ws" depends="clean-transport">
+        <ant dir="modules/storage-controller" inheritall="false" target="clean"/>
+    </target>
+     <target name="clean-eucalyptus" depends="clean-core,clean-www,clean-eucalyptus-ws"/>
     <target name="clean-walrus" depends="clean-walrus-ws"/>
-    <target name="clean" depends="clean-eucalyptus,clean-walrus">
+    <target name="clean-ebs" depends="clean-ebs-ws"/>
+    <target name="clean" depends="clean-eucalyptus,clean-walrus,clean-ebs">
         <delete dir="${target.dir}"/>
     </target>
     <target name="distclean" depends="clean">
@@ -122,7 +130,7 @@
         <untar src="${deps.dir}/${deps.deploy}.tar" dest="${euca.var.dir}"/>
         <untar src="${deps.dir}/${deps.lib}.tar" dest="${euca.lib.dir}"/>
         <mkdir dir="${euca.conf.dir}"/>
-	<chmod dir="${euca.conf.dir}" perm="0755"/>
+<!--	<chmod dir="${euca.conf.dir}" perm="0755"/> -->
         <mkdir dir="${euca.var.dir}/"/>
         <mkdir dir="${euca.var.dir}/webapps"/>
         <mkdir dir="${euca.var.dir}/db"/>
@@ -142,6 +150,23 @@
         <ant dir="modules/group-manager" inheritall="false" target="install"/>
         <ant dir="modules/key-manager" inheritall="false" target="install"/>
         <ant dir="modules/storage-manager" inheritall="false" target="install"/>
+        <ant dir="modules/storage-controller" inheritall="false" target="install"/>
+    </target>
+    <!--================================== unzipping target ==================================-->
+    <target name="untar" depends="unzip">
+        <untar src="${deps.dir}/${deps.lib}.tar" dest="${deps.lib.dir}"/>
+    </target>
+    <target name="unzip" depends="testZip" if="needUnzipping">
+        <gunzip src="${deps.dir}/${deps.lib}.tar.gz"/>
+        <gunzip src="${deps.dir}/${deps.deploy}.tar.gz"/>
+    </target>
+    <target name="testZip">
+       <condition property="needUnzipping">
+          <and>
+             <available file="${deps.dir}/${deps.lib}.tar.gz"/>
+             <available file="${deps.dir}/${deps.deploy}.tar.gz"/>
+          </and>
+       </condition>
     </target>
     <!--================================== DEPS TARGET ==================================-->
     <available property="has.deps" filepath="${basedir}/lib/jibx/" file="jibx-run.jar"/>
@@ -150,10 +175,14 @@
         <mkdir dir="${deps.lib.dir}"/>
         <!--===========  download the dependency libraries  ===========-->
         <get src="${deps.url}/${deps.lib}.tar.gz" dest="${deps.dir}/${deps.lib}.tar.gz"/>
+
         <gunzip src="${deps.dir}/${deps.lib}.tar.gz"/>
         <untar src="${deps.dir}/${deps.lib}.tar" dest="${deps.lib.dir}"/>
+
         <!--===========  download the deployments/modules ===========-->
         <get src="${deps.url}/${deps.deploy}.tar.gz" dest="${deps.dir}/${deps.deploy}.tar.gz"/>
+
         <gunzip src="${deps.dir}/${deps.deploy}.tar.gz"/>
+
     </target>
 </project>

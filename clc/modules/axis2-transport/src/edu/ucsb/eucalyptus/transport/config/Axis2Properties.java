@@ -34,12 +34,16 @@
 
 package edu.ucsb.eucalyptus.transport.config;
 
-import edu.ucsb.eucalyptus.util.*;
-import edu.ucsb.eucalyptus.transport.binding.*;
+import edu.ucsb.eucalyptus.transport.binding.Binding;
+import edu.ucsb.eucalyptus.transport.binding.BindingManager;
+import edu.ucsb.eucalyptus.util.BaseDirectory;
+import edu.ucsb.eucalyptus.util.BindingUtil;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
-import org.apache.axis2.context.*;
+import org.apache.axis2.context.ConfigurationContext;
+import org.apache.axis2.context.ConfigurationContextFactory;
 import org.apache.log4j.Logger;
-import org.apache.neethi.*;
+import org.apache.neethi.Policy;
+import org.apache.neethi.PolicyEngine;
 import org.jibx.runtime.JiBXException;
 
 import java.io.File;

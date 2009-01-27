@@ -1,0 +1,25 @@
+<project>
+    <parent>
+        <groupId>eucalyptus</groupId>
+        <artifactId>cloud</artifactId>
+        <version>1</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>eucalyptus</groupId>
+    <artifactId>security-groups-manager</artifactId>
+    <version>${euca.version}</version>
+    <name>Eucalyptus Security Groups Manager</name>
+    <dependencies>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>msgs</artifactId>
+            <version>${euca.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eucalyptus</groupId>
+            <artifactId>core</artifactId>
+            <version>${euca.version}</version>
+        </dependency>
+    </dependencies>
+</project>

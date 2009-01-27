@@ -35,21 +35,21 @@
 package edu.ucsb.eucalyptus.storage;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
-import edu.ucsb.eucalyptus.msgs.GetVolumeResponseType;
 
-import java.io.IOException;
 import java.util.List;
 
 public interface ElasticBlockManager {
-    public void initVolumeManager(String volumeRoot, String snapshotRoot);
+    public void initVolumeManager();
 
-    public void createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
+    public void reload();
+        
+    public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
 
     public List<String> prepareForTransfer(String volumeId, String snapshotId) throws EucalyptusCloudException;
 
     public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
+
+    public int createVolume(String volumeId, String volumePath) throws EucalyptusCloudException;
 
     public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException;
 
@@ -61,5 +61,7 @@ public interface ElasticBlockManager {
 
     public List<String> getVolume(String volumeId) throws EucalyptusCloudException;
 
-    public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames);
+    public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
+
+    public List<String> getSnapshotValues(String snapshotId) throws EucalyptusCloudException;
 }

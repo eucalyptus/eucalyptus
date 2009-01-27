@@ -44,8 +44,8 @@ import edu.ucsb.eucalyptus.util.BindingUtil;
 import edu.ucsb.eucalyptus.util.WalrusProperties;
 import groovy.lang.GroovyObject;
 import org.apache.axiom.om.OMElement;
-import org.apache.log4j.Logger;
 import org.apache.axis2.context.MessageContext;
+import org.apache.log4j.Logger;
 import org.jibx.runtime.JiBXException;
 
 import java.lang.reflect.Field;
@@ -75,11 +75,11 @@ public class WalrusQueryBinding implements QueryBinding {
 
     public OMElement bind( final String operationName, final UserInfo user, final Map<String, String> params, Map bindingArguments, final Map<String, String> headers ) throws QueryBindingException
     {
-        OMElement msg = null;
+        OMElement msg;
 
-        EucalyptusMessage eucaMsg = null;
-        Map<String, String> fieldMap = null;
-        Class targetType = null;
+        EucalyptusMessage eucaMsg;
+        Map<String, String> fieldMap;
+        Class targetType;
         try
         {
             //:: try to create the target class :://

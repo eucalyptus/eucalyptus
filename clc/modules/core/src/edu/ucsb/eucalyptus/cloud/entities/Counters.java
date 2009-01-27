@@ -35,12 +35,13 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.keys.Hashes;
-import org.hibernate.*;
-import org.hibernate.annotations.*;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.*;
-import javax.persistence.Entity;
-import javax.persistence.Table;
 import java.util.List;
 import java.util.zip.Adler32;
 
@@ -96,7 +97,7 @@ public class Counters {
     if ( tempId < 0 )
     {
       Counters find = null;
-      EntityManager em = EntityWrapper.getEntityManagerFactory().createEntityManager(  );
+      EntityManager em = EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME).createEntityManager(  );
       Session session = (Session) em.getDelegate();
       List<Counters> found = ( List<Counters> ) session.createSQLQuery( "select * from COUNTERS" ).addEntity( Counters.class ).list();
       if( found.isEmpty() )
@@ -116,7 +117,7 @@ public class Counters {
     }
     else if ( tempId % modulus == 0 )
     {
-      EntityManager em = EntityWrapper.getEntityManagerFactory().createEntityManager(  );
+      EntityManager em = EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME).createEntityManager(  );
       Session session = (Session) em.getDelegate();
       Transaction tx = session.beginTransaction();
       tx.begin();

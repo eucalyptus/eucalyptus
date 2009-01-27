@@ -34,19 +34,39 @@
 
 package edu.ucsb.eucalyptus.storage.fs;
 
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.util.WalrusProperties;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FileSystemStorageManager implements StorageManager {
 
     public static final String FILE_SEPARATOR = "/";
-    public FileSystemStorageManager() {
+    public static final String lvmRootDirectory = "/dev";
+    private static boolean initialized = false;
+
+    private String rootDirectory;
+    public FileSystemStorageManager(String rootDirectory) {
+        this.rootDirectory = rootDirectory;
     }
 
+    public void initialize() {
+        if(!initialized) {
+            System.loadLibrary("fsstorage");
+            initialized = true;
+        }
+    }
+
+    public void setRootDirectory(String rootDirectory) {
+        this.rootDirectory = rootDirectory;
+    }
+
+
     public void createBucket(String bucket) throws IOException {
-        File bukkit = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket);
+        File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);
         if(!bukkit.exists()) {
             if(!bukkit.mkdirs()) {
                 throw new IOException(bucket);
@@ -54,20 +74,22 @@ public class FileSystemStorageManager implements StorageManager {
         }
     }
 
-
-    public boolean isEmpty(String bucket) {
-        return true;  //To change body of implemented methods use File | Settings | File Templates.
+    public long getSize(String bucket, String object) {
+        File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+        if(objectFile.exists())
+            return objectFile.length();
+        return -1;
     }
 
     public void deleteBucket(String bucket) throws IOException {
-        File bukkit = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket);
+        File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);
         if(!bukkit.delete()) {
             throw new IOException(bucket);
         }
     }
 
     public void createObject(String bucket, String object) throws IOException {
-        File objectFile = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+        File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
         if (!objectFile.exists()) {
             if (!objectFile.createNewFile()) {
                 throw new IOException(object);
@@ -76,7 +98,7 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     public int readObject(String bucket, String object, byte[] bytes, long offset) throws IOException {
-        return readObject(WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object, bytes, offset);
+        return readObject(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object, bytes, offset);
     }
 
     public int readObject(String path, byte[] bytes, long offset) throws IOException {
@@ -94,7 +116,7 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     public void deleteObject(String bucket, String object) throws IOException {
-        File objectFile = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+        File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
         if (objectFile.exists()) {
             if(!objectFile.delete()) {
                 throw new IOException(object);
@@ -112,7 +134,7 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     public void putObject(String bucket, String object, byte[] base64Data, boolean append) throws IOException {
-        File objectFile = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+        File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
         if (!objectFile.exists()) {
             objectFile.createNewFile();
         }
@@ -122,14 +144,119 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     public void renameObject(String bucket, String oldName, String newName) throws IOException {
-        File oldObjectFile = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + oldName);
-        File newObjectFile = new File (WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + newName);
-        if (!oldObjectFile.renameTo(newObjectFile)) {
-            throw new IOException(oldName);
+        File oldObjectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + oldName);
+        File newObjectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + newName);
+        if(oldObjectFile.exists()) {
+            if (!oldObjectFile.renameTo(newObjectFile)) {
+                throw new IOException(oldName);
+            }
         }
     }
 
     public String getObjectPath(String bucket, String object) {
-        return WalrusProperties.bucketRootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
+        return rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
+    }
+
+    public native String removeLoopback(String loDevName);
+
+    public native String createLoopback(String fileName);
+
+    public native String removeLogicalVolume(String lvName);
+
+    public native String reduceVolumeGroup(String vgName, String pvName);
+
+    public native String removePhysicalVolume(String loDevName);
+
+    public native String createVolumeFromLv(String lvName, String volumeKey);
+
+    public native String enableLogicalVolume(String lvName);
+
+    public native String disableLogicalVolume(String lvName);
+
+    public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet) throws EucalyptusCloudException {
+        //load the snapshot set
+        ArrayList<String> loDevices = new ArrayList<String>();
+        String snapshotLoDev = null;
+        String snapshotFileName = null;
+        for(String snapshot : snapshotSet) {
+            String fileName = rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + snapshot;
+            String loDevName = createLoopback(fileName);
+            if(loDevName.length() == 0)
+                throw new EucalyptusCloudException("could not create loopback device for " + snapshot);
+            if(snapshot.equals(snapshotId)) {
+                snapshotLoDev = loDevName;
+                snapshotFileName = fileName;
+            }
+            loDevices.add(loDevName);
+        }
+        //now remove the snapshot
+        String absoluteLVName = lvmRootDirectory + FILE_SEPARATOR + vgName + FILE_SEPARATOR + lvName;
+        String returnValue = removeLogicalVolume(absoluteLVName);
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
+        }
+        returnValue = reduceVolumeGroup(vgName, snapshotLoDev);
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to remove volume group " + vgName);
+        }
+        returnValue = removePhysicalVolume(snapshotLoDev);
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Unable to remove physical volume " + snapshotLoDev);
+        }
+
+        //unload the snapshots
+        for(String loDevice : loDevices) {
+            returnValue = removeLoopback(loDevice);
+        }
+
+        //remove the snapshot backing store
+        try {
+            deleteObject("", snapshotFileName);
+        } catch(Exception ex) {
+            throw new EucalyptusCloudException("could not delete snapshot file " + snapshotFileName);
+        }
+    }
+
+    public String createVolume(String bucket, List<String> snapshotSet, List<String> vgNames, List<String> lvNames, String snapshotId, String snapshotVgName, String snapshotLvName) throws EucalyptusCloudException {
+        String snapshotLoDev = null;
+        ArrayList<String> loDevices = new ArrayList<String>();
+        for(String snapshot : snapshotSet) {
+            String loDevName = createLoopback(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + snapshot);
+            if(loDevName.length() == 0)
+                throw new EucalyptusCloudException("could not create loopback device for " + snapshot);
+            if(snapshot.equals(snapshotId))
+                snapshotLoDev = loDevName;
+            loDevices.add(loDevName);
+        }
+
+        //enable them
+        int i = 0;
+        ArrayList<String> absoluteLvNames = new ArrayList<String>();
+        String snapshotAbsoluteLvName = null;
+        for(String snapshot : snapshotSet) {
+            String absoluteLvName = lvmRootDirectory + FILE_SEPARATOR + vgNames.get(i) + FILE_SEPARATOR + lvNames.get(i);
+            if(i == 0)
+                enableLogicalVolume(absoluteLvName);
+            if(snapshotId.equals(snapshot))
+                snapshotAbsoluteLvName = absoluteLvName;
+            absoluteLvNames.add(absoluteLvName);
+            ++i;
+        }
+
+        String volumeKey = "walrusvol-" + Hashes.getRandom(16);
+        String volumePath = rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + volumeKey;
+        createVolumeFromLv(snapshotAbsoluteLvName, volumePath);
+        if(!(new File(volumePath).exists()))
+            throw new EucalyptusCloudException("Unable to create file " + volumePath);
+
+        for(String absoluteLvName : absoluteLvNames) {
+            String returnValue = disableLogicalVolume(absoluteLvName);
+        }
+
+        //unload the snapshots
+        for(String loDevice : loDevices) {
+            String returnValue = removeLoopback(loDevice);
+        }
+        return volumeKey;
     }
 }

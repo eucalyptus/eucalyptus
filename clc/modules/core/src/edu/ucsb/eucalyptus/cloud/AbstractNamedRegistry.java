@@ -37,7 +37,8 @@ package edu.ucsb.eucalyptus.cloud;
 import edu.ucsb.eucalyptus.constants.HasName;
 
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 public abstract class AbstractNamedRegistry<TYPE extends HasName> {
 

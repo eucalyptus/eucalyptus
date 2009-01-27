@@ -36,11 +36,14 @@ package edu.ucsb.eucalyptus.keys;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.openssl.PEMWriter;
+import org.bouncycastle.util.encoders.UrlBase64;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.security.*;
-import java.io.*;
+import java.util.zip.Adler32;
 
 public class Hashes {
     private static Logger LOG = Logger.getLogger( Hashes.class );
@@ -154,11 +157,20 @@ public class Hashes {
 
     public static String getRandom(int size) {
         SecureRandom random = new SecureRandom();
-        random.setSeed( System.currentTimeMillis() );
+        random.setSeed( System.nanoTime() );
         byte[] randomBytes = new byte[size];
         random.nextBytes(randomBytes);
         return new String(UrlBase64.encode(randomBytes));
     }
+
+  public static String generateId( final String userId, final String prefix ) {
+    Adler32 hash = new Adler32();
+    String key = userId + System.currentTimeMillis();
+    hash.update( key.getBytes() );
+    String imageId = String.format( "%s-%08X", prefix, hash.getValue() );
+    return imageId;
+  }
+
 
   // borrowing from neil for the time being
   public static byte[] hexToBytes(String data) {

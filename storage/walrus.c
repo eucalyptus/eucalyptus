@@ -88,8 +88,10 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	headers = curl_slist_append (headers, "Authorization: Euca");
 
 	char op_hdr [STRSIZE];
-	snprintf (op_hdr, STRSIZE, "EucaOperation: %s", walrus_op);
-	headers = curl_slist_append (headers, op_hdr);
+	if(walrus_op != NULL) {
+	    snprintf (op_hdr, STRSIZE, "EucaOperation: %s", walrus_op);
+	    headers = curl_slist_append (headers, op_hdr);
+	}
 
 	time_t t = time(NULL);
 	char * date_str = asctime(localtime(&t)); /* points to a static area */
@@ -120,7 +122,11 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers); /* register headers */
 
 	total_wrote = total_calls = 0;
-    logprintfl (EUCADEBUG, "walrus_request(): writing %s/%s output to %s\n", verb, walrus_op, outfile);
+	if (walrus_op) {
+	  logprintfl (EUCADEBUG, "walrus_request(): writing %s/%s output to %s\n", verb, walrus_op, outfile);
+	} else {
+	  logprintfl (EUCADEBUG, "walrus_request(): writing %s output to %s\n", verb, outfile);
+	}
 	result = curl_easy_perform (curl); /* do it */
     logprintfl (EUCADEBUG, "walrus_request(): wrote %d bytes in %d writes\n", total_wrote, total_calls);
 	fclose (fp);
@@ -163,7 +169,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 /* downloads a Walrus object from the URL, saves it to outfile */
 int walrus_object_by_url (const char * url, const char * outfile)
 {
-    return walrus_request (GET_OBJECT_CMD, "GET", url, outfile);
+    return walrus_request (NULL, "GET", url, outfile);
 }
 
 /* downloads a Walrus object from the default Walrus endpoing,

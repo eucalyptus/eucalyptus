@@ -104,3 +104,4 @@ config.status: configure
 		echo "you have to run ./configure!"; exit 1; fi
 	./config.status --recheck
 
+# DO NOT DELETE

@@ -35,16 +35,20 @@
 package edu.ucsb.eucalyptus.transport.query;
 
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.keys.*;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import org.apache.log4j.Logger;
-import org.apache.xml.security.utils.Base64;
+import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.openssl.PEMReader;
 
-import java.io.StringReader;
-import java.security.*;
+import java.security.Signature;
+import java.security.PublicKey;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.TreeMap;
+import java.io.StringReader;
 
 public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
@@ -86,7 +90,7 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
         //this.checkParameters( hdrs );
         //:: check the signature :://
 
-        if(hdrs.containsKey(StorageProperties.EUCALYPTUS_OPERATION)) {
+        if(hdrs.containsKey(StorageQuerySecurityHandler.StorageSecurityParameters.EucaSignature)) {
             //possible internal request -- perform authentication using internal credentials
             String date =  (String) hdrs.remove( SecurityParameter.Date);
             String eucaCert = (String) hdrs.remove(StorageQuerySecurityHandler.StorageSecurityParameters.EucaCert);
@@ -96,7 +100,10 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             Signature sig;
             boolean valid = false;
             try {
-                X509Certificate cert = (X509Certificate)new PEMReader(new StringReader(new String(Base64.decode(eucaCert)))).readObject();
+                byte[] bytes = Base64.decode(eucaCert);
+                String certString = new String(bytes);
+                PEMReader pemReader = new PEMReader(new StringReader(certString));
+                X509Certificate cert = (X509Certificate) pemReader.readObject();
                 AbstractKeyStore keyStore = ServiceKeyStore.getInstance();
                 if (keyStore.getCertificateAlias(cert) != null) {
                     //cert found in keystore
@@ -105,7 +112,6 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
                     sig.initVerify(publicKey);
                     sig.update(data.getBytes());
-                    String decoded = new String(Base64.decode(signature));
                     valid = sig.verify(Base64.decode(signature));
                 } else {
                     LOG.warn ("WalrusQuerySecurityHandler(): certificate not found in keystore");

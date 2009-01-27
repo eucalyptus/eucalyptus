@@ -79,6 +79,12 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	snprintf(cmd, 256, "-A POSTROUTING -d ! %s/%d -j MASQUERADE", network, slashnet);
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
+	snprintf(cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 dev %s", vnetconfig->eucahome, vnetconfig->pubInterface);
+	rc = system(cmd);
+	
+	snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to 169.254.169.254:8773", network, slashnet);
+	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
 	for (vlan=2; vlan<NUMBER_OF_VLANS; vlan++) {
@@ -637,22 +643,32 @@ int check_chain(vnetConfig *vnetconfig, char *userName, char *netName) {
 }
 
 int check_device(char *dev) {
-  char rbuf[256], devbuf[256];
+  char rbuf[256], devbuf[256], *ptr;
   FILE *FH=NULL;
   
+  
   if (!dev) return(1);
-
-  snprintf(devbuf, 255, "%s:", dev);
-
+  
   FH = fopen("/proc/net/dev", "r");
   if (!FH) {
     return(1);
   }
   
   while(fgets(rbuf, 256, FH)) {
-    if (strstr(rbuf, devbuf)) {
-      fclose(FH);
-      return(0);
+    ptr = strrchr(rbuf, ':');
+    if (ptr) {
+      *ptr = '\0';
+      ptr = strrchr(rbuf, ' ');
+      if (ptr) {
+        ptr = ptr + 1;
+      } else {
+        ptr = rbuf;
+      }
+      if (!strcmp(ptr, dev)) {
+	// found it
+	fclose(FH);
+	return(0);
+      }
     }
   }
   fclose(FH);
@@ -661,27 +677,7 @@ int check_device(char *dev) {
 }
 
 int check_bridge(char *brname) {
-  char rbuf[256], devbuf[256];
-  FILE *FH=NULL;
-  
-  if (!brname) return(1);
-
-  snprintf(devbuf, 255, "%s:", brname);
-
-  FH = fopen("/proc/net/dev", "r");
-  if (!FH) {
-    return(1);
-  }
-  
-  while(fgets(rbuf, 256, FH)) {
-    if (strstr(rbuf, devbuf)) {
-      fclose(FH);
-      return(0);
-    }
-  }
-  fclose(FH);
-
-  return(1);
+  return(check_device(brname));
 }
 
 int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname) {
@@ -730,13 +726,28 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
 	}      
       }
       
+      // add if to bridge
       snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, newbrname, newdevname);
       rc = system(cmd);
       
+      // bring br up
+      //      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add 0.0.0.0 dev %s", vnetconfig->eucahome, newbrname);
+      //      rc = system(cmd);
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip link set dev %s up", vnetconfig->eucahome, newbrname);
+      rc = system(cmd);
+      
+      // bring if up
+      //      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add 0.0.0.0 dev %s", vnetconfig->eucahome, newdevname);
+      //      rc = system(cmd);
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip link set dev %s up", vnetconfig->eucahome, newdevname);
+      rc = system(cmd);
+
+      /*
       snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s 0.0.0.0 up", vnetconfig->eucahome, newbrname);
       rc = system(cmd);
       snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s up", vnetconfig->eucahome, newdevname);
       rc = system(cmd);
+      */
       
     } else {
       snprintf(newbrname, 32, "%s", vnetconfig->bridgedev);
@@ -760,6 +771,38 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
 	  return(1);
 	}
       }
+
+      // create new bridge                                                                                                                                     
+      snprintf(newbrname, 32, "eucabr%d", vlan);
+      rc = check_bridge(newbrname);
+      if (rc) {
+        // bridge does not yet exist
+        snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap brctl addbr %s", vnetconfig->eucahome, newbrname);
+        rc = system(cmd);
+        if (rc) {
+          logprintfl(EUCAERROR, "could not create new bridge %s\n", newbrname);
+          return(1);
+        }
+      }
+
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, newbrname, newdevname);
+      rc = system(cmd);
+      
+      // bring br up
+      //      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add 0.0.0.0 dev %s", vnetconfig->eucahome, newbrname);
+      //      rc = system(cmd);
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip link set dev %s up", vnetconfig->eucahome, newbrname);
+      rc = system(cmd);
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr flush %s", vnetconfig->eucahome, newbrname);
+      rc = system(cmd);
+
+      // bring if up
+      //      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add 0.0.0.0 dev %s", vnetconfig->eucahome, newdevname);
+      //      rc = system(cmd);
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip link set dev %s up", vnetconfig->eucahome, newdevname);
+      rc = system(cmd);
+
+      snprintf(newdevname, 32, "%s", newbrname);
     } else {
       snprintf(newdevname, 32, "%s", vnetconfig->pubInterface);
     }
@@ -768,21 +811,6 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
     if (rc) {
       return(rc);
     }
-    /*
-      newip = hex2dot(vnetconfig->networks[vlan].router);
-      netmask = hex2dot(vnetconfig->networks[vlan].nm);
-      
-      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, newdevname, newip, netmask);
-      rc = system(cmd);
-      if (rc) {
-      logprintfl(EUCAERROR, "could not bring up new device %s with ip %s\n", newdevname, newip);
-      if (newip) free(newip);
-      if (netmask) free(netmask);
-      return(1);
-      }
-      if (newip) free(newip);
-      if (netmask) free(netmask);
-    */
     
     *outbrname = strdup(newdevname);
   }
@@ -812,7 +840,7 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
   if (newip) free(newip);
   if (broadcast) free(broadcast);
 
-  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s up", vnetconfig->eucahome, devname);
+  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip link set dev %s up", vnetconfig->eucahome, devname);
   rc = system(cmd);
   if (rc) {
     logprintfl(EUCAERROR, "could not bring up interface '%s'\n", devname);
@@ -851,25 +879,25 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
   int rc, ret;
   
   ret = 0;
-  if (vnetconfig->role == NC) {
+  //if (vnetconfig->role == NC) {
     
-    if (!strcmp(vnetconfig->mode, "MANAGED")) {
-      snprintf(newbrname, 32, "eucabr%d", vlan);
-      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s down", vnetconfig->eucahome, newbrname);
-      rc = system(cmd);
-      if (rc) {
-	logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
-	ret = 1;
-      }
+  if (!strcmp(vnetconfig->mode, "MANAGED")) {
+    snprintf(newbrname, 32, "eucabr%d", vlan);
+    snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip link set dev %s down", vnetconfig->eucahome, newbrname);
+    rc = system(cmd);
+    if (rc) {
+      logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
+      ret = 1;
     }
-
   }
+
+    //  }
   
   if (!strcmp(vnetconfig->mode, "MANAGED")) {
     snprintf(newdevname, 32, "%s.%d", vnetconfig->pubInterface, vlan);
     rc = check_device(newdevname);
     if (!rc) {
-      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s down", vnetconfig->eucahome, newdevname);
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip link set dev %s down", vnetconfig->eucahome, newdevname);
       rc = system(cmd);
       if (rc) {
 	logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
@@ -884,6 +912,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
 	ret = 1;
       }
     }
+    snprintf(newdevname, 32, "%s", newbrname);
   } else {
     snprintf(newdevname, 32, "%s", vnetconfig->pubInterface);
   }
@@ -895,9 +924,8 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
       if (rc) {
 	logprintfl(EUCAERROR, "could not remove '%s' from list of interfaces\n", newdevname);
       }
-    } else {
-      rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname);
-    }
+    } 
+    rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname);
     
     if (userName && netName) {
       rc = vnetDeleteChain(vnetconfig, userName, netName);

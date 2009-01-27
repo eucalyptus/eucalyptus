@@ -40,7 +40,9 @@ import edu.ucsb.eucalyptus.admin.client.*;
 import edu.ucsb.eucalyptus.util.BaseDirectory;
 import org.apache.log4j.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -598,11 +600,11 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
         } catch (Exception e) {
             throw new SerializableException("Username '" + userName + "' not found");
         }
-		if (! callerRecord.isAdministrator() 
+		if (! callerRecord.isAdministrator()
 		&&  ! callerRecord.getUserName().equals(userName)) {
 				throw new SerializableException ("Operation restricted to owner and administrator");
 		}
-	
+
         /* TODO: Any checks? Reset password expiration? */
 		oldRecord.setRealName (newRecord.getRealName());
 		oldRecord.setEmail (newRecord.getEmail());
@@ -611,7 +613,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 		oldRecord.setAffiliation (newRecord.getAffiliation());
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
-										
+
         EucalyptusManagement.commitWebUser( oldRecord );
 
         return "Account updated";

@@ -35,13 +35,16 @@
 package edu.ucsb.eucalyptus.transport.query;
 
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.keys.*;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
 import org.apache.log4j.Logger;
+import org.apache.xml.security.utils.Base64;
 import org.bouncycastle.openssl.PEMReader;
 
 import java.io.StringReader;
-import java.security.*;
+import java.security.PublicKey;
+import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.Map;
 
@@ -82,7 +85,7 @@ public class StorageQuerySecurityHandler extends HMACQuerySecurityHandler {
 
         String data = verb + "\n" + date + "\n" + addr + "\n";
 
-        Signature sig = null;
+        Signature sig;
         boolean valid = false;
         try {
             X509Certificate cert = (X509Certificate)new PEMReader(new StringReader(eucaCert)).readObject();
@@ -94,7 +97,7 @@ public class StorageQuerySecurityHandler extends HMACQuerySecurityHandler {
 
                 sig.initVerify(publicKey);
                 sig.update(data.getBytes());
-                valid = sig.verify(signature.getBytes("UTF-8"));
+                valid = sig.verify(Base64.decode(signature));
             }
         } catch(Exception ex) {
             ex.printStackTrace();
@@ -105,7 +108,9 @@ public class StorageQuerySecurityHandler extends HMACQuerySecurityHandler {
         }
 
         //run as admin
-        return new UserInfo("admin");
+        UserInfo admin = new UserInfo("admin");
+        admin.setIsAdministrator(Boolean.TRUE);
+        return admin;
     }
 
 

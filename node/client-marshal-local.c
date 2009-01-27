@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define HANDLERS_FANOUT
 #include "handlers.h"
 #include "client-marshal.h"
 

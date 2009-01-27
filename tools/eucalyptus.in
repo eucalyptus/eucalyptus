@@ -77,6 +77,11 @@ create_httpd_config() {
 #	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|"  >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
 	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" |sed "s|EUCA_USER|$EUCA_USER|" >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
 
+	# Ubuntu: needs to load authz 
+	if [ -e /usr/lib/apache2/modules/mod_authz_host.so ]; then
+		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+	fi
+
 	# let's configure the CC 
 	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $CC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/httpd-cc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|"|sed "s|\(StartServers\).*|\1 5|"|sed "s|\(MinSpareServers\).*|\1 5|"|sed "s|\(MaxSpareServers\).*|\1 10|"|sed "s|\(MaxClients\).*|\1 25|" |sed "s|\(MinSpareThreads\).*|\1 5|" | sed "s|\(MaxSpareThreads\).*|\1 10|" | sed "s|\(ThreadsPerChild\).*|\1 25|">  $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
 
@@ -95,7 +100,7 @@ do_start() {
 		# we have a program to test xen and more for the NC
 		if [ ! -x $EUCALYPTUS/usr/sbin/euca_test_nc ]; then
 			echo "Cannot check Node Controller: missing euca_test_nc."
-		elif ! $EUCALYPTUS/usr/sbin/euca_test_nc > $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log 2>&1 ; then
+		elif ! $EUCALYPTUS/usr/sbin/euca_test_nc $HYPERVISOR > $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log 2>&1 ; then
 			echo "Node Controller cannot be started: errors in $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log"
 			exit 1
 		fi
@@ -207,7 +212,8 @@ echo "or we can install it for you."
 				$ANT -f cloud.xml install-jce 2> /dev/null > /dev/null
 			else 
 				echo "Eucalptus needs unlimited strength crypto policy."
-				exit 1
+				echo "Trying to start anyway, but you may have issues"
+				sleep 5
 			fi
 		fi
 		(su $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
@@ -250,11 +256,17 @@ fi
 START_CLOUD="`echo $START_CLOUD | tr 'a-z' 'A-Z'`"
 START_CC="`echo $START_CC | tr 'a-z' 'A-Z'`"
 START_NC="`echo $START_NC | tr 'a-z' 'A-Z'`"
-HTTPD="/usr/sbin/apache2"
-HTTPD_HOME="/tmp/"
 if [ -z "$EUCA_USER" ] ; then
 	EUCA_USER="root"
 fi
+
+# let's try to pick the system apache2
+HTTPD="`which apache2 2> /dev/null`"		# .deb based machines
+if [ -z  "$HTTPD" ]; then
+	HTTPD="`which httpd 2> /dev/null`"	# .rpm based machines
+fi
+HTTPD_HOME="/tmp/"
+
 # set up eucalyptus var locations to be owned by EUCA_USER
 for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
     if [ $y != "/" -a -d $y ]; then

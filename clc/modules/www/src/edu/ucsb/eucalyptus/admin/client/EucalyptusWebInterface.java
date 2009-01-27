@@ -34,12 +34,17 @@
 
 package edu.ucsb.eucalyptus.admin.client;
 
-import com.google.gwt.core.client.*;
-import com.google.gwt.user.client.*;
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.user.client.Cookies;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
 
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.
@@ -210,7 +215,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         } else {
             if ( currentAction.equals( "approve" )
                     || currentAction.equals( "reject" )
-                    || currentAction.equals( "disable" ) 
+                    || currentAction.equals( "disable" )
                     || currentAction.equals( "delete" )) {
                 displayLoginPage("Please, log into Eucalyptus to " + currentAction + " the user");
 
@@ -356,7 +361,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		final String oldPassword;
 		final boolean newUser;
         boolean admin = false;
-		
+
         if (loggedInUser != null
                 && loggedInUser.isAdministrator().booleanValue()) {
              admin = true;
@@ -369,7 +374,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	            label_box.setText ("Please, fill out the form to add a user");
 	        } else {
 	            label_box.setText ( signup_greeting ); // Please, fill out the form:
-	        }	
+	        }
 		} else {
 			newUser = false;
 			oldPassword = userToEdit.getBCryptedPassword();
@@ -651,10 +656,10 @@ public class EucalyptusWebInterface implements EntryPoint {
 		Button submit_button;
 		if (newUser) {
 	        if (admin) {
-				submit_button = new Button ( "Add user", SignupButtonListener);	
+				submit_button = new Button ( "Add user", SignupButtonListener);
 			} else {
 				submit_button = new Button ( "Sign up", SignupButtonListener);
-			}		
+			}
 		} else {
 			submit_button = new Button ( "Update Record", SignupButtonListener );
 		}
@@ -865,7 +870,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 			hpanel.add (firstButton);
 		}
 		hpanel.add (ok_button);
-		
+
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
         vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
@@ -885,7 +890,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         return ok_button;
 	}
-	
+
     private boolean isPasswordExpired (UserInfoWeb user) {
         final long now = System.currentTimeMillis();
         if ((now > 0) && (now >= user.getPasswordExpires().longValue())) {
@@ -1011,7 +1016,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     public void displayDefaultPage()
     {
 		displayStatusPage("Loading default page...");
-        
+
         /* If there is an action encoded in the URL, then redirect to
          * a URL without that action, so it is not repeated upon a reload
          * However, reserve the currently selected tab in URL.
@@ -1195,14 +1200,14 @@ public class EucalyptusWebInterface implements EntryPoint {
 						"getX509?user=" + loggedInUser.getUserName() +
 						"&keyValue=" + loggedInUser.getUserName() +
 						"&code=" + loggedInUser.getCertificateCode(),
-						"_self", ""); 
+						"_self", "");
 				}
 		});
 
         VerticalPanel rpanel = new VerticalPanel();
 		rpanel.setSpacing (5);
         rpanel.add( new HTML (rest_credentials_text) );
-		final HTML secretStrings = new HTML 
+		final HTML secretStrings = new HTML
 			("<p><b>Query ID:</b> <font color=#666666 size=\"1\">"
 			+ loggedInUser.getQueryId() + "</font></br>"
             + "<b>Secret key:</b> <font color=#666666 size=\"1\">"
@@ -1515,7 +1520,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		final TextBox box = new TextBox ();
 		box.setVisibleLength (55);
 		hpanel.add (box);
-	
+
 		EucalyptusWebBackend.App.getInstance().getSystemConfig(sessionId,
 			new AsyncCallback( ) {
 				public void onSuccess ( final Object result ) {
@@ -1525,8 +1530,8 @@ public class EucalyptusWebInterface implements EntryPoint {
 				public void onFailure ( Throwable caught ) { }
 			}
 		);
-			
-        Button change_button = new Button( "Confirm URL", 
+
+        Button change_button = new Button( "Confirm URL",
  			new ClickListener() {
 	            public void onClick( Widget sender )
 	            {
@@ -1622,7 +1627,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 					+ "&page=" + currentTabIndex);
 			}
         });
-		Button okButton = displayDialog ("Sure?", 
+		Button okButton = displayDialog ("Sure?",
 			"Do you want to delete user '" + userName + "'?", deleteButton);
 		okButton.setText ("Cancel");
 		label_box.setStyleName("euca-greeting-warning");
@@ -1641,7 +1646,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 
 		private EucalyptusWebInterface parent;
 		private UserInfoWeb u;
-		
+
 		EditCallback ( final EucalyptusWebInterface parent, UserInfoWeb u )
 		{
 			this.parent = parent;
@@ -1650,10 +1655,10 @@ public class EucalyptusWebInterface implements EntryPoint {
 
 		public void onClick( final Widget widget )
 		{
-			displayUserRecordPage (RootPanel.get(), u); 
+			displayUserRecordPage (RootPanel.get(), u);
 		}
 	}
-	
+
     public void displayUsersList(List usersList, final VerticalPanel parent)
     {
         parent.clear();
@@ -1718,7 +1723,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 				editLabel.addClickListener (new EditCallback(this, u));
 				editLabel.setStyleName ("euca-action-link");
 				ops.add(editLabel);
-				
+
                 //HTML del_button = userActionButton ("Delete", u);
 		        Hyperlink del_button = new Hyperlink( "Delete", "confirmdelete" );
 				del_button.setStyleName ("euca-action-link");
@@ -1745,7 +1750,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         }
         vpanel.add(new Button ("Add user", AddUserButtonListener));
     }
-	    
+
     private HTML imageActionButton (String action, ImageInfoWeb img)
     {
         return new HTML ("<a class=\"euca-action-link\" href=\"" + GWT.getModuleBaseURL()

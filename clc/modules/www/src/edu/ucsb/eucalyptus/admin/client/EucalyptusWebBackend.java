@@ -35,9 +35,12 @@
 package edu.ucsb.eucalyptus.admin.client;
 
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.user.client.rpc.*;
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.SerializableException;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.

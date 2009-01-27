@@ -34,9 +34,13 @@
 
 package edu.ucsb.eucalyptus.transport.config;
 
-import edu.ucsb.eucalyptus.transport.*;
-import org.apache.axis2.*;
-import org.apache.axis2.description.*;
+import edu.ucsb.eucalyptus.transport.Axis2Connector;
+import edu.ucsb.eucalyptus.transport.Axis2MessageReceiver;
+import edu.ucsb.eucalyptus.transport.OverloadedWebserviceMethod;
+import org.apache.axis2.AxisFault;
+import org.apache.axis2.description.AxisOperation;
+import org.apache.axis2.description.AxisService;
+import org.apache.axis2.description.Parameter;
 
 import java.lang.reflect.Method;
 

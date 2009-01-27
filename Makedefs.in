@@ -39,6 +39,7 @@ DIST_ROOT		= $(TOP)/$(DIST_DIR)
 # system dependents 
 CC		= @CC@
 CFLAGS		= @CFLAGS@
+LDFLAGS		= @LDFLAGS@
 INCLUDES	= @INCLUDES@
 LIBS		= @LIBS@
 INSTALL		= @INSTALL@

@@ -35,6 +35,11 @@ JAVA=""
 java_min_version="1.6.0"
 ant_min_version="1.6.5"
 
+# these are for large files (>2GB)
+LDFLAGS="`getconf LFS64_LDFLAGS` $LDFLAGS"
+LIBS="`getconf LFS64_LIBS` $LIBS"
+CFLAGS="`getconf LFS64_CFLAGS`"
+
 # compile options
 CFLAGS="${CFLAGS} -Wall -Wno-unused-variable -fPIC -DHAVE_CONFIG_H"
 INCLUDES="${INCLUDES} -I. -I.. -Igenerated -I${TOP}/storage -I${TOP}/node -I${TOP}/util -I${TOP}/net"
@@ -176,6 +181,7 @@ AC_SUBST(AXIS2C_HOME)
 AC_SUBST(AXIS2_HOME)
 AC_SUBST(LIBVIRT_HOME)
 AC_SUBST(CFLAGS)
+AC_SUBST(LDFLAGS)
 AC_SUBST(LIBS)
 AC_SUBST(INCLUDES)
 

@@ -34,8 +34,6 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
-import java.util.Date;
-
 /**
  * Created by IntelliJ IDEA.
  * User: dmitriizagorodnov

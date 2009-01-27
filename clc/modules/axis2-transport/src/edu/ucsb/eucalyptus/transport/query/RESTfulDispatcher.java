@@ -34,8 +34,8 @@
 
 package edu.ucsb.eucalyptus.transport.query;
 
-import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.AxisFault;
+import org.apache.axis2.context.MessageContext;
 
 /**
  * User: decker

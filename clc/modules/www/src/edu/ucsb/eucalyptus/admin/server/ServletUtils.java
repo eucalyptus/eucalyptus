@@ -34,39 +34,44 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
-import sun.net.smtp.SmtpClient;
-
+import javax.mail.Message;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.util.Properties;
 import java.util.UUID;
-import java.io.*;
 
 public class ServletUtils extends HttpServlet {
 
     public static void sendMail(String from, String to, String subject, String body)
             throws ServletException, IOException {
-
-        SmtpClient smtp = new SmtpClient();  /* assume localhost */
-        smtp.from(from);
-        smtp.to(to);
-        PrintStream msg = smtp.startMessage();
-
-        msg.println("To: " + to);  /* so mailers will display the To & From */
-        msg.println("From: " + from);
-        msg.println("Subject: " + subject);
-        msg.println();
-        msg.print(body);
-        smtp.closeServer();
+        Properties properties = System.getProperties();
+        //TODO: This should read the MX for the recepient
+        String mailHost = properties.getProperty("mail.smtp.host");
+        if(mailHost == null) {
+            mailHost = InetAddress.getLocalHost().getHostName();
+            properties.setProperty("mail.smtp.host", mailHost);
+        }
+        Session session = Session.getDefaultInstance(properties);
+        MimeMessage message = new MimeMessage(session);
+        try {
+            message.setFrom(new InternetAddress(from));
+            message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+            message.setSubject(subject);
+            message.setText(body);
+            Transport.send(message);
+        } catch(Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     public static String getRequestUrl(HttpServletRequest req) {
-        //HttpSession hsession = getThreadLocalRequest().getSession();
-        //return hsession.getServletContext().getRealPath();
-        //return "http://localhost:8888/EucalyptusWebInterface/EucalyptusWebInterface.html"; // TODO: find this
-        //return ServletRequest.getRequestURL();
-        //return GWT.getModuleBaseURL();
         String scheme = req.getScheme();             // http
         String serverName = req.getServerName();     // hostname.com
         int serverPort = req.getServerPort();        // 80
