@@ -349,19 +349,20 @@ public class Storage {
                 try {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
-                    if(foundSnapshotInfo != null) {
+                    if(foundSnapshotInfo == null) {
                         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
                         size = ebsManager.createVolume(volumeId, volumePath);
-
+                        db.commit();
                     } else {
                         if(!foundSnapshotInfo.getStatus().equals(Status.available.toString())) {
                             success = false;
                             db.rollback();
                             LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
+                        } else {
+                            size = ebsManager.createVolume(volumeId, snapshotId, size);
+                            db.commit();
                         }
-                        size = ebsManager.createVolume(volumeId, snapshotId, size);
                     }
-                    db.commit();
                 } catch(Exception ex) {
                     success = false;
                     db.rollback();
