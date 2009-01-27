@@ -12,7 +12,8 @@ SUBDIRS			=	tools \
 				storage	 \
 				gatherlog \
 				node  \
-				cluster
+				cluster \
+				clc
 
 # files we are going to package
 DIST_FILES		=	CHANGELOG \
