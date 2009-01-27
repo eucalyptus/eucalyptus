@@ -256,11 +256,17 @@ fi
 START_CLOUD="`echo $START_CLOUD | tr 'a-z' 'A-Z'`"
 START_CC="`echo $START_CC | tr 'a-z' 'A-Z'`"
 START_NC="`echo $START_NC | tr 'a-z' 'A-Z'`"
-HTTPD="/usr/sbin/apache2"
-HTTPD_HOME="/tmp/"
 if [ -z "$EUCA_USER" ] ; then
 	EUCA_USER="root"
 fi
+
+# let's try to pick the system apache2
+HTTPD="`which apache2 2> /dev/null`"		# .deb based machines
+if [ -z  "$HTTPD" ]; then
+	HTTPD="`which httpd 2> /dev/null`"	# .rpm based machines
+fi
+HTTPD_HOME="/tmp/"
+
 # set up eucalyptus var locations to be owned by EUCA_USER
 for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
     if [ $y != "/" -a -d $y ]; then
