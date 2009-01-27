@@ -84,7 +84,7 @@ public class Bukkit {
             shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
         }
         //NOTE: initializeForEBS MUST be called before exercizing any storage/EBS functionality
-        //initializeForEBS();
+        initializeForEBS();
     }
 
     public static void initializeForEBS() {
@@ -1959,7 +1959,7 @@ public class Bukkit {
             foundSnapshotSet = snapshotSets.get(0);
         }
 
-/*        List<WalrusSnapshotInfo> snapshotInfos = foundSnapshotSet.getSnapshotSet();
+        List<WalrusSnapshotInfo> snapshotInfos = foundSnapshotSet.getSnapshotSet();
         for(WalrusSnapshotInfo snapInfo: snapshotInfos) {
             if(snapInfo.getSnapshotId().equals(snapshotId)) {
                 db.rollback();
@@ -1975,10 +1975,10 @@ public class Bukkit {
         snapshotInfo.setTransferred(false);
         EntityWrapper<WalrusSnapshotInfo> dbSnap = db.recast(WalrusSnapshotInfo.class);
         snapshotInfos.add(snapshotInfo);
-        dbSnap.add(snapshotInfo); */
+        dbSnap.add(snapshotInfo);
 
-        //read and store it
         db.commit();
+        //read and store it
         //convert to a PutObject request
         //Make sure the bucket exists
 
@@ -2009,11 +2009,11 @@ public class Bukkit {
         reply.setStatusMessage(putObjectResponseType.getStatusMessage());
 
         //change state 
-        /* snapshotInfo = new WalrusSnapshotInfo(snapshotId);
-      dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
-      WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
-      foundSnapshotInfo.setTransferred(true);
-      dbSnap.commit();  */
+        snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+        dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
+        WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
+        foundSnapshotInfo.setTransferred(true);
+        dbSnap.commit();
 
         return reply;
     }

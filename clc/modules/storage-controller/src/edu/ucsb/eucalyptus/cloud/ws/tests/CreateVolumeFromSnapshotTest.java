@@ -46,7 +46,7 @@ public class CreateVolumeFromSnapshotTest extends TestCase {
 
         String userId = "admin";
 
-        String snapshotId = "snap-7d_CtRujsYM.";
+        String snapshotId = "snap-Q-DtCuwDu7yhTg..";
         String volumeId = "vol-" + Hashes.getRandom(10);
         CreateStorageVolumeType createVolumeFromSnapshotRequest = new CreateStorageVolumeType();
         createVolumeFromSnapshotRequest.setVolumeId(volumeId);
@@ -54,7 +54,8 @@ public class CreateVolumeFromSnapshotTest extends TestCase {
         createVolumeFromSnapshotRequest.setSnapshotId(snapshotId);
         CreateStorageVolumeResponseType createVolumeFromSnapshotResponse = storage.CreateStorageVolume(createVolumeFromSnapshotRequest);
         System.out.println(createVolumeFromSnapshotResponse);
-        DeleteStorageSnapshotType deleteSnapshotRequest = new DeleteStorageSnapshotType();
+        while(true);
+        /* DeleteStorageSnapshotType deleteSnapshotRequest = new DeleteStorageSnapshotType();
         deleteSnapshotRequest.setUserId(userId);
         deleteSnapshotRequest.setSnapshotId(snapshotId);
         DeleteStorageSnapshotResponseType deleteSnapshotResponseType = storage.DeleteStorageSnapshot(deleteSnapshotRequest);
@@ -64,7 +65,7 @@ public class CreateVolumeFromSnapshotTest extends TestCase {
         deleteVolumeRequest.setUserId(userId);
         deleteVolumeRequest.setVolumeId(volumeId);
         DeleteStorageVolumeResponseType deleteVolumeResponse = storage.DeleteStorageVolume(deleteVolumeRequest);
-        System.out.println(deleteVolumeResponse);
+        System.out.println(deleteVolumeResponse);     */
     }
 
     public void setUp() {
