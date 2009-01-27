@@ -11,7 +11,8 @@ public class Snapshot extends AbstractIsomorph {
   @Id
   @GeneratedValue
   private Long id = -1l;
-  private String parentVolume;
+
+  @Transient private String parentVolume;
 
   public Snapshot(  ) {
     super( null, null );
@@ -30,6 +31,7 @@ public class Snapshot extends AbstractIsomorph {
     switch(this.getState()) {
       case GENERATING: return "pending";
       case EXTANT: return "completed";
+      case ASSPLODED: return "failed";
       default: return null;
     }
   }

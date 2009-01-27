@@ -35,34 +35,23 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.VmImageInfo;
+import edu.ucsb.eucalyptus.cloud.*;
+import edu.ucsb.eucalyptus.cloud.cluster.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.keys.UserKeyStore;
+import edu.ucsb.eucalyptus.keys.*;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 
 import javax.crypto.Cipher;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
+import javax.xml.parsers.*;
+import javax.xml.xpath.*;
 import java.io.ByteArrayInputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.Signature;
+import java.net.*;
+import java.security.*;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.zip.Adler32;
 
 public class ImageManager {
@@ -511,7 +500,7 @@ If you specify a list of executable users, only users that have launch permissio
     ImageInfo query = new ImageInfo();
     query.setImageId( generateImageId( imagePrefix, imageLocation ) );
     LOG.info( "Trying to lookup using created AMI id=" + query.getImageId() );
-    for ( ; db.query( query ).size() != 0; query.setImageId( generateImageId( imagePrefix, imageLocation ) ) );
+    for ( ; db.query( query ).size() != 0; query.setImageId( generateImageId( imagePrefix, imageLocation ) ) ) ;
     db.commit();
     LOG.info( "Assigning imageId=" + query.getImageId() );
     return query.getImageId();
@@ -536,15 +525,35 @@ If you specify a list of executable users, only users that have launch permissio
     return reply;
   }
 
+  public ConfirmProductInstanceResponseType ConfirmProductInstance( ConfirmProductInstanceType request ) throws EucalyptusCloudException {
+    ConfirmProductInstanceResponseType reply = (ConfirmProductInstanceResponseType) request.getReply();
+    reply.set_return( false );
+    VmInstance vm = null;
+    try {
+      vm = VmInstances.getInstance().lookup( request.getInstanceId() );
+    } catch ( NoSuchElementException e ) {
+      return reply;
+    }
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
+    try {
+      ImageInfo found = db.getUnique( new ImageInfo( vm.getImageInfo().getImageId() ) );
+      if ( vm.getImageInfo().getImageId().equals( found ) ) {
+        reply.set_return( true );
+      }
+    } catch ( EucalyptusCloudException e ) {
+    } finally {
+      db.commit();
+    }
+    return reply;
+  }
+
   public DescribeImageAttributeResponseType DescribeImageAttribute( DescribeImageAttributeType request ) throws EucalyptusCloudException {
     DescribeImageAttributeResponseType reply = ( DescribeImageAttributeResponseType ) request.getReply();
     reply.setImageId( request.getImageId() );
 
-    if( request.getAttribute() != null )
+    if ( request.getAttribute() != null )
       request.applyAttribute();
 
-    if ( request.getProductCodes() != null )
-      throw new EucalyptusCloudException( "image attribute: product codes: not implemented" );
     if ( request.getBlockDeviceMapping() != null )
       throw new EucalyptusCloudException( "image attribute: block device mappings: not implemented" );
 
@@ -552,8 +561,8 @@ If you specify a list of executable users, only users that have launch permissio
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
     try {
       ImageInfo imgInfo = db.getUnique( new ImageInfo( request.getImageId() ) );
-      if( !imgInfo.isAllowed( db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId() ) ) ) )
-        throw new EucalyptusCloudException( "image attribute: not authorized." );        
+      if ( !imgInfo.isAllowed( db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId() ) ) ) )
+        throw new EucalyptusCloudException( "image attribute: not authorized." );
       if ( request.getKernel() != null ) {
         reply.setKernel( imgInfo.getKernelId() );
       } else if ( request.getRamdisk() != null ) {
@@ -563,8 +572,13 @@ If you specify a list of executable users, only users that have launch permissio
           reply.getLaunchPermission().add( LaunchPermissionItemType.getGroup( userGroup.getName() ) );
         for ( UserInfo user : imgInfo.getPermissions() )
           reply.getLaunchPermission().add( LaunchPermissionItemType.getUser( user.getUserName() ) );
-      } else
-        throw new EucalyptusCloudException( "invalid image attribute request: not implemented" );
+      } else if ( !request.getProductCodes().isEmpty() ) {
+        for ( ProductCode p : imgInfo.getProductCodes() ) {
+          reply.getProductCodes().add( p.getValue() );
+        }
+      } else {
+        throw new EucalyptusCloudException( "invalid image attribute request." );
+      }
     } catch ( EucalyptusCloudException e ) {
       db.commit();
       throw e;
@@ -575,13 +589,26 @@ If you specify a list of executable users, only users that have launch permissio
   public ModifyImageAttributeResponseType ModifyImageAttribute( ModifyImageAttributeType request ) throws EucalyptusCloudException {
     ModifyImageAttributeResponseType reply = ( ModifyImageAttributeResponseType ) request.getReply();
 
-    if( request.getAttribute() != null )
+    if ( request.getAttribute() != null )
       request.applyAttribute();
 
-    if ( !request.getProductCodes().isEmpty() )
-      throw new EucalyptusCloudException( "image attribute: product codes: not implemented" );
-
-    reply.set_return( this.modifyImageInfo( request.getImageId(), request.getUserId(), request.isAdministrator(), request.getAdd(), request.getRemove() ) );
+    if ( request.getProductCodes().isEmpty() ) {
+      reply.set_return( this.modifyImageInfo( request.getImageId(), request.getUserId(), request.isAdministrator(), request.getAdd(), request.getRemove() ) );
+    } else {
+      EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
+      ImageInfo imgInfo = null;
+      try {
+        imgInfo = db.getUnique( new ImageInfo( request.getImageId() ) );
+        for ( String productCode : request.getProductCodes() )
+          imgInfo.getProductCodes().add( new ProductCode( productCode ) );
+        db.commit();
+        reply.set_return( true );
+      }
+      catch ( EucalyptusCloudException e ) {
+        db.rollback();
+        reply.set_return( false );
+      }
+    }
     return reply;
   }
 
@@ -610,7 +637,7 @@ If you specify a list of executable users, only users that have launch permissio
     }
   }
 
-  private void applyImageAttributes( final EntityWrapper<ImageInfo> db ,final ImageInfo imgInfo, final List<LaunchPermissionItemType> changeList, final boolean adding ) throws EucalyptusCloudException {
+  private void applyImageAttributes( final EntityWrapper<ImageInfo> db, final ImageInfo imgInfo, final List<LaunchPermissionItemType> changeList, final boolean adding ) throws EucalyptusCloudException {
     for ( LaunchPermissionItemType perm : changeList ) {
       if ( perm.isGroup() ) {
         UserGroupInfo target = new UserGroupInfo( perm.getGroup() );

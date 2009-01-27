@@ -38,6 +38,7 @@ public class Volume extends AbstractIsomorph {
       case EXTANT: return "available";
       case ANNIHILATING: return "deleting";
       case ANNILATED: return "deleted";
+      case ASSPLODED: return "failed";      
       default: return null;
     }
   }
