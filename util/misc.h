@@ -99,5 +99,7 @@ int logcat (int debug_level, const char * file_name);
 int touch (const char * path);
 int diff (const char * path1, const char * path2);
 int dir_size (const char * path);
+char * file2str (const char * path); /* read file 'path' into a new string */
+long long str2longlong (const char * str, const char * begin, const char * end); /* extract integer from str bound by 'begin' and 'end' */
 
 #endif

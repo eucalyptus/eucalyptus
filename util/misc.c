@@ -12,6 +12,7 @@
 #include <math.h> /* powf */
 #include <vnetwork.h>
 #include <fcntl.h> /* open */
+#include <utime.h> /* utime */
 
 #ifndef NO_AXIS /* for compiling on systems without Axis */
 #include <neethi_policy.h>
@@ -707,16 +708,20 @@ int logcat (int debug_level, const char * file_name)
 	return got;
 }
 
-/* create an empty file as a marker */
+/* "touch" a file, creating if necessary */
 int touch (const char * path)
 {
     int ret = 0;
     int fd;
     
-    if ( (fd = open (path, O_EXCL | O_CREAT, 0644)) > 0 ) {
+    if ( (fd = open (path, O_WRONLY | O_CREAT | O_NONBLOCK, 0644)) >= 0 ) {
         close (fd);
+        if (utime (path, NULL)!=0) {
+            logprintfl (EUCAERROR, "error: touch(): failed to adjust time for %s (%s)\n", path, strerror (errno));
+            ret = 1;
+        }
     } else {
-        logprintfl (EUCAERROR, "error: failed to create marker %s\n", path);
+        logprintfl (EUCAERROR, "error: touch(): failed to create/open file %s (%s)\n", path, strerror (errno));
         ret = 1;
     }
     return ret;
@@ -794,4 +799,85 @@ int dir_size (const char * path)
 
     closedir (dir);
     return size;
+}
+
+/* read file 'path' into a new string */
+char * file2str (const char * path)
+{
+    char * content = NULL;
+    struct stat mystat;
+    
+    if (stat (path, &mystat) < 0) {
+        logprintfl (EUCAERROR, "error: file2str() could not state file %s\n", path);
+        return content;
+    }
+
+    if ( (content = malloc (mystat.st_size+BUFSIZE)) == NULL ) {
+        logprintfl (EUCAERROR, "error: file2str() out of memory reading file %s\n", path);
+        return content;
+    }
+
+    int fp;
+    if ( ( fp = open (path, O_RDONLY) ) < 1 ) {
+        logprintfl (EUCAERROR, "error: file2str() failed to open file %s\n", path);
+        free (content);
+        content = NULL;
+        return content;
+    }
+
+    int got;
+    char * p = content;
+    while ( ( got = read (fp, p, BUFSIZE) ) > 0 )
+        p += got;
+
+    if ( got < 0 ) {
+        logprintfl (EUCAERROR, "error: file2str() failed to read file %s\n", path);
+        free (content);
+        content = NULL;
+        return content;
+    }
+
+    * p = '\0';
+    return content;
+}
+
+/* extract integer from str bound by 'begin' and 'end' */
+long long str2longlong (const char * str, const char * begin, const char * end)
+{
+    long long value = -1L;
+
+    if ( str==NULL || begin==NULL || end==NULL || strlen (str)<3 || strlen (begin)<1 || strlen (end)<1 ) {
+        logprintfl (EUCAERROR, "error: str2int() called with bad parameters\n");
+        return value;
+    }
+
+    char * b = strstr ( str, begin );
+    if ( b==NULL ) {
+        logprintfl (EUCAERROR, "error: str2int() beginning string '%s' not found\n", begin);
+        return value;
+    }
+
+    char * e = strstr ( str, end );
+    if ( e==NULL ) {
+        logprintfl (EUCAERROR, "error: str2int() end string '%s' not found\n", end);
+        return value;
+    }
+
+    b += strlen (begin); // b now points at the supposed number
+    int len = e-b;
+    if ( len < 0 ) {
+        logprintfl (EUCAERROR, "error: str2int() there is nothing between '%s' and '%s'\n", begin, end);
+        return value;
+    }
+
+    if ( len > BUFSIZE-1 ) {
+        logprintfl (EUCAERROR, "error: str2int() string between '%s' and '%s' is too long\n", begin, end);
+        return value;
+    }
+
+    char buf [BUFSIZE];
+    strncpy (buf, b, len);
+    value = atoll (buf);
+
+    return value;
 }

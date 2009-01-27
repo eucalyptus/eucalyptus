@@ -942,6 +942,7 @@ int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource **outRe
     int sum_cores = 0;      /* for known domains: sum of requested cores */
 
     logprintfl (EUCAINFO, "doDescribeResource() invoked\n");
+    LogprintfCache (); /* print cache contents */
 
     * outRes = NULL;
     error = init_config();

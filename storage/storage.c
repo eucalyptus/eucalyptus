@@ -33,6 +33,10 @@ static char *sc_instance_path = "";
 static int scConfigInit=0;
 static sem * sc_sem;
 
+/* in MB */
+static long long cache_size_mb = DEFAULT_NC_CACHE_SIZE;
+static long long cache_free_mb = DEFAULT_NC_CACHE_SIZE;
+
 int scInitConfig (void)
 {
     struct stat mystat;
@@ -59,6 +63,12 @@ int scInitConfig (void)
         
         if (get_conf_var(config, INSTANCE_PATH, &s)>0){ 
             sc_instance_path = strdup (s); 
+            free (s); 
+        }
+
+        if (get_conf_var(config, CONFIG_NC_CACHE_SIZE, &s)>0){ 
+            cache_size_mb = atoll (s); 
+            cache_free_mb = cache_size_mb;
             free (s); 
         }
     }
@@ -129,6 +139,291 @@ ncInstance * scRecoverInstanceInfo (const char *instanceId)
     close (fd);
     instance->stateCode = NO_STATE;
     return instance;
+}
+
+typedef struct cache_entry_t {
+    char path [BUFSIZE];
+    long long size_mb;
+    struct cache_entry_t * next;
+    struct cache_entry_t * prev;
+} cache_entry;
+
+static cache_entry * cache_head = NULL;
+
+static void add_to_cache (const char * cached_path, const long long file_size_bytes)
+{
+    long long file_size_mb = file_size_bytes/MEGABYTE;
+
+    cache_entry * e = malloc (sizeof(cache_entry));
+    if (e==NULL) {
+        logprintfl (EUCAFATAL, "error: out of memory in add_to_cache()\n");
+        return;
+    }
+
+    strncpy (e->path, cached_path, BUFSIZE);
+    e->size_mb = file_size_mb;
+    e->next = NULL;
+    e->prev = NULL;
+
+    // add at the end
+    cache_entry ** pp;
+    cache_entry * p = NULL;
+    for ( pp = & cache_head; * pp != NULL; pp = & ((* pp)->next)) p = * pp;
+    if ( p ) {
+        e->prev = p;
+    }
+    * pp = e;
+
+    cache_free_mb -= file_size_mb;
+}
+
+void LogprintfCache (void)
+{
+    struct stat mystat;
+    cache_entry * e;
+    if (cache_head) {
+        logprintfl (EUCAINFO, "cached images (free=%d of %dMB):\n", cache_free_mb, cache_size_mb);
+    } else {
+        logprintfl (EUCAINFO, "cached images (free=%d of %dMB): none\n", cache_free_mb, cache_size_mb);
+    }
+    for ( e = cache_head; e; e=e->next) {
+        bzero (&mystat, sizeof (mystat));
+        stat (e->path, &mystat);
+        logprintfl (EUCAINFO, "\t%5dMB %8dsec %s\n", e->size_mb, mystat.st_mtime, e->path);
+    }
+}
+
+/* Returns 1 if there is space in the cache for the image,
+ * purging the cache in LRU fashion, if necessary.
+ * The function assumes the image is not in the cache already */
+static int ok_to_cache (const char * cached_path, const long long file_size_bytes)
+{
+    long long file_size_mb = file_size_bytes/MEGABYTE;
+
+    if (file_size_mb > cache_size_mb) return 0;
+
+    while (file_size_mb > cache_free_mb) {
+        time_t oldest_mtime = time (NULL) + 1;
+        off_t  oldest_size = 0;
+        cache_entry * oldest_entry = NULL;
+        struct stat mystat;
+        cache_entry * e;
+        for ( e = cache_head; e; e=e->next) {
+            if (stat (e->path, &mystat)<0) {
+                logprintfl (EUCAERROR, "error: ok_to_cache() can't stat %s\n", cached_path);
+                return 0;
+            }
+            if (mystat.st_mtime<oldest_mtime) {
+                oldest_mtime = mystat.st_mtime;
+                oldest_size = e->size_mb; /* (mystat.st_size doesn't include digest) */
+                oldest_entry = e;
+            } else {
+                if (mystat.st_mtime==oldest_mtime) {
+                    /* smaller ones get purged first */
+                    if (oldest_size > e->size_mb) {
+                        oldest_size = e->size_mb;
+                        oldest_entry = e;
+                    }
+                }
+            }
+        }
+
+        if ( oldest_entry ) { // remove it
+            logprintfl (EUCAINFO, "purging from cache image %s\n", oldest_entry->path);
+            if ( oldest_entry->next ) {
+                oldest_entry->next->prev = oldest_entry->prev;
+            }
+            if ( oldest_entry->prev ) {
+                oldest_entry->prev->next = oldest_entry->next;
+            } else {
+                cache_head = oldest_entry->next;
+            }
+            if ( unlink (oldest_entry->path) != 0 ) { // should allow open descriptors to complete
+                logprintfl (EUCAERROR, "error: failed to unlink file %s (%s)\n", oldest_entry->path, strerror (errno));
+            }
+            char digest_path [BUFSIZE];
+            snprintf (digest_path, BUFSIZE, "%s-digest", oldest_entry->path);
+            unlink (digest_path);
+            cache_free_mb += oldest_entry->size_mb;
+            free (oldest_entry);
+        } else {
+            logprintfl (EUCAERROR, "error: cannot find oldest entry in cache\n");
+            return 0;
+        }
+    }
+    add_to_cache (cached_path, file_size_bytes);
+    return 1;
+}
+
+static long long init_cache (const char * cache_path)
+{
+    long long total_size = 0;
+    
+    logprintfl (EUCAINFO, "checking the integrity of the cache directory (%s)\n", cache_path);
+    
+    if (cache_path==NULL) {
+        logprintfl (EUCAINFO, "no cache directory yet\n");
+        return total_size;
+    }
+
+    struct stat mystat;
+    if (stat (cache_path, &mystat) < 0) {
+        logprintfl (EUCAFATAL, "error: could not stat %s\n", cache_path);
+        return -1;
+    }
+    total_size += mystat.st_size;
+   
+    DIR * cache_dir;
+    if ((cache_dir=opendir(cache_path))==NULL) {
+        logprintfl (EUCAFATAL, "errror: could not open cache directory %s\n", cache_path);
+        return -1;
+    }
+
+    struct dirent * cache_dir_entry;
+    while ((cache_dir_entry=readdir(cache_dir))!=NULL) {
+        char * image_name = cache_dir_entry->d_name;
+        char image_path [BUFSIZE];
+        int image_size = 0;
+        int image_files = 0;
+
+        if (!strcmp(".", image_name) || 
+            !strcmp("..", image_name))
+            continue;
+        
+        DIR * image_dir;
+        snprintf (image_path, BUFSIZE, "%s/%s", cache_path, image_name);
+        if ((image_dir=opendir(image_path))==NULL) {
+            logprintfl (EUCAWARN, "warning: unopeneable directory %s\n", image_path);
+            continue;
+        }
+
+        if (stat (image_path, &mystat) < 0) {
+            logprintfl (EUCAWARN, "warning: could not stat %s\n", image_path);
+            continue;
+        }
+        image_size += mystat.st_size;
+        
+        /* make sure that image directory contains only two files: one
+         * named X and another X-digest, also add up their sizes */
+        char X        [BUFSIZE] = "";
+        char X_digest [BUFSIZE] = "";
+        struct dirent * image_dir_entry;
+        while ((image_dir_entry=readdir(image_dir))!=NULL) {
+            char name [BUFSIZE];
+            strncpy (name, image_dir_entry->d_name, BUFSIZE);
+            
+            if (!strcmp(".", name) ||
+                !strcmp("..", name))
+                continue;
+
+            image_files++;
+            
+            char filepath [BUFSIZE];
+            snprintf (filepath, BUFSIZE, "%s/%s", image_path, name);
+            if (stat (filepath, &mystat) < 0 ) {
+                logprintfl (EUCAERROR, "error: could not stat file %s\n", filepath);
+                break;
+            }
+            if (mystat.st_size < 1) {
+                logprintfl (EUCAERROR, "error: empty file among cached images in %s\n", filepath);
+                break;
+            }
+            image_size += mystat.st_size;
+            
+            char * suffix;
+            if ((suffix=strstr (name, "-digest"))==NULL) {
+                if (strlen (X)) 
+                    break; /* already saw X => fail */
+                strncpy (X, name, BUFSIZE);
+            } else {
+                if (strlen (X_digest))
+                    break; /* already saw X-digest => fail */
+                * suffix = '\0';
+                strncpy (X_digest, name, BUFSIZE);
+            }
+        }
+
+        if (image_files > 0) { /* ignore empty directories */
+            if (image_files != 2 || strncmp (X, X_digest, BUFSIZE) != 0 ) {
+                logprintfl (EUCAERROR, "error: inconsistent state of cached image %s, deleting it\n", image_name);
+                if (vrun ("rm -rf %s", image_path)) {            
+                    logprintfl (EUCAWARN, "warning: failed to remove %s\n", image_path);
+                }
+            } else {
+                char filepath [BUFSIZE];
+                snprintf (filepath, BUFSIZE, "%s/%s", image_path, X);
+                if (image_size>0) {
+                    logprintfl (EUCAINFO, "- cached image %s directory, size=%d\n", image_name, image_size);
+                    total_size += image_size;
+                    add_to_cache (filepath, image_size);
+                } else {
+                    logprintfl (EUCAWARN, "warning: empty cached image directory %s\n", image_path);
+                }
+            }
+        }
+    }
+    closedir (cache_dir);
+
+    return total_size;
+}
+
+#define F1 "/tmp/improbable-cache-file-1"
+#define F2 "/tmp/improbable-cache-file-2"
+#define F3 "/tmp/improbable-cache-file-3"
+#define F4 "/tmp/improbable-cache-file-4"
+#define F5 "/tmp/improbable-cache-file-5"
+#define RM_CMD "rm -rf /tmp/improbable-cache-file-?"
+
+int test_cache (void)
+{
+    int error = 0;
+
+    /* save the current values */
+    long long saved_size = cache_size_mb;
+    long long saved_free = cache_free_mb;
+    cache_entry * saved_head = cache_head;
+
+    cache_size_mb = 10;
+    cache_free_mb = 10;
+    cache_head = NULL;
+
+    touch (F1); 
+    if (ok_to_cache (F1, 3*MEGABYTE)!=1) { error= 1; goto out; }
+    LogprintfCache();
+    sleep (1);
+
+    touch (F2);
+    add_to_cache (F2, 3*MEGABYTE);
+    LogprintfCache();
+    sleep (1);
+
+    touch (F3);
+    if (ok_to_cache (F3, 11*MEGABYTE)!=0) { error = 2; goto out; }
+    if (ok_to_cache (F3, 7*MEGABYTE)!=1) { error = 3; goto out; }
+    LogprintfCache();
+
+    touch (F4);
+    if (ok_to_cache (F4, 4*MEGABYTE)!=1) { error = 4; goto out; }
+    touch (F5);
+    if (ok_to_cache (F5, 6*MEGABYTE)!=1) { error = 5; goto out; }
+    LogprintfCache();
+
+    touch (F3);
+    add_to_cache (F3, 3*MEGABYTE);
+    touch (F2);
+    add_to_cache (F2, 5*MEGABYTE);
+    LogprintfCache();
+
+    touch (F1);
+    if (ok_to_cache (F1, 1*MEGABYTE)!=1) { error = 6; goto out; }
+    LogprintfCache();
+    
+out:
+    cache_size_mb = saved_size;
+    cache_free_mb = saved_free;
+    cache_head = saved_head;
+    system (RM_CMD);
+    return error;
 }
 
 /* perform integrity check on instances directory, including the cache:
@@ -225,109 +520,13 @@ long long scFSCK (bunchOfInstances ** instances)
     closedir (insts_dir);
 
     /*** scan the cache ***/
-
-    logprintfl (EUCAINFO, "checking the integrity of the cache directory (%s)\n", cache_path);
-
-    if (cache_path==NULL) {
-        logprintfl (EUCAINFO, "no cache directory yet\n");
-        return total_size;
-    }
-
-    if (stat (cache_path, &mystat) < 0) {
-        logprintfl (EUCAFATAL, "error: could not stat %s\n", cache_path);
-        free (cache_path);
-        return -1;
-    }
-    total_size += mystat.st_size;
-   
-    DIR * cache_dir;
-    if ((cache_dir=opendir(cache_path))==NULL) {
-        logprintfl (EUCAFATAL, "errror: could not open cache directory %s\n", cache_path);
-        free (cache_path);
-        return -1;
-    }
-
-    struct dirent * cache_dir_entry;
-    while ((cache_dir_entry=readdir(cache_dir))!=NULL) {
-        char * image_name = cache_dir_entry->d_name;
-        char image_path [BUFSIZE];
-        int image_size = 0;
-        int image_files = 0;
-
-        if (!strcmp(".", image_name) || 
-            !strcmp("..", image_name))
-            continue;
-        
-        DIR * image_dir;
-        snprintf (image_path, BUFSIZE, "%s/%s", cache_path, image_name);
-        if ((image_dir=opendir(image_path))==NULL) {
-            logprintfl (EUCAWARN, "warning: unopeneable directory %s\n", image_path);
-            continue;
-        }
-
-        if (stat (image_path, &mystat) < 0) {
-            logprintfl (EUCAWARN, "warning: could not stat %s\n", image_path);
-            continue;
-        }
-        image_size += mystat.st_size;
-        
-        /* make sure that image directory contains only two files: one
-         * named X and another X-digest, also add up their sizes */
-        char X        [BUFSIZE] = "";
-        char X_digest [BUFSIZE] = "";
-        struct dirent * image_dir_entry;
-        while ((image_dir_entry=readdir(image_dir))!=NULL) {
-            char name [BUFSIZE];
-            strncpy (name, image_dir_entry->d_name, BUFSIZE);
-            
-            if (!strcmp(".", name) ||
-                !strcmp("..", name))
-                continue;
-            image_files++;
-            
-            char filepath [BUFSIZE];
-            snprintf (filepath, BUFSIZE, "%s/%s", image_path, name);
-            if (stat (filepath, &mystat) < 0 ) {
-                logprintfl (EUCAERROR, "error: could not stat file %s\n", filepath);
-                break;
-            }
-            if (mystat.st_size < 1) {
-                logprintfl (EUCAERROR, "error: empty file among cached images in %s\n", filepath);
-                break;
-            }
-            image_size += mystat.st_size;
-            
-            char * suffix;
-            if ((suffix=strstr (name, "-digest"))==NULL) {
-                if (strlen (X)) 
-                    break; /* already saw X => fail */
-                strncpy (X, name, BUFSIZE);
-            } else {
-                if (strlen (X_digest))
-                    break; /* already saw X-digest => fail */
-                * suffix = '\0';
-                strncpy (X_digest, name, BUFSIZE);
-            }
-        }
-        
-        if (image_files != 2 || strncmp (X, X_digest, BUFSIZE) != 0 ) {
-            logprintfl (EUCAERROR, "error: inconsistent state of cached image %s, deleting it\n", image_name);
-            if (vrun ("rm -rf %s", image_path)) {            
-                logprintfl (EUCAWARN, "warning: failed to remove %s\n", image_path);
-            }
-        } else {
-            if (image_size>0) {
-                logprintfl (EUCAINFO, "- cached image %s directory, size=%d\n", image_name, image_size);
-                total_size += image_size;
-            } else {
-                logprintfl (EUCAWARN, "warning: empty cached image directory %s\n", image_path);
-            }
-        }
-    }
-    closedir (cache_dir);
+    long long cache_bytes = init_cache (cache_path);
     free (cache_path);
+    if (cache_bytes < 0) {
+        return -1;
+    }
     
-    return total_size;
+    return total_size + cache_bytes;
 }
 
 const char * scGetInstancePath(void)
@@ -433,27 +632,30 @@ static int wait_for_file (const char * appear, const char * disappear, const int
 
 static int get_cached_file (const char * user_id, const char * url, const char * file_id, const char * instance_id, const char * file_name, char * file_path) 
 {
-	char cached_dir   [BUFSIZE];
-	char cached_path  [BUFSIZE];
-	char staging_path [BUFSIZE];
-	char digest_path  [BUFSIZE];
+    char tmp_digest_path [BUFSIZE];
+	char cached_dir      [BUFSIZE]; 
+	char cached_path     [BUFSIZE];
+	char staging_path    [BUFSIZE];
+	char digest_path     [BUFSIZE];
 	
-	snprintf (file_path,    BUFSIZE, "%s/%s/%s/%s",    sc_instance_path, user_id, instance_id, file_name);
-	snprintf (cached_dir,   BUFSIZE, "%s/%s/cache/%s", sc_instance_path, EUCALYPTUS_ADMIN, file_id); /* cache is in admin's directory */
-	snprintf (cached_path,  BUFSIZE, "%s/%s",          cached_dir, file_name);
-	snprintf (staging_path, BUFSIZE, "%s-staging",     cached_path);
-	snprintf (digest_path,  BUFSIZE, "%s-digest",      cached_path);
+	snprintf (file_path,       BUFSIZE, "%s/%s/%s/%s",    sc_instance_path, user_id, instance_id, file_name);
+	snprintf (tmp_digest_path, BUFSIZE, "%s-digest",      file_path);
+	snprintf (cached_dir,      BUFSIZE, "%s/%s/cache/%s", sc_instance_path, EUCALYPTUS_ADMIN, file_id); /* cache is in admin's directory */
+	snprintf (cached_path,     BUFSIZE, "%s/%s",          cached_dir, file_name);
+	snprintf (staging_path,    BUFSIZE, "%s-staging",     cached_path);
+	snprintf (digest_path,     BUFSIZE, "%s-digest",      cached_path);
 
 retry:
 
     /* under a lock, figure out the state of the file */
     sem_p (sc_sem); /***** acquire lock *****/
-    ensure_path_exists (cached_dir); /* creates missing directories */
+    ensure_subdirectory_exists (file_path); /* creates missing directories */
 
 	struct stat mystat;
     int cached_exists  = ! stat (cached_path, &mystat);
     int staging_exists = ! stat (staging_path, &mystat);
 
+    int e = ERROR;
     int action;
     enum { ABORT, VERIFY, WAIT, STAGE };
     if ( staging_exists ) {
@@ -466,34 +668,73 @@ retry:
         }
     }
     
-    /* while still under lock... */
+    /* while still under lock, decide whether to cache */
+    long long file_size = 0;
+    int should_cache = 0;
     if (action==STAGE) { 
-        if ( touch (staging_path) ) /* indicate that we'll be downloading it */
+        e = walrus_object_by_url (url, tmp_digest_path); /* get the digest to see how big the file is */
+        int digest_size = 0;
+        if (e==OK && stat (tmp_digest_path, &mystat)) {
+            digest_size = (int)mystat.st_size;
+        }
+        if (e==OK) {
+            /* pull the size out of the digest */
+            char * xml_file = file2str (tmp_digest_path);
+            if (xml_file) {
+                file_size = str2longlong (xml_file, "<size>", "</size>");
+                free (xml_file);
+            }
+            if (file_size > 0) {
+                if ( ok_to_cache (cached_path, file_size+digest_size) ) { /* will invalidate the cache, if needed */
+                    ensure_path_exists (cached_dir); /* creates missing directories */
+                    should_cache = 1;
+                    if ( touch (staging_path) ) { /* indicate that we'll be caching it */
+                        logprintfl (EUCAERROR, "error: failed to create staging file %s\n", staging_path);
+                        action = ABORT;
+                    }
+                }
+            } else {
+                logprintfl (EUCAERROR, "error: failed to obtain file size from digest %s\n", url);
+                action = ABORT;
+            }
+        } else {
+            logprintfl (EUCAERROR, "error: failed to obtain digest from %s\n", url);
             action = ABORT;
+        }
     }
     sem_v (sc_sem); /***** release lock *****/
     
-	int e = ERROR;
     switch (action) {
     case STAGE:
-        /* TODO: purge expired items from the cache */
-        logprintfl (EUCAINFO, "bringing file %s into the cache...\n", cached_path);		
-        e = walrus_image_by_manifest_url (url, cached_path); /* get the file */
-        if (!e) e=walrus_object_by_url (url, digest_path); /* get the digest */
-
+        logprintfl (EUCAINFO, "downloding image into %s...\n", file_path);		
+        e = walrus_image_by_manifest_url (url, file_path);
+        if ( e==OK && should_cache ) {
+            if ( (e=run ("cp", "-a", file_path, cached_path, 0)) != 0) {
+                logprintfl (EUCAERROR, "failed to copy file %s into cache at %s\n", file_path, cached_path);
+            }
+            if ( e==OK && (e=run ("cp", "-a", tmp_digest_path, digest_path, 0)) != 0) {
+                logprintfl (EUCAERROR, "failed to copy digest file %s into cache at %s\n", tmp_digest_path, digest_path);
+            }
+        }
+        
         sem_p (sc_sem);
-        unlink (staging_path);
+        if (should_cache) {
+            unlink (staging_path);            
+        }
         if ( e ) {
-            logprintfl (EUCAERROR, "error: failed to download the file from Walrus\n");
-            unlink (cached_path);
-            unlink (digest_path);
-            if ( rmdir (cached_dir) ) {
-                logprintfl (EUCAWARN, "warning: failed to remove cache directory %s\n", cached_dir);
+            logprintfl (EUCAERROR, "error: failed to download file from Walrus into %s\n", file_path);
+            unlink (file_path);
+            unlink (tmp_digest_path);
+            if (should_cache) {
+                unlink (cached_path);
+                unlink (digest_path);
+                if ( rmdir(cached_dir) ) {
+                    logprintfl (EUCAWARN, "warning: failed to remove cache directory %s\n", cached_dir);
+                }
             }
         }
         sem_v (sc_sem);
-        if (e) return e;
-        /* yes, it is OK to fall through */
+        break;
         
     case WAIT:
         logprintfl (EUCAINFO, "waiting for disapperance of %s...\n", staging_path);
@@ -501,7 +742,7 @@ retry:
          * download succeeded or it failed */
         if ( (e=wait_for_file (NULL, staging_path, 180, "cached image")) ) 
             return e;        
-        /* yes, yes, it is OK to fall through */
+        /* yes, it is OK to fall through */
         
     case VERIFY:
         logprintfl (EUCAINFO, "verifying cached file in %s...\n", cached_path);
@@ -521,6 +762,11 @@ retry:
             } else {
                 logprintfl (EUCAINFO, "due to failure, removed cache directory %s\n", cached_dir);
             }
+        } else {
+            /* touch the digest so cache can use mtime for invalidation */
+            if ( touch (digest_path) ) {
+                logprintfl (EUCAERROR, "error: failed to touch digest file %s\n", digest_path);
+            }            
         }
         sem_v (sc_sem); /***** release lock *****/
 
@@ -536,14 +782,14 @@ retry:
             return ERROR;
             
         } else { /* all good - copy it, finally */
-            ensure_subdirectory_exists (file_path); /* creates missing directories */
+            ensure_subdirectory_exists (file_path); /* creates missing directories */            
             if ( (e=run ("cp", "-a", cached_path, file_path, 0)) != 0) {
-                logprintfl (EUCAERROR, "failed to copy cached file %s into run file %s\n", cached_path, file_path);
-                return e;
+                logprintfl (EUCAERROR, "failed to copy file %s from cache at %s\n", file_path, cached_path);
+                return ERROR;
             }
         }
         break;
-
+        
     case ABORT:
         logprintfl (EUCAERROR, "get_cached_file() failed (errno=%d)\n", e);
     }

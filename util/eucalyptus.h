@@ -29,6 +29,7 @@
 #define CONFIG_NC_SERVICE "NC_SERVICE"
 #define CONFIG_NC_PORT "NC_PORT"
 #define CONFIG_NODES "NODES"
+#define CONFIG_NC_CACHE_SIZE "NC_CACHE_SIZE"
 
 /* name of the administrative user within Eucalyptus */
 #define EUCALYPTUS_ADMIN "eucalyptus"
@@ -39,7 +40,9 @@
 #define MAXLOGFILESIZE 32768000
 #define EUCA_MAX_GROUPS 64
 #define EUCA_MAX_VOLUMES 3
+#define DEFAULT_NC_CACHE_SIZE 99999 /* in MB */
 
+#define MEGABYTE 1048576
 #define OK 0
 #define ERROR 1
 
