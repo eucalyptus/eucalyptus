@@ -349,13 +349,8 @@ public class Storage {
                 try {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
-                    if(foundSnapshotInfo == null) {
-                        //retrieve the snapshot (tree) from Walrus.
-                        //"load" it locally and add to SnapshotInfos
-                        //ArrayList<String> snapshotFileNames = new ArrayList<String>();
-                        //List<String> snapshotSet = getSnapshots(snapshotSetName, snapshotId, snapshotFileNames);
+                    if(foundSnapshotInfo != null) {
                         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
-                        //ebsManager.loadSnapshots(snapshotSet, snapshotFileNames);
                         size = ebsManager.createVolume(volumeId, volumePath);
 
                     } else {
@@ -413,6 +408,9 @@ public class Storage {
             volumeReader.run();
         } else {
             throw new EucalyptusCloudException("volume file already exists");
+        }
+        if(file.length() == 0) {
+            throw new EucalyptusCloudException("could not get volume");
         }
         return volumePath;
     }
@@ -574,7 +572,7 @@ public class Storage {
             } catch(Exception ex) {
                 LOG.warn(ex, ex);
             }
-            httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
+            httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters, true);
             try {
                 httpWriter.run();
             } catch(Exception ex) {
@@ -706,10 +704,14 @@ public class Storage {
             }
             String date = new Date().toString();
             String httpVerb = verb;
-            String addrPath = null;
+            String addrPath;
             try {
                 java.net.URI addrUri = new URL(addr).toURI();
-                addrPath = addrUri.getPath().toString() + "?" + addrUri.getQuery().toString();
+                addrPath = addrUri.getPath().toString();
+                String query = addrUri.getQuery();
+                if(query != null) {
+                    addrPath += "?" + query;
+                }
             } catch(Exception ex) {
                 ex.printStackTrace();
                 return null;
@@ -759,6 +761,7 @@ public class Storage {
     public class PutMethodWithProgress extends PutMethod {
         private File outFile;
         private CallBack callback;
+        private boolean deleteOnXfer;
 
         public PutMethodWithProgress(String path) {
             super(path);
@@ -770,6 +773,10 @@ public class Storage {
 
         public void setCallBack(CallBack callback) {
             this.callback = callback;
+        }
+
+        public void setDeleteOnXfer(boolean deleteOnXfer) {
+            this.deleteOnXfer = deleteOnXfer;
         }
 
         @Override
@@ -794,8 +801,11 @@ public class Storage {
                     }
                 }
                 callback.finish();
-                gzipOutStream.finish();
+                gzipOutStream.close();
                 inputStream.close();
+                if(deleteOnXfer) {
+                    snapshotStorageManager.deleteAbsoluteObject(outFile.getAbsolutePath());
+                }
             } else{
                 return false;
             }
@@ -809,8 +819,6 @@ public class Storage {
 
         private HttpClient httpClient;
         private HttpMethodBase method;
-        private File file;
-
         public HttpWriter(String httpVerb, String bucket, String key, String eucaOperation, String eucaHeader) {
             httpClient = new HttpClient();
             String walrusAddr = System.getProperty(WalrusProperties.URL_PROPERTY);
@@ -843,9 +851,12 @@ public class Storage {
                 method.setRequestHeader("Content-Length", String.valueOf(file.length()));
                 ((PutMethodWithProgress)method).setOutFile(file);
                 ((PutMethodWithProgress)method).setCallBack(callback);
-
-                this.file = file;
             }
+        }
+
+        public HttpWriter(String httpVerb, File file, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters, boolean deleteOnXfer) {
+            this(httpVerb, file, callback, bucket, key, eucaOperation, eucaHeader, httpParameters);
+            ((PutMethodWithProgress)method).setDeleteOnXfer(deleteOnXfer);
         }
 
         public void run() throws EucalyptusCloudException {
@@ -899,6 +910,7 @@ public class Storage {
         private void getResponseToFile() {
             byte[] bytes = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
             try {
+                assert(method != null);
                 httpClient.executeMethod(method);
                 InputStream httpIn = method.getResponseBodyAsStream();
                 int bytesRead;
