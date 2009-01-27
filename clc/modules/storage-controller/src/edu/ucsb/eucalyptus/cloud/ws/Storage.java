@@ -851,8 +851,6 @@ public class Storage {
         public void run() throws EucalyptusCloudException {
             try {
                 httpClient.executeMethod(method);
-                String response = method.getResponseBodyAsString();
-                System.out.println(response);
                 method.releaseConnection();
             } catch (Exception ex) {
                 ex.printStackTrace();
