@@ -793,7 +793,9 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
       //      rc = system(cmd);
       snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip link set dev %s up", vnetconfig->eucahome, newbrname);
       rc = system(cmd);
-      
+      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr flush %s", vnetconfig->eucahome, newbrname);
+      rc = system(cmd);
+
       // bring if up
       //      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add 0.0.0.0 dev %s", vnetconfig->eucahome, newdevname);
       //      rc = system(cmd);
@@ -809,21 +811,6 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
     if (rc) {
       return(rc);
     }
-    /*
-      newip = hex2dot(vnetconfig->networks[vlan].router);
-      netmask = hex2dot(vnetconfig->networks[vlan].nm);
-      
-      snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, newdevname, newip, netmask);
-      rc = system(cmd);
-      if (rc) {
-      logprintfl(EUCAERROR, "could not bring up new device %s with ip %s\n", newdevname, newip);
-      if (newip) free(newip);
-      if (netmask) free(netmask);
-      return(1);
-      }
-      if (newip) free(newip);
-      if (netmask) free(netmask);
-    */
     
     *outbrname = strdup(newdevname);
   }
