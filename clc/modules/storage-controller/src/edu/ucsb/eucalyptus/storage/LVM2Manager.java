@@ -455,8 +455,9 @@ public class LVM2Manager implements ElasticBlockManager {
                 String snapshotRawFileName = StorageProperties.storageRootDirectory + PATH_SEPARATOR + foundLVMVolumeInfo.getVolumeId();
                 String dupSnapshotDeltaFileName = snapshotRawFileName + "." + Hashes.getRandom(4);
                 String returnValue = suspendDevice(dmDeviceName);
-                if(!returnValue.contains(foundLVMVolumeInfo.getVgName())) {
+                if(!returnValue.contains(foundLVMVolumeInfo.getVgName().replaceAll("-", "--"))) {
                     db.rollback();
+                    resumeDevice(dmDeviceName);
                     throw new EucalyptusCloudException("Could not suspend device " + dmDeviceName);
                 }
                 dupFile(snapshotRawFileName, dupSnapshotDeltaFileName);

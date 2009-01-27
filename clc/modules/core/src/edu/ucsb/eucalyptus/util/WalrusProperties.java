@@ -66,10 +66,6 @@ public class WalrusProperties {
         }
     }
 
-    static {
-        update();
-    }
-
     public static final String URL_PROPERTY = "euca.walrus.url";
     public static final String USAGE_LIMITS_PROPERTY = "euca.walrus.usageLimits";
     public static final String WALRUS_OPERATION = "WalrusOperation";
