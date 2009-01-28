@@ -192,6 +192,8 @@ public class StartupChecks {
     try {
       UserInfo u = UserManagement.generateAdmin();
       db.add( u );
+      UserGroupInfo allGroup = new UserGroupInfo( "all" );
+      db.recast( UserGroupInfo.class ).add( allGroup );
       db.getSession().persist( new Counters() );
       db.commit();
       return true;

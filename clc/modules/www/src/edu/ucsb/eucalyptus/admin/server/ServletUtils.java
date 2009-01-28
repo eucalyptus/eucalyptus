@@ -52,23 +52,34 @@ public class ServletUtils extends HttpServlet {
     public static void sendMail(String from, String to, String subject, String body)
             throws ServletException, IOException {
         Properties properties = System.getProperties();
-        //TODO: This should read the MX for the recepient
         String mailHost = properties.getProperty("mail.smtp.host");
         if(mailHost == null) {
             mailHost = InetAddress.getLocalHost().getHostName();
             properties.setProperty("mail.smtp.host", mailHost);
         }
+        try {
+            send(from, to, subject, body);
+        } catch(Exception ex) {
+            //try again with mailhost
+            properties.setProperty("mail.smtp.host", "mailhost");
+            try {
+                send(from, to, subject, body);
+            } catch(Exception exception) {
+                exception.printStackTrace();
+                //TODO: should read MX               
+            }
+        }
+    }
+
+    private static void send(String from, String to, String subject, String body) throws Exception {
+        Properties properties = System.getProperties();
         Session session = Session.getDefaultInstance(properties);
         MimeMessage message = new MimeMessage(session);
-        try {
-            message.setFrom(new InternetAddress(from));
-            message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
-            message.setSubject(subject);
-            message.setText(body);
-            Transport.send(message);
-        } catch(Exception ex) {
-            ex.printStackTrace();
-        }
+        message.setFrom(new InternetAddress(from));
+        message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+        message.setSubject(subject);
+        message.setText(body);
+        Transport.send(message);
     }
 
     public static String getRequestUrl(HttpServletRequest req) {

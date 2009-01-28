@@ -94,6 +94,14 @@ public class ImageInfo {
   )
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   private List<UserInfo> permissions = new ArrayList<UserInfo>();
+  @ManyToMany()
+  @JoinTable(
+      name = "image_has_perms",
+      joinColumns = { @JoinColumn( name = "image_id" ) },
+      inverseJoinColumns = @JoinColumn( name = "user_id" )
+  )
+  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  private List<ProductCode> productCodes = new ArrayList<ProductCode>();
 
   public static ImageInfo deregistered() {
     ImageInfo img = new ImageInfo();
@@ -244,6 +252,14 @@ public class ImageInfo {
     i.setKernelId( this.getKernelId() );
     i.setRamdiskId( this.getRamdiskId() );
     return i;
+  }
+
+  public List<ProductCode> getProductCodes() {
+    return productCodes;
+  }
+
+  public void setProductCodes( final List<ProductCode> productCodes ) {
+    this.productCodes = productCodes;
   }
 
   public void checkValid() {

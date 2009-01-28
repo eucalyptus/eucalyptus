@@ -65,6 +65,7 @@
         <class>edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotSet</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.Address</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo</class>
+        <class>edu.ucsb.eucalyptus.cloud.entities.ProductCode</class>
         <properties>
             <property name="hibernate.connection.provider_class" value="org.hibernate.connection.C3P0ConnectionProvider"/>
             <property name="hibernate.cache.provider_class" value="org.hibernate.cache.EhCacheProvider"/>

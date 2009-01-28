@@ -10,70 +10,78 @@
        http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0 http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0/euca.xsd">
 
 
-  <model name="eucalyptus-interface">
+    <model name="eucalyptus-interface">
 
-    <default-service-exception-strategy>
-      <outbound-endpoint ref="ReplyQueueWS"/>
-    </default-service-exception-strategy>
+        <default-service-exception-strategy>
+            <outbound-endpoint ref="ReplyQueueWS"/>
+        </default-service-exception-strategy>
 
-    <service name="HttpServer">
-      <inbound>
-        <vm:inbound-endpoint address="vm://HttpServer" synchronous="false"/>
-      </inbound>
-      <component class="edu.ucsb.eucalyptus.ic.HttpServer"/>
-    </service>
+        <service name="HttpServer">
+            <inbound>
+                <vm:inbound-endpoint address="vm://HttpServer" synchronous="false"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.ic.HttpServer"/>
+        </service>
 
-    <service name="Eucalyptus">
-      <inbound>
-        <inbound-endpoint ref="EucalyptusWS"/>
-      </inbound>
-      <component class="edu.ucsb.eucalyptus.ic.Eucalyptus"/>
-    </service>
+        <service name="Eucalyptus">
+            <inbound>
+                <inbound-endpoint ref="EucalyptusWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.ic.Eucalyptus"/>
+        </service>
 
 
-    <service name="RequestQueue">
-      <inbound>
-        <vm:inbound-endpoint address="vm://RequestQueue"/>
-      </inbound>
-      <component class="edu.ucsb.eucalyptus.ic.RequestQueue"/>
-      <outbound>
-        <filtering-router>
-          <outbound-endpoint ref="StartVerifyWS"/>
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.RunInstancesType"/>
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="VmControlWS"/>
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmControlMessage"/>
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ClusterEndpointWS"/>
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ClusterMessage"/>
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="KeyPairWS"/>
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmKeyPairMessage"/>
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ImageWS"/>
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImageMessage"/>
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="AddressWS"/>
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmAddressMessage"/>
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="GroupsWS"/>
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage"/>
-        </filtering-router>
-      </outbound>
-    </service>
+        <service name="RequestQueue">
+            <inbound>
+                <vm:inbound-endpoint address="vm://RequestQueue"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.ic.RequestQueue"/>
+            <outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="StartVerifyWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.RunInstancesType"/>
+                </filtering-router>
+                <filtering-router>
+                    <outbound-endpoint ref="VmControlWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmControlMessage"/>
+                </filtering-router>
+                <filtering-router>
+                    <outbound-endpoint ref="ClusterEndpointWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ClusterMessage"/>
+                </filtering-router>
+                <filtering-router>
+                    <outbound-endpoint ref="KeyPairWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmKeyPairMessage"/>
+                </filtering-router>
+                <filtering-router>
+                    <outbound-endpoint ref="ImageWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImageMessage"/>
+                </filtering-router>
+                <filtering-router>
+                    <outbound-endpoint ref="ImageWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockVolumeMessage"/>
+                </filtering-router>
+                <filtering-router>
+                    <outbound-endpoint ref="ImageWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockSnapshotMessage"/>
+                </filtering-router>
+                <filtering-router>
+                    <outbound-endpoint ref="AddressWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmAddressMessage"/>
+                </filtering-router>
+                <filtering-router>
+                    <outbound-endpoint ref="GroupsWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage"/>
+                </filtering-router>
+            </outbound>
+        </service>
 
-    <service name="ReplyQueue">
-      <inbound>
-        <inbound-endpoint ref="ReplyQueueWS"/>
-      </inbound>
-      <component class="edu.ucsb.eucalyptus.ic.ReplyQueue"/>
-    </service>
+        <service name="ReplyQueue">
+            <inbound>
+                <inbound-endpoint ref="ReplyQueueWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.ic.ReplyQueue"/>
+        </service>
 
-  </model>
+    </model>
 </mule>
