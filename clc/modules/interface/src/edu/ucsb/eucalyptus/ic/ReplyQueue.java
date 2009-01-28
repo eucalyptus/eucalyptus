@@ -95,7 +95,7 @@ public class ReplyQueue {
         errMsg = new EucalyptusErrorMessageType( exMsg.getComponentName(), msg, e.getMessage() );
       }
     }
-    if( errMsg == null ) {
+    if ( errMsg == null ) {
       ByteArrayOutputStream exStream = new ByteArrayOutputStream();
       exception.printStackTrace( new PrintStream( exStream ) );
       errMsg = new EucalyptusErrorMessageType( exMsg.getComponentName(), msg, "Internal Error: \n" + exStream.toString() );
@@ -104,7 +104,11 @@ public class ReplyQueue {
   }
 
   private EucalyptusMessage parsePayload( Object payload ) throws Exception {
-    return ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( ( String ) payload );
+    if ( payload instanceof EucalyptusMessage ) {
+      return (EucalyptusMessage) payload;
+    } else {
+      return ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( ( String ) payload );
+    }
   }
 
 }
