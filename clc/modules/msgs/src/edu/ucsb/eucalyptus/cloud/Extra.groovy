@@ -37,8 +37,10 @@ public class Pair {
   }
 
 }
-
-public class VmAllocationInfo implements Serializable {
+public interface RequestTransactionScript extends Serializable {
+  public EucalyptusMessage getRequest();
+}
+public class VmAllocationInfo extends RequestTransactionScript {
 
   RunInstancesType request;
   RunInstancesResponseType reply;
