@@ -96,9 +96,9 @@ public class ImageInfo {
   private List<UserInfo> permissions = new ArrayList<UserInfo>();
   @ManyToMany()
   @JoinTable(
-      name = "image_has_perms",
+      name = "image_has_product_codes",
       joinColumns = { @JoinColumn( name = "image_id" ) },
-      inverseJoinColumns = @JoinColumn( name = "user_id" )
+      inverseJoinColumns = @JoinColumn( name = "image_product_code_id" )
   )
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   private List<ProductCode> productCodes = new ArrayList<ProductCode>();
