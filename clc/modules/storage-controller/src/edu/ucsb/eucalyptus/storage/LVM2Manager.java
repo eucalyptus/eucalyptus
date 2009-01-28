@@ -53,7 +53,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class LVM2Manager implements ElasticBlockManager {
+public class LVM2Manager implements BlockStorageManager {
 
     public static final String lvmRootDirectory = "/dev";
     public static final String PATH_SEPARATOR = "/";
@@ -101,6 +101,38 @@ public class LVM2Manager implements ElasticBlockManager {
         }
     }
 
+    public void startupChecks() {
+        reload();
+    }
+
+    public void cleanVolume(String volumeId) {
+        EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+        LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
+        List<LVMVolumeInfo> lvmVolumeInfos = db.query(lvmVolumeInfo);
+        if(lvmVolumeInfos.size() > 0) {
+            LVMVolumeInfo lvmVolInfo = lvmVolumeInfos.get(0);
+            //remove aoe export
+            String loDevName = lvmVolInfo.getLoDevName();
+            exportManager.unexportVolume(lvmVolInfo.getVbladePid());
+            removeLoopback(loDevName);
+            db.delete(lvmVolInfo);
+            db.commit();
+        }
+    }
+
+     public void cleanSnapshot(String snapshotId) {
+        EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+        LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
+        List<LVMVolumeInfo> lvmVolumeInfos = db.query(lvmVolumeInfo);
+        if(lvmVolumeInfos.size() > 0) {
+            LVMVolumeInfo lvmVolInfo = lvmVolumeInfos.get(0);
+            String loDevName = lvmVolInfo.getLoDevName();
+            removeLoopback(loDevName);
+            db.delete(lvmVolInfo);
+            db.commit();
+        }
+    }
+    
     public native String losetup(String fileName);
 
     public native String losetup(String absoluteFileName, String loDevName);

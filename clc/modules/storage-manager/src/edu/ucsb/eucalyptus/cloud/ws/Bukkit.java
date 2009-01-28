@@ -84,11 +84,41 @@ public class Bukkit {
             shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
         }
         //NOTE: initializeForEBS MUST be called before exercizing any storage/EBS functionality
-        //initializeForEBS();
+        initializeForEBS();
+        startupChecks();
     }
 
     public static void initializeForEBS() {
         storageManager.initialize();
+    }
+
+    public static void startupChecks() {
+        cleanFailedSnapshots();
+    }
+
+    private static void cleanFailedSnapshots() {
+        EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
+        WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo();
+        snapshotInfo.setTransferred(false);
+        List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+        for(WalrusSnapshotInfo snapInfo : snapshotInfos) {
+            String snapSetId = snapInfo.getSnapshotSetId();
+            EntityWrapper<WalrusSnapshotSet> dbSet = db.recast(WalrusSnapshotSet.class);
+            List<WalrusSnapshotSet> snapsets = dbSet.query(new WalrusSnapshotSet(snapSetId));
+            if(snapsets.size() > 0) {
+                WalrusSnapshotSet snapset = snapsets.get(0);
+                List<WalrusSnapshotInfo>snapList = snapset.getSnapshotSet();
+                if(snapList.contains(snapInfo))
+                    snapList.remove(snapInfo);
+            }
+            db.delete(snapInfo);
+            try {
+                storageManager.deleteObject(snapInfo.getSnapshotSetId(), snapInfo.getSnapshotId());
+            } catch(Exception ex) {
+                LOG.warn(ex);
+            }
+        }
+        db.commit();
     }
 
     //For unit testing
@@ -167,11 +197,8 @@ public class Bukkit {
 
     public DeleteBucketResponseType DeleteBucket(DeleteBucketType request) throws EucalyptusCloudException {
         DeleteBucketResponseType reply = (DeleteBucketResponseType) request.getReply();
-
         String bucketName = request.getBucket();
-
         String userId = request.getUserId();
-
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
         BucketInfo searchBucket = new BucketInfo(bucketName);
         List<BucketInfo> bucketList = db.query(searchBucket);
