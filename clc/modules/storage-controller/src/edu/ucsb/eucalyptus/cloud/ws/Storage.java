@@ -75,6 +75,8 @@ public class Storage {
     static StorageManager snapshotStorageManager;
     static BlockStorageManager blockManager;
 
+    private static boolean enableSnapshots = true;
+
     private static final String ETHERD_PREFIX = "/dev/etherd/e";
 
     static {
@@ -99,16 +101,17 @@ public class Storage {
             LOG.warn("Could not initialize block manager");
             return;
         }
-        startupChecks();
+        startup();
         //TODO: inform CLC
         StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
     }
 
     public Storage() {}
 
-    private static void startupChecks() {
+    private static void startup() {
         cleanVolumes();
         cleanSnapshots();
+        checkWalrusConnection();
         blockManager.startupChecks();
     }
 
@@ -219,6 +222,20 @@ public class Storage {
         db.commit();
     }
 
+    private static void checkWalrusConnection() {
+        HttpClient httpClient = new HttpClient();
+        GetMethod getMethod = new GetMethod(StorageProperties.WALRUS_URL);
+        try {
+            httpClient.executeMethod(getMethod);
+            enableSnapshots = true;
+        } catch(Exception ex) {
+            LOG.warn("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url");
+            enableSnapshots = false;
+        } finally {
+            getMethod.releaseConnection();
+        }
+    }
+
     public InitializeStorageManagerResponseType InitializeStorageManager(InitializeStorageManagerType request) {
         InitializeStorageManagerResponseType reply = (InitializeStorageManagerResponseType) request.getReply();
         initializeForEBS();
@@ -240,6 +257,9 @@ public class Storage {
         if(storageInterface != null) {
             blockManager.setStorageInterface(storageInterface);
         }
+
+        //test connection to Walrus
+        checkWalrusConnection();
         return reply;
     }
 
@@ -303,6 +323,9 @@ public class Storage {
 
     public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
         CreateStorageSnapshotResponseType reply = ( CreateStorageSnapshotResponseType ) request.getReply();
+
+        if(!enableSnapshots)
+            return reply;
         String volumeId = request.getVolumeId();
         String snapshotId = request.getSnapshotId();
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
@@ -381,6 +404,9 @@ public class Storage {
     public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
         DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
+        if(!enableSnapshots)
+            return reply;
+        
         String snapshotId = request.getSnapshotId();
 
         EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();

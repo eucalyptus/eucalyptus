@@ -80,7 +80,7 @@ public class LVM2Manager implements BlockStorageManager {
         if(returnValue.length() == 0) {
             throw new EucalyptusCloudException("Is lvm installed?");
         } else {
-            LOG.info("LVM2: " + returnValue);
+            LOG.info(returnValue);
         }
     }
 
