@@ -64,7 +64,6 @@ import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 
 
