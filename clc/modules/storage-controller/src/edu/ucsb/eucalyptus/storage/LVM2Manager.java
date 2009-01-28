@@ -57,12 +57,12 @@ public class LVM2Manager implements BlockStorageManager {
 
     public static final String lvmRootDirectory = "/dev";
     public static final String PATH_SEPARATOR = "/";
-    public static String iface = "wlan0";
+    public static String iface = "eth0";
     public static boolean initialized = false;
     public static String hostName = "localhost";
     public static final int MAX_LOOP_DEVICES = 256;
     public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
-    
+
     private static Logger LOG = Logger.getLogger(LVM2Manager.class);
 
     public StorageExportManager exportManager;
@@ -80,8 +80,12 @@ public class LVM2Manager implements BlockStorageManager {
         if(returnValue.length() == 0) {
             throw new EucalyptusCloudException("Is lvm installed?");
         } else {
-           LOG.info("LVM2: " + returnValue); 
+            LOG.info("LVM2: " + returnValue);
         }
+    }
+
+    public LVM2Manager(String storageInterface) {
+        iface = storageInterface;
     }
 
     public void initVolumeManager() {
@@ -123,6 +127,10 @@ public class LVM2Manager implements BlockStorageManager {
 
     public void startupChecks() {
         reload();
+    }
+
+    public void setStorageInterface(String storageInterface) {
+        iface = storageInterface;
     }
 
     public void cleanVolume(String volumeId) {
@@ -198,7 +206,7 @@ public class LVM2Manager implements BlockStorageManager {
     public native String enableLogicalVolume(String absoluteLvName);
 
     public native String getLvmVersion();
-    
+
     public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
         int majorNumber = -1;
         int minorNumber = -1;

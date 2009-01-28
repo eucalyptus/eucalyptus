@@ -85,22 +85,23 @@ public class Storage {
     }
 
     public static void initializeForEBS() {
-        String walrusAddr = System.getProperty(WalrusProperties.URL_PROPERTY);
+        String walrusAddr = System.getProperty(StorageProperties.WALRUS_URL);
         if(walrusAddr == null) {
             LOG.warn("Walrus host addr not set");
         }
         //TODO: this should be created by a factory
-        blockManager = new LVM2Manager();
+        blockManager = new LVM2Manager(StorageProperties.storageInterface);
         blockManager.initVolumeManager();
         try {
             blockManager.checkPreconditions();
         } catch(Exception ex) {
-            //TODO: inform CLC
             //bind to null provider
             LOG.warn("Could not initialize block manager");
             return;
         }
         startupChecks();
+        //TODO: inform CLC
+        StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
     }
 
     //For unit testing
@@ -181,13 +182,19 @@ public class Storage {
 
     public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) {
         UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
-        String volumeRootDirectory = request.getVolumeRootDirectory();
-        if(volumeRootDirectory != null)
-            volumeStorageManager.setRootDirectory(volumeRootDirectory);
-        String snapshotRootDirectory = request.getSnapshotRootDirectory();
-        if(snapshotRootDirectory != null)
-            snapshotStorageManager.setRootDirectory(snapshotRootDirectory);
+        String storageRootDirectory = request.getStorageRootDirectory();
+        String storageInterface = request.getStorageInterface();
+        Integer maxVolumeSize = request.getMaxVolumeSize();
+        Integer maxSnapshotSize = request.getMaxSnapshotSize();
 
+        if(storageRootDirectory != null)  {
+            volumeStorageManager.setRootDirectory(storageRootDirectory);
+            snapshotStorageManager.setRootDirectory(storageRootDirectory);
+        }
+
+        if(storageInterface != null) {
+            blockManager.setStorageInterface(storageInterface);
+        }
         return reply;
     }
 
@@ -931,7 +938,7 @@ public class Storage {
         private HttpMethodBase method;
         public HttpWriter(String httpVerb, String bucket, String key, String eucaOperation, String eucaHeader) {
             httpClient = new HttpClient();
-            String walrusAddr = System.getProperty(WalrusProperties.URL_PROPERTY);
+            String walrusAddr = System.getProperty(StorageProperties.WALRUS_URL);
             if(walrusAddr != null) {
                 String addr = walrusAddr + "/" + bucket + "/" + key;
                 method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
@@ -940,7 +947,7 @@ public class Storage {
 
         public HttpWriter(String httpVerb, File file, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters) {
             httpClient = new HttpClient();
-            String walrusAddr = System.getProperty(WalrusProperties.URL_PROPERTY);
+            String walrusAddr = System.getProperty(StorageProperties.WALRUS_URL);
             if(walrusAddr != null) {
                 String addr = walrusAddr + "/" + bucket + "/" + key;
                 Set<String> paramKeySet = httpParameters.keySet();
@@ -993,7 +1000,7 @@ public class Storage {
             httpClient = new HttpClient();
 
             String httpVerb = "GET";
-            String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/" + path;
+            String addr = System.getProperty(StorageProperties.WALRUS_URL) + "/" + path;
 
             method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
         }
