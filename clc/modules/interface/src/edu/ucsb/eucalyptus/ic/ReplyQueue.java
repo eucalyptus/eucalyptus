@@ -71,7 +71,7 @@ public class ReplyQueue {
       MuleMessage muleMsg = ex.getUmoMessage();
 
       if ( payload instanceof RequestTransactionScript ) {
-        msg = ( ( RequestTransactionScript ) payload ).getRequest();
+        msg = ( ( RequestTransactionScript ) payload ).getRequestMessage();
       } else {
         try {
           msg = parsePayload( muleMsg.getPayload() );
