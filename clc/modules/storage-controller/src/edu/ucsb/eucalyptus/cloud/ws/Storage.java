@@ -117,7 +117,7 @@ public class Storage {
     private static void cleanVolumes() {
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
         VolumeInfo volumeInfo = new VolumeInfo();
-        volumeInfo.setStatus(Status.creating.toString());
+        volumeInfo.setStatus(StorageProperties.Status.creating.toString());
         List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         for(VolumeInfo volInfo : volumeInfos) {
             String volumeId = volInfo.getVolumeId();
@@ -129,7 +129,7 @@ public class Storage {
             }
             db.delete(volInfo);
         }
-        volumeInfo.setStatus(Status.failed.toString());
+        volumeInfo.setStatus(StorageProperties.Status.failed.toString());
         volumeInfos = db.query(volumeInfo);
         for(VolumeInfo volInfo : volumeInfos) {
             String volumeId = volInfo.getVolumeId();
@@ -146,7 +146,7 @@ public class Storage {
     private static void cleanSnapshots() {
         EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
         SnapshotInfo snapshotInfo = new SnapshotInfo();
-        snapshotInfo.setStatus(Status.creating.toString());
+        snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
         List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
         for(SnapshotInfo snapInfo : snapshotInfos) {
             String snapshotId = snapInfo.getSnapshotId();
@@ -158,7 +158,7 @@ public class Storage {
             }
             db.delete(snapInfo);
         }
-        snapshotInfo.setStatus(Status.failed.toString());
+        snapshotInfo.setStatus(StorageProperties.Status.failed.toString());
         snapshotInfos = db.query(snapshotInfo);
         for(SnapshotInfo snapInfo : snapshotInfos) {
             String snapshotId = snapInfo.getSnapshotId();
@@ -228,7 +228,7 @@ public class Storage {
         if(volumeList.size() > 0) {
             VolumeInfo foundVolume = volumeList.get(0);
             //check its status
-            if(foundVolume.getStatus().equals(Status.available.toString())) {
+            if(foundVolume.getStatus().equals(StorageProperties.Status.available.toString())) {
                 try {
                     blockManager.deleteVolume(volumeId);
                     volumeStorageManager.deleteObject("", volumeId);
@@ -259,7 +259,7 @@ public class Storage {
         if(volumeInfos.size() > 0) {
             VolumeInfo foundVolumeInfo = volumeInfos.get(0);
             //check status
-            if(foundVolumeInfo.getStatus().equals(Status.available.toString())) {
+            if(foundVolumeInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
                 //create snapshot
                 EntityWrapper<SnapshotInfo> db2 = new EntityWrapper<SnapshotInfo>();
                 edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo snapshotInfo = new edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo(snapshotId);
@@ -268,7 +268,7 @@ public class Storage {
                 Date startTime = new Date();
                 snapshotInfo.setStartTime(startTime);
                 snapshotInfo.setProgress("0");
-                snapshotInfo.setStatus(Status.creating.toString());
+                snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
                 db2.add(snapshotInfo);
                 db2.commit();
                 db.commit();
@@ -327,7 +327,7 @@ public class Storage {
         reply.set_return(true);
         if(snapshotInfos.size() > 0) {
             SnapshotInfo  foundSnapshotInfo = snapshotInfos.get(0);
-            if(foundSnapshotInfo.getStatus().equals(Status.available.toString())) {
+            if(foundSnapshotInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
                 try {
                     blockManager.deleteSnapshot(snapshotId);
                     snapshotStorageManager.deleteObject("", snapshotId);
@@ -383,7 +383,7 @@ public class Storage {
         }
         volumeInfo.setUserName(userId);
         volumeInfo.setSize(sizeAsInt);
-        volumeInfo.setStatus(Status.creating.toString());
+        volumeInfo.setStatus(StorageProperties.Status.creating.toString());
         Date creationDate = new Date();
         volumeInfo.setCreateTime(creationDate);
         volumeInfo.setTransferred(Boolean.FALSE);
@@ -430,7 +430,7 @@ public class Storage {
                         size = blockManager.createVolume(volumeId, volumePath);
                         db.commit();
                     } else {
-                        if(!foundSnapshotInfo.getStatus().equals(Status.available.toString())) {
+                        if(!foundSnapshotInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
                             success = false;
                             db.rollback();
                             LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
@@ -459,9 +459,9 @@ public class Storage {
                 VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
                 if(foundVolumeInfo != null) {
                     if(success)
-                        foundVolumeInfo.setStatus(Status.available.toString());
+                        foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
                     else
-                        foundVolumeInfo.setStatus(Status.failed.toString());
+                        foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
                     if(snapshotId != null) {
                         foundVolumeInfo.setSize(size);
                     }
@@ -525,11 +525,19 @@ public class Storage {
         ArrayList<VolumeInfo> volumeInfos = new ArrayList<VolumeInfo>();
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
 
-        for(String volumeSetEntry: volumeSet) {
-            VolumeInfo volumeInfo = new VolumeInfo(volumeSetEntry);
-            VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
-            if(foundVolumeInfo != null) {
-                volumeInfos.add(foundVolumeInfo);
+        if((volumeSet != null) && !volumeSet.isEmpty()) {
+            for(String volumeSetEntry: volumeSet) {
+                VolumeInfo volumeInfo = new VolumeInfo(volumeSetEntry);
+                List<VolumeInfo> foundVolumeInfos = db.query(volumeInfo);
+                if(foundVolumeInfos.size() > 0) {
+                    volumeInfos.add(foundVolumeInfos.get(0));
+                }
+            }
+        } else {
+            VolumeInfo volumeInfo = new VolumeInfo();
+            List<VolumeInfo> foundVolumeInfos = db.query(volumeInfo);
+            for(VolumeInfo volInfo : foundVolumeInfos) {
+                volumeInfos.add(volInfo);
             }
         }
 
@@ -760,7 +768,7 @@ public class Storage {
                 SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
                 foundSnapshotInfo.setProgress(String.valueOf(100));
                 foundSnapshotInfo.setTransferred(true);
-                foundSnapshotInfo.setStatus(Status.available.toString());
+                foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
             } catch (Exception ex) {
                 db.rollback();
                 ex.printStackTrace();
@@ -775,7 +783,7 @@ public class Storage {
                 SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
                 foundSnapshotInfo.setProgress(String.valueOf(0));
                 foundSnapshotInfo.setTransferred(false);
-                foundSnapshotInfo.setStatus(Status.failed.toString());
+                foundSnapshotInfo.setStatus(StorageProperties.Status.failed.toString());
             } catch (Exception ex) {
                 db.rollback();
                 ex.printStackTrace();
@@ -1055,7 +1063,4 @@ public class Storage {
         }
     }
 
-    public enum Status {
-        creating, available, pending, completed, failed
-    }
 }
