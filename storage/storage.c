@@ -830,9 +830,9 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
         image_name = "root";
     }
     if ((e=get_cached_file (userId, imageURL, imageId, instanceId, image_name, image_path, s, convert_to_disk))!=0) return e;
-    if ((e=get_cached_file (userId, kernelURL, kernelId, instanceId, "kernel", kernel_path, s, convert_to_disk))!=0) return e;
+    if ((e=get_cached_file (userId, kernelURL, kernelId, instanceId, "kernel", kernel_path, s, 0))!=0) return e;
     if (ramdiskId && strnlen (ramdiskId, CHAR_BUFFER_SIZE) ) {
-        if ((e=get_cached_file (userId, ramdiskURL, ramdiskId, instanceId, "ramdisk", ramdisk_path, s, convert_to_disk))!=0) return e;
+        if ((e=get_cached_file (userId, ramdiskURL, ramdiskId, instanceId, "ramdisk", ramdisk_path, s, 0))!=0) return e;
     }
     snprintf (rundir_path, BUFSIZE, "%s/%s/%s", sc_instance_path, userId, instanceId);
     

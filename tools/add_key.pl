@@ -63,13 +63,15 @@ if (! -d "$tmpfile") {
 $attached = 0;
 for ($i=0; $i<10 && !$attached; $i++) {
     $loopdev=untaint(`$LOSETUP -f`);
-    if ($offset != 0) {
-	$rc = system("$LOSETUP $loopdev $img");
-    } else {
-	$rc = system("$LOSETUP -o $offset $loopdev $img");
-    }
     if ($loopdev ne "") {
+	if ($offset == 0) {
+	    $rc = system("$LOSETUP $loopdev $img");
+	} else {
+	    $rc = system("$LOSETUP -o $offset $loopdev $img");
+	}
+
 	if (!$rc) {
+	    print "WTF: $mounter mount $loopdev $tmpfile\n";
 	    if (!system("$mounter mount $loopdev $tmpfile")) {
 		$attached = 1;
 	    } else {
