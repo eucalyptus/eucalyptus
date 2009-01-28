@@ -15,7 +15,7 @@ public class Snapshot extends AbstractIsomorph {
   @Transient private String parentVolume;
 
   public Snapshot(  ) {
-    super( null, null );
+    super( );
   }
 
   public Snapshot( final String userName, final String displayName ) {
@@ -27,13 +27,33 @@ public class Snapshot extends AbstractIsomorph {
     this.parentVolume = parentVolume;
   }
 
+  public static Snapshot named( String userName, String volumeId ) {
+    Snapshot v = new Snapshot(  );
+    v.setDisplayName( volumeId );
+    v.setUserName( userName );
+    return v;
+  }
+
+
+  public static Snapshot ownedBy( String userName ) {
+    Snapshot v = new Snapshot(  );
+    v.setUserName( userName );
+    return v;
+  }
+
+
   public String mapState( ) {
     switch(this.getState()) {
       case GENERATING: return "pending";
       case EXTANT: return "completed";
-      case ASSPLODED: return "failed";
-      default: return null;
+      default: return "failed";
     }
+  }
+
+  public void setMappedState( final String state ) {
+    if( "pending".equals( state ) ) this.setState( State.GENERATING );
+    else if( "completed".equals( state )) this.setState( State.EXTANT );
+    else this.setState( State.FAIL );
   }
 
   public Object morph( final Object o ) {

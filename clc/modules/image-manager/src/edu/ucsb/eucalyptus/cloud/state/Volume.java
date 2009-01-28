@@ -1,6 +1,5 @@
 package edu.ucsb.eucalyptus.cloud.state;
 
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import org.hibernate.annotations.*;
 
 import javax.persistence.Entity;
@@ -18,7 +17,7 @@ public class Volume extends AbstractIsomorph {
   private String parentSnapshot;
 
   public Volume() {
-    super( null, null );
+    super( );
   }
 
   public Volume( final String userName, final String displayName, final Integer size, final String cluster, final String parentSnapshot ) {
@@ -32,15 +31,36 @@ public class Volume extends AbstractIsomorph {
     super( userName, displayName );
   }
 
+  public static Volume named( String userName, String volumeId ) {
+    Volume v = new Volume(  );
+    v.setDisplayName( volumeId );
+    v.setUserName( userName );
+    return v;
+  }
+
+
+  public static Volume ownedBy( String userName ) {
+    Volume v = new Volume(  );
+    v.setUserName( userName );
+    return v;
+  }
+
   public String mapState( ) {
     switch(this.getState()) {
       case GENERATING: return "creating";
       case EXTANT: return "available";
       case ANNIHILATING: return "deleting";
       case ANNILATED: return "deleted";
-      case ASSPLODED: return "failed";      
-      default: return null;
+      case FAIL: return "failed";
+      default: return "unavailable";
     }
+  }
+
+  public void setMappedState( final String state ) {
+    if("failed".equals( state ) ) this.setState( State.FAIL );
+    else if("creating".equals( state ) ) this.setState( State.GENERATING );
+    else if("available".equals( state ) ) this.setState( State.EXTANT );
+    else this.setState( State.ANNILATED );
   }
 
   public Object morph( final Object o ) {
@@ -53,7 +73,7 @@ public class Volume extends AbstractIsomorph {
     vol.setVolumeId( this.getDisplayName() );
     vol.setSnapshotId( this.getParentSnapshot() );
     vol.setStatus( this.mapState() );
-    vol.setSize( this.getState().toString() );
+    vol.setSize( this.getSize().toString() );
     return vol;
   }
 

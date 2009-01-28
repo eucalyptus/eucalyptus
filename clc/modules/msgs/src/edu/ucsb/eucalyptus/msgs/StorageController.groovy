@@ -173,6 +173,14 @@ public class StorageVolume extends EucalyptusData {
 
 public class DescribeStorageVolumesType extends StorageRequestType {
   ArrayList<String> volumeSet = new ArrayList<String>();
+
+  def DescribeStorageVolumesType() {
+  }
+
+  def DescribeStorageVolumesType(final volumeSet) {
+    this.volumeSet = volumeSet;
+  }
+
 }
 public class DescribeStorageVolumesResponseType extends StorageResponseType {
   ArrayList<StorageVolume> volumeSet = new ArrayList<StorageVolume>();

@@ -49,22 +49,24 @@ public class SnapshotManager {
 
   private static Logger LOG = Logger.getLogger( SnapshotManager.class );
   private static String ID_PREFIX = "snap-";
+
   public static EntityWrapper<Snapshot> getEntityWrapper() {
     return new EntityWrapper<Snapshot>( VolumeManager.PERSISTENCE_CONTEXT );
   }
 
-
-  public CreateSnapshotResponseType CreateSnapshot( CreateSnapshotType request ) throws EucalyptusCloudException
-  {
+  public CreateSnapshotResponseType CreateSnapshot( CreateSnapshotType request ) throws EucalyptusCloudException {
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper();
-    String userName = request.isAdministrator()?null:request.getUserId();
-    Volume vol = db.recast( Volume.class ).getUnique( new Volume( userName, request.getVolumeId() ) );
+    String userName = request.isAdministrator() ? null : request.getUserId();
+    Volume vol = db.recast( Volume.class ).getUnique( Volume.named( userName, request.getVolumeId() ) );
 
     String newId = null;
+    Snapshot snap = null;
     while ( true ) {
       newId = Hashes.generateId( request.getUserId(), ID_PREFIX );
       try {
         db.getUnique( new Snapshot( null, newId ) );
+        snap = new Snapshot( request.getUserId(), newId, vol.getDisplayName() );
+        db.add( snap );
         break;
       } catch ( EucalyptusCloudException e ) {}
     }
@@ -73,30 +75,28 @@ public class SnapshotManager {
     CreateStorageSnapshotResponseType scReply = null;
     try {
       scReply = ( CreateStorageSnapshotResponseType ) Messaging.send( StorageProperties.STORAGE_REF, scRequest );
+      snap.setMappedState( scReply.getStatus() );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback();
       throw new EucalyptusCloudException( "Error calling CreateStorageSnapshot:" + e.getMessage() );
     }
-
-    Snapshot snap = new Snapshot( request.getUserId(), newId, vol.getDisplayName() );
-    db.add( snap );
     db.commit();
 
-    CreateSnapshotResponseType reply = (CreateSnapshotResponseType ) request.getReply();
-    reply.setSnapshot( snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() ));
-
+    CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply();
+    edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() );
+    snapMsg.setProgress( snapMsg.getProgress() );
+    reply.setSnapshot( snapMsg );
     return reply;
   }
 
-  public DeleteSnapshotResponseType DeleteSnapshot( DeleteSnapshotType request ) throws EucalyptusCloudException
-  {
+  public DeleteSnapshotResponseType DeleteSnapshot( DeleteSnapshotType request ) throws EucalyptusCloudException {
     DeleteSnapshotResponseType reply = ( DeleteSnapshotResponseType ) request.getReply();
     reply.set_return( false );
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
     try {
-      Snapshot snap = db.getUnique( new Snapshot( userName, request.getSnapshotId() ) );
+      Snapshot snap = db.getUnique( Snapshot.named( userName, request.getSnapshotId() ) );
       //:: TODO-1.5: state checks and snapshot tree check here :://
       Messaging.dispatch( StorageProperties.STORAGE_REF, new DeleteStorageSnapshotType( snap.getDisplayName() ) );
       db.delete( snap );
@@ -110,12 +110,11 @@ public class SnapshotManager {
     return reply;
   }
 
-  public DescribeSnapshotsResponseType DescribeSnapshots( DescribeSnapshotsType request ) throws EucalyptusCloudException
-  {
+  public DescribeSnapshotsResponseType DescribeSnapshots( DescribeSnapshotsType request ) throws EucalyptusCloudException {
     DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply();
     EntityWrapper<Snapshot> db = getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
-    List<Snapshot> Snapshots = db.query( new Snapshot( userName, null ) );
+    List<Snapshot> Snapshots = db.query( Snapshot.ownedBy( userName ) );
     for ( Snapshot v : Snapshots ) {
       if ( request.getSnapshotSet().isEmpty() || request.getSnapshotSet().contains( v.getDisplayName() ) ) {
         reply.getSnapshotSet().add( v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() ) );

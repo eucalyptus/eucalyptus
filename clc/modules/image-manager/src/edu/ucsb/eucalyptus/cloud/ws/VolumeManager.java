@@ -34,17 +34,39 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.cluster.*;
+import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
+import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateVolumeType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteVolumeType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
+import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
+import edu.ucsb.eucalyptus.msgs.StorageVolume;
+import edu.ucsb.eucalyptus.util.Messaging;
+import edu.ucsb.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;
 
-import java.util.*;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 public class VolumeManager {
   static String PERSISTENCE_CONTEXT = "eucalyptus_volumes";
@@ -85,6 +107,7 @@ public class VolumeManager {
         break;
       }
     }
+    newVol.setState( State.GENERATING );
     CreateStorageVolumeType scRequest = new CreateStorageVolumeType( newId, request.getSize(), request.getSnapshotId() );
     CreateStorageVolumeResponseType scReply = null;
     try {
@@ -106,7 +129,7 @@ public class VolumeManager {
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
     try {
-      Volume vol = db.getUnique( new Volume( userName, request.getVolumeId() ) );
+      Volume vol = db.getUnique( Volume.named( userName, request.getVolumeId() ) );
       //:: TODO-1.5: state checks and snapshot tree check here :://
       Messaging.dispatch( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
       db.delete( vol );
@@ -114,7 +137,7 @@ public class VolumeManager {
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback();
-      throw new EucalyptusCloudException( "Error deleting storage volume:" + e.getMessage() );
+      return reply;
     }
     reply.set_return( true );
     return reply;
@@ -124,9 +147,17 @@ public class VolumeManager {
     DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply();
     EntityWrapper<Volume> db = getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
-    List<Volume> volumes = db.query( new Volume( userName, null ) );
+    LOG.debug( request );
+    List<Volume> volumes = db.query( Volume.ownedBy( userName ) );
     for ( Volume v : volumes ) {
       if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
+        DescribeStorageVolumesResponseType volState = (DescribeStorageVolumesResponseType)Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageVolumesType( Lists.newArrayList( v.getDisplayName() ) ) );
+        String volumeState = "unavailable";
+        if( !volState.getVolumeSet().isEmpty() ) {
+          StorageVolume vol = volState.getVolumeSet().get( 0 );
+          volumeState = vol.getStatus();
+        }
+        v.setMappedState( volumeState );
         reply.getVolumeSet().add( v.morph( new edu.ucsb.eucalyptus.msgs.Volume() ) );
       }
     }

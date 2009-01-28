@@ -132,14 +132,15 @@ public class EucalyptusErrorMessageType extends EucalyptusMessage {
 }
 
 public class EucalyptusData implements Cloneable, Serializable {
-
-  public MetaClass getMetaClass()
-  {
+  public MetaClass getMetaClass() {
     return metaClass;
   }
 
-  public Object clone()
-  {
+  public String toString() {
+    return this.getProperties().toMapString();
+  }
+
+  public Object clone(){
     return super.clone();
   }
 }

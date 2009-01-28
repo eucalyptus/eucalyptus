@@ -110,12 +110,14 @@ public class Cluster implements HasName {
 
     if ( this.addrThread == null || this.addrThread.isAlive() )
       this.addrThread = this.startNamedThread( addrUpdater );
+    this.fireNodeThreads();
   }
 
   private Thread startNamedThread( Runnable r ) {
     Thread t = new Thread( r );
     t.setName( String.format( "%s-%s@%X", r.getClass().getSimpleName(), this.getName(), t.hashCode() ) );
     t.start();
+    LOG.info( "Starting threads for [ " + this.getName() + " ] " + t.getName() );
     return t;
   }
 
