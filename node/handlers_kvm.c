@@ -753,7 +753,7 @@ static void * rebooting_thread (void *arg)
 
     sem_p (xen_sem);
     // for KVM, must stop and restart the instance
-    int error = virDomainDestroy (dom); // TODO: change to Shutdown?
+    int error = virDomainDestroy (dom); // TODO: change to Shutdown?  TODO: is this synchronous?
     sem_v (xen_sem);
     virDomainFree(dom);
     if (error) {
