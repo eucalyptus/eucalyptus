@@ -7,7 +7,7 @@
 #define NC_ENDPOINT "/axis2/services/EucalyptusNC"
 #define WALRUS_ENDPOINT "/services/Walrus"
 #define DEFAULT_WALRUS_HOSTPORT "localhost:8773"
-#define DEFAULT_NC_HOSTPORT "localhost:9091"
+#define DEFAULT_NC_HOSTPORT "localhost:8775"
 #define DEFAULT_MAC_ADDR "aa:bb:cc:dd:ee:ff"
 #define BUFSIZE 1024
 char debug = 0;

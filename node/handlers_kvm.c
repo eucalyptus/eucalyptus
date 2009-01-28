@@ -723,97 +723,83 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
 
 }
 
-static int doRebootInstance(ncMetadata *meta, char *instanceId) {
-  char xml_path[1024], cmd[256];
-  char *xml;
-  struct stat statbuf;
-  
-  int rc, fd;
-  virConnectPtr conn = NULL;
-  virDomainPtr dom = NULL;
-  ncInstance *instance;
-  
-  logprintfl(EUCAINFO, "doRebootInstances() invoked\n");
-  
-  // for KVM, must stop and restart the instance
-  
-  sem_p (inst_sem); 
-  instance = find_instance(&global_instances, instanceId);
-  sem_v (inst_sem);
-  if ( instance == NULL ) {
-    logprintfl(EUCAERROR, "cannot find instance %s\n", instanceId);
-    return 1;
-  }
-  
-  snprintf(xml_path, 1024, "%s/%s/%s/libvirt.xml", config_instance_path, meta->userId, instanceId);
-  
-  rc = stat(xml_path, &statbuf);
-  if (rc < 0) {
-    logprintfl(EUCAERROR, "cannot stat XML file '%s'\n", xml_path);
-    return(1);
-  }
-  
-  xml = malloc(statbuf.st_size + 1);
-  if (xml == NULL) {
-    logprintfl(EUCAERROR, "malloc() failed '%d'\n", statbuf.st_size+1);
-    return(1);
-  }
-  
-  fd = open(xml_path, O_RDONLY);
-  if (fd < 0) {
-    logprintfl(EUCAERROR, "cannot open file for read '%s'\n", xml_path);
-    if (xml) free(xml);
-    return(1);
-  }
-  bzero (xml, statbuf.st_size+1);
-  rc = read(fd, xml, statbuf.st_size);
-  close(fd);
-  
-  //  logprintfl(EUCAINFO, "reboot(): xml: %s\n", xml);
-  
-  conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
-  if (conn == NULL) {
-    logprintfl (EUCAFATAL, "failed to connect to hypervisor to restart instance %s, abandoning it\n", instance->instanceId);
-    change_state (instance, SHUTOFF);
-    if (xml) free(xml);
-    return 1;
-  }
+/* thread that does the actual reboot */
+static void * rebooting_thread (void *arg) 
+{
+    ncInstance * instance = (ncInstance *)arg;
 
-  sem_p (xen_sem);
-  dom = virDomainLookupByName(conn, instanceId);
-  sem_v (xen_sem);
+    char xml_path [1024];
+    snprintf (xml_path, 1024, "%s/%s/%s/libvirt.xml", config_instance_path, instance->userId, instance->instanceId);
+    char * xml = file2str (xml_path);
+    if (xml == NULL) {
+        logprintfl (EUCAERROR, "cannot obtain XML file %s\n", xml_path);
+        return NULL;
+    }
 
-  if (!dom) {
-    virConnectClose(conn);
-    return(1);
-  }
+    virConnectPtr conn = virConnectOpen("qemu:///system");
+    if (conn == NULL) {
+        logprintfl (EUCAFATAL, "failed to connect to hypervisor to restart instance %s, abandoning it\n", instance->instanceId);
+        change_state (instance, SHUTOFF);
+        free (xml);
+        return NULL;
+    }
+    
+    virDomainPtr dom = virDomainLookupByName(conn, instance->instanceId);
+    if (dom == NULL) {
+        virConnectClose(conn);
+        free (xml);
+        return NULL;
+    }
 
-  sem_p (xen_sem);
-  rc = virDomainShutdown (dom);
-  sem_v (xen_sem);
-  if (rc) {
+    sem_p (xen_sem);
+    // for KVM, must stop and restart the instance
+    int error = virDomainShutdown (dom);
+    sem_v (xen_sem);
+    if (error) {
+        virDomainFree(dom);
+        virConnectClose(conn);
+        free (xml);
+        return NULL;
+    }
+    
+    // domain is now shut down, create a new one with the same XML
+    sem_p (xen_sem); 
+    dom = virDomainCreateLinux (conn, xml, 0);
+    sem_v (xen_sem);
+    free (xml);
+    
+    if (dom==NULL) {
+        logprintfl (EUCAFATAL, "Failed to restart instance %s\n", instance->instanceId);
+        change_state (instance, SHUTOFF);
+        virConnectClose(conn);
+        return NULL;
+    }
+    
     virDomainFree(dom);
     virConnectClose(conn);
-    return(1);
-  }
+    return NULL;
+}
 
-  // domain is now shut down
-
-  sem_p (xen_sem); 
-  dom = virDomainCreateLinux (conn, xml, 0);
-  sem_v (xen_sem);
-  if (xml) free(xml);
-  
-  if (!dom) {
-    logprintfl (EUCAFATAL, "Failed to create libvirt dom for instance %s\n", instance->instanceId);
-    change_state (instance, SHUTOFF);
-    virConnectClose(conn);
-    return(1);
-  }
-
-  virDomainFree(dom);
-  virConnectClose(conn);
-  return(rc);
+static int doRebootInstance(ncMetadata *meta, char *instanceId) 
+{    
+    logprintfl(EUCAINFO, "doRebootInstances() invoked\n");
+        
+    sem_p (inst_sem); 
+    ncInstance *instance = find_instance (&global_instances, instanceId);
+    sem_v (inst_sem);
+    if ( instance == NULL ) {
+        logprintfl (EUCAERROR, "cannot find instance %s\n", instanceId);
+        return ERROR;
+    }
+    
+    pthread_t tcb;
+    // since shutdown/restart may take a while, we do them in a thread
+    if ( pthread_create (&tcb, NULL, rebooting_thread, (void *)instance) ) {
+        logprintfl (EUCAFATAL, "failed to spawn a reboot thread\n");
+        return ERROR_FATAL;
+    }
+    
+    return OK;
 }
 
 static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **consoleOutput) {
