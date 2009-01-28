@@ -1,4 +1,4 @@
-Walrus/*
+/*
  * Software License Agreement (BSD License)
  *
  * Copyright (c) 2008, Regents of the University of California
