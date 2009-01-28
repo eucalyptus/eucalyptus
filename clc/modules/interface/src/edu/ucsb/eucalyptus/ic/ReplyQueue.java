@@ -72,8 +72,7 @@ public class ReplyQueue {
       } else {
         try {
           msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( ( String ) muleMsg.getPayload() );
-        }
-        catch ( Exception e ) {
+        } catch ( Exception e ) {
           LOG.error( e, e );
         }
       }

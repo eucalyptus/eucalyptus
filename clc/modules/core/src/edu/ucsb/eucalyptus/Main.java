@@ -35,9 +35,8 @@
 package edu.ucsb.eucalyptus;
 
 import edu.ucsb.eucalyptus.ic.HttpServer;
-import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import edu.ucsb.eucalyptus.util.Messaging;
+import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 import org.mule.MuleServer;
 
@@ -59,6 +58,14 @@ public class Main {
     descAz.setEffectiveUserId( EucalyptusProperties.NAME );
     descAz.setCorrelationId( "" );
     Messaging.dispatch( "vm://RequestQueue", descAz );
+
+/* TODO-1.5: neil, will it cause a problem to call this here
+    UpdateWalrusConfigurationType updateConfig = new UpdateWalrusConfigurationType();
+    updateConfig.setBucketRootDirectory( WalrusProperties.bucketRootDirectory);
+    Messaging.send( WalrusProperties.WALRUS_REF, updateConfig );
+*/
+
+    Messaging.dispatch( StorageProperties.STORAGE_REF, new InitializeStorageManagerType() );
 
     LOG.info( "Eucalyptus started." );
   }
