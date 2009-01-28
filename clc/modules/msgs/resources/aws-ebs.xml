@@ -62,8 +62,8 @@
 
     <mapping name="CreateVolume" class="edu.ucsb.eucalyptus.msgs.CreateVolumeType">
         <value name="size" field="size" usage="required"/>
-        <value name="snapshotId" field="snapshotId" usage="required"/>
         <value name="availabilityZone" field="availabilityZone" usage="required"/>
+        <value name="snapshotId" field="snapshotId" usage="required"/>
     </mapping>
     <mapping name="DeleteVolume" class="edu.ucsb.eucalyptus.msgs.DeleteVolumeType">
         <value name="volumeId" field="volumeId" usage="required"/>
