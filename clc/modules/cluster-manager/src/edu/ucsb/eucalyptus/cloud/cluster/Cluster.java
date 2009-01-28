@@ -37,8 +37,7 @@ public class Cluster implements HasName {
   private Thread logThread;
   private Thread keyThread;
 
-  public Cluster( ClusterInfo clusterInfo )
-  {
+  public Cluster( ClusterInfo clusterInfo ) {
     this.clusterInfo = clusterInfo;
     this.state = new ClusterState( this );
     this.messageQueue = new ClusterMessageQueue( this );
@@ -52,53 +51,44 @@ public class Cluster implements HasName {
     this.start();
   }
 
-
-
-  private void waitForCerts()
-  {
+  private void waitForCerts() {
     Axis2MessageDispatcher dispatcher = Defaults.getMessageDispatcher( Defaults.getInsecureOutboundEndpoint( clusterInfo.getInsecureUri(), ClusterInfo.NAMESPACE, 15, 1, 1 ) );
     GetKeysResponseType reply = null;
-    do
-    {
+    do {
       try {
         reply = ( GetKeysResponseType ) dispatcher.getClient().send( new GetKeysType( "self" ) );
       } catch ( Exception e ) {
         LOG.error( e, e );
       }
-      try{Thread.sleep( 5000 );} catch ( InterruptedException ignored ){}
-    } while ( reply == null || !this.checkCerts( reply ));
+      try {Thread.sleep( 5000 );} catch ( InterruptedException ignored ) {}
+    } while ( reply == null || !this.checkCerts( reply ) );
 
   }
 
-  private boolean checkCerts( final GetKeysResponseType reply )
-  {
+  private boolean checkCerts( final GetKeysResponseType reply ) {
     NodeCertInfo certs = reply.getCerts();
-    if( certs == null ) return false;
+    if ( certs == null ) return false;
     String ccCert = new String( Base64.decode( certs.getCcCert() ) );
     String ncCert = new String( Base64.decode( certs.getNcCert() ) );
     boolean ret = true;
     LOG.info( "===============================================================" );
     LOG.info( " Trying to verify the certificates for " + this.getClusterInfo().getName() );
     LOG.info( "---------------------------------------------------------------" );
-    try
-    {
+    try {
       X509Certificate x509 = AbstractKeyStore.pemToX509( ccCert );
       String alias = ServiceKeyStore.getInstance().getCertificateAlias( x509 );
       LOG.info( "FOUND: alias " + alias );
     }
-    catch ( GeneralSecurityException e )
-    {
+    catch ( GeneralSecurityException e ) {
       LOG.error( e );
       ret = false;
     }
     LOG.info( "---------------------------------------------------------------" );
-    try
-    {
+    try {
       String alias = ServiceKeyStore.getInstance().getCertificateAlias( ncCert );
       LOG.info( "FOUND: alias " + alias );
     }
-    catch ( GeneralSecurityException e )
-    {
+    catch ( GeneralSecurityException e ) {
       ret = false;
       LOG.error( e );
     }
@@ -106,40 +96,37 @@ public class Cluster implements HasName {
     return ret;
   }
 
-  public synchronized void start()
-  {
+  public synchronized void start() {
     //:: should really be organized as a thread group etc etc :://
     LOG.info( "Starting cluster: " + this.clusterInfo.getUri() );
-    if( this.mqThread == null || this.mqThread.isAlive() )
+    if ( this.mqThread == null || this.mqThread.isAlive() )
       this.mqThread = this.startNamedThread( messageQueue );
 
-    if( this.rscThread == null || this.rscThread.isAlive() )
+    if ( this.rscThread == null || this.rscThread.isAlive() )
       this.rscThread = this.startNamedThread( rscUpdater );
 
-    if( this.vmThread == null || this.vmThread.isAlive() )
+    if ( this.vmThread == null || this.vmThread.isAlive() )
       this.vmThread = this.startNamedThread( vmUpdater );
 
-    if( this.addrThread == null || this.addrThread.isAlive() )
+    if ( this.addrThread == null || this.addrThread.isAlive() )
       this.addrThread = this.startNamedThread( addrUpdater );
   }
 
   private Thread startNamedThread( Runnable r ) {
     Thread t = new Thread( r );
-    t.setName( String.format("%s-%s@%X",r.getClass().getSimpleName(), this.getName(), t.hashCode() ) );
+    t.setName( String.format( "%s-%s@%X", r.getClass().getSimpleName(), this.getName(), t.hashCode() ) );
     t.start();
     return t;
   }
 
-  public void fireNodeThreads()
-  {
-    if( this.keyThread != null && !this.keyThread.isAlive() )
-    ( this.keyThread = new Thread( nodeCertUpdater, nodeCertUpdater.getClass().getSimpleName()+"-"+this.getName() ) ).start();
-    if( this.logThread != null && !this.logThread.isAlive() )
-    ( this.logThread = new Thread( nodeLogUpdater,nodeLogUpdater.getClass().getSimpleName()+"-"+this.getName() ) ).start();
+  public void fireNodeThreads() {
+    if ( this.keyThread != null && !this.keyThread.isAlive() )
+      ( this.keyThread = new Thread( nodeCertUpdater, nodeCertUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
+    if ( this.logThread != null && !this.logThread.isAlive() )
+      ( this.logThread = new Thread( nodeLogUpdater, nodeLogUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
   }
 
-  public void stop() throws InterruptedException
-  {
+  public void stop() throws InterruptedException {
     LOG.info( "Stopping cluster: " + this.clusterInfo.getUri() );
     this.rscUpdater.stop();
     this.addrUpdater.stop();
@@ -155,72 +142,62 @@ public class Cluster implements HasName {
     this.mqThread.join();
   }
 
-  public ClusterInfoType getInfo()
-  {
+  public ClusterInfoType getInfo() {
     return new ClusterInfoType( this.clusterInfo.getName(), this.clusterInfo.getHost() );
   }
 
-  public ClusterState getState()
-  {
+  public ClusterState getState() {
     return state;
   }
 
-  public ClusterMessageQueue getMessageQueue()
-  {
+  public ClusterMessageQueue getMessageQueue() {
     return messageQueue;
   }
 
-  public int compareTo( final Object o )
-  {
+  public int compareTo( final Object o ) {
     Cluster that = ( Cluster ) o;
     return this.getName().compareTo( that.getName() );
   }
 
-  public synchronized void updateNodeInfo( List<String> nodeTags )
-  {
+  public void updateNodeInfo( List<String> nodeTags ) {
     NodeInfo ret = null;
     for ( String tag : nodeTags )
       if ( ( ret = this.nodeMap.putIfAbsent( tag, new NodeInfo( tag ) ) ) != null )
         ret.touch();
   }
 
-  public synchronized void updateNodeCerts( NavigableSet<NodeCertInfo> nodeCerts )
-  {
+  public void updateNodeCerts( NavigableSet<NodeCertInfo> nodeCerts ) {
     NodeInfo ret = null;
-    for ( NodeCertInfo cert : nodeCerts )
-      if ( ( ret = this.nodeMap.putIfAbsent( cert.getServiceTag(), new NodeInfo( cert ) ) ) != null )
-        this.nodeMap.replace( cert.getServiceTag(), new NodeInfo( ret, cert ) );
+    for ( NodeCertInfo cert : nodeCerts ) {
+      NodeInfo newNodeInfo = new NodeInfo( cert );
+      if ( ( ret = this.nodeMap.putIfAbsent( cert.getServiceTag(), newNodeInfo ) ) != null )
+        ret.setCerts( cert );
+    }
   }
 
-  public synchronized void updateNodeLogs( NavigableSet<NodeLogInfo> nodeCerts )
-  {
+  public void updateNodeLogs( NavigableSet<NodeLogInfo> nodeCerts ) {
     NodeInfo ret = null;
     for ( NodeLogInfo log : nodeCerts )
       if ( ( ret = this.nodeMap.putIfAbsent( log.getServiceTag(), new NodeInfo( log ) ) ) != null )
-        this.nodeMap.replace( log.getServiceTag(), new NodeInfo( ret, log ) );
+        ret.setLogs( log );
   }
 
-  public NavigableSet<String> getNodeTags()
-  {
+  public NavigableSet<String> getNodeTags() {
     return this.nodeMap.navigableKeySet();
   }
 
-  public NavigableSet<NodeInfo> getNodes()
-  {
+  public NavigableSet<NodeInfo> getNodes() {
     return new ConcurrentSkipListSet<NodeInfo>( this.nodeMap.values() );
   }
 
-  public NodeInfo getNode( String serviceTag )
-  {
+  public NodeInfo getNode( String serviceTag ) {
     return this.nodeMap.get( serviceTag );
   }
 
-  public ClusterStateType getWeb()
-  {
+  public ClusterStateType getWeb() {
     String host = this.getClusterInfo().getUri();
     int port = 0;
-    try
-    {
+    try {
       URI uri = new URI( this.getClusterInfo().getUri() );
       host = uri.getHost();
       port = uri.getPort();
@@ -229,13 +206,11 @@ public class Cluster implements HasName {
     return new ClusterStateType( this.getName(), host, port );
   }
 
-  public ClusterInfo getClusterInfo()
-  {
+  public ClusterInfo getClusterInfo() {
     return clusterInfo;
   }
 
-  public String getName()
-  {
+  public String getName() {
     return this.clusterInfo.getName();
   }
 

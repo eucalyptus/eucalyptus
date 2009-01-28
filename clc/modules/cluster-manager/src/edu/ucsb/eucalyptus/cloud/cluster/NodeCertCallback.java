@@ -9,11 +9,6 @@ import org.bouncycastle.util.encoders.Base64;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
-/**
- * User: decker
- * Date: Dec 5, 2008
- * Time: 6:58:37 AM
- */
 public class NodeCertCallback extends QueuedEventCallback<GetKeysType> implements Runnable {
 
   private static Logger LOG = Logger.getLogger( NodeCertCallback.class );
@@ -35,10 +30,12 @@ public class NodeCertCallback extends QueuedEventCallback<GetKeysType> implement
       NodeCertInfo certInfo = reply.getCerts();
       if ( certInfo != null ) {
         certInfo.setServiceTag( certInfo.getServiceTag().replaceAll( "EucalyptusGL", "EucalyptusNC" ) );
-        if ( certInfo.getCcCert() != null && certInfo.getCcCert().length() > 0 )
+        if ( certInfo.getCcCert() != null && certInfo.getCcCert().length() > 0 ) {
           certInfo.setCcCert( new String( Base64.decode( certInfo.getCcCert() ) ) );
-        if ( certInfo.getNcCert() != null && certInfo.getNcCert().length() > 0 )
+        }
+        if ( certInfo.getNcCert() != null && certInfo.getNcCert().length() > 0 ) {
           certInfo.setNcCert( new String( Base64.decode( certInfo.getNcCert() ) ) );
+        }
         results.add( certInfo );
       }
       requests.remove( msg );
@@ -50,7 +47,9 @@ public class NodeCertCallback extends QueuedEventCallback<GetKeysType> implement
 
   @Override
   protected void notifyHandler() {
-    if ( requests.isEmpty() ) super.notifyHandler();
+    if ( requests.isEmpty() ) {
+      super.notifyHandler();
+    }
   }
 
   public void run() {
