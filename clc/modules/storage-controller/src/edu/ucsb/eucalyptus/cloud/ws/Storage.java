@@ -89,8 +89,17 @@ public class Storage {
         if(walrusAddr == null) {
             LOG.warn("Walrus host addr not set");
         }
+        //TODO: this should be created by a factory
         blockManager = new LVM2Manager();
         blockManager.initVolumeManager();
+        try {
+            blockManager.checkPreconditions();
+        } catch(Exception ex) {
+            //TODO: inform CLC
+            //bind to null provider
+            LOG.warn("Could not initialize block manager");
+            return;
+        }
         startupChecks();
     }
 
@@ -120,6 +129,17 @@ public class Storage {
             }
             db.delete(volInfo);
         }
+        volumeInfo.setStatus(Status.failed.toString());
+        volumeInfos = db.query(volumeInfo);
+        for(VolumeInfo volInfo : volumeInfos) {
+            String volumeId = volInfo.getVolumeId();
+            try {
+                volumeStorageManager.deleteObject("", volumeId);
+            } catch(Exception ex) {
+                LOG.warn(ex);
+            }
+            db.delete(volInfo);
+        }
         db.commit();
     }
 
@@ -136,6 +156,19 @@ public class Storage {
             } catch(Exception ex) {
                 LOG.warn(ex);
             }
+            db.delete(snapInfo);
+        }
+        snapshotInfo.setStatus(Status.failed.toString());
+        snapshotInfos = db.query(snapshotInfo);
+        for(SnapshotInfo snapInfo : snapshotInfos) {
+            String snapshotId = snapInfo.getSnapshotId();
+            blockManager.cleanSnapshot(snapshotId);
+            try {
+                snapshotStorageManager.deleteObject("", snapshotId);
+            } catch(Exception ex) {
+                LOG.warn(ex);
+            }
+            db.delete(snapInfo);
         }
         db.commit();
     }
