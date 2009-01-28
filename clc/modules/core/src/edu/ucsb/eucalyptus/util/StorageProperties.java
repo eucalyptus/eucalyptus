@@ -68,4 +68,8 @@ public class StorageProperties {
             LOG.warn(ex.getMessage());
         }
     }
+
+    public enum Status {
+        creating, available, pending, completed, failed
+    }
 }
