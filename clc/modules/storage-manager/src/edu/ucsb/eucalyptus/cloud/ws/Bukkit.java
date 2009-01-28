@@ -1987,27 +1987,28 @@ public class Bukkit {
         }
 
         List<WalrusSnapshotInfo> snapshotInfos = foundSnapshotSet.getSnapshotSet();
-        for(WalrusSnapshotInfo snapInfo: snapshotInfos) {
-            if(snapInfo.getSnapshotId().equals(snapshotId)) {
+        EntityWrapper<WalrusSnapshotInfo> dbSnap = db.recast(WalrusSnapshotInfo.class);
+        WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+        List<WalrusSnapshotInfo> snapInfos = dbSnap.query(snapshotInfo);
+        if(snapInfos.size() > 0) {
+            snapshotInfo = snapInfos.get(0);
+            if(snapshotInfo.getTransferred()) {
                 db.rollback();
                 throw new EntityAlreadyExistsException(snapshotId);
             }
+        } else {
+            snapshotInfos.add(snapshotInfo);
+            dbSnap.add(snapshotInfo);
         }
 
-        WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
-        //create a snapshot set
+        //set snapshot props
         snapshotInfo.setSnapshotSetId(bucketName);
         snapshotInfo.setVgName(snapshotVgName);
         snapshotInfo.setLvName(snapshotLvName);
         snapshotInfo.setTransferred(false);
-        EntityWrapper<WalrusSnapshotInfo> dbSnap = db.recast(WalrusSnapshotInfo.class);
-        snapshotInfos.add(snapshotInfo);
-        dbSnap.add(snapshotInfo);
-
         db.commit();
         //read and store it
         //convert to a PutObject request
-        //Make sure the bucket exists
 
         String userId = request.getUserId();
         if(createBucket) {
