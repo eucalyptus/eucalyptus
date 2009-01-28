@@ -41,6 +41,7 @@ import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.ws.Storage;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.util.StorageProperties;
+import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -61,8 +62,28 @@ public class LVM2Manager implements BlockStorageManager {
     public static boolean initialized = false;
     public static String hostName = "localhost";
     public static final int MAX_LOOP_DEVICES = 256;
+    public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
+    
+    private static Logger LOG = Logger.getLogger(LVM2Manager.class);
 
     public StorageExportManager exportManager;
+
+    public void checkPreconditions() throws EucalyptusCloudException {
+        //check if binaries exist, commands can be executed, etc.
+        String eucaHome = System.getProperty("euca.home");
+        if(eucaHome == null) {
+            throw new EucalyptusCloudException("euca.home not set");
+        }
+        if(!new File(eucaHome + EUCA_ROOT_WRAPPER).exists()) {
+            throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist");
+        }
+        String returnValue = getLvmVersion();
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Is lvm installed?");
+        } else {
+           LOG.info("LVM2: " + returnValue); 
+        }
+    }
 
     public void initVolumeManager() {
         if(!initialized) {
@@ -177,6 +198,8 @@ public class LVM2Manager implements BlockStorageManager {
 
     public native String enableLogicalVolume(String absoluteLvName);
 
+    public native String getLvmVersion();
+    
     public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
         int majorNumber = -1;
         int minorNumber = -1;
@@ -417,7 +440,14 @@ public class LVM2Manager implements BlockStorageManager {
             String lvName = foundLVMVolumeInfo.getLvName();
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
-            exportManager.unexportVolume(foundLVMVolumeInfo.getVbladePid());
+
+            int pid = foundLVMVolumeInfo.getVbladePid();
+            if(pid > 0) {
+                String returnValue = getAoEStatus(String.valueOf(pid));
+                if(returnValue.contains("vblade")) {
+                    exportManager.unexportVolume(pid);
+                }
+            }
             String returnValue = removeLogicalVolume(absoluteLVName);
             if(returnValue.length() == 0) {
                 throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
