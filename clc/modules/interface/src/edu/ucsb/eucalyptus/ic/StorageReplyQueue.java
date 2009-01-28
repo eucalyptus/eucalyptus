@@ -104,7 +104,7 @@ public class StorageReplyQueue {
         }
         catch ( Exception e )
         {
-            LOG.error( e, e );
+            LOG.error(e);
         }
     }
 

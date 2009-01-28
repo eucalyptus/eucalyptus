@@ -121,7 +121,6 @@ public class Bukkit {
         db.commit();
     }
 
-    //For unit testing
     public Bukkit () {}
 
     public InitializeWalrusResponseType InitializeWalrus(InitializeWalrusType request) {
