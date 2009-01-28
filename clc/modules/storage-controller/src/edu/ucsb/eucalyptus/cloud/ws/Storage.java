@@ -43,7 +43,7 @@ import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.storage.ElasticBlockManager;
+import edu.ucsb.eucalyptus.storage.BlockStorageManager;
 import edu.ucsb.eucalyptus.storage.LVM2Manager;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
@@ -58,13 +58,14 @@ import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 
 import java.io.*;
+import java.net.URL;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
-import java.net.URL;
 
 
 public class Storage {
@@ -73,7 +74,7 @@ public class Storage {
 
     static StorageManager volumeStorageManager;
     static StorageManager snapshotStorageManager;
-    static ElasticBlockManager ebsManager;
+    static BlockStorageManager blockManager;
 
     private static final String ETHERD_PREFIX = "/dev/etherd/e";
 
@@ -89,13 +90,56 @@ public class Storage {
         if(walrusAddr == null) {
             LOG.warn("Walrus host addr not set");
         }
-        ebsManager = new LVM2Manager();
-        ebsManager.initVolumeManager();
-        ebsManager.reload();
+        blockManager = new LVM2Manager();
+        blockManager.initVolumeManager();
+        startupChecks();
     }
 
     //For unit testing
     public Storage() {}
+
+    private static void startupChecks() {
+        //clean pending snapshots
+        //clean pending volumes
+        cleanVolumes();
+        cleanSnapshots();
+        blockManager.startupChecks();
+    }
+
+    private static void cleanVolumes() {
+        EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
+        VolumeInfo volumeInfo = new VolumeInfo();
+        volumeInfo.setStatus(Status.creating.toString());
+        List<VolumeInfo> volumeInfos = db.query(volumeInfo);
+        for(VolumeInfo volInfo : volumeInfos) {
+            String volumeId = volInfo.getVolumeId();
+            blockManager.cleanVolume(volumeId);
+            try {
+                volumeStorageManager.deleteObject("", volumeId);
+            } catch(Exception ex) {
+                LOG.warn(ex);
+            }
+            db.delete(volInfo);
+        }
+        db.commit();
+    }
+
+    private static void cleanSnapshots() {
+        EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
+        SnapshotInfo snapshotInfo = new SnapshotInfo();
+        snapshotInfo.setStatus(Status.creating.toString());
+        List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+        for(SnapshotInfo snapInfo : snapshotInfos) {
+            String snapshotId = snapInfo.getSnapshotId();
+            blockManager.cleanSnapshot(snapshotId);
+            try {
+                snapshotStorageManager.deleteObject("", snapshotId);
+            } catch(Exception ex) {
+                LOG.warn(ex);
+            }
+        }
+        db.commit();
+    }
 
     public InitializeStorageManagerResponseType InitializeStorageManager(InitializeStorageManagerType request) {
         InitializeStorageManagerResponseType reply = (InitializeStorageManagerResponseType) request.getReply();
@@ -125,7 +169,7 @@ public class Storage {
         List <VolumeInfo> volumeInfos = db.query(volumeInfo);
         if(volumeInfos.size() > 0) {
             VolumeInfo foundVolumeInfo = volumeInfos.get(0);
-            List<String> returnValues = ebsManager.getVolume(volumeId);
+            List<String> returnValues = blockManager.getVolume(volumeId);
             reply.setVolumeId(foundVolumeInfo.getVolumeId());
             reply.setSize(foundVolumeInfo.getSize().toString());
             reply.setStatus(foundVolumeInfo.getStatus());
@@ -154,7 +198,7 @@ public class Storage {
             //check its status
             if(foundVolume.getStatus().equals(Status.available.toString())) {
                 try {
-                    ebsManager.deleteVolume(volumeId);
+                    blockManager.deleteVolume(volumeId);
                     volumeStorageManager.deleteObject("", volumeId);
                     db.delete(foundVolume);
                     db.commit();
@@ -198,7 +242,7 @@ public class Storage {
                 db.commit();
                 //snapshot asynchronously
                 String snapshotSet = "snapset-" + UUID.randomUUID();
-                ebsManager.createSnapshot(volumeId, snapshotId);
+                blockManager.createSnapshot(volumeId, snapshotId);
                 Snapshotter snapshotter = new Snapshotter(snapshotSet, volumeId, snapshotId);
                 snapshotter.run();
                 reply.setSnapshotId(snapshotId);
@@ -253,7 +297,7 @@ public class Storage {
             SnapshotInfo  foundSnapshotInfo = snapshotInfos.get(0);
             if(foundSnapshotInfo.getStatus().equals(Status.available.toString())) {
                 try {
-                    ebsManager.deleteSnapshot(snapshotId);
+                    blockManager.deleteSnapshot(snapshotId);
                     snapshotStorageManager.deleteObject("", snapshotId);
                     db.delete(foundSnapshotInfo);
                     db.commit();
@@ -351,7 +395,7 @@ public class Storage {
                     SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
                     if(foundSnapshotInfo == null) {
                         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
-                        size = ebsManager.createVolume(volumeId, volumePath);
+                        size = blockManager.createVolume(volumeId, volumePath);
                         db.commit();
                     } else {
                         if(!foundSnapshotInfo.getStatus().equals(Status.available.toString())) {
@@ -359,7 +403,7 @@ public class Storage {
                             db.rollback();
                             LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
                         } else {
-                            size = ebsManager.createVolume(volumeId, snapshotId, size);
+                            size = blockManager.createVolume(volumeId, snapshotId, size);
                             db.commit();
                         }
                     }
@@ -371,7 +415,7 @@ public class Storage {
             } else {
                 try {
                     assert(size > 0);
-                    ebsManager.createVolume(volumeId, size);
+                    blockManager.createVolume(volumeId, size);
                 } catch(Exception ex) {
                     success = false;
                     ex.printStackTrace();
@@ -438,8 +482,8 @@ public class Storage {
 
     public void GetSnapshots(String volumeId, String snapshotSetName, String snapshotId) throws EucalyptusCloudException {
         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
-        //ebsManager.loadSnapshots(snapshotSet, snapshotFileNames);
-        int size = ebsManager.createVolume(volumeId, volumePath);
+        //blockManager.loadSnapshots(snapshotSet, snapshotFileNames);
+        int size = blockManager.createVolume(volumeId, volumePath);
     }
 
 
@@ -500,7 +544,7 @@ public class Storage {
 
         public void run() {
             try {
-                List<String> returnValues = ebsManager.prepareForTransfer(volumeId, snapshotId);
+                List<String> returnValues = blockManager.prepareForTransfer(volumeId, snapshotId);
                 volumeFileName = returnValues.get(0);
                 snapshotFileName = returnValues.get(1);
                 EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
@@ -548,7 +592,7 @@ public class Storage {
             HttpWriter httpWriter;
             if(shouldTransferVolume) {
                 try {
-                    List<String> returnValues = ebsManager.getSnapshotValues(volumeId);
+                    List<String> returnValues = blockManager.getSnapshotValues(volumeId);
                     if(returnValues.size() > 0) {
                         httpParamaters.put("SnapshotVgName", returnValues.get(0));
                         httpParamaters.put("SnapshotLvName", returnValues.get(1));
@@ -565,7 +609,7 @@ public class Storage {
                 }
             }
             try {
-                List<String> returnValues = ebsManager.getSnapshotValues(snapshotId);
+                List<String> returnValues = blockManager.getSnapshotValues(snapshotId);
                 if(returnValues.size() > 0) {
                     httpParamaters.put("SnapshotVgName", returnValues.get(0));
                     httpParamaters.put("SnapshotLvName", returnValues.get(1));
@@ -611,7 +655,7 @@ public class Storage {
         HttpWriter httpWriter;
         if(shouldTransferVolume) {
             try {
-                List<String> returnValues = ebsManager.getSnapshotValues(volumeId);
+                List<String> returnValues = blockManager.getSnapshotValues(volumeId);
                 if(returnValues.size() > 0) {
                     httpParamaters.put("SnapshotVgName", returnValues.get(0));
                     httpParamaters.put("SnapshotLvName", returnValues.get(1));
@@ -628,7 +672,7 @@ public class Storage {
             }
         }
         try {
-            List<String> returnValues = ebsManager.getSnapshotValues(snapshotId);
+            List<String> returnValues = blockManager.getSnapshotValues(snapshotId);
             if(returnValues.size() > 0) {
                 httpParamaters.put("SnapshotVgName", returnValues.get(0));
                 httpParamaters.put("SnapshotLvName", returnValues.get(1));
@@ -648,6 +692,7 @@ public class Storage {
         void run();
         int getUpdateThreshold();
         void finish();
+        void failed();
     }
 
     public class SnapshotProgressCallback implements CallBack {
@@ -689,6 +734,22 @@ public class Storage {
                 ex.printStackTrace();
             }
             db.commit();
+        }
+
+        public void failed() {
+            EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
+            SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
+            try {
+                SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
+                foundSnapshotInfo.setProgress(String.valueOf(0));
+                foundSnapshotInfo.setTransferred(false);
+                foundSnapshotInfo.setStatus(Status.failed.toString());
+            } catch (Exception ex) {
+                db.rollback();
+                ex.printStackTrace();
+            }
+            db.commit();
+
         }
 
         public int getUpdateThreshold() {
@@ -796,14 +857,20 @@ public class Storage {
                 byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
                 int bytesRead;
                 int numberProcessed = 0;
+                long totalBytesProcessed = 0;
                 while ((bytesRead = inputStream.read(buffer)) > 0) {
                     gzipOutStream.write(buffer, 0, bytesRead);
+                    totalBytesProcessed += bytesRead;
                     if(++numberProcessed >= callback.getUpdateThreshold()) {
                         callback.run();
                         numberProcessed = 0;
                     }
                 }
-                callback.finish();
+                if(totalBytesProcessed == outFile.length()) {
+                    callback.finish();
+                } else {
+                    callback.failed();
+                }
                 gzipOutStream.close();
                 inputStream.close();
                 if(deleteOnXfer) {
