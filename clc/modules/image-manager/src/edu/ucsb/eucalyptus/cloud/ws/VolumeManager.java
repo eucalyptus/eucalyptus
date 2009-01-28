@@ -47,7 +47,7 @@ import org.apache.log4j.Logger;
 import java.util.*;
 
 public class VolumeManager {
-  static String PERSISTENCE_CONTEXT = "eucalyptus.volumes";
+  static String PERSISTENCE_CONTEXT = "eucalyptus_volumes";
 
   private static String ID_PREFIX = "vol";
   private static Logger LOG = Logger.getLogger( VolumeManager.class );
