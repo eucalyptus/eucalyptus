@@ -753,10 +753,10 @@ static void * rebooting_thread (void *arg)
 
     sem_p (xen_sem);
     // for KVM, must stop and restart the instance
-    int error = virDomainShutdown (dom);
+    int error = virDomainDestroy (dom); // TODO: change to Shutdown?
     sem_v (xen_sem);
+    virDomainFree(dom);
     if (error) {
-        virDomainFree(dom);
         virConnectClose(conn);
         free (xml);
         return NULL;
