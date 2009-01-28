@@ -68,9 +68,15 @@ for ($i=0; $i<10 && !$attached; $i++) {
     } else {
 	$rc = system("$LOSETUP -o $offset $loopdev $img");
     }
-    if ($loopdev ne "" && !$rc) {
-	if (!system("$mounter mount $loopdev $tmpfile")) {
-	    $attached = 1;
+    if ($loopdev ne "") {
+	if (!$rc) {
+	    if (!system("$mounter mount $loopdev $tmpfile")) {
+		$attached = 1;
+	    } else {
+		system("$LOSETUP -d $loopdev");
+	    }
+	} else {
+	    system("$LOSETUP -d $loopdev");
 	}
     }
 }
