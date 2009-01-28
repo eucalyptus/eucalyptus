@@ -40,7 +40,7 @@ public class Pair {
 public interface RequestTransactionScript extends Serializable {
   public EucalyptusMessage getRequest();
 }
-public class VmAllocationInfo extends RequestTransactionScript {
+public class VmAllocationInfo implements RequestTransactionScript {
 
   RunInstancesType request;
   RunInstancesResponseType reply;
