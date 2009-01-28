@@ -27,18 +27,6 @@
             </outbound>
         </service>
 
-        <service name="Image">
-            <inbound>
-                <inbound-endpoint ref="ImageWS"/>
-            </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.ImageManager"/>
-            <outbound>
-                <outbound-pass-through-router>
-                    <outbound-endpoint ref="ReplyQueueWS"/>
-                </outbound-pass-through-router>
-            </outbound>
-        </service>
-
         <service name="Groups">
             <inbound>
                 <inbound-endpoint ref="GroupsWS"/>

@@ -58,11 +58,11 @@
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImageMessage"/>
                 </filtering-router>
                 <filtering-router>
-                    <outbound-endpoint ref="ImageWS"/>
+                    <outbound-endpoint ref="VolumeWS"/>
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockVolumeMessage"/>
                 </filtering-router>
                 <filtering-router>
-                    <outbound-endpoint ref="ImageWS"/>
+                    <outbound-endpoint ref="SnapshotWS"/>
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockSnapshotMessage"/>
                 </filtering-router>
                 <filtering-router>
