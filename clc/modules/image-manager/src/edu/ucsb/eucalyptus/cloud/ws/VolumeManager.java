@@ -49,10 +49,6 @@ import java.util.*;
 public class VolumeManager {
   static String PERSISTENCE_CONTEXT = "eucalyptus.volumes";
 
-  static {
-    System.setProperty( PERSISTENCE_CONTEXT, PERSISTENCE_CONTEXT );
-  }
-
   private static String ID_PREFIX = "vol";
   private static Logger LOG = Logger.getLogger( VolumeManager.class );
 
