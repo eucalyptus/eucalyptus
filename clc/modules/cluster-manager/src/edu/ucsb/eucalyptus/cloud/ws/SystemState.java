@@ -263,7 +263,7 @@ public class SystemState {
   private static void dispatchReboot( final String clusterName, final String instanceId, final EucalyptusMessage request ) {
     Cluster cluster = Clusters.getInstance().lookup( clusterName );
     QueuedEvent<RebootInstancesType> event = QueuedEvent.make( new RebootCallback( cluster ),
-                                                               Admin.makeMsg( RebootInstancesType.class, instanceId ) );
+                                                               Admin.makeMsg( RebootInstancesType.class, request, instanceId ) );
     cluster.getMessageQueue().enqueue( event );
   }
 
