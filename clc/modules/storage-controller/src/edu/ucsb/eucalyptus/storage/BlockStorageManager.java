@@ -47,6 +47,8 @@ public interface BlockStorageManager {
 
     public void startupChecks();
 
+    public void setStorageInterface(String storageInterface);
+
     public void cleanVolume(String volumeId);
 
     public void cleanSnapshot(String volumeId);

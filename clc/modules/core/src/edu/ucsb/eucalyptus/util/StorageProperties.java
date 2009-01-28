@@ -38,32 +38,44 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import org.apache.log4j.Logger;
 
+import java.util.UUID;
+
 public class StorageProperties {
 
     private static Logger LOG = Logger.getLogger( StorageProperties.class );
 
     public static final String SERVICE_NAME = "StorageController";
+    public static String SC_ID = SERVICE_NAME + UUID.randomUUID();
     public static String STORAGE_REF = "vm://StorageInternal";
     public static final String EUCALYPTUS_OPERATION = "EucaOperation";
     public static final String EUCALYPTUS_HEADER = "EucaHeader";
-    public static String volumeRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
-    public static String snapshotRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
     public static String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
+    public static String storageInterface = "eth0";
+    public static String WALRUS_URL = "http://localhost:8773/services/Walrus";
+    public static int maxVolumeSize = 50;
+    public static int maxSnapshotSize = 50;
     public static final long GB = 1024*1024*1024;
     public static final long MB = 1024*1024;
     public static final long KB = 1024;
     public static final int TRANSFER_CHUNK_SIZE = 102400;
 
-
+    static {
+        String walrusAt = System.getProperty(WalrusProperties.URL_PROPERTY);
+        if(walrusAt != null)
+            WALRUS_URL = walrusAt;
+    }
+    
     public static void update() {
         try {
             //TODO: This assumes that the SC shares the database with the front end. This is NOT true. Fix this thru message passing.
             SystemConfiguration systemConfiguration = EucalyptusProperties.getSystemConfiguration();
             //bucketRootDirectory = systemConfiguration.getStorageDir();
             UpdateStorageConfigurationType updateConfig = new UpdateStorageConfigurationType();
-            updateConfig.setVolumeRootDirectory(volumeRootDirectory);
-            updateConfig.setSnapshotRootDirectory(snapshotRootDirectory);
-            Messaging.send(STORAGE_REF, updateConfig );
+            updateConfig.setStorageRootDirectory(storageRootDirectory);
+            updateConfig.setMaxVolumeSize(maxVolumeSize);
+            updateConfig.setMaxSnapshotSize(maxSnapshotSize);
+            updateConfig.setStorageInterface(storageInterface);
+            Messaging.send(STORAGE_REF, updateConfig);
         } catch(Exception ex) {
             LOG.warn(ex.getMessage());
         }
