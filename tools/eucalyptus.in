@@ -260,6 +260,15 @@ if [ -z "$EUCA_USER" ] ; then
 	EUCA_USER="root"
 fi
 
+# let's see if the user exists
+ID="`which id 2> /dev/null`"
+if [ -n "$ID" ]; then
+	if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
+		echo "User $EUCA_USER doesn't exists!"
+		exit 1
+	fi
+fi
+
 # let's try to pick the system apache2
 HTTPD="`which apache2 2> /dev/null`"		# .deb based machines
 if [ -z  "$HTTPD" ]; then
