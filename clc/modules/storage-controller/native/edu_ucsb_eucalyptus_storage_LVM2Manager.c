@@ -231,7 +231,7 @@ JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_aoeUnexport
     //TODO: blind kill. Hope for the best.
    char command[128];
 
-   snprintf(command, 128, "kill -9 %s", vblade_pid);
+   snprintf(command, 128, "kill %s", vblade_pid);
    run_command(env, command, 1);
 }
 

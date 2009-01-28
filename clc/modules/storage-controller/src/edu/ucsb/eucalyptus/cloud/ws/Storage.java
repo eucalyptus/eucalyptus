@@ -104,12 +104,9 @@ public class Storage {
         StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
     }
 
-    //For unit testing
     public Storage() {}
 
     private static void startupChecks() {
-        //clean pending snapshots
-        //clean pending volumes
         cleanVolumes();
         cleanSnapshots();
         blockManager.startupChecks();
@@ -130,8 +127,15 @@ public class Storage {
             }
             db.delete(volInfo);
         }
+        db.commit();
+        cleanFailedVolumes();
+    }
+
+    private static void cleanFailedVolumes() {
+        EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
+        VolumeInfo volumeInfo = new VolumeInfo();
         volumeInfo.setStatus(StorageProperties.Status.failed.toString());
-        volumeInfos = db.query(volumeInfo);
+        List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         for(VolumeInfo volInfo : volumeInfos) {
             String volumeId = volInfo.getVolumeId();
             try {
@@ -143,6 +147,23 @@ public class Storage {
         }
         db.commit();
     }
+
+    private static void cleanFailedVolume(String volumeId) {
+        EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
+        VolumeInfo volumeInfo = new VolumeInfo(volumeId);
+        List<VolumeInfo> volumeInfos = db.query(volumeInfo);
+        if(volumeInfos.size() > 0) {
+            VolumeInfo volInfo = volumeInfos.get(0);
+            try {
+                volumeStorageManager.deleteObject("", volumeId);
+            } catch(Exception ex) {
+                LOG.warn(ex);
+            }
+            db.delete(volInfo);
+        }
+        db.commit();
+    }
+
 
     private static void cleanSnapshots() {
         EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
@@ -159,10 +180,34 @@ public class Storage {
             }
             db.delete(snapInfo);
         }
+        db.commit();
+        cleanFailedSnapshots();
+    }
+
+    private static void cleanFailedSnapshots() {
+        EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
+        SnapshotInfo snapshotInfo = new SnapshotInfo();
         snapshotInfo.setStatus(StorageProperties.Status.failed.toString());
-        snapshotInfos = db.query(snapshotInfo);
+        List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
         for(SnapshotInfo snapInfo : snapshotInfos) {
             String snapshotId = snapInfo.getSnapshotId();
+            blockManager.cleanSnapshot(snapshotId);
+            try {
+                snapshotStorageManager.deleteObject("", snapshotId);
+            } catch(Exception ex) {
+                LOG.warn(ex);
+            }
+            db.delete(snapInfo);
+        }
+        db.commit();
+    }
+
+    private static void cleanFailedSnapshot(String snapshotId) {
+        EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
+        SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
+        List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+        if(snapshotInfos.size() > 0) {
+            SnapshotInfo snapInfo = snapshotInfos.get(0);
             blockManager.cleanSnapshot(snapshotId);
             try {
                 snapshotStorageManager.deleteObject("", snapshotId);
@@ -235,7 +280,8 @@ public class Storage {
         if(volumeList.size() > 0) {
             VolumeInfo foundVolume = volumeList.get(0);
             //check its status
-            if(foundVolume.getStatus().equals(StorageProperties.Status.available.toString())) {
+            String status = foundVolume.getStatus();
+            if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
                 try {
                     blockManager.deleteVolume(volumeId);
                     volumeStorageManager.deleteObject("", volumeId);
@@ -306,17 +352,27 @@ public class Storage {
         ArrayList<SnapshotInfo> snapshotInfos = new ArrayList<SnapshotInfo>();
         EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
 
-        for(String snapshotSetEntry: snapshotSet) {
-            SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotSetEntry);
-            SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
-            if(foundSnapshotInfo != null) {
-                snapshotInfos.add(foundSnapshotInfo);
+        if((snapshotSet != null) && !snapshotSet.isEmpty()) {
+            for(String snapshotSetEntry: snapshotSet) {
+                SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotSetEntry);
+                List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
+                if(foundSnapshotInfos.size() > 0) {
+                    snapshotInfos.add(foundSnapshotInfos.get(0));
+                }
+            }
+        } else {
+            SnapshotInfo snapshotInfo = new SnapshotInfo();
+            List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
+            for(SnapshotInfo snapInfo : foundSnapshotInfos) {
+                snapshotInfos.add(snapInfo);
             }
         }
 
         ArrayList<StorageSnapshot> snapshots = reply.getSnapshotSet();
         for(SnapshotInfo snapshotInfo: snapshotInfos) {
             snapshots.add(convertSnapshotInfo(snapshotInfo));
+            if(snapshotInfo.getStatus().equals(StorageProperties.Status.failed.toString()))
+                cleanFailedSnapshot(snapshotInfo.getSnapshotId());
         }
         return reply;
     }
@@ -334,7 +390,8 @@ public class Storage {
         reply.set_return(true);
         if(snapshotInfos.size() > 0) {
             SnapshotInfo  foundSnapshotInfo = snapshotInfos.get(0);
-            if(foundSnapshotInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
+            String status = foundSnapshotInfo.getStatus();
+            if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
                 try {
                     blockManager.deleteSnapshot(snapshotId);
                     snapshotStorageManager.deleteObject("", snapshotId);
@@ -521,7 +578,6 @@ public class Storage {
 
     public void GetSnapshots(String volumeId, String snapshotSetName, String snapshotId) throws EucalyptusCloudException {
         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
-        //blockManager.loadSnapshots(snapshotSet, snapshotFileNames);
         int size = blockManager.createVolume(volumeId, volumePath);
     }
 
@@ -551,7 +607,10 @@ public class Storage {
         ArrayList<StorageVolume> volumes = reply.getVolumeSet();
         for(VolumeInfo volumeInfo: volumeInfos) {
             volumes.add(convertVolumeInfo(volumeInfo));
+            if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString()))
+                cleanFailedVolume(volumeInfo.getVolumeId());
         }
+        db.commit();
         return reply;
     }
 
