@@ -113,14 +113,20 @@ public class LVM2Manager implements BlockStorageManager {
             LVMVolumeInfo lvmVolInfo = lvmVolumeInfos.get(0);
             //remove aoe export
             String loDevName = lvmVolInfo.getLoDevName();
-            exportManager.unexportVolume(lvmVolInfo.getVbladePid());
+            int pid = lvmVolInfo.getVbladePid();
+            if(pid > 0) {
+                String returnValue = getAoEStatus(String.valueOf(pid));
+                if(returnValue.contains("vblade")) {
+                    exportManager.unexportVolume(pid);
+                }
+            }
             removeLoopback(loDevName);
             db.delete(lvmVolInfo);
             db.commit();
         }
     }
 
-     public void cleanSnapshot(String snapshotId) {
+    public void cleanSnapshot(String snapshotId) {
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
         LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
         List<LVMVolumeInfo> lvmVolumeInfos = db.query(lvmVolumeInfo);
@@ -132,7 +138,7 @@ public class LVM2Manager implements BlockStorageManager {
             db.commit();
         }
     }
-    
+
     public native String losetup(String fileName);
 
     public native String losetup(String absoluteFileName, String loDevName);
