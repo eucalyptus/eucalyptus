@@ -835,50 +835,51 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
         if ((e=get_cached_file (userId, ramdiskURL, ramdiskId, instanceId, "ramdisk", ramdisk_path, s, convert_to_disk))!=0) return e;
     }
     snprintf (rundir_path, BUFSIZE, "%s/%s/%s", sc_instance_path, userId, instanceId);
-    logprintfl (EUCAINFO, "preparing images for instance %s...\n", instanceId);
     
-    /* embed the key, which is contained in keyName */
-    if (keyName && strlen(keyName)) {
-        int key_len = strlen(keyName);
-        char *key_template = NULL;
-        int fd = -1;
-        int ret;
-        
-        key_template = strdup("/tmp/sckey.XXXXXX");
-        
-        if (((fd = mkstemp(key_template)) < 0)) {
-            logprintfl (EUCAERROR, "failed to create a temporary key file\n"); 
-        } else if ((ret = write (fd, keyName, key_len))<key_len) {
-            logprintfl (EUCAERROR, "failed to write to key file %s write()=%d\n", key_template, ret);
+    if (!convert_to_disk) { 
+        logprintfl (EUCAINFO, "preparing images for instance %s...\n", instanceId);
+
+        /* embed the key, which is contained in keyName */
+        if (keyName && strlen(keyName)) {
+            int key_len = strlen(keyName);
+            char *key_template = NULL;
+            int fd = -1;
+            int ret;
+            
+            key_template = strdup("/tmp/sckey.XXXXXX");
+            
+            if (((fd = mkstemp(key_template)) < 0)) {
+                logprintfl (EUCAERROR, "failed to create a temporary key file\n"); 
+            } else if ((ret = write (fd, keyName, key_len))<key_len) {
+                logprintfl (EUCAERROR, "failed to write to key file %s write()=%d\n", key_template, ret);
+            } else {
+                close (fd);
+                logprintfl (EUCAINFO, "adding key %s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
+                sem_p (s);
+                if ((e=run(add_key_command_path, image_path, key_template, 0))!=0) {
+                    logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
+                }
+                sem_v (s);
+                
+                /* let's remove the temporary key file */
+                if (unlink(key_template) != 0) {
+                    logprintfl (EUCAWARN, "WARNING: failed to remove temporary key file %s\n", key_template);
+                }
+            }
+            
+            /* TODO: handle errors! */
+            if (key_template) free(key_template);
+            if (e) return e;
+            
         } else {
-            close (fd);
-            logprintfl (EUCAINFO, "adding key %s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
             sem_p (s);
-            if ((e=run(add_key_command_path, image_path, key_template, 0))!=0) {
-                logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
+            if ((e=run(add_key_command_path, image_path, 0))!=0) { /* without key, add_key just does tune2fs */
+                logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
             }
             sem_v (s);
-            
-            /* let's remove the temporary key file */
-            if (unlink(key_template) != 0) {
-                logprintfl (EUCAWARN, "WARNING: failed to remove temporary key file %s\n", key_template);
-            }
+            /* printf ("no user public key to embed, skipping\n"); */
         }
         
-        /* TODO: handle errors! */
-        if (key_template) free(key_template);
-        if (e) return e;
-        
-    } else {
-        sem_p (s);
-        if ((e=run(add_key_command_path, image_path, 0))!=0) { /* without key, add_key just does tune2fs */
-            logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
-        }
-        sem_v (s);
-        /* printf ("no user public key to embed, skipping\n"); */
-    }
-    
-    if (!convert_to_disk) {
         /* create swap partition */
         int swap_size_mb = default_swap_size; /* TODO: set this dynamically */
         if (swap_size_mb) { 
@@ -905,7 +906,7 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
             }
         }
     } else {
-        /* TODO: do we want to create swap & ephemeral here? */
+        // TODO: add support for key injection, swap, and ephemeral in partitions
     }
     
     * instance_path = strdup (rundir_path);
