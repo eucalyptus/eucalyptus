@@ -76,7 +76,7 @@ public class ReplyQueue {
         try {
           msg = parsePayload( muleMsg.getPayload() );
         } catch ( Exception e ) {
-          LOG.error( "BUG: Bailing out of error handling due to unknown!" );
+          LOG.error( "Bailing out of error handling: don't have the correlationId for the caller!" );
           LOG.error( e, e );
           return;
         }
