@@ -57,6 +57,8 @@ const int unbooted_cleanup_threshold = 60 * 60 * 2; /* after this many seconds a
 const int teardown_state_duration = 60; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
 const int monitoring_period_duration = 5; /* how frequently we check on instances */
 
+static virConnectPtr conn = NULL;
+
 static void libvirt_error_handler (void * userData, virErrorPtr error)
 {
     if ( error==NULL) {
@@ -107,7 +109,6 @@ static void refresh_instance_info (ncInstance * instance)
         return;
     
     /* try to get domain state from Xen */
-    virConnectPtr conn = virConnectOpen ("xen:///"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAERROR, "warning: failed to connect to hypervisor\n");
         return;
@@ -123,7 +124,6 @@ static void refresh_instance_info (ncInstance * instance)
             change_state (instance, SHUTOFF);
         }
         /* else 'now' stays in SHUTFOFF, BOOTING or CRASHED */
-        virConnectClose (conn);
         return;
     }
     virDomainInfo info;
@@ -132,7 +132,6 @@ static void refresh_instance_info (ncInstance * instance)
         logprintfl (EUCAWARN, "warning: failed to get informations for domain %s\n", instance->instanceId);
         /* what to do? hopefully we'll find out more later */
         virDomainFree (dom);
-        virConnectClose (conn);
         return;
     } 
     int xen = info.state;
@@ -165,7 +164,6 @@ static void refresh_instance_info (ncInstance * instance)
         return;
     }
     virDomainFree(dom);
-    virConnectClose(conn);
 
     /* if instance is running, try to find out its IP address */
     if (instance->state==RUNNING ||
@@ -338,9 +336,11 @@ static int doInitialize (void)
     snprintf (gen_libvirt_xml_command_path, BUFSIZE, EUCALYPTUS_GEN_LIBVIRT_XML, home, home);
     snprintf (get_xen_info_command_path,    BUFSIZE, EUCALYPTUS_GET_XEN_INFO,    home, home);
     
+    /* open the connection to hypervisor, once and for all */
+    conn = virConnectOpen ("xen:///");
+
     /* "adopt" currently running Xen instances */
     {
-        virConnectPtr conn = NULL;
         int dom_ids[MAXDOMS];
         int num_doms = 0;
         
@@ -348,7 +348,6 @@ static int doInitialize (void)
         virSetErrorFunc (NULL, libvirt_error_handler);
 
         /* check with Xen */
-        conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
         if (conn == NULL) {
             logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
             free(home);
@@ -418,7 +417,6 @@ static int doInitialize (void)
         } else {
             logprintfl (EUCAWARN, "WARNING: failed to find out about running domains\n");
         }
-        virConnectClose (conn);
     }
 
     /* network startup */
@@ -554,13 +552,11 @@ static int get_instance_xml (char *userId, char *instanceId, int ramdisk, char *
 void * startup_thread (void * arg)
 {
     ncInstance * instance = (ncInstance *)arg;
-    virConnectPtr conn = NULL;
     virDomainPtr dom = NULL;
     char * disk_path, * xml;
     char *brname=NULL;
     int error;
     
-    conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAFATAL, "failed to connect to hypervisor to start instance %s, abandoning it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
@@ -571,7 +567,6 @@ void * startup_thread (void * arg)
     if ( error ) {
         logprintfl (EUCAFATAL, "start network failed for instance %s, terminating it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
-        virConnectClose (conn);
         return NULL;
     }
     logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
@@ -585,13 +580,11 @@ void * startup_thread (void * arg)
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
-        virConnectClose (conn);
         return NULL;
     }
     if (instance->state!=BOOTING) {
         logprintfl (EUCAFATAL, "Startup of instance %s was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
-        virConnectClose (conn);
         return NULL;
     }
     
@@ -605,7 +598,6 @@ void * startup_thread (void * arg)
     if (error) {
         logprintfl (EUCAFATAL, "Failed to create libvirt XML config for instance %s\n", instance->instanceId);
         change_state (instance, SHUTOFF);
-        virConnectClose(conn);
         return NULL;
     }
     
@@ -622,13 +614,11 @@ void * startup_thread (void * arg)
     if (dom == NULL) {
         logprintfl (EUCAFATAL, "hypervisor failed to start domain\n");
         change_state (instance, SHUTOFF);
-        virConnectClose(conn);
         return NULL;
     }
     eventlog("NC", instance->userId, "", "instanceBoot", "begin"); /* TODO: bring back correlationId */
     
     virDomainFree(dom);
-    virConnectClose(conn);
     logprintfl (EUCAINFO, "started VM instance %s\n", instance->instanceId);
     
     return NULL;
@@ -813,7 +803,6 @@ static int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdow
     if ( instance == NULL ) return NOT_FOUND;
 
     /* try stopping the Xen domain */
-    virConnectPtr conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
     } else {
@@ -832,7 +821,6 @@ static int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdow
                 logprintfl (EUCAWARN, "warning: domain %s to be terminated not running on hypervisor\n", instanceId);
             }
         }
-        virConnectClose (conn);
     }
 
     /* change the state and let the monitoring_thread clean up state */
@@ -996,7 +984,6 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     }
 
     /* try attaching to the Xen domain */
-    virConnectPtr conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
         ret = ERROR;
@@ -1011,7 +998,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
-	    //            int err = virDomainAttachDevice (dom, xml);
+            err = virDomainAttachDevice (dom, xml);
             sem_v (xen_sem);
             if (err) {
                 logprintfl (EUCAERROR, "AttachVolume() failed (err=%d) XML=%s\n", err, xml);
@@ -1026,7 +1013,6 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
             }
             ret = ERROR;
         }
-        virConnectClose (conn);
     }
     return ret;
 }
@@ -1053,7 +1039,6 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     }
 
     /* try attaching to the Xen domain */
-    virConnectPtr conn = virConnectOpen("xen:///"); /* NULL means local hypervisor */
     if (conn == NULL) {
         logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
         ret = ERROR;
@@ -1067,7 +1052,7 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
-//            int err = virDomainDetachDevice (dom, xml);
+            err = virDomainDetachDevice (dom, xml);
             sem_v (xen_sem);
             if (err) {
                 logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
@@ -1082,7 +1067,6 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
             }
             ret = ERROR;
         }
-        virConnectClose (conn);
     }
     return ret;
 }
