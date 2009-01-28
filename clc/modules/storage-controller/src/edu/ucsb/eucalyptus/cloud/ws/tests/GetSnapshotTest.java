@@ -34,11 +34,11 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.ws.Storage;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import junit.framework.TestCase;
-
-import java.util.UUID;
 
 public class GetSnapshotTest extends TestCase {
 
@@ -49,10 +49,19 @@ public class GetSnapshotTest extends TestCase {
 
         String volumeId = "vol-" + Hashes.getRandom(10);
         String snapshotBucket = "snapset-FuXLn1MUHJ66BkK0";
-        String snapshotId = "snap-zVl2kZJmjhxnEg..";
-        storage.GetSnapshots(volumeId, snapshotBucket, snapshotId);
+        String snapshotId = "snap-" + Hashes.getRandom(10);
+        EntityWrapper<WalrusSnapshotInfo>db = new EntityWrapper<WalrusSnapshotInfo>();
+        WalrusSnapshotInfo snapInfo = new WalrusSnapshotInfo(snapshotId);
+        db.add(snapInfo);
+        snapInfo.setLvName("lol");
+        
+        db.commit();
+        //    storage.GetSnapshots(volumeId, snapshotBucket, snapshotId);
+
+
+        if ( EntityWrapper.getEntityManagerFactory().isOpen() )
+     EntityWrapper.getEntityManagerFactory().close();
     }
-    
     public void setUp() {
         storage = new Storage();
     }
