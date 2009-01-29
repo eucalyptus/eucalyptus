@@ -64,16 +64,27 @@ public class StorageProperties {
         if(walrusAt != null)
             WALRUS_URL = walrusAt;
     }
-    
+
     public static void update() {
         try {
             //TODO: This assumes that the SC shares the database with the front end. This is NOT true. Fix this thru message passing.
             SystemConfiguration systemConfiguration = EucalyptusProperties.getSystemConfiguration();
-            //bucketRootDirectory = systemConfiguration.getStorageDir();
             UpdateStorageConfigurationType updateConfig = new UpdateStorageConfigurationType();
-            updateConfig.setStorageRootDirectory(storageRootDirectory);
+            Integer maxVolSize = systemConfiguration.getStorageMaxVolumeSizeInGb();
+            if(maxVolSize != null) {
+                if(maxVolSize > 0) {
+                    maxVolumeSize = maxVolSize;
+                }
+            }
+            Integer maxSnapSize = systemConfiguration.getStorageMaxSnapshotSizeInGb();
+            if(maxSnapSize != null) {
+                if(maxSnapSize > 0) {
+                    maxSnapshotSize = maxSnapSize;
+                }
+            }
             updateConfig.setMaxVolumeSize(maxVolumeSize);
             updateConfig.setMaxSnapshotSize(maxSnapshotSize);
+            updateConfig.setStorageRootDirectory(storageRootDirectory);
             updateConfig.setStorageInterface(storageInterface);
             Messaging.send(STORAGE_REF, updateConfig);
         } catch(Exception ex) {

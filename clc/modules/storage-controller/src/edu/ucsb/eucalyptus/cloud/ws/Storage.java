@@ -84,8 +84,6 @@ public class Storage {
     static {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
-        //NOTE: initializeForEBS MUST be called before exercizing any storage/EBS functionality
-        initializeForEBS();
     }
 
     public static void initializeForEBS() {
@@ -256,8 +254,6 @@ public class Storage {
         UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
         String storageRootDirectory = request.getStorageRootDirectory();
         String storageInterface = request.getStorageInterface();
-        Integer maxVolumeSize = request.getMaxVolumeSize();
-        Integer maxSnapshotSize = request.getMaxSnapshotSize();
 
         if(storageRootDirectory != null)  {
             volumeStorageManager.setRootDirectory(storageRootDirectory);
