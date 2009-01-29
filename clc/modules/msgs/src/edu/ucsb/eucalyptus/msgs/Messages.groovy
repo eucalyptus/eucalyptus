@@ -412,7 +412,7 @@ public class HeartbeatMessage implements Cloneable, Serializable {
     this.heartbeatId = heartbeatId;
   }
 
-  def HeartBeatMessage() {}
+  def HeartbeatMessage() {}
 
 
 }
