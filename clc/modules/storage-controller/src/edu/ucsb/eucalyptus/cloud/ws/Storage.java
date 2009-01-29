@@ -85,7 +85,7 @@ public class Storage {
     static {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
-        //initializeForEBS();
+        initializeForEBS();
     }
 
     public static void initializeForEBS() {
@@ -110,13 +110,13 @@ public class Storage {
         try {
             blockManager.checkPreconditions();
         } catch(Exception ex) {
-            //bind to null provider
             enableStorage = false;
             LOG.warn(ex);
             LOG.warn("Could not initialize block manager");
             return;
         }
         startup();
+        checkWalrusConnection();
         //TODO: inform CLC
         //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
     }
@@ -126,7 +126,6 @@ public class Storage {
     private static void startup() {
         cleanVolumes();
         cleanSnapshots();
-        checkWalrusConnection();
         blockManager.startupChecks();
     }
 
@@ -361,7 +360,9 @@ public class Storage {
         CreateStorageSnapshotResponseType reply = ( CreateStorageSnapshotResponseType ) request.getReply();
 
         if(!enableSnapshots || !enableStorage) {
-            LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
+            checkWalrusConnection();
+            if(!enableSnapshots)
+                LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
             return reply;
         }
         String volumeId = request.getVolumeId();
@@ -444,7 +445,9 @@ public class Storage {
         DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
         if(!enableSnapshots || !enableStorage) {
-            LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
+            checkWalrusConnection();
+            if(!enableSnapshots)        
+                LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
             return reply;
         }
 
@@ -649,6 +652,11 @@ public class Storage {
     }
 
     private String getVolume(String volumeId, String snapshotBucket, String snapshotId) throws EucalyptusCloudException {
+        checkWalrusConnection();
+        if(!enableSnapshots) {
+            LOG.warn("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url");
+            throw new EucalyptusCloudException("could not connect to Walrus.");
+        }
         String walrusSnapshotPath = snapshotBucket + "/" + snapshotId;
         String volumePath = StorageProperties.storageRootDirectory + "/" + volumeId;
         File file = new File(volumePath);
