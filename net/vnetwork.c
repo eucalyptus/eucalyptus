@@ -836,7 +836,7 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
   //  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, devname, newip, netmask);
   slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
   snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add %s/%d broadcast %s dev %s", vnetconfig->eucahome, newip, slashnet, broadcast, devname);
-  //  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add %s/%d dev %s", vnetconfig->eucahome, newip, slashnet, devname);
+
   logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
   rc = system(cmd);
   if (rc) {
@@ -871,14 +871,15 @@ int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
   //slashnet = 16;
   snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr del %s/%d broadcast %s dev %s", vnetconfig->eucahome, newip, slashnet, broadcast, devname);
   //  snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip addr del %s/%d dev %s", vnetconfig->eucahome, newip, slashnet, devname);
-  if (newip) free(newip);
-  if (broadcast) free(broadcast);
-  
   rc = system(cmd);
   if (rc) {
-    logprintfl(EUCAERROR, "could not bring up new device %s with ip %s\n", devname, newip);
+    logprintfl(EUCAERROR, "could not bring down new device %s with ip %s\n", devname, newip);
+    if (newip) free(newip);
+    if (broadcast) free(broadcast);
     return(1);
   }
+  if (newip) free(newip);
+  if (broadcast) free(broadcast);
   return(0);
 }
 
