@@ -42,9 +42,7 @@ import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -62,20 +60,27 @@ public class LVM2Manager implements BlockStorageManager {
     public static String hostName = "localhost";
     public static final int MAX_LOOP_DEVICES = 256;
     public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
-
+    private static final String CONFIG_FILE_PATH = "/etc/eucalyptus/eucalyptus.conf";
     private static Logger LOG = Logger.getLogger(LVM2Manager.class);
+    private static String eucaHome = "/opt/eucalyptus";
+    private static final String IFACE_CONFIG_STRING = "VNET_INTERFACE";
 
     public StorageExportManager exportManager;
 
     public void checkPreconditions() throws EucalyptusCloudException {
         //check if binaries exist, commands can be executed, etc.
-        String eucaHome = System.getProperty("euca.home");
-        if(eucaHome == null) {
+        String eucaHomeDir = System.getProperty("euca.home");
+        if(eucaHomeDir == null) {
             throw new EucalyptusCloudException("euca.home not set");
         }
+        eucaHome = eucaHomeDir;
         if(!new File(eucaHome + EUCA_ROOT_WRAPPER).exists()) {
             throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist");
         }
+        if(!new File(eucaHome + CONFIG_FILE_PATH).exists()) {
+            throw new EucalyptusCloudException(eucaHome + CONFIG_FILE_PATH + " does not exist");
+        }
+
         String returnValue = getLvmVersion();
         if(returnValue.length() == 0) {
             throw new EucalyptusCloudException("Is lvm installed?");
@@ -94,20 +99,28 @@ public class LVM2Manager implements BlockStorageManager {
             exportManager = new AOEManager();
             try {
                 hostName = InetAddress.getLocalHost().getHostName();
-                NetworkInterface inface = NetworkInterface.getByName(iface);
-                if(inface == null) {
-                    List<NetworkInterface> ifaces = null;
-                    try {
-                        ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-                    } catch ( SocketException e1 ) {}
-                    for ( NetworkInterface ifc : ifaces )
+                iface = parseConfig();
+                if(iface == null || (iface.length() == 0)) {
+                    NetworkInterface inface = NetworkInterface.getByName(iface);
+                    if(inface == null) {
+                        List<NetworkInterface> ifaces = null;
                         try {
-                            if ( !ifc.isLoopback() && !ifc.isVirtual() && ifc.isUp() ) {
-                                iface = ifc.getName();
-                                break;
-                            }
+                            ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
                         } catch ( SocketException e1 ) {}
+                        for ( NetworkInterface ifc : ifaces )
+                            try {
+                                if ( !ifc.isLoopback() && !ifc.isVirtual() && ifc.isUp() ) {
+                                    iface = ifc.getName();
+                                    break;
+                                }
+                            } catch ( SocketException e1 ) {}
+                    } else {
+                        if(!inface.isUp()) {
+                            LOG.warn("Network interface " + iface + " is not up. Storage may not function.");
+                        }
+                    }
                 }
+
 
                 EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
                 LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
@@ -123,6 +136,29 @@ public class LVM2Manager implements BlockStorageManager {
                 ex.printStackTrace();
             }
         }
+    }
+
+    private String parseConfig() {
+        String configFileName = eucaHome + CONFIG_FILE_PATH;
+        String ifaceName = null;
+        try {
+            FileInputStream fileInputStream = new FileInputStream(new File(configFileName));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(fileInputStream));
+            String line;
+            while((line = reader.readLine()) !=null) {
+                if(line.contains(IFACE_CONFIG_STRING) && !line.startsWith("#")) {
+                    String[] parts = line.split("=");
+                    if(parts.length > 1) {
+                      ifaceName = parts[1];
+                        ifaceName = ifaceName.replaceAll('\"' + "", "");
+                    }
+                    break;
+                }
+            }
+        } catch (Exception ex) {
+            LOG.warn("Could not parse config file " + configFileName);
+        }
+        return ifaceName;
     }
 
     public void startupChecks() {
@@ -148,6 +184,13 @@ public class LVM2Manager implements BlockStorageManager {
                     exportManager.unexportVolume(pid);
                 }
             }
+            String vgName = lvmVolInfo.getVgName();
+            String lvName = lvmVolInfo.getLvName();
+            String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+
+            String returnValue = removeLogicalVolume(absoluteLVName);
+            returnValue = removeVolumeGroup(vgName);
+            returnValue = removePhysicalVolume(loDevName);
             removeLoopback(loDevName);
             db.delete(lvmVolInfo);
             db.commit();
@@ -160,7 +203,14 @@ public class LVM2Manager implements BlockStorageManager {
         List<LVMVolumeInfo> lvmVolumeInfos = db.query(lvmVolumeInfo);
         if(lvmVolumeInfos.size() > 0) {
             LVMVolumeInfo lvmVolInfo = lvmVolumeInfos.get(0);
+            String vgName = lvmVolInfo.getVgName();
+            String lvName = lvmVolInfo.getLvName();
             String loDevName = lvmVolInfo.getLoDevName();
+            String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+
+            String returnValue = removeLogicalVolume(absoluteLVName);
+            returnValue = reduceVolumeGroup(vgName, loDevName);
+            returnValue = removePhysicalVolume(loDevName);
             removeLoopback(loDevName);
             db.delete(lvmVolInfo);
             db.commit();
