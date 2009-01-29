@@ -100,7 +100,7 @@ public class Storage {
             db.add(metaInfo);
         }
         db.commit();
-        String walrusAddr = System.getProperty(StorageProperties.WALRUS_URL);
+        String walrusAddr = StorageProperties.WALRUS_URL;
         if(walrusAddr == null) {
             LOG.warn("Walrus host addr not set");
         }
@@ -1114,7 +1114,7 @@ public class Storage {
         private HttpMethodBase method;
         public HttpWriter(String httpVerb, String bucket, String key, String eucaOperation, String eucaHeader) {
             httpClient = new HttpClient();
-            String walrusAddr = System.getProperty(StorageProperties.WALRUS_URL);
+            String walrusAddr = StorageProperties.WALRUS_URL;
             if(walrusAddr != null) {
                 String addr = walrusAddr + "/" + bucket + "/" + key;
                 method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
@@ -1123,7 +1123,7 @@ public class Storage {
 
         public HttpWriter(String httpVerb, File file, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters) {
             httpClient = new HttpClient();
-            String walrusAddr = System.getProperty(StorageProperties.WALRUS_URL);
+            String walrusAddr = StorageProperties.WALRUS_URL;
             if(walrusAddr != null) {
                 String addr = walrusAddr + "/" + bucket + "/" + key;
                 Set<String> paramKeySet = httpParameters.keySet();
@@ -1177,7 +1177,7 @@ public class Storage {
             httpClient = new HttpClient();
 
             String httpVerb = "GET";
-            String addr = System.getProperty(StorageProperties.WALRUS_URL) + "/" + path;
+            String addr = StorageProperties.WALRUS_URL + "/" + path;
 
             method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
         }
