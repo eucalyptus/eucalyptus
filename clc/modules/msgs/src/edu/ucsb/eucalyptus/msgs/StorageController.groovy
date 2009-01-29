@@ -164,7 +164,7 @@ public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
 public class StorageControllerHeartbeatMessage extends HeartbeatMessage {
   def StorageControllerHeartbeatMessage() {}
 
-  public StorageControllerHeartbeatMessage(final String heartbeatId) {
+  def StorageControllerHeartbeatMessage(final String heartbeatId) {
     super(heartbeatId);
   }
 }
