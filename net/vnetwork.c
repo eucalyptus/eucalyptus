@@ -567,9 +567,10 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig) {
 }
 
 int vnetKickDHCP(vnetConfig *vnetconfig) {
-
+  struct stat statbuf;  
   char dstring [512] = "";
   char buf [512];
+  char file[1024];
   int rc, i;
   
   if (param_check("vnetKickDHCP", vnetconfig)) return(1);
@@ -592,14 +593,21 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   }
   
   /* force dhcpd to reload the conf */
-  snprintf (buf, 512, "%s/usr/share/eucalyptus/euca_rootwrap kill `cat %s/euca-dhcp.pid`", vnetconfig->eucahome, vnetconfig->path);
-  logprintfl(EUCADEBUG, "executing: %s\n", buf);
-  rc = system (buf);
-  
-  snprintf (buf, 512, "%s/usr/share/eucalyptus/euca_rootwrap kill -9 `cat %s/euca-dhcp.pid`", vnetconfig->eucahome, vnetconfig->path);
-  logprintfl(EUCADEBUG, "executing: %s\n", buf);
-  rc = system (buf);
-  usleep(250000);
+
+  snprintf(file, 1024, "%s/euca-dhcp.pid", vnetconfig->path);
+  if (stat(file, &statbuf) == 0) {
+
+    /*
+      snprintf (buf, 512, "%s/usr/share/eucalyptus/euca_rootwrap kill `cat %s/euca-dhcp.pid`", vnetconfig->eucahome, vnetconfig->path);
+      logprintfl(EUCADEBUG, "executing: %s\n", buf);
+      rc = system (buf);
+    */
+    
+    snprintf (buf, 512, "%s/usr/share/eucalyptus/euca_rootwrap kill -9 `cat %s/euca-dhcp.pid`", vnetconfig->eucahome, vnetconfig->path);
+    logprintfl(EUCADEBUG, "executing: %s\n", buf);
+    rc = system (buf);
+    usleep(250000);
+  }
   
   snprintf (buf, 512, "%s/euca-dhcp.trace", vnetconfig->path);
   unlink(buf);
