@@ -64,6 +64,7 @@ public class LVM2Manager implements BlockStorageManager {
     private static Logger LOG = Logger.getLogger(LVM2Manager.class);
     private static String eucaHome = "/opt/eucalyptus";
     private static final String IFACE_CONFIG_STRING = "VNET_INTERFACE";
+    private static final boolean ifaceDiscovery = false;
 
     public StorageExportManager exportManager;
 
@@ -103,24 +104,26 @@ public class LVM2Manager implements BlockStorageManager {
                 if(iface == null || (iface.length() == 0)) {
                     NetworkInterface inface = NetworkInterface.getByName(iface);
                     if(inface == null) {
-                        List<NetworkInterface> ifaces = null;
-                        try {
-                            ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-                        } catch ( SocketException e1 ) {}
-                        for ( NetworkInterface ifc : ifaces )
+                        LOG.warn("Network interface " + iface + " is not valid. Storage may not function.");
+                        if(ifaceDiscovery) {
+                            List<NetworkInterface> ifaces = null;
                             try {
-                                if ( !ifc.isLoopback() && !ifc.isVirtual() && ifc.isUp() ) {
-                                    iface = ifc.getName();
-                                    break;
-                                }
+                                ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
                             } catch ( SocketException e1 ) {}
+                            for ( NetworkInterface ifc : ifaces )
+                                try {
+                                    if ( !ifc.isLoopback() && !ifc.isVirtual() && ifc.isUp() ) {
+                                        iface = ifc.getName();
+                                        break;
+                                    }
+                                } catch ( SocketException e1 ) {}
+                        }
                     } else {
                         if(!inface.isUp()) {
-                            LOG.warn("Network interface " + iface + " is not up. Storage may not function.");
+                            LOG.warn("Network interface " + iface + " is not available (up). Storage may not function.");
                         }
                     }
                 }
-
 
                 EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
                 LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
@@ -149,7 +152,7 @@ public class LVM2Manager implements BlockStorageManager {
                 if(line.contains(IFACE_CONFIG_STRING) && !line.startsWith("#")) {
                     String[] parts = line.split("=");
                     if(parts.length > 1) {
-                      ifaceName = parts[1];
+                        ifaceName = parts[1];
                         ifaceName = ifaceName.replaceAll('\"' + "", "");
                     }
                     break;
