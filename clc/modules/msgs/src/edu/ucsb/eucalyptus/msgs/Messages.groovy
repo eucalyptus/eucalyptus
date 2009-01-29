@@ -408,10 +408,12 @@ public class NodeLogInfo extends EucalyptusData implements Comparable {
 public class HeartbeatMessage implements Cloneable, Serializable {
   String heartbeatId;
 
-  def HeartBeatMessage() {}
-
-  def HeartBeatMessage(String heartbearId) {
+  def HeartbeatMessage(final String heartbeatId) {
     this.heartbeatId = heartbeatId;
   }
+
+  def HeartBeatMessage() {}
+
+
 }
 

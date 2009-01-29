@@ -51,6 +51,7 @@ public class StorageErrorMessageType extends EucalyptusMessage {
     this.requestId = requestId;
     this.httpCode = httpCode;
   }
+
   public String toString() {
     return "StrorageErrorMessage:" + message;
   }
@@ -87,9 +88,9 @@ public class UpdateStorageConfigurationResponseType extends StorageResponseType 
 }
 
 public class CreateStorageVolumeType extends StorageRequestType {
-    String volumeId;
-    String size;
-    String snapshotId;
+  String volumeId;
+  String size;
+  String snapshotId;
 
   def CreateStorageVolumeType() {
   }
@@ -110,8 +111,8 @@ public class CreateStorageVolumeResponseType extends StorageResponseType {
 }
 
 public class CreateStorageSnapshotType extends StorageRequestType {
-    String volumeId;
-    String snapshotId;
+  String volumeId;
+  String snapshotId;
 
   def CreateStorageSnapshotType(final String volumeId, final String snapshotId) {
     this.volumeId = volumeId;
@@ -165,7 +166,9 @@ public class StorageVolume extends EucalyptusData {
   String snapshotId;
   String status;
   String createTime;
+
   def StorageVolume() {}
+
   def StorageVolume(String volumeId) {
     this.volumeId = volumeId;
   }
@@ -202,9 +205,11 @@ public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
 }
 
 public class StorageControllerHeartbeatMessage extends HeartbeatMessage {
-  def StorageControllerHeartbeatMessage() {}
 
-  def StorageControllerHeartbeatMessage(String heartbeatId) {
+  def StorageControllerHeartbeatMessage() {
+  }
+
+  def StorageControllerHeartbeatMessage(final String heartbeatId) {
     super(heartbeatId);
   }
 }
