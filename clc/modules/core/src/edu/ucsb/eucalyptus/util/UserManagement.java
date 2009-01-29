@@ -34,96 +34,80 @@
 
 package edu.ucsb.eucalyptus.util;
 
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.NetworkRulesGroup;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import org.apache.log4j.Logger;
 
 import java.security.NoSuchAlgorithmException;
-import java.util.List;
 
 public class UserManagement {
 
-  private static Logger LOG = Logger.getLogger( UserManagement.class );
-  private static String keyPath = SubDirectory.KEYS.toString();
+    private static Logger LOG = Logger.getLogger( UserManagement.class );
+    private static String keyPath = SubDirectory.KEYS.toString();
 
-  public static UserInfo generateAdmin()
-  {
-    UserInfo admin = new UserInfo( "admin" );
-    admin.setUserName( admin.getUserName() );
-    admin.setEmail( "" );
-    admin.setRealName( "" );
-    admin.setTelephoneNumber( "" );
-
-    admin.setAffiliation( "" );
-    admin.setProjectDescription( "" );
-    admin.setProjectPIName( "" );
-
-    admin.setPasswordExpires( 0L );  /* must be changed upon login */
-    try
+    public static UserInfo generateAdmin()
     {
-      admin.setBCryptedPassword( Hashes.hashPassword( admin.getUserName() ) );
-    }
-    catch ( NoSuchAlgorithmException e )
-    {
-    }
+        UserInfo admin = new UserInfo( "admin" );
+        admin.setUserName( admin.getUserName() );
+        admin.setEmail( "" );
+        admin.setRealName( "" );
+        admin.setTelephoneNumber( "" );
 
-    admin.setConfirmationCode( UserManagement.generateConfirmationCode( admin.getUserName() ) );
-    admin.setCertificateCode( UserManagement.generateCertificateCode( admin.getUserName() ) );
+        admin.setAffiliation( "" );
+        admin.setProjectDescription( "" );
+        admin.setProjectPIName( "" );
 
-    admin.setSecretKey( UserManagement.generateSecretKey( admin.getUserName() ) );
-    admin.setQueryId( UserManagement.generateQueryId( admin.getUserName() ) );
-
-    admin.setReservationId( 0l );
-
-    admin.setIsApproved( true );
-    admin.setIsConfirmed( true );
-    admin.setIsEnabled( true );
-    admin.setIsAdministrator( true );
-
-    admin.getNetworkRulesGroup().add( NetworkRulesGroup.getDefaultGroup() );
-
-    return admin;
-  }
-
-  public static String generateConfirmationCode( String userName )
-  {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll( "\\.", "" );
-  }
-
-  public static String generateCertificateCode( String userName )
-  {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll( "\\.", "" );
-  }
-
-  public static String generateSecretKey( String userName )
-  {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll( "\\.", "" );
-  }
-
-  public static String generateQueryId( String userName )
-  {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.MD5, false ).replaceAll( "\\.", "" );
-  }
-
-  public static boolean isAdministrator( String userId )
-  {
-    if( EucalyptusProperties.NAME.equals( userId ) || WalrusProperties.ADMIN.equals( userId ) ) return true;
-    if ( userId != null )
-    {
-      EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-      UserInfo searchUser = new UserInfo( userId );
-      List<UserInfo> userInfoList = db.query( searchUser );
-      if ( userInfoList.size() > 0 )
-      {
-        UserInfo foundUser = userInfoList.get( 0 );
-        if ( foundUser.isAdministrator() )
+        admin.setPasswordExpires( 0L );  /* must be changed upon login */
+        try
         {
-          return true;
+            admin.setBCryptedPassword( Hashes.hashPassword( admin.getUserName() ) );
         }
-      }
+        catch ( NoSuchAlgorithmException e )
+        {
+        }
+
+        admin.setConfirmationCode( UserManagement.generateConfirmationCode( admin.getUserName() ) );
+        admin.setCertificateCode( UserManagement.generateCertificateCode( admin.getUserName() ) );
+
+        admin.setSecretKey( UserManagement.generateSecretKey( admin.getUserName() ) );
+        admin.setQueryId( UserManagement.generateQueryId( admin.getUserName() ) );
+
+        admin.setReservationId( 0l );
+
+        admin.setIsApproved( true );
+        admin.setIsConfirmed( true );
+        admin.setIsEnabled( true );
+        admin.setIsAdministrator( true );
+
+        admin.getNetworkRulesGroup().add( NetworkRulesGroup.getDefaultGroup() );
+
+        return admin;
     }
-    return false;
-  }
+
+    public static String generateConfirmationCode( String userName )
+    {
+        return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll( "\\.", "" );
+    }
+
+    public static String generateCertificateCode( String userName )
+    {
+        return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll( "\\.", "" );
+    }
+
+    public static String generateSecretKey( String userName )
+    {
+        return Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll( "\\.", "" );
+    }
+
+    public static String generateQueryId( String userName )
+    {
+        return Hashes.getDigestBase64( userName, Hashes.Digest.MD5, false ).replaceAll( "\\.", "" );
+    }
+
+    public static boolean isAdministrator( String userId )
+    {
+        if( EucalyptusProperties.NAME.equals( userId )) return true;
+        return false;
+    }
 }

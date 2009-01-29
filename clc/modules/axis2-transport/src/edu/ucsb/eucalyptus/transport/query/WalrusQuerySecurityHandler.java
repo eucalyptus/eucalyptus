@@ -35,20 +35,21 @@
 package edu.ucsb.eucalyptus.transport.query;
 
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
 import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
+import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.util.encoders.Base64;
 
-import java.security.Signature;
+import java.io.StringReader;
 import java.security.PublicKey;
+import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
-import java.io.StringReader;
 
 public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
@@ -125,7 +126,7 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
                 throw new QuerySecurityException( "User authentication failed." );
             }
             //run as admin
-            UserInfo admin = new UserInfo("admin");
+            UserInfo admin = new UserInfo(EucalyptusProperties.NAME);
             admin.setIsAdministrator(Boolean.TRUE);
             return admin;
         } else {
