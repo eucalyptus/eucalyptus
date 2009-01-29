@@ -379,6 +379,7 @@ public class Storage {
         return reply;
     }
 
+    //returns snapshots in progress or at the SC
     public DescribeStorageSnapshotsResponseType DescribeStorageSnapshots( DescribeStorageSnapshotsType request ) throws EucalyptusCloudException {
         DescribeStorageSnapshotsResponseType reply = ( DescribeStorageSnapshotsResponseType ) request.getReply();
         List<String> snapshotSet = request.getSnapshotSet();
