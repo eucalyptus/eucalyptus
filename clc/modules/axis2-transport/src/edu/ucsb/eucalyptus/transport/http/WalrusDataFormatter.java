@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.zip.GZIPOutputStream;
 
 public class WalrusDataFormatter implements MessageFormatter {
 
@@ -39,6 +40,20 @@ public class WalrusDataFormatter implements MessageFormatter {
             }   else {
                 String key = (String) messageContext.getProperty("GET_KEY");
                 String randomKey = (String) messageContext.getProperty("GET_RANDOM_KEY");
+                Boolean isCompressed = (Boolean) messageContext.getProperty("GET_COMPRESSED");
+                if(isCompressed == null)
+                    isCompressed = false;
+
+                GZIPOutputStream gzipOutStream = null;
+                if(isCompressed) {
+                    try {
+                        gzipOutStream = new GZIPOutputStream(outputStream);
+                    } catch(Exception ex) {
+                        ex.printStackTrace();
+                        return;
+                    }
+                }
+
                 WalrusDataMessenger messenger = WalrusQueryDispatcher.getReadMessenger();
                 LinkedBlockingQueue<WalrusDataMessage> getQueue = messenger.getQueue(key, randomKey);
 
@@ -49,18 +64,29 @@ public class WalrusDataFormatter implements MessageFormatter {
                             //TODO: should read size and verify
                         } else if(WalrusDataMessage.isData(dataMessage)) {
                             byte[] data = dataMessage.getPayload();
-                            //TODO: Figure out why the interface forces us to use a vanilla outputstream
-                            for (byte b: data) {
+                            if(isCompressed) {
                                 try {
-                                    outputStream.write(b);
-                                } catch  (IOException e) {
-                                    e.printStackTrace();
-                                    throw new AxisFault("An error occured while writing the request");
+                                    gzipOutStream.write(data);
+                                } catch(Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            } else {
+                                for (byte b: data) {
+                                    try {
+                                        outputStream.write(b);
+                                    } catch  (IOException e) {
+                                        e.printStackTrace();
+                                        throw new AxisFault("An error occured while writing the request");
+                                    }
                                 }
                             }
                         } else if(WalrusDataMessage.isEOF(dataMessage)) {
                             try {
-                                outputStream.flush();
+                                if(isCompressed) {
+                                    gzipOutStream.close();
+                                } else {
+                                    outputStream.flush();
+                                }
                                 messenger.removeQueue(key, randomKey);
                                 break;
                             } catch  (IOException e) {

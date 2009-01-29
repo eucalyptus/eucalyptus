@@ -157,6 +157,10 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
                     WalrusDataRequestType request = (WalrusDataRequestType) wrappedParam;
                     newMsgContext.setProperty("GET_KEY", request.getBucket() + "." + request.getKey());
                     newMsgContext.setProperty("GET_RANDOM_KEY", request.getRandomKey());
+                    Boolean isCompressed = request.getIsCompressed();
+                    if(isCompressed != null) {
+                        newMsgContext.setProperty("GET_COMPRESSED", isCompressed);
+                    }
                 }
                 //This selects the data formatter
                 newMsgContext.setProperty( "messageType", "application/walrus" );
