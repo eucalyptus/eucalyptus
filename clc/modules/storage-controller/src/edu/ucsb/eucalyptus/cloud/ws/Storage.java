@@ -95,7 +95,8 @@ public class Storage {
         try {
             StorageMetaInfo storageMetaInfo = db.getUnique(metaInfo);
         } catch(Exception ex) {
-            metaInfo.setVolumeSize(0);
+            metaInfo.setMaxTotalVolumeSize(0);
+            metaInfo.setMaxTotalSnapshotSize(0);
             db.add(metaInfo);
         }
         db.commit();
@@ -512,7 +513,10 @@ public class Storage {
             StorageMetaInfo foundMetaInfo;
             try {
                 foundMetaInfo = db.getUnique(metaInfo);
-                if((foundMetaInfo.getVolumeSize() + sizeAsInt) > StorageProperties.maxVolumeSize)
+                if(((foundMetaInfo.getMaxTotalVolumeSize() + sizeAsInt) > StorageProperties.MAX_TOTAL_VOLUME_SIZE) ||
+                        (sizeAsInt > StorageProperties.MAX_VOLUME_SIZE))
+                    throw new EntityTooLargeException(volumeId);
+                if(sizeAsInt > StorageProperties.MAX_VOLUME_SIZE)
                     throw new EntityTooLargeException(volumeId);
             } catch(Exception ex) {
                 db.rollback();
@@ -611,11 +615,12 @@ public class Storage {
                         StorageMetaInfo foundMetaInfo;
                         try {
                             foundMetaInfo = dbMeta.getUnique(metaInfo);
-                            if((foundMetaInfo.getVolumeSize() + size) > StorageProperties.maxVolumeSize) {
+                            if((foundMetaInfo.getMaxTotalVolumeSize() + size) > StorageProperties.MAX_TOTAL_VOLUME_SIZE ||
+                                    (size > StorageProperties.MAX_VOLUME_SIZE)) {
                                 success = false;
                                 LOG.warn("Volume size limit exceeeded");
                             } else {
-                                foundMetaInfo.setVolumeSize(foundMetaInfo.getVolumeSize() + size);
+                                foundMetaInfo.setMaxTotalVolumeSize(foundMetaInfo.getMaxTotalVolumeSize() + size);
                             }
                         } catch(Exception ex) {
                             dbMeta.rollback();
@@ -1091,8 +1096,6 @@ public class Storage {
             }
             return true;
         }
-
-
     }
 
     class HttpWriter extends HttpTransfer {

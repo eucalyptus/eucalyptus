@@ -47,16 +47,26 @@ public class StorageMetaInfo {
     @GeneratedValue
     @Column(name = "storage_meta_info_id")
     private Long id = -1l;
-    @Column(name = "volume_size")
-    private Integer volumeSize;
+    @Column(name = "max_total_volume_size")
+    private Integer maxTotalVolumeSize;
+    @Column(name = "max_total_snapshot_size")
+    private Integer maxTotalSnapshotSize;
 
     public StorageMetaInfo() {}
-
-    public Integer getVolumeSize() {
-        return volumeSize;
+   
+    public Integer getMaxTotalVolumeSize() {
+        return maxTotalVolumeSize;
     }
 
-    public void setVolumeSize(Integer volumeSize) {
-        this.volumeSize = volumeSize;
+    public void setMaxTotalVolumeSize(Integer maxTotalVolumeSize) {
+        this.maxTotalVolumeSize = maxTotalVolumeSize;
+    }
+
+    public Integer getMaxTotalSnapshotSize() {
+        return maxTotalSnapshotSize;
+    }
+
+    public void setMaxTotalSnapshotSize(Integer maxTotalSnapshotSize) {
+        this.maxTotalSnapshotSize = maxTotalSnapshotSize;
     }
 }
