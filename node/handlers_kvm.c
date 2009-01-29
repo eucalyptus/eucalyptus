@@ -1051,7 +1051,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
-	    //            int err = virDomainAttachDevice (dom, xml);
+	    err = virDomainAttachDevice (dom, xml);
             sem_v (xen_sem);
             if (err) {
                 logprintfl (EUCAERROR, "AttachVolume() failed (err=%d) XML=%s\n", err, xml);
@@ -1107,11 +1107,11 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
-//            int err = virDomainDetachDevice (dom, xml);
+	    err = virDomainDetachDevice (dom, xml);
             sem_v (xen_sem);
             if (err) {
-                logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
-                ret = ERROR;
+	      logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
+	      ret = ERROR;
             } else {
                 logprintfl (EUCAINFO, "detached %s as %s in domain %s\n", remoteDev, localDev, instanceId);
             }
