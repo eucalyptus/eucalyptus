@@ -77,6 +77,7 @@ public class Storage {
     static BlockStorageManager blockManager;
 
     private static boolean enableSnapshots = true;
+    private static boolean enableStorage = true;
 
     private static final String ETHERD_PREFIX = "/dev/etherd/e";
 
@@ -99,6 +100,7 @@ public class Storage {
             blockManager.checkPreconditions();
         } catch(Exception ex) {
             //bind to null provider
+            enableStorage = false;
             LOG.warn(ex);
             LOG.warn("Could not initialize block manager");
             return;
@@ -268,11 +270,23 @@ public class Storage {
 
         //test connection to Walrus
         checkWalrusConnection();
+        try {
+            blockManager.checkPreconditions();
+            enableStorage = true;
+        } catch (Exception ex) {
+            enableStorage = false;
+            ex.printStackTrace();
+        }
         return reply;
     }
 
     public GetStorageVolumeResponseType GetStorageVolume(GetStorageVolumeType request) throws EucalyptusCloudException {
         GetStorageVolumeResponseType reply = (GetStorageVolumeResponseType) request.getReply();
+        if(!enableStorage) {
+            LOG.warn("Storage has been disabled. Please check your setup");
+            return reply;
+        }
+
         String volumeId = request.getVolumeId();
 
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
@@ -297,6 +311,11 @@ public class Storage {
 
     public DeleteStorageVolumeResponseType DeleteStorageVolume(DeleteStorageVolumeType request) throws EucalyptusCloudException {
         DeleteStorageVolumeResponseType reply = (DeleteStorageVolumeResponseType) request.getReply();
+        if(!enableStorage) {
+            LOG.warn("Storage has been disabled. Please check your setup");
+            return reply;
+        }
+
         String volumeId = request.getVolumeId();
 
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
@@ -332,7 +351,7 @@ public class Storage {
     public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
         CreateStorageSnapshotResponseType reply = ( CreateStorageSnapshotResponseType ) request.getReply();
 
-        if(!enableSnapshots) {
+        if(!enableSnapshots || !enableStorage) {
             LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
             return reply;
         }
@@ -415,7 +434,7 @@ public class Storage {
     public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
         DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
-        if(!enableSnapshots) {
+        if(!enableSnapshots || !enableStorage) {
             LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
             return reply;
         }
@@ -465,6 +484,11 @@ public class Storage {
 
     public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
         CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
+
+        if(!enableStorage) {
+            LOG.warn("Storage has been disabled. Please check your setup");
+            return reply;
+        }
 
         String snapshotId = request.getSnapshotId();
         String userId = request.getUserId();
@@ -623,6 +647,7 @@ public class Storage {
 
     public DescribeStorageVolumesResponseType DescribeStorageVolumes(DescribeStorageVolumesType request) throws EucalyptusCloudException {
         DescribeStorageVolumesResponseType reply = (DescribeStorageVolumesResponseType) request.getReply();
+
         List<String> volumeSet = request.getVolumeSet();
         ArrayList<VolumeInfo> volumeInfos = new ArrayList<VolumeInfo>();
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
