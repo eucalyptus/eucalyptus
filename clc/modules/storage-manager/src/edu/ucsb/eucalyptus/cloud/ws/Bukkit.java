@@ -993,6 +993,7 @@ public class Bukkit {
         String bucketName = request.getBucket();
         String objectName = request.getKey();
         String userId = request.getUserId();
+        Boolean isCompressed = request.getIsCompressed();
 
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
         BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -1897,6 +1898,7 @@ public class Bukkit {
         private LinkedBlockingQueue<WalrusDataMessage> getQueue;
         private long byteRangeStart;
         private long byteRangeEnd;
+        private boolean compressed;
         private boolean deleteAfterXfer;
         private WalrusSemaphore semaphore;
 
@@ -2115,6 +2117,7 @@ public class Bukkit {
                 getObjectType.setGetMetaData(false);
                 getObjectType.setBucket(snapshotSetId);
                 getObjectType.setKey(volumeKey);
+                getObjectType.setIsCompressed(true);
                 db.commit();
                 GetObjectResponseType getObjectResponse = GetObject(getObjectType);
                 reply.setEtag(getObjectResponse.getEtag());
@@ -2123,6 +2126,7 @@ public class Bukkit {
                 request.setRandomKey(getObjectType.getRandomKey());
                 request.setBucket(snapshotSetId);
                 request.setKey(volumeKey);
+                request.setIsCompressed(true);
             } else {
                 db.rollback();
                 throw new EucalyptusCloudException("Could not find snapshot set");

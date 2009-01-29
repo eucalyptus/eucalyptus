@@ -65,6 +65,7 @@ import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPOutputStream;
+import java.util.zip.GZIPInputStream;
 
 
 public class Storage {
@@ -98,12 +99,13 @@ public class Storage {
             blockManager.checkPreconditions();
         } catch(Exception ex) {
             //bind to null provider
+            LOG.warn(ex);
             LOG.warn("Could not initialize block manager");
             return;
         }
         startup();
         //TODO: inform CLC
-        StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
+        //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
     }
 
     public Storage() {}
@@ -224,15 +226,21 @@ public class Storage {
 
     private static void checkWalrusConnection() {
         HttpClient httpClient = new HttpClient();
-        GetMethod getMethod = new GetMethod(StorageProperties.WALRUS_URL);
+        GetMethod getMethod = null;
         try {
+            java.net.URI addrUri = new URL(StorageProperties.WALRUS_URL).toURI();
+            String addrPath = addrUri.getPath();
+            String addr = StorageProperties.WALRUS_URL.replaceAll(addrPath, "");
+            getMethod = new GetMethod(addr);
+
             httpClient.executeMethod(getMethod);
             enableSnapshots = true;
         } catch(Exception ex) {
             LOG.warn("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url");
             enableSnapshots = false;
         } finally {
-            getMethod.releaseConnection();
+            if(getMethod != null)
+                getMethod.releaseConnection();
         }
     }
 
@@ -324,8 +332,10 @@ public class Storage {
     public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
         CreateStorageSnapshotResponseType reply = ( CreateStorageSnapshotResponseType ) request.getReply();
 
-        if(!enableSnapshots)
+        if(!enableSnapshots) {
+            LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
             return reply;
+        }
         String volumeId = request.getVolumeId();
         String snapshotId = request.getSnapshotId();
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
@@ -404,9 +414,11 @@ public class Storage {
     public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
         DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
-        if(!enableSnapshots)
+        if(!enableSnapshots) {
+            LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
             return reply;
-        
+        }
+
         String snapshotId = request.getSnapshotId();
 
         EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
@@ -571,7 +583,7 @@ public class Storage {
         String volumePath = StorageProperties.storageRootDirectory + "/" + volumeId;
         File file = new File(volumePath);
         if(!file.exists()) {
-            HttpReader volumeReader = new HttpReader(walrusSnapshotPath, null, file, "GetVolume", "");
+            HttpReader volumeReader = new HttpReader(walrusSnapshotPath, null, file, "GetVolume", "", true);
             volumeReader.run();
         } else {
             throw new EucalyptusCloudException("volume file already exists");
@@ -1078,6 +1090,7 @@ public class Storage {
         private HttpClient httpClient;
         private HttpMethodBase method;
         private File file;
+        private boolean compressed;
 
         public HttpReader(String path, LinkedBlockingQueue<WalrusDataMessage> getQueue, File file, String eucaOperation, String eucaHeader) {
             this.getQueue = getQueue;
@@ -1090,10 +1103,21 @@ public class Storage {
             method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
         }
 
+        public HttpReader(String path, LinkedBlockingQueue<WalrusDataMessage> getQueue, File file, String eucaOperation, String eucaHeader, boolean compressed) {
+            this(path, getQueue, file, eucaOperation, eucaHeader);
+            this.compressed = compressed;
+        }
+
         public String getResponseAsString() {
             try {
                 httpClient.executeMethod(method);
-                InputStream inputStream = method.getResponseBodyAsStream();
+                InputStream inputStream;
+                if(compressed) {
+                    inputStream = new GZIPInputStream(method.getResponseBodyAsStream());
+                } else {
+                    inputStream = method.getResponseBodyAsStream();
+                }
+
                 String responseString = "";
                 byte[] bytes = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
                 int bytesRead;
