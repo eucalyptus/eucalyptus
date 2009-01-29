@@ -39,6 +39,7 @@ import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.StorageMetaInfo;
 import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
@@ -76,17 +77,28 @@ public class Storage {
     static StorageManager snapshotStorageManager;
     static BlockStorageManager blockManager;
 
-    private static boolean enableSnapshots = true;
-    private static boolean enableStorage = true;
+    private static boolean enableSnapshots = false;
+    private static boolean enableStorage = false;
 
     private static final String ETHERD_PREFIX = "/dev/etherd/e";
 
     static {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
+        initializeForEBS();
     }
 
     public static void initializeForEBS() {
+        enableSnapshots = enableStorage = true;
+        EntityWrapper<StorageMetaInfo> db = new EntityWrapper<StorageMetaInfo>();
+        StorageMetaInfo metaInfo = new StorageMetaInfo();
+        try {
+            StorageMetaInfo storageMetaInfo = db.getUnique(metaInfo);
+        } catch(Exception ex) {
+            metaInfo.setVolumeSize(0);
+            db.add(metaInfo);
+        }
+        db.commit();
         String walrusAddr = System.getProperty(StorageProperties.WALRUS_URL);
         if(walrusAddr == null) {
             LOG.warn("Walrus host addr not set");
@@ -495,6 +507,18 @@ public class Storage {
         int sizeAsInt = 0;
         if(size != null) {
             sizeAsInt = Integer.parseInt(size);
+            EntityWrapper<StorageMetaInfo> db = new EntityWrapper<StorageMetaInfo>();
+            StorageMetaInfo metaInfo = new StorageMetaInfo();
+            StorageMetaInfo foundMetaInfo;
+            try {
+                foundMetaInfo = db.getUnique(metaInfo);
+                if((foundMetaInfo.getVolumeSize() + sizeAsInt) > StorageProperties.maxVolumeSize)
+                    throw new EntityTooLargeException(volumeId);
+            } catch(Exception ex) {
+                db.rollback();
+                ex.printStackTrace();
+            }
+            db.commit();
         }
 
         VolumeInfo volumeInfo = new VolumeInfo(volumeId);
@@ -581,10 +605,30 @@ public class Storage {
                 VolumeInfo volumeInfo = new VolumeInfo(volumeId);
                 VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
                 if(foundVolumeInfo != null) {
-                    if(success)
+                    if(success) {
+                        EntityWrapper<StorageMetaInfo> dbMeta = new EntityWrapper<StorageMetaInfo>();
+                        StorageMetaInfo metaInfo = new StorageMetaInfo();
+                        StorageMetaInfo foundMetaInfo;
+                        try {
+                            foundMetaInfo = dbMeta.getUnique(metaInfo);
+                            if((foundMetaInfo.getVolumeSize() + size) > StorageProperties.maxVolumeSize) {
+                                success = false;
+                                LOG.warn("Volume size limit exceeeded");
+                            } else {
+                                foundMetaInfo.setVolumeSize(foundMetaInfo.getVolumeSize() + size);
+                            }
+                        } catch(Exception ex) {
+                            dbMeta.rollback();
+                            foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
+                            db.commit();
+                            ex.printStackTrace();
+                            return;
+                        }
+                        dbMeta.commit();
                         foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-                    else
+                    } else {
                         foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
+                    }
                     if(snapshotId != null) {
                         foundVolumeInfo.setSize(size);
                     }
