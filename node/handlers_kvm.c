@@ -40,9 +40,6 @@ static int cores_max      = 0;
 static char config_network_path [BUFSIZE];
 static int  config_network_port = NC_NET_PORT_DEFAULT;
 
-/* for kvm driver, we need the instance path */
-static char config_instance_path [BUFSIZE] = "";
-
 static char * admin_user_id = EUCALYPTUS_ADMIN;
 static char gen_kvm_libvirt_xml_command_path [BUFSIZE] = "";
 static char get_kvm_info_command_path [BUFSIZE] = "";
@@ -442,7 +439,7 @@ static int doInitialize (void)
     mode = getConfString(config, "VNET_MODE");
 
     vnetInit(vnetconfig, mode, home, config_network_path, NC, pubInterface, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge);
-    
+
     /* cleanup from previous runs and verify integrity of instances
      * directory */
     sem_p (inst_sem);
@@ -723,7 +720,7 @@ static void * rebooting_thread (void *arg)
     ncInstance * instance = (ncInstance *)arg;
 
     char xml_path [1024];
-    snprintf (xml_path, 1024, "%s/%s/%s/libvirt.xml", config_instance_path, instance->userId, instance->instanceId);
+    snprintf (xml_path, 1024, "%s/%s/%s/libvirt.xml", scGetInstancePath(), instance->userId, instance->instanceId);
     char * xml = file2str (xml_path);
     if (xml == NULL) {
         logprintfl (EUCAERROR, "cannot obtain XML file %s\n", xml_path);
@@ -805,7 +802,7 @@ static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **console
     return(1);
   }
   
-  snprintf(console_file, 1024, "%s/%s/%s/console.log", config_instance_path, meta->userId, instanceId);
+  snprintf(console_file, 1024, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
   
   rc = stat(console_file, &statbuf);
   if (rc < 0) {
