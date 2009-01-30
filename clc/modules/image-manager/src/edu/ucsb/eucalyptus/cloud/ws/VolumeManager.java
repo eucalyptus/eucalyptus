@@ -268,11 +268,12 @@ public class VolumeManager {
     if( volume == null )
         throw new EucalyptusCloudException( "Volume is not attached: "+ request.getVolumeId() );
 
+    request.setVolumeId( volume.getVolumeId() );
     request.setRemoteDevice( volume.getRemoteDevice() );
     QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( cluster ), request);
     cluster.getMessageQueue().enqueue( event );
 
-
+    vm.getVolumes().remove( new AttachedVolume( volume.getVolumeId() ) );
 
     reply.setDetachedVolume( volume );
     return reply;

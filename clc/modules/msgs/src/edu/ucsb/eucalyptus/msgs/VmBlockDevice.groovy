@@ -116,6 +116,10 @@ public class AttachedVolume extends EucalyptusData {
     this.status = "attaching";
   }
 
+  public AttachedVolume( String volumeId ) {
+    this.volumeId = volumeId;
+  }
+
   public AttachedVolume() {}
 
   boolean equals(final Object o) {
