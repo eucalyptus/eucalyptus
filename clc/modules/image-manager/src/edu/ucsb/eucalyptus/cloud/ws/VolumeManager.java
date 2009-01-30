@@ -210,6 +210,10 @@ public class VolumeManager {
     QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback( cluster ), request);
     cluster.getMessageQueue().enqueue( event );
 
+    AttachedVolume attachVol = new AttachedVolume(volume.getDisplayName(), vm.getInstanceId(), request.getDevice(), volume.getRemoteDevice());
+    vm.getVolumes().add(attachVol);
+    reply.setAttachedVolume( attachVol );
+
     return reply;
   }
 
