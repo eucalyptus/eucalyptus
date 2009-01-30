@@ -358,6 +358,24 @@ public class Storage {
             db.rollback();
             throw new NoSuchVolumeException(volumeId);
         }
+        SnapshotInfo snapInfo = new SnapshotInfo();
+        snapInfo.setVolumeId(volumeId);
+        EntityWrapper<SnapshotInfo> dbSnap = new EntityWrapper<SnapshotInfo>();
+        List<SnapshotInfo> snapInfos = dbSnap.query(snapInfo);
+        for(SnapshotInfo snapshotInfo : snapInfos) {
+            String snapshotId = snapInfo.getSnapshotId();
+            String status = snapshotInfo.getStatus();
+            if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
+                try {
+                    blockManager.deleteSnapshot(snapshotId);
+                    snapshotStorageManager.deleteObject("", snapshotId);
+                    dbSnap.delete(snapshotInfo);
+                } catch (IOException ex) {
+                    LOG.warn("Could not delete snapshot " + snapshotId);
+                }
+            }
+        }
+        dbSnap.commit();
         return reply;
     }
 
@@ -585,7 +603,7 @@ public class Storage {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
                     //TODO: revert back after testing
-                    if(foundSnapshotInfos.size() != 0) {
+                    if(foundSnapshotInfos.size() == 0) {
                         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
                         size = blockManager.createVolume(volumeId, volumePath);
                         db.commit();
