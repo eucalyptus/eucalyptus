@@ -164,6 +164,8 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
                 }
                 //This selects the data formatter
                 newMsgContext.setProperty( "messageType", "application/walrus" );
+            } else if(putType != null) {
+                response.addHeader(new BasicHeader(HTTP.CONTENT_LEN, String.valueOf(0)));                
             }
         }
 
