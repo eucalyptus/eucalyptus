@@ -58,7 +58,7 @@ public class Cluster implements HasName {
       try {
         reply = ( GetKeysResponseType ) dispatcher.getClient().send( new GetKeysType( "self" ) );
       } catch ( Exception e ) {
-        LOG.error( e, e );
+        LOG.debug( e, e );
       }
       try {Thread.sleep( 5000 );} catch ( InterruptedException ignored ) {}
     } while ( reply == null || !this.checkCerts( reply ) );
