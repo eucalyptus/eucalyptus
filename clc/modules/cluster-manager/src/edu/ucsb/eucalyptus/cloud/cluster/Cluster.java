@@ -47,7 +47,7 @@ public class Cluster implements HasName {
     this.nodeLogUpdater = new NodeLogCallback( this );
     this.nodeCertUpdater = new NodeCertCallback( this );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>();
-    this.waitForCerts();
+//    this.waitForCerts();
     this.start();
   }
 
@@ -109,7 +109,12 @@ public class Cluster implements HasName {
 
     if ( this.addrThread == null || this.addrThread.isAlive() )
       this.addrThread = this.startNamedThread( addrUpdater );
-    this.fireNodeThreads();
+
+    if ( this.keyThread != null && !this.keyThread.isAlive() )
+      ( this.keyThread = new Thread( nodeCertUpdater, nodeCertUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
+
+//    if ( this.logThread != null && !this.logThread.isAlive() )
+//      ( this.logThread = new Thread( nodeLogUpdater, nodeLogUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
   }
 
   private Thread startNamedThread( Runnable r ) {
@@ -118,13 +123,6 @@ public class Cluster implements HasName {
     t.start();
     LOG.info( "Starting threads for [ " + this.getName() + " ] " + t.getName() );
     return t;
-  }
-
-  public void fireNodeThreads() {
-//    if ( this.keyThread != null && !this.keyThread.isAlive() )
-//      ( this.keyThread = new Thread( nodeCertUpdater, nodeCertUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
-//    if ( this.logThread != null && !this.logThread.isAlive() )
-//      ( this.logThread = new Thread( nodeLogUpdater, nodeLogUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
   }
 
   public void stop() throws InterruptedException {
