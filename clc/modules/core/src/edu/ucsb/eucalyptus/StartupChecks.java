@@ -190,8 +190,8 @@ public class StartupChecks {
   private static boolean createDb() {
     EntityWrapper<VmType> db2 = new EntityWrapper<VmType>();
     try {
-      db2.add( new VmType( "m1.small", 1, 10, 128 ) );
-      db2.add( new VmType( "c1.medium", 1, 10, 256 ) );
+      db2.add( new VmType( "m1.small", 1, 0, 128 ) );
+      db2.add( new VmType( "c1.medium", 1, 2, 256 ) );
       db2.add( new VmType( "m1.large", 2, 10, 512 ) );
       db2.add( new VmType( "m1.xlarge", 2, 20, 1024 ) );
       db2.add( new VmType( "c1.xlarge", 4, 20, 2048 ) );
