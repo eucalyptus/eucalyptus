@@ -199,6 +199,7 @@ public class VmInstance implements HasName {
     runningInstance.setPlacement( this.placement );
 
     runningInstance.setLaunchTime( this.launchTime );
+
     return runningInstance;
   }
 

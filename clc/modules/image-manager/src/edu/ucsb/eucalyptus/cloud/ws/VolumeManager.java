@@ -69,7 +69,9 @@ import edu.ucsb.eucalyptus.util.Messaging;
 import edu.ucsb.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 public class VolumeManager {
@@ -152,6 +154,12 @@ public class VolumeManager {
     EntityWrapper<Volume> db = getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
     LOG.debug( request );
+    Map<String,AttachedVolume> attachedVolumes = new HashMap<String,AttachedVolume>();
+    for( VmInstance vm : VmInstances.getInstance().listValues() ) {
+      for( AttachedVolume av : vm.getVolumes() ) {
+        attachedVolumes.put( av.getVolumeId(), av );
+      }
+    }
     List<Volume> volumes = db.query( Volume.ownedBy( userName ) );
     for ( Volume v : volumes ) {
       if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
@@ -164,7 +172,10 @@ public class VolumeManager {
           v.setMappedState( volumeState );
           v.setRemoteDevice( vol.getActualDeviceName() );
         }
-        reply.getVolumeSet().add( v.morph( new edu.ucsb.eucalyptus.msgs.Volume() ) );
+        edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
+        if( attachedVolumes.containsKey( aVolume.getVolumeId() ) )
+          aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
+        reply.getVolumeSet().add( aVolume );
       }
     }
     db.commit();
@@ -258,6 +269,8 @@ public class VolumeManager {
     request.setRemoteDevice( volume.getRemoteDevice() );
     QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( cluster ), request);
     cluster.getMessageQueue().enqueue( event );
+
+
 
     reply.setDetachedVolume( volume );
     return reply;
