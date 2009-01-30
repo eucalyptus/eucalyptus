@@ -36,9 +36,13 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.cluster.Cluster;
 import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
+import edu.ucsb.eucalyptus.cloud.cluster.VolumeAttachCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.VolumeDetachCallback;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.State;
@@ -156,8 +160,8 @@ public class VolumeManager {
         if( !volState.getVolumeSet().isEmpty() ) {
           StorageVolume vol = volState.getVolumeSet().get( 0 );
           volumeState = vol.getStatus();
+          v.setMappedState( volumeState );
         }
-        v.setMappedState( volumeState );
         reply.getVolumeSet().add( v.morph( new edu.ucsb.eucalyptus.msgs.Volume() ) );
       }
     }
@@ -175,7 +179,13 @@ public class VolumeManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId() );
     }
-
+    Cluster cluster = null;
+    try {
+      cluster = Clusters.getInstance().lookup( vm.getPlacement() );
+    } catch ( NoSuchElementException e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPlacement() );
+    }
     for( VmInstance v : VmInstances.getInstance().listValues() ) {
       for( AttachedVolume vol : v.getVolumes() ) {
         if( vol.getVolumeId().equals( request.getVolumeId() ) ) {
@@ -186,6 +196,7 @@ public class VolumeManager {
     //:: TODO-1.5: there is a potential race here :://
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     String userName = request.isAdministrator()?null:request.getUserId();
+    Volume volume = null;
     try {
       db.getUnique( new Volume( userName, request.getVolumeId() ) );
     } catch ( EucalyptusCloudException e ) {
@@ -193,6 +204,11 @@ public class VolumeManager {
       db.rollback();
       throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId() );
     }
+
+//    request.setRemoteDevice( volume.get() );
+    QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback( cluster ), request);
+    cluster.getMessageQueue().enqueue( event );
+
     //:: TODO-1.5: dispatch message to the cc backend here :://
     return reply;
   }
@@ -207,7 +223,13 @@ public class VolumeManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId() );
     }
-    //:: TODO-1.5: there is a potential race here :://
+    Cluster cluster = null;
+    try {
+      cluster = Clusters.getInstance().lookup( vm.getPlacement() );
+    } catch ( NoSuchElementException e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPlacement() );
+    }
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     String userName = request.isAdministrator()?null:request.getUserId();
     try {
@@ -229,7 +251,10 @@ public class VolumeManager {
     if( volume == null )
         throw new EucalyptusCloudException( "Volume is not attached: "+ request.getVolumeId() );
 
-    //:: TODO-1.5: dispatch volume detach message to cc backend here :://
+    request.setRemoteDevice( volume.getRemoteDevice() );
+    QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( cluster ), request);
+    cluster.getMessageQueue().enqueue( event );
+
     reply.setDetachedVolume( volume );
     return reply;
   }

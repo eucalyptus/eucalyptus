@@ -15,6 +15,8 @@ public class Volume extends AbstractIsomorph {
   private Integer size;
   private String cluster;
   private String parentSnapshot;
+  private String remoteDevice;
+  private String localDevice;
 
   public Volume() {
     super( );
@@ -99,5 +101,21 @@ public class Volume extends AbstractIsomorph {
 
   public void setParentSnapshot( final String parentSnapshot ) {
     this.parentSnapshot = parentSnapshot;
+  }
+
+  public String getRemoteDevice() {
+    return remoteDevice;
+  }
+
+  public void setRemoteDevice( final String remoteDevice ) {
+    this.remoteDevice = remoteDevice;
+  }
+
+  public String getLocalDevice() {
+    return localDevice;
+  }
+
+  public void setLocalDevice( final String localDevice ) {
+    this.localDevice = localDevice;
   }
 }
