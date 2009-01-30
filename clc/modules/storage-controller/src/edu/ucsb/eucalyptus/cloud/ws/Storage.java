@@ -1117,7 +1117,8 @@ public class Storage {
                 } else {
                     callback.failed();
                 }
-                gzipOutStream.close();
+                gzipOutStream.flush();
+                gzipOutStream.finish();
                 inputStream.close();
                 if(deleteOnXfer) {
                     snapshotStorageManager.deleteAbsoluteObject(outFile.getAbsolutePath());
@@ -1178,8 +1179,7 @@ public class Storage {
                 httpClient.executeMethod(method);
                 method.releaseConnection();
             } catch (Exception ex) {
-               // ex.printStackTrace();
-               // throw new EucalyptusCloudException("error transferring");
+                throw new EucalyptusCloudException("error transferring");
             }
         }
     }
