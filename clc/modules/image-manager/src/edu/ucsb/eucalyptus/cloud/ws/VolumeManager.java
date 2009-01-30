@@ -173,8 +173,10 @@ public class VolumeManager {
           v.setRemoteDevice( vol.getActualDeviceName() );
         }
         edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
-        if( attachedVolumes.containsKey( aVolume.getVolumeId() ) )
+        if( attachedVolumes.containsKey( aVolume.getVolumeId() ) ) {
+          aVolume.setStatus( "in-use" );
           aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
+        }
         reply.getVolumeSet().add( aVolume );
       }
     }
