@@ -39,7 +39,7 @@
 
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
-static const char* blockSize = "1G";
+static const char* blockSize = "1M";
 jstring run_command(JNIEnv *env, char *cmd, int outfd) {
 	FILE* fd;
 	int pid;
@@ -91,8 +91,9 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getAoESta
     const jbyte* pid = (*env)->GetStringUTFChars(env, processId, NULL);
 
     char command[128];
-	snprintf(command, 128, "cat /proc/%s/cmdline", pid);
-	jstring returnValue = run_command(env, command, 1);	
+    snprintf(command, 128, "cat /proc/%s/cmdline", pid);                                                
+	
+    jstring returnValue = run_command(env, command, 1);	
     (*env)->ReleaseStringUTFChars(env, processId, pid);
     return returnValue;
 }
@@ -143,7 +144,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createEmp
 (JNIEnv *env, jobject obj, jstring fileName, jint size) {
 	char command[256];
 	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
-
+    size = size * 1024;
 	snprintf(command, 256, "dd if=/dev/zero of=%s count=%d bs=%s", filename, size, blockSize);
 
 	jstring returnValue = run_command(env, command, 2);
@@ -231,7 +232,7 @@ JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_aoeUnexport
     //TODO: blind kill. Hope for the best.
    char command[128];
 
-   snprintf(command, 128, "kill -9 %s", vblade_pid);
+   snprintf(command, 128, "kill %d", vblade_pid);
    run_command(env, command, 1);
 }
 
@@ -372,5 +373,15 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_enableLog
     jstring returnValue = run_command(env, command, 1);
 
     (*env)->ReleaseStringUTFChars(env, absoluteLvName, lv_name);
+    return returnValue;
+}
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getLvmVersion
+  (JNIEnv *env, jobject obj) {
+	char command[256];
+
+   	snprintf(command, 256, "lvdisplay --version");
+    jstring returnValue = run_command(env, command, 1);
+   
     return returnValue;
 }

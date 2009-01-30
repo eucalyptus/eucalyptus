@@ -23,11 +23,14 @@ if (!-x $MKDIR || !-x $RMDIR || !-x $CHOWN || !-x $CHMOD || !-x $MKTEMP || !-x $
 
 # check input params
 $mounter = untaint(shift @ARGV);
+$offset = untaint(shift @ARGV);
 $img = untaint(shift @ARGV);
 $key = shift @ARGV; # untaint later
-$offset = untaint(shift @ARGV);
+
 $tmpfile = "";
 $loopdev = "";
+$mounted = 0;
+$attached = 0;
 
 if (!-f "$img" || !-x "$mounter") {
     print STDERR "add_key cannot verify inputs: mounter=$mounter img=$img\n";
@@ -37,9 +40,35 @@ if ($offset eq "") {
     $offset = 0;
 }
 
+chomp($tmpfile = untaint(`$MKTEMP -d`));
+if (! -d "$tmpfile") {
+    print STDERR "no dir: $tmpfile";
+    do_exit(1);
+}
 
-if (system("$TUNE2FS -c 0 -i 0 $img >/dev/null 2>&1")) {
-    print STDERR "cmd: $TUNE2FS -c 0 -i 0 $img\n";
+# find loop dev and attach image to it
+for ($i=0; $i<10 && !$attached; $i++) {
+    $loopdev=untaint(`$LOSETUP -f`);
+    if ($loopdev ne "") {
+	if ($offset == 0) {
+	    $rc = system("$LOSETUP $loopdev $img");
+	} else {
+	    $rc = system("$LOSETUP -o $offset $loopdev $img");
+	}
+	if (!$rc) {
+	    $attached = 1;
+	} else {
+	    system("$LOSETUP -d $loopdev");
+	}
+    }
+}
+if (!$attached) {
+    print STDERR "cannot attach a loop device\n";
+    do_exit(1);
+}
+
+if (system("$TUNE2FS -c 0 -i 0 $loopdev >/dev/null 2>&1")) {
+    print STDERR "cmd: $TUNE2FS -c 0 -i 0 $loopdev\n";
 #    do_exit(1);
 }
 
@@ -54,30 +83,11 @@ if (!-f "$key") {
     do_exit(1);
 }
 
-chomp($tmpfile = untaint(`$MKTEMP -d`));
-if (! -d "$tmpfile") {
-    print STDERR "no dir: $tmpfile";
-    do_exit(1);
-}
-
-$attached = 0;
-for ($i=0; $i<10 && !$attached; $i++) {
-    $loopdev=untaint(`$LOSETUP -f`);
-    if ($offset != 0) {
-	$rc = system("$LOSETUP $loopdev $img");
-    } else {
-	$rc = system("$LOSETUP -o $offset $loopdev $img");
-    }
-    if ($loopdev ne "" && !$rc) {
-	if (!system("$mounter mount $loopdev $tmpfile")) {
-	    $attached = 1;
-	}
-    }
-}
-if (!$attached) {
+if (system("$mounter mount $loopdev $tmpfile")) {
     print STDERR "cannot mount: $mounter mount $loopdev $tmpfile\n";
     do_exit(1);
 }
+$mounted = 1;
 
 if ( !-d "$tmpfile/root/.ssh" ) {
     if (system("$MKDIR $tmpfile/root/.ssh")) {
@@ -111,12 +121,14 @@ do_exit(0);
 sub do_exit() {
     $e = shift;
 
-    if ($tmpfile ne "") {
+    if ($mounted && ($tmpfile ne "")) {
 	system("$mounter umount $tmpfile");
-	if ($loopdev ne "") {
-	    system("$LOSETUP -d $loopdev");
-	    system("$RMDIR $tmpfile");
-	}
+    }
+    if ($attached && ($loopdev ne "")) {
+	system("$LOSETUP -d $loopdev");
+    }
+    if ($tmpfile ne "") {
+	system("$RMDIR $tmpfile");
     }
     exit($e);
 }

@@ -12,6 +12,8 @@ public abstract class AbstractIsomorph {
   @Enumerated(EnumType.STRING)
   private State state;
 
+  public AbstractIsomorph( ) {}
+
   public AbstractIsomorph( String userName,String displayName ) {
     this.userName = userName;
     this.uuid = UUID.randomUUID().toString();
@@ -63,4 +65,5 @@ public abstract class AbstractIsomorph {
   }
 
   public abstract String mapState( );
+  public abstract void setMappedState( String state );
 }

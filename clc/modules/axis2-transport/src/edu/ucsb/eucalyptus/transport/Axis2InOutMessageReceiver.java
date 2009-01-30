@@ -140,6 +140,7 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
 
         Boolean putType = (Boolean) msgContext.getProperty(WalrusProperties.STREAMING_HTTP_PUT);
         Boolean getType = (Boolean) msgContext.getProperty(WalrusProperties.STREAMING_HTTP_GET);
+
         if(getType != null || putType != null) {
             WalrusDataResponseType reply = (WalrusDataResponseType) message.getPayload();
             AxisHttpResponse response = ( AxisHttpResponse ) msgContext.getProperty( Axis2HttpWorker.REAL_HTTP_RESPONSE );
@@ -157,9 +158,15 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
                     WalrusDataRequestType request = (WalrusDataRequestType) wrappedParam;
                     newMsgContext.setProperty("GET_KEY", request.getBucket() + "." + request.getKey());
                     newMsgContext.setProperty("GET_RANDOM_KEY", request.getRandomKey());
+                    Boolean isCompressed = request.getIsCompressed();
+                    if(isCompressed != null) {
+                        newMsgContext.setProperty("GET_COMPRESSED", isCompressed);
+                    }
                 }
                 //This selects the data formatter
                 newMsgContext.setProperty( "messageType", "application/walrus" );
+            } else if(putType != null) {
+                response.addHeader(new BasicHeader(HTTP.CONTENT_LEN, String.valueOf(0)));                
             }
         }
 
@@ -276,5 +283,4 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
                         msg = this.msgReceiver.getProperties().getAuthenticator().authenticate( cert, msg );
                     }
     }
-
 }

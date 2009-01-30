@@ -1091,8 +1091,8 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
             err = virDomainDetachDevice (dom, xml);
             sem_v (xen_sem);
             if (err) {
-                logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
-                ret = ERROR;
+	      logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
+	      ret = ERROR;
             } else {
                 logprintfl (EUCAINFO, "detached %s as %s in domain %s\n", remoteDev, localDev, instanceId);
             }

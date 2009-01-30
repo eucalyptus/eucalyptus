@@ -132,14 +132,15 @@ public class EucalyptusErrorMessageType extends EucalyptusMessage {
 }
 
 public class EucalyptusData implements Cloneable, Serializable {
-
-  public MetaClass getMetaClass()
-  {
+  public MetaClass getMetaClass() {
     return metaClass;
   }
 
-  public Object clone()
-  {
+  public String toString() {
+    return this.getProperties().toMapString();
+  }
+
+  public Object clone(){
     return super.clone();
   }
 }
@@ -174,11 +175,11 @@ public class VmTypeInfo extends EucalyptusData {
   @Override
   public String toString() {
     return "VmTypeInfo{" +
-           "name='" + name + '\'' +
-           ", memory=" + memory +
-           ", disk=" + disk +
-           ", cores=" + cores +
-           '}';
+            "name='" + name + '\'' +
+            ", memory=" + memory +
+            ", disk=" + disk +
+            ", cores=" + cores +
+            '}';
   }
 
 }
@@ -202,11 +203,11 @@ public class NetworkConfigType extends EucalyptusData {
   @Override
   public String toString() {
     return "NetworkConfigType{" +
-           "macAddress='" + macAddress + '\'' +
-           ", ipAddress='" + ipAddress + '\'' +
-           ", publicIp='" + ignoredPublicIp + '\'' +
-           ", vlan=" + vlan +
-           '}';
+            "macAddress='" + macAddress + '\'' +
+            ", ipAddress='" + ipAddress + '\'' +
+            ", publicIp='" + ignoredPublicIp + '\'' +
+            ", vlan=" + vlan +
+            '}';
   }
 
 
@@ -261,16 +262,16 @@ public class PacketFilterRule {
   @Override
   public String toString() {
     return "PacketFilterRule{" +
-           "destName='" + destName + '\'' +
-           ", policy='" + policy + '\'' +
-           ", protocol='" + protocol + '\'' +
-           ", portMin=" + portMin +
-           ", portMax=" + portMax +
-           ", sourceCidrs=" + sourceCidrs +
-           ", peers=" + peers +
-           ", sourceNetworkNames=" + sourceNetworkNames +
-           ", sourceUserNames=" + sourceUserNames +
-           '}';
+            "destName='" + destName + '\'' +
+            ", policy='" + policy + '\'' +
+            ", protocol='" + protocol + '\'' +
+            ", portMin=" + portMin +
+            ", portMax=" + portMax +
+            ", sourceCidrs=" + sourceCidrs +
+            ", peers=" + peers +
+            ", sourceNetworkNames=" + sourceNetworkNames +
+            ", sourceUserNames=" + sourceUserNames +
+            '}';
   }
 
 
@@ -382,10 +383,10 @@ public class NodeCertInfo extends EucalyptusData implements Comparable {
   @Override
   public String toString() {
     return "NodeCertInfo{" +
-           "serviceTag='" + serviceTag.replaceAll("services/EucalyptusNC","") + '\'' +
-           ", ccCert='" + ccCert + '\'' +
-           ", ncCert='" + ncCert + '\'' +
-           '}';
+            "serviceTag='" + serviceTag.replaceAll("services/EucalyptusNC","") + '\'' +
+            ", ccCert='" + ccCert + '\'' +
+            ", ncCert='" + ncCert + '\'' +
+            '}';
   }
 
 }
@@ -404,4 +405,15 @@ public class NodeLogInfo extends EucalyptusData implements Comparable {
 
 }
 
+public class HeartbeatMessage implements Cloneable, Serializable {
+  String heartbeatId;
+
+  def HeartbeatMessage(final String heartbeatId) {
+    this.heartbeatId = heartbeatId;
+  }
+
+  def HeartbeatMessage() {}
+
+
+}
 

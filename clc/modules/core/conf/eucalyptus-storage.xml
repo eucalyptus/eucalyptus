@@ -10,28 +10,38 @@
        http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0 http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0/euca.xsd">
 
 
-    <model name="eucalyptus-userdata">
+    <model name="eucalyptus-storage">
         <default-service-exception-strategy>
             <outbound-endpoint ref="ReplyQueueWS"/>
         </default-service-exception-strategy>
 
-        <service name="KeyPair">
+        <service name="Image">
             <inbound>
-                <inbound-endpoint ref="KeyPairWS"/>
+                <inbound-endpoint ref="ImageWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.KeyPairBroker"/>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.ImageManager"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="ReplyQueueWS"/>
                 </outbound-pass-through-router>
             </outbound>
         </service>
-
-        <service name="Groups">
+        <service name="Volume">
             <inbound>
-                <inbound-endpoint ref="GroupsWS"/>
+                <inbound-endpoint ref="VolumeWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.GroupManager"/>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.VolumeManager"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="ReplyQueueWS"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+        <service name="Snapshot">
+            <inbound>
+                <inbound-endpoint ref="SnapshotWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.SnapshotManager"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="ReplyQueueWS"/>
@@ -40,5 +50,4 @@
         </service>
 
     </model>
-
 </mule>

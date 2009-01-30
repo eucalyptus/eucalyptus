@@ -32,37 +32,41 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws.tests;
+package edu.ucsb.eucalyptus.cloud.entities;
 
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
-import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
-import edu.ucsb.eucalyptus.cloud.ws.Storage;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import junit.framework.TestCase;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-public class GetSnapshotTest extends TestCase {
+import javax.persistence.*;
 
-    static Storage storage;
+@Entity
+@Table( name = "StorageMetadata" )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+public class StorageMetaInfo {
+    @Id
+    @GeneratedValue
+    @Column(name = "storage_meta_info_id")
+    private Long id = -1l;
+    @Column(name = "max_total_volume_size")
+    private Integer maxTotalVolumeSize;
+    @Column(name = "max_total_snapshot_size")
+    private Integer maxTotalSnapshotSize;
 
-
-    public void testGetSnapshot() throws Throwable {
-
-        String volumeId = "vol-" + Hashes.getRandom(10);
-        String snapshotBucket = "snapset-FuXLn1MUHJ66BkK0";
-        String snapshotId = "snap-" + Hashes.getRandom(10);
-        EntityWrapper<WalrusSnapshotInfo>db = new EntityWrapper<WalrusSnapshotInfo>();
-        WalrusSnapshotInfo snapInfo = new WalrusSnapshotInfo(snapshotId);
-        db.add(snapInfo);
-        snapInfo.setLvName("lol");
-        
-        db.commit();
-        //    storage.GetSnapshots(volumeId, snapshotBucket, snapshotId);
-
-
-        if ( EntityWrapper.getEntityManagerFactory().isOpen() )
-     EntityWrapper.getEntityManagerFactory().close();
+    public StorageMetaInfo() {}
+   
+    public Integer getMaxTotalVolumeSize() {
+        return maxTotalVolumeSize;
     }
-    public void setUp() {
-        storage = new Storage();
+
+    public void setMaxTotalVolumeSize(Integer maxTotalVolumeSize) {
+        this.maxTotalVolumeSize = maxTotalVolumeSize;
+    }
+
+    public Integer getMaxTotalSnapshotSize() {
+        return maxTotalSnapshotSize;
+    }
+
+    public void setMaxTotalSnapshotSize(Integer maxTotalSnapshotSize) {
+        this.maxTotalSnapshotSize = maxTotalSnapshotSize;
     }
 }

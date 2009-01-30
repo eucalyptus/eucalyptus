@@ -37,8 +37,10 @@ public class Pair {
   }
 
 }
-
-public class VmAllocationInfo implements Serializable {
+public interface RequestTransactionScript extends Serializable {
+  public EucalyptusMessage getRequestMessage();
+}
+public class VmAllocationInfo implements RequestTransactionScript {
 
   RunInstancesType request;
   RunInstancesResponseType reply;
@@ -58,6 +60,10 @@ public class VmAllocationInfo implements Serializable {
   def VmAllocationInfo(final RunInstancesType request) {
     this.request = request;
     this.reply = request.getReply();
+  }
+
+  public EucalyptusMessage getRequestMessage() {
+    return this.getRequest();
   }
 }
 

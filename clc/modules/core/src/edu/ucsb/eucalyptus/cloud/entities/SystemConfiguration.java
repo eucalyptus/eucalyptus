@@ -64,6 +64,10 @@ public class SystemConfiguration {
     private Integer storageMaxBucketSizeInMB;
     @Column( name = "system_storage_cache_size_mb" )
     private Integer storageMaxCacheSizeInMB;
+    @Column( name = "system_storage_volume_size_gb" )
+    private Integer storageMaxTotalVolumeSizeInGb;
+    @Column( name = "system_storage_snapshot_size_gb" )
+    private Integer storageMaxSnapshotSizeInGb;
 
     public SystemConfiguration(){}
 
@@ -152,5 +156,21 @@ public class SystemConfiguration {
 
     public void setStorageMaxCacheSizeInMB(Integer storageMaxCacheSizeInMB) {
         this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
+    }
+
+    public Integer getStorageMaxTotalVolumeSizeInGb() {
+        return storageMaxTotalVolumeSizeInGb;
+    }
+
+    public void setStorageMaxTotalVolumeSizeInGb(Integer storageMaxTotalVolumeSizeInGb) {
+        this.storageMaxTotalVolumeSizeInGb = storageMaxTotalVolumeSizeInGb;
+    }
+
+    public Integer getStorageMaxSnapshotSizeInGb() {
+        return storageMaxSnapshotSizeInGb;
+    }
+
+    public void setStorageMaxSnapshotSizeInGb(Integer storageMaxSnapshotSizeInGb) {
+        this.storageMaxSnapshotSizeInGb = storageMaxSnapshotSizeInGb;
     }
 }

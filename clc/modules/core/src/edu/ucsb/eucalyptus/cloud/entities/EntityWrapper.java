@@ -51,6 +51,11 @@ public class EntityWrapper<TYPE> {
 
   private static Map<String,EntityManagerFactory> emf = new ConcurrentSkipListMap<String,EntityManagerFactory>();
 
+  public static EntityManagerFactory getEntityManagerFactory( ) {
+    return EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME );
+  }
+
+
   public static EntityManagerFactory getEntityManagerFactory( String persistenceContext )
   {
     synchronized ( EntityWrapper.class )

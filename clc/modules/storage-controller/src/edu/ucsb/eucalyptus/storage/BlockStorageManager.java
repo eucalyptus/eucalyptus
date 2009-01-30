@@ -41,9 +41,13 @@ import java.util.List;
 public interface BlockStorageManager {
     public void initVolumeManager();
 
+    public void checkPreconditions() throws EucalyptusCloudException;
+
     public void reload();
 
     public void startupChecks();
+
+    public void setStorageInterface(String storageInterface);
 
     public void cleanVolume(String volumeId);
 

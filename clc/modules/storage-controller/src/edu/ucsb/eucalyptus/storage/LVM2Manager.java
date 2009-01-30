@@ -38,13 +38,11 @@ import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
-import edu.ucsb.eucalyptus.cloud.ws.Storage;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.util.StorageProperties;
+import org.apache.log4j.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -57,12 +55,48 @@ public class LVM2Manager implements BlockStorageManager {
 
     public static final String lvmRootDirectory = "/dev";
     public static final String PATH_SEPARATOR = "/";
-    public static String iface = "wlan0";
+    public static String iface = "eth0";
     public static boolean initialized = false;
     public static String hostName = "localhost";
     public static final int MAX_LOOP_DEVICES = 256;
+    public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
+    public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
+    private static final String CONFIG_FILE_PATH = "/etc/eucalyptus/eucalyptus.conf";
+    private static Logger LOG = Logger.getLogger(LVM2Manager.class);
+    private static String eucaHome = "/opt/eucalyptus";
+    private static final String IFACE_CONFIG_STRING = "VNET_INTERFACE";
+    private static final boolean ifaceDiscovery = false;
 
     public StorageExportManager exportManager;
+
+    public void checkPreconditions() throws EucalyptusCloudException {
+        //check if binaries exist, commands can be executed, etc.
+        String eucaHomeDir = System.getProperty("euca.home");
+        if(eucaHomeDir == null) {
+            throw new EucalyptusCloudException("euca.home not set");
+        }
+        eucaHome = eucaHomeDir;
+        if(!new File(eucaHome + EUCA_ROOT_WRAPPER).exists()) {
+            throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist");
+        }
+        if(!new File(eucaHome + CONFIG_FILE_PATH).exists()) {
+            throw new EucalyptusCloudException(eucaHome + CONFIG_FILE_PATH + " does not exist");
+        }
+        File varDir = new File(eucaHome + EUCA_VAR_RUN_PATH);
+        if(!varDir.exists()) {
+            varDir.mkdirs();
+        }
+        String returnValue = getLvmVersion();
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Is lvm installed?");
+        } else {
+            LOG.info(returnValue);
+        }
+    }
+
+    public LVM2Manager(String storageInterface) {
+        iface = storageInterface;
+    }
 
     public void initVolumeManager() {
         if(!initialized) {
@@ -70,19 +104,29 @@ public class LVM2Manager implements BlockStorageManager {
             exportManager = new AOEManager();
             try {
                 hostName = InetAddress.getLocalHost().getHostName();
-                NetworkInterface inface = NetworkInterface.getByName(iface);
-                if(inface == null) {
-                    List<NetworkInterface> ifaces = null;
-                    try {
-                        ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-                    } catch ( SocketException e1 ) {}
-                    for ( NetworkInterface ifc : ifaces )
-                        try {
-                            if ( !ifc.isLoopback() && !ifc.isVirtual() && ifc.isUp() ) {
-                                iface = ifc.getName();
-                                break;
-                            }
-                        } catch ( SocketException e1 ) {}
+                iface = parseConfig();
+                if(iface == null || (iface.length() == 0)) {
+                    NetworkInterface inface = NetworkInterface.getByName(iface);
+                    if(inface == null) {
+                        LOG.warn("Network interface " + iface + " is not valid. Storage may not function.");
+                        if(ifaceDiscovery) {
+                            List<NetworkInterface> ifaces = null;
+                            try {
+                                ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
+                            } catch ( SocketException e1 ) {}
+                            for ( NetworkInterface ifc : ifaces )
+                                try {
+                                    if ( !ifc.isLoopback() && !ifc.isVirtual() && ifc.isUp() ) {
+                                        iface = ifc.getName();
+                                        break;
+                                    }
+                                } catch ( SocketException e1 ) {}
+                        }
+                    } else {
+                        if(!inface.isUp()) {
+                            LOG.warn("Network interface " + iface + " is not available (up). Storage may not function.");
+                        }
+                    }
                 }
 
                 EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
@@ -101,8 +145,35 @@ public class LVM2Manager implements BlockStorageManager {
         }
     }
 
+    private String parseConfig() {
+        String configFileName = eucaHome + CONFIG_FILE_PATH;
+        String ifaceName = null;
+        try {
+            FileInputStream fileInputStream = new FileInputStream(new File(configFileName));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(fileInputStream));
+            String line;
+            while((line = reader.readLine()) !=null) {
+                if(line.contains(IFACE_CONFIG_STRING) && !line.startsWith("#")) {
+                    String[] parts = line.split("=");
+                    if(parts.length > 1) {
+                        ifaceName = parts[1];
+                        ifaceName = ifaceName.replaceAll('\"' + "", "");
+                    }
+                    break;
+                }
+            }
+        } catch (Exception ex) {
+            LOG.warn("Could not parse config file " + configFileName);
+        }
+        return ifaceName;
+    }
+
     public void startupChecks() {
         reload();
+    }
+
+    public void setStorageInterface(String storageInterface) {
+        iface = storageInterface;
     }
 
     public void cleanVolume(String volumeId) {
@@ -115,11 +186,24 @@ public class LVM2Manager implements BlockStorageManager {
             String loDevName = lvmVolInfo.getLoDevName();
             int pid = lvmVolInfo.getVbladePid();
             if(pid > 0) {
-                String returnValue = getAoEStatus(String.valueOf(pid));
+                String returnValue = aoeStatus(pid);
                 if(returnValue.contains("vblade")) {
                     exportManager.unexportVolume(pid);
+                    int majorNumber = lvmVolInfo.getMajorNumber();
+                    int minorNumber = lvmVolInfo.getMinorNumber();
+                    File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+                    if(vbladePidFile.exists()) {
+                        vbladePidFile.delete();
+                    }
                 }
             }
+            String vgName = lvmVolInfo.getVgName();
+            String lvName = lvmVolInfo.getLvName();
+            String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+
+            String returnValue = removeLogicalVolume(absoluteLVName);
+            returnValue = removeVolumeGroup(vgName);
+            returnValue = removePhysicalVolume(loDevName);
             removeLoopback(loDevName);
             db.delete(lvmVolInfo);
             db.commit();
@@ -132,7 +216,14 @@ public class LVM2Manager implements BlockStorageManager {
         List<LVMVolumeInfo> lvmVolumeInfos = db.query(lvmVolumeInfo);
         if(lvmVolumeInfos.size() > 0) {
             LVMVolumeInfo lvmVolInfo = lvmVolumeInfos.get(0);
+            String vgName = lvmVolInfo.getVgName();
+            String lvName = lvmVolInfo.getLvName();
             String loDevName = lvmVolInfo.getLoDevName();
+            String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+
+            String returnValue = removeLogicalVolume(absoluteLVName);
+            returnValue = reduceVolumeGroup(vgName, loDevName);
+            returnValue = removePhysicalVolume(loDevName);
             removeLoopback(loDevName);
             db.delete(lvmVolInfo);
             db.commit();
@@ -177,6 +268,8 @@ public class LVM2Manager implements BlockStorageManager {
 
     public native String enableLogicalVolume(String absoluteLvName);
 
+    public native String getLvmVersion();
+
     public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
         int majorNumber = -1;
         int minorNumber = -1;
@@ -200,9 +293,19 @@ public class LVM2Manager implements BlockStorageManager {
         }
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
         int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
-        String returnValue = getAoEStatus(String.valueOf(pid));
+        String returnValue = aoeStatus(pid);
         if(pid < 0 || (!returnValue.contains("vblade"))) {
             throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface);
+        } else {
+            File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+            try {
+                FileOutputStream fileOutStream = new FileOutputStream(vbladePidFile);
+                String pidString = String.valueOf(pid);
+                fileOutStream.write(pidString.getBytes());
+                fileOutStream.close();
+            } catch (Exception ex) {
+                LOG.warn("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
+            }
         }
         lvmVolumeInfo.setVbladePid(pid);
         lvmVolumeInfo.setMajorNumber(majorNumber);
@@ -296,12 +399,13 @@ public class LVM2Manager implements BlockStorageManager {
         if(vbladePid < 0) {
             throw new EucalyptusCloudException();
         }
+
         lvmVolumeInfo.setVolumeId(volumeId);
         lvmVolumeInfo.setLoDevName(loDevName);
         lvmVolumeInfo.setPvName(loDevName);
         lvmVolumeInfo.setVgName(vgName);
         lvmVolumeInfo.setLvName(lvName);
-        lvmVolumeInfo.setStatus(Storage.Status.available.toString());
+        lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
         lvmVolumeInfo.setSize(size);
 
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
@@ -332,7 +436,7 @@ public class LVM2Manager implements BlockStorageManager {
         lvmVolumeInfo.setPvName(loDevName);
         lvmVolumeInfo.setVgName(vgName);
         lvmVolumeInfo.setLvName(lvName);
-        lvmVolumeInfo.setStatus(Storage.Status.available.toString());
+        lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
         lvmVolumeInfo.setSize(size);
 
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
@@ -347,7 +451,7 @@ public class LVM2Manager implements BlockStorageManager {
         LVMVolumeInfo foundSnapshotInfo = db.getUnique(lvmVolumeInfo);
         if(foundSnapshotInfo != null) {
             String status = foundSnapshotInfo.getStatus();
-            if(status.equals(Storage.Status.available.toString())) {
+            if(status.equals(StorageProperties.Status.available.toString())) {
                 String vgName = "vg-" + Hashes.getRandom(4);
                 String lvName = "lv-" + Hashes.getRandom(4);
                 lvmVolumeInfo = new LVMVolumeInfo();
@@ -375,7 +479,7 @@ public class LVM2Manager implements BlockStorageManager {
                 lvmVolumeInfo.setPvName(loDevName);
                 lvmVolumeInfo.setVgName(vgName);
                 lvmVolumeInfo.setLvName(lvName);
-                lvmVolumeInfo.setStatus(Storage.Status.available.toString());
+                lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
                 lvmVolumeInfo.setSize(size);
                 db.add(lvmVolumeInfo);
                 db.commit();
@@ -417,7 +521,20 @@ public class LVM2Manager implements BlockStorageManager {
             String lvName = foundLVMVolumeInfo.getLvName();
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
-            exportManager.unexportVolume(foundLVMVolumeInfo.getVbladePid());
+
+            int pid = foundLVMVolumeInfo.getVbladePid();
+            if(pid > 0) {
+                String returnValue = aoeStatus(pid);
+                if(returnValue.contains("vblade")) {
+                    exportManager.unexportVolume(pid);
+                    int majorNumber = foundLVMVolumeInfo.getMajorNumber();
+                    int minorNumber = foundLVMVolumeInfo.getMinorNumber();
+                    File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+                    if(vbladePidFile.exists()) {
+                        vbladePidFile.delete();
+                    }
+                }
+            }
             String returnValue = removeLogicalVolume(absoluteLVName);
             if(returnValue.length() == 0) {
                 throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
@@ -466,7 +583,7 @@ public class LVM2Manager implements BlockStorageManager {
             snapshotInfo.setPvName(loDevName);
             snapshotInfo.setVgName(vgName);
             snapshotInfo.setLvName(lvName);
-            snapshotInfo.setStatus(Storage.Status.available.toString());
+            snapshotInfo.setStatus(StorageProperties.Status.available.toString());
             snapshotInfo.setVbladePid(-1);
             snapshotInfo.setSize(size);
             returnValues.add(vgName);
@@ -546,13 +663,11 @@ public class LVM2Manager implements BlockStorageManager {
 
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
         LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
-        LVMVolumeInfo foundLvmVolumeInfo = db.getUnique(lvmVolumeInfo);
-        if(foundLvmVolumeInfo != null) {
+        List<LVMVolumeInfo> foundLvmVolumeInfos = db.query(lvmVolumeInfo);
+        if(foundLvmVolumeInfos.size() > 0) {
+            LVMVolumeInfo foundLvmVolumeInfo = foundLvmVolumeInfos.get(0);
             returnValues.add(String.valueOf(foundLvmVolumeInfo.getMajorNumber()));
             returnValues.add(String.valueOf(foundLvmVolumeInfo.getMinorNumber()));
-        } else {
-            db.rollback();
-            throw new EucalyptusCloudException();
         }
         db.commit();
         return returnValues;
@@ -568,7 +683,7 @@ public class LVM2Manager implements BlockStorageManager {
             lvmVolumeInfo.setLoDevName(loDevName);
             lvmVolumeInfo.setMajorNumber(-1);
             lvmVolumeInfo.setMinorNumber(-1);
-            lvmVolumeInfo.setStatus(Storage.Status.available.toString());
+            lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
             db.add(lvmVolumeInfo);
         }
         db.commit();
@@ -594,10 +709,21 @@ public class LVM2Manager implements BlockStorageManager {
                 //enable logical volumes
                 String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
                 enableLogicalVolume(absoluteLVName);
-                String returnValue = getAoEStatus(String.valueOf(pid));
+                String returnValue = aoeStatus(pid);
                 if(!returnValue.contains("vblade")) {
-                    pid = exportManager.exportVolume(iface, absoluteLVName, foundVolumeInfo.getMajorNumber(), foundVolumeInfo.getMinorNumber());
+                    int majorNumber = foundVolumeInfo.getMajorNumber();
+                    int minorNumber = foundVolumeInfo.getMinorNumber();
+                    pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
                     foundVolumeInfo.setVbladePid(pid);
+                    File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+                    try {
+                        FileOutputStream fileOutStream = new FileOutputStream(vbladePidFile);
+                        String pidString = String.valueOf(pid);
+                        fileOutStream.write(pidString.getBytes());
+                        fileOutStream.close();
+                    } catch (Exception ex) {
+                        LOG.warn("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
+                    }
                 }
             }
         }
@@ -620,5 +746,23 @@ public class LVM2Manager implements BlockStorageManager {
         }
         db.commit();
         return returnValues;
+    }
+
+    private String aoeStatus(int pid) {
+        File file = new File("/proc/" + pid + "/cmdline");
+        String returnString = "";
+        if(file.exists()) {
+            try {
+                FileInputStream fileIn = new FileInputStream(file);
+                byte[] bytes = new byte[512];
+                int bytesRead;
+                while((bytesRead = fileIn.read(bytes)) > 0) {
+                    returnString += new String(bytes, 0, bytesRead);
+                }
+            } catch (Exception ex) {
+                LOG.warn("could not find " + file.getAbsolutePath());
+            }
+        }
+        return returnString;
     }
 }

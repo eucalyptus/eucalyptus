@@ -253,7 +253,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
                         operationParams.put("GetData", Boolean.TRUE);
                         operationParams.put("InlineData", Boolean.FALSE);
-                        operationParams.put("GetMetaData", Boolean.FALSE);
+                        operationParams.put("GetMetaData", Boolean.TRUE);
 
                         Iterator<String> iterator = headers.keySet().iterator();
                         boolean isExtendedGet = false;
@@ -463,7 +463,6 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                 }
 
                 putQueue.put(WalrusDataMessage.EOF());
-
             } catch (Exception ex) {
                 LOG.warn(ex, ex);
             }

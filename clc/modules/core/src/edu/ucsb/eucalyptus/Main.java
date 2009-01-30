@@ -35,9 +35,8 @@
 package edu.ucsb.eucalyptus;
 
 import edu.ucsb.eucalyptus.ic.HttpServer;
-import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import edu.ucsb.eucalyptus.util.Messaging;
+import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 import org.mule.MuleServer;
 
@@ -59,6 +58,9 @@ public class Main {
     descAz.setEffectiveUserId( EucalyptusProperties.NAME );
     descAz.setCorrelationId( "" );
     Messaging.dispatch( "vm://RequestQueue", descAz );
+
+    Messaging.dispatch( WalrusProperties.WALRUS_REF, new InitializeWalrusType() );
+    Messaging.dispatch( StorageProperties.STORAGE_REF, new InitializeStorageManagerType() );
 
     LOG.info( "Eucalyptus started." );
   }

@@ -130,12 +130,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
                 }
             }
             if (reply_email==null) {
-                try {
-                    reply_email = EucalyptusManagement.getAdminEmail();
-                } catch (Exception e) {
-                    reply_email = ""; /* signup will not work until admin email address is set */
-                    system_ready = false;
-                }
+            	reply_email = signup_email;
             }
 
         } catch (IOException e) {
@@ -435,7 +430,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
         final UserInfoWeb user = verifyUser (session, session.getUserId(), false);
         /* TODO: forbid actions if password expired, maybe? */
 
-        String response = "Your `" + action + "` request succeeded, thank you."; /* generic response */
+        String response = "Your `" + action + "` request succeeded."; /* generic response */
         if (action.equals("approve")
                 || action.equals("reject")
                 || action.equals ( "delete" )
@@ -465,7 +460,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
                 new_user.setIsEnabled(true);
                 EucalyptusManagement.commitWebUser(new_user);
             }
-            response = "Your request to " + action + " user '" + userName + "' succeeded, thank you.";
+            response = "Request to " + action + " user '" + userName + "' succeeded.";
 
         } else if (action.equals("delete_image")
                 || action.equals("enable_image")

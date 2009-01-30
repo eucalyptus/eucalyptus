@@ -83,13 +83,12 @@ public class Bukkit {
         if(limits != null) {
             shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
         }
-        //NOTE: initializeForEBS MUST be called before exercizing any storage/EBS functionality
         initializeForEBS();
-        startupChecks();
     }
 
     public static void initializeForEBS() {
         storageManager.initialize();
+        startupChecks();
     }
 
     public static void startupChecks() {
@@ -121,7 +120,6 @@ public class Bukkit {
         db.commit();
     }
 
-    //For unit testing
     public Bukkit () {}
 
     public InitializeWalrusResponseType InitializeWalrus(InitializeWalrusType request) {
@@ -994,6 +992,7 @@ public class Bukkit {
         String bucketName = request.getBucket();
         String objectName = request.getKey();
         String userId = request.getUserId();
+        Boolean isCompressed = request.getIsCompressed();
 
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
         BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -1898,6 +1897,7 @@ public class Bukkit {
         private LinkedBlockingQueue<WalrusDataMessage> getQueue;
         private long byteRangeStart;
         private long byteRangeEnd;
+        private boolean compressed;
         private boolean deleteAfterXfer;
         private WalrusSemaphore semaphore;
 
@@ -1987,27 +1987,27 @@ public class Bukkit {
         }
 
         List<WalrusSnapshotInfo> snapshotInfos = foundSnapshotSet.getSnapshotSet();
-        for(WalrusSnapshotInfo snapInfo: snapshotInfos) {
-            if(snapInfo.getSnapshotId().equals(snapshotId)) {
+        EntityWrapper<WalrusSnapshotInfo> dbSnap = db.recast(WalrusSnapshotInfo.class);
+        WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+        List<WalrusSnapshotInfo> snapInfos = dbSnap.query(snapshotInfo);
+        if(snapInfos.size() > 0) {
+            snapshotInfo = snapInfos.get(0);
+            if(snapshotInfo.getTransferred()) {
                 db.rollback();
                 throw new EntityAlreadyExistsException(snapshotId);
             }
+        } else {
+            snapshotInfos.add(snapshotInfo);
+            dbSnap.add(snapshotInfo);
         }
 
-        WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
-        //create a snapshot set
+        //set snapshot props
         snapshotInfo.setSnapshotSetId(bucketName);
         snapshotInfo.setVgName(snapshotVgName);
         snapshotInfo.setLvName(snapshotLvName);
         snapshotInfo.setTransferred(false);
-        EntityWrapper<WalrusSnapshotInfo> dbSnap = db.recast(WalrusSnapshotInfo.class);
-        snapshotInfos.add(snapshotInfo);
-        dbSnap.add(snapshotInfo);
-
-        db.commit();
         //read and store it
         //convert to a PutObject request
-        //Make sure the bucket exists
 
         String userId = request.getUserId();
         if(createBucket) {
@@ -2030,18 +2030,24 @@ public class Bukkit {
         putObjectRequest.setBucket(bucketName);
         putObjectRequest.setKey(snapshotId);
         putObjectRequest.setRandomKey(request.getRandomKey());
-        PutObjectResponseType putObjectResponseType = PutObject(putObjectRequest);
-        reply.setEtag(putObjectResponseType.getEtag());
-        reply.setLastModified(putObjectResponseType.getLastModified());
-        reply.setStatusMessage(putObjectResponseType.getStatusMessage());
+        try {
+            PutObjectResponseType putObjectResponseType = PutObject(putObjectRequest);
+            reply.setEtag(putObjectResponseType.getEtag());
+            reply.setLastModified(putObjectResponseType.getLastModified());
+            reply.setStatusMessage(putObjectResponseType.getStatusMessage());
 
-        //change state 
-        snapshotInfo = new WalrusSnapshotInfo(snapshotId);
-        dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
-        WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
-        foundSnapshotInfo.setTransferred(true);
-        dbSnap.commit();
+            //change state
+            db.commit();
 
+            snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+            dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
+            WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
+            foundSnapshotInfo.setTransferred(true);
+            dbSnap.commit();
+        } catch (EucalyptusCloudException ex) {
+            db.rollback();
+            throw ex;
+        }
         return reply;
     }
 
@@ -2115,6 +2121,7 @@ public class Bukkit {
                 getObjectType.setGetMetaData(false);
                 getObjectType.setBucket(snapshotSetId);
                 getObjectType.setKey(volumeKey);
+                getObjectType.setIsCompressed(true);
                 db.commit();
                 GetObjectResponseType getObjectResponse = GetObject(getObjectType);
                 reply.setEtag(getObjectResponse.getEtag());
@@ -2123,6 +2130,7 @@ public class Bukkit {
                 request.setRandomKey(getObjectType.getRandomKey());
                 request.setBucket(snapshotSetId);
                 request.setKey(volumeKey);
+                request.setIsCompressed(true);
             } else {
                 db.rollback();
                 throw new EucalyptusCloudException("Could not find snapshot set");
@@ -2143,6 +2151,10 @@ public class Bukkit {
         EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
         WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
         List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+
+        ArrayList<String> vgNames = new ArrayList<String>();
+        ArrayList<String> lvNames = new ArrayList<String>();
+        ArrayList<String> snapIdsToDelete = new ArrayList<String>();
 
         //Delete is idempotent.
         reply.set_return(true);
@@ -2167,16 +2179,29 @@ public class Bukkit {
                 for(WalrusSnapshotInfo snapInfo : snapshotSet) {
                     String snapId = snapInfo.getSnapshotId();
                     snapshotIds.add(snapId);
-                    if(snapId.equals(foundSnapshotInfo.getSnapshotId()))
+                    if(snapId.equals(foundSnapshotInfo.getSnapshotId())) {
                         snapshotSetSnapInfo = snapInfo;
+                    }
                 }
                 //delete from the database
-                if(snapshotSetSnapInfo != null)
+                if(snapshotSetSnapInfo != null) {
                     snapshotSet.remove(snapshotSetSnapInfo);
+                    //only 1 entry left? It is the volume
+                    if(snapshotSet.size() == 1) {
+                        WalrusSnapshotInfo snapZeroInfo = snapshotSet.get(0);
+                        if(snapZeroInfo.getSnapshotId().startsWith("vol")) {
+                            snapshotSet.remove(snapZeroInfo);
+                            dbSet.delete(foundSnapshotSetInfo);
+                            snapZeroInfo = new WalrusSnapshotInfo(snapZeroInfo.getSnapshotId());
+                            WalrusSnapshotInfo foundVolInfo = db.getUnique(snapZeroInfo);
+                            db.delete(foundVolInfo);
+                        }
+                    }
+                }
                 db.delete(foundSnapshotInfo);
                 //remove the snapshot in the background
-                SnapshotDeleter snapshotDeleter = new SnapshotDeleter(bucketName, foundSnapshotInfo.getSnapshotId(),
-                        foundSnapshotInfo.getVgName(), foundSnapshotInfo.getLvName(), snapshotIds);
+                SnapshotDeleter snapshotDeleter = new SnapshotDeleter(bucketName, snapIdsToDelete,
+                        vgNames, lvNames, snapshotIds);
                 snapshotDeleter.start();
             } else {
                 db.rollback();
@@ -2191,22 +2216,35 @@ public class Bukkit {
     private class SnapshotDeleter extends Thread {
         private String bucketName;
         private List<String> snapshotSet;
-        private String snapshotId;
-        private String vgName;
-        private String lvName;
+        private List<String> snapshotIdsToDelete;
+        private List<String> vgNames;
+        private List<String> lvNames;
 
-        public SnapshotDeleter(String bucketName, String snapshotId, String vgName, String lvName, List<String> snapshotSet) {
+        public SnapshotDeleter(String bucketName, List<String> snapshotIdsToDelete, List<String> vgNames, List<String> lvNames, List<String> snapshotSet) {
             this.bucketName = bucketName;
             this.snapshotSet = snapshotSet;
-            this.snapshotId = snapshotId;
-            this.vgName = vgName;
-            this.lvName = lvName;
+            this.snapshotIdsToDelete = snapshotIdsToDelete;
+            this.vgNames = vgNames;
+            this.lvNames = lvNames;
         }
 
         public void run() {
             try {
-                storageManager.deleteSnapshot(bucketName, snapshotId, vgName, lvName, snapshotSet);
+                for(int i = vgNames.size() - 1; i >= 0; --i) {
+                    String snapId = snapshotIdsToDelete.get(i);
+                    storageManager.deleteSnapshot(bucketName, snapId, vgNames.get(i), lvNames.get(i), snapshotSet);
+                    String snapIdToRemove = null;
+                    for(String snapsetId : snapshotSet) {
+                        if(snapsetId.equals(snapId)) {
+                            snapIdToRemove = snapsetId;
+                            break;
+                        }
+                    }
+                    if(snapIdToRemove != null)
+                        snapshotSet.remove(snapIdToRemove);
+                }
             } catch(EucalyptusCloudException ex) {
+
                 LOG.warn(ex, ex);
             }
         }

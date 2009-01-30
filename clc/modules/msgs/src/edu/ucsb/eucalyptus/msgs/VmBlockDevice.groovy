@@ -108,7 +108,31 @@ public class AttachedVolume extends EucalyptusData {
   String status;
   Date attachTime = new Date();
 
+  def AttachedVolume(final String volumeId, final String instanceId, final String device, final String remoteDevice) {
+    this.volumeId = volumeId;
+    this.instanceId = instanceId;
+    this.device = device;
+    this.remoteDevice = remoteDevice;
+    this.status = "attaching";
+  }
+
+  public AttachedVolume( String volumeId ) {
+    this.volumeId = volumeId;
+  }
+
   public AttachedVolume() {}
+
+  boolean equals(final Object o) {
+    if ( this.is(o) ) return true;
+    if ( !o || getClass() != o.class ) return false;
+    AttachedVolume that = (AttachedVolume) o;
+    if ( volumeId ? !volumeId.equals(that.volumeId) : that.volumeId != null ) return false;
+    return true;
+  }
+
+  int hashCode() {
+    return (volumeId ? volumeId.hashCode() : 0);
+  }
 
 }
 

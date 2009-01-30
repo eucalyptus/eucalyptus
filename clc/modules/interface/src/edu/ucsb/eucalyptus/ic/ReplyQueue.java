@@ -34,14 +34,15 @@
 
 package edu.ucsb.eucalyptus.ic;
 
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.cloud.RequestTransactionScript;
+import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 import edu.ucsb.eucalyptus.util.ReplyCoordinator;
 import org.apache.log4j.Logger;
-import org.mule.api.MessagingException;
+import org.mule.api.*;
 import org.mule.message.ExceptionMessage;
+
+import java.io.*;
 
 public class ReplyQueue {
 
@@ -60,37 +61,53 @@ public class ReplyQueue {
     return msg;
   }
 
-  public void handle( ExceptionMessage muleMsg ) {
+  public void handle( ExceptionMessage exMsg ) {
+    Throwable exception = exMsg.getException();
     Object payload = null;
     EucalyptusMessage msg = null;
-    Throwable exception = muleMsg.getException();
+    //:: messaging exceptions are the easiest to handle, deal with it first :://
     if ( exception instanceof MessagingException ) {
       MessagingException ex = ( MessagingException ) exception;
-      payload = ex.getUmoMessage().getPayload();
-      if ( payload instanceof VmAllocationInfo ) {
-        msg = ( ( VmAllocationInfo ) payload ).getRequest();
+      MuleMessage muleMsg = ex.getUmoMessage();
+
+      if ( payload instanceof RequestTransactionScript ) {
+        msg = ( ( RequestTransactionScript ) payload ).getRequestMessage();
       } else {
         try {
-          msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( ( String ) muleMsg.getPayload() );
-        }
-        catch ( Exception e ) {
+          msg = parsePayload( muleMsg.getPayload() );
+        } catch ( Exception e ) {
+          LOG.error( "Bailing out of error handling: don't have the correlationId for the caller!" );
           LOG.error( e, e );
+          return;
         }
       }
-      EucalyptusErrorMessageType errMsg = null;
-      if ( exception != null ) {
-        Throwable e = muleMsg.getException().getCause();
-        if ( e != null ) {
-          errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName(), msg, e.getMessage() );
-        }
-      }
-      if( errMsg == null ) {
-        errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName(), msg, "Internal Error.");
-      }
+      EucalyptusErrorMessageType errMsg = getErrorMessageType( exMsg, msg );
       replies.putMessage( errMsg );
+    }
+  }
+
+  private EucalyptusErrorMessageType getErrorMessageType( final ExceptionMessage exMsg, final EucalyptusMessage msg ) {
+    Throwable exception = exMsg.getException();
+    EucalyptusErrorMessageType errMsg = null;
+    if ( exception != null ) {
+      Throwable e = exMsg.getException().getCause();
+      if ( e != null ) {
+        errMsg = new EucalyptusErrorMessageType( exMsg.getComponentName(), msg, e.getMessage() );
+      }
+    }
+    if ( errMsg == null ) {
+      ByteArrayOutputStream exStream = new ByteArrayOutputStream();
+      exception.printStackTrace( new PrintStream( exStream ) );
+      errMsg = new EucalyptusErrorMessageType( exMsg.getComponentName(), msg, "Internal Error: \n" + exStream.toString() );
+    }
+    return errMsg;
+  }
+
+  private EucalyptusMessage parsePayload( Object payload ) throws Exception {
+    if ( payload instanceof EucalyptusMessage ) {
+      return (EucalyptusMessage) payload;
     } else {
-      LOG.error( "Bailing out of error handling!" );
-      LOG.error( exception, exception );
+      return ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( ( String ) payload );
     }
   }
 

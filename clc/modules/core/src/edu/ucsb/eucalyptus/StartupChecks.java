@@ -1,8 +1,20 @@
 package edu.ucsb.eucalyptus;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.keys.*;
+import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
+import edu.ucsb.eucalyptus.cloud.entities.Counters;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
+import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.EucaKeyStore;
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.keys.KeyTool;
+import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
+import edu.ucsb.eucalyptus.keys.UserKeyStore;
+import edu.ucsb.eucalyptus.msgs.Volume;
 import edu.ucsb.eucalyptus.util.BaseDirectory;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.SubDirectory;
@@ -161,6 +173,7 @@ public class StartupChecks {
   private static boolean checkDatabase() { /** initialize the counters **/
 
     EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
+    EntityWrapper<Volume> db2 = new EntityWrapper<Volume>("eucalyptus_volumes");
     try {
       UserInfo adminUser = db.getUnique( new UserInfo( "admin" ) );
       return true;
