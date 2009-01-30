@@ -537,12 +537,14 @@ const char * scGetInstancePath(void)
     return sc_instance_path;
 }
 
-int scSetInstancePath(char *path) {
-  sc_instance_path = strdup(path);
-  return(0);
+int scSetInstancePath(char *path) 
+{
+    sc_instance_path = strdup(path);
+    return(0);
 }
 
-int scCleanupInstanceImage (char *user, char *instId) {
+int scCleanupInstanceImage (char *user, char *instId) 
+{
     return vrun ("rm -rf %s/%s/%s/", sc_instance_path, user, instId);
 }
 
