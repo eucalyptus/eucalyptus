@@ -94,6 +94,10 @@ public class Storage {
         StorageMetaInfo metaInfo = new StorageMetaInfo();
         try {
             StorageMetaInfo storageMetaInfo = db.getUnique(metaInfo);
+            if(storageMetaInfo.getMaxTotalVolumeSize() == null)
+                storageMetaInfo.setMaxTotalVolumeSize(0);
+            if(storageMetaInfo.getMaxTotalSnapshotSize() == null)
+                storageMetaInfo.setMaxTotalSnapshotSize(0);
         } catch(Exception ex) {
             metaInfo.setMaxTotalVolumeSize(0);
             metaInfo.setMaxTotalSnapshotSize(0);
@@ -250,7 +254,7 @@ public class Storage {
             httpClient.executeMethod(getMethod);
             enableSnapshots = true;
         } catch(Exception ex) {
-            LOG.warn("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url");
+            LOG.warn("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url.");
             enableSnapshots = false;
         } finally {
             if(getMethod != null)
@@ -743,7 +747,10 @@ public class Storage {
         volume.setSize(String.valueOf(volInfo.getSize()));
         volume.setSnapshotId(volInfo.getSnapshotId());
         List<String> returnValues = blockManager.getVolume(volumeId);
-        volume.setActualDeviceName(ETHERD_PREFIX + returnValues.get(0) + "." + returnValues.get(1));
+        if(returnValues.size() > 0)
+            volume.setActualDeviceName(ETHERD_PREFIX + returnValues.get(0) + "." + returnValues.get(1));
+        else
+            volume.setActualDeviceName("invalid");
         return volume;
     }
 
