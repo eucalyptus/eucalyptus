@@ -636,14 +636,12 @@ public class LVM2Manager implements BlockStorageManager {
 
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
         LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
-        LVMVolumeInfo foundLvmVolumeInfo = db.getUnique(lvmVolumeInfo);
-        if(foundLvmVolumeInfo != null) {
+        List<LVMVolumeInfo> foundLvmVolumeInfos = db.query(lvmVolumeInfo);
+        if(foundLvmVolumeInfos.size() > 0) {
+            LVMVolumeInfo foundLvmVolumeInfo = foundLvmVolumeInfos.get(0);
             returnValues.add(String.valueOf(foundLvmVolumeInfo.getMajorNumber()));
             returnValues.add(String.valueOf(foundLvmVolumeInfo.getMinorNumber()));
-        } else {
-            db.rollback();
-            throw new EucalyptusCloudException();
-        }
+        } 
         db.commit();
         return returnValues;
     }
