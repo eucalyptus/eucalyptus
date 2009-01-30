@@ -1293,12 +1293,14 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
 	}
 
 	rc = ncGetConsoleOutputStub(ncs, meta, instId, &consoleOutput);
-	if (!rc) {
+	if (!rc && consoleOutput) {
 	  len = strlen(consoleOutput) + 1;
 	  rc = write(filedes[1], &len, sizeof(int));
 	  rc = write(filedes[1], consoleOutput, sizeof(char) * len);
 	  ret = 0;
 	} else {
+	  len = 0;
+	  rc = write(filedes[1], &len, sizeof(int));
 	  ret = 1;
 	}
 	close(filedes[1]);	  
