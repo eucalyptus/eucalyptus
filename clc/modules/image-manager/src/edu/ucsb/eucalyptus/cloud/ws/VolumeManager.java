@@ -169,12 +169,15 @@ public class VolumeManager {
         if ( !volState.getVolumeSet().isEmpty() ) {
           StorageVolume vol = volState.getVolumeSet().get( 0 );
           volumeState = vol.getStatus();
-          v.setMappedState( volumeState );
           v.setRemoteDevice( vol.getActualDeviceName() );
         }
+        if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
+          volumeState = "in-use";
+        }
+        v.setMappedState( volumeState );
         edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
-        if ( attachedVolumes.containsKey( aVolume.getVolumeId() ) ) {
-          aVolume.setStatus( "in-use" );
+        if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
+          aVolume.setStatus();
           aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
         }
         reply.getVolumeSet().add( aVolume );

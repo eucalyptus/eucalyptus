@@ -62,6 +62,7 @@ public class Volume extends AbstractIsomorph {
     if("failed".equals( state ) ) this.setState( State.FAIL );
     else if("creating".equals( state ) ) this.setState( State.GENERATING );
     else if("available".equals( state ) ) this.setState( State.EXTANT );
+    else if("in-use".equals( state ) ) this.setState( State.BUSY );
     else this.setState( State.ANNILATED );
   }
 

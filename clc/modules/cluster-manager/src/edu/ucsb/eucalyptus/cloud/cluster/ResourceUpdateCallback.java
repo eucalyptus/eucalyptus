@@ -22,10 +22,10 @@ public class ResourceUpdateCallback extends QueuedEventCallback<DescribeResource
     DescribeResourcesResponseType reply = ( DescribeResourcesResponseType ) cluster.send( msg );
     parent.getState().update( reply.getResources() );
     parent.updateNodeInfo( reply.getServiceTags() );
-    if ( !parent.getNodeTags().isEmpty() && this.firstTime ) {
-      this.firstTime = false;
-      this.parent.fireNodeThreads();
-    }
+//    if ( !parent.getNodeTags().isEmpty() && this.firstTime ) {
+//      this.firstTime = false;
+//      this.parent.fireNodeThreads();
+//    }
   }
 
   public void run() {
