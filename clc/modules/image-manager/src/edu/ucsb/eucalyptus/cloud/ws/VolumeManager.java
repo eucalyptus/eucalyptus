@@ -90,8 +90,8 @@ public class VolumeManager {
     }
 
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
-    if ( !(request.getSnapshotId() == null )) {
-      String userName = request.isAdministrator()?null:request.getUserId();
+    if ( !( request.getSnapshotId() == null ) ) {
+      String userName = request.isAdministrator() ? null : request.getUserId();
       try {
         db.recast( Snapshot.class ).getUnique( new Snapshot( userName, request.getSnapshotId() ) );
       } catch ( EucalyptusCloudException e ) {
@@ -154,26 +154,26 @@ public class VolumeManager {
     EntityWrapper<Volume> db = getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
     LOG.debug( request );
-    Map<String,AttachedVolume> attachedVolumes = new HashMap<String,AttachedVolume>();
-    for( VmInstance vm : VmInstances.getInstance().listValues() ) {
-      for( AttachedVolume av : vm.getVolumes() ) {
+    Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>();
+    for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
+      for ( AttachedVolume av : vm.getVolumes() ) {
         attachedVolumes.put( av.getVolumeId(), av );
       }
     }
     List<Volume> volumes = db.query( Volume.ownedBy( userName ) );
     for ( Volume v : volumes ) {
       if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
-        DescribeStorageVolumesResponseType volState = (DescribeStorageVolumesResponseType)Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageVolumesType( Lists.newArrayList( v.getDisplayName() ) ) );
+        DescribeStorageVolumesResponseType volState = ( DescribeStorageVolumesResponseType ) Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageVolumesType( Lists.newArrayList( v.getDisplayName() ) ) );
         LOG.debug( volState );
         String volumeState = "unavailable";
-        if( !volState.getVolumeSet().isEmpty() ) {
+        if ( !volState.getVolumeSet().isEmpty() ) {
           StorageVolume vol = volState.getVolumeSet().get( 0 );
           volumeState = vol.getStatus();
           v.setMappedState( volumeState );
           v.setRemoteDevice( vol.getActualDeviceName() );
         }
         edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
-        if( attachedVolumes.containsKey( aVolume.getVolumeId() ) ) {
+        if ( attachedVolumes.containsKey( aVolume.getVolumeId() ) ) {
           aVolume.setStatus( "in-use" );
           aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
         }
@@ -201,15 +201,15 @@ public class VolumeManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPlacement() );
     }
-    for( VmInstance v : VmInstances.getInstance().listValues() ) {
-      for( AttachedVolume vol : v.getVolumes() ) {
-        if( vol.getVolumeId().equals( request.getVolumeId() ) ) {
+    for ( VmInstance v : VmInstances.getInstance().listValues() ) {
+      for ( AttachedVolume vol : v.getVolumes() ) {
+        if ( vol.getVolumeId().equals( request.getVolumeId() ) ) {
           throw new EucalyptusCloudException( "Volume already attached: " + request.getVolumeId() );
         }
       }
     }
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
-    String userName = request.isAdministrator()?null:request.getUserId();
+    String userName = request.isAdministrator() ? null : request.getUserId();
     Volume volume = null;
     try {
       volume = db.getUnique( Volume.named( userName, request.getVolumeId() ) );
@@ -220,11 +220,11 @@ public class VolumeManager {
     }
 
     request.setRemoteDevice( volume.getRemoteDevice() );
-    QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback( cluster ), request);
+    QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback( cluster ), request );
     cluster.getMessageQueue().enqueue( event );
 
-    AttachedVolume attachVol = new AttachedVolume(volume.getDisplayName(), vm.getInstanceId(), request.getDevice(), volume.getRemoteDevice());
-    vm.getVolumes().add(attachVol);
+    AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName(), vm.getInstanceId(), request.getDevice(), volume.getRemoteDevice() );
+    vm.getVolumes().add( attachVol );
     reply.setAttachedVolume( attachVol );
 
     return reply;
@@ -248,7 +248,7 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPlacement() );
     }
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
-    String userName = request.isAdministrator()?null:request.getUserId();
+    String userName = request.isAdministrator() ? null : request.getUserId();
     try {
       db.getUnique( Volume.named( userName, request.getVolumeId() ) );
     } catch ( EucalyptusCloudException e ) {
@@ -258,20 +258,20 @@ public class VolumeManager {
     }
     db.commit();
     AttachedVolume volume = null;
-    for( VmInstance v : VmInstances.getInstance().listValues() ) {
-      for( AttachedVolume vol : v.getVolumes() ) {
-        if( vol.getVolumeId().equals( request.getVolumeId() ) ) {
+    for ( VmInstance v : VmInstances.getInstance().listValues() ) {
+      for ( AttachedVolume vol : v.getVolumes() ) {
+        if ( vol.getVolumeId().equals( request.getVolumeId() ) ) {
           volume = vol;
         }
       }
     }
-    if( volume == null )
-        throw new EucalyptusCloudException( "Volume is not attached: "+ request.getVolumeId() );
+    if ( volume == null )
+      throw new EucalyptusCloudException( "Volume is not attached: " + request.getVolumeId() );
 
     request.setVolumeId( volume.getVolumeId() );
     request.setRemoteDevice( volume.getRemoteDevice() );
     request.setDevice( volume.getDevice() );
-    QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( cluster ), request);
+    QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( cluster ), request );
     cluster.getMessageQueue().enqueue( event );
 
     vm.getVolumes().remove( new AttachedVolume( volume.getVolumeId() ) );

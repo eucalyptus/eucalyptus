@@ -62,7 +62,6 @@ public class Cluster implements HasName {
       }
       try {Thread.sleep( 5000 );} catch ( InterruptedException ignored ) {}
     } while ( reply == null || !this.checkCerts( reply ) );
-
   }
 
   private boolean checkCerts( final GetKeysResponseType reply ) {
@@ -122,10 +121,10 @@ public class Cluster implements HasName {
   }
 
   public void fireNodeThreads() {
-    if ( this.keyThread != null && !this.keyThread.isAlive() )
-      ( this.keyThread = new Thread( nodeCertUpdater, nodeCertUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
-    if ( this.logThread != null && !this.logThread.isAlive() )
-      ( this.logThread = new Thread( nodeLogUpdater, nodeLogUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
+//    if ( this.keyThread != null && !this.keyThread.isAlive() )
+//      ( this.keyThread = new Thread( nodeCertUpdater, nodeCertUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
+//    if ( this.logThread != null && !this.logThread.isAlive() )
+//      ( this.logThread = new Thread( nodeLogUpdater, nodeLogUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
   }
 
   public void stop() throws InterruptedException {
