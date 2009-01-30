@@ -91,8 +91,9 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getAoESta
     const jbyte* pid = (*env)->GetStringUTFChars(env, processId, NULL);
 
     char command[128];
-	snprintf(command, 128, "cat /proc/%s/cmdline", pid);
-	jstring returnValue = run_command(env, command, 1);	
+    snprintf(command, 128, "cat /proc/%s/cmdline", pid);                                                
+	
+    jstring returnValue = run_command(env, command, 1);	
     (*env)->ReleaseStringUTFChars(env, processId, pid);
     return returnValue;
 }
