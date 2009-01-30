@@ -161,6 +161,7 @@ public class VolumeManager {
           StorageVolume vol = volState.getVolumeSet().get( 0 );
           volumeState = vol.getStatus();
           v.setMappedState( volumeState );
+          v.setRemoteDevice( vol.getActualDeviceName() );
         }
         reply.getVolumeSet().add( v.morph( new edu.ucsb.eucalyptus.msgs.Volume() ) );
       }
@@ -193,7 +194,6 @@ public class VolumeManager {
         }
       }
     }
-    //:: TODO-1.5: there is a potential race here :://
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     String userName = request.isAdministrator()?null:request.getUserId();
     Volume volume = null;
@@ -205,11 +205,10 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId() );
     }
 
-//    request.setRemoteDevice( volume.get() );
+    request.setRemoteDevice( volume.getRemoteDevice() );
     QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback( cluster ), request);
     cluster.getMessageQueue().enqueue( event );
 
-    //:: TODO-1.5: dispatch message to the cc backend here :://
     return reply;
   }
 
