@@ -83,6 +83,7 @@ public class Bukkit {
         if(limits != null) {
             shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
         }
+        initializeForEBS();
     }
 
     public static void initializeForEBS() {
@@ -2005,7 +2006,6 @@ public class Bukkit {
         snapshotInfo.setVgName(snapshotVgName);
         snapshotInfo.setLvName(snapshotLvName);
         snapshotInfo.setTransferred(false);
-        db.commit();
         //read and store it
         //convert to a PutObject request
 
@@ -2030,18 +2030,24 @@ public class Bukkit {
         putObjectRequest.setBucket(bucketName);
         putObjectRequest.setKey(snapshotId);
         putObjectRequest.setRandomKey(request.getRandomKey());
-        PutObjectResponseType putObjectResponseType = PutObject(putObjectRequest);
-        reply.setEtag(putObjectResponseType.getEtag());
-        reply.setLastModified(putObjectResponseType.getLastModified());
-        reply.setStatusMessage(putObjectResponseType.getStatusMessage());
+        try {
+            PutObjectResponseType putObjectResponseType = PutObject(putObjectRequest);
+            reply.setEtag(putObjectResponseType.getEtag());
+            reply.setLastModified(putObjectResponseType.getLastModified());
+            reply.setStatusMessage(putObjectResponseType.getStatusMessage());
 
-        //change state 
-        snapshotInfo = new WalrusSnapshotInfo(snapshotId);
-        dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
-        WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
-        foundSnapshotInfo.setTransferred(true);
-        dbSnap.commit();
+            //change state
+            db.commit();
 
+            snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+            dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
+            WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
+            foundSnapshotInfo.setTransferred(true);
+            dbSnap.commit();
+        } catch (EucalyptusCloudException ex) {
+            db.rollback();
+            throw ex;
+        }
         return reply;
     }
 
