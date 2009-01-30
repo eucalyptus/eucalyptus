@@ -64,7 +64,7 @@ public class SnapshotManager {
     while ( true ) {
       newId = Hashes.generateId( request.getUserId(), ID_PREFIX );
       try {
-        db.getUnique( new Snapshot( null, newId ) );
+        db.getUnique( Snapshot.ownedBy( newId ) );
         snap = new Snapshot( request.getUserId(), newId, vol.getDisplayName() );
         db.add( snap );
         break;

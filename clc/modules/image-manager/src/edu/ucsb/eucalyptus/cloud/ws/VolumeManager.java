@@ -198,7 +198,7 @@ public class VolumeManager {
     String userName = request.isAdministrator()?null:request.getUserId();
     Volume volume = null;
     try {
-      db.getUnique( new Volume( userName, request.getVolumeId() ) );
+      db.getUnique( Volume.named( userName, request.getVolumeId() ) );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback();
@@ -232,7 +232,7 @@ public class VolumeManager {
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     String userName = request.isAdministrator()?null:request.getUserId();
     try {
-      db.getUnique( new Volume( userName, request.getVolumeId() ) );
+      db.getUnique( Volume.named( userName, request.getVolumeId() ) );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback();
