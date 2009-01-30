@@ -83,7 +83,8 @@ public class WalrusDataFormatter implements MessageFormatter {
                         } else if(WalrusDataMessage.isEOF(dataMessage)) {
                             try {
                                 if(isCompressed) {
-                                    gzipOutStream.close();
+                                    gzipOutStream.finish();
+                                    gzipOutStream.flush();
                                 } else {
                                     outputStream.flush();
                                 }

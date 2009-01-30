@@ -140,6 +140,7 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
 
         Boolean putType = (Boolean) msgContext.getProperty(WalrusProperties.STREAMING_HTTP_PUT);
         Boolean getType = (Boolean) msgContext.getProperty(WalrusProperties.STREAMING_HTTP_GET);
+
         if(getType != null || putType != null) {
             WalrusDataResponseType reply = (WalrusDataResponseType) message.getPayload();
             AxisHttpResponse response = ( AxisHttpResponse ) msgContext.getProperty( Axis2HttpWorker.REAL_HTTP_RESPONSE );
