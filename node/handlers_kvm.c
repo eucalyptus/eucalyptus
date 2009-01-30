@@ -526,11 +526,13 @@ static int get_instance_xml (char *userId, char *instanceId, int ramdisk, char *
 {
     char buf [BUFSIZE];
 
-    /* TODO: add --ephemeral? */
     if (ramdisk) {
         snprintf (buf, BUFSIZE, "%s --ramdisk", gen_kvm_libvirt_xml_command_path);
     } else {
         snprintf (buf, BUFSIZE, "%s", gen_kvm_libvirt_xml_command_path);
+    }
+    if (params->diskSize > 0) { /* ephemeral disk was requested */
+        strncat (buf, " --ephemeral", BUFSIZE);
     }
     * xml = system_output (buf);
     if ( ( * xml ) == NULL ) {
@@ -581,7 +583,7 @@ void * kvm_startup_thread (void * arg)
                                  instance->kernelId, instance->kernelURL, 
                                  instance->ramdiskId, instance->ramdiskURL, 
                                  instance->instanceId, instance->keyName, 
-                                 &disk_path, xen_sem, 1);
+                                 &disk_path, xen_sem, 1, instance->params.diskSize*1024);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);

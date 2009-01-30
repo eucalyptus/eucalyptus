@@ -27,7 +27,6 @@
 /* default paths(may be overriden from config file) */
 static char add_key_command_path [BUFSIZE] = "";
 static int default_swap_size = 512; /* in MB */
-static int default_ephemeral_size = 0; /* in MB, none by default */
 
 static char *sc_instance_path = "";
 static char disk_convert_command_path [BUFSIZE] = "";
@@ -813,7 +812,7 @@ retry:
 }
 
 
-int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char **instance_path, sem * s, int convert_to_disk) 
+int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char **instance_path, sem * s, int convert_to_disk, int ephemeral_size_mb) 
 {
     char rundir_path  [BUFSIZE];
     char image_path   [BUFSIZE];
@@ -896,9 +895,8 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
         }
         
         /* create ephemeral partition */
-        int ephemeral_size_mb = default_ephemeral_size; /* TODO: set this dynamically */
         if (ephemeral_size_mb) {
-            if ((e=vrun ("dd bs=1M seek=%d if=/dev/zero of=%s/ephemeral 2>/dev/null", ephemeral_size_mb, rundir_path )) != 0) {
+            if ((e=vrun ("dd bs=1M count=%d if=/dev/zero of=%s/ephemeral 2>/dev/null", ephemeral_size_mb, rundir_path )) != 0) {
                 logprintfl (EUCAINFO, "creation of ephemeral disk (dd) at %s/ephemeral failed\n", rundir_path);
                 return e;
             }
