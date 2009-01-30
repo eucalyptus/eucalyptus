@@ -85,7 +85,7 @@ public class Storage {
     static {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
-        //initializeForEBS();
+        initializeForEBS();
     }
 
     public static void initializeForEBS() {
@@ -584,12 +584,14 @@ public class Storage {
                 EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
                 try {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-                    SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
-                    if(foundSnapshotInfo == null) {
+                    List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
+
+                    if(foundSnapshotInfos.size() == 0) {
                         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
                         size = blockManager.createVolume(volumeId, volumePath);
                         db.commit();
                     } else {
+                        SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);
                         if(!foundSnapshotInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
                             success = false;
                             db.rollback();
