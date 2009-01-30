@@ -448,7 +448,7 @@ public class Storage {
 
         if(!enableSnapshots || !enableStorage) {
             checkWalrusConnection();
-            if(!enableSnapshots)        
+            if(!enableSnapshots)
                 LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
             return reply;
         }
@@ -734,13 +734,16 @@ public class Storage {
     }
 
 
-    private StorageVolume convertVolumeInfo(VolumeInfo volInfo) {
+    private StorageVolume convertVolumeInfo(VolumeInfo volInfo) throws EucalyptusCloudException {
         StorageVolume volume = new StorageVolume();
-        volume.setVolumeId(volInfo.getVolumeId());
+        String volumeId = volInfo.getVolumeId();
+        volume.setVolumeId(volumeId);
         volume.setStatus(volInfo.getStatus());
         volume.setCreateTime(DateUtils.format(volInfo.getCreateTime().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
         volume.setSize(String.valueOf(volInfo.getSize()));
         volume.setSnapshotId(volInfo.getSnapshotId());
+        List<String> returnValues = blockManager.getVolume(volumeId);
+        volume.setActualDeviceName(ETHERD_PREFIX + returnValues.get(0) + "." + returnValues.get(1));
         return volume;
     }
 
@@ -782,11 +785,9 @@ public class Storage {
                     if(!foundVolumeInfo.getTransferred()) {
                         //transfer volume to Walrus
                         foundVolumeInfo.setVolumeBucket(volumeBucket);
-                        foundVolumeInfo.setTransferred(Boolean.TRUE);
                         shouldTransferVolume = true;
-                    } else {
-                        volumeBucket = foundVolumeInfo.getVolumeBucket();
                     }
+                    volumeBucket = foundVolumeInfo.getVolumeBucket();
                     db.commit();
                     EntityWrapper<SnapshotInfo> db2 = new EntityWrapper<SnapshotInfo>();
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
@@ -828,6 +829,14 @@ public class Storage {
                 httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeId, "StoreSnapshot", null, httpParamaters);
                 try {
                     httpWriter.run();
+                    EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
+                    VolumeInfo volumeInfo = new VolumeInfo(volumeId);
+                    List <VolumeInfo> volumeInfos = db.query(volumeInfo);
+                    if(volumeInfos.size() > 0) {
+                        VolumeInfo volInfo = volumeInfos.get(0);
+                        volInfo.setTransferred(true);
+                    }
+                    db.commit();
                 } catch(Exception ex) {
                     ex.printStackTrace();
                     return;
@@ -941,6 +950,7 @@ public class Storage {
                 foundSnapshotInfo.setProgress(String.valueOf(progress));
             } catch (Exception ex) {
                 db.rollback();
+                failed();
                 ex.printStackTrace();
             }
             db.commit();
