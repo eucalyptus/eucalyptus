@@ -115,6 +115,7 @@ public class Cluster implements HasName {
 
 //    if ( this.logThread != null && !this.logThread.isAlive() )
 //      ( this.logThread = new Thread( nodeLogUpdater, nodeLogUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
+    
   }
 
   private Thread startNamedThread( Runnable r ) {
