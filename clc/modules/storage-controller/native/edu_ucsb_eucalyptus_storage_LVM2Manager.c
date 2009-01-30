@@ -356,7 +356,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_duplicate
     const jbyte* lv_name = (*env)->GetStringUTFChars(env, newLvName, NULL);
 	char command[256];
 
-	snprintf(command, 256, "dd if=%s of=%s", old_lv_name, lv_name);
+	snprintf(command, 256, "dd if=%s of=%s bs=%s", old_lv_name, lv_name, blockSize);
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, oldLvName, old_lv_name);

@@ -2121,7 +2121,7 @@ public class Bukkit {
                 getObjectType.setGetMetaData(false);
                 getObjectType.setBucket(snapshotSetId);
                 getObjectType.setKey(volumeKey);
-                getObjectType.setIsCompressed(true);
+              //  getObjectType.setIsCompressed(true);
                 db.commit();
                 GetObjectResponseType getObjectResponse = GetObject(getObjectType);
                 reply.setEtag(getObjectResponse.getEtag());
@@ -2130,7 +2130,7 @@ public class Bukkit {
                 request.setRandomKey(getObjectType.getRandomKey());
                 request.setBucket(snapshotSetId);
                 request.setKey(volumeKey);
-                request.setIsCompressed(true);
+               // request.setIsCompressed(true);
             } else {
                 db.rollback();
                 throw new EucalyptusCloudException("Could not find snapshot set");

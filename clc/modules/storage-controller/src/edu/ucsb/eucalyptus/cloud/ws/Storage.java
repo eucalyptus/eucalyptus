@@ -584,8 +584,8 @@ public class Storage {
                 try {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
-
-                    if(foundSnapshotInfos.size() == 0) {
+                    //TODO: revert back after testing
+                    if(foundSnapshotInfos.size() != 0) {
                         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
                         size = blockManager.createVolume(volumeId, volumePath);
                         db.commit();
@@ -665,10 +665,10 @@ public class Storage {
             throw new EucalyptusCloudException("could not connect to Walrus.");
         }
         String walrusSnapshotPath = snapshotBucket + "/" + snapshotId;
-        String volumePath = StorageProperties.storageRootDirectory + "/" + volumeId;
+        String volumePath = StorageProperties.storageRootDirectory + "/" + volumeId + Hashes.getRandom(10);
         File file = new File(volumePath);
         if(!file.exists()) {
-            HttpReader volumeReader = new HttpReader(walrusSnapshotPath, null, file, "GetVolume", "", true);
+            HttpReader volumeReader = new HttpReader(walrusSnapshotPath, null, file, "GetVolume", "", false);
             volumeReader.run();
         } else {
             throw new EucalyptusCloudException("volume file already exists");
@@ -1223,11 +1223,10 @@ public class Storage {
                 while((bytesRead = inputStream.read(bytes)) > 0) {
                     responseString += new String(bytes, 0 , bytesRead);
                 }
+                method.releaseConnection();
                 return responseString;
             } catch(Exception ex) {
                 ex.printStackTrace();
-            } finally {
-                method.releaseConnection();
             }
             return null;
         }
@@ -1237,17 +1236,22 @@ public class Storage {
             try {
                 assert(method != null);
                 httpClient.executeMethod(method);
-                InputStream httpIn = method.getResponseBodyAsStream();
+                InputStream httpIn;
+                if(compressed) {
+                    httpIn = new GZIPInputStream(method.getResponseBodyAsStream());
+                } else {
+                    httpIn = method.getResponseBodyAsStream();
+                }
                 int bytesRead;
                 BufferedOutputStream bufferedOut = new BufferedOutputStream(new FileOutputStream(file));
                 while((bytesRead = httpIn.read(bytes)) > 0) {
                     bufferedOut.write(bytes, 0, bytesRead);
                 }
+
                 bufferedOut.close();
+                method.releaseConnection();
             } catch (Exception ex) {
                 ex.printStackTrace();
-            } finally {
-                method.releaseConnection();
             }
         }
 
