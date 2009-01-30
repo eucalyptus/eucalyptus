@@ -270,6 +270,7 @@ public class VolumeManager {
 
     request.setVolumeId( volume.getVolumeId() );
     request.setRemoteDevice( volume.getRemoteDevice() );
+    request.setDevice( volume.getDevice() );
     QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( cluster ), request);
     cluster.getMessageQueue().enqueue( event );
 
