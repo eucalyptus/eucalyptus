@@ -82,7 +82,10 @@ public class LVM2Manager implements BlockStorageManager {
         if(!new File(eucaHome + CONFIG_FILE_PATH).exists()) {
             throw new EucalyptusCloudException(eucaHome + CONFIG_FILE_PATH + " does not exist");
         }
-
+        File varDir = new File(eucaHome + EUCA_VAR_RUN_PATH);
+        if(!varDir.exists()) {
+            varDir.mkdirs();
+        }
         String returnValue = getLvmVersion();
         if(returnValue.length() == 0) {
             throw new EucalyptusCloudException("Is lvm installed?");
@@ -186,6 +189,12 @@ public class LVM2Manager implements BlockStorageManager {
                 String returnValue = aoeStatus(pid);
                 if(returnValue.contains("vblade")) {
                     exportManager.unexportVolume(pid);
+                    int majorNumber = lvmVolInfo.getMajorNumber();
+                    int minorNumber = lvmVolInfo.getMinorNumber();
+                    File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+                    if(vbladePidFile.exists()) {
+                        vbladePidFile.delete();
+                    }
                 }
             }
             String vgName = lvmVolInfo.getVgName();
@@ -287,6 +296,16 @@ public class LVM2Manager implements BlockStorageManager {
         String returnValue = aoeStatus(pid);
         if(pid < 0 || (!returnValue.contains("vblade"))) {
             throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface);
+        } else {
+            File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+            try {
+                FileOutputStream fileOutStream = new FileOutputStream(vbladePidFile);
+                String pidString = String.valueOf(pid);
+                fileOutStream.write(pidString.getBytes());
+                fileOutStream.close();
+            } catch (Exception ex) {
+                LOG.warn("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
+            }
         }
         lvmVolumeInfo.setVbladePid(pid);
         lvmVolumeInfo.setMajorNumber(majorNumber);
@@ -380,6 +399,7 @@ public class LVM2Manager implements BlockStorageManager {
         if(vbladePid < 0) {
             throw new EucalyptusCloudException();
         }
+
         lvmVolumeInfo.setVolumeId(volumeId);
         lvmVolumeInfo.setLoDevName(loDevName);
         lvmVolumeInfo.setPvName(loDevName);
@@ -507,6 +527,12 @@ public class LVM2Manager implements BlockStorageManager {
                 String returnValue = aoeStatus(pid);
                 if(returnValue.contains("vblade")) {
                     exportManager.unexportVolume(pid);
+                    int majorNumber = foundLVMVolumeInfo.getMajorNumber();
+                    int minorNumber = foundLVMVolumeInfo.getMinorNumber();
+                    File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+                    if(vbladePidFile.exists()) {
+                        vbladePidFile.delete();
+                    }
                 }
             }
             String returnValue = removeLogicalVolume(absoluteLVName);
@@ -685,8 +711,19 @@ public class LVM2Manager implements BlockStorageManager {
                 enableLogicalVolume(absoluteLVName);
                 String returnValue = aoeStatus(pid);
                 if(!returnValue.contains("vblade")) {
-                    pid = exportManager.exportVolume(iface, absoluteLVName, foundVolumeInfo.getMajorNumber(), foundVolumeInfo.getMinorNumber());
+                    int majorNumber = foundVolumeInfo.getMajorNumber();
+                    int minorNumber = foundVolumeInfo.getMinorNumber();
+                    pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
                     foundVolumeInfo.setVbladePid(pid);
+                    File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+                    try {
+                        FileOutputStream fileOutStream = new FileOutputStream(vbladePidFile);
+                        String pidString = String.valueOf(pid);
+                        fileOutStream.write(pidString.getBytes());
+                        fileOutStream.close();
+                    } catch (Exception ex) {
+                        LOG.warn("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
+                    }
                 }
             }
         }
