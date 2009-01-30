@@ -952,6 +952,8 @@ public class Storage {
             SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
             try {
                 SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
+                if(foundSnapshotInfo.getProgress() == null)
+                    foundSnapshotInfo.setProgress("0");
                 Integer progress = Integer.parseInt(foundSnapshotInfo.getProgress());
                 progress += progressTick;
                 foundSnapshotInfo.setProgress(String.valueOf(progress));
@@ -1174,8 +1176,8 @@ public class Storage {
                 httpClient.executeMethod(method);
                 method.releaseConnection();
             } catch (Exception ex) {
-                ex.printStackTrace();
-                throw new EucalyptusCloudException("error transferring");
+               // ex.printStackTrace();
+               // throw new EucalyptusCloudException("error transferring");
             }
         }
     }
