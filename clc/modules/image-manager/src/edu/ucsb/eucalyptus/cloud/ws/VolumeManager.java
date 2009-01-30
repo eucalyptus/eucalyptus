@@ -177,7 +177,7 @@ public class VolumeManager {
         v.setMappedState( volumeState );
         edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
         if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-          aVolume.setStatus();
+          aVolume.setStatus( volumeState );
           aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
         }
         reply.getVolumeSet().add( aVolume );
