@@ -89,7 +89,7 @@ public class SnapshotManager {
     reply.setSnapshot( snapMsg );
     return reply;
   }
-
+ 
   public DeleteSnapshotResponseType DeleteSnapshot( DeleteSnapshotType request ) throws EucalyptusCloudException {
     DeleteSnapshotResponseType reply = ( DeleteSnapshotResponseType ) request.getReply();
     reply.set_return( false );

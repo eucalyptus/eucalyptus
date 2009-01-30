@@ -156,6 +156,7 @@ public class VolumeManager {
     for ( Volume v : volumes ) {
       if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
         DescribeStorageVolumesResponseType volState = (DescribeStorageVolumesResponseType)Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageVolumesType( Lists.newArrayList( v.getDisplayName() ) ) );
+        LOG.debug( volState );
         String volumeState = "unavailable";
         if( !volState.getVolumeSet().isEmpty() ) {
           StorageVolume vol = volState.getVolumeSet().get( 0 );
@@ -198,7 +199,7 @@ public class VolumeManager {
     String userName = request.isAdministrator()?null:request.getUserId();
     Volume volume = null;
     try {
-      db.getUnique( Volume.named( userName, request.getVolumeId() ) );
+      volume = db.getUnique( Volume.named( userName, request.getVolumeId() ) );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback();
