@@ -66,7 +66,7 @@ public class LVM2Manager implements BlockStorageManager {
     private static String eucaHome = "/opt/eucalyptus";
     private static final String IFACE_CONFIG_STRING = "VNET_INTERFACE";
     private static final boolean ifaceDiscovery = false;
-
+    private static final long LVM_HEADER_LENGTH = 4 * StorageProperties.MB;
     public StorageExportManager exportManager;
 
     public void checkPreconditions() throws EucalyptusCloudException {
@@ -420,16 +420,25 @@ public class LVM2Manager implements BlockStorageManager {
         String vgName = "vg-" + Hashes.getRandom(4);
         String lvName = "lv-" + Hashes.getRandom(4);
         LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo();
-
-        int size = (int)(new File(volumePath).length() / StorageProperties.GB);
+        File dataFile = new File(volumePath);
+        int size = (int)((dataFile.length() + LVM_HEADER_LENGTH) / StorageProperties.GB);
         //create file and attach to loopback device
-        String loDevName = createLoopback(volumePath);
+        String rawFileName = StorageProperties.storageRootDirectory + "/" + volumeId;
+
+        String loDevName = createLoopback(rawFileName, size);
         //create physical volume, volume group and logical volume
         createLogicalVolume(loDevName, vgName, lvName);
+        String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;        
+        //copy it
+        duplicateLogicalVolume(volumePath, absoluteLVName);
         //export logical volume
         int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
         if(vbladePid < 0) {
             throw new EucalyptusCloudException();
+        }
+
+        if(dataFile.exists()) {
+            dataFile.delete();
         }
         lvmVolumeInfo.setVolumeId(volumeId);
         lvmVolumeInfo.setLoDevName(loDevName);
@@ -708,7 +717,7 @@ public class LVM2Manager implements BlockStorageManager {
             if(foundVolumeInfo.getVbladePid() > 0) {
                 //enable logical volumes
                 String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
-                enableLogicalVolume(absoluteLVName);
+                //enableLogicalVolume(absoluteLVName);
                 String returnValue = aoeStatus(pid);
                 if(!returnValue.contains("vblade")) {
                     int majorNumber = foundVolumeInfo.getMajorNumber();

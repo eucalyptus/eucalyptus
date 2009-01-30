@@ -39,6 +39,7 @@
 
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
+static const char* blockSize = "1M";
 
 jstring run_command(JNIEnv *env, char *cmd, int outfd) {
 	FILE* fd;
@@ -162,7 +163,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageM
     const jbyte* volume_path = (*env)->GetStringUTFChars(env, volumePath, NULL);
 	char command[256];
 
-	snprintf(command, 256, "dd if=%s of=%s", lv_name, volume_path);
+	snprintf(command, 256, "dd if=%s of=%s bs=%s", lv_name, volume_path, blockSize);
 	jstring returnValue = run_command(env, command, 1);
 
     (*env)->ReleaseStringUTFChars(env, lvName, lv_name);

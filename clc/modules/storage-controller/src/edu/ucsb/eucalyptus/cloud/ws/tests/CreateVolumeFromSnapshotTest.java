@@ -46,7 +46,7 @@ public class CreateVolumeFromSnapshotTest extends TestCase {
 
         String userId = "admin";
 
-        String snapshotId = "snap-wusZa45ZT4YhcQ..";
+        String snapshotId = "snap-ApSNO9uFwfdlYw..";
         String volumeId = "vol-" + Hashes.getRandom(10);
         CreateStorageVolumeType createVolumeFromSnapshotRequest = new CreateStorageVolumeType();
         createVolumeFromSnapshotRequest.setVolumeId(volumeId);
