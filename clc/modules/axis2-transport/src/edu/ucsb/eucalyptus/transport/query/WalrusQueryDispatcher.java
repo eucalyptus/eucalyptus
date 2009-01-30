@@ -463,7 +463,6 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                 }
 
                 putQueue.put(WalrusDataMessage.EOF());
-
             } catch (Exception ex) {
                 LOG.warn(ex, ex);
             }
