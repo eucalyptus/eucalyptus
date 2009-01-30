@@ -59,9 +59,9 @@
                 <inbound-endpoint ref="StorageInternalWS"/>
             </inbound>
             <component class="edu.ucsb.eucalyptus.cloud.ws.Storage"/>
-            <default-service-exception-strategy>
-                <vm:outbound-endpoint path="ReplyQueueWS"/>
-            </default-service-exception-strategy>           
+            <!--<default-service-exception-strategy>-->
+                <!--<vm:outbound-endpoint path="ReplyQueueWS"/>-->
+            <!--</default-service-exception-strategy>           -->
         </service>
 
     </model>

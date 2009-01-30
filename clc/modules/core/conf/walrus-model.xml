@@ -59,9 +59,9 @@
                 <inbound-endpoint ref="BukkitInternalWS"/>
             </inbound>
             <component class="edu.ucsb.eucalyptus.cloud.ws.Bukkit"/>
-            <default-service-exception-strategy>
-                <vm:outbound-endpoint path="ReplyQueueWS"/>
-            </default-service-exception-strategy>
+            <!--<default-service-exception-strategy>-->
+                <!--<vm:outbound-endpoint path="ReplyQueueWS"/>-->
+            <!--</default-service-exception-strategy>-->
         </service>
 
     </model>
