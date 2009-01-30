@@ -39,7 +39,7 @@
 
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
-static const char* blockSize = "1G";
+static const char* blockSize = "1M";
 jstring run_command(JNIEnv *env, char *cmd, int outfd) {
 	FILE* fd;
 	int pid;
@@ -143,7 +143,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createEmp
 (JNIEnv *env, jobject obj, jstring fileName, jint size) {
 	char command[256];
 	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
-
+    size = size * 1024;
 	snprintf(command, 256, "dd if=/dev/zero of=%s count=%d bs=%s", filename, size, blockSize);
 
 	jstring returnValue = run_command(env, command, 2);
