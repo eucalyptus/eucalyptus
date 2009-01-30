@@ -182,7 +182,7 @@ public class LVM2Manager implements BlockStorageManager {
             String loDevName = lvmVolInfo.getLoDevName();
             int pid = lvmVolInfo.getVbladePid();
             if(pid > 0) {
-                String returnValue = getAoEStatus(String.valueOf(pid));
+                String returnValue = aoeStatus(pid);
                 if(returnValue.contains("vblade")) {
                     exportManager.unexportVolume(pid);
                 }
@@ -283,7 +283,7 @@ public class LVM2Manager implements BlockStorageManager {
         }
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
         int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
-        String returnValue = getAoEStatus(String.valueOf(pid));
+        String returnValue = aoeStatus(pid);
         if(pid < 0 || (!returnValue.contains("vblade"))) {
             throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface);
         }
@@ -503,7 +503,7 @@ public class LVM2Manager implements BlockStorageManager {
 
             int pid = foundLVMVolumeInfo.getVbladePid();
             if(pid > 0) {
-                String returnValue = getAoEStatus(String.valueOf(pid));
+                String returnValue = aoeStatus(pid);
                 if(returnValue.contains("vblade")) {
                     exportManager.unexportVolume(pid);
                 }
@@ -641,7 +641,7 @@ public class LVM2Manager implements BlockStorageManager {
             LVMVolumeInfo foundLvmVolumeInfo = foundLvmVolumeInfos.get(0);
             returnValues.add(String.valueOf(foundLvmVolumeInfo.getMajorNumber()));
             returnValues.add(String.valueOf(foundLvmVolumeInfo.getMinorNumber()));
-        } 
+        }
         db.commit();
         return returnValues;
     }
@@ -682,7 +682,7 @@ public class LVM2Manager implements BlockStorageManager {
                 //enable logical volumes
                 String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
                 enableLogicalVolume(absoluteLVName);
-                String returnValue = getAoEStatus(String.valueOf(pid));
+                String returnValue = aoeStatus(pid);
                 if(!returnValue.contains("vblade")) {
                     pid = exportManager.exportVolume(iface, absoluteLVName, foundVolumeInfo.getMajorNumber(), foundVolumeInfo.getMinorNumber());
                     foundVolumeInfo.setVbladePid(pid);
@@ -708,5 +708,23 @@ public class LVM2Manager implements BlockStorageManager {
         }
         db.commit();
         return returnValues;
+    }
+
+    private String aoeStatus(int pid) {
+        File file = new File("/proc/" + pid + "/cmdline");
+        String returnString = "";
+        if(file.exists()) {
+            try {
+                FileInputStream fileIn = new FileInputStream(file);
+                byte[] bytes = new byte[512];
+                int bytesRead;
+                while((bytesRead = fileIn.read(bytes)) > 0) {
+                    returnString += new String(bytes, 0, bytesRead);
+                }
+            } catch (Exception ex) {
+                LOG.warn("could not find " + file.getAbsolutePath());
+            }
+        }
+        return returnString;
     }
 }
