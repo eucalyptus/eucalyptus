@@ -85,7 +85,6 @@ public class Storage {
     static {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
-        initializeForEBS();
     }
 
     public static void initializeForEBS() {
