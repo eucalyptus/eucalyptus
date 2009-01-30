@@ -586,7 +586,7 @@ public class Storage {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
                     //TODO: revert back after testing
-                    if(foundSnapshotInfos.size() != 0) {
+                    if(foundSnapshotInfos.size() == 0) {
                         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
                         size = blockManager.createVolume(volumeId, volumePath);
                         db.commit();
