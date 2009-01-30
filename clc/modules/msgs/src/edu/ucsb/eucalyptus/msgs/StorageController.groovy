@@ -135,6 +135,7 @@ public class StorageVolume extends EucalyptusData {
   String snapshotId;
   String status;
   String createTime;
+  String actualDeviceName;
   def StorageVolume() {}
   def StorageVolume(String volumeId) {
     this.volumeId = volumeId;

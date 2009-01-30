@@ -2146,6 +2146,10 @@ public class Bukkit {
         WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
         List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
 
+        ArrayList<String> vgNames = new ArrayList<String>();
+        ArrayList<String> lvNames = new ArrayList<String>();
+        ArrayList<String> snapIdsToDelete = new ArrayList<String>();
+
         //Delete is idempotent.
         reply.set_return(true);
         if(snapshotInfos.size() > 0) {
@@ -2169,16 +2173,29 @@ public class Bukkit {
                 for(WalrusSnapshotInfo snapInfo : snapshotSet) {
                     String snapId = snapInfo.getSnapshotId();
                     snapshotIds.add(snapId);
-                    if(snapId.equals(foundSnapshotInfo.getSnapshotId()))
+                    if(snapId.equals(foundSnapshotInfo.getSnapshotId())) {
                         snapshotSetSnapInfo = snapInfo;
+                    }
                 }
                 //delete from the database
-                if(snapshotSetSnapInfo != null)
+                if(snapshotSetSnapInfo != null) {
                     snapshotSet.remove(snapshotSetSnapInfo);
+                    //only 1 entry left? It is the volume
+                    if(snapshotSet.size() == 1) {
+                        WalrusSnapshotInfo snapZeroInfo = snapshotSet.get(0);
+                        if(snapZeroInfo.getSnapshotId().startsWith("vol")) {
+                            snapshotSet.remove(snapZeroInfo);
+                            dbSet.delete(foundSnapshotSetInfo);
+                            snapZeroInfo = new WalrusSnapshotInfo(snapZeroInfo.getSnapshotId());
+                            WalrusSnapshotInfo foundVolInfo = db.getUnique(snapZeroInfo);
+                            db.delete(foundVolInfo);
+                        }
+                    }
+                }
                 db.delete(foundSnapshotInfo);
                 //remove the snapshot in the background
-                SnapshotDeleter snapshotDeleter = new SnapshotDeleter(bucketName, foundSnapshotInfo.getSnapshotId(),
-                        foundSnapshotInfo.getVgName(), foundSnapshotInfo.getLvName(), snapshotIds);
+                SnapshotDeleter snapshotDeleter = new SnapshotDeleter(bucketName, snapIdsToDelete,
+                        vgNames, lvNames, snapshotIds);
                 snapshotDeleter.start();
             } else {
                 db.rollback();
@@ -2193,22 +2210,35 @@ public class Bukkit {
     private class SnapshotDeleter extends Thread {
         private String bucketName;
         private List<String> snapshotSet;
-        private String snapshotId;
-        private String vgName;
-        private String lvName;
+        private List<String> snapshotIdsToDelete;
+        private List<String> vgNames;
+        private List<String> lvNames;
 
-        public SnapshotDeleter(String bucketName, String snapshotId, String vgName, String lvName, List<String> snapshotSet) {
+        public SnapshotDeleter(String bucketName, List<String> snapshotIdsToDelete, List<String> vgNames, List<String> lvNames, List<String> snapshotSet) {
             this.bucketName = bucketName;
             this.snapshotSet = snapshotSet;
-            this.snapshotId = snapshotId;
-            this.vgName = vgName;
-            this.lvName = lvName;
+            this.snapshotIdsToDelete = snapshotIdsToDelete;
+            this.vgNames = vgNames;
+            this.lvNames = lvNames;
         }
 
         public void run() {
             try {
-                storageManager.deleteSnapshot(bucketName, snapshotId, vgName, lvName, snapshotSet);
+                for(int i = vgNames.size() - 1; i >= 0; --i) {
+                    String snapId = snapshotIdsToDelete.get(i);
+                    storageManager.deleteSnapshot(bucketName, snapId, vgNames.get(i), lvNames.get(i), snapshotSet);
+                    String snapIdToRemove = null;
+                    for(String snapsetId : snapshotSet) {
+                        if(snapsetId.equals(snapId)) {
+                            snapIdToRemove = snapsetId;
+                            break;
+                        }
+                    }
+                    if(snapIdToRemove != null)
+                        snapshotSet.remove(snapIdToRemove);
+                }
             } catch(EucalyptusCloudException ex) {
+
                 LOG.warn(ex, ex);
             }
         }
