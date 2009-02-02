@@ -47,6 +47,7 @@ import java.io.StringReader;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -157,23 +158,51 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             if(auth_part != null) {
                 String sigString[] = getSigInfo(auth_part);
                 String signature = sigString[1];
-                signature = signature.replaceAll("=", "");
-
-                String queryKey = findQueryKey( sigString[0] );
-
-                String authSig = checkSignature( queryKey, data );
-
-                if ( !authSig.equals(signature) )
-                    throw new QuerySecurityException( "User authentication failed." );
-
-                return findUserId( sigString[0] );
-            } else {
+                return getUserInfo(sigString[0], signature, data);
+            } else if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())){
+                //query string authentication
+                String accesskeyid = parameters.get(SecurityParameter.AWSAccessKeyId.toString());
+                String signature = parameters.get(SecurityParameter.Signature.toString());
+                if(signature == null) {
+                    throw new QuerySecurityException("User authentication failed. Null signature.");
+                }
+                String expires = parameters.get(SecurityParameter.Expires.toString());
+                if(expires == null) {
+                    throw new QuerySecurityException("Authentication failed. Expires must be specified.");
+                }
+                if(checkExpires(expires)) {
+                    return getUserInfo(accesskeyid, signature, data);
+                } else {
+                    throw new QuerySecurityException("Cannot process request. Expired.");
+                }
+            } else{
                 //anonymous request
                 return null;
             }
         }
     }
 
+
+    private UserInfo getUserInfo(String accessKeyID, String signature, String data) throws QuerySecurityException {
+        signature = signature.replaceAll("=", "");
+
+        String queryKey = findQueryKey(accessKeyID);
+
+        String authSig = checkSignature( queryKey, data );
+
+        if (!authSig.equals(signature))
+            throw new QuerySecurityException( "User authentication failed. Could not verify signature" );
+
+        return findUserId(accessKeyID);
+    }
+
+    private boolean checkExpires(String expires) {
+        Long expireTime = Long.parseLong(expires);
+        Long currentTime = new Date().getTime() / 1000;
+        if(currentTime > expireTime)
+            return false;
+        return true;
+    }
 
     private void checkParameters( final CaseInsensitiveMap header ) throws QuerySecurityException
     {

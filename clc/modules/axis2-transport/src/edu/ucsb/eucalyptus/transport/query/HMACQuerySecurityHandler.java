@@ -59,8 +59,7 @@ public abstract class HMACQuerySecurityHandler implements QuerySecurityHandler {
       new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss'Z'Z" )
   };
 
-  enum SecurityParameter {
-
+  public enum SecurityParameter {
     AWSAccessKeyId, Timestamp, Expires, Signature, Authorization, Date, Content_MD5, Content_Type
   }
 
