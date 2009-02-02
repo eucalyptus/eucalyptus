@@ -7,7 +7,7 @@
  * Redistribution and use of this software in source and binary forms, with or
  * without modification, are permitted provided that the following conditions
  * are met:
- *               a
+ *
  * * Redistributions of source code must retain the above
  *   copyright notice, this list of conditions and the
  *   following disclaimer.
@@ -348,6 +348,15 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         while(iterator.hasNext()) {
             Object key = iterator.next();
             String keyString = key.toString().toLowerCase();
+            boolean dontIncludeParam = false;
+            for(HMACQuerySecurityHandler.SecurityParameter securityParam : HMACQuerySecurityHandler.SecurityParameter.values()) {
+                if(keyString.equals(securityParam.toString().toLowerCase())) {
+                    dontIncludeParam = true;
+                    break;
+                }
+            }
+            if(dontIncludeParam)
+                continue;
             String value = params.get(key);
             if(value != null) {
                 String[] keyStringParts = keyString.split("-");
