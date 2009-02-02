@@ -170,3 +170,13 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageM
     (*env)->ReleaseStringUTFChars(env, volumePath, volume_path);    
     return returnValue;
 }
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getLvmVersion
+  (JNIEnv *env, jobject obj) {
+	char command[256];
+
+   	snprintf(command, 256, "lvdisplay --version");
+    jstring returnValue = run_command(env, command, 1);
+
+    return returnValue;
+}

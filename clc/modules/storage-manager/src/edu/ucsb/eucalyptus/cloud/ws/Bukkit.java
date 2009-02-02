@@ -76,6 +76,7 @@ public class Bukkit {
 
     static StorageManager storageManager;
     static boolean shouldEnforceUsageLimits = true;
+    private static boolean enableSnapshots = false;
 
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
@@ -87,8 +88,14 @@ public class Bukkit {
     }
 
     public static void initializeForEBS() {
+        enableSnapshots = true;
         storageManager.initialize();
         startupChecks();
+        try {
+            storageManager.checkPreconditions();
+        } catch(Exception ex) {
+            enableSnapshots = false;
+        }
     }
 
     public static void startupChecks() {
@@ -992,7 +999,9 @@ public class Bukkit {
         String bucketName = request.getBucket();
         String objectName = request.getKey();
         String userId = request.getUserId();
-        Boolean isCompressed = request.getIsCompressed();
+        Boolean deleteAfterGet = request.getDeleteAfterGet();
+        if(deleteAfterGet == null)
+            deleteAfterGet = false;
 
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
         BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -1007,6 +1016,7 @@ public class Bukkit {
                         if(request.getGetMetaData()) {
                             ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
                             objectInfo.getMetaData(metaData);
+                            reply.setMetaData(metaData);
                             reply.setMetaData(metaData);
                         }
                         if(request.getGetData()) {
@@ -1031,7 +1041,7 @@ public class Bukkit {
                                 request.setRandomKey(randomKey);
                                 LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
 
-                                Reader reader = new Reader(bucketName, objectName, objectInfo.getSize(), getQueue);
+                                Reader reader = new Reader(bucketName, objectName, objectInfo.getSize(), getQueue, true, null);
                                 reader.start();
                             }
                         }
@@ -1967,6 +1977,11 @@ public class Bukkit {
 
     public StoreSnapshotResponseType StoreSnapshot(StoreSnapshotType request) throws EucalyptusCloudException {
         StoreSnapshotResponseType reply = (StoreSnapshotResponseType) request.getReply();
+
+        if(!enableSnapshots) {
+            LOG.warn("Snapshots not enabled. Please check pre-conditions and restart Walrus.");
+            return reply;
+        }
         String snapshotId = request.getKey();
         String bucketName = request.getBucket();
         String snapshotVgName = request.getSnapshotvgname();
@@ -2087,6 +2102,10 @@ public class Bukkit {
 
     public GetVolumeResponseType GetVolume(GetVolumeType request) throws EucalyptusCloudException {
         GetVolumeResponseType reply = (GetVolumeResponseType) request.getReply();
+        if(!enableSnapshots) {
+            LOG.warn("Snapshots not enabled. Please check pre-conditions and restart Walrus.");
+            return reply;
+        }
         String snapshotId = request.getKey();
         String userId = request.getUserId();
         EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
@@ -2121,7 +2140,8 @@ public class Bukkit {
                 getObjectType.setGetMetaData(false);
                 getObjectType.setBucket(snapshotSetId);
                 getObjectType.setKey(volumeKey);
-              //  getObjectType.setIsCompressed(true);
+                getObjectType.setIsCompressed(true);
+                getObjectType.setDeleteAfterGet(true);
                 db.commit();
                 GetObjectResponseType getObjectResponse = GetObject(getObjectType);
                 reply.setEtag(getObjectResponse.getEtag());
@@ -2130,7 +2150,7 @@ public class Bukkit {
                 request.setRandomKey(getObjectType.getRandomKey());
                 request.setBucket(snapshotSetId);
                 request.setKey(volumeKey);
-               // request.setIsCompressed(true);
+                request.setIsCompressed(true);
             } else {
                 db.rollback();
                 throw new EucalyptusCloudException("Could not find snapshot set");
@@ -2145,6 +2165,10 @@ public class Bukkit {
 
     public DeleteWalrusSnapshotResponseType DeleteWalrusSnapshot(DeleteWalrusSnapshotType request) throws EucalyptusCloudException {
         DeleteWalrusSnapshotResponseType reply = (DeleteWalrusSnapshotResponseType) request.getReply();
+        if(!enableSnapshots) {
+            LOG.warn("Snapshots not enabled. Please check pre-conditions and restart Walrus.");
+            return reply;
+        }
         String snapshotId = request.getKey();
 
         //Load the entire snapshot tree and then remove the snapshot

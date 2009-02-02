@@ -132,11 +132,11 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
             return;
         }
 
-   /*     if(message.getPayload() instanceof WalrusDeleteResponseType) {
-            msgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_NO_CONTENT);
-            newMsgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_NO_CONTENT);
-            return;
-        } */
+        /*     if(message.getPayload() instanceof WalrusDeleteResponseType) {
+           msgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_NO_CONTENT);
+           newMsgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_NO_CONTENT);
+           return;
+       } */
 
         Boolean putType = (Boolean) msgContext.getProperty(WalrusProperties.STREAMING_HTTP_PUT);
         Boolean getType = (Boolean) msgContext.getProperty(WalrusProperties.STREAMING_HTTP_GET);
@@ -148,25 +148,26 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
             response.addHeader( new BasicHeader( "ETag", reply.getEtag()));
             if(getType != null) {
                 newMsgContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, getType);
-                Long contentLength = reply.getSize();
-                response.addHeader(new BasicHeader(HTTP.CONTENT_LEN, String.valueOf(contentLength)));
+                WalrusDataRequestType request = (WalrusDataRequestType) wrappedParam;
+                Boolean isCompressed = request.getIsCompressed();
+                if(isCompressed != null) {
+                    newMsgContext.setProperty("GET_COMPRESSED", isCompressed);
+                } else {
+                    Long contentLength = reply.getSize();
+                    response.addHeader(new BasicHeader(HTTP.CONTENT_LEN, String.valueOf(contentLength)));
+                }
                 List<MetaDataEntry> metaData = reply.getMetaData();
                 for(MetaDataEntry metaDataEntry: metaData) {
                     response.addHeader(new BasicHeader(WalrusProperties.AMZ_META_HEADER_PREFIX + metaDataEntry.getName(), metaDataEntry.getValue()));
                 }
                 if(getType.equals(Boolean.TRUE)) {
-                    WalrusDataRequestType request = (WalrusDataRequestType) wrappedParam;
                     newMsgContext.setProperty("GET_KEY", request.getBucket() + "." + request.getKey());
                     newMsgContext.setProperty("GET_RANDOM_KEY", request.getRandomKey());
-                    Boolean isCompressed = request.getIsCompressed();
-                    if(isCompressed != null) {
-                        newMsgContext.setProperty("GET_COMPRESSED", isCompressed);
-                    }
                 }
                 //This selects the data formatter
                 newMsgContext.setProperty( "messageType", "application/walrus" );
             } else if(putType != null) {
-                response.addHeader(new BasicHeader(HTTP.CONTENT_LEN, String.valueOf(0)));                
+                response.addHeader(new BasicHeader(HTTP.CONTENT_LEN, String.valueOf(0)));
             }
         }
 

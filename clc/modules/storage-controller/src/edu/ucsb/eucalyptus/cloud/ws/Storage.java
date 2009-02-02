@@ -686,7 +686,7 @@ public class Storage {
         String volumePath = StorageProperties.storageRootDirectory + "/" + volumeId + Hashes.getRandom(10);
         File file = new File(volumePath);
         if(!file.exists()) {
-            HttpReader volumeReader = new HttpReader(walrusSnapshotPath, null, file, "GetVolume", "", false);
+            HttpReader volumeReader = new HttpReader(walrusSnapshotPath, null, file, "GetVolume", "", true);
             volumeReader.run();
         } else {
             throw new EucalyptusCloudException("volume file already exists");
@@ -718,6 +718,7 @@ public class Storage {
 
 
     public void GetSnapshots(String volumeId, String snapshotSetName, String snapshotId) throws EucalyptusCloudException {
+        checkWalrusConnection();
         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
         int size = blockManager.createVolume(volumeId, volumePath);
     }
