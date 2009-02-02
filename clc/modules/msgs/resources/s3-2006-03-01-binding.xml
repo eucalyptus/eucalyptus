@@ -233,6 +233,7 @@
         <value name="GetMetadata" field="getMetaData"/>
         <value name="GetData" field="getData"/>
         <value name="InlineData" field="inlineData"/>
+        <value name="DeleteAfterGet" field="deleteAfterGet" usage="optional"/>
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 

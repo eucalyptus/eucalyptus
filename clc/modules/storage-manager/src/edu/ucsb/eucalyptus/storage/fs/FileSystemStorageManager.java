@@ -37,6 +37,7 @@ package edu.ucsb.eucalyptus.storage.fs;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.storage.StorageManager;
+import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -47,6 +48,9 @@ public class FileSystemStorageManager implements StorageManager {
     public static final String FILE_SEPARATOR = "/";
     public static final String lvmRootDirectory = "/dev";
     private static boolean initialized = false;
+    private static String eucaHome = "/opt/eucalyptus";
+    public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
+    private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
 
     private String rootDirectory;
     public FileSystemStorageManager(String rootDirectory) {
@@ -58,6 +62,24 @@ public class FileSystemStorageManager implements StorageManager {
             System.loadLibrary("fsstorage");
             initialized = true;
         }
+    }
+
+    public void checkPreconditions() throws EucalyptusCloudException {
+        String eucaHomeDir = System.getProperty("euca.home");
+        if(eucaHomeDir == null) {
+            throw new EucalyptusCloudException("euca.home not set");
+        }
+        eucaHome = eucaHomeDir;
+        if(!new File(eucaHome + EUCA_ROOT_WRAPPER).exists()) {
+            throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist");
+        }
+        String returnValue = getLvmVersion();
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("Is lvm installed?");
+        } else {
+            LOG.info(returnValue);
+        }
+
     }
 
     public void setRootDirectory(String rootDirectory) {
@@ -172,6 +194,8 @@ public class FileSystemStorageManager implements StorageManager {
     public native String enableLogicalVolume(String lvName);
 
     public native String disableLogicalVolume(String lvName);
+
+    public native String getLvmVersion();
 
     public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet) throws EucalyptusCloudException {
         //load the snapshot set
