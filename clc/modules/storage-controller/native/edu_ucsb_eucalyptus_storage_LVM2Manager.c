@@ -77,8 +77,21 @@ int run_command_and_get_pid(char *cmd, char **args) {
     }
 
    if (pid == 0) {
-        close(fd[0]);
-        dup2(fd[1], 2);
+        //daemonize
+        umask(0);
+        int sid = setsid();
+        if(sid < 0)
+            return -1;
+        char* home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+        if (!home) {
+            home = strdup (""); /* root by default */
+        } else {
+        home = strdup (home);
+        }
+        chdir(home);
+        freopen( "/dev/null", "r", stdin);
+        freopen( "/dev/null", "w", stdout);
+        freopen( "/dev/null", "w", stderr);
         execvp(cmd, args);
    } else {
         close(fd[1]);
@@ -91,9 +104,9 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getAoESta
     const jbyte* pid = (*env)->GetStringUTFChars(env, processId, NULL);
 
     char command[128];
-    snprintf(command, 128, "cat /proc/%s/cmdline", pid);                                                
-	
-    jstring returnValue = run_command(env, command, 1);	
+    snprintf(command, 128, "cat /proc/%s/cmdline", pid);
+
+    jstring returnValue = run_command(env, command, 1);
     (*env)->ReleaseStringUTFChars(env, processId, pid);
     return returnValue;
 }
@@ -175,7 +188,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createVol
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, pvName, dev_name);
-	(*env)->ReleaseStringUTFChars(env, vgName, vg_name);    
+	(*env)->ReleaseStringUTFChars(env, vgName, vg_name);
 	return returnValue;
 }
 
@@ -382,6 +395,6 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getLvmVer
 
    	snprintf(command, 256, "lvdisplay --version");
     jstring returnValue = run_command(env, command, 1);
-   
+
     return returnValue;
 }
