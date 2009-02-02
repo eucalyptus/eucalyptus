@@ -94,7 +94,7 @@
         <value name="Key" field="key"/>
     </mapping>
 
-    <mapping class="edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType" abstract="true">
+    <mapping name="GetObjectAccessControlPolicyResponse" class="edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType">
         <structure field="accessControlPolicy" map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" usage="optional"/>
     </mapping>
 

@@ -422,8 +422,9 @@ public class Bukkit {
                 } else {
                     //object already exists. see if we can modify acl
                     if (foundObject.canWriteACP(userId)) {
-                        List<GrantInfo> grantInfos = foundObject.getGrants();
+                        List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                         foundObject.addGrants(userId, grantInfos, accessControlList);
+                        foundObject.setGrants(grantInfos);
                     }
                 }
                 foundObject.setObjectName(objectName);

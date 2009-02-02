@@ -150,7 +150,9 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
                 newMsgContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, getType);
                 WalrusDataRequestType request = (WalrusDataRequestType) wrappedParam;
                 Boolean isCompressed = request.getIsCompressed();
-                if(isCompressed != null) {
+                if(isCompressed == null)
+                    isCompressed = false;
+                if(isCompressed) {
                     newMsgContext.setProperty("GET_COMPRESSED", isCompressed);
                 } else {
                     Long contentLength = reply.getSize();
