@@ -2209,6 +2209,10 @@ public class Bukkit {
                     }
                 }
                 //delete from the database
+                db.delete(foundSnapshotInfo);
+                vgNames.add(foundSnapshotInfo.getVgName());
+                lvNames.add(foundSnapshotInfo.getLvName());
+                snapIdsToDelete.add(foundSnapshotInfo.getSnapshotId());
                 if(snapshotSetSnapInfo != null) {
                     snapshotSet.remove(snapshotSetSnapInfo);
                     //only 1 entry left? It is the volume
@@ -2220,10 +2224,12 @@ public class Bukkit {
                             snapZeroInfo = new WalrusSnapshotInfo(snapZeroInfo.getSnapshotId());
                             WalrusSnapshotInfo foundVolInfo = db.getUnique(snapZeroInfo);
                             db.delete(foundVolInfo);
+                            vgNames.add(foundVolInfo.getVgName());
+                            lvNames.add(foundVolInfo.getLvName());
+                            snapIdsToDelete.add(foundVolInfo.getSnapshotId());
                         }
                     }
                 }
-                db.delete(foundSnapshotInfo);
                 //remove the snapshot in the background
                 SnapshotDeleter snapshotDeleter = new SnapshotDeleter(bucketName, snapIdsToDelete,
                         vgNames, lvNames, snapshotIds);
@@ -2255,9 +2261,13 @@ public class Bukkit {
 
         public void run() {
             try {
-                for(int i = vgNames.size() - 1; i >= 0; --i) {
+                for(int i = 0; i < vgNames.size(); ++i) {
+                    boolean removeVg = false;
+                    //last one?
+                    if(i == (vgNames.size() - 1))
+                        removeVg = true;
                     String snapId = snapshotIdsToDelete.get(i);
-                    storageManager.deleteSnapshot(bucketName, snapId, vgNames.get(i), lvNames.get(i), snapshotSet);
+                    storageManager.deleteSnapshot(bucketName, snapId, vgNames.get(i), lvNames.get(i), snapshotSet, removeVg);
                     String snapIdToRemove = null;
                     for(String snapsetId : snapshotSet) {
                         if(snapsetId.equals(snapId)) {

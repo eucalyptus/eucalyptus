@@ -195,9 +195,11 @@ public class FileSystemStorageManager implements StorageManager {
 
     public native String disableLogicalVolume(String lvName);
 
+    public native String removeVolumeGroup(String vgName);
+    
     public native String getLvmVersion();
 
-    public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet) throws EucalyptusCloudException {
+    public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet, boolean removeVg) throws EucalyptusCloudException {
         //load the snapshot set
         ArrayList<String> loDevices = new ArrayList<String>();
         String snapshotLoDev = null;
@@ -219,7 +221,11 @@ public class FileSystemStorageManager implements StorageManager {
         if(returnValue.length() == 0) {
             throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
         }
+        if(removeVg) {
+         returnValue = removeVolumeGroup(vgName);
+        } else {
         returnValue = reduceVolumeGroup(vgName, snapshotLoDev);
+        }
         if(returnValue.length() == 0) {
             throw new EucalyptusCloudException("Unable to remove volume group " + vgName);
         }
