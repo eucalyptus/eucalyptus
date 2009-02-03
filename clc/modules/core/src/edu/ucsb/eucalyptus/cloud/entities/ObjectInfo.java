@@ -58,6 +58,9 @@ public class ObjectInfo {
     @Column( name = "owner_id" )
     private String ownerId;
 
+    @Column( name = "object_key" )
+    private String objectKey;
+
     @Column( name = "object_name" )
     private String objectName;
 
@@ -109,6 +112,14 @@ public class ObjectInfo {
 
     public ObjectInfo(String ownerId) {
         this.ownerId = ownerId;
+    }
+
+    public String getObjectKey() {
+        return objectKey;
+    }
+
+    public void setObjectKey(String objectKey) {
+        this.objectKey = objectKey;
     }
 
     public String getObjectName() {
