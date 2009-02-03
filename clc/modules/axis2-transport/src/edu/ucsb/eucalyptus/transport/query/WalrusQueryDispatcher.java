@@ -213,8 +213,14 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         } else {
             //target = object
             operationKey = OBJECT + verb;
+            String objectKey="";
+            String splitOn = "";
+            for(int i = 1; i < target.length; ++i) {
+                objectKey += splitOn + target[i];
+                splitOn = "/";
+            }
             operationParams.put("Bucket", target[0]);
-            operationParams.put("Key", target[1]);
+            operationParams.put("Key", objectKey);
 
 
             if(!params.containsKey(OperationParameter.acl.toString())) {
@@ -232,7 +238,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                             return null;
                         }
                     }
-                    String key = target[0] + "." + target[1];
+                    String key = target[0] + "." + objectKey;
                     String randomKey = key + "." + Hashes.getRandom(10);
                     LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
                     int dataLength = 0;

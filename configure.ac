@@ -32,6 +32,7 @@ AXIS2_HOME="${AXIS2_HOME}"
 LIBVIRT_HOME="${LIBVIRT_HOME}"
 ANT=""
 JAVA=""
+JAVA_HOME=""
 java_min_version="1.6.0"
 ant_min_version="1.6.5"
 
@@ -49,6 +50,9 @@ AC_ARG_WITH(axis2,
 AC_ARG_WITH(libvirt, 
         [  --with-libvirt=<dir>    where libvirt is installed],
         [LIBVIRT_HOME="${withval}"])
+AC_ARG_WITH(java, 
+        [  --with-java=<dir>    where jdk is installed],
+        [JAVA_HOME="${withval}"])
 AC_ARG_ENABLE(debug,
         [  --enable-debug          include debugging info when compiling],
                 [if test "${enableval}" != "no"; then
@@ -86,6 +90,9 @@ if test -z "$ANT" ; then
 fi
 if test -z "$JAVA" ; then
 	AC_MSG_ERROR([Cannot find java!])
+fi
+if test -z "$JAVA_HOME" ; then
+	AC_MSG_ERROR([java_home must be set!])
 fi
 java_version=`$JAVA -version 2>&1 | grep "java version" | \
 	sed -e 's/.*java version "\(.*\)".*/\1/'`
