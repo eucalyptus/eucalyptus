@@ -4579,7 +4579,14 @@ if test $goodversion -eq 0; then
 echo "$as_me: error: Eucalyptus needs at least JDK version $java_min_version" >&2;}
    { (exit 1); exit 1; }; }
 fi
-export JAVA_HOME
+
+# now let's test we have jni.h
+if test ! -e $JAVA_HOME/include/jni.h ; then
+	{ { echo "$as_me:$LINENO: error: Cannot find jni.h: do you have a JDK installed?" >&5
+echo "$as_me: error: Cannot find jni.h: do you have a JDK installed?" >&2;}
+   { (exit 1); exit 1; }; }
+fi
+
 ant_version=`$ANT -version 2>&1 | grep "Ant version" | \
 	sed -e 's/.*Ant version \([0-9.]*\).*/\1/'`
 goodversion=`expr $ant_version ">=" $ant_min_version`
