@@ -39,7 +39,6 @@ import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
-import edu.ucsb.eucalyptus.cloud.entities.StorageMetaInfo;
 import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
@@ -90,20 +89,6 @@ public class Storage {
 
     public static void initializeForEBS() {
         enableSnapshots = enableStorage = true;
-        EntityWrapper<StorageMetaInfo> db = new EntityWrapper<StorageMetaInfo>();
-        StorageMetaInfo metaInfo = new StorageMetaInfo();
-        try {
-            StorageMetaInfo storageMetaInfo = db.getUnique(metaInfo);
-            if(storageMetaInfo.getMaxTotalVolumeSize() == null)
-                storageMetaInfo.setMaxTotalVolumeSize(0);
-            if(storageMetaInfo.getMaxTotalSnapshotSize() == null)
-                storageMetaInfo.setMaxTotalSnapshotSize(0);
-        } catch(Exception ex) {
-            metaInfo.setMaxTotalVolumeSize(0);
-            metaInfo.setMaxTotalSnapshotSize(0);
-            db.add(metaInfo);
-        }
-        db.commit();
         String walrusAddr = StorageProperties.WALRUS_URL;
         if(walrusAddr == null) {
             LOG.warn("Walrus host addr not set");
@@ -535,25 +520,22 @@ public class Storage {
         int sizeAsInt = 0;
         if(size != null) {
             sizeAsInt = Integer.parseInt(size);
-            EntityWrapper<StorageMetaInfo> db = new EntityWrapper<StorageMetaInfo>();
-            StorageMetaInfo metaInfo = new StorageMetaInfo();
-            StorageMetaInfo foundMetaInfo;
-            try {
-                foundMetaInfo = db.getUnique(metaInfo);
-                if(((foundMetaInfo.getMaxTotalVolumeSize() + sizeAsInt) > StorageProperties.MAX_TOTAL_VOLUME_SIZE) ||
-                        (sizeAsInt > StorageProperties.MAX_VOLUME_SIZE))
-                    throw new EntityTooLargeException(volumeId);
-                if(sizeAsInt > StorageProperties.MAX_VOLUME_SIZE)
-                    throw new EntityTooLargeException(volumeId);
-            } catch(Exception ex) {
-                db.rollback();
-                ex.printStackTrace();
+            EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
+
+            VolumeInfo volInfo = new VolumeInfo();
+            List<VolumeInfo> volInfos = db.query(volInfo);
+            int totalVolumeSize = 0;
+            for(VolumeInfo vinfo : volInfos) {
+                totalVolumeSize += vinfo.getSize();
             }
+            if(((totalVolumeSize + sizeAsInt) > StorageProperties.MAX_TOTAL_VOLUME_SIZE) ||
+                    (sizeAsInt > StorageProperties.MAX_VOLUME_SIZE))
+                throw new EntityTooLargeException(volumeId);
             db.commit();
         }
+        EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
 
         VolumeInfo volumeInfo = new VolumeInfo(volumeId);
-        EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
         List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         if(volumeInfos.size() > 0) {
             db.rollback();
@@ -633,32 +615,26 @@ public class Storage {
                     ex.printStackTrace();
                 }
             }
+            EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
+            VolumeInfo volumeInfo = new VolumeInfo(volumeId);
             try {
-                EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
-                VolumeInfo volumeInfo = new VolumeInfo(volumeId);
                 VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
                 if(foundVolumeInfo != null) {
                     if(success) {
-                        EntityWrapper<StorageMetaInfo> dbMeta = new EntityWrapper<StorageMetaInfo>();
-                        StorageMetaInfo metaInfo = new StorageMetaInfo();
-                        StorageMetaInfo foundMetaInfo;
-                        try {
-                            foundMetaInfo = dbMeta.getUnique(metaInfo);
-                            if((foundMetaInfo.getMaxTotalVolumeSize() + size) > StorageProperties.MAX_TOTAL_VOLUME_SIZE ||
-                                    (size > StorageProperties.MAX_VOLUME_SIZE)) {
-                                success = false;
-                                LOG.warn("Volume size limit exceeeded");
-                            } else {
-                                foundMetaInfo.setMaxTotalVolumeSize(foundMetaInfo.getMaxTotalVolumeSize() + size);
-                            }
-                        } catch(Exception ex) {
-                            dbMeta.rollback();
+                        EntityWrapper<VolumeInfo> dbVol = new EntityWrapper<VolumeInfo>();
+                        VolumeInfo volInfo = new VolumeInfo();
+                        List<VolumeInfo> volInfos = db.query(volInfo);
+                        int totalVolumeSize = 0;
+                        for(VolumeInfo vinfo : volInfos) {
+                            totalVolumeSize += vinfo.getSize();
+                        }
+                        if((totalVolumeSize + size) > StorageProperties.MAX_TOTAL_VOLUME_SIZE ||
+                                (size > StorageProperties.MAX_VOLUME_SIZE)) {
+                            LOG.warn("Volume size limit exceeeded");
                             foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
                             db.commit();
-                            ex.printStackTrace();
                             return;
                         }
-                        dbMeta.commit();
                         foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
                     } else {
                         foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
@@ -672,7 +648,7 @@ public class Storage {
                 }
                 db.commit();
             } catch(EucalyptusCloudException ex) {
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
             }
         }
     }
@@ -716,6 +692,7 @@ public class Storage {
         }
         return snapshotSet;
     }
+
 
 
     public void GetSnapshots(String volumeId, String snapshotSetName, String snapshotId) throws EucalyptusCloudException {
