@@ -4582,8 +4582,8 @@ fi
 
 # now let's test we have jni.h
 if test ! -e $JAVA_HOME/include/jni.h ; then
-	{ { echo "$as_me:$LINENO: error: Cannot find jni.h: do you have a JDK installed?" >&5
-echo "$as_me: error: Cannot find jni.h: do you have a JDK installed?" >&2;}
+	{ { echo "$as_me:$LINENO: error: Cannot find jni.h in $JAVA_HOME: do you have a JDK installed?" >&5
+echo "$as_me: error: Cannot find jni.h in $JAVA_HOME: do you have a JDK installed?" >&2;}
    { (exit 1); exit 1; }; }
 fi
 

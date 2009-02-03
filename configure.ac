@@ -107,7 +107,7 @@ fi
 
 # now let's test we have jni.h
 if test ! -e $JAVA_HOME/include/jni.h ; then
-	AC_MSG_ERROR([Cannot find jni.h: do you have a JDK installed?])
+	AC_MSG_ERROR([Cannot find jni.h in $JAVA_HOME: do you have a JDK installed?])
 fi
 
 ant_version=`$ANT -version 2>&1 | grep "Ant version" | \
