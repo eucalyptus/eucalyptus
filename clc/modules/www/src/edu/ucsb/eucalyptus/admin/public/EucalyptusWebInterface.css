@@ -129,3 +129,13 @@ body {
     font-size: smaller;
     background: #FFFF66;
 }
+
+.gwt-DialogBox { 
+	background: white;
+}
+.gwt-DialogBox .Caption {
+	background-color: #FFFF66;
+}
+.gwt-DialogBox .dialogContent { 
+	background: #FFFF66;
+}

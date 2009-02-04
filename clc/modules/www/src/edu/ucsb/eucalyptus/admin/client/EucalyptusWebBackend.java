@@ -100,6 +100,8 @@ public interface EucalyptusWebBackend extends RemoteService {
   public List<VmTypeWeb> getVmTypes( String sessionId ) throws SerializableException;
   public void setVmTypes( String sessionId, List<VmTypeWeb> vmTypes )throws SerializableException;
 
+  public CloudInfoWeb getCloudInfo (String sessionId, boolean setExternalHostport) throws SerializableException;
+
 
   /**
    * Utility/Convenience class.

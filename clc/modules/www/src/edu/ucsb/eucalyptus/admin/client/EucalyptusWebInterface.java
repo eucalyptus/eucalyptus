@@ -41,6 +41,7 @@ import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
+import com.google.gwt.http.client.URL;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -76,6 +77,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	private static String cloud_registration_text;
     private static Image logo = null;
 	private static Image textless_logo = null;
+	private static String rightscaleUrl;
 	
     /* global variables */
     private static HashMap props;
@@ -83,6 +85,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     private static String sessionId;
     private static String currentAction;
     private static UserInfoWeb loggedInUser;
+	private static CloudInfoWeb cloudInfo;
 	private static TabBar allTabs;
     private static int currentTabIndex = 0;
 	private static int credsTabIndex;
@@ -1182,8 +1185,55 @@ public class EucalyptusWebInterface implements EntryPoint {
         RootPanel.get().add( wrapper );
     }
 
-    public void displayCredentialsTab (VerticalPanel parent)
-    {
+	public void displayCredentialsTab (final VerticalPanel parent)
+	{
+		EucalyptusWebBackend.App.getInstance().getCloudInfo(
+			sessionId,
+			false, // do not check external IP for now
+		new AsyncCallback() {
+			public void onSuccess( Object result )
+			{
+				cloudInfo = ( CloudInfoWeb ) result;
+				actuallyDisplayCredentialsTab (parent);
+			}
+			public void onFailure( Throwable caught )
+			{
+				displayErrorPage( caught.getMessage() );
+			}
+		}
+		);
+	}
+
+	private static class MyDialog extends DialogBox {
+
+		public MyDialog() {
+			//setText("Rightscale Registration");
+			//setStyleName("euca-dialog-box");
+			HorizontalPanel buttonPanel = new HorizontalPanel();
+			setHTML ("<h3>Rightscale registration</h3> You are about to open a new window to Rightscale's Web site, on which you will be able to complete registraton. </p> TODO: warn about IP address discrepacies, if necessary. </p> "
+				+ rightscaleUrl);
+			
+			Button okButton = new Button("OK",
+			new ClickListener() {
+				public void onClick(Widget sender) {
+					MyDialog.this.hide();
+					Window.open (rightscaleUrl, "_blank", "");
+				}
+				});
+				Button cancelButton = new Button("Cancel",
+				new ClickListener() {
+					public void onClick(Widget sender) {
+						MyDialog.this.hide();
+					}
+					});
+					buttonPanel.add (okButton);
+					buttonPanel.add (cancelButton);
+					setWidget(buttonPanel);
+				}
+			}
+	
+	public void actuallyDisplayCredentialsTab (VerticalPanel parent)
+	{
         History.newItem("credentials");
 
 		VerticalPanel ppanel = new VerticalPanel();
@@ -1259,7 +1309,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		}
 		
         final Grid g = new Grid( gridRows, 2 );
-        g.getColumnFormatter().setWidth(0, "320");
+        g.getColumnFormatter().setWidth(0, "400");
         g.getColumnFormatter().setWidth(1, "200");
         g.setCellSpacing( 30 );
 
@@ -1272,32 +1322,49 @@ public class EucalyptusWebInterface implements EntryPoint {
         g.setWidget( 2, 0, rpanel ); g.getCellFormatter().setVerticalAlignment(2, 0, HasVerticalAlignment.ALIGN_TOP);
 		g.setWidget( 2, 1, secretButton ); g.getCellFormatter().setVerticalAlignment(2, 1, HasVerticalAlignment.ALIGN_TOP);
 		
-		if (loggedInUser.isAdministrator() && show_cloud_registration) {
+		if (loggedInUser.isAdministrator() && show_cloud_registration) {			
 	        VerticalPanel cloud_panel = new VerticalPanel();
 			cloud_panel.setSpacing (5);
 	        cloud_panel.add( new HTML (cloud_registration_text) );
 			Grid g1 = new Grid (2, 2);
 			g1.setWidget (0, 0, new HTML ("<b><font size=\"2\">Cloud URL:</font></b><"));
-			// TODO: get URL from cloud
-			final HTML cloudUrl = new HTML ("<font color=#666666 size=\"1\">" + "http://foo/bar" + "</font>");
+			final HTML cloudUrl = new HTML ("<font color=#666666 size=\"1\">http://" 
+				+ cloudInfo.getInternalHostPort() 
+				+ cloudInfo.getServicePath()
+				+ "</font>");
 			g1.setWidget (0, 1, cloudUrl);
 			g1.setWidget (1, 0, new HTML ("<b><font size=\"2\">Cloud ID:</font></b>"));
-			// TODO: get ID from cloud
-			final HTML cloudId = new HTML ("<font color=#666666 size=\"1\">" + "asdlkfj345lksjj" + "</font>");
-			cloudId.setVisible (false);
+			final HTML cloudId = new HTML ("<font color=#666666 size=\"1\">" 
+			 	+ cloudInfo.getCloudId() 
+				+ "</font>");
 			g1.setWidget (1, 1, cloudId);
 			cloud_panel.add (g1);
 	        cloud_panel.setStyleName( "euca-text" );
-			final Button cloudButton = new Button ( "Show cloud ID" );
+			final Button cloudButton = new Button ( "Register with Rightscale" );
 			cloudButton.addClickListener(new ClickListener() {
 	            public void onClick(Widget sender) {
-	                if (cloudId.isVisible()) {
-						cloudId.setVisible(false);
-						cloudButton.setText ("Show cloud ID");
-					} else {
-						cloudId.setVisible(true);
-						cloudButton.setText ("Hide cloud ID");
+					EucalyptusWebBackend.App.getInstance().getCloudInfo(
+						sessionId,
+						true, // DO check external IP
+					new AsyncCallback() {
+						public void onSuccess( Object result )
+						{
+							cloudInfo = ( CloudInfoWeb ) result;
+							String callbackUrl = "http://" 
+								+ cloudInfo.getExternalHostPort() 
+								+ cloudInfo.getServicePath();
+							rightscaleUrl = "http://foo.bar/cloud_registrations/new?callback_url="
+								+ URL.encode(callbackUrl) 
+								+ "&registration_version=1.0&retry=1&secret_token="
+								+ URL.encode(cloudInfo.getCloudId());
+							new MyDialog().center();
+						}
+						public void onFailure( Throwable caught )
+						{
+							displayErrorPage( caught.getMessage() );
+						}
 					}
+					);
 	            }
 	        });
 			g.setWidget (3, 0, cloud_panel ); g.getCellFormatter().setVerticalAlignment(3, 0, HasVerticalAlignment.ALIGN_TOP);
