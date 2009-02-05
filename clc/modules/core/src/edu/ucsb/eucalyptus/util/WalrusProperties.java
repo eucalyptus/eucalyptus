@@ -116,4 +116,8 @@ public class WalrusProperties {
     public enum StorageParameters {
         SnapshotVgName, SnapshotLvName
     }
+
+    public enum FormField {
+        FormUploadPolicyData, AWSAccessKeyId, key, acl, policy, success_action_redirect, success_action_status, signature, file
+    }
 }

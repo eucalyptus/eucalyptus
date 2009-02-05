@@ -1303,7 +1303,7 @@ public class Bukkit {
                         EntityWrapper<ObjectInfo> dbObject = new EntityWrapper<ObjectInfo>();
                         for (String part: parts) {
                             ObjectInfo partInfo = new ObjectInfo();
-                            objectInfo.setObjectKey(part);
+                            partInfo.setObjectKey(part);
                             List<ObjectInfo> partInfos = dbObject.query(partInfo);
                             if(partInfos.size() > 0) {
                                 ObjectInfo pInfo = partInfos.get(0);

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Chris Grzegorczyk grze@cs.ucsb.edu
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
 package edu.ucsb.eucalyptus.transport.query;

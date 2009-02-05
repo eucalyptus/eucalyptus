@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Chris Grzegorczyk grze@cs.ucsb.edu
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
 package edu.ucsb.eucalyptus.transport.query;
@@ -42,8 +42,12 @@ import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.util.*;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.HandlerDescription;
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileUpload;
 import org.apache.commons.lang.time.DateUtils;
+import org.apache.http.protocol.HTTP;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -98,8 +102,9 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.GET.toString() + OperationParameter.acl.toString(), "GetObjectAccessControlPolicy");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString() + OperationParameter.acl.toString(), "SetObjectAccessControlPolicy");
 
+        newMap.put(BUCKET + WalrusQueryDispatcher.HTTPVerb.POST.toString(), "PutObject");
+
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString(), "PutObject");
-        //TODO: newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.POST.toString(), "PutObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.GET.toString(), "GetObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.DELETE.toString(), "DeleteObject");
 
@@ -207,6 +212,83 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             if(!target[0].equals("")) {
                 operationKey = BUCKET + verb;
                 operationParams.put("Bucket", target[0]);
+
+                if(verb.equals(HTTPVerb.POST.toString())) {
+                    InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
+                    String contentType = headers.get(HTTP.CONTENT_TYPE);
+                    int contentLength = Integer.parseInt(headers.get(HTTP.CONTENT_LEN));
+                    POSTRequestContext postRequestContext = new POSTRequestContext(in, contentType, contentLength);
+                    FileUpload fileUpload = new FileUpload(new WalrusFileItemFactory());
+                    InputStream formDataIn = null;
+                    String objectKey = null;
+                    String key;
+                    Map<String, String> formFields = new HashMap<String, String>();
+                    try {
+                        List<FileItem> parts = fileUpload.parseRequest(postRequestContext);
+                        for(FileItem part : parts) {
+                            if(part.isFormField()) {
+                                InputStream formFieldIn = part.getInputStream();
+                                int bytesRead;
+                                String fieldValue = "";
+                                byte[] bytes = new byte[512];
+                                while((bytesRead = formFieldIn.read(bytes)) > 0) {
+                                    fieldValue += new String(bytes, 0, bytesRead);
+                                }
+                                formFields.put(part.getFieldName(), fieldValue);
+                            } else {
+                                formDataIn = part.getInputStream();
+                            }
+                        }
+                    } catch (Exception ex) {
+                        LOG.warn(ex, ex);
+                        return null;
+                    }
+
+                    String authenticationHeader = "";
+                    String aclHeader = "";
+                    if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString())) {
+                        String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString());
+                        authenticationHeader += "AWS" + " " + accessKeyId + ":";
+                    }
+                    if(formFields.containsKey(WalrusProperties.FormField.key.toString())) {
+                        objectKey = formFields.remove(WalrusProperties.FormField.key.toString());
+                    }
+                    if(formFields.containsKey(WalrusProperties.FormField.signature.toString())) {
+                        String signature = formFields.remove(WalrusProperties.FormField.signature.toString());
+                        authenticationHeader += signature;
+                        headers.put(HMACQuerySecurityHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
+                    }
+                    if(formFields.containsKey(WalrusProperties.FormField.acl.toString())) {
+                        String acl = formFields.remove(WalrusProperties.FormField.acl.toString());
+                        headers.put(WalrusProperties.AMZ_ACL, acl);
+                    }
+                    if(formFields.containsKey(WalrusProperties.FormField.policy.toString())) {
+                        String policy = new String(Base64.decode(formFields.remove(WalrusProperties.FormField.policy.toString())));
+                        try {
+                            String policyData = new String(Base64.encode(policy.getBytes()));
+                            headers.put(WalrusProperties.FormField.FormUploadPolicyData.toString(), policyData);
+                        } catch (Exception ex) {
+                            LOG.warn(ex, ex);
+                            return null;
+                        }
+                    }
+                    operationParams.put("Key", objectKey);
+                    key = target[0] + "." + objectKey;
+                    String randomKey = key + "." + Hashes.getRandom(10);
+                    LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
+                    int dataLength = 0;
+                    try {
+                        dataLength = formDataIn.available();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                    Writer writer = new Writer(formDataIn, dataLength, putQueue);
+                    writer.start();
+
+                    operationParams.put("ContentLength", (new Long(dataLength).toString()));
+                    operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
+                }
+
             } else {
                 operationKey = SERVICE + verb;
             }
@@ -298,6 +380,8 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             }
 
         }
+
+
         if (verb.equals(HTTPVerb.PUT.toString()) && params.containsKey(OperationParameter.acl.toString())) {
             //read ACL
             try {

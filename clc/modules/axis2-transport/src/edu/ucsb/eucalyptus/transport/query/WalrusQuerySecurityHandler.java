@@ -39,6 +39,7 @@ import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.Base64;
@@ -130,6 +131,16 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             UserInfo admin = new UserInfo(EucalyptusProperties.NAME);
             admin.setIsAdministrator(Boolean.TRUE);
             return admin;
+        } else if(hdrs.containsKey(WalrusProperties.FormField.FormUploadPolicyData)) {
+            String data = (String) hdrs.remove(WalrusProperties.FormField.FormUploadPolicyData);
+            String auth_part = (String) hdrs.remove(SecurityParameter.Authorization);
+
+            if(auth_part != null) {
+                String sigString[] = getSigInfo(auth_part);
+                String signature = sigString[1];
+                return getUserInfo(sigString[0], signature, data);
+            }
+            throw new QuerySecurityException("User authentication failed.");
         } else {
             //external user request
             String date =  (String) hdrs.remove( SecurityParameter.Date);
