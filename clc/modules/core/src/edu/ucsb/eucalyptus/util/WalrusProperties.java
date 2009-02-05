@@ -118,6 +118,6 @@ public class WalrusProperties {
     }
 
     public enum FormField {
-        FormUploadPolicyData, AWSAccessKeyId, key, acl, policy, success_action_redirect, success_action_status, signature, file
+        FormUploadPolicyData, AWSAccessKeyId, key, bucket, acl, policy, success_action_redirect, success_action_status, signature, file
     }
 }

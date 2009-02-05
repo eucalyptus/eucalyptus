@@ -172,6 +172,7 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
                 return getUserInfo(sigString[0], signature, data);
             } else if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())){
                 //query string authentication
+
                 String accesskeyid = parameters.get(SecurityParameter.AWSAccessKeyId.toString());
                 String signature = parameters.get(SecurityParameter.Signature.toString());
                 if(signature == null) {
@@ -182,7 +183,8 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
                     throw new QuerySecurityException("Authentication failed. Expires must be specified.");
                 }
                 if(checkExpires(expires)) {
-                    return getUserInfo(accesskeyid, signature, data);
+                    String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + addrString;
+                    return getUserInfo(accesskeyid, signature, stringToSign);
                 } else {
                     throw new QuerySecurityException("Cannot process request. Expired.");
                 }

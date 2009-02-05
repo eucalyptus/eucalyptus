@@ -34,6 +34,7 @@
 
 package edu.ucsb.eucalyptus.transport.query;
 
+
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
@@ -44,10 +45,12 @@ import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.HandlerDescription;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUpload;
-import org.apache.commons.lang.time.DateUtils;
+import org.apache.tools.ant.util.DateUtils;
 import org.apache.http.protocol.HTTP;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -227,6 +230,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                         List<FileItem> parts = fileUpload.parseRequest(postRequestContext);
                         for(FileItem part : parts) {
                             if(part.isFormField()) {
+                                String fieldName = part.getFieldName().toString();
                                 InputStream formFieldIn = part.getInputStream();
                                 int bytesRead;
                                 String fieldValue = "";
@@ -234,7 +238,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                                 while((bytesRead = formFieldIn.read(bytes)) > 0) {
                                     fieldValue += new String(bytes, 0, bytesRead);
                                 }
-                                formFields.put(part.getFieldName(), fieldValue);
+                                formFields.put(fieldName, fieldValue);
                             } else {
                                 formDataIn = part.getInputStream();
                             }
@@ -246,31 +250,68 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
                     String authenticationHeader = "";
                     String aclHeader = "";
-                    if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString())) {
-                        String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString());
-                        authenticationHeader += "AWS" + " " + accessKeyId + ":";
-                    }
+                    formFields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
                     if(formFields.containsKey(WalrusProperties.FormField.key.toString())) {
-                        objectKey = formFields.remove(WalrusProperties.FormField.key.toString());
-                    }
-                    if(formFields.containsKey(WalrusProperties.FormField.signature.toString())) {
-                        String signature = formFields.remove(WalrusProperties.FormField.signature.toString());
-                        authenticationHeader += signature;
-                        headers.put(HMACQuerySecurityHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
+                        objectKey = formFields.get(WalrusProperties.FormField.key.toString());
                     }
                     if(formFields.containsKey(WalrusProperties.FormField.acl.toString())) {
-                        String acl = formFields.remove(WalrusProperties.FormField.acl.toString());
+                        String acl = formFields.get(WalrusProperties.FormField.acl.toString());
                         headers.put(WalrusProperties.AMZ_ACL, acl);
                     }
                     if(formFields.containsKey(WalrusProperties.FormField.policy.toString())) {
                         String policy = new String(Base64.decode(formFields.remove(WalrusProperties.FormField.policy.toString())));
+                        String policyData;
                         try {
-                            String policyData = new String(Base64.encode(policy.getBytes()));
-                            headers.put(WalrusProperties.FormField.FormUploadPolicyData.toString(), policyData);
+                            policyData = new String(Base64.encode(policy.getBytes()));
                         } catch (Exception ex) {
                             LOG.warn(ex, ex);
                             return null;
                         }
+                        //parse policy
+                        try {
+                            JSONObject policyObject = new JSONObject(policy);
+                            String expiration = (String) policyObject.get("expiration");
+                            if(expiration != null) {
+                                Date expirationDate = DateUtils.parseIso8601DateTimeOrDate(expiration);
+                                if((new Date()).getTime() > expirationDate.getTime()) {
+                                    LOG.warn("Policy has expired.");
+                                    //TODO: currently this will be reported as an invalid operation
+                                    //Fix this to report a security exception
+                                    // return null;
+                                }
+                            }
+                            JSONArray conditions = (JSONArray) policyObject.get("conditions");
+                            for (int i = 0 ; i < conditions.length() ; ++i) {
+                                Object policyItem = conditions.get(i);
+                                if(policyItem instanceof JSONObject) {
+                                    JSONObject jsonObject = (JSONObject) policyItem;
+                                    if(!exactMatch(jsonObject, formFields)) {
+                                        LOG.warn("Policy verification failed. ");
+                                        return null;
+                                    }
+                                    System.out.println(jsonObject);
+                                } else if(policyItem instanceof  JSONArray) {
+                                    JSONArray jsonArray = (JSONArray) policyItem;
+                                    if(!partialMatch(jsonArray, formFields)) {
+                                        LOG.warn("Policy verification failed. ");
+                                        return null;
+                                    }
+                                }
+                            }
+                        } catch(Exception ex) {
+                            LOG.warn(ex, ex);
+                        }
+                        //all form uploads without a policy are anonymous
+                        if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString())) {
+                            String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString());
+                            authenticationHeader += "AWS" + " " + accessKeyId + ":";
+                        }
+                        if(formFields.containsKey(WalrusProperties.FormField.signature.toString())) {
+                            String signature = formFields.remove(WalrusProperties.FormField.signature.toString());
+                            authenticationHeader += signature;
+                            headers.put(HMACQuerySecurityHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
+                        }
+                        headers.put(WalrusProperties.FormField.FormUploadPolicyData.toString(), policyData);
                     }
                     operationParams.put("Key", objectKey);
                     key = target[0] + "." + objectKey;
@@ -480,6 +521,50 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         return operationName;
     }
 
+    private boolean exactMatch(JSONObject jsonObject, Map formFields) {
+        Iterator<String> iterator = jsonObject.keys();
+        boolean returnValue = false;
+        while(iterator.hasNext()) {
+            String key = iterator.next();
+            key = key.replaceAll("\\$", "");
+            try {
+                if(jsonObject.get(key).equals(formFields.get(key)))
+                    returnValue = true;
+                else
+                    returnValue = false;
+            } catch(Exception ex) {
+                ex.printStackTrace();
+                return false;
+            }
+        }
+        return returnValue;
+    }
+
+    private boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields) {
+        boolean returnValue = false;
+        if(jsonArray.length() != 3)
+            return false;
+        try {
+            String condition = (String) jsonArray.get(0);
+            String key = (String) jsonArray.get(1);
+            key = key.replaceAll("\\$", "");
+            String value = (String) jsonArray.get(2);
+            if(condition.contains("eq")) {
+                if(value.equals(formFields.get(key)))
+                    returnValue = true;
+            } else if(condition.contains("starts-with")) {
+                if(!formFields.containsKey(key.toLowerCase()))
+                    return false;
+                if(formFields.get(key.toLowerCase()).startsWith(value))
+                    returnValue = true;
+            }
+        } catch(Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+        return returnValue;
+    }
+
     private void parseExtendedGetHeaders(Map operationParams, String headerString, String value) {
         if(headerString.equals(WalrusProperties.ExtendedGetHeaders.Range.toString())) {
             String prefix = "bytes=";
@@ -496,7 +581,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), Long.parseLong(values[1]));
         } else if(WalrusProperties.ExtendedHeaderDateTypes.contains(headerString)) {
             try {
-                operationParams.put(headerString, DateUtils.parseDate(value, null));
+                operationParams.put(headerString, DateUtils.parseIso8601DateTimeOrDate(value));
             } catch(Exception ex) {
                 ex.printStackTrace();
             }
