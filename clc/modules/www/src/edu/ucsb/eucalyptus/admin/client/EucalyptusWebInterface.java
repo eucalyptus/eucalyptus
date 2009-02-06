@@ -520,21 +520,37 @@ public class EucalyptusWebInterface implements EntryPoint {
                     g1.clearCell( j, 2 ); /* clear previous right-hand-side annotations */
                 }
 
-                /* perform checks */
+                // perform checks
                 if ( userName_box.getText().length() < 1 )
                 {
                     Label l = new Label( "Username is empty!" );
                     l.setStyleName("euca-error-hint");
                     g1.setWidget( userName_row, 2, l);
                     formOk = false;
-                }
-				/* no spaces in username */
-				if ( userName_box.getText().matches(".*[ \t]+.*") ) {
-					Label l = new Label ("Username cannot have spaces, sorry!");
+                } else {
+	                if ( cleartextPassword1_box.getText().toLowerCase().matches(".*" +
+	                        userName_box.getText().toLowerCase() + ".*")) {
+	                    Label l = new Label ( "Password may not contain the username!");
+	                    l.setStyleName("euca-error-hint");
+	                    g1.setWidget( password1_row, 2, l );
+	                    formOk = false;
+	                }
+				}
+
+				if ( userName_box.getText().matches(".*[^\\w\\-\\.@]+.*") ) {
+					Label l = new Label ("Invalid characters in the username!");
 					l.setStyleName ("euca-error-hint");
 					g1.setWidget (userName_row, 2, l);
 					formOk = false;
 				}
+				
+                if ( userName_box.getText().length() > 30)
+                {
+                    Label l = new Label( "Username is too long, sorry!" );
+                    l.setStyleName("euca-error-hint");
+                    g1.setWidget( userName_row, 2, l);
+                    formOk = false;
+                }
 
                 if ( cleartextPassword1_box.getText().length() < minPasswordLength )
                 {
@@ -558,13 +574,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                     g1.setWidget( password1_row, 2, l );
                     formOk = false;
                 }
-                if ( cleartextPassword1_box.getText().toLowerCase().matches(".*" +
-                        userName_box.getText().toLowerCase() + ".*")) {
-                    Label l = new Label ( "Password may not contain the username!");
-                    l.setStyleName("euca-error-hint");
-                    g1.setWidget( password1_row, 2, l );
-                    formOk = false;
-                }
+
                 if ( realName_box.getText().length() < 1 )
                 {
                     Label l = new Label( "Name is empty!" );

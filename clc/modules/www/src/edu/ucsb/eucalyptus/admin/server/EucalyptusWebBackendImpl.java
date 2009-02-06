@@ -191,9 +191,16 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
         if (user.getUserName().equalsIgnoreCase( "eucalyptus" )) {
             throw new SerializableException("User 'eucalyptus' is not allowed");
         }
+		// these two won't happen unless the user hacks the client side
+		if ( user.getUserName().matches(".*[^\\w\\-\\.@]+.*") ) {
+			throw new SerializableException ("Invalid characters in the username");
+		}
+        if ( user.getUserName().length() < 1 || user.getUserName().length() > 30)
+        {
+            throw new SerializableException ( "Invalid length of username" );
+        }
 
         load_props(); /* get parameters from config file */
-
         boolean admin = false;
         try {
             SessionInfo session = verifySession (sessionId);
