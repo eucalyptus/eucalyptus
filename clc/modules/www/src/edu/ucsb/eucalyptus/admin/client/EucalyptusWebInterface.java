@@ -1250,9 +1250,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 						String in = cloudInfo.getInternalHostPort();
 						String text = "";
 						String ip;
-						 
-						ip = ex = in; // TODO: for debugging
-						
+						 						
 						if (ex==null) {
 							ip = in;
 							text = "<b>Warning:</b> Rightscale could not discover the external IP address of your cloud.  Hence, the pre-filled cloud URL <i>may</i> be incorrect.  Check your firewall settings.</p> ";
@@ -1271,7 +1269,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 							+ URL.encode(callbackUrl) 
 							+ "&registration_version=1.0&retry=1&secret_token="
 							+ URL.encode(cloudInfo.getCloudId());
-						String pre = "<h3>Rightscale registration</h3> You are about to open a new window to Rightscale's Web site, on which you will be able to complete registraton. </p> ";
+						String pre = "<h3>Cloud registration</h3> You are about to open a new window to Rightscale's Web site, on which you will be able to complete registraton. </p> ";
 						setHTML (pre + text);
 						okButton.setEnabled (true);
 						center();
@@ -1882,29 +1880,33 @@ public class EucalyptusWebInterface implements EntryPoint {
                 /* actions */
                 HorizontalPanel ops = new HorizontalPanel();
                 ops.setSpacing (3);
-                HTML act_button = userActionButton ("Disable", u);
-                if (!u.isApproved().booleanValue()) {
-                    act_button = userActionButton ("Approve", u);
-                } else if (!u.isEnabled().booleanValue()) {
-                    act_button = userActionButton ("Enable", u);
-                }
-                ops.add(act_button);
 
 				Label editLabel = new Label ("Edit");
 				editLabel.addClickListener (new EditCallback(this, u));
 				editLabel.setStyleName ("euca-action-link");
 				ops.add(editLabel);
 
-                //HTML del_button = userActionButton ("Delete", u);
-		        Hyperlink del_button = new Hyperlink( "Delete", "confirmdelete" );
-				del_button.setStyleName ("euca-action-link");
-		        del_button.addClickListener( new ClickListener() {
-                    public void onClick(Widget sender) {
-                        displayConfirmDeletePage (u.getUserName());
-                    }
-                });
-                ops.add(del_button);
-                g.setWidget(row, 4, ops );
+				// admin can't be disabled or deleted (that breaks things)
+				if (!u.isAdministrator().booleanValue()) {
+					HTML act_button = userActionButton ("Disable", u);
+	                if (!u.isApproved().booleanValue()) {
+	                    act_button = userActionButton ("Approve", u);
+	                } else if (!u.isEnabled().booleanValue()) {
+	                    act_button = userActionButton ("Enable", u);
+	                }
+	                ops.add(act_button);
+	
+					Hyperlink del_button = new Hyperlink( "Delete", "confirmdelete" );
+					del_button.setStyleName ("euca-action-link");
+					del_button.addClickListener( new ClickListener() {
+						public void onClick(Widget sender) {
+							displayConfirmDeletePage (u.getUserName());
+						}
+					});
+					ops.add(del_button);
+				}
+				
+				g.setWidget(row, 4, ops );	
 
                 /* view */
                 HorizontalPanel views = new HorizontalPanel();

@@ -516,8 +516,9 @@ public class EucalyptusManagement {
 		String ipAddr = null;
 		HttpClient httpClient = new HttpClient();
 		// Use Rightscale's "whoami" service
-		//GetMethod method = new GetMethod("https://my.rightscale.com/whoami?api_version=1.0&cloud=0");
-		GetMethod method = new GetMethod("http://128.111.179.143/"); // will time out
+		GetMethod method = new GetMethod("https://my.rightscale.com/whoami?api_version=1.0&cloud=0");
+		Integer timeoutMs = new Integer(3 * 1000); // TODO: is this working?
+		method.getParams().setSoTimeout(timeoutMs);
 		
 		try {
 			httpClient.executeMethod(method);
