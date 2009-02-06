@@ -118,22 +118,23 @@ public class EucalyptusWebInterface implements EntryPoint {
                         try {
                             load_props(); /* verify properties */
 
-                            /* if we have don't have sessionId saved in a cookie */
-                            if ( sessionId == null )
-                            {
-								/* these don't need sessions */
-								if ( currentAction.equals ("confirm")
-								|| currentAction.equals ("recover") ) {
-									executeAction( currentAction );
-								} else {
+							/* these don't need sessions */
+							if ( currentAction.equals ("confirm")
+							|| currentAction.equals ("recover") ) {
+								executeAction( currentAction );
+								
+							} else {				
+								/* if we have don't have sessionId saved in a cookie */
+								if ( sessionId == null )
+								{
 									displayLoginPage();
 								}
-                            }
-                            else /* we have a cookie - try using it */
-                            {
-                                check_box.setChecked(true);
-                                attemptLogin();
-                            }
+								else /* we have a cookie - try using it */
+								{
+									check_box.setChecked(true);
+									attemptLogin();
+								}
+							}
                         } catch (Exception e) {
                             displayErrorPageFinal ("Internal error (1): " + e.getMessage());
                         }
@@ -162,7 +163,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         server_ready = (Boolean)props.get("ready");
 
         if (server_ready==null) {
-            throw new Exception("Internal server erorr (cannot determine server readiness)");
+            throw new Exception("Internal server error (cannot determine server readiness)");
         }
         if (cloud_name==null) {
             throw new Exception("Server configuration is missing 'cloud-name' value");
@@ -528,6 +529,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                     g1.setWidget( userName_row, 2, l);
                     formOk = false;
                 } else {
+					// do this in the else-clause so the empty username doesn't match here
 	                if ( cleartextPassword1_box.getText().toLowerCase().matches(".*" +
 	                        userName_box.getText().toLowerCase() + ".*")) {
 	                    Label l = new Label ( "Password may not contain the username!");
@@ -1131,6 +1133,8 @@ public class EucalyptusWebInterface implements EntryPoint {
     public void displayBarAndTabs(String message)
     {
         /* top bar */
+		displayStatusPage("Drawing the tabs...");
+
         HorizontalPanel top_bar = new HorizontalPanel();
         top_bar.setStyleName("euca-top-bar");
         top_bar.setSize("100%", "20");
@@ -1276,9 +1280,9 @@ public class EucalyptusWebInterface implements EntryPoint {
 							+ ip
 							+ cloudInfo.getServicePath();
 						rightscaleUrl = "https://moo.rightscale.com/cloud_registrations/new?callback_url="
-							+ URL.encode(callbackUrl) 
+							+ GWTUtils.escape (callbackUrl) // URL.encode() wasn't quite right 
 							+ "&registration_version=1.0&retry=1&secret_token="
-							+ URL.encode(cloudInfo.getCloudId());
+							+ GWTUtils.escape (cloudInfo.getCloudId());
 						String pre = "<h3>Cloud registration</h3> You are about to open a new window to Rightscale's Web site, on which you will be able to complete registraton. </p> ";
 						setHTML (pre + text);
 						okButton.setEnabled (true);

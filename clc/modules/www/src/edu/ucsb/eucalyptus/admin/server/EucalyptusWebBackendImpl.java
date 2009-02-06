@@ -310,7 +310,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
     }
 
     /* ensure the user exists and valid */
-    private UserInfoWeb verifyUser (SessionInfo session, String userName, boolean fullCheck)
+    private UserInfoWeb verifyUser (SessionInfo session, String userName, boolean verifyPasswordAge)
             throws SerializableException
     {
         UserInfoWeb user;
@@ -331,10 +331,10 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
         if (!user.isEnabled()) {
             throw new SerializableException("Disabled user account");
         }
-        if (fullCheck) {
-            if (!user.isConfirmed()) {
-                throw new SerializableException("Unconfirmed account (click on the link in confirmation email)");
-            }
+        if (!user.isConfirmed()) {
+            throw new SerializableException("Unconfirmed account (click on the link in confirmation email)");
+        }
+        if (verifyPasswordAge) {
             if (isPasswordExpired(user)) {
                 throw new SerializableException("Password expired");
             }
@@ -351,11 +351,11 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
         if (md5Password==null) {
             throw new SerializableException("Invalid RPC arguments: password is missing");
         }
+		// you can get a sessionId with an expired password so you can change it => false
         user = verifyUser (null, userId, false);
         if (!user.getBCryptedPassword().equals( md5Password )) {
             throw new SerializableException("Incorrect password");
         }
-        /* NOTE: you don't have to be confirmed to get sessionId */
 
         sessionId = ServletUtils.genGUID();
         SessionInfo session = new SessionInfo(sessionId, userId, System.currentTimeMillis());
@@ -434,8 +434,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 		}
 
         final SessionInfo session = verifySession (sessionId);
-        final UserInfoWeb user = verifyUser (session, session.getUserId(), false);
-        /* TODO: forbid actions if password expired, maybe? */
+        final UserInfoWeb user = verifyUser (session, session.getUserId(), true);
 
         String response = "Your `" + action + "` request succeeded."; /* generic response */
         if (action.equals("approve")
@@ -509,8 +508,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
             throws SerializableException
     {
         SessionInfo session = verifySession (sessionId);
-        UserInfoWeb user = verifyUser (session, session.getUserId(), false);
-        /* NOTE: account does not have to be confirmed for retrieving UserInfo */
+        UserInfoWeb user = verifyUser (session, session.getUserId(), true);
 
         List l = new ArrayList();
         if (userId==null) {
@@ -570,10 +568,8 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
     {
         /* check everything except password expiration */
         SessionInfo session = verifySession (sessionId);
+		// naturally, it is OK to change the password if it expired => false
         UserInfoWeb user = verifyUser (session, session.getUserId(), false);
-        if (!user.isConfirmed()) {
-            throw new SerializableException("Unconfirmed account (click on the link in confirmation email)");
-        }
 
         /* check old password if the user is changing password voluntarily */
         if ( !isPasswordExpired((UserInfoWeb)user) ) {
