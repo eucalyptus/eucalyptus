@@ -53,6 +53,7 @@ import org.apache.axis2.description.AxisOperation;
 import org.apache.axis2.receivers.AbstractInOutMessageReceiver;
 import org.apache.axis2.transport.http.server.AxisHttpResponse;
 import org.apache.axis2.util.JavaUtils;
+import org.apache.commons.httpclient.HttpStatus;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
 import org.apache.log4j.Logger;
@@ -132,12 +133,6 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
             return;
         }
 
-        /*     if(message.getPayload() instanceof WalrusDeleteResponseType) {
-           msgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_NO_CONTENT);
-           newMsgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_NO_CONTENT);
-           return;
-       } */
-
         Boolean putType = (Boolean) msgContext.getProperty(WalrusProperties.STREAMING_HTTP_PUT);
         Boolean getType = (Boolean) msgContext.getProperty(WalrusProperties.STREAMING_HTTP_GET);
 
@@ -167,9 +162,30 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
                     newMsgContext.setProperty("GET_RANDOM_KEY", request.getRandomKey());
                 }
                 //This selects the data formatter
-                newMsgContext.setProperty( "messageType", "application/walrus" );
             } else if(putType != null) {
-                response.addHeader(new BasicHeader(HTTP.CONTENT_LEN, String.valueOf(0)));
+                if(reply instanceof PostObjectResponseType) {
+                    PostObjectResponseType postReply = (PostObjectResponseType) reply;
+                    String redirectUrl = postReply.getRedirectUrl();
+                    if(redirectUrl != null) {
+                        response.addHeader(new BasicHeader("Location", redirectUrl));
+                        msgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_MOVED_PERMANENTLY);
+                        newMsgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_MOVED_PERMANENTLY);
+                        newMsgContext.setProperty( "messageType", "application/walrus" );
+                    } else {
+                        Integer successCode = postReply.getSuccessCode();
+                        if(successCode != null) {
+                            newMsgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, successCode);
+                            if(successCode == 201) {
+                                return;
+                            } else {
+                                newMsgContext.setProperty( "messageType", "application/walrus" );
+                                return;
+                            }
+
+                        }
+                    }
+                }
+                response.addHeader(new BasicHeader(HTTP.CONTENT_LEN, String.valueOf(0)));                
             }
         }
 

@@ -67,6 +67,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
+import java.net.URL;
+import java.net.InetAddress;
 
 public class Bukkit {
 
@@ -532,6 +534,66 @@ public class Bukkit {
         }
         reply.setEtag(md5);
         reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+        return reply;
+    }
+
+    public PostObjectResponseType PostObject (PostObjectType request) throws EucalyptusCloudException {
+        PostObjectResponseType reply = (PostObjectResponseType) request.getReply();
+
+        String bucketName = request.getBucket();
+        String key = request.getKey();
+
+        PutObjectType putObject = new PutObjectType();
+        putObject.setUserId(request.getUserId());
+        putObject.setBucket(bucketName);
+        putObject.setKey(key);
+        putObject.setRandomKey(request.getRandomKey());
+        putObject.setAccessControlList(request.getAccessControlList());
+        putObject.setContentLength(request.getContentLength());
+        putObject.setAccessKeyID(request.getAccessKeyID());
+        putObject.setEffectiveUserId(request.getEffectiveUserId());
+        putObject.setCredential(request.getCredential());
+        putObject.setIsCompressed(request.getIsCompressed());
+        putObject.setMetaData(request.getMetaData());
+        putObject.setStorageClass(request.getStorageClass());
+
+        PutObjectResponseType putObjectResponse = PutObject(putObject);
+
+        reply.setEtag(putObjectResponse.getEtag());
+        reply.setLastModified(putObjectResponse.getLastModified());
+        reply.set_return(putObjectResponse.get_return());
+        reply.setMetaData(putObjectResponse.getMetaData());
+        reply.setErrorCode(putObjectResponse.getErrorCode());
+        reply.setSize(putObjectResponse.getSize());
+        reply.setStatusMessage(putObjectResponse.getStatusMessage());
+
+        String successActionRedirect = request.getSuccessActionRedirect();
+        if(successActionRedirect != null) {
+            try {
+                java.net.URI addrUri = new URL(successActionRedirect).toURI();
+                InetAddress.getByName(addrUri.getHost());
+            } catch(Exception ex) {
+                LOG.warn(ex);
+            }
+            reply.setRedirectUrl(successActionRedirect);
+        } else {
+            Integer successActionStatus = request.getSuccessActionStatus();
+            if(successActionStatus != null) {
+                if((successActionStatus == 200) || (successActionStatus == 201)) {
+                    reply.setSuccessCode(successActionStatus);
+                    if(successActionStatus == 200) {
+                        return reply;
+                    } else {
+                        reply.setBucket(bucketName);
+                        reply.setKey(key);
+                        reply.setLocation(WalrusProperties.WALRUS_URL + "/" + bucketName + "/" + key);
+                    }
+                } else {
+                    reply.setSuccessCode(204);
+                    return reply;
+                }
+            }
+        }
         return reply;
     }
 

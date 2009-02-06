@@ -38,6 +38,7 @@ import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.WalrusBucketErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.WalrusRedirectMessageType;
 import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 import edu.ucsb.eucalyptus.util.ReplyCoordinator;
 import org.apache.http.HttpStatus;
@@ -161,6 +162,11 @@ public class WalrusReplyQueue {
             else if ( ex instanceof NotImplementedException )
             {
                 errMsg = new WalrusBucketErrorMessageType( ( ( NotImplementedException ) ex ).getValue(), "Not Implemented", "NA", HttpStatus.SC_NOT_IMPLEMENTED, msg.getCorrelationId(), ipAddr);
+                errMsg.setCorrelationId( msg.getCorrelationId() );
+            }
+            else if ( ex instanceof WalrusRedirectException )
+            {
+                errMsg = new WalrusRedirectMessageType( ( ( WalrusRedirectException ) ex ).getRedirectUrl());
                 errMsg.setCorrelationId( msg.getCorrelationId() );
             }
             else

@@ -105,7 +105,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.GET.toString() + OperationParameter.acl.toString(), "GetObjectAccessControlPolicy");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString() + OperationParameter.acl.toString(), "SetObjectAccessControlPolicy");
 
-        newMap.put(BUCKET + WalrusQueryDispatcher.HTTPVerb.POST.toString(), "PutObject");
+        newMap.put(BUCKET + WalrusQueryDispatcher.HTTPVerb.POST.toString(), "PostObject");
 
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString(), "PutObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.GET.toString(), "GetObject");
@@ -218,6 +218,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
                 if(verb.equals(HTTPVerb.POST.toString())) {
                     InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
+                    messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
                     String contentType = headers.get(HTTP.CONTENT_TYPE);
                     int contentLength = Integer.parseInt(headers.get(HTTP.CONTENT_LEN));
                     POSTRequestContext postRequestContext = new POSTRequestContext(in, contentType, contentLength);
@@ -258,6 +259,19 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                         String acl = formFields.get(WalrusProperties.FormField.acl.toString());
                         headers.put(WalrusProperties.AMZ_ACL, acl);
                     }
+                    if(formFields.containsKey(WalrusProperties.FormField.success_action_redirect.toString())) {
+                        String successActionRedirect = formFields.get(WalrusProperties.FormField.success_action_redirect.toString());
+                        operationParams.put("SuccessActionRedirect", successActionRedirect);
+                    }
+                    if(formFields.containsKey(WalrusProperties.FormField.success_action_status.toString())) {
+                        Integer successActionStatus = Integer.parseInt(formFields.get(WalrusProperties.FormField.success_action_status.toString()));
+                        if(successActionStatus == 200 || successActionStatus == 201)
+                            operationParams.put("SuccessActionStatus", successActionStatus);
+                        else
+                            operationParams.put("SuccessActionStatus", 204);
+                    } else {
+                        operationParams.put("SuccessActionStatus", 204);
+                    }
                     if(formFields.containsKey(WalrusProperties.FormField.policy.toString())) {
                         String policy = new String(Base64.decode(formFields.remove(WalrusProperties.FormField.policy.toString())));
                         String policyData;
@@ -270,17 +284,17 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                         //parse policy
                         try {
                             JSONObject policyObject = new JSONObject(policy);
-                            String expiration = (String) policyObject.get("expiration");
+                            String expiration = (String) policyObject.get(WalrusProperties.PolicyHeaders.expiration.toString());
                             if(expiration != null) {
                                 Date expirationDate = DateUtils.parseIso8601DateTimeOrDate(expiration);
                                 if((new Date()).getTime() > expirationDate.getTime()) {
                                     LOG.warn("Policy has expired.");
                                     //TODO: currently this will be reported as an invalid operation
                                     //Fix this to report a security exception
-                                    // return null;
+                                    return null;
                                 }
                             }
-                            JSONArray conditions = (JSONArray) policyObject.get("conditions");
+                            JSONArray conditions = (JSONArray) policyObject.get(WalrusProperties.PolicyHeaders.conditions.toString());
                             for (int i = 0 ; i < conditions.length() ; ++i) {
                                 Object policyItem = conditions.get(i);
                                 if(policyItem instanceof JSONObject) {
