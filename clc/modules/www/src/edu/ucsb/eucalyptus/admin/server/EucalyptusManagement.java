@@ -513,10 +513,11 @@ public class EucalyptusManagement {
 
 	private static String getExternalIpAddress () 
 	{
-		String ipAddr = "127.0.0.1";
+		String ipAddr = null;
 		HttpClient httpClient = new HttpClient();
 		// Use Rightscale's "whoami" service
-		GetMethod method = new GetMethod("https://my.rightscale.com/whoami?api_version=1.0&cloud=0");
+		//GetMethod method = new GetMethod("https://my.rightscale.com/whoami?api_version=1.0&cloud=0");
+		GetMethod method = new GetMethod("http://128.111.179.143/"); // will time out
 		
 		try {
 			httpClient.executeMethod(method);
@@ -546,7 +547,10 @@ public class EucalyptusManagement {
 		CloudInfoWeb cloudInfo = new CloudInfoWeb();
 		cloudInfo.setInternalHostPort (getInternalIpAddress() + ":8773");
 		if (setExternalHostPort) {
-			cloudInfo.setExternalHostPort (getExternalIpAddress() + ":8773");
+			String ipAddr = getExternalIpAddress();
+			if (ipAddr!=null) {
+				cloudInfo.setExternalHostPort ( ipAddr + ":8773");				
+			}
 		}
 		cloudInfo.setServicePath ("/services/Eucalyptus"); // TODO: what is the actual cloud registration service?
 		cloudInfo.setCloudId ("xyz123abc456"); // TODO: what is the actual cloud registration ID?

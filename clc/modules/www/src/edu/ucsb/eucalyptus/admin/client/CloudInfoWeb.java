@@ -9,6 +9,10 @@ public class CloudInfoWeb implements IsSerializable {
 
 	public CloudInfoWeb ()
 	{
+		internalHostPort = null;
+		externalHostPort = null;
+		servicePath = null;
+		cloudId = null;
 	}
 
 	public String getInternalHostPort()

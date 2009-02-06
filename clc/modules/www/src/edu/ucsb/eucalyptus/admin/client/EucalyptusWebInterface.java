@@ -77,7 +77,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	private static String cloud_registration_text;
     private static Image logo = null;
 	private static Image textless_logo = null;
-	private static String rightscaleUrl;
+	private static String rightscaleUrl = null;
 	
     /* global variables */
     private static HashMap props;
@@ -1204,33 +1204,86 @@ public class EucalyptusWebInterface implements EntryPoint {
 		);
 	}
 
-	private static class MyDialog extends DialogBox {
+	private class RightscaleDialog extends DialogBox {
 
-		public MyDialog() {
-			//setText("Rightscale Registration");
-			//setStyleName("euca-dialog-box");
-			HorizontalPanel buttonPanel = new HorizontalPanel();
-			setHTML ("<h3>Rightscale registration</h3> You are about to open a new window to Rightscale's Web site, on which you will be able to complete registraton. </p> TODO: warn about IP address discrepacies, if necessary. </p> "
-				+ rightscaleUrl);
+		private boolean cancelled;
+		 
+		public RightscaleDialog () {
 			
-			Button okButton = new Button("OK",
+			cancelled = false;
+			setHTML ("<img src=\"img/ajax-loader-FFCC33.gif\" align=\"middle\"> &nbsp; Checking the external IP address...");
+
+			final Button okButton = new Button("OK",
 			new ClickListener() {
 				public void onClick(Widget sender) {
-					MyDialog.this.hide();
-					Window.open (rightscaleUrl, "_blank", "");
-				}
-				});
-				Button cancelButton = new Button("Cancel",
-				new ClickListener() {
-					public void onClick(Widget sender) {
-						MyDialog.this.hide();
+					RightscaleDialog.this.hide();
+					if (rightscaleUrl!=null) {
+						Window.open (rightscaleUrl, "_blank", "");						
 					}
-					});
-					buttonPanel.add (okButton);
-					buttonPanel.add (cancelButton);
-					setWidget(buttonPanel);
 				}
-			}
+			});
+			okButton.setEnabled (false);
+			Button cancelButton = new Button("Cancel",
+			new ClickListener() {
+				public void onClick(Widget sender) {
+					RightscaleDialog.this.hide();
+					cancelled = true;
+				}
+			});
+			
+			HorizontalPanel buttonPanel = new HorizontalPanel();
+			buttonPanel.add (okButton);
+			buttonPanel.add (cancelButton);
+			setWidget (buttonPanel);
+			
+			EucalyptusWebBackend.App.getInstance().getCloudInfo(
+				sessionId,
+				true, // DO check external IP
+				new AsyncCallback () {
+					public void onSuccess( Object result )
+					{
+						if (cancelled) {
+							return;							
+						} 
+						cloudInfo = ( CloudInfoWeb ) result;
+						String ex = cloudInfo.getExternalHostPort();
+						String in = cloudInfo.getInternalHostPort();
+						String text = "";
+						String ip;
+						 
+						ip = ex = in; // TODO: for debugging
+						
+						if (ex==null) {
+							ip = in;
+							text = "<b>Warning:</b> Rightscale could not discover the external IP address of your cloud.  Hence, the pre-filled cloud URL <i>may</i> be incorrect.  Check your firewall settings.</p> ";
+							
+						} else if (!ex.equals(in)) {
+							ip = ex;
+							text = "<b>Warning:</b> The external cloud IP discovered by Rightscale is different from the IP of your NIC .  Hence, the pre-filled cloud URL <i>may</i> be incorrect.  Check your firewall settings.</p> ";
+							
+						} else { 
+							ip = ex;
+						}
+						String callbackUrl = "http://" 
+							+ ip
+							+ cloudInfo.getServicePath();
+						rightscaleUrl = "https://moo.rightscale.com/cloud_registrations/new?callback_url="
+							+ URL.encode(callbackUrl) 
+							+ "&registration_version=1.0&retry=1&secret_token="
+							+ URL.encode(cloudInfo.getCloudId());
+						String pre = "<h3>Rightscale registration</h3> You are about to open a new window to Rightscale's Web site, on which you will be able to complete registraton. </p> ";
+						setHTML (pre + text);
+						okButton.setEnabled (true);
+						center();
+					}
+					public void onFailure( Throwable caught )
+					{
+						displayErrorPage( caught.getMessage() );
+					}
+				}
+			);
+		}
+	}
 	
 	public void actuallyDisplayCredentialsTab (VerticalPanel parent)
 	{
@@ -1282,7 +1335,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		final HTML queryId = new HTML ("<font color=#666666 size=\"1\">" + loggedInUser.getQueryId() + "</font>");
 		queryId.setVisible (false);
 		g0.setWidget (0, 1, queryId);
-		g0.setWidget (1, 0, new HTML ("<b><font size=\"2\">Secret key:</font></b><"));
+		g0.setWidget (1, 0, new HTML ("<b><font size=\"2\">Secret key:</font></b>"));
 		final HTML secretKey = new HTML ("<font color=#666666 size=\"1\">" + loggedInUser.getSecretKey() + "</font>");
 		secretKey.setVisible (false);
 		g0.setWidget (1, 1, secretKey);
@@ -1327,7 +1380,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 			cloud_panel.setSpacing (5);
 	        cloud_panel.add( new HTML (cloud_registration_text) );
 			Grid g1 = new Grid (2, 2);
-			g1.setWidget (0, 0, new HTML ("<b><font size=\"2\">Cloud URL:</font></b><"));
+			g1.setWidget (0, 0, new HTML ("<b><font size=\"2\">Cloud URL:</font></b>"));
 			final HTML cloudUrl = new HTML ("<font color=#666666 size=\"1\">http://" 
 				+ cloudInfo.getInternalHostPort() 
 				+ cloudInfo.getServicePath()
@@ -1340,35 +1393,24 @@ public class EucalyptusWebInterface implements EntryPoint {
 			g1.setWidget (1, 1, cloudId);
 			cloud_panel.add (g1);
 	        cloud_panel.setStyleName( "euca-text" );
-			final Button cloudButton = new Button ( "Register with Rightscale" );
+			final Button cloudButton = new Button ( "Register" );
 			cloudButton.addClickListener(new ClickListener() {
 	            public void onClick(Widget sender) {
-					EucalyptusWebBackend.App.getInstance().getCloudInfo(
-						sessionId,
-						true, // DO check external IP
-					new AsyncCallback() {
-						public void onSuccess( Object result )
-						{
-							cloudInfo = ( CloudInfoWeb ) result;
-							String callbackUrl = "http://" 
-								+ cloudInfo.getExternalHostPort() 
-								+ cloudInfo.getServicePath();
-							rightscaleUrl = "http://foo.bar/cloud_registrations/new?callback_url="
-								+ URL.encode(callbackUrl) 
-								+ "&registration_version=1.0&retry=1&secret_token="
-								+ URL.encode(cloudInfo.getCloudId());
-							new MyDialog().center();
-						}
-						public void onFailure( Throwable caught )
-						{
-							displayErrorPage( caught.getMessage() );
-						}
-					}
-					);
-	            }
+					new RightscaleDialog().center();
+				}
 	        });
-			g.setWidget (3, 0, cloud_panel ); g.getCellFormatter().setVerticalAlignment(3, 0, HasVerticalAlignment.ALIGN_TOP);
-			g.setWidget( 3, 1, cloudButton ); g.getCellFormatter().setVerticalAlignment(3, 1, HasVerticalAlignment.ALIGN_TOP);
+			g.setWidget (3, 0, cloud_panel ); 
+			g.getCellFormatter().setVerticalAlignment(3, 0, HasVerticalAlignment.ALIGN_TOP);
+			VerticalPanel vp = new VerticalPanel();
+			vp.setSpacing (3);
+			HorizontalPanel hp = new HorizontalPanel();
+			hp.setSpacing (3);
+			hp.add (cloudButton);
+			hp.add (new HTML ("with"));
+			vp.add (hp);
+			vp.add (new Image ("img/rightscale_logo_blue.gif"));
+			g.setWidget( 3, 1, vp ); 
+			g.getCellFormatter().setVerticalAlignment(3, 1, HasVerticalAlignment.ALIGN_TOP);
 		}
 
         parent.add(g);

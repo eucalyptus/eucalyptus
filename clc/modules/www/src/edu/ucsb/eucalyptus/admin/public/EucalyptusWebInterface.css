@@ -89,6 +89,7 @@ body {
     cursor: default;
     width: 100px;
     text-align: center;
+    border: none;
 }
 
 .gwt-TabBarItem:hover {
@@ -131,11 +132,16 @@ body {
 }
 
 .gwt-DialogBox { 
-	background: white;
+    border: solid;
+    border-width: 1px;
+    border-color: #FF6600;
+    background: #FFCC33;
+    padding: 10px 10px 10px 10px;
+    width: 400px;
 }
 .gwt-DialogBox .Caption {
-	background-color: #FFFF66;
+    font-size: smaller;
 }
 .gwt-DialogBox .dialogContent { 
-	background: #FFFF66;
+    padding: 10px 0px 0px 0px;
 }
