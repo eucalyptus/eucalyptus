@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.transport.query;
 
 
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
@@ -45,9 +46,9 @@ import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.HandlerDescription;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUpload;
-import org.apache.tools.ant.util.DateUtils;
 import org.apache.http.protocol.HTTP;
 import org.apache.log4j.Logger;
+import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
@@ -169,7 +170,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         return false;
     }
 
-    public String getOperation( HttpRequest httpRequest, MessageContext messageContext )
+    public String getOperation( HttpRequest httpRequest, MessageContext messageContext ) throws EucalyptusCloudException
     {
         //Figure out if it is an operation on the service, a bucket or an object
         Map operationParams = new HashMap();
@@ -231,7 +232,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                         List<FileItem> parts = fileUpload.parseRequest(postRequestContext);
                         for(FileItem part : parts) {
                             if(part.isFormField()) {
-                                String fieldName = part.getFieldName().toString();
+                                String fieldName = part.getFieldName().toString().toLowerCase();
                                 InputStream formFieldIn = part.getInputStream();
                                 int bytesRead;
                                 String fieldValue = "";
@@ -246,11 +247,10 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                         }
                     } catch (Exception ex) {
                         LOG.warn(ex, ex);
-                        return null;
+                        throw new EucalyptusCloudException("could not process form request");
                     }
 
                     String authenticationHeader = "";
-                    String aclHeader = "";
                     formFields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
                     if(formFields.containsKey(WalrusProperties.FormField.key.toString())) {
                         objectKey = formFields.get(WalrusProperties.FormField.key.toString());
@@ -279,7 +279,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                             policyData = new String(Base64.encode(policy.getBytes()));
                         } catch (Exception ex) {
                             LOG.warn(ex, ex);
-                            return null;
+                            throw new EucalyptusCloudException("error reading policy data.");
                         }
                         //parse policy
                         try {
@@ -291,33 +291,56 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                                     LOG.warn("Policy has expired.");
                                     //TODO: currently this will be reported as an invalid operation
                                     //Fix this to report a security exception
-                                    return null;
+                                   throw new EucalyptusCloudException("Policy has expired.");
                                 }
                             }
+                            List<String> policyItemNames = new ArrayList<String>();
+
                             JSONArray conditions = (JSONArray) policyObject.get(WalrusProperties.PolicyHeaders.conditions.toString());
                             for (int i = 0 ; i < conditions.length() ; ++i) {
                                 Object policyItem = conditions.get(i);
                                 if(policyItem instanceof JSONObject) {
                                     JSONObject jsonObject = (JSONObject) policyItem;
-                                    if(!exactMatch(jsonObject, formFields)) {
+                                    if(!exactMatch(jsonObject, formFields, policyItemNames)) {
                                         LOG.warn("Policy verification failed. ");
-                                        return null;
+                                        throw new EucalyptusCloudException("Policy verification failed.");
                                     }
-                                    System.out.println(jsonObject);
                                 } else if(policyItem instanceof  JSONArray) {
                                     JSONArray jsonArray = (JSONArray) policyItem;
-                                    if(!partialMatch(jsonArray, formFields)) {
+                                    if(!partialMatch(jsonArray, formFields, policyItemNames)) {
                                         LOG.warn("Policy verification failed. ");
-                                        return null;
+                                        throw new EucalyptusCloudException("Policy verification failed.");
                                     }
                                 }
                             }
+
+                            Set<String> formFieldsKeys = formFields.keySet();
+                            for(String formKey : formFieldsKeys) {
+                                if(formKey.startsWith(WalrusProperties.IGNORE_PREFIX))
+                                    continue;
+                                boolean fieldOkay = false;
+                                for(WalrusProperties.IgnoredFields field : WalrusProperties.IgnoredFields.values()) {
+                                    if(formKey.equals(field.toString().toLowerCase())) {
+                                        fieldOkay = true;
+                                        break;
+                                    }
+                                }
+                                if(fieldOkay)
+                                    continue;
+                                if(policyItemNames.contains(formKey))
+                                    continue;
+                                LOG.warn("All fields except those marked with x-ignore- should be in policy.");
+                                throw new EucalyptusCloudException("All fields except those marked with x-ignore- should be in policy.");
+                            }
                         } catch(Exception ex) {
-                            LOG.warn(ex, ex);
+                            //rethrow
+                            if(ex instanceof EucalyptusCloudException)
+                                throw (EucalyptusCloudException)ex;
+                            LOG.warn(ex);
                         }
                         //all form uploads without a policy are anonymous
-                        if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString())) {
-                            String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString());
+                        if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString().toLowerCase())) {
+                            String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString().toLowerCase());
                             authenticationHeader += "AWS" + " " + accessKeyId + ":";
                         }
                         if(formFields.containsKey(WalrusProperties.FormField.signature.toString())) {
@@ -372,7 +395,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                             inStream = new GZIPInputStream(in);
                         } catch(Exception ex) {
                             LOG.warn(ex, ex);
-                            return null;
+                            throw new EucalyptusCloudException("cannot process input");
                         }
                     }
                     String key = target[0] + "." + objectKey;
@@ -535,12 +558,13 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         return operationName;
     }
 
-    private boolean exactMatch(JSONObject jsonObject, Map formFields) {
+    private boolean exactMatch(JSONObject jsonObject, Map formFields, List<String> policyItemNames) {
         Iterator<String> iterator = jsonObject.keys();
         boolean returnValue = false;
         while(iterator.hasNext()) {
             String key = iterator.next();
             key = key.replaceAll("\\$", "");
+            policyItemNames.add(key.toLowerCase());
             try {
                 if(jsonObject.get(key).equals(formFields.get(key)))
                     returnValue = true;
@@ -554,7 +578,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         return returnValue;
     }
 
-    private boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields) {
+    private boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields, List<String> policyItemNames) {
         boolean returnValue = false;
         if(jsonArray.length() != 3)
             return false;
@@ -562,6 +586,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             String condition = (String) jsonArray.get(0);
             String key = (String) jsonArray.get(1);
             key = key.replaceAll("\\$", "");
+            policyItemNames.add(key.toLowerCase());
             String value = (String) jsonArray.get(2);
             if(condition.contains("eq")) {
                 if(value.equals(formFields.get(key)))

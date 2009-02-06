@@ -82,7 +82,13 @@ public class GenericHttpDispatcher extends RequestURIBasedDispatcher {
     if ( maybeVersion != null )
       nameSpace = nameSpace.replaceAll( dispatcher.getBinding().getName(), maybeVersion );
     //:: set the operation name... this looks ugly... sigh :://
-    httpRequest.setOperation( dispatcher.getOperation( httpRequest, messageContext ) );
+      String operationName;
+      try {
+        operationName = dispatcher.getOperation( httpRequest, messageContext );
+      } catch(Exception ex) {
+          throw new AxisFault("Could not process operation\n" + ex.getMessage());
+      }
+    httpRequest.setOperation( operationName );
     httpRequest.setBindingName( BindingUtil.sanitizeNamespace( dispatcher.getNamespace() ) );
 
     QuerySecurityHandler securityHandler = dispatcher.getSecurityHandler();
