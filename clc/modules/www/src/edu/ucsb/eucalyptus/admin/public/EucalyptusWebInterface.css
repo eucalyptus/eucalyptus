@@ -89,6 +89,7 @@ body {
     cursor: default;
     width: 100px;
     text-align: center;
+    border: none;
 }
 
 .gwt-TabBarItem:hover {
@@ -128,4 +129,19 @@ body {
 .euca-table-even-row {
     font-size: smaller;
     background: #FFFF66;
+}
+
+.gwt-DialogBox { 
+    border: solid;
+    border-width: 1px;
+    border-color: #FF6600;
+    background: #FFCC33;
+    padding: 20px 20px 20px 20px;
+    width: 400px;
+}
+.gwt-DialogBox .Caption {
+    font-size: smaller;
+}
+.gwt-DialogBox .dialogContent { 
+    padding: 10px 0px 0px 0px;
 }

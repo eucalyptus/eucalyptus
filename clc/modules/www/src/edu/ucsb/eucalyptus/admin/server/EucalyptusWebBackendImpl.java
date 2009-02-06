@@ -662,4 +662,11 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
     RemoteInfoHandler.setVmTypes(vmTypes);
   }
 
+  public CloudInfoWeb getCloudInfo(final String sessionId, final boolean setExternalHostPort) throws SerializableException
+  {
+    SessionInfo session = verifySession (sessionId);
+    UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+    //:: TODO-1.4: anything more to do here? :://
+    return EucalyptusManagement.getCloudInfo(setExternalHostPort);	
+  }
 }

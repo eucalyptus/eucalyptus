@@ -41,6 +41,11 @@ import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 
+import org.apache.commons.httpclient.*;
+import org.apache.commons.httpclient.methods.GetMethod;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import java.io.*;
 import java.net.*;
 import java.util.*;
 
@@ -407,6 +412,28 @@ public class EucalyptusManagement {
         }
     }
 
+	private static String getInternalIpAddress () 
+	{
+		String ipAddr = "127.0.0.1";
+
+		List<NetworkInterface> ifaces = null;
+		try {
+			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
+		} 
+		catch ( SocketException e1 ) {}
+
+		for ( NetworkInterface iface : ifaces )
+		try {
+			if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() )
+				for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) )
+				if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) )
+				ipAddr = iaddr.getHostAddress();
+		} 
+		catch ( SocketException e1 ) {}
+
+		return ipAddr;
+	}
+
     public static SystemConfigWeb getSystemConfig() throws SerializableException
     {
         EntityWrapper<SystemConfiguration> db = new EntityWrapper<SystemConfiguration>();
@@ -421,18 +448,7 @@ public class EucalyptusManagement {
         }
         catch ( EucalyptusCloudException e )
         {
-            String ipAddr = "127.0.0.1";
-			List<NetworkInterface> ifaces = null;
-			try {
-				ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-			} catch ( SocketException e1 ) {}
-			for ( NetworkInterface iface : ifaces )
-			try {
-				if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() )
-					for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) )
-						if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) )
-							ipAddr = iaddr.getHostAddress();
-			} catch ( SocketException e1 ) {}
+			String ipAddr = getInternalIpAddress ();
             String wUrl = String.format( "http://%s:8773/services/" + WalrusProperties.SERVICE_NAME, ipAddr );
 
             String defKernel = "", defRamdisk="";
@@ -494,4 +510,52 @@ public class EucalyptusManagement {
           StorageProperties.update();
         }
     }
+
+	private static String getExternalIpAddress () 
+	{
+		String ipAddr = null;
+		HttpClient httpClient = new HttpClient();
+		// Use Rightscale's "whoami" service
+		GetMethod method = new GetMethod("https://my.rightscale.com/whoami?api_version=1.0&cloud=0");
+		Integer timeoutMs = new Integer(3 * 1000); // TODO: is this working?
+		method.getParams().setSoTimeout(timeoutMs);
+		
+		try {
+			httpClient.executeMethod(method);
+			String str = method.getResponseBodyAsString();
+			Matcher matcher = Pattern.compile(".*your ip is (.*)").matcher(str);
+			if (matcher.find()) {
+				ipAddr = matcher.group(1);
+			}
+			
+		} catch (MalformedURLException e) {
+			LOG.warn ("Malformed URL exception: " + e.getMessage());
+            e.printStackTrace();
+
+		} catch (IOException e) {
+			LOG.warn ("I/O exception: " + e.getMessage());
+            e.printStackTrace();
+
+		} finally {
+			method.releaseConnection();
+		}
+
+		return ipAddr;
+	}
+	
+  	public static CloudInfoWeb getCloudInfo (boolean setExternalHostPort) throws SerializableException
+	{
+		CloudInfoWeb cloudInfo = new CloudInfoWeb();
+		cloudInfo.setInternalHostPort (getInternalIpAddress() + ":8773");
+		if (setExternalHostPort) {
+			String ipAddr = getExternalIpAddress();
+			if (ipAddr!=null) {
+				cloudInfo.setExternalHostPort ( ipAddr + ":8773");				
+			}
+		}
+		cloudInfo.setServicePath ("/services/Eucalyptus"); // TODO: what is the actual cloud registration service?
+		cloudInfo.setCloudId ("xyz123abc456"); // TODO: what is the actual cloud registration ID?
+		return cloudInfo;
+	}
+
 }
