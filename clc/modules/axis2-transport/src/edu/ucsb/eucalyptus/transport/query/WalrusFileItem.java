@@ -29,29 +29,20 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Chris Grzegorczyk grze@cs.ucsb.edu
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
 package edu.ucsb.eucalyptus.transport.query;
 
-import org.apache.axis2.AxisFault;
-import org.apache.axis2.context.MessageContext;
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import org.apache.commons.fileupload.disk.DiskFileItem;
 
-/**
- * User: decker
- * Date: Aug 19, 2008
- * Time: 9:22:36 PM
- */
-public interface RESTfulDispatcher {
+import java.io.File;
 
-  boolean accepts( HttpRequest httpRequest, MessageContext messageContext ) throws AxisFault;
-
-  String getOperation( HttpRequest httpRequest, MessageContext messageContext ) throws EucalyptusCloudException;
-
-  QuerySecurityHandler getSecurityHandler();
-
-  QueryBinding getBinding();
-
-  String getNamespace();
+public class WalrusFileItem extends DiskFileItem {
+    public WalrusFileItem(String fieldName, String contentType,
+                          boolean isFormField, String fileName, int sizeThreshold,
+                          File repository) {
+        super(fieldName, contentType, isFormField, fileName, sizeThreshold,
+                repository);
+    }
 }

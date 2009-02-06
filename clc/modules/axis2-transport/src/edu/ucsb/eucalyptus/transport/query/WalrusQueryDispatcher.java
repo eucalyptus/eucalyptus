@@ -29,11 +29,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Chris Grzegorczyk grze@cs.ucsb.edu
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
 package edu.ucsb.eucalyptus.transport.query;
 
+
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
@@ -42,8 +44,14 @@ import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.util.*;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.HandlerDescription;
-import org.apache.commons.lang.time.DateUtils;
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileUpload;
+import org.apache.http.protocol.HTTP;
 import org.apache.log4j.Logger;
+import org.apache.tools.ant.util.DateUtils;
+import org.bouncycastle.util.encoders.Base64;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -98,8 +106,9 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.GET.toString() + OperationParameter.acl.toString(), "GetObjectAccessControlPolicy");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString() + OperationParameter.acl.toString(), "SetObjectAccessControlPolicy");
 
+        newMap.put(BUCKET + WalrusQueryDispatcher.HTTPVerb.POST.toString(), "PostObject");
+
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString(), "PutObject");
-        //TODO: newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.POST.toString(), "PutObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.GET.toString(), "GetObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.DELETE.toString(), "DeleteObject");
 
@@ -161,7 +170,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         return false;
     }
 
-    public String getOperation( HttpRequest httpRequest, MessageContext messageContext )
+    public String getOperation( HttpRequest httpRequest, MessageContext messageContext ) throws EucalyptusCloudException
     {
         //Figure out if it is an operation on the service, a bucket or an object
         Map operationParams = new HashMap();
@@ -207,6 +216,157 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             if(!target[0].equals("")) {
                 operationKey = BUCKET + verb;
                 operationParams.put("Bucket", target[0]);
+
+                if(verb.equals(HTTPVerb.POST.toString())) {
+                    InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
+                    messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
+                    String contentType = headers.get(HTTP.CONTENT_TYPE);
+                    int contentLength = Integer.parseInt(headers.get(HTTP.CONTENT_LEN));
+                    POSTRequestContext postRequestContext = new POSTRequestContext(in, contentType, contentLength);
+                    FileUpload fileUpload = new FileUpload(new WalrusFileItemFactory());
+                    InputStream formDataIn = null;
+                    String objectKey = null;
+                    String key;
+                    Map<String, String> formFields = new HashMap<String, String>();
+                    try {
+                        List<FileItem> parts = fileUpload.parseRequest(postRequestContext);
+                        for(FileItem part : parts) {
+                            if(part.isFormField()) {
+                                String fieldName = part.getFieldName().toString().toLowerCase();
+                                InputStream formFieldIn = part.getInputStream();
+                                int bytesRead;
+                                String fieldValue = "";
+                                byte[] bytes = new byte[512];
+                                while((bytesRead = formFieldIn.read(bytes)) > 0) {
+                                    fieldValue += new String(bytes, 0, bytesRead);
+                                }
+                                formFields.put(fieldName, fieldValue);
+                            } else {
+                                formDataIn = part.getInputStream();
+                            }
+                        }
+                    } catch (Exception ex) {
+                        LOG.warn(ex, ex);
+                        throw new EucalyptusCloudException("could not process form request");
+                    }
+
+                    String authenticationHeader = "";
+                    formFields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
+                    if(formFields.containsKey(WalrusProperties.FormField.key.toString())) {
+                        objectKey = formFields.get(WalrusProperties.FormField.key.toString());
+                    }
+                    if(formFields.containsKey(WalrusProperties.FormField.acl.toString())) {
+                        String acl = formFields.get(WalrusProperties.FormField.acl.toString());
+                        headers.put(WalrusProperties.AMZ_ACL, acl);
+                    }
+                    if(formFields.containsKey(WalrusProperties.FormField.success_action_redirect.toString())) {
+                        String successActionRedirect = formFields.get(WalrusProperties.FormField.success_action_redirect.toString());
+                        operationParams.put("SuccessActionRedirect", successActionRedirect);
+                    }
+                    if(formFields.containsKey(WalrusProperties.FormField.success_action_status.toString())) {
+                        Integer successActionStatus = Integer.parseInt(formFields.get(WalrusProperties.FormField.success_action_status.toString()));
+                        if(successActionStatus == 200 || successActionStatus == 201)
+                            operationParams.put("SuccessActionStatus", successActionStatus);
+                        else
+                            operationParams.put("SuccessActionStatus", 204);
+                    } else {
+                        operationParams.put("SuccessActionStatus", 204);
+                    }
+                    if(formFields.containsKey(WalrusProperties.FormField.policy.toString())) {
+                        String policy = new String(Base64.decode(formFields.remove(WalrusProperties.FormField.policy.toString())));
+                        String policyData;
+                        try {
+                            policyData = new String(Base64.encode(policy.getBytes()));
+                        } catch (Exception ex) {
+                            LOG.warn(ex, ex);
+                            throw new EucalyptusCloudException("error reading policy data.");
+                        }
+                        //parse policy
+                        try {
+                            JSONObject policyObject = new JSONObject(policy);
+                            String expiration = (String) policyObject.get(WalrusProperties.PolicyHeaders.expiration.toString());
+                            if(expiration != null) {
+                                Date expirationDate = DateUtils.parseIso8601DateTimeOrDate(expiration);
+                                if((new Date()).getTime() > expirationDate.getTime()) {
+                                    LOG.warn("Policy has expired.");
+                                    //TODO: currently this will be reported as an invalid operation
+                                    //Fix this to report a security exception
+                                   throw new EucalyptusCloudException("Policy has expired.");
+                                }
+                            }
+                            List<String> policyItemNames = new ArrayList<String>();
+
+                            JSONArray conditions = (JSONArray) policyObject.get(WalrusProperties.PolicyHeaders.conditions.toString());
+                            for (int i = 0 ; i < conditions.length() ; ++i) {
+                                Object policyItem = conditions.get(i);
+                                if(policyItem instanceof JSONObject) {
+                                    JSONObject jsonObject = (JSONObject) policyItem;
+                                    if(!exactMatch(jsonObject, formFields, policyItemNames)) {
+                                        LOG.warn("Policy verification failed. ");
+                                        throw new EucalyptusCloudException("Policy verification failed.");
+                                    }
+                                } else if(policyItem instanceof  JSONArray) {
+                                    JSONArray jsonArray = (JSONArray) policyItem;
+                                    if(!partialMatch(jsonArray, formFields, policyItemNames)) {
+                                        LOG.warn("Policy verification failed. ");
+                                        throw new EucalyptusCloudException("Policy verification failed.");
+                                    }
+                                }
+                            }
+
+                            Set<String> formFieldsKeys = formFields.keySet();
+                            for(String formKey : formFieldsKeys) {
+                                if(formKey.startsWith(WalrusProperties.IGNORE_PREFIX))
+                                    continue;
+                                boolean fieldOkay = false;
+                                for(WalrusProperties.IgnoredFields field : WalrusProperties.IgnoredFields.values()) {
+                                    if(formKey.equals(field.toString().toLowerCase())) {
+                                        fieldOkay = true;
+                                        break;
+                                    }
+                                }
+                                if(fieldOkay)
+                                    continue;
+                                if(policyItemNames.contains(formKey))
+                                    continue;
+                                LOG.warn("All fields except those marked with x-ignore- should be in policy.");
+                                throw new EucalyptusCloudException("All fields except those marked with x-ignore- should be in policy.");
+                            }
+                        } catch(Exception ex) {
+                            //rethrow
+                            if(ex instanceof EucalyptusCloudException)
+                                throw (EucalyptusCloudException)ex;
+                            LOG.warn(ex);
+                        }
+                        //all form uploads without a policy are anonymous
+                        if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString().toLowerCase())) {
+                            String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString().toLowerCase());
+                            authenticationHeader += "AWS" + " " + accessKeyId + ":";
+                        }
+                        if(formFields.containsKey(WalrusProperties.FormField.signature.toString())) {
+                            String signature = formFields.remove(WalrusProperties.FormField.signature.toString());
+                            authenticationHeader += signature;
+                            headers.put(HMACQuerySecurityHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
+                        }
+                        headers.put(WalrusProperties.FormField.FormUploadPolicyData.toString(), policyData);
+                    }
+                    operationParams.put("Key", objectKey);
+                    key = target[0] + "." + objectKey;
+                    String randomKey = key + "." + Hashes.getRandom(10);
+                    LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
+                    int dataLength = 0;
+                    try {
+                        dataLength = formDataIn.available();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                    Writer writer = new Writer(formDataIn, dataLength, putQueue);
+                    writer.start();
+
+                    operationParams.put("ContentLength", (new Long(dataLength).toString()));
+                    operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
+                }
+
             } else {
                 operationKey = SERVICE + verb;
             }
@@ -235,7 +395,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                             inStream = new GZIPInputStream(in);
                         } catch(Exception ex) {
                             LOG.warn(ex, ex);
-                            return null;
+                            throw new EucalyptusCloudException("cannot process input");
                         }
                     }
                     String key = target[0] + "." + objectKey;
@@ -298,6 +458,8 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             }
 
         }
+
+
         if (verb.equals(HTTPVerb.PUT.toString()) && params.containsKey(OperationParameter.acl.toString())) {
             //read ACL
             try {
@@ -396,6 +558,52 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         return operationName;
     }
 
+    private boolean exactMatch(JSONObject jsonObject, Map formFields, List<String> policyItemNames) {
+        Iterator<String> iterator = jsonObject.keys();
+        boolean returnValue = false;
+        while(iterator.hasNext()) {
+            String key = iterator.next();
+            key = key.replaceAll("\\$", "");
+            policyItemNames.add(key.toLowerCase());
+            try {
+                if(jsonObject.get(key).equals(formFields.get(key)))
+                    returnValue = true;
+                else
+                    returnValue = false;
+            } catch(Exception ex) {
+                ex.printStackTrace();
+                return false;
+            }
+        }
+        return returnValue;
+    }
+
+    private boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields, List<String> policyItemNames) {
+        boolean returnValue = false;
+        if(jsonArray.length() != 3)
+            return false;
+        try {
+            String condition = (String) jsonArray.get(0);
+            String key = (String) jsonArray.get(1);
+            key = key.replaceAll("\\$", "");
+            policyItemNames.add(key.toLowerCase());
+            String value = (String) jsonArray.get(2);
+            if(condition.contains("eq")) {
+                if(value.equals(formFields.get(key)))
+                    returnValue = true;
+            } else if(condition.contains("starts-with")) {
+                if(!formFields.containsKey(key.toLowerCase()))
+                    return false;
+                if(formFields.get(key.toLowerCase()).startsWith(value))
+                    returnValue = true;
+            }
+        } catch(Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+        return returnValue;
+    }
+
     private void parseExtendedGetHeaders(Map operationParams, String headerString, String value) {
         if(headerString.equals(WalrusProperties.ExtendedGetHeaders.Range.toString())) {
             String prefix = "bytes=";
@@ -412,7 +620,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), Long.parseLong(values[1]));
         } else if(WalrusProperties.ExtendedHeaderDateTypes.contains(headerString)) {
             try {
-                operationParams.put(headerString, DateUtils.parseDate(value, null));
+                operationParams.put(headerString, DateUtils.parseIso8601DateTimeOrDate(value));
             } catch(Exception ex) {
                 ex.printStackTrace();
             }

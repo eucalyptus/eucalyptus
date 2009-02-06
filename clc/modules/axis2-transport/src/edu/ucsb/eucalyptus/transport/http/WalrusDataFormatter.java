@@ -30,8 +30,7 @@ public class WalrusDataFormatter implements MessageFormatter {
         Integer status = (Integer) messageContext.getProperty(Axis2HttpWorker.HTTP_STATUS);
         if(status == null) {
             Boolean getType = (Boolean) messageContext.getProperty(WalrusProperties.STREAMING_HTTP_GET);
-            assert(getType != null);
-            if(getType.equals(Boolean.FALSE)) {
+            if(getType != null && getType.equals(Boolean.FALSE)) {
                 try {
                     outputStream.flush();
                 } catch(Exception ex) {

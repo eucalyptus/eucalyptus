@@ -29,29 +29,40 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Chris Grzegorczyk grze@cs.ucsb.edu
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
 package edu.ucsb.eucalyptus.transport.query;
 
-import org.apache.axis2.AxisFault;
-import org.apache.axis2.context.MessageContext;
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import org.apache.commons.fileupload.RequestContext;
 
-/**
- * User: decker
- * Date: Aug 19, 2008
- * Time: 9:22:36 PM
- */
-public interface RESTfulDispatcher {
+import java.io.InputStream;
+import java.io.IOException;
 
-  boolean accepts( HttpRequest httpRequest, MessageContext messageContext ) throws AxisFault;
+public class POSTRequestContext implements RequestContext {
+    private InputStream inputStream;
+    private String contentType;
+    int contentLength;
 
-  String getOperation( HttpRequest httpRequest, MessageContext messageContext ) throws EucalyptusCloudException;
+    public POSTRequestContext(InputStream inputStream, String contentType, int contentLength) {
+        this.inputStream = inputStream;
+        this.contentType = contentType;
+        this.contentLength = contentLength;
+    }
 
-  QuerySecurityHandler getSecurityHandler();
+    public String getCharacterEncoding() {
+        return null;
+    }
 
-  QueryBinding getBinding();
+    public String getContentType() {
+        return contentType;
+    }
 
-  String getNamespace();
+    public int getContentLength() {
+        return contentLength;
+    }
+
+    public InputStream getInputStream() throws IOException {
+        return inputStream;
+    }
 }

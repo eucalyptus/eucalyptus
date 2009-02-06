@@ -39,11 +39,13 @@ import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.Base64;
 
 import java.io.StringReader;
+import java.net.URLDecoder;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
@@ -130,6 +132,16 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             UserInfo admin = new UserInfo(EucalyptusProperties.NAME);
             admin.setIsAdministrator(Boolean.TRUE);
             return admin;
+        } else if(hdrs.containsKey(WalrusProperties.FormField.FormUploadPolicyData)) {
+            String data = (String) hdrs.remove(WalrusProperties.FormField.FormUploadPolicyData);
+            String auth_part = (String) hdrs.remove(SecurityParameter.Authorization);
+
+            if(auth_part != null) {
+                String sigString[] = getSigInfo(auth_part);
+                String signature = sigString[1];
+                return getUserInfo(sigString[0], signature, data);
+            }
+            throw new QuerySecurityException("User authentication failed.");
         } else {
             //external user request
             String date =  (String) hdrs.remove( SecurityParameter.Date);
@@ -159,21 +171,26 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
                 String sigString[] = getSigInfo(auth_part);
                 String signature = sigString[1];
                 return getUserInfo(sigString[0], signature, data);
-            } else if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())){
+            } else if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())) {
                 //query string authentication
                 String accesskeyid = parameters.get(SecurityParameter.AWSAccessKeyId.toString());
-                String signature = parameters.get(SecurityParameter.Signature.toString());
-                if(signature == null) {
-                    throw new QuerySecurityException("User authentication failed. Null signature.");
-                }
-                String expires = parameters.get(SecurityParameter.Expires.toString());
-                if(expires == null) {
-                    throw new QuerySecurityException("Authentication failed. Expires must be specified.");
-                }
-                if(checkExpires(expires)) {
-                    return getUserInfo(accesskeyid, signature, data);
-                } else {
-                    throw new QuerySecurityException("Cannot process request. Expired.");
+                try {
+                    String signature = URLDecoder.decode(parameters.get(SecurityParameter.Signature.toString()), "UTF-8");
+                    if(signature == null) {
+                        throw new QuerySecurityException("User authentication failed. Null signature.");
+                    }
+                    String expires = parameters.get(SecurityParameter.Expires.toString());
+                    if(expires == null) {
+                        throw new QuerySecurityException("Authentication failed. Expires must be specified.");
+                    }
+                    if(checkExpires(expires)) {
+                        String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + getCanonicalizedAmzHeaders(hdrs) + addrString;
+                        return getUserInfo(accesskeyid, signature, stringToSign);
+                    } else {
+                        throw new QuerySecurityException("Cannot process request. Expired.");
+                    }
+                } catch (Exception ex) {
+                    throw new QuerySecurityException("Unsupported encoding");
                 }
             } else{
                 //anonymous request

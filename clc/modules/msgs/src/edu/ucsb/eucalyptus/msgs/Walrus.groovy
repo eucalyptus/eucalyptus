@@ -152,6 +152,27 @@ public class WalrusBucketErrorMessageType extends WalrusErrorMessageType {
   }
 }
 
+public class WalrusRedirectMessageType extends WalrusErrorMessageType {
+  private String redirectUrl;
+
+  def WalrusRedirectMessageType() {
+    this.code = 301;
+  }
+
+  def WalrusRedirectMessageType(String redirectUrl) {
+    this.redirectUrl = redirectUrl;
+    this.code = 301;
+  }
+
+  public String toString() {
+    return "WalrusRedirectMessage:" +  redirectUrl;
+  }
+
+  public String getRedirectUrl() {
+    return redirectUrl;
+  }
+}
+
 public class ListAllMyBucketsType extends WalrusRequestType {
 }
 
@@ -234,6 +255,14 @@ public class WalrusDataResponseType extends WalrusResponseType {
 public class PutObjectResponseType extends WalrusDataResponseType {
 }
 
+public class PostObjectResponseType extends WalrusDataResponseType {
+  String redirectUrl;
+  Integer successCode;
+  String location;
+  String bucket;
+  String key;
+}
+
 public class PutObjectInlineResponseType extends WalrusDataResponseType {
 }
 
@@ -242,6 +271,15 @@ public class PutObjectType extends WalrusDataRequestType {
   ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
   AccessControlListType accessControlList = new AccessControlListType();
   String storageClass;
+}
+
+public class PostObjectType extends WalrusDataRequestType {
+  String contentLength;
+  ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  AccessControlListType accessControlList = new AccessControlListType();
+  String storageClass;
+  String successActionRedirect;
+  Integer successActionStatus;
 }
 
 public class CopyObjectType extends WalrusDataRequestType {
