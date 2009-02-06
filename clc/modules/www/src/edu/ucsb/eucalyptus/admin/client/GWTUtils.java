@@ -38,6 +38,10 @@ import java.util.HashMap;
 
 public final class GWTUtils {
 
+	public static native String escape (String s)/*-{
+		return encodeURIComponent(s);
+	}-*/;
+	
     public static native void redirect(String url)/*-{
         $wnd.location = url;
     }-*/;
