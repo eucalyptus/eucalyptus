@@ -918,14 +918,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         return ok_button;
 	}
 
-    private boolean isPasswordExpired (UserInfoWeb user) {
-        final long now = System.currentTimeMillis();
-        if ((now > 0) && (now >= user.getPasswordExpires().longValue())) {
-            return true;
-        }
-        return false;
-    }
-
     public void attemptLogin()
     {
         displayStatusPage("Logging into the server...");
@@ -933,27 +925,24 @@ public class EucalyptusWebInterface implements EntryPoint {
                 sessionId,
                 null, /* get user record associated with this sessionId */
                 new AsyncCallback() {
-                    public void onSuccess( Object result )
-                    {
-                        loggedInUser = ( UserInfoWeb ) ( (List) result).get(0);
-                        if ( currentAction == null )
-                        {
-                            if (isPasswordExpired(loggedInUser)) {
-                                displayPasswordChangePage( true );
-                            } else {
-                                displayDefaultPage ("");
-                            }
-                        }
-                        else
-                        {
-                            executeAction( currentAction );
-                        }
-                    }
+					public void onSuccess( Object result )
+					{
+						loggedInUser = ( UserInfoWeb ) ( (List) result).get(0);
+						if ( currentAction == null ) {
+							displayDefaultPage ("");
+						} else {
+							executeAction( currentAction );
+						}
+					}
 
-                    public void onFailure( Throwable caught )
-                    {
-                        displayLoginErrorPage( caught.getMessage() );
-                    }
+					public void onFailure( Throwable caught )
+					{
+						if (caught.getMessage().equals("Password expired")) {
+							displayPasswordChangePage( true );							
+						} else {
+							displayLoginErrorPage( caught.getMessage() );							
+						}
+					}
                 }
         );
     }
