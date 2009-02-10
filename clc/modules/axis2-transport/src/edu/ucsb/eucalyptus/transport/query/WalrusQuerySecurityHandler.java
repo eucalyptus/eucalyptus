@@ -139,7 +139,7 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             if(auth_part != null) {
                 String sigString[] = getSigInfo(auth_part);
                 String signature = sigString[1];
-                return getUserInfo(sigString[0], signature, data);
+                return getUserInfo(sigString[0], signature, data, false);
             }
             throw new QuerySecurityException("User authentication failed.");
         } else {
@@ -170,7 +170,7 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             if(auth_part != null) {
                 String sigString[] = getSigInfo(auth_part);
                 String signature = sigString[1];
-                return getUserInfo(sigString[0], signature, data);
+                return getUserInfo(sigString[0], signature, data, false);
             } else if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())) {
                 //query string authentication
                 String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
@@ -185,12 +185,12 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
                     }
                     if(checkExpires(expires)) {
                         String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + getCanonicalizedAmzHeaders(hdrs) + addrString;
-                        return getUserInfo(accesskeyid, signature, stringToSign);
+                        return getUserInfo(accesskeyid, signature, stringToSign, true);
                     } else {
                         throw new QuerySecurityException("Cannot process request. Expired.");
                     }
                 } catch (Exception ex) {
-                    throw new QuerySecurityException("Unsupported encoding");
+                    throw new QuerySecurityException("Could not verify request " + ex.getMessage());
                 }
             } else{
                 //anonymous request
@@ -200,12 +200,20 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
     }
 
 
-    private UserInfo getUserInfo(String accessKeyID, String signature, String data) throws QuerySecurityException {
+    private UserInfo getUserInfo(String accessKeyID, String signature, String data, boolean decode) throws QuerySecurityException {
         signature = signature.replaceAll("=", "");
 
         String queryKey = findQueryKey(accessKeyID);
 
         String authSig = checkSignature( queryKey, data );
+
+        if(decode) {
+            try {
+                authSig = URLDecoder.decode(authSig, "UTF-8");
+            } catch(Exception ex) {
+                throw new QuerySecurityException(ex.getMessage());
+            }
+        }
 
         if (!authSig.equals(signature))
             throw new QuerySecurityException( "User authentication failed. Could not verify signature" );
