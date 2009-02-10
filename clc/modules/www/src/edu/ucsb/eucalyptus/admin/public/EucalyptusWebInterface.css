@@ -1,3 +1,5 @@
+a:focus {-moz-outline: none /* fx 1.07*/ outline:none /* fx 1.05, Safari, Mac IE*/}
+
 body {
     background-color: white;
     color: black;
@@ -43,7 +45,7 @@ body {
 
 .euca-top-bar {
     background: #FFCC33;
-    padding: 10px 10px 10px 10px;
+    padding: 4px 15px 2px 2px;
     font-weight: bold;
     font-size: large;
     text-align: left;
@@ -80,6 +82,7 @@ body {
     cursor: pointer;
     width: 100px;
     text-align: center;
+    -moz-outline: none; /* fx 1.07*/ outline: none; /* fx 1.05, Safari, Mac IE*/
 }
 
 .gwt-TabBar .gwt-TabBarItem-selected {
@@ -89,7 +92,6 @@ body {
     cursor: default;
     width: 100px;
     text-align: center;
-    border: none;
 }
 
 .gwt-TabBarItem:hover {
