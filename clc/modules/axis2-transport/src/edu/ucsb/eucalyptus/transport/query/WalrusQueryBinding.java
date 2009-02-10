@@ -179,7 +179,7 @@ public class WalrusQueryBinding implements QueryBinding {
             }
             obj.setProperty(metaDataString, metaData);
         }
-        
+
         //populate from binding map (required params)
         Iterator bindingMapIterator = bindingMap.keySet().iterator();
         while(bindingMapIterator.hasNext()) {
@@ -224,7 +224,7 @@ public class WalrusQueryBinding implements QueryBinding {
 
         CanonicalUserType aws = new CanonicalUserType();
         aws.setDisplayName("");
-        Grant grant = new Grant(aws, cannedACLString);
+        Grant grant = new Grant(new Grantee(aws), cannedACLString);
         grants.add(grant);
 
         accessControlList.setGrants(grants);

@@ -75,6 +75,16 @@ public class CanonicalUserType extends EucalyptusData {
   }
 }
 
+public class Group extends EucalyptusData {
+  String uri;
+
+  public Group() {}
+
+  public Group(String uri) {
+    this.uri = uri;
+  }
+}
+
 public class AccessControlPolicyType extends EucalyptusData {
   AccessControlPolicyType() {}
   AccessControlPolicyType(CanonicalUserType owner, AccessControlListType acl) {
@@ -85,14 +95,28 @@ public class AccessControlPolicyType extends EucalyptusData {
   AccessControlListType accessControlList;
 }
 
-public class Grant extends EucalyptusData {
-  //FIXME: handle other types of users
-  CanonicalUserType grantee;
-  String permission;
+public class Grantee extends EucalyptusData {
+  CanonicalUserType canonicalUser;
+  Group group;
 
+  public Grantee() {}
+  
+  public Grantee(CanonicalUserType canonicalUser) {
+    this.canonicalUser = canonicalUser;
+  }
+
+  public Grantee(Group group) {
+    this.group = group;
+  }
+}
+
+public class Grant extends EucalyptusData {
+  Grantee grantee;
+  String permission;
+           
   public Grant() {}
 
-  public Grant(CanonicalUserType grantee, String permission) {
+  public Grant(Grantee grantee, String permission) {
     this.grantee = grantee;
     this.permission = permission;
   }

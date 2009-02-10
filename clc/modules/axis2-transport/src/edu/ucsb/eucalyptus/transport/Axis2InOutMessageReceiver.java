@@ -162,6 +162,7 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
                     newMsgContext.setProperty("GET_RANDOM_KEY", request.getRandomKey());
                 }
                 //This selects the data formatter
+                newMsgContext.setProperty( "messageType", "application/walrus" );                
             } else if(putType != null) {
                 if(reply instanceof PostObjectResponseType) {
                     PostObjectResponseType postReply = (PostObjectResponseType) reply;

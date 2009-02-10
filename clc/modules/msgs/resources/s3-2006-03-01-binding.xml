@@ -121,13 +121,22 @@
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.Grant" abstract="true">
-        <structure name="Grantee" field="grantee" map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" usage="optional"/>
+        <structure field="grantee" map-as="edu.ucsb.eucalyptus.msgs.Grantee" usage="optional"/>
         <value name="Permission" field="permission" usage="optional"/>
+    </mapping>
+
+    <mapping name="Grantee" class="edu.ucsb.eucalyptus.msgs.Grantee">
+        <structure field="canonicalUser" map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" usage="optional"/>
+        <structure field="group" map-as="edu.ucsb.eucalyptus.msgs.Group" usage="optional"/>
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.CanonicalUserType" abstract="true">
         <value name="ID" field="ID" usage="optional"/>
         <value name="DisplayName" field="DisplayName" usage="optional"/>
+    </mapping>
+
+    <mapping class="edu.ucsb.eucalyptus.msgs.Group" abstract="true">
+        <value name="URI" field="uri"/>
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType" abstract="true">

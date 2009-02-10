@@ -35,6 +35,7 @@ package edu.ucsb.eucalyptus.util;
 
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -86,7 +87,7 @@ public class XMLParser {
         this.rawData = xmlData;
         InputStream in = new ByteArrayInputStream(xmlData.getBytes());
         try {
-        docRoot = docBuilder.parse(in);
+            docRoot = docBuilder.parse(in);
         } catch(Exception ex) {
             ex.printStackTrace();
         }
@@ -95,6 +96,15 @@ public class XMLParser {
     public String getValue(String name) {
         try {
             return (String) xpath.evaluate(name, docRoot, XPathConstants.STRING);
+        } catch(XPathExpressionException ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }
+
+    public String getValue(Node node, String name) {
+        try {
+            return (String) xpath.evaluate(name, node, XPathConstants.STRING);
         } catch(XPathExpressionException ex) {
             ex.printStackTrace();
         }
@@ -114,6 +124,17 @@ public class XMLParser {
         }
         return null;
     }
+
+    public DTMNodeList getNodes(String name) {
+        try {
+            DTMNodeList nodes = (DTMNodeList) xpath.evaluate(name, docRoot, XPathConstants.NODESET);
+            return nodes;
+        } catch(XPathExpressionException ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }
+
 
     public String getXML(String name) {
         if(rawData == null) {

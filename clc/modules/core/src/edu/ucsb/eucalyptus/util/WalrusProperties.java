@@ -75,6 +75,9 @@ public class WalrusProperties {
     public static final String STREAMING_HTTP_GET = "STREAMING_HTTP_GET";
     public static final String STREAMING_HTTP_PUT = "STREAMING_HTTP_PUT";
     public static final String AMZ_ACL = "x-amz-acl";
+    public static final String ALL_USERS_GROUP = "http://acs.amazonaws.com/groups/global/AllUsers";
+    public static final String AUTHENTICATED_USERS_GROUP = "'http://acs.amazonaws.com/groups/global/AuthenticatedUsers";
+
     public static final String IGNORE_PREFIX = "x-ignore-";
     public static final String ADMIN = "admin";
     public static String WALRUS_REF = "vm://BukkitInternal";

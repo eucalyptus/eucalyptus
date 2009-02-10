@@ -277,7 +277,7 @@ public class Bukkit {
             ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
             for(BucketInfo bucketInfo: bucketInfoList) {
-                buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z"));
+                buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN)));
             }
 
             CanonicalUserType owner = new CanonicalUserType(user.getQueryId(), user.getUserName());
@@ -323,6 +323,7 @@ public class Bukkit {
 
                     if(grantUserInfos.size() > 0) {
                         UserInfo grantUserInfo = grantUserInfos.get(0);
+                        bucket.readPermissions(grants);
                         addPermission(grants, grantUserInfo, grantInfo);
                     }
                 }
@@ -353,24 +354,24 @@ public class Bukkit {
         CanonicalUserType user = new CanonicalUserType(userInfo.getQueryId(), userInfo.getUserName());
 
         if (grantInfo.isRead() && grantInfo.isWrite() && grantInfo.isReadACP() && grantInfo.isWriteACP()) {
-            grants.add(new Grant(user, "FULL_CONTROL"));
+            grants.add(new Grant(new Grantee(user), "FULL_CONTROL"));
             return;
         }
 
         if (grantInfo.isRead()) {
-            grants.add(new Grant(user, "READ"));
+            grants.add(new Grant(new Grantee(user), "READ"));
         }
 
         if (grantInfo.isWrite()) {
-            grants.add(new Grant(user, "WRITE"));
+            grants.add(new Grant(new Grantee(user), "WRITE"));
         }
 
         if (grantInfo.isReadACP()) {
-            grants.add(new Grant(user, "READ_ACP"));
+            grants.add(new Grant(new Grantee(user), "READ_ACP"));
         }
 
         if (grantInfo.isWriteACP()) {
-            grants.add(new Grant(user, "WRITE_ACP"));
+            grants.add(new Grant(new Grantee(user), "WRITE_ACP"));
         }
     }
 
@@ -414,12 +415,15 @@ public class Bukkit {
                     }
                 }
                 //write object to bucket
+                String objectName;
                 if (foundObject == null) {
                     //not found. create an object info
                     foundObject = new ObjectInfo(objectKey);
                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                     foundObject.addGrants(userId, grantInfos, accessControlList);
                     foundObject.setGrants(grantInfos);
+                    objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
+                    foundObject.setObjectName(objectName);
                     objectInfos.add(foundObject);
                 } else {
                     //object already exists. see if we can modify acl
@@ -428,9 +432,8 @@ public class Bukkit {
                         foundObject.addGrants(userId, grantInfos, accessControlList);
                         foundObject.setGrants(grantInfos);
                     }
+                    objectName = foundObject.getObjectName();
                 }
-                String objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
-                foundObject.setObjectName(objectName);
                 foundObject.setObjectKey(objectKey);
                 foundObject.setOwnerId(userId);
                 foundObject.addMetaData(request.getMetaData());
@@ -533,7 +536,7 @@ public class Bukkit {
             throw new NoSuchBucketException(bucketName);
         }
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
         return reply;
     }
 
@@ -635,12 +638,15 @@ public class Bukkit {
                     }
                 }
                 //write object to bucket
+                String objectName;
                 if (foundObject == null) {
                     //not found. create an object info
                     foundObject = new ObjectInfo(objectKey);
                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                     foundObject.addGrants(userId, grantInfos, accessControlList);
                     foundObject.setGrants(grantInfos);
+                    objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
+                    foundObject.setObjectName(objectName);
                     objectInfos.add(foundObject);
                 } else {
                     //object already exists. see if we can modify acl
@@ -648,13 +654,13 @@ public class Bukkit {
                         List<GrantInfo> grantInfos = foundObject.getGrants();
                         foundObject.addGrants(userId, grantInfos, accessControlList);
                     }
+                    objectName = foundObject.getObjectName();
                 }
                 foundObject.setObjectKey(objectKey);
                 foundObject.setOwnerId(userId);
                 try {
                     //writes are unconditional
                     byte[] base64Data = request.getBase64Data().getBytes();
-                    String objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
                     foundObject.setObjectName(objectName);
                     storageManager.putObject(bucketName, objectName, base64Data, false);
                     md5 = Hashes.getHexString(Hashes.Digest.MD5.get().digest(base64Data));
@@ -695,7 +701,7 @@ public class Bukkit {
         db.commit();
 
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
         return reply;
     }
 
@@ -881,7 +887,7 @@ public class Bukkit {
                         ListEntry listEntry = new ListEntry();
                         listEntry.setKey(objectKey);
                         listEntry.setEtag(objectInfo.getEtag());
-                        listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+                        listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
                         listEntry.setStorageClass(objectInfo.getStorageClass());
                         String displayName = objectInfo.getOwnerId();
 
@@ -947,6 +953,7 @@ public class Bukkit {
                             List<UserInfo> grantUserInfos = db2.query(userInfo);
                             db2.commit();
                             if(grantUserInfos.size() > 0) {
+                                objectInfo.readPermissions(grants);
                                 addPermission(grants, grantUserInfos.get(0), grantInfo);
                             }
                         }
@@ -1110,12 +1117,12 @@ public class Bukkit {
                                 request.setRandomKey(randomKey);
                                 LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
 
-                                Reader reader = new Reader(bucketName, objectName, objectInfo.getSize(), getQueue, true, null);
+                                Reader reader = new Reader(bucketName, objectName, objectInfo.getSize(), getQueue, deleteAfterGet, null);
                                 reader.start();
                             }
                         }
                         reply.setEtag(objectInfo.getEtag());
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
                         reply.setSize(objectInfo.getSize());
                         Status status = new Status();
                         status.setCode(200);
@@ -1204,7 +1211,7 @@ public class Bukkit {
                             reader.start();
                         }
                         reply.setEtag(objectInfo.getEtag());
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
                         reply.setSize(objectInfo.getSize());
                         status.setCode(200);
                         status.setDescription("OK");
@@ -1586,7 +1593,7 @@ public class Bukkit {
 
                         LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(queueKey, randomKey);
                         reply.setSize(unencryptedSize);
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
                         reply.setEtag("");
                         Reader reader = new Reader(bucketName, imageKey, unencryptedSize, getQueue, false, semaphore);
                         reader.start();
