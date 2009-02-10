@@ -173,13 +173,13 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
                 return getUserInfo(sigString[0], signature, data);
             } else if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())) {
                 //query string authentication
-                String accesskeyid = parameters.get(SecurityParameter.AWSAccessKeyId.toString());
+                String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
                 try {
-                    String signature = URLDecoder.decode(parameters.get(SecurityParameter.Signature.toString()), "UTF-8");
+                    String signature = URLDecoder.decode(parameters.remove(SecurityParameter.Signature.toString()), "UTF-8");
                     if(signature == null) {
                         throw new QuerySecurityException("User authentication failed. Null signature.");
                     }
-                    String expires = parameters.get(SecurityParameter.Expires.toString());
+                    String expires = parameters.remove(SecurityParameter.Expires.toString());
                     if(expires == null) {
                         throw new QuerySecurityException("Authentication failed. Expires must be specified.");
                     }
