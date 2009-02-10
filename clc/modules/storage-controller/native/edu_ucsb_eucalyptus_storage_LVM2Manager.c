@@ -393,8 +393,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getLvmVer
   (JNIEnv *env, jobject obj) {
 	char command[256];
 
-   	snprintf(command, 256, "lvdisplay --version");
-    jstring returnValue = run_command(env, command, 1);
+    jstring returnValue = run_command(env, "lvdisplay --version", 1);
 
     return returnValue;
 }

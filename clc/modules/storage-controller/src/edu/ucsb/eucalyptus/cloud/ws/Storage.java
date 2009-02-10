@@ -97,16 +97,14 @@ public class Storage {
         blockManager.initVolumeManager();
         try {
             blockManager.checkPreconditions();
+            startup();
+            checkWalrusConnection();
+            //TODO: inform CLC
+            //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
         } catch(Exception ex) {
             enableStorage = false;
-            LOG.warn(ex);
             LOG.warn("Could not initialize block manager");
-            return;
         }
-        startup();
-        checkWalrusConnection();
-        //TODO: inform CLC
-        //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
     }
 
     public Storage() {}
