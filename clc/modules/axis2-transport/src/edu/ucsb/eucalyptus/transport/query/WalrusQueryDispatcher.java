@@ -37,10 +37,7 @@ package edu.ucsb.eucalyptus.transport.query;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.msgs.AccessControlListType;
-import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
-import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
-import edu.ucsb.eucalyptus.msgs.Grant;
+import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.*;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.HandlerDescription;
@@ -49,6 +46,7 @@ import org.apache.commons.fileupload.FileUpload;
 import org.apache.http.protocol.HTTP;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
+import org.apache.xml.dtm.ref.DTMNodeList;
 import org.bouncycastle.util.encoders.Base64;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
@@ -291,7 +289,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                                     LOG.warn("Policy has expired.");
                                     //TODO: currently this will be reported as an invalid operation
                                     //Fix this to report a security exception
-                                   throw new EucalyptusCloudException("Policy has expired.");
+                                    throw new EucalyptusCloudException("Policy has expired.");
                                 }
                             }
                             List<String> policyItemNames = new ArrayList<String>();
@@ -485,14 +483,29 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                     AccessControlListType accessControlList = new AccessControlListType();
                     ArrayList<Grant> grants = new ArrayList<Grant>();
 
-                    List<String> displayNames = xmlParser.getValues("//AccessControlList/Grant/Grantee/DisplayName");
-                    List<String> ids = xmlParser.getValues("//AccessControlList/Grant/Grantee/ID");
                     List<String> permissions = xmlParser.getValues("//AccessControlList/Grant/Permission");
 
-                    if((ids.size() == permissions.size()) && (ids.size() == displayNames.size())) {
-                        for(int i=0; i < ids.size(); ++i) {
+                    DTMNodeList grantees = xmlParser.getNodes("//AccessControlList/Grant/Grantee");
+
+
+                    for(int i = 0 ; i < grantees.getLength() ; ++i) {
+                        String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
+                        if(canonicalUserName.length() > 0) {
+                            String id = xmlParser.getValue(grantees.item(i), "ID");
                             Grant grant = new Grant();
-                            grant.setGrantee(new CanonicalUserType(ids.get(i), displayNames.get(i)));
+                            Grantee grantee = new Grantee();
+                            grantee.setCanonicalUser(new CanonicalUserType(id, canonicalUserName));
+                            grant.setGrantee(grantee);
+                            grant.setPermission(permissions.get(i));
+                            grants.add(grant);
+                        } else {
+                            String groupUri = xmlParser.getValue(grantees.item(i), "URI");
+                            if(groupUri.length() == 0)
+                                throw new EucalyptusCloudException("malformed access control list");
+                            Grant grant = new Grant();
+                            Grantee grantee = new Grantee();
+                            grantee.setGroup(new Group(groupUri));
+                            grant.setGrantee(grantee);
                             grant.setPermission(permissions.get(i));
                             grants.add(grant);
                         }
@@ -504,7 +517,8 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                     operationParams.put("AccessControlPolicy", accessControlPolicy);
                 }
             } catch(Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.warn(ex);
+                throw new EucalyptusCloudException(ex.getMessage());
             }
 
         }

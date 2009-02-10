@@ -36,6 +36,7 @@ package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.Grant;
+import edu.ucsb.eucalyptus.msgs.Grantee;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
@@ -51,8 +52,10 @@ public class GrantInfo {
 	@GeneratedValue
 	@Column( name = "grant_id" )
 	private Long id = -1l;
-	@Column(name ="user_id")
+	@Column(name="user_id")
 	private String userId;
+    @Column(name="grant_group")
+    private String grant_group;
 	@Column(name="read")
 	private Boolean read;
 	@Column(name="write")
@@ -62,7 +65,9 @@ public class GrantInfo {
 	@Column(name="write_acp")
 	private Boolean writeACP;
 
-	public GrantInfo(){}
+    public GrantInfo(){
+        read = write = readACP = writeACP = false;
+    }
 
 	public Long getId()
 	{
@@ -85,7 +90,15 @@ public class GrantInfo {
 		this.userId = userId;
 	}
 
-	public boolean isWrite() {
+    public String getGrant_group() {
+        return grant_group;
+    }
+
+    public void setGrant_group(String grant_group) {
+        this.grant_group = grant_group;
+    }
+
+    public boolean isWrite() {
 		return write;
 	}
 
@@ -119,7 +132,12 @@ public class GrantInfo {
 			for (Grant grant: grants) {
 				String permission = grant.getPermission();
 				GrantInfo grantInfo = new GrantInfo();
-				grantInfo.setUserId(grant.getGrantee().getDisplayName());
+                Grantee grantee = grant.getGrantee();
+                if(grantee.getCanonicalUser() != null) {
+                    grantInfo.setUserId(grantee.getCanonicalUser().getDisplayName());
+                } else {
+                    grantInfo.setGrant_group(grantee.getGroup().getUri());
+                }
 				if (permission.equals("FULL_CONTROL")) {
 					grantInfo.setFullControl();
 				}   else if (permission.equals("READ")) {
