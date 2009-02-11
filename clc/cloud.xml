@@ -71,6 +71,7 @@
     <target name="run" description="--> run Eucalyptus (for production)." if="localenv.EUCALYPTUS">
         <java classname="edu.ucsb.eucalyptus.Main" fork="true" failonerror="true" dir="${euca.home}">
             <jvmarg value="-server"/>
+            <jvmarg value="-Xbootclasspath/p:${euca.lib.dir}/eucalyptus-crypto.jar"/>
             <jvmarg value="-Xmx${jvm.heap}"/>
             <jvmarg value="-Xms${jvm.heap}"/>
             <jvmarg value="-XX:+UseConcMarkSweepGC"/>

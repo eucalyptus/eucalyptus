@@ -48,7 +48,10 @@
     <property name="deps.lib" value="cloud-lib"/>
     <property name="deps.deploy" value="cloud-deploy"/>
     <!--================================== build targets ==================================-->
-    <target name="build-msgs" depends="untar">
+    <target name="build-crypto" depends="untar">
+        <ant dir="modules/crypto" inheritall="false"/>
+    </target>
+<target name="build-msgs" depends="build-crypto">
         <ant dir="modules/msgs" inheritall="false"/>
     </target>
     <target name="build-core" depends="build-msgs">
