@@ -450,7 +450,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                     if(!walrusInternalOperation) {
                         operationParams.put("GetData", Boolean.FALSE);
                         operationParams.put("InlineData", Boolean.FALSE);
-                        operationParams.put("GetMetaData", Boolean.FALSE);
+                        operationParams.put("GetMetaData", Boolean.TRUE);
                     }
                 }
             }

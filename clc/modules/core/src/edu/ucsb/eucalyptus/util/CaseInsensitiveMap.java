@@ -53,7 +53,7 @@ public class CaseInsensitiveMap {
 	}
 
 
-	public Object get(Object o) {
+	public String get(Object o) {
 		return map.get(o.toString().toLowerCase());
 	}
 
@@ -73,11 +73,11 @@ public class CaseInsensitiveMap {
 		return map.containsValue(o);
 	}
 
-	public Object put(Object o, Object o1) {
+	public String put(Object o, Object o1) {
 		return map.put(o.toString().toLowerCase(), (String)o1);
 	}
 
-	public Object remove(Object o) {
+	public String remove(Object o) {
 		return map.remove(o.toString().toLowerCase());
 	}
 
