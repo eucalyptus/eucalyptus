@@ -15,7 +15,8 @@ NAME=""
 INSTANCE=""
 EUCA_USER=""
 HYPERVISOR=""
-DHCPCD=""
+DHCPD=""
+DHCP_USER=""
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -32,7 +33,8 @@ usage () {
 	echo "   -cloudp <port1> <port2>     set the 2 cloud ports"
 	echo "   -hypervisor <kvm|xen>       set hypervisor to use"
 	echo "   -user <euca_user>           set the user to use"
-	echo "   -dhcpd <dhcpd>              set the dhcpcd binary to <name>"
+	echo "   -dhcpd <dhcpd>              set the dhcpd binary to <name>"
+	echo "   -dhcp_user <user>           set the username to run dhcpd as"
 	echo "   -name <var>                 returns the value or <name>"
 	echo "where <file> is the configuration file ($FILE by default)"
 	echo
@@ -107,7 +109,12 @@ while [ $# -gt 0 ]; do
 		continue
 	fi		
 	if [ "$1" = "-dhcpd" ]; then
-		DHCPCD="$2"
+		DHCPD="$2"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "-dhcp_user" ]; then
+		DHCPC_USER="$2"
 		shift; shift
 		continue
 	fi		
@@ -198,8 +205,11 @@ fi
 if [ -n "$INSTANCE" ]; then
 	change_var_value $FILE INSTANCE_PATH "${INSTANCE}"
 fi
-if [ -n "$DHCPCD" ]; then
-	change_var_value $FILE VNET_DHCPDAEMON "${DHCPCD}"
+if [ -n "$DHCPD" ]; then
+	change_var_value $FILE VNET_DHCPDAEMON "${DHCPD}"
+fi
+if [ -n "$DHCPC_USER" ]; then
+	change_var_value $FILE VNET_DHCPUSER "${DHCPC_USER}"
 fi
 if [ -n "$NODES" ]; then
 	change_var_value $FILE NODES "${NODES}"
