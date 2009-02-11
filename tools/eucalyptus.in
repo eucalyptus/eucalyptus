@@ -199,20 +199,36 @@ do_start() {
 		# now we start the services
 		if [ "$START_NC" = "Y" ]; then
 			# we need 2 httpd
-			$HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
+			if  ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf ; then
+				echo
+				echo "Failed to start the CC!"
+				exit 1
+			fi
 			echo -n " CC"
 
-			$HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
+			if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf ; then
+				echo
+				echo "Failed to start the NC!"
+				exit 1
+			fi
 			echo -n " NC"
 		else 
 			# just the CC running
 			disable_service "EucalyptusNC"
-			$HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
+			if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf ; then
+				echo
+				echo "Failed to start the CC!"
+				exit 1
+			fi
 			echo -n " CC"
 		fi
 	elif [ "$START_NC" = "Y" ]; then
 		disable_service "EucalyptusCC"
-		$HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
+		if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf ; then
+			echo
+			echo "Failed to start the NC!"
+			exit 1
+		fi
 		echo -n " NC"
 	elif [ "$START_CLOUD" != "Y" ]; then
 		echo "No service to start?"
