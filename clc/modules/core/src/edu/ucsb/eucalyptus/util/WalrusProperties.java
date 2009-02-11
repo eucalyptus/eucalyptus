@@ -111,6 +111,10 @@ public class WalrusProperties {
         GetDecryptedImage
     }
 
+    public enum GetOptionalParameters {
+        IsCompressed
+    }
+
     public enum StorageOperations {
         StoreSnapshot, DeleteWalrusSnapshot, GetSnapshotInfo, GetVolume
     }
