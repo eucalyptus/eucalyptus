@@ -372,7 +372,8 @@ public class ObjectInfo {
         }
     }
 
-    public void addMetaData(ArrayList<MetaDataEntry>metaDataEntries) {
+    public void setMetaData(ArrayList<MetaDataEntry>metaDataEntries) {
+        metaData = new ArrayList<MetaDataInfo>();
         for (MetaDataEntry metaDataEntry: metaDataEntries) {
             MetaDataInfo metaDataInfo = new MetaDataInfo();
             metaDataInfo.setObjectName(objectName);

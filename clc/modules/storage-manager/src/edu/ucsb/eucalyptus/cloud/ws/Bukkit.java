@@ -436,7 +436,7 @@ public class Bukkit {
                 }
                 foundObject.setObjectKey(objectKey);
                 foundObject.setOwnerId(userId);
-                foundObject.addMetaData(request.getMetaData());
+                foundObject.setMetaData(request.getMetaData());
                 //writes are unconditional
                 String randomKey = request.getRandomKey();
 
@@ -677,7 +677,7 @@ public class Bukkit {
                         bucket.setBucketSize(newSize);
                     }
                     //Add meta data if specified
-                    foundObject.addMetaData(request.getMetaData());
+                    foundObject.setMetaData(request.getMetaData());
 
                     //TODO: add support for other storage classes
                     foundObject.setStorageClass("STANDARD");
