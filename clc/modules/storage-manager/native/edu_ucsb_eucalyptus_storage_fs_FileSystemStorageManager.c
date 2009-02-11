@@ -175,7 +175,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageM
   (JNIEnv *env, jobject obj) {
 	char command[256];
 
-    jstring returnValue = run_command(env, "lvdisplay --version", 1);
+    jstring returnValue = run_command(env, "lvm version", 1);
 
     return returnValue;
 }
