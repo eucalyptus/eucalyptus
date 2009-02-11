@@ -445,6 +445,11 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                             }
                         }
                     }
+                    if(params.containsKey(WalrusProperties.GetOptionalParameters.IsCompressed.toString())) {
+                        Boolean isCompressed = Boolean.parseBoolean(WalrusProperties.GetOptionalParameters.IsCompressed.toString());
+                        operationParams.put("IsCompressed", isCompressed);
+                    }
+
                 } else if(verb.equals(HTTPVerb.HEAD.toString())) {
                     messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.FALSE);
                     if(!walrusInternalOperation) {

@@ -47,7 +47,7 @@
         <value name="RandomKey" field="randomKey" usage="optional"/>
         <value name="Bucket" field="bucket"/>
         <value name="Key" field="key"/>
-        <value name="Compressed" field="isCompressed" usage="optional"/>
+        <value name="IsCompressed" field="isCompressed" usage="optional"/>
     </mapping>
 
     <mapping name="ListAllMyBuckets" class="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
