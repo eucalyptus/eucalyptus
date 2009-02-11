@@ -80,6 +80,8 @@ public class Bukkit {
     static boolean shouldEnforceUsageLimits = true;
     private static boolean enableSnapshots = false;
 
+    private static boolean sharedMode = false;
+
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
         String limits = System.getProperty(WalrusProperties.USAGE_LIMITS_PROPERTY);
@@ -98,8 +100,14 @@ public class Bukkit {
         } catch(Exception ex) {
             enableSnapshots = false;
         }
+        //inform SC in case it is running on the same host
+        sharedMode = true;
     }
 
+    public static boolean getSharedMode() {
+        return sharedMode;
+    }
+    
     public static void startupChecks() {
         cleanFailedSnapshots();
     }

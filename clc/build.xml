@@ -114,7 +114,7 @@
         <delete dir="${deps.lib.dir}"/>
     </target>
     <!--================================== install target ==================================-->
-    <target name="install" depends="build-eucalyptus,build-walrus">
+    <target name="install" depends="build-eucalyptus,build-ebs,build-walrus">
         <!-- copy libraries over -->
         <mkdir dir="${euca.lib.dir}"/>
         <copy todir="${euca.lib.dir}">

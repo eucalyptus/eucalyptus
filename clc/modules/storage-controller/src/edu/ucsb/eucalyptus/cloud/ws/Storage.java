@@ -81,6 +81,8 @@ public class Storage {
 
     private static final String ETHERD_PREFIX = "/dev/etherd/e";
 
+    public static boolean sharedMode;
+
     static {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
@@ -105,12 +107,15 @@ public class Storage {
             return;
         }
         startup();
-        checkWalrusConnection();
+        sharedMode = Bukkit.getSharedMode();
+        if(!sharedMode)
+            checkWalrusConnection();
         //TODO: inform CLC
         //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
     }
 
     public Storage() {}
+
 
     private static void startup() {
         cleanVolumes();
@@ -268,7 +273,8 @@ public class Storage {
         }
 
         //test connection to Walrus
-        checkWalrusConnection();
+        if(!sharedMode)
+            checkWalrusConnection();
         try {
             blockManager.checkPreconditions();
             enableStorage = true;
@@ -368,11 +374,13 @@ public class Storage {
     public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
         CreateStorageSnapshotResponseType reply = ( CreateStorageSnapshotResponseType ) request.getReply();
 
-        if(!enableSnapshots || !enableStorage) {
-            checkWalrusConnection();
-            if(!enableSnapshots)
-                LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
-            return reply;
+        if(!sharedMode) {
+            if(!enableSnapshots || !enableStorage) {
+                checkWalrusConnection();
+                if(!enableSnapshots)
+                    LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
+                return reply;
+            }
         }
         String volumeId = request.getVolumeId();
         String snapshotId = request.getSnapshotId();
@@ -394,13 +402,19 @@ public class Storage {
                 snapshotInfo.setProgress("0");
                 snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
                 db2.add(snapshotInfo);
-                db2.commit();
-                db.commit();
                 //snapshot asynchronously
                 String snapshotSet = "snapset-" + UUID.randomUUID();
                 blockManager.createSnapshot(volumeId, snapshotId);
-                Snapshotter snapshotter = new Snapshotter(snapshotSet, volumeId, snapshotId);
-                snapshotter.run();
+                if(!sharedMode) {
+                    Snapshotter snapshotter = new Snapshotter(snapshotSet, volumeId, snapshotId);
+                    snapshotter.start();
+                } else {
+                    snapshotInfo.setProgress("100");
+                    snapshotInfo.setTransferred(true);
+                    snapshotInfo.setStatus(StorageProperties.Status.available.toString());
+                }
+                db2.commit();
+                db.commit();
                 reply.setSnapshotId(snapshotId);
                 reply.setVolumeId(volumeId);
                 reply.setStatus(snapshotInfo.getStatus());
@@ -453,11 +467,13 @@ public class Storage {
     public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
         DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
-        if(!enableSnapshots || !enableStorage) {
-            checkWalrusConnection();
-            if(!enableSnapshots)
-                LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
-            return reply;
+        if(!sharedMode) {
+            if(!enableSnapshots || !enableStorage) {
+                checkWalrusConnection();
+                if(!enableSnapshots)
+                    LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
+                return reply;
+            }
         }
 
         String snapshotId = request.getSnapshotId();
@@ -476,8 +492,10 @@ public class Storage {
                     snapshotStorageManager.deleteObject("", snapshotId);
                     db.delete(foundSnapshotInfo);
                     db.commit();
-                    HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
-                    httpWriter.run();
+                    if(!sharedMode) {
+                        SnapshotDeleter snapshotDeleter = new SnapshotDeleter(snapshotId);
+                        snapshotDeleter.start();
+                    }
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
@@ -861,6 +879,23 @@ public class Storage {
                 httpWriter.run();
             } catch(Exception ex) {
                 ex.printStackTrace();
+            }
+        }
+    }
+
+    private class SnapshotDeleter extends Thread {
+        private String snapshotId;
+
+        public SnapshotDeleter(String snapshotId) {
+            this.snapshotId = snapshotId;
+        }
+
+        public void run() {
+            HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
+            try {
+                httpWriter.run();
+            } catch(EucalyptusCloudException ex) {
+                LOG.warn(ex, ex);
             }
         }
     }
