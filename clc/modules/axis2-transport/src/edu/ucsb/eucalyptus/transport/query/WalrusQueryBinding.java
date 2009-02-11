@@ -41,6 +41,7 @@ import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.transport.binding.Binding;
 import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 import edu.ucsb.eucalyptus.util.BindingUtil;
+import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
 import edu.ucsb.eucalyptus.util.WalrusProperties;
 import groovy.lang.GroovyObject;
 import org.apache.axiom.om.OMElement;
@@ -96,8 +97,9 @@ public class WalrusQueryBinding implements QueryBinding {
 
 
         //TODO: Refactor this to be more general
+        CaseInsensitiveMap caseInsensitiveHeaders = new CaseInsensitiveMap(headers);
         List<String> failedMappings = populateObject( eucaMsg, fieldMap, params, bindingArguments);
-        populateObjectFromBindingMap(eucaMsg, fieldMap, headers, bindingArguments);
+        populateObjectFromBindingMap(eucaMsg, fieldMap, caseInsensitiveHeaders, bindingArguments);
         setRequiredParams (eucaMsg, user);
 
         if ( !failedMappings.isEmpty() || !params.isEmpty() )
@@ -155,7 +157,7 @@ public class WalrusQueryBinding implements QueryBinding {
         return failedMappings;
     }
 
-    private void populateObjectFromBindingMap( final GroovyObject obj, final Map<String, String> paramFieldMap, final Map<String, String> headers, final Map bindingMap)
+    private void populateObjectFromBindingMap( final GroovyObject obj, final Map<String, String> paramFieldMap, final CaseInsensitiveMap headers, final Map bindingMap)
     {
         //process headers
         String aclString = headers.remove(WalrusProperties.AMZ_ACL);
@@ -172,7 +174,7 @@ public class WalrusQueryBinding implements QueryBinding {
                 String key = iterator.next();
                 if(key.startsWith(WalrusProperties.AMZ_META_HEADER_PREFIX)) {
                     MetaDataEntry metaDataEntry = new MetaDataEntry();
-                    metaDataEntry.setName(key.substring(WalrusProperties.AMZ_META_HEADER_PREFIX.length() - 1));
+                    metaDataEntry.setName(key.substring(WalrusProperties.AMZ_META_HEADER_PREFIX.length()));
                     metaDataEntry.setValue(headers.remove(key));
                     metaData.add(metaDataEntry);
                 }
