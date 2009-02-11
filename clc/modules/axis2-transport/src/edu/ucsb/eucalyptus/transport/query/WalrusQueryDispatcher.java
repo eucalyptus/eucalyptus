@@ -446,7 +446,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                         }
                     }
                     if(params.containsKey(WalrusProperties.GetOptionalParameters.IsCompressed.toString())) {
-                        Boolean isCompressed = Boolean.parseBoolean(WalrusProperties.GetOptionalParameters.IsCompressed.toString());
+                        Boolean isCompressed = Boolean.parseBoolean(params.remove(WalrusProperties.GetOptionalParameters.IsCompressed.toString()));
                         operationParams.put("IsCompressed", isCompressed);
                     }
 
