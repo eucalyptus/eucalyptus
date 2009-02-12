@@ -405,15 +405,9 @@ public class Storage {
                 db2.add(snapshotInfo);
                 //snapshot asynchronously
                 String snapshotSet = "snapset-" + UUID.randomUUID();
-                blockManager.createSnapshot(volumeId, snapshotId);
-                if(!sharedMode) {
-                    Snapshotter snapshotter = new Snapshotter(snapshotSet, volumeId, snapshotId);
-                    snapshotter.start();
-                } else {
-                    snapshotInfo.setProgress("100");
-                    snapshotInfo.setTransferred(true);
-                    snapshotInfo.setStatus(StorageProperties.Status.available.toString());
-                }
+
+                Snapshotter snapshotter = new Snapshotter(snapshotSet, volumeId, snapshotId);
+                snapshotter.start();
                 db2.commit();
                 db.commit();
                 reply.setSnapshotId(snapshotId);
@@ -796,6 +790,8 @@ public class Storage {
 
         public void run() {
             try {
+                blockManager.createSnapshot(volumeId, snapshotId);
+
                 List<String> returnValues = blockManager.prepareForTransfer(volumeId, snapshotId);
                 volumeFileName = returnValues.get(0);
                 snapshotFileName = returnValues.get(1);
@@ -817,7 +813,13 @@ public class Storage {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     SnapshotInfo foundSnapshotInfo = db2.getUnique(snapshotInfo);
                     if(foundSnapshotInfo != null) {
-                        transferSnapshot(shouldTransferVolume);
+                        if(!sharedMode) {
+                            transferSnapshot(shouldTransferVolume);
+                        } else {
+                            foundSnapshotInfo.setProgress("100");
+                            foundSnapshotInfo.setTransferred(true);
+                            foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
+                        }
                     }
                     db2.commit();
                 } else {
