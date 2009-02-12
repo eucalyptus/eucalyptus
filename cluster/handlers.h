@@ -60,8 +60,10 @@ void print_ccInstance(ccInstance *in);
 //void free_ccInstance(ccInstance *inInst);
 
 typedef struct resource_t {
+  char ncURL[128];
   char ncService[128];
-  char hostname[96];
+  int ncPort;
+  char hostname[128];
   int maxMemory, availMemory, maxDisk, availDisk, maxCores, availCores;
   int isup;
 } resource;
@@ -76,6 +78,7 @@ typedef struct ccConfig_t {
   int instanceCacheUpdate;
   int initialized;
   int schedPolicy, schedState;
+  time_t configMtime;
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN};
@@ -123,6 +126,8 @@ pid_t timewait(pid_t pid, int *status, int timeout);
 int sem_timewait(sem_t *sem, time_t seconds);
 int sem_timepost(sem_t *sem);
 int timeread(int fd, void *buf, size_t bytes, int timeout);
+int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHosts);
+int restoreNetworkState();
 
 #endif
 
