@@ -92,6 +92,12 @@ public class LVM2Manager implements BlockStorageManager {
         } else {
             LOG.info(returnValue);
         }
+        returnValue = getVblade();
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("vblade not found: Is aoetools installed?");
+        } else {
+            LOG.info(returnValue);
+        }
     }
 
     public LVM2Manager(String storageInterface) {
@@ -270,6 +276,8 @@ public class LVM2Manager implements BlockStorageManager {
 
     public native String getLvmVersion();
 
+    public native String getVblade();
+    
     public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
         int majorNumber = -1;
         int minorNumber = -1;
