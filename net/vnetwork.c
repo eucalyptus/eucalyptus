@@ -333,6 +333,7 @@ int vnetSaveTablesToMemory(vnetConfig *vnetconfig) {
       // error
     } else {
       // read file
+      bzero(vnetconfig->iptables, 32768);
       rbytes = 0;
       rc = read(fd, vnetconfig->iptables+rbytes, 32767 - rbytes);
       while(rc > 0 && rbytes <= 32767) {

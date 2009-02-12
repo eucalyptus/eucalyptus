@@ -257,6 +257,7 @@ int doFlushNetwork(ncMetadata *ccMeta, char *destName) {
 int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   int rc, allocated, addrdevno, ret;
   char cmd[256];
+  ccInstance *myInstance=NULL;
 
   rc = init_config();
   if (rc) {
@@ -305,6 +306,15 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
     sem_post(vnetConfigLock);
   }
   
+  if (!ret) {
+    // everything worked, update instance cache
+    rc = find_instanceCacheIP(dst, &myInstance);
+    if (!rc) {
+      snprintf(myInstance->ccnet.publicIp, 24, "%s", src);
+      rc = refresh_instanceCache(myInstance->instanceId, myInstance);
+      free(myInstance);
+    }
+  }
   logprintfl(EUCADEBUG,"AssignAddress(): done\n");  
   return(ret);
 }
@@ -326,7 +336,8 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
 int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   int rc, allocated, addrdevno, ret, count;
   char cmd[256];
-  
+  ccInstance *myInstance=NULL;
+
   rc = init_config();
   if (rc) {
     return(1);
@@ -364,8 +375,17 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
       	logprintfl(EUCAWARN,"cmd failed '%s'\n", cmd);
       }
     }
-    
     sem_post(vnetConfigLock);
+  }
+
+  if (!ret) {
+    // refresh instance cache
+    rc = find_instanceCacheIP(src, &myInstance);
+    if (!rc) {
+      snprintf(myInstance->ccnet.publicIp, 24, "0.0.0.0");
+      rc = refresh_instanceCache(myInstance->instanceId, myInstance);
+      free(myInstance);
+    }
   }
   
   logprintfl(EUCADEBUG,"UnassignAddress(): done\n");  
@@ -682,6 +702,8 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   if (rc) {
     return(1);
   }
+  logprintfl(EUCADEBUG, "printing instance cache in describeInstances()\n");
+  print_instanceCache();
 
   logprintfl(EUCADEBUG,"DescribeInstances(): called\n");
 
@@ -1713,7 +1735,8 @@ int init_config(void) {
   if (config->initialized) {
     // some other thread has already initialized the configuration
     logprintfl(EUCAINFO, "init(): another thread has already set up config\n");
-    
+    logprintfl(EUCADEBUG, "printing instance cache in init_config()\n");
+    print_instanceCache();
     rc = restoreNetworkState();
     if (rc) {
       // error
@@ -2099,7 +2122,7 @@ void print_instanceCache(void) {
   int i;
   for (i=0; i<MAXINSTANCES; i++) {
     if (instanceCache[i].instanceId[0] != '\0') {
-      logprintfl(EUCADEBUG,"\tcache: %s\n", instanceCache[i].instanceId);
+      logprintfl(EUCADEBUG,"\tcache: %s %s %s\n", instanceCache[i].instanceId, instanceCache[i].ccnet.publicIp, instanceCache[i].ccnet.privateIp);
     }
   }
 }
@@ -2157,6 +2180,7 @@ int add_instanceCache(char *instanceId, ccInstance *in){
   if (!done) {
   }
   allocate_ccInstance(&(instanceCache[firstNull]), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL, in->ramdiskURL, in->ownerId, in->state, in->ts, in->reservationId, &(in->ccnet), &(in->ccvm), in->ncHostIdx, in->keyName, in->serviceTag, in->userData, in->launchIndex, in->groupNames, in->volumes, in->volumesSize);
+
   return(0);
 }
 
@@ -2194,6 +2218,7 @@ int find_instanceCacheId(char *instanceId, ccInstance **out) {
       }
     }
   }
+
   if (done) {
     return(0);
   }
@@ -2219,6 +2244,7 @@ int find_instanceCacheIP(char *ip, ccInstance **out) {
       }
     }
   }
+
   if (done) {
     return(0);
   }
