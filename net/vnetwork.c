@@ -348,7 +348,7 @@ int vnetSaveTablesToMemory(vnetConfig *vnetconfig) {
   unlink(file);
   free(file);
 
-  logprintfl(EUCADEBUG, "in memory iptables: %s\n", vnetconfig->iptables);
+  //  logprintfl(EUCADEBUG, "in memory iptables: %s\n", vnetconfig->iptables);
   return(ret);
 }
 
@@ -395,7 +395,7 @@ int vnetRestoreTablesFromMemory(vnetConfig *vnetconfig) {
     ret = 1;
   }
 
-  //  unlink(file);
+  unlink(file);
   free(file);
   return(ret);
 }
