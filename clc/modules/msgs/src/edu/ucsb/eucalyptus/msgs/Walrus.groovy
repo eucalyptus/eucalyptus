@@ -306,18 +306,18 @@ public class PostObjectType extends WalrusDataRequestType {
   Integer successActionStatus;
 }
 
-public class CopyObjectType extends WalrusDataRequestType {
+public class CopyObjectType extends WalrusRequestType {
   String sourceBucket;
   String sourceObject;
   String destinationBucket;
   String destinationObject;
-  String metaDataDirective;
+  String metadataDirective;
   ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
   AccessControlListType accessControlList = new AccessControlListType();
-  String copyIfMatch;
-  String copyIfNoneMatch;
-  Date copyIfModifiedSince;
-  Date copyIfUnmodifiedSince;
+  String copySourceIfMatch;
+  String copySourceIfNoneMatch;
+  Date copySourceIfModifiedSince;
+  Date copySourceIfUnmodifiedSince;
 }
 
 public class CopyObjectResponseType extends WalrusDataResponseType {

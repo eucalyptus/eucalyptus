@@ -273,6 +273,18 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeVol
     return returnValue;
 }
 
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_disableLogicalVolume
+  (JNIEnv *env, jobject obj, jstring lvName) {
+    const jbyte* lv_name = (*env)->GetStringUTFChars(env, lvName, NULL);
+	char command[256];
+
+	snprintf(command, 256, "lvchange -an %s", lv_name);
+    jstring returnValue = run_command(env, command, 1);
+
+    (*env)->ReleaseStringUTFChars(env, lvName, lv_name);
+    return returnValue;
+}
+
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removePhysicalVolume
   (JNIEnv *env, jobject obj, jstring pvName) {
     const jbyte* pv_name = (*env)->GetStringUTFChars(env, pvName, NULL);

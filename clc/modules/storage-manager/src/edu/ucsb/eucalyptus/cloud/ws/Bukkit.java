@@ -107,7 +107,7 @@ public class Bukkit {
     public static boolean getSharedMode() {
         return sharedMode;
     }
-    
+
     public static void startupChecks() {
         cleanFailedSnapshots();
     }
@@ -444,7 +444,7 @@ public class Bukkit {
                 }
                 foundObject.setObjectKey(objectKey);
                 foundObject.setOwnerId(userId);
-                foundObject.setMetaData(request.getMetaData());
+                foundObject.replaceMetaData(request.getMetaData());
                 //writes are unconditional
                 String randomKey = request.getRandomKey();
 
@@ -685,7 +685,7 @@ public class Bukkit {
                         bucket.setBucketSize(newSize);
                     }
                     //Add meta data if specified
-                    foundObject.setMetaData(request.getMetaData());
+                    foundObject.replaceMetaData(request.getMetaData());
 
                     //TODO: add support for other storage classes
                     foundObject.setStorageClass("STANDARD");
@@ -907,7 +907,7 @@ public class Bukkit {
                             listEntry.setOwner(new CanonicalUserType(ownerInfos.get(0).getQueryId(), displayName));
                         }
                         ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-                        objectInfo.getMetaData(metaData);
+                        objectInfo.returnMetaData(metaData);
                         reply.setMetaData(metaData);
                         listEntry.setSize(objectInfo.getSize());
                         listEntry.setStorageClass(objectInfo.getStorageClass());
@@ -1099,7 +1099,7 @@ public class Bukkit {
                         String objectName = objectInfo.getObjectName();
                         if(request.getGetMetaData()) {
                             ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-                            objectInfo.getMetaData(metaData);
+                            objectInfo.returnMetaData(metaData);
                             reply.setMetaData(metaData);
                             reply.setMetaData(metaData);
                         }
@@ -1136,18 +1136,20 @@ public class Bukkit {
                         status.setCode(200);
                         status.setDescription("OK");
                         reply.setStatus(status);
+                        db.commit();
+                        return reply;
                     } else {
                         db.rollback();
                         throw new AccessDeniedException(objectKey);
                     }
                 }
             }
+            db.rollback();
+            throw new NoSuchEntityException(objectKey);
         } else {
             db.rollback();
             throw new NoSuchBucketException(bucketName);
         }
-        db.commit();
-        return reply;
     }
 
     public GetObjectExtendedResponseType GetObjectExtended(GetObjectExtendedType request) throws EucalyptusCloudException {
@@ -1206,7 +1208,7 @@ public class Bukkit {
                         }
                         if(request.getGetMetaData()) {
                             ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-                            objectInfo.getMetaData(metaData);
+                            objectInfo.returnMetaData(metaData);
                             reply.setMetaData(metaData);
                         }
                         if(request.getGetData()) {
@@ -1266,8 +1268,145 @@ public class Bukkit {
 
     public CopyObjectResponseType CopyObject(CopyObjectType request) throws EucalyptusCloudException {
         CopyObjectResponseType reply = (CopyObjectResponseType) request.getReply();
+        String userId = request.getUserId();
+        String sourceBucket = request.getSourceBucket();
+        String sourceKey = request.getSourceObject();
+        String destinationBucket = request.getDestinationBucket();
+        String destinationKey = request.getDestinationObject();
+        String metadataDirective = request.getMetadataDirective();
+        AccessControlListType accessControlList = request.getAccessControlList();
 
-        throw new NotImplementedException("CopyObject");
+        String copyIfMatch = request.getCopySourceIfMatch();
+        String copyIfNoneMatch = request.getCopySourceIfNoneMatch();
+        Date copyIfUnmodifiedSince = request.getCopySourceIfUnmodifiedSince();
+        Date copyIfModifiedSince = request.getCopySourceIfModifiedSince();
+
+        if(metadataDirective == null)
+            metadataDirective = "COPY";
+        EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+        BucketInfo bucketInfo = new BucketInfo(sourceBucket);
+        List<BucketInfo> bucketList = db.query(bucketInfo);
+
+        if (bucketList.size() > 0) {
+            BucketInfo bucket = bucketList.get(0);
+
+            for(ObjectInfo objectInfo: bucket.getObjects()) {
+                if(objectInfo.getObjectKey().equals(sourceKey)) {
+                    ObjectInfo sourceObjectInfo = objectInfo;
+                    if(sourceObjectInfo.canRead(userId)) {
+                        if(copyIfMatch != null) {
+                            if(!copyIfMatch.equals(sourceObjectInfo.getEtag())) {
+                                db.rollback();
+                                throw new PreconditionFailedException("CopySourceIfMatch " + copyIfMatch);
+                            }
+                        }
+                        if(copyIfNoneMatch != null) {
+                            if(copyIfNoneMatch.equals(sourceObjectInfo.getEtag())) {
+                                db.rollback();
+                                throw new PreconditionFailedException("CopySourceIfNoneMatch " + copyIfNoneMatch);
+                            }
+                        }
+                        if(copyIfUnmodifiedSince != null) {
+                            long unmodifiedTime = copyIfUnmodifiedSince.getTime();
+                            long objectTime = sourceObjectInfo.getLastModified().getTime();
+                            if(unmodifiedTime < objectTime) {
+                                db.rollback();
+                                throw new PreconditionFailedException("CopySourceIfUnmodifiedSince " + copyIfUnmodifiedSince.toString());
+                            }
+                        }
+                        if(copyIfModifiedSince != null) {
+                            long modifiedTime = copyIfModifiedSince.getTime();
+                            long objectTime = sourceObjectInfo.getLastModified().getTime();
+                            if(modifiedTime > objectTime) {
+                                db.rollback();
+                                throw new PreconditionFailedException("CopySourceIfModifiedSince " + copyIfModifiedSince.toString());
+                            }
+                        }
+                        BucketInfo destinationBucketInfo = new BucketInfo(destinationBucket);
+                        List<BucketInfo> destinationBuckets = db.query(destinationBucketInfo);
+                        if(destinationBuckets.size() > 0) {
+                            BucketInfo foundDestinationBucketInfo = destinationBuckets.get(0);
+                            if(foundDestinationBucketInfo.canWrite(userId)) {
+                                //all ok
+                                ObjectInfo destinationObjectInfo = null;
+                                String destinationObjectName;
+                                for(ObjectInfo objInfo: foundDestinationBucketInfo.getObjects()) {
+                                    if(objInfo.getObjectKey().equals(destinationKey)) {
+                                        destinationObjectInfo = objInfo;
+                                        if(!destinationObjectInfo.canWrite(userId)) {
+                                            db.rollback();
+                                            throw new AccessDeniedException(destinationKey);
+                                        }
+                                        break;
+                                    }
+                                }
+                                if(destinationObjectInfo == null) {
+                                    //not found. create a new one
+                                    destinationObjectInfo = new ObjectInfo(userId);
+                                    List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+                                    destinationObjectInfo.setObjectKey(destinationKey);
+                                    destinationObjectInfo.addGrants(userId, grantInfos, accessControlList);
+                                    destinationObjectInfo.setGrants(grantInfos);
+                                    destinationObjectInfo.setObjectName(destinationKey.replaceAll("/", "-") + Hashes.getRandom(4));
+                                    foundDestinationBucketInfo.getObjects().add(destinationObjectInfo);
+                                } else {
+                                    if (destinationObjectInfo.canWriteACP(userId)) {
+                                        List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+                                        destinationObjectInfo.addGrants(userId, grantInfos, accessControlList);
+                                        destinationObjectInfo.setGrants(grantInfos);
+                                    }
+                                }
+
+                                destinationObjectInfo.setSize(sourceObjectInfo.getSize());
+                                destinationObjectInfo.setStorageClass(sourceObjectInfo.getStorageClass());
+                                destinationObjectInfo.setOwnerId(sourceObjectInfo.getOwnerId());
+                                String etag = sourceObjectInfo.getEtag();
+                                Date lastModified = sourceObjectInfo.getLastModified();
+                                destinationObjectInfo.setEtag(etag);
+                                destinationObjectInfo.setLastModified(lastModified);
+                                if(!metadataDirective.equals("REPLACE")) {
+                                    destinationObjectInfo.setMetaData(sourceObjectInfo.cloneMetaData());
+                                } else {
+                                    List<MetaDataEntry> metaData = request.getMetaData();
+                                    if(metaData != null)
+                                        destinationObjectInfo.replaceMetaData(metaData);
+                                }
+
+                                String sourceObjectName = sourceObjectInfo.getObjectName();
+                                destinationObjectName = destinationObjectInfo.getObjectName();
+
+                                try {
+                                    storageManager.copyObject(sourceBucket, sourceObjectName, destinationBucket, destinationObjectName);
+                                } catch(Exception ex) {
+                                    LOG.warn(ex, ex);
+                                    db.rollback();
+                                    throw new EucalyptusCloudException("Could not rename " + sourceObjectName + " to " + destinationObjectName);
+                                }
+                                reply.setEtag(etag);
+                                reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+
+                                db.commit();
+                                return reply;
+                            } else {
+                                db.rollback();
+                                throw new AccessDeniedException(destinationBucket);
+                            }
+                        } else {
+                            db.rollback();
+                            throw new NoSuchBucketException(destinationBucket);
+                        }
+                    } else {
+                        db.rollback();
+                        throw new AccessDeniedException(sourceKey);
+                    }
+                }
+            }
+            db.rollback();
+            throw new NoSuchEntityException(sourceKey);
+        } else {
+            db.rollback();
+            throw new NoSuchBucketException(sourceBucket);
+        }
     }
 
     public GetBucketLoggingStatusResponseType GetBucketLoggingStatus(GetBucketLoggingStatusType request) throws EucalyptusCloudException {

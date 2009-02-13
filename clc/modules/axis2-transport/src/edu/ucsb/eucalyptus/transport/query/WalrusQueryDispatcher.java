@@ -52,7 +52,6 @@ import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 
 import java.io.BufferedInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -107,6 +106,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         newMap.put(BUCKET + WalrusQueryDispatcher.HTTPVerb.POST.toString(), "PostObject");
 
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString(), "PutObject");
+        newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString() + WalrusProperties.COPY_SOURCE.toString(), "CopyObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.GET.toString(), "GetObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.DELETE.toString(), "DeleteObject");
 
@@ -150,7 +150,8 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
     }
 
     private static String[] getTarget(String operationPath) {
-        operationPath = operationPath.substring(1);
+        if(operationPath.startsWith("/"))
+            operationPath = operationPath.substring(1);
         operationPath = operationPath.replaceAll("//", "/");
         return operationPath.split("/");
     }
@@ -181,11 +182,17 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
         String verb = httpRequest.getHttpMethod();
         Map<String, String> headers = httpRequest.getHeaders();
+        CaseInsensitiveMap caseInsensitiveHeaders = new CaseInsensitiveMap(headers);
         String operationKey = "";
         Map<String, String> params = httpRequest.getParameters();
         String operationName = null;
-        if(headers.containsKey(StorageProperties.EUCALYPTUS_OPERATION)) {
-            String value = headers.get(StorageProperties.EUCALYPTUS_OPERATION);
+        long contentLength = 0;
+        String contentLengthString = (String) messageContext.getProperty(HTTP.CONTENT_LEN);
+        if(contentLengthString != null) {
+            contentLength = Long.parseLong(contentLengthString);
+        }
+        if(caseInsensitiveHeaders.containsKey(StorageProperties.EUCALYPTUS_OPERATION)) {
+            String value = caseInsensitiveHeaders.get(StorageProperties.EUCALYPTUS_OPERATION);
             for(WalrusProperties.WalrusInternalOperations operation: WalrusProperties.WalrusInternalOperations.values()) {
                 if(value.toLowerCase().equals(operation.toString().toLowerCase())) {
                     operationName = operation.toString();
@@ -218,9 +225,9 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                 if(verb.equals(HTTPVerb.POST.toString())) {
                     InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
                     messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
-                    String contentType = headers.get(HTTP.CONTENT_TYPE);
-                    int contentLength = Integer.parseInt(headers.get(HTTP.CONTENT_LEN));
-                    POSTRequestContext postRequestContext = new POSTRequestContext(in, contentType, contentLength);
+                    String contentType = caseInsensitiveHeaders.get(HTTP.CONTENT_TYPE);
+                    int postContentLength = Integer.parseInt(caseInsensitiveHeaders.get(HTTP.CONTENT_LEN));
+                    POSTRequestContext postRequestContext = new POSTRequestContext(in, contentType, postContentLength);
                     FileUpload fileUpload = new FileUpload(new WalrusFileItemFactory());
                     InputStream formDataIn = null;
                     String objectKey = null;
@@ -352,16 +359,11 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                     key = target[0] + "." + objectKey;
                     String randomKey = key + "." + Hashes.getRandom(10);
                     LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
-                    int dataLength = 0;
-                    try {
-                        dataLength = formDataIn.available();
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
-                    Writer writer = new Writer(formDataIn, dataLength, putQueue);
+
+                    Writer writer = new Writer(formDataIn, postContentLength, putQueue);
                     writer.start();
 
-                    operationParams.put("ContentLength", (new Long(dataLength).toString()));
+                    operationParams.put("ContentLength", (new Long(postContentLength).toString()));
                     operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
                 }
 
@@ -383,34 +385,74 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
             if(!params.containsKey(OperationParameter.acl.toString())) {
                 if (verb.equals(HTTPVerb.PUT.toString())) {
-                    messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
-                    InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
-                    InputStream inStream = in;
-                    if((!walrusInternalOperation) || (!WalrusProperties.StorageOperations.StoreSnapshot.toString().equals(operationName))) {
-                        inStream = new BufferedInputStream(in);
-                    } else {
-                        try {
-                            inStream = new GZIPInputStream(in);
-                        } catch(Exception ex) {
-                            LOG.warn(ex, ex);
-                            throw new EucalyptusCloudException("cannot process input");
+                    if(caseInsensitiveHeaders.containsKey(WalrusProperties.COPY_SOURCE.toString())) {
+                        String copySource = caseInsensitiveHeaders.get(WalrusProperties.COPY_SOURCE.toString());
+                        String[] sourceTarget = getTarget(copySource);
+                        String sourceObjectKey = "";
+                        String sourceSplitOn = "";
+                        if(sourceTarget.length > 1) {
+                            for(int i = 1; i < sourceTarget.length; ++i) {
+                                sourceObjectKey += sourceSplitOn + sourceTarget[i];
+                                sourceSplitOn = "/";
+                            }
+                            operationParams.put("SourceBucket", sourceTarget[0]);
+                            operationParams.put("SourceObject", sourceObjectKey);
+                            operationParams.put("DestinationBucket", operationParams.remove("Bucket"));
+                            operationParams.put("DestinationObject", operationParams.remove("Key"));
+
+                            String metaDataDirective = caseInsensitiveHeaders.get(WalrusProperties.METADATA_DIRECTIVE.toString());
+                            if(metaDataDirective != null) {
+                                operationParams.put("MetadataDirective", metaDataDirective);
+                            }
+                            AccessControlListType accessControlList;
+                            if(contentLength > 0) {
+                                InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
+                                accessControlList = getAccessControlList(in);
+                            } else {
+                                accessControlList = new AccessControlListType();
+                                ArrayList<Grant> grant = new ArrayList<Grant>();
+                                accessControlList.setGrants(grant);
+                            }
+                            operationParams.put("AccessControlList", accessControlList);
+                            operationKey += WalrusProperties.COPY_SOURCE.toString();
+                            Iterator<String> iterator = caseInsensitiveHeaders.keySet().iterator();
+                            while(iterator.hasNext()) {
+                                String key = iterator.next();
+                                for(WalrusProperties.CopyHeaders header: WalrusProperties.CopyHeaders.values()) {
+                                    if(key.replaceAll("-", "").equals(header.toString().toLowerCase())) {
+                                        String value = caseInsensitiveHeaders.get(key);
+                                        parseExtendedHeaders(operationParams, header.toString(), value);
+                                    }
+                                }
+                            }
+                        } else {
+                            throw new EucalyptusCloudException("Malformed COPY request");
                         }
-                    }
-                    String key = target[0] + "." + objectKey;
-                    String randomKey = key + "." + Hashes.getRandom(10);
-                    LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
-                    int dataLength = 0;
-                    try {
-                        dataLength = inStream.available();
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
 
-                    Writer writer = new Writer(inStream, dataLength, putQueue);
-                    writer.start();
+                    } else {
+                        messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
+                        InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
+                        InputStream inStream = in;
+                        if((!walrusInternalOperation) || (!WalrusProperties.StorageOperations.StoreSnapshot.toString().equals(operationName))) {
+                            inStream = new BufferedInputStream(in);
+                        } else {
+                            try {
+                                inStream = new GZIPInputStream(in);
+                            } catch(Exception ex) {
+                                LOG.warn(ex, ex);
+                                throw new EucalyptusCloudException("cannot process input");
+                            }
+                        }
+                        String key = target[0] + "." + objectKey;
+                        String randomKey = key + "." + Hashes.getRandom(10);
+                        LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
 
-                    operationParams.put("ContentLength", (new Long(dataLength).toString()));
-                    operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
+                        Writer writer = new Writer(inStream, contentLength, putQueue);
+                        writer.start();
+
+                        operationParams.put("ContentLength", (new Long(contentLength).toString()));
+                        operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
+                    }
                 } else if(verb.equals(HTTPVerb.GET.toString())) {
                     messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.TRUE);
                     if(!walrusInternalOperation) {
@@ -419,15 +461,15 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                         operationParams.put("InlineData", Boolean.FALSE);
                         operationParams.put("GetMetaData", Boolean.TRUE);
 
-                        Iterator<String> iterator = headers.keySet().iterator();
+                        Iterator<String> iterator = caseInsensitiveHeaders.keySet().iterator();
                         boolean isExtendedGet = false;
                         while(iterator.hasNext()) {
                             String key = iterator.next();
                             for(WalrusProperties.ExtendedGetHeaders header: WalrusProperties.ExtendedGetHeaders.values()) {
-                                if(key.toLowerCase().equals(header.toString().toLowerCase())) {
-                                    String value = headers.get(key);
+                                if(key.replaceAll("-", "").equals(header.toString().toLowerCase())) {
+                                    String value = caseInsensitiveHeaders.get(key);
                                     isExtendedGet = true;
-                                    parseExtendedGetHeaders(operationParams, header.toString(), value);
+                                    parseExtendedHeaders(operationParams, header.toString(), value);
                                 }
                             }
 
@@ -465,67 +507,8 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
         if (verb.equals(HTTPVerb.PUT.toString()) && params.containsKey(OperationParameter.acl.toString())) {
             //read ACL
-            try {
-                InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
-                BufferedInputStream bufferedIn = new BufferedInputStream(in);
-
-                byte[] bytes = new byte[DATA_MESSAGE_SIZE];
-
-                int bytesRead;
-                String aclString = "";
-                while ((bytesRead = bufferedIn.read(bytes)) > 0) {
-                    aclString += new String(bytes, 0, bytesRead);
-                }
-                if(aclString.length() > 0) {
-                    XMLParser xmlParser = new XMLParser(aclString);
-                    AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
-                    String ownerId = xmlParser.getValue("//Owner/ID");
-                    String displayName = xmlParser.getValue("//Owner/DisplayName");
-
-                    CanonicalUserType canonicalUser = new CanonicalUserType(ownerId, displayName);
-                    accessControlPolicy.setOwner(canonicalUser);
-
-                    AccessControlListType accessControlList = new AccessControlListType();
-                    ArrayList<Grant> grants = new ArrayList<Grant>();
-
-                    List<String> permissions = xmlParser.getValues("//AccessControlList/Grant/Permission");
-
-                    DTMNodeList grantees = xmlParser.getNodes("//AccessControlList/Grant/Grantee");
-
-
-                    for(int i = 0 ; i < grantees.getLength() ; ++i) {
-                        String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
-                        if(canonicalUserName.length() > 0) {
-                            String id = xmlParser.getValue(grantees.item(i), "ID");
-                            Grant grant = new Grant();
-                            Grantee grantee = new Grantee();
-                            grantee.setCanonicalUser(new CanonicalUserType(id, canonicalUserName));
-                            grant.setGrantee(grantee);
-                            grant.setPermission(permissions.get(i));
-                            grants.add(grant);
-                        } else {
-                            String groupUri = xmlParser.getValue(grantees.item(i), "URI");
-                            if(groupUri.length() == 0)
-                                throw new EucalyptusCloudException("malformed access control list");
-                            Grant grant = new Grant();
-                            Grantee grantee = new Grantee();
-                            grantee.setGroup(new Group(groupUri));
-                            grant.setGrantee(grantee);
-                            grant.setPermission(permissions.get(i));
-                            grants.add(grant);
-                        }
-                    }
-
-                    accessControlList.setGrants(grants);
-                    accessControlPolicy.setAccessControlList(accessControlList);
-
-                    operationParams.put("AccessControlPolicy", accessControlPolicy);
-                }
-            } catch(Exception ex) {
-                LOG.warn(ex);
-                throw new EucalyptusCloudException(ex.getMessage());
-            }
-
+            InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
+            operationParams.put("AccessControlPolicy", getAccessControlPolicy(in));
         }
 
         ArrayList paramsToRemove = new ArrayList();
@@ -623,7 +606,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         return returnValue;
     }
 
-    private void parseExtendedGetHeaders(Map operationParams, String headerString, String value) {
+    private void parseExtendedHeaders(Map operationParams, String headerString, String value) {
         if(headerString.equals(WalrusProperties.ExtendedGetHeaders.Range.toString())) {
             String prefix = "bytes=";
             assert(value.startsWith(prefix));
@@ -646,6 +629,121 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         } else {
             operationParams.put(headerString, value);
         }
+    }
+
+    private AccessControlPolicyType getAccessControlPolicy(InputStream in) throws EucalyptusCloudException {
+        AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
+        try {
+            BufferedInputStream bufferedIn = new BufferedInputStream(in);
+            byte[] bytes = new byte[DATA_MESSAGE_SIZE];
+
+            int bytesRead;
+            String aclString = "";
+            while ((bytesRead = bufferedIn.read(bytes)) > 0) {
+                aclString += new String(bytes, 0, bytesRead);
+            }
+            if(aclString.length() > 0) {
+                XMLParser xmlParser = new XMLParser(aclString);
+                String ownerId = xmlParser.getValue("//Owner/ID");
+                String displayName = xmlParser.getValue("//Owner/DisplayName");
+
+                CanonicalUserType canonicalUser = new CanonicalUserType(ownerId, displayName);
+                accessControlPolicy.setOwner(canonicalUser);
+
+                AccessControlListType accessControlList = new AccessControlListType();
+                ArrayList<Grant> grants = new ArrayList<Grant>();
+
+                List<String> permissions = xmlParser.getValues("//AccessControlList/Grant/Permission");
+
+                DTMNodeList grantees = xmlParser.getNodes("//AccessControlList/Grant/Grantee");
+
+
+                for(int i = 0 ; i < grantees.getLength() ; ++i) {
+                    String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
+                    if(canonicalUserName.length() > 0) {
+                        String id = xmlParser.getValue(grantees.item(i), "ID");
+                        Grant grant = new Grant();
+                        Grantee grantee = new Grantee();
+                        grantee.setCanonicalUser(new CanonicalUserType(id, canonicalUserName));
+                        grant.setGrantee(grantee);
+                        grant.setPermission(permissions.get(i));
+                        grants.add(grant);
+                    } else {
+                        String groupUri = xmlParser.getValue(grantees.item(i), "URI");
+                        if(groupUri.length() == 0)
+                            throw new EucalyptusCloudException("malformed access control list");
+                        Grant grant = new Grant();
+                        Grantee grantee = new Grantee();
+                        grantee.setGroup(new Group(groupUri));
+                        grant.setGrantee(grantee);
+                        grant.setPermission(permissions.get(i));
+                        grants.add(grant);
+                    }
+                }
+
+                accessControlList.setGrants(grants);
+                accessControlPolicy.setAccessControlList(accessControlList);
+            }
+        } catch(Exception ex) {
+            LOG.warn(ex);
+            throw new EucalyptusCloudException(ex.getMessage());
+        }
+        return accessControlPolicy;
+    }
+
+    private AccessControlListType getAccessControlList(InputStream in) throws EucalyptusCloudException {
+        AccessControlListType accessControlList = new AccessControlListType();
+        try {
+            BufferedInputStream bufferedIn = new BufferedInputStream(in);
+            byte[] bytes = new byte[DATA_MESSAGE_SIZE];
+
+            int bytesRead;
+            String aclString = "";
+            while ((bytesRead = bufferedIn.read(bytes)) > 0) {
+                aclString += new String(bytes, 0, bytesRead);
+            }
+            if(aclString.length() > 0) {
+                XMLParser xmlParser = new XMLParser(aclString);
+                String ownerId = xmlParser.getValue("//Owner/ID");
+                String displayName = xmlParser.getValue("//Owner/DisplayName");
+
+
+                ArrayList<Grant> grants = new ArrayList<Grant>();
+
+                List<String> permissions = xmlParser.getValues("/AccessControlList/Grant/Permission");
+
+                DTMNodeList grantees = xmlParser.getNodes("/AccessControlList/Grant/Grantee");
+
+
+                for(int i = 0 ; i < grantees.getLength() ; ++i) {
+                    String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
+                    if(canonicalUserName.length() > 0) {
+                        String id = xmlParser.getValue(grantees.item(i), "ID");
+                        Grant grant = new Grant();
+                        Grantee grantee = new Grantee();
+                        grantee.setCanonicalUser(new CanonicalUserType(id, canonicalUserName));
+                        grant.setGrantee(grantee);
+                        grant.setPermission(permissions.get(i));
+                        grants.add(grant);
+                    } else {
+                        String groupUri = xmlParser.getValue(grantees.item(i), "URI");
+                        if(groupUri.length() == 0)
+                            throw new EucalyptusCloudException("malformed access control list");
+                        Grant grant = new Grant();
+                        Grantee grantee = new Grantee();
+                        grantee.setGroup(new Group(groupUri));
+                        grant.setGrantee(grantee);
+                        grant.setPermission(permissions.get(i));
+                        grants.add(grant);
+                    }
+                }
+                accessControlList.setGrants(grants);
+            }
+        } catch(Exception ex) {
+            LOG.warn(ex);
+            throw new EucalyptusCloudException(ex.getMessage());
+        }
+        return accessControlList;
     }
 
     public QuerySecurityHandler getSecurityHandler()
