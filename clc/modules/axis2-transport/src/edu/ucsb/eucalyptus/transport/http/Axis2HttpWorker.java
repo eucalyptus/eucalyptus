@@ -92,6 +92,12 @@ public class Axis2HttpWorker implements Worker {
     msgContext.setProperty( REAL_HTTP_REQUEST, request );
     msgContext.setProperty( REAL_HTTP_RESPONSE, response );
 
+    Header[] headers = request.getHeaders(HTTP.CONTENT_LEN);
+    if(headers != null && headers.length > 0) {
+        String contentLength = headers[0].getValue();
+        msgContext.setProperty(HTTP.CONTENT_LEN, contentLength);
+    }
+      
     if ( method.equals( HTTPConstants.HEADER_GET ) ) {
       if ( ( uri.startsWith( "/latest/" ) || uri.matches("/\\d\\d\\d\\d-\\d\\d-\\d\\d/.*") ) && handleMetaData( response, msgContext, uri ) )
         return;

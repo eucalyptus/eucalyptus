@@ -79,6 +79,8 @@ public class WalrusProperties {
     public static final String AUTHENTICATED_USERS_GROUP = "'http://acs.amazonaws.com/groups/global/AuthenticatedUsers";
 
     public static final String IGNORE_PREFIX = "x-ignore-";
+    public static final String COPY_SOURCE = "x-amz-copy-source";
+    public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
     public static final String ADMIN = "admin";
     public static String WALRUS_REF = "vm://BukkitInternal";
 
@@ -91,7 +93,7 @@ public class WalrusProperties {
     }
 
     public enum ExtendedHeaderDateTypes {
-        IfModifiedSince, IfUnmodifiedSince;
+        IfModifiedSince, IfUnmodifiedSince, CopySourceIfModifiedSince, CopySourceIfUnmodifiedSince;
 
         public static boolean contains(String value) {
             for(ExtendedHeaderDateTypes type: values()) {
@@ -137,5 +139,9 @@ public class WalrusProperties {
 
     public enum PolicyHeaders {
         expiration, conditions
+    }
+
+    public enum CopyHeaders {
+       CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince 
     }
 }

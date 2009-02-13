@@ -372,7 +372,7 @@ public class ObjectInfo {
         }
     }
 
-    public void setMetaData(ArrayList<MetaDataEntry>metaDataEntries) {
+    public void replaceMetaData(List<MetaDataEntry>metaDataEntries) {
         metaData = new ArrayList<MetaDataInfo>();
         for (MetaDataEntry metaDataEntry: metaDataEntries) {
             MetaDataInfo metaDataInfo = new MetaDataInfo();
@@ -383,12 +383,28 @@ public class ObjectInfo {
         }
     }
 
-    public void getMetaData(ArrayList<MetaDataEntry>metaDataEntries) {
+    public void returnMetaData(List<MetaDataEntry>metaDataEntries) {
         for (MetaDataInfo metaDataInfo: metaData) {
             MetaDataEntry metaDataEntry = new MetaDataEntry();
             metaDataEntry.setName(metaDataInfo.getName());
             metaDataEntry.setValue(metaDataInfo.getValue());
             metaDataEntries.add(metaDataEntry);
         }
+    }
+
+    public List<MetaDataInfo> cloneMetaData() {
+        ArrayList<MetaDataInfo> metaDataInfos = new ArrayList<MetaDataInfo>();
+        for(MetaDataInfo metaDataInfo : metaData) {
+            metaDataInfos.add(metaDataInfo.clone());
+        }
+        return metaDataInfos;
+    }
+
+    public List<MetaDataInfo> getMetaData() {
+        return metaData;
+    }
+
+    public void setMetaData(List<MetaDataInfo> metaData) {
+        this.metaData = metaData;
     }
 }

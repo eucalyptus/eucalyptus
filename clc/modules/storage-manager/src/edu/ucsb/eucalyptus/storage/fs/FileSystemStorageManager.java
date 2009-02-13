@@ -42,6 +42,7 @@ import org.apache.log4j.Logger;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.nio.channels.FileChannel;
 
 public class FileSystemStorageManager implements StorageManager {
 
@@ -170,9 +171,20 @@ public class FileSystemStorageManager implements StorageManager {
         File newObjectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + newName);
         if(oldObjectFile.exists()) {
             if (!oldObjectFile.renameTo(newObjectFile)) {
-                throw new IOException(oldName);
+                throw new IOException(bucket + FILE_SEPARATOR + oldName);
             }
         }
+    }
+
+    public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException {
+        File oldObjectFile = new File (rootDirectory + FILE_SEPARATOR + sourceBucket + FILE_SEPARATOR + sourceObject);
+        File newObjectFile = new File (rootDirectory + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR + destinationObject);
+
+        FileChannel fileIn = new FileInputStream(oldObjectFile).getChannel();
+        FileChannel fileOut = new FileOutputStream(newObjectFile).getChannel();
+        fileIn.transferTo(0, fileIn.size(), fileOut);
+        fileIn.close();
+        fileOut.close();
     }
 
     public String getObjectPath(String bucket, String object) {
@@ -196,7 +208,7 @@ public class FileSystemStorageManager implements StorageManager {
     public native String disableLogicalVolume(String lvName);
 
     public native String removeVolumeGroup(String vgName);
-    
+
     public native String getLvmVersion();
 
     public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet, boolean removeVg) throws EucalyptusCloudException {
@@ -222,9 +234,9 @@ public class FileSystemStorageManager implements StorageManager {
             throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
         }
         if(removeVg) {
-         returnValue = removeVolumeGroup(vgName);
+            returnValue = removeVolumeGroup(vgName);
         } else {
-        returnValue = reduceVolumeGroup(vgName, snapshotLoDev);
+            returnValue = reduceVolumeGroup(vgName, snapshotLoDev);
         }
         if(returnValue.length() == 0) {
             throw new EucalyptusCloudException("Unable to remove volume group " + vgName);

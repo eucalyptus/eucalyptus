@@ -206,16 +206,20 @@
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 
-    <mapping name="CopyObject" class="edu.ucsb.eucalyptus.msgs.CopyObjectType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
+    <mapping name="CopyObject" class="edu.ucsb.eucalyptus.msgs.CopyObjectType"  extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+        <value name="SourceBucket" field="sourceBucket"/>
+        <value name="SourceObject" field="sourceObject"/>
+        <value name="DestinationBucket" field="destinationBucket"/>
+        <value name="DestinationObject" field="destinationObject"/>
+        <value name="MetadataDirective" field="metadataDirective"/>
         <collection field="metaData" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
             <structure map-as="edu.ucsb.eucalyptus.msgs.MetaDataEntry"/>
         </collection>
         <structure field="accessControlList" map-as="edu.ucsb.eucalyptus.msgs.AccessControlListType" usage="optional"/>
-        <value name="CopyIfMatch" field="copyIfMatch"/>
-        <value name="CopyIfNoneMatch" field="copyIfNoneMatch"/>
-        <value name="CopyIfModifiedSince" field="copyIfModifiedSince"/>
-        <value name="CopyIfUnmodifiedSince" field="copyIfUnmodifiedSince"/>
+        <value name="CopySourceIfMatch" field="copySourceIfMatch"/>
+        <value name="CopySourceIfNoneMatch" field="copySourceIfNoneMatch"/>
+        <value name="CopySourceIfModifiedSince" field="copySourceIfModifiedSince"/>
+        <value name="CopySourceIfUnmodifiedSince" field="copySourceIfUnmodifiedSince"/>
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 
