@@ -1018,15 +1018,14 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
 }
 
 int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, ccInstance **outInsts, int *outInstsLen) {
-  int rc, i, j, done, runCount, resid;
+  int rc, i, j, done, runCount, resid, foundnet=0;
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
   char *instId=NULL, 
-    *mac=NULL, 
-    *pubip=NULL, 
-    *privip=NULL, 
     *brname=NULL;
   time_t op_start, op_timer;
+  resource *res;
+  char mac[32], privip[32], pubip[32];
 
   ncInstance *outInst=NULL;
   ncInstParams ncvm;
@@ -1055,10 +1054,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   rc = refresh_resources(ccMeta, OP_TIMEOUT - (time(NULL) - op_start));
   
   for (i=0; i<maxCount; i++) {
-    resource *res;
-    char mac[32], privip[32], pubip[32];
-    int foundnet=0;
-
     logprintfl(EUCAINFO,"\trunning instance %d with emiId %s...\n", i, amiId);
     
     // generate new mac
@@ -1078,6 +1073,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       bzero(mac, 32);
       rc = vnetGetNextHost(vnetconfig, mac, privip, 0);
       if (!rc) {
+	snprintf(pubip, 32, "%s", privip);
 	foundnet = 1;
       }
     } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
@@ -1096,7 +1092,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     }
     sem_post(vnetConfigLock);
     
-    logprintfl(EUCAINFO,"\tassigning MAC/IP: %s/%s\n", mac, privip);
+    logprintfl(EUCAINFO,"\tassigning MAC/IP: %s/%s/%s\n", mac, pubip, privip);
     
     if (mac[0] == '\0' || !foundnet) {
       logprintfl(EUCAERROR,"could not find any free network address, failing doRunInstances()\n");
@@ -1193,35 +1189,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  
 	  // stuff from NC
 	  rc = ccInstance_to_ncInstance(myInstance, outInst);
-
-	  /*
-	  strncpy(myInstance->instanceId, outInst->instanceId, 16);
-	  strncpy(myInstance->reservationId, outInst->reservationId, 16);
-	  strncpy(myInstance->ownerId, outInst->userId, 16);
-	  strncpy(myInstance->amiId, outInst->imageId, 16);
-	  strncpy(myInstance->kernelId, outInst->kernelId, 16);
-	  strncpy(myInstance->ramdiskId, outInst->ramdiskId, 16);
-	  strncpy(myInstance->launchIndex, outInst->launchIndex, 64);
-	  strncpy(myInstance->userData, outInst->userData, 64);
-	  for (i=0; i<outInst->groupNamesSize || i >= 64; i++) {
-	    snprintf(myInstance->groupNames[i], 32, "%s", outInst->groupNames[i]);
-	  }
-	  strncpy(myInstance->state, outInst->stateName, 16);
-	  myInstance->ccnet.vlan = outInst->ncnet.vlan;
-	  strncpy(myInstance->ccnet.publicMac, outInst->ncnet.publicMac, 24);
-	  strncpy(myInstance->ccnet.privateMac, outInst->ncnet.privateMac, 24);
-	  if (strcmp(pubip, "0.0.0.0")) {
-	    strncpy(myInstance->ccnet.publicIp, pubip, 16);
-	  } else {
-	    strncpy(myInstance->ccnet.publicIp, outInst->ncnet.publicIp, 16);
-	  }
-	  
-	  if (strcmp(privip, "0.0.0.0")) {
-	  strncpy(myInstance->ccnet.privateIp, privip, 16);
-	  } else {
-	  strncpy(myInstance->ccnet.privateIp, outInst->ncnet.privateIp, 16);
-	    }
-	  */
 	  
 	  // instance info that CC has
 	  myInstance->ts = time(NULL);
@@ -1234,19 +1201,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  myInstance->ncHostIdx = resid;
 	  if (ccvm) memcpy(&(myInstance->ccvm), ccvm, sizeof(virtualMachine));
 	  if (config->resourcePool[resid].ncURL) strncpy(myInstance->serviceTag, config->resourcePool[resid].ncURL, 64);
-	  //	  if (kernelId) strncpy(myInstance->kernelId, kernelId, 16);
-	  //	  if (ramdiskId) strncpy(myInstance->ramdiskId, ramdiskId, 16);
-	  //	  if (userData) strncpy(myInstance->userData, userData, 64);
-	  //	  if (launchIndex) strncpy(myInstance->launchIndex, launchIndex, 64);
-	  /*
-	  {
-	    int i;
-	    for (i=0; i<netNamesLen; i++) {
-	      if (i >= 64) break;
-	      if (netNames[i]) snprintf(myInstance->groupNames[i], 32, "%s", netNames[i]);
-	    }
-	  }
-	  */
+
 	  // start up DHCP
 	  rc = vnetKickDHCP(vnetconfig);
 	  if (rc) {
@@ -1841,7 +1796,6 @@ int init_config(void) {
 	}
 	toka = strtok_r(NULL, " ", &ptra);
       }
-      //      vnetGenerateDHCP(vnetconfig, &numHosts);
       vnetKickDHCP(vnetconfig);
     } else if (pubips) {
       char *ip, *ptra, *toka;

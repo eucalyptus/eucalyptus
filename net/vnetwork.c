@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <math.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -1275,8 +1276,8 @@ int fill_arp(char *subnet) {
 
 int discover_mac(vnetConfig *vnetconfig, char *mac, char **ip) {
   int rc, i, j;
-  char cmd[1024], rbuf[256], *tok;
-  struct ifreq ifinfo;
+  char cmd[1024], rbuf[256], *tok, lowbuf[256], lowmac[256];
+
   FILE *FH=NULL;
 
   if (mac == NULL || ip == NULL) {
@@ -1287,13 +1288,24 @@ int discover_mac(vnetConfig *vnetconfig, char *mac, char **ip) {
   if (!FH) {
     return(1);
   }
+
+  bzero(lowmac, 256);
+  for (i=0; i<strlen(mac); i++) {
+    lowmac[i] = tolower(mac[i]);
+  }
+
   while(fgets(rbuf, 256, FH) != NULL) {
-    if (strstr(rbuf, mac)) {
-      tok = strtok(rbuf, " ");
+    bzero(lowbuf, 256);
+    for (i=0; i<strlen(rbuf); i++) {
+      lowbuf[i] = tolower(rbuf[i]);
+    }
+
+    if (strstr(lowbuf, lowmac)) {
+      tok = strtok(lowbuf, " ");
       if (tok != NULL) {
-	*ip = strdup(tok);
-	fclose(FH);
-	return(0);
+        *ip = strdup(tok);
+        fclose(FH);
+        return(0);
       }
     }
   }
