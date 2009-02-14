@@ -1154,8 +1154,14 @@ public class Bukkit {
 
     public GetObjectExtendedResponseType GetObjectExtended(GetObjectExtendedType request) throws EucalyptusCloudException {
         GetObjectExtendedResponseType reply = (GetObjectExtendedResponseType) request.getReply();
-        long byteRangeStart = request.getByteRangeStart();
-        long byteRangeEnd = request.getByteRangeEnd();
+        Long byteRangeStart = request.getByteRangeStart();
+        if(byteRangeStart == null) {
+            byteRangeStart = 0L;
+        }
+        Long byteRangeEnd = request.getByteRangeEnd();
+        if(byteRangeEnd == null) {
+            byteRangeEnd = -1L;
+        }
         Date ifModifiedSince = request.getIfModifiedSince();
         Date ifUnmodifiedSince = request.getIfUnmodifiedSince();
         String ifMatch = request.getIfMatch();
@@ -1201,7 +1207,7 @@ public class Bukkit {
                             }
                         }
                         if(ifUnmodifiedSince != null) {
-                            if((ifUnmodifiedSince.getTime() <= lastModified.getTime()) && !returnCompleteObjectOnFailure) {
+                            if((ifUnmodifiedSince.getTime() < lastModified.getTime()) && !returnCompleteObjectOnFailure) {
                                 db.rollback();
                                 throw new PreconditionFailedException(lastModified.toString());
                             }
@@ -1222,7 +1228,14 @@ public class Bukkit {
                         }
                         reply.setEtag(objectInfo.getEtag());
                         reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
-                        reply.setSize(objectInfo.getSize());
+                        if(byteRangeEnd > -1) {
+                            if(byteRangeEnd <= objectInfo.getSize() && ((byteRangeEnd - byteRangeStart) > 0))
+                                reply.setSize(byteRangeEnd - byteRangeStart);
+                            else
+                                reply.setSize(0L);
+                        } else {
+                            reply.setSize(objectInfo.getSize());
+                        }
                         status.setCode(200);
                         status.setDescription("OK");
                         reply.setStatus(status);
@@ -2174,10 +2187,12 @@ public class Bukkit {
             long bytesRemaining = objectSize;
             long offset = byteRangeStart;
 
-            if(byteRangeEnd != 0) {
+            if(byteRangeEnd > 0) {
                 assert(byteRangeEnd <= objectSize);
                 assert(byteRangeEnd >= byteRangeStart);
                 bytesRemaining = byteRangeEnd - byteRangeStart;
+                if(byteRangeEnd > objectSize || (byteRangeStart < 0))
+                    bytesRemaining = 0;
             }
 
             try {
@@ -2185,8 +2200,12 @@ public class Bukkit {
 
                 while (bytesRemaining > 0) {
                     int bytesRead = storageManager.readObject(bucketName, objectName, bytes, offset);
+                    if(bytesRemaining - bytesRead > 0)
+                        getQueue.put(WalrusDataMessage.DataMessage(bytes, bytesRead));
+                    else
+                        getQueue.put(WalrusDataMessage.DataMessage(bytes, (int)bytesRemaining));
+
                     bytesRemaining -= bytesRead;
-                    getQueue.put(WalrusDataMessage.DataMessage(bytes, bytesRead));
                     offset += bytesRead;
                 }
                 getQueue.put(WalrusDataMessage.EOF());
