@@ -60,6 +60,7 @@ public class Main {
     Messaging.dispatch( "vm://RequestQueue", descAz );
 
     Messaging.dispatch( WalrusProperties.WALRUS_REF, new InitializeWalrusType() );
+    if( System.getProperty("euca.ebs.disable") == null )
     Messaging.dispatch( StorageProperties.STORAGE_REF, new InitializeStorageManagerType() );
 
     LOG.info( "Eucalyptus started." );
