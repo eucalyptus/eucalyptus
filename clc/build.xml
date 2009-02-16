@@ -51,7 +51,10 @@
     <target name="build-crypto" depends="untar">
         <ant dir="modules/crypto" inheritall="false"/>
     </target>
-<target name="build-msgs" depends="build-crypto">
+    <target name="build-workarounds" depends="build-crypto">
+        <ant dir="modules/workarounds" inheritall="false"/>
+    </target>
+    <target name="build-msgs" depends="build-workarounds">
         <ant dir="modules/msgs" inheritall="false"/>
     </target>
     <target name="build-core" depends="build-msgs">
@@ -81,7 +84,13 @@
     <target name="build-ebs" depends="build-ebs-ws"/>
     <target name="build" depends="build-eucalyptus,build-walrus,build-ebs"/>
     <!--================================== clean targets ==================================-->
-    <target name="clean-msgs">
+    <target name="clean-workarounds">
+        <ant dir="modules/workarounds" inheritall="false" target="clean"/>
+    </target>
+    <target name="clean-crypto" depends="clean-workarounds">
+        <ant dir="modules/crypto" inheritall="false" target="clean"/>
+    </target>
+    <target name="clean-msgs" depends="clean-crypto">
         <ant dir="modules/msgs" inheritall="false" target="clean"/>
     </target>
     <target name="clean-core" depends="clean-msgs">
@@ -143,6 +152,8 @@
         <mkdir dir="${euca.var.dir}/webapps"/>
         <mkdir dir="${euca.var.dir}/modules"/>
         <mkdir dir="${euca.log.dir}"/>
+        <ant dir="modules/workarounds" inheritall="false" target="install"/>
+        <ant dir="modules/crypto" inheritall="false" target="install"/>
         <ant dir="modules/msgs" inheritall="false" target="install"/>
         <ant dir="modules/core" inheritall="false" target="install"/>
         <ant dir="modules/www" inheritall="false" target="install"/>
