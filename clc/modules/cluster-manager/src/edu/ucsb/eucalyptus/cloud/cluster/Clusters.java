@@ -107,6 +107,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       LOG.error( e1, e1 );
     }
     this.register( new Cluster( clusterInfo ) );
+    this.lookup( clusterInfo.getName() ).start();
     return clusterInfo;
   }
 
