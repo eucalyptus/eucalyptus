@@ -48,15 +48,22 @@ public class ReplyCoordinator {
   private static float MAP_BIN_AVG_THRESHOLD = 1.0f;
   private static long MAP_GET_WAIT_MS = 10;
   private static long MAP_SUBMIT_SLEEP_MS = MAP_GET_WAIT_MS;
-  private static long MAP_TIMEOUT_MS = 15000;
+  private long MAP_TIMEOUT_MS = 15000;
   private ConcurrentHashMap<String, EucalyptusMessage> replyMap;
   private ConcurrentHashMap<String,String> waitList;
 
   public ReplyCoordinator()
   {
+    this.MAP_TIMEOUT_MS = 15000;
     this.replyMap = new ConcurrentHashMap<String, EucalyptusMessage>( MAP_CAPACITY, MAP_BIN_AVG_THRESHOLD, MAP_NUM_CONCURRENT );
     this.waitList = new ConcurrentHashMap<String, String>( MAP_CAPACITY, MAP_BIN_AVG_THRESHOLD, MAP_NUM_CONCURRENT );
   }
+  public ReplyCoordinator( long user_timeout )
+  {
+    this();
+    this.MAP_TIMEOUT_MS = user_timeout;
+  }
+
 
   public void putMessage( EucalyptusMessage msg )
   {

@@ -55,7 +55,7 @@ public class WalrusReplyQueue {
 
     private static Logger LOG = Logger.getLogger( WalrusReplyQueue.class );
 
-    private static ReplyCoordinator replies = new ReplyCoordinator();
+    private static ReplyCoordinator replies = new ReplyCoordinator( 3600000 );
 
     private static int SC_DECRYPTION_FAILED = 566;
     public void handle( EucalyptusMessage msg )
