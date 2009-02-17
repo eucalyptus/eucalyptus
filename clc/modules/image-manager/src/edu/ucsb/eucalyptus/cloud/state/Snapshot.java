@@ -1,9 +1,13 @@
 package edu.ucsb.eucalyptus.cloud.state;
 
-import org.hibernate.annotations.*;
+import edu.ucsb.eucalyptus.util.StorageProperties;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import javax.persistence.*;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Transient;
 
 @Entity
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
@@ -51,8 +55,8 @@ public class Snapshot extends AbstractIsomorph {
   }
 
   public void setMappedState( final String state ) {
-    if( "pending".equals( state ) ) this.setState( State.GENERATING );
-    else if( "completed".equals( state )) this.setState( State.EXTANT );
+    if( StorageProperties.Status.creating.toString().equals( state ) ) this.setState( State.GENERATING );
+    else if( StorageProperties.Status.completed.equals( state )) this.setState( State.EXTANT );
     else this.setState( State.FAIL );
   }
 
@@ -61,7 +65,6 @@ public class Snapshot extends AbstractIsomorph {
   }
 
   public edu.ucsb.eucalyptus.msgs.Snapshot morph( final edu.ucsb.eucalyptus.msgs.Snapshot snap ) {
-    snap.setProgress( "100%!1!11" );
     snap.setSnapshotId( this.getDisplayName() );
     snap.setStatus( this.mapState() );
     snap.setStartTime( this.getBirthday() );

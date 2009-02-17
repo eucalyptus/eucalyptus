@@ -83,7 +83,7 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
   Integer maxTotalVolumeSize;
   Integer maxTotalSnapshotSize;
   Integer maxVolumeSize;
-  Integer maxSnapshotSize;  
+  Integer maxSnapshotSize;
 }
 
 public class UpdateStorageConfigurationResponseType extends StorageResponseType {
@@ -201,9 +201,17 @@ public class StorageSnapshot extends EucalyptusData {
 
 public class DescribeStorageSnapshotsType extends StorageRequestType {
   ArrayList<String> snapshotSet = new ArrayList<String>();
+
+  def DescribeStorageSnapshotsType() {
+  }
+
+  def DescribeStorageSnapshotsType(final snapshotSet) {
+    this.snapshotSet = snapshotSet;
+  }
+
 }
 public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
-  ArrayList<StorageSnapshot> snapshotSet = new ArrayList<Snapshot>();
+  ArrayList<StorageSnapshot> snapshotSet = new ArrayList<StorageSnapshot>();
 }
 
 public class StorageControllerHeartbeatMessage extends HeartbeatMessage {

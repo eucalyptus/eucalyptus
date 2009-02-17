@@ -34,13 +34,27 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
-import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
+import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
+import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
+import edu.ucsb.eucalyptus.msgs.DeleteSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteSnapshotType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
+import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
+import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
+import edu.ucsb.eucalyptus.util.Messaging;
+import edu.ucsb.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;
 
 import java.util.List;
@@ -77,6 +91,7 @@ public class SnapshotManager {
     try {
       scReply = ( CreateStorageSnapshotResponseType ) Messaging.send( StorageProperties.STORAGE_REF, scRequest );
       snap.setMappedState( scReply.getStatus() );
+      LOG.debug(scReply);
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback();
@@ -86,11 +101,11 @@ public class SnapshotManager {
 
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply();
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() );
-    snapMsg.setProgress( snapMsg.getProgress() );
+    snapMsg.setProgress( "0%" );
     reply.setSnapshot( snapMsg );
     return reply;
   }
- 
+
   public DeleteSnapshotResponseType DeleteSnapshot( DeleteSnapshotType request ) throws EucalyptusCloudException {
     DeleteSnapshotResponseType reply = ( DeleteSnapshotResponseType ) request.getReply();
     reply.set_return( false );
@@ -99,7 +114,8 @@ public class SnapshotManager {
     try {
       Snapshot snap = db.getUnique( Snapshot.named( userName, request.getSnapshotId() ) );
       //:: TODO-1.5: state checks and snapshot tree check here :://
-      Messaging.dispatch( StorageProperties.STORAGE_REF, new DeleteStorageSnapshotType( snap.getDisplayName() ) );
+      DeleteStorageSnapshotResponseType scReply = ( DeleteStorageSnapshotResponseType ) Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageSnapshotType( snap.getDisplayName() ) );
+      LOG.debug( scReply );
       db.delete( snap );
       db.commit();
     } catch ( EucalyptusCloudException e ) {
@@ -115,10 +131,26 @@ public class SnapshotManager {
     DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply();
     EntityWrapper<Snapshot> db = getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
-    List<Snapshot> Snapshots = db.query( Snapshot.ownedBy( userName ) );
-    for ( Snapshot v : Snapshots ) {
+    List<Snapshot> snapshots = db.query( Snapshot.ownedBy( userName ) );
+    for ( Snapshot v : snapshots ) {
       if ( request.getSnapshotSet().isEmpty() || request.getSnapshotSet().contains( v.getDisplayName() ) ) {
-        reply.getSnapshotSet().add( v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() ) );
+        DescribeStorageSnapshotsResponseType snapshotInfo = null;
+        try {
+          snapshotInfo = ( DescribeStorageSnapshotsResponseType ) Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName() ) ) );
+          LOG.debug( snapshotInfo );
+        } catch ( EucalyptusCloudException e ) {
+          LOG.debug( e, e );
+          throw e;
+        }
+        if( !snapshotInfo.getSnapshotSet().isEmpty() ) {
+          StorageSnapshot storageSnapshot = snapshotInfo.getSnapshotSet().get( 0 );
+          v.setMappedState( storageSnapshot.getStatus() );
+          edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() );
+          snapReply.setProgress( storageSnapshot.getProgress() );
+          reply.getSnapshotSet().add( snapReply );
+        } else {
+          //:: TODO: handle the now-removed snapshot entry case here :://
+        }
       }
     }
     db.commit();

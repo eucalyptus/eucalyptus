@@ -37,7 +37,7 @@ public class Cluster implements HasName {
   private Thread logThread;
   private Thread keyThread;
   private boolean stopped = false;
-
+  
   public Cluster( ClusterInfo clusterInfo ) {
     this.clusterInfo = clusterInfo;
     this.state = new ClusterState( this );

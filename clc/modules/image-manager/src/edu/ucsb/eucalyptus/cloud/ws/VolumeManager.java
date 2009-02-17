@@ -43,6 +43,7 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.cluster.VolumeAttachCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VolumeDetachCallback;
+import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.State;
@@ -79,6 +80,10 @@ public class VolumeManager {
 
   private static String ID_PREFIX = "vol";
   private static Logger LOG = Logger.getLogger( VolumeManager.class );
+
+//  static {
+//    Clusters.getInstance().register( new Cluster( new ClusterInfo( "bogocluster", "lollerskates", 8774 ) ) );
+//  }
 
   public static EntityWrapper<Volume> getEntityWrapper() {
     return new EntityWrapper<Volume>( PERSISTENCE_CONTEXT );
@@ -137,7 +142,7 @@ public class VolumeManager {
     try {
       Volume vol = db.getUnique( Volume.named( userName, request.getVolumeId() ) );
       //:: TODO-1.5: state checks and snapshot tree check here :://
-      Messaging.dispatch( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
+      Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
       db.delete( vol );
       db.commit();
     } catch ( EucalyptusCloudException e ) {
@@ -154,6 +159,8 @@ public class VolumeManager {
     EntityWrapper<Volume> db = getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
     LOG.debug( request );
+    Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageVolumesType(  ) );
+
     Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>();
     for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
       for ( AttachedVolume av : vm.getVolumes() ) {

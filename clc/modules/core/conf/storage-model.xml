@@ -54,16 +54,14 @@
             <component class="edu.ucsb.eucalyptus.ic.StorageReplyQueue"/>
         </service>
 
+    </model>
+    <model name="storage-internal">
         <service name="StorageInternal">
             <inbound>
                 <inbound-endpoint ref="StorageInternalWS"/>
             </inbound>
             <component class="edu.ucsb.eucalyptus.cloud.ws.Storage"/>
-            <!--<default-service-exception-strategy>-->
-                <!--<vm:outbound-endpoint path="ReplyQueueWS"/>-->
-            <!--</default-service-exception-strategy>           -->
-        </service>
-
+        </service>        
     </model>
 
 </mule>
