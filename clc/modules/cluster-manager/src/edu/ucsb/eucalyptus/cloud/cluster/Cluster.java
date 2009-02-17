@@ -36,6 +36,7 @@ public class Cluster implements HasName {
   private Thread mqThread;
   private Thread logThread;
   private Thread keyThread;
+  private boolean stopped = false;
 
   public Cluster( ClusterInfo clusterInfo ) {
     this.clusterInfo = clusterInfo;
@@ -47,7 +48,6 @@ public class Cluster implements HasName {
     this.nodeLogUpdater = new NodeLogCallback( this );
     this.nodeCertUpdater = new NodeCertCallback( this );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>();
-//    this.waitForCerts();
   }
 
   private void waitForCerts() {
@@ -60,7 +60,7 @@ public class Cluster implements HasName {
         LOG.debug( e, e );
       }
       try {Thread.sleep( 5000 );} catch ( InterruptedException ignored ) {}
-    } while ( reply == null || !this.checkCerts( reply ) );
+    } while ( ( reply == null || !this.checkCerts( reply ) ) && !stopped );
   }
 
   private boolean checkCerts( final GetKeysResponseType reply ) {
@@ -94,10 +94,28 @@ public class Cluster implements HasName {
     return ret;
   }
 
-  public synchronized void start() {
+  class ClusterStartupWatchdog extends Thread {
+    Cluster cluster = null;
+    ClusterStartupWatchdog( final Cluster cluster ) {
+      super( cluster.getName() + "-ClusterStartupWatchdog" );
+      this.cluster = cluster;
+    }
+
+    public void run() {
+      LOG.info( "Calling startup on cluster: " + cluster.getName() );
+      cluster.startThreads();
+    }
+  }
+
+  public void start() {
+    ( new ClusterStartupWatchdog( this ) ).start();
+  }
+
+  public void startThreads() {
     //:: should really be organized as a thread group etc etc :://
     LOG.warn( "Starting cluster: " + this.clusterInfo.getUri() );
     this.waitForCerts();
+    if( !stopped ) {
     if ( this.mqThread == null || this.mqThread.isAlive() )
       this.mqThread = this.startNamedThread( messageQueue );
 
@@ -116,6 +134,7 @@ public class Cluster implements HasName {
 //    if ( this.logThread != null && !this.logThread.isAlive() )
 //      ( this.logThread = new Thread( nodeLogUpdater, nodeLogUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
 
+    }
   }
 
   private Thread startNamedThread( Runnable r ) {
@@ -126,8 +145,9 @@ public class Cluster implements HasName {
     return t;
   }
 
-  public synchronized void stop() throws InterruptedException {
+  public void stop() {
     LOG.warn( "Stopping cluster: " + this.clusterInfo.getUri() );
+    this.stopped = true;
     this.rscUpdater.stop();
     this.addrUpdater.stop();
     this.vmUpdater.stop();

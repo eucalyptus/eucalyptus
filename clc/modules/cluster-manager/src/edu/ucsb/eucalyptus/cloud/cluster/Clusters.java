@@ -39,9 +39,35 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
 
   public void update( List<ClusterStateType> clusterChanges )
   {
+    EntityWrapper<ClusterInfo> db = new EntityWrapper<ClusterInfo>();
+    //:: remove old non-existant clusters :://
+    List<ClusterInfo> clusterList = db.query( new ClusterInfo() );
+    for( ClusterInfo c : clusterList ) {
+      boolean found = false;
+      for( ClusterStateType newClusterInfo : clusterChanges ) {
+        if( c.getName().equals( newClusterInfo.getName() ) ) {
+          found = true;
+          break;
+        }
+      }
+      if( !found ) {
+        Cluster cluster = null;
+        try {
+          cluster = this.lookup( c.getName() );
+          db.delete( c );
+          this.deregister( cluster.getName() );
+          cluster.stop();
+        } catch ( Exception e ) {
+          LOG.error( e, e );
+        }
+      }
+    }
+    db.commit();
+
+    //:: add the new entries / modify existing entries :://
     for ( ClusterStateType c : clusterChanges )
     {
-      EntityWrapper<ClusterInfo> db = new EntityWrapper<ClusterInfo>();
+      db = new EntityWrapper<ClusterInfo>();
       try
       {
         ClusterInfo clusterInfo = db.getUnique( new ClusterInfo( c.getName() ) );
@@ -97,6 +123,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     }
     db.commit();
   }
+
 
   public List<ClusterStateType> getClusters()
   {
