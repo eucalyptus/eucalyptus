@@ -301,7 +301,7 @@ public class SystemState {
       if ( request.isAdministrator() || v.getOwnerId().equals( request.getUserId() ) ) {
         cluster = Clusters.getInstance().lookup( v.getPlacement() );
       }
-      if ( VmState.RUNNING.equals( v.getState() ) )
+      if ( !VmState.RUNNING.equals( v.getState() ) )
         throw new NoSuchElementException( "Instance " + request.getInstanceId() + " is not in a running state." );
       QueuedEvent<GetConsoleOutputType> event = new QueuedEvent<GetConsoleOutputType>( new ConsoleOutputCallback( cluster ), request );
       cluster.getMessageQueue().enqueue( event );
