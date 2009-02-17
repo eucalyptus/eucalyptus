@@ -125,7 +125,13 @@ public class ImageManager {
     GetObjectType msg = new GetObjectType( imagePathParts[ 0 ], imagePathParts[ 1 ], true, false, true );
     msg.setUserId( EucalyptusProperties.NAME );
     msg.setEffectiveUserId( EucalyptusProperties.NAME );
-    reply = ( GetObjectResponseType ) Messaging.send( WalrusProperties.WALRUS_REF, msg );
+    try {
+      reply = ( GetObjectResponseType ) Messaging.send( WalrusProperties.WALRUS_REF, msg );
+    } catch ( EucalyptusCloudException e ) {
+      LOG.error( e );
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Invalid manifest reference: " + imgInfo.getImageLocation() );
+    }
 
     if ( reply == null || reply.getBase64Data() == null ) throw new EucalyptusCloudException( "Invalid manifest reference: " + imgInfo.getImageLocation() );
     XMLParser parser = new XMLParser( reply.getBase64Data() );

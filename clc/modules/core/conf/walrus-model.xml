@@ -54,6 +54,8 @@
             <component class="edu.ucsb.eucalyptus.ic.WalrusReplyQueue"/>
         </service>
 
+    </model>
+    <model name="WalrusInternal">
         <service name="BukkitInternal">
             <inbound>
                 <inbound-endpoint ref="BukkitInternalWS"/>
@@ -65,6 +67,5 @@
         </service>
 
     </model>
-
 
 </mule>
