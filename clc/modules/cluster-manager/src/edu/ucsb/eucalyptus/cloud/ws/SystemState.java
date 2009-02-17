@@ -35,10 +35,27 @@ public class SystemState {
     for ( VmInfo runVm : request.getVms() )
       runningVmIds.add( runVm.getInstanceId() );
 
+    for( String vmId : VmInstances.getInstance().getKeys() ) {
+      if( runningVmIds.contains( vmId ) ) continue;
+      VmInstance vm = null;
+      try {
+        vm = VmInstances.getInstance().lookup( vmId );
+        long splitTime = vm.getSplitTime();
+        if ( splitTime > SHUT_DOWN_TIME ) {
+          VmInstances.getInstance().disable( vm.getName() );
+          vm.resetStopWatch();
+          vm.setState( VmState.TERMINATED );
+          vm.setReason( INSTANCE_EXPIRED );
+          SystemState.cleanUp( vm );
+        }
+      } catch ( NoSuchElementException e ) {
+        /* should never happen, just pulled the key set, if it does ignore it */
+      }
+    }
+
     List<String> knownVmIds = new ArrayList<String>();
     knownVmIds.addAll( VmInstances.getInstance().getKeys() );
-
-    if ( knownVmIds.removeAll( runningVmIds ) ) //<-- active registered vms not reported in describe
+    if ( knownVmIds.removeAll( runningVmIds ) ) {//<-- active registered vms not reported in describe
       for ( String vmId : knownVmIds ) {
         VmInstance vm = null;
         try {
@@ -55,12 +72,14 @@ public class SystemState {
           /* should never happen, just pulled the key set, if it does ignore it */
         }
       }
+    }
 
-    for ( VmInstance vm : VmInstances.getInstance().getDisabledEntries() )
+    for ( VmInstance vm : VmInstances.getInstance().getDisabledEntries() ) {
       if ( vm.getSplitTime() > SHUT_DOWN_TIME && !VmState.BURIED.equals( vm.getState() ) ) {
         vm.setState( VmState.BURIED );
         SystemState.cleanUp( vm );
       }
+    }
   }
 
   private static void cleanUp( final VmInstance vm ) {
