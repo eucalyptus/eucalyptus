@@ -103,8 +103,8 @@ public class VmInstance implements HasName {
                                 this.instanceId.substring( 8, 10 ) );
     this.networkConfig.setMacAddress( "d0:0d:" + mac );
     this.networkConfig.setIgnoredMacAddress( "d0:0f:" + mac );
-    this.networkConfig.setIpAddress( "0.0.0.0" );
-    this.networkConfig.setIgnoredPublicIp( "0.0.0.0" );
+    this.networkConfig.setIpAddress( DEFAULT_IP );
+    this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
   }
 
   public String getName() {

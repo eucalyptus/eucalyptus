@@ -94,10 +94,12 @@ public class SystemState {
           return;
       } else {
         vm.resetStopWatch();
-        //:: this is ridiculous, throwing away all but 2 pieces of state :://
-        vm.getNetworkConfig().setIpAddress( runVm.getNetParams().getIpAddress() );
+        if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams().getIpAddress() ) && !"".equals( runVm.getNetParams().getIpAddress() ) && runVm.getNetParams().getIpAddress() != null )
+          vm.getNetworkConfig().setIpAddress( runVm.getNetParams().getIpAddress() );
+        if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams().getIgnoredPublicIp() ) && !"".equals( runVm.getNetParams().getIgnoredPublicIp() ) && runVm.getNetParams().getIgnoredPublicIp() != null )
+          vm.getNetworkConfig().setIgnoredPublicIp( runVm.getNetParams().getIpAddress() );
         vm.setState( VmState.Mapper.get( runVm.getStateName() ) );
-        for( AttachedVolume vol : runVm.getVolumes() ) {
+        for ( AttachedVolume vol : runVm.getVolumes() ) {
           vol.setInstanceId( vm.getInstanceId() );
         }
         vm.setVolumes( runVm.getVolumes() );
@@ -186,7 +188,8 @@ public class SystemState {
           v.resetStopWatch();
           SystemState.cleanUp( v );
         } catch ( NoSuchElementException e ) {
-          throw new EucalyptusCloudException( e );
+          LOG.debug( e, e );
+          throw new EucalyptusCloudException( e.getMessage() );
         }
       }
       return reply;
@@ -209,6 +212,9 @@ public class SystemState {
           SystemState.cleanUp( v );
         }
       }
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e );
     } finally {
       state.destroy();
     }
@@ -276,7 +282,7 @@ public class SystemState {
       if ( request.isAdministrator() || v.getOwnerId().equals( request.getUserId() ) ) {
         cluster = Clusters.getInstance().lookup( v.getPlacement() );
       }
-      if( VmState.RUNNING.equals( v.getState() ) )
+      if ( VmState.RUNNING.equals( v.getState() ) )
         throw new NoSuchElementException( "Instance " + request.getInstanceId() + " is not in a running state." );
       QueuedEvent<GetConsoleOutputType> event = new QueuedEvent<GetConsoleOutputType>( new ConsoleOutputCallback( cluster ), request );
       cluster.getMessageQueue().enqueue( event );

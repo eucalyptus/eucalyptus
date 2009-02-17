@@ -33,8 +33,10 @@ class VmRunCallback extends QueuedEventCallback<VmRunType> {
       Clusters.getInstance().lookup( token.getCluster() ).getState().redeemToken( token );
       LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.redeemed, token ) );
       if ( reply.get_return() ) {
-        for ( VmInfo vmInfo : reply.getVms() )
+        for ( VmInfo vmInfo : reply.getVms() ) {
           VmInstances.getInstance().lookup( vmInfo.getInstanceId() ).getNetworkConfig().setIpAddress( vmInfo.getNetParams().getIpAddress() );
+          VmInstances.getInstance().lookup( vmInfo.getInstanceId() ).getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
+        }
       } else {
         this.parent.getRollback().lazySet( true );
       }
