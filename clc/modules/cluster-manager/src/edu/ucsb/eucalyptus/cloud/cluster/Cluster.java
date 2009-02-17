@@ -48,7 +48,6 @@ public class Cluster implements HasName {
     this.nodeCertUpdater = new NodeCertCallback( this );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>();
 //    this.waitForCerts();
-    this.start();
   }
 
   private void waitForCerts() {
@@ -97,7 +96,8 @@ public class Cluster implements HasName {
 
   public synchronized void start() {
     //:: should really be organized as a thread group etc etc :://
-    LOG.info( "Starting cluster: " + this.clusterInfo.getUri() );
+    LOG.warn( "Starting cluster: " + this.clusterInfo.getUri() );
+    this.waitForCerts();
     if ( this.mqThread == null || this.mqThread.isAlive() )
       this.mqThread = this.startNamedThread( messageQueue );
 
@@ -115,31 +115,25 @@ public class Cluster implements HasName {
 
 //    if ( this.logThread != null && !this.logThread.isAlive() )
 //      ( this.logThread = new Thread( nodeLogUpdater, nodeLogUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
-    
+
   }
 
   private Thread startNamedThread( Runnable r ) {
     Thread t = new Thread( r );
     t.setName( String.format( "%s-%s@%X", r.getClass().getSimpleName(), this.getName(), t.hashCode() ) );
     t.start();
-    LOG.info( "Starting threads for [ " + this.getName() + " ] " + t.getName() );
+    LOG.warn( "Starting threads for [ " + this.getName() + " ] " + t.getName() );
     return t;
   }
 
-  public void stop() throws InterruptedException {
-    LOG.info( "Stopping cluster: " + this.clusterInfo.getUri() );
+  public synchronized void stop() throws InterruptedException {
+    LOG.warn( "Stopping cluster: " + this.clusterInfo.getUri() );
     this.rscUpdater.stop();
     this.addrUpdater.stop();
     this.vmUpdater.stop();
     this.nodeLogUpdater.stop();
     this.nodeCertUpdater.stop();
     this.messageQueue.stop();
-    this.rscThread.join();
-    this.vmThread.join();
-    this.addrThread.join();
-    this.keyThread.join();
-    this.logThread.join();
-    this.mqThread.join();
   }
 
   public ClusterInfoType getInfo() {

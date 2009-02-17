@@ -55,6 +55,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
           Cluster newCluster = new Cluster( clusterInfo );
           this.register( newCluster );
           db.commit();
+          newCluster.start();
         }
         else
           db.rollback();

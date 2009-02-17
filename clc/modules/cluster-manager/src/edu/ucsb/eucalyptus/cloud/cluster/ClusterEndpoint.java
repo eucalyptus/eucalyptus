@@ -25,6 +25,10 @@ public class ClusterEndpoint implements Startable {
   }
 
   public void fire( List<ClusterStateType> clusterChanges ) {
+    LOG.warn( "Processing new list of clusters: ");
+    for( ClusterStateType c : clusterChanges ) {
+      LOG.warn( "Cluster: " + c.getName() + " host=" + c.getHost() + ":" + c.getPort() );
+    }
     Clusters.getInstance().update( clusterChanges );
   }
 

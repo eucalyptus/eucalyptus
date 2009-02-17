@@ -22,8 +22,10 @@ public class RemoteInfoHandler {
   public static synchronized void setClusterList( List<ClusterInfoWeb> newClusterList )
   {
     List<ClusterStateType> list = new ArrayList<ClusterStateType>();
-    for ( ClusterInfoWeb cw : newClusterList )
+    for ( ClusterInfoWeb cw : newClusterList ) {
+      LOG.info( "Adding cluster for update: " + cw.getName() + " - " + cw.getHost() + ":" + cw.getPort() );
       list.add( new ClusterStateType( cw.getName(), cw.getHost(), cw.getPort() ) );
+    }
     Messaging.dispatch( EucalyptusProperties.CLUSTERSINK_REF, list );
   }
 
