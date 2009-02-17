@@ -93,6 +93,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     {
       Cluster newCluster = new Cluster( info );
       this.register( newCluster );
+      newCluster.start();
     }
     db.commit();
   }
