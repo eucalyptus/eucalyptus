@@ -34,17 +34,19 @@
 #define CONFIG_NODES "NODES"
 #define CONFIG_HYPERVISOR "HYPERVISOR"
 #define CONFIG_NC_CACHE_SIZE "NC_CACHE_SIZE"
+#define CONFIG_NC_SWAP_SIZE "SWAP_SIZE"
 
 /* name of the administrative user within Eucalyptus */
 #define EUCALYPTUS_ADMIN "eucalyptus"
 
-// system limit defaults
+/* system limit defaults */
 #define MAXNODES 1024
 #define MAXINSTANCES 2048
 #define MAXLOGFILESIZE 32768000
 #define EUCA_MAX_GROUPS 64
 #define EUCA_MAX_VOLUMES 3
 #define DEFAULT_NC_CACHE_SIZE 99999 /* in MB */
+#define DEFAULT_SWAP_SIZE 512 /* in MB */
 
 #define MEGABYTE 1048576
 #define OK 0
