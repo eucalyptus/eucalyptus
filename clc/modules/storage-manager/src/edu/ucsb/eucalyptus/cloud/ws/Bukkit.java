@@ -2131,7 +2131,7 @@ public class Bukkit {
                 error.start();
                 output.start();
                 int exitVal = proc.waitFor();
-              output.join();
+                output.join();
             } catch (Throwable t) {
                 t.printStackTrace();
             }
