@@ -127,7 +127,7 @@ public class Storage {
         List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         for(VolumeInfo volInfo : volumeInfos) {
             String volumeId = volInfo.getVolumeId();
-            LOG.info("Cleaning failed volume " + volumeId);
+            LOG.warn("Cleaning failed volume " + volumeId);
             blockManager.cleanVolume(volumeId);
             try {
                 volumeStorageManager.deleteObject("", volumeId);
@@ -147,7 +147,7 @@ public class Storage {
         List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         for(VolumeInfo volInfo : volumeInfos) {
             String volumeId = volInfo.getVolumeId();
-            LOG.info("Cleaning failed volume " + volumeId);
+            LOG.warn("Cleaning failed volume " + volumeId);
             blockManager.cleanVolume(volumeId);
             try {
                 volumeStorageManager.deleteObject("", volumeId);
@@ -165,7 +165,7 @@ public class Storage {
         List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         if(volumeInfos.size() > 0) {
             VolumeInfo volInfo = volumeInfos.get(0);
-            LOG.info("Cleaning failed volume " + volumeId);
+            LOG.warn("Cleaning failed volume " + volumeId);
             blockManager.cleanVolume(volumeId);
             try {
                 volumeStorageManager.deleteObject("", volumeId);
@@ -743,8 +743,10 @@ public class Storage {
         ArrayList<StorageVolume> volumes = reply.getVolumeSet();
         for(VolumeInfo volumeInfo: volumeInfos) {
             volumes.add(convertVolumeInfo(volumeInfo));
-            if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString()))
+            if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString())) {
+                LOG.warn( "Volume looks like it has failed removing it: " + volumeInfo.getVolumeId() );
                 cleanFailedVolume(volumeInfo.getVolumeId());
+            }
         }
         db.commit();
         return reply;

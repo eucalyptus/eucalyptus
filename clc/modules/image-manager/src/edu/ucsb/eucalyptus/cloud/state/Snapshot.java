@@ -56,8 +56,10 @@ public class Snapshot extends AbstractIsomorph {
 
   public void setMappedState( final String state ) {
     if( StorageProperties.Status.creating.toString().equals( state ) ) this.setState( State.GENERATING );
+    else if( StorageProperties.Status.pending.equals( state )) this.setState( State.EXTANT );
     else if( StorageProperties.Status.completed.equals( state )) this.setState( State.EXTANT );
-    else this.setState( State.FAIL );
+    else if( StorageProperties.Status.available.equals( state )) this.setState( State.EXTANT );
+    else if( StorageProperties.Status.failed.equals( state )) this.setState( State.FAIL );
   }
 
   public Object morph( final Object o ) {
@@ -69,6 +71,7 @@ public class Snapshot extends AbstractIsomorph {
     snap.setStatus( this.mapState() );
     snap.setStartTime( this.getBirthday() );
     snap.setVolumeId( this.getParentVolume() );
+    snap.setProgress( this.getState().equals( State.EXTANT ) ? "100%" : "" );
     return snap;
   }
 

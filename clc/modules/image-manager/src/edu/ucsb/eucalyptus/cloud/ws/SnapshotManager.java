@@ -137,23 +137,22 @@ public class SnapshotManager {
         DescribeStorageSnapshotsResponseType snapshotInfo = null;
         try {
           snapshotInfo = ( DescribeStorageSnapshotsResponseType ) Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName() ) ) );
-          LOG.debug( snapshotInfo );
+          for( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet() ) {
+            v.setMappedState( storageSnapshot.getStatus() );
+            edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() );
+            if( storageSnapshot.getProgress() != null )
+              snapReply.setProgress( storageSnapshot.getProgress() );
+            snapReply.setVolumeId( storageSnapshot.getVolumeId() );
+            reply.getSnapshotSet().add( snapReply );
+          }
         } catch ( EucalyptusCloudException e ) {
           LOG.debug( e, e );
           throw e;
         }
-        if( !snapshotInfo.getSnapshotSet().isEmpty() ) {
-          StorageSnapshot storageSnapshot = snapshotInfo.getSnapshotSet().get( 0 );
-          v.setMappedState( storageSnapshot.getStatus() );
-          edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() );
-          snapReply.setProgress( storageSnapshot.getProgress() );
-          reply.getSnapshotSet().add( snapReply );
-        } else {
-          //:: TODO: handle the now-removed snapshot entry case here :://
-        }
       }
     }
     db.commit();
+    LOG.warn( "RESPONSE ============\n" + reply );
     return reply;
   }
 }

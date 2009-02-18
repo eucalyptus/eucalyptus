@@ -70,15 +70,15 @@ public class Defaults {
   {
     MultiThreadedHttpConnectionManager httpConnMgr = new MultiThreadedHttpConnectionManager();
     HttpConnectionManagerParams params = httpConnMgr.getParams();
-    params.setDefaultMaxConnectionsPerHost( 128 );
-    params.setMaxTotalConnections( 128 );
+    params.setDefaultMaxConnectionsPerHost( 16 );
+    params.setMaxTotalConnections( 16 );
     params.setTcpNoDelay( true );
     params.setConnectionTimeout( 120*1000 );
-    params.setReceiveBufferSize( 8388608 );
-    params.setSendBufferSize( 8388608 );
+//    params.setReceiveBufferSize( 8388608 );
+//    params.setSendBufferSize( 8388608 );
     params.setStaleCheckingEnabled( true );
     params.setSoTimeout( 120*1000 );
-    params.setLinger( -1 );
+//    params.setLinger( -1 );
     return httpConnMgr;
   }
 
