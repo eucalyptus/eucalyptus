@@ -1742,6 +1742,7 @@ public class Bukkit {
                         }
 
                         Long unencryptedSize = foundImageCacheInfo.getSize();
+
                         String imageKey = foundImageCacheInfo.getImageName();
                         String queueKey = bucketName + "." + objectKey;
                         String randomKey = queueKey + "." + Hashes.getRandom(10);
@@ -2128,6 +2129,7 @@ public class Bukkit {
                 error.start();
                 output.start();
                 int exitVal = proc.waitFor();
+              output.join();
             } catch (Throwable t) {
                 t.printStackTrace();
             }
