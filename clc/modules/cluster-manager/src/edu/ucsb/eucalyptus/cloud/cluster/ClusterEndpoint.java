@@ -32,6 +32,19 @@ public class ClusterEndpoint implements Startable {
     Clusters.getInstance().update( clusterChanges );
   }
 
+  public AddClusterResponseType fire( AddClusterType request ) throws EucalyptusCloudException {
+    if( !request.isAdministrator() ) {
+      throw new EucalyptusCloudException("Only admins can add clusters.");
+    }
+    for ( ClusterStateType c : Clusters.getInstance().getClusters() ) {
+      if( c.getName().equals( request.getName() ) ) {
+        throw new EucalyptusCloudException("Cluster already exists: " + request.getName() );
+      }
+    }
+    Clusters.getInstance().add( new ClusterStateType( request.getName(), request.getHost(), request.getPort() ) );
+    return (AddClusterResponseType) request.getReply();
+  }
+
   public void enqueue( EucalyptusMessage msg ) {
     LOG.error( "Intentionally dropping generic message: " + msg );
   }

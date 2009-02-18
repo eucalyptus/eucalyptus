@@ -162,7 +162,7 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
                     newMsgContext.setProperty("GET_RANDOM_KEY", request.getRandomKey());
                 }
                 //This selects the data formatter
-                newMsgContext.setProperty( "messageType", "application/walrus" );                
+                newMsgContext.setProperty( "messageType", "application/walrus" );
             } else if(putType != null) {
                 if(reply instanceof PostObjectResponseType) {
                     PostObjectResponseType postReply = (PostObjectResponseType) reply;
@@ -186,7 +186,7 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
                         }
                     }
                 }
-                response.addHeader(new BasicHeader(HTTP.CONTENT_LEN, String.valueOf(0)));                
+                response.addHeader(new BasicHeader(HTTP.CONTENT_LEN, String.valueOf(0)));
             }
         }
 
@@ -206,10 +206,12 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
         }
     }
 
-    private SOAPEnvelope generateMessage( final String methodName, final SOAPFactory factory, final String bindingName, final Object response )
+    private SOAPEnvelope generateMessage( final String methodName, final SOAPFactory factory, String bindingName, final Object response )
     {
         SOAPEnvelope envelope = null;
         LOG.info( "[" + serviceClass.getSimpleName() + ":" + methodName + "] Got return type " + response.getClass().getSimpleName() );
+        if( response instanceof AddClusterResponseType )
+          bindingName = "msgs_eucalyptus_ucsb_edu";
         try
         {
             /** construct the response **/

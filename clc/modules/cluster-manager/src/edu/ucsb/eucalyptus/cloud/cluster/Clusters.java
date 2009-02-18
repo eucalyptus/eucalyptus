@@ -45,6 +45,13 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
 
   }
 
+  public void add( ClusterStateType cluster ) {    
+    EntityWrapper<ClusterInfo> db = new EntityWrapper<ClusterInfo>();
+    ClusterInfo clusterInfo = setupCluster( cluster );
+    db.add( clusterInfo );
+    db.commit();
+  }
+
   public void update( List<ClusterStateType> clusterChanges )
   {
     EntityWrapper<ClusterInfo> db = new EntityWrapper<ClusterInfo>();
