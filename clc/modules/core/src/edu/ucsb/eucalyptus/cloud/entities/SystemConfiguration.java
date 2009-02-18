@@ -64,13 +64,18 @@ public class SystemConfiguration {
     private Integer storageMaxBucketSizeInMB;
     @Column( name = "system_storage_cache_size_mb" )
     private Integer storageMaxCacheSizeInMB;
+	@Column( name = "system_storage_snapshots_total_gb" )
+	private Integer storageSnapshotsTotalInGB;
 
     public SystemConfiguration(){}
 
     public SystemConfiguration( final String storageUrl,
                                 final String defaultKernel, final String defaultRamdisk,
                                 final String storageDir,
-                                final Integer storageMaxBucketsPerUser, final Integer storageMaxBucketSizeInMB, final Integer storageMaxCacheSizeInMB )
+                                final Integer storageMaxBucketsPerUser, 
+								final Integer storageMaxBucketSizeInMB, 
+								final Integer storageMaxCacheSizeInMB,
+								final Integer storageSnapshotsTotalInGB )
     {
         this.storageUrl = storageUrl;
         this.defaultKernel = defaultKernel;
@@ -79,6 +84,7 @@ public class SystemConfiguration {
         this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
         this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
 		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
+		this.storageSnapshotsTotalInGB = storageSnapshotsTotalInGB;
     }
 
     public Long getId()
@@ -152,5 +158,13 @@ public class SystemConfiguration {
 
     public void setStorageMaxCacheSizeInMB(Integer storageMaxCacheSizeInMB) {
         this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
+    }
+
+    public Integer getStorageSnapshotsTotalInGB() {
+        return storageSnapshotsTotalInGB;
+    }
+
+    public void setStorageSnapshotsTotalInGB(Integer storageSnapshotsTotalInGB) {
+        this.storageSnapshotsTotalInGB = storageSnapshotsTotalInGB;
     }
 }

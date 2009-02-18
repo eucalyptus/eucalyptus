@@ -23,7 +23,7 @@ public class RemoteInfoHandler {
   {
     List<ClusterStateType> list = new ArrayList<ClusterStateType>();
     for ( ClusterInfoWeb cw : newClusterList )
-      list.add( new ClusterStateType( cw.getName(), cw.getHost(), cw.getPort() ) );
+      list.add( new ClusterStateType( cw.getName(), cw.getHost(), cw.getPort() ) ); // TODO Sunil: add SC configuration params
     Messaging.dispatch( EucalyptusProperties.CLUSTERSINK_REF, list );
   }
 
@@ -31,7 +31,7 @@ public class RemoteInfoHandler {
   {
     List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>();
     for ( ClusterStateType c : Clusters.getInstance().getClusters() )
-      clusterList.add( new ClusterInfoWeb( c.getName(), c.getHost(), c.getPort() ) );
+      clusterList.add( new ClusterInfoWeb( c.getName(), c.getHost(), c.getPort(), "/foo/bar", 0, 0) ); // TODO Sunil: add SC configuration params
     return clusterList;
   }
 

@@ -444,6 +444,7 @@ public class EucalyptusManagement {
                     sysConf.getStorageMaxBucketsPerUser(),
 					sysConf.getStorageMaxBucketSizeInMB(),
 					sysConf.getStorageMaxCacheSizeInMB(),
+					sysConf.getStorageSnapshotsTotalInGB(),
                     sysConf.getDefaultKernel(), sysConf.getDefaultRamdisk() );
         }
         catch ( EucalyptusCloudException e )
@@ -470,6 +471,7 @@ public class EucalyptusManagement {
                     WalrusProperties.MAX_BUCKETS_PER_USER,
 					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
 					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
+					(int)0, // TODO: Sunil: add the proper constant
                     defKernel, defRamdisk );
         }
         finally {
@@ -504,7 +506,10 @@ public class EucalyptusManagement {
             db.add( new SystemConfiguration(systemConfig.getStorageUrl(),
                     systemConfig.getDefaultKernelId(),
                     systemConfig.getDefaultRamdiskId(), systemConfig.getStoragePath(),
-                    systemConfig.getStorageMaxBucketsPerUser() , systemConfig.getStorageMaxBucketSizeInMB(), systemConfig.getStorageMaxCacheSizeInMB() ) );
+                    systemConfig.getStorageMaxBucketsPerUser() , 
+					systemConfig.getStorageMaxBucketSizeInMB(), 
+					systemConfig.getStorageMaxCacheSizeInMB(),
+					systemConfig.getStorageSnapshotsTotalInGB() ) );
             db.commit();
           WalrusProperties.update();
           StorageProperties.update();

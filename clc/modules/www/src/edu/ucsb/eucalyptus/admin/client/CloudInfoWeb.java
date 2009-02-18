@@ -6,7 +6,7 @@ public class CloudInfoWeb implements IsSerializable {
 	private String externalHostPort;
 	private String servicePath;
 	private String cloudId;
-
+	
 	public CloudInfoWeb ()
 	{
 		internalHostPort = null;
@@ -34,7 +34,7 @@ public class CloudInfoWeb implements IsSerializable {
 	{
 		this.externalHostPort = hostPort;
 	}
-	
+
 	public String getServicePath()
 	{
 		return servicePath;
