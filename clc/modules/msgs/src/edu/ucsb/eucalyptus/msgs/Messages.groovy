@@ -13,6 +13,18 @@ public class INTERNAL extends EucalyptusMessage {
   }
 }
 
+public class ClusterStateType {
+  String name;
+  String host;
+  int port;
+  def ClusterStateType(final name, final host, final port) {
+    this.name = name;
+    this.host = host;
+    this.port = port;
+  }
+}
+
+
 public class EucalyptusMessage implements Cloneable, Serializable {
 
   String correlationId;

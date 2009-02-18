@@ -37,6 +37,8 @@ package edu.ucsb.eucalyptus.transport.query;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import org.apache.log4j.Logger;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Map;
@@ -66,24 +68,40 @@ public class EucalyptusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
   public UserInfo authenticate( final HttpRequest httpRequest ) throws QuerySecurityException
   {
-    return handle( httpRequest.getServicePath(), httpRequest.getHttpMethod(), httpRequest.getParameters(), httpRequest.getHeaders() );
+    return handle( "http://" + httpRequest.getHostAddr() + httpRequest.getRequestURL(), httpRequest.getHttpMethod(), httpRequest.getParameters(), httpRequest.getHeaders() );
   }
 
-  public UserInfo handle(String addr, String verb, Map<String, String> parameters, Map<String, String> headers ) throws QuerySecurityException
+  public UserInfo handle(String urlString, String verb, Map<String, String> parameters, Map<String, String> headers ) throws QuerySecurityException
   {
     this.checkParameters( parameters );
 
+    URL url = null;
+    try {
+      url = new URL( urlString );
+    } catch ( MalformedURLException e ) {
+      throw new QuerySecurityException( e.getMessage() );
+    }
+    String host = url.getHost();
+    String addr = url.getPath();
     //:: check the signature :://
     String sig = parameters.remove( SecurityParameter.Signature.toString() );
+    //:: check the signature version type here :://
+
+
     String queryId = parameters.get( SecurityParameter.AWSAccessKeyId.toString() );
     String queryKey = findQueryKey( queryId );
 
     String paramString = makeSubjectString( parameters );
     String paramString2 = makePlusSubjectString( parameters );
+    String paramString3 = makeV2SubjectString( verb, host, addr, parameters );
 
     String authSig = checkSignature( queryKey, paramString );
     String authSig2 = checkSignature( queryKey, paramString2 );
-    if ( !authSig.equals( sig ) && !authSig2.equals( sig ) )
+
+    String authv2sha1 = checkSignature( queryKey, paramString3 );
+    String authv2sha256 = checkSignature256( queryKey, paramString3 );
+    LOG.info( "VERSION2-SHA256: " + authv2sha256 + " -- " + sig.replaceAll("=","") );
+    if ( !authSig.equals( sig ) && !authSig2.equals( sig ) && !authv2sha1.equals( sig.replaceAll("=","") ) && !authv2sha256.equals( sig.replaceAll("=","") ) )
       throw new QuerySecurityException( "User authentication failed." );
 
     //:: check the timestamp :://
@@ -106,6 +124,7 @@ public class EucalyptusQuerySecurityHandler extends HMACQuerySecurityHandler {
     for ( Axis2QueryDispatcher.OperationParameter op : Axis2QueryDispatcher.OperationParameter.values() ) parameters.remove( op.name() );
     parameters.remove( Axis2QueryDispatcher.RequiredQueryParams.SignatureVersion.toString() );
     parameters.remove( Axis2QueryDispatcher.RequiredQueryParams.Version.toString() );
+    parameters.remove( "SignatureMethod" );
 
     return findUserId( parameters.remove( SecurityParameter.AWSAccessKeyId.toString() ) );
   }

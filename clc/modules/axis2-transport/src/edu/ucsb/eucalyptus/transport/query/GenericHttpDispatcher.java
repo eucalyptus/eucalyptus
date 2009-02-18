@@ -120,6 +120,7 @@ public class GenericHttpDispatcher extends RequestURIBasedDispatcher {
       EndpointReference endpoint = messageContext.getTo();
       URL url = new URL( "http://my.flavourite.host.com" + endpoint.getAddress() );
       HttpRequest httpRequest = new HttpRequest();
+      httpRequest.setHostAddr( (String) messageContext.getProperty( MessageContext.TRANSPORT_ADDR ) );
       httpRequest.setRequestURL( messageContext.getTo().getAddress() );
 
       //:: mangle the service path :://

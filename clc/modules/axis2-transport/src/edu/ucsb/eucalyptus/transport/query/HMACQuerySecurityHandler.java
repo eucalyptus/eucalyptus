@@ -65,7 +65,7 @@ public abstract class HMACQuerySecurityHandler implements QuerySecurityHandler {
 
 
   enum SubResource {
-    acl, logging, torrent, location  
+    acl, logging, torrent, location
   }
 
   public abstract UserInfo handle(String addr, String verb, Map<String, String> parameters, Map<String, String> headers ) throws QuerySecurityException;
@@ -98,6 +98,28 @@ public abstract class HMACQuerySecurityHandler implements QuerySecurityHandler {
       paramString = paramString.concat( key ).concat( parameters.get( key ).replaceAll( "\\+"," " ));
     return paramString;
   }
+  protected String makeV2SubjectString( String httpMethod, String host, String path, final Map<String, String> parameters )
+  {
+    StringBuilder sb = new StringBuilder();
+    sb.append( httpMethod );
+    sb.append( "\n" );
+    sb.append( host );
+    sb.append( "\n" );
+    sb.append( path );
+    sb.append( "\n" );
+    String prefix = sb.toString();
+    sb = new StringBuilder( );
+    NavigableSet<String> sortedKeys = new TreeSet<String>( );
+    sortedKeys.addAll( parameters.keySet() );
+    String firstKey = sortedKeys.pollFirst();
+    sb.append( java.net.URLEncoder.encode( firstKey  )).append( "=" ).append( java.net.URLEncoder.encode( parameters.get( firstKey ).replaceAll( "\\+"," " ) ) );
+    while ( ( firstKey = sortedKeys.pollFirst() ) != null ) {
+      sb.append( "&" ).append( java.net.URLEncoder.encode( firstKey ) ).append( "=" ).append( java.net.URLEncoder.encode( parameters.get( firstKey ).replaceAll( "\\+"," " ) ) );
+    }
+    String subject = prefix + sb.toString();
+    LOG.info( "VERSION2: " + subject );
+    return subject;
+  }
 
   protected String makePlusSubjectString( final Map<String, String> parameters )
   {
@@ -115,6 +137,22 @@ public abstract class HMACQuerySecurityHandler implements QuerySecurityHandler {
     try
     {
       Mac mac = Mac.getInstance( Hashes.Mac.HmacSHA1.toString() );
+      mac.init( signingKey );
+      byte[] rawHmac = mac.doFinal( subject.getBytes() );
+      return Base64.encode( rawHmac ).replaceAll( "=", "" );
+    }
+    catch ( Exception e )
+    {
+      LOG.error( e, e );
+      throw new QuerySecurityException( "Failed to compute signature" );
+    }
+  }
+  protected String checkSignature256( final String queryKey, final String subject ) throws QuerySecurityException
+  {
+    SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes(), Hashes.Mac.HmacSHA256.toString() );
+    try
+    {
+      Mac mac = Mac.getInstance( Hashes.Mac.HmacSHA256.toString() );
       mac.init( signingKey );
       byte[] rawHmac = mac.doFinal( subject.getBytes() );
       return Base64.encode( rawHmac ).replaceAll( "=", "" );

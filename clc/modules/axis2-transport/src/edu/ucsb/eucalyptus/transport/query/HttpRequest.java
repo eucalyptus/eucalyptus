@@ -39,6 +39,9 @@ import java.util.Map;
 
 public class HttpRequest {
 
+  private String hostAddr;
+
+
   private String service;
   private String servicePath;
   private String operation;
@@ -51,103 +54,90 @@ public class HttpRequest {
   private String bindingName;
   private String requestURL;
 
-  public String getRequestURL()
-  {
+  public String getRequestURL() {
     return requestURL;
   }
 
-  public void setRequestURL( final String requestURL )
-  {
+  public void setRequestURL( final String requestURL ) {
     this.requestURL = requestURL;
   }
 
-  public String getBindingName()
-  {
+  public String getBindingName() {
     return bindingName;
   }
 
-  public void setBindingName( final String bindingName )
-  {
+  public void setBindingName( final String bindingName ) {
     this.bindingName = bindingName;
   }
+  public String getHostAddr() {
+    return hostAddr;
+  }
 
-  public String getService()
-  {
+  public void setHostAddr( final String hostAddr ) {
+    this.hostAddr = hostAddr;
+  }
+
+  public String getService() {
     return service;
   }
 
-  public void setService( final String service )
-  {
+  public void setService( final String service ) {
     this.service = service;
   }
 
-  public String getServicePath()
-  {
+  public String getServicePath() {
     return servicePath;
   }
 
-  public void setServicePath( final String servicePath )
-  {
+  public void setServicePath( final String servicePath ) {
     this.servicePath = servicePath;
   }
 
-  public String getOperation()
-  {
+  public String getOperation() {
     return operation;
   }
 
-  public void setOperation( final String operation )
-  {
+  public void setOperation( final String operation ) {
     this.operation = operation;
   }
 
-  public String getOperationPath()
-  {
+  public String getOperationPath() {
     return operationPath;
   }
 
-  public void setOperationPath( final String operationPath )
-  {
+  public void setOperationPath( final String operationPath ) {
     this.operationPath = operationPath;
   }
 
-  public String getHttpMethod()
-  {
+  public String getHttpMethod() {
     return httpMethod;
   }
 
-  public void setHttpMethod( final String httpMethod )
-  {
+  public void setHttpMethod( final String httpMethod ) {
     this.httpMethod = httpMethod;
   }
 
-  public InputStream getInStream()
-  {
+  public InputStream getInStream() {
     return inStream;
   }
 
-  public void setInStream( final InputStream inStream )
-  {
+  public void setInStream( final InputStream inStream ) {
     this.inStream = inStream;
   }
 
-  public Map<String, String> getParameters()
-  {
+  public Map<String, String> getParameters() {
     return parameters;
   }
 
-  public void setParameters( final Map<String, String> parameters )
-  {
+  public void setParameters( final Map<String, String> parameters ) {
     this.parameters = parameters;
   }
 
-  public Map<String, String> getHeaders()
-  {
+  public Map<String, String> getHeaders() {
     return headers;
   }
 
-  public void setHeaders( final Map<String, String> headers )
-  {
+  public void setHeaders( final Map<String, String> headers ) {
     this.headers = headers;
   }
 
@@ -155,7 +145,7 @@ public class HttpRequest {
     return bindingArguments;
   }
 
-  public void setBindingArguments(Map bindingArguments) {
+  public void setBindingArguments( Map bindingArguments ) {
     this.bindingArguments = bindingArguments;
   }
 }
