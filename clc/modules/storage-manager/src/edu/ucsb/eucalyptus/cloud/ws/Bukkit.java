@@ -46,14 +46,14 @@ import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
 import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
-import org.apache.tools.tar.TarEntry;
-import org.apache.tools.tar.TarInputStream;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
+import java.net.InetAddress;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -67,8 +67,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
-import java.net.URL;
-import java.net.InetAddress;
 
 public class Bukkit {
 
@@ -1529,17 +1527,13 @@ public class Bukkit {
                         List<String> parts = parser.getValues("//image/parts/part/filename");
                         ArrayList<String> qualifiedPaths = new ArrayList<String>();
 
-                        EntityWrapper<ObjectInfo> dbObject = new EntityWrapper<ObjectInfo>();
                         for (String part: parts) {
-                            ObjectInfo partInfo = new ObjectInfo();
-                            partInfo.setObjectKey(part);
-                            List<ObjectInfo> partInfos = dbObject.query(partInfo);
-                            if(partInfos.size() > 0) {
-                                ObjectInfo pInfo = partInfos.get(0);
-                                qualifiedPaths.add(storageManager.getObjectPath(bucketName, pInfo.getObjectName()));
+                            for(ObjectInfo object : bucket.getObjects()) {
+                                if(part.equals(object.getObjectKey())) {
+                                    qualifiedPaths.add(storageManager.getObjectPath(bucketName, object.getObjectName()));
+                                }
                             }
                         }
-                        dbObject.commit();
                         //Assemble parts
                         String encryptedImageKey = imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
                         String encryptedImageName = storageManager.getObjectPath(bucketName, encryptedImageKey);
@@ -1554,8 +1548,12 @@ public class Bukkit {
                             PrivateKey pk = (PrivateKey) userKeyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
                             Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
                             cipher.init(Cipher.DECRYPT_MODE, pk);
-                            key = hexToBytes(new String(cipher.doFinal(hexToBytes(encryptedKey))));
-                            iv = hexToBytes(new String(cipher.doFinal(hexToBytes(encryptedIV))));
+                            String keyString = new String(cipher.doFinal(hexToBytes(encryptedKey)));
+                            // keyString = "a88df5489a9adf337c26c81c841ee0d8";
+                            key = hexToBytes(keyString);
+                            String ivString = new String(cipher.doFinal(hexToBytes(encryptedIV)));
+                            // ivString = "76ac331e02fde0c781a9653c139f7f8f";
+                            iv = hexToBytes(ivString);
                         } catch(Exception ex) {
                             db2.rollback();
                             db.rollback();
@@ -1565,7 +1563,7 @@ public class Bukkit {
 
                         //Unencrypt image
                         try {
-                            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
                             IvParameterSpec salt = new IvParameterSpec(iv);
                             SecretKey keySpec = new SecretKeySpec(key, "AES");
                             cipher.init(Cipher.DECRYPT_MODE, keySpec, salt);
@@ -2062,7 +2060,7 @@ public class Bukkit {
     }
 
     private long untarImage(String tarredImageName, String imageName) throws Exception {
-        TarInputStream in = new TarInputStream(new FileInputStream(new File(tarredImageName)));
+        /*TarInputStream in = new TarInputStream(new FileInputStream(new File(tarredImageName)));
         File outFile = new File(imageName);
         BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outFile));
 
@@ -2072,7 +2070,70 @@ public class Bukkit {
         in.copyEntryContents(out);
         out.close();
         in.close();
-        return outFile.length();
+        return outFile.length();*/
+
+        //Workaround because TarInputStream is broken
+        Tar tarrer = new Tar();
+        tarrer.untar(tarredImageName, imageName);
+        File outFile = new File(imageName);
+        if(outFile.exists())
+            return outFile.length();
+        else
+            throw new EucalyptusCloudException("Could not untar image " + imageName);
+    }
+
+    private class StreamConsumer extends Thread
+    {
+        private InputStream is;
+        private File file;
+
+        public StreamConsumer(InputStream is) {
+            this.is = is;
+        }
+
+        public StreamConsumer(InputStream is, File file) {
+            this(is);
+            this.file = file;
+        }
+
+        public void run()
+        {
+            try
+            {
+                BufferedInputStream inStream = new BufferedInputStream(is);
+                BufferedOutputStream outStream = null;
+                if(file != null) {
+                    outStream = new BufferedOutputStream(new FileOutputStream(file));
+                }
+                byte[] bytes = new byte[WalrusQueryDispatcher.DATA_MESSAGE_SIZE];
+                int bytesRead;
+                while((bytesRead = inStream.read(bytes)) > 0) {
+                    if(outStream != null) {
+                        outStream.write(bytes, 0, bytesRead);
+                    }
+                }
+            } catch (IOException ex)
+            {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    private class Tar {
+        public void untar(String tarFile, String outFile) {
+            try
+            {
+                Runtime rt = Runtime.getRuntime();
+                Process proc = rt.exec(new String[]{ "/bin/tar", "xfO", tarFile});
+                StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+                StreamConsumer output = new StreamConsumer(proc.getInputStream(), new File(outFile));
+                error.start();
+                output.start();
+                int exitVal = proc.waitFor();
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+        }
     }
 
     private void decryptImage(final String encryptedImageName, final String decyptedImageName, final Cipher cipher) {
