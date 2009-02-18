@@ -2111,6 +2111,8 @@ public class Bukkit {
                         outStream.write(bytes, 0, bytesRead);
                     }
                 }
+                if(outStream != null)
+                    outStream.close();
             } catch (IOException ex)
             {
                 ex.printStackTrace();
