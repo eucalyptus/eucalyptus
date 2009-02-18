@@ -46,8 +46,8 @@ public class BukkitImageTest extends TestCase {
 
 		Bukkit bukkit = new Bukkit();
         String userId = "admin";
-        String bucket = "s1skl3eill12100";
-        String key = "ttylinux.img.manifest.xml";
+        String bucket = "vol-image-test-222";
+        String key = "image.manifest.xml";
 
         GetDecryptedImageType getImageRequest = new GetDecryptedImageType();
         getImageRequest.setBucket(bucket);
@@ -55,7 +55,8 @@ public class BukkitImageTest extends TestCase {
         getImageRequest.setUserId(userId);
 
         GetDecryptedImageResponseType getImageReply = bukkit.GetDecryptedImage(getImageRequest);
-        System.out.println(getImageReply);      
+        System.out.println(getImageReply);
+        while(true);
     }
     
     public BukkitImageTest() {

@@ -100,19 +100,15 @@ public class Storage {
         try {
             blockManager.checkPreconditions();
             startup();
-            checkWalrusConnection();
+            sharedMode = Bukkit.getSharedMode();
+            if(!sharedMode)
+                checkWalrusConnection();
             //TODO: inform CLC
             //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
         } catch(Exception ex) {
             enableStorage = false;
             LOG.warn("Could not initialize block manager");
         }
-        startup();
-        sharedMode = Bukkit.getSharedMode();
-        if(!sharedMode)
-            checkWalrusConnection();
-        //TODO: inform CLC
-        //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
     }
 
     public Storage() {}
@@ -131,6 +127,7 @@ public class Storage {
         List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         for(VolumeInfo volInfo : volumeInfos) {
             String volumeId = volInfo.getVolumeId();
+            LOG.info("Cleaning failed volume " + volumeId);
             blockManager.cleanVolume(volumeId);
             try {
                 volumeStorageManager.deleteObject("", volumeId);
@@ -150,6 +147,7 @@ public class Storage {
         List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         for(VolumeInfo volInfo : volumeInfos) {
             String volumeId = volInfo.getVolumeId();
+            LOG.info("Cleaning failed volume " + volumeId);
             blockManager.cleanVolume(volumeId);
             try {
                 volumeStorageManager.deleteObject("", volumeId);
@@ -167,6 +165,7 @@ public class Storage {
         List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         if(volumeInfos.size() > 0) {
             VolumeInfo volInfo = volumeInfos.get(0);
+            LOG.info("Cleaning failed volume " + volumeId);
             blockManager.cleanVolume(volumeId);
             try {
                 volumeStorageManager.deleteObject("", volumeId);
@@ -186,6 +185,7 @@ public class Storage {
         List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
         for(SnapshotInfo snapInfo : snapshotInfos) {
             String snapshotId = snapInfo.getSnapshotId();
+            LOG.info("Cleaning failed snapshot " + snapshotId);
             blockManager.cleanSnapshot(snapshotId);
             try {
                 snapshotStorageManager.deleteObject("", snapshotId);
@@ -205,6 +205,7 @@ public class Storage {
         List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
         for(SnapshotInfo snapInfo : snapshotInfos) {
             String snapshotId = snapInfo.getSnapshotId();
+            LOG.info("Cleaning failed snapshot " + snapshotId);
             blockManager.cleanSnapshot(snapshotId);
             try {
                 snapshotStorageManager.deleteObject("", snapshotId);
@@ -222,6 +223,7 @@ public class Storage {
         List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
         if(snapshotInfos.size() > 0) {
             SnapshotInfo snapInfo = snapshotInfos.get(0);
+            LOG.info("Cleaning failed snapshot " + snapshotId);
             blockManager.cleanSnapshot(snapshotId);
             try {
                 snapshotStorageManager.deleteObject("", snapshotId);

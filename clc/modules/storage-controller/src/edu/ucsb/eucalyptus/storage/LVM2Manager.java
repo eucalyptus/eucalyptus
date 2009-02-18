@@ -285,22 +285,18 @@ public class LVM2Manager implements BlockStorageManager {
         int minorNumber = -1;
         LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
         EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
-        try {
-            LVMMetaInfo foundMetaInfo = db.getUnique(metaInfo);
-            if(foundMetaInfo != null) {
-                majorNumber = foundMetaInfo.getMajorNumber();
-                minorNumber = foundMetaInfo.getMinorNumber();
-                if(((++minorNumber) % MAX_LOOP_DEVICES) == 0) {
-                    ++majorNumber;
-                }
-                foundMetaInfo.setMajorNumber(majorNumber);
-                foundMetaInfo.setMinorNumber(minorNumber);
+        List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
+        if(metaInfoList.size() > 0) {
+            LVMMetaInfo foundMetaInfo = metaInfoList.get(0);
+            majorNumber = foundMetaInfo.getMajorNumber();
+            minorNumber = foundMetaInfo.getMinorNumber();
+            if(((++minorNumber) % MAX_LOOP_DEVICES) == 0) {
+                ++majorNumber;
             }
-            db.commit();
-        } catch (Exception ex) {
-            db.rollback();
-            ex.printStackTrace();
+            foundMetaInfo.setMajorNumber(majorNumber);
+            foundMetaInfo.setMinorNumber(minorNumber);
         }
+        db.commit();
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
         int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
         String returnValue = aoeStatus(pid);
