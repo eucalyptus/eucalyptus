@@ -128,7 +128,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         logprintfl (EUCADEBUG, "walrus_request(): writing %s output to %s\n", verb, outfile);
 	}
 	result = curl_easy_perform (curl); /* do it */
-    logprintfl (EUCADEBUG, "walrus_request(): wrote %l bytes in %l writes\n", total_wrote, total_calls);
+    logprintfl (EUCADEBUG, "walrus_request(): wrote %ld bytes in %ld writes\n", total_wrote, total_calls);
 	fclose (fp);
 	
     int remove_outfile = 0;
