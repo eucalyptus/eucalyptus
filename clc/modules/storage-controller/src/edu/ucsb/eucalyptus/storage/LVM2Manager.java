@@ -108,48 +108,52 @@ public class LVM2Manager implements BlockStorageManager {
         if(!initialized) {
             System.loadLibrary("lvm2control");
             exportManager = new AOEManager();
-            try {
-                hostName = InetAddress.getLocalHost().getHostName();
-                iface = parseConfig();
-                if(iface == null || (iface.length() == 0)) {
-                    NetworkInterface inface = NetworkInterface.getByName(iface);
-                    if(inface == null) {
-                        LOG.warn("Network interface " + iface + " is not valid. Storage may not function.");
-                        if(ifaceDiscovery) {
-                            List<NetworkInterface> ifaces = null;
-                            try {
-                                ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-                            } catch ( SocketException e1 ) {}
-                            for ( NetworkInterface ifc : ifaces )
-                                try {
-                                    if ( !ifc.isLoopback() && !ifc.isVirtual() && ifc.isUp() ) {
-                                        iface = ifc.getName();
-                                        break;
-                                    }
-                                } catch ( SocketException e1 ) {}
-                        }
-                    } else {
-                        if(!inface.isUp()) {
-                            LOG.warn("Network interface " + iface + " is not available (up). Storage may not function.");
-                        }
-                    }
-                }
-
-                EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
-                LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
-                List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
-                if(metaInfoList.size() <= 0) {
-                    metaInfo.setMajorNumber(-1);
-                    metaInfo.setMinorNumber(-1);
-                    db.add(metaInfo);
-                    initialized = true;
-                }
-                db.commit();
-            } catch(Exception ex) {
-                ex.printStackTrace();
-            }
+            initialized = true;
         }
     }
+
+    public void configure() {
+        try {
+            hostName = InetAddress.getLocalHost().getHostName();
+            iface = parseConfig();
+            if(iface == null || (iface.length() == 0)) {
+                NetworkInterface inface = NetworkInterface.getByName(iface);
+                if(inface == null) {
+                    LOG.warn("Network interface " + iface + " is not valid. Storage may not function.");
+                    if(ifaceDiscovery) {
+                        List<NetworkInterface> ifaces = null;
+                        try {
+                            ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
+                        } catch ( SocketException e1 ) {}
+                        for ( NetworkInterface ifc : ifaces )
+                            try {
+                                if ( !ifc.isLoopback() && !ifc.isVirtual() && ifc.isUp() ) {
+                                    iface = ifc.getName();
+                                    break;
+                                }
+                            } catch ( SocketException e1 ) {}
+                    }
+                } else {
+                    if(!inface.isUp()) {
+                        LOG.warn("Network interface " + iface + " is not available (up). Storage may not function.");
+                    }
+                }
+            }
+
+            EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
+            LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
+            List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
+            if(metaInfoList.size() <= 0) {
+                metaInfo.setMajorNumber(-1);
+                metaInfo.setMinorNumber(-1);
+                db.add(metaInfo);
+            }
+            db.commit();
+        } catch(Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
 
     private String parseConfig() {
         String configFileName = eucaHome + CONFIG_FILE_PATH;

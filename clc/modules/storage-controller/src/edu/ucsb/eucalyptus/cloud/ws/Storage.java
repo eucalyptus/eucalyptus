@@ -100,6 +100,7 @@ public class Storage {
         blockManager.initVolumeManager();
         try {
             blockManager.checkPreconditions();
+            blockManager.configure();
         } catch(Exception ex) {
             enableStorage = false;
             LOG.warn(ex);
