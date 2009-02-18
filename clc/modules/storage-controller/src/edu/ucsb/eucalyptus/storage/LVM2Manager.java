@@ -63,7 +63,7 @@ public class LVM2Manager implements BlockStorageManager {
     public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
     private static final String CONFIG_FILE_PATH = "/etc/eucalyptus/eucalyptus.conf";
     private static Logger LOG = Logger.getLogger(LVM2Manager.class);
-    private static String eucaHome = "/opt/eucalyptus";
+    private static String eucaHome;
     private static final String IFACE_CONFIG_STRING = "VNET_INTERFACE";
     private static final boolean ifaceDiscovery = false;
     private static final long LVM_HEADER_LENGTH = 4 * StorageProperties.MB;
