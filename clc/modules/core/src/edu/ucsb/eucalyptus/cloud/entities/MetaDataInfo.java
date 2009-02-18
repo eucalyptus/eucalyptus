@@ -43,23 +43,23 @@ import javax.persistence.*;
 @Table( name = "MetaData" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class MetaDataInfo {
-	@Id
-	@GeneratedValue
-	@Column( name = "metadata_id" )
-	private Long id = -1l;
-	@Column(name ="object_id")
-	private String objectName;
-	@Column(name="name")
-	private String name;
-	@Column(name="value")
-	private String value;
+    @Id
+    @GeneratedValue
+    @Column( name = "metadata_id" )
+    private Long id = -1l;
+    @Column(name ="object_id")
+    private String objectName;
+    @Column(name="name")
+    private String name;
+    @Column(name="value")
+    private String value;
 
     public MetaDataInfo(){}
 
-	public Long getId()
-	{
-		return this.id;
-	}
+    public Long getId()
+    {
+        return this.id;
+    }
 
     public String getObjectName() {
         return objectName;
@@ -83,5 +83,13 @@ public class MetaDataInfo {
 
     public void setValue(String value) {
         this.value = value;
+    }
+
+    public MetaDataInfo clone() {
+        MetaDataInfo metaDataInfo = new MetaDataInfo();
+        metaDataInfo.setName(name);
+        metaDataInfo.setValue(value);
+        metaDataInfo.setObjectName(objectName);
+        return metaDataInfo;
     }
 }

@@ -34,7 +34,6 @@
  * Author: Dmitrii Zagorodnov dmitrii@cs.ucsb.edu
  */
 
-
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import org.hibernate.annotations.Cache;
@@ -43,134 +42,130 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import javax.persistence.*;
 
 @Entity
-@Table(name="system_info")
+@Table( name = "system_info" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class SystemConfiguration {
-    @Id
-    @GeneratedValue
-    @Column( name = "system_info_id" )
-    private Long id = -1l;
-    @Column( name = "system_info_storage_url" )
-    private String storageUrl;
-    @Column( name = "system_info_default_kernel" )
-    private String defaultKernel;
-    @Column( name = "system_info_default_ramdisk" )
-    private String defaultRamdisk;
-    @Column( name = "system_storage_dir" )
-    private String storageDir;
-    @Column( name = "system_storage_max_buckets_per_user" )
-    private Integer storageMaxBucketsPerUser;
-    @Column( name = "system_storage_max_bucket_size_mb" )
-    private Integer storageMaxBucketSizeInMB;
-    @Column( name = "system_storage_cache_size_mb" )
-    private Integer storageMaxCacheSizeInMB;
-    @Column( name = "system_storage_volume_size_gb" )
-    private Integer storageMaxTotalVolumeSizeInGb;
-    @Column( name = "system_storage_snapshot_size_gb" )
-    private Integer storageMaxSnapshotSizeInGb;
+  @Id
+  @GeneratedValue
+  @Column( name = "system_info_id" )
+  private Long id = -1l;
+  @Column( name = "system_info_storage_url" )
+  private String storageUrl;
+  @Column( name = "system_info_default_kernel" )
+  private String defaultKernel;
+  @Column( name = "system_info_default_ramdisk" )
+  private String defaultRamdisk;
+  @Column( name = "system_storage_dir" )
+  private String storageDir;
+  @Column( name = "system_storage_max_buckets_per_user" )
+  private Integer storageMaxBucketsPerUser;
+  @Column( name = "system_storage_max_bucket_size_mb" )
+  private Integer storageMaxBucketSizeInMB;
+  @Column( name = "system_storage_cache_size_mb" )
+  private Integer storageMaxCacheSizeInMB;
+  @Column( name = "system_storage_volume_size_gb" )
+  private Integer storageMaxTotalVolumeSizeInGb;
+  @Column( name = "system_storage_snapshot_size_gb" )
+  private Integer storageMaxSnapshotSizeInGb;
+  @Column( name = "system_registration_id" )
+  private String registrationId;
 
-    public SystemConfiguration(){}
+  public SystemConfiguration() {}
 
-    public SystemConfiguration( final String storageUrl,
-                                final String defaultKernel, final String defaultRamdisk,
-                                final String storageDir,
-                                final Integer storageMaxBucketsPerUser, final Integer storageMaxBucketSizeInMB, final Integer storageMaxCacheSizeInMB )
-    {
-        this.storageUrl = storageUrl;
-        this.defaultKernel = defaultKernel;
-        this.defaultRamdisk = defaultRamdisk;
-        this.storageDir = storageDir;
-        this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
-        this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
-		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
-    }
+  public SystemConfiguration( final String storageUrl,
+                              final String defaultKernel, final String defaultRamdisk,
+                              final String storageDir,
+                              final Integer storageMaxBucketsPerUser, final Integer storageMaxBucketSizeInMB, final Integer storageMaxCacheSizeInMB ) {
+    this.storageUrl = storageUrl;
+    this.defaultKernel = defaultKernel;
+    this.defaultRamdisk = defaultRamdisk;
+    this.storageDir = storageDir;
+    this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
+    this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
+    this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
+  }
 
-    public Long getId()
-    {
-        return id;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public String getStorageUrl()
-    {
-        return storageUrl;
-    }
+  public String getStorageUrl() {
+    return storageUrl;
+  }
 
-    public String getDefaultKernel()
-    {
-        return defaultKernel;
-    }
+  public String getDefaultKernel() {
+    return defaultKernel;
+  }
 
-    public String getDefaultRamdisk()
-    {
-        return defaultRamdisk;
-    }
+  public String getDefaultRamdisk() {
+    return defaultRamdisk;
+  }
 
-    public void setStorageUrl( final String storageUrl )
-    {
-        this.storageUrl = storageUrl;
-    }
+  public void setStorageUrl( final String storageUrl ) {
+    this.storageUrl = storageUrl;
+  }
 
-    public void setDefaultKernel( final String defaultKernel )
-    {
-        this.defaultKernel = defaultKernel;
-    }
+  public void setDefaultKernel( final String defaultKernel ) {
+    this.defaultKernel = defaultKernel;
+  }
 
-    public void setDefaultRamdisk( final String defaultRamdisk )
-    {
-        this.defaultRamdisk = defaultRamdisk;
-    }
+  public void setDefaultRamdisk( final String defaultRamdisk ) {
+    this.defaultRamdisk = defaultRamdisk;
+  }
 
-    public String getStorageDir()
-    {
-        return storageDir;
-    }
+  public String getStorageDir() {
+    return storageDir;
+  }
 
-    public void setStorageDir( final String storageDir )
-    {
-        this.storageDir = storageDir;
-    }
+  public void setStorageDir( final String storageDir ) {
+    this.storageDir = storageDir;
+  }
 
-    public Integer getStorageMaxBucketsPerUser()
-    {
-        return storageMaxBucketsPerUser;
-    }
+  public Integer getStorageMaxBucketsPerUser() {
+    return storageMaxBucketsPerUser;
+  }
 
-    public void setStorageMaxBucketsPerUser( final Integer storageMaxBucketsPerUser )
-    {
-        this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
-    }
+  public void setStorageMaxBucketsPerUser( final Integer storageMaxBucketsPerUser ) {
+    this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
+  }
 
-    public int getStorageMaxBucketSizeInMB()
-    {
-        return storageMaxBucketSizeInMB;
-    }
+  public int getStorageMaxBucketSizeInMB() {
+    return storageMaxBucketSizeInMB;
+  }
 
-    public void setStorageMaxBucketSizeInMB( final Integer storageMaxBucketSizeInMB )
-    {
-        this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
-    }
+  public void setStorageMaxBucketSizeInMB( final Integer storageMaxBucketSizeInMB ) {
+    this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
+  }
 
-    public Integer getStorageMaxCacheSizeInMB() {
-        return storageMaxCacheSizeInMB;
-    }
+  public Integer getStorageMaxCacheSizeInMB() {
+    return storageMaxCacheSizeInMB;
+  }
 
-    public void setStorageMaxCacheSizeInMB(Integer storageMaxCacheSizeInMB) {
-        this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
-    }
+  public void setStorageMaxCacheSizeInMB( Integer storageMaxCacheSizeInMB ) {
+    this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
+  }
 
-    public Integer getStorageMaxTotalVolumeSizeInGb() {
-        return storageMaxTotalVolumeSizeInGb;
-    }
+  public Integer getStorageMaxTotalVolumeSizeInGb() {
+    return storageMaxTotalVolumeSizeInGb;
+  }
 
-    public void setStorageMaxTotalVolumeSizeInGb(Integer storageMaxTotalVolumeSizeInGb) {
-        this.storageMaxTotalVolumeSizeInGb = storageMaxTotalVolumeSizeInGb;
-    }
+  public void setStorageMaxTotalVolumeSizeInGb( Integer storageMaxTotalVolumeSizeInGb ) {
+    this.storageMaxTotalVolumeSizeInGb = storageMaxTotalVolumeSizeInGb;
+  }
 
-    public Integer getStorageMaxSnapshotSizeInGb() {
-        return storageMaxSnapshotSizeInGb;
-    }
+  public Integer getStorageMaxSnapshotSizeInGb() {
+    return storageMaxSnapshotSizeInGb;
+  }
 
-    public void setStorageMaxSnapshotSizeInGb(Integer storageMaxSnapshotSizeInGb) {
-        this.storageMaxSnapshotSizeInGb = storageMaxSnapshotSizeInGb;
-    }
+  public void setStorageMaxSnapshotSizeInGb( Integer storageMaxSnapshotSizeInGb ) {
+    this.storageMaxSnapshotSizeInGb = storageMaxSnapshotSizeInGb;
+  }
+
+  public String getRegistrationId() {
+    return registrationId;
+  }
+
+  public void setRegistrationId( final String registrationId ) {
+    this.registrationId = registrationId;
+  }
 }

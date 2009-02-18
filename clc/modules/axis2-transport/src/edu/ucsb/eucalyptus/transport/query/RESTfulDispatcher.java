@@ -36,6 +36,7 @@ package edu.ucsb.eucalyptus.transport.query;
 
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.context.MessageContext;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 
 /**
  * User: decker
@@ -46,7 +47,7 @@ public interface RESTfulDispatcher {
 
   boolean accepts( HttpRequest httpRequest, MessageContext messageContext ) throws AxisFault;
 
-  String getOperation( HttpRequest httpRequest, MessageContext messageContext );
+  String getOperation( HttpRequest httpRequest, MessageContext messageContext ) throws EucalyptusCloudException;
 
   QuerySecurityHandler getSecurityHandler();
 

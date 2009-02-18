@@ -75,6 +75,16 @@ public class CanonicalUserType extends EucalyptusData {
   }
 }
 
+public class Group extends EucalyptusData {
+  String uri;
+
+  public Group() {}
+
+  public Group(String uri) {
+    this.uri = uri;
+  }
+}
+
 public class AccessControlPolicyType extends EucalyptusData {
   AccessControlPolicyType() {}
   AccessControlPolicyType(CanonicalUserType owner, AccessControlListType acl) {
@@ -85,14 +95,28 @@ public class AccessControlPolicyType extends EucalyptusData {
   AccessControlListType accessControlList;
 }
 
-public class Grant extends EucalyptusData {
-  //FIXME: handle other types of users
-  CanonicalUserType grantee;
-  String permission;
+public class Grantee extends EucalyptusData {
+  CanonicalUserType canonicalUser;
+  Group group;
 
+  public Grantee() {}
+  
+  public Grantee(CanonicalUserType canonicalUser) {
+    this.canonicalUser = canonicalUser;
+  }
+
+  public Grantee(Group group) {
+    this.group = group;
+  }
+}
+
+public class Grant extends EucalyptusData {
+  Grantee grantee;
+  String permission;
+           
   public Grant() {}
 
-  public Grant(CanonicalUserType grantee, String permission) {
+  public Grant(Grantee grantee, String permission) {
     this.grantee = grantee;
     this.permission = permission;
   }
@@ -149,6 +173,27 @@ public class WalrusBucketErrorMessageType extends WalrusErrorMessageType {
   }
   public String toString() {
     return "BucketErrorMessage:" + message + bucketName;
+  }
+}
+
+public class WalrusRedirectMessageType extends WalrusErrorMessageType {
+  private String redirectUrl;
+
+  def WalrusRedirectMessageType() {
+    this.code = 301;
+  }
+
+  def WalrusRedirectMessageType(String redirectUrl) {
+    this.redirectUrl = redirectUrl;
+    this.code = 301;
+  }
+
+  public String toString() {
+    return "WalrusRedirectMessage:" +  redirectUrl;
+  }
+
+  public String getRedirectUrl() {
+    return redirectUrl;
   }
 }
 
@@ -234,6 +279,14 @@ public class WalrusDataResponseType extends WalrusResponseType {
 public class PutObjectResponseType extends WalrusDataResponseType {
 }
 
+public class PostObjectResponseType extends WalrusDataResponseType {
+  String redirectUrl;
+  Integer successCode;
+  String location;
+  String bucket;
+  String key;
+}
+
 public class PutObjectInlineResponseType extends WalrusDataResponseType {
 }
 
@@ -244,18 +297,27 @@ public class PutObjectType extends WalrusDataRequestType {
   String storageClass;
 }
 
-public class CopyObjectType extends WalrusDataRequestType {
+public class PostObjectType extends WalrusDataRequestType {
+  String contentLength;
+  ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  AccessControlListType accessControlList = new AccessControlListType();
+  String storageClass;
+  String successActionRedirect;
+  Integer successActionStatus;
+}
+
+public class CopyObjectType extends WalrusRequestType {
   String sourceBucket;
   String sourceObject;
   String destinationBucket;
   String destinationObject;
-  String metaDataDirective;
+  String metadataDirective;
   ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
   AccessControlListType accessControlList = new AccessControlListType();
-  String copyIfMatch;
-  String copyIfNoneMatch;
-  Date copyIfModifiedSince;
-  Date copyIfUnmodifiedSince;
+  String copySourceIfMatch;
+  String copySourceIfNoneMatch;
+  Date copySourceIfModifiedSince;
+  Date copySourceIfUnmodifiedSince;
 }
 
 public class CopyObjectResponseType extends WalrusDataResponseType {
@@ -349,6 +411,7 @@ public class GetObjectType extends WalrusDataRequestType {
   Boolean getMetaData;
   Boolean getData;
   Boolean inlineData;
+  Boolean deleteAfterGet;
 
   def GetObjectType() {
   }

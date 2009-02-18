@@ -36,7 +36,8 @@ public class Cluster implements HasName {
   private Thread mqThread;
   private Thread logThread;
   private Thread keyThread;
-
+  private boolean stopped = false;
+  
   public Cluster( ClusterInfo clusterInfo ) {
     this.clusterInfo = clusterInfo;
     this.state = new ClusterState( this );
@@ -47,8 +48,6 @@ public class Cluster implements HasName {
     this.nodeLogUpdater = new NodeLogCallback( this );
     this.nodeCertUpdater = new NodeCertCallback( this );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>();
-    this.waitForCerts();
-    this.start();
   }
 
   private void waitForCerts() {
@@ -58,11 +57,10 @@ public class Cluster implements HasName {
       try {
         reply = ( GetKeysResponseType ) dispatcher.getClient().send( new GetKeysType( "self" ) );
       } catch ( Exception e ) {
-        LOG.error( e, e );
+        LOG.debug( e, e );
       }
       try {Thread.sleep( 5000 );} catch ( InterruptedException ignored ) {}
-    } while ( reply == null || !this.checkCerts( reply ) );
-
+    } while ( ( reply == null || !this.checkCerts( reply ) ) && !stopped );
   }
 
   private boolean checkCerts( final GetKeysResponseType reply ) {
@@ -96,9 +94,28 @@ public class Cluster implements HasName {
     return ret;
   }
 
-  public synchronized void start() {
+  class ClusterStartupWatchdog extends Thread {
+    Cluster cluster = null;
+    ClusterStartupWatchdog( final Cluster cluster ) {
+      super( cluster.getName() + "-ClusterStartupWatchdog" );
+      this.cluster = cluster;
+    }
+
+    public void run() {
+      LOG.info( "Calling startup on cluster: " + cluster.getName() );
+      cluster.startThreads();
+    }
+  }
+
+  public void start() {
+    ( new ClusterStartupWatchdog( this ) ).start();
+  }
+
+  public void startThreads() {
     //:: should really be organized as a thread group etc etc :://
-    LOG.info( "Starting cluster: " + this.clusterInfo.getUri() );
+    LOG.warn( "Starting cluster: " + this.clusterInfo.getUri() );
+    this.waitForCerts();
+    if( !stopped ) {
     if ( this.mqThread == null || this.mqThread.isAlive() )
       this.mqThread = this.startNamedThread( messageQueue );
 
@@ -110,38 +127,33 @@ public class Cluster implements HasName {
 
     if ( this.addrThread == null || this.addrThread.isAlive() )
       this.addrThread = this.startNamedThread( addrUpdater );
-    this.fireNodeThreads();
+
+    if ( this.keyThread != null && !this.keyThread.isAlive() )
+      ( this.keyThread = new Thread( nodeCertUpdater, nodeCertUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
+
+//    if ( this.logThread != null && !this.logThread.isAlive() )
+//      ( this.logThread = new Thread( nodeLogUpdater, nodeLogUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
+
+    }
   }
 
   private Thread startNamedThread( Runnable r ) {
     Thread t = new Thread( r );
     t.setName( String.format( "%s-%s@%X", r.getClass().getSimpleName(), this.getName(), t.hashCode() ) );
     t.start();
-    LOG.info( "Starting threads for [ " + this.getName() + " ] " + t.getName() );
+    LOG.warn( "Starting threads for [ " + this.getName() + " ] " + t.getName() );
     return t;
   }
 
-  public void fireNodeThreads() {
-    if ( this.keyThread != null && !this.keyThread.isAlive() )
-      ( this.keyThread = new Thread( nodeCertUpdater, nodeCertUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
-    if ( this.logThread != null && !this.logThread.isAlive() )
-      ( this.logThread = new Thread( nodeLogUpdater, nodeLogUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
-  }
-
-  public void stop() throws InterruptedException {
-    LOG.info( "Stopping cluster: " + this.clusterInfo.getUri() );
+  public void stop() {
+    LOG.warn( "Stopping cluster: " + this.clusterInfo.getUri() );
+    this.stopped = true;
     this.rscUpdater.stop();
     this.addrUpdater.stop();
     this.vmUpdater.stop();
     this.nodeLogUpdater.stop();
     this.nodeCertUpdater.stop();
     this.messageQueue.stop();
-    this.rscThread.join();
-    this.vmThread.join();
-    this.addrThread.join();
-    this.keyThread.join();
-    this.logThread.join();
-    this.mqThread.join();
   }
 
   public ClusterInfoType getInfo() {

@@ -5,21 +5,6 @@ import edu.ucsb.eucalyptus.msgs.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
-public class ClusterStateType {
-
-  String name;
-  String host;
-  int port;
-
-
-  def ClusterStateType(final name, final host, final port) {
-    this.name = name;
-    this.host = host;
-    this.port = port;
-  }
-
-}
-
 public class Pair {
 
   public static List<Pair> getPaired(List one, List two) {

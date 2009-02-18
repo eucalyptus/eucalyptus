@@ -48,7 +48,7 @@ public class StorageReplyQueue {
 
     private static Logger LOG = Logger.getLogger( StorageReplyQueue.class );
 
-    private static ReplyCoordinator replies = new ReplyCoordinator();
+    private static ReplyCoordinator replies = new ReplyCoordinator( 3600000 );
 
     public void handle( EucalyptusMessage msg )
     {

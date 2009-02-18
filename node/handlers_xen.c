@@ -40,6 +40,9 @@ static int cores_max      = 0;
 static char config_network_path [BUFSIZE];
 static int  config_network_port = NC_NET_PORT_DEFAULT;
 
+/* debuging parameter, can be set in config file */
+static int save_instance_files = 0; 
+
 static char * admin_user_id = EUCALYPTUS_ADMIN;
 static char gen_libvirt_xml_command_path [BUFSIZE] = "";
 static char get_xen_info_command_path [BUFSIZE] = "";
@@ -261,8 +264,10 @@ static void * monitoring_thread (void *arg)
                 continue; /* let it be */
             
             /* ok, it's been condemned => destroy the files */
-            if (scCleanupInstanceImage(instance->userId, instance->instanceId)) {
-                logprintfl (EUCAWARN, "warning: failed to cleanup instance image %d\n", instance->instanceId);
+            if (!save_instance_files) {
+                if (scCleanupInstanceImage(instance->userId, instance->instanceId)) {
+                    logprintfl (EUCAWARN, "warning: failed to cleanup instance image %d\n", instance->instanceId);
+                }
             }
             
             /* check to see if this is the last instance running on vlan */
@@ -301,9 +306,9 @@ static int get_value (char * s, const char * name, long long * valp)
 static int doInitialize (void) 
 {
     struct stat mystat;
-    char config [BUFSIZE];
-    char *brname, *s, *home, *pubInterface, *bridge, *mode;
-    int error, rc;
+    char config [BUFSIZE], logpath[BUFSIZE];
+    char *brname, *s, *home, *pubInterface, *bridge, *mode, *loglevelstr;
+    int error, rc, loglevel;
 
     /* read in configuration - this should be first! */
     int do_warn = 0;
@@ -315,24 +320,39 @@ static int doInitialize (void)
         home = strdup (home);
     }
 
-    snprintf(config, BUFSIZE, "%s/var/log/eucalyptus/nc.log", home);
-    logfile(config, EUCADEBUG); // TODO: right level?
+    snprintf(logpath, BUFSIZE, "%s/var/log/eucalyptus/nc.log", home);
+    logfile(logpath, EUCADEBUG); // TODO: right level?
     if (do_warn) 
         logprintfl (EUCAWARN, "env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
 
     snprintf(config, BUFSIZE, EUCALYPTUS_CONF_LOCATION, home);
     if (stat(config, &mystat)==0) {
       logprintfl (EUCAINFO, "NC is looking for configuration in %s\n", config);
-      
+
+      // reset loglevel to that set in config file (if any)
+      loglevelstr = getConfString(config, "LOGLEVEL");
+      if (loglevelstr) {
+	if (!strcmp(loglevelstr,"DEBUG")) {loglevel=EUCADEBUG;}
+	else if (!strcmp(loglevelstr,"INFO")) {loglevel=EUCAINFO;}
+	else if (!strcmp(loglevelstr,"WARN")) {loglevel=EUCAWARN;}
+	else if (!strcmp(loglevelstr,"ERROR")) {loglevel=EUCAERROR;}
+	else if (!strcmp(loglevelstr,"FATAL")) {loglevel=EUCAFATAL;}
+	else {loglevel=EUCADEBUG;}
+	logfile(logpath, loglevel);
+	free(loglevelstr);
+      }
+	
+
 #define GET_VAR_INT(var,name) \
             if (get_conf_var(config, name, &s)>0){\
                 var = atoi(s);\
                 free (s);\
             }
         
-        GET_VAR_INT(config_max_mem,   CONFIG_MAX_MEM);
-        GET_VAR_INT(config_max_disk,  CONFIG_MAX_DISK);
-        GET_VAR_INT(config_max_cores, CONFIG_MAX_CORES);
+        GET_VAR_INT(config_max_mem,      CONFIG_MAX_MEM);
+        GET_VAR_INT(config_max_disk,     CONFIG_MAX_DISK);
+        GET_VAR_INT(config_max_cores,    CONFIG_MAX_CORES);
+        GET_VAR_INT(save_instance_files, CONFIG_SAVE_INSTANCES);
     }
 
     if ((xen_sem = sem_alloc (1, "eucalyptus-nc-xen-semaphore")) == NULL

@@ -43,6 +43,8 @@ public interface StorageManager {
     
     public void initialize();
 
+    public void checkPreconditions() throws EucalyptusCloudException;
+
     public void createBucket(String bucket) throws IOException;
 
     public long getSize(String bucket, String object);
@@ -61,13 +63,15 @@ public interface StorageManager {
 
     public void deleteAbsoluteObject(String object) throws IOException;
 
+    public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException;
+    
     public void renameObject(String bucket, String oldName, String newName) throws IOException;
 
     public String getObjectPath(String bucket, String object);
 
     public void setRootDirectory(String rootDirectory);
 
-    public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet) throws EucalyptusCloudException;
+    public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet, boolean removeVg) throws EucalyptusCloudException;
 
     public String createVolume(String bucket, List<String> snapshotSet, List<String> vgNames, List<String> lvNames, String snapshotId, String snapshotVgName, String snapshotLvName) throws EucalyptusCloudException;
 }

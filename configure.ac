@@ -82,8 +82,14 @@ AC_PROG_AWK
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
+
+# we need JAVA_HOME 
+if test -z "$JAVA_HOME" ; then
+	AC_MSG_ERROR([JAVA_HOME is not defined!])
+fi
+
 AC_PATH_PROG([ANT], ant,,$ANT_HOME/bin:$PATH)
-AC_PATH_PROG([JAVA], java,,$JAVA_HOME/bin:$PATH)
+AC_PATH_PROG([JAVA], java,,$JAVA_HOME/bin)
 
 # Check the version of java and ant
 if test -z "$ANT" ; then
@@ -98,6 +104,12 @@ goodversion=`expr $java_version ">=" $java_min_version`
 if test $goodversion -eq 0; then
 	AC_MSG_ERROR([Eucalyptus needs at least JDK version $java_min_version])
 fi
+
+# now let's test we have jni.h
+if test ! -e $JAVA_HOME/include/jni.h ; then
+	AC_MSG_ERROR([Cannot find jni.h in $JAVA_HOME: do you have a JDK installed?])
+fi
+
 ant_version=`$ANT -version 2>&1 | grep "Ant version" | \
 	sed -e 's/.*Ant version \([[0-9.]]*\).*/\1/'`
 goodversion=`expr $ant_version ">=" $ant_min_version`
@@ -111,6 +123,7 @@ goodversion=`expr $java_version ">=" $java_min_version`
 if test $goodversion -eq 0; then
         AC_MSG_ERROR([ANT is using the wrong java (version less than $java_min_version)])
 fi
+
 
 # Checks for libraries.
 # FIXME: Replace `main' with a function in the library

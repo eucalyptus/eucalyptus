@@ -1,9 +1,12 @@
 package edu.ucsb.eucalyptus.cloud.state;
 
-import org.hibernate.annotations.*;
+import edu.ucsb.eucalyptus.util.StorageProperties;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.Entity;
-import javax.persistence.*;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
 
 @Entity
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
@@ -59,9 +62,10 @@ public class Volume extends AbstractIsomorph {
   }
 
   public void setMappedState( final String state ) {
-    if("failed".equals( state ) ) this.setState( State.FAIL );
-    else if("creating".equals( state ) ) this.setState( State.GENERATING );
-    else if("available".equals( state ) ) this.setState( State.EXTANT );
+    if( StorageProperties.Status.failed.toString().equals( state ) ) this.setState( State.FAIL );
+    else if(StorageProperties.Status.creating.toString().equals( state ) ) this.setState( State.GENERATING );
+    else if(StorageProperties.Status.available.toString().equals( state ) ) this.setState( State.EXTANT );
+    else if("in-use".equals( state ) ) this.setState( State.BUSY );
     else this.setState( State.ANNILATED );
   }
 

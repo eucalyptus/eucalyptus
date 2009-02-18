@@ -66,7 +66,7 @@ public class LVM2Manager implements BlockStorageManager {
     private static String eucaHome = "/opt/eucalyptus";
     private static final String IFACE_CONFIG_STRING = "VNET_INTERFACE";
     private static final boolean ifaceDiscovery = false;
-
+    private static final long LVM_HEADER_LENGTH = 4 * StorageProperties.MB;
     public StorageExportManager exportManager;
 
     public void checkPreconditions() throws EucalyptusCloudException {
@@ -89,6 +89,12 @@ public class LVM2Manager implements BlockStorageManager {
         String returnValue = getLvmVersion();
         if(returnValue.length() == 0) {
             throw new EucalyptusCloudException("Is lvm installed?");
+        } else {
+            LOG.info(returnValue);
+        }
+        returnValue = getVblade();
+        if(returnValue.length() == 0) {
+            throw new EucalyptusCloudException("vblade not found: Is aoetools installed?");
         } else {
             LOG.info(returnValue);
         }
@@ -250,6 +256,8 @@ public class LVM2Manager implements BlockStorageManager {
 
     public native String removeLogicalVolume(String lvName);
 
+    public native String disableLogicalVolume(String lvName);
+
     public native String removeVolumeGroup(String vgName);
 
     public native String removePhysicalVolume(String loDevName);
@@ -270,27 +278,25 @@ public class LVM2Manager implements BlockStorageManager {
 
     public native String getLvmVersion();
 
+    public native String getVblade();
+
     public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
         int majorNumber = -1;
         int minorNumber = -1;
         LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
         EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
-        try {
-            LVMMetaInfo foundMetaInfo = db.getUnique(metaInfo);
-            if(foundMetaInfo != null) {
-                majorNumber = foundMetaInfo.getMajorNumber();
-                minorNumber = foundMetaInfo.getMinorNumber();
-                if(((++minorNumber) % MAX_LOOP_DEVICES) == 0) {
-                    ++majorNumber;
-                }
-                foundMetaInfo.setMajorNumber(majorNumber);
-                foundMetaInfo.setMinorNumber(minorNumber);
+        List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
+        if(metaInfoList.size() > 0) {
+            LVMMetaInfo foundMetaInfo = metaInfoList.get(0);
+            majorNumber = foundMetaInfo.getMajorNumber();
+            minorNumber = foundMetaInfo.getMinorNumber();
+            if(((++minorNumber) % MAX_LOOP_DEVICES) == 0) {
+                ++majorNumber;
             }
-            db.commit();
-        } catch (Exception ex) {
-            db.rollback();
-            ex.printStackTrace();
+            foundMetaInfo.setMajorNumber(majorNumber);
+            foundMetaInfo.setMinorNumber(minorNumber);
         }
+        db.commit();
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
         int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
         String returnValue = aoeStatus(pid);
@@ -395,9 +401,18 @@ public class LVM2Manager implements BlockStorageManager {
         //create physical volume, volume group and logical volume
         createLogicalVolume(loDevName, vgName, lvName);
         //export logical volume
-        int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
-        if(vbladePid < 0) {
-            throw new EucalyptusCloudException();
+        try {
+            int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
+            if(vbladePid < 0) {
+                throw new EucalyptusCloudException();
+            }
+        } catch(EucalyptusCloudException ex) {
+            String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+            String returnValue = removeLogicalVolume(absoluteLVName);
+            returnValue = removeVolumeGroup(vgName);
+            returnValue = removePhysicalVolume(loDevName);
+            removeLoopback(loDevName);
+            throw ex;
         }
 
         lvmVolumeInfo.setVolumeId(volumeId);
@@ -420,16 +435,25 @@ public class LVM2Manager implements BlockStorageManager {
         String vgName = "vg-" + Hashes.getRandom(4);
         String lvName = "lv-" + Hashes.getRandom(4);
         LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo();
-
-        int size = (int)(new File(volumePath).length() / StorageProperties.GB);
+        File dataFile = new File(volumePath);
+        int size = (int)((dataFile.length() + LVM_HEADER_LENGTH) / StorageProperties.GB);
         //create file and attach to loopback device
-        String loDevName = createLoopback(volumePath);
+        String rawFileName = StorageProperties.storageRootDirectory + "/" + volumeId;
+
+        String loDevName = createLoopback(rawFileName, size);
         //create physical volume, volume group and logical volume
         createLogicalVolume(loDevName, vgName, lvName);
+        String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+        //copy it
+        duplicateLogicalVolume(volumePath, absoluteLVName);
         //export logical volume
         int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
         if(vbladePid < 0) {
             throw new EucalyptusCloudException();
+        }
+
+        if(dataFile.exists()) {
+            dataFile.delete();
         }
         lvmVolumeInfo.setVolumeId(volumeId);
         lvmVolumeInfo.setLoDevName(loDevName);
@@ -470,9 +494,17 @@ public class LVM2Manager implements BlockStorageManager {
                         PATH_SEPARATOR + foundSnapshotInfo.getLvName();
                 duplicateLogicalVolume(absoluteSnapshotLVName, absoluteLVName);
                 //export logical volume
-                int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
-                if(vbladePid < 0) {
-                    throw new EucalyptusCloudException();
+                try {
+                    int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
+                    if(vbladePid < 0) {
+                        throw new EucalyptusCloudException();
+                    }
+                } catch(EucalyptusCloudException ex) {
+                    String returnValue = removeLogicalVolume(absoluteLVName);
+                    returnValue = removeVolumeGroup(vgName);
+                    returnValue = removePhysicalVolume(loDevName);
+                    removeLoopback(loDevName);
+                    throw ex;
                 }
                 lvmVolumeInfo.setVolumeId(volumeId);
                 lvmVolumeInfo.setLoDevName(loDevName);

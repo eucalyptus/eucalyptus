@@ -15,6 +15,8 @@ NAME=""
 INSTANCE=""
 EUCA_USER=""
 HYPERVISOR=""
+DHCPD=""
+DHCP_USER=""
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -31,6 +33,8 @@ usage () {
 	echo "   -cloudp <port1> <port2>     set the 2 cloud ports"
 	echo "   -hypervisor <kvm|xen>       set hypervisor to use"
 	echo "   -user <euca_user>           set the user to use"
+	echo "   -dhcpd <dhcpd>              set the dhcpd binary to <name>"
+	echo "   -dhcp_user <user>           set the username to run dhcpd as"
 	echo "   -name <var>                 returns the value or <name>"
 	echo "where <file> is the configuration file ($FILE by default)"
 	echo
@@ -42,10 +46,16 @@ change_var_value () {
 	sed "s<\(${2}\).*<\1=\"${3}\"<" /tmp/euca-tmp.$$ > $1
 	rm -f /tmp/euca-tmp.$$
 }
-# comment lines macting $2 ($1 is the file)
+# comment lines matching $2 ($1 is the file)
 comment () {
 	cp $1 /tmp/euca-tmp.$$
 	sed "s<[[:blank:]]*\(${2}.*\)<#\1<" /tmp/euca-tmp.$$ > $1
+	rm -f /tmp/euca-tmp.$$
+}
+# comment lines matching $2 ($1 is the file)
+uncomment () {
+	cp $1 /tmp/euca-tmp.$$
+	sed "s<[#[:blank:]]*\(${2}.*\)<\1<" /tmp/euca-tmp.$$ > $1
 	rm -f /tmp/euca-tmp.$$
 }
 
@@ -101,6 +111,16 @@ while [ $# -gt 0 ]; do
 	fi		
 	if [ "$1" = "-cc" ]; then
 		START_CC="$2"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "-dhcpd" ]; then
+		DHCPD="$2"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "-dhcp_user" ]; then
+		DHCPC_USER="$2"
 		shift; shift
 		continue
 	fi		
@@ -191,11 +211,19 @@ fi
 if [ -n "$INSTANCE" ]; then
 	change_var_value $FILE INSTANCE_PATH "${INSTANCE}"
 fi
+if [ -n "$DHCPD" ]; then
+	change_var_value $FILE VNET_DHCPDAEMON "${DHCPD}"
+fi
+if [ -n "$DHCPC_USER" ]; then
+	change_var_value $FILE VNET_DHCPUSER "${DHCPC_USER}"
+	uncomment $FILE VNET_DHCPUSER
+fi
 if [ -n "$NODES" ]; then
 	change_var_value $FILE NODES "${NODES}"
 fi
 if [ -n "$HYPERVISOR" ]; then
 	change_var_value $FILE HYPERVISOR "${HYPERVISOR}"
+	uncomment $FILE HYPERVISOR
 fi
 if [ -n "$EUCA_USER" ]; then
 	change_var_value $FILE EUCA_USER "${EUCA_USER}"

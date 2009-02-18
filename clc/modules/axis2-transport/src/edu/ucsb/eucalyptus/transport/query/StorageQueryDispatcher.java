@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.transport.query;
 
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.HandlerDescription;
 import org.apache.log4j.Logger;
@@ -118,7 +119,7 @@ public class StorageQueryDispatcher extends GenericHttpDispatcher implements RES
         return true;
     }
 
-    public String getOperation( HttpRequest httpRequest, MessageContext messageContext )
+    public String getOperation( HttpRequest httpRequest, MessageContext messageContext ) throws EucalyptusCloudException
     {
         //Figure out if it is an operation on the service, a bucket or an object
         Map operationParams = new HashMap();

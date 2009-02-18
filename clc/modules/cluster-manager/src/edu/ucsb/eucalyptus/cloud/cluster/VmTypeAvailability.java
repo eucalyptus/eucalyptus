@@ -89,7 +89,7 @@ public class VmTypeAvailability implements Comparable {
   static class ZeroTypeAvailability extends VmTypeAvailability {
     ZeroTypeAvailability()
     {
-      super( null, 0, 0 );
+      super( new VmType("ZERO",0,0,0), 0, 0 );
     }
 
     @Override

@@ -36,11 +36,14 @@ package edu.ucsb.eucalyptus.util;
 
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import org.apache.log4j.Logger;
 
-import java.net.*;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
+import java.util.UUID;
 
 public class EucalyptusProperties {
 
@@ -87,6 +90,9 @@ public class EucalyptusProperties {
     catch ( EucalyptusCloudException e ) {
       confDb.rollback();
       throw new EucalyptusCloudException( "Failed to load system configuration", e );
+    }
+    if( conf.getRegistrationId() == null ) {
+      conf.setRegistrationId( UUID.randomUUID().toString() );
     }
     confDb.commit();
     String walrusUrl = null;

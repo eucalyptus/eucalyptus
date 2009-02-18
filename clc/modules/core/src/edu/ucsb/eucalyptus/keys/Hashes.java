@@ -83,7 +83,7 @@ public class Hashes {
     }
 
     public enum Mac {
-        HmacSHA1
+        HmacSHA1, HmacSHA256
     }
 
     public static String hashPassword( String password ) throws NoSuchAlgorithmException

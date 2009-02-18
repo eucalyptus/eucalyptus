@@ -17,6 +17,7 @@ our $use_ramdisk = 0;
 
 # deal with command-line parameters
 GetOptions('ramdisk'        => sub { $use_ramdisk = 1; },
+           'ephemeral'      => sub { }, # option ignored 
 		   ) or exit (1);
 
 print <<EOF;

@@ -49,7 +49,7 @@ public class Walrus {
     @OverloadedWebserviceMethod( actions = {
 			"CreateBucket", "DeleteBucket", "ListAllMyBuckets",
 			"GetBucketAccessControlPolicy", "ListBucket",
-			"GetObjectAccessControlPolicy", "PutObject", "PutObjectInline",
+			"GetObjectAccessControlPolicy", "PutObject", "PutObjectInline", "PostObject",
             "SetBucketAccessControlPolicy", "SetObjectAccessControlPolicy", "GetObject",
             "GetObjectExtended", "DeleteObject", "GetDecryptedImage",
             "CheckImage", "CacheImage", "FlushCachedImage",

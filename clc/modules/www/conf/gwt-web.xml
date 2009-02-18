@@ -59,6 +59,14 @@
     <servlet-class>edu.ucsb.eucalyptus.admin.server.X509Download</servlet-class>
     <load-on-startup>1</load-on-startup>
   </servlet>
+  <servlet>
+    <description></description>
+    <display-name>CloudRegistration</display-name>
+    <servlet-name>CloudRegistration</servlet-name>
+    <servlet-class>edu.ucsb.eucalyptus.admin.server.Registration</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+
 
   <servlet-mapping>
     <servlet-name>EucalyptusWebBackendImpl</servlet-name>
@@ -69,5 +77,11 @@
     <servlet-name>X509Download</servlet-name>
     <url-pattern>/getX509</url-pattern>
   </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>CloudRegistration</servlet-name>
+    <url-pattern>/register</url-pattern>
+  </servlet-mapping>
+
 
 </web-app>

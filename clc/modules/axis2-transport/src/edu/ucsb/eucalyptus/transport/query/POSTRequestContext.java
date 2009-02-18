@@ -32,41 +32,37 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.entities;
+package edu.ucsb.eucalyptus.transport.query;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.apache.commons.fileupload.RequestContext;
 
-import javax.persistence.*;
+import java.io.InputStream;
+import java.io.IOException;
 
-@Entity
-@Table( name = "StorageMetadata" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class StorageMetaInfo {
-    @Id
-    @GeneratedValue
-    @Column(name = "storage_meta_info_id")
-    private Long id = -1l;
-    @Column(name = "max_total_volume_size")
-    private Integer maxTotalVolumeSize;
-    @Column(name = "max_total_snapshot_size")
-    private Integer maxTotalSnapshotSize;
+public class POSTRequestContext implements RequestContext {
+    private InputStream inputStream;
+    private String contentType;
+    int contentLength;
 
-    public StorageMetaInfo() {}
-   
-    public Integer getMaxTotalVolumeSize() {
-        return maxTotalVolumeSize;
+    public POSTRequestContext(InputStream inputStream, String contentType, int contentLength) {
+        this.inputStream = inputStream;
+        this.contentType = contentType;
+        this.contentLength = contentLength;
     }
 
-    public void setMaxTotalVolumeSize(Integer maxTotalVolumeSize) {
-        this.maxTotalVolumeSize = maxTotalVolumeSize;
+    public String getCharacterEncoding() {
+        return null;
     }
 
-    public Integer getMaxTotalSnapshotSize() {
-        return maxTotalSnapshotSize;
+    public String getContentType() {
+        return contentType;
     }
 
-    public void setMaxTotalSnapshotSize(Integer maxTotalSnapshotSize) {
-        this.maxTotalSnapshotSize = maxTotalSnapshotSize;
+    public int getContentLength() {
+        return contentLength;
+    }
+
+    public InputStream getInputStream() throws IOException {
+        return inputStream;
     }
 }

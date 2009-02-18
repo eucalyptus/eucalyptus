@@ -41,6 +41,7 @@ import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
+import com.google.gwt.http.client.URL;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -55,12 +56,13 @@ import java.util.List;
  */
 public class EucalyptusWebInterface implements EntryPoint {
 
+	private static final AppMessages MSG = (AppMessages) GWT.create(AppMessages.class);
+	
     private static String cookie_name = "eucalyptus-session-id";
     private static int minPasswordLength = 5;  /* TODO: put into config? */
 
     /* configuration parameters to be set from the server */
     private static Boolean server_ready = new Boolean(false);
-    private static String login_greeting;
     private static String signup_greeting;
     private static String cloud_name;
     private static String certificate_download_text;
@@ -76,6 +78,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	private static String cloud_registration_text;
     private static Image logo = null;
 	private static Image textless_logo = null;
+	private static String rightscaleUrl = null;
 	
     /* global variables */
     private static HashMap props;
@@ -83,6 +86,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     private static String sessionId;
     private static String currentAction;
     private static UserInfoWeb loggedInUser;
+	private static CloudInfoWeb cloudInfo;
 	private static TabBar allTabs;
     private static int currentTabIndex = 0;
 	private static int credsTabIndex;
@@ -93,7 +97,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     /* globally visible UI widgets */
     private Label label_box = new Label();
     private CheckBox check_box = new CheckBox("", false);
-    private Label remember_label = new Label("Remember me on this computer");
+    private Label remember_label = new Label(MSG.rememberMe());
 	
     public void onModuleLoad()
     {
@@ -115,22 +119,23 @@ public class EucalyptusWebInterface implements EntryPoint {
                         try {
                             load_props(); /* verify properties */
 
-                            /* if we have don't have sessionId saved in a cookie */
-                            if ( sessionId == null )
-                            {
-								/* these don't need sessions */
-								if ( currentAction.equals ("confirm")
-								|| currentAction.equals ("recover") ) {
-									executeAction( currentAction );
-								} else {
+							/* these don't need sessions */
+							if ( currentAction.equals ("confirm")
+							|| currentAction.equals ("recover") ) {
+								executeAction( currentAction );
+								
+							} else {				
+								/* if we have don't have sessionId saved in a cookie */
+								if ( sessionId == null )
+								{
 									displayLoginPage();
 								}
-                            }
-                            else /* we have a cookie - try using it */
-                            {
-                                check_box.setChecked(true);
-                                attemptLogin();
-                            }
+								else /* we have a cookie - try using it */
+								{
+									check_box.setChecked(true);
+									attemptLogin();
+								}
+							}
                         } catch (Exception e) {
                             displayErrorPageFinal ("Internal error (1): " + e.getMessage());
                         }
@@ -149,7 +154,6 @@ public class EucalyptusWebInterface implements EntryPoint {
             throw new Exception("Invalid server configuration");
         }
         cloud_name = (String)props.get("cloud-name");
-        login_greeting = (String)props.get("login-greeting");
         signup_greeting = (String)props.get("signup-greeting");
         certificate_download_text = (String)props.get("certificate-download-text");
         rest_credentials_text = (String)props.get("rest-credentials-text");
@@ -159,13 +163,10 @@ public class EucalyptusWebInterface implements EntryPoint {
         server_ready = (Boolean)props.get("ready");
 
         if (server_ready==null) {
-            throw new Exception("Internal server erorr (cannot determine server readiness)");
+            throw new Exception("Internal server error (cannot determine server readiness)");
         }
         if (cloud_name==null) {
             throw new Exception("Server configuration is missing 'cloud-name' value");
-        }
-        if (login_greeting==null) {
-            throw new Exception("Server configuration is missing 'login-greeting' value");
         }
         if (signup_greeting==null) {
             throw new Exception("Server configuration is missing 'signup-greeting' value");
@@ -223,7 +224,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     public void displayLoginPage()
     {
         if ( currentAction == null ) {
-            displayLoginPage(login_greeting);
+            displayLoginPage(MSG.pleaseSignIn() + ":");
         } else {
             if ( currentAction.equals( "approve" )
                     || currentAction.equals( "reject" )
@@ -238,7 +239,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 displayLoginPage("Please, log into Eucalyptus to confirm your acccount");
 
             } else { /* unknown action - will be caught upon login */
-                displayLoginPage(login_greeting);
+                displayLoginPage(MSG.pleaseSignIn() + ":");
             }
             label_box.setStyleName ("euca-greeting-warning"); /* highlight the message */
         }
@@ -304,18 +305,18 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         };
 
-        Button submit_button = new Button( "Sign in", LoginButtonListener );
-        Hyperlink signup_button = new Hyperlink( "Apply", "apply" );
+        Button submit_button = new Button( MSG.signInButton(), LoginButtonListener );
+        Hyperlink signup_button = new Hyperlink( MSG.applyButton(), "apply" );
         signup_button.addClickListener( AddUserButtonListener );
-        Hyperlink recover_button = new Hyperlink( "Recover", "recover" );
+        Hyperlink recover_button = new Hyperlink( MSG.recoverButton(), "recover" );
         recover_button.addClickListener( RecoverButtonListener );
         remember_label.setStyleName("euca-remember-text");
 
         Grid g = new Grid( 4, 2 );
         g.setCellSpacing(4);
-        g.setWidget(0, 0, new Label("Username:"));
+        g.setWidget(0, 0, new Label(MSG.usernameField()+":"));
         g.getCellFormatter().setHorizontalAlignment(0, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        g.setWidget(1, 0, new Label("Password:"));
+        g.setWidget(1, 0, new Label(MSG.passwordField()+":"));
         g.getCellFormatter().setHorizontalAlignment(1, 0, HasHorizontalAlignment.ALIGN_RIGHT);
         g.setWidget(0, 1, login_box );
         g.setWidget(1, 1, pass_box );
@@ -332,9 +333,9 @@ public class EucalyptusWebInterface implements EntryPoint {
         HorizontalPanel hpanel = new HorizontalPanel();
         hpanel.setSpacing(2);
         hpanel.add( signup_button );
-        hpanel.add( new HTML("&nbsp;for account&nbsp;&nbsp;|&nbsp;&nbsp;") );
+        hpanel.add( new HTML("&nbsp;" + MSG.forAccount() + "&nbsp;&nbsp;|&nbsp;&nbsp;") );
         hpanel.add( recover_button );
-        hpanel.add( new HTML("&nbsp;password") );
+        hpanel.add( new HTML("&nbsp;" + MSG.thePassword()) );
 
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
@@ -517,21 +518,38 @@ public class EucalyptusWebInterface implements EntryPoint {
                     g1.clearCell( j, 2 ); /* clear previous right-hand-side annotations */
                 }
 
-                /* perform checks */
+                // perform checks
                 if ( userName_box.getText().length() < 1 )
                 {
                     Label l = new Label( "Username is empty!" );
                     l.setStyleName("euca-error-hint");
                     g1.setWidget( userName_row, 2, l);
                     formOk = false;
-                }
-				/* no spaces in username */
-				if ( userName_box.getText().matches(".*[ \t]+.*") ) {
-					Label l = new Label ("Username cannot have spaces, sorry!");
+                } else {
+					// do this in the else-clause so the empty username doesn't match here
+	                if ( cleartextPassword1_box.getText().toLowerCase().matches(".*" +
+	                        userName_box.getText().toLowerCase() + ".*")) {
+	                    Label l = new Label ( "Password may not contain the username!");
+	                    l.setStyleName("euca-error-hint");
+	                    g1.setWidget( password1_row, 2, l );
+	                    formOk = false;
+	                }
+				}
+
+				if ( userName_box.getText().matches(".*[^\\w\\-\\.@]+.*") ) {
+					Label l = new Label ("Invalid characters in the username!");
 					l.setStyleName ("euca-error-hint");
 					g1.setWidget (userName_row, 2, l);
 					formOk = false;
 				}
+				
+                if ( userName_box.getText().length() > 30)
+                {
+                    Label l = new Label( "Username is too long, sorry!" );
+                    l.setStyleName("euca-error-hint");
+                    g1.setWidget( userName_row, 2, l);
+                    formOk = false;
+                }
 
                 if ( cleartextPassword1_box.getText().length() < minPasswordLength )
                 {
@@ -555,13 +573,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                     g1.setWidget( password1_row, 2, l );
                     formOk = false;
                 }
-                if ( cleartextPassword1_box.getText().toLowerCase().matches(".*" +
-                        userName_box.getText().toLowerCase() + ".*")) {
-                    Label l = new Label ( "Password may not contain the username!");
-                    l.setStyleName("euca-error-hint");
-                    g1.setWidget( password1_row, 2, l );
-                    formOk = false;
-                }
+
                 if ( realName_box.getText().length() < 1 )
                 {
                     Label l = new Label( "Name is empty!" );
@@ -903,14 +915,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         return ok_button;
 	}
 
-    private boolean isPasswordExpired (UserInfoWeb user) {
-        final long now = System.currentTimeMillis();
-        if ((now > 0) && (now >= user.getPasswordExpires().longValue())) {
-            return true;
-        }
-        return false;
-    }
-
     public void attemptLogin()
     {
         displayStatusPage("Logging into the server...");
@@ -918,27 +922,24 @@ public class EucalyptusWebInterface implements EntryPoint {
                 sessionId,
                 null, /* get user record associated with this sessionId */
                 new AsyncCallback() {
-                    public void onSuccess( Object result )
-                    {
-                        loggedInUser = ( UserInfoWeb ) ( (List) result).get(0);
-                        if ( currentAction == null )
-                        {
-                            if (isPasswordExpired(loggedInUser)) {
-                                displayPasswordChangePage( true );
-                            } else {
-                                displayDefaultPage ("");
-                            }
-                        }
-                        else
-                        {
-                            executeAction( currentAction );
-                        }
-                    }
+					public void onSuccess( Object result )
+					{
+						loggedInUser = ( UserInfoWeb ) ( (List) result).get(0);
+						if ( currentAction == null ) {
+							displayDefaultPage ("");
+						} else {
+							executeAction( currentAction );
+						}
+					}
 
-                    public void onFailure( Throwable caught )
-                    {
-                        displayLoginErrorPage( caught.getMessage() );
-                    }
+					public void onFailure( Throwable caught )
+					{
+						if (caught.getMessage().equals("Password expired")) {
+							displayPasswordChangePage( true );							
+						} else {
+							displayLoginErrorPage( caught.getMessage() );							
+						}
+					}
                 }
         );
     }
@@ -1118,6 +1119,8 @@ public class EucalyptusWebInterface implements EntryPoint {
     public void displayBarAndTabs(String message)
     {
         /* top bar */
+		displayStatusPage("Drawing the tabs...");
+
         HorizontalPanel top_bar = new HorizontalPanel();
         top_bar.setStyleName("euca-top-bar");
         top_bar.setSize("100%", "20");
@@ -1182,8 +1185,106 @@ public class EucalyptusWebInterface implements EntryPoint {
         RootPanel.get().add( wrapper );
     }
 
-    public void displayCredentialsTab (VerticalPanel parent)
-    {
+	public void displayCredentialsTab (final VerticalPanel parent)
+	{
+		EucalyptusWebBackend.App.getInstance().getCloudInfo(
+			sessionId,
+			false, // do not check external IP for now
+		new AsyncCallback() {
+			public void onSuccess( Object result )
+			{
+				cloudInfo = ( CloudInfoWeb ) result;
+				actuallyDisplayCredentialsTab (parent);
+			}
+			public void onFailure( Throwable caught )
+			{
+				displayErrorPage( caught.getMessage() );
+			}
+		}
+		);
+	}
+
+	private class RightscaleDialog extends DialogBox {
+
+		private boolean cancelled;
+		 
+		public RightscaleDialog () {
+			
+			cancelled = false;
+			setHTML ("<img src=\"img/ajax-loader-FFCC33.gif\" align=\"middle\"> &nbsp; Checking the external IP address...");
+
+			final Button okButton = new Button("OK",
+			new ClickListener() {
+				public void onClick(Widget sender) {
+					RightscaleDialog.this.hide();
+					if (rightscaleUrl!=null) {
+						Window.open (rightscaleUrl, "_blank", "");						
+					}
+				}
+			});
+			okButton.setEnabled (false);
+			Button cancelButton = new Button("Cancel",
+			new ClickListener() {
+				public void onClick(Widget sender) {
+					RightscaleDialog.this.hide();
+					cancelled = true;
+				}
+			});
+			
+			HorizontalPanel buttonPanel = new HorizontalPanel();
+			buttonPanel.add (okButton);
+			buttonPanel.add (cancelButton);
+			setWidget (buttonPanel);
+			
+			EucalyptusWebBackend.App.getInstance().getCloudInfo(
+				sessionId,
+				true, // DO check external IP
+				new AsyncCallback () {
+					public void onSuccess( Object result )
+					{
+						if (cancelled) {
+							return;							
+						} 
+						cloudInfo = ( CloudInfoWeb ) result;
+						String ex = cloudInfo.getExternalHostPort();
+						String in = cloudInfo.getInternalHostPort();
+						String text = "";
+						String ip;
+						 						
+						if (ex==null) {
+							ip = in;
+							text = "<b>Warning:</b> Rightscale could not discover the external IP address of your cloud.  Hence, the pre-filled cloud URL <i>may</i> be incorrect.  Check your firewall settings.</p> ";
+							
+						} else if (!ex.equals(in)) {
+							ip = ex;
+							text = "<b>Warning:</b> The external cloud IP discovered by Rightscale (" + ex + ") is different from the IP found by Eucalyptus (" + in + ").  Hence, the pre-filled cloud URL <i>may</i> be incorrect.  Check your firewall settings.</p> ";
+							
+						} else { 
+							ip = ex;
+						}
+						String callbackUrl = "http://" 
+							+ ip
+							+ cloudInfo.getServicePath();
+						rightscaleUrl = "https://moo.rightscale.com/cloud_registrations/new?callback_url="
+							+ GWTUtils.escape (callbackUrl) // URL.encode() wasn't quite right 
+							+ "&registration_version=1.0&retry=1&secret_token="
+							+ GWTUtils.escape (cloudInfo.getCloudId());
+						String pre = "<h3>Cloud registration</h3> You are about to open a new window to Rightscale's Web site, on which you will be able to complete registraton. </p> ";
+						setHTML (pre + text);
+						okButton.setEnabled (true);
+						center();
+					}
+					public void onFailure( Throwable caught )
+					{
+						displayErrorPage( caught.getMessage() );
+					}
+				}
+			);
+		}
+	}
+	
+	public void actuallyDisplayCredentialsTab (VerticalPanel parent)
+	{
         History.newItem("credentials");
 
 		VerticalPanel ppanel = new VerticalPanel();
@@ -1232,7 +1333,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		final HTML queryId = new HTML ("<font color=#666666 size=\"1\">" + loggedInUser.getQueryId() + "</font>");
 		queryId.setVisible (false);
 		g0.setWidget (0, 1, queryId);
-		g0.setWidget (1, 0, new HTML ("<b><font size=\"2\">Secret key:</font></b><"));
+		g0.setWidget (1, 0, new HTML ("<b><font size=\"2\">Secret key:</font></b>"));
 		final HTML secretKey = new HTML ("<font color=#666666 size=\"1\">" + loggedInUser.getSecretKey() + "</font>");
 		secretKey.setVisible (false);
 		g0.setWidget (1, 1, secretKey);
@@ -1259,7 +1360,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		}
 		
         final Grid g = new Grid( gridRows, 2 );
-        g.getColumnFormatter().setWidth(0, "320");
+        g.getColumnFormatter().setWidth(0, "400");
         g.getColumnFormatter().setWidth(1, "200");
         g.setCellSpacing( 30 );
 
@@ -1272,36 +1373,42 @@ public class EucalyptusWebInterface implements EntryPoint {
         g.setWidget( 2, 0, rpanel ); g.getCellFormatter().setVerticalAlignment(2, 0, HasVerticalAlignment.ALIGN_TOP);
 		g.setWidget( 2, 1, secretButton ); g.getCellFormatter().setVerticalAlignment(2, 1, HasVerticalAlignment.ALIGN_TOP);
 		
-		if (loggedInUser.isAdministrator() && show_cloud_registration) {
+		if (loggedInUser.isAdministrator() && show_cloud_registration) {			
 	        VerticalPanel cloud_panel = new VerticalPanel();
 			cloud_panel.setSpacing (5);
 	        cloud_panel.add( new HTML (cloud_registration_text) );
 			Grid g1 = new Grid (2, 2);
-			g1.setWidget (0, 0, new HTML ("<b><font size=\"2\">Cloud URL:</font></b><"));
-			// TODO: get URL from cloud
-			final HTML cloudUrl = new HTML ("<font color=#666666 size=\"1\">" + "http://foo/bar" + "</font>");
+			g1.setWidget (0, 0, new HTML ("<b><font size=\"2\">Cloud URL:</font></b>"));
+			final HTML cloudUrl = new HTML ("<font color=#666666 size=\"1\">http://" 
+				+ cloudInfo.getInternalHostPort() 
+				+ cloudInfo.getServicePath()
+				+ "</font>");
 			g1.setWidget (0, 1, cloudUrl);
 			g1.setWidget (1, 0, new HTML ("<b><font size=\"2\">Cloud ID:</font></b>"));
-			// TODO: get ID from cloud
-			final HTML cloudId = new HTML ("<font color=#666666 size=\"1\">" + "asdlkfj345lksjj" + "</font>");
-			cloudId.setVisible (false);
+			final HTML cloudId = new HTML ("<font color=#666666 size=\"1\">" 
+			 	+ cloudInfo.getCloudId() 
+				+ "</font>");
 			g1.setWidget (1, 1, cloudId);
 			cloud_panel.add (g1);
 	        cloud_panel.setStyleName( "euca-text" );
-			final Button cloudButton = new Button ( "Show cloud ID" );
+			final Button cloudButton = new Button ( "Register" );
 			cloudButton.addClickListener(new ClickListener() {
 	            public void onClick(Widget sender) {
-	                if (cloudId.isVisible()) {
-						cloudId.setVisible(false);
-						cloudButton.setText ("Show cloud ID");
-					} else {
-						cloudId.setVisible(true);
-						cloudButton.setText ("Hide cloud ID");
-					}
-	            }
+					new RightscaleDialog().center();
+				}
 	        });
-			g.setWidget (3, 0, cloud_panel ); g.getCellFormatter().setVerticalAlignment(3, 0, HasVerticalAlignment.ALIGN_TOP);
-			g.setWidget( 3, 1, cloudButton ); g.getCellFormatter().setVerticalAlignment(3, 1, HasVerticalAlignment.ALIGN_TOP);
+			g.setWidget (3, 0, cloud_panel ); 
+			g.getCellFormatter().setVerticalAlignment(3, 0, HasVerticalAlignment.ALIGN_TOP);
+			VerticalPanel vp = new VerticalPanel();
+			vp.setSpacing (3);
+			HorizontalPanel hp = new HorizontalPanel();
+			hp.setSpacing (3);
+			hp.add (cloudButton);
+			hp.add (new HTML ("with"));
+			vp.add (hp);
+			vp.add (new Image ("img/rightscale_logo_blue.gif"));
+			g.setWidget( 3, 1, vp ); 
+			g.getCellFormatter().setVerticalAlignment(3, 1, HasVerticalAlignment.ALIGN_TOP);
 		}
 
         parent.add(g);
@@ -1773,29 +1880,33 @@ public class EucalyptusWebInterface implements EntryPoint {
                 /* actions */
                 HorizontalPanel ops = new HorizontalPanel();
                 ops.setSpacing (3);
-                HTML act_button = userActionButton ("Disable", u);
-                if (!u.isApproved().booleanValue()) {
-                    act_button = userActionButton ("Approve", u);
-                } else if (!u.isEnabled().booleanValue()) {
-                    act_button = userActionButton ("Enable", u);
-                }
-                ops.add(act_button);
 
 				Label editLabel = new Label ("Edit");
 				editLabel.addClickListener (new EditCallback(this, u));
 				editLabel.setStyleName ("euca-action-link");
 				ops.add(editLabel);
 
-                //HTML del_button = userActionButton ("Delete", u);
-		        Hyperlink del_button = new Hyperlink( "Delete", "confirmdelete" );
-				del_button.setStyleName ("euca-action-link");
-		        del_button.addClickListener( new ClickListener() {
-                    public void onClick(Widget sender) {
-                        displayConfirmDeletePage (u.getUserName());
-                    }
-                });
-                ops.add(del_button);
-                g.setWidget(row, 4, ops );
+				// admin can't be disabled or deleted (that breaks things)
+				if (!u.isAdministrator().booleanValue()) {
+					HTML act_button = userActionButton ("Disable", u);
+	                if (!u.isApproved().booleanValue()) {
+	                    act_button = userActionButton ("Approve", u);
+	                } else if (!u.isEnabled().booleanValue()) {
+	                    act_button = userActionButton ("Enable", u);
+	                }
+	                ops.add(act_button);
+	
+					Hyperlink del_button = new Hyperlink( "Delete", "confirmdelete" );
+					del_button.setStyleName ("euca-action-link");
+					del_button.addClickListener( new ClickListener() {
+						public void onClick(Widget sender) {
+							displayConfirmDeletePage (u.getUserName());
+						}
+					});
+					ops.add(del_button);
+				}
+				
+				g.setWidget(row, 4, ops );	
 
                 /* view */
                 HorizontalPanel views = new HorizontalPanel();

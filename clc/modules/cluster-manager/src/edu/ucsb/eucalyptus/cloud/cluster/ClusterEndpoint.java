@@ -25,7 +25,24 @@ public class ClusterEndpoint implements Startable {
   }
 
   public void fire( List<ClusterStateType> clusterChanges ) {
+    LOG.warn( "Processing new list of clusters: ");
+    for( ClusterStateType c : clusterChanges ) {
+      LOG.warn( "Cluster: " + c.getName() + " host=" + c.getHost() + ":" + c.getPort() );
+    }
     Clusters.getInstance().update( clusterChanges );
+  }
+
+  public AddClusterResponseType fire( AddClusterType request ) throws EucalyptusCloudException {
+    if( !request.isAdministrator() ) {
+      throw new EucalyptusCloudException("Only admins can add clusters.");
+    }
+    for ( ClusterStateType c : Clusters.getInstance().getClusters() ) {
+      if( c.getName().equals( request.getName() ) ) {
+        throw new EucalyptusCloudException("Cluster already exists: " + request.getName() );
+      }
+    }
+    Clusters.getInstance().add( new ClusterStateType( request.getName(), request.getHost(), request.getPort() ) );
+    return (AddClusterResponseType) request.getReply();
   }
 
   public void enqueue( EucalyptusMessage msg ) {

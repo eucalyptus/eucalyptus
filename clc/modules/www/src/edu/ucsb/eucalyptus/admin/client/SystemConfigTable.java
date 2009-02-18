@@ -107,7 +107,7 @@ public class SystemConfigTable extends VerticalPanel {
         this.w_grid.getColumnFormatter().setWidth(1, "260");
 		i = 0;
 		
-		this.w_grid.setWidget( i, 0, new Label( "Walrus path:" ) );
+		this.w_grid.setWidget( i, 0, new Label( "Buckets path:" ) );
         this.w_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		walrusPath_box.addChangeListener (new ChangeCallback (this));
         walrusPath_box.setVisibleLength(55);

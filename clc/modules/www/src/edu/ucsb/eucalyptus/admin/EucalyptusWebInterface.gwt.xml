@@ -33,7 +33,15 @@
   -->
 
 <module>
+	<!-- Inherit the core Web Toolkit stuff. -->
     <inherits name='com.google.gwt.user.User'/>
+
+	<!-- Inherit internationalization support. -->
+	<inherits name='com.google.gwt.i18n.I18N'/>
+	<extend-property name="locale" values="en,ru" />
+	
+	<!-- Specify the app entry point class. -->
     <entry-point class='edu.ucsb.eucalyptus.admin.client.EucalyptusWebInterface'/>
+
     <servlet path="/EucalyptusWebBackend" class="edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl"/>
 </module>

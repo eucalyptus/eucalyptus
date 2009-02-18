@@ -97,4 +97,6 @@ public interface EucalyptusWebBackendAsync {
   void getVmTypes( String sessionId, final AsyncCallback<List<VmTypeWeb>> async );
 
   void setVmTypes( String sessionId, List<VmTypeWeb> vmTypes, final AsyncCallback async );
+
+  void getCloudInfo (String sessionId, boolean setExternalHostport, final AsyncCallback<CloudInfoWeb> async );
 }
