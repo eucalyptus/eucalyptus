@@ -1549,10 +1549,8 @@ public class Bukkit {
                             Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
                             cipher.init(Cipher.DECRYPT_MODE, pk);
                             String keyString = new String(cipher.doFinal(hexToBytes(encryptedKey)));
-                            // keyString = "a88df5489a9adf337c26c81c841ee0d8";
                             key = hexToBytes(keyString);
                             String ivString = new String(cipher.doFinal(hexToBytes(encryptedIV)));
-                            // ivString = "76ac331e02fde0c781a9653c139f7f8f";
                             iv = hexToBytes(ivString);
                         } catch(Exception ex) {
                             db2.rollback();
