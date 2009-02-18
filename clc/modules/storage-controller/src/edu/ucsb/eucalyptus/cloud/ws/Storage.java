@@ -99,6 +99,7 @@ public class Storage {
         blockManager.initVolumeManager();
         try {
             blockManager.checkPreconditions();
+            blockManager.configure();
             startup();
             sharedMode = Bukkit.getSharedMode();
             if(!sharedMode)
