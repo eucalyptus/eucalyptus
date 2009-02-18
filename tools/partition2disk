@@ -37,27 +37,34 @@ my $root_size_sectors = ($root_size_b / 512);
 my $swap_size_sectors = ($swap_size_mb * 2000);
 my $ephemeral_size_sectors = ($ephemeral_size_mb * 2000);
 
+# create the disk image
 run ("$DD if=/dev/zero of=$partition.disk bs=1M count=$disk_size_mb >/dev/null 2>&1", 2);
 run ("$PARTED --script $partition.disk mklabel msdos", 3);
+
+# create the root partition
 my $first_sector = 63;
 my $last_sector = $first_sector + $root_size_sectors;
 run ("$PARTED --script $partition.disk mkpart primary ext2 ${first_sector}s ${last_sector}s", 4);
 
-# create an 8-sector swap partition even if the size is empty so ephemeral gets part #3
+# create the ephemeral disk partition
 $first_sector = $last_sector + 1;
-my $actual_swap = 8; # this is apparently the smallest allowed swap partition size
-if ($swap_size_sectors>1) { $actual_swap = $swap_size_sectors }
-$last_sector = $first_sector + $actual_swap; 
-run ("$PARTED --script $partition.disk mkpartfs primary linux-swap ${first_sector}s ${last_sector}s", 5);
-
-if ($ephemeral_size_sectors>0) {
-    $first_sector = $last_sector + 1;
-    run ("$PARTED --script $partition.disk mkpartfs primary ext2 ${first_sector}s 100%", 6);
+$last_sector = $first_sector + $ephemeral_size_sectors;
+if ($ephemeral_size_sectors>=40) { # 40 is the bare minimum for ext2 disks, apparently
+    run ("$PARTED --script $partition.disk mkpartfs primary ext2 ${first_sector}s ${last_sector}s", 5);
+} else {
+    # we'll create a dummy partition so that swap gets partition #3
+    $last_sector = $first_sector + 1;
+    run ("$PARTED --script $partition.disk mkpart primary ${first_sector}s ${last_sector}s", 6);
 }
 
-# delete the swap if it wasn't actually requested, leaving an 8-sector hole
-if ($swap_size_sectors<1) {
-    run ("$PARTED --script $partition.disk rm 2", 7);
+if ($swap_size_sectors>=8) { # 8 is the bare minimum for swap partitions, apparently
+    $first_sector = $last_sector + 1;
+    run ("$PARTED --script $partition.disk mkpartfs primary linux-swap ${first_sector}s 100%", 7);
+}
+
+# delete the ephemeral if it wasn't actually requested, leaving a 1-sector hole
+if ($ephemeral_size_sectors<1) {
+    run ("$PARTED --script $partition.disk rm 2", 8);
 }
 
 my $loopdev = "";
@@ -72,7 +79,7 @@ for (my $i=0; $i<10 && !$attached; $i++) {
 }
 if (!$attached) {
     print STDERR "cannot find free loop device\n";
-    do_exit(8);
+    do_exit(9);
 }
 
 $attached = 0;
@@ -85,15 +92,15 @@ for (my $i=0; $i<10 && !$attached; $i++) {
 }
 if (!$attached) {
     print STDERR "cannot find free loop device\n";
-    do_exit(9);
+    do_exit(10);
 }
-run ("$DD if=$partition of=$loopdevp bs=512k >/dev/null 2>&1", 10);
+run ("$DD if=$partition of=$loopdevp bs=512k >/dev/null 2>&1", 11);
 
-run ("$LOSETUP -d $loopdev", 11);
+run ("$LOSETUP -d $loopdev", 12);
 $loopdev="";
-run ("$LOSETUP -d $loopdevp", 12);
+run ("$LOSETUP -d $loopdevp", 13);
 $loopdevp="";
-run ("$MV $partition.disk $partition", 13);
+run ("$MV $partition.disk $partition", 14);
 do_exit(0);
 
 sub run() {
