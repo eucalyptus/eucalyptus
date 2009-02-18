@@ -40,6 +40,9 @@ static int cores_max      = 0;
 static char config_network_path [BUFSIZE];
 static int  config_network_port = NC_NET_PORT_DEFAULT;
 
+/* debuging parameter, can be set in config file */
+static int save_instance_files = 0; 
+
 static char * admin_user_id = EUCALYPTUS_ADMIN;
 static char gen_libvirt_xml_command_path [BUFSIZE] = "";
 static char get_xen_info_command_path [BUFSIZE] = "";
@@ -261,8 +264,10 @@ static void * monitoring_thread (void *arg)
                 continue; /* let it be */
             
             /* ok, it's been condemned => destroy the files */
-            if (scCleanupInstanceImage(instance->userId, instance->instanceId)) {
-                logprintfl (EUCAWARN, "warning: failed to cleanup instance image %d\n", instance->instanceId);
+            if (!save_instance_files) {
+                if (scCleanupInstanceImage(instance->userId, instance->instanceId)) {
+                    logprintfl (EUCAWARN, "warning: failed to cleanup instance image %d\n", instance->instanceId);
+                }
             }
             
             /* check to see if this is the last instance running on vlan */
@@ -344,9 +349,10 @@ static int doInitialize (void)
                 free (s);\
             }
         
-        GET_VAR_INT(config_max_mem,   CONFIG_MAX_MEM);
-        GET_VAR_INT(config_max_disk,  CONFIG_MAX_DISK);
-        GET_VAR_INT(config_max_cores, CONFIG_MAX_CORES);
+        GET_VAR_INT(config_max_mem,      CONFIG_MAX_MEM);
+        GET_VAR_INT(config_max_disk,     CONFIG_MAX_DISK);
+        GET_VAR_INT(config_max_cores,    CONFIG_MAX_CORES);
+        GET_VAR_INT(save_instance_files, CONFIG_SAVE_INSTANCES);
     }
 
     if ((xen_sem = sem_alloc (1, "eucalyptus-nc-xen-semaphore")) == NULL
