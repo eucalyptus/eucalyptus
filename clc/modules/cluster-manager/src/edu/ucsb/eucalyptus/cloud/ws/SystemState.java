@@ -116,7 +116,7 @@ public class SystemState {
         if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams().getIpAddress() ) && !"".equals( runVm.getNetParams().getIpAddress() ) && runVm.getNetParams().getIpAddress() != null )
           vm.getNetworkConfig().setIpAddress( runVm.getNetParams().getIpAddress() );
         if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams().getIgnoredPublicIp() ) && !"".equals( runVm.getNetParams().getIgnoredPublicIp() ) && runVm.getNetParams().getIgnoredPublicIp() != null )
-          vm.getNetworkConfig().setIgnoredPublicIp( runVm.getNetParams().getPublicIpAddress() );
+          vm.getNetworkConfig().setIgnoredPublicIp( runVm.getNetParams().getIgnoredPublicIp() );
         vm.setState( VmState.Mapper.get( runVm.getStateName() ) );
         for ( AttachedVolume vol : runVm.getVolumes() ) {
           vol.setInstanceId( vm.getInstanceId() );

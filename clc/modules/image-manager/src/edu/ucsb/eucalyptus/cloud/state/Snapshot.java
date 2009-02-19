@@ -16,7 +16,7 @@ public class Snapshot extends AbstractIsomorph {
   @GeneratedValue
   private Long id = -1l;
 
-  @Transient private String parentVolume;
+  private String parentVolume;
 
   public Snapshot(  ) {
     super( );

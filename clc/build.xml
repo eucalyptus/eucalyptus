@@ -53,7 +53,7 @@
     </target>
     <target name="build-workarounds" depends="build-crypto">
         <ant dir="modules/workarounds" inheritall="false"/>
-    </target>
+    </target> 
     <target name="build-msgs" depends="build-workarounds">
         <ant dir="modules/msgs" inheritall="false"/>
     </target>
@@ -152,7 +152,7 @@
         <mkdir dir="${euca.var.dir}/webapps"/>
         <mkdir dir="${euca.var.dir}/modules"/>
         <mkdir dir="${euca.log.dir}"/>
-        <ant dir="modules/workarounds" inheritall="false" target="install"/>
+        <ant dir="modules/workarounds" inheritall="false" target="install"/> 
         <ant dir="modules/crypto" inheritall="false" target="install"/>
         <ant dir="modules/msgs" inheritall="false" target="install"/>
         <ant dir="modules/core" inheritall="false" target="install"/>
