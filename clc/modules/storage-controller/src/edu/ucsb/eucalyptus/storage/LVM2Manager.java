@@ -116,6 +116,7 @@ public class LVM2Manager implements BlockStorageManager {
         try {
             hostName = InetAddress.getLocalHost().getHostName();
             iface = parseConfig();
+	    LOG.warn("iface: " + iface); 
             if(iface == null || (iface.length() == 0)) {
                 NetworkInterface inface = NetworkInterface.getByName(iface);
                 if(inface == null) {
