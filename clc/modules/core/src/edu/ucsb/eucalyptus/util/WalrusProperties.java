@@ -52,6 +52,8 @@ public class WalrusProperties {
     public static long IMAGE_CACHE_SIZE = 30 * G;
     public static String WALRUS_URL;
 
+    public static final int IO_CHUNK_SIZE = 102400;
+
     public static void update() {
         try {
             SystemConfiguration systemConfiguration = EucalyptusProperties.getSystemConfiguration();

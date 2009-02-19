@@ -287,7 +287,7 @@ public class Storage {
             enableStorage = true;
         } catch (Exception ex) {
             enableStorage = false;
-            ex.printStackTrace();
+            LOG.warn(ex);
         }
         return reply;
     }
@@ -347,7 +347,7 @@ public class Storage {
                     db.delete(foundVolume);
                     db.commit();
                 } catch (IOException ex) {
-                    ex.printStackTrace();
+                    LOG.warn(ex, ex);
                 }
             } else {
                 db.rollback();
@@ -498,7 +498,7 @@ public class Storage {
                         snapshotDeleter.start();
                     }
                 } catch (IOException ex) {
-                    ex.printStackTrace();
+                    LOG.warn(ex, ex);
                 }
             } else {
                 //snapshot is still in progress.
@@ -518,7 +518,7 @@ public class Storage {
         try {
             httpWriter.run();
         } catch(Exception ex) {
-            ex.printStackTrace();
+            LOG.warn(ex, ex);
         }
     }
 
@@ -623,7 +623,7 @@ public class Storage {
                 } catch(Exception ex) {
                     success = false;
                     db.rollback();
-                    ex.printStackTrace();
+                    LOG.warn(ex, ex);
                 }
             } else {
                 try {
@@ -631,7 +631,7 @@ public class Storage {
                     blockManager.createVolume(volumeId, size);
                 } catch(Exception ex) {
                     success = false;
-                    ex.printStackTrace();
+                    LOG.warn(ex, ex);
                 }
             }
             EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
@@ -797,43 +797,48 @@ public class Storage {
         public void run() {
             try {
                 blockManager.createSnapshot(volumeId, snapshotId);
-
-                List<String> returnValues = blockManager.prepareForTransfer(volumeId, snapshotId);
-                volumeFileName = returnValues.get(0);
-                snapshotFileName = returnValues.get(1);
-                EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
-                VolumeInfo volumeInfo = new VolumeInfo(volumeId);
-                List <VolumeInfo> volumeInfos = db.query(volumeInfo);
-
-                boolean shouldTransferVolume = false;
-                if(volumeInfos.size() > 0) {
-                    VolumeInfo foundVolumeInfo = volumeInfos.get(0);
-                    if(!foundVolumeInfo.getTransferred()) {
-                        //transfer volume to Walrus
-                        foundVolumeInfo.setVolumeBucket(volumeBucket);
-                        shouldTransferVolume = true;
-                    }
-                    volumeBucket = foundVolumeInfo.getVolumeBucket();
-                    db.commit();
-                    EntityWrapper<SnapshotInfo> db2 = new EntityWrapper<SnapshotInfo>();
+                if(sharedMode) {
+                    EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-                    SnapshotInfo foundSnapshotInfo = db2.getUnique(snapshotInfo);
-                    if(foundSnapshotInfo != null) {
-                        if(!sharedMode) {
-                            transferSnapshot(shouldTransferVolume);
-                        } else {
-                            foundSnapshotInfo.setProgress("100");
-                            foundSnapshotInfo.setTransferred(true);
-                            foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
-                        }
-                    }
-                    db2.commit();
+                    SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
+                    foundSnapshotInfo.setProgress("100");
+                    foundSnapshotInfo.setTransferred(true);
+                    foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
+                    db.commit();
+                    return;
                 } else {
-                    db.rollback();
-                    throw new EucalyptusCloudException();
+                    List<String> returnValues = blockManager.prepareForTransfer(volumeId, snapshotId);
+                    volumeFileName = returnValues.get(0);
+                    snapshotFileName = returnValues.get(1);
+                    EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
+                    VolumeInfo volumeInfo = new VolumeInfo(volumeId);
+                    List <VolumeInfo> volumeInfos = db.query(volumeInfo);
+
+                    boolean shouldTransferVolume = false;
+                    if(volumeInfos.size() > 0) {
+                        VolumeInfo foundVolumeInfo = volumeInfos.get(0);
+                        if(!foundVolumeInfo.getTransferred()) {
+                            //transfer volume to Walrus
+                            foundVolumeInfo.setVolumeBucket(volumeBucket);
+                            shouldTransferVolume = true;
+                        }
+                        volumeBucket = foundVolumeInfo.getVolumeBucket();
+                        db.commit();
+                        EntityWrapper<SnapshotInfo> db2 = new EntityWrapper<SnapshotInfo>();
+                        SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
+                        SnapshotInfo foundSnapshotInfo = db2.getUnique(snapshotInfo);
+                        if(foundSnapshotInfo != null) {
+                            transferSnapshot(shouldTransferVolume);
+
+                        }
+                        db2.commit();
+                    } else {
+                        db.rollback();
+                        throw new EucalyptusCloudException();
+                    }
                 }
             } catch(EucalyptusCloudException ex) {
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
             }
         }
 
@@ -870,7 +875,7 @@ public class Storage {
                     }
                     db.commit();
                 } catch(Exception ex) {
-                    ex.printStackTrace();
+                    LOG.warn(ex, ex);
                     return;
                 }
             }
@@ -887,7 +892,7 @@ public class Storage {
             try {
                 httpWriter.run();
             } catch(Exception ex) {
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
             }
         }
     }
@@ -950,7 +955,7 @@ public class Storage {
             try {
                 httpWriter.run();
             } catch(Exception ex) {
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
                 return;
             }
         }
@@ -967,7 +972,7 @@ public class Storage {
         try {
             httpWriter.run();
         } catch(Exception ex) {
-            ex.printStackTrace();
+            LOG.warn(ex, ex);
         }
     }
 
@@ -1002,7 +1007,7 @@ public class Storage {
             } catch (Exception ex) {
                 db.rollback();
                 failed();
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
             }
             db.commit();
         }
@@ -1017,7 +1022,7 @@ public class Storage {
                 foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
             } catch (Exception ex) {
                 db.rollback();
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
             }
             db.commit();
         }
@@ -1032,7 +1037,7 @@ public class Storage {
                 foundSnapshotInfo.setStatus(StorageProperties.Status.failed.toString());
             } catch (Exception ex) {
                 db.rollback();
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
             }
             db.commit();
 
@@ -1063,7 +1068,7 @@ public class Storage {
                     addrPath += "?" + query;
                 }
             } catch(Exception ex) {
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
                 return null;
             }
             String data = httpVerb + "\n" + date + "\n" + addrPath + "\n";
@@ -1100,7 +1105,7 @@ public class Storage {
                 method.setRequestHeader("EucaCert", new String(Base64.encode(pemCertBytes))); // or maybe cert instead of ccPublicKey?
                 method.setRequestHeader("EucaSignature", new String(Base64.encode(sig)));
             } catch(Exception ex) {
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
             }
             return method;
         }
@@ -1267,7 +1272,7 @@ public class Storage {
                 method.releaseConnection();
                 return responseString;
             } catch(Exception ex) {
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
             }
             return null;
         }
@@ -1292,7 +1297,7 @@ public class Storage {
                 bufferedOut.close();
                 method.releaseConnection();
             } catch (Exception ex) {
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
             }
         }
 
@@ -1308,7 +1313,7 @@ public class Storage {
                 }
                 getQueue.add(WalrusDataMessage.EOF());
             } catch (Exception ex) {
-                ex.printStackTrace();
+                LOG.warn(ex, ex);
             } finally {
                 method.releaseConnection();
             }
