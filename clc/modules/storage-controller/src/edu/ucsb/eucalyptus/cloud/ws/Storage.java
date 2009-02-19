@@ -108,7 +108,8 @@ public class Storage {
             //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
         } catch(Exception ex) {
             enableStorage = false;
-            LOG.warn("Could not initialize block manager");
+	    LOG.warn(ex.getMessage());
+            LOG.warn("Could not initialize block manager. Storage has been disabled.");
         }
     }
 

@@ -77,7 +77,7 @@ public class LVM2Manager implements BlockStorageManager {
         }
         eucaHome = eucaHomeDir;
         if(!new File(eucaHome + EUCA_ROOT_WRAPPER).exists()) {
-            throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist");
+            throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist in " + eucaHome);
         }
         if(!new File(eucaHome + CONFIG_FILE_PATH).exists()) {
             throw new EucalyptusCloudException(eucaHome + CONFIG_FILE_PATH + " does not exist");
