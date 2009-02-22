@@ -7,7 +7,6 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.Transient;
 
 @Entity
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
@@ -18,8 +17,8 @@ public class Snapshot extends AbstractIsomorph {
 
   private String parentVolume;
 
-  public Snapshot(  ) {
-    super( );
+  public Snapshot() {
+    super();
   }
 
   public Snapshot( final String userName, final String displayName ) {
@@ -32,34 +31,35 @@ public class Snapshot extends AbstractIsomorph {
   }
 
   public static Snapshot named( String userName, String volumeId ) {
-    Snapshot v = new Snapshot(  );
+    Snapshot v = new Snapshot();
     v.setDisplayName( volumeId );
     v.setUserName( userName );
     return v;
   }
 
-
   public static Snapshot ownedBy( String userName ) {
-    Snapshot v = new Snapshot(  );
+    Snapshot v = new Snapshot();
     v.setUserName( userName );
     return v;
   }
 
-
-  public String mapState( ) {
-    switch(this.getState()) {
-      case GENERATING: return "pending";
-      case EXTANT: return "completed";
-      default: return "failed";
+  public String mapState() {
+    switch ( this.getState() ) {
+      case GENERATING:
+        return "pending";
+      case EXTANT:
+        return "completed";
+      default:
+        return "failed";
     }
   }
 
   public void setMappedState( final String state ) {
-    if( StorageProperties.Status.creating.toString().equals( state ) ) this.setState( State.GENERATING );
-    else if( StorageProperties.Status.pending.equals( state )) this.setState( State.EXTANT );
-    else if( StorageProperties.Status.completed.equals( state )) this.setState( State.EXTANT );
-    else if( StorageProperties.Status.available.equals( state )) this.setState( State.EXTANT );
-    else if( StorageProperties.Status.failed.equals( state )) this.setState( State.FAIL );
+    if ( StorageProperties.Status.creating.toString().equals( state ) ) this.setState( State.GENERATING );
+    else if ( StorageProperties.Status.pending.toString().equals( state ) ) this.setState( State.GENERATING );
+    else if ( StorageProperties.Status.completed.toString().equals( state ) ) this.setState( State.EXTANT );
+    else if ( StorageProperties.Status.available.toString().equals( state ) ) this.setState( State.EXTANT );
+    else if ( StorageProperties.Status.failed.toString().equals( state ) ) this.setState( State.FAIL );
   }
 
   public Object morph( final Object o ) {
