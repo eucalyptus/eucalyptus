@@ -65,7 +65,12 @@ public class ImageManager {
     RunInstancesType msg = vmAllocInfo.getRequest();
     ImageInfo searchDiskInfo = new ImageInfo( msg.getImageId() );
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
-    ImageInfo diskInfo = db.getUnique( searchDiskInfo );
+    ImageInfo diskInfo = null;
+    try {
+      diskInfo = db.getUnique( searchDiskInfo );
+    } catch ( EucalyptusCloudException e ) {
+      throw new EucalyptusCloudException( "Failed to find kernel image: " + msg.getImageId() );
+    }
     UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( msg.getUserId() ) );
     if ( !diskInfo.isAllowed( user ) ) {
       db.rollback();
