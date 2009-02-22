@@ -76,7 +76,7 @@
     <target name="build-walrus-ws" depends="build-transport">
         <ant dir="modules/storage-manager" inheritall="false"/>
     </target>
-    <target name="build-ebs-ws" depends="build-transport">
+    <target name="build-ebs-ws" depends="build-walrus-ws">
         <ant dir="modules/storage-controller" inheritall="false"/>
     </target>
     <target name="build-eucalyptus" depends="build-core,build-www,build-eucalyptus-ws"/>
