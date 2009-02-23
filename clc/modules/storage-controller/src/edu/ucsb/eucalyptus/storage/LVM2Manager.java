@@ -197,7 +197,7 @@ public class LVM2Manager implements BlockStorageManager {
             int pid = lvmVolInfo.getVbladePid();
             if(pid > 0) {
                 String returnValue = aoeStatus(pid);
-                if(returnValue.contains("vblade")) {
+                if(returnValue.length() > 0) {
                     exportManager.unexportVolume(pid);
                     int majorNumber = lvmVolInfo.getMajorNumber();
                     int minorNumber = lvmVolInfo.getMinorNumber();
@@ -304,7 +304,7 @@ public class LVM2Manager implements BlockStorageManager {
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
         int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
         String returnValue = aoeStatus(pid);
-        if(pid < 0 || (!returnValue.contains("vblade"))) {
+        if(pid < 0 || (returnValue.length() == 0)) {
             throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface);
         } else {
             File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
@@ -561,7 +561,7 @@ public class LVM2Manager implements BlockStorageManager {
             int pid = foundLVMVolumeInfo.getVbladePid();
             if(pid > 0) {
                 String returnValue = aoeStatus(pid);
-                if(returnValue.contains("vblade")) {
+                if(returnValue.length() > 0) {
                     exportManager.unexportVolume(pid);
                     int majorNumber = foundLVMVolumeInfo.getMajorNumber();
                     int minorNumber = foundLVMVolumeInfo.getMinorNumber();
@@ -746,7 +746,7 @@ public class LVM2Manager implements BlockStorageManager {
                 String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
                 //enableLogicalVolume(absoluteLVName);
                 String returnValue = aoeStatus(pid);
-                if(!returnValue.contains("vblade")) {
+                if(returnValue.length() == 0) {
                     int majorNumber = foundVolumeInfo.getMajorNumber();
                     int minorNumber = foundVolumeInfo.getMinorNumber();
                     pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
