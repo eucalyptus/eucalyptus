@@ -37,7 +37,8 @@ public class Cluster implements HasName {
   private Thread logThread;
   private Thread keyThread;
   private boolean stopped = false;
-  
+  private boolean reachable = false;
+
   public Cluster( ClusterInfo clusterInfo ) {
     this.clusterInfo = clusterInfo;
     this.state = new ClusterState( this );
@@ -56,6 +57,7 @@ public class Cluster implements HasName {
     do {
       try {
         reply = ( GetKeysResponseType ) dispatcher.getClient().send( new GetKeysType( "self" ) );
+        reachable = true;
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
@@ -147,6 +149,7 @@ public class Cluster implements HasName {
 
   public void stop() {
     LOG.warn( "Stopping cluster: " + this.clusterInfo.getUri() );
+    this.reachable = false;
     this.stopped = true;
     this.rscUpdater.stop();
     this.addrUpdater.stop();
@@ -157,7 +160,8 @@ public class Cluster implements HasName {
   }
 
   public ClusterInfoType getInfo() {
-    return new ClusterInfoType( this.clusterInfo.getName(), this.clusterInfo.getHost() );
+    String state = String.format( "%4s %s", this.isReachable() ? "UP" : "DOWN", this.clusterInfo.getHost() );
+    return new ClusterInfoType( this.clusterInfo.getName(), state );
   }
 
   public ClusterState getState() {
@@ -226,6 +230,14 @@ public class Cluster implements HasName {
 
   public String getName() {
     return this.clusterInfo.getName();
+  }
+
+  public boolean isReachable() {
+    return reachable;
+  }
+
+  public void setReachable( final boolean reachable ) {
+    this.reachable = reachable;
   }
 
   @Override

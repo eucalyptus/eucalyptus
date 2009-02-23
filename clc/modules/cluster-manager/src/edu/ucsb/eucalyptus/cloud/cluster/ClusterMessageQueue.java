@@ -128,8 +128,10 @@ public class ClusterMessageQueue implements Runnable {
           long msgStart = System.currentTimeMillis();
           try {
             event.trigger( event instanceof QueuedLogEvent ? this.logClient : this.client );
+            this.parent.setReachable( true );
           } catch ( Exception e ) {
             LOG.error( e );
+            this.parent.setReachable( false );
           } finally {
             event.getCallback().notifyHandler();
           }

@@ -95,7 +95,9 @@ public class ClusterEndpoint implements Startable {
     Collection<Cluster> clusterList = Clusters.getInstance().getEntries();
     for ( Cluster c : clusterList ) {
       reply.getAvailabilityZoneInfo().add( c.getInfo() );
-
+      if( !c.isReachable() ) {
+        continue;
+      }
       List<String> args = request.getAvailabilityZoneSet();
       NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( request.getAvailabilityZoneSet() );
       if ( tagList.size() == 1 ) tagList = c.getNodeTags();
@@ -177,7 +179,7 @@ public class ClusterEndpoint implements Startable {
       info.add( new ClusterInfoType( String.format( INFO_FSTRING, "vm types" ), HEADER_STRING ) );
       for ( VmType v : VmTypes.list() ) {
         VmTypeAvailability va = cluster.getState().getAvailability( v.getName() );
-        info.add( s( v.getName(), String.format( STATE_FSTRING, va.getAvailable(), va.getMax(), v.getCpu(), v.getMemory(), v.getDisk() ) ) );
+        info.add( s( v.getName(), String.format( STATE_FSTRING, cluster.getState().getAvailable( v.getName() ), va.getMax(), v.getCpu(), v.getMemory(), v.getDisk() ) ) );
       }
       for ( String s : cluster.getNodeTags() ) {
         NodeInfo node = cluster.getNode( s );
