@@ -93,12 +93,15 @@ public class VolumeManager {
     if ( !Clusters.getInstance().contains( request.getAvailabilityZone() ) ) {
       throw new EucalyptusCloudException( "Zone does not exist: " + request.getAvailabilityZone() );
     }
+    if( ( request.getSnapshotId() == null && request.getSize() == null ) || ( request.getSnapshotId() != null && request.getSize() != null ) ) {
+      throw new EucalyptusCloudException( "One of 'snapshotId' or 'size' must be set." );
+    }
 
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     if ( !( request.getSnapshotId() == null ) ) {
       String userName = request.isAdministrator() ? null : request.getUserId();
       try {
-        db.recast( Snapshot.class ).getUnique( new Snapshot( userName, request.getSnapshotId() ) );
+        db.recast( Snapshot.class ).getUnique( Snapshot.named( userName, request.getSnapshotId() ) );
       } catch ( EucalyptusCloudException e ) {
         LOG.debug( e, e );
         db.rollback();
@@ -110,9 +113,9 @@ public class VolumeManager {
     while ( true ) {
       newId = Hashes.generateId( request.getUserId(), ID_PREFIX );
       try {
-        db.getUnique( new Volume( null, newId ) );
+        db.getUnique( Volume.ownedBy( newId ) );
       } catch ( EucalyptusCloudException e ) {
-        newVol = new Volume( request.getUserId(), newId, new Integer( request.getSize() ),
+        newVol = new Volume( request.getUserId(), newId, new Integer( request.getSize() != null ? request.getSize() : "-1" ),
                              request.getAvailabilityZone(), request.getSnapshotId() );
         db.add( newVol );
         break;
@@ -176,6 +179,7 @@ public class VolumeManager {
         if ( !volState.getVolumeSet().isEmpty() ) {
           StorageVolume vol = volState.getVolumeSet().get( 0 );
           volumeState = vol.getStatus();
+          v.setSize( new Integer( vol.getSize() ) );
           v.setRemoteDevice( vol.getActualDeviceName() );
         }
         if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {

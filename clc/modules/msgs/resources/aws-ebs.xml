@@ -36,7 +36,7 @@
     <!--2008-05-05-->
     <mapping abstract="true" class="edu.ucsb.eucalyptus.msgs.Volume" ordered="false">
         <value name="volumeId" field="volumeId" usage="required"/>
-        <value name="size" field="size" usage="required"/>
+        <value name="size" field="size" usage="optional"/>
         <value name="snapshotId" field="snapshotId" usage="optional"/>
         <value name="zone" field="availabilityZone" usage="required"/>
         <value name="status" field="status" usage="required"/>
@@ -61,7 +61,7 @@
     </mapping>
 
     <mapping name="CreateVolume" class="edu.ucsb.eucalyptus.msgs.CreateVolumeType" ordered="false">
-        <value name="size" field="size" usage="required"/>
+        <value name="size" field="size" usage="optional"/>
         <value name="availabilityZone" field="availabilityZone" usage="required"/>
         <value name="snapshotId" field="snapshotId" usage="optional"/>
     </mapping>
