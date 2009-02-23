@@ -65,6 +65,8 @@ public interface BlockStorageManager {
 
     public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException;
 
+    public void dupVolume(String volumeId, String dupedVolumeId) throws EucalyptusCloudException;
+    
     public List<String> getStatus(List<String> volumeSet) throws EucalyptusCloudException;
 
     public void deleteVolume(String volumeId) throws EucalyptusCloudException;

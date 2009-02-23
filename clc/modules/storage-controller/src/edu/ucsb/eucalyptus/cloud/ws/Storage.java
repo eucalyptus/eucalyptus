@@ -489,7 +489,23 @@ public class Storage {
             String status = foundSnapshotInfo.getStatus();
             if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
                 try {
+                    SnapshotInfo snapInfo = new SnapshotInfo();
+                    snapInfo.setVolumeId(foundSnapshotInfo.getVolumeId());
+                    List<SnapshotInfo> snapInfos = db.query(snapInfo);
+                    String dupedVolumeId = null;
+                    if(snapInfos.size() == 1) {
+                        //ok to remove the duped vol this snapshot is based on
+                        EntityWrapper<VolumeInfo> dbVol = db.recast(VolumeInfo.class);
+                        VolumeInfo volumeInfo = new VolumeInfo();
+                        volumeInfo.setVolumeId(snapInfos.get(0).getVolumeId());
+                        VolumeInfo foundVolumeInfo = dbVol.getUnique(volumeInfo);
+                        dupedVolumeId = foundVolumeInfo.getDupedVolumeId();
+                    }
                     blockManager.deleteSnapshot(snapshotId);
+                    if(dupedVolumeId != null) {
+                        blockManager.deleteVolume(dupedVolumeId);
+                        volumeStorageManager.deleteObject("", dupedVolumeId);
+                    }
                     snapshotStorageManager.deleteObject("", snapshotId);
                     db.delete(foundSnapshotInfo);
                     db.commit();
@@ -796,27 +812,41 @@ public class Storage {
 
         public void run() {
             try {
+                EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
+                VolumeInfo volumeInfo = new VolumeInfo(volumeId);
+                VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
+                String dupedVolumeId;
+                if(foundVolumeInfo.getDupedVolumeId() == null) {
+                    //dup it so parent vol can be treated independently
+                    dupedVolumeId = volumeId + "-" + Hashes.getRandom(6);
+                    foundVolumeInfo.setDupedVolumeId(dupedVolumeId);
+                    blockManager.dupVolume(volumeId, dupedVolumeId);
+                    volumeId = dupedVolumeId;
+                } else {
+                    volumeId = foundVolumeInfo.getDupedVolumeId();
+                }
+                db.commit();
                 blockManager.createSnapshot(volumeId, snapshotId);
                 if(sharedMode) {
-                    EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
+                    EntityWrapper<SnapshotInfo> dbSnap = new EntityWrapper<SnapshotInfo>();
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-                    SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
+                    SnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
                     foundSnapshotInfo.setProgress("100");
                     foundSnapshotInfo.setTransferred(true);
                     foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
-                    db.commit();
+                    dbSnap.commit();
                     return;
                 } else {
                     List<String> returnValues = blockManager.prepareForTransfer(volumeId, snapshotId);
                     volumeFileName = returnValues.get(0);
                     snapshotFileName = returnValues.get(1);
-                    EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
-                    VolumeInfo volumeInfo = new VolumeInfo(volumeId);
+                    db = new EntityWrapper<VolumeInfo>();
+                    volumeInfo = new VolumeInfo(volumeId);
                     List <VolumeInfo> volumeInfos = db.query(volumeInfo);
 
                     boolean shouldTransferVolume = false;
                     if(volumeInfos.size() > 0) {
-                        VolumeInfo foundVolumeInfo = volumeInfos.get(0);
+                        foundVolumeInfo = volumeInfos.get(0);
                         if(!foundVolumeInfo.getTransferred()) {
                             //transfer volume to Walrus
                             foundVolumeInfo.setVolumeBucket(volumeBucket);
@@ -829,7 +859,6 @@ public class Storage {
                         SnapshotInfo foundSnapshotInfo = db2.getUnique(snapshotInfo);
                         if(foundSnapshotInfo != null) {
                             transferSnapshot(shouldTransferVolume);
-
                         }
                         db2.commit();
                     } else {
