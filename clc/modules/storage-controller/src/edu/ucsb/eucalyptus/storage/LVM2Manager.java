@@ -528,6 +528,47 @@ public class LVM2Manager implements BlockStorageManager {
         return size;
     }
 
+    public void dupVolume(String volumeId, String dupVolumeId) throws EucalyptusCloudException {
+        EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+        LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
+        LVMVolumeInfo foundVolumeInfo = db.getUnique(lvmVolumeInfo);
+        if(foundVolumeInfo != null) {
+            String vgName = "vg-" + Hashes.getRandom(4);
+            String lvName = "lv-" + Hashes.getRandom(4);
+            lvmVolumeInfo = new LVMVolumeInfo();
+
+            File volumeFile = new File(StorageProperties.storageRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVolumeId());
+
+            String rawFileName = StorageProperties.storageRootDirectory + "/" + dupVolumeId;
+            //create file and attach to loopback device
+            int size = (int)(volumeFile.length() / StorageProperties.GB);
+            String loDevName = createLoopback(rawFileName, size);
+            //create physical volume, volume group and logical volume
+            createLogicalVolume(loDevName, vgName, lvName);
+            //duplicate snapshot volume
+            String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+            String absoluteVolumeLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() +
+                    PATH_SEPARATOR + foundVolumeInfo.getLvName();
+            duplicateLogicalVolume(absoluteVolumeLVName, absoluteLVName);
+
+            lvmVolumeInfo.setVolumeId(dupVolumeId);
+            lvmVolumeInfo.setLoDevName(loDevName);
+            lvmVolumeInfo.setPvName(loDevName);
+            lvmVolumeInfo.setVgName(vgName);
+            lvmVolumeInfo.setLvName(lvName);
+            lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+            lvmVolumeInfo.setSize(size);
+            lvmVolumeInfo.setVbladePid(-1);
+            db.add(lvmVolumeInfo);
+
+            db.commit();
+        } else {
+            db.rollback();
+            throw new EucalyptusCloudException("Could not dup volume " + volumeId);
+        }
+
+    }
+
     public List<String> getStatus(List<String> volumeSet) throws EucalyptusCloudException {
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
         ArrayList<String> status = new ArrayList<String>();
@@ -742,7 +783,7 @@ public class LVM2Manager implements BlockStorageManager {
         //now enable them
         for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
             int pid = foundVolumeInfo.getVbladePid();
-            if(foundVolumeInfo.getVbladePid() > 0) {
+            if(pid > 0) {
                 //enable logical volumes
                 String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
                 enableLogicalVolume(absoluteLVName);
