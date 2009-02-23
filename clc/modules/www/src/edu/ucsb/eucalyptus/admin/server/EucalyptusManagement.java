@@ -414,7 +414,8 @@ public class EucalyptusManagement {
 
 	private static String getInternalIpAddress ()
 	{
-		String ipAddr = "127.0.0.1";
+		String ipAddr = null;
+    String localAddr = "127.0.0.1";
 
 		List<NetworkInterface> ifaces = null;
 		try {
@@ -422,16 +423,21 @@ public class EucalyptusManagement {
 		}
 		catch ( SocketException e1 ) {}
 
-		for ( NetworkInterface iface : ifaces )
-		try {
-			if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() )
-				for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) )
-				if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) )
-				ipAddr = iaddr.getHostAddress();
-		}
-		catch ( SocketException e1 ) {}
+    for ( NetworkInterface iface : ifaces )
+      try {
+        if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
+          for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
+            if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
+              ipAddr = iaddr.getHostAddress();
+            } else if ( iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
+              localAddr = iaddr.getHostAddress();
+            }
+          }
+        }
+      }
+      catch ( SocketException e1 ) {}
 
-		return ipAddr;
+    return ipAddr == null ? localAddr : ipAddr;
 	}
 
     public static SystemConfigWeb getSystemConfig() throws SerializableException
