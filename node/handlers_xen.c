@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#define __USE_GNU /* strnlen */
 #include <string.h> /* strlen, strcpy */
 #include <time.h>
 #include <limits.h> /* INT_MAX */
