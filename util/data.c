@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#define __USE_GNU
 #include <string.h> 
 #include "data.h"
 

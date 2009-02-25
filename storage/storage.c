@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#define __USE_GNU /* strnlen */
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -8,11 +9,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <string.h>
 #include <dirent.h> /* open|read|close dir */
 #include <time.h> /* time() */
-#define _GNU_SOURCE
-#include <string.h> /* strnlen */
 
 #include "ipc.h"
 #include "walrus.h"
@@ -735,7 +733,7 @@ retry:
         /* for KVM, convert partition into disk */
         if (e==OK && convert_to_disk) { 
             sem_p (s);
-            if ((e=run(disk_convert_command_path, file_path, swap_mb, ephemeral_mb, 0))!=0) {
+            if ((e=vrun("%s %s %d %d", disk_convert_command_path, file_path, swap_mb, ephemeral_mb))!=0) {
                 logprintfl (EUCAERROR, "error: partition-to-disk image conversion command failed\n");
             }
             sem_v (s);
@@ -743,10 +741,10 @@ retry:
 
         /* cache the partition or disk, if possible */
         if ( e==OK && should_cache ) {
-            if ( (e=run ("cp", "-a", file_path, cached_path, 0)) != 0) {
+            if ( (e=vrun ("cp -a %s %s", file_path, cached_path)) != 0) {
                 logprintfl (EUCAERROR, "failed to copy file %s into cache at %s\n", file_path, cached_path);
             }
-            if ( e==OK && (e=run ("cp", "-a", tmp_digest_path, digest_path, 0)) != 0) {
+            if ( e==OK && (e=vrun ("cp -a %s %s", tmp_digest_path, digest_path)) != 0) {
                 logprintfl (EUCAERROR, "failed to copy digest file %s into cache at %s\n", tmp_digest_path, digest_path);
             }
         }
@@ -818,7 +816,7 @@ retry:
             
         } else { /* all good - copy it, finally */
             ensure_subdirectory_exists (file_path); /* creates missing directories */            
-            if ( (e=run ("cp", "-a", cached_path, file_path, 0)) != 0) {
+            if ( (e=vrun ("cp -a %s %s", cached_path, file_path)) != 0) {
                 logprintfl (EUCAERROR, "failed to copy file %s from cache at %s\n", file_path, cached_path);
                 return 0L;
             }
@@ -878,13 +876,13 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
 	logprintfl (EUCAINFO, "adding key %s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
 	sem_p (s);
 	if (convert_to_disk) {
-	  if ((e=run(add_key_command_path, "32256", image_path, key_template, 0))!=0) {
-	    logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
-	  }
+        if ((e=vrun("%s 32256 %s %s", add_key_command_path, image_path, key_template))!=0) {
+            logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
+        }
 	} else {
-	  if ((e=run(add_key_command_path, "0", image_path, key_template, 0))!=0) {
-	    logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
-	  }
+        if ((e=vrun("%s 0 %s %s", add_key_command_path, image_path, key_template))!=0) {
+            logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
+        }
 	}
 	sem_v (s);
         
@@ -901,13 +899,13 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
     } else {
       sem_p (s);
       if (convert_to_disk) {
-	if ((e=run(add_key_command_path, "32256", image_path, 0))!=0) { /* without key, add_key just does tune2fs */
-	  logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
-	}
+          if ((e=vrun("%s 32256 %s %s", add_key_command_path, image_path))!=0) { /* without key, add_key just does tune2fs */
+              logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
+          }
       } else {
-	if ((e=run(add_key_command_path, "0", image_path, 0))!=0) { /* without key, add_key just does tune2fs */
-	  logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
-	}
+          if ((e=vrun("%s 0 %s %s", add_key_command_path, image_path))!=0) { /* without key, add_key just does tune2fs */
+              logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
+          }
       }
       sem_v (s);
       /* printf ("no user public key to embed, skipping\n"); */

@@ -628,31 +628,6 @@ char * get_string_stats (const char * s)
 
 #define BUFSIZE 1024
 
-/* given a variable number of strings terminated by a NULL pointer, 
- * concatenate them with spaces in between and run the command the shell */
-int run (const char * arg1, ...) 
-{
-	char cmd [BUFSIZE];
-	const char * arg;
-	va_list ap;
-	int i, e;
-  
-    cmd [0] = '\0';
-  	va_start (ap, arg1);
-	for (i = 0, arg=arg1; arg != NULL; i++, arg = va_arg (ap, const char *) ) {
-        char buf [BUFSIZE];
-        snprintf (buf, BUFSIZE, "%s%s%s", cmd, (i>0)?" ":"", arg);
-        strncpy (cmd, buf, BUFSIZE);
-	}
-  	va_end (ap);
-
-    logprintfl (EUCAINFO, "run(): [%s]\n", cmd);
-	if ((e = system (cmd)) != 0) {
-		logprintfl (EUCAERROR, "system (%s) failed with %d (%d)\n", cmd, (unsigned int)(e) >> 8, e);
-	}
-	return e;
-}
-
 /* given printf-style arguments, run the resulting string in the shell */
 int vrun (const char * fmt, ...)
 {
