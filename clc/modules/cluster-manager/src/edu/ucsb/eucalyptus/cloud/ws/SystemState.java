@@ -208,7 +208,8 @@ public class SystemState {
           SystemState.cleanUp( v );
         } catch ( NoSuchElementException e ) {
           LOG.debug( e, e );
-          throw new EucalyptusCloudException( e.getMessage() );
+//Bug #334650: uncomment the following if it should throw an exception
+//          throw new EucalyptusCloudException( e.getMessage() );
         }
       }
       return reply;
@@ -233,7 +234,8 @@ public class SystemState {
       }
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      throw new EucalyptusCloudException( e );
+//Bug #334650: uncomment the following if it should throw an exception
+//      throw new EucalyptusCloudException( e );
     } finally {
       state.destroy();
     }
