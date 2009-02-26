@@ -107,7 +107,7 @@ public class UserManagement {
 
     public static boolean isAdministrator( String userId )
     {
-        if( EucalyptusProperties.NAME.equals( userId )) return true;
+        if(EucalyptusProperties.NAME.equals(userId) || WalrusProperties.ADMIN.equals(userId)) return true;
         return false;
     }
 }
