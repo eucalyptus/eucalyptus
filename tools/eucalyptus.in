@@ -25,13 +25,13 @@ NAME=eucalyptus
 BRCTL="`which brctl 2> /dev/null`"
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
+MODPROBE="`which modprobe 2> /dev/null`"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
 	EUCALYPTUS="@prefix@"
 fi
 export EUCALYPTUS
-
 
 check_java() {
 	java_min_version="1.6.0"
@@ -144,6 +144,13 @@ do_start() {
 					echo "Warning! Cannot find bridge $VNET_BRIDGE: instances may be without net"
 				fi
 			fi
+		fi
+
+		# we need aoe loaded 
+		if [ -z "$MODPROBE" ]; then
+			echo "Cannot find modprobe: you may have problems."
+		elif ! $MODPROBE aoe ; then
+			echo "Failed to load aoe: you may experience problems"
 		fi
 
 		# if both the NC and the CC are starting they need != ports
