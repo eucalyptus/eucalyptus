@@ -36,6 +36,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
@@ -78,6 +80,12 @@ int run_command_and_get_pid(char *cmd, char **args) {
 
    if (pid == 0) {
         //daemonize
+        DIR *proc_fd_dir;
+        struct dirent *fd_dir;
+        int fd_to_close;
+        char fd_path[128];
+        int my_pid = getpid();
+
         umask(0);
         int sid = setsid();
         if(sid < 0)
@@ -89,6 +97,22 @@ int run_command_and_get_pid(char *cmd, char **args) {
         home = strdup (home);
         }
         chdir(home);
+
+        //close all open fds
+        snprintf(fd_path, 128, "/proc/%d/fd", my_pid);
+
+        if ((proc_fd_dir = opendir(fd_path)) == NULL) {
+            perror("ERROR: Cannot opendir\n");
+            return -1;
+        }
+
+        while ((fd_dir = readdir(proc_fd_dir)) != NULL) {
+            if (isdigit(fd_dir->d_name[0])) {
+                fd_to_close =  atoi(fd_dir->d_name);
+                close(fd_to_close);
+            }
+        }
+
         freopen( "/dev/null", "r", stdin);
         freopen( "/dev/null", "w", stdout);
         freopen( "/dev/null", "w", stderr);
