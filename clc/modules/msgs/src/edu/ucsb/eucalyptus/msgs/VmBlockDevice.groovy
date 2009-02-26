@@ -122,12 +122,11 @@ public class AttachedVolume extends EucalyptusData {
 
   public AttachedVolume() {}
 
-  boolean equals(final Object o) {
-    if ( this.is(o) ) return true;
-    if ( !o || getClass() != o.class ) return false;
+  public boolean equals(final Object o) {
+    if( !( o instanceof AttachedVolume ) ) return false;
+    if ( this == o ) return true;
     AttachedVolume that = (AttachedVolume) o;
-    if ( volumeId ? !volumeId.equals(that.volumeId) : that.volumeId != null ) return false;
-    return true;
+    return this.volumeId.equals(that.volumeId) ;
   }
 
   int hashCode() {
