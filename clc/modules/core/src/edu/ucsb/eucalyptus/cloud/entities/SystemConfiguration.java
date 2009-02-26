@@ -69,7 +69,7 @@ public class SystemConfiguration {
   private Integer storageMaxSnapshotSizeInGb;
   @Column( name = "system_registration_id" )
   private String registrationId;
-  @Column( name = "system_storage_max_volume_size_gb" )
+  @Column( name = "system_storage_max_volume_size_gb")
   private Integer storageMaxVolumeSizeInGB;
   @Column( name = "system_storage_volumes_dir" )
   private String storageVolumesDir;
@@ -77,11 +77,11 @@ public class SystemConfiguration {
   public SystemConfiguration() {}
 
   public SystemConfiguration(final String storageUrl,
-	final String defaultKernel, 
+	final String defaultKernel,
 	final String defaultRamdisk,
 	final String storageDir,
-	final Integer storageMaxBucketsPerUser, 
-	final Integer storageMaxBucketSizeInMB, 
+	final Integer storageMaxBucketsPerUser,
+	final Integer storageMaxBucketSizeInMB,
 	final Integer storageMaxCacheSizeInMB,
 	final Integer storageMaxTotalVolumeSizeInGb,
 	final Integer storageMaxSnapshotSizeInGb,
