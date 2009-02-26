@@ -43,7 +43,6 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.cluster.VolumeAttachCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VolumeDetachCallback;
-import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.State;
@@ -263,16 +262,16 @@ public class VolumeManager {
     for ( VmInstance v : VmInstances.getInstance().listValues() ) {
       for ( AttachedVolume vol : v.getVolumes() ) {
         if ( vol.getVolumeId().equals( request.getVolumeId() ) ) {
-          if( request.getInstanceId() != null && !request.getInstanceId().equals("" ) && !v.getInstanceId().equals( request.getInstanceId() ) ) {
-            throw new EucalyptusCloudException( "Volume is not attached to instance: " + request.getInstanceId() );
-          }
           volume = vol;
           vm = v;
         }
       }
     }
-    if ( volume == null ) {
+    if ( volume == null || vm == null ) {
       throw new EucalyptusCloudException( "Volume is not attached: " + request.getVolumeId() );
+    }
+    if( !vm.getInstanceId().equals( request.getInstanceId() ) && request.getInstanceId() != null && !request.getInstanceId().equals("" ) ) {
+      throw new EucalyptusCloudException( "Volume is not attached to instance: " + request.getInstanceId() );
     }
     if ( request.getDevice() != null && !request.getDevice().equals("") && !volume.getDevice().equals( request.getDevice() ) ) {
       throw new EucalyptusCloudException( "Volume is not attached to device: " + request.getDevice() );
