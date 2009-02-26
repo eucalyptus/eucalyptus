@@ -1314,10 +1314,15 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
 	  }
 	}
 	close(filedes[0]);
-
+	
 	logprintfl(EUCAINFO,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
 	if (!rc) {
 	  done++;
+	} else {
+	  if (consoleOutput) {
+	    free(consoleOutput);
+	    consoleOutput = NULL;
+	  }
 	}
       }
     }
