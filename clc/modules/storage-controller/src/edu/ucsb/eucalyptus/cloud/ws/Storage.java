@@ -493,11 +493,7 @@ public class Storage {
                     String dupedVolumeId = null;
                     if(snapInfos.size() == 1) {
                         //ok to remove the duped vol this snapshot is based on
-                        EntityWrapper<VolumeInfo> dbVol = db.recast(VolumeInfo.class);
-                        VolumeInfo volumeInfo = new VolumeInfo();
-                        volumeInfo.setVolumeId(snapInfos.get(0).getVolumeId());
-                        VolumeInfo foundVolumeInfo = dbVol.getUnique(volumeInfo);
-                        dupedVolumeId = foundVolumeInfo.getDupedVolumeId();
+                        dupedVolumeId = foundSnapshotInfo.getDupedVolumeId();
                     }
                     blockManager.deleteSnapshot(snapshotId);
                     if(dupedVolumeId != null) {
@@ -812,20 +808,20 @@ public class Storage {
 
         public void run() {
             try {
-                EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
-                VolumeInfo volumeInfo = new VolumeInfo(volumeId);
-                VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
+                EntityWrapper<SnapshotInfo>dbS = new EntityWrapper<SnapshotInfo>();
+                SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+                SnapshotInfo foundSnapInfo = dbS.getUnique(snapInfo);
                 String dupedVolumeId;
-                if(foundVolumeInfo.getDupedVolumeId() == null) {
+                if(foundSnapInfo.getDupedVolumeId() == null) {
                     //dup it so parent vol can be treated independently
                     dupedVolumeId = volumeId + "-" + Hashes.getRandom(6);
-                    foundVolumeInfo.setDupedVolumeId(dupedVolumeId);
+                    foundSnapInfo.setDupedVolumeId(dupedVolumeId);
                     blockManager.dupVolume(volumeId, dupedVolumeId);
                     volumeId = dupedVolumeId;
                 } else {
-                    volumeId = foundVolumeInfo.getDupedVolumeId();
+                    volumeId = foundSnapInfo.getDupedVolumeId();
                 }
-                db.commit();
+                dbS.commit();
                 blockManager.createSnapshot(volumeId, snapshotId);
                 if(sharedMode) {
                     EntityWrapper<SnapshotInfo> dbSnap = new EntityWrapper<SnapshotInfo>();
@@ -840,13 +836,13 @@ public class Storage {
                     List<String> returnValues = blockManager.prepareForTransfer(volumeId, snapshotId);
                     volumeFileName = returnValues.get(0);
                     snapshotFileName = returnValues.get(1);
-                    db = new EntityWrapper<VolumeInfo>();
-                    volumeInfo = new VolumeInfo(volumeId);
+                    EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
+                    VolumeInfo volumeInfo = new VolumeInfo(volumeId);
                     List <VolumeInfo> volumeInfos = db.query(volumeInfo);
 
                     boolean shouldTransferVolume = false;
                     if(volumeInfos.size() > 0) {
-                        foundVolumeInfo = volumeInfos.get(0);
+                        VolumeInfo foundVolumeInfo = volumeInfos.get(0);
                         if(!foundVolumeInfo.getTransferred()) {
                             //transfer volume to Walrus
                             foundVolumeInfo.setVolumeBucket(volumeBucket);

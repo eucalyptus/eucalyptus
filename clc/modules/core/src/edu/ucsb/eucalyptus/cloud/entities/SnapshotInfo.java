@@ -62,6 +62,8 @@ public class SnapshotInfo {
     @Transient String progress;
     @Column(name = "transferred")
     private Boolean transferred;
+    @Column(name = "duped_volume_name")
+    private String dupedVolumeId;
 
     public SnapshotInfo() {}
 
@@ -125,20 +127,29 @@ public class SnapshotInfo {
         this.transferred = transferred;
     }
 
-  @Override
-  public boolean equals( final Object o ) {
-    if ( this == o ) return true;
-    if ( o == null || getClass() != o.getClass() ) return false;
 
-    SnapshotInfo that = ( SnapshotInfo ) o;
+    public String getDupedVolumeId() {
+        return dupedVolumeId;
+    }
 
-    if ( !snapshotId.equals( that.snapshotId ) ) return false;
+    public void setDupedVolumeId(String dupedVolumeId) {
+        this.dupedVolumeId = dupedVolumeId;
+    }
 
-    return true;
-  }
+    @Override
+    public boolean equals( final Object o ) {
+        if ( this == o ) return true;
+        if ( o == null || getClass() != o.getClass() ) return false;
 
-  @Override
-  public int hashCode() {
-    return snapshotId.hashCode();
-  }
+        SnapshotInfo that = ( SnapshotInfo ) o;
+
+        if ( !snapshotId.equals( that.snapshotId ) ) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return snapshotId.hashCode();
+    }
 }

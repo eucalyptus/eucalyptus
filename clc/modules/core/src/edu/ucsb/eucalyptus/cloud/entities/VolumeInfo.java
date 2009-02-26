@@ -70,8 +70,6 @@ public class VolumeInfo {
     private String snapshotId;
     @Column(name = "transferred")
     private Boolean transferred;
-    @Column(name = "duped_volume_name")
-    private String dupedVolumeId;
 
     @OneToMany( cascade = CascadeType.ALL )
     @JoinTable(
@@ -174,14 +172,6 @@ public class VolumeInfo {
 
     public void setTransferred(Boolean transferred) {
         this.transferred = transferred;
-    }
-
-    public String getDupedVolumeId() {
-        return dupedVolumeId;
-    }
-
-    public void setDupedVolumeId(String dupedVolumeId) {
-        this.dupedVolumeId = dupedVolumeId;
     }
 
     @Override
