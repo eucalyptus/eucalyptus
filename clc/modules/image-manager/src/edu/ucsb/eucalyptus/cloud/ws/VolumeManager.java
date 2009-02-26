@@ -263,10 +263,10 @@ public class VolumeManager {
     for ( VmInstance v : VmInstances.getInstance().listValues() ) {
       for ( AttachedVolume vol : v.getVolumes() ) {
         if ( vol.getVolumeId().equals( request.getVolumeId() ) ) {
-          volume = vol;
           if( request.getInstanceId() != null && !request.getInstanceId().equals("" ) && !v.getInstanceId().equals( request.getInstanceId() ) ) {
             throw new EucalyptusCloudException( "Volume is not attached to instance: " + request.getInstanceId() );
           }
+          volume = vol;
           vm = v;
         }
       }
