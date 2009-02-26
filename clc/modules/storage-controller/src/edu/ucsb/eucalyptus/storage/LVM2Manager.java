@@ -304,19 +304,31 @@ public class LVM2Manager implements BlockStorageManager {
         db.commit();
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
         int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
-        String returnValue = aoeStatus(pid);
-        if(pid < 0 || (returnValue.length() == 0)) {
-            throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface);
-        } else {
-            File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
-            try {
-                FileOutputStream fileOutStream = new FileOutputStream(vbladePidFile);
-                String pidString = String.valueOf(pid);
-                fileOutStream.write(pidString.getBytes());
-                fileOutStream.close();
-            } catch (Exception ex) {
-                LOG.warn("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
-            }
+        boolean success = false;
+	String returnValue = "";
+	if(pid > 0) {
+   	    for(int i=0; i < 5; ++i) {
+                returnValue = aoeStatus(pid);
+                if(returnValue.length() == 0) {
+		    success = false; 
+	        } else {
+		    success = true;
+		    break;
+	        }
+	    } 
+	}
+	if(!success) {
+            throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface + " pid: " + pid + " returnValue: " + returnValue);
+        } 
+           
+        File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+        try {
+            FileOutputStream fileOutStream = new FileOutputStream(vbladePidFile);
+            String pidString = String.valueOf(pid);
+            fileOutStream.write(pidString.getBytes());
+            fileOutStream.close();
+        } catch (Exception ex) {
+            LOG.warn("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
         }
         lvmVolumeInfo.setVbladePid(pid);
         lvmVolumeInfo.setMajorNumber(majorNumber);
@@ -412,6 +424,7 @@ public class LVM2Manager implements BlockStorageManager {
                 throw new EucalyptusCloudException();
             }
         } catch(EucalyptusCloudException ex) {
+	    LOG.warn(ex);
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
             String returnValue = removeLogicalVolume(absoluteLVName);
             returnValue = removeVolumeGroup(vgName);

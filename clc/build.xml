@@ -41,7 +41,7 @@
             <filterreader classname="org.apache.tools.ant.filters.StripLineBreaks"/>
         </filterchain>
     </loadfile>
-    <property name="jvm.heap" value="1g"/>
+    <property name="jvm.heap" value="512m"/>
     <property name="deps.url" value="http://eucalyptus.cs.ucsb.edu/dependencies/${euca.version}"/>
     <property name="deps.dir" value="deps"/>
     <property name="deps.lib.dir" value="lib"/>
