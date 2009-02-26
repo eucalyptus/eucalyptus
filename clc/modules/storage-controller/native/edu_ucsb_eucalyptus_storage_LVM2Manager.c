@@ -116,7 +116,7 @@ int run_command_and_get_pid(char *cmd, char **args) {
         freopen( "/dev/null", "r", stdin);
         freopen( "/dev/null", "w", stdout);
         freopen( "/dev/null", "w", stderr);
-        execvp(cmd, args);
+        exit(execvp(cmd, args));
    } else {
         close(fd[1]);
    }
