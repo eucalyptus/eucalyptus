@@ -57,10 +57,17 @@ public class Main {
     descAz.setUserId( EucalyptusProperties.NAME );
     descAz.setEffectiveUserId( EucalyptusProperties.NAME );
     descAz.setCorrelationId( "" );
-    Messaging.dispatch( "vm://RequestQueue", descAz );
+    try {
+      Messaging.send( WalrusProperties.WALRUS_REF, new InitializeWalrusType() );
+    } catch (Exception e) {} 
+    try {
+      if( System.getProperty("euca.ebs.disable") == null )
+        Messaging.send( StorageProperties.STORAGE_REF, new InitializeStorageManagerType() );
+    } catch (Exception e) {} 
 
-    Messaging.dispatch( WalrusProperties.WALRUS_REF, new InitializeWalrusType() );
-    Messaging.dispatch( StorageProperties.STORAGE_REF, new InitializeStorageManagerType() );
+    try {
+      Messaging.dispatch( "vm://RequestQueue", descAz );
+    } catch (Exception e) {} 
 
     LOG.info( "Eucalyptus started." );
   }

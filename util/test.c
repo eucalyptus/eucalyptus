@@ -195,7 +195,7 @@ int main (int argc, char * argv[])
     char * s = strdup("jolly old jolly old time...");
     char ** sp = &s;
     if ( strcmp ( replace_string ( sp, "old", "new"), "jolly new jolly new time..." ) ) EXIT;
-    if ( run ( "ls", "/", "/etc", ">/dev/null", NULL ) ) EXIT;
+    if ( vrun ( "ls / /etc >/dev/null" ) ) EXIT;
 
     test_volumes ();
 

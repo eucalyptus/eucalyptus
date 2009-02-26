@@ -50,6 +50,9 @@ public class WalrusProperties {
     public static int MAX_BUCKETS_PER_USER = 5;
     public static long MAX_BUCKET_SIZE = 5 * G;
     public static long IMAGE_CACHE_SIZE = 30 * G;
+    public static String WALRUS_URL;
+
+    public static final int IO_CHUNK_SIZE = 102400;
 
     public static void update() {
         try {
@@ -58,6 +61,7 @@ public class WalrusProperties {
             MAX_BUCKETS_PER_USER = systemConfiguration.getStorageMaxBucketsPerUser();
             MAX_BUCKET_SIZE = systemConfiguration.getStorageMaxBucketSizeInMB() * M;
             IMAGE_CACHE_SIZE = systemConfiguration.getStorageMaxCacheSizeInMB() * M;
+            WALRUS_URL = systemConfiguration.getStorageUrl();
             UpdateWalrusConfigurationType updateConfig = new UpdateWalrusConfigurationType();
             updateConfig.setBucketRootDirectory(bucketRootDirectory);
             Messaging.send( WALRUS_REF, updateConfig );
@@ -73,6 +77,12 @@ public class WalrusProperties {
     public static final String STREAMING_HTTP_GET = "STREAMING_HTTP_GET";
     public static final String STREAMING_HTTP_PUT = "STREAMING_HTTP_PUT";
     public static final String AMZ_ACL = "x-amz-acl";
+    public static final String ALL_USERS_GROUP = "http://acs.amazonaws.com/groups/global/AllUsers";
+    public static final String AUTHENTICATED_USERS_GROUP = "'http://acs.amazonaws.com/groups/global/AuthenticatedUsers";
+
+    public static final String IGNORE_PREFIX = "x-ignore-";
+    public static final String COPY_SOURCE = "x-amz-copy-source";
+    public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
     public static final String ADMIN = "admin";
     public static String WALRUS_REF = "vm://BukkitInternal";
 
@@ -85,7 +95,7 @@ public class WalrusProperties {
     }
 
     public enum ExtendedHeaderDateTypes {
-        IfModifiedSince, IfUnmodifiedSince;
+        IfModifiedSince, IfUnmodifiedSince, CopySourceIfModifiedSince, CopySourceIfUnmodifiedSince;
 
         public static boolean contains(String value) {
             for(ExtendedHeaderDateTypes type: values()) {
@@ -105,6 +115,10 @@ public class WalrusProperties {
         GetDecryptedImage
     }
 
+    public enum GetOptionalParameters {
+        IsCompressed
+    }
+
     public enum StorageOperations {
         StoreSnapshot, DeleteWalrusSnapshot, GetSnapshotInfo, GetVolume
     }
@@ -115,5 +129,21 @@ public class WalrusProperties {
     
     public enum StorageParameters {
         SnapshotVgName, SnapshotLvName
+    }
+
+    public enum FormField {
+        FormUploadPolicyData, AWSAccessKeyId, key, bucket, acl, policy, success_action_redirect, success_action_status, signature, file
+    }
+
+    public enum IgnoredFields {
+       AWSAccessKeyId, signature, file, policy, submit
+    }
+
+    public enum PolicyHeaders {
+        expiration, conditions
+    }
+
+    public enum CopyHeaders {
+       CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince 
     }
 }

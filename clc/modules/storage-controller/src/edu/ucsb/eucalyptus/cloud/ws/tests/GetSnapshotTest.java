@@ -34,35 +34,40 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
-import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
+import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
 import edu.ucsb.eucalyptus.cloud.ws.Storage;
 import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType;
+import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
 import junit.framework.TestCase;
 
 public class GetSnapshotTest extends TestCase {
 
     static Storage storage;
-
+    static Bukkit bukkit;
 
     public void testGetSnapshot() throws Throwable {
 
+        String userId = "admin";
+        ListAllMyBucketsType listBucketsRequest = new ListAllMyBucketsType();
+
+        listBucketsRequest.setUserId(userId);
+        ListAllMyBucketsResponseType response =  bukkit.ListAllMyBuckets(listBucketsRequest);
+        System.out.println(response);
+
         String volumeId = "vol-" + Hashes.getRandom(10);
-        String snapshotBucket = "snapset-FuXLn1MUHJ66BkK0";
+        String snapshotBucket = "snapset-1234"; //irrelevant
         String snapshotId = "snap-" + Hashes.getRandom(10);
-        EntityWrapper<WalrusSnapshotInfo>db = new EntityWrapper<WalrusSnapshotInfo>();
-        WalrusSnapshotInfo snapInfo = new WalrusSnapshotInfo(snapshotId);
-        db.add(snapInfo);
-        snapInfo.setLvName("lol");
-        
-        db.commit();
-        //    storage.GetSnapshots(volumeId, snapshotBucket, snapshotId);
+        snapshotId = "snap-xsO2qaH9xGSxYQ..";
+
+        storage.GetSnapshots(volumeId, snapshotBucket, snapshotId);
 
 
-        if ( EntityWrapper.getEntityManagerFactory().isOpen() )
-     EntityWrapper.getEntityManagerFactory().close();
+//        if ( EntityWrapper.getEntityManagerFactory().isOpen() )
+  //   EntityWrapper.getEntityManagerFactory().close();
     }
     public void setUp() {
         storage = new Storage();
+        bukkit = new Bukkit();
     }
 }

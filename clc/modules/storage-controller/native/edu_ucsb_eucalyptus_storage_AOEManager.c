@@ -83,6 +83,11 @@ JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_AOEManager_unexportVolum
   (JNIEnv *env, jobject obj, jint vblade_pid) {
    char command[128];
 
-   snprintf(command, 128, "kill -9 %s", vblade_pid);
+   snprintf(command, 128, "kill -9 %d", vblade_pid);
    run_command(env, command, 1);
+}
+
+JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_AOEManager_loadModule
+  (JNIEnv *env, jobject obj) {
+   run_command(env, "modprobe aoe", 1);  
 }

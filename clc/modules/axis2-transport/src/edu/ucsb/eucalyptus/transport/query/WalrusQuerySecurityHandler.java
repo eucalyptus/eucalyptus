@@ -35,20 +35,24 @@
 package edu.ucsb.eucalyptus.transport.query;
 
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
 import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
+import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.util.encoders.Base64;
 
-import java.security.Signature;
+import java.io.StringReader;
+import java.net.URLDecoder;
 import java.security.PublicKey;
+import java.security.Signature;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
-import java.io.StringReader;
 
 public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
@@ -125,9 +129,19 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
                 throw new QuerySecurityException( "User authentication failed." );
             }
             //run as admin
-            UserInfo admin = new UserInfo("admin");
+            UserInfo admin = new UserInfo(EucalyptusProperties.NAME);
             admin.setIsAdministrator(Boolean.TRUE);
             return admin;
+        } else if(hdrs.containsKey(WalrusProperties.FormField.FormUploadPolicyData)) {
+            String data = (String) hdrs.remove(WalrusProperties.FormField.FormUploadPolicyData);
+            String auth_part = (String) hdrs.remove(SecurityParameter.Authorization);
+
+            if(auth_part != null) {
+                String sigString[] = getSigInfo(auth_part);
+                String signature = sigString[1];
+                return getUserInfo(sigString[0], signature, data, false);
+            }
+            throw new QuerySecurityException("User authentication failed.");
         } else {
             //external user request
             String date =  (String) hdrs.remove( SecurityParameter.Date);
@@ -156,23 +170,64 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             if(auth_part != null) {
                 String sigString[] = getSigInfo(auth_part);
                 String signature = sigString[1];
-                signature = signature.replaceAll("=", "");
-
-                String queryKey = findQueryKey( sigString[0] );
-
-                String authSig = checkSignature( queryKey, data );
-
-                if ( !authSig.equals(signature) )
-                    throw new QuerySecurityException( "User authentication failed." );
-
-                return findUserId( sigString[0] );
-            } else {
+                return getUserInfo(sigString[0], signature, data, false);
+            } else if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())) {
+                //query string authentication
+                String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
+                try {
+                    String signature = URLDecoder.decode(parameters.remove(SecurityParameter.Signature.toString()), "UTF-8");
+                    if(signature == null) {
+                        throw new QuerySecurityException("User authentication failed. Null signature.");
+                    }
+                    String expires = parameters.remove(SecurityParameter.Expires.toString());
+                    if(expires == null) {
+                        throw new QuerySecurityException("Authentication failed. Expires must be specified.");
+                    }
+                    if(checkExpires(expires)) {
+                        String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + getCanonicalizedAmzHeaders(hdrs) + addrString;
+                        return getUserInfo(accesskeyid, signature, stringToSign, true);
+                    } else {
+                        throw new QuerySecurityException("Cannot process request. Expired.");
+                    }
+                } catch (Exception ex) {
+                    throw new QuerySecurityException("Could not verify request " + ex.getMessage());
+                }
+            } else{
                 //anonymous request
                 return null;
             }
         }
     }
 
+
+    private UserInfo getUserInfo(String accessKeyID, String signature, String data, boolean decode) throws QuerySecurityException {
+        signature = signature.replaceAll("=", "");
+
+        String queryKey = findQueryKey(accessKeyID);
+
+        String authSig = checkSignature( queryKey, data );
+
+        if(decode) {
+            try {
+                authSig = URLDecoder.decode(authSig, "UTF-8");
+            } catch(Exception ex) {
+                throw new QuerySecurityException(ex.getMessage());
+            }
+        }
+
+        if (!authSig.equals(signature))
+            throw new QuerySecurityException( "User authentication failed. Could not verify signature" );
+
+        return findUserId(accessKeyID);
+    }
+
+    private boolean checkExpires(String expires) {
+        Long expireTime = Long.parseLong(expires);
+        Long currentTime = new Date().getTime() / 1000;
+        if(currentTime > expireTime)
+            return false;
+        return true;
+    }
 
     private void checkParameters( final CaseInsensitiveMap header ) throws QuerySecurityException
     {

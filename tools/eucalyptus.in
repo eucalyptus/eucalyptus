@@ -24,6 +24,7 @@ START_CLOUD="N"
 NAME=eucalyptus
 BRCTL="`which brctl 2> /dev/null`"
 ANT="`which ant 2> /dev/null`"
+JAVA="`which java 2> /dev/null`"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
@@ -31,13 +32,37 @@ if [ -z "$EUCALYPTUS" ] ; then
 fi
 export EUCALYPTUS
 
+
 check_java() {
 	java_min_version="1.6.0"
-	java_version=`java -version 2>&1 | grep "java version" | sed -e 's/.*java version "\(.*\)".*/\1/'`
-	if [ `expr $java_version ">=" $java_min_version` -eq 0 ]; then
-		echo "Eucalyptus needs java version >= $java_min_version"
-		exit 1
+
+	
+	#  let's check the default java
+	if [ -n "$JAVA" ]; then
+		java_version=`java -version 2>&1 | grep "java version" | sed -e 's/.*java version "\(.*\)".*/\1/'`
+		if [ `expr $java_version "<" $java_min_version` -eq 0 ]; then
+			return 
+		fi
 	fi
+
+	# we don't have a good java, let's look at JAVA_HOME (defined one
+	# or the one which was defined at compile time)
+	if [ -z "$JAVA_HOME" ]; then
+		JAVA_HOME="@JAVA_HOME@"
+	fi
+	JAVA="$JAVA_HOME/bin/java"
+
+	# let's see if we can find a decent java
+	if [ -x "$JAVA" ]; then
+		java_version=`$JAVA -version 2>&1 | grep "java version" | sed -e 's/.*java version "\(.*\)".*/\1/'`
+		if [ `expr $java_version "<" $java_min_version` -eq 0 ]; then
+			export JAVA_HOME
+			return 
+		fi
+	fi
+
+	echo "Eucalyptus needs java version >= $java_min_version"
+	exit 1
 }
 enable_service() {
 	for x in ${1}; do 
@@ -174,20 +199,36 @@ do_start() {
 		# now we start the services
 		if [ "$START_NC" = "Y" ]; then
 			# we need 2 httpd
-			$HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
+			if  ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf ; then
+				echo
+				echo "Failed to start the CC!"
+				exit 1
+			fi
 			echo -n " CC"
 
-			$HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
+			if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf ; then
+				echo
+				echo "Failed to start the NC!"
+				exit 1
+			fi
 			echo -n " NC"
 		else 
 			# just the CC running
 			disable_service "EucalyptusNC"
-			$HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
+			if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf ; then
+				echo
+				echo "Failed to start the CC!"
+				exit 1
+			fi
 			echo -n " CC"
 		fi
 	elif [ "$START_NC" = "Y" ]; then
 		disable_service "EucalyptusCC"
-		$HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
+		if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf ; then
+			echo
+			echo "Failed to start the NC!"
+			exit 1
+		fi
 		echo -n " NC"
 	elif [ "$START_CLOUD" != "Y" ]; then
 		echo "No service to start?"

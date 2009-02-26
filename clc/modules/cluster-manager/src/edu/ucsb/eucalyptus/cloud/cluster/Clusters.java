@@ -1,15 +1,23 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.keys.*;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.cloud.AbstractNamedRegistry;
+import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.KeyTool;
+import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
+import edu.ucsb.eucalyptus.msgs.ClusterStateType;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.SubDirectory;
 import org.apache.log4j.Logger;
 
-import java.io.*;
-import java.security.*;
-import java.security.cert.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {
 
@@ -37,11 +45,44 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
 
   }
 
+  public void add( ClusterStateType cluster ) {
+    EntityWrapper<ClusterInfo> db = new EntityWrapper<ClusterInfo>();
+    ClusterInfo clusterInfo = setupCluster( cluster );
+    db.add( clusterInfo );
+    db.commit();
+  }
+
   public void update( List<ClusterStateType> clusterChanges )
   {
+    EntityWrapper<ClusterInfo> db = new EntityWrapper<ClusterInfo>();
+    //:: remove old non-existant clusters :://
+    List<ClusterInfo> clusterList = db.query( new ClusterInfo() );
+    for( ClusterInfo c : clusterList ) {
+      boolean found = false;
+      for( ClusterStateType newClusterInfo : clusterChanges ) {
+        if( c.getName().equals( newClusterInfo.getName() ) ) {
+          found = true;
+          break;
+        }
+      }
+      if( !found ) {
+        Cluster cluster = null;
+        try {
+          cluster = this.lookup( c.getName() );
+          db.delete( c );
+          this.deregister( cluster.getName() );
+          cluster.stop();
+        } catch ( Exception e ) {
+          LOG.error( e, e );
+        }
+      }
+    }
+    db.commit();
+
+    //:: add the new entries / modify existing entries :://
     for ( ClusterStateType c : clusterChanges )
     {
-      EntityWrapper<ClusterInfo> db = new EntityWrapper<ClusterInfo>();
+      db = new EntityWrapper<ClusterInfo>();
       try
       {
         ClusterInfo clusterInfo = db.getUnique( new ClusterInfo( c.getName() ) );
@@ -55,6 +96,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
           Cluster newCluster = new Cluster( clusterInfo );
           this.register( newCluster );
           db.commit();
+          newCluster.start();
         }
         else
           db.rollback();
@@ -80,6 +122,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       LOG.error( e1, e1 );
     }
     this.register( new Cluster( clusterInfo ) );
+    this.lookup( clusterInfo.getName() ).start();
     return clusterInfo;
   }
 
@@ -92,9 +135,11 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     {
       Cluster newCluster = new Cluster( info );
       this.register( newCluster );
+      newCluster.start();
     }
     db.commit();
   }
+
 
   public List<ClusterStateType> getClusters()
   {

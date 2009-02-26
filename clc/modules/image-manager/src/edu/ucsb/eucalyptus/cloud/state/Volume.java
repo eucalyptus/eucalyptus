@@ -1,10 +1,12 @@
 package edu.ucsb.eucalyptus.cloud.state;
 
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import org.hibernate.annotations.*;
+import edu.ucsb.eucalyptus.util.StorageProperties;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.Entity;
-import javax.persistence.*;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
 
 @Entity
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
@@ -16,9 +18,11 @@ public class Volume extends AbstractIsomorph {
   private Integer size;
   private String cluster;
   private String parentSnapshot;
+  private String remoteDevice;
+  private String localDevice;
 
   public Volume() {
-    super( null, null );
+    super( );
   }
 
   public Volume( final String userName, final String displayName, final Integer size, final String cluster, final String parentSnapshot ) {
@@ -32,15 +36,37 @@ public class Volume extends AbstractIsomorph {
     super( userName, displayName );
   }
 
+  public static Volume named( String userName, String volumeId ) {
+    Volume v = new Volume(  );
+    v.setDisplayName( volumeId );
+    v.setUserName( userName );
+    return v;
+  }
+
+
+  public static Volume ownedBy( String userName ) {
+    Volume v = new Volume(  );
+    v.setUserName( userName );
+    return v;
+  }
+
   public String mapState( ) {
     switch(this.getState()) {
       case GENERATING: return "creating";
       case EXTANT: return "available";
       case ANNIHILATING: return "deleting";
       case ANNILATED: return "deleted";
-      case ASSPLODED: return "failed";      
-      default: return null;
+      case FAIL: return "failed";
+      default: return "unavailable";
     }
+  }
+
+  public void setMappedState( final String state ) {
+    if( StorageProperties.Status.failed.toString().equals( state ) ) this.setState( State.FAIL );
+    else if(StorageProperties.Status.creating.toString().equals( state ) ) this.setState( State.GENERATING );
+    else if(StorageProperties.Status.available.toString().equals( state ) ) this.setState( State.EXTANT );
+    else if("in-use".equals( state ) ) this.setState( State.BUSY );
+    else this.setState( State.ANNILATED );
   }
 
   public Object morph( final Object o ) {
@@ -53,7 +79,7 @@ public class Volume extends AbstractIsomorph {
     vol.setVolumeId( this.getDisplayName() );
     vol.setSnapshotId( this.getParentSnapshot() );
     vol.setStatus( this.mapState() );
-    vol.setSize( this.getState().toString() );
+    vol.setSize( (this.getSize() == -1) || (this.getSize() == null)? null : this.getSize().toString() );
     return vol;
   }
 
@@ -79,5 +105,21 @@ public class Volume extends AbstractIsomorph {
 
   public void setParentSnapshot( final String parentSnapshot ) {
     this.parentSnapshot = parentSnapshot;
+  }
+
+  public String getRemoteDevice() {
+    return remoteDevice;
+  }
+
+  public void setRemoteDevice( final String remoteDevice ) {
+    this.remoteDevice = remoteDevice;
+  }
+
+  public String getLocalDevice() {
+    return localDevice;
+  }
+
+  public void setLocalDevice( final String localDevice ) {
+    this.localDevice = localDevice;
   }
 }

@@ -17,7 +17,7 @@ public class TerminateInstancesType extends VmControlMessage {
   def TerminateInstancesType() {}
 
   def TerminateInstancesType(String instanceId) {
-      this.instancesSet.add(instanceId);
+    this.instancesSet.add(instanceId);
   }
 
   def TerminateInstancesType(String instanceId, EucalyptusMessage parent) {
@@ -117,12 +117,10 @@ public class GetConsoleOutputResponseType extends VmControlMessage {
   String output;
 }
 public class GetConsoleOutputType extends VmControlMessage {
-
   String instanceId;
 }
 /** *******************************************************************************/
 public class ReservationInfoType extends EucalyptusData {
-
   String reservationId;
   String ownerId;
   ArrayList<String> groupSet = new ArrayList<String>();
@@ -136,10 +134,8 @@ public class ReservationInfoType extends EucalyptusData {
 
   def ReservationInfoType() {
   }
-
 }
 public class RunningInstancesItemType extends EucalyptusData {
-
   String instanceId;
   String imageId;
   String stateCode;
@@ -161,12 +157,10 @@ public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 200
   String deviceName;
 }
 public class InstanceStateType extends EucalyptusData {
-
   int code;
   String name;
 }
 public class TerminateInstancesItemType extends EucalyptusData {
-
   String instanceId;
   String previousStateCode;
   String previousStateName;
@@ -183,6 +177,5 @@ public class TerminateInstancesItemType extends EucalyptusData {
 
   def TerminateInstancesItemType() {
   }
-
 }
 

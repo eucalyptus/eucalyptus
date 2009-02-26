@@ -51,6 +51,7 @@ typedef struct vnetConfig_t {
   
   publicip publicips[NUMBER_OF_PUBLIC_IPS];
 
+  char iptables[32768];
 } vnetConfig;
 
 enum {NC, CC, CLC};
@@ -67,7 +68,7 @@ int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetAddDev(vnetConfig *vnetconfig, char *dev);
 int vnetDelDev(vnetConfig *vnetconfig, char *dev);
 
-int vnetGenerateDHCP(vnetConfig *vnetconfig);
+int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts);
 int vnetKickDHCP(vnetConfig *vnetconfig);
 
 int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network);
@@ -76,6 +77,8 @@ int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network);
 int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName, char *protocol, int minPort, int maxPort);
 int vnetCreateChain(vnetConfig *vnetconfig, char *userName, char *netName);
 int vnetFlushTable(vnetConfig *vnetconfig, char *userName, char *netName);
+int vnetRestoreTablesFromMemory(vnetConfig *vnetconfig);
+int vnetSaveTablesToMemory(vnetConfig *vnetconfig);
 
 int vnetAddPublicIP(vnetConfig *vnetconfig, char *ip);
 int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip);

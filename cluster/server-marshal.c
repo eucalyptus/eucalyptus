@@ -696,6 +696,7 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   axutil_date_time_t *dt=NULL;
   adb_virtualMachineType_t *vm=NULL;
   adb_netConfigType_t *netconf=NULL;
+  adb_volumeType_t *vol=NULL;
   int i;
 
   dt = axutil_date_time_create_with_offset(env, src->ts - time(NULL));
@@ -721,6 +722,16 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
     }
   }
   
+  for (i=0; i<src->volumesSize; i++) {
+    vol = adb_volumeType_create(env);
+    adb_volumeType_set_volumeId(vol, env, src->volumes[i].volumeId);
+    adb_volumeType_set_remoteDev(vol, env, src->volumes[i].remoteDev);
+    adb_volumeType_set_localDev(vol, env, src->volumes[i].localDev);
+    adb_volumeType_set_state(vol, env, src->volumes[i].stateName);
+
+    adb_ccInstanceType_add_volumes(dst, env, vol);
+  }
+
   netconf = adb_netConfigType_create(env);
   adb_netConfigType_set_privateMacAddress(netconf, env, src->ccnet.privateMac);
   adb_netConfigType_set_publicMacAddress(netconf, env, src->ccnet.publicMac);

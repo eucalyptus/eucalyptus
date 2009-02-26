@@ -18,6 +18,7 @@ public class SystemConfigTable extends VerticalPanel {
 	private static TextBox maxBuckets_box = new TextBox();
 	private static TextBox maxBucketSize_box = new TextBox();
 	private static TextBox maxCacheSize_box = new TextBox();
+	private static TextBox totalSnapshots_box = new TextBox();
 	private static TextBox defaultKernel_box = new TextBox();
 	private static TextBox defaultRamdisk_box = new TextBox();
 	
@@ -102,7 +103,7 @@ public class SystemConfigTable extends VerticalPanel {
 		
 		// walrus params
 		this.w_grid.clear ();
-		this.w_grid.resize ( 3, 2 );
+		this.w_grid.resize ( 4, 2 );
         this.w_grid.getColumnFormatter().setWidth(0, "190");
         this.w_grid.getColumnFormatter().setWidth(1, "260");
 		i = 0;
@@ -138,19 +139,28 @@ public class SystemConfigTable extends VerticalPanel {
 		hpanel.add ( new HTML ("&nbsp; MB"));
 		
 		// 3rd row
-		this.w_grid.setWidget( i, 0, new Label( "Max cache size:" ) );
-        this.w_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		HorizontalPanel hpanel3 = new HorizontalPanel ();
 		hpanel3.setSpacing (0);
 		this.w_grid.setWidget( i++, 1, hpanel3 );
-		
 		maxCacheSize_box.addChangeListener (new ChangeCallback (this));
         maxCacheSize_box.setVisibleLength(10);
 		maxCacheSize_box.setText ("" + SystemConfig.getStorageMaxCacheSizeInMB());
 		maxCacheSize_box.addFocusListener (new FocusHandler (w_hint,
 			"You are urged to consult the documentation before changing the default value!"));
 		hpanel3.add ( maxCacheSize_box );
-		hpanel3.add ( new HTML ("&nbsp; MB"));
+		hpanel3.add ( new HTML ("&nbsp; MB of disk are reserved for cache"));
+		
+		// 4th row
+		HorizontalPanel hpanel4 = new HorizontalPanel ();
+		hpanel4.setSpacing (0);
+		this.w_grid.setWidget( i++, 1, hpanel4 );
+		totalSnapshots_box.addChangeListener (new ChangeCallback (this));
+        totalSnapshots_box.setVisibleLength(10);
+		totalSnapshots_box.setText ("" + SystemConfig.getStorageSnapshotsTotalInGB());
+		totalSnapshots_box.addFocusListener (new FocusHandler (w_hint,
+			"You are urged to consult the documentation before changing the default value!"));
+		hpanel4.add ( totalSnapshots_box );
+		hpanel4.add ( new HTML ("&nbsp; GB of disk are reserved for snapshots"));
 	}
 
 	public SystemConfigWeb getSystemConfig()
@@ -170,6 +180,7 @@ public class SystemConfigTable extends VerticalPanel {
 		this.SystemConfig.setStorageMaxBucketsPerUser  (Integer.parseInt(this.maxBuckets_box.getText()));
 		this.SystemConfig.setStorageMaxBucketSizeInMB  (Integer.parseInt(this.maxBucketSize_box.getText()));
 		this.SystemConfig.setStorageMaxCacheSizeInMB   (Integer.parseInt(this.maxCacheSize_box.getText()));
+		this.SystemConfig.setStorageSnapshotsTotalInGB (Integer.parseInt(this.totalSnapshots_box.getText()));
 		this.SystemConfig.setDefaultKernelId           (this.defaultKernel_box.getText());
 		this.SystemConfig.setDefaultRamdiskId          (this.defaultRamdisk_box.getText());
 	}

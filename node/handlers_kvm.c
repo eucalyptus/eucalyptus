@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#define __USE_GNU /* strnlen */
 #include <string.h> /* strlen, strcpy */
 #include <time.h>
 #include <limits.h> /* INT_MAX */
@@ -40,9 +41,6 @@ static int cores_max      = 0;
 static char config_network_path [BUFSIZE];
 static int  config_network_port = NC_NET_PORT_DEFAULT;
 
-/* for kvm driver, we need the instance path */
-static char config_instance_path [BUFSIZE] = "";
-
 static char * admin_user_id = EUCALYPTUS_ADMIN;
 static char gen_kvm_libvirt_xml_command_path [BUFSIZE] = "";
 static char get_kvm_info_command_path [BUFSIZE] = "";
@@ -55,6 +53,7 @@ extern vnetConfig *vnetconfig;
 extern sem * xen_sem; /* semaphore for serializing domain creation */
 extern sem * inst_sem; /* semaphore for guarding access to global instance structs */
 extern bunchOfInstances * global_instances; /* will be initiated upon first call */
+static virConnectPtr conn = NULL; /* global hypervisor connection used by all calls */
 
 extern const int unbooted_cleanup_threshold; /* after this many seconds any unbooted and SHUTOFF domains will be cleaned up */
 extern const int teardown_state_duration; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
@@ -101,6 +100,24 @@ static void change_state (ncInstance * instance, instance_states state)
     strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
 }
 
+/* verify the connection to hypervisor, try to reopen it
+ * if it is closed, and, failing that, return 1 */
+static int check_hypervisor_conn ()
+{
+    char * uri;
+
+    if ( conn == NULL ||
+         ( uri = virConnectGetURI (conn) ) == NULL ) {
+        conn = virConnectOpen ("qemu:///system");
+        if ( conn == NULL) {
+            logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
+            return ERROR;
+        }
+    }
+    
+    return OK;
+}
+
 static void refresh_instance_info (ncInstance * instance)
 {
     int now = instance->state;
@@ -109,10 +126,8 @@ static void refresh_instance_info (ncInstance * instance)
     if (now==TEARDOWN)
         return;
     
-    /* try to get domain state from Xen */
-    virConnectPtr conn = virConnectOpen ("qemu:///system"); /* NULL means local hypervisor */
-    if (conn == NULL) {
-        logprintfl (EUCAERROR, "warning: failed to connect to hypervisor\n");
+    /* try to get domain state from KVM */
+    if (check_hypervisor_conn ()) {
         return;
     }
     virDomainPtr dom = virDomainLookupByName (conn, instance->instanceId);
@@ -126,7 +141,6 @@ static void refresh_instance_info (ncInstance * instance)
             change_state (instance, SHUTOFF);
         }
         /* else 'now' stays in SHUTFOFF, BOOTING or CRASHED */
-        virConnectClose (conn);
         return;
     }
     virDomainInfo info;
@@ -135,7 +149,6 @@ static void refresh_instance_info (ncInstance * instance)
         logprintfl (EUCAWARN, "warning: failed to get informations for domain %s\n", instance->instanceId);
         /* what to do? hopefully we'll find out more later */
         virDomainFree (dom);
-        virConnectClose (conn);
         return;
     } 
     int xen = info.state;
@@ -168,7 +181,6 @@ static void refresh_instance_info (ncInstance * instance)
         return;
     }
     virDomainFree(dom);
-    virConnectClose(conn);
 
     /* if instance is running, try to find out its IP address */
     if (instance->state==RUNNING ||
@@ -290,9 +302,9 @@ static int get_value (char * s, const char * name, long long * valp)
 static int doInitialize (void) 
 {
     struct stat mystat;
-    char config [BUFSIZE];
-    char *brname, *s, *home, *pubInterface, *bridge, *mode, *inst_path;
-    int error, rc;
+    char config [BUFSIZE], logpath[BUFSIZE];
+    char *brname, *s, *home, *pubInterface, *bridge, *mode, *loglevelstr;
+    int error, rc, loglevel;
 
     /* read in configuration - this should be first! */
     int do_warn = 0;
@@ -304,15 +316,28 @@ static int doInitialize (void)
         home = strdup (home);
     }
 
-    snprintf(config, BUFSIZE, "%s/var/log/eucalyptus/nc.log", home);
-    logfile(config, EUCADEBUG); // TODO: right level?
+    snprintf(logpath, BUFSIZE, "%s/var/log/eucalyptus/nc.log", home);
+    logfile(logpath, EUCADEBUG); // TODO: right level?
     if (do_warn) 
         logprintfl (EUCAWARN, "env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
 
     snprintf(config, BUFSIZE, EUCALYPTUS_CONF_LOCATION, home);
     if (stat(config, &mystat)==0) {
       logprintfl (EUCAINFO, "NC is looking for configuration in %s\n", config);
-      
+
+      // reset loglevel to that set in config file (if any)
+      loglevelstr = getConfString(config, "LOGLEVEL");
+      if (loglevelstr) {
+	if (!strcmp(loglevelstr,"DEBUG")) {loglevel=EUCADEBUG;}
+	else if (!strcmp(loglevelstr,"INFO")) {loglevel=EUCAINFO;}
+	else if (!strcmp(loglevelstr,"WARN")) {loglevel=EUCAWARN;}
+	else if (!strcmp(loglevelstr,"ERROR")) {loglevel=EUCAERROR;}
+	else if (!strcmp(loglevelstr,"FATAL")) {loglevel=EUCAFATAL;}
+	else {loglevel=EUCADEBUG;}
+	logfile(logpath, loglevel);
+	free(loglevelstr);
+      }
+
 #define GET_VAR_INT(var,name) \
             if (get_conf_var(config, name, &s)>0){\
                 var = atoi(s);\
@@ -340,24 +365,21 @@ static int doInitialize (void)
     /* set up paths of Eucalyptus commands NC relies on */
     snprintf (gen_kvm_libvirt_xml_command_path, BUFSIZE, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, home, home);
     snprintf (get_kvm_info_command_path,    BUFSIZE, EUCALYPTUS_GET_KVM_INFO,    home, home);
-    
+
+    /* open the connection to hypervisor */
+    if (check_hypervisor_conn () == ERROR) {
+        free(home);
+        return ERROR_FATAL;
+    }
+
     /* "adopt" currently running Xen instances */
     {
-        virConnectPtr conn = NULL;
         int dom_ids[MAXDOMS];
         int num_doms = 0;
         
-        logprintfl (EUCAINFO, "looking for existing Xen domains\n");
+        logprintfl (EUCAINFO, "looking for existing KVM domains\n");
         virSetErrorFunc (NULL, libvirt_error_handler);
 
-        /* check with Xen */
-        conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
-        if (conn == NULL) {
-            logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
-            free(home);
-            return ERROR_FATAL;
-        }
-        
         num_doms = virConnectListDomains(conn, dom_ids, MAXDOMS);
         if (num_doms > 0) {
             virDomainPtr dom = NULL;
@@ -421,7 +443,6 @@ static int doInitialize (void)
         } else {
             logprintfl (EUCAWARN, "WARNING: failed to find out about running domains\n");
         }
-        virConnectClose (conn);
     }
 
     /* network startup */
@@ -432,14 +453,6 @@ static int doInitialize (void)
     mode = getConfString(config, "VNET_MODE");
 
     vnetInit(vnetconfig, mode, home, config_network_path, NC, pubInterface, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge);
-    
-    inst_path = getConfString(config, "INSTANCE_PATH");
-    if (inst_path) {
-      snprintf (config_instance_path, BUFSIZE, "%s", inst_path);
-    } else {
-      logprintfl(EUCAFATAL, "INSTANCE_PATH not defined in config, cannot continue\n");
-      return ERROR_FATAL;
-    }
 
     /* cleanup from previous runs and verify integrity of instances
      * directory */
@@ -527,11 +540,13 @@ static int get_instance_xml (char *userId, char *instanceId, int ramdisk, char *
 {
     char buf [BUFSIZE];
 
-    /* TODO: add --ephemeral? */
     if (ramdisk) {
         snprintf (buf, BUFSIZE, "%s --ramdisk", gen_kvm_libvirt_xml_command_path);
     } else {
         snprintf (buf, BUFSIZE, "%s", gen_kvm_libvirt_xml_command_path);
+    }
+    if (params->diskSize > 0) { /* ephemeral disk was requested */
+        strncat (buf, " --ephemeral", BUFSIZE);
     }
     * xml = system_output (buf);
     if ( ( * xml ) == NULL ) {
@@ -558,15 +573,13 @@ static int get_instance_xml (char *userId, char *instanceId, int ramdisk, char *
 void * kvm_startup_thread (void * arg)
 {
     ncInstance * instance = (ncInstance *)arg;
-    virConnectPtr conn = NULL;
     virDomainPtr dom = NULL;
     char * disk_path, * xml;
     char *brname=NULL;
     int error;
     
-    conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
-    if (conn == NULL) {
-        logprintfl (EUCAFATAL, "failed to connect to hypervisor to start instance %s, abandoning it\n", instance->instanceId);
+    if (check_hypervisor_conn () == ERROR) {
+        logprintfl (EUCAFATAL, "could not start instance %s, abandoning it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         return NULL;
     }
@@ -575,7 +588,6 @@ void * kvm_startup_thread (void * arg)
     if ( error ) {
         logprintfl (EUCAFATAL, "start network failed for instance %s, terminating it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
-        virConnectClose (conn);
         return NULL;
     }
     logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
@@ -585,17 +597,15 @@ void * kvm_startup_thread (void * arg)
                                  instance->kernelId, instance->kernelURL, 
                                  instance->ramdiskId, instance->ramdiskURL, 
                                  instance->instanceId, instance->keyName, 
-                                 &disk_path, xen_sem, 1);
+                                 &disk_path, xen_sem, 1, instance->params.diskSize*1024);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
-        virConnectClose (conn);
         return NULL;
     }
     if (instance->state!=BOOTING) {
         logprintfl (EUCAFATAL, "Startup of instance %s was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
-        virConnectClose (conn);
         return NULL;
     }
     
@@ -609,7 +619,6 @@ void * kvm_startup_thread (void * arg)
     if (error) {
         logprintfl (EUCAFATAL, "Failed to create libvirt XML config for instance %s\n", instance->instanceId);
         change_state (instance, SHUTOFF);
-        virConnectClose(conn);
         return NULL;
     }
     
@@ -626,13 +635,11 @@ void * kvm_startup_thread (void * arg)
     if (dom == NULL) {
         logprintfl (EUCAFATAL, "hypervisor failed to start domain\n");
         change_state (instance, SHUTOFF);
-        virConnectClose(conn);
         return NULL;
     }
     eventlog("NC", instance->userId, "", "instanceBoot", "begin"); /* TODO: bring back correlationId */
     
     virDomainFree(dom);
-    virConnectClose(conn);
     logprintfl (EUCAINFO, "started VM instance %s\n", instance->instanceId);
     
     return NULL;
@@ -729,16 +736,15 @@ static void * rebooting_thread (void *arg)
     ncInstance * instance = (ncInstance *)arg;
 
     char xml_path [1024];
-    snprintf (xml_path, 1024, "%s/%s/%s/libvirt.xml", config_instance_path, instance->userId, instance->instanceId);
+    snprintf (xml_path, 1024, "%s/%s/%s/libvirt.xml", scGetInstancePath(), instance->userId, instance->instanceId);
     char * xml = file2str (xml_path);
     if (xml == NULL) {
         logprintfl (EUCAERROR, "cannot obtain XML file %s\n", xml_path);
         return NULL;
     }
 
-    virConnectPtr conn = virConnectOpen("qemu:///system");
-    if (conn == NULL) {
-        logprintfl (EUCAFATAL, "failed to connect to hypervisor to restart instance %s, abandoning it\n", instance->instanceId);
+    if (check_hypervisor_conn () == ERROR) {
+        logprintfl (EUCAFATAL, "cannot restart instance %s, abandoning it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         free (xml);
         return NULL;
@@ -746,7 +752,6 @@ static void * rebooting_thread (void *arg)
     
     virDomainPtr dom = virDomainLookupByName(conn, instance->instanceId);
     if (dom == NULL) {
-        virConnectClose(conn);
         free (xml);
         return NULL;
     }
@@ -757,7 +762,6 @@ static void * rebooting_thread (void *arg)
     sem_v (xen_sem);
     virDomainFree(dom);
     if (error) {
-        virConnectClose(conn);
         free (xml);
         return NULL;
     }
@@ -771,12 +775,10 @@ static void * rebooting_thread (void *arg)
     if (dom==NULL) {
         logprintfl (EUCAFATAL, "Failed to restart instance %s\n", instance->instanceId);
         change_state (instance, SHUTOFF);
-        virConnectClose(conn);
         return NULL;
     }
     
     virDomainFree(dom);
-    virConnectClose(conn);
     return NULL;
 }
 
@@ -816,7 +818,7 @@ static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **console
     return(1);
   }
   
-  snprintf(console_file, 1024, "%s/%s/%s/console.log", config_instance_path, meta->userId, instanceId);
+  snprintf(console_file, 1024, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
   
   rc = stat(console_file, &statbuf);
   if (rc < 0) {
@@ -852,9 +854,8 @@ static int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdow
     sem_v (inst_sem);
     if ( instance == NULL ) return NOT_FOUND;
 
-    /* try stopping the Xen domain */
-    virConnectPtr conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
-    if (conn == NULL) {
+    /* try stopping the KVM domain */
+    if (check_hypervisor_conn () == ERROR) {
         logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
     } else {
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
@@ -872,7 +873,6 @@ static int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdow
                 logprintfl (EUCAWARN, "warning: domain %s to be terminated not running on hypervisor\n", instanceId);
             }
         }
-        virConnectClose (conn);
     }
 
     /* change the state and let the monitoring_thread clean up state */
@@ -1035,10 +1035,8 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
         return ERROR;
     }
 
-    /* try attaching to the Xen domain */
-    virConnectPtr conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
-    if (conn == NULL) {
-        logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
+    /* try attaching to the KVM domain */
+    if (check_hypervisor_conn () == ERROR) {
         ret = ERROR;
 
     } else {
@@ -1051,7 +1049,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
-	    //            int err = virDomainAttachDevice (dom, xml);
+            err = virDomainAttachDevice (dom, xml);
             sem_v (xen_sem);
             if (err) {
                 logprintfl (EUCAERROR, "AttachVolume() failed (err=%d) XML=%s\n", err, xml);
@@ -1066,7 +1064,6 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
             }
             ret = ERROR;
         }
-        virConnectClose (conn);
     }
     return ret;
 }
@@ -1092,10 +1089,8 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
         return ERROR;
     }
 
-    /* try attaching to the Xen domain */
-    virConnectPtr conn = virConnectOpen("qemu:///system"); /* NULL means local hypervisor */
-    if (conn == NULL) {
-        logprintfl (EUCAFATAL, "Failed to connect to hypervisor\n");
+    /* try attaching to the KVM domain */
+    if (check_hypervisor_conn () == ERROR) {
         ret = ERROR;
 
     } else {
@@ -1107,11 +1102,11 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
-//            int err = virDomainDetachDevice (dom, xml);
+            err = virDomainDetachDevice (dom, xml);
             sem_v (xen_sem);
             if (err) {
-                logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
-                ret = ERROR;
+	      logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
+	      ret = ERROR;
             } else {
                 logprintfl (EUCAINFO, "detached %s as %s in domain %s\n", remoteDev, localDev, instanceId);
             }
@@ -1122,7 +1117,6 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
             }
             ret = ERROR;
         }
-        virConnectClose (conn);
     }
     return ret;
 }

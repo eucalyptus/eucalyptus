@@ -68,7 +68,7 @@ public class Messaging {
       MuleMessage reply = getClient().send( dest, msg, null );
 
       if ( reply.getExceptionPayload() != null )
-        throw new EucalyptusCloudException( reply.getExceptionPayload().getRootException() );
+        throw new EucalyptusCloudException( reply.getExceptionPayload().getRootException().getMessage(), reply.getExceptionPayload().getRootException() );
       else
         return reply.getPayload();
     }

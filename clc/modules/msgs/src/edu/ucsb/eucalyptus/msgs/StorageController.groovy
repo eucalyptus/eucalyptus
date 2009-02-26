@@ -51,6 +51,7 @@ public class StorageErrorMessageType extends EucalyptusMessage {
     this.requestId = requestId;
     this.httpCode = httpCode;
   }
+
   public String toString() {
     return "StrorageErrorMessage:" + message;
   }
@@ -79,6 +80,8 @@ public class GetStorageVolumeResponseType extends StorageResponseType {
 public class UpdateStorageConfigurationType extends StorageRequestType {
   String storageRootDirectory;
   String storageInterface;
+  Integer maxTotalVolumeSize;
+  Integer maxTotalSnapshotSize;
   Integer maxVolumeSize;
   Integer maxSnapshotSize;
 }
@@ -87,9 +90,9 @@ public class UpdateStorageConfigurationResponseType extends StorageResponseType 
 }
 
 public class CreateStorageVolumeType extends StorageRequestType {
-    String volumeId;
-    String size;
-    String snapshotId;
+  String volumeId;
+  String size;
+  String snapshotId;
 
   def CreateStorageVolumeType() {
   }
@@ -110,8 +113,8 @@ public class CreateStorageVolumeResponseType extends StorageResponseType {
 }
 
 public class CreateStorageSnapshotType extends StorageRequestType {
-    String volumeId;
-    String snapshotId;
+  String volumeId;
+  String snapshotId;
 
   def CreateStorageSnapshotType(final String volumeId, final String snapshotId) {
     this.volumeId = volumeId;
@@ -165,7 +168,9 @@ public class StorageVolume extends EucalyptusData {
   String snapshotId;
   String status;
   String createTime;
+  String actualDeviceName;
   def StorageVolume() {}
+
   def StorageVolume(String volumeId) {
     this.volumeId = volumeId;
   }
@@ -173,6 +178,14 @@ public class StorageVolume extends EucalyptusData {
 
 public class DescribeStorageVolumesType extends StorageRequestType {
   ArrayList<String> volumeSet = new ArrayList<String>();
+
+  def DescribeStorageVolumesType() {
+  }
+
+  def DescribeStorageVolumesType(final volumeSet) {
+    this.volumeSet = volumeSet;
+  }
+
 }
 public class DescribeStorageVolumesResponseType extends StorageResponseType {
   ArrayList<StorageVolume> volumeSet = new ArrayList<StorageVolume>();
@@ -188,15 +201,24 @@ public class StorageSnapshot extends EucalyptusData {
 
 public class DescribeStorageSnapshotsType extends StorageRequestType {
   ArrayList<String> snapshotSet = new ArrayList<String>();
+
+  def DescribeStorageSnapshotsType() {
+  }
+
+  def DescribeStorageSnapshotsType(final snapshotSet) {
+    this.snapshotSet = snapshotSet;
+  }
+
 }
 public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
-  ArrayList<StorageSnapshot> snapshotSet = new ArrayList<Snapshot>();
+  ArrayList<StorageSnapshot> snapshotSet = new ArrayList<StorageSnapshot>();
 }
 
 public class StorageControllerHeartbeatMessage extends HeartbeatMessage {
+
   def StorageControllerHeartbeatMessage() {}
 
-  def StorageControllerHeartbeatMessage(String heartbeatId) {
+  def StorageControllerHeartbeatMessage(final String heartbeatId) {
     super(heartbeatId);
   }
 }

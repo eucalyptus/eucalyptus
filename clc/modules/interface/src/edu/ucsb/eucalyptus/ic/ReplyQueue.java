@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.ic;
 
 import edu.ucsb.eucalyptus.cloud.RequestTransactionScript;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 import edu.ucsb.eucalyptus.util.ReplyCoordinator;
@@ -105,7 +106,9 @@ public class ReplyQueue {
 
   private EucalyptusMessage parsePayload( Object payload ) throws Exception {
     if ( payload instanceof EucalyptusMessage ) {
-      return (EucalyptusMessage) payload;
+      return ( EucalyptusMessage ) payload;
+    } else if ( payload instanceof VmAllocationInfo ) {
+      return ( ( VmAllocationInfo ) payload ).getRequest();
     } else {
       return ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( ( String ) payload );
     }

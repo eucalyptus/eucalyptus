@@ -59,6 +59,7 @@ public class VolumeTest extends TestCase {
         System.out.println(createVolumeResponse); 
         Thread.sleep(1000);
         DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
+
         describeVolumesRequest.setUserId(userId);
         ArrayList<String> volumeSet = new ArrayList<String>();
         volumeSet.add(volumeId);

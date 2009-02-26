@@ -65,7 +65,12 @@ public class ImageManager {
     RunInstancesType msg = vmAllocInfo.getRequest();
     ImageInfo searchDiskInfo = new ImageInfo( msg.getImageId() );
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
-    ImageInfo diskInfo = db.getUnique( searchDiskInfo );
+    ImageInfo diskInfo = null;
+    try {
+      diskInfo = db.getUnique( searchDiskInfo );
+    } catch ( EucalyptusCloudException e ) {
+      throw new EucalyptusCloudException( "Failed to find kernel image: " + msg.getImageId() );
+    }
     UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( msg.getUserId() ) );
     if ( !diskInfo.isAllowed( user ) ) {
       db.rollback();
@@ -125,7 +130,13 @@ public class ImageManager {
     GetObjectType msg = new GetObjectType( imagePathParts[ 0 ], imagePathParts[ 1 ], true, false, true );
     msg.setUserId( EucalyptusProperties.NAME );
     msg.setEffectiveUserId( EucalyptusProperties.NAME );
-    reply = ( GetObjectResponseType ) Messaging.send( WalrusProperties.WALRUS_REF, msg );
+    try {
+      reply = ( GetObjectResponseType ) Messaging.send( WalrusProperties.WALRUS_REF, msg );
+    } catch ( EucalyptusCloudException e ) {
+      LOG.error( e );
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Invalid manifest reference: " + imgInfo.getImageLocation() );
+    }
 
     if ( reply == null || reply.getBase64Data() == null ) throw new EucalyptusCloudException( "Invalid manifest reference: " + imgInfo.getImageLocation() );
     XMLParser parser = new XMLParser( reply.getBase64Data() );
@@ -176,34 +187,35 @@ public class ImageManager {
   }
 
   private void checkStoredImage( final ImageInfo imgInfo ) throws EucalyptusCloudException {
-    if ( imgInfo != null ) try {
-      Document inputSource = null;
+    if ( imgInfo != null )
       try {
-        String[] imagePathParts = imgInfo.getImageLocation().split( "/" );
-        inputSource = ImageManager.getManifestData( imgInfo.getImageOwnerId(), imagePathParts[ 0 ], imagePathParts[ 1 ] );
+        Document inputSource = null;
+        try {
+          String[] imagePathParts = imgInfo.getImageLocation().split( "/" );
+          inputSource = ImageManager.getManifestData( imgInfo.getImageOwnerId(), imagePathParts[ 0 ], imagePathParts[ 1 ] );
+        } catch ( EucalyptusCloudException e ) {
+          throw e;
+        }
+        XPath xpath = null;
+        xpath = XPathFactory.newInstance().newXPath();
+        String signature = null;
+        try {
+          signature = ( String ) xpath.evaluate( "/manifest/signature/text()", inputSource, XPathConstants.STRING );
+        } catch ( XPathExpressionException e ) {}
+        if ( !imgInfo.getSignature().equals( signature ) )
+          throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
+        LOG.info( "Checking image: " + imgInfo.getImageLocation() );
+        imgInfo.checkValid();
+        LOG.info( "Triggering caching: " + imgInfo.getImageLocation() );
+        try {
+          imgInfo.triggerCaching();
+        } catch ( Exception e ) {}
       } catch ( EucalyptusCloudException e ) {
-        throw e;
+        LOG.error( e );
+        LOG.error( "Failed bukkit check! Invalidating registration: " + imgInfo.getImageLocation() );
+        this.invalidateImageById( imgInfo.getImageId() );
+        throw new EucalyptusCloudException( "Failed check! Invalidating registration: " + imgInfo.getImageLocation() );
       }
-      XPath xpath = null;
-      xpath = XPathFactory.newInstance().newXPath();
-      String signature = null;
-      try {
-        signature = ( String ) xpath.evaluate( "/manifest/signature/text()", inputSource, XPathConstants.STRING );
-      } catch ( XPathExpressionException e ) {}
-
-      if ( !imgInfo.getSignature().equals( signature ) )
-        throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
-      LOG.info( "Checking image: " + imgInfo.getImageLocation() );
-      imgInfo.checkValid();
-      LOG.info( "Triggering caching: " + imgInfo.getImageLocation() );
-      try {
-        imgInfo.triggerCaching();
-      } catch ( Exception e ) {}
-    } catch ( EucalyptusCloudException e ) {
-      LOG.error( e );
-      LOG.error( "Failed check! Invalidating registration: " + imgInfo.getImageLocation() );
-      this.invalidateImageById( imgInfo.getImageId() );
-    }
   }
 
   private VmImageInfo getVmImageInfo( final String walrusUrl, final ImageInfo diskInfo, final ImageInfo kernelInfo, final ImageInfo ramdiskInfo ) throws EucalyptusCloudException {
@@ -526,7 +538,7 @@ If you specify a list of executable users, only users that have launch permissio
   }
 
   public ConfirmProductInstanceResponseType ConfirmProductInstance( ConfirmProductInstanceType request ) throws EucalyptusCloudException {
-    ConfirmProductInstanceResponseType reply = (ConfirmProductInstanceResponseType) request.getReply();
+    ConfirmProductInstanceResponseType reply = ( ConfirmProductInstanceResponseType ) request.getReply();
     reply.set_return( false );
     VmInstance vm = null;
     try {

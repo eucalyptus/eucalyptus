@@ -46,14 +46,14 @@ import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
 import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
-import org.apache.tools.tar.TarEntry;
-import org.apache.tools.tar.TarInputStream;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
+import java.net.InetAddress;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -76,6 +76,9 @@ public class Bukkit {
 
     static StorageManager storageManager;
     static boolean shouldEnforceUsageLimits = true;
+    private static boolean enableSnapshots = false;
+
+    private static boolean sharedMode = false;
 
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
@@ -83,13 +86,24 @@ public class Bukkit {
         if(limits != null) {
             shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
         }
-        //NOTE: initializeForEBS MUST be called before exercizing any storage/EBS functionality
         initializeForEBS();
-        startupChecks();
     }
 
     public static void initializeForEBS() {
+        enableSnapshots = true;
         storageManager.initialize();
+        startupChecks();
+        try {
+            storageManager.checkPreconditions();
+        } catch(Exception ex) {
+            enableSnapshots = false;
+        }
+        //inform SC in case it is running on the same host
+        sharedMode = true;
+    }
+
+    public static boolean getSharedMode() {
+        return sharedMode;
     }
 
     public static void startupChecks() {
@@ -121,7 +135,6 @@ public class Bukkit {
         db.commit();
     }
 
-    //For unit testing
     public Bukkit () {}
 
     public InitializeWalrusResponseType InitializeWalrus(InitializeWalrusType request) {
@@ -270,7 +283,7 @@ public class Bukkit {
             ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
             for(BucketInfo bucketInfo: bucketInfoList) {
-                buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z"));
+                buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN)));
             }
 
             CanonicalUserType owner = new CanonicalUserType(user.getQueryId(), user.getUserName());
@@ -316,6 +329,7 @@ public class Bukkit {
 
                     if(grantUserInfos.size() > 0) {
                         UserInfo grantUserInfo = grantUserInfos.get(0);
+                        bucket.readPermissions(grants);
                         addPermission(grants, grantUserInfo, grantInfo);
                     }
                 }
@@ -346,24 +360,24 @@ public class Bukkit {
         CanonicalUserType user = new CanonicalUserType(userInfo.getQueryId(), userInfo.getUserName());
 
         if (grantInfo.isRead() && grantInfo.isWrite() && grantInfo.isReadACP() && grantInfo.isWriteACP()) {
-            grants.add(new Grant(user, "FULL_CONTROL"));
+            grants.add(new Grant(new Grantee(user), "FULL_CONTROL"));
             return;
         }
 
         if (grantInfo.isRead()) {
-            grants.add(new Grant(user, "READ"));
+            grants.add(new Grant(new Grantee(user), "READ"));
         }
 
         if (grantInfo.isWrite()) {
-            grants.add(new Grant(user, "WRITE"));
+            grants.add(new Grant(new Grantee(user), "WRITE"));
         }
 
         if (grantInfo.isReadACP()) {
-            grants.add(new Grant(user, "READ_ACP"));
+            grants.add(new Grant(new Grantee(user), "READ_ACP"));
         }
 
         if (grantInfo.isWriteACP()) {
-            grants.add(new Grant(user, "WRITE_ACP"));
+            grants.add(new Grant(new Grantee(user), "WRITE_ACP"));
         }
     }
 
@@ -372,7 +386,7 @@ public class Bukkit {
         String userId = request.getUserId();
 
         String bucketName = request.getBucket();
-        String objectName = request.getKey();
+        String objectKey = request.getKey();
 
         Long oldBucketSize = 0L;
 
@@ -395,11 +409,11 @@ public class Bukkit {
                 ObjectInfo foundObject = null;
                 List<ObjectInfo> objectInfos = bucket.getObjects();
                 for (ObjectInfo objectInfo: objectInfos) {
-                    if (objectInfo.getObjectName().equals(objectName)) {
+                    if (objectInfo.getObjectKey().equals(objectKey)) {
                         //key (object) exists. check perms
                         if (!objectInfo.canWrite(userId)) {
                             db.rollback();
-                            throw new AccessDeniedException(objectName);
+                            throw new AccessDeniedException(objectKey);
                         }
                         foundObject = objectInfo;
                         oldBucketSize = -foundObject.getSize();
@@ -407,28 +421,33 @@ public class Bukkit {
                     }
                 }
                 //write object to bucket
+                String objectName;
                 if (foundObject == null) {
                     //not found. create an object info
-                    foundObject = new ObjectInfo(objectName);
+                    foundObject = new ObjectInfo(objectKey);
                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                     foundObject.addGrants(userId, grantInfos, accessControlList);
                     foundObject.setGrants(grantInfos);
+                    objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
+                    foundObject.setObjectName(objectName);
                     objectInfos.add(foundObject);
                 } else {
                     //object already exists. see if we can modify acl
                     if (foundObject.canWriteACP(userId)) {
-                        List<GrantInfo> grantInfos = foundObject.getGrants();
+                        List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                         foundObject.addGrants(userId, grantInfos, accessControlList);
+                        foundObject.setGrants(grantInfos);
                     }
+                    objectName = foundObject.getObjectName();
                 }
-                foundObject.setObjectName(objectName);
+                foundObject.setObjectKey(objectKey);
                 foundObject.setOwnerId(userId);
-                foundObject.addMetaData(request.getMetaData());
+                foundObject.replaceMetaData(request.getMetaData());
                 //writes are unconditional
                 String randomKey = request.getRandomKey();
 
                 WalrusDataMessenger messenger = WalrusQueryDispatcher.getWriteMessenger();
-                String key = bucketName + "." + objectName;
+                String key = bucketName + "." + objectKey;
                 LinkedBlockingQueue<WalrusDataMessage> putQueue = messenger.getQueue(key, randomKey);
 
                 try {
@@ -447,7 +466,7 @@ public class Bukkit {
                             } catch (IOException ex) {
                                 LOG.warn(ex, ex);
                                 db.rollback();
-                                throw new EucalyptusCloudException(objectName);
+                                throw new EucalyptusCloudException(objectKey);
                             }
                             md5 = bytesToHex(digest.digest());
                             lastModified = new Date();
@@ -460,7 +479,7 @@ public class Bukkit {
                                 long newSize = bucketSize + oldBucketSize + size;
                                 if(newSize > WalrusProperties.MAX_BUCKET_SIZE) {
                                     db.rollback();
-                                    throw new EntityTooLargeException(objectName);
+                                    throw new EntityTooLargeException(objectKey);
                                 }
                                 bucket.setBucketSize(newSize);
                             }
@@ -523,7 +542,67 @@ public class Bukkit {
             throw new NoSuchBucketException(bucketName);
         }
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+        return reply;
+    }
+
+    public PostObjectResponseType PostObject (PostObjectType request) throws EucalyptusCloudException {
+        PostObjectResponseType reply = (PostObjectResponseType) request.getReply();
+
+        String bucketName = request.getBucket();
+        String key = request.getKey();
+
+        PutObjectType putObject = new PutObjectType();
+        putObject.setUserId(request.getUserId());
+        putObject.setBucket(bucketName);
+        putObject.setKey(key);
+        putObject.setRandomKey(request.getRandomKey());
+        putObject.setAccessControlList(request.getAccessControlList());
+        putObject.setContentLength(request.getContentLength());
+        putObject.setAccessKeyID(request.getAccessKeyID());
+        putObject.setEffectiveUserId(request.getEffectiveUserId());
+        putObject.setCredential(request.getCredential());
+        putObject.setIsCompressed(request.getIsCompressed());
+        putObject.setMetaData(request.getMetaData());
+        putObject.setStorageClass(request.getStorageClass());
+
+        PutObjectResponseType putObjectResponse = PutObject(putObject);
+
+        reply.setEtag(putObjectResponse.getEtag());
+        reply.setLastModified(putObjectResponse.getLastModified());
+        reply.set_return(putObjectResponse.get_return());
+        reply.setMetaData(putObjectResponse.getMetaData());
+        reply.setErrorCode(putObjectResponse.getErrorCode());
+        reply.setSize(putObjectResponse.getSize());
+        reply.setStatusMessage(putObjectResponse.getStatusMessage());
+
+        String successActionRedirect = request.getSuccessActionRedirect();
+        if(successActionRedirect != null) {
+            try {
+                java.net.URI addrUri = new URL(successActionRedirect).toURI();
+                InetAddress.getByName(addrUri.getHost());
+            } catch(Exception ex) {
+                LOG.warn(ex);
+            }
+            reply.setRedirectUrl(successActionRedirect);
+        } else {
+            Integer successActionStatus = request.getSuccessActionStatus();
+            if(successActionStatus != null) {
+                if((successActionStatus == 200) || (successActionStatus == 201)) {
+                    reply.setSuccessCode(successActionStatus);
+                    if(successActionStatus == 200) {
+                        return reply;
+                    } else {
+                        reply.setBucket(bucketName);
+                        reply.setKey(key);
+                        reply.setLocation(WalrusProperties.WALRUS_URL + "/" + bucketName + "/" + key);
+                    }
+                } else {
+                    reply.setSuccessCode(204);
+                    return reply;
+                }
+            }
+        }
         return reply;
     }
 
@@ -532,11 +611,11 @@ public class Bukkit {
         String userId = request.getUserId();
 
         String bucketName = request.getBucket();
-        String objectName = request.getKey();
+        String objectKey = request.getKey();
 
         String md5 = "";
         Long oldBucketSize = 0L;
-        Date lastModified = null;
+        Date lastModified;
 
         AccessControlListType accessControlList = request.getAccessControlList();
         if (accessControlList == null) {
@@ -553,11 +632,11 @@ public class Bukkit {
                 ObjectInfo foundObject = null;
                 List<ObjectInfo> objectInfos = bucket.getObjects();
                 for (ObjectInfo objectInfo: objectInfos) {
-                    if (objectInfo.getObjectName().equals(objectName)) {
+                    if (objectInfo.getObjectKey().equals(objectKey)) {
                         //key (object) exists. check perms
                         if (!objectInfo.canWrite(userId)) {
                             db.rollback();
-                            throw new AccessDeniedException(objectName);
+                            throw new AccessDeniedException(objectKey);
                         }
                         foundObject = objectInfo;
                         oldBucketSize = -foundObject.getSize();
@@ -565,12 +644,15 @@ public class Bukkit {
                     }
                 }
                 //write object to bucket
+                String objectName;
                 if (foundObject == null) {
                     //not found. create an object info
-                    foundObject = new ObjectInfo(objectName);
+                    foundObject = new ObjectInfo(objectKey);
                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                     foundObject.addGrants(userId, grantInfos, accessControlList);
                     foundObject.setGrants(grantInfos);
+                    objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
+                    foundObject.setObjectName(objectName);
                     objectInfos.add(foundObject);
                 } else {
                     //object already exists. see if we can modify acl
@@ -578,12 +660,14 @@ public class Bukkit {
                         List<GrantInfo> grantInfos = foundObject.getGrants();
                         foundObject.addGrants(userId, grantInfos, accessControlList);
                     }
+                    objectName = foundObject.getObjectName();
                 }
-                foundObject.setObjectName(objectName);
+                foundObject.setObjectKey(objectKey);
                 foundObject.setOwnerId(userId);
                 try {
                     //writes are unconditional
                     byte[] base64Data = request.getBase64Data().getBytes();
+                    foundObject.setObjectName(objectName);
                     storageManager.putObject(bucketName, objectName, base64Data, false);
                     md5 = Hashes.getHexString(Hashes.Digest.MD5.get().digest(base64Data));
                     foundObject.setEtag(md5);
@@ -594,12 +678,12 @@ public class Bukkit {
                         long newSize = bucketSize + oldBucketSize + size;
                         if(newSize > WalrusProperties.MAX_BUCKET_SIZE) {
                             db.rollback();
-                            throw new EntityTooLargeException(objectName);
+                            throw new EntityTooLargeException(objectKey);
                         }
                         bucket.setBucketSize(newSize);
                     }
                     //Add meta data if specified
-                    foundObject.addMetaData(request.getMetaData());
+                    foundObject.replaceMetaData(request.getMetaData());
 
                     //TODO: add support for other storage classes
                     foundObject.setStorageClass("STANDARD");
@@ -623,7 +707,7 @@ public class Bukkit {
         db.commit();
 
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
         return reply;
     }
 
@@ -643,7 +727,7 @@ public class Bukkit {
             if (bucket.canWrite(userId)) {
                 List<ObjectInfo> objectInfos = bucket.getObjects();
                 for (ObjectInfo objectInfo: objectInfos) {
-                    if (objectInfo.getObjectName().equals(key)) {
+                    if (objectInfo.getObjectKey().equals(key)) {
                         //key (object) exists.
                         db.rollback();
                         throw new EucalyptusCloudException("object already exists " + key);
@@ -656,7 +740,7 @@ public class Bukkit {
                 objectInfo.setGrants(grantInfos);
                 objectInfos.add(objectInfo);
 
-                objectInfo.setObjectName(key);
+                objectInfo.setObjectKey(key);
                 objectInfo.setOwnerId(userId);
                 objectInfo.setSize(storageManager.getSize(bucketName, key));
                 objectInfo.setEtag("");
@@ -675,7 +759,7 @@ public class Bukkit {
     public DeleteObjectResponseType DeleteObject (DeleteObjectType request) throws EucalyptusCloudException {
         DeleteObjectResponseType reply = (DeleteObjectResponseType) request.getReply();
         String bucketName = request.getBucket();
-        String objectName = request.getKey();
+        String objectKey = request.getKey();
         String userId = request.getUserId();
 
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
@@ -687,7 +771,7 @@ public class Bukkit {
             ObjectInfo foundObject = null;
 
             for (ObjectInfo objectInfo: bucketInfo.getObjects()) {
-                if (objectInfo.getObjectName().equals(objectName)) {
+                if (objectInfo.getObjectKey().equals(objectKey)) {
                     foundObject = objectInfo;
                 }
             }
@@ -695,6 +779,7 @@ public class Bukkit {
             if (foundObject != null) {
                 if (foundObject.canWrite(userId)) {
                     bucketInfo.getObjects().remove(foundObject);
+                    String objectName = foundObject.getObjectName();
                     for (GrantInfo grantInfo: foundObject.getGrants()) {
                         db.getEntityManager().remove(grantInfo);
                     }
@@ -706,17 +791,17 @@ public class Bukkit {
                     } catch (IOException ex) {
                         db.rollback();
                         LOG.warn(ex, ex);
-                        throw new EucalyptusCloudException(objectName);
+                        throw new EucalyptusCloudException(objectKey);
                     }
                     reply.setCode("200");
                     reply.setDescription("OK");
                 } else {
                     db.rollback();
-                    throw new AccessDeniedException(objectName);
+                    throw new AccessDeniedException(objectKey);
                 }
             } else {
                 db.rollback();
-                throw new NoSuchEntityException(objectName);
+                throw new NoSuchEntityException(objectKey);
             }
         } else {
             db.rollback();
@@ -765,17 +850,17 @@ public class Bukkit {
                     int howManyProcessed = 0;
                     ArrayList<ListEntry> contents = new ArrayList<ListEntry>();
                     for(ObjectInfo objectInfo: objectInfos) {
-                        String objectName = objectInfo.getObjectName();
+                        String objectKey = objectInfo.getObjectKey();
                         if(marker != null) {
-                            if(objectName.compareTo(marker) < 0)
+                            if(objectKey.compareTo(marker) < 0)
                                 continue;
                         }
                         if(prefix != null) {
-                            if(!objectName.startsWith(prefix)) {
+                            if(!objectKey.startsWith(prefix)) {
                                 continue;
                             } else {
                                 if(delimiter != null) {
-                                    String[] parts = objectName.substring(prefix.length()).split(delimiter);
+                                    String[] parts = objectKey.substring(prefix.length()).split(delimiter);
                                     if(parts.length > 1) {
                                         String prefixString = parts[0] + delimiter;
                                         boolean foundPrefix = false;
@@ -806,9 +891,9 @@ public class Bukkit {
                             }
                         }
                         ListEntry listEntry = new ListEntry();
-                        listEntry.setKey(objectName);
+                        listEntry.setKey(objectKey);
                         listEntry.setEtag(objectInfo.getEtag());
-                        listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+                        listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
                         listEntry.setStorageClass(objectInfo.getStorageClass());
                         String displayName = objectInfo.getOwnerId();
 
@@ -820,7 +905,7 @@ public class Bukkit {
                             listEntry.setOwner(new CanonicalUserType(ownerInfos.get(0).getQueryId(), displayName));
                         }
                         ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-                        objectInfo.getMetaData(metaData);
+                        objectInfo.returnMetaData(metaData);
                         reply.setMetaData(metaData);
                         listEntry.setSize(objectInfo.getSize());
                         listEntry.setStorageClass(objectInfo.getStorageClass());
@@ -848,7 +933,7 @@ public class Bukkit {
         GetObjectAccessControlPolicyResponseType reply = (GetObjectAccessControlPolicyResponseType) request.getReply();
 
         String bucketName = request.getBucket();
-        String objectName = request.getKey();
+        String objectKey = request.getKey();
         String userId = request.getUserId();
         String ownerId = null;
 
@@ -862,7 +947,7 @@ public class Bukkit {
             //construct access control policy from grant infos
             BucketInfo bucket = bucketList.get(0);
             for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if (objectInfo.getObjectName().equals(objectName)) {
+                if (objectInfo.getObjectKey().equals(objectKey)) {
                     if(objectInfo.canReadACP(userId)) {
                         ownerId = objectInfo.getOwnerId();
                         ArrayList<Grant> grants = new ArrayList<Grant>();
@@ -874,13 +959,14 @@ public class Bukkit {
                             List<UserInfo> grantUserInfos = db2.query(userInfo);
                             db2.commit();
                             if(grantUserInfos.size() > 0) {
+                                objectInfo.readPermissions(grants);
                                 addPermission(grants, grantUserInfos.get(0), grantInfo);
                             }
                         }
                         accessControlList.setGrants(grants);
                     } else {
                         db.rollback();
-                        throw new AccessDeniedException(objectName);
+                        throw new AccessDeniedException(objectKey);
                     }
                 }
             }
@@ -947,7 +1033,7 @@ public class Bukkit {
         String userId = request.getUserId();
         AccessControlPolicyType accessControlPolicy = request.getAccessControlPolicy();
         String bucketName = request.getBucket();
-        String objectName = request.getKey();
+        String objectKey = request.getKey();
 
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
         BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -957,13 +1043,13 @@ public class Bukkit {
             BucketInfo bucket = bucketList.get(0);
             ObjectInfo foundObject = null;
             for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectName().equals(objectName)) {
+                if(objectInfo.getObjectKey().equals(objectKey)) {
                     if (objectInfo.canWriteACP(userId) && accessControlPolicy.getOwner().getDisplayName().equals(objectInfo.getOwnerId())) {
                         foundObject = objectInfo;
                         break;
                     } else {
                         db.rollback();
-                        throw new AccessDeniedException(objectName);
+                        throw new AccessDeniedException(objectKey);
                     }
                 }
             }
@@ -979,7 +1065,7 @@ public class Bukkit {
                 reply.setDescription("OK");
             } else {
                 db.rollback();
-                throw new NoSuchEntityException(objectName);
+                throw new NoSuchEntityException(objectKey);
             }
         }   else {
             db.rollback();
@@ -992,8 +1078,11 @@ public class Bukkit {
     public GetObjectResponseType GetObject(GetObjectType request) throws EucalyptusCloudException {
         GetObjectResponseType reply = (GetObjectResponseType) request.getReply();
         String bucketName = request.getBucket();
-        String objectName = request.getKey();
+        String objectKey = request.getKey();
         String userId = request.getUserId();
+        Boolean deleteAfterGet = request.getDeleteAfterGet();
+        if(deleteAfterGet == null)
+            deleteAfterGet = false;
 
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
         BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -1003,11 +1092,13 @@ public class Bukkit {
             BucketInfo bucket = bucketList.get(0);
 
             for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectName().equals(objectName)) {
+                if(objectInfo.getObjectKey().equals(objectKey)) {
                     if(objectInfo.canRead(userId)) {
+                        String objectName = objectInfo.getObjectName();
                         if(request.getGetMetaData()) {
                             ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-                            objectInfo.getMetaData(metaData);
+                            objectInfo.returnMetaData(metaData);
+                            reply.setMetaData(metaData);
                             reply.setMetaData(metaData);
                         }
                         if(request.getGetData()) {
@@ -1027,40 +1118,48 @@ public class Bukkit {
                                 }
                             } else {
                                 //support for large objects
-                                String key = bucketName + "." + objectName;
+                                String key = bucketName + "." + objectKey;
                                 String randomKey = key + "." + Hashes.getRandom(10);
                                 request.setRandomKey(randomKey);
                                 LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
 
-                                Reader reader = new Reader(bucketName, objectName, objectInfo.getSize(), getQueue);
+                                Reader reader = new Reader(bucketName, objectName, objectInfo.getSize(), getQueue, deleteAfterGet, null);
                                 reader.start();
                             }
                         }
                         reply.setEtag(objectInfo.getEtag());
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
                         reply.setSize(objectInfo.getSize());
                         Status status = new Status();
                         status.setCode(200);
                         status.setDescription("OK");
                         reply.setStatus(status);
+                        db.commit();
+                        return reply;
                     } else {
                         db.rollback();
-                        throw new AccessDeniedException(objectName);
+                        throw new AccessDeniedException(objectKey);
                     }
                 }
             }
+            db.rollback();
+            throw new NoSuchEntityException(objectKey);
         } else {
             db.rollback();
             throw new NoSuchBucketException(bucketName);
         }
-        db.commit();
-        return reply;
     }
 
     public GetObjectExtendedResponseType GetObjectExtended(GetObjectExtendedType request) throws EucalyptusCloudException {
         GetObjectExtendedResponseType reply = (GetObjectExtendedResponseType) request.getReply();
-        long byteRangeStart = request.getByteRangeStart();
-        long byteRangeEnd = request.getByteRangeEnd();
+        Long byteRangeStart = request.getByteRangeStart();
+        if(byteRangeStart == null) {
+            byteRangeStart = 0L;
+        }
+        Long byteRangeEnd = request.getByteRangeEnd();
+        if(byteRangeEnd == null) {
+            byteRangeEnd = -1L;
+        }
         Date ifModifiedSince = request.getIfModifiedSince();
         Date ifUnmodifiedSince = request.getIfUnmodifiedSince();
         String ifMatch = request.getIfMatch();
@@ -1068,7 +1167,7 @@ public class Bukkit {
         boolean returnCompleteObjectOnFailure = request.getReturnCompleteObjectOnConditionFailure();
 
         String bucketName = request.getBucket();
-        String objectName = request.getKey();
+        String objectKey = request.getKey();
         String userId = request.getUserId();
         Status status = new Status();
 
@@ -1081,9 +1180,10 @@ public class Bukkit {
             BucketInfo bucket = bucketList.get(0);
 
             for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectName().equals(objectName)) {
+                if(objectInfo.getObjectKey().equals(objectKey)) {
                     if(objectInfo.canRead(userId)) {
                         String etag = objectInfo.getEtag();
+                        String objectName = objectInfo.getObjectName();
                         if(ifMatch != null) {
                             if(!ifMatch.equals(etag) && !returnCompleteObjectOnFailure) {
                                 db.rollback();
@@ -1105,18 +1205,18 @@ public class Bukkit {
                             }
                         }
                         if(ifUnmodifiedSince != null) {
-                            if((ifUnmodifiedSince.getTime() <= lastModified.getTime()) && !returnCompleteObjectOnFailure) {
+                            if((ifUnmodifiedSince.getTime() < lastModified.getTime()) && !returnCompleteObjectOnFailure) {
                                 db.rollback();
                                 throw new PreconditionFailedException(lastModified.toString());
                             }
                         }
                         if(request.getGetMetaData()) {
                             ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-                            objectInfo.getMetaData(metaData);
+                            objectInfo.returnMetaData(metaData);
                             reply.setMetaData(metaData);
                         }
                         if(request.getGetData()) {
-                            String key = bucketName + "." + objectName;
+                            String key = bucketName + "." + objectKey;
                             String randomKey = key + "." + Hashes.getRandom(10);
                             request.setRandomKey(randomKey);
                             LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
@@ -1125,14 +1225,21 @@ public class Bukkit {
                             reader.start();
                         }
                         reply.setEtag(objectInfo.getEtag());
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
-                        reply.setSize(objectInfo.getSize());
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                        if(byteRangeEnd > -1) {
+                            if(byteRangeEnd <= objectInfo.getSize() && ((byteRangeEnd - byteRangeStart) > 0))
+                                reply.setSize(byteRangeEnd - byteRangeStart);
+                            else
+                                reply.setSize(0L);
+                        } else {
+                            reply.setSize(objectInfo.getSize());
+                        }
                         status.setCode(200);
                         status.setDescription("OK");
                         reply.setStatus(status);
                     } else {
                         db.rollback();
-                        throw new AccessDeniedException(objectName);
+                        throw new AccessDeniedException(objectKey);
                     }
                 }
             }
@@ -1172,8 +1279,145 @@ public class Bukkit {
 
     public CopyObjectResponseType CopyObject(CopyObjectType request) throws EucalyptusCloudException {
         CopyObjectResponseType reply = (CopyObjectResponseType) request.getReply();
+        String userId = request.getUserId();
+        String sourceBucket = request.getSourceBucket();
+        String sourceKey = request.getSourceObject();
+        String destinationBucket = request.getDestinationBucket();
+        String destinationKey = request.getDestinationObject();
+        String metadataDirective = request.getMetadataDirective();
+        AccessControlListType accessControlList = request.getAccessControlList();
 
-        throw new NotImplementedException("CopyObject");
+        String copyIfMatch = request.getCopySourceIfMatch();
+        String copyIfNoneMatch = request.getCopySourceIfNoneMatch();
+        Date copyIfUnmodifiedSince = request.getCopySourceIfUnmodifiedSince();
+        Date copyIfModifiedSince = request.getCopySourceIfModifiedSince();
+
+        if(metadataDirective == null)
+            metadataDirective = "COPY";
+        EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+        BucketInfo bucketInfo = new BucketInfo(sourceBucket);
+        List<BucketInfo> bucketList = db.query(bucketInfo);
+
+        if (bucketList.size() > 0) {
+            BucketInfo bucket = bucketList.get(0);
+
+            for(ObjectInfo objectInfo: bucket.getObjects()) {
+                if(objectInfo.getObjectKey().equals(sourceKey)) {
+                    ObjectInfo sourceObjectInfo = objectInfo;
+                    if(sourceObjectInfo.canRead(userId)) {
+                        if(copyIfMatch != null) {
+                            if(!copyIfMatch.equals(sourceObjectInfo.getEtag())) {
+                                db.rollback();
+                                throw new PreconditionFailedException("CopySourceIfMatch " + copyIfMatch);
+                            }
+                        }
+                        if(copyIfNoneMatch != null) {
+                            if(copyIfNoneMatch.equals(sourceObjectInfo.getEtag())) {
+                                db.rollback();
+                                throw new PreconditionFailedException("CopySourceIfNoneMatch " + copyIfNoneMatch);
+                            }
+                        }
+                        if(copyIfUnmodifiedSince != null) {
+                            long unmodifiedTime = copyIfUnmodifiedSince.getTime();
+                            long objectTime = sourceObjectInfo.getLastModified().getTime();
+                            if(unmodifiedTime < objectTime) {
+                                db.rollback();
+                                throw new PreconditionFailedException("CopySourceIfUnmodifiedSince " + copyIfUnmodifiedSince.toString());
+                            }
+                        }
+                        if(copyIfModifiedSince != null) {
+                            long modifiedTime = copyIfModifiedSince.getTime();
+                            long objectTime = sourceObjectInfo.getLastModified().getTime();
+                            if(modifiedTime > objectTime) {
+                                db.rollback();
+                                throw new PreconditionFailedException("CopySourceIfModifiedSince " + copyIfModifiedSince.toString());
+                            }
+                        }
+                        BucketInfo destinationBucketInfo = new BucketInfo(destinationBucket);
+                        List<BucketInfo> destinationBuckets = db.query(destinationBucketInfo);
+                        if(destinationBuckets.size() > 0) {
+                            BucketInfo foundDestinationBucketInfo = destinationBuckets.get(0);
+                            if(foundDestinationBucketInfo.canWrite(userId)) {
+                                //all ok
+                                ObjectInfo destinationObjectInfo = null;
+                                String destinationObjectName;
+                                for(ObjectInfo objInfo: foundDestinationBucketInfo.getObjects()) {
+                                    if(objInfo.getObjectKey().equals(destinationKey)) {
+                                        destinationObjectInfo = objInfo;
+                                        if(!destinationObjectInfo.canWrite(userId)) {
+                                            db.rollback();
+                                            throw new AccessDeniedException(destinationKey);
+                                        }
+                                        break;
+                                    }
+                                }
+                                if(destinationObjectInfo == null) {
+                                    //not found. create a new one
+                                    destinationObjectInfo = new ObjectInfo(userId);
+                                    List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+                                    destinationObjectInfo.setObjectKey(destinationKey);
+                                    destinationObjectInfo.addGrants(userId, grantInfos, accessControlList);
+                                    destinationObjectInfo.setGrants(grantInfos);
+                                    destinationObjectInfo.setObjectName(destinationKey.replaceAll("/", "-") + Hashes.getRandom(4));
+                                    foundDestinationBucketInfo.getObjects().add(destinationObjectInfo);
+                                } else {
+                                    if (destinationObjectInfo.canWriteACP(userId)) {
+                                        List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+                                        destinationObjectInfo.addGrants(userId, grantInfos, accessControlList);
+                                        destinationObjectInfo.setGrants(grantInfos);
+                                    }
+                                }
+
+                                destinationObjectInfo.setSize(sourceObjectInfo.getSize());
+                                destinationObjectInfo.setStorageClass(sourceObjectInfo.getStorageClass());
+                                destinationObjectInfo.setOwnerId(sourceObjectInfo.getOwnerId());
+                                String etag = sourceObjectInfo.getEtag();
+                                Date lastModified = sourceObjectInfo.getLastModified();
+                                destinationObjectInfo.setEtag(etag);
+                                destinationObjectInfo.setLastModified(lastModified);
+                                if(!metadataDirective.equals("REPLACE")) {
+                                    destinationObjectInfo.setMetaData(sourceObjectInfo.cloneMetaData());
+                                } else {
+                                    List<MetaDataEntry> metaData = request.getMetaData();
+                                    if(metaData != null)
+                                        destinationObjectInfo.replaceMetaData(metaData);
+                                }
+
+                                String sourceObjectName = sourceObjectInfo.getObjectName();
+                                destinationObjectName = destinationObjectInfo.getObjectName();
+
+                                try {
+                                    storageManager.copyObject(sourceBucket, sourceObjectName, destinationBucket, destinationObjectName);
+                                } catch(Exception ex) {
+                                    LOG.warn(ex, ex);
+                                    db.rollback();
+                                    throw new EucalyptusCloudException("Could not rename " + sourceObjectName + " to " + destinationObjectName);
+                                }
+                                reply.setEtag(etag);
+                                reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+
+                                db.commit();
+                                return reply;
+                            } else {
+                                db.rollback();
+                                throw new AccessDeniedException(destinationBucket);
+                            }
+                        } else {
+                            db.rollback();
+                            throw new NoSuchBucketException(destinationBucket);
+                        }
+                    } else {
+                        db.rollback();
+                        throw new AccessDeniedException(sourceKey);
+                    }
+                }
+            }
+            db.rollback();
+            throw new NoSuchEntityException(sourceKey);
+        } else {
+            db.rollback();
+            throw new NoSuchBucketException(sourceBucket);
+        }
     }
 
     public GetBucketLoggingStatusResponseType GetBucketLoggingStatus(GetBucketLoggingStatusType request) throws EucalyptusCloudException {
@@ -1195,7 +1439,7 @@ public class Bukkit {
         return sigVerifier.verify(hexToBytes(signature));
     }
 
-    private String decryptImage(String bucketName, String objectName, String userId, boolean isAdministrator) throws EucalyptusCloudException {
+    private String decryptImage(String bucketName, String objectKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
         BucketInfo bucketInfo = new BucketInfo(bucketName);
         List<BucketInfo> bucketList = db.query(bucketInfo);
@@ -1205,8 +1449,9 @@ public class Bukkit {
             BucketInfo bucket = bucketList.get(0);
 
             for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectName().equals(objectName)) {
+                if(objectInfo.getObjectKey().equals(objectKey)) {
                     if(objectInfo.canRead(userId)) {
+                        String objectName = objectInfo.getObjectName();
                         File file = new File(storageManager.getObjectPath(bucketName, objectName));
                         XMLParser parser = new XMLParser(file);
 //Read manifest
@@ -1283,7 +1528,11 @@ public class Bukkit {
                         ArrayList<String> qualifiedPaths = new ArrayList<String>();
 
                         for (String part: parts) {
-                            qualifiedPaths.add(storageManager.getObjectPath(bucketName, part));
+                            for(ObjectInfo object : bucket.getObjects()) {
+                                if(part.equals(object.getObjectKey())) {
+                                    qualifiedPaths.add(storageManager.getObjectPath(bucketName, object.getObjectName()));
+                                }
+                            }
                         }
                         //Assemble parts
                         String encryptedImageKey = imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
@@ -1299,8 +1548,10 @@ public class Bukkit {
                             PrivateKey pk = (PrivateKey) userKeyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
                             Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
                             cipher.init(Cipher.DECRYPT_MODE, pk);
-                            key = hexToBytes(new String(cipher.doFinal(hexToBytes(encryptedKey))));
-                            iv = hexToBytes(new String(cipher.doFinal(hexToBytes(encryptedIV))));
+                            String keyString = new String(cipher.doFinal(hexToBytes(encryptedKey)));
+                            key = hexToBytes(keyString);
+                            String ivString = new String(cipher.doFinal(hexToBytes(encryptedIV)));
+                            iv = hexToBytes(ivString);
                         } catch(Exception ex) {
                             db2.rollback();
                             db.rollback();
@@ -1310,7 +1561,7 @@ public class Bukkit {
 
                         //Unencrypt image
                         try {
-                            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
                             IvParameterSpec salt = new IvParameterSpec(iv);
                             SecretKey keySpec = new SecretKeySpec(key, "AES");
                             cipher.init(Cipher.DECRYPT_MODE, keySpec, salt);
@@ -1337,7 +1588,7 @@ public class Bukkit {
         return null;
     }
 
-    private void checkManifest(String bucketName, String objectName, String userId) throws EucalyptusCloudException {
+    private void checkManifest(String bucketName, String objectKey, String userId) throws EucalyptusCloudException {
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
         BucketInfo bucketInfo = new BucketInfo(bucketName);
         List<BucketInfo> bucketList = db.query(bucketInfo);
@@ -1347,12 +1598,12 @@ public class Bukkit {
             BucketInfo bucket = bucketList.get(0);
 
             for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectName().equals(objectName)) {
+                if(objectInfo.getObjectKey().equals(objectKey)) {
                     if(objectInfo.canRead(userId)) {
+                        String objectName = objectInfo.getObjectName();
                         File file = new File(storageManager.getObjectPath(bucketName, objectName));
                         XMLParser parser = new XMLParser(file);
 //Read manifest
-                        String imageKey = parser.getValue("//image/name");
                         String encryptedKey = parser.getValue("//ec2_encrypted_key");
                         String encryptedIV = parser.getValue("//ec2_encrypted_iv");
                         String signature = parser.getValue("//signature");
@@ -1431,7 +1682,7 @@ public class Bukkit {
     public GetDecryptedImageResponseType GetDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {
         GetDecryptedImageResponseType reply = (GetDecryptedImageResponseType) request.getReply();
         String bucketName = request.getBucket();
-        String objectName = request.getKey();
+        String objectKey = request.getKey();
         String userId = request.getUserId();
 
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
@@ -1442,29 +1693,29 @@ public class Bukkit {
             BucketInfo bucket = bucketList.get(0);
 
             for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectName().equals(objectName)) {
+                if(objectInfo.getObjectKey().equals(objectKey)) {
                     if(objectInfo.canRead(userId) || request.isAdministrator() ) {
-                        WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectName);
+                        WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectKey);
                         try {
                             semaphore.acquire();
                         } catch(InterruptedException ex) {
                             throw new EucalyptusCloudException("semaphore could not be acquired");
                         }
                         EntityWrapper<ImageCacheInfo> db2 = new EntityWrapper<ImageCacheInfo>();
-                        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectName);
+                        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
                         List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
 
                         if(foundImageCacheInfos.size() == 0) {
                             db2.commit();
 //issue a cache request
-                            cacheImage(bucketName, objectName, userId, request.isAdministrator());
+                            cacheImage(bucketName, objectKey, userId, request.isAdministrator());
 //query db again
                             db2 = new EntityWrapper<ImageCacheInfo>();
                             foundImageCacheInfos = db2.query(searchImageCacheInfo);
                         }
                         ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
                         if(!foundImageCacheInfo.getInCache()) {
-                            WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectName);
+                            WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
                             synchronized (monitor) {
                                 try {
                                     monitor.wait();
@@ -1486,19 +1737,20 @@ public class Bukkit {
                             } else {
                                 db.rollback();
                                 db2.rollback();
-                                throw new NoSuchEntityException(objectName);
+                                throw new NoSuchEntityException(objectKey);
                             }
                         }
 
                         Long unencryptedSize = foundImageCacheInfo.getSize();
+
                         String imageKey = foundImageCacheInfo.getImageName();
-                        String queueKey = bucketName + "." + objectName;
+                        String queueKey = bucketName + "." + objectKey;
                         String randomKey = queueKey + "." + Hashes.getRandom(10);
                         request.setRandomKey(randomKey);
 
                         LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(queueKey, randomKey);
                         reply.setSize(unencryptedSize);
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
                         reply.setEtag("");
                         Reader reader = new Reader(bucketName, imageKey, unencryptedSize, getQueue, false, semaphore);
                         reader.start();
@@ -1507,12 +1759,12 @@ public class Bukkit {
                         return reply;
                     } else {
                         db.rollback();
-                        throw new AccessDeniedException(objectName);
+                        throw new AccessDeniedException(objectKey);
                     }
                 }
             }
             db.rollback();
-            throw new NoSuchEntityException(objectName);
+            throw new NoSuchEntityException(objectKey);
         } else {
             db.rollback();
             throw new NoSuchBucketException(bucketName);
@@ -1523,7 +1775,7 @@ public class Bukkit {
         CheckImageResponseType reply = (CheckImageResponseType) request.getReply();
         reply.setSuccess(false);
         String bucketName = request.getBucket();
-        String objectName = request.getKey();
+        String objectKey = request.getKey();
         String userId = request.getUserId();
 
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
@@ -1535,20 +1787,20 @@ public class Bukkit {
             BucketInfo bucket = bucketList.get(0);
 
             for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectName().equals(objectName)) {
+                if(objectInfo.getObjectKey().equals(objectKey)) {
                     if(objectInfo.canRead(userId)) {
-                        checkManifest(bucketName, objectName, userId);
+                        checkManifest(bucketName, objectKey, userId);
                         reply.setSuccess(true);
                         db.commit();
                         return reply;
                     } else {
                         db.rollback();
-                        throw new AccessDeniedException(objectName);
+                        throw new AccessDeniedException(objectKey);
                     }
                 }
             }
             db.rollback();
-            throw new NoSuchEntityException(objectName);
+            throw new NoSuchEntityException(objectKey);
         } else {
             db.rollback();
             throw new NoSuchBucketException(bucketName);
@@ -1593,7 +1845,7 @@ public class Bukkit {
             BucketInfo bucket = bucketList.get(0);
 
             for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectName().equals(manifestKey)) {
+                if(objectInfo.getObjectKey().equals(manifestKey)) {
                     if(objectInfo.canRead(userId)) {
                         EntityWrapper<ImageCacheInfo> db2 = new EntityWrapper<ImageCacheInfo>();
                         ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
@@ -1643,8 +1895,8 @@ public class Bukkit {
         return reply;
     }
 
-    private void flushCachedImage (String bucketName, String objectName) {
-        WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectName);
+    private void flushCachedImage (String bucketName, String objectKey) {
+        WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectKey);
         while(semaphore.inUse()) {
             try {
                 synchronized (semaphore) {
@@ -1654,10 +1906,10 @@ public class Bukkit {
                 LOG.warn(ex, ex);
             }
         }
-        imageMessenger.removeSemaphore(bucketName + "/" + objectName);
+        imageMessenger.removeSemaphore(bucketName + "/" + objectKey);
         try {
             EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
-            ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectName);
+            ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
             List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
 
             if(foundImageCacheInfos.size() > 0) {
@@ -1669,7 +1921,7 @@ public class Bukkit {
                 db.commit();
             } else {
                 db.rollback();
-                LOG.warn("Cannot find image in cache" + bucketName + "/" + objectName);
+                LOG.warn("Cannot find image in cache" + bucketName + "/" + objectKey);
             }
         } catch(Exception ex) {
             LOG.warn(ex, ex);
@@ -1678,14 +1930,15 @@ public class Bukkit {
 
     private class ImageCacheFlusher extends Thread {
         private String bucketName;
-        private String objectName;
-        public ImageCacheFlusher(String bucketName, String objectName) {
+        private String objectKey;
+
+        public ImageCacheFlusher(String bucketName, String objectKey) {
             this.bucketName = bucketName;
-            this.objectName = objectName;
+            this.objectKey = objectKey;
         }
 
         public void run() {
-            flushCachedImage(bucketName, objectName);
+            flushCachedImage(bucketName, objectKey);
         }
     }
 
@@ -1806,7 +2059,7 @@ public class Bukkit {
     }
 
     private long untarImage(String tarredImageName, String imageName) throws Exception {
-        TarInputStream in = new TarInputStream(new FileInputStream(new File(tarredImageName)));
+        /*TarInputStream in = new TarInputStream(new FileInputStream(new File(tarredImageName)));
         File outFile = new File(imageName);
         BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outFile));
 
@@ -1816,10 +2069,76 @@ public class Bukkit {
         in.copyEntryContents(out);
         out.close();
         in.close();
-        return outFile.length();
+        return outFile.length();*/
+
+        //Workaround because TarInputStream is broken
+        Tar tarrer = new Tar();
+        tarrer.untar(tarredImageName, imageName);
+        File outFile = new File(imageName);
+        if(outFile.exists())
+            return outFile.length();
+        else
+            throw new EucalyptusCloudException("Could not untar image " + imageName);
     }
 
-    private void decryptImage(String encryptedImageName, String decyptedImageName, Cipher cipher) {
+    private class StreamConsumer extends Thread
+    {
+        private InputStream is;
+        private File file;
+
+        public StreamConsumer(InputStream is) {
+            this.is = is;
+        }
+
+        public StreamConsumer(InputStream is, File file) {
+            this(is);
+            this.file = file;
+        }
+
+        public void run()
+        {
+            try
+            {
+                BufferedInputStream inStream = new BufferedInputStream(is);
+                BufferedOutputStream outStream = null;
+                if(file != null) {
+                    outStream = new BufferedOutputStream(new FileOutputStream(file));
+                }
+                byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
+                int bytesRead;
+                while((bytesRead = inStream.read(bytes)) > 0) {
+                    if(outStream != null) {
+                        outStream.write(bytes, 0, bytesRead);
+                    }
+                }
+                if(outStream != null)
+                    outStream.close();
+            } catch (IOException ex)
+            {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    private class Tar {
+        public void untar(String tarFile, String outFile) {
+            try
+            {
+                Runtime rt = Runtime.getRuntime();
+                Process proc = rt.exec(new String[]{ "/bin/tar", "xfO", tarFile});
+                StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+                StreamConsumer output = new StreamConsumer(proc.getInputStream(), new File(outFile));
+                error.start();
+                output.start();
+                int exitVal = proc.waitFor();
+                output.join();
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+        }
+    }
+
+    private void decryptImage(final String encryptedImageName, final String decyptedImageName, final Cipher cipher) {
         try {
             BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(new File(decyptedImageName)));
             File inFile = new File(encryptedImageName);
@@ -1837,11 +2156,11 @@ public class Bukkit {
             in.close();
             out.close();
         } catch(Exception ex) {
-            ex.printStackTrace();
+            LOG.warn(ex, ex);
         }
     }
 
-    private void assembleParts(String name, List<String> parts) {
+    private void assembleParts(final String name, List<String> parts) {
         try {
             FileChannel out = new FileOutputStream(new File(name)).getChannel();
             for (String partName: parts) {
@@ -1851,7 +2170,7 @@ public class Bukkit {
             }
             out.close();
         } catch (Exception ex) {
-            ex.printStackTrace();
+            LOG.warn(ex, ex);
         }
     }
 
@@ -1898,6 +2217,7 @@ public class Bukkit {
         private LinkedBlockingQueue<WalrusDataMessage> getQueue;
         private long byteRangeStart;
         private long byteRangeEnd;
+        private boolean compressed;
         private boolean deleteAfterXfer;
         private WalrusSemaphore semaphore;
 
@@ -1930,10 +2250,12 @@ public class Bukkit {
             long bytesRemaining = objectSize;
             long offset = byteRangeStart;
 
-            if(byteRangeEnd != 0) {
+            if(byteRangeEnd > 0) {
                 assert(byteRangeEnd <= objectSize);
                 assert(byteRangeEnd >= byteRangeStart);
                 bytesRemaining = byteRangeEnd - byteRangeStart;
+                if(byteRangeEnd > objectSize || (byteRangeStart < 0))
+                    bytesRemaining = 0;
             }
 
             try {
@@ -1941,8 +2263,12 @@ public class Bukkit {
 
                 while (bytesRemaining > 0) {
                     int bytesRead = storageManager.readObject(bucketName, objectName, bytes, offset);
+                    if(bytesRemaining - bytesRead > 0)
+                        getQueue.put(WalrusDataMessage.DataMessage(bytes, bytesRead));
+                    else
+                        getQueue.put(WalrusDataMessage.DataMessage(bytes, (int)bytesRemaining));
+
                     bytesRemaining -= bytesRead;
-                    getQueue.put(WalrusDataMessage.DataMessage(bytes, bytesRead));
                     offset += bytesRead;
                 }
                 getQueue.put(WalrusDataMessage.EOF());
@@ -1967,6 +2293,11 @@ public class Bukkit {
 
     public StoreSnapshotResponseType StoreSnapshot(StoreSnapshotType request) throws EucalyptusCloudException {
         StoreSnapshotResponseType reply = (StoreSnapshotResponseType) request.getReply();
+
+        if(!enableSnapshots) {
+            LOG.warn("Snapshots not enabled. Please check pre-conditions and restart Walrus.");
+            return reply;
+        }
         String snapshotId = request.getKey();
         String bucketName = request.getBucket();
         String snapshotVgName = request.getSnapshotvgname();
@@ -2006,7 +2337,6 @@ public class Bukkit {
         snapshotInfo.setVgName(snapshotVgName);
         snapshotInfo.setLvName(snapshotLvName);
         snapshotInfo.setTransferred(false);
-        db.commit();
         //read and store it
         //convert to a PutObject request
 
@@ -2031,18 +2361,24 @@ public class Bukkit {
         putObjectRequest.setBucket(bucketName);
         putObjectRequest.setKey(snapshotId);
         putObjectRequest.setRandomKey(request.getRandomKey());
-        PutObjectResponseType putObjectResponseType = PutObject(putObjectRequest);
-        reply.setEtag(putObjectResponseType.getEtag());
-        reply.setLastModified(putObjectResponseType.getLastModified());
-        reply.setStatusMessage(putObjectResponseType.getStatusMessage());
+        try {
+            PutObjectResponseType putObjectResponseType = PutObject(putObjectRequest);
+            reply.setEtag(putObjectResponseType.getEtag());
+            reply.setLastModified(putObjectResponseType.getLastModified());
+            reply.setStatusMessage(putObjectResponseType.getStatusMessage());
 
-        //change state 
-        snapshotInfo = new WalrusSnapshotInfo(snapshotId);
-        dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
-        WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
-        foundSnapshotInfo.setTransferred(true);
-        dbSnap.commit();
+            //change state
+            db.commit();
 
+            snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+            dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
+            WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
+            foundSnapshotInfo.setTransferred(true);
+            dbSnap.commit();
+        } catch (EucalyptusCloudException ex) {
+            db.rollback();
+            throw ex;
+        }
         return reply;
     }
 
@@ -2082,6 +2418,10 @@ public class Bukkit {
 
     public GetVolumeResponseType GetVolume(GetVolumeType request) throws EucalyptusCloudException {
         GetVolumeResponseType reply = (GetVolumeResponseType) request.getReply();
+        if(!enableSnapshots) {
+            LOG.warn("Snapshots not enabled. Please check pre-conditions and restart Walrus.");
+            return reply;
+        }
         String snapshotId = request.getKey();
         String userId = request.getUserId();
         EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
@@ -2116,6 +2456,8 @@ public class Bukkit {
                 getObjectType.setGetMetaData(false);
                 getObjectType.setBucket(snapshotSetId);
                 getObjectType.setKey(volumeKey);
+                getObjectType.setIsCompressed(true);
+                getObjectType.setDeleteAfterGet(true);
                 db.commit();
                 GetObjectResponseType getObjectResponse = GetObject(getObjectType);
                 reply.setEtag(getObjectResponse.getEtag());
@@ -2124,6 +2466,7 @@ public class Bukkit {
                 request.setRandomKey(getObjectType.getRandomKey());
                 request.setBucket(snapshotSetId);
                 request.setKey(volumeKey);
+                request.setIsCompressed(true);
             } else {
                 db.rollback();
                 throw new EucalyptusCloudException("Could not find snapshot set");
@@ -2138,12 +2481,20 @@ public class Bukkit {
 
     public DeleteWalrusSnapshotResponseType DeleteWalrusSnapshot(DeleteWalrusSnapshotType request) throws EucalyptusCloudException {
         DeleteWalrusSnapshotResponseType reply = (DeleteWalrusSnapshotResponseType) request.getReply();
+        if(!enableSnapshots) {
+            LOG.warn("Snapshots not enabled. Please check pre-conditions and restart Walrus.");
+            return reply;
+        }
         String snapshotId = request.getKey();
 
         //Load the entire snapshot tree and then remove the snapshot
         EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
         WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
         List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+
+        ArrayList<String> vgNames = new ArrayList<String>();
+        ArrayList<String> lvNames = new ArrayList<String>();
+        ArrayList<String> snapIdsToDelete = new ArrayList<String>();
 
         //Delete is idempotent.
         reply.set_return(true);
@@ -2168,16 +2519,35 @@ public class Bukkit {
                 for(WalrusSnapshotInfo snapInfo : snapshotSet) {
                     String snapId = snapInfo.getSnapshotId();
                     snapshotIds.add(snapId);
-                    if(snapId.equals(foundSnapshotInfo.getSnapshotId()))
+                    if(snapId.equals(foundSnapshotInfo.getSnapshotId())) {
                         snapshotSetSnapInfo = snapInfo;
+                    }
                 }
                 //delete from the database
-                if(snapshotSetSnapInfo != null)
-                    snapshotSet.remove(snapshotSetSnapInfo);
                 db.delete(foundSnapshotInfo);
+                vgNames.add(foundSnapshotInfo.getVgName());
+                lvNames.add(foundSnapshotInfo.getLvName());
+                snapIdsToDelete.add(foundSnapshotInfo.getSnapshotId());
+                if(snapshotSetSnapInfo != null) {
+                    snapshotSet.remove(snapshotSetSnapInfo);
+                    //only 1 entry left? It is the volume
+                    if(snapshotSet.size() == 1) {
+                        WalrusSnapshotInfo snapZeroInfo = snapshotSet.get(0);
+                        if(snapZeroInfo.getSnapshotId().startsWith("vol")) {
+                            snapshotSet.remove(snapZeroInfo);
+                            dbSet.delete(foundSnapshotSetInfo);
+                            snapZeroInfo = new WalrusSnapshotInfo(snapZeroInfo.getSnapshotId());
+                            WalrusSnapshotInfo foundVolInfo = db.getUnique(snapZeroInfo);
+                            db.delete(foundVolInfo);
+                            vgNames.add(foundVolInfo.getVgName());
+                            lvNames.add(foundVolInfo.getLvName());
+                            snapIdsToDelete.add(foundVolInfo.getSnapshotId());
+                        }
+                    }
+                }
                 //remove the snapshot in the background
-                SnapshotDeleter snapshotDeleter = new SnapshotDeleter(bucketName, foundSnapshotInfo.getSnapshotId(),
-                        foundSnapshotInfo.getVgName(), foundSnapshotInfo.getLvName(), snapshotIds);
+                SnapshotDeleter snapshotDeleter = new SnapshotDeleter(bucketName, snapIdsToDelete,
+                        vgNames, lvNames, snapshotIds);
                 snapshotDeleter.start();
             } else {
                 db.rollback();
@@ -2192,22 +2562,39 @@ public class Bukkit {
     private class SnapshotDeleter extends Thread {
         private String bucketName;
         private List<String> snapshotSet;
-        private String snapshotId;
-        private String vgName;
-        private String lvName;
+        private List<String> snapshotIdsToDelete;
+        private List<String> vgNames;
+        private List<String> lvNames;
 
-        public SnapshotDeleter(String bucketName, String snapshotId, String vgName, String lvName, List<String> snapshotSet) {
+        public SnapshotDeleter(String bucketName, List<String> snapshotIdsToDelete, List<String> vgNames, List<String> lvNames, List<String> snapshotSet) {
             this.bucketName = bucketName;
             this.snapshotSet = snapshotSet;
-            this.snapshotId = snapshotId;
-            this.vgName = vgName;
-            this.lvName = lvName;
+            this.snapshotIdsToDelete = snapshotIdsToDelete;
+            this.vgNames = vgNames;
+            this.lvNames = lvNames;
         }
 
         public void run() {
             try {
-                storageManager.deleteSnapshot(bucketName, snapshotId, vgName, lvName, snapshotSet);
+                for(int i = 0; i < vgNames.size(); ++i) {
+                    boolean removeVg = false;
+                    //last one?
+                    if(i == (vgNames.size() - 1))
+                        removeVg = true;
+                    String snapId = snapshotIdsToDelete.get(i);
+                    storageManager.deleteSnapshot(bucketName, snapId, vgNames.get(i), lvNames.get(i), snapshotSet, removeVg);
+                    String snapIdToRemove = null;
+                    for(String snapsetId : snapshotSet) {
+                        if(snapsetId.equals(snapId)) {
+                            snapIdToRemove = snapsetId;
+                            break;
+                        }
+                    }
+                    if(snapIdToRemove != null)
+                        snapshotSet.remove(snapIdToRemove);
+                }
             } catch(EucalyptusCloudException ex) {
+
                 LOG.warn(ex, ex);
             }
         }

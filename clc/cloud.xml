@@ -53,20 +53,25 @@
     <property name="libpath" value="${euca.home}/usr/lib"/>
     <!--================================== classpaths ==================================-->
     <path id="runtimeclasspath">
+         <fileset dir="${euca.lib.dir}">
+            <include name="**/hibernate*.jar"/>
+        </fileset>
         <pathelement path="${euca.conf.dir}"/>
         <pathelement path="${euca.var.dir}/keys"/>
-        <pathelement path="${euca.lib.dir}/opt/ant-1.7.1.jar"/>
+        <pathelement path="${euca.lib.dir}/ant-1.7.1.jar"/>
         <pathelement path="${euca.lib.dir}/eucalyptus-transport.jar"/>
         <fileset dir="${euca.lib.dir}">
             <include name="**/*.jar"/>
             <exclude name="**/gwt-dev-mac.jar"/>
             <exclude name="**/gwt-dev-linux.jar"/>
+            <exclude name="**/hibernate*jar"/>
         </fileset>
     </path>
     <!--================================== EXEC TARGETS ==================================-->
     <target name="run" description="--> run Eucalyptus (for production)." if="localenv.EUCALYPTUS">
         <java classname="edu.ucsb.eucalyptus.Main" fork="true" failonerror="true" dir="${euca.home}">
             <jvmarg value="-server"/>
+            <jvmarg value="-Xbootclasspath/p:${euca.lib.dir}/eucalyptus-crypto.jar:${euca.lib.dir}/eucalyptus-workarounds.jar"/>
             <jvmarg value="-Xmx${jvm.heap}"/>
             <jvmarg value="-Xms${jvm.heap}"/>
             <jvmarg value="-XX:+UseConcMarkSweepGC"/>

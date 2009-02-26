@@ -1,85 +1,123 @@
 #!/usr/bin/perl
 
+use strict;
+
+our $quiet = 0;
 delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
 $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 
-$partition = untaint(shift @ARGV);
+my $partition = untaint(shift @ARGV);
+my $swap_size_mb = untaint(shift @ARGV);
+if (! defined $swap_size_mb) { $swap_size_mb = 0 }
+my $ephemeral_size_mb = untaint(shift @ARGV);
+if (! defined $ephemeral_size_mb) { $ephemeral_size_mb = 0 }
 
-$LOSETUP=untaint(`which losetup`);
-$DD=untaint(`which dd`);
-$SFDISK=untaint(`which sfdisk`);
-$MV=untaint(`which mv`);
-$FILE=untaint(`which file`);
+my $LOSETUP=untaint(`which losetup`);
+my $DD=untaint(`which dd`);
+my $PARTED=untaint(`which parted`);
+my $MV=untaint(`which mv`);
+my $FILE=untaint(`which file`);
 
-if (!$partition || !-f $partition || !-x $LOSETUP || !-x $DD || !-x $SFDISK) {
-    print "USAGE: partition2disk <path/to/disk_partition_file>\n";
+if (!$partition || !-f $partition || !-x $LOSETUP || !-x $DD || !-x $PARTED) {
+    print STDERR "USAGE: partition2disk <path/to/disk_partition_file> [swap-size-MB] [ephemeral-size-MB]\n";
     exit(1);
 }
 
-chomp($magic=`$FILE $partition`);
+my $magic=`$FILE $partition`;
+chomp($magic);
 if ($magic =~ /boot sector/) {
+    print STDERR "apparently $partition is already a disk, nothing to do";
     exit(0);
 }
 
-$size = -s "$partition";
-$msize = int(($size / (1024 * 1000)))+ 1;
-$bsize = ($size / 512);
+my $root_size_b = -s "$partition";
+my $root_size_mb = int(($root_size_b / (1024 * 1000)))+ 1;
+my $disk_size_mb = $root_size_mb + $swap_size_mb + $ephemeral_size_mb;
+my $root_size_sectors = ($root_size_b / 512);
+my $swap_size_sectors = ($swap_size_mb * 2000);
+my $ephemeral_size_sectors = ($ephemeral_size_mb * 2000);
 
-$cmd = "$DD if=/dev/zero of=$partition.disk bs=1M count=$msize";
-print "$cmd\n";
-if (system($cmd)) {do_exit(1);}
+# create the disk image
+run ("$DD if=/dev/zero of=$partition.disk bs=1M count=$disk_size_mb >/dev/null 2>&1", 2);
+run ("$PARTED --script $partition.disk mklabel msdos", 3);
 
-open(PFH, "|$SFDISK --force -C999 -uS $partition.disk");
-print PFH "63,$bsize,L\n";
-print PFH "0,0,0\n";
-print PFH "0,0,0\n";
-print PFH "0,0,0\n";
-close(PFH);
+# create the root partition
+my $first_sector = 63;
+my $last_sector = $first_sector + $root_size_sectors;
+run ("$PARTED --script $partition.disk mkpart primary ext2 ${first_sector}s ${last_sector}s", 4);
 
-$loopdev = $loopdevp = "";
+# create the ephemeral disk partition
+$first_sector = $last_sector + 1;
+$last_sector = $first_sector + $ephemeral_size_sectors;
+if ($ephemeral_size_sectors>=40) { # 40 is the bare minimum for ext2 disks, apparently
+    run ("$PARTED --script $partition.disk mkpartfs primary ext2 ${first_sector}s ${last_sector}s", 5);
+} else {
+    # we'll create a dummy partition so that swap gets partition #3
+    $last_sector = $first_sector + 1;
+    run ("$PARTED --script $partition.disk mkpart primary ${first_sector}s ${last_sector}s", 6);
+}
 
-$attached = 0;
-for ($i=0; $i<10 && !$attached; $i++) {
+if ($swap_size_sectors>=8) { # 8 is the bare minimum for swap partitions, apparently
+    $first_sector = $last_sector + 1;
+    run ("$PARTED --script $partition.disk mkpartfs primary linux-swap ${first_sector}s 100%", 7);
+}
+
+# delete the ephemeral if it wasn't actually requested, leaving a 1-sector hole
+if ($ephemeral_size_sectors<1) {
+    run ("$PARTED --script $partition.disk rm 2", 8);
+}
+
+my $loopdev = "";
+my $loopdevp = "";
+my $attached = 0;
+for (my $i=0; $i<10 && !$attached; $i++) {
     $loopdev=untaint(`$LOSETUP -f`);
-    $rc = system("$LOSETUP $loopdev $partition.disk");
+    my $rc = system("$LOSETUP $loopdev $partition.disk");
     if ($loopdev ne "" && !$rc) {
 	$attached=1;
     }
 }
 if (!$attached) {
     print STDERR "cannot find free loop device\n";
-    do_exit(1);
+    do_exit(9);
 }
 
-
 $attached = 0;
-for ($i=0; $i<10 && !$attached; $i++) {
+for (my $i=0; $i<10 && !$attached; $i++) {
     $loopdevp=untaint(`$LOSETUP -f`);
-    $rc = system("$LOSETUP -o 32256 $loopdevp $partition.disk");
+    my $rc = system("$LOSETUP -o 32256 $loopdevp $partition.disk");
     if ($loopdevp ne "" && !$rc) {
 	$attached=1;
     }
 }
 if (!$attached) {
     print STDERR "cannot find free loop device\n";
-    do_exit(1);
+    do_exit(10);
 }
+run ("$DD if=$partition of=$loopdevp bs=512k >/dev/null 2>&1", 11);
 
-$cmd = "$DD if=$partition of=$loopdevp bs=512k";
-if (system($cmd)) {do_exit(1);}
-
-$cmd = "$LOSETUP -d $loopdev";
-if (system($cmd)) {do_exit(1);}
+run ("$LOSETUP -d $loopdev", 12);
 $loopdev="";
-
-$cmd = "$LOSETUP -d $loopdevp";
-if (system($cmd)) {do_exit(1);}
+run ("$LOSETUP -d $loopdevp", 13);
 $loopdevp="";
-
-$cmd = "$MV $partition.disk $partition";
-if (system($cmd)) {do_exit(1);}
-
+run ("$MV $partition.disk $partition", 14);
 do_exit(0);
+
+sub run() {
+    my $cmd = shift;
+    my $error = shift;
+
+    if ( not defined $error) {
+	$error = 1;
+    }
+
+    if (system($cmd)) {
+	print STDERR "ERROR while executing: $cmd\n";
+	do_exit ($error);
+    } else {
+	print STDERR "$cmd\n" unless $quiet;
+    }
+}
 
 sub do_exit() {
     my $ecode = shift;
@@ -97,7 +135,7 @@ sub do_exit() {
 }
 
 sub untaint() {
-    $str = shift;
+    my $str = shift;
     if ($str =~ /^([ &:#-\@\w.]+)$/) {
 	$str = $1; #data is now untainted
     } else {

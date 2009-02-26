@@ -39,7 +39,7 @@
 
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
-static const char* blockSize = "1G";
+static const char* blockSize = "1M";
 jstring run_command(JNIEnv *env, char *cmd, int outfd) {
 	FILE* fd;
 	int pid;
@@ -77,8 +77,21 @@ int run_command_and_get_pid(char *cmd, char **args) {
     }
 
    if (pid == 0) {
-        close(fd[0]);
-        dup2(fd[1], 2);
+        //daemonize
+        umask(0);
+        int sid = setsid();
+        if(sid < 0)
+            return -1;
+        char* home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+        if (!home) {
+            home = strdup (""); /* root by default */
+        } else {
+        home = strdup (home);
+        }
+        chdir(home);
+        freopen( "/dev/null", "r", stdin);
+        freopen( "/dev/null", "w", stdout);
+        freopen( "/dev/null", "w", stderr);
         execvp(cmd, args);
    } else {
         close(fd[1]);
@@ -91,8 +104,9 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getAoESta
     const jbyte* pid = (*env)->GetStringUTFChars(env, processId, NULL);
 
     char command[128];
-	snprintf(command, 128, "cat /proc/%s/cmdline", pid);
-	jstring returnValue = run_command(env, command, 1);	
+    snprintf(command, 128, "cat /proc/%s/cmdline", pid);
+
+    jstring returnValue = run_command(env, command, 1);
     (*env)->ReleaseStringUTFChars(env, processId, pid);
     return returnValue;
 }
@@ -143,7 +157,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createEmp
 (JNIEnv *env, jobject obj, jstring fileName, jint size) {
 	char command[256];
 	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
-
+    size = size * 1024;
 	snprintf(command, 256, "dd if=/dev/zero of=%s count=%d bs=%s", filename, size, blockSize);
 
 	jstring returnValue = run_command(env, command, 2);
@@ -174,7 +188,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createVol
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, pvName, dev_name);
-	(*env)->ReleaseStringUTFChars(env, vgName, vg_name);    
+	(*env)->ReleaseStringUTFChars(env, vgName, vg_name);
 	return returnValue;
 }
 
@@ -231,7 +245,7 @@ JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_aoeUnexport
     //TODO: blind kill. Hope for the best.
    char command[128];
 
-   snprintf(command, 128, "kill -9 %s", vblade_pid);
+   snprintf(command, 128, "kill %d", vblade_pid);
    run_command(env, command, 1);
 }
 
@@ -256,6 +270,18 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_removeVol
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, vgName, vg_name);
+    return returnValue;
+}
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_disableLogicalVolume
+  (JNIEnv *env, jobject obj, jstring lvName) {
+    const jbyte* lv_name = (*env)->GetStringUTFChars(env, lvName, NULL);
+	char command[256];
+
+	snprintf(command, 256, "lvchange -an %s", lv_name);
+    jstring returnValue = run_command(env, command, 1);
+
+    (*env)->ReleaseStringUTFChars(env, lvName, lv_name);
     return returnValue;
 }
 
@@ -355,7 +381,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_duplicate
     const jbyte* lv_name = (*env)->GetStringUTFChars(env, newLvName, NULL);
 	char command[256];
 
-	snprintf(command, 256, "dd if=%s of=%s", old_lv_name, lv_name);
+	snprintf(command, 256, "dd if=%s of=%s bs=%s", old_lv_name, lv_name, blockSize);
 	jstring returnValue = run_command(env, command, 1);
 
 	(*env)->ReleaseStringUTFChars(env, oldLvName, old_lv_name);
@@ -377,10 +403,20 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_enableLog
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getLvmVersion
   (JNIEnv *env, jobject obj) {
-	char command[256];
+	char command[128];
 
-   	snprintf(command, 256, "lvdisplay --version");
+   	snprintf(command, 128, "lvm version");
     jstring returnValue = run_command(env, command, 1);
-   
+
+    return returnValue;
+}
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getVblade
+  (JNIEnv *env, jobject obj) {
+	char command[128];
+
+   	snprintf(command, 128, "which vblade");
+    jstring returnValue = run_command(env, command, 1);
+
     return returnValue;
 }

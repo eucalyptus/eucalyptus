@@ -47,6 +47,7 @@
         <value name="RandomKey" field="randomKey" usage="optional"/>
         <value name="Bucket" field="bucket"/>
         <value name="Key" field="key"/>
+        <value name="IsCompressed" field="isCompressed" usage="optional"/>
     </mapping>
 
     <mapping name="ListAllMyBuckets" class="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
@@ -80,7 +81,7 @@
 
     <mapping name="SetBucketAccessControlPolicy" class="edu.ucsb.eucalyptus.msgs.SetBucketAccessControlPolicyType"  extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
         <value name="Bucket" field="bucket"/>
-        <structure field="accessControlPolicy" map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType"/>        
+        <structure field="accessControlPolicy" map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType"/>
     </mapping>
 
     <mapping name="SetBucketAccessControlPolicyResponse" class="edu.ucsb.eucalyptus.msgs.SetBucketAccessControlPolicyResponseType">
@@ -93,7 +94,7 @@
         <value name="Key" field="key"/>
     </mapping>
 
-    <mapping class="edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType" abstract="true">
+    <mapping name="GetObjectAccessControlPolicyResponse" class="edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType">
         <structure field="accessControlPolicy" map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" usage="optional"/>
     </mapping>
 
@@ -120,13 +121,22 @@
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.Grant" abstract="true">
-        <structure name="Grantee" field="grantee" map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" usage="optional"/>
+        <structure field="grantee" map-as="edu.ucsb.eucalyptus.msgs.Grantee" usage="optional"/>
         <value name="Permission" field="permission" usage="optional"/>
+    </mapping>
+
+    <mapping name="Grantee" class="edu.ucsb.eucalyptus.msgs.Grantee">
+        <structure field="canonicalUser" map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" usage="optional"/>
+        <structure field="group" map-as="edu.ucsb.eucalyptus.msgs.Group" usage="optional"/>
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.CanonicalUserType" abstract="true">
         <value name="ID" field="ID" usage="optional"/>
         <value name="DisplayName" field="DisplayName" usage="optional"/>
+    </mapping>
+
+    <mapping class="edu.ucsb.eucalyptus.msgs.Group" abstract="true">
+        <value name="URI" field="uri"/>
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType" abstract="true">
@@ -165,8 +175,8 @@
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" abstract="true">
-        <value name="ETag" field="etag"/>
-        <value name="LastModified" field="lastModified"/>
+        <value name="ETag" field="etag" usage="optional"/>
+        <value name="LastModified" field="lastModified" usage="optional"/>
         <collection field="metaData" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
             <structure map-as="edu.ucsb.eucalyptus.msgs.MetaDataEntry"/>
         </collection>
@@ -178,6 +188,15 @@
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 
+    <mapping name="PostResponse" class="edu.ucsb.eucalyptus.msgs.PostObjectResponseType">
+        <value name="Location" field="location" usage="optional"/>
+        <value name="Bucket" field="bucket" usage="optional"/>
+        <value name="Key" field="key" usage="optional"/>
+        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
+        <value name="RedirectUrl" field="redirectUrl" usage="optional"/>
+        <value name="SuccessActionStatus" field="successCode" usage="optional"/>
+    </mapping>
+
     <mapping name="MetaData" class="edu.ucsb.eucalyptus.msgs.MetaDataEntry">
         <value name="Name" field="name"/>
         <value name="Value" field="value"/>
@@ -187,16 +206,20 @@
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 
-    <mapping name="CopyObject" class="edu.ucsb.eucalyptus.msgs.CopyObjectType">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
+    <mapping name="CopyObject" class="edu.ucsb.eucalyptus.msgs.CopyObjectType"  extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+        <value name="SourceBucket" field="sourceBucket"/>
+        <value name="SourceObject" field="sourceObject"/>
+        <value name="DestinationBucket" field="destinationBucket"/>
+        <value name="DestinationObject" field="destinationObject"/>
+        <value name="MetadataDirective" field="metadataDirective"/>
         <collection field="metaData" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
             <structure map-as="edu.ucsb.eucalyptus.msgs.MetaDataEntry"/>
         </collection>
         <structure field="accessControlList" map-as="edu.ucsb.eucalyptus.msgs.AccessControlListType" usage="optional"/>
-        <value name="CopyIfMatch" field="copyIfMatch"/>
-        <value name="CopyIfNoneMatch" field="copyIfNoneMatch"/>
-        <value name="CopyIfModifiedSince" field="copyIfModifiedSince"/>
-        <value name="CopyIfUnmodifiedSince" field="copyIfUnmodifiedSince"/>        
+        <value name="CopySourceIfMatch" field="copySourceIfMatch"/>
+        <value name="CopySourceIfNoneMatch" field="copySourceIfNoneMatch"/>
+        <value name="CopySourceIfModifiedSince" field="copySourceIfModifiedSince"/>
+        <value name="CopySourceIfUnmodifiedSince" field="copySourceIfUnmodifiedSince"/>
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 
@@ -208,6 +231,19 @@
         <value name="ContentLength" field="contentLength"/>
         <structure field="accessControlList" map-as="edu.ucsb.eucalyptus.msgs.AccessControlListType" usage="optional"/>
         <value name="StorageClass" field="storageClass" usage="optional"/>
+        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
+    </mapping>
+
+    <mapping name="PostObject" class="edu.ucsb.eucalyptus.msgs.PostObjectType">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
+        <collection field="metaData" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+            <structure map-as="edu.ucsb.eucalyptus.msgs.MetaDataEntry"/>
+        </collection>
+        <value name="ContentLength" field="contentLength"/>
+        <structure field="accessControlList" map-as="edu.ucsb.eucalyptus.msgs.AccessControlListType" usage="optional"/>
+        <value name="StorageClass" field="storageClass" usage="optional"/>
+        <value name="SuccessActionRedirect" field="successActionRedirect" usage="optional"/>
+        <value name="SuccessActionStatus" field="successActionStatus" usage="optional"/>
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 
@@ -232,6 +268,7 @@
         <value name="GetMetadata" field="getMetaData"/>
         <value name="GetData" field="getData"/>
         <value name="InlineData" field="inlineData"/>
+        <value name="DeleteAfterGet" field="deleteAfterGet" usage="optional"/>
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 
@@ -315,7 +352,7 @@
 
     <mapping name="GetBucketLocation" class="edu.ucsb.eucalyptus.msgs.GetBucketLocationType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
         <value name="Bucket" field="bucket"/>
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>        
+        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.GetBucketLocationResponseType" abstract="true">
@@ -329,7 +366,7 @@
 
     <mapping name="SetBucketLoggingStatus" class="edu.ucsb.eucalyptus.msgs.SetBucketLoggingStatusType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
         <value name="Bucket" field="bucket"/>
-        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>        
+        <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 
     <mapping name="GetDecryptedImage" class="edu.ucsb.eucalyptus.msgs.GetDecryptedImageType">
@@ -342,7 +379,7 @@
 
     <mapping name="StoreSnapshot" class="edu.ucsb.eucalyptus.msgs.StoreSnapshotType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
-        <value name="ContentLength" field="contentLength"/>        
+        <value name="ContentLength" field="contentLength"/>
         <value name="SnapshotVgName" field="snapshotvgname"/>
         <value name="SnapshotLvName" field="snapshotlvname"/>
     </mapping>
@@ -375,7 +412,7 @@
 
     <mapping name="GetSnapshotInfoResponse" class="edu.ucsb.eucalyptus.msgs.GetSnapshotInfoResponseType">
         <collection field="snapshotSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String" >
-                <value name="snapshotId" />
+            <value name="snapshotId" />
         </collection >
         <value name="Bucket" field="bucket"/>
     </mapping>

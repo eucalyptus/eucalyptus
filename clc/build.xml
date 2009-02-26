@@ -48,7 +48,13 @@
     <property name="deps.lib" value="cloud-lib"/>
     <property name="deps.deploy" value="cloud-deploy"/>
     <!--================================== build targets ==================================-->
-    <target name="build-msgs" depends="untar">
+    <target name="build-crypto" depends="untar">
+        <ant dir="modules/crypto" inheritall="false"/>
+    </target>
+    <target name="build-workarounds" depends="build-crypto">
+        <ant dir="modules/workarounds" inheritall="false"/>
+    </target> 
+    <target name="build-msgs" depends="build-workarounds">
         <ant dir="modules/msgs" inheritall="false"/>
     </target>
     <target name="build-core" depends="build-msgs">
@@ -70,7 +76,7 @@
     <target name="build-walrus-ws" depends="build-transport">
         <ant dir="modules/storage-manager" inheritall="false"/>
     </target>
-    <target name="build-ebs-ws" depends="build-transport">
+    <target name="build-ebs-ws" depends="build-walrus-ws">
         <ant dir="modules/storage-controller" inheritall="false"/>
     </target>
     <target name="build-eucalyptus" depends="build-core,build-www,build-eucalyptus-ws"/>
@@ -78,7 +84,13 @@
     <target name="build-ebs" depends="build-ebs-ws"/>
     <target name="build" depends="build-eucalyptus,build-walrus,build-ebs"/>
     <!--================================== clean targets ==================================-->
-    <target name="clean-msgs">
+    <target name="clean-workarounds">
+        <ant dir="modules/workarounds" inheritall="false" target="clean"/>
+    </target>
+    <target name="clean-crypto" depends="clean-workarounds">
+        <ant dir="modules/crypto" inheritall="false" target="clean"/>
+    </target>
+    <target name="clean-msgs" depends="clean-crypto">
         <ant dir="modules/msgs" inheritall="false" target="clean"/>
     </target>
     <target name="clean-core" depends="clean-msgs">
@@ -114,7 +126,7 @@
         <delete dir="${deps.lib.dir}"/>
     </target>
     <!--================================== install target ==================================-->
-    <target name="install" depends="build-eucalyptus,build-walrus">
+    <target name="install" depends="build-eucalyptus,build-ebs,build-walrus">
         <!-- copy libraries over -->
         <mkdir dir="${euca.lib.dir}"/>
         <copy todir="${euca.lib.dir}">
@@ -140,6 +152,8 @@
         <mkdir dir="${euca.var.dir}/webapps"/>
         <mkdir dir="${euca.var.dir}/modules"/>
         <mkdir dir="${euca.log.dir}"/>
+        <ant dir="modules/workarounds" inheritall="false" target="install"/> 
+        <ant dir="modules/crypto" inheritall="false" target="install"/>
         <ant dir="modules/msgs" inheritall="false" target="install"/>
         <ant dir="modules/core" inheritall="false" target="install"/>
         <ant dir="modules/www" inheritall="false" target="install"/>

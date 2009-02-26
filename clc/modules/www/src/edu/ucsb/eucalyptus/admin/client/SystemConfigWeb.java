@@ -14,6 +14,9 @@ public class SystemConfigWeb implements IsSerializable {
 	private Integer storageMaxBucketSizeInMB;
 	private Integer storageMaxCacheSizeInMB;
 	private Integer storageSnapshotsTotalInGB;
+	private Integer storageVolumesTotalInGB;
+	private Integer storageMaxVolumeSizeInGB;
+	private String storageVolumesPath;
 	private String defaultKernelId;
 	private String defaultRamdiskId;
 
@@ -27,6 +30,9 @@ public class SystemConfigWeb implements IsSerializable {
 		final int storageMaxBucketSizeInMB, 
 		final int storageMaxCacheSizeInMB, 
 		final int storageSnapshotsTotalInGB,
+		final int storageVolumesTotalInGB,
+		final int storageMaxVolumeSizeInGB,
+		final String storageVolumesPath,
 		final String defaultKernelId, 
 		final String defaultRamdiskId )
 	{
@@ -36,6 +42,9 @@ public class SystemConfigWeb implements IsSerializable {
 		this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
 		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
 		this.storageSnapshotsTotalInGB = storageSnapshotsTotalInGB;
+		this.storageVolumesTotalInGB = storageVolumesTotalInGB;
+		this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
+		this.storageVolumesPath = storageVolumesPath;
 		this.defaultKernelId = defaultKernelId;
 		this.defaultRamdiskId = defaultRamdiskId;
 	}
@@ -90,6 +99,46 @@ public class SystemConfigWeb implements IsSerializable {
 		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
 	}
 
+	public Integer getStorageSnapshotsTotalInGB()
+	{
+		return storageSnapshotsTotalInGB;
+	}
+
+	public void setStorageSnapshotsTotalInGB( final Integer storageSnapshotsTotalInGB )
+	{
+		this.storageSnapshotsTotalInGB = storageSnapshotsTotalInGB;
+	}
+	
+	public Integer getStorageVolumesTotalInGB()
+	{
+		return storageVolumesTotalInGB;
+	}
+
+	public void setStorageVolumesTotalInGB( final Integer storageVolumesTotalInGB )
+	{
+		this.storageVolumesTotalInGB = storageVolumesTotalInGB;
+	}
+	
+	public Integer getStorageMaxVolumeSizeInGB()
+	{
+		return storageMaxVolumeSizeInGB;
+	}
+
+	public void setStorageMaxVolumeSizeInGB( final Integer storageMaxVolumeSizeInGB )
+	{
+		this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
+	}	
+	
+	public String getStorageVolumesPath()
+	{
+		return storageVolumesPath;
+	}
+
+	public void setStorageVolumesPath( final String storageVolumesPath )
+	{
+		this.storageVolumesPath = storageVolumesPath;
+	}
+
 	public String getDefaultKernelId()
 	{
 		return defaultKernelId;
@@ -108,15 +157,5 @@ public class SystemConfigWeb implements IsSerializable {
 	public void setDefaultRamdiskId( final String defaultRamdiskId )
 	{
 		this.defaultRamdiskId = defaultRamdiskId;
-	}
-
-	public Integer getStorageSnapshotsTotalInGB()
-	{
-		return storageSnapshotsTotalInGB;
-	}
-
-	public void setStorageSnapshotsTotalInGB( final Integer storageSnapshotsTotalInGB )
-	{
-		this.storageSnapshotsTotalInGB = storageSnapshotsTotalInGB;
 	}
 }

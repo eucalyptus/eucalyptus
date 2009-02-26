@@ -35,10 +35,27 @@ public class SystemState {
     for ( VmInfo runVm : request.getVms() )
       runningVmIds.add( runVm.getInstanceId() );
 
+    for( String vmId : VmInstances.getInstance().getKeys() ) {
+      if( runningVmIds.contains( vmId ) ) continue;
+      VmInstance vm = null;
+      try {
+        vm = VmInstances.getInstance().lookup( vmId );
+        long splitTime = vm.getSplitTime();
+        if ( splitTime > SHUT_DOWN_TIME ) {
+          VmInstances.getInstance().disable( vm.getName() );
+          vm.resetStopWatch();
+          vm.setState( VmState.TERMINATED );
+          vm.setReason( INSTANCE_EXPIRED );
+          SystemState.cleanUp( vm );
+        }
+      } catch ( NoSuchElementException e ) {
+        /* should never happen, just pulled the key set, if it does ignore it */
+      }
+    }
+
     List<String> knownVmIds = new ArrayList<String>();
     knownVmIds.addAll( VmInstances.getInstance().getKeys() );
-
-    if ( knownVmIds.removeAll( runningVmIds ) ) //<-- active registered vms not reported in describe
+    if ( knownVmIds.removeAll( runningVmIds ) ) {//<-- active registered vms not reported in describe
       for ( String vmId : knownVmIds ) {
         VmInstance vm = null;
         try {
@@ -55,12 +72,14 @@ public class SystemState {
           /* should never happen, just pulled the key set, if it does ignore it */
         }
       }
+    }
 
-    for ( VmInstance vm : VmInstances.getInstance().getDisabledEntries() )
+    for ( VmInstance vm : VmInstances.getInstance().getDisabledEntries() ) {
       if ( vm.getSplitTime() > SHUT_DOWN_TIME && !VmState.BURIED.equals( vm.getState() ) ) {
         vm.setState( VmState.BURIED );
         SystemState.cleanUp( vm );
       }
+    }
   }
 
   private static void cleanUp( final VmInstance vm ) {
@@ -94,10 +113,12 @@ public class SystemState {
           return;
       } else {
         vm.resetStopWatch();
-        //:: this is ridiculous, throwing away all but 2 pieces of state :://
-        vm.getNetworkConfig().setIpAddress( runVm.getNetParams().getIpAddress() );
+        if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams().getIpAddress() ) && !"".equals( runVm.getNetParams().getIpAddress() ) && runVm.getNetParams().getIpAddress() != null )
+          vm.getNetworkConfig().setIpAddress( runVm.getNetParams().getIpAddress() );
+        if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams().getIgnoredPublicIp() ) && !"".equals( runVm.getNetParams().getIgnoredPublicIp() ) && runVm.getNetParams().getIgnoredPublicIp() != null )
+          vm.getNetworkConfig().setIgnoredPublicIp( runVm.getNetParams().getIgnoredPublicIp() );
         vm.setState( VmState.Mapper.get( runVm.getStateName() ) );
-        for( AttachedVolume vol : runVm.getVolumes() ) {
+        for ( AttachedVolume vol : runVm.getVolumes() ) {
           vol.setInstanceId( vm.getInstanceId() );
         }
         vm.setVolumes( runVm.getVolumes() );
@@ -186,7 +207,8 @@ public class SystemState {
           v.resetStopWatch();
           SystemState.cleanUp( v );
         } catch ( NoSuchElementException e ) {
-          throw new EucalyptusCloudException( e );
+          LOG.debug( e, e );
+          throw new EucalyptusCloudException( e.getMessage() );
         }
       }
       return reply;
@@ -209,6 +231,9 @@ public class SystemState {
           SystemState.cleanUp( v );
         }
       }
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e );
     } finally {
       state.destroy();
     }
@@ -276,6 +301,8 @@ public class SystemState {
       if ( request.isAdministrator() || v.getOwnerId().equals( request.getUserId() ) ) {
         cluster = Clusters.getInstance().lookup( v.getPlacement() );
       }
+      if ( !VmState.RUNNING.equals( v.getState() ) )
+        throw new NoSuchElementException( "Instance " + request.getInstanceId() + " is not in a running state." );
       QueuedEvent<GetConsoleOutputType> event = new QueuedEvent<GetConsoleOutputType>( new ConsoleOutputCallback( cluster ), request );
       cluster.getMessageQueue().enqueue( event );
       return;

@@ -57,13 +57,14 @@ public class ClusterMessageQueue implements Runnable {
   private BlockingQueue<QueuedEvent> msgQueue;
   private int offerInterval = 10;
   private int pollInterval = 10;
+  private final int messageQueueSize = 100;
   private AtomicBoolean finished;
 
   public ClusterMessageQueue( Cluster parent )
   {
     this.parent = parent;
     this.finished = new AtomicBoolean( false );
-    this.msgQueue = new LinkedBlockingQueue<QueuedEvent>();
+    this.msgQueue = new LinkedBlockingQueue<QueuedEvent>(messageQueueSize);
     OutboundEndpoint endpoint = Defaults.getDefaultOutboundEndpoint( this.parent.getClusterInfo().getUri(), ClusterInfo.NAMESPACE, 15, 10, 20 );
     Axis2MessageDispatcherFactory clientFactory = new Axis2MessageDispatcherFactory();
     try
@@ -99,8 +100,8 @@ public class ClusterMessageQueue implements Runnable {
       try
       {
         if ( this.msgQueue.contains( event ) ) return;
-        this.msgQueue.offer( event, offerInterval, TimeUnit.MILLISECONDS );
-        inserted = true;
+        if(this.msgQueue.offer( event, offerInterval, TimeUnit.MILLISECONDS ))
+	        inserted = true;
       }
       catch ( InterruptedException e )
       {
@@ -127,8 +128,10 @@ public class ClusterMessageQueue implements Runnable {
           long msgStart = System.currentTimeMillis();
           try {
             event.trigger( event instanceof QueuedLogEvent ? this.logClient : this.client );
+            this.parent.setReachable( true );
           } catch ( Exception e ) {
             LOG.error( e );
+            this.parent.setReachable( false );
           } finally {
             event.getCallback().notifyHandler();
           }

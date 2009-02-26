@@ -39,6 +39,7 @@
 
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
+static const char* blockSize = "1M";
 
 jstring run_command(JNIEnv *env, char *cmd, int outfd) {
 	FILE* fd;
@@ -162,10 +163,31 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageM
     const jbyte* volume_path = (*env)->GetStringUTFChars(env, volumePath, NULL);
 	char command[256];
 
-	snprintf(command, 256, "dd if=%s of=%s", lv_name, volume_path);
+	snprintf(command, 256, "dd if=%s of=%s bs=%s", lv_name, volume_path, blockSize);
 	jstring returnValue = run_command(env, command, 1);
 
     (*env)->ReleaseStringUTFChars(env, lvName, lv_name);
     (*env)->ReleaseStringUTFChars(env, volumePath, volume_path);    
+    return returnValue;
+}
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_getLvmVersion
+  (JNIEnv *env, jobject obj) {
+	char command[256];
+
+    jstring returnValue = run_command(env, "lvm version", 1);
+
+    return returnValue;
+}
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_removeVolumeGroup
+  (JNIEnv *env, jobject obj, jstring vgName) {
+    const jbyte* vg_name = (*env)->GetStringUTFChars(env, vgName, NULL);
+    char command[128];
+
+	snprintf(command, 128, "vgremove %s", vg_name);
+	jstring returnValue = run_command(env, command, 1);
+
+	(*env)->ReleaseStringUTFChars(env, vgName, vg_name);
     return returnValue;
 }
