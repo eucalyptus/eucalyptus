@@ -130,8 +130,8 @@ public class Cluster implements HasName {
     if ( this.addrThread == null || this.addrThread.isAlive() )
       this.addrThread = this.startNamedThread( addrUpdater );
 
-    if ( this.keyThread != null && !this.keyThread.isAlive() )
-      ( this.keyThread = new Thread( nodeCertUpdater, nodeCertUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
+    if ( this.keyThread == null || this.keyThread.isAlive() )
+      this.keyThread = this.startNamedThread( nodeCertUpdater );//, nodeCertUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();
 
 //    if ( this.logThread != null && !this.logThread.isAlive() )
 //      ( this.logThread = new Thread( nodeLogUpdater, nodeLogUpdater.getClass().getSimpleName() + "-" + this.getName() ) ).start();

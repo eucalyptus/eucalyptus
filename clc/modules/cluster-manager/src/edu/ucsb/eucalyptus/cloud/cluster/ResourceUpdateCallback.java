@@ -21,6 +21,7 @@ public class ResourceUpdateCallback extends QueuedEventCallback<DescribeResource
   public void process( final Client cluster, final DescribeResourcesType msg ) throws Exception {
     DescribeResourcesResponseType reply = ( DescribeResourcesResponseType ) cluster.send( msg );
     parent.getState().update( reply.getResources() );
+    LOG.debug("Adding node service tags: " + reply.getServiceTags() );
     parent.updateNodeInfo( reply.getServiceTags() );
 //    if ( !parent.getNodeTags().isEmpty() && this.firstTime ) {
 //      this.firstTime = false;
