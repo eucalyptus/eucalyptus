@@ -69,13 +69,25 @@ public class SystemConfiguration {
   private Integer storageMaxSnapshotSizeInGb;
   @Column( name = "system_registration_id" )
   private String registrationId;
+  @Column( name = "system_storage_max_volume_size_gb ")
+  private Integer storageMaxVolumeSizeInGB;
+  @Column( name = "system_storage_volumes_dir" )
+  private String storageVolumesDir;
 
   public SystemConfiguration() {}
 
-  public SystemConfiguration( final String storageUrl,
-                              final String defaultKernel, final String defaultRamdisk,
-                              final String storageDir,
-                              final Integer storageMaxBucketsPerUser, final Integer storageMaxBucketSizeInMB, final Integer storageMaxCacheSizeInMB ) {
+  public SystemConfiguration(final String storageUrl,
+	final String defaultKernel, 
+	final String defaultRamdisk,
+	final String storageDir,
+	final Integer storageMaxBucketsPerUser, 
+	final Integer storageMaxBucketSizeInMB, 
+	final Integer storageMaxCacheSizeInMB,
+	final Integer storageMaxTotalVolumeSizeInGb,
+	final Integer storageMaxSnapshotSizeInGb,
+	final Integer storageMaxVolumeSizeInGB,
+	final String storageVolumesDir)
+  {
     this.storageUrl = storageUrl;
     this.defaultKernel = defaultKernel;
     this.defaultRamdisk = defaultRamdisk;
@@ -83,6 +95,10 @@ public class SystemConfiguration {
     this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
     this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
     this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
+	this.storageMaxTotalVolumeSizeInGb = storageMaxTotalVolumeSizeInGb;
+	this.storageMaxSnapshotSizeInGb = storageMaxSnapshotSizeInGb;
+	this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
+	this.storageVolumesDir = storageVolumesDir;
   }
 
   public Long getId() {
@@ -167,5 +183,21 @@ public class SystemConfiguration {
 
   public void setRegistrationId( final String registrationId ) {
     this.registrationId = registrationId;
+  }
+
+  public Integer getStorageMaxVolumeSizeInGB() {
+    return storageMaxVolumeSizeInGB;
+  }
+
+  public void setStorageMaxVolumeSizeInGB( Integer storageMaxVolumeSizeInGB ) {
+    this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
+  }
+
+  public String getStorageVolumesDir() {
+    return storageVolumesDir;
+  }
+
+  public void setStorageVolumesDir( final String storageVolumesDir ) {
+    this.storageVolumesDir = storageVolumesDir;
   }
 }
