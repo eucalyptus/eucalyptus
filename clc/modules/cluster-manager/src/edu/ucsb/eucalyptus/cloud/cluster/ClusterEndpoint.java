@@ -191,7 +191,9 @@ public class ClusterEndpoint implements Startable {
           if ( ccAlias == null ) ccAlias = "FALSE";
           ncAlias = ServiceKeyStore.getInstance().getCertificateAlias( node.getCerts().getNcCert() );
           if ( ncAlias == null ) ncAlias = "FALSE";
-        } catch ( GeneralSecurityException e ) {}
+        } catch ( GeneralSecurityException e ) {
+          LOG.error( e );
+        }
         info.add( s( node.getName(), String.format( certs, ccAlias.startsWith( "cc-" ), ncAlias.startsWith( "nc-" ), node.getLastSeen() ) ) );
       }
     }
