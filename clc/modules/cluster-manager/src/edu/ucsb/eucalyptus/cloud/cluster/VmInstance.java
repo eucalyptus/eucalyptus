@@ -69,7 +69,7 @@ public class VmInstance implements HasName {
   private List<Network> networks = new ArrayList<Network>();
   private VmState state;
   private StringBuffer consoleOutput;
-  private List<AttachedVolume> volumes;
+  private List<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
   private NetworkConfigType networkConfig;
 
   public VmInstance() {
@@ -79,6 +79,7 @@ public class VmInstance implements HasName {
     this.stopWatch = new StopWatch();
     this.stopWatch.start();
     this.consoleOutput = new StringBuffer();
+    this.volumes = new ArrayList<AttachedVolume>();
   }
 
   public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement, final String userData,

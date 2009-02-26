@@ -21,9 +21,12 @@ public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputT
   public void process( final Client cluster, final GetConsoleOutputType msg ) throws Exception {
     GetConsoleOutputResponseType reply = ( GetConsoleOutputResponseType ) cluster.send( msg );
     VmInstance vm = VmInstances.getInstance().lookup( msg.getInstanceId() );
-    String output = new String( Base64.decode( reply.getOutput().getBytes() ) );
-    if ( !"EMPTY".equals( output ) )
-      vm.getConsoleOutput().append( output );
+    String output = null;
+    try {
+      output = new String( Base64.decode( reply.getOutput().getBytes() ) );
+      if ( !"EMPTY".equals( output ) )
+        vm.getConsoleOutput().append( output );
+    } catch ( ArrayIndexOutOfBoundsException e1 ) {}
     reply.setInstanceId( msg.getInstanceId() );
     reply.setTimestamp( new Date() );
     reply.setOutput( new String( Base64.encode( vm.getConsoleOutput().toString().getBytes() ) ) );

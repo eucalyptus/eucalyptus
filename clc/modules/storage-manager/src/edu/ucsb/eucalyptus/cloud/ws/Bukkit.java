@@ -2104,7 +2104,7 @@ public class Bukkit {
                 if(file != null) {
                     outStream = new BufferedOutputStream(new FileOutputStream(file));
                 }
-                byte[] bytes = new byte[WalrusQueryDispatcher.DATA_MESSAGE_SIZE];
+                byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
                 int bytesRead;
                 while((bytesRead = inStream.read(bytes)) > 0) {
                     if(outStream != null) {
@@ -2131,7 +2131,7 @@ public class Bukkit {
                 error.start();
                 output.start();
                 int exitVal = proc.waitFor();
-              output.join();
+                output.join();
             } catch (Throwable t) {
                 t.printStackTrace();
             }
@@ -2156,7 +2156,7 @@ public class Bukkit {
             in.close();
             out.close();
         } catch(Exception ex) {
-            ex.printStackTrace();
+            LOG.warn(ex, ex);
         }
     }
 
@@ -2170,7 +2170,7 @@ public class Bukkit {
             }
             out.close();
         } catch (Exception ex) {
-            ex.printStackTrace();
+            LOG.warn(ex, ex);
         }
     }
 

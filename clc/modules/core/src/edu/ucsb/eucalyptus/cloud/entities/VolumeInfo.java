@@ -70,6 +70,7 @@ public class VolumeInfo {
     private String snapshotId;
     @Column(name = "transferred")
     private Boolean transferred;
+
     @OneToMany( cascade = CascadeType.ALL )
     @JoinTable(
             name = "volume_has_attachments",

@@ -43,7 +43,6 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.cluster.VolumeAttachCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VolumeDetachCallback;
-import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.State;
@@ -93,12 +92,15 @@ public class VolumeManager {
     if ( !Clusters.getInstance().contains( request.getAvailabilityZone() ) ) {
       throw new EucalyptusCloudException( "Zone does not exist: " + request.getAvailabilityZone() );
     }
+    if( ( request.getSnapshotId() == null && request.getSize() == null ) || ( request.getSnapshotId() != null && request.getSize() != null ) ) {
+      throw new EucalyptusCloudException( "One of 'snapshotId' or 'size' must be set." );
+    }
 
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     if ( !( request.getSnapshotId() == null ) ) {
       String userName = request.isAdministrator() ? null : request.getUserId();
       try {
-        db.recast( Snapshot.class ).getUnique( new Snapshot( userName, request.getSnapshotId() ) );
+        db.recast( Snapshot.class ).getUnique( Snapshot.named( userName, request.getSnapshotId() ) );
       } catch ( EucalyptusCloudException e ) {
         LOG.debug( e, e );
         db.rollback();
@@ -110,9 +112,9 @@ public class VolumeManager {
     while ( true ) {
       newId = Hashes.generateId( request.getUserId(), ID_PREFIX );
       try {
-        db.getUnique( new Volume( null, newId ) );
+        db.getUnique( Volume.ownedBy( newId ) );
       } catch ( EucalyptusCloudException e ) {
-        newVol = new Volume( request.getUserId(), newId, new Integer( request.getSize() ),
+        newVol = new Volume( request.getUserId(), newId, new Integer( request.getSize() != null ? request.getSize() : "-1" ),
                              request.getAvailabilityZone(), request.getSnapshotId() );
         db.add( newVol );
         break;
@@ -176,6 +178,7 @@ public class VolumeManager {
         if ( !volState.getVolumeSet().isEmpty() ) {
           StorageVolume vol = volState.getVolumeSet().get( 0 );
           volumeState = vol.getStatus();
+          v.setSize( new Integer( vol.getSize() ) );
           v.setRemoteDevice( vol.getActualDeviceName() );
         }
         if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
@@ -243,20 +246,6 @@ public class VolumeManager {
   public DetachVolumeResponseType DetachVolume( DetachVolumeType request ) throws EucalyptusCloudException {
     DetachVolumeResponseType reply = ( DetachVolumeResponseType ) request.getReply();
 
-    VmInstance vm = null;
-    try {
-      vm = VmInstances.getInstance().lookup( request.getInstanceId() );
-    } catch ( NoSuchElementException e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId() );
-    }
-    Cluster cluster = null;
-    try {
-      cluster = Clusters.getInstance().lookup( vm.getPlacement() );
-    } catch ( NoSuchElementException e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPlacement() );
-    }
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
     try {
@@ -267,21 +256,40 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId() );
     }
     db.commit();
+
+    VmInstance vm = null;
     AttachedVolume volume = null;
     for ( VmInstance v : VmInstances.getInstance().listValues() ) {
       for ( AttachedVolume vol : v.getVolumes() ) {
         if ( vol.getVolumeId().equals( request.getVolumeId() ) ) {
           volume = vol;
+          vm = v;
         }
       }
     }
-    if ( volume == null )
+    if ( volume == null || vm == null ) {
       throw new EucalyptusCloudException( "Volume is not attached: " + request.getVolumeId() );
+    }
+    if( !vm.getInstanceId().equals( request.getInstanceId() ) && request.getInstanceId() != null && !request.getInstanceId().equals("" ) ) {
+      throw new EucalyptusCloudException( "Volume is not attached to instance: " + request.getInstanceId() );
+    }
+    if ( request.getDevice() != null && !request.getDevice().equals("") && !volume.getDevice().equals( request.getDevice() ) ) {
+      throw new EucalyptusCloudException( "Volume is not attached to device: " + request.getDevice() );
+    }
+
+    Cluster cluster = null;
+    try {
+      cluster = Clusters.getInstance().lookup( vm.getPlacement() );
+    } catch ( NoSuchElementException e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPlacement() );
+    }
 
     request.setVolumeId( volume.getVolumeId() );
     request.setRemoteDevice( volume.getRemoteDevice() );
     request.setDevice( volume.getDevice() );
-    QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( cluster ), request );
+    request.setInstanceId( vm.getInstanceId() );
+    QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( ), request );
     cluster.getMessageQueue().enqueue( event );
 
     vm.getVolumes().remove( new AttachedVolume( volume.getVolumeId() ) );

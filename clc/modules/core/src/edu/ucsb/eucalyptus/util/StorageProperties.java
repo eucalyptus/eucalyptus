@@ -84,6 +84,8 @@ public class StorageProperties {
                     MAX_TOTAL_SNAPSHOT_SIZE = maxTotalSnapSize;
                 }
             }
+			/* TODO: set storageRootDirectory and MAX_VOLUME_SIZE from systemConfiguration */
+			
             updateConfig.setMaxTotalVolumeSize(MAX_TOTAL_VOLUME_SIZE);
             updateConfig.setMaxTotalSnapshotSize(MAX_TOTAL_SNAPSHOT_SIZE);
             updateConfig.setMaxVolumeSize(MAX_VOLUME_SIZE);

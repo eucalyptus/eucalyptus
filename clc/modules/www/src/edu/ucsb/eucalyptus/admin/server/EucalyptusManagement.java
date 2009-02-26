@@ -414,7 +414,8 @@ public class EucalyptusManagement {
 
 	private static String getInternalIpAddress ()
 	{
-		String ipAddr = "127.0.0.1";
+		String ipAddr = null;
+    String localAddr = "127.0.0.1";
 
 		List<NetworkInterface> ifaces = null;
 		try {
@@ -422,16 +423,21 @@ public class EucalyptusManagement {
 		}
 		catch ( SocketException e1 ) {}
 
-		for ( NetworkInterface iface : ifaces )
-		try {
-			if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() )
-				for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) )
-				if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) )
-				ipAddr = iaddr.getHostAddress();
-		}
-		catch ( SocketException e1 ) {}
+    for ( NetworkInterface iface : ifaces )
+      try {
+        if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
+          for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
+            if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
+              ipAddr = iaddr.getHostAddress();
+            } else if ( iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
+              localAddr = iaddr.getHostAddress();
+            }
+          }
+        }
+      }
+      catch ( SocketException e1 ) {}
 
-		return ipAddr;
+    return ipAddr == null ? localAddr : ipAddr;
 	}
 
     public static SystemConfigWeb getSystemConfig() throws SerializableException
@@ -440,10 +446,15 @@ public class EucalyptusManagement {
         try
         {
             SystemConfiguration sysConf = db.getUnique( new SystemConfiguration() );
+			
             return new SystemConfigWeb( sysConf.getStorageUrl(), sysConf.getStorageDir(),
                     sysConf.getStorageMaxBucketsPerUser(),
 					sysConf.getStorageMaxBucketSizeInMB(),
 					sysConf.getStorageMaxCacheSizeInMB(),
+					sysConf.getStorageMaxSnapshotSizeInGb(),
+					sysConf.getStorageMaxTotalVolumeSizeInGb(),
+					sysConf.getStorageMaxVolumeSizeInGB(),
+					sysConf.getStorageVolumesDir(),
                     sysConf.getDefaultKernel(), sysConf.getDefaultRamdisk() );
         }
         catch ( EucalyptusCloudException e )
@@ -470,6 +481,10 @@ public class EucalyptusManagement {
                     WalrusProperties.MAX_BUCKETS_PER_USER,
 					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
 					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
+					StorageProperties.MAX_TOTAL_SNAPSHOT_SIZE,
+					StorageProperties.MAX_TOTAL_VOLUME_SIZE,
+					StorageProperties.MAX_VOLUME_SIZE,
+					StorageProperties.storageRootDirectory,
                     defKernel, defRamdisk );
         }
         finally {
@@ -495,6 +510,10 @@ public class EucalyptusManagement {
             sysConf.setStorageMaxBucketsPerUser( systemConfig.getStorageMaxBucketsPerUser() );
             sysConf.setStorageMaxBucketSizeInMB( systemConfig.getStorageMaxBucketSizeInMB() );
 			sysConf.setStorageMaxCacheSizeInMB ( systemConfig.getStorageMaxCacheSizeInMB() );
+			sysConf.setStorageMaxTotalVolumeSizeInGb ( systemConfig.getStorageVolumesTotalInGB() );
+			sysConf.setStorageMaxSnapshotSizeInGb ( systemConfig.getStorageSnapshotsTotalInGB() );
+			sysConf.setStorageMaxVolumeSizeInGB (systemConfig.getStorageMaxVolumeSizeInGB());
+			sysConf.setStorageVolumesDir (systemConfig.getStorageVolumesPath());
             db.commit();
             WalrusProperties.update();
             StorageProperties.update();
@@ -504,7 +523,13 @@ public class EucalyptusManagement {
             db.add( new SystemConfiguration(systemConfig.getStorageUrl(),
                     systemConfig.getDefaultKernelId(),
                     systemConfig.getDefaultRamdiskId(), systemConfig.getStoragePath(),
-                    systemConfig.getStorageMaxBucketsPerUser() , systemConfig.getStorageMaxBucketSizeInMB(), systemConfig.getStorageMaxCacheSizeInMB() ) );
+                    systemConfig.getStorageMaxBucketsPerUser() , 
+					systemConfig.getStorageMaxBucketSizeInMB(), 
+					systemConfig.getStorageMaxCacheSizeInMB(),
+					systemConfig.getStorageVolumesTotalInGB(),
+					systemConfig.getStorageSnapshotsTotalInGB(),
+					systemConfig.getStorageMaxVolumeSizeInGB(),
+					systemConfig.getStorageVolumesPath() ) );
             db.commit();
           WalrusProperties.update();
           StorageProperties.update();

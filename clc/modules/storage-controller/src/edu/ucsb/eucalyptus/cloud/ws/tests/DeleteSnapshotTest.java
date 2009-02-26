@@ -47,7 +47,7 @@ public class DeleteSnapshotTest extends TestCase {
     public void testDeleteSnapshot() throws Throwable {
 
         String snapshotBucket = "snapset";
-        String snapshotId = "snap-Q-DtCuwDu7yhTg..";
+        String snapshotId = "snap-95HwDtbhhKRqhg..";
 
         DeleteStorageSnapshotType deleteSnapshot = new DeleteStorageSnapshotType();
         deleteSnapshot.setUserId("admin");

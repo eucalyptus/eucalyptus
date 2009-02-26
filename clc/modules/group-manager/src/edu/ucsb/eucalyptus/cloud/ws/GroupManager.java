@@ -222,9 +222,9 @@ public class GroupManager {
       }
     }
     if ( foundAll ) {
-      db.commit();
       Network changedNetwork = ruleGroup.getVmNetwork( user.getUserName() );
       Messaging.dispatch( EucalyptusProperties.CLUSTERSINK_REF, changedNetwork );
+      db.commit();
     } else db.rollback();
     reply.set_return( foundAll );
     return reply;

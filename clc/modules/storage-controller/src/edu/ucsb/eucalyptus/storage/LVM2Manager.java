@@ -77,7 +77,7 @@ public class LVM2Manager implements BlockStorageManager {
         }
         eucaHome = eucaHomeDir;
         if(!new File(eucaHome + EUCA_ROOT_WRAPPER).exists()) {
-            throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist");
+            throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist in " + eucaHome);
         }
         if(!new File(eucaHome + CONFIG_FILE_PATH).exists()) {
             throw new EucalyptusCloudException(eucaHome + CONFIG_FILE_PATH + " does not exist");
@@ -116,6 +116,7 @@ public class LVM2Manager implements BlockStorageManager {
         try {
             hostName = InetAddress.getLocalHost().getHostName();
             iface = parseConfig();
+	    LOG.warn("iface: " + iface); 
             if(iface == null || (iface.length() == 0)) {
                 NetworkInterface inface = NetworkInterface.getByName(iface);
                 if(inface == null) {
@@ -197,7 +198,7 @@ public class LVM2Manager implements BlockStorageManager {
             int pid = lvmVolInfo.getVbladePid();
             if(pid > 0) {
                 String returnValue = aoeStatus(pid);
-                if(returnValue.contains("vblade")) {
+                if(returnValue.length() > 0) {
                     exportManager.unexportVolume(pid);
                     int majorNumber = lvmVolInfo.getMajorNumber();
                     int minorNumber = lvmVolInfo.getMinorNumber();
@@ -303,19 +304,38 @@ public class LVM2Manager implements BlockStorageManager {
         db.commit();
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
         int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
-        String returnValue = aoeStatus(pid);
-        if(pid < 0 || (!returnValue.contains("vblade"))) {
-            throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface);
-        } else {
-            File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
-            try {
-                FileOutputStream fileOutStream = new FileOutputStream(vbladePidFile);
-                String pidString = String.valueOf(pid);
-                fileOutStream.write(pidString.getBytes());
-                fileOutStream.close();
-            } catch (Exception ex) {
-                LOG.warn("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
-            }
+        boolean success = false;
+	String returnValue = "";
+	int timeout = 300;
+	if(pid > 0) {
+   	    for(int i=0; i < 5; ++i) {
+                returnValue = aoeStatus(pid);
+                if(returnValue.length() == 0) {
+		    success = false;
+		    try {
+		        Thread.sleep(timeout); 
+		    } catch(InterruptedException ie) {
+			LOG.warn(ie, ie);
+		    }
+		    timeout += 300;
+	        } else {
+		    success = true;
+		    break;
+	        }
+	    } 
+	}
+	if(!success) {
+            throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface + " pid: " + pid + " returnValue: " + returnValue);
+        } 
+           
+        File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+        try {
+            FileOutputStream fileOutStream = new FileOutputStream(vbladePidFile);
+            String pidString = String.valueOf(pid);
+            fileOutStream.write(pidString.getBytes());
+            fileOutStream.close();
+        } catch (Exception ex) {
+            LOG.warn("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
         }
         lvmVolumeInfo.setVbladePid(pid);
         lvmVolumeInfo.setMajorNumber(majorNumber);
@@ -411,6 +431,7 @@ public class LVM2Manager implements BlockStorageManager {
                 throw new EucalyptusCloudException();
             }
         } catch(EucalyptusCloudException ex) {
+	    LOG.warn(ex);
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
             String returnValue = removeLogicalVolume(absoluteLVName);
             returnValue = removeVolumeGroup(vgName);
@@ -527,6 +548,47 @@ public class LVM2Manager implements BlockStorageManager {
         return size;
     }
 
+    public void dupVolume(String volumeId, String dupVolumeId) throws EucalyptusCloudException {
+        EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+        LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
+        LVMVolumeInfo foundVolumeInfo = db.getUnique(lvmVolumeInfo);
+        if(foundVolumeInfo != null) {
+            String vgName = "vg-" + Hashes.getRandom(4);
+            String lvName = "lv-" + Hashes.getRandom(4);
+            lvmVolumeInfo = new LVMVolumeInfo();
+
+            File volumeFile = new File(StorageProperties.storageRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVolumeId());
+
+            String rawFileName = StorageProperties.storageRootDirectory + "/" + dupVolumeId;
+            //create file and attach to loopback device
+            int size = (int)(volumeFile.length() / StorageProperties.GB);
+            String loDevName = createLoopback(rawFileName, size);
+            //create physical volume, volume group and logical volume
+            createLogicalVolume(loDevName, vgName, lvName);
+            //duplicate snapshot volume
+            String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+            String absoluteVolumeLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() +
+                    PATH_SEPARATOR + foundVolumeInfo.getLvName();
+            duplicateLogicalVolume(absoluteVolumeLVName, absoluteLVName);
+
+            lvmVolumeInfo.setVolumeId(dupVolumeId);
+            lvmVolumeInfo.setLoDevName(loDevName);
+            lvmVolumeInfo.setPvName(loDevName);
+            lvmVolumeInfo.setVgName(vgName);
+            lvmVolumeInfo.setLvName(lvName);
+            lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+            lvmVolumeInfo.setSize(size);
+            lvmVolumeInfo.setVbladePid(-1);
+            db.add(lvmVolumeInfo);
+
+            db.commit();
+        } else {
+            db.rollback();
+            throw new EucalyptusCloudException("Could not dup volume " + volumeId);
+        }
+
+    }
+
     public List<String> getStatus(List<String> volumeSet) throws EucalyptusCloudException {
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
         ArrayList<String> status = new ArrayList<String>();
@@ -561,7 +623,7 @@ public class LVM2Manager implements BlockStorageManager {
             int pid = foundLVMVolumeInfo.getVbladePid();
             if(pid > 0) {
                 String returnValue = aoeStatus(pid);
-                if(returnValue.contains("vblade")) {
+                if(returnValue.length() > 0) {
                     exportManager.unexportVolume(pid);
                     int majorNumber = foundLVMVolumeInfo.getMajorNumber();
                     int minorNumber = foundLVMVolumeInfo.getMinorNumber();
@@ -741,12 +803,12 @@ public class LVM2Manager implements BlockStorageManager {
         //now enable them
         for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
             int pid = foundVolumeInfo.getVbladePid();
-            if(foundVolumeInfo.getVbladePid() > 0) {
+            if(pid > 0) {
                 //enable logical volumes
                 String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
                 enableLogicalVolume(absoluteLVName);
                 String returnValue = aoeStatus(pid);
-                if(!returnValue.contains("vblade")) {
+                if(returnValue.length() == 0) {
                     int majorNumber = foundVolumeInfo.getMajorNumber();
                     int minorNumber = foundVolumeInfo.getMinorNumber();
                     pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);

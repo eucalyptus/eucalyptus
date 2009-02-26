@@ -33,7 +33,7 @@ public class RemoteInfoHandler {
   {
     List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>();
     for ( ClusterStateType c : Clusters.getInstance().getClusters() )
-      clusterList.add( new ClusterInfoWeb( c.getName(), c.getHost(), c.getPort() ) );
+      clusterList.add( new ClusterInfoWeb( c.getName(), c.getHost(), c.getPort(), "/foo/bar", 0, 0) ); // TODO Sunil: add SC configuration params
     return clusterList;
   }
 

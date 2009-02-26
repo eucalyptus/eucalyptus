@@ -8,12 +8,7 @@ public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType> 
 
   private static Logger LOG = Logger.getLogger( VolumeDetachCallback.class );
 
-  private Cluster parent;
-
-  public VolumeDetachCallback( final Cluster parent )
-  {
-    this.parent = parent;
-  }
+  public VolumeDetachCallback( ){}
 
   public void process( final Client cluster, final DetachVolumeType msg ) throws Exception
   {

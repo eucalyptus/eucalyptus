@@ -55,7 +55,9 @@ public class NodeCertCallback extends QueuedEventCallback<GetKeysType> implement
   public void run() {
     do {
       if ( !this.parent.getNodeTags().isEmpty() ) {
+        LOG.debug( "Querying all known service tags:" );
         for ( String serviceTag : this.parent.getNodeTags() ) {
+          LOG.debug( "- " + serviceTag );
           GetKeysType msg = new GetKeysType( serviceTag.replaceAll( "EucalyptusNC", "EucalyptusGL" ) );
           this.requests.add( msg );
           this.parent.getMessageQueue().enqueue( new QueuedLogEvent( this, msg ) );

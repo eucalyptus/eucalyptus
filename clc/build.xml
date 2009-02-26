@@ -41,7 +41,7 @@
             <filterreader classname="org.apache.tools.ant.filters.StripLineBreaks"/>
         </filterchain>
     </loadfile>
-    <property name="jvm.heap" value="1g"/>
+    <property name="jvm.heap" value="512m"/>
     <property name="deps.url" value="http://eucalyptus.cs.ucsb.edu/dependencies/${euca.version}"/>
     <property name="deps.dir" value="deps"/>
     <property name="deps.lib.dir" value="lib"/>
@@ -53,7 +53,7 @@
     </target>
     <target name="build-workarounds" depends="build-crypto">
         <ant dir="modules/workarounds" inheritall="false"/>
-    </target>
+    </target> 
     <target name="build-msgs" depends="build-workarounds">
         <ant dir="modules/msgs" inheritall="false"/>
     </target>
@@ -76,7 +76,7 @@
     <target name="build-walrus-ws" depends="build-transport">
         <ant dir="modules/storage-manager" inheritall="false"/>
     </target>
-    <target name="build-ebs-ws" depends="build-transport">
+    <target name="build-ebs-ws" depends="build-walrus-ws">
         <ant dir="modules/storage-controller" inheritall="false"/>
     </target>
     <target name="build-eucalyptus" depends="build-core,build-www,build-eucalyptus-ws"/>
@@ -152,7 +152,7 @@
         <mkdir dir="${euca.var.dir}/webapps"/>
         <mkdir dir="${euca.var.dir}/modules"/>
         <mkdir dir="${euca.log.dir}"/>
-        <ant dir="modules/workarounds" inheritall="false" target="install"/>
+        <ant dir="modules/workarounds" inheritall="false" target="install"/> 
         <ant dir="modules/crypto" inheritall="false" target="install"/>
         <ant dir="modules/msgs" inheritall="false" target="install"/>
         <ant dir="modules/core" inheritall="false" target="install"/>

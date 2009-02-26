@@ -116,7 +116,7 @@ public class SystemState {
         if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams().getIpAddress() ) && !"".equals( runVm.getNetParams().getIpAddress() ) && runVm.getNetParams().getIpAddress() != null )
           vm.getNetworkConfig().setIpAddress( runVm.getNetParams().getIpAddress() );
         if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams().getIgnoredPublicIp() ) && !"".equals( runVm.getNetParams().getIgnoredPublicIp() ) && runVm.getNetParams().getIgnoredPublicIp() != null )
-          vm.getNetworkConfig().setIgnoredPublicIp( runVm.getNetParams().getIpAddress() );
+          vm.getNetworkConfig().setIgnoredPublicIp( runVm.getNetParams().getIgnoredPublicIp() );
         vm.setState( VmState.Mapper.get( runVm.getStateName() ) );
         for ( AttachedVolume vol : runVm.getVolumes() ) {
           vol.setInstanceId( vm.getInstanceId() );
@@ -208,7 +208,8 @@ public class SystemState {
           SystemState.cleanUp( v );
         } catch ( NoSuchElementException e ) {
           LOG.debug( e, e );
-          throw new EucalyptusCloudException( e.getMessage() );
+//Bug #334650: uncomment the following if it should throw an exception
+//          throw new EucalyptusCloudException( e.getMessage() );
         }
       }
       return reply;
@@ -233,7 +234,8 @@ public class SystemState {
       }
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      throw new EucalyptusCloudException( e );
+//Bug #334650: uncomment the following if it should throw an exception
+//      throw new EucalyptusCloudException( e );
     } finally {
       state.destroy();
     }

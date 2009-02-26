@@ -79,7 +79,7 @@ public class Volume extends AbstractIsomorph {
     vol.setVolumeId( this.getDisplayName() );
     vol.setSnapshotId( this.getParentSnapshot() );
     vol.setStatus( this.mapState() );
-    vol.setSize( this.getSize().toString() );
+    vol.setSize( (this.getSize() == -1) || (this.getSize() == null)? null : this.getSize().toString() );
     return vol;
   }
 
