@@ -81,9 +81,9 @@ public class VolumeManager {
   private static String ID_PREFIX = "vol";
   private static Logger LOG = Logger.getLogger( VolumeManager.class );
 
-  static {
-    Clusters.getInstance().register( new Cluster( new ClusterInfo( "bogocluster", "lollerskates", 8774 ) ) );
-  }
+//  static {
+//    Clusters.getInstance().register( new Cluster( new ClusterInfo( "bogocluster", "lollerskates", 8774 ) ) );
+//  }
 
   public static EntityWrapper<Volume> getEntityWrapper() {
     return new EntityWrapper<Volume>( PERSISTENCE_CONTEXT );
