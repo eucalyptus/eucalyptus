@@ -263,10 +263,14 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   if (rc) {
     return(1);
   }
-
-  ret = 0;
-
   logprintfl(EUCADEBUG,"AssignAddress(): called\n");
+
+  if (!src || !dst || !strcmp(src, "0.0.0.0") || !strcmp(dst, "0.0.0.0")) {
+    logprintfl(EUCADEBUG, "AssignAddress(): bad input params\n");
+    return(1);
+  }
+  
+  ret = 0;
 
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
     ret = 0;
@@ -344,6 +348,11 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   }
   logprintfl(EUCADEBUG,"UnassignAddress(): called\n");  
   
+  if (!src || !dst || !strcmp(src, "0.0.0.0") || !strcmp(dst, "0.0.0.0")) {
+    logprintfl(EUCADEBUG, "UnassignAddress(): bad input params\n");
+    return(1);
+  }
+
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
     ret = 0;
   } else {
