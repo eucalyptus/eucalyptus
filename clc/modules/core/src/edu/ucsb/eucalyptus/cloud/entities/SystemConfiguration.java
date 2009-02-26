@@ -69,7 +69,7 @@ public class SystemConfiguration {
   private Integer storageMaxSnapshotSizeInGb;
   @Column( name = "system_registration_id" )
   private String registrationId;
-  @Column( name = "system_storage_max_volume_size_gb ")
+  @Column( name = "system_storage_max_volume_size_gb" )
   private Integer storageMaxVolumeSizeInGB;
   @Column( name = "system_storage_volumes_dir" )
   private String storageVolumesDir;
