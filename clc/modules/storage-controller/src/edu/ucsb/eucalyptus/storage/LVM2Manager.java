@@ -306,11 +306,18 @@ public class LVM2Manager implements BlockStorageManager {
         int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
         boolean success = false;
 	String returnValue = "";
+	int timeout = 300;
 	if(pid > 0) {
    	    for(int i=0; i < 5; ++i) {
                 returnValue = aoeStatus(pid);
                 if(returnValue.length() == 0) {
-		    success = false; 
+		    success = false;
+		    try {
+		        Thread.sleep(timeout); 
+		    } catch(InterruptedException ie) {
+			LOG.warn(ie, ie);
+		    }
+		    timeout += 300;
 	        } else {
 		    success = true;
 		    break;
