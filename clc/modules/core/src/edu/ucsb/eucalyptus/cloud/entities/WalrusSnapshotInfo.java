@@ -58,6 +58,8 @@ public class WalrusSnapshotInfo {
     private String lvName;
     @Column(name ="transferred")
     private Boolean transferred;
+    @Column(name = "size")
+    private Integer size;
 
     public WalrusSnapshotInfo() {}
 
@@ -103,5 +105,13 @@ public class WalrusSnapshotInfo {
 
     public void setTransferred(Boolean transferred) {
         this.transferred = transferred;
+    }
+
+    public Integer getSize() {
+        return size;
+    }
+
+    public void setSize(Integer size) {
+        this.size = size;
     }
 }

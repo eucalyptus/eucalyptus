@@ -474,6 +474,7 @@ public class Bukkit {
                             foundObject.setSize(size);
                             foundObject.setLastModified(lastModified);
                             foundObject.setStorageClass("STANDARD");
+                            reply.setSize(size);
                             if(shouldEnforceUsageLimits && !request.isAdministrator()) {
                                 Long bucketSize = bucket.getBucketSize();
                                 long newSize = bucketSize + oldBucketSize + size;
@@ -2366,6 +2367,20 @@ public class Bukkit {
             reply.setEtag(putObjectResponseType.getEtag());
             reply.setLastModified(putObjectResponseType.getLastModified());
             reply.setStatusMessage(putObjectResponseType.getStatusMessage());
+            int snapshotSize = (int)(putObjectResponseType.getSize() / WalrusProperties.G);
+            if(shouldEnforceUsageLimits) {
+                int totalSnapshotSize = 0;
+                WalrusSnapshotInfo snapInfo = new WalrusSnapshotInfo();
+
+                List<WalrusSnapshotInfo> sInfos = dbSnap.query(snapInfo);
+                for (WalrusSnapshotInfo sInfo : sInfos) {
+                    totalSnapshotSize += sInfo.getSize();
+                }
+                if((totalSnapshotSize + snapshotSize) > WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE) {
+                    db.rollback();
+                    throw new EntityTooLargeException(snapshotId);
+                }
+            }
 
             //change state
             db.commit();
@@ -2373,6 +2388,7 @@ public class Bukkit {
             snapshotInfo = new WalrusSnapshotInfo(snapshotId);
             dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
             WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
+            foundSnapshotInfo.setSize(snapshotSize);
             foundSnapshotInfo.setTransferred(true);
             dbSnap.commit();
         } catch (EucalyptusCloudException ex) {
