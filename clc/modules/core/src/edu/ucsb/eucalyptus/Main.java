@@ -59,17 +59,15 @@ public class Main {
     descAz.setCorrelationId( "" );
     try {
       Messaging.send( WalrusProperties.WALRUS_REF, new InitializeWalrusType() );
-    } catch (Exception e) {} 
+    } catch (Exception e) {}
     try {
       if( System.getProperty("euca.ebs.disable") == null )
         Messaging.send( StorageProperties.STORAGE_REF, new InitializeStorageManagerType() );
-    } catch (Exception e) {} 
+    } catch (Exception e) {}
 
     try {
       Messaging.dispatch( "vm://RequestQueue", descAz );
-    } catch (Exception e) {} 
-    com.iterative.groovy.service.GroovyShellService gshell = new com.iterative.groovy.service.GroovyShellService(19191);
-    gshell.launchInBackground();
+    } catch (Exception e) {}
     LOG.info( "Eucalyptus started." );
   }
 }
