@@ -68,7 +68,8 @@ public class Main {
     try {
       Messaging.dispatch( "vm://RequestQueue", descAz );
     } catch (Exception e) {} 
-
+    com.iterative.groovy.service.GroovyShellService gshell = new com.iterative.groovy.service.GroovyShellService(19191);
+    gshell.launchInBackground();
     LOG.info( "Eucalyptus started." );
   }
 }
