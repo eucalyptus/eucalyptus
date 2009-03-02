@@ -48,7 +48,7 @@ public class VmAdmissionControl {
     if ( failed ) {
       if ( allocTokeList != null )
         for ( ResourceToken token : allocTokeList )
-          Clusters.getInstance().lookup( token.getCluster() ).getState().releaseResourceToken( token );
+          Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
       throw new EucalyptusCloudException( "Not enough resources available." );
     }
 

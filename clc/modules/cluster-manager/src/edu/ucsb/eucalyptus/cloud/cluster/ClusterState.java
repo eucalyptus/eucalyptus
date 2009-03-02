@@ -34,40 +34,28 @@
 
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.VmType;
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 import org.apache.log4j.Logger;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Comparator;
+import java.util.NavigableSet;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 public class ClusterState {
 
   private static Logger LOG = Logger.getLogger( ClusterState.class );
 
   private Cluster parent;
-  private int virtualTimer;
-  private ConcurrentNavigableMap<String, VmTypeAvailability> typeMap;
-
-  private NavigableSet<ResourceToken> pendingTokens;
-  private NavigableSet<ResourceToken> submittedTokens;
   private NavigableSet<Integer> availableVlans;
 
   public ClusterState( Cluster parent ) {
     this.parent = parent;
-    this.virtualTimer = 0;
-    this.typeMap = new ConcurrentSkipListMap<String, VmTypeAvailability>();
-
-    for ( VmType v : VmTypes.list() )
-      this.typeMap.putIfAbsent( v.getName(), new VmTypeAvailability( v, 0, 0 ) );
-
-    this.pendingTokens = new ConcurrentSkipListSet<ResourceToken>();
-    this.submittedTokens = new ConcurrentSkipListSet<ResourceToken>();
 
     this.availableVlans = new ConcurrentSkipListSet<Integer>();
     for ( int i = 10; i < 4096; i++ ) this.availableVlans.add( i );
   }
+
 
   public NetworkToken extantAllocation( String userName, String networkName, int vlan ) throws NetworkAlreadyExistsException {
     NetworkToken netToken = new NetworkToken( this.parent.getName(), userName, networkName, vlan );
@@ -88,83 +76,6 @@ public class ClusterState {
     this.availableVlans.add( token.getVlan() );
   }
 
-  public void releaseResourceToken( ResourceToken token ) {
-    this.pendingTokens.remove( token );
-  }
-
-  public int getAvailable( String vmTypeName ) {
-    VmTypeAvailability vmType = this.typeMap.get( vmTypeName );
-    NavigableSet<VmTypeAvailability> sorted = this.sorted();
-    if ( sorted.headSet( VmTypeAvailability.ZERO ).contains( vmType ) )
-      return sorted.higher( VmTypeAvailability.ZERO ).getAvailable();
-    return vmType.getAvailable();
-  }
-
-  public int getMax( String vmTypeName ) {
-    VmTypeAvailability vmType = this.typeMap.get( vmTypeName );
-    return vmType.getMax();
-  }
-
-  public ResourceToken getResourceAllocation( String requestId, String userName, String vmTypeName, Integer quantity ) throws NotEnoughResourcesAvailable {
-    VmTypeAvailability vmType = this.typeMap.get( vmTypeName );
-    NavigableSet<VmTypeAvailability> sorted = this.sorted();
-
-    //:: figure out how many resources are actually available :://
-    int available = 0;
-    if ( sorted.headSet( VmTypeAvailability.ZERO ).contains( vmType ) )
-      available = sorted.higher( VmTypeAvailability.ZERO ).getAvailable();
-    else
-      available = vmType.getAvailable();
-
-    //:: if not enough, then bail out :://
-    if ( available < quantity ) throw new NotEnoughResourcesAvailable();
-
-    //:: decrement available resources across the "active" partition :://
-    for ( VmTypeAvailability v : sorted.tailSet( VmTypeAvailability.ZERO ) )
-      v.decrement( quantity );
-
-    //:: if vmType is IN the "active" partition, make it the first entry in the partition by disabling its tailSet:://
-    if ( !sorted.headSet( VmTypeAvailability.ZERO ).contains( vmType ) )
-      for ( VmTypeAvailability v : sorted.headSet( vmType ) )
-        v.setDisabled( true );
-
-    ResourceToken token = new ResourceToken( this.parent.getName(), requestId, userName, quantity, this.virtualTimer++, vmTypeName );
-    this.pendingTokens.add( token );
-    return token;
-  }
-
-  public void submitResourceAllocation( ResourceToken token ) throws NoSuchTokenException {
-    if ( this.pendingTokens.remove( token ) )
-      this.submittedTokens.add( token );
-    else
-      throw new NoSuchTokenException();
-  }
-
-  public void redeemToken( ResourceToken token ) throws NoSuchTokenException {
-    if ( this.submittedTokens.remove( token ) ) ;
-    else
-      throw new NoSuchTokenException();
-  }
-
-  public void update( List<ResourceType> rscUpdate ) {
-    for ( ResourceType rsc : rscUpdate ) {
-      VmTypeAvailability vmAvailable = this.typeMap.get( rsc.getInstanceType().getName() );
-      if ( vmAvailable == null ) continue;
-      int outstandingCount = 0;
-      for ( ResourceToken token : this.pendingTokens )
-        if ( token.getVmType().equals( rsc.getInstanceType().getName() ) )
-          outstandingCount++;
-      for ( ResourceToken token : this.submittedTokens )
-        if ( token.getVmType().equals( rsc.getInstanceType().getName() ) )
-          outstandingCount++;
-      vmAvailable.setAvailable( rsc.getAvailableInstances() - outstandingCount );
-      vmAvailable.setMax( rsc.getMaxInstances() );
-    }
-  }
-
-  public static ResourceComparator getComparator( VmTypeInfo vmTypeInfo ) {
-    return new ResourceComparator( vmTypeInfo );
-  }
 
   @Override
   public boolean equals( final Object o ) {
@@ -183,39 +94,6 @@ public class ClusterState {
     return this.parent.getClusterInfo().hashCode();
   }
 
-  private NavigableSet<VmTypeAvailability> sorted() {
-    NavigableSet<VmTypeAvailability> available = new TreeSet<VmTypeAvailability>();
-    for ( String typeName : this.typeMap.keySet() )
-      available.add( this.typeMap.get( typeName ) );
-    available.add( VmTypeAvailability.ZERO );
-    return available;
-  }
 
-  public VmTypeAvailability getAvailability( String vmTypeName ) {
-    return this.typeMap.get( vmTypeName );
-  }
-
-  public static class ResourceComparator implements Comparator<ClusterState> {
-
-    private VmTypeInfo vmTypeInfo;
-
-    ResourceComparator( final VmTypeInfo vmTypeInfo ) {
-      this.vmTypeInfo = vmTypeInfo;
-    }
-
-    public int compare( final ClusterState o1, final ClusterState o2 ) {
-      return o1.getAvailable( this.vmTypeInfo.getName() ) - o2.getAvailable( this.vmTypeInfo.getName() );
-    }
-  }
-
-  @Override
-  public String toString() {
-    return "ClusterState{" +
-           "typeMap=" + typeMap +
-           ", pendingTokens=" + pendingTokens +
-           ", submittedTokens=" + submittedTokens +
-           ", availableVlans=" + availableVlans.size() +
-           '}';
-  }
 }
 

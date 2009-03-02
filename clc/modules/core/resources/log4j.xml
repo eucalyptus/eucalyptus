@@ -44,10 +44,11 @@
         </layout>
     </appender>
 
-    <appender name="logfile" class="org.apache.log4j.AsyncAppender">
+<!--    <appender name="logfile" class="org.apache.log4j.AsyncAppender">
         <appender-ref ref="rolling-logfile"/>
     </appender>
-    <appender name="rolling-logfile" class="org.apache.log4j.RollingFileAppender">
+-->
+    <appender name="logfile" class="org.apache.log4j.RollingFileAppender">
         <param name="File" value="${euca.log.dir}/cloud-debug.log"/>
         <param name="MaxFileSize" value="10MB"/>
         <param name="MaxBackupIndex" value="10"/>

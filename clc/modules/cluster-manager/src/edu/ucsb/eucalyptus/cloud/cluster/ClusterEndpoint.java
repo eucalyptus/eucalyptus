@@ -178,8 +178,8 @@ public class ClusterEndpoint implements Startable {
     try {
       info.add( new ClusterInfoType( String.format( INFO_FSTRING, "vm types" ), HEADER_STRING ) );
       for ( VmType v : VmTypes.list() ) {
-        VmTypeAvailability va = cluster.getState().getAvailability( v.getName() );
-        info.add( s( v.getName(), String.format( STATE_FSTRING, cluster.getState().getAvailable( v.getName() ), va.getMax(), v.getCpu(), v.getMemory(), v.getDisk() ) ) );
+        VmTypeAvailability va = cluster.getNodeState().getAvailability( v.getName() );
+        info.add( s( v.getName(), String.format( STATE_FSTRING, va.getAvailable(), va.getMax(), v.getCpu(), v.getMemory(), v.getDisk() ) ) );
       }
       for ( String s : cluster.getNodeTags() ) {
         NodeInfo node = cluster.getNode( s );

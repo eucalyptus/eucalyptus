@@ -38,6 +38,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.transport.config.Axis2OutProperties;
 import edu.ucsb.eucalyptus.transport.config.Mep;
 import edu.ucsb.eucalyptus.transport.util.Defaults;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.axiom.om.OMElement;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.addressing.EndpointReference;
@@ -143,21 +144,22 @@ public class BasicClient implements Client {
 
   public OMElement sync( OMElement omMsg ) throws AxisFault {
     this.activate();
+    this.serviceClient.getOptions().setAction( omMsg.getLocalName() );
     OMElement omResponse = null;
-  /*  LOG.trace( "--------------------------------------------------------------------------------------" );
-    LOG.trace( "Sending to " + this.getUri() );
-    LOG.trace( omMsg.toString() );
-    LOG.trace( "--------------------------------------------------------------------------------------" );
-   */ try {
-      this.serviceClient.getOptions().setAction( omMsg.getLocalName() );
-      omResponse = this.serviceClient.sendReceive( omMsg );
-     // LOG.trace( "Received to " + this.getUri() );
-     // LOG.trace( omResponse.toString() );
+    Exception ex = null;
+    for ( int i = 0; i < 5; i++ ) {
+      try {
+        omResponse = this.serviceClient.sendReceive( omMsg );
+        break;
+      }
+      catch ( Exception e ) {
+        LOG.error( String.format( EucalyptusProperties.DEBUG_FSTRING, omMsg.getLocalName()+":"+i, e.getMessage() ) );
+        ex = e;
+      }
     }
-    catch ( AxisFault axisFault ) {
-      LOG.error( axisFault );
-      throw axisFault;
-    } finally {
+    if( omResponse == null ) {
+      LOG.debug(ex,ex);
+      throw AxisFault.makeFault( ex );
     }
     return omResponse;
   }
