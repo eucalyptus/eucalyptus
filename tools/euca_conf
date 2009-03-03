@@ -349,7 +349,6 @@ if [ -n "$NEWNODE" ]; then
     fi
     
 # create backup
-    cat $TMPFILE
     cp $FILE $FILE.bak && cp $TMPFILE $FILE
     if [ "$?" != "0" ]; then
 	echo "ERROR: could not install new conf file"
