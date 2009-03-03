@@ -48,7 +48,7 @@
         <propertyref prefix="euca"/>
     </propertyset>
     <!--================================== other vars ==================================-->
-    <property name="jvm.heap" value="1g"/>
+    <property name="jvm.heap" value="512m"/>
     <property name="security.policy" value="${euca.conf.dir}/security.policy"/>
     <property name="libpath" value="${euca.home}/usr/lib"/>
     <!--================================== classpaths ==================================-->
