@@ -231,6 +231,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                     FileUpload fileUpload = new FileUpload(new WalrusFileItemFactory());
                     InputStream formDataIn = null;
                     String objectKey = null;
+                    String file = null;
                     String key;
                     Map<String, String> formFields = new HashMap<String, String>();
                     try {
@@ -257,8 +258,19 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
                     String authenticationHeader = "";
                     formFields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
+                    if(formFields.containsKey(WalrusProperties.FormField.file.toString())) {
+                        file = formFields.get(WalrusProperties.FormField.file.toString());
+                    }
                     if(formFields.containsKey(WalrusProperties.FormField.key.toString())) {
                         objectKey = formFields.get(WalrusProperties.FormField.key.toString());
+                        if(file != null) {
+                            StringBuilder builder = new StringBuilder();
+                            builder.append('$');
+                            builder.append('{');
+                            builder.append("filename");
+                            builder.append('}');
+                            objectKey = objectKey.replaceAll(builder.toString(), file);
+                        }
                     }
                     if(formFields.containsKey(WalrusProperties.FormField.acl.toString())) {
                         String acl = formFields.get(WalrusProperties.FormField.acl.toString());
