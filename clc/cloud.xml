@@ -73,7 +73,6 @@
             <jvmarg value="-server"/>
             <jvmarg value="-Xbootclasspath/p:${euca.lib.dir}/eucalyptus-crypto.jar:${euca.lib.dir}/eucalyptus-workarounds.jar"/>
             <jvmarg value="-Xmx${jvm.heap}"/>
-            <jvmarg value="-Xms${jvm.heap}"/>
             <jvmarg value="-XX:+UseConcMarkSweepGC"/>
             <jvmarg value="-Djava.security.policy=${security.policy}"/>
             <jvmarg value="-Djava.library.path=${libpath}"/>
