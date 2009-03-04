@@ -15,9 +15,11 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPOutputStream;
+import org.apache.log4j.Logger;
 
 public class WalrusDataFormatter implements MessageFormatter {
 
+    private static Logger LOG = Logger.getLogger( WalrusDataFormatter.class );
 
     public byte[] getBytes(MessageContext messageContext, OMOutputFormat format) throws AxisFault {
         //not used

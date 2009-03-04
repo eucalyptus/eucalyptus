@@ -426,7 +426,7 @@ public class Bukkit {
                     //not found. create an object info
                     foundObject = new ObjectInfo(objectKey);
                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-                    foundObject.addGrants(userId, grantInfos, accessControlList);
+	            foundObject.addGrants(userId, grantInfos, accessControlList);
                     foundObject.setGrants(grantInfos);
                     objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
                     foundObject.setObjectName(objectName);
