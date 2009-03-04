@@ -1008,7 +1008,7 @@ public class Bukkit {
 
         if (bucketList.size() > 0) {
             BucketInfo bucket = bucketList.get(0);
-            if (bucket.canWriteACP(userId) && accessControlPolicy.getOwner().getDisplayName().equals(bucket.getOwnerId())) {
+            if (bucket.canWriteACP(userId)) {
                 List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                 AccessControlListType accessControlList = accessControlPolicy.getAccessControlList();
                 bucket.resetGlobalGrants();
@@ -1045,7 +1045,7 @@ public class Bukkit {
             ObjectInfo foundObject = null;
             for(ObjectInfo objectInfo: bucket.getObjects()) {
                 if(objectInfo.getObjectKey().equals(objectKey)) {
-                    if (objectInfo.canWriteACP(userId) && accessControlPolicy.getOwner().getDisplayName().equals(objectInfo.getOwnerId())) {
+                    if (objectInfo.canWriteACP(userId)) {
                         foundObject = objectInfo;
                         break;
                     } else {

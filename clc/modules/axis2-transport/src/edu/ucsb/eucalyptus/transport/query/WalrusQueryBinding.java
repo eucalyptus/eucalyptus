@@ -117,7 +117,7 @@ public class WalrusQueryBinding implements QueryBinding {
             eucaMsg.setEffectiveUserId( user.isAdministrator() ? "eucalyptus" : user.getUserName() );
         }
 
-        LOG.warn(eucaMsg.toString());
+        LOG.info(eucaMsg.toString());
         try
         {
             Binding binding = BindingManager.getBinding( namespace );

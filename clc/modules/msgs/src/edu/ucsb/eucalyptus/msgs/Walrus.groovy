@@ -126,18 +126,16 @@ public class AccessControlListType extends EucalyptusData {
   ArrayList<Grant> grants = new ArrayList<Grant>();
 }
 
-public class GetBucketAccessControlPolicyResponseType extends WalrusResponseType {
+public class GetBucketAccessControlPolicyResponseType extends EucalyptusMessage {
   AccessControlPolicyType accessControlPolicy;
-
 }
 
 public class GetBucketAccessControlPolicyType extends WalrusRequestType {
   String bucket;
 }
 
-public class GetObjectAccessControlPolicyResponseType extends WalrusResponseType {
+public class GetObjectAccessControlPolicyResponseType extends EucalyptusMessage {
   AccessControlPolicyType accessControlPolicy;
-
 }
 
 public class GetObjectAccessControlPolicyType extends WalrusRequestType {

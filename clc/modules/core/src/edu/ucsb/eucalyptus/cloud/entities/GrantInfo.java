@@ -39,6 +39,7 @@ import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import edu.ucsb.eucalyptus.util.UserManagement;
 
 import javax.persistence.*;
 import java.util.ArrayList;
@@ -141,7 +142,16 @@ public class GrantInfo {
 				GrantInfo grantInfo = new GrantInfo();
                 Grantee grantee = grant.getGrantee();
                 if(grantee.getCanonicalUser() != null) {
-                    grantInfo.setUserId(grantee.getCanonicalUser().getDisplayName());
+		    String displayName = grantee.getCanonicalUser().getDisplayName();
+                    if(displayName == null || displayName.length() == 0) {
+                        String id = grantee.getCanonicalUser().getID();
+                        if(id == null || id.length() == 0)
+                            continue;
+                        displayName = UserManagement.getUserName(id);
+			if(displayName == null)
+			    continue;
+                    }
+                    grantInfo.setUserId(displayName);
                 } else {
                     grantInfo.setGrant_group(grantee.getGroup().getUri());
                 }

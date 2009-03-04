@@ -661,9 +661,9 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
 
                 for(int i = 0 ; i < grantees.getLength() ; ++i) {
-                    String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
-                    if(canonicalUserName.length() > 0) {
-                        String id = xmlParser.getValue(grantees.item(i), "ID");
+                    String id = xmlParser.getValue(grantees.item(i), "ID");
+                    if(id.length() > 0) {
+                        String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
                         Grant grant = new Grant();
                         Grantee grantee = new Grantee();
                         grantee.setCanonicalUser(new CanonicalUserType(id, canonicalUserName));
