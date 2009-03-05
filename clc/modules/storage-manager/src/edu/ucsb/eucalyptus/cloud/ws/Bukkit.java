@@ -1826,7 +1826,7 @@ public class Bukkit {
             db.commit();
 //decrypt, unzip, untar image in the background
             ImageCacher imageCacher = new ImageCacher(bucketName, manifestKey, decryptedImageKey);
-            imageCacher.run();
+            imageCacher.start();
         }
     }
 
@@ -1990,6 +1990,14 @@ public class Bukkit {
             return unencryptedSize;
         }
 
+        private void notifyWaiters() {
+            WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + manifestKey);
+            synchronized (monitor) {
+                monitor.notifyAll();
+            }
+            imageMessenger.removeMonitor(bucketName + "/" + manifestKey);
+        }
+
         public void run() {
             //update status
             //wake up any waiting consumers
@@ -2001,14 +2009,29 @@ public class Bukkit {
             while((unencryptedSize = tryToCache(decryptedImageName, tarredImageName, imageName)) < 0) {
                 EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
                 List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
-                ImageCacheInfo imageCacheInfo = null;
+                ImageCacheInfo imageCacheInfo;
                 if(imageCacheInfos.size() > 1) {
+                    boolean anyCached = false;
+                    for(ImageCacheInfo icInfo : imageCacheInfos) {
+                        if(icInfo.getInCache()) {
+                            anyCached = true;
+                            break;
+                        }
+                    }
+                    if(!anyCached) {
+                        db.rollback();
+                        notifyWaiters();
+                        return;
+                    }
                     Collections.sort(imageCacheInfos);
                     imageCacheInfo = imageCacheInfos.get(0);
-                    break;
+                } else {
+                    db.rollback();
+                    notifyWaiters();
+                    return;
                 }
                 db.commit();
-                if(imageCacheInfo != null && imageCacheInfo.getInCache()) {
+                if(imageCacheInfo.getInCache()) {
                     flushCachedImage(imageCacheInfo.getBucketName(), imageCacheInfo.getManifestName());
                 }
             }
@@ -2027,12 +2050,7 @@ public class Bukkit {
                     foundImageCacheInfo.setSize(unencryptedSize);
                     db.commit();
                     //wake up waiters
-                    WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + manifestKey);
-                    synchronized (monitor) {
-                        monitor.notifyAll();
-                    }
-                    imageMessenger.removeMonitor(bucketName + "/" + manifestKey);
-
+                    notifyWaiters();
                 } else {
                     db.rollback();
                     LOG.warn("Could not expand image" + decryptedImageName);
