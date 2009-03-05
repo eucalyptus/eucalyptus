@@ -175,13 +175,19 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         Map operationParams = new HashMap();
         String[] target = null;
         String path = httpRequest.getOperationPath();
+        Map<String, String> headers = httpRequest.getHeaders();
         boolean walrusInternalOperation = false;
+        Object virtualSubdomain = messageContext.getProperty(WalrusProperties.VIRTUAL_SUBDOMAIN);
+        if(virtualSubdomain != null) {
+            String bukkit = (String) virtualSubdomain;
+            path += bukkit + "/";
+            headers.put(WalrusProperties.VIRTUAL_SUBDOMAIN, bukkit);
+        }
         if(path.length() > 0) {
             target = getTarget(path);
         }
 
         String verb = httpRequest.getHttpMethod();
-        Map<String, String> headers = httpRequest.getHeaders();
         CaseInsensitiveMap caseInsensitiveHeaders = new CaseInsensitiveMap(headers);
         String operationKey = "";
         Map<String, String> params = httpRequest.getParameters();
@@ -410,8 +416,6 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                                 accessControlList = getAccessControlList(in);
                             } else {
                                 accessControlList = new AccessControlListType();
-                                ArrayList<Grant> grant = new ArrayList<Grant>();
-                                accessControlList.setGrants(grant);
                             }
                             operationParams.put("AccessControlList", accessControlList);
                             operationKey += WalrusProperties.COPY_SOURCE.toString();

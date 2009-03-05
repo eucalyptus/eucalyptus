@@ -36,6 +36,8 @@ package edu.ucsb.eucalyptus.util;
 
 import edu.ucsb.eucalyptus.cloud.entities.NetworkRulesGroup;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import org.apache.log4j.Logger;
 
@@ -109,5 +111,18 @@ public class UserManagement {
     {
         if(EucalyptusProperties.NAME.equals(userId) || WalrusProperties.ADMIN.equals(userId)) return true;
         return false;
+    }
+
+    public static String getUserName(String queryId) {
+        EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
+        UserInfo userInfo = new UserInfo();
+        userInfo.setQueryId(queryId);
+        try {
+            UserInfo foundUserInfo = db.getUnique(userInfo);
+            return foundUserInfo.getUserName();
+        } catch(EucalyptusCloudException ex) {
+            LOG.warn(ex, ex);
+        }
+        return null;
     }
 }

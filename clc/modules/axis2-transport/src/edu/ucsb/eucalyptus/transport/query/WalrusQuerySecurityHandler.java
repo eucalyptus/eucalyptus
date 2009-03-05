@@ -151,6 +151,11 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             String content_type = (String) hdrs.remove ( "Content-Type");
             content_type = content_type == null ? "" : content_type;
 
+            if(headers.containsKey(WalrusProperties.VIRTUAL_SUBDOMAIN)) {
+                String bukkit = headers.remove(WalrusProperties.VIRTUAL_SUBDOMAIN);
+                addr = addr.replaceAll("services/" + WalrusProperties.SERVICE_NAME, "");
+                addr = "/" + bukkit + addr;
+            }
             String[] addrStrings = addr.split("\\?");
             String addrString = addrStrings[0];
 
