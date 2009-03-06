@@ -569,7 +569,8 @@ public class Bukkit {
 
         PutObjectResponseType putObjectResponse = PutObject(putObject);
 
-        reply.setEtag(putObjectResponse.getEtag());
+	String etag = putObjectResponse.getEtag();
+        reply.setEtag(etag);
         reply.setLastModified(putObjectResponse.getLastModified());
         reply.set_return(putObjectResponse.get_return());
         reply.setMetaData(putObjectResponse.getMetaData());
@@ -585,7 +586,8 @@ public class Bukkit {
             } catch(Exception ex) {
                 LOG.warn(ex);
             }
-            reply.setRedirectUrl(successActionRedirect);
+	    String paramString = "bucket=" + bucketName + "&key=" + key + "&etag=quot;" + etag + "quot;";
+            reply.setRedirectUrl(successActionRedirect + "?" + paramString);
         } else {
             Integer successActionStatus = request.getSuccessActionStatus();
             if(successActionStatus != null) {
