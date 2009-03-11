@@ -78,6 +78,7 @@ public class Storage {
 
     private static boolean enableSnapshots = false;
     private static boolean enableStorage = false;
+    static boolean shouldEnforceUsageLimits = true;
 
     private static final String ETHERD_PREFIX = "/dev/etherd/e";
 
@@ -95,7 +96,7 @@ public class Storage {
             LOG.warn("Walrus host addr not set");
         }
         //TODO: this should be created by a factory
-        blockManager = new LVM2Manager(StorageProperties.storageInterface);
+        blockManager = new LVM2Manager();
         blockManager.initVolumeManager();
         try {
             blockManager.checkPreconditions();
@@ -108,7 +109,7 @@ public class Storage {
             //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
         } catch(Exception ex) {
             enableStorage = false;
-	    LOG.warn(ex.getMessage());
+            LOG.warn(ex.getMessage());
             LOG.warn("Could not initialize block manager. Storage has been disabled.");
         }
     }
@@ -266,15 +267,10 @@ public class Storage {
     public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) {
         UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
         String storageRootDirectory = request.getStorageRootDirectory();
-        String storageInterface = request.getStorageInterface();
 
         if(storageRootDirectory != null)  {
             volumeStorageManager.setRootDirectory(storageRootDirectory);
             snapshotStorageManager.setRootDirectory(storageRootDirectory);
-        }
-
-        if(storageInterface != null) {
-            blockManager.setStorageInterface(storageInterface);
         }
 
         //test connection to Walrus
@@ -398,6 +394,21 @@ public class Storage {
             //check status
             if(foundVolumeInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
                 //create snapshot
+                if(shouldEnforceUsageLimits && sharedMode) {
+                    int volSize = foundVolumeInfo.getSize();
+                    int totalSnapshotSize = 0;
+                    SnapshotInfo snapInfo = new SnapshotInfo();
+                    EntityWrapper<SnapshotInfo> dbSnap = db.recast(SnapshotInfo.class);
+
+                    List<SnapshotInfo> snapInfos = dbSnap.query(snapInfo);
+                    for (SnapshotInfo sInfo : snapInfos) {
+                        totalSnapshotSize += blockManager.getSnapshotSize(sInfo.getSnapshotId());
+                    }
+                    if((totalSnapshotSize + volSize) > StorageProperties.MAX_TOTAL_SNAPSHOT_SIZE) {
+                        db.rollback();
+                        throw new EntityTooLargeException(snapshotId);
+                    }
+                }
                 EntityWrapper<SnapshotInfo> db2 = new EntityWrapper<SnapshotInfo>();
                 edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo snapshotInfo = new edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo(snapshotId);
                 snapshotInfo.setUserName(foundVolumeInfo.getUserName());
@@ -547,20 +558,22 @@ public class Storage {
         //in GB
         String size = request.getSize();
         int sizeAsInt = 0;
-        if(size != null) {
-            sizeAsInt = Integer.parseInt(size);
-            EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
+        if(shouldEnforceUsageLimits) {
+            if(size != null) {
+                sizeAsInt = Integer.parseInt(size);
+                EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
 
-            VolumeInfo volInfo = new VolumeInfo();
-            List<VolumeInfo> volInfos = db.query(volInfo);
-            int totalVolumeSize = 0;
-            for(VolumeInfo vinfo : volInfos) {
-                totalVolumeSize += vinfo.getSize();
+                VolumeInfo volInfo = new VolumeInfo();
+                List<VolumeInfo> volInfos = db.query(volInfo);
+                int totalVolumeSize = 0;
+                for(VolumeInfo vinfo : volInfos) {
+                    totalVolumeSize += vinfo.getSize();
+                }
+                if(((totalVolumeSize + sizeAsInt) > StorageProperties.MAX_TOTAL_VOLUME_SIZE) ||
+                        (sizeAsInt > StorageProperties.MAX_VOLUME_SIZE))
+                    throw new EntityTooLargeException(volumeId);
+                db.commit();
             }
-            if(((totalVolumeSize + sizeAsInt) > StorageProperties.MAX_TOTAL_VOLUME_SIZE) ||
-                    (sizeAsInt > StorageProperties.MAX_VOLUME_SIZE))
-                throw new EntityTooLargeException(volumeId);
-            db.commit();
         }
         EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
 
@@ -650,19 +663,21 @@ public class Storage {
                 VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
                 if(foundVolumeInfo != null) {
                     if(success) {
-                        EntityWrapper<VolumeInfo> dbVol = new EntityWrapper<VolumeInfo>();
-                        VolumeInfo volInfo = new VolumeInfo();
-                        List<VolumeInfo> volInfos = db.query(volInfo);
-                        int totalVolumeSize = 0;
-                        for(VolumeInfo vinfo : volInfos) {
-                            totalVolumeSize += vinfo.getSize();
-                        }
-                        if((totalVolumeSize + size) > StorageProperties.MAX_TOTAL_VOLUME_SIZE ||
-                                (size > StorageProperties.MAX_VOLUME_SIZE)) {
-                            LOG.warn("Volume size limit exceeeded");
-                            foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
-                            db.commit();
-                            return;
+                        if(shouldEnforceUsageLimits) {
+                            EntityWrapper<VolumeInfo> dbVol = new EntityWrapper<VolumeInfo>();
+                            VolumeInfo volInfo = new VolumeInfo();
+                            List<VolumeInfo> volInfos = db.query(volInfo);
+                            int totalVolumeSize = 0;
+                            for(VolumeInfo vinfo : volInfos) {
+                                totalVolumeSize += vinfo.getSize();
+                            }
+                            if((totalVolumeSize + size) > StorageProperties.MAX_TOTAL_VOLUME_SIZE ||
+                                    (size > StorageProperties.MAX_VOLUME_SIZE)) {
+                                LOG.warn("Volume size limit exceeeded");
+                                foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
+                                db.commit();
+                                return;
+                            }
                         }
                         foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
                     } else {

@@ -52,6 +52,7 @@ public class WalrusProperties {
     public static long MAX_BUCKET_SIZE = 5 * G;
     public static long IMAGE_CACHE_SIZE = 30 * G;
     public static String WALRUS_URL;
+    public static int MAX_TOTAL_SNAPSHOT_SIZE = 50;
 
     public static final int IO_CHUNK_SIZE = 102400;
 
@@ -63,6 +64,12 @@ public class WalrusProperties {
             MAX_BUCKET_SIZE = systemConfiguration.getStorageMaxBucketSizeInMB() * M;
             IMAGE_CACHE_SIZE = systemConfiguration.getStorageMaxCacheSizeInMB() * M;
             WALRUS_URL = systemConfiguration.getStorageUrl();
+            Integer maxTotalSnapSize = systemConfiguration.getStorageMaxTotalSnapshotSizeInGb();
+            if(maxTotalSnapSize != null) {
+                if(maxTotalSnapSize > 0) {
+                    MAX_TOTAL_SNAPSHOT_SIZE = maxTotalSnapSize;
+                }
+            }
             UpdateWalrusConfigurationType updateConfig = new UpdateWalrusConfigurationType();
             updateConfig.setBucketRootDirectory(bucketRootDirectory);
             Messaging.send( WALRUS_REF, updateConfig );
@@ -127,7 +134,7 @@ public class WalrusProperties {
     public enum InfoOperations {
         GetSnapshotInfo
     }
-    
+
     public enum StorageParameters {
         SnapshotVgName, SnapshotLvName
     }
@@ -137,7 +144,7 @@ public class WalrusProperties {
     }
 
     public enum IgnoredFields {
-       AWSAccessKeyId, signature, file, policy, submit
+        AWSAccessKeyId, signature, file, policy, submit
     }
 
     public enum PolicyHeaders {
@@ -145,6 +152,6 @@ public class WalrusProperties {
     }
 
     public enum CopyHeaders {
-       CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince 
+        CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince
     }
 }

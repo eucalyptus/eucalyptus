@@ -451,7 +451,7 @@ public class EucalyptusManagement {
                     sysConf.getStorageMaxBucketsPerUser(),
 					sysConf.getStorageMaxBucketSizeInMB(),
 					sysConf.getStorageMaxCacheSizeInMB(),
-					sysConf.getStorageMaxSnapshotSizeInGb(),
+					sysConf.getStorageMaxTotalSnapshotSizeInGb(),
 					sysConf.getStorageMaxTotalVolumeSizeInGb(),
 					sysConf.getStorageMaxVolumeSizeInGB(),
 					sysConf.getStorageVolumesDir(),
@@ -511,7 +511,7 @@ public class EucalyptusManagement {
             sysConf.setStorageMaxBucketSizeInMB( systemConfig.getStorageMaxBucketSizeInMB() );
 			sysConf.setStorageMaxCacheSizeInMB ( systemConfig.getStorageMaxCacheSizeInMB() );
 			sysConf.setStorageMaxTotalVolumeSizeInGb ( systemConfig.getStorageVolumesTotalInGB() );
-			sysConf.setStorageMaxSnapshotSizeInGb ( systemConfig.getStorageSnapshotsTotalInGB() );
+			sysConf.setStorageMaxTotalSnapshotSizeInGb( systemConfig.getStorageSnapshotsTotalInGB() );
 			sysConf.setStorageMaxVolumeSizeInGB (systemConfig.getStorageMaxVolumeSizeInGB());
 			sysConf.setStorageVolumesDir (systemConfig.getStorageVolumesPath());
             db.commit();

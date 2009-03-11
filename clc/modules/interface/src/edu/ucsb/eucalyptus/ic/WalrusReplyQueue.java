@@ -60,7 +60,6 @@ public class WalrusReplyQueue {
     private static int SC_DECRYPTION_FAILED = 566;
     public void handle( EucalyptusMessage msg )
     {
-        Logger.getLogger( WalrusReplyQueue.class ).warn( "walrus queueing reply to " + msg.getCorrelationId() );
         replies.putMessage( msg );
     }
 
@@ -177,10 +176,9 @@ public class WalrusReplyQueue {
 
     public static EucalyptusMessage getReply( String msgId )
     {
-        Logger.getLogger( WalrusReplyQueue.class ).warn( "walrus request for reply to " + msgId );
         EucalyptusMessage msg = null;
         msg = replies.getMessage( msgId );
-        Logger.getLogger( WalrusReplyQueue.class ).warn( "walrus obtained reply to " + msgId );
+        LOG.info( "walrus got reply to: " + msgId);
         return msg;
     }
 }

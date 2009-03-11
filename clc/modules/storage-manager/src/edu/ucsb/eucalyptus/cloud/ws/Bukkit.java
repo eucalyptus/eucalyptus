@@ -426,7 +426,7 @@ public class Bukkit {
                     //not found. create an object info
                     foundObject = new ObjectInfo(objectKey);
                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-                    foundObject.addGrants(userId, grantInfos, accessControlList);
+	            foundObject.addGrants(userId, grantInfos, accessControlList);
                     foundObject.setGrants(grantInfos);
                     objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
                     foundObject.setObjectName(objectName);
@@ -474,6 +474,7 @@ public class Bukkit {
                             foundObject.setSize(size);
                             foundObject.setLastModified(lastModified);
                             foundObject.setStorageClass("STANDARD");
+                            reply.setSize(size);
                             if(shouldEnforceUsageLimits && !request.isAdministrator()) {
                                 Long bucketSize = bucket.getBucketSize();
                                 long newSize = bucketSize + oldBucketSize + size;
@@ -1007,7 +1008,7 @@ public class Bukkit {
 
         if (bucketList.size() > 0) {
             BucketInfo bucket = bucketList.get(0);
-            if (bucket.canWriteACP(userId) && accessControlPolicy.getOwner().getDisplayName().equals(bucket.getOwnerId())) {
+            if (bucket.canWriteACP(userId)) {
                 List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                 AccessControlListType accessControlList = accessControlPolicy.getAccessControlList();
                 bucket.resetGlobalGrants();
@@ -1044,7 +1045,7 @@ public class Bukkit {
             ObjectInfo foundObject = null;
             for(ObjectInfo objectInfo: bucket.getObjects()) {
                 if(objectInfo.getObjectKey().equals(objectKey)) {
-                    if (objectInfo.canWriteACP(userId) && accessControlPolicy.getOwner().getDisplayName().equals(objectInfo.getOwnerId())) {
+                    if (objectInfo.canWriteACP(userId)) {
                         foundObject = objectInfo;
                         break;
                     } else {
@@ -1825,7 +1826,7 @@ public class Bukkit {
             db.commit();
 //decrypt, unzip, untar image in the background
             ImageCacher imageCacher = new ImageCacher(bucketName, manifestKey, decryptedImageKey);
-            imageCacher.run();
+            imageCacher.start();
         }
     }
 
@@ -1989,6 +1990,14 @@ public class Bukkit {
             return unencryptedSize;
         }
 
+        private void notifyWaiters() {
+            WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + manifestKey);
+            synchronized (monitor) {
+                monitor.notifyAll();
+            }
+            imageMessenger.removeMonitor(bucketName + "/" + manifestKey);
+        }
+
         public void run() {
             //update status
             //wake up any waiting consumers
@@ -2000,14 +2009,29 @@ public class Bukkit {
             while((unencryptedSize = tryToCache(decryptedImageName, tarredImageName, imageName)) < 0) {
                 EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
                 List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
-                ImageCacheInfo imageCacheInfo = null;
+                ImageCacheInfo imageCacheInfo;
                 if(imageCacheInfos.size() > 1) {
+                    boolean anyCached = false;
+                    for(ImageCacheInfo icInfo : imageCacheInfos) {
+                        if(icInfo.getInCache()) {
+                            anyCached = true;
+                            break;
+                        }
+                    }
+                    if(!anyCached) {
+                        db.rollback();
+                        notifyWaiters();
+                        return;
+                    }
                     Collections.sort(imageCacheInfos);
                     imageCacheInfo = imageCacheInfos.get(0);
-                    break;
+                } else {
+                    db.rollback();
+                    notifyWaiters();
+                    return;
                 }
                 db.commit();
-                if(imageCacheInfo != null && imageCacheInfo.getInCache()) {
+                if(imageCacheInfo.getInCache()) {
                     flushCachedImage(imageCacheInfo.getBucketName(), imageCacheInfo.getManifestName());
                 }
             }
@@ -2026,12 +2050,7 @@ public class Bukkit {
                     foundImageCacheInfo.setSize(unencryptedSize);
                     db.commit();
                     //wake up waiters
-                    WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + manifestKey);
-                    synchronized (monitor) {
-                        monitor.notifyAll();
-                    }
-                    imageMessenger.removeMonitor(bucketName + "/" + manifestKey);
-
+                    notifyWaiters();
                 } else {
                     db.rollback();
                     LOG.warn("Could not expand image" + decryptedImageName);
@@ -2366,6 +2385,20 @@ public class Bukkit {
             reply.setEtag(putObjectResponseType.getEtag());
             reply.setLastModified(putObjectResponseType.getLastModified());
             reply.setStatusMessage(putObjectResponseType.getStatusMessage());
+            int snapshotSize = (int)(putObjectResponseType.getSize() / WalrusProperties.G);
+            if(shouldEnforceUsageLimits) {
+                int totalSnapshotSize = 0;
+                WalrusSnapshotInfo snapInfo = new WalrusSnapshotInfo();
+
+                List<WalrusSnapshotInfo> sInfos = dbSnap.query(snapInfo);
+                for (WalrusSnapshotInfo sInfo : sInfos) {
+                    totalSnapshotSize += sInfo.getSize();
+                }
+                if((totalSnapshotSize + snapshotSize) > WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE) {
+                    db.rollback();
+                    throw new EntityTooLargeException(snapshotId);
+                }
+            }
 
             //change state
             db.commit();
@@ -2373,6 +2406,7 @@ public class Bukkit {
             snapshotInfo = new WalrusSnapshotInfo(snapshotId);
             dbSnap = new EntityWrapper<WalrusSnapshotInfo>();
             WalrusSnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
+            foundSnapshotInfo.setSize(snapshotSize);
             foundSnapshotInfo.setTransferred(true);
             dbSnap.commit();
         } catch (EucalyptusCloudException ex) {

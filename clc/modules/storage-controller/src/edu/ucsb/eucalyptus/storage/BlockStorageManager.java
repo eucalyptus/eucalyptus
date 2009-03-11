@@ -78,4 +78,6 @@ public interface BlockStorageManager {
     public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
 
     public List<String> getSnapshotValues(String snapshotId) throws EucalyptusCloudException;
+
+    public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;    
 }

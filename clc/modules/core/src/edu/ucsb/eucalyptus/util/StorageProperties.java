@@ -50,7 +50,6 @@ public class StorageProperties {
     public static final String EUCALYPTUS_OPERATION = "EucaOperation";
     public static final String EUCALYPTUS_HEADER = "EucaHeader";
     public static String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
-    public static String storageInterface = "eth0";
     public static String WALRUS_URL = "http://localhost:8773/services/Walrus";
     public static int MAX_TOTAL_VOLUME_SIZE = 50;
     public static int MAX_TOTAL_SNAPSHOT_SIZE = 50;
@@ -69,7 +68,7 @@ public class StorageProperties {
 
     public static void update() {
         try {
-            //TODO: This assumes that the SC shares the database with the front end. This is NOT true. Fix this thru message passing.
+            //TODO: This assumes that the SC shares the database with the front end. This is NOT true in general. Fix this thru message passing.
             SystemConfiguration systemConfiguration = EucalyptusProperties.getSystemConfiguration();
             UpdateStorageConfigurationType updateConfig = new UpdateStorageConfigurationType();
             Integer maxTotalVolumeSize = systemConfiguration.getStorageMaxTotalVolumeSizeInGb();
@@ -78,20 +77,25 @@ public class StorageProperties {
                     MAX_TOTAL_VOLUME_SIZE = maxTotalVolumeSize;
                 }
             }
-            Integer maxTotalSnapSize = systemConfiguration.getStorageMaxSnapshotSizeInGb();
+
+            Integer maxTotalSnapSize = systemConfiguration.getStorageMaxTotalSnapshotSizeInGb();
             if(maxTotalSnapSize != null) {
                 if(maxTotalSnapSize > 0) {
                     MAX_TOTAL_SNAPSHOT_SIZE = maxTotalSnapSize;
                 }
             }
-			/* TODO: set storageRootDirectory and MAX_VOLUME_SIZE from systemConfiguration */
-			
+
+            Integer maxVolumeSize = systemConfiguration.getStorageMaxVolumeSizeInGB();
+            if(maxVolumeSize != null) {
+                if(maxVolumeSize > 0) {
+                    MAX_VOLUME_SIZE = maxVolumeSize;
+                }
+            }
+            
             updateConfig.setMaxTotalVolumeSize(MAX_TOTAL_VOLUME_SIZE);
             updateConfig.setMaxTotalSnapshotSize(MAX_TOTAL_SNAPSHOT_SIZE);
             updateConfig.setMaxVolumeSize(MAX_VOLUME_SIZE);
-            updateConfig.setMaxSnapshotSize(MAX_SNAPSHOT_SIZE);            
             updateConfig.setStorageRootDirectory(storageRootDirectory);
-            updateConfig.setStorageInterface(storageInterface);
             Messaging.send(STORAGE_REF, updateConfig);
         } catch(Exception ex) {
             LOG.warn(ex.getMessage());

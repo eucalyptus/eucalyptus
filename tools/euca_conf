@@ -17,12 +17,22 @@ EUCA_USER=""
 HYPERVISOR=""
 DHCPD=""
 DHCP_USER=""
+NEWNODE=""
+NODEMODE=""
+CLUSNAME=""
+NEWCLUS=""
+CLUSMODE=""
+ACCESSKEY=""
 
 usage () {
 	echo "$0 [options] [<file>]"
 	echo
 	echo "   -help                       this message"
 	echo "   -d <dir>                    point EUCALYPTUS to <dir>"
+	echo "   -addnode <hostname>         add new node to EUCALYPTUS"
+	echo "   -delnode <hostname>         remove node from EUCALYPTUS"
+	echo "   -addcluster <clusname> <hostname> add new cluster to EUCALYPTUS"
+#	echo "   -delcluster <clusname> <hostname> remove cluster from EUCALYPTUS"
 	echo "   -cc {Y|N}                   enable/disable CC"
 	echo "   -nc {Y|N}                   enable/disable NC"
 	echo "   -cloud {Y|N}                enable/disable Cloud Controller"
@@ -173,6 +183,38 @@ while [ $# -gt 0 ]; do
 		shift; shift; shift
 		continue
 	fi
+	if [ "$1" = "-addnode" ]; then 
+	    if [ $# -lt 2 ]; then
+		echo "Requires the hostname of the node to add"
+		exit 1
+	    fi
+	    NEWNODE="$2"
+	    NODEMODE="ADD"
+	    shift; shift
+	    continue
+	fi
+	if [ "$1" = "-delnode" ]; then 
+	    if [ $# -lt 2 ]; then
+		echo "Requires the hostname of the node to delete"
+		exit 1
+	    fi
+	    NEWNODE="$2"
+	    NODEMODE="REM"
+	    shift; shift
+	    continue
+	fi
+	if [ "$1" = "-addcluster" ]; then
+	    if [ $# -lt 4 ]; then
+		echo "Requires the cluster nice name, hostname and admin access key"
+		exit 1
+	    fi
+	    CLUSNAME="$2"
+	    NEWCLUS="$3"
+	    ACCESSKEY="$4"
+	    CLUSMODE="ADD"
+	    shift; shift; shift; shift
+	    continue
+	fi
 	usage 
 	exit 1
 done
@@ -231,4 +273,92 @@ fi
 if [ -n "$NAME" ]; then
 	VALUE=`cat $FILE |grep $NAME|cut -f 2 -d =|tr  '"' ' '`
 	echo $VALUE
+fi
+if [ -n "$NEWCLUS" ]; then
+#    NEWCLUS=localhost
+#    CLUSNAME=testing
+#    CC_PORT=8774
+#    ACCESS_KEY="ISMvKXpXpadDiUoOSoAfww"
+
+    if [ -f "$FILE" ]; then
+	. $FILE
+    else
+	echo "ERROR: cannot find file '$EUCALYPTUS/etc/eucalyptus.conf'. Is your EUCALYPTUS enviroment variable set?"
+	exit 1
+    fi
+
+    KEY=$(eval echo $(awk -F, '/INSERT INTO USERS.*admin/ {print $5}' ${EUCALYPTUS}/var/eucalyptus/db/* | head -n 1))
+    
+#ARGS="AWSAccessKeyId=ISMvKXpXpadDiUoOSoAfww&Action=AddCluster&Host=${NEWCLUS}&Name=${CLUSNAME}&Port=${CC_PORT}"
+    ARGS="AWSAccessKeyId=${ACCESSKEY}&Action=AddCluster&Host=${NEWCLUS}&Name=${CLUSNAME}&Port=${CC_PORT}"
+    ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=2008-12-01"
+    
+    SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Eucalyptus\n${ARGS}" | openssl dgst -sha256 -hmac ${KEY} -binary | openssl base64)
+    
+    wget -dump "http://127.0.0.1:8773/services/Eucalyptus?${ARGS}&Signature=${SIGNATURE}"
+fi
+
+if [ -n "$NEWNODE" ]; then
+    if [ "$NODEMODE" = "ADD" ]; then
+	SSHKEY=`cat ~eucalyptus/.ssh/id_rsa.pub`
+	
+	if [ "$SSHKEY" = "" ]; then
+	    echo "ERROR: cannot read ssh key ~eucalyptus/.ssh/id_rsa.pub, syncronization will probably not work"
+	else
+	    echo "First, please run the following command on '$NEWNODE':"
+	    echo ""
+	    echo "echo \"$SSHKEY\" >> ~eucalyptus/authorized_keys"
+	    echo ""
+	    echo "hit return to continue"
+	    read
+	fi
+    fi
+    
+# get old value
+    if [ -f "$FILE" ]; then
+	. $FILE
+    else
+	echo "ERROR: cannot find file '$EUCALYPTUS/etc/eucalyptus.conf'. Is your EUCALYPTUS enviroment variable set?"
+	exit 1
+    fi
+    TMPFILE="$FILE.$$"
+    
+    if [ "$NODEMODE" = "ADD" ]; then
+	sudo -u eucalyptus scp ${EUCALYPTUS}/var/eucalyptus/keys/* ${EUCA_USER}@${NEWNODE}:${EUCALYPTUS}/var/eucalyptus/keys/
+	if [ "$?" != "0" ]; then
+	    echo "ERROR: could not syncronize keys, check authorized_keys on ${NEWNODE}, then run this command again."
+	    exit 1
+	fi
+    fi
+    
+    export NODES=`echo $NODES | sed "s/ *$NEWNODE *//g"`
+
+# sed in new value
+    if [ "$NODEMODE" = "ADD" ]; then
+	cat $FILE | sed "/NODES=/s/NODES=.*/NODES=\"$NODES $NEWNODE\"/" > $TMPFILE
+    elif [ "$NODEMODE" = "REM" ]; then
+	cat $FILE | sed "/NODES=/s/ *$NEWNODE *//g" > $TMPFILE
+    else
+	echo "ERROR: unknown mode '$NODEMODE', don't know what to do"
+	exit 1
+    fi    
+
+    if [ ! -s "$TMPFILE" ]; then
+	echo "ERROR: failed to add node to $FILE"
+	exit 1
+    fi
+    
+# create backup
+    cp $FILE $FILE.bak && cp $TMPFILE $FILE
+    if [ "$?" != "0" ]; then
+	echo "ERROR: could not install new conf file"
+	exit 1
+    fi
+    
+    rm $TMPFILE
+    if [ "$NODEMODE" = "ADD" ]; then
+	echo "SUCCESS: added node '$NEWNODE' to '$FILE'"
+    elif [ "$NODEMODE" = "REM" ]; then
+	echo "SUCCESS: removed node '$NEWNODE' from '$FILE'"
+    fi
 fi

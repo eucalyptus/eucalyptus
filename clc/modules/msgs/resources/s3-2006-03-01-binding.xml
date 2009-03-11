@@ -95,7 +95,7 @@
     </mapping>
 
     <mapping name="GetObjectAccessControlPolicyResponse" class="edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType">
-        <structure field="accessControlPolicy" map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" usage="optional"/>
+        <structure field="accessControlPolicy" map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType"/>
     </mapping>
 
     <mapping name="SetObjectAccessControlPolicy" class="edu.ucsb.eucalyptus.msgs.SetObjectAccessControlPolicyType"  extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
@@ -109,7 +109,7 @@
         <value name="Description" field="description"/>
     </mapping>
 
-    <mapping name="AccessControlPolicy" class="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" abstract="true">
+    <mapping name="AccessControlPolicy" class="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType">
         <structure name="Owner" field="owner" map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" usage="optional"/>
         <structure field="accessControlList" map-as="edu.ucsb.eucalyptus.msgs.AccessControlListType" usage="optional"/>
     </mapping>

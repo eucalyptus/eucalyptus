@@ -21,7 +21,7 @@ class VmRunCallback extends QueuedEventCallback<VmRunType> {
 
   public void process( final Client clusterClient, final VmRunType msg ) throws Exception {
     LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, token ) );
-    Clusters.getInstance().lookup( token.getCluster() ).getState().submitResourceAllocation( token );
+    Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
     for ( String vmId : msg.getInstanceIds() )
       parent.msgMap.put( ClusterAllocator.State.ROLLBACK,
                          new QueuedEvent<TerminateInstancesType>(
@@ -30,7 +30,7 @@ class VmRunCallback extends QueuedEventCallback<VmRunType> {
     VmRunResponseType reply = null;
     try {
       reply = ( VmRunResponseType ) clusterClient.send( msg );
-      Clusters.getInstance().lookup( token.getCluster() ).getState().redeemToken( token );
+      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
       LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.redeemed, token ) );
       if ( reply.get_return() ) {
         for ( VmInfo vmInfo : reply.getVms() ) {

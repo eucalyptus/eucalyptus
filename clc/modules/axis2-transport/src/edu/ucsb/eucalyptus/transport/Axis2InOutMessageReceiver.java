@@ -124,6 +124,8 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
         newMsgContext.setProperty( Axis2HttpWorker.REAL_HTTP_REQUEST, msgContext.getProperty( Axis2HttpWorker.REAL_HTTP_REQUEST ) );
         newMsgContext.setProperty( Axis2HttpWorker.REAL_HTTP_RESPONSE, msgContext.getProperty( Axis2HttpWorker.REAL_HTTP_RESPONSE ) );
 
+	LOG.info("Returning reply: " + message.getPayload());
+
         if(message.getPayload() instanceof WalrusErrorMessageType) {
             WalrusErrorMessageType errorMessage = (WalrusErrorMessageType) message.getPayload();
             msgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, errorMessage.getHttpCode());
@@ -169,8 +171,8 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
                     String redirectUrl = postReply.getRedirectUrl();
                     if(redirectUrl != null) {
                         response.addHeader(new BasicHeader("Location", redirectUrl));
-                        msgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_MOVED_PERMANENTLY);
-                        newMsgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_MOVED_PERMANENTLY);
+                        msgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_SEE_OTHER);
+                        newMsgContext.setProperty(Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_SEE_OTHER);
                         newMsgContext.setProperty( "messageType", "application/walrus" );
                     } else {
                         Integer successCode = postReply.getSuccessCode();

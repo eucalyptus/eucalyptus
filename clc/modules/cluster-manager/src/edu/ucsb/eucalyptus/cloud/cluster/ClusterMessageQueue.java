@@ -124,7 +124,7 @@ public class ClusterMessageQueue implements Runnable {
         QueuedEvent event = this.msgQueue.poll( pollInterval, TimeUnit.MILLISECONDS );
         if ( event != null ) // msg == null if the queue was empty and we timed out
         {
-          LOG.warn( "Dequeued message of type " + event.getCallback().getClass().getSimpleName() );
+          LOG.trace( "Dequeued message of type " + event.getCallback().getClass().getSimpleName() );
           long msgStart = System.currentTimeMillis();
           try {
             event.trigger( event instanceof QueuedLogEvent ? this.logClient : this.client );

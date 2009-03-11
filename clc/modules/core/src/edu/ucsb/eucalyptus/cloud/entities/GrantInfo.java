@@ -39,10 +39,12 @@ import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import edu.ucsb.eucalyptus.util.UserManagement;
 
 import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.log4j.Logger;
 
 @Entity
 @Table( name = "Grants" )
@@ -64,6 +66,8 @@ public class GrantInfo {
 	private Boolean readACP;
 	@Column(name="write_acp")
 	private Boolean writeACP;
+
+    private static Logger LOG = Logger.getLogger( ObjectInfo.class );
 
     public GrantInfo(){
         read = write = readACP = writeACP = false;
@@ -131,10 +135,23 @@ public class GrantInfo {
 		if (grants.size() > 0) {
 			for (Grant grant: grants) {
 				String permission = grant.getPermission();
+				if(permission.equals("private")) {
+					setFullControl(ownerId, grantInfos);
+					continue;
+				}
 				GrantInfo grantInfo = new GrantInfo();
                 Grantee grantee = grant.getGrantee();
                 if(grantee.getCanonicalUser() != null) {
-                    grantInfo.setUserId(grantee.getCanonicalUser().getDisplayName());
+		    String displayName = grantee.getCanonicalUser().getDisplayName();
+                    if(displayName == null || displayName.length() == 0) {
+                        String id = grantee.getCanonicalUser().getID();
+                        if(id == null || id.length() == 0)
+                            continue;
+                        displayName = UserManagement.getUserName(id);
+			if(displayName == null)
+			    continue;
+                    }
+                    grantInfo.setUserId(displayName);
                 } else {
                     grantInfo.setGrant_group(grantee.getGroup().getUri());
                 }

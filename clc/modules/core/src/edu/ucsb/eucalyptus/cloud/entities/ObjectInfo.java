@@ -44,6 +44,7 @@ import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import org.apache.log4j.Logger;
 
 @Entity
 @Table( name = "Objects" )
@@ -105,6 +106,8 @@ public class ObjectInfo {
     @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
     @Column(name="metadata")
     private List<MetaDataInfo> metaData = new ArrayList<MetaDataInfo>();
+
+    private static Logger LOG = Logger.getLogger( ObjectInfo.class );
 
     public ObjectInfo() {
     }
