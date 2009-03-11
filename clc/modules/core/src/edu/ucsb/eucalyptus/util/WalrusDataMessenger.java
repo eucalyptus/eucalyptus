@@ -35,12 +35,13 @@ package edu.ucsb.eucalyptus.util;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import org.apache.log4j.Logger;
 
 // A concurrent hash map that holds a map of queues, which can be used for passing data
 // Currently, the queues are a LinkedBlockingQueue and producers/consumers do not timeout.
 
 public class WalrusDataMessenger {
-
+    private static Logger LOG = Logger.getLogger( WalrusDataMessenger.class );
     private static final int DATA_QUEUE_SIZE = 100;
 
     private ConcurrentHashMap<String, ConcurrentHashMap<String,LinkedBlockingQueue<WalrusDataMessage>>> queueMap;
@@ -69,7 +70,13 @@ public class WalrusDataMessenger {
         ConcurrentHashMap<String,LinkedBlockingQueue<WalrusDataMessage>> queues = queueMap.get(key1);
         if(queues != null) {
             for (LinkedBlockingQueue<WalrusDataMessage> queue: queues.values()) {
-                queue.add(WalrusDataMessage.InterruptTransaction());
+		try {
+                    queue.put(WalrusDataMessage.InterruptTransaction());
+		} catch(InterruptedException ex) {
+		    LOG.warn(ex, ex);
+		    return null;
+		}
+	
             }
         }
         return getQueue(key1, key2);
