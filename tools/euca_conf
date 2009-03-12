@@ -22,7 +22,6 @@ NODEMODE=""
 CLUSNAME=""
 NEWCLUS=""
 CLUSMODE=""
-ACCESSKEY=""
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -204,13 +203,12 @@ while [ $# -gt 0 ]; do
 	    continue
 	fi
 	if [ "$1" = "-addcluster" ]; then
-	    if [ $# -lt 4 ]; then
+	    if [ $# -lt 3 ]; then
 		echo "Requires the cluster nice name, hostname and admin access key"
 		exit 1
 	    fi
 	    CLUSNAME="$2"
 	    NEWCLUS="$3"
-	    ACCESSKEY="$4"
 	    CLUSMODE="ADD"
 	    shift; shift; shift; shift
 	    continue
@@ -275,10 +273,6 @@ if [ -n "$NAME" ]; then
 	echo $VALUE
 fi
 if [ -n "$NEWCLUS" ]; then
-#    NEWCLUS=localhost
-#    CLUSNAME=testing
-#    CC_PORT=8774
-#    ACCESS_KEY="ISMvKXpXpadDiUoOSoAfww"
 
     if [ -f "$FILE" ]; then
 	. $FILE
@@ -287,15 +281,28 @@ if [ -n "$NEWCLUS" ]; then
 	exit 1
     fi
 
-    KEY=$(eval echo $(awk -F, '/INSERT INTO USERS.*admin/ {print $5}' ${EUCALYPTUS}/var/eucalyptus/db/* | head -n 1))
+    FIELD=`grep "CREATE MEMORY TABLE USERS" /var/lib/eucalyptus/db/* | sed 's/,/\n/g' | awk '/USER_SECRETKEY/ {print NR}'`
+    KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO USERS.*admin/ {print $field}' ${EUCALYPTUS}/var/lib/eucalyptus/db/* | head -n 1))
     
-#ARGS="AWSAccessKeyId=ISMvKXpXpadDiUoOSoAfww&Action=AddCluster&Host=${NEWCLUS}&Name=${CLUSNAME}&Port=${CC_PORT}"
-    ARGS="AWSAccessKeyId=${ACCESSKEY}&Action=AddCluster&Host=${NEWCLUS}&Name=${CLUSNAME}&Port=${CC_PORT}"
+    ARGS="AWSAccessKeyId=ISMvKXpXpadDiUoOSoAfww&Action=DescribeAvailabilityZones"
     ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=2008-12-01"
-    
+    SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Eucalyptus\n${ARGS}" | openssl dgst -sha256 -hmac ${KEY} -binary | openssl base64)
+    ISUP=`wget -O - "http://127.0.0.1:8773/services/Eucalyptus?${ARGS}&Signature=${SIGNATURE}" 2>/dev/null | grep UP`
+    if [ -n "$ISUP" ]; then
+	echo "ERROR: there is already a cluster registered with the system."
+	exit 1
+    fi
+
+    ARGS="AWSAccessKeyId=ISMvKXpXpadDiUoOSoAfww&Action=AddCluster&Host=${NEWCLUS}&Name=${CLUSNAME}&Port=${CC_PORT}"
+    ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=2008-12-01"
     SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Eucalyptus\n${ARGS}" | openssl dgst -sha256 -hmac ${KEY} -binary | openssl base64)
     
-    wget -dump "http://127.0.0.1:8773/services/Eucalyptus?${ARGS}&Signature=${SIGNATURE}"
+    ISREG=`wget -O - "http://127.0.0.1:8773/services/Eucalyptus?${ARGS}&Signature=${SIGNATURE}" 2>/dev/null`
+    if [ ! -n "$ISREG" ]; then
+	echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
+	exit 1
+    fi
+    echo "New cluster '${NEWCLUS}' on host '${NEWCLUS}' successfully added."
 fi
 
 if [ -n "$NEWNODE" ]; then
@@ -305,9 +312,12 @@ if [ -n "$NEWNODE" ]; then
 	if [ "$SSHKEY" = "" ]; then
 	    echo "ERROR: cannot read ssh key ~eucalyptus/.ssh/id_rsa.pub, syncronization will probably not work"
 	else
-	    echo "First, please run the following command on '$NEWNODE':"
+	    echo "First, please run the following commands on '$NEWNODE':"
 	    echo ""
-	    echo "echo \"$SSHKEY\" >> ~eucalyptus/authorized_keys"
+	    echo "sudo apt-get install eucalyptus-nc"
+	    echo "sudo tee ~eucalyptus/.ssh/authorized_keys > /dev/null <<EOT"
+	    echo "$SSHKEY"
+	    echo "EOT"
 	    echo ""
 	    echo "hit return to continue"
 	    read
@@ -324,7 +334,7 @@ if [ -n "$NEWNODE" ]; then
     TMPFILE="$FILE.$$"
     
     if [ "$NODEMODE" = "ADD" ]; then
-	sudo -u eucalyptus scp ${EUCALYPTUS}/var/eucalyptus/keys/* ${EUCA_USER}@${NEWNODE}:${EUCALYPTUS}/var/eucalyptus/keys/
+	sudo -u eucalyptus scp ${EUCALYPTUS}/var/lib/eucalyptus/keys/* ${EUCA_USER}@${NEWNODE}:${EUCALYPTUS}/var/lib/eucalyptus/keys/
 	if [ "$?" != "0" ]; then
 	    echo "ERROR: could not syncronize keys, check authorized_keys on ${NEWNODE}, then run this command again."
 	    exit 1
