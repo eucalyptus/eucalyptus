@@ -70,8 +70,6 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
 	curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, write_header);
 	curl_easy_setopt (curl, CURLOPT_WRITEDATA, fp);
-    curl_easy_setopt (curl, CURLOPT_TIMEOUT, 3600L);         /* TODO: decrease? increase? */
-    curl_easy_setopt (curl, CURLOPT_CONNECTTIMEOUT, 3600L);  /* TODO: decrease? increase? */
     if (strncmp (verb, "GET", 4)==0) {
         curl_easy_setopt (curl, CURLOPT_HTTPGET, 1L);
     } else if (strncmp (verb, "HEAD", 5)==0) {
@@ -81,8 +79,10 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         logprintfl (EUCAERROR, "walrus_request(): invalid HTTP verb %s\n", verb);
         return ERROR; /* TODO: dealloc structs before returning! */
     }
-	/* curl_easy_setopt (curl, CURLOPT_IGNORE_CONTENT_LENGTH, 1L); *//* potentially useful? */
-    /* curl_easy_setopt (curl, CURLOPT_VERBOSE, 1); *//* too much information */
+	// curl_easy_setopt (curl, CURLOPT_IGNORE_CONTENT_LENGTH, 1L);
+    // curl_easy_setopt (curl, CURLOPT_VERBOSE, 1); // too much info
+    // curl_easy_setopt (curl, CURLOPT_TIMEOUT, 3600L); 
+    // curl_easy_setopt (curl, CURLOPT_CONNECTTIMEOUT, 3600L);
 
 	struct curl_slist * headers = NULL; /* beginning of a DLL with headers */
 	headers = curl_slist_append (headers, "Authorization: Euca");
@@ -120,41 +120,52 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	headers = curl_slist_append (headers, sig_hdr);
 
 	curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers); /* register headers */
-
-	total_wrote = total_calls = 0L;
-	if (walrus_op) {
+    if (walrus_op) {
         logprintfl (EUCADEBUG, "walrus_request(): writing %s/%s output to %s\n", verb, walrus_op, outfile);
-	} else {
+    } else {
         logprintfl (EUCADEBUG, "walrus_request(): writing %s output to %s\n", verb, outfile);
-	}
-	result = curl_easy_perform (curl); /* do it */
-    logprintfl (EUCADEBUG, "walrus_request(): wrote %ld bytes in %ld writes\n", total_wrote, total_calls);
-	fclose (fp);
-	
-    int remove_outfile = 0;
-	if (result) {
-		logprintfl (EUCAERROR, "walrus_request(): (%d): %s\n", result, error_msg);
-        remove_outfile = 1;
-		
-	} else {
-		long httpcode;
-		
-		curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpcode);
-        /* TODO: pull out response message, too */
-		switch (httpcode) {
-		case 200L: /* all good */
-			logprintfl (EUCAINFO, "walrus_request(): saved image in %s\n", outfile);
-			code = OK;
-			break;
-			
-		default: /* some kind of error */
-			logprintfl (EUCAERROR, "walrus_request(): server responded with HTTP code %ld\n", httpcode);
-            logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
-            remove_outfile = 1; 
-		}
-	}
-    
-    if ( remove_outfile ) {
+    }
+
+#define TOTAL_RETRIES 4
+    int retries = TOTAL_RETRIES;
+    int timeout = 4;
+    do {
+        total_wrote = total_calls = 0L;
+        result = curl_easy_perform (curl); /* do it */
+        logprintfl (EUCADEBUG, "walrus_request(): wrote %ld bytes in %ld writes\n", total_wrote, total_calls);
+        
+        if (result) { // curl error (connection or transfer failed)
+            logprintfl (EUCAERROR,     "walrus_request(): %s (%d)\n", error_msg, result);
+            if (retries > 0) {
+                logprintfl (EUCAERROR, "                  download retry %d of %d will commence in %d seconds\n", retries, TOTAL_RETRIES, timeout);
+            }
+            sleep (timeout);
+            fseek (fp, 0L, SEEK_SET);
+            timeout <<= 1;
+            retries--;
+
+        } else {
+            retries = 0;
+
+            long httpcode;
+            curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpcode);
+            /* TODO: pull out response message, too */
+
+            switch (httpcode) {
+            case 200L: /* all good */
+                logprintfl (EUCAINFO, "walrus_request(): saved image in %s\n", outfile);
+                code = OK;
+                break;
+                
+            default: /* some kind of error */
+                logprintfl (EUCAERROR, "walrus_request(): server responded with HTTP code %ld\n", httpcode);
+                logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
+            }
+        }
+    } while (code!=OK && retries>0);
+    fclose (fp);
+
+    if ( code != OK ) {
         logprintfl (EUCAINFO, "walrus_request(): due to error, removing %s\n", outfile);
         remove (outfile);
     }
