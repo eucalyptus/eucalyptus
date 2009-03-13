@@ -396,19 +396,19 @@ static int doInitialize (void)
                     
                     error = virDomainGetInfo(dom, &info);
                     if (error < 0 || info.state == VIR_DOMAIN_NOSTATE) {
-                        logprintfl (EUCAWARN, "WARNING: failed to get info on running Xen domain #%d, ignoring it\n", dom_ids[i]);
+                        logprintfl (EUCAWARN, "WARNING: failed to get info on running KVM domain #%d, ignoring it\n", dom_ids[i]);
                         continue;
                     }
 
                     if (info.state == VIR_DOMAIN_SHUTDOWN ||
                         info.state == VIR_DOMAIN_SHUTOFF ||
                         info.state == VIR_DOMAIN_CRASHED ) {
-                        logprintfl (EUCADEBUG, "ignoring non-running Xen domain #%d\n", dom_ids[i]);
+                        logprintfl (EUCADEBUG, "ignoring non-running KVM domain #%d\n", dom_ids[i]);
                         continue;
                     }
                     
                     if ((dom_name = virDomainGetName(dom))==NULL) {
-                        logprintfl (EUCAWARN, "WARNING: failed to get name of running Xen domain #%d, ignoring it\n", dom_ids[i]);
+                        logprintfl (EUCAWARN, "WARNING: failed to get name of running KVM domain #%d, ignoring it\n", dom_ids[i]);
                         continue;
                     }
 
@@ -417,7 +417,7 @@ static int doInitialize (void)
                     }
 
                     if ((instance = scRecoverInstanceInfo (dom_name))==NULL) {
-                        logprintfl (EUCAWARN, "WARNING: failed to recover Eucalyptus metadata of running Xen domain %s, ignoring it\n", dom_name);
+                        logprintfl (EUCAWARN, "WARNING: failed to recover Eucalyptus metadata of running KVM domain %s, ignoring it\n", dom_name);
                         continue;
                     }
                     
@@ -430,16 +430,16 @@ static int doInitialize (void)
                         continue;
                     }
                     
-                    logprintfl (EUCAINFO, "- adopted running Xen domain %s from user %s\n", instance->instanceId, instance->userId);
+                    logprintfl (EUCAINFO, "- adopted running KVM domain %s from user %s\n", instance->instanceId, instance->userId);
                     /* TODO: try to look up IPs? */
 
                     virDomainFree (dom);
                 } else {
-                    logprintfl (EUCAWARN, "WARNING: failed to lookup running Xen domain #%d, ignoring it\n", dom_ids[i]);
+                    logprintfl (EUCAWARN, "WARNING: failed to lookup running KVM domain #%d, ignoring it\n", dom_ids[i]);
                 }
             }
         } else if (num_doms==0) {
-            logprintfl (EUCAINFO, "no currently running Xen domains to adopt\n");
+            logprintfl (EUCAINFO, "no currently running KVM domains to adopt\n");
         } else {
             logprintfl (EUCAWARN, "WARNING: failed to find out about running domains\n");
         }
@@ -865,7 +865,7 @@ static int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdow
             int err=virDomainDestroy (dom);
             sem_v (xen_sem);
             if (err==0) {
-                logprintfl (EUCAINFO, "destroyed Xen domain for instance %s\n", instanceId);
+                logprintfl (EUCAINFO, "destroyed KVM domain for instance %s\n", instanceId);
             }
             virDomainFree(dom); /* necessary? */
         } else {
@@ -1047,7 +1047,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
             char xml [1024];
             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDev);
 
-            /* protect Xen calls, just in case */
+            /* protect KVM calls, just in case */
             sem_p (xen_sem);
             err = virDomainAttachDevice (dom, xml);
             sem_v (xen_sem);
@@ -1100,7 +1100,7 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
             char xml [1024];
             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDev);
 
-            /* protect Xen calls, just in case */
+            /* protect KVM calls, just in case */
             sem_p (xen_sem);
             err = virDomainDetachDevice (dom, xml);
             sem_v (xen_sem);
