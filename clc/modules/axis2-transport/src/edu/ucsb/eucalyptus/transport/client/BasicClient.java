@@ -152,6 +152,10 @@ public class BasicClient implements Client {
         omResponse = this.serviceClient.sendReceive( omMsg );
         break;
       }
+      catch ( RuntimeException e ) {
+        LOG.error( String.format( EucalyptusProperties.DEBUG_FSTRING, omMsg.getLocalName()+":"+i, e.getMessage() ) );
+        ex = e;
+      }
       catch ( Exception e ) {
         LOG.error( String.format( EucalyptusProperties.DEBUG_FSTRING, omMsg.getLocalName()+":"+i, e.getMessage() ) );
         ex = e;
