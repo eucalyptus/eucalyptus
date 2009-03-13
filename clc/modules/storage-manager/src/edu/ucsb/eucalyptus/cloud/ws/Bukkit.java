@@ -569,7 +569,8 @@ public class Bukkit {
 
         PutObjectResponseType putObjectResponse = PutObject(putObject);
 
-        reply.setEtag(putObjectResponse.getEtag());
+        String etag = putObjectResponse.getEtag();
+        reply.setEtag(etag);
         reply.setLastModified(putObjectResponse.getLastModified());
         reply.set_return(putObjectResponse.get_return());
         reply.setMetaData(putObjectResponse.getMetaData());
@@ -585,7 +586,8 @@ public class Bukkit {
             } catch(Exception ex) {
                 LOG.warn(ex);
             }
-            reply.setRedirectUrl(successActionRedirect);
+            String paramString = "bucket=" + bucketName + "&key=" + key + "&etag=quot;" + etag + "quot;";
+            reply.setRedirectUrl(successActionRedirect + "?" + paramString);
         } else {
             Integer successActionStatus = request.getSuccessActionStatus();
             if(successActionStatus != null) {
@@ -817,12 +819,19 @@ public class Bukkit {
         String bucketName = request.getBucket();
         String userId = request.getUserId();
         String prefix = request.getPrefix();
+        if(prefix == null)
+            prefix = "";
+
         String marker = request.getMarker();
+        if(marker == null)
+            marker = "";
 
         int maxKeys = -1;
         String maxKeysString = request.getMaxKeys();
         if(maxKeysString != null)
             maxKeys = Integer.parseInt(maxKeysString);
+        else
+            maxKeys = WalrusProperties.MAX_KEYS;
 
         String delimiter = request.getDelimiter();
 
@@ -839,11 +848,8 @@ public class Bukkit {
                 reply.setIsTruncated(false);
                 if(maxKeys >= 0)
                     reply.setMaxKeys(maxKeys);
-                if(prefix != null) {
-                    reply.setPrefix(prefix);
-                }
-                if(marker != null)
-                    reply.setMarker(marker);
+                reply.setPrefix(prefix);
+                reply.setMarker(marker);
                 if(delimiter != null)
                     reply.setDelimiter(delimiter);
                 List<ObjectInfo> objectInfos = bucket.getObjects();
@@ -1008,7 +1014,7 @@ public class Bukkit {
 
         if (bucketList.size() > 0) {
             BucketInfo bucket = bucketList.get(0);
-            if (bucket.canWriteACP(userId) && accessControlPolicy.getOwner().getDisplayName().equals(bucket.getOwnerId())) {
+            if (bucket.canWriteACP(userId)) {
                 List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                 AccessControlListType accessControlList = accessControlPolicy.getAccessControlList();
                 bucket.resetGlobalGrants();
@@ -1045,7 +1051,7 @@ public class Bukkit {
             ObjectInfo foundObject = null;
             for(ObjectInfo objectInfo: bucket.getObjects()) {
                 if(objectInfo.getObjectKey().equals(objectKey)) {
-                    if (objectInfo.canWriteACP(userId) && accessControlPolicy.getOwner().getDisplayName().equals(objectInfo.getOwnerId())) {
+                    if (objectInfo.canWriteACP(userId)) {
                         foundObject = objectInfo;
                         break;
                     } else {
@@ -1826,7 +1832,7 @@ public class Bukkit {
             db.commit();
 //decrypt, unzip, untar image in the background
             ImageCacher imageCacher = new ImageCacher(bucketName, manifestKey, decryptedImageKey);
-            imageCacher.run();
+            imageCacher.start();
         }
     }
 
@@ -1990,6 +1996,14 @@ public class Bukkit {
             return unencryptedSize;
         }
 
+        private void notifyWaiters() {
+            WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + manifestKey);
+            synchronized (monitor) {
+                monitor.notifyAll();
+            }
+            imageMessenger.removeMonitor(bucketName + "/" + manifestKey);
+        }
+
         public void run() {
             //update status
             //wake up any waiting consumers
@@ -2001,14 +2015,29 @@ public class Bukkit {
             while((unencryptedSize = tryToCache(decryptedImageName, tarredImageName, imageName)) < 0) {
                 EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
                 List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
-                ImageCacheInfo imageCacheInfo = null;
+                ImageCacheInfo imageCacheInfo;
                 if(imageCacheInfos.size() > 1) {
+                    boolean anyCached = false;
+                    for(ImageCacheInfo icInfo : imageCacheInfos) {
+                        if(icInfo.getInCache()) {
+                            anyCached = true;
+                            break;
+                        }
+                    }
+                    if(!anyCached) {
+                        db.rollback();
+                        notifyWaiters();
+                        return;
+                    }
                     Collections.sort(imageCacheInfos);
                     imageCacheInfo = imageCacheInfos.get(0);
-                    break;
+                } else {
+                    db.rollback();
+                    notifyWaiters();
+                    return;
                 }
                 db.commit();
-                if(imageCacheInfo != null && imageCacheInfo.getInCache()) {
+                if(imageCacheInfo.getInCache()) {
                     flushCachedImage(imageCacheInfo.getBucketName(), imageCacheInfo.getManifestName());
                 }
             }
@@ -2027,12 +2056,7 @@ public class Bukkit {
                     foundImageCacheInfo.setSize(unencryptedSize);
                     db.commit();
                     //wake up waiters
-                    WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + manifestKey);
-                    synchronized (monitor) {
-                        monitor.notifyAll();
-                    }
-                    imageMessenger.removeMonitor(bucketName + "/" + manifestKey);
-
+                    notifyWaiters();
                 } else {
                     db.rollback();
                     LOG.warn("Could not expand image" + decryptedImageName);

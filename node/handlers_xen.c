@@ -999,8 +999,23 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 {
     ncInstance *instance;
     int ret = OK;
+    char localDevReal[32], *strptr;
+
 
     logprintfl (EUCAINFO, "doAttachVolume() invoked (id=%s vol=%s remote=%s local=%s)\n", instanceId, volumeId, remoteDev, localDev);
+
+    // fix up format of incoming local dev name, if we need to.
+    bzero(localDevReal, 32);
+    if ((strptr = strchr(localDev, '/')) != NULL) {
+      sscanf(localDev, "/dev/%s", localDevReal);
+    } else {
+      snprintf(localDevReal, 32, "%s", localDev);
+    }
+    if (localDevReal[0] == 0) {
+      logprintfl(EUCAERROR, "bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
+      return(ERROR);
+    }
+
     sem_p (inst_sem); 
     instance = find_instance(&global_instances, instanceId);
     sem_v (inst_sem);
@@ -1009,7 +1024,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
     ncVolume * volume;
     sem_p (inst_sem);
-    volume = add_volume (instance, volumeId, remoteDev, localDev);
+    volume = add_volume (instance, volumeId, remoteDev, localDevReal);
     sem_v (inst_sem);
     if ( volume == NULL ) {
         logprintfl (EUCAFATAL, "ERROR: Failed to save the volume record, aborting volume attachment\n");
@@ -1026,7 +1041,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
             int err = 0;
             char xml [1024];
-            snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDev);
+            snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
@@ -1036,7 +1051,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
                 logprintfl (EUCAERROR, "AttachVolume() failed (err=%d) XML=%s\n", err, xml);
                 ret = ERROR;
             } else {
-                logprintfl (EUCAINFO, "attached %s to %s in domain %s\n", remoteDev, localDev, instanceId);
+                logprintfl (EUCAINFO, "attached %s to %s in domain %s\n", remoteDev, localDevReal, instanceId);
             }
             virDomainFree(dom);
         } else {

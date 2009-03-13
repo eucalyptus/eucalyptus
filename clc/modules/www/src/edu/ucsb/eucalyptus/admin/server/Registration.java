@@ -113,7 +113,7 @@ public class Registration extends HttpServlet {
 
   private static String getRegistrationId() {
     try {
-      return EucalyptusProperties.getSystemConfiguration().getStorageUrl();
+      return EucalyptusProperties.getSystemConfiguration().getRegistrationId();
     } catch ( EucalyptusCloudException e ) {
       return "configuration error";
     }
@@ -139,11 +139,12 @@ public class Registration extends HttpServlet {
   }
 
   private static String getSignature( String key, String uuid ) {
-    SecretKeySpec signingKey = new SecretKeySpec( key.getBytes(), Hashes.Mac.HmacSHA1.toString() );
+    SecretKeySpec signingKey = new SecretKeySpec( key.getBytes(), Hashes.Mac.HmacSHA256.toString() );
     try {
       Mac mac = Mac.getInstance( Hashes.Mac.HmacSHA256.toString() );
       mac.init( signingKey );
       byte[] rawHmac = mac.doFinal( uuid.getBytes() );
+      LOG.warn("\nkey='"+key+"'\nid='"+uuid+"'\nresult="+Hashes.getHexString( rawHmac ));
       return Hashes.getHexString( rawHmac );
     }
     catch ( Exception e ) {

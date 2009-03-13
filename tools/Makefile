@@ -11,15 +11,6 @@ all:
 build: all
 
 deploy:
-	@$(INSTALL) -m 755 add_key.pl $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 gen_libvirt_xml $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 gen_kvm_libvirt_xml $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 partition2disk $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 get_xen_info $(datarootdir)/eucalyptus/get_xen_info
-	@$(INSTALL) -m 755 get_sys_info $(datarootdir)/eucalyptus/get_sys_info
-	@$(INSTALL) -m 755 euca_ipt $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 euca_conf $(sbindir)
-	@$(INSTALL) -m 755 euca_sync_key $(sbindir)
 
 clean:
 	rm -f *~ *.o
@@ -33,4 +24,13 @@ install: deploy
 	@if test -e $(etcdir)/eucalyptus/eucalyptus.conf ; then \
 		cp $(etcdir)/eucalyptus/eucalyptus.conf $(etcdir)/eucalyptus/eucalyptus.conf.old ; fi
 	@$(INSTALL) -m 644 eucalyptus.conf $(etcdir)/eucalyptus
+	@$(INSTALL) -m 755 add_key.pl $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 gen_libvirt_xml $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 gen_kvm_libvirt_xml $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 partition2disk $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 get_xen_info $(datarootdir)/eucalyptus/get_xen_info
+	@$(INSTALL) -m 755 get_sys_info $(datarootdir)/eucalyptus/get_sys_info
+	@$(INSTALL) -m 755 euca_ipt $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 euca_conf $(sbindir)
+	@$(INSTALL) -m 755 euca_sync_key $(sbindir)
 

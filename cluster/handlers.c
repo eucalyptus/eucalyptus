@@ -1631,6 +1631,11 @@ int init_config(void) {
       rc = refreshNodes(config, configFile, &res, &numHosts);
       if (rc) {
 	logprintfl(EUCAERROR, "cannot read list of nodes, check your config file\n");
+	sem_wait(configLock);
+	config->numResources = 0;
+	bzero(config->resourcePool, sizeof(resource) * MAXNODES);
+	sem_post(configLock);
+
 	return(1);
       }
       
@@ -1939,7 +1944,7 @@ int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHos
   rc = get_conf_var(configFile, CONFIG_NODES, &tmpstr);
   if (rc != 1) {
     // error
-    logprintfl(EUCAFATAL,"parsing config file (%s) for NODES\n", configFile);
+    logprintfl(EUCAWARN,"parsing config file (%s) for NODES\n", configFile);
     return(1);
   } else {
     hosts = from_var_to_char_list(tmpstr);

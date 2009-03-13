@@ -104,6 +104,7 @@ public class LVM2Manager implements BlockStorageManager {
         if(!initialized) {
             System.loadLibrary("lvm2control");
             exportManager = new AOEManager();
+	    initialize();
             initialized = true;
         }
     }
@@ -112,7 +113,7 @@ public class LVM2Manager implements BlockStorageManager {
         try {
             hostName = InetAddress.getLocalHost().getHostName();
             iface = parseConfig();
-            LOG.warn("iface: " + iface);
+            LOG.info("Will export volumes on interface: " + iface);
             if(iface == null || (iface.length() == 0)) {
                 NetworkInterface inface = NetworkInterface.getByName(iface);
                 if(inface == null) {
@@ -236,6 +237,8 @@ public class LVM2Manager implements BlockStorageManager {
             db.commit();
         }
     }
+
+    public native void initialize();
 
     public native String losetup(String fileName);
 

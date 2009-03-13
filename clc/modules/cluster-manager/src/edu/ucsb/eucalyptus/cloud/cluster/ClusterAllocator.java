@@ -1,11 +1,27 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import com.google.common.collect.*;
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.msgs.*;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.cloud.VmImageInfo;
+import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
+import edu.ucsb.eucalyptus.cloud.VmRunType;
+import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
+import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
+import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import edu.ucsb.eucalyptus.msgs.StartNetworkType;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import edu.ucsb.eucalyptus.util.Admin;
 import org.apache.log4j.Logger;
+import org.apache.axis2.AxisFault;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -30,6 +46,17 @@ class ClusterAllocator extends Thread {
     for ( NetworkToken networkToken : vmToken.getNetworkTokens() )
       this.setupNetworkMessages( networkToken );
     this.setupVmMessages( vmToken );
+  }
+
+  public void setupAddressMessages( ResourceToken token ) {
+    for( String addr : token.getAddresses() ) {
+      String vmId = token.getInstanceIds().get( token.getAddresses().indexOf( addr ) );
+      try {
+        new AddressManager().AssociateAddress( Admin.makeMsg( AssociateAddressType.class, addr, vmId ) );
+      } catch ( AxisFault axisFault ) {
+        LOG.error( axisFault );
+      }
+    }
   }
 
   public void setupNetworkMessages( NetworkToken networkToken ) {
@@ -86,24 +113,22 @@ class ClusterAllocator extends Thread {
   public void run() {
     this.state = State.CREATE_NETWORK;
     while ( !this.state.equals( State.FINISHED ) ) {
+      this.queueEvents();
       switch ( this.state ) {
         case CREATE_NETWORK:
-          this.queueEvents();
           this.setState( State.CREATE_NETWORK_RULES );
           break;
         case CREATE_NETWORK_RULES:
-          this.queueEvents();
           this.setState( State.CREATE_VMS );
           break;
         case CREATE_VMS:
-          this.queueEvents();
+          this.setState( State.ASSIGN_ADDRESSES );
+          break;
+        case ASSIGN_ADDRESSES:
           this.setState( State.FINISHED );
           break;
         case ROLLBACK:
-          this.queueEvents();
           this.setState( State.FINISHED );
-          break;
-        case FINISHED:
           break;
       }
       this.clearQueue();
@@ -133,6 +158,7 @@ class ClusterAllocator extends Thread {
     CREATE_NETWORK,
     CREATE_NETWORK_RULES,
     CREATE_VMS,
+    ASSIGN_ADDRESSES,
     FINISHED,
     ROLLBACK
   }
