@@ -57,6 +57,15 @@
         </layout>
     </appender>
 
+    <appender name="errorlog" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="${euca.log.dir}/cloud-error.log"/>
+        <param name="MaxFileSize" value="10MB"/>
+        <param name="MaxBackupIndex" value="10"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d{HH:mm:ss} [%c{1}:%t] %x %-5p %m%n"/>
+        </layout>
+    </appender>
+
     <category name="edu.ucsb.eucalyptus" additivity="true">
         <priority value="DEBUG"/>
         <appender-ref ref="logfile"/>
@@ -88,6 +97,10 @@
     <category name="com.mchange" additivity="true">
         <priority value="ERROR"/>
         <appender-ref ref="logfile"/>
+    </category>
+    <category name="edu.ucsb.eucalyptus" additivity="true">
+        <priority value="ERROR"/>
+        <appender-ref ref="errorlog"/>
     </category>
 
     <root>
