@@ -143,7 +143,15 @@ public class VolumeManager {
     String userName = request.isAdministrator() ? null : request.getUserId();
     try {
       Volume vol = db.getUnique( Volume.named( userName, request.getVolumeId() ) );
-      //:: TODO-1.5: state checks and snapshot tree check here :://
+      boolean isAttached = false;
+      for( VmInstance vm : VmInstances.getInstance().listValues() ) {
+        for( AttachedVolume attachedVol : vm.getVolumes() ) {
+          if( request.getVolumeId().equals( attachedVol.getVolumeId() ) ) {
+            isAttached = true;
+          }
+        }
+      }
+      if( isAttached ) return reply;
       Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
       db.delete( vol );
       db.commit();
