@@ -207,6 +207,11 @@ public class VolumeManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId() );
     }
+    for( AttachedVolume attachedVol : vm.getVolumes() ) {
+      if( attachedVol.getDevice().replaceAll("/unknown","").equals( request.getDevice() ) ) {
+        throw new EucalyptusCloudException( "Already have a device attached to: " + request.getDevice() );
+      }
+    }
     Cluster cluster = null;
     try {
       cluster = Clusters.getInstance().lookup( vm.getPlacement() );
@@ -286,7 +291,7 @@ public class VolumeManager {
     }
 
     request.setVolumeId( volume.getVolumeId() );
-    request.setRemoteDevice( volume.getRemoteDevice() );
+    request.setRemoteDevice( volume.getRemoteDevice().replaceAll("/unknown","") );
     request.setDevice( volume.getDevice() );
     request.setInstanceId( vm.getInstanceId() );
     QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( ), request );
