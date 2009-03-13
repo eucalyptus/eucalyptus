@@ -59,6 +59,9 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
       numaddrs-=1;
       if (!strcmp(mode, "MANAGED") || !strcmp(mode, "MANAGED-NOVLAN")) {
 	// set up iptables
+	snprintf(cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap iptables -L", vnetconfig->eucahome);
+	rc = system(cmd);
+
 	logprintfl(EUCADEBUG, "flushing 'filter' table\n");
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", "-F");
 	

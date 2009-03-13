@@ -426,7 +426,7 @@ public class Bukkit {
                     //not found. create an object info
                     foundObject = new ObjectInfo(objectKey);
                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-	            foundObject.addGrants(userId, grantInfos, accessControlList);
+                    foundObject.addGrants(userId, grantInfos, accessControlList);
                     foundObject.setGrants(grantInfos);
                     objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
                     foundObject.setObjectName(objectName);
@@ -569,7 +569,7 @@ public class Bukkit {
 
         PutObjectResponseType putObjectResponse = PutObject(putObject);
 
-	String etag = putObjectResponse.getEtag();
+        String etag = putObjectResponse.getEtag();
         reply.setEtag(etag);
         reply.setLastModified(putObjectResponse.getLastModified());
         reply.set_return(putObjectResponse.get_return());
@@ -586,7 +586,7 @@ public class Bukkit {
             } catch(Exception ex) {
                 LOG.warn(ex);
             }
-	    String paramString = "bucket=" + bucketName + "&key=" + key + "&etag=quot;" + etag + "quot;";
+            String paramString = "bucket=" + bucketName + "&key=" + key + "&etag=quot;" + etag + "quot;";
             reply.setRedirectUrl(successActionRedirect + "?" + paramString);
         } else {
             Integer successActionStatus = request.getSuccessActionStatus();
@@ -819,12 +819,19 @@ public class Bukkit {
         String bucketName = request.getBucket();
         String userId = request.getUserId();
         String prefix = request.getPrefix();
+        if(prefix == null)
+            prefix = "";
+
         String marker = request.getMarker();
+        if(marker == null)
+            marker = "";
 
         int maxKeys = -1;
         String maxKeysString = request.getMaxKeys();
         if(maxKeysString != null)
             maxKeys = Integer.parseInt(maxKeysString);
+        else
+            maxKeys = WalrusProperties.MAX_KEYS;
 
         String delimiter = request.getDelimiter();
 
@@ -841,11 +848,8 @@ public class Bukkit {
                 reply.setIsTruncated(false);
                 if(maxKeys >= 0)
                     reply.setMaxKeys(maxKeys);
-                if(prefix != null) {
-                    reply.setPrefix(prefix);
-                }
-                if(marker != null)
-                    reply.setMarker(marker);
+                reply.setPrefix(prefix);
+                reply.setMarker(marker);
                 if(delimiter != null)
                     reply.setDelimiter(delimiter);
                 List<ObjectInfo> objectInfos = bucket.getObjects();

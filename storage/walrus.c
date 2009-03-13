@@ -1,3 +1,4 @@
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -8,12 +9,16 @@
 #include <fcntl.h> /* open */
 #include <curl/curl.h>
 #include <curl/easy.h>
+#if defined(HAVE_ZLIB_H)
 #include <zlib.h>
+#endif
 #include "euca_auth.h"
 #include "eucalyptus.h"
 #include "misc.h"
 #include "walrus.h"
 
+#define TOTAL_RETRIES 4 /* download is retried in case of connection problems */
+#define FIRST_TIMEOUT 4 /* in seconds, goes in powers of two afterwards */
 #define CHUNK 262144 /* buffer size for decompression operations */
 #define BUFSIZE 4096 /* should be big enough for CERT and the signature */
 #define STRSIZE 245 /* for short strings: files, hosts, URLs */
@@ -23,37 +28,22 @@
 #define GET_OBJECT_CMD "GetObject"
 
 static size_t write_data      (void *buffer, size_t size, size_t nmemb, void *userp);
-static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *userp);
 static size_t write_header    (void *buffer, size_t size, size_t nmemb, void *userp);
-static long long total_wrote;
-static long long total_calls;
+#if defined(ZLIB_VERNUM) && (ZLIB_VERNUM >= 0x1204)
+static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *userp);
+static void zerr (int ret, char * where);
+#define CAN_GZIP
+#endif
 
-struct zlib_and_fp {
-	z_stream strm; /* stream struct used by zlib */
+struct request {
 	FILE * fp; /* output file pointer to be used by curl WRITERs */
+    long long total_wrote; /* bytes written during the operation */
+    long long total_calls; /* write calls made during the operation */
+#if defined (CAN_GZIP)
+	z_stream strm; /* stream struct used by zlib */
 	int ret; /* return value of last inflate() call */
+#endif
 };
-
-/* report a zlib or i/o error */
-static void zerr (int ret, char * where)
-{
-    switch (ret) {
-    case Z_ERRNO:
-        logprintfl (EUCAERROR, "error: %s(): zlib: failed to write\n", where);
-        break;
-    case Z_STREAM_ERROR:
-        logprintfl (EUCAERROR, "error: %s(): zlib: invalid compression level\n", where);
-        break;
-    case Z_DATA_ERROR:
-        logprintfl (EUCAERROR, "error: %s(): zlib: invalid or incomplete deflate data\n", where);
-        break;
-    case Z_MEM_ERROR:
-        logprintfl (EUCAERROR, "error: %s(): zlib: out of memory\n", where);
-        break;
-    case Z_VERSION_ERROR:
-        logprintfl (EUCAERROR, "error: %s(): zlib: zlib version mismatch!\n", where);
-    }
-}
 
 /* downloads a decrypted image from Walrus based on the manifest URL,
  * saves it to outfile */
@@ -62,7 +52,11 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	int code = ERROR;
 	char url [BUFSIZE];
 
-    snprintf (url, BUFSIZE, "%s%s", requested_url, do_compress?"?IsCompressed=true":"");
+    strncpy (url, requested_url, BUFSIZE);
+#if defined(CAN_GZIP)
+    if (do_compress)
+        snprintf (url, BUFSIZE, "%s%s", requested_url, "?IsCompressed=true");
+#endif
     logprintfl (EUCAINFO, "walrus_request(): downloading %s\n", outfile);
     logprintfl (EUCAINFO, "                  from %s\n", url);
 
@@ -100,8 +94,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	curl_easy_setopt (curl, CURLOPT_ERRORBUFFER, error_msg);
 	curl_easy_setopt (curl, CURLOPT_URL, url); 
 	curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, write_header);
-    //curl_easy_setopt (curl, CURLOPT_TIMEOUT, 3600L);      /* TODO: decrease? increase? */
-    //curl_easy_setopt (curl, CURLOPT_CONNECTTIMEOUT, 10L); /* TODO: decrease? increase? */
+
     if (strncmp (verb, "GET", 4)==0) {
         curl_easy_setopt (curl, CURLOPT_HTTPGET, 1L);
     } else if (strncmp (verb, "HEAD", 5)==0) {
@@ -111,30 +104,30 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         logprintfl (EUCAERROR, "walrus_request(): invalid HTTP verb %s\n", verb);
         return ERROR; /* TODO: dealloc structs before returning! */
     }
-	/* curl_easy_setopt (curl, CURLOPT_IGNORE_CONTENT_LENGTH, 1L); *//* potentially useful? */
-    /* curl_easy_setopt (curl, CURLOPT_VERBOSE, 1); *//* too much information */
 	
-	/* set up the write function, which depends on compression */
-	struct zlib_and_fp zfp;
+	/* set up the default write function, but possibly override
+     * it below, if compression is desired and possible */
+	struct request params;
+    params.fp = fp;
+    curl_easy_setopt (curl, CURLOPT_WRITEDATA, &params);
+    curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
+        
+#if defined(CAN_GZIP)
 	if (do_compress) {
 		/* allocate zlib inflate state */
-		zfp.strm.zalloc = Z_NULL;
-	    zfp.strm.zfree = Z_NULL;
-	    zfp.strm.opaque = Z_NULL;
-	    zfp.strm.avail_in = 0;
-	    zfp.strm.next_in = Z_NULL;
-	    int ret = inflateInit2 (&(zfp.strm), 31); //deflateInit2(&(zfp.strm), Z_DEFAULT_COMPRESSION, Z_DEFLATED, (15+16), 8, Z_DEFAULT_STRATEGY);
+		params.strm.zalloc = Z_NULL;
+	    params.strm.zfree = Z_NULL;
+	    params.strm.opaque = Z_NULL;
+	    params.strm.avail_in = 0;
+	    params.strm.next_in = Z_NULL;
+	    int ret = inflateInit2 (&(params.strm), 31);
 	    if (ret != Z_OK) {
             zerr (ret, "walrus_request");
 			return ERROR;
 		}
-        zfp.fp = fp;
 		curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data_zlib);
-		curl_easy_setopt (curl, CURLOPT_WRITEDATA, &zfp);
-	} else {
-		curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
-		curl_easy_setopt (curl, CURLOPT_WRITEDATA, fp);
 	}
+#endif /* CAN_GZIP */
 
 	struct curl_slist * headers = NULL; /* beginning of a DLL with headers */
 	headers = curl_slist_append (headers, "Authorization: Euca");
@@ -172,49 +165,59 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	headers = curl_slist_append (headers, sig_hdr);
 
 	curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers); /* register headers */
-
-	total_wrote = total_calls = 0L;
-	if (walrus_op) {
+    if (walrus_op) {
         logprintfl (EUCADEBUG, "walrus_request(): writing %s/%s output to %s\n", verb, walrus_op, outfile);
-	} else {
+    } else {
         logprintfl (EUCADEBUG, "walrus_request(): writing %s output to %s\n", verb, outfile);
 	}
-	result = curl_easy_perform (curl); /* do it */
-    logprintfl (EUCADEBUG, "walrus_request(): wrote %ld bytes in %ld writes\n", total_wrote, total_calls);
-	fclose (fp);
 
-    int remove_outfile = 0;
-	if (do_compress) {
-		(void)inflateEnd(&(zfp.strm));
-		if (zfp.ret != Z_STREAM_END) {
-			logprintfl (EUCAERROR, "walrus_request(): broken compressed stream (err=%d)\n", zfp.ret);
-			remove_outfile = 1;
-		}
-	}
-	
-	if (result) {
-		logprintfl (EUCAERROR, "walrus_request(): (%d): %s\n", result, error_msg);
-        remove_outfile = 1;
-		
-	} else {
-		long httpcode;
-		
-		curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpcode);
-        /* TODO: pull out response message, too */
-		switch (httpcode) {
-		case 200L: /* all good */
-			logprintfl (EUCAINFO, "walrus_request(): saved image in %s\n", outfile);
-			code = OK;
-			break;
-			
-		default: /* some kind of error */
-			logprintfl (EUCAERROR, "walrus_request(): server responded with HTTP code %ld\n", httpcode);
-            logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
-            remove_outfile = 1; 
-		}
-	}
-    
-    if ( remove_outfile ) {
+    int retries = TOTAL_RETRIES;
+    int timeout = FIRST_TIMEOUT;
+    do {
+        params.total_wrote = params.total_calls = 0L;
+        result = curl_easy_perform (curl); /* do it */
+        logprintfl (EUCADEBUG, "walrus_request(): wrote %ld bytes in %ld writes\n", params.total_wrote, params.total_calls);
+#if defined(CAN_GZIP)
+        if (do_compress) {
+            inflateEnd(&(params.strm));
+            if (params.ret != Z_STREAM_END) {
+                zerr (params.ret, "walrus_request");
+            }
+        }
+#endif
+
+        if (result) { // curl error (connection or transfer failed)
+            logprintfl (EUCAERROR,     "walrus_request(): %s (%d)\n", error_msg, result);
+            if (retries > 0) {
+                logprintfl (EUCAERROR, "                  download retry %d of %d will commence in %d seconds\n", retries, TOTAL_RETRIES, timeout);
+            }
+            sleep (timeout);
+            fseek (fp, 0L, SEEK_SET);
+            timeout <<= 1;
+            retries--;
+
+        } else {
+            retries = 0; // do not retry if we go a proper HTTP response
+
+            long httpcode;
+            curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpcode);
+            /* TODO: pull out response message, too */
+
+            switch (httpcode) {
+            case 200L: /* all good */
+                logprintfl (EUCAINFO, "walrus_request(): saved image in %s\n", outfile);
+                code = OK;
+                break;
+                
+            default: /* some kind of error */
+                logprintfl (EUCAERROR, "walrus_request(): server responded with HTTP code %ld\n", httpcode);
+                logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
+            }
+        }
+    } while (code!=OK && retries>0);
+    fclose (fp);
+
+    if ( code != OK ) {
         logprintfl (EUCAINFO, "walrus_request(): due to error, removing %s\n", outfile);
         remove (outfile);
     }
@@ -283,17 +286,26 @@ int walrus_verify_digest (const char * url, const char * old_digest)
     return e;
 }
 
-/* libcurl write handlers */
-static size_t write_data (void *buffer, size_t size, size_t nmemb, void *userp)
+/* libcurl header write handler */
+static size_t write_header (void *buffer, size_t size, size_t nmemb, void *params)
 {
-	int wrote = 0;
-	if (userp) {
-		wrote = fwrite (buffer, size, nmemb, (FILE *) userp);
-        total_wrote += wrote;
-        total_calls++;
-	}
+    /* here in case we want to do something with headers */
+	return size * nmemb;
+}
+
+/* libcurl write handler */
+static size_t write_data (void *buffer, size_t size, size_t nmemb, void *params)
+{
+	assert (params !=NULL);
+	FILE * fp = ((struct request *)params)->fp;
+	int wrote = fwrite (buffer, size, nmemb, fp);
+    ((struct request *)params)->total_wrote += wrote;
+    ((struct request *)params)->total_calls++;
+
 	return wrote;
 }
+
+#if defined(CAN_GZIP)
 
 /* unused testing function */
 static void print_data (unsigned char *buf, const int size)
@@ -310,12 +322,33 @@ static void print_data (unsigned char *buf, const int size)
     printf ("\n");
 }
 
-static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *param)
+/* report on a zlib error */
+static void zerr (int ret, char * where)
 {
-	assert (param !=NULL);
+    switch (ret) {
+    case Z_ERRNO:
+        logprintfl (EUCAERROR, "error: %s(): zlib: failed to write\n", where);
+        break;
+    case Z_STREAM_ERROR:
+        logprintfl (EUCAERROR, "error: %s(): zlib: invalid compression level\n", where);
+        break;
+    case Z_DATA_ERROR:
+        logprintfl (EUCAERROR, "error: %s(): zlib: invalid or incomplete deflate data\n", where);
+        break;
+    case Z_MEM_ERROR:
+        logprintfl (EUCAERROR, "error: %s(): zlib: out of memory\n", where);
+        break;
+    case Z_VERSION_ERROR:
+        logprintfl (EUCAERROR, "error: %s(): zlib: zlib version mismatch!\n", where);
+    }
+}
 
-	z_stream * strm = &(((struct zlib_and_fp *)param)->strm);
-	FILE * fp = ((struct zlib_and_fp *)param)->fp;
+/* libcurl write handler for gzipped streams */
+static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *params)
+{
+	assert (params !=NULL);
+	z_stream * strm = &(((struct request *)params)->strm);
+	FILE * fp = ((struct request *)params)->fp;
     unsigned char out [CHUNK];
 	int wrote = 0;
 	int ret;
@@ -326,7 +359,7 @@ static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *pa
 		strm->avail_out = CHUNK;
 		strm->next_out = out;
 
-		((struct zlib_and_fp *)param)->ret = ret = inflate (strm, Z_NO_FLUSH);
+		((struct request *)params)->ret = ret = inflate (strm, Z_NO_FLUSH);
 		assert (ret != Z_STREAM_ERROR); // verify that state is not clobbered
 		switch (ret) {
 			case Z_NEED_DICT:
@@ -347,15 +380,10 @@ static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *pa
 		wrote += have;
 	} while (strm->avail_out == 0); 
 
-	total_wrote += wrote;
-	total_calls++;
-
+	((struct request *)params)->total_wrote += wrote;
+	((struct request *)params)->total_calls++;
 	return size * nmemb;
 }
 
-static size_t write_header (void *buffer, size_t size, size_t nmemb, void *userp)
-{
-    /* here in case we want to do something with headers */
-	return size * nmemb;
-}
+#endif /* CAN_GZIP */
 

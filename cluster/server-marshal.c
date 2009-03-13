@@ -574,7 +574,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
   }
   
   if (rc) {
-    logprintf("ERROR: doDescribeResources() failed %d\n", rc);
+    logprintfl(ERROR, "ERROR: doDescribeResources() failed %d\n", rc);
     status = AXIS2_FALSE;
     snprintf(statusMessage, 255, "ERROR");
   } else {

@@ -13,6 +13,12 @@ public class AllocateAddressResponseType extends VmAddressMessage { //** added 2
 /** *******************************************************************************/
 public class ReleaseAddressType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
+
+  def ReleaseAddressType(final publicIp) {
+    this.publicIp = publicIp;
+  }
+
+  def ReleaseAddressType() {}
 }
 public class ReleaseAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
   boolean _return;
@@ -29,6 +35,14 @@ public class DescribeAddressesResponseType extends VmAddressMessage { //** added
 public class AssociateAddressType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
   String instanceId;
+
+  def AssociateAddressType(final publicIp, final instanceId) {
+    this.publicIp = publicIp;
+    this.instanceId = instanceId;
+  }
+
+  def AssociateAddressType() {
+  }
 }
 public class AssociateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
   boolean _return;
