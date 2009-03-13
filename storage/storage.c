@@ -816,7 +816,7 @@ retry:
         logprintfl (EUCAERROR, "get_cached_file() failed (errno=%d)\n", e);
     }
 
-    if (file_size > 0) { // if all went well above
+    if (e==OK && file_size > 0 && convert_to_disk ) { // if all went well above
         long long swap_mb = swap_size_mb;
         long long ephemeral_mb = 0L;
         if ((total_disk_limit_mb - (file_size/MEGABYTE)) < swap_size_mb) {
@@ -828,7 +828,7 @@ retry:
             }
         }
         // if this is a disk image and we want to add swap and/or ephemeral partitions to it 
-        if (e==OK && convert_to_disk && (swap_mb>0L || ephemeral_mb>0L) ) {
+        if ( swap_mb>0L || ephemeral_mb>0L ) {
             sem_p (s);
             if ((e=vrun("%s %s %d %d", disk_convert_command_path, file_path, swap_mb, ephemeral_mb))!=0) {
                 logprintfl (EUCAERROR, "error: failed to add swap or ephemeral to the disk image\n");
@@ -837,7 +837,9 @@ retry:
         }
     }
 
-    return file_size + digest_size;
+    if (e==OK && action!=ABORT)
+        return file_size + digest_size;
+    return 0L;
 }
 
 
@@ -848,7 +850,7 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
     char ramdisk_path [BUFSIZE]; long long ramdisk_size = 0L;
     char config_path  [BUFSIZE];
     char rundir_path  [BUFSIZE];
-    int e;
+    int e = ERROR;
     
     logprintfl (EUCAINFO, "retrieving images for instance %s (limit=%dMB)...\n", instanceId, total_disk_limit_mb);
     
