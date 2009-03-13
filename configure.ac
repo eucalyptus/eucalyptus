@@ -144,12 +144,13 @@ AC_CHECK_LIB([pthread],[main])
 AC_CHECK_LIB([rt],[main])
 AC_CHECK_LIB([virt],[main],true,AC_MSG_ERROR([Cannot find libvirt!]))
 AC_CHECK_LIB([curl],[main],true,AC_MSG_ERROR([Cannot find libcurl!]))
+AC_CHECK_LIB([z],[inflate])
 
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([fcntl.h limits.h stdint.h stdlib.h string.h strings.h sys/ioctl.h unistd.h sys/vfs.h])
+AC_CHECK_HEADERS([fcntl.h limits.h stdint.h stdlib.h string.h strings.h sys/ioctl.h unistd.h sys/vfs.h zlib.h])
 AC_CHECK_HEADER([curl/curl.h],,AC_MSG_ERROR([[Cannot find curl/curl.h]]))
 dnl AC_CHECK_HEADER([curl/easy.h],,AC_MSG_ERROR([[Cannot find curl/easy.h]]))
 

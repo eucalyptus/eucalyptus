@@ -54,6 +54,8 @@
 #undef HAVE_SYS_DIR_H
 #undef HAVE_NDIR_H
 
+/* Define if you have zlib.h */
+#undef HAVE_ZLIB_H
 
 /* functions on the system */
 

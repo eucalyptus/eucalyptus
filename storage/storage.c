@@ -643,7 +643,7 @@ static long long get_cached_file (const char * user_id, const char * url, const 
 	char cached_path     [BUFSIZE];
 	char staging_path    [BUFSIZE];
 	char digest_path     [BUFSIZE];
-	
+
 	snprintf (file_path,       BUFSIZE, "%s/%s/%s/%s",    sc_instance_path, user_id, instance_id, file_name);
 	snprintf (tmp_digest_path, BUFSIZE, "%s-digest",      file_path);
 	snprintf (cached_dir,      BUFSIZE, "%s/%s/cache/%s", sc_instance_path, EUCALYPTUS_ADMIN, file_id); /* cache is in admin's directory */
@@ -681,7 +681,7 @@ retry:
     /* while still under lock, decide whether to cache */
     int should_cache = 0;
     if (action==STAGE) { 
-        e = walrus_object_by_url (url, tmp_digest_path); /* get the digest to see how big the file is */
+        e = walrus_object_by_url (url, tmp_digest_path, 0); /* get the digest to see how big the file is */
         if (e==OK && stat (tmp_digest_path, &mystat)) {
             digest_size = (long long)mystat.st_size;
         }
@@ -716,7 +716,7 @@ retry:
     switch (action) {
     case STAGE:
         logprintfl (EUCAINFO, "downloding image into %s...\n", file_path);		
-        e = walrus_image_by_manifest_url (url, file_path);
+        e = walrus_image_by_manifest_url (url, file_path, 1);
 
         /* for KVM, convert partition into disk */
         if (e==OK && convert_to_disk) { 
