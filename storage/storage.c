@@ -645,7 +645,7 @@ static long long get_cached_file (const char * user_id, const char * url, const 
 	char cached_path     [BUFSIZE];
 	char staging_path    [BUFSIZE];
 	char digest_path     [BUFSIZE];
-	
+
 	snprintf (file_path,       BUFSIZE, "%s/%s/%s/%s",    sc_instance_path, user_id, instance_id, file_name);
 	snprintf (tmp_digest_path, BUFSIZE, "%s-digest",      file_path);
 	snprintf (cached_dir,      BUFSIZE, "%s/%s/cache/%s", sc_instance_path, EUCALYPTUS_ADMIN, file_id); /* cache is in admin's directory */
@@ -683,7 +683,7 @@ retry:
     /* while still under lock, decide whether to cache */
     int should_cache = 0;
     if (action==STAGE) { 
-        e = walrus_object_by_url (url, tmp_digest_path); /* get the digest to see how big the file is */
+        e = walrus_object_by_url (url, tmp_digest_path, 0); /* get the digest to see how big the file is */
         if (e==OK && stat (tmp_digest_path, &mystat)) {
             digest_size = (long long)mystat.st_size;
         }
@@ -717,7 +717,7 @@ retry:
     switch (action) {
     case STAGE:
         logprintfl (EUCAINFO, "downloding image into %s...\n", file_path);		
-        e = walrus_image_by_manifest_url (url, file_path);
+        e = walrus_image_by_manifest_url (url, file_path, 1);
 
         long long swap_mb = swap_size_mb;
         long long ephemeral_mb = 0L;
@@ -826,6 +826,9 @@ retry:
     case ABORT:
         logprintfl (EUCAERROR, "get_cached_file() failed (errno=%d)\n", e);
     }
+    
+    if (e) 
+        return e;
     return file_size + digest_size;
 }
 
@@ -837,7 +840,7 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
     char ramdisk_path [BUFSIZE]; long long ramdisk_size = 0L;
     char config_path  [BUFSIZE];
     char rundir_path  [BUFSIZE];
-    int e;
+    int e = ERROR;
     
     logprintfl (EUCAINFO, "retrieving images for instance %s...\n", instanceId);
     
