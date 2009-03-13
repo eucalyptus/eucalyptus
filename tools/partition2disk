@@ -1,8 +1,21 @@
 #!/usr/bin/perl
 
+# This script is invoked by Eucalyptus for converting partitions to disks.
+# If given a partition, it will overwrite it with a disk containing that
+# partition and, optionally, with new swap and ephemeral partitions, too.
+# If it is given a disk with partition #1 only, it can expand the disk to
+# accommodate swap and ephemeral partitions.  (This is used by Eucalyptus
+# to cache a disk with only root partition and then add the other two
+# partitions later.)  If the script is given a disk with more than 
+# partition #1, the disk is quietly ignored.
+
 use strict;
 
 our $quiet = 0;
+our $loopdev = "";
+our $loopdevp = "";
+our $attached = 0;
+
 delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
 $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 
@@ -19,88 +32,106 @@ my $MV=untaint(`which mv`);
 my $FILE=untaint(`which file`);
 
 if (!$partition || !-f $partition || !-x $LOSETUP || !-x $DD || !-x $PARTED) {
-    print STDERR "USAGE: partition2disk <path/to/disk_partition_file> [swap-size-MB] [ephemeral-size-MB]\n";
+    print STDERR "USAGE: partition2disk <path/to/disk_or_partition_file> [swap-size-MB] [ephemeral-size-MB]\n";
     exit(1);
-}
-
-my $magic=`$FILE $partition`;
-chomp($magic);
-if ($magic =~ /boot sector/) {
-    print STDERR "apparently $partition is already a disk, nothing to do";
-    exit(0);
 }
 
 my $root_size_b = -s "$partition";
 my $root_size_mb = int(($root_size_b / (1024 * 1000)))+ 1;
-my $disk_size_mb = $root_size_mb + $swap_size_mb + $ephemeral_size_mb;
+my $disk_size_mb = $root_size_mb + $swap_size_mb + $ephemeral_size_mb - 1;
 my $root_size_sectors = ($root_size_b / 512);
 my $swap_size_sectors = ($swap_size_mb * 2000);
 my $ephemeral_size_sectors = ($ephemeral_size_mb * 2000);
-
-# create the disk image
-run ("$DD if=/dev/zero of=$partition.disk bs=1M count=$disk_size_mb >/dev/null 2>&1", 2);
-run ("$PARTED --script $partition.disk mklabel msdos", 3);
-
-# create the root partition
-my $first_sector = 63;
+my $first_sector = 63; # common starting sector because of DOS
 my $last_sector = $first_sector + $root_size_sectors;
-run ("$PARTED --script $partition.disk mkpart primary ext2 ${first_sector}s ${last_sector}s", 4);
 
-# create the ephemeral disk partition
+my $magic=`$FILE $partition`;
+chomp($magic);
+if (not ($magic =~ /boot sector/)) { # if not a disk image already
+
+    # create the disk image
+    run ("$DD if=/dev/zero of=$partition.disk bs=1M seek=$disk_size_mb count=1 >/dev/null 2>&1", 2);
+    run ("$PARTED --script $partition.disk mklabel msdos", 3);
+
+    # create the first partition
+    run ("$PARTED --script $partition.disk mkpart primary ext2 ${first_sector}s ${last_sector}s", 4);
+
+    # copy partition 
+    for (my $i=0; $i<10 && !$attached; $i++) {
+        $loopdev=untaint(`$LOSETUP -f`);
+        my $rc = system("$LOSETUP $loopdev $partition.disk");
+        if ($loopdev ne "" && !$rc) {
+            $attached=1;
+        }
+    }
+    if (!$attached) {
+        print STDERR "cannot find free loop device\n";
+        do_exit(9);
+    }
+    
+    $attached = 0;
+    for (my $i=0; $i<10 && !$attached; $i++) {
+        $loopdevp=untaint(`$LOSETUP -f`);
+        my $rc = system("$LOSETUP -o 32256 $loopdevp $partition.disk");
+        if ($loopdevp ne "" && !$rc) {
+            $attached=1;
+        }
+    }
+    if (!$attached) {
+        print STDERR "cannot find free loop device\n";
+        do_exit(10);
+    }
+    run ("$DD if=$partition of=$loopdevp bs=512k >/dev/null 2>&1", 11);
+    
+    run ("$LOSETUP -d $loopdev", 12);
+    $loopdev="";
+    run ("$LOSETUP -d $loopdevp", 13);
+    $loopdevp="";
+    run ("$MV $partition.disk $partition", 14);
+
+} else { # if already a disk image
+    if ($ephemeral_size_mb>0 or $swap_size_mb>0) { # and there are partitions to add
+        if ($magic =~ /partition [2-9]/) {
+            print STDERR "this disk already has partitions in the range [2-9], not touching it\n";
+            do_exit(0);
+        }
+        if ($magic =~ /partition 1\: ID=(\w+), starthead (\d+), startsector (\d+), (\d+) sectors/) {
+            $last_sector = $3 + $4 - 1;
+            # enlarge the disk to accommodate ephemeral and swap
+            run ("$DD if=/dev/zero of=$partition bs=1M seek=$disk_size_mb count=1 >/dev/null 2>&1", 15);
+        } else {
+            print STDERR "cannot find the first partition on this disk, aborting\n";
+            do_exit(16);
+        }
+    }
+}
+
+# if no partitions to add, quit
+if ($ephemeral_size_mb<1 and $swap_size_mb<1) {
+    do_exit(0);
+}
+
+# create the ephemeral disk partition no matter what
 $first_sector = $last_sector + 1;
 $last_sector = $first_sector + $ephemeral_size_sectors;
 if ($ephemeral_size_sectors>=40) { # 40 is the bare minimum for ext2 disks, apparently
-    run ("$PARTED --script $partition.disk mkpartfs primary ext2 ${first_sector}s ${last_sector}s", 5);
+    run ("$PARTED --script $partition mkpartfs primary ext2 ${first_sector}s ${last_sector}s", 5);
 } else {
     # we'll create a dummy partition so that swap gets partition #3
     $last_sector = $first_sector + 1;
-    run ("$PARTED --script $partition.disk mkpart primary ${first_sector}s ${last_sector}s", 6);
+    run ("$PARTED --script $partition mkpart primary ${first_sector}s ${last_sector}s", 6);
 }
 
 if ($swap_size_sectors>=8) { # 8 is the bare minimum for swap partitions, apparently
     $first_sector = $last_sector + 1;
-    run ("$PARTED --script $partition.disk mkpartfs primary linux-swap ${first_sector}s 100%", 7);
+    run ("$PARTED --script $partition mkpartfs primary linux-swap ${first_sector}s 100%", 7);
 }
 
 # delete the ephemeral if it wasn't actually requested, leaving a 1-sector hole
-if ($ephemeral_size_sectors<1) {
-    run ("$PARTED --script $partition.disk rm 2", 8);
+if ($ephemeral_size_sectors<40) {
+    run ("$PARTED --script $partition rm 2", 8);
 }
 
-my $loopdev = "";
-my $loopdevp = "";
-my $attached = 0;
-for (my $i=0; $i<10 && !$attached; $i++) {
-    $loopdev=untaint(`$LOSETUP -f`);
-    my $rc = system("$LOSETUP $loopdev $partition.disk");
-    if ($loopdev ne "" && !$rc) {
-	$attached=1;
-    }
-}
-if (!$attached) {
-    print STDERR "cannot find free loop device\n";
-    do_exit(9);
-}
-
-$attached = 0;
-for (my $i=0; $i<10 && !$attached; $i++) {
-    $loopdevp=untaint(`$LOSETUP -f`);
-    my $rc = system("$LOSETUP -o 32256 $loopdevp $partition.disk");
-    if ($loopdevp ne "" && !$rc) {
-	$attached=1;
-    }
-}
-if (!$attached) {
-    print STDERR "cannot find free loop device\n";
-    do_exit(10);
-}
-run ("$DD if=$partition of=$loopdevp bs=512k >/dev/null 2>&1", 11);
-
-run ("$LOSETUP -d $loopdev", 12);
-$loopdev="";
-run ("$LOSETUP -d $loopdevp", 13);
-$loopdevp="";
-run ("$MV $partition.disk $partition", 14);
 do_exit(0);
 
 sub run() {
