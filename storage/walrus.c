@@ -5,10 +5,10 @@
 #include <assert.h>
 #include <string.h>
 #include <strings.h>
+#include <fcntl.h> /* open */
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <zlib.h>
-#include <fcntl.h> /* open */
 #include "euca_auth.h"
 #include "eucalyptus.h"
 #include "misc.h"
@@ -33,6 +33,27 @@ struct zlib_and_fp {
 	FILE * fp; /* output file pointer to be used by curl WRITERs */
 	int ret; /* return value of last inflate() call */
 };
+
+/* report a zlib or i/o error */
+static void zerr (int ret, char * where)
+{
+    switch (ret) {
+    case Z_ERRNO:
+        logprintfl (EUCAERROR, "error: %s(): zlib: failed to write\n", where);
+        break;
+    case Z_STREAM_ERROR:
+        logprintfl (EUCAERROR, "error: %s(): zlib: invalid compression level\n", where);
+        break;
+    case Z_DATA_ERROR:
+        logprintfl (EUCAERROR, "error: %s(): zlib: invalid or incomplete deflate data\n", where);
+        break;
+    case Z_MEM_ERROR:
+        logprintfl (EUCAERROR, "error: %s(): zlib: out of memory\n", where);
+        break;
+    case Z_VERSION_ERROR:
+        logprintfl (EUCAERROR, "error: %s(): zlib: zlib version mismatch!\n", where);
+    }
+}
 
 /* downloads a decrypted image from Walrus based on the manifest URL,
  * saves it to outfile */
@@ -102,11 +123,12 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	    zfp.strm.opaque = Z_NULL;
 	    zfp.strm.avail_in = 0;
 	    zfp.strm.next_in = Z_NULL;
-	    int ret = inflateInit(&(zfp.strm));
+	    int ret = inflateInit2 (&(zfp.strm), 31); //deflateInit2(&(zfp.strm), Z_DEFAULT_COMPRESSION, Z_DEFLATED, (15+16), 8, Z_DEFAULT_STRATEGY);
 	    if (ret != Z_OK) {
-			logprintfl (EUCAERROR, "walrus_request(): failed to initialize zlib (err=%d)\n", ret);
+            zerr (ret, "walrus_request");
 			return ERROR;
 		}
+        zfp.fp = fp;
 		curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data_zlib);
 		curl_easy_setopt (curl, CURLOPT_WRITEDATA, &zfp);
 	} else {
@@ -273,52 +295,30 @@ static size_t write_data (void *buffer, size_t size, size_t nmemb, void *userp)
 	return wrote;
 }
 
-/* report a zlib or i/o error */
-static void zerr(int ret)
-{
-    switch (ret) {
-    case Z_ERRNO:
-        logprintfl (EUCAERROR, "error: zlib: failed to write\n");
-        break;
-    case Z_STREAM_ERROR:
-        logprintfl (EUCAERROR, "error: zlib: invalid compression level\n");
-        break;
-    case Z_DATA_ERROR:
-        logprintfl (EUCAERROR, "error: zlib: invalid or incomplete deflate data\n");
-        break;
-    case Z_MEM_ERROR:
-        logprintfl (EUCAERROR, "error: zlib: out of memory\n");
-        break;
-    case Z_VERSION_ERROR:
-        logprintfl (EUCAERROR, "error: zlib: zlib version mismatch!\n");
-    }
-}
-
+/* unused testing function */
 static void print_data (unsigned char *buf, const int size)
 {
     int i;
 
     for (i=0; i<size; i++) {
         int c = buf [i];
-        if (c>=' ' && c<='~') 
-            printf ("%c", c);
+        if (c>' ' && c<='~') 
+            printf (" %c", c);
         else
-            printf ("\\%o", c);
+            printf (" %x", c);
     }
     printf ("\n");
 }
 
 static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *param)
 {
-	if (param==NULL) return -1;
+	assert (param !=NULL);
+
 	z_stream * strm = &(((struct zlib_and_fp *)param)->strm);
 	FILE * fp = ((struct zlib_and_fp *)param)->fp;
-	
-	int ret;
+    unsigned char out [CHUNK];
 	int wrote = 0;
-	unsigned char out [CHUNK];
-
-    print_data (buffer, size*nmemb);
+	int ret;
 
 	strm->avail_in = size * nmemb;	
 	strm->next_in = (unsigned char *)buffer;
@@ -327,22 +327,21 @@ static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *pa
 		strm->next_out = out;
 
 		((struct zlib_and_fp *)param)->ret = ret = inflate (strm, Z_NO_FLUSH);
-		assert (ret != Z_STREAM_ERROR);  /* state not clobbered */
+		assert (ret != Z_STREAM_ERROR); // verify that state is not clobbered
 		switch (ret) {
 			case Z_NEED_DICT:
-				ret = Z_DATA_ERROR;     /* and fall through */
+				ret = Z_DATA_ERROR; // ok to fall through 
 			case Z_DATA_ERROR:
 			case Z_MEM_ERROR:
-				(void)inflateEnd(strm);
-                logprintfl (EUCAERROR, "error: write_data_zlib(): inflate() failed with %d\n", ret);
-                zerr (ret);
+				inflateEnd(strm);
+                zerr (ret, "write_data_zlib");
 				return ret;
 		}
 
 		unsigned have = CHUNK - strm->avail_out;
 		if (fwrite (out, 1, have, fp) != have || ferror(fp)) {
             logprintfl (EUCAERROR, "error: write_data_zlib(): failed to write\n");
-			(void)inflateEnd(strm);
+			inflateEnd(strm);
 			return Z_ERRNO;
 		}
 		wrote += have;
@@ -350,7 +349,8 @@ static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *pa
 
 	total_wrote += wrote;
 	total_calls++;
-	return wrote;
+
+	return size * nmemb;
 }
 
 static size_t write_header (void *buffer, size_t size, size_t nmemb, void *userp)
