@@ -170,7 +170,7 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
             String data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" +  getCanonicalizedAmzHeaders(hdrs) + addrString;
 
-            String auth_part = (String) hdrs.remove(SecurityParameter.Authorization);
+            String auth_part = hdrs.remove(SecurityParameter.Authorization);
 
             if(auth_part != null) {
                 String sigString[] = getSigInfo(auth_part);

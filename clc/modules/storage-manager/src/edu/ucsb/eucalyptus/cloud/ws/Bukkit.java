@@ -79,6 +79,7 @@ public class Bukkit {
     private static boolean enableSnapshots = false;
 
     private static boolean sharedMode = false;
+    private static Tracker tracker;
 
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
@@ -86,7 +87,13 @@ public class Bukkit {
         if(limits != null) {
             shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
         }
+        initializeTracker();
         initializeForEBS();
+    }
+
+    public static void initializeTracker() {
+        tracker = new Tracker();
+        tracker.start();
     }
 
     public static void initializeForEBS() {
@@ -426,7 +433,7 @@ public class Bukkit {
                     //not found. create an object info
                     foundObject = new ObjectInfo(objectKey);
                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-	            foundObject.addGrants(userId, grantInfos, accessControlList);
+                    foundObject.addGrants(userId, grantInfos, accessControlList);
                     foundObject.setGrants(grantInfos);
                     objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
                     foundObject.setObjectName(objectName);
@@ -569,7 +576,7 @@ public class Bukkit {
 
         PutObjectResponseType putObjectResponse = PutObject(putObject);
 
-	String etag = putObjectResponse.getEtag();
+        String etag = putObjectResponse.getEtag();
         reply.setEtag(etag);
         reply.setLastModified(putObjectResponse.getLastModified());
         reply.set_return(putObjectResponse.get_return());
@@ -586,7 +593,7 @@ public class Bukkit {
             } catch(Exception ex) {
                 LOG.warn(ex);
             }
-	    String paramString = "bucket=" + bucketName + "&key=" + key + "&etag=quot;" + etag + "quot;";
+            String paramString = "bucket=" + bucketName + "&key=" + key + "&etag=quot;" + etag + "quot;";
             reply.setRedirectUrl(successActionRedirect + "?" + paramString);
         } else {
             Integer successActionStatus = request.getSuccessActionStatus();
@@ -1087,6 +1094,14 @@ public class Bukkit {
         if(deleteAfterGet == null)
             deleteAfterGet = false;
 
+        Boolean getTorrent = request.getGetTorrent();
+        if(getTorrent == null)
+            getTorrent = false;
+
+        Boolean getMetaData = request.getGetMetaData();
+        if(getMetaData == null)
+            getMetaData = false;
+
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
         BucketInfo bucketInfo = new BucketInfo(bucketName);
         List<BucketInfo> bucketList = db.query(bucketInfo);
@@ -1098,11 +1113,72 @@ public class Bukkit {
                 if(objectInfo.getObjectKey().equals(objectKey)) {
                     if(objectInfo.canRead(userId)) {
                         String objectName = objectInfo.getObjectName();
-                        if(request.getGetMetaData()) {
+                        if(getMetaData) {
                             ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
                             objectInfo.returnMetaData(metaData);
                             reply.setMetaData(metaData);
                             reply.setMetaData(metaData);
+                        }
+                        if(getTorrent) {
+                            if(objectInfo.isGlobalRead()) {
+                                EntityWrapper<TorrentInfo> dbTorrent = new EntityWrapper<TorrentInfo>();
+                                TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+                                TorrentInfo foundTorrentInfo;
+                                String absoluteObjectPath = storageManager.getObjectPath(bucketName, objectName);
+                                try {
+                                    foundTorrentInfo = dbTorrent.getUnique(torrentInfo);
+                                } catch (EucalyptusCloudException ex) {
+                                    String torrentFile = objectName + ".torrent";
+                                    String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
+                                    TorrentCreator torrentCreator = new TorrentCreator(absoluteObjectPath, objectKey, objectName, torrentFilePath, WalrusProperties.TRACKER_URL);
+                                    try {
+                                        torrentCreator.create();
+                                    } catch(Exception e) {
+                                        LOG.error(e);
+                                        throw new EucalyptusCloudException("could not create torrent file " + torrentFile);
+                                    }
+                                    torrentInfo.setObjectName(objectName);
+                                    torrentInfo.setTorrentFile(torrentFile);
+                                    dbTorrent.add(torrentInfo);
+                                    foundTorrentInfo = torrentInfo;
+                                }
+                                dbTorrent.commit();
+                                String torrentFile = foundTorrentInfo.getTorrentFile();
+                                String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
+                                TorrentClient torrentClient = new TorrentClient(torrentFilePath, absoluteObjectPath);
+                                Torrents.addClient(absoluteObjectPath, torrentClient);
+                                torrentClient.start();
+                                //send torrent
+                                String key = bucketName + "." + objectKey;
+                                String randomKey = key + "." + Hashes.getRandom(10);
+                                request.setRandomKey(randomKey);
+                                LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
+
+                                File torrent = new File(torrentFilePath);
+                                if(torrent.exists()) {
+                                    long torrentLength = torrent.length();
+                                    Reader reader = new Reader(bucketName, torrentFile, torrentLength, getQueue, false, null);
+                                    reader.start();
+
+                                    //TODO: this should reflect params for the torrent?
+                                    reply.setEtag("");
+                                    reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                                    reply.setSize(torrentLength);
+                                    Status status = new Status();
+                                    status.setCode(200);
+                                    status.setDescription("OK");
+                                    reply.setStatus(status);
+                                    db.commit();
+                                    return reply;
+                                } else {
+                                    String errorString = "Could not get torrent file " + torrentFilePath;
+                                    LOG.error(errorString);
+                                    throw new EucalyptusCloudException(errorString);
+                                }
+                            } else {
+                                db.rollback();
+                                throw new AccessDeniedException(objectKey);
+                            }
                         }
                         if(request.getGetData()) {
                             if(request.getInlineData()) {
@@ -1116,6 +1192,7 @@ public class Bukkit {
                                     reply.setBase64Data(base64Data);
                                 } catch (IOException ex) {
                                     db.rollback();
+                                    LOG.error(ex);
                                     //set error code
                                     return reply;
                                 }
@@ -2100,45 +2177,6 @@ public class Bukkit {
             return outFile.length();
         else
             throw new EucalyptusCloudException("Could not untar image " + imageName);
-    }
-
-    private class StreamConsumer extends Thread
-    {
-        private InputStream is;
-        private File file;
-
-        public StreamConsumer(InputStream is) {
-            this.is = is;
-        }
-
-        public StreamConsumer(InputStream is, File file) {
-            this(is);
-            this.file = file;
-        }
-
-        public void run()
-        {
-            try
-            {
-                BufferedInputStream inStream = new BufferedInputStream(is);
-                BufferedOutputStream outStream = null;
-                if(file != null) {
-                    outStream = new BufferedOutputStream(new FileOutputStream(file));
-                }
-                byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
-                int bytesRead;
-                while((bytesRead = inStream.read(bytes)) > 0) {
-                    if(outStream != null) {
-                        outStream.write(bytes, 0, bytesRead);
-                    }
-                }
-                if(outStream != null)
-                    outStream.close();
-            } catch (IOException ex)
-            {
-                ex.printStackTrace();
-            }
-        }
     }
 
     private class Tar {

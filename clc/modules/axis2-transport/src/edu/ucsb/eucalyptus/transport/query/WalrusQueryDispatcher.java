@@ -108,6 +108,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString(), "PutObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.PUT.toString() + WalrusProperties.COPY_SOURCE.toString(), "CopyObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.GET.toString(), "GetObject");
+        newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.GET.toString() + OperationParameter.torrent.toString(), "GetObject");
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.DELETE.toString(), "DeleteObject");
 
         newMap.put(OBJECT + WalrusQueryDispatcher.HTTPVerb.HEAD.toString(), "GetObject");
@@ -123,7 +124,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
     public enum OperationParameter {
 
-        acl, location, prefix, maxkeys, delimiter, marker, logging;
+        acl, location, prefix, maxkeys, delimiter, marker, torrent, logging;
 
         private static String pattern = buildPattern();
 
@@ -255,8 +256,8 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                                 formFields.put(fieldName, fieldValue);
                             } else {
                                 formDataIn = part.getInputStream();
-				if(part.getName() != null)
-				    file = part.getName();
+                                if(part.getName() != null)
+                                    file = part.getName();
                             }
                         }
                     } catch (Exception ex) {
@@ -465,9 +466,13 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                     messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.TRUE);
                     if(!walrusInternalOperation) {
 
-                        operationParams.put("GetData", Boolean.TRUE);
-                        operationParams.put("InlineData", Boolean.FALSE);
-                        operationParams.put("GetMetaData", Boolean.TRUE);
+                        if(params.containsKey("torrent")) {
+                            operationParams.put("GetTorrent", Boolean.TRUE);
+                        } else {
+                            operationParams.put("GetData", Boolean.TRUE);
+                            operationParams.put("InlineData", Boolean.FALSE);
+                            operationParams.put("GetMetaData", Boolean.TRUE);
+                        }
 
                         Iterator<String> iterator = caseInsensitiveHeaders.keySet().iterator();
                         boolean isExtendedGet = false;

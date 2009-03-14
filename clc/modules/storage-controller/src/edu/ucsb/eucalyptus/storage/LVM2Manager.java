@@ -104,6 +104,7 @@ public class LVM2Manager implements BlockStorageManager {
         if(!initialized) {
             System.loadLibrary("lvm2control");
             exportManager = new AOEManager();
+	    initialize();
             initialized = true;
         }
     }
@@ -236,6 +237,8 @@ public class LVM2Manager implements BlockStorageManager {
             db.commit();
         }
     }
+
+    public native void initialize();
 
     public native String losetup(String fileName);
 
