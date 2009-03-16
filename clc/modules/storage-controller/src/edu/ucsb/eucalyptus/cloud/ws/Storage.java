@@ -109,8 +109,9 @@ public class Storage {
             //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
         } catch(Exception ex) {
             enableStorage = false;
-            LOG.warn(ex.getMessage());
+            LOG.error(ex.getMessage());
             LOG.warn("Could not initialize block manager. Storage has been disabled.");
+	    LOG.error("Could not initialize block manager. Storage has been disabled.");
         }
     }
 
@@ -130,7 +131,7 @@ public class Storage {
         List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         for(VolumeInfo volInfo : volumeInfos) {
             String volumeId = volInfo.getVolumeId();
-            LOG.warn("Cleaning failed volume " + volumeId);
+            LOG.info("Cleaning failed volume " + volumeId);
             blockManager.cleanVolume(volumeId);
             try {
                 volumeStorageManager.deleteObject("", volumeId);
@@ -150,7 +151,7 @@ public class Storage {
         List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         for(VolumeInfo volInfo : volumeInfos) {
             String volumeId = volInfo.getVolumeId();
-            LOG.warn("Cleaning failed volume " + volumeId);
+            LOG.info("Cleaning failed volume " + volumeId);
             blockManager.cleanVolume(volumeId);
             try {
                 volumeStorageManager.deleteObject("", volumeId);
@@ -168,7 +169,7 @@ public class Storage {
         List<VolumeInfo> volumeInfos = db.query(volumeInfo);
         if(volumeInfos.size() > 0) {
             VolumeInfo volInfo = volumeInfos.get(0);
-            LOG.warn("Cleaning failed volume " + volumeId);
+            LOG.info("Cleaning failed volume " + volumeId);
             blockManager.cleanVolume(volumeId);
             try {
                 volumeStorageManager.deleteObject("", volumeId);
@@ -250,7 +251,7 @@ public class Storage {
             httpClient.executeMethod(getMethod);
             enableSnapshots = true;
         } catch(Exception ex) {
-            LOG.warn("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url.");
+            LOG.error("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url.");
             enableSnapshots = false;
         } finally {
             if(getMethod != null)
@@ -281,7 +282,7 @@ public class Storage {
             enableStorage = true;
         } catch (Exception ex) {
             enableStorage = false;
-            LOG.warn(ex);
+            LOG.error(ex);
         }
         return reply;
     }
@@ -289,7 +290,7 @@ public class Storage {
     public GetStorageVolumeResponseType GetStorageVolume(GetStorageVolumeType request) throws EucalyptusCloudException {
         GetStorageVolumeResponseType reply = (GetStorageVolumeResponseType) request.getReply();
         if(!enableStorage) {
-            LOG.warn("Storage has been disabled. Please check your setup");
+            LOG.error("Storage has been disabled. Please check your setup");
             return reply;
         }
 
@@ -318,7 +319,7 @@ public class Storage {
     public DeleteStorageVolumeResponseType DeleteStorageVolume(DeleteStorageVolumeType request) throws EucalyptusCloudException {
         DeleteStorageVolumeResponseType reply = (DeleteStorageVolumeResponseType) request.getReply();
         if(!enableStorage) {
-            LOG.warn("Storage has been disabled. Please check your setup");
+            LOG.error("Storage has been disabled. Please check your setup");
             return reply;
         }
 
@@ -341,7 +342,7 @@ public class Storage {
                     db.delete(foundVolume);
                     db.commit();
                 } catch (IOException ex) {
-                    LOG.warn(ex);
+                    LOG.error(ex);
                 }
             } else {
                 db.rollback();
@@ -364,7 +365,7 @@ public class Storage {
                     snapshotStorageManager.deleteObject("", snapshotId);
                     dbSnap.delete(snapshotInfo);
                 } catch (IOException ex) {
-                    LOG.warn("Could not delete snapshot " + snapshotId + ex);
+                    LOG.error("Could not delete snapshot " + snapshotId + ex);
                 }
             }
         }
@@ -379,7 +380,7 @@ public class Storage {
             if(!enableSnapshots || !enableStorage) {
                 checkWalrusConnection();
                 if(!enableSnapshots)
-                    LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
+                    LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
                 return reply;
             }
         }
@@ -481,7 +482,7 @@ public class Storage {
             if(!enableSnapshots || !enableStorage) {
                 checkWalrusConnection();
                 if(!enableSnapshots)
-                    LOG.warn("Snapshots have been disabled. Please check connection to Walrus.");
+                    LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
                 return reply;
             }
         }
@@ -519,7 +520,7 @@ public class Storage {
                         snapshotDeleter.start();
                     }
                 } catch (IOException ex) {
-                    LOG.warn(ex);
+                    LOG.error(ex);
                 }
             } else {
                 //snapshot is still in progress.
@@ -547,7 +548,7 @@ public class Storage {
         CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
         if(!enableStorage) {
-            LOG.warn("Storage has been disabled. Please check your setup");
+            LOG.error("Storage has been disabled. Please check your setup");
             return reply;
         }
 
@@ -627,7 +628,6 @@ public class Storage {
                 try {
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
-                    //TODO: revert back after testing
                     if(foundSnapshotInfos.size() == 0) {
                         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
                         size = blockManager.createVolume(volumeId, volumePath);
@@ -700,7 +700,7 @@ public class Storage {
     private String getVolume(String volumeId, String snapshotBucket, String snapshotId) throws EucalyptusCloudException {
         checkWalrusConnection();
         if(!enableSnapshots) {
-            LOG.warn("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url");
+            LOG.error("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url");
             throw new EucalyptusCloudException("could not connect to Walrus.");
         }
         String walrusSnapshotPath = snapshotBucket + "/" + snapshotId;
