@@ -84,7 +84,7 @@ public class SystemState {
 
   private static void cleanUp( final VmInstance vm ) {
     for ( Address address : Addresses.getInstance().listValues() ) {
-      if ( vm.getNetworkConfig().getIpAddress().equals( address.getInstanceAddress() ) && vm.getInstanceId().equals( address.getInstanceId() ) ) {
+      if ( vm.getInstanceId().equals( address.getInstanceId() ) ) {
         SystemState.dispatch( vm.getPlacement(), new UnassignAddressCallback( address ), Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() ) );
       }
     }

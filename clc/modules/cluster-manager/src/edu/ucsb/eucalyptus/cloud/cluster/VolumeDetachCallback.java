@@ -1,5 +1,7 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 import edu.ucsb.eucalyptus.transport.client.Client;
 import org.apache.log4j.Logger;
@@ -12,7 +14,11 @@ public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType> 
 
   public void process( final Client cluster, final DetachVolumeType msg ) throws Exception
   {
-    cluster.send( msg );
+    DetachVolumeResponseType reply = (DetachVolumeResponseType) cluster.send( msg );
+    if( reply.get_return() ) {
+      VmInstance vm = VmInstances.getInstance().lookup( msg.getInstanceId() );
+      vm.getVolumes().remove( new AttachedVolume( msg.getVolumeId() ) );
+    }
   }
 
 }

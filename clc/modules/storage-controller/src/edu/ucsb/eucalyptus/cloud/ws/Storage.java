@@ -341,7 +341,7 @@ public class Storage {
                     db.delete(foundVolume);
                     db.commit();
                 } catch (IOException ex) {
-                    LOG.warn(ex, ex);
+                    LOG.warn(ex);
                 }
             } else {
                 db.rollback();
@@ -364,7 +364,7 @@ public class Storage {
                     snapshotStorageManager.deleteObject("", snapshotId);
                     dbSnap.delete(snapshotInfo);
                 } catch (IOException ex) {
-                    LOG.warn("Could not delete snapshot " + snapshotId);
+                    LOG.warn("Could not delete snapshot " + snapshotId + ex);
                 }
             }
         }
@@ -519,7 +519,7 @@ public class Storage {
                         snapshotDeleter.start();
                     }
                 } catch (IOException ex) {
-                    LOG.warn(ex, ex);
+                    LOG.warn(ex);
                 }
             } else {
                 //snapshot is still in progress.
@@ -539,7 +539,7 @@ public class Storage {
         try {
             httpWriter.run();
         } catch(Exception ex) {
-            LOG.warn(ex, ex);
+            LOG.error(ex);
         }
     }
 
@@ -646,7 +646,7 @@ public class Storage {
                 } catch(Exception ex) {
                     success = false;
                     db.rollback();
-                    LOG.warn(ex, ex);
+                    LOG.error(ex);
                 }
             } else {
                 try {
@@ -654,7 +654,7 @@ public class Storage {
                     blockManager.createVolume(volumeId, size);
                 } catch(Exception ex) {
                     success = false;
-                    LOG.warn(ex, ex);
+                    LOG.error(ex);
                 }
             }
             EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
@@ -673,7 +673,7 @@ public class Storage {
                             }
                             if((totalVolumeSize + size) > StorageProperties.MAX_TOTAL_VOLUME_SIZE ||
                                     (size > StorageProperties.MAX_VOLUME_SIZE)) {
-                                LOG.warn("Volume size limit exceeeded");
+                                LOG.error("Volume size limit exceeeded");
                                 foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
                                 db.commit();
                                 return;
@@ -692,7 +692,7 @@ public class Storage {
                 }
                 db.commit();
             } catch(EucalyptusCloudException ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
             }
         }
     }
@@ -874,11 +874,11 @@ public class Storage {
                         db2.commit();
                     } else {
                         db.rollback();
-                        throw new EucalyptusCloudException();
+                        throw new EucalyptusCloudException("Volume not found " + volumeId);
                     }
                 }
             } catch(EucalyptusCloudException ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
             }
         }
 
@@ -901,7 +901,7 @@ public class Storage {
                         httpParamaters.put("SnapshotLvName", returnValues.get(1));
                     }
                 } catch(Exception ex) {
-                    LOG.warn(ex, ex);
+                    LOG.error(ex);
                 }
                 httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeId, "StoreSnapshot", null, httpParamaters);
                 try {
@@ -915,7 +915,7 @@ public class Storage {
                     }
                     db.commit();
                 } catch(Exception ex) {
-                    LOG.warn(ex, ex);
+                    LOG.error(ex);
                     return;
                 }
             }
@@ -926,13 +926,13 @@ public class Storage {
                     httpParamaters.put("SnapshotLvName", returnValues.get(1));
                 }
             } catch(Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
             }
             httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters, true);
             try {
                 httpWriter.run();
             } catch(Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
             }
         }
     }
@@ -949,7 +949,7 @@ public class Storage {
             try {
                 httpWriter.run();
             } catch(EucalyptusCloudException ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
             }
         }
     }
@@ -989,13 +989,13 @@ public class Storage {
                     httpParamaters.put("SnapshotLvName", returnValues.get(1));
                 }
             } catch(Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
             }
             httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeId, "StoreSnapshot", null, httpParamaters);
             try {
                 httpWriter.run();
             } catch(Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
                 return;
             }
         }
@@ -1006,13 +1006,13 @@ public class Storage {
                 httpParamaters.put("SnapshotLvName", returnValues.get(1));
             }
         } catch(Exception ex) {
-            LOG.warn(ex, ex);
+            LOG.error(ex);
         }
         httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
         try {
             httpWriter.run();
         } catch(Exception ex) {
-            LOG.warn(ex, ex);
+            LOG.error(ex);
         }
     }
 
@@ -1047,7 +1047,7 @@ public class Storage {
             } catch (Exception ex) {
                 db.rollback();
                 failed();
-                LOG.warn(ex, ex);
+                LOG.error(ex);
             }
             db.commit();
         }
@@ -1062,7 +1062,7 @@ public class Storage {
                 foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
             } catch (Exception ex) {
                 db.rollback();
-                LOG.warn(ex, ex);
+                LOG.warn(ex);
             }
             db.commit();
         }
@@ -1077,7 +1077,7 @@ public class Storage {
                 foundSnapshotInfo.setStatus(StorageProperties.Status.failed.toString());
             } catch (Exception ex) {
                 db.rollback();
-                LOG.warn(ex, ex);
+                LOG.warn(ex);
             }
             db.commit();
 
@@ -1095,7 +1095,7 @@ public class Storage {
             try {
                 keyStore = ServiceKeyStore.getInstance();
             } catch(Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex, ex);
             }
             String date = new Date().toString();
             String httpVerb = verb;
@@ -1108,7 +1108,7 @@ public class Storage {
                     addrPath += "?" + query;
                 }
             } catch(Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex, ex);
                 return null;
             }
             String data = httpVerb + "\n" + date + "\n" + addrPath + "\n";
@@ -1145,7 +1145,7 @@ public class Storage {
                 method.setRequestHeader("EucaCert", new String(Base64.encode(pemCertBytes))); // or maybe cert instead of ccPublicKey?
                 method.setRequestHeader("EucaSignature", new String(Base64.encode(sig)));
             } catch(Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex, ex);
             }
             return method;
         }
@@ -1312,7 +1312,7 @@ public class Storage {
                 method.releaseConnection();
                 return responseString;
             } catch(Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex, ex);
             }
             return null;
         }
@@ -1337,7 +1337,7 @@ public class Storage {
                 bufferedOut.close();
                 method.releaseConnection();
             } catch (Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex, ex);
             }
         }
 
@@ -1353,7 +1353,7 @@ public class Storage {
                 }
                 getQueue.add(WalrusDataMessage.EOF());
             } catch (Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex, ex);
             } finally {
                 method.releaseConnection();
             }

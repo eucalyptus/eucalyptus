@@ -39,6 +39,7 @@ public class VmAllocationInfo implements RequestTransactionScript {
   List<Network> networks = new ArrayList<Network>();
 
   List<ResourceToken> allocationTokens = new ArrayList<ResourceToken>();
+  List<String> addresses = new ArrayList<String>();
 
   def VmAllocationInfo() {}
 
@@ -304,6 +305,7 @@ public class ResourceToken implements Comparable {
   String correlationId;
   String userName;
   ArrayList<String> instanceIds = new ArrayList<String>();
+  ArrayList<String> addresses = new ArrayList<String>();
   ArrayList<NetworkToken> networkTokens = new ArrayList<NetworkToken>();
   int amount;
   String vmType;

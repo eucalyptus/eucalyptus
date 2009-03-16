@@ -136,7 +136,7 @@ public class Bukkit {
             try {
                 storageManager.deleteObject(snapInfo.getSnapshotSetId(), snapInfo.getSnapshotId());
             } catch(Exception ex) {
-                LOG.warn(ex);
+                LOG.error(ex);
             }
         }
         db.commit();
@@ -204,7 +204,7 @@ public class Bukkit {
                 storageManager.createBucket(bucketName);
                 db.add(bucket);
             } catch (IOException ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
                 db.rollback();
                 throw new EucalyptusCloudException(bucketName);
             }
@@ -247,6 +247,7 @@ public class Bukkit {
                         storageManager.deleteBucket(bucketName);
                     } catch (IOException ex) {
                         //set exception code in reply
+                        LOG.error(ex);
                     }
                     Status status = new Status();
                     status.setCode(204);
@@ -446,6 +447,17 @@ public class Bukkit {
                         foundObject.setGrants(grantInfos);
                     }
                     objectName = foundObject.getObjectName();
+                    EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
+                    TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+                    List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
+                    if(torrentInfos.size() > 0) {
+                        TorrentInfo foundTorrentInfo = torrentInfos.get(0);
+                        TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
+                        if(torrentClient != null) {
+                            torrentClient.bye();
+                        }
+                        dbTorrent.delete(foundTorrentInfo);
+                    }
                 }
                 foundObject.setObjectKey(objectKey);
                 foundObject.setOwnerId(userId);
@@ -471,7 +483,7 @@ public class Bukkit {
                             try {
                                 storageManager.renameObject(bucketName, tempObjectName, objectName);
                             } catch (IOException ex) {
-                                LOG.warn(ex, ex);
+                                LOG.error(ex);
                                 db.rollback();
                                 throw new EucalyptusCloudException(objectKey);
                             }
@@ -518,7 +530,7 @@ public class Bukkit {
                             try {
                                 storageManager.deleteObject(bucketName, tempObjectName);
                             } catch (IOException ex) {
-                                ex.printStackTrace();
+                                LOG.error(ex);
                             }
                             db.rollback();
                             LOG.info("Transfer interrupted" + key + " " + randomKey);
@@ -530,7 +542,7 @@ public class Bukkit {
                             try {
                                 storageManager.putObject(bucketName, tempObjectName, data, true);
                             } catch (IOException ex) {
-                                LOG.warn(ex, ex);
+                                LOG.error(ex);
                             }
                             //calculate md5 on the fly
                             size += data.length;
@@ -538,7 +550,7 @@ public class Bukkit {
                         }
                     }
                 } catch (InterruptedException ex) {
-                    ex.printStackTrace();
+                    LOG.error(ex, ex);
                     throw new EucalyptusCloudException();
                 }
             } else {
@@ -700,7 +712,7 @@ public class Bukkit {
                     lastModified = new Date();
                     foundObject.setLastModified(lastModified);
                 } catch (IOException ex) {
-                    LOG.warn(ex, ex);
+                    LOG.error(ex);
                     db.rollback();
                     throw new EucalyptusCloudException(bucketName);
                 }
@@ -800,7 +812,7 @@ public class Bukkit {
                         storageManager.deleteObject(bucketName, objectName);
                     } catch (IOException ex) {
                         db.rollback();
-                        LOG.warn(ex, ex);
+                        LOG.error(ex);
                         throw new EucalyptusCloudException(objectKey);
                     }
                     reply.setCode("200");
@@ -826,12 +838,19 @@ public class Bukkit {
         String bucketName = request.getBucket();
         String userId = request.getUserId();
         String prefix = request.getPrefix();
+        if(prefix == null)
+            prefix = "";
+
         String marker = request.getMarker();
+        if(marker == null)
+            marker = "";
 
         int maxKeys = -1;
         String maxKeysString = request.getMaxKeys();
         if(maxKeysString != null)
             maxKeys = Integer.parseInt(maxKeysString);
+        else
+            maxKeys = WalrusProperties.MAX_KEYS;
 
         String delimiter = request.getDelimiter();
 
@@ -848,11 +867,8 @@ public class Bukkit {
                 reply.setIsTruncated(false);
                 if(maxKeys >= 0)
                     reply.setMaxKeys(maxKeys);
-                if(prefix != null) {
-                    reply.setPrefix(prefix);
-                }
-                if(marker != null)
-                    reply.setMarker(marker);
+                reply.setPrefix(prefix);
+                reply.setMarker(marker);
                 if(delimiter != null)
                     reply.setDelimiter(delimiter);
                 List<ObjectInfo> objectInfos = bucket.getObjects();
@@ -1071,6 +1087,19 @@ public class Bukkit {
                 foundObject.addGrants(foundObject.getOwnerId(), grantInfos, accessControlList);
                 foundObject.setGrants(grantInfos);
 
+                if(!foundObject.isGlobalRead()) {
+                    EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
+                    TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+                    List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
+                    if(torrentInfos.size() > 0) {
+                        TorrentInfo foundTorrentInfo = torrentInfos.get(0);
+                        TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
+                        if(torrentClient != null) {
+                            torrentClient.bye();
+                        }
+                        dbTorrent.delete(foundTorrentInfo);
+                    }
+                }
                 reply.setCode("204");
                 reply.setDescription("OK");
             } else {
@@ -1137,7 +1166,6 @@ public class Bukkit {
                                         LOG.error(e);
                                         throw new EucalyptusCloudException("could not create torrent file " + torrentFile);
                                     }
-                                    torrentInfo.setObjectName(objectName);
                                     torrentInfo.setTorrentFile(torrentFile);
                                     dbTorrent.add(torrentInfo);
                                     foundTorrentInfo = torrentInfo;
@@ -1146,7 +1174,7 @@ public class Bukkit {
                                 String torrentFile = foundTorrentInfo.getTorrentFile();
                                 String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
                                 TorrentClient torrentClient = new TorrentClient(torrentFilePath, absoluteObjectPath);
-                                Torrents.addClient(absoluteObjectPath, torrentClient);
+                                Torrents.addClient(bucketName + objectKey, torrentClient);
                                 torrentClient.start();
                                 //send torrent
                                 String key = bucketName + "." + objectKey;
@@ -1469,7 +1497,7 @@ public class Bukkit {
                                 try {
                                     storageManager.copyObject(sourceBucket, sourceObjectName, destinationBucket, destinationObjectName);
                                 } catch(Exception ex) {
-                                    LOG.warn(ex, ex);
+                                    LOG.error(ex);
                                     db.rollback();
                                     throw new EucalyptusCloudException("Could not rename " + sourceObjectName + " to " + destinationObjectName);
                                 }
@@ -1655,7 +1683,7 @@ public class Bukkit {
                         try {
                             storageManager.deleteAbsoluteObject(encryptedImageName);
                         } catch (Exception ex) {
-                            LOG.warn(ex, ex);
+                            LOG.error(ex);
                             throw new EucalyptusCloudException();
                         }
                         db2.commit();
@@ -1800,7 +1828,7 @@ public class Bukkit {
                                 try {
                                     monitor.wait();
                                 } catch(Exception ex) {
-                                    LOG.warn(ex, ex);
+                                    LOG.error(ex);
                                     db2.rollback();
                                     db.rollback();
                                     throw new EucalyptusCloudException("monitor failure");
@@ -1983,7 +2011,7 @@ public class Bukkit {
                     semaphore.wait();
                 }
             } catch(InterruptedException ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
             }
         }
         imageMessenger.removeSemaphore(bucketName + "/" + objectKey);
@@ -2053,7 +2081,7 @@ public class Bukkit {
                     failed = true;
                 }
             } catch(Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.warn(ex);
                 //try to evict an entry and try again
                 failed = true;
             }
@@ -2062,7 +2090,7 @@ public class Bukkit {
                     storageManager.deleteAbsoluteObject(decryptedImageName);
                     storageManager.deleteAbsoluteObject(tarredImageName);
                 } catch (Exception exception) {
-                    LOG.warn(exception, exception);
+                    LOG.error(exception);
                 }
                 return -1L;
             }
@@ -2132,10 +2160,10 @@ public class Bukkit {
                     notifyWaiters();
                 } else {
                     db.rollback();
-                    LOG.warn("Could not expand image" + decryptedImageName);
+                    LOG.error("Could not expand image" + decryptedImageName);
                 }
             } catch (Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
             }
         }
     }
@@ -2179,6 +2207,45 @@ public class Bukkit {
             throw new EucalyptusCloudException("Could not untar image " + imageName);
     }
 
+    private class StreamConsumer extends Thread
+    {
+        private InputStream is;
+        private File file;
+
+        public StreamConsumer(InputStream is) {
+            this.is = is;
+        }
+
+        public StreamConsumer(InputStream is, File file) {
+            this(is);
+            this.file = file;
+        }
+
+        public void run()
+        {
+            try
+            {
+                BufferedInputStream inStream = new BufferedInputStream(is);
+                BufferedOutputStream outStream = null;
+                if(file != null) {
+                    outStream = new BufferedOutputStream(new FileOutputStream(file));
+                }
+                byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
+                int bytesRead;
+                while((bytesRead = inStream.read(bytes)) > 0) {
+                    if(outStream != null) {
+                        outStream.write(bytes, 0, bytesRead);
+                    }
+                }
+                if(outStream != null)
+                    outStream.close();
+            } catch (IOException ex)
+            {
+                LOG.error(ex);
+            }
+        }
+    }
+
     private class Tar {
         public void untar(String tarFile, String outFile) {
             try
@@ -2192,7 +2259,7 @@ public class Bukkit {
                 int exitVal = proc.waitFor();
                 output.join();
             } catch (Throwable t) {
-                t.printStackTrace();
+                LOG.error(t);
             }
         }
     }
@@ -2215,7 +2282,7 @@ public class Bukkit {
             in.close();
             out.close();
         } catch(Exception ex) {
-            LOG.warn(ex, ex);
+            LOG.error(ex);
         }
     }
 
@@ -2229,7 +2296,7 @@ public class Bukkit {
             }
             out.close();
         } catch (Exception ex) {
-            LOG.warn(ex, ex);
+            LOG.error(ex);
         }
     }
 
@@ -2668,8 +2735,7 @@ public class Bukkit {
                         snapshotSet.remove(snapIdToRemove);
                 }
             } catch(EucalyptusCloudException ex) {
-
-                LOG.warn(ex, ex);
+                LOG.error(ex, ex);
             }
         }
     }

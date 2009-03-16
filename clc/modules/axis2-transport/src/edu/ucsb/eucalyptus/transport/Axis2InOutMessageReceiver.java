@@ -124,7 +124,7 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
         newMsgContext.setProperty( Axis2HttpWorker.REAL_HTTP_REQUEST, msgContext.getProperty( Axis2HttpWorker.REAL_HTTP_REQUEST ) );
         newMsgContext.setProperty( Axis2HttpWorker.REAL_HTTP_RESPONSE, msgContext.getProperty( Axis2HttpWorker.REAL_HTTP_RESPONSE ) );
 
-	LOG.info("Returning reply: " + message.getPayload());
+        LOG.info("Returning reply: " + message.getPayload());
 
         if(message.getPayload() instanceof WalrusErrorMessageType) {
             WalrusErrorMessageType errorMessage = (WalrusErrorMessageType) message.getPayload();
@@ -213,7 +213,7 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
         SOAPEnvelope envelope = null;
         LOG.info( "[" + serviceClass.getSimpleName() + ":" + methodName + "] Got return type " + response.getClass().getSimpleName() );
         if( response instanceof AddClusterResponseType )
-          bindingName = "msgs_eucalyptus_ucsb_edu";
+            bindingName = "msgs_eucalyptus_ucsb_edu";
         try
         {
             /** construct the response **/
