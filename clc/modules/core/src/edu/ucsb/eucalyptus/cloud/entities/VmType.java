@@ -4,7 +4,11 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
 
 @Entity
 @Table( name = "vm_types" )
@@ -135,6 +139,11 @@ public class VmType implements Comparable {
 
   @Override
   public String toString() {
-    return this.getAsVmTypeInfo().toString();
+    return "VmType{" +
+           "name='" + name + '\'' +
+           ", cpu=" + cpu +
+           ", disk=" + disk +
+           ", mem=" + memory +
+           "}";
   }
 }

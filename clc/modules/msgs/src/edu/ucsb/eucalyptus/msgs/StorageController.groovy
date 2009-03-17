@@ -79,11 +79,9 @@ public class GetStorageVolumeResponseType extends StorageResponseType {
 
 public class UpdateStorageConfigurationType extends StorageRequestType {
   String storageRootDirectory;
-  String storageInterface;
   Integer maxTotalVolumeSize;
   Integer maxTotalSnapshotSize;
   Integer maxVolumeSize;
-  Integer maxSnapshotSize;
 }
 
 public class UpdateStorageConfigurationResponseType extends StorageResponseType {

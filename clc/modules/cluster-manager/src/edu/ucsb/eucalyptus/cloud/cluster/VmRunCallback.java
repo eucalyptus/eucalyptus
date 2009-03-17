@@ -1,11 +1,14 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.cloud.*;
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
+import edu.ucsb.eucalyptus.cloud.VmInfo;
+import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
+import edu.ucsb.eucalyptus.cloud.VmRunType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 import edu.ucsb.eucalyptus.transport.client.Client;
-import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import org.apache.log4j.Logger;
 import org.apache.axis2.AxisFault;
+import org.apache.log4j.Logger;
 
 class VmRunCallback extends QueuedEventCallback<VmRunType> {
 
@@ -21,7 +24,7 @@ class VmRunCallback extends QueuedEventCallback<VmRunType> {
 
   public void process( final Client clusterClient, final VmRunType msg ) throws Exception {
     LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, token ) );
-    Clusters.getInstance().lookup( token.getCluster() ).getState().submitResourceAllocation( token );
+    Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
     for ( String vmId : msg.getInstanceIds() )
       parent.msgMap.put( ClusterAllocator.State.ROLLBACK,
                          new QueuedEvent<TerminateInstancesType>(
@@ -30,13 +33,15 @@ class VmRunCallback extends QueuedEventCallback<VmRunType> {
     VmRunResponseType reply = null;
     try {
       reply = ( VmRunResponseType ) clusterClient.send( msg );
-      Clusters.getInstance().lookup( token.getCluster() ).getState().redeemToken( token );
+      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
       LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.redeemed, token ) );
       if ( reply.get_return() ) {
         for ( VmInfo vmInfo : reply.getVms() ) {
-          VmInstances.getInstance().lookup( vmInfo.getInstanceId() ).getNetworkConfig().setIpAddress( vmInfo.getNetParams().getIpAddress() );
-          VmInstances.getInstance().lookup( vmInfo.getInstanceId() ).getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
+          VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
+          vm.getNetworkConfig().setIpAddress( vmInfo.getNetParams().getIpAddress() );
+          vm.getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
         }
+        this.parent.setupAddressMessages( this.token );
       } else {
         this.parent.getRollback().lazySet( true );
       }

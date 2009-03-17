@@ -15,7 +15,7 @@
 #define WALRUS_ENDPOINT "/services/Walrus"
 #define DEFAULT_HOST_PORT "localhost:8773"
 #define DEFAULT_COMMAND "GetObject"
-#define USAGE { fprintf (stderr, "Usage: Wclient [GetDecryptedImage|GetObject] -h [host:port] -m [manifest] -f [output file]\n"); exit (1); }
+#define USAGE { fprintf (stderr, "Usage: Wclient [GetDecryptedImage|GetObject] -h [host:port] -m [manifest] -f [output file] [-z]\n"); exit (1); }
 char debug = 1;
 
 int main (int argc, char * argv[])
@@ -24,9 +24,10 @@ int main (int argc, char * argv[])
 	char * hostport = NULL;
 	char * manifest = NULL;
 	char * file_name = NULL;
+    int do_compress = 0;
 	int ch;
 
-	while ((ch = getopt(argc, argv, "dh:m:f:")) != -1) {
+	while ((ch = getopt(argc, argv, "dh:m:f:z")) != -1) {
 		switch (ch) {
 			case 'h':
 				hostport = optarg; 
@@ -40,6 +41,9 @@ int main (int argc, char * argv[])
 			case 'f':
 				file_name = optarg;
 				break;
+            case 'z':
+                do_compress = 1;
+                break;
 			case '?':
 			default:
 				USAGE;
@@ -77,16 +81,16 @@ int main (int argc, char * argv[])
     if (hostport) {
         snprintf (request, STRSIZE, "http://%s%s/%s", hostport, WALRUS_ENDPOINT, manifest);
         if ( strcmp(command, "GetObject")==0 ) {
-            result = walrus_object_by_url (request, tmp_name);
+            result = walrus_object_by_url (request, tmp_name, do_compress);
         } else {
-            result = walrus_image_by_manifest_url (request, tmp_name);
+            result = walrus_image_by_manifest_url (request, tmp_name, do_compress);
         }
     } else {
         strncpy (request, manifest, STRSIZE);
         if ( strcmp(command, "GetObject")==0 ) {
-            result = walrus_object_by_path (request, tmp_name);
+            result = walrus_object_by_path (request, tmp_name, do_compress);
         } else {
-            result = walrus_image_by_manifest_path (request, tmp_name);
+            result = walrus_image_by_manifest_path (request, tmp_name, do_compress);
         }
     }
     

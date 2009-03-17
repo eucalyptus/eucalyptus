@@ -60,7 +60,7 @@
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsList" abstract="true">
-        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="buckets">
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="buckets" usage="optional">
             <structure name="Bucket" map-as="edu.ucsb.eucalyptus.msgs.BucketListEntry"/>
         </collection>
     </mapping>
@@ -95,7 +95,7 @@
     </mapping>
 
     <mapping name="GetObjectAccessControlPolicyResponse" class="edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType">
-        <structure field="accessControlPolicy" map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" usage="optional"/>
+        <structure field="accessControlPolicy" map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType"/>
     </mapping>
 
     <mapping name="SetObjectAccessControlPolicy" class="edu.ucsb.eucalyptus.msgs.SetObjectAccessControlPolicyType"  extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
@@ -109,7 +109,7 @@
         <value name="Description" field="description"/>
     </mapping>
 
-    <mapping name="AccessControlPolicy" class="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" abstract="true">
+    <mapping name="AccessControlPolicy" class="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType">
         <structure name="Owner" field="owner" map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" usage="optional"/>
         <structure field="accessControlList" map-as="edu.ucsb.eucalyptus.msgs.AccessControlListType" usage="optional"/>
     </mapping>
@@ -323,12 +323,12 @@
             <structure map-as="edu.ucsb.eucalyptus.msgs.MetaDataEntry"/>
         </collection>
         <value name="Name" field="name"/>
-        <value name="Prefix" field="prefix" usage="optional"/>
-        <value name="Marker" field="marker" usage="optional"/>
+        <value name="Prefix" field="prefix"/>
+        <value name="Marker" field="marker"/>
         <value name="NextMarker" field="nextMarker" usage="optional"/>
-        <value name="MaxKeys" field="maxKeys" usage="optional"/>
+        <value name="MaxKeys" field="maxKeys"/>
         <value name="Delimiter" field="delimiter" usage="optional"/>
-        <value name="IsTruncated" field="isTruncated" usage="optional"/>
+        <value name="IsTruncated" field="isTruncated"/>
         <collection field="contents" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
             <structure map-as="edu.ucsb.eucalyptus.msgs.ListEntry"/>
         </collection>
@@ -342,7 +342,7 @@
         <value name="LastModified" field="lastModified"/>
         <value name="ETag" field="etag"/>
         <value name="Size" field="size"/>
-        <structure field="owner" map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType"/>
+        <structure field="owner" map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" usage="optional"/>
         <value name="StorageClass" field="storageClass"/>
     </mapping>
 

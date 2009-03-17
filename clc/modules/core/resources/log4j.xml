@@ -44,13 +44,24 @@
         </layout>
     </appender>
 
-    <appender name="logfile" class="org.apache.log4j.AsyncAppender">
+<!--    <appender name="logfile" class="org.apache.log4j.AsyncAppender">
         <appender-ref ref="rolling-logfile"/>
     </appender>
-    <appender name="rolling-logfile" class="org.apache.log4j.RollingFileAppender">
+-->
+    <appender name="logfile" class="org.apache.log4j.RollingFileAppender">
         <param name="File" value="${euca.log.dir}/cloud-debug.log"/>
         <param name="MaxFileSize" value="10MB"/>
         <param name="MaxBackupIndex" value="10"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d{HH:mm:ss} [%c{1}:%t] %x %-5p %m%n"/>
+        </layout>
+    </appender>
+
+    <appender name="errorlog" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="${euca.log.dir}/cloud-error.log"/>
+        <param name="MaxFileSize" value="10MB"/>
+        <param name="MaxBackupIndex" value="10"/>
+        <param name="Threshold" value="ERROR"/>
         <layout class="org.apache.log4j.PatternLayout">
             <param name="ConversionPattern" value="%d{HH:mm:ss} [%c{1}:%t] %x %-5p %m%n"/>
         </layout>
@@ -90,8 +101,8 @@
     </category>
 
     <root>
-        <priority value="DEBUG"/>
         <appender-ref ref="console"/>
+        <appender-ref ref="errorlog"/>
     </root>
 
 </log4j:configuration>

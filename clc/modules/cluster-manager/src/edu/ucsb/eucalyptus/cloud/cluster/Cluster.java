@@ -24,6 +24,7 @@ public class Cluster implements HasName {
   private ClusterInfo clusterInfo;
   private ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private ClusterState state;
+  private ClusterNodeState nodeState;
   private ClusterMessageQueue messageQueue;
   private ResourceUpdateCallback rscUpdater;
   private AddressUpdateCallback addrUpdater;
@@ -42,6 +43,7 @@ public class Cluster implements HasName {
   public Cluster( ClusterInfo clusterInfo ) {
     this.clusterInfo = clusterInfo;
     this.state = new ClusterState( this );
+    this.nodeState = new ClusterNodeState( this );
     this.messageQueue = new ClusterMessageQueue( this );
     this.rscUpdater = new ResourceUpdateCallback( this );
     this.addrUpdater = new AddressUpdateCallback( this );
@@ -49,6 +51,14 @@ public class Cluster implements HasName {
     this.nodeLogUpdater = new NodeLogCallback( this );
     this.nodeCertUpdater = new NodeCertCallback( this );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>();
+  }
+
+  public ClusterNodeState getNodeState() {
+    return nodeState;
+  }
+
+  public void setNodeState( final ClusterNodeState nodeState ) {
+    this.nodeState = nodeState;
   }
 
   private void waitForCerts() {

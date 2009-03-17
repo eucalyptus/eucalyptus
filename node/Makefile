@@ -54,7 +54,7 @@ server: $(SERVICE_SO)
 ../util/euca_auth.o: ../util/euca_auth.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util
 
-$(SERVICE_SO): generated/stubs ../storage/storage.o ../net/vnetwork.o ../util/misc.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o
+$(SERVICE_SO): generated/stubs ../storage/storage.o ../storage/walrus.o ../net/vnetwork.o ../util/misc.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o
 	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) ../storage/*.o ../net/*.o ../util/*.o 
 
 clientlib: generated/stubs ../util/data.o client-marshal-adb.o
