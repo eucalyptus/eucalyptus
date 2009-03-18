@@ -143,8 +143,18 @@ public class VolumeManager {
     String userName = request.isAdministrator() ? null : request.getUserId();
     try {
       Volume vol = db.getUnique( Volume.named( userName, request.getVolumeId() ) );
-      //:: TODO-1.5: state checks and snapshot tree check here :://
-      Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
+      boolean isAttached = false;
+      for( VmInstance vm : VmInstances.getInstance().listValues() ) {
+        for( AttachedVolume attachedVol : vm.getVolumes() ) {
+          if( request.getVolumeId().equals( attachedVol.getVolumeId() ) ) {
+            isAttached = true;
+          }
+        }
+      }
+      if( isAttached ) return reply;
+      if( !vol.getState(  ).equals( State.ANNILATED ) ) {
+        Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
+      }
       db.delete( vol );
       db.commit();
     } catch ( EucalyptusCloudException e ) {
@@ -208,7 +218,7 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId() );
     }
     for( AttachedVolume attachedVol : vm.getVolumes() ) {
-      if( attachedVol.getDevice().replaceAll("/unknown","").equals( request.getDevice() ) ) {
+      if( attachedVol.getDevice().replaceAll("unknown, requested:","").equals( request.getDevice() ) ) {
         throw new EucalyptusCloudException( "Already have a device attached to: " + request.getDevice() );
       }
     }
@@ -291,8 +301,8 @@ public class VolumeManager {
     }
 
     request.setVolumeId( volume.getVolumeId() );
-    request.setRemoteDevice( volume.getRemoteDevice().replaceAll("/unknown","") );
-    request.setDevice( volume.getDevice() );
+    request.setRemoteDevice( volume.getRemoteDevice() );
+    request.setDevice( volume.getDevice().replaceAll("unknown, requested:","") );
     request.setInstanceId( vm.getInstanceId() );
     QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( ), request );
     cluster.getMessageQueue().enqueue( event );
