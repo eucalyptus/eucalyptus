@@ -117,7 +117,7 @@ public class LVM2Manager implements BlockStorageManager {
             if(iface == null || (iface.length() == 0)) {
                 NetworkInterface inface = NetworkInterface.getByName(iface);
                 if(inface == null) {
-                    LOG.warn("Network interface " + iface + " is not valid. Storage may not function.");
+                    LOG.error("Network interface " + iface + " is not valid. Storage may not function.");
                     if(ifaceDiscovery) {
                         List<NetworkInterface> ifaces = null;
                         try {
@@ -133,7 +133,7 @@ public class LVM2Manager implements BlockStorageManager {
                     }
                 } else {
                     if(!inface.isUp()) {
-                        LOG.warn("Network interface " + iface + " is not available (up). Storage may not function.");
+                        LOG.error("Network interface " + iface + " is not available (up). Storage may not function.");
                     }
                 }
             }
@@ -171,7 +171,7 @@ public class LVM2Manager implements BlockStorageManager {
                 }
             }
         } catch (Exception ex) {
-            LOG.warn("Could not parse config file " + configFileName);
+            LOG.error("Could not parse config file " + configFileName);
         }
         return ifaceName;
     }
@@ -314,7 +314,7 @@ public class LVM2Manager implements BlockStorageManager {
                     try {
                         Thread.sleep(timeout);
                     } catch(InterruptedException ie) {
-                        LOG.warn(ie, ie);
+                        LOG.error(ie);
                     }
                     timeout += 300;
                 } else {
@@ -334,7 +334,7 @@ public class LVM2Manager implements BlockStorageManager {
             fileOutStream.write(pidString.getBytes());
             fileOutStream.close();
         } catch (Exception ex) {
-            LOG.warn("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
+            LOG.error("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
         }
         lvmVolumeInfo.setVbladePid(pid);
         lvmVolumeInfo.setMajorNumber(majorNumber);
@@ -430,7 +430,7 @@ public class LVM2Manager implements BlockStorageManager {
                 throw new EucalyptusCloudException();
             }
         } catch(EucalyptusCloudException ex) {
-            LOG.warn(ex);
+            LOG.error(ex);
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
             String returnValue = removeLogicalVolume(absoluteLVName);
             returnValue = removeVolumeGroup(vgName);
@@ -819,7 +819,7 @@ public class LVM2Manager implements BlockStorageManager {
                         fileOutStream.write(pidString.getBytes());
                         fileOutStream.close();
                     } catch (Exception ex) {
-                        LOG.warn("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
+                        LOG.error("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
                     }
                 }
             }
