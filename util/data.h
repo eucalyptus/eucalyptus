@@ -117,6 +117,7 @@ ncResource * allocate_resource(char *nodeStatus,
                                int numberOfCoresMax, int numberOfCoresAvailable,
                                char *publicSubnets);
 void free_resource(ncResource ** res);
+ncVolume * find_volume (ncInstance * instance, char *volumeId);
 ncVolume *  add_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev);
 ncVolume * free_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev);
 
