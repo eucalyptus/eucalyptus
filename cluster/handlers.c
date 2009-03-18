@@ -447,11 +447,9 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   } else {
     sem_wait(vnetConfigLock);
     brname = NULL;
-    
     rc = vnetStartNetwork(vnetconfig, vlan, ccMeta->userId, netName, &brname);
-    
     //    if (brname) {
-      //      vnetAddDev(vnetconfig, brname);
+    //      vnetAddDev(vnetconfig, brname);
     //    }
     
     sem_post(vnetConfigLock);
@@ -1076,7 +1074,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     
     sem_wait(vnetConfigLock);
     
+    
     // define/get next mac and allocate IP
+    foundnet = 0;
     if (!strcmp(vnetconfig->mode, "STATIC")) {
       // get the next valid mac/ip pairing for this vlan
       bzero(mac, 32);
