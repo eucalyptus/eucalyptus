@@ -34,5 +34,5 @@ install: build
 	make -C modules/storage-controller/native install
 	make -C modules/storage-manager/native install
 
-deploy:
+deploy: install
 
