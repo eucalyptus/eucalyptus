@@ -410,7 +410,8 @@ public class GetObjectType extends WalrusDataRequestType {
   Boolean getData;
   Boolean inlineData;
   Boolean deleteAfterGet;
-
+  Boolean getTorrent;
+  
   def GetObjectType() {
   }
 

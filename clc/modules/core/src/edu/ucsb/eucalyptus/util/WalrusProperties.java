@@ -38,10 +38,13 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 import org.apache.log4j.Logger;
 
+import java.net.URL;
+
 public class WalrusProperties {
     private static Logger LOG = Logger.getLogger( WalrusProperties.class );
 
     public static final String SERVICE_NAME = "Walrus";
+    public static final String VIRTUAL_SUBDOMAIN = "I_R_Bukkit";
     public static final long G = 1024*1024*1024;
     public static final long M = 1024*1024;
     public static final long K = 1024;
@@ -65,6 +68,8 @@ public class WalrusProperties {
             MAX_BUCKET_SIZE = systemConfiguration.getStorageMaxBucketSizeInMB() * M;
             IMAGE_CACHE_SIZE = systemConfiguration.getStorageMaxCacheSizeInMB() * M;
             WALRUS_URL = systemConfiguration.getStorageUrl();
+            java.net.URI walrusAddrUri = new URL(WALRUS_URL).toURI();
+            TRACKER_URL = "http://" + walrusAddrUri.getHost() + ":" + TRACKER_PORT + "/announce";
             Integer maxTotalSnapSize = systemConfiguration.getStorageMaxTotalSnapshotSizeInGb();
             if(maxTotalSnapSize != null) {
                 if(maxTotalSnapSize > 0) {
@@ -94,6 +99,14 @@ public class WalrusProperties {
     public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
     public static final String ADMIN = "admin";
     public static String WALRUS_REF = "vm://BukkitInternal";
+
+    public static String TRACKER_BINARY_DIR = "/usr/bin";
+    public static String TRACKER_BINARY = TRACKER_BINARY_DIR + "/bttrack";
+    public static String TORRENT_CREATOR_BINARY = TRACKER_BINARY_DIR + "/btmakemetafile";
+    public static String TORRENT_CLIENT_BINARY = TRACKER_BINARY_DIR + "/btdownloadheadless";
+    public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
+    public static String TRACKER_URL = "http://localhost:6969/announce";
+    public static String TRACKER_PORT = "6969";
 
     public enum Headers {
         Bucket, Key, RandomKey, VolumeId

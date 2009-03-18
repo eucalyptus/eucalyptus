@@ -268,8 +268,9 @@
         <value name="GetMetadata" field="getMetaData"/>
         <value name="GetData" field="getData"/>
         <value name="InlineData" field="inlineData"/>
-        <value name="DeleteAfterGet" field="deleteAfterGet" usage="optional"/>
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
+        <value name="DeleteAfterGet" field="deleteAfterGet" usage="optional"/>
+        <value name="GetTorrent" field="getTorrent" usage="optional"/>        
     </mapping>
 
     <mapping name="GetObjectResponse" class="edu.ucsb.eucalyptus.msgs.GetObjectResponseType">

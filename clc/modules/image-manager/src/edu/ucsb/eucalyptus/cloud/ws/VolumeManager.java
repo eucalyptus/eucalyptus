@@ -152,7 +152,9 @@ public class VolumeManager {
         }
       }
       if( isAttached ) return reply;
-      Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
+      if( !vol.getState(  ).equals( State.ANNILATED ) ) {
+        Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
+      }
       db.delete( vol );
       db.commit();
     } catch ( EucalyptusCloudException e ) {

@@ -79,6 +79,7 @@ public class Bukkit {
     private static boolean enableSnapshots = false;
 
     private static boolean sharedMode = false;
+    private static Tracker tracker;
 
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
@@ -86,7 +87,13 @@ public class Bukkit {
         if(limits != null) {
             shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
         }
+        initializeTracker();
         initializeForEBS();
+    }
+
+    public static void initializeTracker() {
+        tracker = new Tracker();
+        tracker.start();
     }
 
     public static void initializeForEBS() {
@@ -440,6 +447,17 @@ public class Bukkit {
                         foundObject.setGrants(grantInfos);
                     }
                     objectName = foundObject.getObjectName();
+                    EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
+                    TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+                    List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
+                    if(torrentInfos.size() > 0) {
+                        TorrentInfo foundTorrentInfo = torrentInfos.get(0);
+                        TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
+                        if(torrentClient != null) {
+                            torrentClient.bye();
+                        }
+                        dbTorrent.delete(foundTorrentInfo);
+                    }
                 }
                 foundObject.setObjectKey(objectKey);
                 foundObject.setOwnerId(userId);
@@ -1069,6 +1087,19 @@ public class Bukkit {
                 foundObject.addGrants(foundObject.getOwnerId(), grantInfos, accessControlList);
                 foundObject.setGrants(grantInfos);
 
+                if(!foundObject.isGlobalRead()) {
+                    EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
+                    TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+                    List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
+                    if(torrentInfos.size() > 0) {
+                        TorrentInfo foundTorrentInfo = torrentInfos.get(0);
+                        TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
+                        if(torrentClient != null) {
+                            torrentClient.bye();
+                        }
+                        dbTorrent.delete(foundTorrentInfo);
+                    }
+                }
                 reply.setCode("204");
                 reply.setDescription("OK");
             } else {
@@ -1092,6 +1123,14 @@ public class Bukkit {
         if(deleteAfterGet == null)
             deleteAfterGet = false;
 
+        Boolean getTorrent = request.getGetTorrent();
+        if(getTorrent == null)
+            getTorrent = false;
+
+        Boolean getMetaData = request.getGetMetaData();
+        if(getMetaData == null)
+            getMetaData = false;
+
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
         BucketInfo bucketInfo = new BucketInfo(bucketName);
         List<BucketInfo> bucketList = db.query(bucketInfo);
@@ -1103,11 +1142,71 @@ public class Bukkit {
                 if(objectInfo.getObjectKey().equals(objectKey)) {
                     if(objectInfo.canRead(userId)) {
                         String objectName = objectInfo.getObjectName();
-                        if(request.getGetMetaData()) {
+                        if(getMetaData) {
                             ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
                             objectInfo.returnMetaData(metaData);
                             reply.setMetaData(metaData);
                             reply.setMetaData(metaData);
+                        }
+                        if(getTorrent) {
+                            if(objectInfo.isGlobalRead()) {
+                                EntityWrapper<TorrentInfo> dbTorrent = new EntityWrapper<TorrentInfo>();
+                                TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+                                TorrentInfo foundTorrentInfo;
+                                String absoluteObjectPath = storageManager.getObjectPath(bucketName, objectName);
+                                try {
+                                    foundTorrentInfo = dbTorrent.getUnique(torrentInfo);
+                                } catch (EucalyptusCloudException ex) {
+                                    String torrentFile = objectName + ".torrent";
+                                    String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
+                                    TorrentCreator torrentCreator = new TorrentCreator(absoluteObjectPath, objectKey, objectName, torrentFilePath, WalrusProperties.TRACKER_URL);
+                                    try {
+                                        torrentCreator.create();
+                                    } catch(Exception e) {
+                                        LOG.error(e);
+                                        throw new EucalyptusCloudException("could not create torrent file " + torrentFile);
+                                    }
+                                    torrentInfo.setTorrentFile(torrentFile);
+                                    dbTorrent.add(torrentInfo);
+                                    foundTorrentInfo = torrentInfo;
+                                }
+                                dbTorrent.commit();
+                                String torrentFile = foundTorrentInfo.getTorrentFile();
+                                String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
+                                TorrentClient torrentClient = new TorrentClient(torrentFilePath, absoluteObjectPath);
+                                Torrents.addClient(bucketName + objectKey, torrentClient);
+                                torrentClient.start();
+                                //send torrent
+                                String key = bucketName + "." + objectKey;
+                                String randomKey = key + "." + Hashes.getRandom(10);
+                                request.setRandomKey(randomKey);
+                                LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
+
+                                File torrent = new File(torrentFilePath);
+                                if(torrent.exists()) {
+                                    long torrentLength = torrent.length();
+                                    Reader reader = new Reader(bucketName, torrentFile, torrentLength, getQueue, false, null);
+                                    reader.start();
+
+                                    //TODO: this should reflect params for the torrent?
+                                    reply.setEtag("");
+                                    reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                                    reply.setSize(torrentLength);
+                                    Status status = new Status();
+                                    status.setCode(200);
+                                    status.setDescription("OK");
+                                    reply.setStatus(status);
+                                    db.commit();
+                                    return reply;
+                                } else {
+                                    String errorString = "Could not get torrent file " + torrentFilePath;
+                                    LOG.error(errorString);
+                                    throw new EucalyptusCloudException(errorString);
+                                }
+                            } else {
+                                db.rollback();
+                                throw new AccessDeniedException(objectKey);
+                            }
                         }
                         if(request.getGetData()) {
                             if(request.getInlineData()) {
@@ -1121,6 +1220,7 @@ public class Bukkit {
                                     reply.setBase64Data(base64Data);
                                 } catch (IOException ex) {
                                     db.rollback();
+                                    LOG.error(ex);
                                     //set error code
                                     return reply;
                                 }

@@ -55,7 +55,8 @@
         <class>edu.ucsb.eucalyptus.cloud.entities.ObjectInfo</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.GrantInfo</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo</class>
-        <class>edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo</class>
+        <class>edu.ucsb.eucalyptus.cloud.entities.TorrentInfo</class>
+	<class>edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.VolumeInfo</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.AttachedVolumeInfo</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo</class>
