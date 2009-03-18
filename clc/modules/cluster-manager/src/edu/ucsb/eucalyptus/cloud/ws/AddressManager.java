@@ -34,19 +34,45 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.cloud.cluster.*;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.ClusterEnvelope;
+import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
+import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
+import edu.ucsb.eucalyptus.cloud.entities.Address;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
-import edu.ucsb.eucalyptus.cloud.net.*;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.cloud.net.Addresses;
+import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
+import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
+import edu.ucsb.eucalyptus.msgs.AssignAddressType;
+import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
+import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
+import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
+import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeAddressesType;
+import edu.ucsb.eucalyptus.msgs.DisassociateAddressResponseType;
+import edu.ucsb.eucalyptus.msgs.DisassociateAddressType;
+import edu.ucsb.eucalyptus.msgs.ReleaseAddressResponseType;
+import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
+import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
+import edu.ucsb.eucalyptus.util.Admin;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.Messaging;
 import org.apache.axis2.AxisFault;
 import org.apache.log4j.Logger;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentNavigableMap;
 
 public class AddressManager implements Startable {
@@ -64,6 +90,44 @@ public class AddressManager implements Startable {
       }
     db.commit();
   }
+
+  public static NavigableSet<String> allocateAddresses( int count ) throws NotEnoughResourcesAvailable {
+    ConcurrentNavigableMap<String, Address> unusedAddresses = Addresses.getInstance().getDisabledMap();
+    //:: try to fail fast if needed :://
+    if ( unusedAddresses.size() < count ) throw new NotEnoughResourcesAvailable( );
+    List<Map.Entry<String, Address>> addressList = Lists.newArrayList();
+    for ( int i = 0; i < count; i++ ) {
+      Map.Entry<String, Address> addressEntry = unusedAddresses.pollFirstEntry();
+      if ( addressEntry != null ) {
+        addressList.add( addressEntry );
+      } else {
+        for ( Map.Entry<String, Address> a : addressList ) {
+          unusedAddresses.putIfAbsent( a.getKey(), a.getValue() );
+        }
+        throw new NotEnoughResourcesAvailable( );
+      }
+    }
+    NavigableSet<String> ipList = Sets.newTreeSet();
+    for ( Map.Entry<String, Address> addressEntry : addressList ) {
+      Address address = addressEntry.getValue();
+      address.allocate( EucalyptusProperties.NAME );
+      EntityWrapper<Address> db = new EntityWrapper<Address>();
+      try {
+        Address addr = db.getUnique( new Address( address.getName() ) );
+        addr.allocate( EucalyptusProperties.NAME );
+      } catch ( EucalyptusCloudException e ) {
+        db.merge( address );
+      }
+      db.commit();
+      ipList.add( address.getName() );
+      try {
+        Addresses.getInstance().register( address );
+      } catch ( Exception e ) {
+      }
+    }
+    return ipList;
+  }
+
 
   public AllocateAddressResponseType AllocateAddress( AllocateAddressType request ) throws EucalyptusCloudException {
     int addrCount = 0;

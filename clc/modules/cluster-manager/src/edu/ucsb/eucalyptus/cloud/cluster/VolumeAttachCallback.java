@@ -23,10 +23,13 @@ public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType> 
   {
     AttachVolumeResponseType reply = (AttachVolumeResponseType) cluster.send( msg );
     if( !reply.get_return() ) {
-      LOG.error( "Removing invalid volume attachment " + msg.getVolumeId() + " from instance " + msg.getInstanceId() );
+      LOG.debug( "Trying to remove invalid volume attachment " + msg.getVolumeId() + " from instance " + msg.getInstanceId() );
       try {
         VmInstance vm = VmInstances.getInstance().lookup( msg.getInstanceId() );
-        vm.getVolumes().remove( new AttachedVolume( msg.getVolumeId() ) );
+        AttachedVolume failVol = new AttachedVolume( msg.getVolumeId() );
+        vm.getVolumes().remove( failVol );
+        LOG.debug( "Removed failed attachment: " + failVol.getVolumeId() + " -> "+vm.getInstanceId());
+        LOG.debug( "Final volume attachments for " + vm.getInstanceId() + " " + vm.getVolumes() );
       } catch ( NoSuchElementException e1 ) {}
     }
   }

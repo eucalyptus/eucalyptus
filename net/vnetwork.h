@@ -45,12 +45,11 @@ typedef struct vnetConfig_t {
   int enabled;
   int initialized;
   int numaddrs;
+  int max_vlan;
   char etherdevs[NUMBER_OF_VLANS][32];
   userEntry users[NUMBER_OF_VLANS];
   networkEntry networks[NUMBER_OF_VLANS];
-  
   publicip publicips[NUMBER_OF_PUBLIC_IPS];
-
   char iptables[32768];
 } vnetConfig;
 

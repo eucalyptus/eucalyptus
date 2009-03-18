@@ -66,7 +66,7 @@ public class SystemConfiguration {
   @Column( name = "system_storage_volume_size_gb" )
   private Integer storageMaxTotalVolumeSizeInGb;
   @Column( name = "system_storage_snapshot_size_gb" )
-  private Integer storageMaxSnapshotSizeInGb;
+  private Integer storageMaxTotalSnapshotSizeInGb;
   @Column( name = "system_registration_id" )
   private String registrationId;
   @Column( name = "system_storage_max_volume_size_gb")
@@ -74,7 +74,7 @@ public class SystemConfiguration {
   @Column( name = "system_storage_volumes_dir" )
   private String storageVolumesDir;
 
-  public SystemConfiguration() {}
+    public SystemConfiguration() {}
 
   public SystemConfiguration(final String storageUrl,
 	final String defaultKernel,
@@ -84,7 +84,7 @@ public class SystemConfiguration {
 	final Integer storageMaxBucketSizeInMB,
 	final Integer storageMaxCacheSizeInMB,
 	final Integer storageMaxTotalVolumeSizeInGb,
-	final Integer storageMaxSnapshotSizeInGb,
+	final Integer storageMaxTotalSnapshotSizeInGb,
 	final Integer storageMaxVolumeSizeInGB,
 	final String storageVolumesDir)
   {
@@ -96,7 +96,7 @@ public class SystemConfiguration {
     this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
     this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
 	this.storageMaxTotalVolumeSizeInGb = storageMaxTotalVolumeSizeInGb;
-	this.storageMaxSnapshotSizeInGb = storageMaxSnapshotSizeInGb;
+	this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
 	this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
 	this.storageVolumesDir = storageVolumesDir;
   }
@@ -169,12 +169,12 @@ public class SystemConfiguration {
     this.storageMaxTotalVolumeSizeInGb = storageMaxTotalVolumeSizeInGb;
   }
 
-  public Integer getStorageMaxSnapshotSizeInGb() {
-    return storageMaxSnapshotSizeInGb;
+  public Integer getStorageMaxTotalSnapshotSizeInGb() {
+    return storageMaxTotalSnapshotSizeInGb;
   }
 
-  public void setStorageMaxSnapshotSizeInGb( Integer storageMaxSnapshotSizeInGb ) {
-    this.storageMaxSnapshotSizeInGb = storageMaxSnapshotSizeInGb;
+  public void setStorageMaxTotalSnapshotSizeInGb( Integer storageMaxTotalSnapshotSizeInGb) {
+    this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
   }
 
   public String getRegistrationId() {

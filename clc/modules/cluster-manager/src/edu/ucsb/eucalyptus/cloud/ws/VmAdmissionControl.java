@@ -1,13 +1,19 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.cluster.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.FailScriptFailException;
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
+import edu.ucsb.eucalyptus.cloud.SLAs;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
+import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
+import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import java.util.List;
+import java.util.NavigableSet;
 
 public class VmAdmissionControl {
 
@@ -32,14 +38,24 @@ public class VmAdmissionControl {
     SLAs sla = new SLAs();
     List<ResourceToken> allocTokeList = null;
     boolean failed = false;
+    boolean hasAddr = false;
     try {
       allocTokeList = sla.doVmAllocation( vmAllocInfo );
-      vmAllocInfo.getAllocationTokens().addAll( allocTokeList );
-      try {
-        sla.doNetworkAllocation( vmAllocInfo.getRequest().getUserId(), vmAllocInfo.getAllocationTokens(), vmAllocInfo.getNetworks() );
-      } catch ( NotEnoughResourcesAvailable notEnoughResourcesAvailable ) {
-        failed = true;
+      int addrCount = 0;
+      for ( ResourceToken token : allocTokeList ) {
+        addrCount += token.getAmount();
       }
+      if ( "public".equals( vmAllocInfo.getRequest().getAddressingType() ) || vmAllocInfo.getRequest().getAddressingType() == null ) {
+        NavigableSet<String> addresses = AddressManager.allocateAddresses( addrCount );
+        for ( ResourceToken token : allocTokeList ) {
+          for ( int i = 0; i < token.getAmount(); i++ ) {
+            token.getAddresses().add( addresses.pollFirst() );
+          }
+        }
+      }
+      hasAddr = true;
+      vmAllocInfo.getAllocationTokens().addAll( allocTokeList );
+      sla.doNetworkAllocation( vmAllocInfo.getRequest().getUserId(), vmAllocInfo.getAllocationTokens(), vmAllocInfo.getNetworks() );
     } catch ( FailScriptFailException e ) {
       failed = true;
     } catch ( NotEnoughResourcesAvailable notEnoughResourcesAvailable ) {
@@ -48,8 +64,8 @@ public class VmAdmissionControl {
     if ( failed ) {
       if ( allocTokeList != null )
         for ( ResourceToken token : allocTokeList )
-          Clusters.getInstance().lookup( token.getCluster() ).getState().releaseResourceToken( token );
-      throw new EucalyptusCloudException( "Not enough resources available." );
+          Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
+      throw new EucalyptusCloudException( "Not enough resources available: " + (hasAddr?"vms":" addresses (try --addressing private)") );
     }
 
     return vmAllocInfo;

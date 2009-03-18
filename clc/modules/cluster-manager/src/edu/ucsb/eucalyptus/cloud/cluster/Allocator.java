@@ -6,6 +6,6 @@ import java.util.*;
 
 public interface Allocator {
 
-  public abstract List<ResourceToken> allocate( String requestId, String userName, String vmtype, int min, int max, SortedSet<ClusterState> clusters ) throws NotEnoughResourcesAvailable;
+  public abstract List<ResourceToken> allocate( String requestId, String userName, String vmtype, int min, int max, SortedSet<ClusterNodeState> clusters ) throws NotEnoughResourcesAvailable;
 }
 

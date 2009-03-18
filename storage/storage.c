@@ -33,8 +33,6 @@ static char disk_convert_command_path [BUFSIZE] = "";
 static int scConfigInit=0;
 static sem * sc_sem;
 
-
-
 int scInitConfig (void)
 {
     struct stat mystat;
@@ -645,7 +643,7 @@ static long long get_cached_file (const char * user_id, const char * url, const 
 	char cached_path     [BUFSIZE];
 	char staging_path    [BUFSIZE];
 	char digest_path     [BUFSIZE];
-	
+
 	snprintf (file_path,       BUFSIZE, "%s/%s/%s/%s",    sc_instance_path, user_id, instance_id, file_name);
 	snprintf (tmp_digest_path, BUFSIZE, "%s-digest",      file_path);
 	snprintf (cached_dir,      BUFSIZE, "%s/%s/cache/%s", sc_instance_path, EUCALYPTUS_ADMIN, file_id); /* cache is in admin's directory */
@@ -683,7 +681,7 @@ retry:
     /* while still under lock, decide whether to cache */
     int should_cache = 0;
     if (action==STAGE) { 
-        e = walrus_object_by_url (url, tmp_digest_path); /* get the digest to see how big the file is */
+        e = walrus_object_by_url (url, tmp_digest_path, 0); /* get the digest to see how big the file is */
         if (e==OK && stat (tmp_digest_path, &mystat)) {
             digest_size = (long long)mystat.st_size;
         }
@@ -695,6 +693,7 @@ retry:
                 free (xml_file);
             }
             if (file_size > 0) {
+                /* TODO: take into account extra padding required for disks (over partitions) */
                 if ( ok_to_cache (cached_path, file_size+digest_size) ) { /* will invalidate the cache, if needed */
                     ensure_path_exists (cached_dir); /* creates missing directories */
                     should_cache = 1;
@@ -717,23 +716,13 @@ retry:
     switch (action) {
     case STAGE:
         logprintfl (EUCAINFO, "downloding image into %s...\n", file_path);		
-        e = walrus_image_by_manifest_url (url, file_path);
-
-        long long swap_mb = swap_size_mb;
-        long long ephemeral_mb = 0L;
-        if (total_disk_limit_mb - (file_size/MEGABYTE) < swap_size_mb) {
-            swap_mb = 0L;
-        } else {
-            ephemeral_mb = total_disk_limit_mb - (file_size/MEGABYTE) - swap_size_mb;
-            if (ephemeral_mb < 10) { // pointless
-                ephemeral_mb = 0L; 
-            }
-        }
+        e = walrus_image_by_manifest_url (url, file_path, 1);
 
         /* for KVM, convert partition into disk */
         if (e==OK && convert_to_disk) { 
             sem_p (s);
-            if ((e=vrun("%s %s %d %d", disk_convert_command_path, file_path, swap_mb, ephemeral_mb))!=0) {
+            /* for the cached disk swap==0 and ephemeral==0 as we'll append them below */
+            if ((e=vrun("%s %s %d %d", disk_convert_command_path, file_path, 0, 0))!=0) {
                 logprintfl (EUCAERROR, "error: partition-to-disk image conversion command failed\n");
             }
             sem_v (s);
@@ -826,7 +815,31 @@ retry:
     case ABORT:
         logprintfl (EUCAERROR, "get_cached_file() failed (errno=%d)\n", e);
     }
-    return file_size + digest_size;
+
+    if (e==OK && file_size > 0 && convert_to_disk ) { // if all went well above
+        long long swap_mb = swap_size_mb;
+        long long ephemeral_mb = 0L;
+        if ((total_disk_limit_mb - (file_size/MEGABYTE)) < swap_size_mb) {
+            swap_mb = 0L;
+        } else {
+            ephemeral_mb = total_disk_limit_mb - (file_size/MEGABYTE) - swap_size_mb;
+            if (ephemeral_mb < 10) { // pointless
+                ephemeral_mb = 0L; 
+            }
+        }
+        // if this is a disk image and we want to add swap and/or ephemeral partitions to it 
+        if ( swap_mb>0L || ephemeral_mb>0L ) {
+            sem_p (s);
+            if ((e=vrun("%s %s %d %d", disk_convert_command_path, file_path, swap_mb, ephemeral_mb))!=0) {
+                logprintfl (EUCAERROR, "error: failed to add swap or ephemeral to the disk image\n");
+            }
+            sem_v (s);
+        }
+    }
+
+    if (e==OK && action!=ABORT)
+        return file_size + digest_size;
+    return 0L;
 }
 
 
@@ -837,9 +850,9 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
     char ramdisk_path [BUFSIZE]; long long ramdisk_size = 0L;
     char config_path  [BUFSIZE];
     char rundir_path  [BUFSIZE];
-    int e;
+    int e = ERROR;
     
-    logprintfl (EUCAINFO, "retrieving images for instance %s...\n", instanceId);
+    logprintfl (EUCAINFO, "retrieving images for instance %s (limit=%dMB)...\n", instanceId, total_disk_limit_mb);
     
     /* get the necessary files from Walrus, caching them if necessary */
     char * image_name;
@@ -876,13 +889,13 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
 	logprintfl (EUCAINFO, "adding key %s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
 	sem_p (s);
 	if (convert_to_disk) {
-        if ((e=vrun("%s 32256 %s %s", add_key_command_path, image_path, key_template))!=0) {
+	  if ((e=vrun("%s 32256 %s %s", add_key_command_path, image_path, key_template))!=0) {
             logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
-        }
+	  }
 	} else {
-        if ((e=vrun("%s 0 %s %s", add_key_command_path, image_path, key_template))!=0) {
+	  if ((e=vrun("%s 0 %s %s", add_key_command_path, image_path, key_template))!=0) {
             logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
-        }
+	  }
 	}
 	sem_v (s);
         
@@ -899,11 +912,11 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
     } else {
       sem_p (s);
       if (convert_to_disk) {
-          if ((e=vrun("%s 32256 %s %s", add_key_command_path, image_path))!=0) { /* without key, add_key just does tune2fs */
+          if ((e=vrun("%s 32256 %s", add_key_command_path, image_path))!=0) { /* without key, add_key just does tune2fs */
               logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
           }
       } else {
-          if ((e=vrun("%s 0 %s %s", add_key_command_path, image_path))!=0) { /* without key, add_key just does tune2fs */
+          if ((e=vrun("%s 0 %s", add_key_command_path, image_path))!=0) { /* without key, add_key just does tune2fs */
               logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
           }
       }

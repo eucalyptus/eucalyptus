@@ -38,6 +38,8 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <sys/wait.h>
+#include <signal.h>
 
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
@@ -444,3 +446,14 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getVblade
 
     return returnValue;
 }
+
+void sigchld(int signal)
+{
+ while (0 < waitpid(-1, NULL, WNOHANG));
+}
+
+JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_initialize
+  (JNIEnv *env, jobject obj) {
+  signal(SIGCHLD, sigchld);
+}
+

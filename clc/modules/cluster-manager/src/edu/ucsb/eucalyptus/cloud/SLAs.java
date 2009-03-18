@@ -24,11 +24,10 @@ public class SLAs {
 
   public List<ResourceToken> doVmAllocation( VmAllocationInfo vmAllocInfo ) throws FailScriptFailException, NotEnoughResourcesAvailable {
     Collection<Cluster> clusterList = Clusters.getInstance().getEntries();
-    Comparator<ClusterState> comparator = ClusterState.getComparator( vmAllocInfo.getVmTypeInfo() );
-    SortedSet<ClusterState> clusterStateList = new ConcurrentSkipListSet<ClusterState>( comparator );
+    SortedSet<ClusterNodeState> clusterStateList = new ConcurrentSkipListSet<ClusterNodeState>( ClusterNodeState.getComparator( vmAllocInfo.getVmTypeInfo() ) );
 
     //:: prepare the cluster state list :://
-    for ( Cluster c : clusterList ) clusterStateList.add( c.getState() );
+    for ( Cluster c : clusterList ) clusterStateList.add( c.getNodeState() );
 
     //:: find the right allocator to invoke :://
     Allocator blah = this.getAllocator();

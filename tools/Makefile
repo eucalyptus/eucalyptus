@@ -33,3 +33,4 @@ install: deploy
 	@$(INSTALL) -m 755 euca_ipt $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_conf $(sbindir)
 	@$(INSTALL) -m 755 euca_sync_key $(sbindir)
+

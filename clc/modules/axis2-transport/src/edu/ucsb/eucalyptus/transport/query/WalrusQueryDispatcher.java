@@ -231,6 +231,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                     FileUpload fileUpload = new FileUpload(new WalrusFileItemFactory());
                     InputStream formDataIn = null;
                     String objectKey = null;
+                    String file = "";
                     String key;
                     Map<String, String> formFields = new HashMap<String, String>();
                     try {
@@ -248,6 +249,8 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                                 formFields.put(fieldName, fieldValue);
                             } else {
                                 formDataIn = part.getInputStream();
+				if(part.getName() != null)
+				    file = part.getName();
                             }
                         }
                     } catch (Exception ex) {
@@ -259,6 +262,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                     formFields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
                     if(formFields.containsKey(WalrusProperties.FormField.key.toString())) {
                         objectKey = formFields.get(WalrusProperties.FormField.key.toString());
+                        objectKey = objectKey.replaceAll("\\$\\{filename\\}", file);
                     }
                     if(formFields.containsKey(WalrusProperties.FormField.acl.toString())) {
                         String acl = formFields.get(WalrusProperties.FormField.acl.toString());
@@ -410,8 +414,6 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                                 accessControlList = getAccessControlList(in);
                             } else {
                                 accessControlList = new AccessControlListType();
-                                ArrayList<Grant> grant = new ArrayList<Grant>();
-                                accessControlList.setGrants(grant);
                             }
                             operationParams.put("AccessControlList", accessControlList);
                             operationKey += WalrusProperties.COPY_SOURCE.toString();
@@ -659,9 +661,9 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
 
                 for(int i = 0 ; i < grantees.getLength() ; ++i) {
-                    String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
-                    if(canonicalUserName.length() > 0) {
-                        String id = xmlParser.getValue(grantees.item(i), "ID");
+                    String id = xmlParser.getValue(grantees.item(i), "ID");
+                    if(id.length() > 0) {
+                        String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
                         Grant grant = new Grant();
                         Grantee grantee = new Grantee();
                         grantee.setCanonicalUser(new CanonicalUserType(id, canonicalUserName));

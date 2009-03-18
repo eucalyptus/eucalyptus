@@ -39,6 +39,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     vnetconfig->role = role;
     vnetconfig->enabled=1;
     vnetconfig->initialized = 1;
+    vnetconfig->max_vlan = NUMBER_OF_VLANS;
     if (numberofaddrs) vnetconfig->numaddrs = atoi(numberofaddrs);
 
     // populate networks
@@ -58,7 +59,27 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
       
       numaddrs-=1;
       if (!strcmp(mode, "MANAGED") || !strcmp(mode, "MANAGED-NOVLAN")) {
+	// do some parameter checking
+	if ( (numaddrs+1) < 4) {
+	  logprintfl(EUCAERROR, "NUMADDRS must be >= 4, instances will not start with current value of '%d'\n", numaddrs+1);
+	}
+	
+	// check to make sure our specified range is big enough for all VLANs
+	if ((0xFFFFFFFF - nm) < (NUMBER_OF_VLANS * (numaddrs+1))) {
+	  // not big enough
+	  vnetconfig->max_vlan = (0xFFFFFFFF - nm) / (numaddrs+1);
+	  logprintfl(EUCAWARN, "private network is not large enough to support all vlans, restricting to max vlan '%d'\n", vnetconfig->max_vlan);
+	  if (vnetconfig->max_vlan < 10) {
+	    logprintfl(EUCAWARN, "default eucalyptus cloud controller starts networks at vlan 10, instances will not run with current max vlan '%d'.  Either increase the size of your private subnet (SUBNET/NETMASK) or decrease the number of addrs per group (NUMADDRS).\n", vnetconfig->max_vlan);
+	  }
+	} else {
+	  vnetconfig->max_vlan = NUMBER_OF_VLANS;
+	}
+
 	// set up iptables
+	snprintf(cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap iptables -L", vnetconfig->eucahome);
+	rc = system(cmd);
+
 	logprintfl(EUCADEBUG, "flushing 'filter' table\n");
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", "-F");
 	
@@ -88,7 +109,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
-	for (vlan=2; vlan<NUMBER_OF_VLANS; vlan++) {
+	for (vlan=2; vlan<vnetconfig->max_vlan; vlan++) {
 	  vnetconfig->networks[vlan].nw = unw;
 	  vnetconfig->networks[vlan].nm = unm;
 	  vnetconfig->networks[vlan].bc = unw + numaddrs;
@@ -97,7 +118,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	  unw += numaddrs + 1;	  
 	}	
       } else if (!strcmp(mode, "STATIC")) {
-	for (vlan=0; vlan<NUMBER_OF_VLANS; vlan++) {
+	for (vlan=0; vlan<vnetconfig->max_vlan; vlan++) {
 	  vnetconfig->networks[vlan].nw = nw;
 	  vnetconfig->networks[vlan].nm = nm;
 	  vnetconfig->networks[vlan].bc = bc;
@@ -124,7 +145,7 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   done=found=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
   logprintfl(EUCAINFO,"NUMADDRS %d %d\n", vnetconfig->numaddrs, 2);
-  for (i=2; i<vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
     if (vnetconfig->networks[vlan].addrs[i].mac[0] == '\0') {
       if (!found) found=i;
     } else if (!strcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) {
@@ -164,7 +185,7 @@ int vnetDelHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  for (i=2; i<vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
     if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       bzero(&(vnetconfig->networks[vlan].addrs[i]), sizeof(netEntry));
       vnetconfig->networks[vlan].numhosts--;
@@ -189,7 +210,7 @@ int vnetEnableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  for (i=2; i<vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
     if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       vnetconfig->networks[vlan].addrs[i].active=1;
       done++;
@@ -211,7 +232,7 @@ int vnetDisableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
 
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  for (i=2; i<vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
     if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       vnetconfig->networks[vlan].addrs[i].active=0;
       done++;
@@ -551,7 +572,7 @@ int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network) {
   int i, done;
   
   done=0;
-  for (i=0; i<NUMBER_OF_VLANS; i++) {
+  for (i=0; i<vnetconfig->max_vlan; i++) {
     if (!strcmp(vnetconfig->users[i].userName, user) && !strcmp(vnetconfig->users[i].netName, network)) {
       return(i);
     }
@@ -573,7 +594,7 @@ int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  for (i=2; i<vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
     if (vnetconfig->networks[vlan].addrs[i].mac[0] != '\0' && vnetconfig->networks[vlan].addrs[i].ip != 0 && vnetconfig->networks[vlan].addrs[i].active == 0) {
       strncpy(mac, vnetconfig->networks[vlan].addrs[i].mac, 24);
       newip = hex2dot(vnetconfig->networks[vlan].addrs[i].ip);
@@ -596,7 +617,7 @@ int vnetAddDev(vnetConfig *vnetconfig, char *dev) {
 
   done=0;
   foundone = -1;
-  for (i=0; i<NUMBER_OF_VLANS && !done; i++) {
+  for (i=0; i<vnetconfig->max_vlan && !done; i++) {
     if (!strcmp(vnetconfig->etherdevs[i], dev)) {
       return(1);
     }
@@ -616,7 +637,7 @@ int vnetDelDev(vnetConfig *vnetconfig, char *dev) {
   if (param_check("vnetDelDev", vnetconfig, dev)) return(1);
 
   done=0;
-  for (i=0; i<NUMBER_OF_VLANS && !done; i++) {
+  for (i=0; i<vnetconfig->max_vlan && !done; i++) {
     if (!strncmp(vnetconfig->etherdevs[i], dev, 32)) {
       bzero(vnetconfig->etherdevs[i], 32);
       done++;
@@ -646,7 +667,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
   fprintf(fp, "# automatically generated config file for DHCP server\ndefault-lease-time 1200;\nmax-lease-time 1200;\nddns-update-style none;\n\n");
   
   fprintf(fp, "shared-network euca {\n");
-  for (i=0; i<NUMBER_OF_VLANS; i++) {
+  for (i=0; i<vnetconfig->max_vlan; i++) {
     if (vnetconfig->networks[i].numhosts > 0) {
       network = hex2dot(vnetconfig->networks[i].nw);
       netmask = hex2dot(vnetconfig->networks[i].nm);
@@ -657,7 +678,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
       fprintf(fp, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n  option domain-name-servers %s;\n  option routers %s;\n}\n", network, netmask, netmask, broadcast, nameserver, router);
       
       //      for (j=2; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
-      for (j=2; j<vnetconfig->numaddrs-2; j++) {
+      for (j=2; j<=vnetconfig->numaddrs-2; j++) {
 	if (vnetconfig->networks[i].addrs[j].active == 1) {
 	  newip = hex2dot(vnetconfig->networks[i].addrs[j].ip);
 	  printf("%s ACTIVE\n", newip);
@@ -699,7 +720,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   }
   
   
-  for (i=0; i<NUMBER_OF_VLANS; i++) {
+  for (i=0; i<vnetconfig->max_vlan; i++) {
     if (vnetconfig->etherdevs[i][0] != '\0') {
       strncat (dstring, " ", 512);
       strncat (dstring, vnetconfig->etherdevs[i], 32);
@@ -815,9 +836,14 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
       return(0);
     }
   }
-
-  *outbrname = NULL;
   
+  *outbrname = NULL;
+
+  if (vlan < 0 || vlan > vnetconfig->max_vlan) {
+    logprintfl(EUCAERROR, "supplied vlan '%d' is out of range (%d - %d), cannot start network\n", vlan, 0, vnetconfig->max_vlan);
+    return(1);
+  }
+
   if (vnetconfig->role == NC && vlan > 0) {
 
     // first, create tagged interface
@@ -1003,7 +1029,11 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
   
   ret = 0;
   //if (vnetconfig->role == NC) {
-    
+  if (vlan < 0 || vlan > vnetconfig->max_vlan) {
+    logprintfl(EUCAWARN, "supplied vlan '%d' is out of range (%d - %d), nothing to do\n", vlan, 0, vnetconfig->max_vlan);
+    return(0);
+  }
+
   if (!strcmp(vnetconfig->mode, "MANAGED")) {
     snprintf(newbrname, 32, "eucabr%d", vlan);
     snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap ip link set dev %s down", vnetconfig->eucahome, newbrname);
