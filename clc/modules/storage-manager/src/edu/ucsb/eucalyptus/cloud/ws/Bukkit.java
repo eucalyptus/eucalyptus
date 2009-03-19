@@ -63,6 +63,7 @@ import java.security.*;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -78,6 +79,7 @@ public class Bukkit {
     static boolean shouldEnforceUsageLimits = true;
     private static boolean enableSnapshots = false;
 
+    private static boolean enableTorrents = false;
     private static boolean sharedMode = false;
     private static Tracker tracker;
 
@@ -93,7 +95,20 @@ public class Bukkit {
 
     public static void initializeTracker() {
         tracker = new Tracker();
-        tracker.start();
+        if(tracker.exists())  {
+            enableTorrents = true;
+            tracker.start();
+            Runtime.getRuntime().addShutdownHook(new Thread()
+            {
+                public void run() {
+                    tracker.bye();
+                    Collection<TorrentClient>  torrentClients = Torrents.getClients();
+                    for(TorrentClient torrentClient : torrentClients) {
+                        torrentClient.bye();
+                    }
+                }
+            });
+        }
     }
 
     public static void initializeForEBS() {
@@ -447,16 +462,20 @@ public class Bukkit {
                         foundObject.setGrants(grantInfos);
                     }
                     objectName = foundObject.getObjectName();
-                    EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
-                    TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
-                    List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
-                    if(torrentInfos.size() > 0) {
-                        TorrentInfo foundTorrentInfo = torrentInfos.get(0);
-                        TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
-                        if(torrentClient != null) {
-                            torrentClient.bye();
+                    if(enableTorrents) {
+                        EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
+                        TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+                        List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
+                        if(torrentInfos.size() > 0) {
+                            TorrentInfo foundTorrentInfo = torrentInfos.get(0);
+                            TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
+                            if(torrentClient != null) {
+                                torrentClient.bye();
+                            }
+                            dbTorrent.delete(foundTorrentInfo);
                         }
-                        dbTorrent.delete(foundTorrentInfo);
+                    } else {
+                        LOG.warn("Bittorrent support has been disabled. Please check pre-requisites");
                     }
                 }
                 foundObject.setObjectKey(objectKey);
@@ -1087,18 +1106,22 @@ public class Bukkit {
                 foundObject.addGrants(foundObject.getOwnerId(), grantInfos, accessControlList);
                 foundObject.setGrants(grantInfos);
 
-                if(!foundObject.isGlobalRead()) {
-                    EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
-                    TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
-                    List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
-                    if(torrentInfos.size() > 0) {
-                        TorrentInfo foundTorrentInfo = torrentInfos.get(0);
-                        TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
-                        if(torrentClient != null) {
-                            torrentClient.bye();
+                if(enableTorrents) {
+                    if(!foundObject.isGlobalRead()) {
+                        EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
+                        TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+                        List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
+                        if(torrentInfos.size() > 0) {
+                            TorrentInfo foundTorrentInfo = torrentInfos.get(0);
+                            TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
+                            if(torrentClient != null) {
+                                torrentClient.bye();
+                            }
+                            dbTorrent.delete(foundTorrentInfo);
                         }
-                        dbTorrent.delete(foundTorrentInfo);
                     }
+                } else {
+                    LOG.warn("Bittorrent support has been disabled. Please check pre-requisites");
                 }
                 reply.setCode("204");
                 reply.setDescription("OK");
@@ -1150,6 +1173,10 @@ public class Bukkit {
                         }
                         if(getTorrent) {
                             if(objectInfo.isGlobalRead()) {
+                                if(!enableTorrents) {
+                                    LOG.warn("Bittorrent support has been disabled. Please check pre-requisites");
+                                    throw new EucalyptusCloudException("Torrents disabled");
+                                }
                                 EntityWrapper<TorrentInfo> dbTorrent = new EntityWrapper<TorrentInfo>();
                                 TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
                                 TorrentInfo foundTorrentInfo;
