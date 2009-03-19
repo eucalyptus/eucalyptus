@@ -47,13 +47,14 @@ public class DeleteSnapshotTest extends TestCase {
     public void testDeleteSnapshot() throws Throwable {
 
         String snapshotBucket = "snapset";
-        String snapshotId = "snap-95HwDtbhhKRqhg..";
+        String snapshotId = "snap-C7fyA7Tuj9ecmg..";
 
         DeleteStorageSnapshotType deleteSnapshot = new DeleteStorageSnapshotType();
         deleteSnapshot.setUserId("admin");
         deleteSnapshot.setSnapshotId(snapshotId);
         DeleteStorageSnapshotResponseType deleteSnapshotResponse = storage.DeleteStorageSnapshot(deleteSnapshot);
         System.out.println(deleteSnapshotResponse);
+        while(true);
     }
 
     public void testWalrusDeleteSnapshot() throws Throwable {
@@ -64,5 +65,6 @@ public class DeleteSnapshotTest extends TestCase {
 
     public void setUp() {
         storage = new Storage();
+        Storage.initializeForEBS();
     }    
 }

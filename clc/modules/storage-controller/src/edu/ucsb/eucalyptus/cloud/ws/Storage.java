@@ -551,7 +551,7 @@ public class Storage {
             LOG.error("Storage has been disabled. Please check your setup");
             return reply;
         }
-
+       
         String snapshotId = request.getSnapshotId();
         String userId = request.getUserId();
         String volumeId = request.getVolumeId();
@@ -824,17 +824,22 @@ public class Storage {
         public void run() {
             try {
                 EntityWrapper<SnapshotInfo>dbS = new EntityWrapper<SnapshotInfo>();
+                EntityWrapper<VolumeInfo> dbVol = dbS.recast(VolumeInfo.class);
+                VolumeInfo vInfo = new VolumeInfo(volumeId);
+                VolumeInfo originalVolInfo = dbVol.getUnique(vInfo);
+
                 SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
                 SnapshotInfo foundSnapInfo = dbS.getUnique(snapInfo);
                 String dupedVolumeId;
-                if(foundSnapInfo.getDupedVolumeId() == null) {
+                if(originalVolInfo.getDupedVolumeId() == null) {
                     //dup it so parent vol can be treated independently
                     dupedVolumeId = volumeId + "-" + Hashes.getRandom(6);
+                    originalVolInfo.setDupedVolumeId(dupedVolumeId);
                     foundSnapInfo.setDupedVolumeId(dupedVolumeId);
                     blockManager.dupVolume(volumeId, dupedVolumeId);
                     volumeId = dupedVolumeId;
                 } else {
-                    volumeId = foundSnapInfo.getDupedVolumeId();
+                    volumeId = originalVolInfo.getDupedVolumeId();
                 }
                 dbS.commit();
                 blockManager.createSnapshot(volumeId, snapshotId);
