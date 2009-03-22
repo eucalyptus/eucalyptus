@@ -46,8 +46,7 @@ public class TorrentCreator {
     private String trackerUrl;
     private String objectKey;
     private String objectName;
-    private static final String TORRENT_REWRITER = "/usr/share/eucalyptus/rename_torrent";
-    private String torrentRewriterPath;
+    private final String NAME_TAG = "name";
 
     public TorrentCreator(String filePath, String objectKey, String objectName, String torrentFilePath, String trackerUrl) {
         this.filePath = filePath;
@@ -55,8 +54,6 @@ public class TorrentCreator {
         this.trackerUrl = trackerUrl;
         this.objectKey = objectKey;
         this.objectName = objectName;
-        String eucaHome = System.getProperty("euca.home");
-        torrentRewriterPath = eucaHome + TORRENT_REWRITER;
     }
 
     private void makeTorrent() {
@@ -81,31 +78,36 @@ public class TorrentCreator {
         }
     }
 
-    private void renameTorrent() throws Exception {
-        try {
-            Runtime rt = Runtime.getRuntime();
-            Process proc = rt.exec(new String[]{torrentRewriterPath, String.valueOf(objectName.length()) + ":" + objectName,
-                    String.valueOf(objectKey.length()) + ":" + objectKey, torrentFilePath});
-            StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-            StreamConsumer output = new StreamConsumer(proc.getInputStream());
-            error.start();
-            output.start();
-            int pid = proc.waitFor();
-            output.join();
-            String errValue = error.getReturnValue();
-            String outValue = output.getReturnValue();
-            if(errValue.length() > 0)
-                LOG.warn(errValue);
-            if(outValue.length() > 0)
-                LOG.warn(outValue);
-        } catch (Throwable t) {
-            LOG.error(t);
-        }
+    private void changeName() throws Exception {
+        File inFile = new File(torrentFilePath);
+        File outFile = new File(torrentFilePath + Hashes.getRandom(6));
+        BufferedInputStream inStream = new BufferedInputStream(new FileInputStream(inFile));
+        BufferedOutputStream outStream = new BufferedOutputStream(new FileOutputStream(outFile));
 
+        int bytesRead;
+        int totalBytesRead = 0;
+        byte[] bytes = new byte[1024];
+        String inString = "";
+
+        while((bytesRead = inStream.read(bytes)) > 0) {
+            inString += new String(bytes, 0, bytesRead);
+            totalBytesRead += bytesRead;
+        }
+        inStream.close();
+        int len = inString.length();
+        int idx = inString.indexOf(NAME_TAG);
+        int lastidx = inString.indexOf(objectName) + objectName.length();
+
+        outStream.write(bytes, 0, idx + NAME_TAG.length());
+        outStream.write(new String(objectKey.length() + ":" + objectKey).getBytes());
+        outStream.write(bytes, lastidx, totalBytesRead - lastidx);
+
+        outStream.close();
+        outFile.renameTo(inFile);
     }
 
     public void create() throws Exception {
         makeTorrent();
-        renameTorrent();
+        changeName();
     }
 }
