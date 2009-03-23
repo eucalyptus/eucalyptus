@@ -344,6 +344,25 @@
 	  </xs:extension>
 	</xs:complexContent>
       </xs:complexType>
+
+      <xs:complexType name="describeNetworksType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="describeNetworksResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="networks" type="tns:networkType"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
       
       <xs:complexType name="networkRule">
 	<xs:sequence>
@@ -356,6 +375,15 @@
 	  <xs:element name="protocol" type="xs:string"/>
 	  <xs:element name="portRangeMin" type="xs:int"/>
 	  <xs:element name="portRangeMax" type="xs:int"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="networkType">
+	<xs:sequence>
+	  <xs:element name="name" type="xs:string"/>
+	  <xs:element name="user" type="xs:string"/>
+	  <xs:element name="vlan" type="xs:int"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="rules" type="tns:networkRule"/>
 	</xs:sequence>
       </xs:complexType>
       
@@ -426,6 +454,9 @@
       <xs:element name="ConfigureNetwork" nillable="true" type="tns:configureNetworkType"/>
       <xs:element name="ConfigureNetworkResponse" nillable="true" type="tns:configureNetworkResponseType"/>
 
+      <xs:element name="DescribeNetworks" nillable="true" type="tns:describeNetworksType"/>
+      <xs:element name="DescribeNetworksResponse" nillable="true" type="tns:describeNetworksResponseType"/>
+
       <xs:element name="AssignAddress" nillable="true" type="tns:assignAddressType"/>
       <xs:element name="AssignAddressResponse" nillable="true" type="tns:assignAddressResponseType"/>
 
@@ -487,6 +518,11 @@
 
   <wsdl:message name="ConfigureNetworkResponse">
     <wsdl:part element="tns:ConfigureNetworkResponse" name="ConfigureNetworkResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeNetworksResponse">
+    <wsdl:part element="tns:DescribeNetworksResponse" name="DescribeNetworksResponse">
     </wsdl:part>
   </wsdl:message>
 
@@ -564,6 +600,11 @@
 
   <wsdl:message name="ConfigureNetwork">
     <wsdl:part element="tns:ConfigureNetwork" name="ConfigureNetwork">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeNetworks">
+    <wsdl:part element="tns:DescribeNetworks" name="DescribeNetworks">
     </wsdl:part>
   </wsdl:message>
 
@@ -657,6 +698,13 @@
       <wsdl:input message="tns:ConfigureNetwork" name="ConfigureNetwork">
       </wsdl:input>
       <wsdl:output message="tns:ConfigureNetworkResponse" name="ConfigureNetworkResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeNetworks">
+      <wsdl:input message="tns:DescribeNetworks" name="DescribeNetworks">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribeNetworksResponse" name="DescribeNetworksResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -788,6 +836,16 @@
         <soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="ConfigureNetworkResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeNetworks">
+      <soap:operation soapAction="EucalyptusCC#DescribeNetworks" style="document"/>
+      <wsdl:input name="DescribeNetworks">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribeNetworksResponse">
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>

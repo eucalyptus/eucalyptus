@@ -323,6 +323,19 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   return(ret);
 }
 
+int doDescribeNetworks(ncMetadata *ccMeta) {
+  int rc, ret;
+  
+  ret = 0;
+  rc = init_config();
+  if (rc) {
+    return(1);
+  }
+  logprintfl(EUCADEBUG,"DescribeNetworks(): called\n");
+  logprintfl(EUCADEBUG,"DescribeNetworks(): done\n");  
+  return(ret);
+}
+
 int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *outAddressesLen) {
   int i, rc, count;
   

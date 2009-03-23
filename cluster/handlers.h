@@ -91,6 +91,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan);
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev);
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
 
+int doDescribeNetworks(ncMetadata *ccMeta);
 int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst);
 int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst);
 int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *outAddressesLen);

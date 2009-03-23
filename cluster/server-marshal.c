@@ -212,6 +212,62 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
   return(ret);
 }
 
+adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *describeNetworks, const axutil_env_t *env) {
+  adb_describeNetworksType_t *dpa=NULL;
+
+  adb_DescribeNetworksResponse_t *ret=NULL;
+  adb_describeNetworksResponseType_t *dpart=NULL;
+
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+
+  int rc;
+  ncMetadata ccMeta;
+  //  char **outAddresses=NULL;
+
+  dpa = adb_DescribeNetworks_get_DescribeNetworks(describeNetworks, env);
+
+  ccMeta.correlationId = adb_describeNetworksType_get_correlationId(dpa, env);
+  ccMeta.userId = adb_describeNetworksType_get_userId(dpa, env);
+
+  if (!DONOTHING) {
+    //rc = doDescribeNetworks(&ccMeta, &outAddresses, &outAddressesLen);
+    rc = 0;
+  }
+  
+  if (rc) {
+    logprintf("ERROR: doDescribeNetworks() returned FAIL\n");
+    status = AXIS2_FALSE;
+    //    outAddressesLen = 0;
+  } else {
+    status = AXIS2_TRUE;
+  }
+  
+  dpart = adb_describeNetworksResponseType_create(env);
+  /*
+  for (i=0; i<outAddressesLen; i++) {
+    if (outAddresses[i].ip) {
+      adb_describeNetworksResponseType_add_sourceAddresses(dpart, env, hex2dot(outAddresses[i].ip));
+      if (outAddresses[i].dstip) {
+	adb_describeNetworksResponseType_add_destAddresses(dpart, env, hex2dot(outAddresses[i].dstip));
+      } else {
+	adb_describeNetworksResponseType_add_destAddresses(dpart, env, "");
+      }
+    }
+  }
+  */  
+  adb_describeNetworksResponseType_set_correlationId(dpart, env, ccMeta.correlationId);
+  adb_describeNetworksResponseType_set_userId(dpart, env, ccMeta.userId);
+  adb_describeNetworksResponseType_set_return(dpart, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_describeNetworksResponseType_set_statusMessage(dpart, env, statusMessage);
+  }
+
+  ret = adb_DescribeNetworksResponse_create(env);
+  adb_DescribeNetworksResponse_set_DescribeNetworksResponse(ret, env, dpart);
+  return(ret);
+}
+
 adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t *assignAddress, const axutil_env_t *env) {
   adb_AssignAddressResponse_t *ret=NULL;
   adb_assignAddressResponseType_t *aart=NULL;
