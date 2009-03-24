@@ -95,7 +95,6 @@ public class Storage {
         if(walrusAddr == null) {
             LOG.warn("Walrus host addr not set");
         }
-        //TODO: this should be created by a factory
         blockManager = new LVM2Manager();
         blockManager.initVolumeManager();
         try {
@@ -105,13 +104,15 @@ public class Storage {
             sharedMode = Bukkit.getSharedMode();
             if(!sharedMode)
                 checkWalrusConnection();
-            //TODO: inform CLC
-            //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
         } catch(Exception ex) {
             enableStorage = false;
             LOG.error(ex.getMessage());
             LOG.warn("Could not initialize block manager. Storage has been disabled.");
 	    LOG.error("Could not initialize block manager. Storage has been disabled.");
+	    if(System.getProperty("euca.ebs.disable") == null) {
+		LOG.error("EBS is enabled but preconditions failed. Please resolve preconditions or restart with euca.ebs.disable");
+		System.exit(0xEC2);
+	    }
         }
     }
 
