@@ -40,6 +40,7 @@ import java.util.Map;
 public class HttpRequest {
 
   private String hostAddr;
+  private String hostName;
 
 
   private String service;
@@ -147,5 +148,13 @@ public class HttpRequest {
 
   public void setBindingArguments( Map bindingArguments ) {
     this.bindingArguments = bindingArguments;
+  }
+
+  public String getHostName() {
+    return hostName;
+  }
+
+  public void setHostName( final String hostName ) {
+    this.hostName = hostName;
   }
 }

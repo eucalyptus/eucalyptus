@@ -68,7 +68,12 @@ public class EucalyptusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
   public UserInfo authenticate( final HttpRequest httpRequest ) throws QuerySecurityException
   {
-    return handle( "http://" + httpRequest.getHostAddr() + httpRequest.getRequestURL(), httpRequest.getHttpMethod(), httpRequest.getParameters(), httpRequest.getHeaders() );
+    try {
+      UserInfo user = handle( "http://" + httpRequest.getHostName() + httpRequest.getRequestURL(), httpRequest.getHttpMethod(), httpRequest.getParameters(), httpRequest.getHeaders() );
+      return user;
+    } catch ( QuerySecurityException e ) {
+      return handle( "http://" + httpRequest.getHostAddr() + httpRequest.getRequestURL(), httpRequest.getHttpMethod(), httpRequest.getParameters(), httpRequest.getHeaders() );
+    }
   }
 
   public UserInfo handle(String urlString, String verb, Map<String, String> parameters, Map<String, String> headers ) throws QuerySecurityException

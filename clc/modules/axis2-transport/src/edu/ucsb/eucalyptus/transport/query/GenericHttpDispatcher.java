@@ -121,6 +121,14 @@ public class GenericHttpDispatcher extends RequestURIBasedDispatcher {
       URL url = new URL( "http://my.flavourite.host.com" + endpoint.getAddress() );
       HttpRequest httpRequest = new HttpRequest();
       httpRequest.setHostAddr( (String) messageContext.getProperty( MessageContext.TRANSPORT_ADDR ) );
+      Map transportHeaders = (Map) messageContext.getProperty( MessageContext.TRANSPORT_HEADERS);
+      if( transportHeaders != null && transportHeaders.get("Host") != null ) {
+        String hostHeader = (String) transportHeaders.get("Host");
+        if( hostHeader.indexOf( ':' ) >= 0 ) {
+          hostHeader = hostHeader.split( ":" )[0];
+        }
+        httpRequest.setHostName( hostHeader );
+      }
       httpRequest.setRequestURL( messageContext.getTo().getAddress() );
 
       //:: mangle the service path :://
