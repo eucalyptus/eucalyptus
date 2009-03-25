@@ -7,17 +7,21 @@ import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
+import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
 import edu.ucsb.eucalyptus.util.Admin;
-import org.apache.log4j.Logger;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.axis2.AxisFault;
+import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,15 +52,28 @@ class ClusterAllocator extends Thread {
     this.setupVmMessages( vmToken );
   }
 
-  public void setupAddressMessages( ResourceToken token ) {
-    for( String addr : token.getAddresses() ) {
-      String vmId = token.getInstanceIds().get( token.getAddresses().indexOf( addr ) );
-      try {
-        new AddressManager().AssociateAddress( Admin.makeMsg( AssociateAddressType.class, addr, vmId ) );
-      } catch ( AxisFault axisFault ) {
-        LOG.error( axisFault );
+  public void setupAddressMessages( List<String> addresses, List<VmInfo> runningVms ) {
+    if ( EucalyptusProperties.disableNetworking ) {
+      return;
+    } else if ( addresses.size() < runningVms.size() ) {
+      LOG.error( "Number of running VMs is greater than number of assigned addresses!" );
+    } else {
+      for ( VmInfo vm : runningVms ) {
+        String addr = addresses.remove( 0 );
+        try {
+          new AddressManager().AssociateAddress( Admin.makeMsg( AssociateAddressType.class, addr, vm.getInstanceId() ) );
+        } catch ( AxisFault axisFault ) {
+          LOG.error( axisFault );
+        }
       }
     }
+    for( String addr : addresses ) {
+      try {
+        new AddressManager().ReleaseAddress( Admin.makeMsg( ReleaseAddressType.class, addr ) );
+        LOG.warn( "Released unused public address: " + addr );
+      } catch ( EucalyptusCloudException e ) {}
+    }
+
   }
 
   public void setupNetworkMessages( NetworkToken networkToken ) {

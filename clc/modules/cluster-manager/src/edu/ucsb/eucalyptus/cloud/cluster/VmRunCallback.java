@@ -1,5 +1,6 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
@@ -41,7 +42,7 @@ class VmRunCallback extends QueuedEventCallback<VmRunType> {
           vm.getNetworkConfig().setIpAddress( vmInfo.getNetParams().getIpAddress() );
           vm.getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
         }
-        this.parent.setupAddressMessages( this.token );
+        this.parent.setupAddressMessages( Lists.newArrayList( this.token.getAddresses() ), Lists.newArrayList( reply.getVms() ) );
       } else {
         this.parent.getRollback().lazySet( true );
       }

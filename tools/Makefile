@@ -31,6 +31,7 @@ install: deploy
 	@$(INSTALL) -m 755 get_xen_info $(datarootdir)/eucalyptus/get_xen_info
 	@$(INSTALL) -m 755 get_sys_info $(datarootdir)/eucalyptus/get_sys_info
 	@$(INSTALL) -m 755 euca_ipt $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 populate_arp.pl $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_conf $(sbindir)
 	@$(INSTALL) -m 755 euca_sync_key $(sbindir)
 

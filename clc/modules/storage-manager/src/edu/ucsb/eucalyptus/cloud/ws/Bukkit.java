@@ -1361,7 +1361,7 @@ public class Bukkit {
                                 }
                                 if(destinationObjectInfo == null) {
                                     //not found. create a new one
-                                    destinationObjectInfo = new ObjectInfo(userId);
+                                    destinationObjectInfo = new ObjectInfo();
                                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                                     destinationObjectInfo.setObjectKey(destinationKey);
                                     destinationObjectInfo.addGrants(userId, grantInfos, accessControlList);

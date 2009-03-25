@@ -180,7 +180,11 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
     rc = doDescribePublicAddresses(&ccMeta, &outAddresses, &outAddressesLen);
   }
   
-  if (rc) {
+  if (rc == 2) {
+    snprintf(statusMessage, 256, "NOTSUPPORTED");
+    status = AXIS2_FALSE;
+    outAddressesLen = 0;
+  } else if (rc) {
     logprintf("ERROR: doDescribePublicAddresses() returned FAIL\n");
     status = AXIS2_FALSE;
     outAddressesLen = 0;
@@ -206,7 +210,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
   if (status == AXIS2_FALSE) {
     adb_describePublicAddressesResponseType_set_statusMessage(dpart, env, statusMessage);
   }
-
+  
   ret = adb_DescribePublicAddressesResponse_create(env);
   adb_DescribePublicAddressesResponse_set_DescribePublicAddressesResponse(ret, env, dpart);
   return(ret);
