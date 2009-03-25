@@ -18,8 +18,9 @@ close(FH);
 }
 foreach $key (keys(%ips)) {
     if ($key ne "255.255.255.255") {
-	$cmd = "ping -q -c 1 -w 1 $key";
-	system("$cmd >/dev/null &");
+        $p = Net::Ping->new();
+        $p->{"timeout"} = 0.005;
+        $rc = $p->ping("$key");
     }
 }
 exit(0);
