@@ -577,6 +577,15 @@ int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network) {
   return(0);
 }
 
+int vnetDelVlan(vnetConfig *vnetconfig, int vlan) {
+  if (param_check("vnetDelVlan", vnetconfig, vlan)) return(1);
+  
+  vnetconfig->users[vlan].userName[0] = '\0';
+  vnetconfig->users[vlan].netName[0] = '\0';
+
+  return(0);
+}
+
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network) {
   int i, done;
   

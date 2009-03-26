@@ -72,6 +72,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig);
 
 int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network);
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network);
+int vnetDelVlan(vnetConfig *vnetconfig, int vlan);
 
 int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName, char *protocol, int minPort, int maxPort);
 int vnetCreateChain(vnetConfig *vnetconfig, char *userName, char *netName);
