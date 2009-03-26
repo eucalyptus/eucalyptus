@@ -127,6 +127,15 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	  vnetconfig->numaddrs = 0xFFFFFFFF - nm;
 	}
       }
+    } else {
+      if (!strcmp(vnetconfig->mode, "SYSTEM")) {
+	// set up iptables rule to log DHCP replies to syslog
+	snprintf(cmd, 256, "-A FORWARD -p udp -m udp --sport 67:68 --dport 67:68 -j LOG --log-level 0");
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+	if (rc) {
+	  logprintfl(EUCAWARN, "could not add logging rule for DHCP replies, may not see instance IPs as they are assigned by system DHCP server");
+	}
+      }
     }
   }
 }
@@ -1313,6 +1322,16 @@ int discover_mac(vnetConfig *vnetconfig, char *mac, char **ip) {
   if (mac == NULL || ip == NULL) {
     return(1);
   }
+
+  if (!strcmp(vnetconfig->mode, "SYSTEM")) {
+    // try to fill up the arp cache
+    snprintf(cmd, 1023, "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/populate_arp.pl", vnetconfig->eucahome, vnetconfig->eucahome);
+    rc = system(cmd);
+    if (rc) {
+      logprintfl(EUCAWARN, "could not execute arp cache populator script, check httpd log for errors\n");
+    }
+  }
+
 
   FH=fopen("/proc/net/arp", "r");
   if (!FH) {

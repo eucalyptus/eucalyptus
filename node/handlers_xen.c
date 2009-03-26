@@ -1022,15 +1022,6 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     if ( instance == NULL ) 
         return NOT_FOUND;
 
-    ncVolume * volume;
-    sem_p (inst_sem);
-    volume = add_volume (instance, volumeId, remoteDev, localDevReal);
-    sem_v (inst_sem);
-    if ( volume == NULL ) {
-        logprintfl (EUCAFATAL, "ERROR: Failed to save the volume record, aborting volume attachment\n");
-        return ERROR;
-    }
-
     /* try attaching to the Xen domain */
     if (check_hypervisor_conn () == ERROR) {
         ret = ERROR;
@@ -1061,6 +1052,16 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
             ret = ERROR;
         }
     }
+
+    ncVolume * volume;
+    sem_p (inst_sem);
+    volume = add_volume (instance, volumeId, remoteDev, localDevReal);
+    sem_v (inst_sem);
+    if ( volume == NULL ) {
+        logprintfl (EUCAFATAL, "ERROR: Failed to save the volume record, aborting volume attachment\n");
+        return ERROR;
+    }
+
     return ret;
 }
 
@@ -1075,15 +1076,6 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     sem_v (inst_sem);
     if ( instance == NULL ) 
         return NOT_FOUND;
-
-    ncVolume * volume;
-    sem_p (inst_sem);
-    volume = free_volume (instance, volumeId, remoteDev, localDev);
-    sem_v (inst_sem);
-    if ( volume == NULL ) {
-        logprintfl (EUCAFATAL, "ERROR: Failed to find and remove volume record, aborting volume detachment\n");
-        return ERROR;
-    }
 
     /* try attaching to the Xen domain */
     if (check_hypervisor_conn () == ERROR) {
@@ -1114,6 +1106,16 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
             ret = ERROR;
         }
     }
+
+    ncVolume * volume;
+    sem_p (inst_sem);
+    volume = free_volume (instance, volumeId, remoteDev, localDev);
+    sem_v (inst_sem);
+    if ( volume == NULL ) {
+        logprintfl (EUCAFATAL, "ERROR: Failed to find and remove volume record, aborting volume detachment\n");
+        return ERROR;
+    }
+
     return ret;
 }
 

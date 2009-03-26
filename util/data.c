@@ -259,7 +259,7 @@ int total_instances (bunchOfInstances **headp)
  * OR returns a pointer to the next empty volume slot 
  * OR if full, returns NULL
  */
-static ncVolume * find_volume (ncInstance * instance, char *volumeId) 
+ncVolume * find_volume (ncInstance * instance, char *volumeId) 
 {
     ncVolume * v = instance->volumes;
 
