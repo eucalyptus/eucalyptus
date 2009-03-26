@@ -153,7 +153,7 @@ public class EucalyptusManagement {
 
     public static String getError( String message )
     {
-        return "<html><title>HTTP/1.0 403 NO U. FURBADDEN!!!</title><body><div align=\"center\"><p><h1>403: no u.</h1></p><p><img src=\"img/error-1.jpg\" /></p><p><h3 style=\"font-color: red;\">" + message + "</h3></p></div></body></html>";
+        return "<html><title>HTTP/1.0 403 Forbidden</title><body><div align=\"center\"><p><h1>403: Forbidden</h1></p><p><img src=\"img/error-1.jpg\" /></p><p><h3 style=\"font-color: red;\">" + message + "</h3></p></div></body></html>";
     }
 
     public static String[] getUserCertificateAliases( String userName ) throws SerializableException
@@ -446,7 +446,7 @@ public class EucalyptusManagement {
         try
         {
             SystemConfiguration sysConf = db.getUnique( new SystemConfiguration() );
-			
+
             return new SystemConfigWeb( sysConf.getStorageUrl(), sysConf.getStorageDir(),
                     sysConf.getStorageMaxBucketsPerUser(),
 					sysConf.getStorageMaxBucketSizeInMB(),
@@ -523,8 +523,8 @@ public class EucalyptusManagement {
             db.add( new SystemConfiguration(systemConfig.getStorageUrl(),
                     systemConfig.getDefaultKernelId(),
                     systemConfig.getDefaultRamdiskId(), systemConfig.getStoragePath(),
-                    systemConfig.getStorageMaxBucketsPerUser() , 
-					systemConfig.getStorageMaxBucketSizeInMB(), 
+                    systemConfig.getStorageMaxBucketsPerUser() ,
+					systemConfig.getStorageMaxBucketSizeInMB(),
 					systemConfig.getStorageMaxCacheSizeInMB(),
 					systemConfig.getStorageVolumesTotalInGB(),
 					systemConfig.getStorageSnapshotsTotalInGB(),

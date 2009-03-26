@@ -48,12 +48,12 @@
     <property name="deps.lib" value="cloud-lib"/>
     <property name="deps.deploy" value="cloud-deploy"/>
     <!--================================== build targets ==================================-->
-    <target name="build-crypto" depends="untar">
+    <target name="build-crypto">
         <ant dir="modules/crypto" inheritall="false"/>
     </target>
     <target name="build-workarounds" depends="build-crypto">
         <ant dir="modules/workarounds" inheritall="false"/>
-    </target> 
+    </target>
     <target name="build-msgs" depends="build-workarounds">
         <ant dir="modules/msgs" inheritall="false"/>
     </target>
@@ -152,7 +152,7 @@
         <mkdir dir="${euca.var.dir}/webapps"/>
         <mkdir dir="${euca.var.dir}/modules"/>
         <mkdir dir="${euca.log.dir}"/>
-        <ant dir="modules/workarounds" inheritall="false" target="install"/> 
+        <ant dir="modules/workarounds" inheritall="false" target="install"/>
         <ant dir="modules/crypto" inheritall="false" target="install"/>
         <ant dir="modules/msgs" inheritall="false" target="install"/>
         <ant dir="modules/core" inheritall="false" target="install"/>
@@ -183,7 +183,7 @@
        </condition>
     </target>
     <!--================================== DEPS TARGET ==================================-->
-    <available property="has.deps" filepath="${basedir}/lib/jibx/" file="jibx-run.jar"/>
+    <available property="has.deps" filepath="${basedir}/lib/" file="jibx-run.jar"/>
     <target name="deps" unless="has.deps">
         <mkdir dir="${deps.dir}"/>
         <mkdir dir="${deps.lib.dir}"/>

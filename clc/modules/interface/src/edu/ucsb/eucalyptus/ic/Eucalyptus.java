@@ -34,11 +34,17 @@
 
 package edu.ucsb.eucalyptus.ic;
 
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
+import edu.ucsb.eucalyptus.msgs.RegionInfoType;
 import edu.ucsb.eucalyptus.transport.OverloadedWebserviceMethod;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.Messaging;
 import org.apache.log4j.Logger;
 
@@ -57,10 +63,22 @@ public class Eucalyptus {
       "RebootInstances", "RegisterImage", "ReleaseAddress",
       "ResetImageAttribute", "RevokeSecurityGroupIngress",
       "RunInstances", "TerminateInstances", "AddCluster",
-"CreateVolume", "CreateSnapshot", "DeleteVolume", "DeleteSnapshot", "DescribeVolumes","DescribeSnapshots", "AttachVolume","DetachVolume" } )
-  public EucalyptusMessage handle( EucalyptusMessage msg )
-  {
-    LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() )) ;
+      "CreateVolume", "CreateSnapshot", "DeleteVolume", "DeleteSnapshot",
+      "DescribeVolumes", "DescribeSnapshots", "AttachVolume", "DetachVolume",
+      "DescribeRegions",
+      "BundleInstance","DescribeBundleTasks","CancelBundleTask",
+      "DescribeReservedInstances","DescribeReservedInstancesOfferings","PurchaseReservedInstancesOffering" } )
+  public EucalyptusMessage handle( EucalyptusMessage msg ) {
+    if( msg instanceof DescribeRegionsType ) {
+      DescribeRegionsResponseType reply = (DescribeRegionsResponseType ) msg.getReply();
+      try {
+        SystemConfiguration config = EucalyptusProperties.getSystemConfiguration();
+        reply.getRegionInfo().add(new RegionInfoType( "Eucalyptus", config.getStorageUrl().replaceAll( "Walrus", "Eucalyptus" )));
+        reply.getRegionInfo().add(new RegionInfoType( "Walrus", config.getStorageUrl()));
+      } catch ( EucalyptusCloudException e ) {}
+      return reply;
+    }
+    LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() ) );
     long startTime = System.currentTimeMillis();
     Messaging.dispatch( "vm://RequestQueue", msg );
     EucalyptusMessage reply = null;

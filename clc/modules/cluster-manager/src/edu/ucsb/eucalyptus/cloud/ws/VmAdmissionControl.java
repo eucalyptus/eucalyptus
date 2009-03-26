@@ -9,6 +9,7 @@ import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
@@ -45,7 +46,7 @@ public class VmAdmissionControl {
       for ( ResourceToken token : allocTokeList ) {
         addrCount += token.getAmount();
       }
-      if ( "public".equals( vmAllocInfo.getRequest().getAddressingType() ) || vmAllocInfo.getRequest().getAddressingType() == null ) {
+      if ( !EucalyptusProperties.disableNetworking && ( "public".equals( vmAllocInfo.getRequest().getAddressingType() ) || vmAllocInfo.getRequest().getAddressingType() == null ) ) {
         NavigableSet<String> addresses = AddressManager.allocateAddresses( addrCount );
         for ( ResourceToken token : allocTokeList ) {
           for ( int i = 0; i < token.getAmount(); i++ ) {

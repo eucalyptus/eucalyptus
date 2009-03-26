@@ -94,8 +94,13 @@ public abstract class HMACQuerySecurityHandler implements QuerySecurityHandler {
     String paramString = "";
     Set<String> sortedKeys = new TreeSet<String>( String.CASE_INSENSITIVE_ORDER );
     sortedKeys.addAll( parameters.keySet() );
-    for ( String key : sortedKeys )
-      paramString = paramString.concat( key ).concat( parameters.get( key ).replaceAll( "\\+"," " ));
+    for ( String key : sortedKeys ) {
+      paramString = paramString.concat( key );
+      String val = parameters.get( key );
+      if( val != null ) {
+        paramString = paramString.concat( val.replaceAll( "\\+"," " ) );
+      }
+    }
     return paramString;
   }
   protected String makeV2SubjectString( String httpMethod, String host, String path, final Map<String, String> parameters )
@@ -126,8 +131,13 @@ public abstract class HMACQuerySecurityHandler implements QuerySecurityHandler {
     String paramString = "";
     Set<String> sortedKeys = new TreeSet<String>( String.CASE_INSENSITIVE_ORDER );
     sortedKeys.addAll( parameters.keySet() );
-    for ( String key : sortedKeys )
-      paramString = paramString.concat( key ).concat( parameters.get( key ) );
+    for ( String key : sortedKeys ) {
+      paramString = paramString.concat( key );
+      String val = parameters.get( key );
+      if( val != null ) {
+        paramString = paramString.concat( val );
+      }
+    }
     return paramString;
   }
 

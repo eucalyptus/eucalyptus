@@ -25,7 +25,8 @@ public class AddressUpdateCallback extends QueuedEventCallback<DescribePublicAdd
   public void process( final Client cluster, final DescribePublicAddressesType msg ) throws Exception {
     try {
       DescribePublicAddressesResponseType reply = ( DescribePublicAddressesResponseType ) cluster.send( msg );
-      if ( reply.get_return() )
+      if ( reply.get_return() ) {
+        EucalyptusProperties.disableNetworking = false;
         for ( Pair p : Pair.getPaired( reply.getAddresses(), reply.getMapping() ) )
           try {
             Address blah = Addresses.getInstance().lookup( p.getLeft() );
@@ -33,6 +34,12 @@ public class AddressUpdateCallback extends QueuedEventCallback<DescribePublicAdd
           } catch ( NoSuchElementException ex ) {
             Addresses.getInstance().registerDisabled( new Address( p.getLeft(), this.parent.getName() ) );
           }
+      } else {
+        if( !EucalyptusProperties.disableNetworking ) {
+          LOG.warn( "Response from cluster [" + parent.getName() + "]: " + reply.getStatusMessage() );
+        }
+        EucalyptusProperties.disableNetworking = true;
+      }
     }
     catch ( AxisFault axisFault ) {
       LOG.error( axisFault );

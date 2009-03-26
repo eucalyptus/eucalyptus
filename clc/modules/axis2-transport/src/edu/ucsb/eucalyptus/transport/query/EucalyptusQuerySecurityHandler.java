@@ -68,12 +68,7 @@ public class EucalyptusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
   public UserInfo authenticate( final HttpRequest httpRequest ) throws QuerySecurityException
   {
-    try {
-      UserInfo user = handle( "http://" + httpRequest.getHostName() + httpRequest.getRequestURL(), httpRequest.getHttpMethod(), httpRequest.getParameters(), httpRequest.getHeaders() );
-      return user;
-    } catch ( QuerySecurityException e ) {
-      return handle( "http://" + httpRequest.getHostAddr() + httpRequest.getRequestURL(), httpRequest.getHttpMethod(), httpRequest.getParameters(), httpRequest.getHeaders() );
-    }
+    return handle( "http://" + httpRequest.getHostName() + httpRequest.getRequestURL(), httpRequest.getHttpMethod(), httpRequest.getParameters(), httpRequest.getHeaders() );
   }
 
   public UserInfo handle(String urlString, String verb, Map<String, String> parameters, Map<String, String> headers ) throws QuerySecurityException
@@ -105,6 +100,7 @@ public class EucalyptusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
     String authv2sha1 = checkSignature( queryKey, paramString3 );
     String authv2sha256 = checkSignature256( queryKey, paramString3 );
+
     LOG.info( "VERSION2-SHA256: " + authv2sha256 + " -- " + sig.replaceAll("=","") );
     if ( !authSig.equals( sig ) && !authSig2.equals( sig ) && !authv2sha1.equals( sig.replaceAll("=","") ) && !authv2sha256.equals( sig.replaceAll("=","") ) )
       throw new QuerySecurityException( "User authentication failed." );

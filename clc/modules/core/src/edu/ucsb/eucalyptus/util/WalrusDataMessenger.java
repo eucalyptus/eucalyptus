@@ -42,7 +42,7 @@ import org.apache.log4j.Logger;
 
 public class WalrusDataMessenger {
     private static Logger LOG = Logger.getLogger( WalrusDataMessenger.class );
-    private static final int DATA_QUEUE_SIZE = 100;
+    private static final int DATA_QUEUE_SIZE = 1;
 
     private ConcurrentHashMap<String, ConcurrentHashMap<String,LinkedBlockingQueue<WalrusDataMessage>>> queueMap;
     private ConcurrentHashMap<String, WalrusMonitor> monitorMap;
