@@ -41,6 +41,14 @@
             <artifactId>jetty</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.jboss.netty</groupId>
+            <artifactId>netty</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.jettison</groupId>
+            <artifactId>jettison</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty-gwt</artifactId>
         </dependency>

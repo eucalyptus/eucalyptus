@@ -7,13 +7,13 @@
     <name>Eucalyptus</name>
     <modules>
         <module>modules/msgs</module>
-        <module>modules/axis2-transport</module>
         <module>modules/core</module>
+        <module>modules/axis2-transport</module>
+        <module>modules/key-manager</module>
         <module>modules/interface</module>
         <module>modules/cluster-manager</module>
         <module>modules/www</module>
         <module>modules/group-manager</module>
-        <module>modules/key-manager</module>
         <module>modules/image-manager</module>
         <module>modules/storage-manager</module>
         <module>modules/storage-controller</module>
@@ -64,13 +64,23 @@
             </snapshots>
         </repository>
         <repository>
-            <id>jboss-snapshot</id>
-            <url>http://snapshots.jboss.org/maven2</url>
+            <id>seasar</id>
+            <url>http://maven.seasar.org/maven2/</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
             <snapshots>
                 <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>jboss-snapshot</id>
+            <url>http://snapshots.jboss.org/maven2</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
             </snapshots>
         </repository>
         <repository>
@@ -130,10 +140,12 @@
 
 
     <properties>
-        <euca.version>1.5rc1</euca.version>
+        <euca.version>1.6</euca.version>
+        <netty.version>3.1.0.BETA1</netty.version>
         <jibx.version>1.1.6a</jibx.version>
         <groovy.version>1.5.7</groovy.version>
         <hsqldb.version>1.8.0.7</hsqldb.version>
+        <jettison.version>1.0-RC2</jettison.version>
         <hibernate.core.version>3.3.1.GA</hibernate.core.version>
         <hibernate.em.version>3.4.0.GA</hibernate.em.version>
         <hibernate.annotations.version>3.4.0.GA</hibernate.annotations.version>
@@ -148,7 +160,7 @@
         <axis2.module.version>1.41</axis2.module.version>
         <rampart.version>1.4</rampart.version>
         <wss4j.version>1.5.4</wss4j.version>
-        <drools.version>4.0.7</drools.version>
+        <drools.version>5.0.0.SNAPSHOT</drools.version>
         <ant.version>1.7.1</ant.version>
         <httpcore.version>4.0-beta3</httpcore.version>
         <gwt.version>1.5.3</gwt.version>
@@ -171,9 +183,9 @@
         <dependencies>
             <!--msgs -->
             <dependency>
-              <groupId>org.eclipse.jdt</groupId>
-              <artifactId>core</artifactId>
-              <version>3.3.0-v_771</version>
+                <groupId>org.jboss.netty</groupId>
+                <artifactId>netty</artifactId>
+                <version>${netty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.jibx</groupId>
@@ -212,6 +224,11 @@
                         <artifactId>jta</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.jettison</groupId>
+                <artifactId>jettison</artifactId>
+                <version>${jettison.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.hibernate</groupId>
@@ -653,7 +670,7 @@
                     <target>1.5</target>
                 </configuration>
             </plugin>
-            <plugin>
+<!--            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
                 <version>1.0-alpha-4</version>
@@ -688,7 +705,7 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin> -->
         </plugins>
         <pluginManagement>
             <plugins>

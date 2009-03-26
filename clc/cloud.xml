@@ -89,6 +89,22 @@
             <jvmarg value="-Xdebug"/>
             <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"/>
             <jvmarg value="-server"/>
+            <jvmarg value="-Xbootclasspath/p:${euca.lib.dir}/eucalyptus-crypto.jar:${euca.lib.dir}/eucalyptus-workarounds.jar"/>
+            <jvmarg value="-Xmx${jvm.heap}"/>
+            <jvmarg value="-Xms${jvm.heap}"/>
+            <jvmarg value="-XX:+UseConcMarkSweepGC"/>
+            <jvmarg value="-Djava.security.policy=${security.policy}"/>
+            <jvmarg value="-Djava.library.path=${libpath}"/>
+            <syspropertyset refid="euca-props"/>
+            <classpath refid="runtimeclasspath"/>
+        </java>
+    </target>
+    <target name="test" depends="install" description="--> debug Eucalyptus (for debugging)." if="localenv.EUCALYPTUS">
+        <java classname="${D}" fork="true" failonerror="true" dir="${euca.home}">
+            <jvmarg value="-Xdebug"/>
+            <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=${suspend},address=5005"/>
+            <jvmarg value="-server"/>
+            <jvmarg value="-Xbootclasspath/p:${euca.lib.dir}/eucalyptus-crypto.jar:${euca.lib.dir}/eucalyptus-workarounds.jar"/>
             <jvmarg value="-Xmx${jvm.heap}"/>
             <jvmarg value="-Xms${jvm.heap}"/>
             <jvmarg value="-XX:+UseConcMarkSweepGC"/>
