@@ -42,6 +42,11 @@ public class Tracker extends Thread {
     private static Logger LOG = Logger.getLogger( Tracker.class );
 
     private Process proc;
+
+    public boolean exists() {
+        return (new File(WalrusProperties.TRACKER_BINARY)).exists();     
+    }
+
     public void run() {
         track();
     }

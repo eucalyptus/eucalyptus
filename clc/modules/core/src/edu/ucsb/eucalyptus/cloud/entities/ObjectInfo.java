@@ -61,6 +61,9 @@ public class ObjectInfo {
     @Column( name = "object_key" )
     private String objectKey;
 
+    @Column( name = "bucket_name" )
+    private String bucketName;
+
     @Column( name = "object_name" )
     private String objectName;
 
@@ -112,8 +115,9 @@ public class ObjectInfo {
     public ObjectInfo() {
     }
 
-    public ObjectInfo(String ownerId) {
-        this.ownerId = ownerId;
+    public ObjectInfo(String bucketName, String objectKey) {
+        this.bucketName = bucketName;
+        this.objectKey = objectKey;
     }
 
     public String getObjectKey() {
@@ -122,6 +126,14 @@ public class ObjectInfo {
 
     public void setObjectKey(String objectKey) {
         this.objectKey = objectKey;
+    }
+
+    public String getBucketName() {
+        return bucketName;
+    }
+
+    public void setBucketName(String bucketName) {
+        this.bucketName = bucketName;
     }
 
     public String getObjectName() {

@@ -36,6 +36,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Collection;
 
 public class Torrents {
     private static Logger LOG = Logger.getLogger( Torrents.class );
@@ -52,5 +53,9 @@ public class Torrents {
 
     public static TorrentClient remove(String key) {
         return (TorrentClient) btClients.remove(key);
+    }
+
+    public static Collection<TorrentClient> getClients() {
+        return btClients.values();
     }
 }

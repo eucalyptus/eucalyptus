@@ -66,16 +66,6 @@ public class BucketInfo {
     @Column( name = "bucket_creation_date" )
     private Date creationDate;
 
-    //Objects
-    @OneToMany( cascade = CascadeType.ALL )
-    @JoinTable(
-            name = "bucket_has_objects",
-            joinColumns = { @JoinColumn( name = "bucket_id" ) },
-            inverseJoinColumns = @JoinColumn( name = "object_id" )
-    )
-    @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-    private List<ObjectInfo> objects = new ArrayList<ObjectInfo>();
-
     @Column(name="global_read")
     private Boolean globalRead;
 
@@ -174,14 +164,6 @@ public class BucketInfo {
 
     public void setGrants(List<GrantInfo> grants) {
         this.grants = grants;
-    }
-
-    public List<ObjectInfo> getObjects() {
-        return objects;
-    }
-
-    public void setObjects(List<ObjectInfo> objects) {
-        this.objects = objects;
     }
 
     public boolean canWrite(String userId) {

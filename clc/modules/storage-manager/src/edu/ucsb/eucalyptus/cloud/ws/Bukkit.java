@@ -63,6 +63,7 @@ import java.security.*;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -78,6 +79,7 @@ public class Bukkit {
     static boolean shouldEnforceUsageLimits = true;
     private static boolean enableSnapshots = false;
 
+    private static boolean enableTorrents = false;
     private static boolean sharedMode = false;
     private static Tracker tracker;
 
@@ -93,7 +95,20 @@ public class Bukkit {
 
     public static void initializeTracker() {
         tracker = new Tracker();
-        tracker.start();
+        if(tracker.exists())  {
+            enableTorrents = true;
+            tracker.start();
+            Runtime.getRuntime().addShutdownHook(new Thread()
+            {
+                public void run() {
+                    tracker.bye();
+                    Collection<TorrentClient>  torrentClients = Torrents.getClients();
+                    for(TorrentClient torrentClient : torrentClients) {
+                        torrentClient.bye();
+                    }
+                }
+            });
+        }
     }
 
     public static void initializeForEBS() {
@@ -197,8 +212,6 @@ public class Bukkit {
             bucket.setGrants(grantInfos);
             bucket.setBucketSize(0L);
 
-            ArrayList<ObjectInfo> objectInfos = new ArrayList<ObjectInfo>();
-            bucket.setObjects(objectInfos);
             //call the storage manager to save the bucket to disk
             try {
                 storageManager.createBucket(bucketName);
@@ -227,7 +240,10 @@ public class Bukkit {
         if(bucketList.size() > 0) {
             BucketInfo bucketFound = bucketList.get(0);
             if (bucketFound.canWrite(userId)) {
-                List<ObjectInfo> objectInfos = bucketFound.getObjects();
+                EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+                ObjectInfo searchObject = new ObjectInfo();
+                searchObject.setBucketName(bucketName);
+                List<ObjectInfo> objectInfos = dbObject.query(searchObject);
                 if(objectInfos.size() == 0) {
                     //asychronously flush any images in this bucket
                     EntityWrapper<ImageCacheInfo> dbIC = db.recast(ImageCacheInfo.class);
@@ -415,7 +431,10 @@ public class Bukkit {
             if (bucket.canWrite(userId)) {
 
                 ObjectInfo foundObject = null;
-                List<ObjectInfo> objectInfos = bucket.getObjects();
+                EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+                ObjectInfo searchObject = new ObjectInfo();
+                searchObject.setBucketName(bucketName);
+                List<ObjectInfo> objectInfos = dbObject.query(searchObject);
                 for (ObjectInfo objectInfo: objectInfos) {
                     if (objectInfo.getObjectKey().equals(objectKey)) {
                         //key (object) exists. check perms
@@ -432,13 +451,14 @@ public class Bukkit {
                 String objectName;
                 if (foundObject == null) {
                     //not found. create an object info
-                    foundObject = new ObjectInfo(objectKey);
+                    foundObject = new ObjectInfo(bucketName, objectKey);
+                    foundObject.setOwnerId(userId);
                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                     foundObject.addGrants(userId, grantInfos, accessControlList);
                     foundObject.setGrants(grantInfos);
                     objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
                     foundObject.setObjectName(objectName);
-                    objectInfos.add(foundObject);
+                    dbObject.add(foundObject);
                 } else {
                     //object already exists. see if we can modify acl
                     if (foundObject.canWriteACP(userId)) {
@@ -447,20 +467,23 @@ public class Bukkit {
                         foundObject.setGrants(grantInfos);
                     }
                     objectName = foundObject.getObjectName();
-                    EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
-                    TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
-                    List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
-                    if(torrentInfos.size() > 0) {
-                        TorrentInfo foundTorrentInfo = torrentInfos.get(0);
-                        TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
-                        if(torrentClient != null) {
-                            torrentClient.bye();
+                    if(enableTorrents) {
+                        EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
+                        TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+                        List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
+                        if(torrentInfos.size() > 0) {
+                            TorrentInfo foundTorrentInfo = torrentInfos.get(0);
+                            TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
+                            if(torrentClient != null) {
+                                torrentClient.bye();
+                            }
+                            dbTorrent.delete(foundTorrentInfo);
                         }
-                        dbTorrent.delete(foundTorrentInfo);
+                    } else {
+                        LOG.warn("Bittorrent support has been disabled. Please check pre-requisites");
                     }
                 }
                 foundObject.setObjectKey(objectKey);
-                foundObject.setOwnerId(userId);
                 foundObject.replaceMetaData(request.getMetaData());
                 //writes are unconditional
                 String randomKey = request.getRandomKey();
@@ -651,8 +674,12 @@ public class Bukkit {
         if(bucketList.size() > 0) {
             BucketInfo bucket = bucketList.get(0);
             if (bucket.canWrite(userId)) {
+                EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+                ObjectInfo searchObjectInfo = new ObjectInfo();
+                searchObjectInfo.setBucketName(bucketName);
+
                 ObjectInfo foundObject = null;
-                List<ObjectInfo> objectInfos = bucket.getObjects();
+                List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
                 for (ObjectInfo objectInfo: objectInfos) {
                     if (objectInfo.getObjectKey().equals(objectKey)) {
                         //key (object) exists. check perms
@@ -669,13 +696,14 @@ public class Bukkit {
                 String objectName;
                 if (foundObject == null) {
                     //not found. create an object info
-                    foundObject = new ObjectInfo(objectKey);
+                    foundObject = new ObjectInfo(bucketName, objectKey);
+                    foundObject.setOwnerId(userId);
                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                     foundObject.addGrants(userId, grantInfos, accessControlList);
                     foundObject.setGrants(grantInfos);
                     objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
                     foundObject.setObjectName(objectName);
-                    objectInfos.add(foundObject);
+                    dbObject.add(foundObject);
                 } else {
                     //object already exists. see if we can modify acl
                     if (foundObject.canWriteACP(userId)) {
@@ -685,7 +713,6 @@ public class Bukkit {
                     objectName = foundObject.getObjectName();
                 }
                 foundObject.setObjectKey(objectKey);
-                foundObject.setOwnerId(userId);
                 try {
                     //writes are unconditional
                     byte[] base64Data = request.getBase64Data().getBytes();
@@ -747,7 +774,10 @@ public class Bukkit {
         if(bucketList.size() > 0) {
             BucketInfo bucket = bucketList.get(0);
             if (bucket.canWrite(userId)) {
-                List<ObjectInfo> objectInfos = bucket.getObjects();
+                EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+                ObjectInfo searchObjectInfo = new ObjectInfo();
+                searchObjectInfo.setBucketName(bucketName);
+                List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
                 for (ObjectInfo objectInfo: objectInfos) {
                     if (objectInfo.getObjectKey().equals(key)) {
                         //key (object) exists.
@@ -756,11 +786,11 @@ public class Bukkit {
                     }
                 }
                 //write object to bucket
-                ObjectInfo objectInfo = new ObjectInfo(key);
+                ObjectInfo objectInfo = new ObjectInfo(bucketName, key);
                 List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                 objectInfo.addGrants(userId, grantInfos, accessControlList);
                 objectInfo.setGrants(grantInfos);
-                objectInfos.add(objectInfo);
+                dbObject.add(objectInfo);
 
                 objectInfo.setObjectKey(key);
                 objectInfo.setOwnerId(userId);
@@ -791,23 +821,22 @@ public class Bukkit {
         if (bucketList.size() > 0) {
             BucketInfo bucketInfo = bucketList.get(0);
             ObjectInfo foundObject = null;
-
-            for (ObjectInfo objectInfo: bucketInfo.getObjects()) {
-                if (objectInfo.getObjectKey().equals(objectKey)) {
-                    foundObject = objectInfo;
-                }
+            EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+            ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+            List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+            if(objectInfos.size() > 0) {
+                foundObject = objectInfos.get(0);
             }
 
             if (foundObject != null) {
                 if (foundObject.canWrite(userId)) {
-                    bucketInfo.getObjects().remove(foundObject);
+                    dbObject.delete(foundObject);
                     String objectName = foundObject.getObjectName();
                     for (GrantInfo grantInfo: foundObject.getGrants()) {
                         db.getEntityManager().remove(grantInfo);
                     }
                     Long size = foundObject.getSize();
                     bucketInfo.setBucketSize(bucketInfo.getBucketSize() - size);
-                    db.getEntityManager().remove(foundObject);
                     try {
                         storageManager.deleteObject(bucketName, objectName);
                     } catch (IOException ex) {
@@ -871,7 +900,10 @@ public class Bukkit {
                 reply.setMarker(marker);
                 if(delimiter != null)
                     reply.setDelimiter(delimiter);
-                List<ObjectInfo> objectInfos = bucket.getObjects();
+                EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+                ObjectInfo searchObjectInfo = new ObjectInfo();
+                searchObjectInfo.setBucketName(bucketName);
+                List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
                 if(objectInfos.size() > 0) {
                     int howManyProcessed = 0;
                     ArrayList<ListEntry> contents = new ArrayList<ListEntry>();
@@ -968,35 +1000,37 @@ public class Bukkit {
         List<BucketInfo> bucketList = db.query(bucketInfo);
 
         AccessControlListType accessControlList = new AccessControlListType();
-
         if (bucketList.size() > 0) {
             //construct access control policy from grant infos
-            BucketInfo bucket = bucketList.get(0);
-            for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if (objectInfo.getObjectKey().equals(objectKey)) {
-                    if(objectInfo.canReadACP(userId)) {
-                        ownerId = objectInfo.getOwnerId();
-                        ArrayList<Grant> grants = new ArrayList<Grant>();
-                        List<GrantInfo> grantInfos = objectInfo.getGrants();
-                        for (GrantInfo grantInfo: grantInfos) {
-                            String uId = grantInfo.getUserId();
-                            UserInfo userInfo = new UserInfo(uId);
-                            EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-                            List<UserInfo> grantUserInfos = db2.query(userInfo);
-                            db2.commit();
-                            if(grantUserInfos.size() > 0) {
-                                objectInfo.readPermissions(grants);
-                                addPermission(grants, grantUserInfos.get(0), grantInfo);
-                            }
+            EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+            ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+            List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+            if(objectInfos.size() > 0) {
+                ObjectInfo objectInfo = objectInfos.get(0);
+                if(objectInfo.canReadACP(userId)) {
+                    ownerId = objectInfo.getOwnerId();
+                    ArrayList<Grant> grants = new ArrayList<Grant>();
+                    List<GrantInfo> grantInfos = objectInfo.getGrants();
+                    for (GrantInfo grantInfo: grantInfos) {
+                        String uId = grantInfo.getUserId();
+                        UserInfo userInfo = new UserInfo(uId);
+                        EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
+                        List<UserInfo> grantUserInfos = db2.query(userInfo);
+                        db2.commit();
+                        if(grantUserInfos.size() > 0) {
+                            objectInfo.readPermissions(grants);
+                            addPermission(grants, grantUserInfos.get(0), grantInfo);
                         }
-                        accessControlList.setGrants(grants);
-                    } else {
-                        db.rollback();
-                        throw new AccessDeniedException(objectKey);
                     }
+                    accessControlList.setGrants(grants);
+                } else {
+                    db.rollback();
+                    throw new AccessDeniedException(objectKey);
                 }
+            } else {
+                db.rollback();
+                throw new NoSuchEntityException(objectKey);
             }
-
         }   else {
             db.rollback();
             throw new NoSuchBucketException(bucketName);
@@ -1066,39 +1100,37 @@ public class Bukkit {
         List<BucketInfo> bucketList = db.query(bucketInfo);
 
         if (bucketList.size() > 0) {
-            BucketInfo bucket = bucketList.get(0);
-            ObjectInfo foundObject = null;
-            for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectKey().equals(objectKey)) {
-                    if (objectInfo.canWriteACP(userId)) {
-                        foundObject = objectInfo;
-                        break;
-                    } else {
-                        db.rollback();
-                        throw new AccessDeniedException(objectKey);
-                    }
+            EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+            ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+            List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+            if(objectInfos.size() > 0)  {
+                ObjectInfo objectInfo = objectInfos.get(0);
+                if (!objectInfo.canWriteACP(userId)) {
+                    db.rollback();
+                    throw new AccessDeniedException(objectKey);
                 }
-            }
-
-            if(foundObject != null) {
                 List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                 AccessControlListType accessControlList = accessControlPolicy.getAccessControlList();
-                foundObject.resetGlobalGrants();
-                foundObject.addGrants(foundObject.getOwnerId(), grantInfos, accessControlList);
-                foundObject.setGrants(grantInfos);
+                objectInfo.resetGlobalGrants();
+                objectInfo.addGrants(objectInfo.getOwnerId(), grantInfos, accessControlList);
+                objectInfo.setGrants(grantInfos);
 
-                if(!foundObject.isGlobalRead()) {
-                    EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
-                    TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
-                    List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
-                    if(torrentInfos.size() > 0) {
-                        TorrentInfo foundTorrentInfo = torrentInfos.get(0);
-                        TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
-                        if(torrentClient != null) {
-                            torrentClient.bye();
+                if(enableTorrents) {
+                    if(!objectInfo.isGlobalRead()) {
+                        EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
+                        TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+                        List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
+                        if(torrentInfos.size() > 0) {
+                            TorrentInfo foundTorrentInfo = torrentInfos.get(0);
+                            TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
+                            if(torrentClient != null) {
+                                torrentClient.bye();
+                            }
+                            dbTorrent.delete(foundTorrentInfo);
                         }
-                        dbTorrent.delete(foundTorrentInfo);
                     }
+                } else {
+                    LOG.warn("Bittorrent support has been disabled. Please check pre-requisites");
                 }
                 reply.setCode("204");
                 reply.setDescription("OK");
@@ -1136,122 +1168,127 @@ public class Bukkit {
         List<BucketInfo> bucketList = db.query(bucketInfo);
 
         if (bucketList.size() > 0) {
-            BucketInfo bucket = bucketList.get(0);
-
-            for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectKey().equals(objectKey)) {
-                    if(objectInfo.canRead(userId)) {
-                        String objectName = objectInfo.getObjectName();
-                        if(getMetaData) {
-                            ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-                            objectInfo.returnMetaData(metaData);
-                            reply.setMetaData(metaData);
-                            reply.setMetaData(metaData);
-                        }
-                        if(getTorrent) {
-                            if(objectInfo.isGlobalRead()) {
-                                EntityWrapper<TorrentInfo> dbTorrent = new EntityWrapper<TorrentInfo>();
-                                TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
-                                TorrentInfo foundTorrentInfo;
-                                String absoluteObjectPath = storageManager.getObjectPath(bucketName, objectName);
-                                try {
-                                    foundTorrentInfo = dbTorrent.getUnique(torrentInfo);
-                                } catch (EucalyptusCloudException ex) {
-                                    String torrentFile = objectName + ".torrent";
-                                    String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
-                                    TorrentCreator torrentCreator = new TorrentCreator(absoluteObjectPath, objectKey, objectName, torrentFilePath, WalrusProperties.TRACKER_URL);
-                                    try {
-                                        torrentCreator.create();
-                                    } catch(Exception e) {
-                                        LOG.error(e);
-                                        throw new EucalyptusCloudException("could not create torrent file " + torrentFile);
-                                    }
-                                    torrentInfo.setTorrentFile(torrentFile);
-                                    dbTorrent.add(torrentInfo);
-                                    foundTorrentInfo = torrentInfo;
-                                }
-                                dbTorrent.commit();
-                                String torrentFile = foundTorrentInfo.getTorrentFile();
-                                String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
-                                TorrentClient torrentClient = new TorrentClient(torrentFilePath, absoluteObjectPath);
-                                Torrents.addClient(bucketName + objectKey, torrentClient);
-                                torrentClient.start();
-                                //send torrent
-                                String key = bucketName + "." + objectKey;
-                                String randomKey = key + "." + Hashes.getRandom(10);
-                                request.setRandomKey(randomKey);
-                                LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
-
-                                File torrent = new File(torrentFilePath);
-                                if(torrent.exists()) {
-                                    long torrentLength = torrent.length();
-                                    Reader reader = new Reader(bucketName, torrentFile, torrentLength, getQueue, false, null);
-                                    reader.start();
-
-                                    //TODO: this should reflect params for the torrent?
-                                    reply.setEtag("");
-                                    reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
-                                    reply.setSize(torrentLength);
-                                    Status status = new Status();
-                                    status.setCode(200);
-                                    status.setDescription("OK");
-                                    reply.setStatus(status);
-                                    db.commit();
-                                    return reply;
-                                } else {
-                                    String errorString = "Could not get torrent file " + torrentFilePath;
-                                    LOG.error(errorString);
-                                    throw new EucalyptusCloudException(errorString);
-                                }
-                            } else {
-                                db.rollback();
-                                throw new AccessDeniedException(objectKey);
-                            }
-                        }
-                        if(request.getGetData()) {
-                            if(request.getInlineData()) {
-                                try {
-                                    byte[] bytes = new byte[WalrusQueryDispatcher.DATA_MESSAGE_SIZE];
-                                    int bytesRead = 0;
-                                    String base64Data = "";
-                                    while((bytesRead = storageManager.readObject(bucketName, objectName, bytes, bytesRead)) > 0) {
-                                        base64Data += new String(bytes, 0, bytesRead);
-                                    }
-                                    reply.setBase64Data(base64Data);
-                                } catch (IOException ex) {
-                                    db.rollback();
-                                    LOG.error(ex);
-                                    //set error code
-                                    return reply;
-                                }
-                            } else {
-                                //support for large objects
-                                String key = bucketName + "." + objectKey;
-                                String randomKey = key + "." + Hashes.getRandom(10);
-                                request.setRandomKey(randomKey);
-                                LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
-
-                                Reader reader = new Reader(bucketName, objectName, objectInfo.getSize(), getQueue, deleteAfterGet, null);
-                                reader.start();
-                            }
-                        }
-                        reply.setEtag(objectInfo.getEtag());
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
-                        reply.setSize(objectInfo.getSize());
-                        Status status = new Status();
-                        status.setCode(200);
-                        status.setDescription("OK");
-                        reply.setStatus(status);
-                        db.commit();
-                        return reply;
-                    } else {
-                        db.rollback();
-                        throw new AccessDeniedException(objectKey);
+            EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+            ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+            List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+            if(objectInfos.size() > 0) {
+                ObjectInfo objectInfo = objectInfos.get(0);
+                if(objectInfo.canRead(userId)) {
+                    String objectName = objectInfo.getObjectName();
+                    if(getMetaData) {
+                        ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+                        objectInfo.returnMetaData(metaData);
+                        reply.setMetaData(metaData);
+                        reply.setMetaData(metaData);
                     }
+                    if(getTorrent) {
+                        if(objectInfo.isGlobalRead()) {
+                            if(!enableTorrents) {
+                                LOG.warn("Bittorrent support has been disabled. Please check pre-requisites");
+                                throw new EucalyptusCloudException("Torrents disabled");
+                            }
+                            EntityWrapper<TorrentInfo> dbTorrent = new EntityWrapper<TorrentInfo>();
+                            TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+                            TorrentInfo foundTorrentInfo;
+                            String absoluteObjectPath = storageManager.getObjectPath(bucketName, objectName);
+                            try {
+                                foundTorrentInfo = dbTorrent.getUnique(torrentInfo);
+                            } catch (EucalyptusCloudException ex) {
+                                String torrentFile = objectName + ".torrent";
+                                String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
+                                TorrentCreator torrentCreator = new TorrentCreator(absoluteObjectPath, objectKey, objectName, torrentFilePath, WalrusProperties.TRACKER_URL);
+                                try {
+                                    torrentCreator.create();
+                                } catch(Exception e) {
+                                    LOG.error(e);
+                                    throw new EucalyptusCloudException("could not create torrent file " + torrentFile);
+                                }
+                                torrentInfo.setTorrentFile(torrentFile);
+                                dbTorrent.add(torrentInfo);
+                                foundTorrentInfo = torrentInfo;
+                            }
+                            dbTorrent.commit();
+                            String torrentFile = foundTorrentInfo.getTorrentFile();
+                            String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
+                            TorrentClient torrentClient = new TorrentClient(torrentFilePath, absoluteObjectPath);
+                            Torrents.addClient(bucketName + objectKey, torrentClient);
+                            torrentClient.start();
+                            //send torrent
+                            String key = bucketName + "." + objectKey;
+                            String randomKey = key + "." + Hashes.getRandom(10);
+                            request.setRandomKey(randomKey);
+                            LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
+
+                            File torrent = new File(torrentFilePath);
+                            if(torrent.exists()) {
+                                long torrentLength = torrent.length();
+                                Reader reader = new Reader(bucketName, torrentFile, torrentLength, getQueue, false, null);
+                                reader.start();
+
+                                //TODO: this should reflect params for the torrent?
+                                reply.setEtag("");
+                                reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                                reply.setSize(torrentLength);
+                                Status status = new Status();
+                                status.setCode(200);
+                                status.setDescription("OK");
+                                reply.setStatus(status);
+                                db.commit();
+                                return reply;
+                            } else {
+                                String errorString = "Could not get torrent file " + torrentFilePath;
+                                LOG.error(errorString);
+                                throw new EucalyptusCloudException(errorString);
+                            }
+                        } else {
+                            db.rollback();
+                            throw new AccessDeniedException(objectKey);
+                        }
+                    }
+                    if(request.getGetData()) {
+                        if(request.getInlineData()) {
+                            try {
+                                byte[] bytes = new byte[WalrusQueryDispatcher.DATA_MESSAGE_SIZE];
+                                int bytesRead = 0;
+                                String base64Data = "";
+                                while((bytesRead = storageManager.readObject(bucketName, objectName, bytes, bytesRead)) > 0) {
+                                    base64Data += new String(bytes, 0, bytesRead);
+                                }
+                                reply.setBase64Data(base64Data);
+                            } catch (IOException ex) {
+                                db.rollback();
+                                LOG.error(ex);
+                                //set error code
+                                return reply;
+                            }
+                        } else {
+                            //support for large objects
+                            String key = bucketName + "." + objectKey;
+                            String randomKey = key + "." + Hashes.getRandom(10);
+                            request.setRandomKey(randomKey);
+                            LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
+
+                            Reader reader = new Reader(bucketName, objectName, objectInfo.getSize(), getQueue, deleteAfterGet, null);
+                            reader.start();
+                        }
+                    }
+                    reply.setEtag(objectInfo.getEtag());
+                    reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                    reply.setSize(objectInfo.getSize());
+                    Status status = new Status();
+                    status.setCode(200);
+                    status.setDescription("OK");
+                    reply.setStatus(status);
+                    db.commit();
+                    return reply;
+                } else {
+                    db.rollback();
+                    throw new AccessDeniedException(objectKey);
                 }
+            } else {
+                db.rollback();
+                throw new NoSuchEntityException(objectKey);
             }
-            db.rollback();
-            throw new NoSuchEntityException(objectKey);
         } else {
             db.rollback();
             throw new NoSuchBucketException(bucketName);
@@ -1285,72 +1322,79 @@ public class Bukkit {
 
 
         if (bucketList.size() > 0) {
-            BucketInfo bucket = bucketList.get(0);
+            EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+            ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+            List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+            if(objectInfos.size() > 0) {
+                ObjectInfo objectInfo = objectInfos.get(0);
 
-            for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectKey().equals(objectKey)) {
-                    if(objectInfo.canRead(userId)) {
-                        String etag = objectInfo.getEtag();
-                        String objectName = objectInfo.getObjectName();
-                        if(ifMatch != null) {
-                            if(!ifMatch.equals(etag) && !returnCompleteObjectOnFailure) {
-                                db.rollback();
-                                throw new PreconditionFailedException(etag);
-                            }
+                if(objectInfo.canRead(userId)) {
+                    String etag = objectInfo.getEtag();
+                    String objectName = objectInfo.getObjectName();
+                    if(ifMatch != null) {
+                        if(!ifMatch.equals(etag) && !returnCompleteObjectOnFailure) {
+                            db.rollback();
+                            throw new PreconditionFailedException(etag);
+                        }
 
-                        }
-                        if(ifNoneMatch != null) {
-                            if(ifNoneMatch.equals(etag) && !returnCompleteObjectOnFailure) {
-                                db.rollback();
-                                throw new NotModifiedException(etag);
-                            }
-                        }
-                        Date lastModified = objectInfo.getLastModified();
-                        if(ifModifiedSince != null) {
-                            if((ifModifiedSince.getTime() >= lastModified.getTime()) && !returnCompleteObjectOnFailure) {
-                                db.rollback();
-                                throw new NotModifiedException(lastModified.toString());
-                            }
-                        }
-                        if(ifUnmodifiedSince != null) {
-                            if((ifUnmodifiedSince.getTime() < lastModified.getTime()) && !returnCompleteObjectOnFailure) {
-                                db.rollback();
-                                throw new PreconditionFailedException(lastModified.toString());
-                            }
-                        }
-                        if(request.getGetMetaData()) {
-                            ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-                            objectInfo.returnMetaData(metaData);
-                            reply.setMetaData(metaData);
-                        }
-                        if(request.getGetData()) {
-                            String key = bucketName + "." + objectKey;
-                            String randomKey = key + "." + Hashes.getRandom(10);
-                            request.setRandomKey(randomKey);
-                            LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
-
-                            Reader reader = new Reader(bucketName, objectName, objectInfo.getSize(), getQueue, byteRangeStart, byteRangeEnd);
-                            reader.start();
-                        }
-                        reply.setEtag(objectInfo.getEtag());
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
-                        if(byteRangeEnd > -1) {
-                            if(byteRangeEnd <= objectInfo.getSize() && ((byteRangeEnd - byteRangeStart) > 0))
-                                reply.setSize(byteRangeEnd - byteRangeStart);
-                            else
-                                reply.setSize(0L);
-                        } else {
-                            reply.setSize(objectInfo.getSize());
-                        }
-                        status.setCode(200);
-                        status.setDescription("OK");
-                        reply.setStatus(status);
-                    } else {
-                        db.rollback();
-                        throw new AccessDeniedException(objectKey);
                     }
+                    if(ifNoneMatch != null) {
+                        if(ifNoneMatch.equals(etag) && !returnCompleteObjectOnFailure) {
+                            db.rollback();
+                            throw new NotModifiedException(etag);
+                        }
+                    }
+                    Date lastModified = objectInfo.getLastModified();
+                    if(ifModifiedSince != null) {
+                        if((ifModifiedSince.getTime() >= lastModified.getTime()) && !returnCompleteObjectOnFailure) {
+                            db.rollback();
+                            throw new NotModifiedException(lastModified.toString());
+                        }
+                    }
+                    if(ifUnmodifiedSince != null) {
+                        if((ifUnmodifiedSince.getTime() < lastModified.getTime()) && !returnCompleteObjectOnFailure) {
+                            db.rollback();
+                            throw new PreconditionFailedException(lastModified.toString());
+                        }
+                    }
+                    if(request.getGetMetaData()) {
+                        ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+                        objectInfo.returnMetaData(metaData);
+                        reply.setMetaData(metaData);
+                    }
+                    if(request.getGetData()) {
+                        String key = bucketName + "." + objectKey;
+                        String randomKey = key + "." + Hashes.getRandom(10);
+                        request.setRandomKey(randomKey);
+                        LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
+
+                        Reader reader = new Reader(bucketName, objectName, objectInfo.getSize(), getQueue, byteRangeStart, byteRangeEnd);
+                        reader.start();
+                    }
+                    reply.setEtag(objectInfo.getEtag());
+                    reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                    if(byteRangeEnd > -1) {
+                        if(byteRangeEnd <= objectInfo.getSize() && ((byteRangeEnd - byteRangeStart) > 0))
+                            reply.setSize(byteRangeEnd - byteRangeStart);
+                        else
+                            reply.setSize(0L);
+                    } else {
+                        reply.setSize(objectInfo.getSize());
+                    }
+                    status.setCode(200);
+                    status.setDescription("OK");
+                    reply.setStatus(status);
+                } else {
+                    db.rollback();
+                    throw new AccessDeniedException(objectKey);
                 }
+            } else {
+                db.rollback();
+                throw new NoSuchEntityException(objectKey);
             }
+        } else {
+            db.rollback();
+            throw new NoSuchBucketException(bucketName);
         }
         db.commit();
         return reply;
@@ -1407,121 +1451,121 @@ public class Bukkit {
         List<BucketInfo> bucketList = db.query(bucketInfo);
 
         if (bucketList.size() > 0) {
-            BucketInfo bucket = bucketList.get(0);
-
-            for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectKey().equals(sourceKey)) {
-                    ObjectInfo sourceObjectInfo = objectInfo;
-                    if(sourceObjectInfo.canRead(userId)) {
-                        if(copyIfMatch != null) {
-                            if(!copyIfMatch.equals(sourceObjectInfo.getEtag())) {
-                                db.rollback();
-                                throw new PreconditionFailedException("CopySourceIfMatch " + copyIfMatch);
-                            }
+            EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+            ObjectInfo searchObjectInfo = new ObjectInfo(sourceBucket, sourceKey);
+            List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+            if(objectInfos.size() > 0) {
+                ObjectInfo sourceObjectInfo = objectInfos.get(0);
+                if(sourceObjectInfo.canRead(userId)) {
+                    if(copyIfMatch != null) {
+                        if(!copyIfMatch.equals(sourceObjectInfo.getEtag())) {
+                            db.rollback();
+                            throw new PreconditionFailedException("CopySourceIfMatch " + copyIfMatch);
                         }
-                        if(copyIfNoneMatch != null) {
-                            if(copyIfNoneMatch.equals(sourceObjectInfo.getEtag())) {
-                                db.rollback();
-                                throw new PreconditionFailedException("CopySourceIfNoneMatch " + copyIfNoneMatch);
-                            }
+                    }
+                    if(copyIfNoneMatch != null) {
+                        if(copyIfNoneMatch.equals(sourceObjectInfo.getEtag())) {
+                            db.rollback();
+                            throw new PreconditionFailedException("CopySourceIfNoneMatch " + copyIfNoneMatch);
                         }
-                        if(copyIfUnmodifiedSince != null) {
-                            long unmodifiedTime = copyIfUnmodifiedSince.getTime();
-                            long objectTime = sourceObjectInfo.getLastModified().getTime();
-                            if(unmodifiedTime < objectTime) {
-                                db.rollback();
-                                throw new PreconditionFailedException("CopySourceIfUnmodifiedSince " + copyIfUnmodifiedSince.toString());
-                            }
+                    }
+                    if(copyIfUnmodifiedSince != null) {
+                        long unmodifiedTime = copyIfUnmodifiedSince.getTime();
+                        long objectTime = sourceObjectInfo.getLastModified().getTime();
+                        if(unmodifiedTime < objectTime) {
+                            db.rollback();
+                            throw new PreconditionFailedException("CopySourceIfUnmodifiedSince " + copyIfUnmodifiedSince.toString());
                         }
-                        if(copyIfModifiedSince != null) {
-                            long modifiedTime = copyIfModifiedSince.getTime();
-                            long objectTime = sourceObjectInfo.getLastModified().getTime();
-                            if(modifiedTime > objectTime) {
-                                db.rollback();
-                                throw new PreconditionFailedException("CopySourceIfModifiedSince " + copyIfModifiedSince.toString());
-                            }
+                    }
+                    if(copyIfModifiedSince != null) {
+                        long modifiedTime = copyIfModifiedSince.getTime();
+                        long objectTime = sourceObjectInfo.getLastModified().getTime();
+                        if(modifiedTime > objectTime) {
+                            db.rollback();
+                            throw new PreconditionFailedException("CopySourceIfModifiedSince " + copyIfModifiedSince.toString());
                         }
-                        BucketInfo destinationBucketInfo = new BucketInfo(destinationBucket);
-                        List<BucketInfo> destinationBuckets = db.query(destinationBucketInfo);
-                        if(destinationBuckets.size() > 0) {
-                            BucketInfo foundDestinationBucketInfo = destinationBuckets.get(0);
-                            if(foundDestinationBucketInfo.canWrite(userId)) {
-                                //all ok
-                                ObjectInfo destinationObjectInfo = null;
-                                String destinationObjectName;
-                                for(ObjectInfo objInfo: foundDestinationBucketInfo.getObjects()) {
-                                    if(objInfo.getObjectKey().equals(destinationKey)) {
-                                        destinationObjectInfo = objInfo;
-                                        if(!destinationObjectInfo.canWrite(userId)) {
-                                            db.rollback();
-                                            throw new AccessDeniedException(destinationKey);
-                                        }
-                                        break;
-                                    }
+                    }
+                    BucketInfo destinationBucketInfo = new BucketInfo(destinationBucket);
+                    List<BucketInfo> destinationBuckets = db.query(destinationBucketInfo);
+                    if(destinationBuckets.size() > 0) {
+                        BucketInfo foundDestinationBucketInfo = destinationBuckets.get(0);
+                        if(foundDestinationBucketInfo.canWrite(userId)) {
+                            //all ok
+                            ObjectInfo destinationObjectInfo = null;
+                            String destinationObjectName;
+                            ObjectInfo destSearchObjectInfo = new ObjectInfo(destinationBucket, destinationKey);
+                            List<ObjectInfo> destinationObjectInfos = dbObject.query(destSearchObjectInfo);
+                            if(destinationObjectInfos.size() > 0) {
+                                destinationObjectInfo = destinationObjectInfos.get(0);
+                                if(!destinationObjectInfo.canWrite(userId)) {
+                                    db.rollback();
+                                    throw new AccessDeniedException(destinationKey);
                                 }
-                                if(destinationObjectInfo == null) {
-                                    //not found. create a new one
-                                    destinationObjectInfo = new ObjectInfo(userId);
+                            }
+
+                            if(destinationObjectInfo == null) {
+                                //not found. create a new one
+                                destinationObjectInfo = new ObjectInfo();
+                                List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+                                destinationObjectInfo.setObjectKey(destinationKey);
+                                destinationObjectInfo.addGrants(userId, grantInfos, accessControlList);
+                                destinationObjectInfo.setGrants(grantInfos);
+                                destinationObjectInfo.setObjectName(destinationKey.replaceAll("/", "-") + Hashes.getRandom(4));
+                                dbObject.add(destinationObjectInfo);
+                            } else {
+                                if (destinationObjectInfo.canWriteACP(userId)) {
                                     List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-                                    destinationObjectInfo.setObjectKey(destinationKey);
                                     destinationObjectInfo.addGrants(userId, grantInfos, accessControlList);
                                     destinationObjectInfo.setGrants(grantInfos);
-                                    destinationObjectInfo.setObjectName(destinationKey.replaceAll("/", "-") + Hashes.getRandom(4));
-                                    foundDestinationBucketInfo.getObjects().add(destinationObjectInfo);
-                                } else {
-                                    if (destinationObjectInfo.canWriteACP(userId)) {
-                                        List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-                                        destinationObjectInfo.addGrants(userId, grantInfos, accessControlList);
-                                        destinationObjectInfo.setGrants(grantInfos);
-                                    }
                                 }
-
-                                destinationObjectInfo.setSize(sourceObjectInfo.getSize());
-                                destinationObjectInfo.setStorageClass(sourceObjectInfo.getStorageClass());
-                                destinationObjectInfo.setOwnerId(sourceObjectInfo.getOwnerId());
-                                String etag = sourceObjectInfo.getEtag();
-                                Date lastModified = sourceObjectInfo.getLastModified();
-                                destinationObjectInfo.setEtag(etag);
-                                destinationObjectInfo.setLastModified(lastModified);
-                                if(!metadataDirective.equals("REPLACE")) {
-                                    destinationObjectInfo.setMetaData(sourceObjectInfo.cloneMetaData());
-                                } else {
-                                    List<MetaDataEntry> metaData = request.getMetaData();
-                                    if(metaData != null)
-                                        destinationObjectInfo.replaceMetaData(metaData);
-                                }
-
-                                String sourceObjectName = sourceObjectInfo.getObjectName();
-                                destinationObjectName = destinationObjectInfo.getObjectName();
-
-                                try {
-                                    storageManager.copyObject(sourceBucket, sourceObjectName, destinationBucket, destinationObjectName);
-                                } catch(Exception ex) {
-                                    LOG.error(ex);
-                                    db.rollback();
-                                    throw new EucalyptusCloudException("Could not rename " + sourceObjectName + " to " + destinationObjectName);
-                                }
-                                reply.setEtag(etag);
-                                reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
-
-                                db.commit();
-                                return reply;
-                            } else {
-                                db.rollback();
-                                throw new AccessDeniedException(destinationBucket);
                             }
+
+                            destinationObjectInfo.setSize(sourceObjectInfo.getSize());
+                            destinationObjectInfo.setStorageClass(sourceObjectInfo.getStorageClass());
+                            destinationObjectInfo.setOwnerId(sourceObjectInfo.getOwnerId());
+                            String etag = sourceObjectInfo.getEtag();
+                            Date lastModified = sourceObjectInfo.getLastModified();
+                            destinationObjectInfo.setEtag(etag);
+                            destinationObjectInfo.setLastModified(lastModified);
+                            if(!metadataDirective.equals("REPLACE")) {
+                                destinationObjectInfo.setMetaData(sourceObjectInfo.cloneMetaData());
+                            } else {
+                                List<MetaDataEntry> metaData = request.getMetaData();
+                                if(metaData != null)
+                                    destinationObjectInfo.replaceMetaData(metaData);
+                            }
+
+                            String sourceObjectName = sourceObjectInfo.getObjectName();
+                            destinationObjectName = destinationObjectInfo.getObjectName();
+
+                            try {
+                                storageManager.copyObject(sourceBucket, sourceObjectName, destinationBucket, destinationObjectName);
+                            } catch(Exception ex) {
+                                LOG.error(ex);
+                                db.rollback();
+                                throw new EucalyptusCloudException("Could not rename " + sourceObjectName + " to " + destinationObjectName);
+                            }
+                            reply.setEtag(etag);
+                            reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+
+                            db.commit();
+                            return reply;
                         } else {
                             db.rollback();
-                            throw new NoSuchBucketException(destinationBucket);
+                            throw new AccessDeniedException(destinationBucket);
                         }
                     } else {
                         db.rollback();
-                        throw new AccessDeniedException(sourceKey);
+                        throw new NoSuchBucketException(destinationBucket);
                     }
+                } else {
+                    db.rollback();
+                    throw new AccessDeniedException(sourceKey);
                 }
+            } else {
+                db.rollback();
+                throw new NoSuchEntityException(sourceKey);
             }
-            db.rollback();
-            throw new NoSuchEntityException(sourceKey);
         } else {
             db.rollback();
             throw new NoSuchBucketException(sourceBucket);
@@ -1554,146 +1598,154 @@ public class Bukkit {
 
 
         if (bucketList.size() > 0) {
-            BucketInfo bucket = bucketList.get(0);
-
-            for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectKey().equals(objectKey)) {
-                    if(objectInfo.canRead(userId)) {
-                        String objectName = objectInfo.getObjectName();
-                        File file = new File(storageManager.getObjectPath(bucketName, objectName));
-                        XMLParser parser = new XMLParser(file);
+            EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+            ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+            List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+            if(objectInfos.size() > 0)  {
+                ObjectInfo objectInfo = objectInfos.get(0);
+                if(objectInfo.canRead(userId)) {
+                    String objectName = objectInfo.getObjectName();
+                    File file = new File(storageManager.getObjectPath(bucketName, objectName));
+                    XMLParser parser = new XMLParser(file);
 //Read manifest
-                        String imageKey = parser.getValue("//image/name");
-                        String encryptedKey = parser.getValue("//ec2_encrypted_key");
-                        String encryptedIV = parser.getValue("//ec2_encrypted_iv");
-                        String signature = parser.getValue("//signature");
+                    String imageKey = parser.getValue("//image/name");
+                    String encryptedKey = parser.getValue("//ec2_encrypted_key");
+                    String encryptedIV = parser.getValue("//ec2_encrypted_iv");
+                    String signature = parser.getValue("//signature");
 
-                        AbstractKeyStore userKeyStore = UserKeyStore.getInstance();
+                    AbstractKeyStore userKeyStore = UserKeyStore.getInstance();
 
-                        String image = parser.getXML("image");
-                        String machineConfiguration = parser.getXML("machine_configuration");
+                    String image = parser.getXML("image");
+                    String machineConfiguration = parser.getXML("machine_configuration");
 
-                        String verificationString = machineConfiguration + image;
+                    String verificationString = machineConfiguration + image;
 
-                        Signature sigVerifier;
+                    Signature sigVerifier;
+                    try {
+                        sigVerifier = Signature.getInstance("SHA1withRSA");
+                    } catch (NoSuchAlgorithmException ex) {
+                        LOG.error(ex, ex);
+                        throw new DecryptionFailedException("SHA1withRSA not found");
+                    }
+
+                    EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
+                    UserInfo userInfo = new UserInfo(userId);
+                    List<UserInfo> foundUserInfos = db2.query(userInfo);
+                    if(foundUserInfos.size() == 0) {
+                        db2.rollback();
+                        db.rollback();
+                        throw new AccessDeniedException(userId);
+                    }
+
+                    if(isAdministrator) {
                         try {
-                            sigVerifier = Signature.getInstance("SHA1withRSA");
-                        } catch (NoSuchAlgorithmException ex) {
-                            LOG.error(ex, ex);
-                            throw new DecryptionFailedException("SHA1withRSA not found");
-                        }
-
-                        EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-                        UserInfo userInfo = new UserInfo(userId);
-                        List<UserInfo> foundUserInfos = db2.query(userInfo);
-                        if(foundUserInfos.size() == 0) {
+                            boolean verified = false;
+                            List<String> aliases = userKeyStore.getAliases();
+                            for(String alias : aliases) {
+                                X509Certificate cert = userKeyStore.getCertificate(alias);
+                                verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+                                if(verified)
+                                    break;
+                            }
+                            if(!verified) {
+                                throw new NotAuthorizedException("Invalid signature");
+                            }
+                        } catch (Exception ex) {
                             db2.rollback();
                             db.rollback();
-                            throw new AccessDeniedException(userId);
+                            LOG.error(ex, ex);
+                            throw new DecryptionFailedException("signature verification");
                         }
-
-                        if(isAdministrator) {
+                    } else {
+                        List<CertificateInfo> certInfos = foundUserInfos.get(0).getCertificates();
+                        boolean signatureVerified = false;
+                        for(CertificateInfo certInfo: certInfos) {
+                            String alias = certInfo.getCertAlias();
                             try {
-                                boolean verified = false;
-                                List<String> aliases = userKeyStore.getAliases();
-                                for(String alias : aliases) {
-                                    X509Certificate cert = userKeyStore.getCertificate(alias);
-                                    verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
-                                    if(verified)
-                                        break;
-                                }
-                                if(!verified) {
-                                    throw new NotAuthorizedException("Invalid signature");
-                                }
-                            } catch (Exception ex) {
+                                X509Certificate cert = userKeyStore.getCertificate(alias);
+                                signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+                                if (signatureVerified)
+                                    break;
+                            } catch(Exception ex) {
                                 db2.rollback();
                                 db.rollback();
                                 LOG.error(ex, ex);
                                 throw new DecryptionFailedException("signature verification");
                             }
-                        } else {
-                            List<CertificateInfo> certInfos = foundUserInfos.get(0).getCertificates();
-                            boolean signatureVerified = false;
-                            for(CertificateInfo certInfo: certInfos) {
-                                String alias = certInfo.getCertAlias();
-                                try {
-                                    X509Certificate cert = userKeyStore.getCertificate(alias);
-                                    signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
-                                    if (signatureVerified)
-                                        break;
-                                } catch(Exception ex) {
-                                    db2.rollback();
-                                    db.rollback();
-                                    LOG.error(ex, ex);
-                                    throw new DecryptionFailedException("signature verification");
-                                }
-                            }
-                            if(!signatureVerified) {
-                                throw new NotAuthorizedException("Invalid signature");
-                            }
                         }
-                        List<String> parts = parser.getValues("//image/parts/part/filename");
-                        ArrayList<String> qualifiedPaths = new ArrayList<String>();
+                        if(!signatureVerified) {
+                            throw new NotAuthorizedException("Invalid signature");
+                        }
+                    }
+                    List<String> parts = parser.getValues("//image/parts/part/filename");
+                    ArrayList<String> qualifiedPaths = new ArrayList<String>();
 
-                        for (String part: parts) {
-                            for(ObjectInfo object : bucket.getObjects()) {
-                                if(part.equals(object.getObjectKey())) {
-                                    qualifiedPaths.add(storageManager.getObjectPath(bucketName, object.getObjectName()));
-                                }
+                    for (String part: parts) {
+                        for(ObjectInfo object : objectInfos) {
+                            if(part.equals(object.getObjectKey())) {
+                                qualifiedPaths.add(storageManager.getObjectPath(bucketName, object.getObjectName()));
                             }
                         }
-                        //Assemble parts
-                        String encryptedImageKey = imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
-                        String encryptedImageName = storageManager.getObjectPath(bucketName, encryptedImageKey);
-                        String decryptedImageKey = encryptedImageKey.replaceAll("crypt.gz", "tgz");
-                        String decryptedImageName = storageManager.getObjectPath(bucketName, decryptedImageKey);
-                        assembleParts(encryptedImageName, qualifiedPaths);
+                    }
+                    //Assemble parts
+                    String encryptedImageKey = imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
+                    String encryptedImageName = storageManager.getObjectPath(bucketName, encryptedImageKey);
+                    String decryptedImageKey = encryptedImageKey.replaceAll("crypt.gz", "tgz");
+                    String decryptedImageName = storageManager.getObjectPath(bucketName, decryptedImageKey);
+                    assembleParts(encryptedImageName, qualifiedPaths);
 //Decrypt key and IV
 
-                        byte[] key;
-                        byte[] iv;
-                        try {
-                            PrivateKey pk = (PrivateKey) userKeyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
-                            Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-                            cipher.init(Cipher.DECRYPT_MODE, pk);
-                            String keyString = new String(cipher.doFinal(hexToBytes(encryptedKey)));
-                            key = hexToBytes(keyString);
-                            String ivString = new String(cipher.doFinal(hexToBytes(encryptedIV)));
-                            iv = hexToBytes(ivString);
-                        } catch(Exception ex) {
-                            db2.rollback();
-                            db.rollback();
-                            LOG.error(ex, ex);
-                            throw new DecryptionFailedException("AES params");
-                        }
-
-                        //Unencrypt image
-                        try {
-                            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
-                            IvParameterSpec salt = new IvParameterSpec(iv);
-                            SecretKey keySpec = new SecretKeySpec(key, "AES");
-                            cipher.init(Cipher.DECRYPT_MODE, keySpec, salt);
-                            decryptImage(encryptedImageName, decryptedImageName, cipher);
-                        } catch (Exception ex) {
-                            db2.rollback();
-                            db.rollback();
-                            LOG.error(ex, ex);
-                            throw new DecryptionFailedException("decryption failed");
-                        }
-                        try {
-                            storageManager.deleteAbsoluteObject(encryptedImageName);
-                        } catch (Exception ex) {
-                            LOG.error(ex);
-                            throw new EucalyptusCloudException();
-                        }
-                        db2.commit();
-                        db.commit();
-                        return decryptedImageKey;
+                    byte[] key;
+                    byte[] iv;
+                    try {
+                        PrivateKey pk = (PrivateKey) userKeyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
+                        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+                        cipher.init(Cipher.DECRYPT_MODE, pk);
+                        String keyString = new String(cipher.doFinal(hexToBytes(encryptedKey)));
+                        key = hexToBytes(keyString);
+                        String ivString = new String(cipher.doFinal(hexToBytes(encryptedIV)));
+                        iv = hexToBytes(ivString);
+                    } catch(Exception ex) {
+                        db2.rollback();
+                        db.rollback();
+                        LOG.error(ex, ex);
+                        throw new DecryptionFailedException("AES params");
                     }
+
+                    //Unencrypt image
+                    try {
+                        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
+                        IvParameterSpec salt = new IvParameterSpec(iv);
+                        SecretKey keySpec = new SecretKeySpec(key, "AES");
+                        cipher.init(Cipher.DECRYPT_MODE, keySpec, salt);
+                        decryptImage(encryptedImageName, decryptedImageName, cipher);
+                    } catch (Exception ex) {
+                        db2.rollback();
+                        db.rollback();
+                        LOG.error(ex, ex);
+                        throw new DecryptionFailedException("decryption failed");
+                    }
+                    try {
+                        storageManager.deleteAbsoluteObject(encryptedImageName);
+                    } catch (Exception ex) {
+                        LOG.error(ex);
+                        throw new EucalyptusCloudException();
+                    }
+                    db2.commit();
+                    db.commit();
+                    return decryptedImageKey;
+                } else {
+                    db.rollback();
+                    throw new AccessDeniedException(objectKey);
                 }
+            } else {
+                db.rollback();
+                throw new NoSuchEntityException(objectKey);
             }
+        }  else {
+            db.rollback();
+            throw new NoSuchBucketException(bucketName);
         }
-        return null;
     }
 
     private void checkManifest(String bucketName, String objectKey, String userId) throws EucalyptusCloudException {
@@ -1703,87 +1755,97 @@ public class Bukkit {
 
 
         if (bucketList.size() > 0) {
-            BucketInfo bucket = bucketList.get(0);
+            EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+            ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+            List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+            if(objectInfos.size() > 0)  {
+                ObjectInfo objectInfo = objectInfos.get(0);
 
-            for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectKey().equals(objectKey)) {
-                    if(objectInfo.canRead(userId)) {
-                        String objectName = objectInfo.getObjectName();
-                        File file = new File(storageManager.getObjectPath(bucketName, objectName));
-                        XMLParser parser = new XMLParser(file);
+                if(objectInfo.canRead(userId)) {
+                    String objectName = objectInfo.getObjectName();
+                    File file = new File(storageManager.getObjectPath(bucketName, objectName));
+                    XMLParser parser = new XMLParser(file);
 //Read manifest
-                        String encryptedKey = parser.getValue("//ec2_encrypted_key");
-                        String encryptedIV = parser.getValue("//ec2_encrypted_iv");
-                        String signature = parser.getValue("//signature");
+                    String encryptedKey = parser.getValue("//ec2_encrypted_key");
+                    String encryptedIV = parser.getValue("//ec2_encrypted_iv");
+                    String signature = parser.getValue("//signature");
 
-                        AbstractKeyStore userKeyStore = UserKeyStore.getInstance();
+                    AbstractKeyStore userKeyStore = UserKeyStore.getInstance();
 
-                        String image = parser.getXML("image");
-                        String machineConfiguration = parser.getXML("machine_configuration");
+                    String image = parser.getXML("image");
+                    String machineConfiguration = parser.getXML("machine_configuration");
 
-                        EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-                        UserInfo userInfo = new UserInfo(userId);
-                        List<UserInfo> foundUserInfos = db2.query(userInfo);
-                        if(foundUserInfos.size() == 0) {
-                            db2.rollback();
-                            db.rollback();
-                            throw new AccessDeniedException(userId);
-                        }
+                    EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
+                    UserInfo userInfo = new UserInfo(userId);
+                    List<UserInfo> foundUserInfos = db2.query(userInfo);
+                    if(foundUserInfos.size() == 0) {
+                        db2.rollback();
+                        db.rollback();
+                        throw new AccessDeniedException(userId);
+                    }
 
-                        List<CertificateInfo> certInfos = foundUserInfos.get(0).getCertificates();
-                        boolean signatureVerified = false;
+                    List<CertificateInfo> certInfos = foundUserInfos.get(0).getCertificates();
+                    boolean signatureVerified = false;
 
-                        Signature sigVerifier;
+                    Signature sigVerifier;
+                    try {
+                        sigVerifier = Signature.getInstance("SHA1withRSA");
+                    } catch (NoSuchAlgorithmException ex) {
+                        LOG.error(ex, ex);
+                        throw new DecryptionFailedException("SHA1withRSA not found");
+                    }
+
+                    for(CertificateInfo certInfo: certInfos) {
+                        String alias = certInfo.getCertAlias();
                         try {
-                            sigVerifier = Signature.getInstance("SHA1withRSA");
-                        } catch (NoSuchAlgorithmException ex) {
-                            LOG.error(ex, ex);
-                            throw new DecryptionFailedException("SHA1withRSA not found");
-                        }
-
-                        for(CertificateInfo certInfo: certInfos) {
-                            String alias = certInfo.getCertAlias();
-                            try {
-                                X509Certificate cert = userKeyStore.getCertificate(alias);
-                                PublicKey publicKey = cert.getPublicKey();
-                                sigVerifier.initVerify(publicKey);
-                                sigVerifier.update((machineConfiguration + image).getBytes());
-                                signatureVerified = sigVerifier.verify(hexToBytes(signature));
-                                if (signatureVerified) {
-                                    break;
-                                }
-                            } catch(Exception ex) {
-                                db2.rollback();
-                                db.rollback();
-                                LOG.error(ex, ex);
-                                throw new DecryptionFailedException("signature verification");
+                            X509Certificate cert = userKeyStore.getCertificate(alias);
+                            PublicKey publicKey = cert.getPublicKey();
+                            sigVerifier.initVerify(publicKey);
+                            sigVerifier.update((machineConfiguration + image).getBytes());
+                            signatureVerified = sigVerifier.verify(hexToBytes(signature));
+                            if (signatureVerified) {
+                                break;
                             }
-                        }
-
-                        if(!signatureVerified) {
-                            throw new NotAuthorizedException("Invalid signature");
-                        }
-                        //Decrypt key and IV
-
-                        byte[] key;
-                        byte[] iv;
-                        try {
-                            PrivateKey pk = (PrivateKey) userKeyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
-                            Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-                            cipher.init(Cipher.DECRYPT_MODE, pk);
-                            key = hexToBytes(new String(cipher.doFinal(hexToBytes(encryptedKey))));
-                            iv = hexToBytes(new String(cipher.doFinal(hexToBytes(encryptedIV))));
                         } catch(Exception ex) {
                             db2.rollback();
                             db.rollback();
                             LOG.error(ex, ex);
-                            throw new DecryptionFailedException("AES params");
+                            throw new DecryptionFailedException("signature verification");
                         }
-                        db2.commit();
-                        db.commit();
                     }
+
+                    if(!signatureVerified) {
+                        throw new NotAuthorizedException("Invalid signature");
+                    }
+                    //Decrypt key and IV
+
+                    byte[] key;
+                    byte[] iv;
+                    try {
+                        PrivateKey pk = (PrivateKey) userKeyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
+                        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+                        cipher.init(Cipher.DECRYPT_MODE, pk);
+                        key = hexToBytes(new String(cipher.doFinal(hexToBytes(encryptedKey))));
+                        iv = hexToBytes(new String(cipher.doFinal(hexToBytes(encryptedIV))));
+                    } catch(Exception ex) {
+                        db2.rollback();
+                        db.rollback();
+                        LOG.error(ex, ex);
+                        throw new DecryptionFailedException("AES params");
+                    }
+                    db2.commit();
+                    db.commit();
+                } else {
+                    db.rollback();
+                    throw new AccessDeniedException(objectKey);
                 }
+            } else {
+                db.rollback();
+                throw new NoSuchEntityException(objectKey);
             }
+        } else {
+            db.rollback();
+            throw new NoSuchBucketException(bucketName);
         }
     }
 
@@ -1798,81 +1860,82 @@ public class Bukkit {
         List<BucketInfo> bucketList = db.query(bucketInfo);
 
         if (bucketList.size() > 0) {
-            BucketInfo bucket = bucketList.get(0);
-
-            for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectKey().equals(objectKey)) {
-                    if(objectInfo.canRead(userId) || request.isAdministrator() ) {
-                        WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectKey);
-                        try {
-                            semaphore.acquire();
-                        } catch(InterruptedException ex) {
-                            throw new EucalyptusCloudException("semaphore could not be acquired");
-                        }
-                        EntityWrapper<ImageCacheInfo> db2 = new EntityWrapper<ImageCacheInfo>();
-                        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
-                        List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
-
-                        if(foundImageCacheInfos.size() == 0) {
-                            db2.commit();
-//issue a cache request
-                            cacheImage(bucketName, objectKey, userId, request.isAdministrator());
-//query db again
-                            db2 = new EntityWrapper<ImageCacheInfo>();
-                            foundImageCacheInfos = db2.query(searchImageCacheInfo);
-                        }
-                        ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
-                        if(!foundImageCacheInfo.getInCache()) {
-                            WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
-                            synchronized (monitor) {
-                                try {
-                                    monitor.wait();
-                                } catch(Exception ex) {
-                                    LOG.error(ex);
-                                    db2.rollback();
-                                    db.rollback();
-                                    throw new EucalyptusCloudException("monitor failure");
-                                }
-                            }
-                            //caching may have modified the db. repeat the query
-                            db2.commit();
-                            db2 = new EntityWrapper<ImageCacheInfo>();
-                            foundImageCacheInfos = db2.query(searchImageCacheInfo);
-                            if(foundImageCacheInfos.size() > 0) {
-                                foundImageCacheInfo = foundImageCacheInfos.get(0);
-                                foundImageCacheInfo.setUseCount(foundImageCacheInfo.getUseCount() + 1);
-                                assert(foundImageCacheInfo.getInCache());
-                            } else {
-                                db.rollback();
-                                db2.rollback();
-                                throw new NoSuchEntityException(objectKey);
-                            }
-                        }
-
-                        Long unencryptedSize = foundImageCacheInfo.getSize();
-
-                        String imageKey = foundImageCacheInfo.getImageName();
-                        String queueKey = bucketName + "." + objectKey;
-                        String randomKey = queueKey + "." + Hashes.getRandom(10);
-                        request.setRandomKey(randomKey);
-
-                        LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(queueKey, randomKey);
-                        reply.setSize(unencryptedSize);
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
-                        reply.setEtag("");
-                        Reader reader = new Reader(bucketName, imageKey, unencryptedSize, getQueue, false, semaphore);
-                        reader.start();
-                        db.commit();
-                        db2.commit();
-                        return reply;
-                    } else {
-                        db.rollback();
-                        throw new AccessDeniedException(objectKey);
+            EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+            ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+            List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+            if(objectInfos.size() > 0)  {
+                ObjectInfo objectInfo = objectInfos.get(0);
+                if(objectInfo.canRead(userId) || request.isAdministrator() ) {
+                    WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectKey);
+                    try {
+                        semaphore.acquire();
+                    } catch(InterruptedException ex) {
+                        throw new EucalyptusCloudException("semaphore could not be acquired");
                     }
+                    EntityWrapper<ImageCacheInfo> db2 = new EntityWrapper<ImageCacheInfo>();
+                    ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
+                    List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
+
+                    if(foundImageCacheInfos.size() == 0) {
+                        db2.commit();
+//issue a cache request
+                        cacheImage(bucketName, objectKey, userId, request.isAdministrator());
+//query db again
+                        db2 = new EntityWrapper<ImageCacheInfo>();
+                        foundImageCacheInfos = db2.query(searchImageCacheInfo);
+                    }
+                    ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
+                    if(!foundImageCacheInfo.getInCache()) {
+                        WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
+                        synchronized (monitor) {
+                            try {
+                                monitor.wait();
+                            } catch(Exception ex) {
+                                LOG.error(ex);
+                                db2.rollback();
+                                db.rollback();
+                                throw new EucalyptusCloudException("monitor failure");
+                            }
+                        }
+                        //caching may have modified the db. repeat the query
+                        db2.commit();
+                        db2 = new EntityWrapper<ImageCacheInfo>();
+                        foundImageCacheInfos = db2.query(searchImageCacheInfo);
+                        if(foundImageCacheInfos.size() > 0) {
+                            foundImageCacheInfo = foundImageCacheInfos.get(0);
+                            foundImageCacheInfo.setUseCount(foundImageCacheInfo.getUseCount() + 1);
+                            assert(foundImageCacheInfo.getInCache());
+                        } else {
+                            db.rollback();
+                            db2.rollback();
+                            throw new NoSuchEntityException(objectKey);
+                        }
+                    }
+
+                    Long unencryptedSize = foundImageCacheInfo.getSize();
+
+                    String imageKey = foundImageCacheInfo.getImageName();
+                    String queueKey = bucketName + "." + objectKey;
+                    String randomKey = queueKey + "." + Hashes.getRandom(10);
+                    request.setRandomKey(randomKey);
+
+                    LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(queueKey, randomKey);
+                    reply.setSize(unencryptedSize);
+                    reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                    reply.setEtag("");
+                    Reader reader = new Reader(bucketName, imageKey, unencryptedSize, getQueue, false, semaphore);
+                    reader.start();
+                    db.commit();
+                    db2.commit();
+                    return reply;
+                } else {
+                    db.rollback();
+                    throw new AccessDeniedException(objectKey);
                 }
+            } else {
+                db.rollback();
+                throw new NoSuchEntityException(objectKey);
             }
-            db.rollback();
-            throw new NoSuchEntityException(objectKey);
         } else {
             db.rollback();
             throw new NoSuchBucketException(bucketName);
@@ -1892,23 +1955,24 @@ public class Bukkit {
 
 
         if (bucketList.size() > 0) {
-            BucketInfo bucket = bucketList.get(0);
-
-            for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectKey().equals(objectKey)) {
-                    if(objectInfo.canRead(userId)) {
-                        checkManifest(bucketName, objectKey, userId);
-                        reply.setSuccess(true);
-                        db.commit();
-                        return reply;
-                    } else {
-                        db.rollback();
-                        throw new AccessDeniedException(objectKey);
-                    }
+            EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+            ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+            List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+            if(objectInfos.size() > 0)  {
+                ObjectInfo objectInfo = objectInfos.get(0);
+                if(objectInfo.canRead(userId)) {
+                    checkManifest(bucketName, objectKey, userId);
+                    reply.setSuccess(true);
+                    db.commit();
+                    return reply;
+                } else {
+                    db.rollback();
+                    throw new AccessDeniedException(objectKey);
                 }
+            } else {
+                db.rollback();
+                throw new NoSuchEntityException(objectKey);
             }
-            db.rollback();
-            throw new NoSuchEntityException(objectKey);
         } else {
             db.rollback();
             throw new NoSuchBucketException(bucketName);
@@ -1950,29 +2014,35 @@ public class Bukkit {
 
 
         if (bucketList.size() > 0) {
-            BucketInfo bucket = bucketList.get(0);
-
-            for(ObjectInfo objectInfo: bucket.getObjects()) {
-                if(objectInfo.getObjectKey().equals(manifestKey)) {
-                    if(objectInfo.canRead(userId)) {
-                        EntityWrapper<ImageCacheInfo> db2 = new EntityWrapper<ImageCacheInfo>();
-                        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
-                        List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
-                        db2.commit();
-                        if(foundImageCacheInfos.size() == 0) {
-                            cacheImage(bucketName, manifestKey, userId, request.isAdministrator());
-                            reply.setSuccess(true);
-                        }
-                        return reply;
-                    } else {
-                        db.rollback();
-                        throw new AccessDeniedException(manifestKey);
+            EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+            ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, manifestKey);
+            List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+            if(objectInfos.size() > 0)  {
+                ObjectInfo objectInfo = objectInfos.get(0);
+                if(objectInfo.canRead(userId)) {
+                    EntityWrapper<ImageCacheInfo> db2 = new EntityWrapper<ImageCacheInfo>();
+                    ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+                    List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
+                    db2.commit();
+                    if(foundImageCacheInfos.size() == 0) {
+                        cacheImage(bucketName, manifestKey, userId, request.isAdministrator());
+                        reply.setSuccess(true);
                     }
-
+                    return reply;
+                } else {
+                    db.rollback();
+                    throw new AccessDeniedException(manifestKey);
                 }
+
+            } else {
+                db.rollback();
+                throw new NoSuchEntityException(manifestKey);
+
             }
+        } else {
+            db.rollback();
+            throw new NoSuchBucketException(bucketName);
         }
-        throw new NoSuchEntityException(manifestKey);
     }
 
     public FlushCachedImageResponseType FlushCachedImage(FlushCachedImageType request) throws EucalyptusCloudException {
