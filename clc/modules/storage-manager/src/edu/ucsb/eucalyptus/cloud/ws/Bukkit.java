@@ -1679,9 +1679,13 @@ public class Bukkit {
                     }
                     List<String> parts = parser.getValues("//image/parts/part/filename");
                     ArrayList<String> qualifiedPaths = new ArrayList<String>();
-
+	
+		    searchObjectInfo = new ObjectInfo();
+		    searchObjectInfo.setBucketName(bucketName);
+		    List<ObjectInfo> bucketObjectInfos = dbObject.query(searchObjectInfo);
+		
                     for (String part: parts) {
-                        for(ObjectInfo object : objectInfos) {
+                        for(ObjectInfo object : bucketObjectInfos) {
                             if(part.equals(object.getObjectKey())) {
                                 qualifiedPaths.add(storageManager.getObjectPath(bucketName, object.getObjectName()));
                             }
