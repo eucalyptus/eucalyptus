@@ -252,8 +252,8 @@ public class ObjectInfo {
         }
 
         for (GrantInfo grantInfo: grants) {
-            if(grantInfo.getGrant_group() != null) {
-                String groupUri = grantInfo.getGrant_group();
+            if(grantInfo.getGrantGroup() != null) {
+                String groupUri = grantInfo.getGrantGroup();
                 if(groupUri.equals(WalrusProperties.AUTHENTICATED_USERS_GROUP))
                     return true;
             }
