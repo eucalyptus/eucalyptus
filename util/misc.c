@@ -124,6 +124,12 @@ int param_check(char *func, ...) {
     if (!a || b < 0 || b >= NUMBER_OF_VLANS || !c || !d) {
       fail=1;
     }
+  } else if (!strcmp(func, "vnetDelVlan")) {
+    vnetConfig *a = va_arg(al, vnetConfig *);
+    int b = va_arg(al, int);
+    if (!a || b < 0 || b >= NUMBER_OF_VLANS) {
+      fail=1;
+    }
   } else if (!strcmp(func, "vnetInit")) {
     vnetConfig *a = va_arg(al, vnetConfig *);
     char *b = va_arg(al, char *);
