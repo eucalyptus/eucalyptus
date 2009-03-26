@@ -358,6 +358,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
+	      <xs:element name="mode" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="unbounded" name="networks" type="tns:networkType"/>
 	    </xs:sequence>
 	  </xs:extension>

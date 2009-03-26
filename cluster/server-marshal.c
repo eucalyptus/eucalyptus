@@ -220,6 +220,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
+  char *mode=NULL;
 
   int rc;
   ncMetadata ccMeta;
@@ -231,8 +232,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   ccMeta.userId = adb_describeNetworksType_get_userId(dpa, env);
 
   if (!DONOTHING) {
-    //rc = doDescribeNetworks(&ccMeta, &outAddresses, &outAddressesLen);
-    rc = 0;
+    rc = doDescribeNetworks(&ccMeta, &mode);
   }
   
   if (rc) {
@@ -244,18 +244,10 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   }
   
   dpart = adb_describeNetworksResponseType_create(env);
-  /*
-  for (i=0; i<outAddressesLen; i++) {
-    if (outAddresses[i].ip) {
-      adb_describeNetworksResponseType_add_sourceAddresses(dpart, env, hex2dot(outAddresses[i].ip));
-      if (outAddresses[i].dstip) {
-	adb_describeNetworksResponseType_add_destAddresses(dpart, env, hex2dot(outAddresses[i].dstip));
-      } else {
-	adb_describeNetworksResponseType_add_destAddresses(dpart, env, "");
-      }
-    }
+  if (mode) {
+    adb_describeNetworksResponseType_set_mode(dpart, env, mode);
   }
-  */  
+
   adb_describeNetworksResponseType_set_correlationId(dpart, env, ccMeta.correlationId);
   adb_describeNetworksResponseType_set_userId(dpart, env, ccMeta.userId);
   adb_describeNetworksResponseType_set_return(dpart, env, status);

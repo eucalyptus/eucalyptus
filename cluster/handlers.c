@@ -323,7 +323,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   return(ret);
 }
 
-int doDescribeNetworks(ncMetadata *ccMeta) {
+int doDescribeNetworks(ncMetadata *ccMeta, char **outmode) {
   int rc, ret;
   
   ret = 0;
@@ -332,6 +332,12 @@ int doDescribeNetworks(ncMetadata *ccMeta) {
     return(1);
   }
   logprintfl(EUCADEBUG,"DescribeNetworks(): called\n");
+  if (outmode == NULL) {
+    logprintfl(EUCAERROR, "DescribeNetworks(): bad input params\n");
+    return(1);
+  }
+  
+  *outmode = strdup(vnetconfig->mode);
   logprintfl(EUCADEBUG,"DescribeNetworks(): done\n");  
   return(ret);
 }
