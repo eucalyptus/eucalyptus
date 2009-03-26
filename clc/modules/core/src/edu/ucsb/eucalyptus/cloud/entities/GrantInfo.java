@@ -56,8 +56,10 @@ public class GrantInfo {
 	private Long id = -1l;
 	@Column(name="user_id")
 	private String userId;
-    @Column(name="grant_group")
-    private String grant_group;
+    @Column(name="grantGroup")
+    private String grantGroup;
+    @Column(name="entity_name")
+    private String entityName;
 	@Column(name="read")
 	private Boolean read;
 	@Column(name="write")
@@ -94,12 +96,20 @@ public class GrantInfo {
 		this.userId = userId;
 	}
 
-    public String getGrant_group() {
-        return grant_group;
+    public String getGrantGroup() {
+        return grantGroup;
     }
 
-    public void setGrant_group(String grant_group) {
-        this.grant_group = grant_group;
+    public void setGrantGroup(String grantGroup) {
+        this.grantGroup = grantGroup;
+    }
+
+    public String getEntityName() {
+        return entityName;
+    }
+
+    public void setEntityName(String entityName) {
+        this.entityName = entityName;
     }
 
     public boolean isWrite() {
@@ -153,7 +163,7 @@ public class GrantInfo {
                     }
                     grantInfo.setUserId(displayName);
                 } else {
-                    grantInfo.setGrant_group(grantee.getGroup().getUri());
+                    grantInfo.setGrantGroup(grantee.getGroup().getUri());
                 }
 				if (permission.equals("FULL_CONTROL")) {
 					grantInfo.setFullControl();

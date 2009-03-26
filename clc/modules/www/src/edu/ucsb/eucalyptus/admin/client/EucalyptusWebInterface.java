@@ -1265,7 +1265,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 						String callbackUrl = "http://" 
 							+ ip
 							+ cloudInfo.getServicePath();
-						rightscaleUrl = "https://moo.rightscale.com/cloud_registrations/new?callback_url="
+						rightscaleUrl = "https://my.rightscale.com/cloud_registrations/new?callback_url="
 							+ GWTUtils.escape (callbackUrl) // URL.encode() wasn't quite right 
 							+ "&registration_version=1.0&retry=1&secret_token="
 							+ GWTUtils.escape (cloudInfo.getCloudId());

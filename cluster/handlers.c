@@ -331,8 +331,14 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
     return(1);
   }
   
-  *outAddresses = vnetconfig->publicips;
-  *outAddressesLen = NUMBER_OF_PUBLIC_IPS;
+  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    *outAddresses = vnetconfig->publicips;
+    *outAddressesLen = NUMBER_OF_PUBLIC_IPS;
+  } else {
+    *outAddresses = NULL;
+    *outAddressesLen = 0;
+    return(2);
+  }
   
   return(0);
 }

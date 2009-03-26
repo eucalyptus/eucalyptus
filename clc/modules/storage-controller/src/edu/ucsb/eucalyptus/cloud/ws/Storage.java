@@ -95,7 +95,6 @@ public class Storage {
         if(walrusAddr == null) {
             LOG.warn("Walrus host addr not set");
         }
-        //TODO: this should be created by a factory
         blockManager = new LVM2Manager();
         blockManager.initVolumeManager();
         try {
@@ -105,13 +104,15 @@ public class Storage {
             sharedMode = Bukkit.getSharedMode();
             if(!sharedMode)
                 checkWalrusConnection();
-            //TODO: inform CLC
-            //StorageControllerHeartbeatMessage heartbeat = new StorageControllerHeartbeatMessage(StorageProperties.SC_ID);
         } catch(Exception ex) {
             enableStorage = false;
             LOG.error(ex.getMessage());
             LOG.warn("Could not initialize block manager. Storage has been disabled.");
 	    LOG.error("Could not initialize block manager. Storage has been disabled.");
+	    if(System.getProperty("euca.ebs.disable") == null) {
+		LOG.error("EBS is enabled but preconditions failed. Please resolve preconditions or restart with euca.ebs.disable");
+		System.exit(0xEC2);
+	    }
         }
     }
 
@@ -551,7 +552,7 @@ public class Storage {
             LOG.error("Storage has been disabled. Please check your setup");
             return reply;
         }
-
+       
         String snapshotId = request.getSnapshotId();
         String userId = request.getUserId();
         String volumeId = request.getVolumeId();
@@ -824,17 +825,22 @@ public class Storage {
         public void run() {
             try {
                 EntityWrapper<SnapshotInfo>dbS = new EntityWrapper<SnapshotInfo>();
+                EntityWrapper<VolumeInfo> dbVol = dbS.recast(VolumeInfo.class);
+                VolumeInfo vInfo = new VolumeInfo(volumeId);
+                VolumeInfo originalVolInfo = dbVol.getUnique(vInfo);
+
                 SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
                 SnapshotInfo foundSnapInfo = dbS.getUnique(snapInfo);
                 String dupedVolumeId;
-                if(foundSnapInfo.getDupedVolumeId() == null) {
+                if(originalVolInfo.getDupedVolumeId() == null) {
                     //dup it so parent vol can be treated independently
                     dupedVolumeId = volumeId + "-" + Hashes.getRandom(6);
+                    originalVolInfo.setDupedVolumeId(dupedVolumeId);
                     foundSnapInfo.setDupedVolumeId(dupedVolumeId);
                     blockManager.dupVolume(volumeId, dupedVolumeId);
                     volumeId = dupedVolumeId;
                 } else {
-                    volumeId = foundSnapInfo.getDupedVolumeId();
+                    volumeId = originalVolInfo.getDupedVolumeId();
                 }
                 dbS.commit();
                 blockManager.createSnapshot(volumeId, snapshotId);

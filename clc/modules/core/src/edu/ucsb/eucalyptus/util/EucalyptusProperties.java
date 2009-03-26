@@ -57,6 +57,8 @@ public class EucalyptusProperties {
     return Lists.newArrayList(  );
   }
 
+  public static boolean disableNetworking = false;
+
   public static String NAME = "eucalyptus";
   public static String WWW_NAME = "jetty";
   public static String NETWORK_DEFAULT_NAME = "default";
