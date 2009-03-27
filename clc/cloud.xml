@@ -99,7 +99,7 @@
             <classpath refid="runtimeclasspath"/>
         </java>
     </target>
-    <target name="test" depends="install" description="--> debug Eucalyptus (for debugging)." if="localenv.EUCALYPTUS">
+    <target name="test" description="--> debug Eucalyptus (for debugging)." if="localenv.EUCALYPTUS">
         <java classname="${D}" fork="true" failonerror="true" dir="${euca.home}">
             <jvmarg value="-Xdebug"/>
             <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=${suspend},address=5005"/>
