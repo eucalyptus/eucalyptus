@@ -191,6 +191,16 @@ public class FileSystemStorageManager implements StorageManager {
         return rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
     }
 
+    public long getObjectSize(String bucket, String object) {
+        String absoluteObjectPath = rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
+
+        File objectFile = new File(absoluteObjectPath);
+        if(objectFile.exists())
+            return objectFile.length();
+        return -1;
+    }
+
+
     public native String removeLoopback(String loDevName);
 
     public native String createLoopback(String fileName);

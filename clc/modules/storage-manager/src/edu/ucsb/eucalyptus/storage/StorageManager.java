@@ -69,6 +69,8 @@ public interface StorageManager {
 
     public String getObjectPath(String bucket, String object);
 
+    public long getObjectSize(String bucket, String object);
+
     public void setRootDirectory(String rootDirectory);
 
     public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet, boolean removeVg) throws EucalyptusCloudException;

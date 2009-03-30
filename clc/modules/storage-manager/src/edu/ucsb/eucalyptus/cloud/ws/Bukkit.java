@@ -78,10 +78,11 @@ public class Bukkit {
     static StorageManager storageManager;
     static boolean shouldEnforceUsageLimits = true;
     private static boolean enableSnapshots = false;
-
     private static boolean enableTorrents = false;
     private static boolean sharedMode = false;
     private static Tracker tracker;
+
+    private final long CACHE_PROGRESS_TIMEOUT = 60000L; //a minute
 
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
@@ -1887,9 +1888,22 @@ public class Bukkit {
                     ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
                     if(!foundImageCacheInfo.getInCache()) {
                         WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
+                        boolean cached = false;
                         synchronized (monitor) {
                             try {
-                                monitor.wait();
+                                boolean caching;
+                                long bytesCached = 0;
+                                do {
+                                    monitor.wait(CACHE_PROGRESS_TIMEOUT);
+                                    if(isCached(bucketName, objectKey)) {
+                                        cached = true;
+                                        break;
+                                    }
+                                    long newBytesCached = checkCachingProgress(bucketName, objectKey, bytesCached);
+                                    caching = (newBytesCached - bytesCached) > 0 ? true : false;
+                                    bytesCached = newBytesCached;
+                                } while(caching);
+
                             } catch(Exception ex) {
                                 LOG.error(ex);
                                 db2.rollback();
@@ -1897,6 +1911,14 @@ public class Bukkit {
                                 throw new EucalyptusCloudException("monitor failure");
                             }
                         }
+                        if(!cached) {
+                            db2.rollback();
+                            db.rollback();
+                            LOG.error("Image caching failed for " + bucketName + "/" + objectKey);
+                            LOG.error("Aborting GetDecryptedImage. No progress made in a while");
+                            throw new EucalyptusCloudException("image caching failed");
+                        }
+
                         //caching may have modified the db. repeat the query
                         db2.commit();
                         db2 = new EntityWrapper<ImageCacheInfo>();
@@ -1939,6 +1961,40 @@ public class Bukkit {
         } else {
             db.rollback();
             throw new NoSuchBucketException(bucketName);
+        }
+    }
+
+    private boolean isCached(String bucketName, String manifestKey) {
+        EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+        try {
+            ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
+            if(foundImageCacheInfo.getInCache())
+                return true;
+            else
+                return false;
+        } catch(Exception ex) {
+            return false;
+        } finally {
+            db.commit();
+        }
+    }
+
+    private long checkCachingProgress(String bucketName, String manifestKey, long oldBytesRead) {
+        EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+        try {
+            ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
+            String cacheImageKey = foundImageCacheInfo.getImageName().replaceAll(".tgz", "");
+            long objectSize = storageManager.getObjectSize(bucketName, cacheImageKey);
+            if(objectSize > 0) {
+                return objectSize - oldBytesRead;
+            }
+            return oldBytesRead;
+        } catch (Exception ex) {
+            return oldBytesRead;
+        } finally {
+            db.commit();
         }
     }
 
