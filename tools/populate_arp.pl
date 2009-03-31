@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+use Net::Ping;
+
 # need this rule
 # iptables -A FORWARD -p UDP --sport 67:68 --dport 67:68 -j LOG --log-level 0
 delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
