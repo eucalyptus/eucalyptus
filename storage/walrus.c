@@ -10,14 +10,14 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 #if defined(HAVE_ZLIB_H)
-#include <zlib.h>
+//#include <zlib.h>
 #endif
 #include "euca_auth.h"
 #include "eucalyptus.h"
 #include "misc.h"
 #include "walrus.h"
 
-#define TOTAL_RETRIES 4 /* download is retried in case of connection problems */
+#define TOTAL_RETRIES 5 /* download is retried in case of connection problems */
 #define FIRST_TIMEOUT 4 /* in seconds, goes in powers of two afterwards */
 #define CHUNK 262144 /* buffer size for decompression operations */
 #define BUFSIZE 4096 /* should be big enough for CERT and the signature */
@@ -111,23 +111,11 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     params.fp = fp;
     curl_easy_setopt (curl, CURLOPT_WRITEDATA, &params);
     curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
-        
 #if defined(CAN_GZIP)
 	if (do_compress) {
-		/* allocate zlib inflate state */
-		params.strm.zalloc = Z_NULL;
-	    params.strm.zfree = Z_NULL;
-	    params.strm.opaque = Z_NULL;
-	    params.strm.avail_in = 0;
-	    params.strm.next_in = Z_NULL;
-	    int ret = inflateInit2 (&(params.strm), 31);
-	    if (ret != Z_OK) {
-            zerr (ret, "walrus_request");
-			return ERROR;
-		}
 		curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data_zlib);
 	}
-#endif /* CAN_GZIP */
+#endif
 
 	struct curl_slist * headers = NULL; /* beginning of a DLL with headers */
 	headers = curl_slist_append (headers, "Authorization: Euca");
@@ -174,9 +162,27 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     int retries = TOTAL_RETRIES;
     int timeout = FIRST_TIMEOUT;
     do {
-        params.total_wrote = params.total_calls = 0L;
+        params.total_wrote = 0L;
+        params.total_calls = 0L;
+#if defined(CAN_GZIP)
+        if (do_compress) {
+            /* allocate zlib inflate state */
+            params.strm.zalloc = Z_NULL;
+            params.strm.zfree = Z_NULL;
+            params.strm.opaque = Z_NULL;
+            params.strm.avail_in = 0;
+            params.strm.next_in = Z_NULL;
+            params.ret = inflateInit2 (&(params.strm), 31);
+            if (params.ret != Z_OK) {
+                zerr (params.ret, "walrus_request");
+                break;
+            }
+        }
+#endif
+
         result = curl_easy_perform (curl); /* do it */
         logprintfl (EUCADEBUG, "walrus_request(): wrote %ld bytes in %ld writes\n", params.total_wrote, params.total_calls);
+
 #if defined(CAN_GZIP)
         if (do_compress) {
             inflateEnd(&(params.strm));
@@ -360,15 +366,15 @@ static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *pa
 		strm->next_out = out;
 
 		((struct request *)params)->ret = ret = inflate (strm, Z_NO_FLUSH);
-		assert (ret != Z_STREAM_ERROR); // verify that state is not clobbered
 		switch (ret) {
-			case Z_NEED_DICT:
-				ret = Z_DATA_ERROR; // ok to fall through 
-			case Z_DATA_ERROR:
-			case Z_MEM_ERROR:
-				inflateEnd(strm);
-                zerr (ret, "write_data_zlib");
-				return ret;
+        case Z_NEED_DICT:
+            ret = Z_DATA_ERROR; // ok to fall through 
+        case Z_DATA_ERROR:
+        case Z_MEM_ERROR:
+        case Z_STREAM_ERROR:
+            inflateEnd(strm);
+            zerr (ret, "write_data_zlib");
+            return ret;
 		}
 
 		unsigned have = CHUNK - strm->avail_out;

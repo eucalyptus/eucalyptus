@@ -129,7 +129,7 @@ public class Bukkit {
             try {
                 storageManager.deleteObject(snapInfo.getSnapshotSetId(), snapInfo.getSnapshotId());
             } catch(Exception ex) {
-                LOG.warn(ex);
+                LOG.error(ex);
             }
         }
         db.commit();
@@ -197,7 +197,7 @@ public class Bukkit {
                 storageManager.createBucket(bucketName);
                 db.add(bucket);
             } catch (IOException ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
                 db.rollback();
                 throw new EucalyptusCloudException(bucketName);
             }
@@ -240,6 +240,7 @@ public class Bukkit {
                         storageManager.deleteBucket(bucketName);
                     } catch (IOException ex) {
                         //set exception code in reply
+                        LOG.error(ex);
                     }
                     Status status = new Status();
                     status.setCode(204);
@@ -464,7 +465,7 @@ public class Bukkit {
                             try {
                                 storageManager.renameObject(bucketName, tempObjectName, objectName);
                             } catch (IOException ex) {
-                                LOG.warn(ex, ex);
+                                LOG.error(ex);
                                 db.rollback();
                                 throw new EucalyptusCloudException(objectKey);
                             }
@@ -511,7 +512,7 @@ public class Bukkit {
                             try {
                                 storageManager.deleteObject(bucketName, tempObjectName);
                             } catch (IOException ex) {
-                                ex.printStackTrace();
+                                LOG.error(ex);
                             }
                             db.rollback();
                             LOG.info("Transfer interrupted" + key + " " + randomKey);
@@ -523,7 +524,7 @@ public class Bukkit {
                             try {
                                 storageManager.putObject(bucketName, tempObjectName, data, true);
                             } catch (IOException ex) {
-                                LOG.warn(ex, ex);
+                                LOG.error(ex);
                             }
                             //calculate md5 on the fly
                             size += data.length;
@@ -531,7 +532,7 @@ public class Bukkit {
                         }
                     }
                 } catch (InterruptedException ex) {
-                    ex.printStackTrace();
+                    LOG.error(ex, ex);
                     throw new EucalyptusCloudException();
                 }
             } else {
@@ -693,7 +694,7 @@ public class Bukkit {
                     lastModified = new Date();
                     foundObject.setLastModified(lastModified);
                 } catch (IOException ex) {
-                    LOG.warn(ex, ex);
+                    LOG.error(ex);
                     db.rollback();
                     throw new EucalyptusCloudException(bucketName);
                 }
@@ -793,7 +794,7 @@ public class Bukkit {
                         storageManager.deleteObject(bucketName, objectName);
                     } catch (IOException ex) {
                         db.rollback();
-                        LOG.warn(ex, ex);
+                        LOG.error(ex);
                         throw new EucalyptusCloudException(objectKey);
                     }
                     reply.setCode("200");
@@ -1396,7 +1397,7 @@ public class Bukkit {
                                 try {
                                     storageManager.copyObject(sourceBucket, sourceObjectName, destinationBucket, destinationObjectName);
                                 } catch(Exception ex) {
-                                    LOG.warn(ex, ex);
+                                    LOG.error(ex);
                                     db.rollback();
                                     throw new EucalyptusCloudException("Could not rename " + sourceObjectName + " to " + destinationObjectName);
                                 }
@@ -1582,7 +1583,7 @@ public class Bukkit {
                         try {
                             storageManager.deleteAbsoluteObject(encryptedImageName);
                         } catch (Exception ex) {
-                            LOG.warn(ex, ex);
+                            LOG.error(ex);
                             throw new EucalyptusCloudException();
                         }
                         db2.commit();
@@ -1727,7 +1728,7 @@ public class Bukkit {
                                 try {
                                     monitor.wait();
                                 } catch(Exception ex) {
-                                    LOG.warn(ex, ex);
+                                    LOG.error(ex);
                                     db2.rollback();
                                     db.rollback();
                                     throw new EucalyptusCloudException("monitor failure");
@@ -1910,7 +1911,7 @@ public class Bukkit {
                     semaphore.wait();
                 }
             } catch(InterruptedException ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
             }
         }
         imageMessenger.removeSemaphore(bucketName + "/" + objectKey);
@@ -1980,7 +1981,7 @@ public class Bukkit {
                     failed = true;
                 }
             } catch(Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.warn(ex);
                 //try to evict an entry and try again
                 failed = true;
             }
@@ -1989,7 +1990,7 @@ public class Bukkit {
                     storageManager.deleteAbsoluteObject(decryptedImageName);
                     storageManager.deleteAbsoluteObject(tarredImageName);
                 } catch (Exception exception) {
-                    LOG.warn(exception, exception);
+                    LOG.error(exception);
                 }
                 return -1L;
             }
@@ -2059,10 +2060,10 @@ public class Bukkit {
                     notifyWaiters();
                 } else {
                     db.rollback();
-                    LOG.warn("Could not expand image" + decryptedImageName);
+                    LOG.error("Could not expand image" + decryptedImageName);
                 }
             } catch (Exception ex) {
-                LOG.warn(ex, ex);
+                LOG.error(ex);
             }
         }
     }
@@ -2140,7 +2141,7 @@ public class Bukkit {
                     outStream.close();
             } catch (IOException ex)
             {
-                ex.printStackTrace();
+                LOG.error(ex);
             }
         }
     }
@@ -2158,7 +2159,7 @@ public class Bukkit {
                 int exitVal = proc.waitFor();
                 output.join();
             } catch (Throwable t) {
-                t.printStackTrace();
+                LOG.error(t);
             }
         }
     }
@@ -2181,7 +2182,7 @@ public class Bukkit {
             in.close();
             out.close();
         } catch(Exception ex) {
-            LOG.warn(ex, ex);
+            LOG.error(ex);
         }
     }
 
@@ -2195,7 +2196,7 @@ public class Bukkit {
             }
             out.close();
         } catch (Exception ex) {
-            LOG.warn(ex, ex);
+            LOG.error(ex);
         }
     }
 
@@ -2634,8 +2635,7 @@ public class Bukkit {
                         snapshotSet.remove(snapIdToRemove);
                 }
             } catch(EucalyptusCloudException ex) {
-
-                LOG.warn(ex, ex);
+                LOG.error(ex, ex);
             }
         }
     }
