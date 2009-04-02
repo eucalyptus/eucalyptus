@@ -280,9 +280,21 @@ if [ -n "$NEWCLUS" ]; then
 	echo "ERROR: cannot find file '$EUCALYPTUS/etc/eucalyptus.conf'. Is your EUCALYPTUS enviroment variable set?"
 	exit 1
     fi
-
-    FIELD=`grep "CREATE MEMORY TABLE USERS" /var/lib/eucalyptus/db/* | sed 's/,/\n/g' | awk '/USER_SECRETKEY/ {print NR}'`
-    KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO USERS.*admin/ {print $field}' ${EUCALYPTUS}/var/lib/eucalyptus/db/* | head -n 1))
+    
+    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
+	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
+    elif [ -d "$EUCALYPTUS/var/eucalyptus/db/" ]; then
+	DBDIR="$EUCALYPTUS/var/eucalyptus/db/"
+    else
+	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface"
+	exit 1
+    fi
+    FIELD=`grep -i "CREATE .*TABLE USERS" ${DBDIR}/* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Ss][Ee][Cc][Rr][Ee][Tt][Kk][Ee][Yy]/ {print NR}'`
+    if [ "$FIELD" = "" ]; then
+	echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
+	exit 1
+    fi
+    KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1))
     
     ARGS="AWSAccessKeyId=ISMvKXpXpadDiUoOSoAfww&Action=DescribeAvailabilityZones"
     ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=2008-12-01"
@@ -306,25 +318,7 @@ if [ -n "$NEWCLUS" ]; then
 fi
 
 if [ -n "$NEWNODE" ]; then
-    if [ "$NODEMODE" = "ADD" ]; then
-	SSHKEY=`cat ~eucalyptus/.ssh/id_rsa.pub`
-	
-	if [ "$SSHKEY" = "" ]; then
-	    echo "ERROR: cannot read ssh key ~eucalyptus/.ssh/id_rsa.pub, syncronization will probably not work"
-	else
-	    echo "First, please run the following commands on '$NEWNODE':"
-	    echo ""
-	    echo "sudo apt-get install eucalyptus-nc"
-	    echo "sudo tee ~eucalyptus/.ssh/authorized_keys > /dev/null <<EOT"
-	    echo "$SSHKEY"
-	    echo "EOT"
-	    echo ""
-	    echo "hit return to continue"
-	    read
-	fi
-    fi
-    
-# get old value
+
     if [ -f "$FILE" ]; then
 	. $FILE
     else
@@ -333,8 +327,38 @@ if [ -n "$NEWNODE" ]; then
     fi
     TMPFILE="$FILE.$$"
     
+    
     if [ "$NODEMODE" = "ADD" ]; then
-	sudo -u eucalyptus scp ${EUCALYPTUS}/var/lib/eucalyptus/keys/* ${EUCA_USER}@${NEWNODE}:${EUCALYPTUS}/var/lib/eucalyptus/keys/
+	EUCA_HOME=`su - -c 'echo $HOME' $EUCA_USER`
+	echo $EUCA_HOME
+	SSHKEY=`cat ${EUCA_HOME}/.ssh/id_rsa.pub`
+	
+	if [ "$SSHKEY" = "" ]; then
+	    echo "ERROR: cannot read ssh key ~${EUCA_USER}/.ssh/id_rsa.pub, syncronization will probably not work"
+	else
+	    echo "First, please run the following commands on '$NEWNODE':"
+	    echo ""
+	    echo "sudo apt-get install eucalyptus-nc"
+	    echo "sudo tee ~${EUCA_USER}/.ssh/authorized_keys > /dev/null <<EOT"
+	    echo "$SSHKEY"
+	    echo "EOT"
+	    echo ""
+	    echo "hit return to continue"
+	    read
+	fi
+    fi
+    
+    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
+	KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
+    elif [ -d "$EUCALYPTUS/var/eucalyptus/keys/" ]; then
+	KEYDIR="$EUCALYPTUS/var/eucalyptus/keys/"
+    else
+	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface"
+	exit 1
+    fi
+    
+    if [ "$NODEMODE" = "ADD" ]; then
+	sudo -u eucalyptus scp ${KEYDIR}/* ${EUCA_USER}@${NEWNODE}:${KEYDIR}
 	if [ "$?" != "0" ]; then
 	    echo "ERROR: could not syncronize keys, check authorized_keys on ${NEWNODE}, then run this command again."
 	    exit 1
@@ -352,7 +376,7 @@ if [ -n "$NEWNODE" ]; then
 	echo "ERROR: unknown mode '$NODEMODE', don't know what to do"
 	exit 1
     fi    
-
+    
     if [ ! -s "$TMPFILE" ]; then
 	echo "ERROR: failed to add node to $FILE"
 	exit 1

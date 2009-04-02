@@ -71,6 +71,7 @@ public class VolumeTest extends TestCase {
     }
 
     public void setUp() {
-        storage = new Storage();        
+        storage = new Storage();
+        Storage.initializeForEBS();
     }
 }

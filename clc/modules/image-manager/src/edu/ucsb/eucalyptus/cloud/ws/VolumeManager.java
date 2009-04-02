@@ -152,7 +152,9 @@ public class VolumeManager {
         }
       }
       if( isAttached ) return reply;
-      Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
+      if( !vol.getState(  ).equals( State.ANNILATED ) ) {
+        Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
+      }
       db.delete( vol );
       db.commit();
     } catch ( EucalyptusCloudException e ) {
@@ -216,7 +218,7 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId() );
     }
     for( AttachedVolume attachedVol : vm.getVolumes() ) {
-      if( attachedVol.getDevice().replaceAll("/unknown","").equals( request.getDevice() ) ) {
+      if( attachedVol.getDevice().replaceAll("unknown,requested:","").equals( request.getDevice() ) ) {
         throw new EucalyptusCloudException( "Already have a device attached to: " + request.getDevice() );
       }
     }
@@ -300,7 +302,7 @@ public class VolumeManager {
 
     request.setVolumeId( volume.getVolumeId() );
     request.setRemoteDevice( volume.getRemoteDevice() );
-    request.setDevice( volume.getDevice().replaceAll("/unknown","") );
+    request.setDevice( volume.getDevice().replaceAll("unknown,requested:","") );
     request.setInstanceId( vm.getInstanceId() );
     QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( ), request );
     cluster.getMessageQueue().enqueue( event );

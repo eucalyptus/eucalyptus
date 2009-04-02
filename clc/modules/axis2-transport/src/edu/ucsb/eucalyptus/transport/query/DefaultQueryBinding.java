@@ -91,7 +91,7 @@ public class DefaultQueryBinding implements QueryBinding {
       throw new QueryBindingException( "Failed to construct message of type " + operationName );
     }
 
-    List<String> failedMappings = populateObject( eucaMsg, fieldMap, params );
+    List<String> failedMappings = populateObject( ( GroovyObject ) eucaMsg, fieldMap, params );
 
     if ( !failedMappings.isEmpty() || !params.isEmpty() )
     {
@@ -148,6 +148,16 @@ public class DefaultQueryBinding implements QueryBinding {
         obj.setProperty( paramFieldPair.getValue(), params.remove( paramFieldPair.getKey() ) );
       else if ( declaredType.getName().equals( "int" ) )
         obj.setProperty( paramFieldPair.getValue(), Integer.parseInt( params.remove( paramFieldPair.getKey() ) ) );
+      else if ( declaredType.equals( Integer.class ) )
+        obj.setProperty( paramFieldPair.getValue(), new Integer( params.remove( paramFieldPair.getKey() ) ) );
+      else if ( declaredType.getName().equals( "boolean" ) )
+        obj.setProperty( paramFieldPair.getValue(), Boolean.parseBoolean( params.remove( paramFieldPair.getKey() ) ) );
+      else if ( declaredType.equals( Boolean.class ) )
+        obj.setProperty( paramFieldPair.getValue(), new Boolean( params.remove( paramFieldPair.getKey() ) ) );
+      else if ( declaredType.getName().equals( "long" ) )
+        obj.setProperty( paramFieldPair.getValue(), Long.parseLong( params.remove( paramFieldPair.getKey() ) ) );
+      else if ( declaredType.equals( Long.class ) )
+        obj.setProperty( paramFieldPair.getValue(), new Long( params.remove( paramFieldPair.getKey() ) ) );
       else
         return false;
       return true;
