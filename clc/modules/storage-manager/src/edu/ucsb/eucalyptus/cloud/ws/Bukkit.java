@@ -79,6 +79,7 @@ public class Bukkit {
     private static boolean enableSnapshots = false;
 
     private static boolean sharedMode = false;
+    private final long CACHE_PROGRESS_TIMEOUT = 60000L; //a minute
 
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
@@ -1687,6 +1688,40 @@ public class Bukkit {
         }
     }
 
+    private boolean isCached(String bucketName, String manifestKey) {
+        EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+        try {
+            ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
+            if(foundImageCacheInfo.getInCache())
+                return true;
+            else
+                return false;
+        } catch(Exception ex) {
+            return false;
+        } finally {
+            db.commit();
+        }
+    }
+
+    private long checkCachingProgress(String bucketName, String manifestKey, long oldBytesRead) {
+        EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+        try {
+            ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
+            String cacheImageKey = foundImageCacheInfo.getImageName().replaceAll(".tgz", "");
+            long objectSize = storageManager.getObjectSize(bucketName, cacheImageKey);
+            if(objectSize > 0) {
+                return objectSize - oldBytesRead;
+            }
+            return oldBytesRead;
+        } catch (Exception ex) {
+            return oldBytesRead;
+        } finally {
+            db.commit();
+        }
+    }
+
     public GetDecryptedImageResponseType GetDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {
         GetDecryptedImageResponseType reply = (GetDecryptedImageResponseType) request.getReply();
         String bucketName = request.getBucket();
@@ -1723,10 +1758,22 @@ public class Bukkit {
                         }
                         ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
                         if(!foundImageCacheInfo.getInCache()) {
+                            boolean cached = false;
                             WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
                             synchronized (monitor) {
                                 try {
-                                    monitor.wait();
+                                    boolean caching;
+                                    long bytesCached = 0;
+                                    do {
+                                        monitor.wait(CACHE_PROGRESS_TIMEOUT);
+                                        if(isCached(bucketName, objectKey)) {
+                                            cached = true;
+                                            break;
+                                        }
+                                        long newBytesCached = checkCachingProgress(bucketName, objectKey, bytesCached);
+                                        caching = (newBytesCached - bytesCached) > 0 ? true : false;
+                                        bytesCached = newBytesCached;
+                                    } while(caching);
                                 } catch(Exception ex) {
                                     LOG.error(ex);
                                     db2.rollback();
