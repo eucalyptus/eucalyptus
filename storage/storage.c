@@ -185,9 +185,9 @@ void LogprintfCache (void)
     struct stat mystat;
     cache_entry * e;
     if (cache_head) {
-        logprintfl (EUCAINFO, "cached images (free=%d of %dMB):\n", cache_free_mb, cache_size_mb);
+        logprintfl (EUCAINFO, "cached images (free=%lld of %lldMB):\n", cache_free_mb, cache_size_mb);
     } else {
-        logprintfl (EUCAINFO, "cached images (free=%d of %dMB): none\n", cache_free_mb, cache_size_mb);
+        logprintfl (EUCAINFO, "cached images (free=%lld of %lldMB): none\n", cache_free_mb, cache_size_mb);
     }
     for ( e = cache_head; e; e=e->next) {
         bzero (&mystat, sizeof (mystat));
@@ -830,7 +830,7 @@ retry:
         // if this is a disk image and we want to add swap and/or ephemeral partitions to it 
         if ( swap_mb>0L || ephemeral_mb>0L ) {
             sem_p (s);
-            if ((e=vrun("%s %s %d %d", disk_convert_command_path, file_path, swap_mb, ephemeral_mb))!=0) {
+            if ((e=vrun("%s %s %lld %lld", disk_convert_command_path, file_path, swap_mb, ephemeral_mb))!=0) {
                 logprintfl (EUCAERROR, "error: failed to add swap or ephemeral to the disk image\n");
             }
             sem_v (s);
@@ -852,7 +852,7 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
     char rundir_path  [BUFSIZE];
     int e = ERROR;
     
-    logprintfl (EUCAINFO, "retrieving images for instance %s (limit=%dMB)...\n", instanceId, total_disk_limit_mb);
+    logprintfl (EUCAINFO, "retrieving images for instance %s (limit=%lldMB)...\n", instanceId, total_disk_limit_mb);
     
     /* get the necessary files from Walrus, caching them if necessary */
     char * image_name;
@@ -938,7 +938,7 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
     if (!convert_to_disk) {
       /* create swap partition */
         if (swap_mb) { 
-            if ((e=vrun ("dd bs=1M count=%d if=/dev/zero of=%s/swap 2>/dev/null", swap_mb, rundir_path)) != 0) { 
+            if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/swap 2>/dev/null", swap_mb, rundir_path)) != 0) { 
                 logprintfl (EUCAINFO, "creation of swap (dd) at %s/swap failed\n", rundir_path);
                 return e;
             }
@@ -950,7 +950,7 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
         
         /* create ephemeral partition */
         if (ephemeral_mb) {
-            if ((e=vrun ("dd bs=1M count=%d if=/dev/zero of=%s/ephemeral 2>/dev/null", ephemeral_mb, rundir_path )) != 0) {
+            if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/ephemeral 2>/dev/null", ephemeral_mb, rundir_path )) != 0) {
                 logprintfl (EUCAINFO, "creation of ephemeral disk (dd) at %s/ephemeral failed\n", rundir_path);
                 return e;
             }

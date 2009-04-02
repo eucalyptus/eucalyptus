@@ -462,7 +462,7 @@ static int doInitialize (void)
     long long instances_bytes = scFSCK (&global_instances);
     sem_v (inst_sem);
     if (instances_bytes<0) {
-        logprintfl (EUCAFATAL, "instances store failed integrity check (error=%d)\n", instances_bytes);
+        logprintfl (EUCAFATAL, "instances store failed integrity check (error=%lld)\n", instances_bytes);
         return ERROR_FATAL;
     }
 
