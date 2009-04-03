@@ -58,7 +58,7 @@ public class LVM2Manager implements BlockStorageManager {
     public static String iface = "eth0";
     public static boolean initialized = false;
     public static String hostName = "localhost";
-    public static final int MAX_LOOP_DEVICES = 256;
+    public static final int MAX_LOOP_DEVICES = 16;
     public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
     public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
     private static final String CONFIG_FILE_PATH = "/etc/eucalyptus/eucalyptus.conf";
