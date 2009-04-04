@@ -891,10 +891,12 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
 	if (convert_to_disk) {
 	  if ((e=vrun("%s 32256 %s %s", add_key_command_path, image_path, key_template))!=0) {
             logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
+	    e=0;
 	  }
 	} else {
 	  if ((e=vrun("%s 0 %s %s", add_key_command_path, image_path, key_template))!=0) {
             logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
+	    e=0;
 	  }
 	}
 	sem_v (s);
@@ -914,10 +916,12 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
       if (convert_to_disk) {
           if ((e=vrun("%s 32256 %s", add_key_command_path, image_path))!=0) { /* without key, add_key just does tune2fs */
               logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
+	      e=0;
           }
       } else {
           if ((e=vrun("%s 0 %s", add_key_command_path, image_path))!=0) { /* without key, add_key just does tune2fs */
               logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
+	      e=0;
           }
       }
       sem_v (s);
