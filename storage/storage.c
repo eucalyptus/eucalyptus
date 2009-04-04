@@ -636,7 +636,7 @@ static int wait_for_file (const char * appear, const char * disappear, const int
 }
 
 /* returns size of the file in bytes if OK, otherwise a negative error */
-static long long get_cached_file (const char * user_id, const char * url, const char * file_id, const char * instance_id, const char * file_name, char * file_path, sem * s, int convert_to_disk, long long total_disk_limit_mb) 
+static long long get_cached_file (const char * user_id, const char * url, const char * file_id, const char * instance_id, const char * file_name, char * file_path, sem * s, int convert_to_disk, long long limit_mb) 
 {
     char tmp_digest_path [BUFSIZE];
 	char cached_dir      [BUFSIZE]; 
@@ -675,26 +675,31 @@ retry:
     }
 
     /* we return the sum of these */
-    long long file_size = 0;
-    long long digest_size = 0;
+    long long file_size_b = 0;
+    long long digest_size_b = 0;
    
     /* while still under lock, decide whether to cache */
     int should_cache = 0;
     if (action==STAGE) { 
         e = walrus_object_by_url (url, tmp_digest_path, 0); /* get the digest to see how big the file is */
         if (e==OK && stat (tmp_digest_path, &mystat)) {
-            digest_size = (long long)mystat.st_size;
+            digest_size_b = (long long)mystat.st_size;
         }
         if (e==OK) {
             /* pull the size out of the digest */
             char * xml_file = file2str (tmp_digest_path);
             if (xml_file) {
-                file_size = str2longlong (xml_file, "<size>", "</size>");
+                file_size_b = str2longlong (xml_file, "<size>", "</size>");
                 free (xml_file);
             }
-            if (file_size > 0) {
+            if (file_size_b > 0) {
                 /* TODO: take into account extra padding required for disks (over partitions) */
-                if ( ok_to_cache (cached_path, file_size+digest_size) ) { /* will invalidate the cache, if needed */
+                long long full_size_b = file_size_b+digest_size_b;
+                if ( full_size_b/MEGABYTE > limit_mb) {
+                    logprintfl (EUCAERROR, "error: file size exceeds limits imposed by the VM Type\n");
+                    action = ABORT;
+
+                } else if ( ok_to_cache (cached_path, full_size_b) ) { /* will invalidate the cache, if needed */
                     ensure_path_exists (cached_dir); /* creates missing directories */
                     should_cache = 1;
                     if ( touch (staging_path) ) { /* indicate that we'll be caching it */
@@ -788,7 +793,7 @@ retry:
             if ( touch (digest_path) ) {
                 logprintfl (EUCAERROR, "error: failed to touch digest file %s\n", digest_path);
             }            
-            file_size = mystat.st_size;
+            file_size_b = mystat.st_size;
         }
         sem_v (sc_sem); /***** release lock *****/
 
@@ -814,15 +819,16 @@ retry:
         
     case ABORT:
         logprintfl (EUCAERROR, "get_cached_file() failed (errno=%d)\n", e);
+        e = ERROR;
     }
 
-    if (e==OK && file_size > 0 && convert_to_disk ) { // if all went well above
+    if (e==OK && file_size_b > 0 && convert_to_disk ) { // if all went well above
         long long swap_mb = swap_size_mb;
         long long ephemeral_mb = 0L;
-        if ((total_disk_limit_mb - (file_size/MEGABYTE)) < swap_size_mb) {
+        if ((limit_mb - (file_size_b/MEGABYTE)) < swap_size_mb) {
             swap_mb = 0L;
         } else {
-            ephemeral_mb = total_disk_limit_mb - (file_size/MEGABYTE) - swap_size_mb;
+            ephemeral_mb = limit_mb - (file_size_b/MEGABYTE) - swap_size_mb;
             if (ephemeral_mb < 10) { // pointless
                 ephemeral_mb = 0L; 
             }
@@ -838,16 +844,16 @@ retry:
     }
 
     if (e==OK && action!=ABORT)
-        return file_size + digest_size;
+        return file_size_b + digest_size_b;
     return 0L;
 }
 
 
 int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char **instance_path, sem * s, int convert_to_disk, long long total_disk_limit_mb) 
 {
-    char image_path   [BUFSIZE]; long long image_size = 0L;
-    char kernel_path  [BUFSIZE]; long long kernel_size = 0L;
-    char ramdisk_path [BUFSIZE]; long long ramdisk_size = 0L;
+    char image_path   [BUFSIZE]; long long image_size_b = 0L;
+    char kernel_path  [BUFSIZE]; long long kernel_size_b = 0L;
+    char ramdisk_path [BUFSIZE]; long long ramdisk_size_b = 0L;
     char config_path  [BUFSIZE];
     char rundir_path  [BUFSIZE];
     int e = ERROR;
@@ -862,10 +868,21 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
         image_name = "root";
     }
 
-    if ((image_size=get_cached_file (userId, imageURL, imageId, instanceId, image_name, image_path, s, convert_to_disk, total_disk_limit_mb))<1L) return e;
-    if ((kernel_size=get_cached_file (userId, kernelURL, kernelId, instanceId, "kernel", kernel_path, s, 0, 0L))<1L) return e;
+    long long limit_mb = total_disk_limit_mb - swap_size_mb;
+#define CHECK_LIMIT \
+    if (limit_mb < 1L) { \
+        logprintfl (EUCAFATAL, "VM Type disk limit (%lldMB) exceeded for instance %s\n", total_disk_limit_mb, instanceId); \
+        return e; \
+    }
+    CHECK_LIMIT
+    if ((image_size_b=get_cached_file (userId, imageURL, imageId, instanceId, image_name, image_path, s, convert_to_disk, limit_mb))<1L) return e;
+    limit_mb -= image_size_b/MEGABYTE;
+    CHECK_LIMIT
+    if ((kernel_size_b=get_cached_file (userId, kernelURL, kernelId, instanceId, "kernel", kernel_path, s, 0, limit_mb))<1L) return e;
+    limit_mb -= kernel_size_b/MEGABYTE;
+    CHECK_LIMIT
     if (ramdiskId && strnlen (ramdiskId, CHAR_BUFFER_SIZE) ) {
-        if ((ramdisk_size=get_cached_file (userId, ramdiskURL, ramdiskId, instanceId, "ramdisk", ramdisk_path, s, 0, 0L))<1L) return e;
+        if ((ramdisk_size_b=get_cached_file (userId, ramdiskURL, ramdiskId, instanceId, "ramdisk", ramdisk_path, s, 0, limit_mb))<1L) return e;
     }
     snprintf (rundir_path, BUFSIZE, "%s/%s/%s", sc_instance_path, userId, instanceId);
     
@@ -930,10 +947,10 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
 
     long long swap_mb = swap_size_mb;
     long long ephemeral_mb = 0L;
-    if (total_disk_limit_mb - (image_size/MEGABYTE) < swap_size_mb) {
+    if (total_disk_limit_mb - (image_size_b/MEGABYTE) < swap_size_mb) {
         swap_mb = 0L;
     } else {
-        ephemeral_mb = total_disk_limit_mb - (image_size/MEGABYTE) - swap_size_mb;
+        ephemeral_mb = total_disk_limit_mb - (image_size_b/MEGABYTE) - swap_size_mb;
         if (ephemeral_mb < 10) { // pointless
             ephemeral_mb = 0L; 
         }
