@@ -497,25 +497,27 @@ static int doInitialize (void)
             logprintfl (EUCAINFO, "Maximum disk available = %lld (under %s)\n", disk_max, ipath);
         }
 
-        /* xm info will be used for memory and cores */
-        s = system_output (get_xen_info_command_path);
-#define GET_VALUE(name,var) \
-        if (get_value (s, name, &var)) { \
-            logprintfl (EUCAFATAL, "error: did not find %s in output from %s\n", name, get_xen_info_command_path); \
-            free (s); \
-            return ERROR_FATAL; \
+        /* get memory and cores from Xen */
+        virNodeInfo ni;
+        if (virNodeGetInfo(conn, &ni)) {
+            logprintfl (EUCAFATAL, "error: failed to discover memory and cores\n");
+            return ERROR_FATAL;
         }
-
+        
         /* calculate mem_max */
         {
-            long long total_memory = 0;
-            long long free_memory  = 0;
-            long long dom0_min_mem = 0;
-            
-            GET_VALUE("total_memory", total_memory);
-            GET_VALUE("free_memory", free_memory);
-            GET_VALUE("dom0-min-mem", dom0_min_mem);
-            
+            long long total_memory = ni.memory/1024;
+            long long dom0_min_mem;
+
+            /* dom0-min-mem has to come from xend config file */
+            s = system_output (get_xen_info_command_path);
+            if (get_value (s, "dom0-min-mem", &dom0_min_mem)) {
+                logprintfl (EUCAFATAL, "error: did not find dom0-min-mem in output from %s\n", get_xen_info_command_path);
+                free (s);
+                return ERROR_FATAL;
+            }
+            free (s);
+
             mem_max = total_memory - 32 - dom0_min_mem;
             if (config_max_mem 
                 && mem_max>config_max_mem) 
@@ -523,22 +525,13 @@ static int doInitialize (void)
             logprintfl (EUCAINFO, "Maximum memory available = %lld\n", mem_max);
         }
 
-        /* calculate cores_max */
-        {
-             long long nr_cpus; 
-             long long nr_nodes; 
-         
-             GET_VALUE("nr_cpus", nr_cpus);
-             GET_VALUE("nr_nodes", nr_nodes);
-            
-             cores_max = (int)nr_cpus * (int)nr_nodes; 
-             /* unlike with disk or memory limits, use the limit as the
-              * number of cores, regardless of whether the actual number
-              * of cores is bigger or smaller */
-             if (config_max_cores) 
-                 cores_max = config_max_cores; 
-             logprintfl (EUCAINFO, "Maximum cores available = %d\n", cores_max);
-        }
+        /* calculate cores_max: unlike with disk or memory limits, use the
+         * limit as the number of cores, regardless of whether the actual
+         * number of cores is bigger or smaller */
+        cores_max = ni.cpus;
+        if (config_max_cores) 
+            cores_max = config_max_cores; 
+        logprintfl (EUCAINFO, "Maximum cores available = %d\n", cores_max);
     }
 
     pthread_t tcb;

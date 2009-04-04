@@ -25,15 +25,23 @@ int main (int argc, char * argv[] )
   char *eucahome=NULL;
   
   logfile (NULL, EUCAFATAL); /* suppress all messages */
-  
-  snprintf(hypervisorURL, 32, "xen:///");
-  hypervisor = strdup("xen");
-  if (argc == 2) {
-    if (!strcmp(argv[1], "kvm")) {
-      if (hypervisor) free(hypervisor);
+ 
+  if (argc != 2) {
+      fprintf (stderr, "error: test_nc expects one parameter (name of hypervisor)\n");
+      exit (1);
+  }
+ 
+  hypervisor = argv[1];
+  if (!strcmp(hypervisor, "kvm")) {
       snprintf(hypervisorURL, 32, "qemu:///system");
-      hypervisor = strdup("kvm");
-    }
+  } else if (!strcmp(hypervisor, "xen")) {
+      snprintf(hypervisorURL, 32, "xen:///");      
+  } else if (!strcmp(hypervisor, "not_configured")) {
+      fprintf (stderr, "error: HYPERVISOR variable is not set in eucalyptus.conf\n");
+      exit (1);
+  } else {
+      fprintf (stderr, "error: hypervisor type (%s) is not recognized\n", hypervisor);
+      exit (1);
   }
   
   /* check that commands that NC needs are there */
