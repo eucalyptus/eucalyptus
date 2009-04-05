@@ -295,9 +295,10 @@ public class LVM2Manager implements BlockStorageManager {
             LVMMetaInfo foundMetaInfo = metaInfoList.get(0);
             majorNumber = foundMetaInfo.getMajorNumber();
             minorNumber = foundMetaInfo.getMinorNumber();
-            if(((++minorNumber) % MAX_LOOP_DEVICES) == 0) {
+            if(minorNumber >= MAX_LOOP_DEVICES) {
                 ++majorNumber;
             }
+            minorNumber = (minorNumber + 1) % MAX_LOOP_DEVICES;
             foundMetaInfo.setMajorNumber(majorNumber);
             foundMetaInfo.setMinorNumber(minorNumber);
         }
