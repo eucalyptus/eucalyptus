@@ -94,11 +94,11 @@ and save the file.
 
 d. Cloud dependencies
 
-; cd $EUCALYPTUS_SRC/CLC
-; mkdir deps
-; mv $EUCALYPTUS_SRC/eucalyptus-src-deps/cloud-lib.tar.gz deps
-; mv $EUCALYPTUS_SRC/eucalyptus-src-deps/cloud-deploy.tar.gz deps
+This step will download the CLC (Cloud Controller) java dependencies,
+which are required for both building and running Eucalyptus.
 
+; cd $EUCALYPTUS_SRC/clc
+; make deps
 
 f. Other software
 

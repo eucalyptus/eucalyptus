@@ -14,7 +14,7 @@ build:
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
 	@if test ! -e deps/cloud-lib.tar.gz; then \
-		echo "Did you forget to run ant deps?"; exit 1; fi
+		echo "Cannot find java deps, please run 'make deps' in the 'clc/' subdirectory."; exit 1; fi
 	ANT_OPTS="-Xmx512m" $(ANT) build
 	make -C modules/storage-controller/native
 	make -C modules/storage-manager/native
