@@ -693,12 +693,14 @@ retry:
                 free (xml_file);
             }
             if (file_size_b > 0) {
-                /* TODO: take into account extra padding required for disks (over partitions) */
                 long long full_size_b = file_size_b+digest_size_b;
-                if ( full_size_b/MEGABYTE > limit_mb) {
-                    logprintfl (EUCAERROR, "error: file size exceeds limits imposed by the VM Type\n");
+                if (convert_to_disk) {
+                    full_size_b += swap_size_mb*MEGABYTE + MEGABYTE; /* TODO: take into account extra padding required for disks (over partitions) */
+                }
+                if ( full_size_b/MEGABYTE + 1 > limit_mb ) {
+                    logprintfl (EUCAFATAL, "error: insufficient disk capacity remaining (%lldMB) in VM Type of instance %s for component %s\n", limit_mb, instance_id, file_name);
                     action = ABORT;
-
+                    
                 } else if ( ok_to_cache (cached_path, full_size_b) ) { /* will invalidate the cache, if needed */
                     ensure_path_exists (cached_dir); /* creates missing directories */
                     should_cache = 1;
@@ -731,6 +733,15 @@ retry:
                 logprintfl (EUCAERROR, "error: partition-to-disk image conversion command failed\n");
             }
             sem_v (s);
+            
+            /* recalculate file size now that it was converted */
+            if ( stat (file_path, &mystat ) != 0 ) {
+                logprintfl (EUCAERROR, "error: file %s not found\n", file_path);
+            } else if (mystat.st_size < 1) {
+                logprintfl (EUCAERROR, "error: file %s has the size of 0\n", file_path);
+            } else {
+                file_size_b = (long long)mystat.st_size;
+            }
         }
 
         /* cache the partition or disk, if possible */
@@ -764,7 +775,7 @@ retry:
         
     case WAIT:
         logprintfl (EUCAINFO, "waiting for disapperance of %s...\n", staging_path);
-        /* wait for staging_path to disappear, which means both that either the
+        /* wait for staging_path to disappear, which means both either the
          * download succeeded or it failed */
         if ( (e=wait_for_file (NULL, staging_path, 180, "cached image")) ) 
             return 0L;        
@@ -789,14 +800,19 @@ retry:
                 logprintfl (EUCAINFO, "due to failure, removed cache directory %s\n", cached_dir);
             }
         } else {
+            file_size_b = mystat.st_size;
+
             /* touch the digest so cache can use mtime for invalidation */
             if ( touch (digest_path) ) {
                 logprintfl (EUCAERROR, "error: failed to touch digest file %s\n", digest_path);
-            }            
-            file_size_b = mystat.st_size;
+            } else if ( stat (digest_path, &mystat) ) {
+                logprintfl (EUCAERROR, "error: digest file %s not found\n", digest_path);
+            } else {
+                digest_size_b = (long long)mystat.st_size;
+            }
         }
         sem_v (sc_sem); /***** release lock *****/
-
+        
         if (e<0) { /* digest changed */
             if (action==VERIFY) { /* i.e. we did not download/waited for this file */
                 /* try downloading anew */
@@ -823,23 +839,22 @@ retry:
     }
 
     if (e==OK && file_size_b > 0 && convert_to_disk ) { // if all went well above
-        long long swap_mb = swap_size_mb;
-        long long ephemeral_mb = 0L;
-        if ((limit_mb - (file_size_b/MEGABYTE)) < swap_size_mb) {
-            swap_mb = 0L;
-        } else {
-            ephemeral_mb = limit_mb - (file_size_b/MEGABYTE) - swap_size_mb;
-            if (ephemeral_mb < 10) { // pointless
-                ephemeral_mb = 0L; 
-            }
-        }
-        // if this is a disk image and we want to add swap and/or ephemeral partitions to it 
-        if ( swap_mb>0L || ephemeral_mb>0L ) {
+        long long ephemeral_mb = limit_mb - swap_size_mb - (file_size_b+digest_size_b)/MEGABYTE;
+        if ( swap_size_mb>0L || ephemeral_mb>0L ) {
             sem_p (s);
-            if ((e=vrun("%s %s %lld %lld", disk_convert_command_path, file_path, swap_mb, ephemeral_mb))!=0) {
+            if ((e=vrun("%s %s %lld %lld", disk_convert_command_path, file_path, swap_size_mb, ephemeral_mb))!=0) {
                 logprintfl (EUCAERROR, "error: failed to add swap or ephemeral to the disk image\n");
             }
             sem_v (s);
+
+            /* recalculate file size (again!) now that it was converted */
+            if ( stat (file_path, &mystat ) != 0 ) {
+                logprintfl (EUCAERROR, "error: file %s not found\n", file_path);
+            } else if (mystat.st_size < 1) {
+                logprintfl (EUCAERROR, "error: file %s has the size of 0\n", file_path);
+            } else {
+                file_size_b = (long long)mystat.st_size;
+            }
         }
     }
 
@@ -858,108 +873,88 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
     char rundir_path  [BUFSIZE];
     int e = ERROR;
     
-    logprintfl (EUCAINFO, "retrieving images for instance %s (limit=%lldMB)...\n", instanceId, total_disk_limit_mb);
+    logprintfl (EUCAINFO, "retrieving images for instance %s (disk limit=%lldMB)...\n", instanceId, total_disk_limit_mb);
     
-    /* get the necessary files from Walrus, caching them if necessary */
+    /* get the necessary files from Walrus, caching them if possible */
     char * image_name;
+    int mount_offset = 0;
+    long long limit_mb = total_disk_limit_mb;
     if (convert_to_disk) {
         image_name = "disk";
+        mount_offset = 32256; /* 1st partition offset in the disk image */
     } else {
         image_name = "root";
-    }
+        limit_mb -= swap_size_mb; /* account for swap, which will be a separate file */
+    } 
 
-    long long limit_mb = total_disk_limit_mb - swap_size_mb;
-#define CHECK_LIMIT \
+#define CHECK_LIMIT(WHAT) \
     if (limit_mb < 1L) { \
-        logprintfl (EUCAFATAL, "VM Type disk limit (%lldMB) exceeded for instance %s\n", total_disk_limit_mb, instanceId); \
+        logprintfl (EUCAFATAL, "error: insufficient disk capacity remaining (%lldMB) in VM Type of instance %s for component %s\n", limit_mb, instanceId, WHAT); \
         return e; \
     }
-    CHECK_LIMIT
-    if ((image_size_b=get_cached_file (userId, imageURL, imageId, instanceId, image_name, image_path, s, convert_to_disk, limit_mb))<1L) return e;
-    limit_mb -= image_size_b/MEGABYTE;
-    CHECK_LIMIT
+    CHECK_LIMIT("swap");
+
+    /* do kernel & ramdisk first, since either the disk or the ephemeral partition will take up the rest */
     if ((kernel_size_b=get_cached_file (userId, kernelURL, kernelId, instanceId, "kernel", kernel_path, s, 0, limit_mb))<1L) return e;
     limit_mb -= kernel_size_b/MEGABYTE;
-    CHECK_LIMIT
+    CHECK_LIMIT("kernel")
     if (ramdiskId && strnlen (ramdiskId, CHAR_BUFFER_SIZE) ) {
         if ((ramdisk_size_b=get_cached_file (userId, ramdiskURL, ramdiskId, instanceId, "ramdisk", ramdisk_path, s, 0, limit_mb))<1L) return e;
+        limit_mb -= ramdisk_size_b/MEGABYTE;
+        CHECK_LIMIT("ramdisk")
     }
+
+    if ((image_size_b=get_cached_file (userId, imageURL, imageId, instanceId, image_name, image_path, s, convert_to_disk, limit_mb))<1L) return e;
+    limit_mb -= image_size_b/MEGABYTE;
+
     snprintf (rundir_path, BUFSIZE, "%s/%s/%s", sc_instance_path, userId, instanceId);
-    
+   
     logprintfl (EUCAINFO, "preparing images for instance %s...\n", instanceId);
     
     /* embed the key, which is contained in keyName */
+    char *key_template = NULL;
     if (keyName && strlen(keyName)) {
-      int key_len = strlen(keyName);
-      char *key_template = NULL;
-      int fd = -1;
-      int ret;
-      
-      key_template = strdup("/tmp/sckey.XXXXXX");
-      
-      if (((fd = mkstemp(key_template)) < 0)) {
-	logprintfl (EUCAERROR, "failed to create a temporary key file\n"); 
-      } else if ((ret = write (fd, keyName, key_len))<key_len) {
-	logprintfl (EUCAERROR, "failed to write to key file %s write()=%d\n", key_template, ret);
-      } else {
-	close (fd);
-	logprintfl (EUCAINFO, "adding key %s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
-	sem_p (s);
-	if (convert_to_disk) {
-	  if ((e=vrun("%s 32256 %s %s", add_key_command_path, image_path, key_template))!=0) {
-            logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
-	    e=0;
-	  }
-	} else {
-	  if ((e=vrun("%s 0 %s %s", add_key_command_path, image_path, key_template))!=0) {
-            logprintfl (EUCAERROR, "ERROR: key injection command failed\n");
-	    e=0;
-	  }
-	}
-	sem_v (s);
+        int key_len = strlen(keyName);
+        int fd = -1;
+        int ret;
         
-	/* let's remove the temporary key file */
-	if (unlink(key_template) != 0) {
-	  logprintfl (EUCAWARN, "WARNING: failed to remove temporary key file %s\n", key_template);
-	}
-      }
-      
-      /* TODO: handle errors! */
-      if (key_template) free(key_template);
-      if (e) return e;
-      
-    } else {
-      sem_p (s);
-      if (convert_to_disk) {
-          if ((e=vrun("%s 32256 %s", add_key_command_path, image_path))!=0) { /* without key, add_key just does tune2fs */
-              logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
-	      e=0;
-          }
-      } else {
-          if ((e=vrun("%s 0 %s", add_key_command_path, image_path))!=0) { /* without key, add_key just does tune2fs */
-              logprintfl (EUCAWARN, "WARNING: failed to prepare the superblock of the root disk image\n");
-	      e=0;
-          }
-      }
-      sem_v (s);
-      /* printf ("no user public key to embed, skipping\n"); */
-    }
-
-    long long swap_mb = swap_size_mb;
-    long long ephemeral_mb = 0L;
-    if (total_disk_limit_mb - (image_size_b/MEGABYTE) < swap_size_mb) {
-        swap_mb = 0L;
-    } else {
-        ephemeral_mb = total_disk_limit_mb - (image_size_b/MEGABYTE) - swap_size_mb;
-        if (ephemeral_mb < 10) { // pointless
-            ephemeral_mb = 0L; 
+        key_template = strdup(" /tmp/sckey.XXXXXX");
+        
+        if (((fd = mkstemp(key_template)) < 0)) {
+            logprintfl (EUCAERROR, "failed to create a temporary key file\n"); 
+        } else if ((ret = write (fd, keyName, key_len))<key_len) {
+            logprintfl (EUCAERROR, "failed to write to key file %s write()=%d\n", key_template, ret);
+        } else {
+            close (fd);
+            logprintfl (EUCAINFO, "adding key%s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
         }
+    } else { /* if no key was given, add_key just does tune2fs to up the filesystem mount date */
+        key_template = "";
+        logprintfl (EUCAINFO, "running tune2fs on the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
     }
 
+    /* do the key injection and/or tune2fs */
+    sem_p (s);
+    if (vrun("%s %d %s%s", add_key_command_path, mount_offset, image_path, key_template)!=0) {
+        logprintfl (EUCAERROR, "ERROR: key injection / tune2fs command failed\n");
+        /* we proceed despite the failure since maybe user embedded the key
+         * into the image; also tune2fs may fail on uncrecognized but valid
+         * filesystems */
+    }
+    sem_v (s);
+    
+    if (strlen(key_template)) {
+        if (unlink(key_template) != 0) {
+            logprintfl (EUCAWARN, "WARNING: failed to remove temporary key file %s\n", key_template);
+        }
+        free (key_template);
+    }
+    
+    /* if the image is a root partition... */
     if (!convert_to_disk) {
-      /* create swap partition */
-        if (swap_mb) { 
-            if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/swap 2>/dev/null", swap_mb, rundir_path)) != 0) { 
+        /* create swap partition */
+        if (swap_size_mb>0) { 
+            if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/swap 2>/dev/null", swap_size_mb, rundir_path)) != 0) { 
                 logprintfl (EUCAINFO, "creation of swap (dd) at %s/swap failed\n", rundir_path);
                 return e;
             }
@@ -968,10 +963,9 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
                 return e;		
             }
         }
-        
         /* create ephemeral partition */
-        if (ephemeral_mb) {
-            if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/ephemeral 2>/dev/null", ephemeral_mb, rundir_path )) != 0) {
+        if (limit_mb>0) {
+            if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/ephemeral 2>/dev/null", limit_mb, rundir_path )) != 0) {
                 logprintfl (EUCAINFO, "creation of ephemeral disk (dd) at %s/ephemeral failed\n", rundir_path);
                 return e;
             }

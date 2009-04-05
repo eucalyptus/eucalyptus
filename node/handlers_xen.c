@@ -552,7 +552,7 @@ static int get_instance_xml (char *userId, char *instanceId, int ramdisk, char *
     } else {
         snprintf (buf, BUFSIZE, "%s", gen_libvirt_xml_command_path);
     }
-    if (params->diskSize > 0) { /* ephemeral disk was requested */
+    if (params->diskSize > 0) { /* TODO: get this info from scMakeImage */
         strncat (buf, " --ephemeral", BUFSIZE);
     }
     * xml = system_output (buf);
@@ -1046,13 +1046,15 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
         }
     }
 
-    ncVolume * volume;
-    sem_p (inst_sem);
-    volume = add_volume (instance, volumeId, remoteDev, localDevReal);
-    sem_v (inst_sem);
-    if ( volume == NULL ) {
-        logprintfl (EUCAFATAL, "ERROR: Failed to save the volume record, aborting volume attachment\n");
-        return ERROR;
+    if (ret==OK) {
+        ncVolume * volume;
+        sem_p (inst_sem);
+        volume = add_volume (instance, volumeId, remoteDev, localDevReal);
+        sem_v (inst_sem);
+        if ( volume == NULL ) {
+            logprintfl (EUCAFATAL, "ERROR: Failed to save the volume record, aborting volume attachment\n");
+            return ERROR;
+        }
     }
 
     return ret;
@@ -1100,13 +1102,15 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
         }
     }
 
-    ncVolume * volume;
-    sem_p (inst_sem);
-    volume = free_volume (instance, volumeId, remoteDev, localDev);
-    sem_v (inst_sem);
-    if ( volume == NULL ) {
-        logprintfl (EUCAFATAL, "ERROR: Failed to find and remove volume record, aborting volume detachment\n");
-        return ERROR;
+    if (ret==OK) {
+        ncVolume * volume;
+        sem_p (inst_sem);
+        volume = free_volume (instance, volumeId, remoteDev, localDev);
+        sem_v (inst_sem);
+        if ( volume == NULL ) {
+            logprintfl (EUCAFATAL, "ERROR: Failed to find and remove volume record, aborting volume detachment\n");
+            return ERROR;
+        }
     }
 
     return ret;
