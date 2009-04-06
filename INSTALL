@@ -1,7 +1,6 @@
 Installing Eucalyptus from source
 ---------------------------------
 
-
 Eucalyptus cloud setup consists of three components: the cloud controller
 [ClC], the cluster controller(s) [CCs], and node controller(s) [NCs].
 Typically, a ClC and a CC will run on the head node of a cluster, while an
@@ -10,7 +9,7 @@ all components on a single machine. To have a fully functional Eucalyptus
 installation you'll need at least one of each component.  
 
 Note that some of the commands below require root privileges.  Please,
-check section 2.f below for the list of software that Eucalyptus requires.
+check section 2.d below for the list of software that Eucalyptus requires.
 
 For the most up-to-date instructions, please visit the Eucalyptus web page
 (http://eucalyptus.cs.ucsb.edu).
@@ -92,6 +91,7 @@ to
 
 and save the file.
 
+
 d. Other software
 
 Additionally, the following dependencies need to be met:
@@ -99,7 +99,8 @@ Additionally, the following dependencies need to be met:
 - Java Development Kit (JDK), version 1.6 or above
 - Apache ant, version 1.6 or above
 - apache2 (httpd) developement files
-- libvrt developement files and libvirtd configured and running properly
+- libvirt version 0.6.0 or higher development files and libvirtd
+  configured and running properly
 - GNU C compiler
 - Make
 - iptables
@@ -127,56 +128,77 @@ site for download and installation instructions.)
 4. Setting Up Eucalyptus
 ------------------------
 
-NOTE: we provide the 'euca_conf' script as a convenience for setting
-up the configuration file located in
-'$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf'.  Expert users may edit
-this file manually instead of using 'euca_conf'.
+To configure Eucalyptus you need to specify where Eucalyptus is
+installed.  Moreover, for security reasons you need to specify the
+Unix user that Eucalyptus's services will run as.  We suggest using
+'eucalyptus' as such user.
 
-To configure eucalyptus you need to specify where eucalyptus is installed
-and which services to start (cloud, cluster controller and/or node
-controller) and which hypervisor you want to use (kvm or xen). Moreover for 
-security reasons you need to specify a user which eucalyptus' services
-will run as: we stronly suggest to use 'eucalyptus' as such user.
-For example to start the cluster controller, the cloud controller and to
-use kvm as hypervisor:
+These and other configuration options are stored in the file called
+`$EUCALYPTUS/etc/eucalyptus/eucalytpus.conf` on all nodes.  You may
+edit it manually or you may use the `euca_conf` script that we
+provide. For instance, the minimal required configuration that should
+be the same on all nodes can be recorded as follows:
 
-; $EUCALYPTUS/usr/sbin/euca_conf -user eucalyptus -d $EUCALYPTUS -cc Y -cloud Y -hypervisor kvm -nc N $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+; $EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS -user eucalyptus $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
 
-On the cluster controller add a list of hostnames on which you plan to run
-node controllers
-
-; $EUCALYPTUS/usr/sbin/euca_conf -nodes "<hostname1> ... <hostnamen>" $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
-
-Manually edit '$EUCALYPTUS/etc/eucalyptus/eucalytpus.conf' and, in
-particular, pay attention to the networking settings.  By default
-Eucalyptus will assume that you already have a DHCP server configured
-to serve IP addresses to VMs that start on cluster nodes (this mode is
-called SYSTEM in the configuration file). If that is not your setup,
-you have a choice between STATIC and MANAGED modes.  See the brief
-explanation in the comments of the configuration file for these modes,
-or consult the Eucalyptus documentation online.
-
-At this point you're ready to push the software out to your nodes.  If
-you installed Eucalyptus in it's own directory, you can just sync the
+At this point, if you plan to use Eucalyptus on more than one node,
+you're ready to push the software out to the other nodes.  If you
+installed Eucalyptus in its own directory, you can just sync the
 entire package to all of the hosts listed above using whatever
-mechanism you typically use to push changes to nodes (rsync, for instance)
+mechanism you typically use to push changes to nodes (rsync, for
+instance)
 
 ; rsync -a $EUCALYPTUS/ hostname1:$EUCALYPTUS/
 ; rsync -a $EUCALYPTUS/ hostname2:$EUCALYPTUS/
 ...
 
-On each compute node, create a local directory where VM images are placed
-at VM run-time.  Instruct the nodes to run only the node controller, and
-point it to the path of VM images. This path is used to store temporary VM
-images and it's important it's empty (everything in it will be removed!).
+This would also be a good time to ensure that all of your nodes have
+the Unix user for running Eucalyptus (e.g., `eucalytus` is in 
+`/etc/passwd` on all nodes).
+
+a. First-time Configuration
+
+In following instructions we assume that CLC and CC are co-located on
+a machine that we will refer to as the 'front end' and that NCs run on
+'compute nodes'.  The instructions will also work if one physical
+machine fulfills the role of both the front end and a compute node.
+
+=== Front-end Configuration ===
+
+Specify that the CLC and the CC are started on the front end:
+
+; $EUCALYPTUS/usr/sbin/euca_conf -cc Y -cloud Y $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+
+Next, add a list of hostnames on which you plan to run node controllers:
+
+; $EUCALYPTUS/usr/sbin/euca_conf -nodes "<hostname1> ... <hostnamen>" $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+
+Eucalyptus provides some options when it comes to configuring your VM
+virtual network. By default, we enable the simplest but least
+feature-ful networking mode, called SYSTEM in the eucalyptus.conf
+file: Eucalyptus will assume that you already have a DHCP server
+configured to serve IP addresses to VMs that start on cluster
+nodes. Please consult the the brief explanation in the comments of the
+configuration file and the Eucalyptus Networking document if you wish
+to try other modes that will enable more features (security groups,
+elastic IPs, etc.).
+
+=== Compute-node Configuration ===
+
+On each compute node, create a local directory where VM images are
+placed temporarily when VMs are running (images will be cached under
+the same path, too).  Instruct the nodes to run the node controller,
+choose what hypervisor to use ('xen' or 'kvm'), and specify the path
+for VM images. This path is used to store temporary VM images and it's
+important it's empty (everything in it will be removed!).
 
 ; for x in hostname1 hostname2 ... hostnameN ; do \
- 	ssh $x "mkdir -p /usr/local/instances/; $EUCALYPTUS/usr/sbin/euca_conf -cc N -cloud N -nc Y -hypervisor kvm -instances /usr/local/instances $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
+ 	ssh $x "mkdir -p /usr/local/instances/; $EUCALYPTUS/usr/sbin/euca_conf -nc Y -hypervisor kvm -instances /usr/local/instances $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
 ; done
 
 Make sure that the user you have decided to run eucalyptus as
-(username='eucalyptus' in the above examples) has the ability to
-control VMs through the node controller machine's local libvirt
+(username='eucalyptus' in the above example) has the ability to
+control VMs through the node controller machine's libvirt
 installation.  A good test is to run the command 'virsh list' as the
 eucalyptus user to see if that user has the appropriate rights.
 
