@@ -918,7 +918,7 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
         int fd = -1;
         int ret;
         
-        key_template = strdup(" /tmp/sckey.XXXXXX");
+        key_template = strdup("/tmp/sckey.XXXXXX");
         
         if (((fd = mkstemp(key_template)) < 0)) {
             logprintfl (EUCAERROR, "failed to create a temporary key file\n"); 
@@ -935,7 +935,7 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
 
     /* do the key injection and/or tune2fs */
     sem_p (s);
-    if (vrun("%s %d %s%s", add_key_command_path, mount_offset, image_path, key_template)!=0) {
+    if (vrun("%s %d %s %s", add_key_command_path, mount_offset, image_path, key_template)!=0) {
         logprintfl (EUCAERROR, "ERROR: key injection / tune2fs command failed\n");
         /* we proceed despite the failure since maybe user embedded the key
          * into the image; also tune2fs may fail on uncrecognized but valid

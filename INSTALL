@@ -92,15 +92,7 @@ to
 
 and save the file.
 
-d. Cloud dependencies
-
-This step will download the CLC (Cloud Controller) java dependencies,
-which are required for both building and running Eucalyptus.
-
-; cd $EUCALYPTUS_SRC/clc
-; make deps
-
-f. Other software
+d. Other software
 
 Additionally, the following dependencies need to be met:
 
@@ -128,6 +120,7 @@ site for download and installation instructions.)
 
 ; cd $EUCALYPTUS_SRC
 ; ./configure --with-axis2=$EUCALYPTUS/packages/axis2-1.4 --with-axis2c=$EUCALYPTUS/packages/axis2c-1.5.0 --enable-debug --prefix=$EUCALYPTUS
+; cd clc/; make deps; cd ..
 ; make ; make install
 
 
@@ -142,7 +135,7 @@ this file manually instead of using 'euca_conf'.
 To configure eucalyptus you need to specify where eucalyptus is installed
 and which services to start (cloud, cluster controller and/or node
 controller) and which hypervisor you want to use (kvm or xen). Moreover for 
-sicurity reasons you need to specify a user which eucalyptus' services
+security reasons you need to specify a user which eucalyptus' services
 will run as: we stronly suggest to use 'eucalyptus' as such user.
 For example to start the cluster controller, the cloud controller and to
 use kvm as hypervisor:
@@ -181,8 +174,16 @@ images and it's important it's empty (everything in it will be removed!).
  	ssh $x "mkdir -p /usr/local/instances/; $EUCALYPTUS/usr/sbin/euca_conf -cc N -cloud N -nc Y -hypervisor kvm -instances /usr/local/instances $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
 ; done
 
-Finally, ensure that the networking settings in 'eucalyptus.conf' on each
-of your nodes is configured properly (VNET_INTERFACE and VNET_BRIDGE).
+Make sure that the user you have decided to run eucalyptus as
+(username='eucalyptus' in the above examples) has the ability to
+control VMs through the node controller machine's local libvirt
+installation.  A good test is to run the command 'virsh list' as the
+eucalyptus user to see if that user has the appropriate rights.
+
+Finally, ensure that the networking settings in 'eucalyptus.conf' on
+each of your nodes is configured properly (VNET_MODE and related
+options, VNET_INTERFACE, VNET_BRIDGE.  See website for detailed
+documentation on Eucalyptus Networking Modes).
 
 
 5. Running Eucalyptus 
@@ -272,10 +273,13 @@ prompted for the password of each of your cluster nodes.
 First off, be sure to source the 'eucarc' file before running the commands
 below.  
 
-To run VMs, one must add a root disk image, a kernel, and, optionally, a
-ramdisk for the kernel.  Each is added to Walrus separately, using three
-EC2 commands.  The following example uses the test image that we provide.
-Unpack it to any directory:
+To run VMs, one must add a root disk image, a kernel, and, optionally,
+a ramdisk for the kernel.  Each is added to Walrus separately, using
+three EC2 commands.  The following example uses the test image that we
+provide.  Note that this image may or may not work within your local
+hypervisor environment.  It is highly recommended that you try to
+manually run the image on your hypervisor before trying to use it
+within Eucalyptus.  Unpack it to any directory:
 
 ; tar zxvf euca-ttylinux.tgz
 
