@@ -142,8 +142,8 @@ public class LVM2Manager implements BlockStorageManager {
             LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
             List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
             if(metaInfoList.size() <= 0) {
-                metaInfo.setMajorNumber(-1);
-                metaInfo.setMinorNumber(-1);
+                metaInfo.setMajorNumber(0);
+                metaInfo.setMinorNumber(0);
                 db.add(metaInfo);
             }
             db.commit();
