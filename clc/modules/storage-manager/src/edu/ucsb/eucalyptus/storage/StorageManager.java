@@ -40,7 +40,7 @@ import java.io.IOException;
 import java.util.List;
 
 public interface StorageManager {
-    
+
     public void initialize();
 
     public void checkPreconditions() throws EucalyptusCloudException;
@@ -53,8 +53,8 @@ public interface StorageManager {
 
     public void createObject(String bucket, String object) throws IOException;
 
-	public void putObject(String bucket, String object, byte[] base64Data, boolean append) throws IOException;
-    
+    public void putObject(String bucket, String object, byte[] base64Data, boolean append) throws IOException;
+
     public int readObject(String bucket, String object, byte[] bytes, long offset) throws IOException;
 
     public int readObject(String objectPath, byte[] bytes, long offset) throws IOException;
@@ -64,10 +64,12 @@ public interface StorageManager {
     public void deleteAbsoluteObject(String object) throws IOException;
 
     public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException;
-    
+
     public void renameObject(String bucket, String oldName, String newName) throws IOException;
 
     public String getObjectPath(String bucket, String object);
+
+    public long getObjectSize(String bucket, String object);
 
     public void setRootDirectory(String rootDirectory);
 

@@ -13,6 +13,11 @@
 # if we are on rocks we need the rocks binaries 
 [ -e /etc/profile.d/rocks-binaries.sh ] && . /etc/profile.d/rocks-binaries.sh
 
+if [ "$EUID" != "0" ]; then
+    echo "Eucalyptus must be run as root."
+    exit 1
+fi
+
 # I just wanted to set PATH to be the system PATH, but if a user install
 # eucalyptus manually, it may have binaries in a non-standard position:
 # hence we need to keep the PATH we receive.
@@ -246,7 +251,7 @@ do_start() {
 		check_java
 
 		cd $EUCALYPTUS/etc/eucalyptus
-		(su $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
+		(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
 		echo "$!" > $EUCALYPTUS/var/run/eucalyptus/cloud.pid
 		echo -n " CLC"
 	fi
