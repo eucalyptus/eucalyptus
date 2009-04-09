@@ -1906,7 +1906,7 @@ public class Bukkit {
             List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
             if(objectInfos.size() > 0)  {
                 ObjectInfo objectInfo = objectInfos.get(0);
-                if(objectInfo.canRead(userId) || request.isAdministrator() ) {
+                if(objectInfo.canRead(userId) || request.isAdministrator()) {
                     WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectKey);
                     try {
                         semaphore.acquire();
@@ -1918,39 +1918,26 @@ public class Bukkit {
                     List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
 
                     if(foundImageCacheInfos.size() == 0) {
-                        db2.commit();
+                            db2.commit();
 //issue a cache request
-                        cacheImage(bucketName, objectKey, userId, request.isAdministrator());
+                            cacheImage(bucketName, objectKey, userId, request.isAdministrator());
 //query db again
-<<<<<<< TREE
-                        db2 = new EntityWrapper<ImageCacheInfo>();
-                        foundImageCacheInfos = db2.query(searchImageCacheInfo);
-                    }
-                    ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
-                    if(!foundImageCacheInfo.getInCache()) {
-                        WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
-                        synchronized (monitor) {
-                            try {
-                                monitor.wait();
-                            } catch(Exception ex) {
-                                LOG.error(ex);
-                                db2.rollback();
-=======
                             db2 = new EntityWrapper<ImageCacheInfo>();
                             foundImageCacheInfos = db2.query(searchImageCacheInfo);
-                        }
+                    }
                         ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
+			db2.commit();
                         if(!foundImageCacheInfo.getInCache()) {
-                            boolean cached = false;
                             WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
-                            synchronized (monitor) {
+                            boolean cached = false;
+			    synchronized (monitor) {
                                 try {
                                     boolean caching;
                                     long bytesCached = 0;
                                     do {
                                         monitor.wait(CACHE_PROGRESS_TIMEOUT);
                                         if(isCached(bucketName, objectKey)) {
-                                            cached = true;
+					    cached = true;
                                             break;
                                         }
                                         long newBytesCached = checkCachingProgress(bucketName, objectKey, bytesCached);
@@ -1959,27 +1946,17 @@ public class Bukkit {
                                     } while(caching);
                                 } catch(Exception ex) {
                                     LOG.error(ex);
-                                    db2.rollback();
                                     db.rollback();
                                     throw new EucalyptusCloudException("monitor failure");
                                 }
                             }
-                            //caching may have modified the db. repeat the query
-                            db2.commit();
-                            db2 = new EntityWrapper<ImageCacheInfo>();
-                            foundImageCacheInfos = db2.query(searchImageCacheInfo);
-                            if(foundImageCacheInfos.size() > 0) {
-                                foundImageCacheInfo = foundImageCacheInfos.get(0);
-                                foundImageCacheInfo.setUseCount(foundImageCacheInfo.getUseCount() + 1);
-                                assert(foundImageCacheInfo.getInCache());
-                            } else {
->>>>>>> MERGE-SOURCE
-                                db.rollback();
-                                throw new EucalyptusCloudException("monitor failure");
-                            }
+			    if(!cached) {
+				LOG.error("unable to cache image: " + bucketName + "/" + objectKey);
+				db.rollback();
+				throw new EucalyptusCloudException("caching failure");
+			    }
                         }
                         //caching may have modified the db. repeat the query
-                        db2.commit();
                         db2 = new EntityWrapper<ImageCacheInfo>();
                         foundImageCacheInfos = db2.query(searchImageCacheInfo);
                         if(foundImageCacheInfos.size() > 0) {
@@ -1989,9 +1966,9 @@ public class Bukkit {
                         } else {
                             db.rollback();
                             db2.rollback();
-                            throw new NoSuchEntityException(objectKey);
+			    LOG.error("Could not find cached image: " + bucketName + "/" + objectKey);
+                            throw new NoSuchEntityException(bucketName + "/" + objectKey);
                         }
-                    }
 
                     Long unencryptedSize = foundImageCacheInfo.getSize();
 
