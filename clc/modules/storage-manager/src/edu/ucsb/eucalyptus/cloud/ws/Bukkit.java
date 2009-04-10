@@ -2230,28 +2230,24 @@ public class Bukkit {
         }
     }
 
-    private void decryptImage(final String encryptedImageName, final String decryptedImageName, final Cipher cipher) {
-        try {
-	    LOG.info("Decrypting image: " + decryptedImageName);
-            BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(new File(decryptedImageName)));
-            File inFile = new File(encryptedImageName);
-            BufferedInputStream in = new BufferedInputStream(new FileInputStream(inFile));
+    private void decryptImage(final String encryptedImageName, final String decryptedImageName, final Cipher cipher) throws Exception {
+	LOG.info("Decrypting image: " + decryptedImageName);
+        BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(new File(decryptedImageName)));            
+	File inFile = new File(encryptedImageName);
+        BufferedInputStream in = new BufferedInputStream(new FileInputStream(inFile));
 
-            int bytesRead = 0;
-            byte[] bytes = new byte[8192];
+        int bytesRead = 0;
+        byte[] bytes = new byte[8192];
 
-            while((bytesRead = in.read(bytes)) > 0) {
-                byte[] outBytes = cipher.update(bytes, 0, bytesRead);
-                out.write(outBytes);
-            }
-            byte[] outBytes = cipher.doFinal();
+        while((bytesRead = in.read(bytes)) > 0) {
+            byte[] outBytes = cipher.update(bytes, 0, bytesRead);
             out.write(outBytes);
-            in.close();
-            out.close();
- 	    LOG.info("Done decrypting: " + decryptedImageName);
-        } catch(Exception ex) {
-            LOG.error(ex);
         }
+        byte[] outBytes = cipher.doFinal();
+        out.write(outBytes);
+        in.close();
+        out.close();
+	LOG.info("Done decrypting: " + decryptedImageName);
     }
 
     private void assembleParts(final String name, List<String> parts) {
