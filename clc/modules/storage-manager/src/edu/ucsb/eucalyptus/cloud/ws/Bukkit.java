@@ -498,7 +498,7 @@ public class Bukkit {
                             }
                             messenger.removeQueue(key, randomKey);
                             messenger.removeMonitor(key);
-                            LOG.info("Transfer complete" + key + " " + randomKey);
+                            LOG.info("Transfer complete: " + key);
                             break;
 
                         } else if(WalrusDataMessage.isInterrupted(dataMessage)) {
@@ -518,7 +518,7 @@ public class Bukkit {
                                 LOG.error(ex);
                             }
                             db.rollback();
-                            LOG.info("Transfer interrupted" + key + " " + randomKey);
+                            LOG.info("Transfer interrupted: "+ key);
                             break;
                         } else {
                             assert(WalrusDataMessage.isData(dataMessage));
@@ -1775,6 +1775,9 @@ public class Bukkit {
                                         long newBytesCached = checkCachingProgress(bucketName, objectKey, bytesCached);
                                         caching = (newBytesCached - bytesCached) > 0 ? true : false;
                                         bytesCached = newBytesCached;
+					if(caching) {
+					    LOG.info("Bytes cached so far for image " + bucketName + "/" + objectKey + " :" +  String.valueOf(bytesCached));
+					}
                                     } while(caching);
                                 } catch(Exception ex) {
                                     LOG.error(ex);
@@ -2025,7 +2028,10 @@ public class Bukkit {
             Long unencryptedSize = 0L;
             boolean failed = false;
             try {
+		LOG.info("Caching image: " + bucketName + "/" + manifestKey);
+		LOG.info("Unzipping image: " + bucketName + "/" + manifestKey);
                 unzipImage(decryptedImageName, tarredImageName);
+		LOG.info("Untarring image: " + bucketName + "/" + manifestKey);
                 unencryptedSize = untarImage(tarredImageName, imageName);
                 Long oldCacheSize = 0L;
                 EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
@@ -2053,6 +2059,7 @@ public class Bukkit {
                 }
                 return -1L;
             }
+	    LOG.info("Cached image: " + bucketName + "/" + manifestKey + " size: " + String.valueOf(unencryptedSize));
             return unencryptedSize;
         }
 
@@ -2223,9 +2230,10 @@ public class Bukkit {
         }
     }
 
-    private void decryptImage(final String encryptedImageName, final String decyptedImageName, final Cipher cipher) {
+    private void decryptImage(final String encryptedImageName, final String decryptedImageName, final Cipher cipher) {
         try {
-            BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(new File(decyptedImageName)));
+	    LOG.info("Decrypting image: " + decryptedImageName);
+            BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(new File(decryptedImageName)));
             File inFile = new File(encryptedImageName);
             BufferedInputStream in = new BufferedInputStream(new FileInputStream(inFile));
 
@@ -2240,6 +2248,7 @@ public class Bukkit {
             out.write(outBytes);
             in.close();
             out.close();
+ 	    LOG.info("Done decrypting: " + decryptedImageName);
         } catch(Exception ex) {
             LOG.error(ex);
         }
