@@ -509,11 +509,11 @@ public class EucalyptusManagement {
 
             sysConf.setStorageMaxBucketsPerUser( systemConfig.getStorageMaxBucketsPerUser() );
             sysConf.setStorageMaxBucketSizeInMB( systemConfig.getStorageMaxBucketSizeInMB() );
-			sysConf.setStorageMaxCacheSizeInMB ( systemConfig.getStorageMaxCacheSizeInMB() );
-			sysConf.setStorageMaxTotalVolumeSizeInGb ( systemConfig.getStorageVolumesTotalInGB() );
-			sysConf.setStorageMaxTotalSnapshotSizeInGb( systemConfig.getStorageSnapshotsTotalInGB() );
-			sysConf.setStorageMaxVolumeSizeInGB (systemConfig.getStorageMaxVolumeSizeInGB());
-			sysConf.setStorageVolumesDir (systemConfig.getStorageVolumesPath());
+  	    sysConf.setStorageMaxCacheSizeInMB ( systemConfig.getStorageMaxCacheSizeInMB() );
+	    sysConf.setStorageMaxTotalVolumeSizeInGb ( systemConfig.getStorageVolumesTotalInGB() );
+	    sysConf.setStorageMaxTotalSnapshotSizeInGb( systemConfig.getStorageSnapshotsTotalInGB() );
+	    sysConf.setStorageMaxVolumeSizeInGB (systemConfig.getStorageMaxVolumeSizeInGB());
+	    sysConf.setStorageVolumesDir (systemConfig.getStorageVolumesPath());
             db.commit();
             WalrusProperties.update();
             StorageProperties.update();
@@ -524,12 +524,12 @@ public class EucalyptusManagement {
                     systemConfig.getDefaultKernelId(),
                     systemConfig.getDefaultRamdiskId(), systemConfig.getStoragePath(),
                     systemConfig.getStorageMaxBucketsPerUser() ,
-					systemConfig.getStorageMaxBucketSizeInMB(),
-					systemConfig.getStorageMaxCacheSizeInMB(),
-					systemConfig.getStorageVolumesTotalInGB(),
-					systemConfig.getStorageSnapshotsTotalInGB(),
-					systemConfig.getStorageMaxVolumeSizeInGB(),
-					systemConfig.getStorageVolumesPath() ) );
+		    systemConfig.getStorageMaxBucketSizeInMB(),
+		    systemConfig.getStorageMaxCacheSizeInMB(),
+	  	    systemConfig.getStorageVolumesTotalInGB(),
+		    systemConfig.getStorageSnapshotsTotalInGB(),
+		    systemConfig.getStorageMaxVolumeSizeInGB(),
+		    systemConfig.getStorageVolumesPath() ) );
             db.commit();
           WalrusProperties.update();
           StorageProperties.update();
