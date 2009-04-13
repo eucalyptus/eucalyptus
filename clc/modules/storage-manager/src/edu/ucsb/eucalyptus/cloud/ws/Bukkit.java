@@ -81,6 +81,8 @@ public class Bukkit {
 
     private static boolean sharedMode = false;
     private final long CACHE_PROGRESS_TIMEOUT = 60000L; //a minute
+    private long CACHE_RETRY_TIMEOUT = 1000L;
+    private final int CACHE_RETRY_LIMIT = 5;
     private ConcurrentHashMap<String, ImageCacher> imageCachers = new ConcurrentHashMap<String, ImageCacher>();
 
     static {
@@ -1750,7 +1752,7 @@ public class Bukkit {
                         ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
                         List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
 
-                        if(foundImageCacheInfos.size() == 0) {
+                        if((foundImageCacheInfos.size() == 0) || (imageCachers.get(bucketName + objectKey) == null)) {
                             db2.commit();
 //issue a cache request
                             cacheImage(bucketName, objectKey, userId, request.isAdministrator());
@@ -2080,7 +2082,19 @@ public class Bukkit {
             String imageName = tarredImageName.replaceAll(".tar", "");
             String imageKey = decryptedImageKey.replaceAll(".tgz", "");
             Long unencryptedSize;
+	    int numberOfRetries = 0;
             while((unencryptedSize = tryToCache(decryptedImageName, tarredImageName, imageName)) < 0) {
+		try {
+		    Thread.sleep(CACHE_RETRY_TIMEOUT);
+		} catch(InterruptedException ex) {
+		    notifyWaiters();
+		    return;
+		}
+		CACHE_RETRY_TIMEOUT = 2*CACHE_RETRY_TIMEOUT;
+		if(numberOfRetries++ >= CACHE_RETRY_LIMIT) {
+		    notifyWaiters();
+		    return;
+		}
                 EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
                 List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
                 ImageCacheInfo imageCacheInfo;
