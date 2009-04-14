@@ -5,6 +5,19 @@
 # chkconfig: 2345 99 05
 # description: script for starting and stopping eucalyptus
 #
+### BEGIN INIT INFO
+# Provides:                   eucalyptus
+# Required-Start:             $syslog 
+# Should-Start:               sendmail
+# Required-Stop:              $syslog 
+# Should-Stop:                sendmail
+# Default-Start:              2 3 5
+# Default-Stop:
+# Short-Description:          Start the eucalyptus cloud
+# Description:                Start the eucalyptus cloud
+# X-UnitedLinux-Default-Enabled: yes
+### END INIT INFO
+#
 # $Id: eucalyptus.in,v 1.6 2009-01-06 00:14:41 graziano Exp $
 #
 
