@@ -48,7 +48,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt >= 0.6, libcurl4, xen, xen-tools
+Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt, libcurl4, xen, xen-tools
 Group:        Applications/System
 
 %description nc
@@ -121,6 +121,8 @@ rm -f /etc/init.d/eucalyptus
 /opt/eucalyptus/var/eucalyptus/modules
 /opt/eucalyptus/var/eucalyptus/services
 /opt/eucalyptus/var/eucalyptus/webapps
+/opt/eucalyptys/usr/lib/libfsstorage.so
+/opt/eucalyptys/usr/lib/libvm2control.so
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
@@ -189,7 +191,9 @@ fi
 /opt/eucalyptus/usr/sbin/euca_conf -cc "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 
 %post nc
+. /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 /opt/eucalyptus/usr/sbin/euca_conf -nc "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+[ -n "$INSTANCE_PATH" ] && mkdir -p $INSTANCE_PATH
 
 %preun 
 if [ "$1" = "0" ]; then

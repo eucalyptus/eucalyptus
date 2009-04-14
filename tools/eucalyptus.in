@@ -191,11 +191,6 @@ do_start() {
 
 	# let's do some basic checkings depending on what we want to run
 	if [ "$START_CC" = "Y" ]; then
-		if [ -z "$NODES" ]; then
-			echo "NODES is empty in configuration file!" 
-			exit 1
-		fi
-
 		# if in MANAGED or STATIC mode, we need to use
 		# dhcpd, so better check we know how to use it
 		if [ "$VNET_MODE" = "MANAGED" -o "$VNET_MODE" = "STATIC" ]; then

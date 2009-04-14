@@ -48,7 +48,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= @VERSION@, apache2, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt >= 0.6, libcurl4
+Requires:     eucalyptus >= @VERSION@, apache2, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt, libcurl4
 Group:        Applications/System
 
 %description nc
