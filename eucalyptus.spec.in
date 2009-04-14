@@ -4,7 +4,7 @@ Version:       @VERSION@
 Release:       1
 License:       BSD
 Group:         Applications/System
-BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, jdk
+BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0
 Requires:      vlan
 Vendor:        Mayhem lab
 #Icon:          someicon.xpm
@@ -22,7 +22,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= @VERSION@, jdk, ant, ant-nodeps
+Requires:     eucalyptus >= @VERSION@, java-sdk >= 1.6.0, ant, ant-nodeps
 Group:        Applications/System
 
 %description cloud
