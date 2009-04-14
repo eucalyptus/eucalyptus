@@ -1,0 +1,338 @@
+Summary:       Elastic Utility Computing Architecture
+Name:          eucalyptus
+Version:       1.5.1
+Release:       1
+License:       BSD
+Group:         Applications/System
+BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0
+Requires:      vlan, aoetools, vblade
+Vendor:        Mayhem lab
+#Icon:          someicon.xpm
+Source:        http://eucalyptus.cs.ucsb.edu/downloads/eucalyptus-%{version}.tgz
+URL:           http://eucalyptus.cs.ucsb.edu
+
+%description
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains the common parts: you will need to install either
+eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
+
+%package cloud
+Summary:      Elastic Utility Computing Architecture - cloud controller
+Requires:     eucalyptus >= 1.5.1, java-sdk >= 1.6.0, ant, ant-nodeps
+Group:        Applications/System
+
+%description cloud
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains the cloud controller part of eucalyptus.
+
+%package cc
+Summary:      Elastic Utility Computing Architecture - cluster controller
+Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, iptables, bridge-utils, eucalyptus-gl, dhcp-server
+Group:        Applications/System
+
+%description cc
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains the cluster controller part of eucalyptus.
+
+%package nc
+Summary:      Elastic Utility Computing Architecture - node controller
+Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt >= 0.6, libcurl4, xen, xen-tools
+Group:        Applications/System
+
+%description nc
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains the node controller part of eucalyptus.
+
+%package gl
+Summary:      Elastic Utility Computing Architecture - cloud controller
+Requires:     eucalyptus, euca-httpd, euca-axis2c
+Group:        Applications/System
+
+%description gl
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains the internal log service of eucalyptus.
+
+%prep
+%setup -n eucalyptus
+
+%build
+./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
+cd clc
+make deps
+cd ..
+make
+
+%install
+make install
+
+# symlink for the system to start
+ln -sf /opt/eucalyptus/etc/init.d/eucalyptus /etc/init.d/eucalyptus
+
+%clean
+rm -rf /opt/eucalyptus/etc /opt/eucalyptus/usr /opt/eucalyptus/var
+rm -rf /opt/eucalyptus/lib
+rm -rf $RPM_BUILD_DIR/eucalyptus
+rm -f /etc/init.d/eucalyptus 
+
+%files
+%config /etc/init.d/eucalyptus
+%config(noreplace) /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+%doc LICENSE INSTALL README CHANGELOG
+/opt/eucalyptus/var/eucalyptus/keys
+/opt/eucalyptus/var/log
+/opt/eucalyptus/var/run
+/opt/eucalyptus/usr/share/eucalyptus/add_key.pl
+/opt/eucalyptus/usr/share/eucalyptus/euca_ipt
+/opt/eucalyptus/usr/share/eucalyptus/populate_arp.pl
+/opt/eucalyptus/usr/share/eucalyptus/euca_rootwrap
+/opt/eucalyptus/usr/sbin/euca_conf
+/opt/eucalyptus/usr/sbin/euca_sync_key
+/opt/eucalyptus/usr/sbin/euca_killall
+/opt/eucalyptus/etc/init.d/eucalyptus
+/opt/eucalyptus/etc/eucalyptus/httpd.conf
+
+%files cloud
+%config(noreplace) /opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
+/opt/eucalyptus/etc/eucalyptus/cloud.d
+/opt/eucalyptus/etc/eucalyptus/cloud.xml
+/opt/eucalyptus/usr/share/eucalyptus/*jar
+/opt/eucalyptus/var/eucalyptus/db
+/opt/eucalyptus/var/eucalyptus/images
+/opt/eucalyptus/var/eucalyptus/modules
+/opt/eucalyptus/var/eucalyptus/services
+/opt/eucalyptus/var/eucalyptus/webapps
+
+%files cc
+/opt/euca-axis2c/services/EucalyptusCC
+
+%files nc
+/opt/eucalyptus/usr/share/eucalyptus/euca_mountwrap
+/opt/eucalyptus/usr/share/eucalyptus/gen_libvirt_xml
+/opt/eucalyptus/usr/share/eucalyptus/gen_kvm_libvirt_xml
+/opt/eucalyptus/usr/share/eucalyptus/partition2disk
+/opt/eucalyptus/usr/share/eucalyptus/get_xen_info
+/opt/eucalyptus/usr/share/eucalyptus/get_sys_info
+/opt/eucalyptus/usr/sbin/euca_test_nc
+/opt/euca-axis2c/services/EucalyptusNC
+
+%files gl
+/opt/euca-axis2c/services/EucalyptusGL
+
+%pre
+if [ -x /etc/init.d/eucalyptus ]; 
+then
+	# stop the old services
+	/etc/init.d/eucalyptus stop || true
+fi
+if [ "$1" = "2" ]; 
+then
+	# let's try to save the old configuration
+	if [ -d /opt/eucalyptus-1.1/var/eucalyptus/db -o -d /opt/eucalyptus/var/eucalyptus/db ]; 
+	then
+		if [ -d /opt/eucalyptus-1.1/var/eucalyptus/db ]; 
+		then
+			# this is from 1.1: not tested
+			cd /opt/eucalyptus-1.1
+		fi
+		if [ -d /opt/eucalyptus/var/eucalyptus/db ]; 
+		then
+			cd /opt/eucalyptus
+		fi
+		rm -f var/eucalyptus/db/eucalyptus.lck
+		tar cf /root/eucalyptus-pre%{version}-upgrade.tar var/eucalyptus/db/eucalyptus.* etc/eucalyptus/cloud.d/*.bks
+		tar cf /root/eucalyptus-pre%{version}-rollback.tar var/eucalyptus/db/eucalyptus.* var/eucalyptus/keys etc/eucalyptus/eucalyptus.conf etc/eucalyptus/cloud.d/*.bks
+	fi
+fi
+
+
+%post
+# let's be sure we point to right eucalyptus installation
+/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+if [ "$1" = "1" ]; 
+then
+	chkconfig --add eucalyptus
+fi
+if [ "$1" = "2" ]; 
+then
+	if [ -s /root/eucalyptus-pre%{version}-upgrade.tar ];
+	then
+		cd /opt/eucalyptus
+		tar xf /root/eucalyptus-pre%{version}-upgrade.tar
+		rm -f /root/eucalyptus-pre%{version}-upgrade.tar
+	fi
+fi
+
+%post cloud
+/opt/eucalyptus/usr/sbin/euca_conf -cloud "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+
+%post cc
+/opt/eucalyptus/usr/sbin/euca_conf -cc "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+
+%post nc
+/opt/eucalyptus/usr/sbin/euca_conf -nc "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+
+%preun 
+if [ "$1" = "0" ]; then
+	chkconfig --del eucalyptus || true
+fi
+
+%postun
+if [ "$1" = "0" ]; 
+then
+	rm -rf /opt/eucalyptus
+fi
+
+%preun cloud
+if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
+	if [ -x /etc/init.d/eucalyptus ]; 
+	then
+		/etc/init.d/eucalyptus stop || /bin/true
+	fi
+	/opt/eucalyptus/usr/sbin/euca_conf -cloud "N" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+fi
+
+%preun cc
+if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
+	if [ -x /etc/init.d/eucalyptus ]; 
+	then
+		/etc/init.d/eucalyptus stop || /bin/true
+	fi
+	/opt/eucalyptus/usr/sbin/euca_conf -cc "N" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+fi
+
+%preun nc
+if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
+	if [ -x /etc/init.d/eucalyptus ]; 
+	then
+		/etc/init.d/eucalyptus stop || /bin/true
+	fi
+	/opt/eucalyptus/usr/sbin/euca_conf -nc "N" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+fi
+
+%changelog gl
+*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Added new service
+
+%changelog cloud
+*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Added cloud/Walrus configuration, including clusters and VM types
+- Revamped 'credentials' tab with new options to edit user information
+  and hide/show "secret" strings
+- Editing of user information for the administrator, including
+  confirmation dialog for deletion of users
+- User-initiated password recovery mechanism
+- Fixed a couple of bugs: ' ' in username, spurious double additions
+- User, Cluster, and System keys are now stored in PKCS#12 keystores and
+  have moved to var/eucalyptus/keys
+- Configuration is handled entirely through the web interface
+- Clusters dynamically added/started/stopped
+- Webservices operations complete up to EC2 2008-05-05 (w/o EBS):
+- "Elastic IP" address support
+- Image registration and attribute manipulation
+- GetConsole and RebootInstances support
+- Working Security Groups support for clusters in MANAGED network mode
+- see website for additional details, extensions, and caveats:
+  http://eucalyptus.cs.ucsb.edu/wiki/API_v1.4
+- Instance Metadata service (including userData)
+- Workaround to use standard tools for registering kernels & ramdisks
+
+*Mon Jul 28 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- First revision: split from eucalyptus to allow installation of only
+  this module.
+- Fix the instance ID naming collision.
+
+%changelog cc
+*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Cluster controller now handles concurrent requests (no longer have to 
+  restrict apache to allow only one connection at a time)
+- Cluster controller scheduling policy can now be configured in 
+  eucalyptus.conf (ROUNDROBIN and GREEDY currently supported)
+
+*Mon Jul 28 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- First revision: split from eucalyptus to allow installation of only
+  this module.
+
+%changelog nc
+*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Retrieval of images from Walrus instead of NFS-mounted file system
+- New caching and cleanup code, including start-time integrity checks
+- Script-based discovery of node resources (no assumptions about stat)
+- On-the-fly generation of libvirt XML configuration
+- MAX_CORES overrides actual number of cores both down and up
+- More robust instance state reporting to Cluster Controller
+- Moved libvirt errors to nc.log and suppressed harmless ones
+- Serialized some Xen invocations to guard against non-determinism
+- Added proper swap creation, also "ephemeral" disk support
+
+*Mon Jul 28 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- First revision: split from eucalyptus to allow installation of only
+  this module.
+- Implemented caching of the instances.
+- More robust checking for running instances.
+
+%changelog
+*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Added new networking subsystem that no longer depends on VDE
+- Added support for elastic IP assignment and security using the 'MANAGED' 
+  networking mode
+- Added Walrus: a Amazon S3 interface compatible storage manager. Walrus
+  handles storage of user data as well as filesystem images, kernels, and
+  ramdisks.
+- Support for new operations: reboot instance and get console output.
+- Revamped logging throughout, with five levels a la log4j.
+
+*Mon Jul 28 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Removed cloud, cluster controller and node controller and created their
+  own packages.
+- Added the possibility of installing Eucalyptus from RPMs (without ROCKS).
+
+*Tue Jul 01 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Added WS-security for internal communication
+- Added URL Query Interface for interacting with Eucalyptus
+- Cluster Controller improvements:
+   - Instance caching added to improve performance under
+     certain conditions
+   - Thread locks removed to improve performance
+   - NC resource information gathered asynchronously to
+     improve scheduler performance
+- Network control improvements:
+   - Added ability to configure 'public' instance interface
+     network parameters (instead of hardcoded 10. network)
+   - Lots of reliability changes
+- Cloud Controller improvements:
+   - Pure in-memory database
+   - Image registration over WS interface
+   - Improved build procedure
+- Web interface improvements:
+    - For all users (query interface credentials, listing of
+      available images)
+    - For the administrator (addition, approval, disabling,
+      and deletion of users; disabling of images)
+- Numerous bug fixes, improving stability and performance.
+   In particular, but not limited to:
+   - Recovering Cloud Controller system state
+   - Timeout-related error reporting
+   - Slimmer log files, with timestamps
+
+*Sat May 21 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- first release of eucalyptus

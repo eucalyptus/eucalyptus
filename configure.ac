@@ -182,7 +182,6 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 
 # Time to substitute and generate the files
 AC_CONFIG_FILES([Makedefs 
-		eucalyptus-${VERSION}-1.spec:eucalyptus.spec.in 
 		tools/eucalyptus:tools/eucalyptus.in])
 
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
