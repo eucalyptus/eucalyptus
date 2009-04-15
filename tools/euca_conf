@@ -358,7 +358,7 @@ if [ -n "$NEWNODE" ]; then
     fi
     
     if [ "$NODEMODE" = "ADD" ]; then
-	sudo -u eucalyptus scp ${KEYDIR}/* ${EUCA_USER}@${NEWNODE}:${KEYDIR}
+	sudo -u $EUCA_USER scp ${KEYDIR}/* ${EUCA_USER}@${NEWNODE}:${KEYDIR}
 	if [ "$?" != "0" ]; then
 	    echo "ERROR: could not syncronize keys, check authorized_keys on ${NEWNODE}, then run this command again."
 	    exit 1
