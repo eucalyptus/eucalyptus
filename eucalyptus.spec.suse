@@ -121,8 +121,8 @@ rm -f /etc/init.d/eucalyptus
 /opt/eucalyptus/var/eucalyptus/modules
 /opt/eucalyptus/var/eucalyptus/services
 /opt/eucalyptus/var/eucalyptus/webapps
-/opt/eucalyptys/usr/lib/libfsstorage.so
-/opt/eucalyptys/usr/lib/libvm2control.so
+/opt/eucalyptus/usr/lib/libfsstorage.so
+/opt/eucalyptus/usr/lib/liblvm2control.so
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
