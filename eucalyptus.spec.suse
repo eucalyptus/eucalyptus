@@ -234,10 +234,23 @@ if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
 fi
 
 %changelog gl
+*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- New eucalyptus version
+
 *Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - Added new service
 
 %changelog cloud
+*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Support for groups in ACLS
+- Fixed issues with meta data support
+- Web browser form-based uploads via HTTP POST
+- Object copying
+- Query string authentication
+- Support for arbitrary key names
+- Compressed image downloads and fixes to image caching
+- Reduced memory requirement 
+
 *Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - Added cloud/Walrus configuration, including clusters and VM types
 - Revamped 'credentials' tab with new options to edit user information
@@ -266,6 +279,9 @@ fi
 - Fix the instance ID naming collision.
 
 %changelog cc
+*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Network improvement: new MANAGED-NOVLAN mode 
+
 *Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - Cluster controller now handles concurrent requests (no longer have to 
   restrict apache to allow only one connection at a time)
@@ -277,6 +293,11 @@ fi
   this module.
 
 %changelog nc
+*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Support for the KVM hypervisor
+- Compression & retries on Walrus downloads
+- Reworked caching (now with configurable limit) 
+
 *Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - Retrieval of images from Walrus instead of NFS-mounted file system
 - New caching and cleanup code, including start-time integrity checks
@@ -295,6 +316,17 @@ fi
 - More robust checking for running instances.
 
 %changelog
+*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Elastic Block Store (EBS) support (volumes & snapshots) 
+- Better Java installation checking
+- New command-line administration: euca_conf -addcluster ... -addnode ...
+- Non-root user deployment of Eucalyptus
+- Binary packages for more distributions (Ubuntu et al) 
+- Cloud registration with Rightscale (from admin's 'Credentials' tab)
+- New configuration options for Walrus
+- Better screening of usernames
+- Fixed account confirmation glitches 
+
 *Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - Added new networking subsystem that no longer depends on VDE
 - Added support for elastic IP assignment and security using the 'MANAGED' 
