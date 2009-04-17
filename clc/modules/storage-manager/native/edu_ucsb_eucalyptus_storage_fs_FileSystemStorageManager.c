@@ -76,7 +76,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageM
 	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
 
 	char command[128];
-	snprintf(command, 128, "losetup -sf %s", filename);
+	snprintf(command, 128, "losetup --show -f %s", filename);
 	jstring returnValue = run_command(env, command, 1);
 	(*env)->ReleaseStringUTFChars(env, fileName, filename);
 	return returnValue;
