@@ -1,11 +1,11 @@
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       @VERSION@
-Release:       1
+Version:       1.5.1
+Release:       rc3
 License:       BSD
 Group:         Applications/System
-BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0
-Requires:      vlan
+BuildRequires: gcc, make, libvirt-devel, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c
+Requires:      vconfig, aoetools, vblade
 Vendor:        Mayhem lab
 #Icon:          someicon.xpm
 Source:        http://eucalyptus.cs.ucsb.edu/downloads/eucalyptus-%{version}.tgz
@@ -22,7 +22,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= @VERSION@, java-sdk >= 1.6.0, ant, ant-nodeps
+Requires:     eucalyptus >= 1.5.1, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -35,7 +35,7 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= @VERSION@, apache2, euca-axis2c, iptables, bridge-utils, eucalyptus-gl, dhcp-server
+Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, iptables, bridge-utils, eucalyptus-gl, dhcp
 Group:        Applications/System
 
 %description cc
@@ -48,7 +48,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= @VERSION@, apache2, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt, libcurl4
+Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt, curl, xen, xen-tools
 Group:        Applications/System
 
 %description nc
@@ -60,8 +60,8 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the node controller part of eucalyptus.
 
 %package gl
-Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus, apache2, euca-axis2c
+Summary:      Elastic Utility Computing Architecture - log service
+Requires:     eucalyptus, euca-httpd, euca-axis2c
 Group:        Applications/System
 
 %description gl
@@ -121,6 +121,8 @@ rm -f /etc/init.d/eucalyptus
 /opt/eucalyptus/var/eucalyptus/modules
 /opt/eucalyptus/var/eucalyptus/services
 /opt/eucalyptus/var/eucalyptus/webapps
+/opt/eucalyptus/usr/lib/libfsstorage.so
+/opt/eucalyptus/usr/lib/liblvm2control.so
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
@@ -189,7 +191,9 @@ fi
 /opt/eucalyptus/usr/sbin/euca_conf -cc "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 
 %post nc
+. /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 /opt/eucalyptus/usr/sbin/euca_conf -nc "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+[ -n "$INSTANCE_PATH" ] && mkdir -p $INSTANCE_PATH
 
 %preun 
 if [ "$1" = "0" ]; then

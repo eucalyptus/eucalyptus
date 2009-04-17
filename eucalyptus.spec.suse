@@ -1,7 +1,7 @@
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       1.5.1
-Release:       1
+Release:       rc3
 License:       BSD
 Group:         Applications/System
 BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0
@@ -22,7 +22,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= 1.5.1, java-sdk >= 1.6.0, ant, ant-nodeps
+Requires:     eucalyptus >= 1.5.1, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -60,7 +60,7 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the node controller part of eucalyptus.
 
 %package gl
-Summary:      Elastic Utility Computing Architecture - cloud controller
+Summary:      Elastic Utility Computing Architecture - log service 
 Requires:     eucalyptus, euca-httpd, euca-axis2c
 Group:        Applications/System
 
