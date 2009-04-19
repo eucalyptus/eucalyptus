@@ -80,9 +80,9 @@ public class Bukkit {
     private static boolean enableSnapshots = false;
 
     private static boolean sharedMode = false;
-    private final long CACHE_PROGRESS_TIMEOUT = 60000L; //a minute
+    private final long CACHE_PROGRESS_TIMEOUT = 600000L; //ten minutes
     private long CACHE_RETRY_TIMEOUT = 1000L;
-    private final int CACHE_RETRY_LIMIT = 5;
+    private final int CACHE_RETRY_LIMIT = 3;
     private ConcurrentHashMap<String, ImageCacher> imageCachers = new ConcurrentHashMap<String, ImageCacher>();
 
     static {
@@ -1766,8 +1766,8 @@ public class Bukkit {
                             WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
                             synchronized (monitor) {
                                 try {
-                                    boolean caching;
                                     long bytesCached = 0;
+				    int number_of_tries = 0;
                                     do {
                                         monitor.wait(CACHE_PROGRESS_TIMEOUT);
                                         if(isCached(bucketName, objectKey)) {
@@ -1775,12 +1775,16 @@ public class Bukkit {
                                             break;
                                         }
                                         long newBytesCached = checkCachingProgress(bucketName, objectKey, bytesCached);
-                                        caching = (newBytesCached - bytesCached) > 0 ? true : false;
+					++number_of_tries;
+                                        boolean is_caching = (newBytesCached - bytesCached) > 0 ? true : false;
+					if (!is_caching && (number_of_tries++ >= CACHE_RETRY_LIMIT))
+					    break;
+
                                         bytesCached = newBytesCached;
-					if(caching) {
+					if(is_caching) {
 					    LOG.info("Bytes cached so far for image " + bucketName + "/" + objectKey + " :" +  String.valueOf(bytesCached));
 					}
-                                    } while(caching);
+                                    } while(true);				    
                                 } catch(Exception ex) {
                                     LOG.error(ex);
                                     db2.rollback();
@@ -1788,6 +1792,12 @@ public class Bukkit {
                                     throw new EucalyptusCloudException("monitor failure");
                                 }
                             }
+			    if(!cached) {
+				LOG.error("Tired of waiting to cache image: " + bucketName + "/" + objectKey + " giving up");
+				db2.rollback();
+				db.rollback();
+				throw new EucalyptusCloudException("caching failure");			
+			    }
                             //caching may have modified the db. repeat the query
                             db2.commit();
                             db2 = new EntityWrapper<ImageCacheInfo>();
@@ -1877,10 +1887,12 @@ public class Bukkit {
         String decryptedImageKey;
         if(imageCacheInfos.size() != 0) {
             ImageCacheInfo icInfo = imageCacheInfos.get(0);
-            if(!icInfo.getInCache())
+            if(!icInfo.getInCache()) {
                 decryptedImageKey = icInfo.getImageName();
-            else
-                decryptedImageKey = "invalid";
+            } else {
+		db.commit();
+		return;
+	    }
         } else {
             decryptedImageKey = decryptImage(bucketName, manifestKey, userId, isAdministrator);
             //decryption worked. Add it.
@@ -1922,10 +1934,8 @@ public class Bukkit {
                         ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
                         List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
                         db2.commit();
-                        if(foundImageCacheInfos.size() == 0) {
-                            cacheImage(bucketName, manifestKey, userId, request.isAdministrator());
-                            reply.setSuccess(true);
-                        }
+                        cacheImage(bucketName, manifestKey, userId, request.isAdministrator());
+                        reply.setSuccess(true);
                         return reply;
                     } else {
                         db.rollback();
@@ -2367,7 +2377,11 @@ public class Bukkit {
 
                 while (bytesRemaining > 0) {
                     int bytesRead = storageManager.readObject(bucketName, objectName, bytes, offset);
-                    if(bytesRemaining - bytesRead > 0)
+		    if(bytesRead < 0) {
+			LOG.error("Unable to read object: " + bucketName + "/" + objectName);
+			break;
+		    }
+                    if((bytesRemaining - bytesRead) > 0)
                         getQueue.put(WalrusDataMessage.DataMessage(bytes, bytesRead));
                     else
                         getQueue.put(WalrusDataMessage.DataMessage(bytes, (int)bytesRemaining));
