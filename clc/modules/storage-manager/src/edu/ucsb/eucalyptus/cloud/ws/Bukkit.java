@@ -1775,7 +1775,6 @@ public class Bukkit {
                                             break;
                                         }
                                         long newBytesCached = checkCachingProgress(bucketName, objectKey, bytesCached);
-					++number_of_tries;
                                         boolean is_caching = (newBytesCached - bytesCached) > 0 ? true : false;
 					if (!is_caching && (number_of_tries++ >= CACHE_RETRY_LIMIT))
 					    break;
