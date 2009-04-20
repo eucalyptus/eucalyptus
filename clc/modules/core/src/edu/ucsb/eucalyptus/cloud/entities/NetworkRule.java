@@ -179,7 +179,7 @@ public class NetworkRule {
   }
 
   public boolean isValid() {
-    return this.protocol.equals( "tcp" ) || this.protocol.equals( "udp" ) || this.protocol.equals( "icmp" );
+    return "tcp".equals( this.protocol ) || "udp".equals( this.protocol ) || "icmp".equals( this.protocol );
   }
 
 }

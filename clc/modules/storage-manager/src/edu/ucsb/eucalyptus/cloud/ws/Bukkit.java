@@ -80,10 +80,10 @@ public class Bukkit {
     private static boolean enableSnapshots = false;
 
     private static boolean sharedMode = false;
-    private final long CACHE_PROGRESS_TIMEOUT = 60000L; //a minute
+    private final long CACHE_PROGRESS_TIMEOUT = 600000L; //ten minutes
     private long CACHE_RETRY_TIMEOUT = 1000L;
-    private final int CACHE_RETRY_LIMIT = 5;
-    private ConcurrentHashMap<String, ImageCacher> imageCachers = new ConcurrentHashMap<String, ImageCacher>();
+    private final int CACHE_RETRY_LIMIT = 3;
+    private static ConcurrentHashMap<String, ImageCacher> imageCachers = new ConcurrentHashMap<String, ImageCacher>();
 
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
@@ -92,6 +92,7 @@ public class Bukkit {
             shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
         }
         initializeForEBS();
+        cleanFailedCachedImages();
     }
 
     public static void initializeForEBS() {
@@ -136,6 +137,30 @@ public class Bukkit {
             } catch(Exception ex) {
                 LOG.error(ex);
             }
+        }
+        db.commit();
+    }
+
+    private static void cleanFailedCachedImages() {
+        EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
+        searchImageCacheInfo.setInCache(false);
+        List<ImageCacheInfo> icInfos = db.query(searchImageCacheInfo);
+        for(ImageCacheInfo icInfo : icInfos) {
+            String decryptedImageName = icInfo.getImageName();
+            String bucket = icInfo.getBucketName();
+            LOG.info("Cleaning failed cache entry: " + bucket + "/" + icInfo.getManifestName());
+            try {
+                if(decryptedImageName.contains(".tgz")) {
+                    storageManager.deleteObject(bucket, decryptedImageName.replaceAll(".tgz", "crypt.gz"));
+                    storageManager.deleteObject(bucket, decryptedImageName.replaceAll(".tgz", ".tar"));
+                    storageManager.deleteObject(bucket, decryptedImageName.replaceAll(".tgz", ""));
+                }
+                storageManager.deleteObject(bucket, decryptedImageName);
+            } catch(IOException ex) {
+                LOG.error(ex);
+            }
+            db.delete(icInfo);
         }
         db.commit();
     }
@@ -1488,14 +1513,6 @@ public class Bukkit {
                             throw new DecryptionFailedException("SHA1withRSA not found");
                         }
 
-                        EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-                        UserInfo userInfo = new UserInfo(userId);
-                        List<UserInfo> foundUserInfos = db2.query(userInfo);
-                        if(foundUserInfos.size() == 0) {
-                            db2.rollback();
-                            db.rollback();
-                            throw new AccessDeniedException(userId);
-                        }
 
                         if(isAdministrator) {
                             try {
@@ -1511,12 +1528,19 @@ public class Bukkit {
                                     throw new NotAuthorizedException("Invalid signature");
                                 }
                             } catch (Exception ex) {
-                                db2.rollback();
                                 db.rollback();
                                 LOG.error(ex, ex);
                                 throw new DecryptionFailedException("signature verification");
                             }
                         } else {
+                            EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
+                            UserInfo userInfo = new UserInfo(userId);
+                            List<UserInfo> foundUserInfos = db2.query(userInfo);
+                            if(foundUserInfos.size() == 0) {
+                                db2.rollback();
+                                db.rollback();
+                                throw new AccessDeniedException(userId);
+                            }
                             List<CertificateInfo> certInfos = foundUserInfos.get(0).getCertificates();
                             boolean signatureVerified = false;
                             for(CertificateInfo certInfo: certInfos) {
@@ -1536,6 +1560,7 @@ public class Bukkit {
                             if(!signatureVerified) {
                                 throw new NotAuthorizedException("Invalid signature");
                             }
+                            db2.commit();
                         }
                         List<String> parts = parser.getValues("//image/parts/part/filename");
                         ArrayList<String> qualifiedPaths = new ArrayList<String>();
@@ -1566,7 +1591,6 @@ public class Bukkit {
                             String ivString = new String(cipher.doFinal(hexToBytes(encryptedIV)));
                             iv = hexToBytes(ivString);
                         } catch(Exception ex) {
-                            db2.rollback();
                             db.rollback();
                             LOG.error(ex, ex);
                             throw new DecryptionFailedException("AES params");
@@ -1580,7 +1604,6 @@ public class Bukkit {
                             cipher.init(Cipher.DECRYPT_MODE, keySpec, salt);
                             decryptImage(encryptedImageName, decryptedImageName, cipher);
                         } catch (Exception ex) {
-                            db2.rollback();
                             db.rollback();
                             LOG.error(ex, ex);
                             throw new DecryptionFailedException("decryption failed");
@@ -1591,7 +1614,6 @@ public class Bukkit {
                             LOG.error(ex);
                             throw new EucalyptusCloudException();
                         }
-                        db2.commit();
                         db.commit();
                         return decryptedImageKey;
                     }
@@ -1752,7 +1774,7 @@ public class Bukkit {
                         ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
                         List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
 
-                        if((foundImageCacheInfos.size() == 0) || (imageCachers.get(bucketName + objectKey) == null)) {
+                        if((foundImageCacheInfos.size() == 0) || (!imageCachers.containsKey(bucketName + objectKey))) {
                             db2.commit();
 //issue a cache request
                             cacheImage(bucketName, objectKey, userId, request.isAdministrator());
@@ -1760,14 +1782,16 @@ public class Bukkit {
                             db2 = new EntityWrapper<ImageCacheInfo>();
                             foundImageCacheInfos = db2.query(searchImageCacheInfo);
                         }
-                        ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
-                        if(!foundImageCacheInfo.getInCache()) {
+                        ImageCacheInfo foundImageCacheInfo = null;
+                        if(foundImageCacheInfos.size() > 0)
+                            foundImageCacheInfo = foundImageCacheInfos.get(0);
+                        if((foundImageCacheInfo == null) || (!foundImageCacheInfo.getInCache())) {
                             boolean cached = false;
                             WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
                             synchronized (monitor) {
                                 try {
-                                    boolean caching;
                                     long bytesCached = 0;
+                                    int number_of_tries = 0;
                                     do {
                                         monitor.wait(CACHE_PROGRESS_TIMEOUT);
                                         if(isCached(bucketName, objectKey)) {
@@ -1775,18 +1799,27 @@ public class Bukkit {
                                             break;
                                         }
                                         long newBytesCached = checkCachingProgress(bucketName, objectKey, bytesCached);
-                                        caching = (newBytesCached - bytesCached) > 0 ? true : false;
+                                        boolean is_caching = (newBytesCached - bytesCached) > 0 ? true : false;
+                                        if (!is_caching && (number_of_tries++ >= CACHE_RETRY_LIMIT))
+                                            break;
+
                                         bytesCached = newBytesCached;
-					if(caching) {
-					    LOG.info("Bytes cached so far for image " + bucketName + "/" + objectKey + " :" +  String.valueOf(bytesCached));
-					}
-                                    } while(caching);
+                                        if(is_caching) {
+                                            LOG.info("Bytes cached so far for image " + bucketName + "/" + objectKey + " :" +  String.valueOf(bytesCached));
+                                        }
+                                    } while(true);
                                 } catch(Exception ex) {
                                     LOG.error(ex);
                                     db2.rollback();
                                     db.rollback();
                                     throw new EucalyptusCloudException("monitor failure");
                                 }
+                            }
+                            if(!cached) {
+                                LOG.error("Tired of waiting to cache image: " + bucketName + "/" + objectKey + " giving up");
+                                db2.rollback();
+                                db.rollback();
+                                throw new EucalyptusCloudException("caching failure");
                             }
                             //caching may have modified the db. repeat the query
                             db2.commit();
@@ -1874,29 +1907,35 @@ public class Bukkit {
         EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
         ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
         List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
-        String decryptedImageKey;
+        String decryptedImageKey = null;
         if(imageCacheInfos.size() != 0) {
             ImageCacheInfo icInfo = imageCacheInfos.get(0);
-            if(!icInfo.getInCache())
+            if(!icInfo.getInCache()) {
                 decryptedImageKey = icInfo.getImageName();
-            else
-                decryptedImageKey = "invalid";
-        } else {
-            decryptedImageKey = decryptImage(bucketName, manifestKey, userId, isAdministrator);
-            //decryption worked. Add it.
-            ImageCacheInfo foundImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
-            foundImageCacheInfo.setImageName(decryptedImageKey);
-            foundImageCacheInfo.setInCache(false);
-            foundImageCacheInfo.setUseCount(0);
-            foundImageCacheInfo.setSize(0L);
-            db.add(foundImageCacheInfo);
+            } else {
+                db.commit();
+                return;
+            }
         }
-        db.commit();
         //unzip, untar image in the background
         ImageCacher imageCacher = imageCachers.putIfAbsent(bucketName + manifestKey, new ImageCacher(bucketName, manifestKey, decryptedImageKey));
         if(imageCacher == null) {
+            if(decryptedImageKey == null) {
+                decryptedImageKey = decryptImage(bucketName, manifestKey, userId, isAdministrator);
+                //decryption worked. Add it.
+                ImageCacheInfo foundImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+                foundImageCacheInfo.setImageName(decryptedImageKey);
+                foundImageCacheInfo.setInCache(false);
+                foundImageCacheInfo.setUseCount(0);
+                foundImageCacheInfo.setSize(0L);
+                db.add(foundImageCacheInfo);
+            }
+            db.commit();
             imageCacher = imageCachers.get(bucketName + manifestKey);
+            imageCacher.setDecryptedImageKey(decryptedImageKey);
             imageCacher.start();
+        } else {
+            db.commit();
         }
     }
 
@@ -1922,7 +1961,7 @@ public class Bukkit {
                         ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
                         List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
                         db2.commit();
-                        if(foundImageCacheInfos.size() == 0) {
+                        if((foundImageCacheInfos.size() == 0) || (!imageCachers.containsKey(bucketName + manifestKey))) {
                             cacheImage(bucketName, manifestKey, userId, request.isAdministrator());
                             reply.setSuccess(true);
                         }
@@ -2026,14 +2065,17 @@ public class Bukkit {
             this.decryptedImageKey = decryptedImageKey;
         }
 
+        public void setDecryptedImageKey(String key) {
+            this.decryptedImageKey = key;
+        }
         private long tryToCache(String decryptedImageName, String tarredImageName, String imageName) {
             Long unencryptedSize = 0L;
             boolean failed = false;
             try {
-		LOG.info("Caching image: " + bucketName + "/" + manifestKey);
-		LOG.info("Unzipping image: " + bucketName + "/" + manifestKey);
+                LOG.info("Caching image: " + bucketName + "/" + manifestKey);
+                LOG.info("Unzipping image: " + bucketName + "/" + manifestKey);
                 unzipImage(decryptedImageName, tarredImageName);
-		LOG.info("Untarring image: " + bucketName + "/" + manifestKey);
+                LOG.info("Untarring image: " + bucketName + "/" + manifestKey);
                 unencryptedSize = untarImage(tarredImageName, imageName);
                 Long oldCacheSize = 0L;
                 EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
@@ -2061,7 +2103,7 @@ public class Bukkit {
                 }
                 return -1L;
             }
-	    LOG.info("Cached image: " + bucketName + "/" + manifestKey + " size: " + String.valueOf(unencryptedSize));
+            LOG.info("Cached image: " + bucketName + "/" + manifestKey + " size: " + String.valueOf(unencryptedSize));
             return unencryptedSize;
         }
 
@@ -2082,19 +2124,19 @@ public class Bukkit {
             String imageName = tarredImageName.replaceAll(".tar", "");
             String imageKey = decryptedImageKey.replaceAll(".tgz", "");
             Long unencryptedSize;
-	    int numberOfRetries = 0;
+            int numberOfRetries = 0;
             while((unencryptedSize = tryToCache(decryptedImageName, tarredImageName, imageName)) < 0) {
-		try {
-		    Thread.sleep(CACHE_RETRY_TIMEOUT);
-		} catch(InterruptedException ex) {
-		    notifyWaiters();
-		    return;
-		}
-		CACHE_RETRY_TIMEOUT = 2*CACHE_RETRY_TIMEOUT;
-		if(numberOfRetries++ >= CACHE_RETRY_LIMIT) {
-		    notifyWaiters();
-		    return;
-		}
+                try {
+                    Thread.sleep(CACHE_RETRY_TIMEOUT);
+                } catch(InterruptedException ex) {
+                    notifyWaiters();
+                    return;
+                }
+                CACHE_RETRY_TIMEOUT = 2*CACHE_RETRY_TIMEOUT;
+                if(numberOfRetries++ >= CACHE_RETRY_LIMIT) {
+                    notifyWaiters();
+                    return;
+                }
                 EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
                 List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
                 ImageCacheInfo imageCacheInfo;
@@ -2245,9 +2287,9 @@ public class Bukkit {
     }
 
     private void decryptImage(final String encryptedImageName, final String decryptedImageName, final Cipher cipher) throws Exception {
-	LOG.info("Decrypting image: " + decryptedImageName);
-        BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(new File(decryptedImageName)));            
-	File inFile = new File(encryptedImageName);
+        LOG.info("Decrypting image: " + decryptedImageName);
+        BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(new File(decryptedImageName)));
+        File inFile = new File(encryptedImageName);
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(inFile));
 
         int bytesRead = 0;
@@ -2261,7 +2303,7 @@ public class Bukkit {
         out.write(outBytes);
         in.close();
         out.close();
-	LOG.info("Done decrypting: " + decryptedImageName);
+        LOG.info("Done decrypting: " + decryptedImageName);
     }
 
     private void assembleParts(final String name, List<String> parts) {
@@ -2367,7 +2409,11 @@ public class Bukkit {
 
                 while (bytesRemaining > 0) {
                     int bytesRead = storageManager.readObject(bucketName, objectName, bytes, offset);
-                    if(bytesRemaining - bytesRead > 0)
+                    if(bytesRead < 0) {
+                        LOG.error("Unable to read object: " + bucketName + "/" + objectName);
+                        break;
+                    }
+                    if((bytesRemaining - bytesRead) > 0)
                         getQueue.put(WalrusDataMessage.DataMessage(bytes, bytesRead));
                     else
                         getQueue.put(WalrusDataMessage.DataMessage(bytes, (int)bytesRemaining));
