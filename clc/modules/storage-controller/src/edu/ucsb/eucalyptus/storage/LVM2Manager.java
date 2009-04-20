@@ -58,7 +58,7 @@ public class LVM2Manager implements BlockStorageManager {
     public static String iface = "eth0";
     public static boolean initialized = false;
     public static String hostName = "localhost";
-    public static final int MAX_LOOP_DEVICES = 256;
+    public static final int MAX_LOOP_DEVICES = 16;
     public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
     public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
     private static final String CONFIG_FILE_PATH = "/etc/eucalyptus/eucalyptus.conf";
@@ -142,8 +142,8 @@ public class LVM2Manager implements BlockStorageManager {
             LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
             List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
             if(metaInfoList.size() <= 0) {
-                metaInfo.setMajorNumber(-1);
-                metaInfo.setMinorNumber(-1);
+                metaInfo.setMajorNumber(0);
+                metaInfo.setMinorNumber(0);
                 db.add(metaInfo);
             }
             db.commit();
@@ -284,9 +284,10 @@ public class LVM2Manager implements BlockStorageManager {
 
     public native String getVblade();
 
-    public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
+    private synchronized List<Integer> allocateDeviceNumbers() throws EucalyptusCloudException {
         int majorNumber = -1;
         int minorNumber = -1;
+	List<Integer> deviceNumbers = new ArrayList<Integer>();
         LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
         EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
         List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
@@ -294,13 +295,23 @@ public class LVM2Manager implements BlockStorageManager {
             LVMMetaInfo foundMetaInfo = metaInfoList.get(0);
             majorNumber = foundMetaInfo.getMajorNumber();
             minorNumber = foundMetaInfo.getMinorNumber();
-            if(((++minorNumber) % MAX_LOOP_DEVICES) == 0) {
+            if(minorNumber >= MAX_LOOP_DEVICES) {
                 ++majorNumber;
             }
+            minorNumber = (minorNumber + 1) % MAX_LOOP_DEVICES;
             foundMetaInfo.setMajorNumber(majorNumber);
             foundMetaInfo.setMinorNumber(minorNumber);
         }
+	deviceNumbers.add(majorNumber);
+	deviceNumbers.add(minorNumber);
         db.commit();
+	return deviceNumbers;
+    }
+
+    public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
+        List<Integer> deviceNumbers = allocateDeviceNumbers();
+        int majorNumber = deviceNumbers.get(0);
+	int minorNumber = deviceNumbers.get(1);       
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
         int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
         boolean success = false;
@@ -837,10 +848,7 @@ public class LVM2Manager implements BlockStorageManager {
             LVMVolumeInfo foundLVMVolumeInfo = lvmVolumeInfos.get(0);
             returnValues.add(foundLVMVolumeInfo.getVgName());
             returnValues.add(foundLVMVolumeInfo.getLvName());
-        } else {
-            db.rollback();
-            throw new EucalyptusCloudException("could not locate LVMVolumeInfo for " + snapshotId);
-        }
+        } 
         db.commit();
         return returnValues;
     }
@@ -856,7 +864,7 @@ public class LVM2Manager implements BlockStorageManager {
             return snapSize;
         } else {
             db.rollback();
-            throw new EucalyptusCloudException("could not locate LVMVolumeInfo for " + snapshotId);
+            return 0;
         }
     }
 

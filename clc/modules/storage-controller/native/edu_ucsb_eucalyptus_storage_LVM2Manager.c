@@ -149,7 +149,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_losetup__
 	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
 
 	char command[512];
-	snprintf(command, 512, "losetup -sf %s", filename);
+	snprintf(command, 512, "losetup --show -f %s", filename);
 	jstring returnValue = run_command(env, command, 1);
 	(*env)->ReleaseStringUTFChars(env, fileName, filename);
 	return returnValue;
@@ -173,7 +173,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getLoopba
 	const jbyte* lodevname = (*env)->GetStringUTFChars(env, loDevName, NULL);
 
 	char command[128];
-	snprintf(command, 128, "losetup -s %s", lodevname);
+	snprintf(command, 128, "losetup --show %s", lodevname);
 	jstring returnValue = run_command(env, command, 1);
 	(*env)->ReleaseStringUTFChars(env, loDevName, lodevname);
 	return returnValue;

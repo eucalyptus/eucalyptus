@@ -66,9 +66,6 @@ public class ImageCacheInfo implements Comparable {
     @Column( name = "use_count")
     private Integer useCount;
 
-    @Column( name = "is_caching" )
-    private Boolean isCaching;
-
 
     public ImageCacheInfo() {}
 
@@ -135,11 +132,4 @@ public class ImageCacheInfo implements Comparable {
             return -1;
     }
 
-    public Boolean getCaching() {
-        return isCaching;
-    }
-
-    public void setCaching(Boolean caching) {
-        isCaching = caching;
-    }
 }

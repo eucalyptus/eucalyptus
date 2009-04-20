@@ -77,7 +77,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	}
 
 	// set up iptables
-	snprintf(cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap iptables -L", vnetconfig->eucahome);
+	snprintf(cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap iptables -L -n", vnetconfig->eucahome);
 	rc = system(cmd);
 
 	logprintfl(EUCADEBUG, "flushing 'filter' table\n");
@@ -789,7 +789,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
 int check_chain(vnetConfig *vnetconfig, char *userName, char *netName) {
   char cmd[256];
   int rc;
-  snprintf(cmd, 256, "-L %s-%s", userName, netName);
+  snprintf(cmd, 256, "-L %s-%s -n", userName, netName);
   rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
   return(rc);
 }

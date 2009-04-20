@@ -46,8 +46,10 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Properties;
 import java.util.UUID;
+import org.apache.log4j.Logger;
 
 public class ServletUtils extends HttpServlet {
+    private static Logger LOG = Logger.getLogger(ServletUtils.class);
 
     public static void sendMail(String from, String to, String subject, String body)
             throws ServletException, IOException {
@@ -65,8 +67,13 @@ public class ServletUtils extends HttpServlet {
             try {
                 send(from, to, subject, body);
             } catch(Exception exception) {
-                exception.printStackTrace();
-                //TODO: should read MX               
+		properties.setProperty("mail.smtp.host", "localhost");
+		try {
+		    //try with localhost
+                    send(from, to, subject, body);
+		} catch(Exception exception1) {
+		    LOG.error("Unable to send mail" + exception1); 
+		}
             }
         }
     }

@@ -78,6 +78,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	private static String cloud_registration_text;
     private static Image logo = null;
 	private static Image textless_logo = null;
+	private static String rightscale_base_url = null;
 	private static String rightscaleUrl = null;
 	
     /* global variables */
@@ -202,9 +203,11 @@ public class EucalyptusWebInterface implements EntryPoint {
 		}
 		show_cloud_registration = str2bool((String)props.get("show-cloud-registration"));
 		cloud_registration_text = (String)props.get("cloud-registration-text");
-		if (cloud_registration_text==null) {
+        rightscale_base_url = (String)props.get("rightscale-registration-base-url");
+		if (cloud_registration_text==null || rightscale_base_url==null) {
 			show_cloud_registration = false;
 		}
+
     }
 
     private boolean str2bool(String s)
@@ -1265,7 +1268,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 						String callbackUrl = "http://" 
 							+ ip
 							+ cloudInfo.getServicePath();
-						rightscaleUrl = "https://my.rightscale.com/cloud_registrations/new?callback_url="
+						rightscaleUrl = rightscale_base_url 
 							+ GWTUtils.escape (callbackUrl) // URL.encode() wasn't quite right 
 							+ "&registration_version=1.0&retry=1&secret_token="
 							+ GWTUtils.escape (cloudInfo.getCloudId());

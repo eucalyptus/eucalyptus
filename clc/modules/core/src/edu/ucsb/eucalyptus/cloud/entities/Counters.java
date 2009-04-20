@@ -99,7 +99,7 @@ public class Counters {
       Counters find = null;
       EntityManager em = EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME).createEntityManager(  );
       Session session = (Session) em.getDelegate();
-      List<Counters> found = ( List<Counters> ) session.createSQLQuery( "select * from COUNTERS" ).addEntity( Counters.class ).list();
+      List<Counters> found = ( List<Counters> ) session.createSQLQuery( "select * from counters" ).addEntity( Counters.class ).list();
       if( found.isEmpty() )
       {
         EntityTransaction tx = em.getTransaction();
@@ -121,7 +121,7 @@ public class Counters {
       Session session = (Session) em.getDelegate();
       Transaction tx = session.beginTransaction();
       tx.begin();
-      Counters find = ( Counters ) session.createSQLQuery( "select * from COUNTERS" ).addEntity( Counters.class ).list().get( 0 );
+      Counters find = ( Counters ) session.createSQLQuery( "select * from counters" ).addEntity( Counters.class ).list().get( 0 );
       tempId += modulus;
       find.setMessageId( tempId );
       session.save( find );
