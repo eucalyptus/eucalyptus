@@ -142,7 +142,7 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
             WalrusDataResponseType reply = (WalrusDataResponseType) message.getPayload();
             AxisHttpResponse response = ( AxisHttpResponse ) msgContext.getProperty( Axis2HttpWorker.REAL_HTTP_RESPONSE );
             response.addHeader( new BasicHeader( "Last-Modified", reply.getLastModified()));
-            response.addHeader( new BasicHeader( "ETag", reply.getEtag()));
+            response.addHeader( new BasicHeader( "ETag", '\"' + reply.getEtag() + '\"'));
             if(getType != null) {
                 newMsgContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, getType);
                 WalrusDataRequestType request = (WalrusDataRequestType) wrappedParam;
