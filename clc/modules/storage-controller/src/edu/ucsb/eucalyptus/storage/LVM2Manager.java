@@ -58,7 +58,8 @@ public class LVM2Manager implements BlockStorageManager {
     public static String iface = "eth0";
     public static boolean initialized = false;
     public static String hostName = "localhost";
-    public static final int MAX_LOOP_DEVICES = 16;
+    public static final int MAX_LOOP_DEVICES = 256;
+    public static final int MAX_MINOR_NUMBER = 16;
     public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
     public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
     private static final String CONFIG_FILE_PATH = "/etc/eucalyptus/eucalyptus.conf";
@@ -104,7 +105,7 @@ public class LVM2Manager implements BlockStorageManager {
         if(!initialized) {
             System.loadLibrary("lvm2control");
             exportManager = new AOEManager();
-	    initialize();
+            initialize();
             initialized = true;
         }
     }
@@ -240,9 +241,9 @@ public class LVM2Manager implements BlockStorageManager {
 
     public native void initialize();
 
-    public native String losetup(String fileName);
+    public native int losetup(String absoluteFileName, String loDevName);
 
-    public native String losetup(String absoluteFileName, String loDevName);
+    public native String findFreeLoopback();
 
     public native String getLoopback(String loDevName);
 
@@ -287,7 +288,7 @@ public class LVM2Manager implements BlockStorageManager {
     private synchronized List<Integer> allocateDeviceNumbers() throws EucalyptusCloudException {
         int majorNumber = -1;
         int minorNumber = -1;
-	List<Integer> deviceNumbers = new ArrayList<Integer>();
+        List<Integer> deviceNumbers = new ArrayList<Integer>();
         LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
         EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
         List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
@@ -295,23 +296,23 @@ public class LVM2Manager implements BlockStorageManager {
             LVMMetaInfo foundMetaInfo = metaInfoList.get(0);
             majorNumber = foundMetaInfo.getMajorNumber();
             minorNumber = foundMetaInfo.getMinorNumber();
-            if(minorNumber >= MAX_LOOP_DEVICES) {
+            if(minorNumber >= MAX_MINOR_NUMBER) {
                 ++majorNumber;
             }
-            minorNumber = (minorNumber + 1) % MAX_LOOP_DEVICES;
+            minorNumber = (minorNumber + 1) % MAX_MINOR_NUMBER;
             foundMetaInfo.setMajorNumber(majorNumber);
             foundMetaInfo.setMinorNumber(minorNumber);
         }
-	deviceNumbers.add(majorNumber);
-	deviceNumbers.add(minorNumber);
+        deviceNumbers.add(majorNumber);
+        deviceNumbers.add(minorNumber);
         db.commit();
-	return deviceNumbers;
+        return deviceNumbers;
     }
 
     public int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
         List<Integer> deviceNumbers = allocateDeviceNumbers();
         int majorNumber = deviceNumbers.get(0);
-	int minorNumber = deviceNumbers.get(1);       
+        int minorNumber = deviceNumbers.get(1);
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
         int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
         boolean success = false;
@@ -378,15 +379,26 @@ public class LVM2Manager implements BlockStorageManager {
     }
 
     public String createLoopback(String fileName) throws EucalyptusCloudException {
-        String loDevName = losetup(fileName);
-        if(loDevName.length() == 0) {
+        int number_of_retries = 0;
+        int status = -1;
+        String loDevName;
+        do {
+            loDevName = findFreeLoopback();
+            if(loDevName.length() > 0) {
+                status = losetup(fileName, loDevName);
+            }
+            if(number_of_retries++ >= MAX_LOOP_DEVICES)
+                break;
+        } while(status != 0);
+
+        if(status != 0) {
             throw new EucalyptusCloudException("Could not create loopback device for " + fileName +
                     ". Please check the max loop value and permissions");
         }
         return loDevName;
     }
 
-    public String createLoopback(String absoluteFileName, String loDevName) {
+    public int createLoopback(String absoluteFileName, String loDevName) {
         return losetup(absoluteFileName, loDevName);
     }
 
@@ -806,7 +818,7 @@ public class LVM2Manager implements BlockStorageManager {
             String loFileName = foundVolumeInfo.getVolumeId();
             String absoluteLoFileName = StorageProperties.storageRootDirectory + PATH_SEPARATOR + loFileName;
             String returnValue = getLoopback(loDevName);
-            if(!returnValue.contains(loFileName)) {
+            if(returnValue.length() <= 0) {
                 createLoopback(absoluteLoFileName, loDevName);
             }
         }
@@ -848,7 +860,7 @@ public class LVM2Manager implements BlockStorageManager {
             LVMVolumeInfo foundLVMVolumeInfo = lvmVolumeInfos.get(0);
             returnValues.add(foundLVMVolumeInfo.getVgName());
             returnValues.add(foundLVMVolumeInfo.getLvName());
-        } 
+        }
         db.commit();
         return returnValues;
     }
