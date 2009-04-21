@@ -1,3 +1,4 @@
+
 /*
  * Software License Agreement (BSD License)
  *
@@ -69,19 +70,26 @@ jstring run_command(JNIEnv *env, char *cmd, int outfd) {
 	return (*env)->NewStringUTF(env, readbuffer);
 }
 
-
-JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_createLoopback
-(JNIEnv *env, jobject obj, jstring fileName) {
-	char *args[4];
+JNIEXPORT jint JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_losetup
+  (JNIEnv *env, jobject obj, jstring fileName, jstring loDevName) {
 	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
+    const jbyte* lodevname = (*env)->GetStringUTFChars(env, loDevName, NULL);
 
-	char command[128];
-	snprintf(command, 128, "losetup --show -f %s", filename);
-	jstring returnValue = run_command(env, command, 1);
+	char command[512];
+	snprintf(command, 512, "losetup %s %s", lodevname, filename);
+	int returnValue = run_command_and_get_status(env, command, 1);
 	(*env)->ReleaseStringUTFChars(env, fileName, filename);
+	(*env)->ReleaseStringUTFChars(env, loDevName, lodevname);
 	return returnValue;
 }
 
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_findFreeLoopback
+  (JNIEnv *env, jobject obj) {
+	char command[64];
+	snprintf(command, 64, "losetup -f");
+	jstring returnValue = run_command(env, command, 1);
+	return returnValue;
+}
 
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager_removeLogicalVolume 
   (JNIEnv *env, jobject obj, jstring lvName) {
