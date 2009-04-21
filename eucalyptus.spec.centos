@@ -48,7 +48,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt, curl, xen, xen-tools
+Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt, curl, xen
 Group:        Applications/System
 
 %description nc
@@ -76,6 +76,12 @@ This package contains the internal log service of eucalyptus.
 %setup -n eucalyptus
 
 %build
+# let's be sure we have the right configuration file
+if [ -f tools/eucalyptus.conf.centos ]; then
+	cp tools/eucalyptus.conf.centos tools/eucalyptus.conf
+else if [ -f tools/eucalyptus.conf.rpm ]; then
+	cp tools/eucalyptus.conf.rpm tools/eucalyptus.conf
+fi
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
 cd clc
 make deps
