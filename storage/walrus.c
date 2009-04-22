@@ -10,7 +10,7 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 #if defined(HAVE_ZLIB_H)
-//#include <zlib.h>
+#include <zlib.h>
 #endif
 #include "euca_auth.h"
 #include "eucalyptus.h"
