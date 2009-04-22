@@ -2059,24 +2059,41 @@ public class Bukkit {
         private String bucketName;
         private String manifestKey;
         private String decryptedImageKey;
+        private boolean imageSizeExceeded;
+        private long spaceNeeded;
 
         public ImageCacher(String bucketName, String manifestKey, String decryptedImageKey) {
             this.bucketName = bucketName;
             this.manifestKey = manifestKey;
             this.decryptedImageKey = decryptedImageKey;
+            this.imageSizeExceeded = false;
+
         }
 
         public void setDecryptedImageKey(String key) {
             this.decryptedImageKey = key;
         }
+
         private long tryToCache(String decryptedImageName, String tarredImageName, String imageName) {
             Long unencryptedSize = 0L;
             boolean failed = false;
             try {
-                LOG.info("Unzipping image: " + bucketName + "/" + manifestKey);
-                unzipImage(decryptedImageName, tarredImageName);
-                LOG.info("Untarring image: " + bucketName + "/" + manifestKey);
-                unencryptedSize = untarImage(tarredImageName, imageName);
+                if(!imageSizeExceeded) {
+                    LOG.info("Unzipping image: " + bucketName + "/" + manifestKey);
+                    unzipImage(decryptedImageName, tarredImageName);
+                    LOG.info("Untarring image: " + bucketName + "/" + manifestKey);
+                    unencryptedSize = untarImage(tarredImageName, imageName);
+                } else {
+                    File imageFile = new File(imageName);
+                    if(imageFile.exists()) {
+                        unencryptedSize = imageFile.length();
+                    } else {
+                        LOG.error("Could not find image: " + imageName);
+                        imageSizeExceeded = false;
+                        return -1L;
+                    }
+
+                }
                 Long oldCacheSize = 0L;
                 EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
                 List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
@@ -2089,6 +2106,8 @@ public class Bukkit {
                 if((oldCacheSize + unencryptedSize) > WalrusProperties.IMAGE_CACHE_SIZE) {
                     LOG.error("Maximum image cache size exceeded when decrypting " + bucketName + "/" + manifestKey);
                     failed = true;
+                    imageSizeExceeded = true;
+                    spaceNeeded = unencryptedSize;
                 }
             } catch(Exception ex) {
                 LOG.warn(ex);
@@ -2096,11 +2115,13 @@ public class Bukkit {
                 failed = true;
             }
             if(failed) {
-                try {
-                    storageManager.deleteAbsoluteObject(tarredImageName);
-                    storageManager.deleteAbsoluteObject(imageName);
-                } catch (Exception exception) {
-                    LOG.error(exception);
+                if(!imageSizeExceeded) {
+                    try {
+                        storageManager.deleteAbsoluteObject(tarredImageName);
+                        storageManager.deleteAbsoluteObject(imageName);
+                    } catch (Exception exception) {
+                        LOG.error(exception);
+                    }
                 }
                 return -1L;
             }
@@ -2149,10 +2170,31 @@ public class Bukkit {
                     return;
                 }
                 Collections.sort(imageCacheInfos);
-                ImageCacheInfo imageCacheInfo = imageCacheInfos.get(0);
                 db.commit();
                 try {
-                    flushCachedImage(imageCacheInfo.getBucketName(), imageCacheInfo.getManifestName());
+                    if(spaceNeeded > 0) {
+                        ArrayList<ImageCacheInfo> imagesToFlush = new ArrayList<ImageCacheInfo>();
+                        long tryToFree = spaceNeeded;
+                        for(ImageCacheInfo imageCacheInfo : imageCacheInfos) {
+                            if(tryToFree <= 0)
+                                break;
+                            long imageSize = imageCacheInfo.getSize();
+                            tryToFree -= imageSize;
+                            imagesToFlush.add(imageCacheInfo);
+                        }
+                        if(imagesToFlush.size() == 0) {
+                            LOG.error("Unable to flush existing images. Sorry.");
+                            notifyWaiters();
+                            return;
+                        }
+                        for(ImageCacheInfo imageCacheInfo : imagesToFlush) {
+                            flushCachedImage(imageCacheInfo.getBucketName(), imageCacheInfo.getManifestName());
+                        }
+                    } else {
+                        LOG.error("Unable to cache image. Unable to flush existing images.");
+                        notifyWaiters();
+                        return;
+                    }
                 } catch(Exception ex) {
                     LOG.error(ex);
                     LOG.error("Unable to flush previously cached image. Please increase your image cache size");
