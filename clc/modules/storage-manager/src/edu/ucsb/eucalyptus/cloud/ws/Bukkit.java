@@ -2005,7 +2005,7 @@ public class Bukkit {
         return reply;
     }
 
-    private void flushCachedImage (String bucketName, String objectKey) {
+    private void flushCachedImage (String bucketName, String objectKey) throws Exception {
         WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectKey);
         while(semaphore.inUse()) {
             try {
@@ -2017,24 +2017,21 @@ public class Bukkit {
             }
         }
         imageMessenger.removeSemaphore(bucketName + "/" + objectKey);
-        try {
-            EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
-            ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
-            List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
+        EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
+        List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
 
-            if(foundImageCacheInfos.size() > 0) {
-                ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
-                if(foundImageCacheInfo.getInCache() && (imageCachers.get(bucketName + objectKey) == null)) {
-                    db.delete(foundImageCacheInfo);
-                    storageManager.deleteObject(bucketName, foundImageCacheInfo.getImageName());
-                }
-                db.commit();
-            } else {
-                db.rollback();
-                LOG.warn("Cannot find image in cache" + bucketName + "/" + objectKey);
+        if(foundImageCacheInfos.size() > 0) {
+            ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
+            LOG.info("Attempting to flush cached image: " + bucketName + "/" + objectKey);
+            if(foundImageCacheInfo.getInCache() && (imageCachers.get(bucketName + objectKey) == null)) {
+                db.delete(foundImageCacheInfo);
+                storageManager.deleteObject(bucketName, foundImageCacheInfo.getImageName());
             }
-        } catch(Exception ex) {
-            LOG.warn(ex, ex);
+            db.commit();
+        } else {
+            db.rollback();
+            LOG.warn("Cannot find image in cache" + bucketName + "/" + objectKey);
         }
     }
 
@@ -2048,7 +2045,11 @@ public class Bukkit {
         }
 
         public void run() {
-            flushCachedImage(bucketName, objectKey);
+            try {
+                flushCachedImage(bucketName, objectKey);
+            } catch(Exception ex) {
+                LOG.error(ex);
+            }
         }
     }
 
@@ -2072,7 +2073,6 @@ public class Bukkit {
             Long unencryptedSize = 0L;
             boolean failed = false;
             try {
-                LOG.info("Caching image: " + bucketName + "/" + manifestKey);
                 LOG.info("Unzipping image: " + bucketName + "/" + manifestKey);
                 unzipImage(decryptedImageName, tarredImageName);
                 LOG.info("Untarring image: " + bucketName + "/" + manifestKey);
@@ -2087,6 +2087,7 @@ public class Bukkit {
                 }
                 db.commit();
                 if((oldCacheSize + unencryptedSize) > WalrusProperties.IMAGE_CACHE_SIZE) {
+                    LOG.error("Maximum image cache size exceeded when decrypting " + bucketName + "/" + manifestKey);
                     failed = true;
                 }
             } catch(Exception ex) {
@@ -2096,8 +2097,8 @@ public class Bukkit {
             }
             if(failed) {
                 try {
-                    storageManager.deleteAbsoluteObject(decryptedImageName);
                     storageManager.deleteAbsoluteObject(tarredImageName);
+                    storageManager.deleteAbsoluteObject(imageName);
                 } catch (Exception exception) {
                     LOG.error(exception);
                 }
@@ -2138,31 +2139,24 @@ public class Bukkit {
                     return;
                 }
                 EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
-                List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
-                ImageCacheInfo imageCacheInfo;
-                if(imageCacheInfos.size() > 1) {
-                    boolean anyCached = false;
-                    for(ImageCacheInfo icInfo : imageCacheInfos) {
-                        if(icInfo.getInCache()) {
-                            anyCached = true;
-                            break;
-                        }
-                    }
-                    if(!anyCached) {
-                        db.rollback();
-                        notifyWaiters();
-                        return;
-                    }
-                    Collections.sort(imageCacheInfos);
-                    imageCacheInfo = imageCacheInfos.get(0);
-                } else {
+                ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
+                searchImageCacheInfo.setInCache(true);
+                List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
+                if(imageCacheInfos.size() == 0) {
+                    LOG.error("No cached images found to flush. Unable to cache image. Please check the error log and the image cache size.");
                     db.rollback();
                     notifyWaiters();
                     return;
                 }
+                Collections.sort(imageCacheInfos);
+                ImageCacheInfo imageCacheInfo = imageCacheInfos.get(0);
                 db.commit();
-                if(imageCacheInfo.getInCache()) {
+                try {
                     flushCachedImage(imageCacheInfo.getBucketName(), imageCacheInfo.getManifestName());
+                } catch(Exception ex) {
+                    LOG.error(ex);
+                    LOG.error("Unable to flush previously cached image. Please increase your image cache size");
+                    notifyWaiters();
                 }
             }
             try {
