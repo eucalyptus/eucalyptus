@@ -314,7 +314,7 @@ public class Bukkit {
             ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
             for(BucketInfo bucketInfo: bucketInfoList) {
-                buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN)));
+                buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z"));
             }
 
             CanonicalUserType owner = new CanonicalUserType(user.getQueryId(), user.getUserName());
@@ -574,7 +574,7 @@ public class Bukkit {
             throw new NoSuchBucketException(bucketName);
         }
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
         return reply;
     }
 
@@ -741,7 +741,7 @@ public class Bukkit {
         db.commit();
 
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
         return reply;
     }
 
@@ -931,7 +931,7 @@ public class Bukkit {
                         ListEntry listEntry = new ListEntry();
                         listEntry.setKey(objectKey);
                         listEntry.setEtag(objectInfo.getEtag());
-                        listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                        listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
                         listEntry.setStorageClass(objectInfo.getStorageClass());
                         String displayName = objectInfo.getOwnerId();
 
@@ -1166,7 +1166,7 @@ public class Bukkit {
                             }
                         }
                         reply.setEtag(objectInfo.getEtag());
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
                         reply.setSize(objectInfo.getSize());
                         Status status = new Status();
                         status.setCode(200);
@@ -1263,7 +1263,7 @@ public class Bukkit {
                             reader.start();
                         }
                         reply.setEtag(objectInfo.getEtag());
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
                         if(byteRangeEnd > -1) {
                             if(byteRangeEnd <= objectInfo.getSize() && ((byteRangeEnd - byteRangeStart) > 0))
                                 reply.setSize(byteRangeEnd - byteRangeStart);
@@ -1432,7 +1432,7 @@ public class Bukkit {
                                     throw new EucalyptusCloudException("Could not rename " + sourceObjectName + " to " + destinationObjectName);
                                 }
                                 reply.setEtag(etag);
-                                reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                                reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
 
                                 db.commit();
                                 return reply;
@@ -1845,7 +1845,7 @@ public class Bukkit {
 
                         LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(queueKey, randomKey);
                         reply.setSize(unencryptedSize);
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
                         reply.setEtag("");
                         Reader reader = new Reader(bucketName, imageKey, unencryptedSize, getQueue, false, semaphore);
                         reader.start();
@@ -2005,7 +2005,7 @@ public class Bukkit {
         return reply;
     }
 
-    private void flushCachedImage (String bucketName, String objectKey) {
+    private void flushCachedImage (String bucketName, String objectKey) throws Exception {
         WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectKey);
         while(semaphore.inUse()) {
             try {
@@ -2017,24 +2017,21 @@ public class Bukkit {
             }
         }
         imageMessenger.removeSemaphore(bucketName + "/" + objectKey);
-        try {
-            EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
-            ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
-            List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
+        EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
+        List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
 
-            if(foundImageCacheInfos.size() > 0) {
-                ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
-                if(foundImageCacheInfo.getInCache() && (imageCachers.get(bucketName + objectKey) == null)) {
-                    db.delete(foundImageCacheInfo);
-                    storageManager.deleteObject(bucketName, foundImageCacheInfo.getImageName());
-                }
-                db.commit();
-            } else {
-                db.rollback();
-                LOG.warn("Cannot find image in cache" + bucketName + "/" + objectKey);
+        if(foundImageCacheInfos.size() > 0) {
+            ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
+            LOG.info("Attempting to flush cached image: " + bucketName + "/" + objectKey);
+            if(foundImageCacheInfo.getInCache() && (imageCachers.get(bucketName + objectKey) == null)) {
+                db.delete(foundImageCacheInfo);
+                storageManager.deleteObject(bucketName, foundImageCacheInfo.getImageName());
             }
-        } catch(Exception ex) {
-            LOG.warn(ex, ex);
+            db.commit();
+        } else {
+            db.rollback();
+            LOG.warn("Cannot find image in cache" + bucketName + "/" + objectKey);
         }
     }
 
@@ -2048,7 +2045,11 @@ public class Bukkit {
         }
 
         public void run() {
-            flushCachedImage(bucketName, objectKey);
+            try {
+                flushCachedImage(bucketName, objectKey);
+            } catch(Exception ex) {
+                LOG.error(ex);
+            }
         }
     }
 
@@ -2058,25 +2059,41 @@ public class Bukkit {
         private String bucketName;
         private String manifestKey;
         private String decryptedImageKey;
+        private boolean imageSizeExceeded;
+        private long spaceNeeded;
 
         public ImageCacher(String bucketName, String manifestKey, String decryptedImageKey) {
             this.bucketName = bucketName;
             this.manifestKey = manifestKey;
             this.decryptedImageKey = decryptedImageKey;
+            this.imageSizeExceeded = false;
+
         }
 
         public void setDecryptedImageKey(String key) {
             this.decryptedImageKey = key;
         }
+
         private long tryToCache(String decryptedImageName, String tarredImageName, String imageName) {
             Long unencryptedSize = 0L;
             boolean failed = false;
             try {
-                LOG.info("Caching image: " + bucketName + "/" + manifestKey);
-                LOG.info("Unzipping image: " + bucketName + "/" + manifestKey);
-                unzipImage(decryptedImageName, tarredImageName);
-                LOG.info("Untarring image: " + bucketName + "/" + manifestKey);
-                unencryptedSize = untarImage(tarredImageName, imageName);
+                if(!imageSizeExceeded) {
+                    LOG.info("Unzipping image: " + bucketName + "/" + manifestKey);
+                    unzipImage(decryptedImageName, tarredImageName);
+                    LOG.info("Untarring image: " + bucketName + "/" + manifestKey);
+                    unencryptedSize = untarImage(tarredImageName, imageName);
+                } else {
+                    File imageFile = new File(imageName);
+                    if(imageFile.exists()) {
+                        unencryptedSize = imageFile.length();
+                    } else {
+                        LOG.error("Could not find image: " + imageName);
+                        imageSizeExceeded = false;
+                        return -1L;
+                    }
+
+                }
                 Long oldCacheSize = 0L;
                 EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
                 List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
@@ -2087,7 +2104,10 @@ public class Bukkit {
                 }
                 db.commit();
                 if((oldCacheSize + unencryptedSize) > WalrusProperties.IMAGE_CACHE_SIZE) {
+                    LOG.error("Maximum image cache size exceeded when decrypting " + bucketName + "/" + manifestKey);
                     failed = true;
+                    imageSizeExceeded = true;
+                    spaceNeeded = unencryptedSize;
                 }
             } catch(Exception ex) {
                 LOG.warn(ex);
@@ -2095,11 +2115,13 @@ public class Bukkit {
                 failed = true;
             }
             if(failed) {
-                try {
-                    storageManager.deleteAbsoluteObject(decryptedImageName);
-                    storageManager.deleteAbsoluteObject(tarredImageName);
-                } catch (Exception exception) {
-                    LOG.error(exception);
+                if(!imageSizeExceeded) {
+                    try {
+                        storageManager.deleteAbsoluteObject(tarredImageName);
+                        storageManager.deleteAbsoluteObject(imageName);
+                    } catch (Exception exception) {
+                        LOG.error(exception);
+                    }
                 }
                 return -1L;
             }
@@ -2138,31 +2160,45 @@ public class Bukkit {
                     return;
                 }
                 EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
-                List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
-                ImageCacheInfo imageCacheInfo;
-                if(imageCacheInfos.size() > 1) {
-                    boolean anyCached = false;
-                    for(ImageCacheInfo icInfo : imageCacheInfos) {
-                        if(icInfo.getInCache()) {
-                            anyCached = true;
-                            break;
-                        }
-                    }
-                    if(!anyCached) {
-                        db.rollback();
-                        notifyWaiters();
-                        return;
-                    }
-                    Collections.sort(imageCacheInfos);
-                    imageCacheInfo = imageCacheInfos.get(0);
-                } else {
+                ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
+                searchImageCacheInfo.setInCache(true);
+                List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
+                if(imageCacheInfos.size() == 0) {
+                    LOG.error("No cached images found to flush. Unable to cache image. Please check the error log and the image cache size.");
                     db.rollback();
                     notifyWaiters();
                     return;
                 }
+                Collections.sort(imageCacheInfos);
                 db.commit();
-                if(imageCacheInfo.getInCache()) {
-                    flushCachedImage(imageCacheInfo.getBucketName(), imageCacheInfo.getManifestName());
+                try {
+                    if(spaceNeeded > 0) {
+                        ArrayList<ImageCacheInfo> imagesToFlush = new ArrayList<ImageCacheInfo>();
+                        long tryToFree = spaceNeeded;
+                        for(ImageCacheInfo imageCacheInfo : imageCacheInfos) {
+                            if(tryToFree <= 0)
+                                break;
+                            long imageSize = imageCacheInfo.getSize();
+                            tryToFree -= imageSize;
+                            imagesToFlush.add(imageCacheInfo);
+                        }
+                        if(imagesToFlush.size() == 0) {
+                            LOG.error("Unable to flush existing images. Sorry.");
+                            notifyWaiters();
+                            return;
+                        }
+                        for(ImageCacheInfo imageCacheInfo : imagesToFlush) {
+                            flushCachedImage(imageCacheInfo.getBucketName(), imageCacheInfo.getManifestName());
+                        }
+                    } else {
+                        LOG.error("Unable to cache image. Unable to flush existing images.");
+                        notifyWaiters();
+                        return;
+                    }
+                } catch(Exception ex) {
+                    LOG.error(ex);
+                    LOG.error("Unable to flush previously cached image. Please increase your image cache size");
+                    notifyWaiters();
                 }
             }
             try {
