@@ -10,7 +10,7 @@ GLWSDL=$(WSDLPATH)/$(GLWSDLNAME)
 SERVICE_SO=libEucalyptusGL.so
 SERVICE_NAME=EucalyptusGL
 CLIENT=GLclient
-WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
+#WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 
 all: server client 
 
