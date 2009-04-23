@@ -32,6 +32,7 @@ AXIS2_HOME="${AXIS2_HOME}"
 LIBVIRT_HOME="${LIBVIRT_HOME}"
 ANT=""
 JAVA=""
+WSDL2C=""
 java_min_version="1.6.0"
 ant_min_version="1.6.5"
 
@@ -82,6 +83,15 @@ AC_PROG_AWK
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
+
+# let's search for WSDL2C.sh
+# we cannot use AC_PROG_PATH because WSDL2C.sh is not executable
+#AC_PATH_PROG([WSDL2C], WSDL2C.sh,,$AXIS2C_HOME/bin/tools/wsdl2c:$PATH)
+WSDL2C=$AXIS2C_HOME/bin/tools/wsdl2c/WSDL2C.sh
+AC_CHECK_FILE($WSDL2C,,WSDL2C="")
+if test -z "$WSDL2C" ; then
+	AC_MSG_ERROR([Cannot find WSDL2C.sh!])
+fi
 
 # we need JAVA_HOME 
 if test -z "$JAVA_HOME" ; then
@@ -189,6 +199,7 @@ AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
 AC_SUBST(VERSION)
 AC_SUBST(TOP)
 AC_SUBST(ANT)
+AC_SUBST(WSDL2C)
 AC_SUBST(JAVA_HOME)
 AC_SUBST(AXIS2C_HOME)
 AC_SUBST(AXIS2_HOME)
