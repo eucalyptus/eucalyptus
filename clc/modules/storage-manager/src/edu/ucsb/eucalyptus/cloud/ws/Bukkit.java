@@ -314,7 +314,7 @@ public class Bukkit {
             ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
             for(BucketInfo bucketInfo: bucketInfoList) {
-                buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN)));
+                buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z"));
             }
 
             CanonicalUserType owner = new CanonicalUserType(user.getQueryId(), user.getUserName());
@@ -574,7 +574,7 @@ public class Bukkit {
             throw new NoSuchBucketException(bucketName);
         }
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
         return reply;
     }
 
@@ -741,7 +741,7 @@ public class Bukkit {
         db.commit();
 
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
         return reply;
     }
 
@@ -931,7 +931,7 @@ public class Bukkit {
                         ListEntry listEntry = new ListEntry();
                         listEntry.setKey(objectKey);
                         listEntry.setEtag(objectInfo.getEtag());
-                        listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                        listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
                         listEntry.setStorageClass(objectInfo.getStorageClass());
                         String displayName = objectInfo.getOwnerId();
 
@@ -1166,7 +1166,7 @@ public class Bukkit {
                             }
                         }
                         reply.setEtag(objectInfo.getEtag());
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
                         reply.setSize(objectInfo.getSize());
                         Status status = new Status();
                         status.setCode(200);
@@ -1263,7 +1263,7 @@ public class Bukkit {
                             reader.start();
                         }
                         reply.setEtag(objectInfo.getEtag());
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
                         if(byteRangeEnd > -1) {
                             if(byteRangeEnd <= objectInfo.getSize() && ((byteRangeEnd - byteRangeStart) > 0))
                                 reply.setSize(byteRangeEnd - byteRangeStart);
@@ -1432,7 +1432,7 @@ public class Bukkit {
                                     throw new EucalyptusCloudException("Could not rename " + sourceObjectName + " to " + destinationObjectName);
                                 }
                                 reply.setEtag(etag);
-                                reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                                reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
 
                                 db.commit();
                                 return reply;
@@ -1845,7 +1845,7 @@ public class Bukkit {
 
                         LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(queueKey, randomKey);
                         reply.setSize(unencryptedSize);
-                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+                        reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
                         reply.setEtag("");
                         Reader reader = new Reader(bucketName, imageKey, unencryptedSize, getQueue, false, semaphore);
                         reader.start();
