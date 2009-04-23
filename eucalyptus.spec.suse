@@ -1,14 +1,15 @@
-Summary:      Elastic Utility Computing Architecture
-Name:         eucalyptus
-Version:      @VERSION@
-Release:      2
-License:      BSD
-Group:        Applications/System
-Requires:     vconfig
-Vendor:       Mayhem lab
-#Icon:         someicon.xpm
-Source:       http://eucalyptus.cs.ucsb.edu/downloads/eucalyptus-%{version}.tgz
-URL:          http://eucalyptus.cs.ucsb.edu
+Summary:       Elastic Utility Computing Architecture
+Name:          eucalyptus
+Version:       1.5.1
+Release:       rc3
+License:       BSD
+Group:         Applications/System
+BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0
+Requires:      vlan, aoetools, vblade
+Vendor:        Mayhem lab
+#Icon:          someicon.xpm
+Source:        http://eucalyptus.cs.ucsb.edu/downloads/eucalyptus-%{version}.tgz
+URL:           http://eucalyptus.cs.ucsb.edu
 
 %description
 EUCALYPTUS is an open source service overlay that implements elastic
@@ -21,7 +22,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= @VERSION@, jdk 
+Requires:     eucalyptus >= 1.5.1, java >= 1.6.0, ant, ant-nodeps, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -34,7 +35,7 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= @VERSION@, euca-httpd, euca-axis2c, iptables, bridge-utils, eucalyptus-gl, dhcp
+Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, iptables, bridge-utils, eucalyptus-gl, dhcp-server
 Group:        Applications/System
 
 %description cc
@@ -47,7 +48,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= @VERSION@, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, euca-libvirt
+Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt, libcurl4, xen, xen-tools
 Group:        Applications/System
 
 %description nc
@@ -59,7 +60,7 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the node controller part of eucalyptus.
 
 %package gl
-Summary:      Elastic Utility Computing Architecture - cloud controller
+Summary:      Elastic Utility Computing Architecture - log service 
 Requires:     eucalyptus, euca-httpd, euca-axis2c
 Group:        Applications/System
 
@@ -75,7 +76,13 @@ This package contains the internal log service of eucalyptus.
 %setup -n eucalyptus
 
 %build
-./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --with-libvirt=/opt/euca-libvirt/ --enable-debug --prefix=/opt/eucalyptus
+# let's be sure we have the right configuration file
+if [ -f tools/eucalyptus.conf.suse ]; then
+        cp tools/eucalyptus.conf.suse tools/eucalyptus.conf
+elif [ -f tools/eucalyptus.conf.rpm ]; then
+        cp tools/eucalyptus.conf.rpm tools/eucalyptus.conf
+fi
+./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
 cd clc
 make deps
 cd ..
@@ -102,6 +109,7 @@ rm -f /etc/init.d/eucalyptus
 /opt/eucalyptus/var/run
 /opt/eucalyptus/usr/share/eucalyptus/add_key.pl
 /opt/eucalyptus/usr/share/eucalyptus/euca_ipt
+/opt/eucalyptus/usr/share/eucalyptus/populate_arp.pl
 /opt/eucalyptus/usr/share/eucalyptus/euca_rootwrap
 /opt/eucalyptus/usr/sbin/euca_conf
 /opt/eucalyptus/usr/sbin/euca_sync_key
@@ -113,19 +121,14 @@ rm -f /etc/init.d/eucalyptus
 %config(noreplace) /opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
 /opt/eucalyptus/etc/eucalyptus/cloud.d
 /opt/eucalyptus/etc/eucalyptus/cloud.xml
-/opt/eucalyptus/usr/share/eucalyptus/axis2
-/opt/eucalyptus/usr/share/eucalyptus/drools
-/opt/eucalyptus/usr/share/eucalyptus/hibernate
-/opt/eucalyptus/usr/share/eucalyptus/jetty
-/opt/eucalyptus/usr/share/eucalyptus/jibx
-/opt/eucalyptus/usr/share/eucalyptus/mule
-/opt/eucalyptus/usr/share/eucalyptus/opt
 /opt/eucalyptus/usr/share/eucalyptus/*jar
 /opt/eucalyptus/var/eucalyptus/db
 /opt/eucalyptus/var/eucalyptus/images
 /opt/eucalyptus/var/eucalyptus/modules
 /opt/eucalyptus/var/eucalyptus/services
 /opt/eucalyptus/var/eucalyptus/webapps
+/opt/eucalyptus/usr/lib/libfsstorage.so
+/opt/eucalyptus/usr/lib/liblvm2control.so
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
@@ -133,7 +136,10 @@ rm -f /etc/init.d/eucalyptus
 %files nc
 /opt/eucalyptus/usr/share/eucalyptus/euca_mountwrap
 /opt/eucalyptus/usr/share/eucalyptus/gen_libvirt_xml
+/opt/eucalyptus/usr/share/eucalyptus/gen_kvm_libvirt_xml
+/opt/eucalyptus/usr/share/eucalyptus/partition2disk
 /opt/eucalyptus/usr/share/eucalyptus/get_xen_info
+/opt/eucalyptus/usr/share/eucalyptus/get_sys_info
 /opt/eucalyptus/usr/sbin/euca_test_nc
 /opt/euca-axis2c/services/EucalyptusNC
 
@@ -191,7 +197,9 @@ fi
 /opt/eucalyptus/usr/sbin/euca_conf -cc "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 
 %post nc
+. /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 /opt/eucalyptus/usr/sbin/euca_conf -nc "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+[ -n "$INSTANCE_PATH" ] && mkdir -p $INSTANCE_PATH
 
 %preun 
 if [ "$1" = "0" ]; then
@@ -232,10 +240,23 @@ if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
 fi
 
 %changelog gl
+*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- New eucalyptus version
+
 *Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - Added new service
 
 %changelog cloud
+*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Support for groups in ACLS
+- Fixed issues with meta data support
+- Web browser form-based uploads via HTTP POST
+- Object copying
+- Query string authentication
+- Support for arbitrary key names
+- Compressed image downloads and fixes to image caching
+- Reduced memory requirement 
+
 *Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - Added cloud/Walrus configuration, including clusters and VM types
 - Revamped 'credentials' tab with new options to edit user information
@@ -264,6 +285,9 @@ fi
 - Fix the instance ID naming collision.
 
 %changelog cc
+*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Network improvement: new MANAGED-NOVLAN mode 
+
 *Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - Cluster controller now handles concurrent requests (no longer have to 
   restrict apache to allow only one connection at a time)
@@ -275,6 +299,11 @@ fi
   this module.
 
 %changelog nc
+*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Support for the KVM hypervisor
+- Compression & retries on Walrus downloads
+- Reworked caching (now with configurable limit) 
+
 *Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - Retrieval of images from Walrus instead of NFS-mounted file system
 - New caching and cleanup code, including start-time integrity checks
@@ -293,6 +322,17 @@ fi
 - More robust checking for running instances.
 
 %changelog
+*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- Elastic Block Store (EBS) support (volumes & snapshots) 
+- Better Java installation checking
+- New command-line administration: euca_conf -addcluster ... -addnode ...
+- Non-root user deployment of Eucalyptus
+- Binary packages for more distributions (Ubuntu et al) 
+- Cloud registration with Rightscale (from admin's 'Credentials' tab)
+- New configuration options for Walrus
+- Better screening of usernames
+- Fixed account confirmation glitches 
+
 *Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - Added new networking subsystem that no longer depends on VDE
 - Added support for elastic IP assignment and security using the 'MANAGED' 

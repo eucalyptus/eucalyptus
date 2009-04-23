@@ -5,6 +5,19 @@
 # chkconfig: 2345 99 05
 # description: script for starting and stopping eucalyptus
 #
+### BEGIN INIT INFO
+# Provides:                   eucalyptus
+# Required-Start:             $syslog 
+# Should-Start:               sendmail
+# Required-Stop:              $syslog 
+# Should-Stop:                sendmail
+# Default-Start:              2 3 5
+# Default-Stop:
+# Short-Description:          Start the eucalyptus cloud
+# Description:                Start the eucalyptus cloud
+# X-UnitedLinux-Default-Enabled: yes
+### END INIT INFO
+#
 # $Id: eucalyptus.in,v 1.6 2009-01-06 00:14:41 graziano Exp $
 #
 
@@ -191,11 +204,6 @@ do_start() {
 
 	# let's do some basic checkings depending on what we want to run
 	if [ "$START_CC" = "Y" ]; then
-		if [ -z "$NODES" ]; then
-			echo "NODES is empty in configuration file!" 
-			exit 1
-		fi
-
 		# if in MANAGED or STATIC mode, we need to use
 		# dhcpd, so better check we know how to use it
 		if [ "$VNET_MODE" = "MANAGED" -o "$VNET_MODE" = "STATIC" ]; then

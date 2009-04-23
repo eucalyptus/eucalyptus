@@ -1,10 +1,10 @@
 Summary:      Elastic Utility Computing Architecture - httpd package
 Name:         euca-httpd
-Version:      1.4
+Version:      1.5
 Release:      1
 License:      Apache
 Group:        Applications/System
-Source:       http://eucalyptus.cs.ucsb.edu/dependencies/1.4/httpd-2.2.8.tgz
+Source:       http://eucalyptus.cs.ucsb.edu/dependencies/1.5/httpd-2.2.8.tgz
 URL:          http://eucalyptus.cs.ucsb.edu
 Provides:     euca-httpd
 
@@ -36,6 +36,9 @@ rm -rf $RPM_BUILD_DIR/euca-httpd-%{version}
 rm -rf /opt/euca-httpd
 
 %changelog
+
+*Mon Apr 13 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- pakcaged for eucalyptus 1.5
 
 *Tue Dec  9 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - packaged version 2.2.8
