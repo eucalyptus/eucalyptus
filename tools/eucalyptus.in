@@ -189,12 +189,9 @@ do_start() {
 
 		# both the NC and CC needs to have ip forwarding
 		# if we managed the network
-		if [ "$VNET_MODE" = "MANAGED" ]; then
-			if [ ! -w /proc/sys/net/ipv4/ip_forward ]; then
-				echo "You need to enable IP forwarding for eucalyptus to use MANAGED mode!"
-				exit 1
-			fi
-			echo -n 1 > /proc/sys/net/ipv4/ip_forward
+		if [ ! -w /proc/sys/net/ipv4/ip_forward ]; then
+		    echo "Enabling IP forwarding for eucalyptus."
+		    echo -n 1 > /proc/sys/net/ipv4/ip_forward
 		fi
 
 	fi
