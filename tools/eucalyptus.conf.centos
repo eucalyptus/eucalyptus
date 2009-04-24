@@ -69,7 +69,7 @@ CC_PORT="8774"
 # Currently, this option can be set to GREEDY (first node that is
 # found that can run the VM will be chosen) or ROUNDROBIN (nodes are
 # selected one after another until one is found that can run the VM).
-SCHEDPOLICY="GREEDY"
+SCHEDPOLICY="ROUNDROBIN"
 
 # The list of Node Controllers the Cluster Controller will be in charge
 # of. For example on the rocks cluster you can run rocks list host to
