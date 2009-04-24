@@ -22,7 +22,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= 1.5.1, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Requires:     eucalyptus >= 1.5.1, java >= 1.6.0, ant, ant-nodeps, lvm2
 Group:        Applications/System
 
 %description cloud
