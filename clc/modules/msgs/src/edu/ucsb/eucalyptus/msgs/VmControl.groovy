@@ -44,6 +44,9 @@ public class RebootInstancesType extends VmControlMessage {
   ArrayList<String> instancesSet = new ArrayList<String>();
 
   def RebootInstancesType() {}
+  def RebootInstancesType(String instanceId) {
+    this.instancesSet.add(instanceId);
+  }
 
   def RebootInstancesType(String instanceId, EucalyptusMessage parent) {
     this.instancesSet.add(instanceId);
