@@ -1,10 +1,10 @@
 Summary:      Elastic Utility Computing Architecture - libvirt libraries
 Name:         euca-libvirt
-Version:      1.4
+Version:      1.5
 Release:      1
 License:      BSD
 Group:        Applications/System
-Source:       http://eucalyptus.cs.ucsb.edu/dependencies/1.4/euca-libvirt.tgz
+Source:       http://eucalyptus.cs.ucsb.edu/dependencies/1.5/euca-libvirt.tgz
 URL:          http://eucalyptus.cs.ucsb.edu
 Provides:     euca-libvirt
 
@@ -34,6 +34,9 @@ rm -rf $RPM_BUILD_DIR/euca-libvirt-%{version}
 /opt/euca-libvirt
 
 %changelog
+*Fri Apr 24 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+- packaged for eucalyptus 1.5
+
 *Mon Dec  8 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - Upgraded to libvirt 0.4.6
 

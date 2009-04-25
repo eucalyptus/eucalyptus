@@ -38,7 +38,7 @@ rm -rf /opt/euca-httpd
 %changelog
 
 *Mon Apr 13 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
-- pakcaged for eucalyptus 1.5
+- packaged for eucalyptus 1.5
 
 *Tue Dec  9 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
 - packaged version 2.2.8
