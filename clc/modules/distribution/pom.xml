@@ -63,7 +63,7 @@
         <dependency>
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty-sslengine</artifactId>
-        </dependency>        
+        </dependency>
         <dependency>
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty-gwt</artifactId>
@@ -164,7 +164,7 @@
  	<dependency>
     	    <groupId>org.apache.geronimo.javamail</groupId>
             <artifactId>geronimo-javamail_1.4_provider</artifactId>
-        </dependency> 
+        </dependency>
     </dependencies>
 
     <build>
