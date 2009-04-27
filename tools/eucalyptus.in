@@ -189,7 +189,7 @@ do_start() {
 
 		# both the NC and CC needs to have ip forwarding
 		# if we managed the network
-		if [ ! -w /proc/sys/net/ipv4/ip_forward ]; then
+		if [ -w /proc/sys/net/ipv4/ip_forward ]; then
 		    echo "Enabling IP forwarding for eucalyptus."
 		    echo -n 1 > /proc/sys/net/ipv4/ip_forward
 		fi

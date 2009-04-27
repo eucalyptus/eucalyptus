@@ -331,10 +331,14 @@ if [ -n "$NEWNODE" ]; then
     if [ "$NODEMODE" = "ADD" ]; then
 	EUCA_HOME=`su - -c 'echo $HOME' $EUCA_USER`
 	echo $EUCA_HOME
-	SSHKEY=`cat ${EUCA_HOME}/.ssh/id_rsa.pub`
+	if [ -f "${EUCA_HOME}/.ssh/id_rsa.pub" ]; then
+	    SSHKEY=`cat ${EUCA_HOME}/.ssh/id_rsa.pub`
+        else
+	    SSHKEY=""
+        fi
 	
 	if [ "$SSHKEY" = "" ]; then
-	    echo "ERROR: cannot read ssh key ~${EUCA_USER}/.ssh/id_rsa.pub, syncronization will probably not work"
+	    echo "WARNING: cannot read ssh key ~${EUCA_USER}/.ssh/id_rsa.pub, syncronization will ask you to enter a password."
 	else
 	    echo "First, please run the following commands on '$NEWNODE':"
 	    echo ""
