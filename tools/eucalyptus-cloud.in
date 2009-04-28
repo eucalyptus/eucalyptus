@@ -44,10 +44,8 @@ fi
 PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus cloud controller"
 NAME=eucalyptus-cloud
-BRCTL="`which brctl 2> /dev/null`"
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
-MODPROBE="`which modprobe 2> /dev/null`"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
@@ -88,6 +86,8 @@ check_java() {
 }
 
 do_start() {
+	local ret
+
 	# let's be sure we have java
 	check_java
 
@@ -104,7 +104,9 @@ do_start() {
 
 	cd $EUCALYPTUS/etc/eucalyptus
 	(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
+	ret="$?"
 	echo "$!" > $EUCALYPTUS/var/run/eucalyptus/cloud.pid
+	return $ret
 }
 
 do_stop() {
@@ -161,11 +163,6 @@ if [ -n "$ID" ]; then
 		echo "User $EUCA_USER doesn't exists!"
 		exit 1
 	fi
-fi
-
-if [ -x "$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap" ]; then
-    chown root:$EUCA_USER $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
-    chmod 4750 $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
 fi
 
 # set the library path correctly

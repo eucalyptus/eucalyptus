@@ -29,8 +29,8 @@ if [ -e /lib/lsb/init-functions ]; then
 fi
 
 if [ "$EUID" != "0" ]; then
-    echo "Eucalyptus must be run as root."
-    exit 1
+	echo "Eucalyptus must be run as root."
+	exit 1
 fi
 
 # I just wanted to set PATH to be the system PATH, but if a user install
@@ -39,8 +39,6 @@ fi
 PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus cluster controller"
 NAME=eucalyptus-cc
-BRCTL="`which brctl 2> /dev/null`"
-MODPROBE="`which modprobe 2> /dev/null`"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
