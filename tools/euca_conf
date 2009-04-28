@@ -314,7 +314,7 @@ if [ -n "$NEWCLUS" ]; then
 	echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
 	exit 1
     fi
-    echo "New cluster '${NEWCLUS}' on host '${NEWCLUS}' successfully added."
+    echo "New cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully added."
 fi
 
 if [ -n "$NEWNODE" ]; then
