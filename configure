@@ -10681,7 +10681,7 @@ done
 
 
 # Time to substitute and generate the files
-ac_config_files="$ac_config_files Makedefs tools/eucalyptus:tools/eucalyptus.in"
+ac_config_files="$ac_config_files Makedefs tools/eucalyptus-cc:tools/eucalyptus-cc.in tools/eucalyptus-nc:tools/eucalyptus-nc.in tools/eucalyptus-cloud:tools/eucalyptus-cloud.in"
 
 
 cat >>confdefs.h <<_ACEOF
@@ -11301,7 +11301,9 @@ do
   case $ac_config_target in
     "util/config.h") CONFIG_HEADERS="$CONFIG_HEADERS util/config.h" ;;
     "Makedefs") CONFIG_FILES="$CONFIG_FILES Makedefs" ;;
-    "tools/eucalyptus") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus:tools/eucalyptus.in" ;;
+    "tools/eucalyptus-cc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-cc:tools/eucalyptus-cc.in" ;;
+    "tools/eucalyptus-nc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-nc:tools/eucalyptus-nc.in" ;;
+    "tools/eucalyptus-cloud") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-cloud:tools/eucalyptus-cloud.in" ;;
 
   *) { { $as_echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 $as_echo "$as_me: error: invalid argument: $ac_config_target" >&2;}

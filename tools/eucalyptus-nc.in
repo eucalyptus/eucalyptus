@@ -1,0 +1,323 @@
+#!/bin/bash
+#
+# Init script for the Eucalyptus node controller.
+#
+# chkconfig: 2345 99 05
+# description: script for starting and stopping eucalyptus node controller
+#
+### BEGIN INIT INFO
+# Provides:                   eucalyptus-nc
+# Required-Start:             $remote_fs $syslog 
+# Required-Stop:              $remote_fs $syslog 
+# Default-Start:              2 3 4 5
+# Default-Stop:               0 1 6
+# Short-Description:          Start Eucalyptus node controller
+# Description:                Start the Eucalyptus node controller
+### END INIT INFO
+#
+
+# Do NOT "set -e"
+
+# if we are on rocks we need the rocks binaries 
+[ -e /etc/profile.d/rocks-binaries.sh ] && . /etc/profile.d/rocks-binaries.sh
+
+# if we have lsb functions let's source them
+WE_HAVE_LSB="N"
+if [ -e /lib/lsb/init-functions ]; then
+	. /lib/lsb/init-functions
+	WE_HAVE_LSB="Y"
+fi
+
+if [ "$EUID" != "0" ]; then
+    echo "Eucalyptus must be run as root."
+    exit 1
+fi
+
+# I just wanted to set PATH to be the system PATH, but if a user install
+# eucalyptus manually, it may have binaries in a non-standard position:
+# hence we need to keep the PATH we receive.
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+DESC="Eucalyptus services"
+NAME=eucalyptus-nc
+BRCTL="`which brctl 2> /dev/null`"
+MODPROBE="`which modprobe 2> /dev/null`"
+
+# honor the ENV variable if found otherwise look in root
+if [ -z "$EUCALYPTUS" ] ; then
+	EUCALYPTUS="@prefix@"
+fi
+export EUCALYPTUS
+
+create_httpd_config() {
+	if [ -x "/opt/rocks/bin/rocks" ]; then
+		# we are in the frontend: let's get frontend IP
+		MYNAME=`hostname -s`
+		IPS="127.0.0.1"
+		for x in "`/opt/rocks/bin/rocks list host interface $MYNAME|sed '1d'|tr -s ' '|cut -f 4 -d ' '|tr -s '\n' ' '`"; do 
+			IPS="$IPS $x"
+		done
+	else
+		IPS="all"
+	fi
+	
+	# let's configure the common parts for both CC and NC
+	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" |sed "s|EUCA_USER|$EUCA_USER|" >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+
+	# Ubuntu: needs to load authz 
+	if [ -e /usr/lib/apache2/modules/mod_authz_host.so ]; then
+		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+	fi
+
+	# let's configure the NC
+	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $NC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/httpd-nc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" >  $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
+}
+
+# crude way to start the axis2c services
+do_start() {
+	if [ ! -x $HTTPD ]; then
+		echo "cannot find httpd (was set to <$HTTPD>)!"
+		exit 1
+	fi
+
+	# let's be sure we have needed directories
+        mkdir -p $EUCALYPTUS/var/run/eucalyptus
+	mkdir -p $EUCALYPTUS/var/log/eucalyptus
+
+	# set up eucalyptus var locations to be owned by EUCA_USER
+	for y in $EUCALYPTUS/var/eucalyptus/$EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/$INSTANCE_PATH; do
+		if [ $y != "/" -a -d $y ]; then
+			chown -R $EUCA_USER:$EUCA_USER $y
+		fi
+	done
+	if [ -x "$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap" ]; then
+		chown root:$EUCA_USER $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
+		chmod 4750 $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
+	fi
+
+	# we have a program to test the hypervisor and more for the NC
+	if [ ! -x $EUCALYPTUS/usr/sbin/euca_test_nc ]; then
+		echo "Cannot check Node Controller: missing euca_test_nc."
+	elif ! $EUCALYPTUS/usr/sbin/euca_test_nc $HYPERVISOR > $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log 2>&1 ; then
+		echo "Node Controller cannot be started: errors in $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log"
+		exit 1
+	fi
+
+	# NC needs the instance path
+	if [ -z "$INSTANCE_PATH" -o "$INSTANCE_PATH" = "not_configured" -o ! -d "$INSTANCE_PATH" ]; then
+		echo "INSTANCE_PATH is not valid!"
+		exit 1
+	fi
+
+	# on SYSTEM or STATIC mode the bridge needs to exists
+	if [ "$VNET_MODE" = "SYSTEM" -o "$VNET_MODE" = "STATIC" ]; then
+		if [ -n "$BRCTL" -a -x $BRCTL ]; then
+			if ! $BRCTL show |grep $VNET_BRIDGE > /dev/null 2> /dev/null ; then
+				echo
+				echo "Warning! Cannot find bridge $VNET_BRIDGE: instances may be without net"
+			fi
+		fi
+	fi
+
+	# we need aoe loaded 
+	if [ -z "$MODPROBE" ]; then
+		echo "Cannot find modprobe: you may have problems."
+	elif ! $MODPROBE aoe ; then
+		echo "Failed to load aoe: you may experience problems"
+	fi
+
+
+	# both the NC and CC needs to have ip forwarding
+	# if we managed the network
+	if [ ! -w /proc/sys/net/ipv4/ip_forward ]; then
+	    echo "Enabling IP forwarding for eucalyptus."
+	    echo -n 1 > /proc/sys/net/ipv4/ip_forward
+	fi
+
+	# let's be sure we have the right port for NC and CC
+	create_httpd_config
+
+	if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf ; then
+		echo "Failed to start the NC!"
+		exit 1
+	fi
+}
+
+do_stop() {
+	# now kill the services
+	pidfile=/var/run/eucalyptus/eucalyptus-nc.pid
+	if [ -s $pidfile ]; then
+		pid=`cat $pidfile 2> /dev/null`
+		kill $pid > /dev/null 2>&1 
+	else
+		return	
+	fi
+	timeout=5
+	while [ $timeout -ge 0 ]; do
+		if ps $pid > /dev/null 2>&1 ; then
+			sleep 1
+			timeout=$(($timeout - 1))
+		else
+			break
+		fi
+	done
+	if [ $timeout -eq 0 ]; then
+		kill -9 $pid > /dev/null 2>&1
+	fi
+	rm -f $pidfile
+}
+
+# Read configuration variable file if it is present
+if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
+	. $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+else
+	echo "Cannot find eucalyptus configuration file!"
+	exit 1
+fi
+if [ "$EUCALYPTUS" = "not_configured" ]; then
+	echo "EUCALYPTUS not configured!" 
+	exit 1
+fi
+if [ -n "$TEMPLATE_PATH" ]; then
+	echo "TEMPLATE_PATH is defined: do you have an old configuration?"
+	exit 1
+fi
+
+if [ -z "$EUCA_USER" ] ; then
+	EUCA_USER="root"
+fi
+
+# let's see if the user exists
+ID="`which id 2> /dev/null`"
+if [ -n "$ID" ]; then
+	if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
+		echo "User $EUCA_USER doesn't exists!"
+		exit 1
+	fi
+fi
+
+# let's try to pick the system apache2
+HTTPD="`which apache2 2> /dev/null`"		# .deb based machines
+if [ -z  "$HTTPD" ]; then
+	HTTPD="`which httpd 2> /dev/null`"	# .rpm based machines
+fi
+HTTPD_HOME="/tmp/"
+
+# let's find our dependencies
+for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
+	for x in `/bin/ls $y 2> /dev/null`; do
+		# this is for the RPM installed pacakges
+		if [ "$x" = "euca-libvirt" ]; then
+			export LIBVIRT_HOME="$y/$x"
+		fi
+		if [ "$x" = "euca-httpd" ]; then
+			export HTTPD=$y/$x/bin/httpd
+			export HTTPD_HOME="$y/$x"
+		fi
+		if [ "$x" = "euca-axis2c" ]; then
+			export AXIS2C_HOME="$y/$x"
+		fi
+		# this is for system or source installed
+		if [ "`echo $x | cut -f 1 -d -`" = "axis2c" ]; then
+			export AXIS2C_HOME="$y/$x"
+		fi
+		if [ "`echo $x | cut -f 1 -d -`" = "libvirt" ]; then
+			export LIBVIRT_HOME="$y/$x"
+		fi
+		if [ "`echo $x | cut -f 1 -d -`" = "httpd" ]; then
+			if [ -x $y/$x/bin/httpd ]; then
+				export HTTPD="$y/$x/bin/httpd"
+				export HTTPD_HOME="$y/$x"
+			elif [ -x $y/$x/usr/bin/httpd ]; then
+				export HTTPD="$y/$x/usr/bin/httpd"
+				export HTTPD_HOME="$y/$x"
+			elif [ -x $y/$x/usr/sbin/httpd ]; then
+				export HTTPD="$y/$x/usr/sbin/httpd"
+				export HTTPD_HOME="$y/$x"
+			fi
+		fi
+	done
+done
+
+# finally let's see if the basics tools are here
+if [ -z "$AXIS2C_HOME" ]; then
+	echo "Cannot find Eucalyptus webservices: missing AXIS2C_HOME?"
+	exit 1
+fi
+
+# set the library path correctly
+export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$EUCALYPTUS/lib:$LD_LIBRARY_PATH"
+
+case "$1" in
+  start)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_daemon_msg "Starting $DESC" "$NAME"
+		else
+			echo -n "Starting $DESC: "
+		fi
+	fi
+	do_start
+	case "$?" in
+	0|1) 
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 0
+			else
+				echo "."
+			fi
+		fi
+		;;
+	*)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			else
+				echo "failed!"
+			fi
+		fi
+		;;
+	esac
+	;;
+  stop)
+	if [ "$VERBOSE" != no ]; then
+       		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Stopping $DESC"
+		else
+			echo -n "Stopping $DESC: "
+                fi
+        fi
+	do_stop
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg
+		else
+			echo "done."
+		fi
+	fi
+	;;
+  restart)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Restarting $DESC"
+		else
+			echo -n "Restarting $DESC: "
+		fi
+	fi
+	# restart allow the CC to mantain the state across restart
+	do_stop
+	do_start
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg
+		else
+			echo "done."
+		fi
+	fi
+  	;;
+  *)
+	echo "Usage: $NAME {start|stop|restart}" >&2
+	exit 3
+	;;
+esac
+
+:
