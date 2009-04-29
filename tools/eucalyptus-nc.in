@@ -69,7 +69,7 @@ create_httpd_config() {
 	fi
 
 	# let's configure the NC
-	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $NC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/httpd-nc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" >  $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
+	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $NC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" >  $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
 }
 
 # crude way to start the axis2c services
@@ -84,7 +84,7 @@ do_start() {
 	mkdir -p $EUCALYPTUS/var/log/eucalyptus
 
 	# set up eucalyptus var locations to be owned by EUCA_USER
-	for y in $EUCALYPTUS/var/eucalyptus/$EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/$INSTANCE_PATH; do
+	for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
 		if [ $y != "/" -a -d $y ]; then
 			chown -R $EUCA_USER:$EUCA_USER $y
 		fi
