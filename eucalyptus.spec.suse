@@ -1,7 +1,7 @@
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       1.5.1
-Release:       rc3
+Release:       1
 License:       BSD
 Group:         Applications/System
 BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0
@@ -89,17 +89,22 @@ make
 %install
 make install
 
-# symlink for the system to start
-ln -sf /opt/eucalyptus/etc/init.d/eucalyptus /etc/init.d/eucalyptus
+%install cloud
+ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-cloud
+
+%install cc
+ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-cc
+
+%install nc
+ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-nc
 
 %clean
 rm -rf /opt/eucalyptus/etc /opt/eucalyptus/usr /opt/eucalyptus/var
 rm -rf /opt/eucalyptus/lib
 rm -rf $RPM_BUILD_DIR/eucalyptus
-rm -f /etc/init.d/eucalyptus 
+rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-cc
 
 %files
-%config /etc/init.d/eucalyptus
 %config(noreplace) /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 %doc LICENSE INSTALL README CHANGELOG
 /opt/eucalyptus/var/eucalyptus/keys
@@ -112,7 +117,6 @@ rm -f /etc/init.d/eucalyptus
 /opt/eucalyptus/usr/sbin/euca_conf
 /opt/eucalyptus/usr/sbin/euca_sync_key
 /opt/eucalyptus/usr/sbin/euca_killall
-/opt/eucalyptus/etc/init.d/eucalyptus
 /opt/eucalyptus/etc/eucalyptus/httpd.conf
 
 %files cloud
@@ -127,9 +131,11 @@ rm -f /etc/init.d/eucalyptus
 /opt/eucalyptus/var/eucalyptus/webapps
 /opt/eucalyptus/usr/lib/libfsstorage.so
 /opt/eucalyptus/usr/lib/liblvm2control.so
+/opt/eucalyptus/etc/init.d/eucalyptus-cloud
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
+/opt/eucalyptus/etc/init.d/eucalyptus-cc
 
 %files nc
 /opt/eucalyptus/usr/share/eucalyptus/euca_mountwrap
@@ -140,6 +146,7 @@ rm -f /etc/init.d/eucalyptus
 /opt/eucalyptus/usr/share/eucalyptus/get_sys_info
 /opt/eucalyptus/usr/sbin/euca_test_nc
 /opt/euca-axis2c/services/EucalyptusNC
+/opt/eucalyptus/etc/init.d/eucalyptus-nc
 
 %files gl
 /opt/euca-axis2c/services/EucalyptusGL
@@ -216,7 +223,10 @@ if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
 	then
 		/etc/init.d/eucalyptus stop || /bin/true
 	fi
-	/opt/eucalyptus/usr/sbin/euca_conf -cloud "N" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+	if [ -x /etc/init.d/eucalyptus-cloud ]; 
+	then
+		/etc/init.d/eucalyptus-cloud stop || /bin/true
+	fi
 fi
 
 %preun cc
@@ -225,7 +235,10 @@ if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
 	then
 		/etc/init.d/eucalyptus stop || /bin/true
 	fi
-	/opt/eucalyptus/usr/sbin/euca_conf -cc "N" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+	if [ -x /etc/init.d/eucalyptus-cc ]; 
+	then
+		/etc/init.d/eucalyptus-cc stop || /bin/true
+	fi
 fi
 
 %preun nc
@@ -234,7 +247,10 @@ if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
 	then
 		/etc/init.d/eucalyptus stop || /bin/true
 	fi
-	/opt/eucalyptus/usr/sbin/euca_conf -nc "N" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+	if [ -x /etc/init.d/eucalyptus-nc ]; 
+	then
+		/etc/init.d/eucalyptus-nc stop || /bin/true
+	fi
 fi
 
 %changelog gl

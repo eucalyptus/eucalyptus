@@ -12,28 +12,9 @@ EUCALYPTUS="/"
 # This is the username that you require eucalyptus to run as
 EUCA_USER="eucalyptus"
 
-# This variable controls whether or not the Cloud Controller will be
-# started. Typically there is only one Cloud Controller in the whole
-# system, which can controls multiple Cluster Controllers. 
-START_CLOUD="N"
-
 # Uncomment this field if you do not plan on using the dynamic block
 # store functionality of Eucalyptus
 # DISABLE_EBS="Y"
-
-# This variable controls whether or not the Cluster Controller will be
-# started. Typically there is one Cluster Controller per cluster,
-# controlling multiple Node Controllers. The Cluster Controller needs to
-# be accessible from the outside world, so typically it's installed on
-# the head node (frontend).
-START_CC="N"
-
-# This variable controls whether or not to start the Node Controller. The
-# Node Controller is responsible to talk to the hypervisor to get
-# instances running, so it need to run on machine where the
-# virtualization hypervisor is running. Typically they are the compute
-# node on the cluster.
-START_NC="N"
 
 # This variable controls whether ws-security is enabled between
 # eucalyptus components.  The default settings provide secure
