@@ -125,12 +125,20 @@ do_start() {
 		echo "Failed to load aoe: you may experience problems"
 	fi
 
-
-	# both the NC and CC needs to have ip forwarding
-	# if we managed the network
-	if [ ! -w /proc/sys/net/ipv4/ip_forward ]; then
-	    echo "Enabling IP forwarding for eucalyptus."
-	    echo -n 1 > /proc/sys/net/ipv4/ip_forward
+	# we need IP forwarding and we need to use iptable over the bridge
+	if [ -w /proc/sys/net/ipv4/ip_forward ]; then
+		VAL=`cat /proc/sys/net/ipv4/ip_forward`
+		if [ "$VAL" = "0" ]; then
+			echo "Enabling IP forwarding for eucalyptus."
+			echo -n 1 > /proc/sys/net/ipv4/ip_forward
+		fi
+	fi
+	if [ -w /proc/sys/net/bridge/bridge-nf-call-iptables ]; then
+		VAL=`cat /proc/sys/net/bridge/bridge-nf-call-iptables`
+		if [ "$VAL" = "0" ]; then
+			echo "Enabling bridge netfiltering for eucalyptus."
+			echo 1 >  /proc/sys/net/bridge/bridge-nf-call-iptables
+		fi
 	fi
 
 	# let's be sure we have the right port for NC and CC

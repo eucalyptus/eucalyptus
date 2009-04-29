@@ -1021,7 +1021,6 @@ static int convert_dev_names (char *localDev, char *localDevReal, char *localDev
     char *strptr;
 
     bzero(localDevReal, 32);
-    bzero(localDevTag, 256);
     if ((strptr = strchr(localDev, '/')) != NULL) {
         sscanf(localDev, "/dev/%s", localDevReal);
     } else {
@@ -1031,7 +1030,10 @@ static int convert_dev_names (char *localDev, char *localDevReal, char *localDev
         logprintfl(EUCAERROR, "bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
         return(ERROR);
     }
-    snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+    if (localDevTag) {
+        bzero(localDevTag, 256);
+        snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+    }
 
     return 0;
 }
@@ -1089,6 +1091,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
     if (ret==OK) {
         ncVolume * volume;
+
         sem_p (inst_sem);
         volume = add_volume (instance, volumeId, remoteDev, localDevTag);
         scSaveInstanceInfo(instance); /* to enable NC recovery */
@@ -1105,8 +1108,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
     int ret = OK;
-    ncVolume * volume;
-    ncInstance *instance;
+    ncInstance * instance;
     char localDevReal[32], localDevTag[256];
 
     logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
@@ -1156,6 +1158,8 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     }
 
     if (ret==OK) {
+        ncVolume * volume;
+
         sem_p (inst_sem);
         volume = free_volume (instance, volumeId, remoteDev, localDevTag);
         scSaveInstanceInfo(instance); /* to enable NC recovery */

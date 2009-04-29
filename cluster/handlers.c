@@ -1081,7 +1081,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     
     sem_wait(vnetConfigLock);
     
-    
     // define/get next mac and allocate IP
     foundnet = 0;
     if (!strcmp(vnetconfig->mode, "STATIC")) {
@@ -1123,7 +1122,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       
       resid = 0;
       rc = schedule_instance(ccvm, &resid);
-      
       res = &(config->resourcePool[resid]);
       if (rc) {
 	// could not find resource
@@ -1229,8 +1227,8 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  free_instance(&outInst);
 	  runCount++;
 	}
-	sem_post(configLock);
       }
+      sem_post(configLock);
     }
   }
   *outInstsLen = runCount;
