@@ -96,11 +96,11 @@ ALT_WSDL2C=$AXIS2C_HOME/WSDL2C.sh
 AC_CHECK_FILE($WSDL2C,[HAVE_WSDL2C=yes])
 AC_CHECK_FILE($ALT_WSDL2C,[HAVE_ALT_WSDL2C=yes])
 # check if we found either of the possible WSDL2Cs
-if test "$HAVE_WSDL2C$HAVE_ALT_WSDL2C" != yes; then
+if test -z "$HAVE_WSDL2C$HAVE_ALT_WSDL2C" ; then
     AC_MSG_ERROR([Cannot find WSDL2C.sh!])
 fi
 # made it here: we found one! -- set WSDL2C if the default location is wrong
-if test -z "$HAVE_WSDL2C" ; then
+if test -n "$HAVE_ALT_WSDL2C" ; then
     WSDL2C=$ALT_WSDL2C
 fi
 
