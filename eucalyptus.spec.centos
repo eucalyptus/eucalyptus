@@ -159,20 +159,20 @@ then
 fi
 if [ "$1" = "2" ]; 
 then
+	# we upgrade only from 1.4
+	if [ ! -e /opt/eucalyptus/usr/share/eucalyptus/euca_ipt ]; then
+		echo "Cannot upgrade from version earlier than 1.4"
+		exit 2
+	fi
+
 	# let's try to save the old configuration
-	if [ -d /opt/eucalyptus-1.1/var/eucalyptus/db -o -d /opt/eucalyptus/var/eucalyptus/db ]; 
+	if [ -d /opt/eucalyptus/var/eucalyptus/db ]; 
 	then
-		if [ -d /opt/eucalyptus-1.1/var/eucalyptus/db ]; 
-		then
-			# this is from 1.1: not tested
-			cd /opt/eucalyptus-1.1
-		fi
 		if [ -d /opt/eucalyptus/var/eucalyptus/db ]; 
 		then
 			cd /opt/eucalyptus
 		fi
 		rm -f var/eucalyptus/db/eucalyptus.lck
-		tar cf /root/eucalyptus-pre%{version}-upgrade.tar var/eucalyptus/db/eucalyptus.* etc/eucalyptus/cloud.d/*.bks
 		tar cf /root/eucalyptus-pre%{version}-rollback.tar var/eucalyptus/db/eucalyptus.* var/eucalyptus/keys etc/eucalyptus/eucalyptus.conf etc/eucalyptus/cloud.d/*.bks
 	fi
 fi
@@ -181,15 +181,6 @@ fi
 %post
 # let's be sure we point to right eucalyptus installation
 /opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
-if [ "$1" = "2" ]; 
-then
-	if [ -s /root/eucalyptus-pre%{version}-upgrade.tar ];
-	then
-		cd /opt/eucalyptus
-		tar xf /root/eucalyptus-pre%{version}-upgrade.tar
-		rm -f /root/eucalyptus-pre%{version}-upgrade.tar
-	fi
-fi
 
 %post cloud
 chkconfig --add eucalyptus-cloud
