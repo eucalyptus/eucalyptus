@@ -4,8 +4,11 @@
 
 include ../Makedefs
 
-WSDL=../wsdl/eucalyptus_nc.wsdl
+WSDLPATH=../wsdl/
+CCWSDLNAME=eucalyptus_cc.wsdl
+CCWSDL=$(WSDLPATH)/$(CCWSDLNAME)
 NCWSDLNAME=eucalyptus_nc.wsdl
+NCWSDL=$(WSDLPATH)/$(NCWSDLNAME)
 SERVICE_SO=libEucalyptusNC.so
 SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
@@ -17,15 +20,15 @@ all: server client clientlib test_nc test
 
 build: all
 
-generated/stubs: $(WSDL)
+generated/stubs: $(NCWSDL)
 	@echo Generating server stubs
 	rm -rf generated
 	mkdir -p generated
-	sh $(WSDL2C) -uri $(WSDL) -sd -ss -d adb -u -uw -f -o generated | grep -v 'the classpath'
+	sh $(WSDL2C) -uri $(NCWSDL) -sd -ss -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Adding marshalling calls to server stubs
 	../tools/add_marshalling.pl generated/axis2_skel_*.c
 	@echo Generating client stubs
-	sh $(WSDL2C) -uri $(WSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
+	sh $(WSDL2C) -uri $(NCWSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Compiling the stubs
 	cd generated; patch -p1 < ../axis2_svc_generated.patch; $(CC) -c $(CFLAGS) $(INCLUDES) *.c
 	@echo "this is a cute little makefile marker" >generated/stubs
@@ -55,14 +58,14 @@ server: $(SERVICE_SO)
 	make -C ../util
 
 $(SERVICE_SO): generated/stubs ../storage/storage.o ../storage/walrus.o ../net/vnetwork.o ../util/misc.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o
-	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) ../storage/*.o ../net/*.o ../util/*.o 
+	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) ../storage/*.o ../net/*.o ../util/*.o
 
 clientlib: generated/stubs ../util/data.o client-marshal-adb.o
 
 client: $(CLIENT) $(CLIENT)_local
 
 $(CLIENT): generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(AXIS2C_HOME)/lib/libaxutil.so $(CLIENT).c
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../storage/*.o ../net/*.o $(CLIENT).c 
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../storage/*.o ../net/*.o $(CLIENT).c
 
 $(CLIENT)_local: generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o
 	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o ../storage/*.o ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS)
@@ -74,21 +77,21 @@ test_nc: test_nc.c ../util/misc.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o
 
 deploy:
-	$(INSTALL) -d $(AXIS2C_HOME)/services/$(SERVICE_NAME)/
-	$(INSTALL) $(SERVICE_SO) $(AXIS2C_HOME)/services/$(SERVICE_NAME)/
+	$(INSTALL) -d $(AXIS2C_SERVICES)/$(SERVICE_NAME)/
+	$(INSTALL) $(SERVICE_SO) $(AXIS2C_SERVICES)/$(SERVICE_NAME)/
 
 # no ws-sec
-	cat generated/services.xml | ../tools/add_wsdllocation.pl $(AXIS2C_HOME)/services/$(SERVICE_NAME)/$(NCWSDLNAME) > $(AXIS2C_HOME)/services/$(SERVICE_NAME)/services_noWS.xml
+	cat generated/services.xml | ../tools/add_wsdllocation.pl $(AXIS2C_SERVICES)/$(SERVICE_NAME)/$(NCWSDLNAME) > $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_noWS.xml
 # ws-sec
-	cat generated/services.xml | ../tools/add_wsdllocation.pl $(AXIS2C_HOME)/services/$(SERVICE_NAME)/$(NCWSDLNAME) | ../tools/add_service_policy.pl ../tools/service-policy-template.xml | sed "s:CLIENT-CERT:cluster-cert.pem:g" | sed "s:CLIENT-KEY:cluster-pk.pem:g" | sed "s:SERVER-CERT:node-cert.pem:g" | sed "s:SERVER-KEY:node-pk.pem:g" | sed "s:CLIENT-USERNAME:eucalyptus:g" > $(AXIS2C_HOME)/services/$(SERVICE_NAME)/services_WS.xml
+	cat generated/services.xml | ../tools/add_wsdllocation.pl $(AXIS2C_SERVICES)/$(SERVICE_NAME)/$(NCWSDLNAME) | ../tools/add_service_policy.pl ../tools/service-policy-template.xml | sed "s:CLIENT-CERT:cluster-cert.pem:g" | sed "s:CLIENT-KEY:cluster-pk.pem:g" | sed "s:SERVER-CERT:node-cert.pem:g" | sed "s:SERVER-KEY:node-pk.pem:g" | sed "s:CLIENT-USERNAME:eucalyptus:g" > $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_WS.xml
 	cat ../tools/client-policy-template.xml | sed "s:EUCALYPTUS_HOME:$(EUCALYPTUS):g" | sed "s:AXIS2C_HOME:$(AXIS2C_HOME):g"  | sed "s:CLIENT-CERT:cluster-cert.pem:g" | sed "s:CLIENT-KEY:cluster-pk.pem:g" | sed "s:SERVER-CERT:node-cert.pem:g" | sed "s:SERVER-KEY:node-pk.pem:g" | sed "s:CLIENT-USERNAME:eucalyptus:g" > nc-client-policy.xml
 #	cp nc-client-policy.xml $(EUCALYPTUS)/var/eucalyptus/keys/
 ##	cp ../tools/*.pem $(EUCALYPTUS)/var/eucalyptus/keys/
 #	chmod -R 0600 $(EUCALYPTUS)/var/eucalyptus/keys/*
 # ws
-	$(INSTALL) $(AXIS2C_HOME)/services/$(SERVICE_NAME)/services_WS.xml $(AXIS2C_HOME)/services/$(SERVICE_NAME)/services.xml
+	$(INSTALL) $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_WS.xml $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services.xml
 # no ws
-#	cp $(AXIS2C_HOME)/services/$(SERVICE_NAME)/services_noWS.xml $(AXIS2C_HOME)/services/$(SERVICE_NAME)/services.xml
+#	cp $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_noWS.xml $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services.xml
 
 clean:
 	rm -rf $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#*
