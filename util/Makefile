@@ -25,6 +25,7 @@ clean:
 	rm -rf *~ *.o test euca_rootwrap euca_mountwrap
 
 distclean:
+	rm -rf config.h
 
 install:
 	@$(INSTALL) -m 0755 euca_rootwrap $(datarootdir)/eucalyptus

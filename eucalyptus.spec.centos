@@ -4,7 +4,7 @@ Version:       1.5.1
 Release:       rc3
 License:       BSD
 Group:         Applications/System
-BuildRequires: gcc, make, libvirt-devel, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c
+BuildRequires: gcc, make, euca-libvirt, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c
 Requires:      vconfig, aoetools, vblade
 Vendor:        Mayhem lab
 #Icon:          someicon.xpm
@@ -22,7 +22,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= 1.5.1, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Requires:     eucalyptus >= 1.5.1, java >= 1.6.0, ant, ant-nodeps, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -48,7 +48,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt, curl, xen
+Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, euca-libvirt, curl, xen
 Group:        Applications/System
 
 %description nc
@@ -79,10 +79,8 @@ This package contains the internal log service of eucalyptus.
 # let's be sure we have the right configuration file
 if [ -f tools/eucalyptus.conf.centos ]; then
 	cp tools/eucalyptus.conf.centos tools/eucalyptus.conf
-elif [ -f tools/eucalyptus.conf.rpm ]; then
-	cp tools/eucalyptus.conf.rpm tools/eucalyptus.conf
 fi
-./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
+./configure --with-libvirt=/opt/euca-libvirt --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
 cd clc
 make deps
 cd ..

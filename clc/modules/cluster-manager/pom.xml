@@ -4,7 +4,7 @@
         <artifactId>cloud</artifactId>
         <version>1</version>
         <relativePath>../../pom.xml</relativePath>
-    </parent>    
+    </parent>
     <modelVersion>4.0.0</modelVersion>
     <groupId>eucalyptus</groupId>
     <artifactId>cluster-manager</artifactId>
