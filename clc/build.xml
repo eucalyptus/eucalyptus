@@ -150,7 +150,9 @@
         <mkdir dir="${euca.var.dir}/"/>
         <mkdir dir="${euca.var.dir}/webapps"/>
         <mkdir dir="${euca.var.dir}/db"/>
+	<chmod dir="${euca.var.dir}/db" perm="0700"/> 
         <mkdir dir="${euca.var.dir}/keys"/>
+	<chmod dir="${euca.var.dir}/keys" perm="0700"/> 
         <mkdir dir="${euca.var.dir}/modules"/>
         <mkdir dir="${euca.log.dir}"/>
         <ant dir="modules/workarounds" inheritall="false" target="install"/>
