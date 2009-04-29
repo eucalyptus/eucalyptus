@@ -111,7 +111,7 @@ do_start() {
 
 do_stop() {
 	# now kill the service
-	pidfile=/var/run/eucalyptus/eucalyptus-cloud.pid
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
 	if [ -s "$x" ]; then
 		pid=`cat $pidfile 2> /dev/null`
 		kill $pid 2> /dev/null >/dev/null

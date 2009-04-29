@@ -152,7 +152,7 @@ do_start() {
 
 do_stop() {
 	# now kill the services
-	pidfile=/var/run/eucalyptus/eucalyptus-nc.pid
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid
 	if [ -s $pidfile ]; then
 		pid=`cat $pidfile 2> /dev/null`
 		kill $pid > /dev/null 2>&1 
