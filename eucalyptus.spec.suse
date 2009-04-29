@@ -89,15 +89,6 @@ make
 %install
 make install
 
-%install cloud
-ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-cloud
-
-%install cc
-ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-cc
-
-%install nc
-ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-nc
-
 %clean
 rm -rf /opt/eucalyptus/etc /opt/eucalyptus/usr /opt/eucalyptus/var
 rm -rf /opt/eucalyptus/lib
