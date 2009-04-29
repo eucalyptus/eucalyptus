@@ -183,12 +183,15 @@ fi
 /opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 
 %post cloud
+ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-cloud
 chkconfig --add eucalyptus-cloud
 
 %post cc
+ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-cc
 chkconfig --add eucalyptus-cc
 
 %post nc
+ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-nc
 . /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 chkconfig --add eucalyptus-nc
 [ -n "$INSTANCE_PATH" ] && mkdir -p $INSTANCE_PATH
