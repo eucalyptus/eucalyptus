@@ -1,0 +1,246 @@
+#!/bin/bash
+#
+# Init script for the Eucalyptus cloud manager services.
+#
+# chkconfig: 2345 99 05
+# description: script for starting and stopping eucalyptus cloud services
+#
+### BEGIN INIT INFO
+# Provides:                   eucalyptus-cloud
+# Required-Start:             $remote_fs $syslog 
+# Should-Start:               sendmail
+# Required-Stop:              $remote_fs $syslog 
+# Should-Stop:                sendmail
+# Default-Start:              2 3 4 5
+# Default-Stop:	              0 1 6
+# Short-Description:          Start Eucalyptus cloud controller
+# Description:                Start the Eucalyptus cloud controller
+# X-UnitedLinux-Default-Enabled: yes
+### END INIT INFO
+#
+# $Id: eucalyptus.in,v 1.6 2009-01-06 00:14:41 graziano Exp $
+#
+
+# Do NOT "set -e"
+
+# if we are on rocks we need the rocks binaries 
+[ -e /etc/profile.d/rocks-binaries.sh ] && . /etc/profile.d/rocks-binaries.sh
+
+if [ "$EUID" != "0" ]; then
+    echo "Eucalyptus must be run as root."
+    exit 1
+fi
+
+# if we have lsb functions let's source them
+WE_HAVE_LSB="N"
+if [ -e /lib/lsb/init-functions ]; then
+	. /lib/lsb/init-functions
+	# very old lsb don't have the functions we need
+	if type log_daemon_msg > /dev/null 2> /dev/null ; then
+		WE_HAVE_LSB="Y"
+	fi
+fi
+
+# I just wanted to set PATH to be the system PATH, but if a user install
+# eucalyptus manually, it may have binaries in a non-standard position:
+# hence we need to keep the PATH we receive.
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+DESC="Eucalyptus cloud controller"
+NAME=eucalyptus-cloud
+ANT="`which ant 2> /dev/null`"
+JAVA="`which java 2> /dev/null`"
+
+# honor the ENV variable if found otherwise look in root
+if [ -z "$EUCALYPTUS" ] ; then
+	EUCALYPTUS="@prefix@"
+fi
+export EUCALYPTUS
+
+check_java() {
+	java_min_version="1.6.0"
+
+	
+	#  let's check the default java
+	if [ -n "$JAVA" ]; then
+		java_version=`java -version 2>&1 | grep "java version" | sed -e 's/.*java version "\(.*\)".*/\1/'`
+		if [ `expr $java_version "<" $java_min_version` -eq 0 ]; then
+			return 
+		fi
+	fi
+
+	# we don't have a good java, let's look at JAVA_HOME (defined one
+	# or the one which was defined at compile time)
+	if [ -z "$JAVA_HOME" ]; then
+		JAVA_HOME="@JAVA_HOME@"
+	fi
+	JAVA="$JAVA_HOME/bin/java"
+
+	# let's see if we can find a decent java
+	if [ -x "$JAVA" ]; then
+		java_version=`$JAVA -version 2>&1 | grep "java version" | sed -e 's/.*java version "\(.*\)".*/\1/'`
+		if [ `expr $java_version "<" $java_min_version` -eq 0 ]; then
+			export JAVA_HOME
+			return 
+		fi
+	fi
+
+	echo "Eucalyptus needs java version >= $java_min_version"
+	exit 1
+}
+
+do_start() {
+	local ret
+
+	# let's be sure we have java
+	check_java
+
+	# let's be sure we have some needed directories
+	mkdir -p $EUCALYPTUS/var/run/eucalyptus
+	mkdir -p $EUCALYPTUS/var/log/eucalyptus
+
+	# set up eucalyptus var locations to be owned by EUCA_USER
+	for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
+		if [ $y != "/" -a -d $y ]; then
+			chown -R $EUCA_USER:$EUCA_USER $y
+		fi
+	done
+
+	cd $EUCALYPTUS/etc/eucalyptus
+	(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
+	ret="$?"
+	echo "$!" > $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
+	return $ret
+}
+
+do_stop() {
+	# now kill the service
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
+	if [ -s "$pidfile" ]; then
+		pid=`cat $pidfile 2> /dev/null`
+		kill $pid 2> /dev/null >/dev/null
+	else
+		return
+	fi
+
+	# let's way few seconds than kill harder
+	timeout=5
+	while [ $timeout -ge 0 ]; do
+		if ps $pid > /dev/null 2>&1 ; then
+			sleep 1
+			timeout=$(($timeout - 1))
+		else
+			break
+		fi
+	done
+	if [ $timeout -eq 0 ]; then
+		kill -9 $pid > /dev/null 2>&1 
+	fi
+	rm -f $pidfile
+}
+
+# Read configuration variable file if it is present
+if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
+	. $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+else
+	echo "Cannot find eucalyptus configuration file!"
+	exit 1
+fi
+if [ "$EUCALYPTUS" = "not_configured" ]; then
+	echo "EUCALYPTUS not configured!" 
+	exit 1
+fi
+if [ -n "$TEMPLATE_PATH" ]; then
+	echo "TEMPLATE_PATH is defined: do you have an old configuration?"
+	exit 1
+fi
+
+# let's get the user to use
+if [ -z "$EUCA_USER" ] ; then
+	EUCA_USER="root"
+fi
+
+# let's see if the user exists
+ID="`which id 2> /dev/null`"
+if [ -n "$ID" ]; then
+	if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
+		echo "User $EUCA_USER doesn't exists!"
+		exit 1
+	fi
+fi
+
+# set the library path correctly
+export LD_LIBRARY_PATH="$EUCALYPTUS/lib:$LD_LIBRARY_PATH"
+
+case "$1" in
+  start)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_daemon_msg "Starting $DESC" "$NAME"
+		else
+			echo -n "Starting $DESC: "
+		fi
+	fi
+	do_start
+	case "$?" in
+	0|1) 
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 0
+			else
+				echo "."
+			fi
+		fi
+		;;
+	*)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			else
+				echo "failed!"
+			fi
+		fi
+		;;
+	esac
+	;;
+  stop)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Stopping $DESC"
+		else
+			echo -n "Stopping $DESC: "
+		fi
+	fi
+	do_stop
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg
+		else
+			echo "done."
+		fi
+	fi
+	;;
+  restart)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Restarting $DESC"
+		else
+			echo -n "Restarting $DESC: "
+		fi
+	fi
+	do_stop
+	do_start
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg
+		else
+			echo "done."
+		fi
+	fi
+  	;;
+  *)
+	echo "Usage: $NAME {start|stop|restart}" >&2
+	exit 3
+	;;
+esac
+
+:

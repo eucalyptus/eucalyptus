@@ -29,7 +29,7 @@ fi
 # variables we'll need later on
 AXIS2C_HOME="${AXIS2C_HOME}"
 AXIS2_HOME="${AXIS2_HOME}"
-AXIS2C_SERVICES="${AXIS2C_HOME}/services"
+AXIS2C_SERVICES=""
 LIBVIRT_HOME="${LIBVIRT_HOME}"
 ANT=""
 JAVA=""
@@ -64,6 +64,12 @@ AC_ARG_ENABLE(debug,
                 [if test "${enableval}" != "no"; then
                         CFLAGS="$CFLAGS -g -DDEBUG"
                 fi])
+
+
+# If we didn't specify the services directory, let's use the default
+if test -n "$AXIS2C_SERVICES" ; then
+	AXIS2C_SERVICES="$AXIS2C/services"
+fi
 
 # Fix the paths for includes and libraries
 if test -n "${AXIS2C_HOME}" ; then
@@ -203,8 +209,10 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup strerror strncasecmp strstr rmdir])
 
 # Time to substitute and generate the files
-AC_CONFIG_FILES([Makedefs
-		tools/eucalyptus:tools/eucalyptus.in])
+AC_CONFIG_FILES([Makedefs 
+		tools/eucalyptus-cc:tools/eucalyptus-cc.in
+		tools/eucalyptus-nc:tools/eucalyptus-nc.in
+		tools/eucalyptus-cloud:tools/eucalyptus-cloud.in])
 
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
 

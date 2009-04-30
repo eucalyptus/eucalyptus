@@ -1,7 +1,7 @@
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       1.5.1
-Release:       rc3
+Release:       1
 License:       BSD
 Group:         Applications/System
 BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0
@@ -89,17 +89,13 @@ make
 %install
 make install
 
-# symlink for the system to start
-ln -sf /opt/eucalyptus/etc/init.d/eucalyptus /etc/init.d/eucalyptus
-
 %clean
 rm -rf /opt/eucalyptus/etc /opt/eucalyptus/usr /opt/eucalyptus/var
 rm -rf /opt/eucalyptus/lib
 rm -rf $RPM_BUILD_DIR/eucalyptus
-rm -f /etc/init.d/eucalyptus 
+rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-cc
 
 %files
-%config /etc/init.d/eucalyptus
 %config(noreplace) /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 %doc LICENSE INSTALL README CHANGELOG
 /opt/eucalyptus/var/eucalyptus/keys
@@ -112,7 +108,6 @@ rm -f /etc/init.d/eucalyptus
 /opt/eucalyptus/usr/sbin/euca_conf
 /opt/eucalyptus/usr/sbin/euca_sync_key
 /opt/eucalyptus/usr/sbin/euca_killall
-/opt/eucalyptus/etc/init.d/eucalyptus
 /opt/eucalyptus/etc/eucalyptus/httpd.conf
 
 %files cloud
@@ -121,15 +116,15 @@ rm -f /etc/init.d/eucalyptus
 /opt/eucalyptus/etc/eucalyptus/cloud.xml
 /opt/eucalyptus/usr/share/eucalyptus/*jar
 /opt/eucalyptus/var/eucalyptus/db
-/opt/eucalyptus/var/eucalyptus/images
 /opt/eucalyptus/var/eucalyptus/modules
-/opt/eucalyptus/var/eucalyptus/services
 /opt/eucalyptus/var/eucalyptus/webapps
 /opt/eucalyptus/usr/lib/libfsstorage.so
 /opt/eucalyptus/usr/lib/liblvm2control.so
+/opt/eucalyptus/etc/init.d/eucalyptus-cloud
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
+/opt/eucalyptus/etc/init.d/eucalyptus-cc
 
 %files nc
 /opt/eucalyptus/usr/share/eucalyptus/euca_mountwrap
@@ -140,6 +135,7 @@ rm -f /etc/init.d/eucalyptus
 /opt/eucalyptus/usr/share/eucalyptus/get_sys_info
 /opt/eucalyptus/usr/sbin/euca_test_nc
 /opt/euca-axis2c/services/EucalyptusNC
+/opt/eucalyptus/etc/init.d/eucalyptus-nc
 
 %files gl
 /opt/euca-axis2c/services/EucalyptusGL
@@ -152,20 +148,20 @@ then
 fi
 if [ "$1" = "2" ]; 
 then
+	# we upgrade only from 1.4
+	if [ ! -e /opt/eucalyptus/usr/share/eucalyptus/euca_ipt ]; then
+		echo "Cannot upgrade from version earlier than 1.4"
+		exit 2
+	fi
+
 	# let's try to save the old configuration
-	if [ -d /opt/eucalyptus-1.1/var/eucalyptus/db -o -d /opt/eucalyptus/var/eucalyptus/db ]; 
+	if [ -d /opt/eucalyptus/var/eucalyptus/db ]; 
 	then
-		if [ -d /opt/eucalyptus-1.1/var/eucalyptus/db ]; 
-		then
-			# this is from 1.1: not tested
-			cd /opt/eucalyptus-1.1
-		fi
 		if [ -d /opt/eucalyptus/var/eucalyptus/db ]; 
 		then
 			cd /opt/eucalyptus
 		fi
 		rm -f var/eucalyptus/db/eucalyptus.lck
-		tar cf /root/eucalyptus-pre%{version}-upgrade.tar var/eucalyptus/db/eucalyptus.* etc/eucalyptus/cloud.d/*.bks
 		tar cf /root/eucalyptus-pre%{version}-rollback.tar var/eucalyptus/db/eucalyptus.* var/eucalyptus/keys etc/eucalyptus/eucalyptus.conf etc/eucalyptus/cloud.d/*.bks
 	fi
 fi
@@ -174,35 +170,20 @@ fi
 %post
 # let's be sure we point to right eucalyptus installation
 /opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
-if [ "$1" = "1" ]; 
-then
-	chkconfig --add eucalyptus
-fi
-if [ "$1" = "2" ]; 
-then
-	if [ -s /root/eucalyptus-pre%{version}-upgrade.tar ];
-	then
-		cd /opt/eucalyptus
-		tar xf /root/eucalyptus-pre%{version}-upgrade.tar
-		rm -f /root/eucalyptus-pre%{version}-upgrade.tar
-	fi
-fi
 
 %post cloud
-/opt/eucalyptus/usr/sbin/euca_conf -cloud "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-cloud
+chkconfig --add eucalyptus-cloud
 
 %post cc
-/opt/eucalyptus/usr/sbin/euca_conf -cc "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-cc
+chkconfig --add eucalyptus-cc
 
 %post nc
+ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-nc
 . /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
-/opt/eucalyptus/usr/sbin/euca_conf -nc "Y" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+chkconfig --add eucalyptus-nc
 [ -n "$INSTANCE_PATH" ] && mkdir -p $INSTANCE_PATH
-
-%preun 
-if [ "$1" = "0" ]; then
-	chkconfig --del eucalyptus || true
-fi
 
 %postun
 if [ "$1" = "0" ]; 
@@ -216,7 +197,13 @@ if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
 	then
 		/etc/init.d/eucalyptus stop || /bin/true
 	fi
-	/opt/eucalyptus/usr/sbin/euca_conf -cloud "N" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+	if [ -x /etc/init.d/eucalyptus-cloud ]; 
+	then
+		/etc/init.d/eucalyptus-cloud stop || /bin/true
+	fi
+fi
+if [ "$1" = "0" ]; then
+	chkconfig --del eucalyptus-cloud || true
 fi
 
 %preun cc
@@ -225,7 +212,13 @@ if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
 	then
 		/etc/init.d/eucalyptus stop || /bin/true
 	fi
-	/opt/eucalyptus/usr/sbin/euca_conf -cc "N" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+	if [ -x /etc/init.d/eucalyptus-cc ]; 
+	then
+		/etc/init.d/eucalyptus-cc stop || /bin/true
+	fi
+fi
+if [ "$1" = "0" ]; then
+	chkconfig --del eucalyptus-cc || true
 fi
 
 %preun nc
@@ -234,7 +227,13 @@ if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
 	then
 		/etc/init.d/eucalyptus stop || /bin/true
 	fi
-	/opt/eucalyptus/usr/sbin/euca_conf -nc "N" /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+	if [ -x /etc/init.d/eucalyptus-nc ]; 
+	then
+		/etc/init.d/eucalyptus-nc stop || /bin/true
+	fi
+fi
+if [ "$1" = "0" ]; then
+	chkconfig --del eucalyptus-nc || true
 fi
 
 %changelog gl
