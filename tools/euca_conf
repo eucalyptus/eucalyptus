@@ -4,8 +4,6 @@
 
 FILE="$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
-START_CC=""
-START_NC=""
 CC_PORT=""
 NC_PORT=""
 CLOUD=""
@@ -113,16 +111,6 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi		
-	if [ "$1" = "-cloud" ]; then
-		START_CLOUD="$2"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "-cc" ]; then
-		START_CC="$2"
-		shift; shift
-		continue
-	fi		
 	if [ "$1" = "-dhcpd" ]; then
 		DHCPD="$2"
 		shift; shift
@@ -130,11 +118,6 @@ while [ $# -gt 0 ]; do
 	fi		
 	if [ "$1" = "-dhcp_user" ]; then
 		DHCPC_USER="$2"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "-nc" ]; then
-		START_NC="$2"
 		shift; shift
 		continue
 	fi		
@@ -226,15 +209,6 @@ fi
 # let's change the value
 if [ -n "$EUCALYPTUS" ]; then
 	change_var_value $FILE EUCALYPTUS "${EUCALYPTUS}"
-fi
-if [ -n "$START_CLOUD" ]; then
-	change_var_value $FILE START_CLOUD "${START_CLOUD}"
-fi
-if [ -n "$START_CC" ]; then
-	change_var_value $FILE START_CC "${START_CC}"
-fi
-if [ -n "$START_NC" ]; then
-	change_var_value $FILE START_NC "${START_NC}"
 fi
 if [ -n "$CC_PORT" ]; then
 	change_var_value $FILE CC_PORT "${CC_PORT}"

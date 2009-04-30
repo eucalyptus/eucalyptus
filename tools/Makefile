@@ -19,7 +19,14 @@ distclean:
 	@rm -rf eucalyptus
 
 install: deploy
-	@$(INSTALL) -m 755 eucalyptus $(etcdir)/init.d
+	@if test -e /etc/init.d/eucalyptus ; then \
+		mv /etc/init.d/eucalyptus /etc/init.d/eucalyptus.old ; \
+		echo "Moving away old init.d script"; fi
+	@if test -e $(etcdir)/init.d/eucalyptus ; then \
+		mv $(etcdir)/init.d/eucalyptus $(etcdir)/init.d/eucalyptus.old ; fi
+	@$(INSTALL) -m 755 eucalyptus-cloud $(etcdir)/init.d
+	@$(INSTALL) -m 755 eucalyptus-nc $(etcdir)/init.d
+	@$(INSTALL) -m 755 eucalyptus-cc $(etcdir)/init.d
 	@$(INSTALL) -m 644 httpd.conf $(etcdir)/eucalyptus
 	@if test -e $(etcdir)/eucalyptus/eucalyptus.conf ; then \
 		cp $(etcdir)/eucalyptus/eucalyptus.conf $(etcdir)/eucalyptus/eucalyptus.conf.old ; fi

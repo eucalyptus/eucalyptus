@@ -644,6 +644,7 @@ ac_subst_vars='LTLIBOBJS
 INCLUDES
 LIBVIRT_HOME
 AXIS2_HOME
+AXIS2C_SERVICES
 AXIS2C_HOME
 JAVA_HOME
 WSDL2C
@@ -708,6 +709,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 with_axis2c
+with_axis2c_services
 with_axis2
 with_libvirt
 enable_debug
@@ -1342,14 +1344,15 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-debug          include debugging info when compiling
+  --enable-debug                       include debugging info when compiling
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-axis2c=<dir>     where axis2c is installed
-  --with-axis2=<dir>      where axis2 is installed
-  --with-libvirt=<dir>    where libvirt is installed
+  --with-axis2c=<dir>                  where axis2c is installed
+  --with-axis2c-services=<dir>         where axis2c services are installed
+  --with-axis2=<dir>                   where axis2 is installed
+  --with-libvirt=<dir>                 where libvirt is installed
 
 Some influential environment variables:
   CC          C compiler command
@@ -3618,6 +3621,7 @@ fi
 # variables we'll need later on
 AXIS2C_HOME="${AXIS2C_HOME}"
 AXIS2_HOME="${AXIS2_HOME}"
+AXIS2C_SERVICES="${AXIS2C_HOME}/services"
 LIBVIRT_HOME="${LIBVIRT_HOME}"
 ANT=""
 JAVA=""
@@ -3639,6 +3643,12 @@ INCLUDES="${INCLUDES} -I. -I.. -Igenerated -I${TOP}/storage -I${TOP}/node -I${TO
 # Check whether --with-axis2c was given.
 if test "${with_axis2c+set}" = set; then
   withval=$with_axis2c; AXIS2C_HOME="${withval}"
+fi
+
+
+# Check whether --with-axis2c-services was given.
+if test "${with_axis2c_services+set}" = set; then
+  withval=$with_axis2c_services; AXIS2C_SERVICES="${withval}"
 fi
 
 
@@ -4564,6 +4574,7 @@ fi
 # we cannot use AC_PROG_PATH because WSDL2C.sh is not executable
 #AC_PATH_PROG([WSDL2C], WSDL2C.sh,,$AXIS2C_HOME/bin/tools/wsdl2c:$PATH)
 WSDL2C=$AXIS2C_HOME/bin/tools/wsdl2c/WSDL2C.sh
+ALT_WSDL2C=$AXIS2C_HOME/WSDL2C.sh
 as_ac_File=`$as_echo "ac_cv_file_$WSDL2C" | $as_tr_sh`
 { $as_echo "$as_me:$LINENO: checking for $WSDL2C" >&5
 $as_echo_n "checking for $WSDL2C... " >&6; }
@@ -4587,16 +4598,46 @@ $as_echo "$ac_res" >&6; }
 as_val=`eval 'as_val=${'$as_ac_File'}
 		 $as_echo "$as_val"'`
    if test "x$as_val" = x""yes; then
-  :
-else
-  WSDL2C=""
+  HAVE_WSDL2C=yes
 fi
 
-if test -z "$WSDL2C" ; then
-	{ { $as_echo "$as_me:$LINENO: error: Cannot find WSDL2C.sh!" >&5
+as_ac_File=`$as_echo "ac_cv_file_$ALT_WSDL2C" | $as_tr_sh`
+{ $as_echo "$as_me:$LINENO: checking for $ALT_WSDL2C" >&5
+$as_echo_n "checking for $ALT_WSDL2C... " >&6; }
+if { as_var=$as_ac_File; eval "test \"\${$as_var+set}\" = set"; }; then
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  { { $as_echo "$as_me:$LINENO: error: cannot check for file existence when cross compiling" >&5
+$as_echo "$as_me: error: cannot check for file existence when cross compiling" >&2;}
+   { (exit 1); exit 1; }; }
+if test -r "$ALT_WSDL2C"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+ac_res=`eval 'as_val=${'$as_ac_File'}
+		 $as_echo "$as_val"'`
+	       { $as_echo "$as_me:$LINENO: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+as_val=`eval 'as_val=${'$as_ac_File'}
+		 $as_echo "$as_val"'`
+   if test "x$as_val" = x""yes; then
+  HAVE_ALT_WSDL2C=yes
+fi
+
+# check if we found either of the possible WSDL2Cs
+if test -z "$HAVE_WSDL2C$HAVE_ALT_WSDL2C" ; then
+    { { $as_echo "$as_me:$LINENO: error: Cannot find WSDL2C.sh!" >&5
 $as_echo "$as_me: error: Cannot find WSDL2C.sh!" >&2;}
    { (exit 1); exit 1; }; }
 fi
+# made it here: we found one! -- set WSDL2C if the default location is wrong
+if test -n "$HAVE_ALT_WSDL2C" ; then
+    WSDL2C=$ALT_WSDL2C
+fi
+
 
 # we need JAVA_HOME
 if test -z "$JAVA_HOME" ; then
@@ -10681,12 +10722,13 @@ done
 
 
 # Time to substitute and generate the files
-ac_config_files="$ac_config_files Makedefs tools/eucalyptus:tools/eucalyptus.in"
+ac_config_files="$ac_config_files Makedefs tools/eucalyptus-cc:tools/eucalyptus-cc.in tools/eucalyptus-nc:tools/eucalyptus-nc.in tools/eucalyptus-cloud:tools/eucalyptus-cloud.in"
 
 
 cat >>confdefs.h <<_ACEOF
 #define VERSION "$VERSION"
 _ACEOF
+
 
 
 
@@ -11301,7 +11343,9 @@ do
   case $ac_config_target in
     "util/config.h") CONFIG_HEADERS="$CONFIG_HEADERS util/config.h" ;;
     "Makedefs") CONFIG_FILES="$CONFIG_FILES Makedefs" ;;
-    "tools/eucalyptus") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus:tools/eucalyptus.in" ;;
+    "tools/eucalyptus-cc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-cc:tools/eucalyptus-cc.in" ;;
+    "tools/eucalyptus-nc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-nc:tools/eucalyptus-nc.in" ;;
+    "tools/eucalyptus-cloud") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-cloud:tools/eucalyptus-cloud.in" ;;
 
   *) { { $as_echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 $as_echo "$as_me: error: invalid argument: $ac_config_target" >&2;}

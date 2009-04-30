@@ -7,33 +7,14 @@
 ####
 
 # This variable point to where eucalyptus has been installed.
-EUCALYPTUS="/opt/eucalyptus/"
+EUCALYPTUS="/"
 
 # This is the username that you require eucalyptus to run as
-EUCA_USER="root"
-
-# This variable controls whether or not the Cloud Controller will be
-# started. Typically there is only one Cloud Controller in the whole
-# system, which can controls multiple Cluster Controllers. 
-START_CLOUD="N"
+EUCA_USER="eucalyptus"
 
 # Uncomment this field if you do not plan on using the dynamic block
 # store functionality of Eucalyptus
-#DISABLE_EBS="Y"
-
-# This variable controls whether or not the Cluster Controller will be
-# started. Typically there is one Cluster Controller per cluster,
-# controlling multiple Node Controllers. The Cluster Controller needs to
-# be accessible from the outside world, so typically it's installed on
-# the head node (frontend).
-START_CC="N"
-
-# This variable controls whether or not to start the Node Controller. The
-# Node Controller is responsible to talk to the hypervisor to get
-# instances running, so it need to run on machine where the
-# virtualization hypervisor is running. Typically they are the compute
-# node on the cluster.
-START_NC="N"
+# DISABLE_EBS="Y"
 
 # This variable controls whether ws-security is enabled between
 # eucalyptus components.  The default settings provide secure
@@ -132,7 +113,7 @@ HYPERVISOR="xen"
 # needed by the maximum number of instances allowed on the node, combined.
 # Finally, this directory should be local to the Node Controller (as
 # opposed to an NFS share) for performance reasons.
-INSTANCE_PATH="/opt/eucalyptus/var/lib/eucalyptus/instances"
+INSTANCE_PATH="not_configured"
 
 # The maximum amount of disk space, in Megabytes, that Eucalyptus is 
 # allowed to use in the cache directory (INSTANCES_PATH/eucalyptus/cache).
@@ -150,7 +131,7 @@ INSTANCE_PATH="/opt/eucalyptus/var/lib/eucalyptus/instances"
 # either the name of the bridge that has been set up by Xen (xenbr0,
 # eth0, etc), or the physical ethernet device that is attached to the
 # xen bridge (peth0, peth1, etc), depending on your xen configuration.
-VNET_INTERFACE="eth0"
+VNET_INTERFACE="peth0"
 
 # (node setting only) VNET_BRIDGE should be set to the name of the
 # bridge that xen has configured.  This is typically named 'xenbr0,
@@ -162,7 +143,7 @@ VNET_BRIDGE="eth0"
 # This indicates where we have a dhcp server binary. We use it to provide
 # the images with IPs: Eucalyptus provides its own configuration per
 # instance. 
-VNET_DHCPDAEMON="/usr/sbin/dhcpd"
+VNET_DHCPDAEMON="/usr/sbin/dhcpd3"
 
 # Some systems have their DHCP daemon configured to run as a non-root
 # user.  If this is the case, set the name of that user here (by
