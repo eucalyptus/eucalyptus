@@ -108,14 +108,14 @@ do_start() {
 	cd $EUCALYPTUS/etc/eucalyptus
 	(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
 	ret="$?"
-	echo "$!" > $EUCALYPTUS/var/run/eucalyptus/cloud.pid
+	echo "$!" > $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
 	return $ret
 }
 
 do_stop() {
 	# now kill the service
 	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
-	if [ -s "$x" ]; then
+	if [ -s "$pidfile" ]; then
 		pid=`cat $pidfile 2> /dev/null`
 		kill $pid 2> /dev/null >/dev/null
 	else
