@@ -193,6 +193,14 @@ if [ -n "$TEMPLATE_PATH" ]; then
 	exit 1
 fi
 
+# let's see how many loop devices we have available
+LOOP_AVL="`/bin/ls /dev/loop* 2> /dev/null|wc -l`"
+if [ -z "$LOOP_AVL" -o "$LOOP_AVL" = "0" ]; then
+	echo "Couldn't find loop devices (/dev/loop*): expect problems"
+elif [ $LOOP_AVL -lt 32 ]; then
+	echo "You should have at least 32 loop devices"
+fi
+
 if [ -z "$EUCA_USER" ] ; then
 	EUCA_USER="root"
 fi
