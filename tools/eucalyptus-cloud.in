@@ -35,7 +35,10 @@ fi
 WE_HAVE_LSB="N"
 if [ -e /lib/lsb/init-functions ]; then
 	. /lib/lsb/init-functions
-	WE_HAVE_LSB="Y"
+	# very old lsb don't have the functions we need
+	if type log_daemon_msg > /dev/null 2> /dev/null ; then
+		WE_HAVE_LSB="Y"
+	fi
 fi
 
 # I just wanted to set PATH to be the system PATH, but if a user install
