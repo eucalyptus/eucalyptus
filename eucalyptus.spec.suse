@@ -8,8 +8,8 @@ BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0
 Requires:      vlan, aoetools, vblade
 Vendor:        Mayhem lab
 #Icon:          someicon.xpm
-Source:        http://eucalyptus.cs.ucsb.edu/downloads/eucalyptus-%{version}.tgz
-URL:           http://eucalyptus.cs.ucsb.edu
+Source:        http://open.eucalyptus.com/downloads/eucalyptus-%{version}.tgz
+URL:           http://open.eucalyptus.com
 
 %description
 EUCALYPTUS is an open source service overlay that implements elastic
@@ -237,14 +237,14 @@ if [ "$1" = "0" ]; then
 fi
 
 %changelog gl
-*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - New eucalyptus version
 
-*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Mon Jan  5 2009 mayhem group (support@open.eucalyptus.com)
 - Added new service
 
 %changelog cloud
-*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Support for groups in ACLS
 - Fixed issues with meta data support
 - Web browser form-based uploads via HTTP POST
@@ -254,7 +254,7 @@ fi
 - Compressed image downloads and fixes to image caching
 - Reduced memory requirement 
 
-*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Mon Jan  5 2009 mayhem group (support@open.eucalyptus.com)
 - Added cloud/Walrus configuration, including clusters and VM types
 - Revamped 'credentials' tab with new options to edit user information
   and hide/show "secret" strings
@@ -272,36 +272,36 @@ fi
 - GetConsole and RebootInstances support
 - Working Security Groups support for clusters in MANAGED network mode
 - see website for additional details, extensions, and caveats:
-  http://eucalyptus.cs.ucsb.edu/wiki/API_v1.4
+  http://open.eucalyptus.com/wiki/API_v1.4
 - Instance Metadata service (including userData)
 - Workaround to use standard tools for registering kernels & ramdisks
 
-*Mon Jul 28 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Mon Jul 28 2008 mayhem group (support@open.eucalyptus.com)
 - First revision: split from eucalyptus to allow installation of only
   this module.
 - Fix the instance ID naming collision.
 
 %changelog cc
-*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Network improvement: new MANAGED-NOVLAN mode 
 
-*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Mon Jan  5 2009 mayhem group (support@open.eucalyptus.com)
 - Cluster controller now handles concurrent requests (no longer have to 
   restrict apache to allow only one connection at a time)
 - Cluster controller scheduling policy can now be configured in 
   eucalyptus.conf (ROUNDROBIN and GREEDY currently supported)
 
-*Mon Jul 28 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Mon Jul 28 2008 mayhem group (support@open.eucalyptus.com)
 - First revision: split from eucalyptus to allow installation of only
   this module.
 
 %changelog nc
-*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Support for the KVM hypervisor
 - Compression & retries on Walrus downloads
 - Reworked caching (now with configurable limit) 
 
-*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Mon Jan  5 2009 mayhem group (support@open.eucalyptus.com)
 - Retrieval of images from Walrus instead of NFS-mounted file system
 - New caching and cleanup code, including start-time integrity checks
 - Script-based discovery of node resources (no assumptions about stat)
@@ -312,14 +312,14 @@ fi
 - Serialized some Xen invocations to guard against non-determinism
 - Added proper swap creation, also "ephemeral" disk support
 
-*Mon Jul 28 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Mon Jul 28 2008 mayhem group (support@open.eucalyptus.com)
 - First revision: split from eucalyptus to allow installation of only
   this module.
 - Implemented caching of the instances.
 - More robust checking for running instances.
 
 %changelog
-*Thu Apr 16 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Elastic Block Store (EBS) support (volumes & snapshots) 
 - Better Java installation checking
 - New command-line administration: euca_conf -addcluster ... -addnode ...
@@ -330,7 +330,7 @@ fi
 - Better screening of usernames
 - Fixed account confirmation glitches 
 
-*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Mon Jan  5 2009 mayhem group (support@open.eucalyptus.com)
 - Added new networking subsystem that no longer depends on VDE
 - Added support for elastic IP assignment and security using the 'MANAGED' 
   networking mode
@@ -340,12 +340,12 @@ fi
 - Support for new operations: reboot instance and get console output.
 - Revamped logging throughout, with five levels a la log4j.
 
-*Mon Jul 28 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Mon Jul 28 2008 mayhem group (support@open.eucalyptus.com)
 - Removed cloud, cluster controller and node controller and created their
   own packages.
 - Added the possibility of installing Eucalyptus from RPMs (without ROCKS).
 
-*Tue Jul 01 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Tue Jul 01 2008 mayhem group (support@open.eucalyptus.com)
 - Added WS-security for internal communication
 - Added URL Query Interface for interacting with Eucalyptus
 - Cluster Controller improvements:
@@ -373,5 +373,5 @@ fi
    - Timeout-related error reporting
    - Slimmer log files, with timestamps
 
-*Sat May 21 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Sat May 21 2008 mayhem group (support@open.eucalyptus.com)
 - first release of eucalyptus

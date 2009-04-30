@@ -12,7 +12,7 @@
 AC_PREREQ(2.61)
 AC_INIT(Eucalyptus,
 	m4_esyscmd([cat VERSION| tr -d '\n']),
-	support@eucalyptus.cs.ucsb.edu)
+	support@open.eucalyptus.com)
 AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
 AC_CONFIG_HEADER([util/config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])

@@ -4,8 +4,8 @@ Version:      1.5
 Release:      1
 License:      BSD
 Group:        Applications/System
-Source:       http://eucalyptus.cs.ucsb.edu/dependencies/1.5/euca-libvirt.tgz
-URL:          http://eucalyptus.cs.ucsb.edu
+Source:       http://open.eucalyptus.com/dependencies/1.5/euca-libvirt.tgz
+URL:          http://open.eucalyptus.com
 Provides:     euca-libvirt
 
 %description
@@ -35,10 +35,10 @@ rm -rf $RPM_BUILD_DIR/euca-libvirt-%{version}
 /opt/euca-libvirt
 
 %changelog
-*Fri Apr 24 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Fri Apr 24 2009 mayhem group (support@open.eucalyptus.com)
 - packaged for eucalyptus 1.5
 
-*Mon Dec  8 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Mon Dec  8 2008 mayhem group (support@open.eucalyptus.com)
 - Upgraded to libvirt 0.4.6
 
 *Sat May 12 2008 mayhem group (virtual@pompone.cs.ucsb.edu)
