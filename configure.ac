@@ -67,7 +67,7 @@ AC_ARG_ENABLE(debug,
 
 
 # If we didn't specify the services directory, let's use the default
-if test -n "$AXIS2C_SERVICES" ; then
+if test -z "$AXIS2C_SERVICES" ; then
 	AXIS2C_SERVICES="${AXIS2C_HOME}/services"
 fi
 
