@@ -109,7 +109,7 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/usr/sbin/euca_sync_key
 /opt/eucalyptus/usr/sbin/euca_killall
 /opt/eucalyptus/etc/eucalyptus/httpd.conf
-/opt/eucalyptus/etc/eucalyptus/eucalytpus-version
+/opt/eucalyptus/etc/eucalyptus/eucalyptus-version
 
 %files cloud
 %config(noreplace) /opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
