@@ -41,13 +41,6 @@ help:
 	@echo 
 
 
-dep:
-	@echo Checking for dependencies...
-	@tools/make_dep.sh
-#	@echo Checking for Java dependencies...
-#	make -C cloud dep
-
-
 tags:
 	@echo making tags for emacs and vi
 	find cluster net node storage tools util -name "*.[chCH]" -print | ctags -L -
