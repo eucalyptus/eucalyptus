@@ -45,7 +45,10 @@ NAME=eucalyptus-cc
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
-	EUCALYPTUS="@prefix@"
+       EUCALYPTUS="@prefix@"                                   
+       if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
+              EUCALYPTUS="/"                                   
+       fi   
 fi
 export EUCALYPTUS
 

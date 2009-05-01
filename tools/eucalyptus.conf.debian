@@ -8,7 +8,7 @@
 
 # This variable point to where eucalyptus has been installed.
 EUCALYPTUS="/"
-
+AXIS2C_HOME=/usr/lib/axis2
 # This is the username that you require eucalyptus to run as
 EUCA_USER="eucalyptus"
 
