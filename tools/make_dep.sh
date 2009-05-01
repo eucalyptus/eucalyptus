@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BASE_URL=http://eucalyptus.cs.ucsb.edu/dependencies
+BASE_URL=http://open.eucalyptus.com/dependencies
 POSTFIX=`uname`-`uname -m`
 TMP=Makedefs.tmp
 

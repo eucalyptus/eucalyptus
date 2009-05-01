@@ -12,7 +12,7 @@ Note that some of the commands below require root privileges.  Please,
 check section 2.d below for the list of software that Eucalyptus requires.
 
 For the most up-to-date instructions, please visit the Eucalyptus web page
-(http://eucalyptus.cs.ucsb.edu).
+(http://open.eucalyptus.com).
 
 
 1. Download Eucalyptus
@@ -20,7 +20,7 @@ For the most up-to-date instructions, please visit the Eucalyptus web page
 
 From the Eucalyptus Web site:
 
-  http://eucalyptus.cs.ucsb.edu/
+  http://open.eucalyptus.com/
 
 you need to download 
 
@@ -328,5 +328,5 @@ defaults kernel/ramdisk to be used when no kernel is specified.
 Now you should be able to run all the EC2 commands.
 
 ---
-Please see http://eucalyptus.cs.ucsb.edu for more info, downloads,
+Please see http://open.eucalyptus.com for more info, downloads,
 mailing lists and discussion forums.

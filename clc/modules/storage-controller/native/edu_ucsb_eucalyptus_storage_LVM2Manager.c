@@ -66,8 +66,27 @@ jstring run_command(JNIEnv *env, char *cmd, int outfd) {
 		    *ptr = '\0';
 	    }
 	}
-	fclose(fd);
+	pclose(fd);
 	return (*env)->NewStringUTF(env, readbuffer);
+}
+
+int run_command_and_get_status(JNIEnv *env, char *cmd, int outfd) {
+	FILE* fd;
+	int pid;
+	int status;
+	char absolute_cmd[256];
+    char* home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    if (!home) {
+        home = strdup (""); /* root by default */
+    } else {
+        home = strdup (home);
+    }
+
+    snprintf(absolute_cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap %s", home, cmd);
+    fprintf(stderr, "command: %s\n", absolute_cmd);
+	fd = popen(absolute_cmd, "r");
+	status = pclose(fd);
+	return WEXITSTATUS(status);
 }
 
 int run_command_and_get_pid(char *cmd, char **args) {
@@ -144,25 +163,14 @@ JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createSnapsh
 	(*env)->ReleaseStringUTFChars(env, snapshotId, snapshot_id);
 }
 
-JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_losetup__Ljava_lang_String_2
-(JNIEnv *env, jobject obj, jstring fileName) {
-	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
-
-	char command[512];
-	snprintf(command, 512, "losetup -sf %s", filename);
-	jstring returnValue = run_command(env, command, 1);
-	(*env)->ReleaseStringUTFChars(env, fileName, filename);
-	return returnValue;
-}
-
-JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_losetup__Ljava_lang_String_2Ljava_lang_String_2
+JNIEXPORT jint JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_losetup
   (JNIEnv *env, jobject obj, jstring fileName, jstring loDevName) {
 	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
     const jbyte* lodevname = (*env)->GetStringUTFChars(env, loDevName, NULL);
 
 	char command[512];
 	snprintf(command, 512, "losetup %s %s", lodevname, filename);
-	jstring returnValue = run_command(env, command, 1);
+	int returnValue = run_command_and_get_status(env, command, 1);
 	(*env)->ReleaseStringUTFChars(env, fileName, filename);
 	(*env)->ReleaseStringUTFChars(env, loDevName, lodevname);
 	return returnValue;
@@ -173,9 +181,17 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_getLoopba
 	const jbyte* lodevname = (*env)->GetStringUTFChars(env, loDevName, NULL);
 
 	char command[128];
-	snprintf(command, 128, "losetup -s %s", lodevname);
+	snprintf(command, 128, "losetup %s", lodevname);
 	jstring returnValue = run_command(env, command, 1);
 	(*env)->ReleaseStringUTFChars(env, loDevName, lodevname);
+	return returnValue;
+}
+
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_findFreeLoopback
+  (JNIEnv *env, jobject obj) {
+	char command[64];
+	snprintf(command, 64, "losetup -f");
+	jstring returnValue = run_command(env, command, 1);
 	return returnValue;
 }
 

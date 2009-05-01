@@ -41,19 +41,20 @@
             <filterreader classname="org.apache.tools.ant.filters.StripLineBreaks"/>
         </filterchain>
     </loadfile>
-    <property name="jvm.heap" value="512m"/>
-    <property name="deps.url" value="http://eucalyptus.cs.ucsb.edu/dependencies/${euca.version}"/>
+    <property name="jvm.heap" value="256m"/>
+    <property name="deps.url" value="http://open.eucalyptus.com/dependencies/${euca.version}"/>
     <property name="deps.dir" value="deps"/>
     <property name="deps.lib.dir" value="lib"/>
+    <property name="deps.axis2modules.dir" value="axis2-modules"/>
     <property name="deps.lib" value="cloud-lib"/>
     <property name="deps.deploy" value="cloud-deploy"/>
     <!--================================== build targets ==================================-->
-    <target name="build-crypto" depends="untar">
+    <target name="build-crypto">
         <ant dir="modules/crypto" inheritall="false"/>
     </target>
     <target name="build-workarounds" depends="build-crypto">
         <ant dir="modules/workarounds" inheritall="false"/>
-    </target> 
+    </target>
     <target name="build-msgs" depends="build-workarounds">
         <ant dir="modules/msgs" inheritall="false"/>
     </target>
@@ -82,7 +83,7 @@
     <target name="build-eucalyptus" depends="build-core,build-www,build-eucalyptus-ws"/>
     <target name="build-walrus" depends="build-walrus-ws"/>
     <target name="build-ebs" depends="build-ebs-ws"/>
-    <target name="build" depends="build-eucalyptus,build-walrus,build-ebs"/>
+    <target name="build" depends="deps,build-eucalyptus,build-walrus,build-ebs"/>
     <!--================================== clean targets ==================================-->
     <target name="clean-workarounds">
         <ant dir="modules/workarounds" inheritall="false" target="clean"/>
@@ -126,7 +127,7 @@
         <delete dir="${deps.lib.dir}"/>
     </target>
     <!--================================== install target ==================================-->
-    <target name="install" depends="build-eucalyptus,build-ebs,build-walrus">
+    <target name="install" depends="build">
         <!-- copy libraries over -->
         <mkdir dir="${euca.lib.dir}"/>
         <copy todir="${euca.lib.dir}">
@@ -135,24 +136,26 @@
             </fileset>
         </copy>
         <copy todir="${euca.lib.dir}">
-            <fileset dir="${basedir}/lib">
+            <fileset dir="${deps.lib.dir}">
                 <include name="**/*"/>
             </fileset>
         </copy>
-        <untar src="${deps.dir}/${deps.deploy}.tar" dest="${euca.var.dir}"/>
-        <untar src="${deps.dir}/${deps.lib}.tar" dest="${euca.lib.dir}"/>
+        <copy todir="${euca.var.dir}/modules">
+            <fileset dir="${deps.axis2modules.dir}/modules">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
         <mkdir dir="${euca.conf.dir}"/>
 <!--	<chmod dir="${euca.conf.dir}" perm="0755"/> -->
         <mkdir dir="${euca.var.dir}/"/>
         <mkdir dir="${euca.var.dir}/webapps"/>
         <mkdir dir="${euca.var.dir}/db"/>
-        <mkdir dir="${euca.var.dir}/images"/>
+	<chmod dir="${euca.var.dir}/db" perm="0700"/> 
         <mkdir dir="${euca.var.dir}/keys"/>
-        <mkdir dir="${euca.var.dir}/services"/>
-        <mkdir dir="${euca.var.dir}/webapps"/>
+	<chmod dir="${euca.var.dir}/keys" perm="0700"/> 
         <mkdir dir="${euca.var.dir}/modules"/>
         <mkdir dir="${euca.log.dir}"/>
-        <ant dir="modules/workarounds" inheritall="false" target="install"/> 
+        <ant dir="modules/workarounds" inheritall="false" target="install"/>
         <ant dir="modules/crypto" inheritall="false" target="install"/>
         <ant dir="modules/msgs" inheritall="false" target="install"/>
         <ant dir="modules/core" inheritall="false" target="install"/>
@@ -167,36 +170,50 @@
         <ant dir="modules/storage-controller" inheritall="false" target="install"/>
     </target>
     <!--================================== unzipping target ==================================-->
-    <target name="untar" depends="unzip">
-        <untar src="${deps.dir}/${deps.lib}.tar" dest="${deps.lib.dir}"/>
+    <target name="deps">
+        <condition property="needDownload">
+            <and>
+                <not>
+                    <available file="${deps.lib.dir}/jibx-run.jar"/>
+                </not>
+                <and>
+                    <or>
+                        <not>
+                            <available file="${deps.dir}/${deps.lib}.tar.gz"/>
+                        </not>
+                        <not>
+                            <available file="${deps.dir}/${deps.deploy}.tar.gz"/>
+                        </not>
+                    </or>
+                </and>
+            </and>
+        </condition>
+        <ant target="download-deps"/>
+        <condition property="needUnzipping">
+            <and>
+                <not>
+                    <available file="${deps.lib.dir}/jibx-run.jar"/>
+                </not>
+                <and>
+                    <available file="${deps.dir}/${deps.lib}.tar.gz"/>
+                    <available file="${deps.dir}/${deps.deploy}.tar.gz"/>
+                </and>
+            </and>
+        </condition>
+        <ant target="untar"/>
     </target>
-    <target name="unzip" depends="testZip" if="needUnzipping">
-        <gunzip src="${deps.dir}/${deps.lib}.tar.gz"/>
-        <gunzip src="${deps.dir}/${deps.deploy}.tar.gz"/>
+    <target name="dist-deps" depends="deps">
+        <delete dir="${deps.dir}"/>
     </target>
-    <target name="testZip">
-       <condition property="needUnzipping">
-          <and>
-             <available file="${deps.dir}/${deps.lib}.tar.gz"/>
-             <available file="${deps.dir}/${deps.deploy}.tar.gz"/>
-          </and>
-       </condition>
+    <target name="untar" if="needUnzipping">
+        <untar compression="gzip" src="${deps.dir}/${deps.lib}.tar.gz" dest="${deps.lib.dir}"/>
+        <untar compression="gzip" src="${deps.dir}/${deps.deploy}.tar.gz" dest="${deps.axis2modules.dir}"/>
     </target>
-    <!--================================== DEPS TARGET ==================================-->
-    <available property="has.deps" filepath="${basedir}/lib/jibx/" file="jibx-run.jar"/>
-    <target name="deps" unless="has.deps">
+    <target name="download-deps" if="needDownload">
         <mkdir dir="${deps.dir}"/>
         <mkdir dir="${deps.lib.dir}"/>
         <!--===========  download the dependency libraries  ===========-->
         <get src="${deps.url}/${deps.lib}.tar.gz" dest="${deps.dir}/${deps.lib}.tar.gz"/>
-
-        <gunzip src="${deps.dir}/${deps.lib}.tar.gz"/>
-        <untar src="${deps.dir}/${deps.lib}.tar" dest="${deps.lib.dir}"/>
-
-        <!--===========  download the deployments/modules ===========-->
         <get src="${deps.url}/${deps.deploy}.tar.gz" dest="${deps.dir}/${deps.deploy}.tar.gz"/>
-
-        <gunzip src="${deps.dir}/${deps.deploy}.tar.gz"/>
-
     </target>
 </project>

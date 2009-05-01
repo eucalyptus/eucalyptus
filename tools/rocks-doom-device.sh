@@ -5,7 +5,7 @@
 # want to use eucalyptys, please get the binaries. I repeat: you are
 # risking to DESTROY a working environment using this script.
 #
-# eucalyptus  web site http://eucalyptus.cs.ucsb.edu
+# eucalyptus  web site http://open.eucalyptus.com
 #
 #
 
@@ -77,7 +77,7 @@ mkdir $EUCA_DIR
 
 # let's get the stuff we need where we need them 
 cd $SCRIPT_DIR
-wget -q -nd -r -A `uname -m`.tgz  http://eucalyptus.cs.ucsb.edu/dependencies/${VERSION}
+wget -q -nd -r -A `uname -m`.tgz  http://open.eucalyptus.com/dependencies/${VERSION}
 
 for x in `/bin/ls *tgz`; do
 	(cd $EUCA_DIR; tar xzf $SCRIPT_DIR/$x);

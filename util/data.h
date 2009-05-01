@@ -39,6 +39,7 @@ typedef struct ncInstance_t {
     char ramdiskURL[CHAR_BUFFER_SIZE];
     char reservationId[CHAR_BUFFER_SIZE];
     char userId[CHAR_BUFFER_SIZE];
+    int retries;
     
     /* state as reported to CC & CLC */
     char stateName[CHAR_BUFFER_SIZE];  /* as string */

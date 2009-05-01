@@ -1,12 +1,13 @@
-Summary:      Elastic Utility Computing Architecture - axis2c/rampartc
-Name:         euca-axis2c
-Version:      1.4
-Release:      1
-License:      Apache
-Group:        Applications/System
-Source:       http://eucalyptus.cs.ucsb.edu/dependencies/1.4/axis2c-1.4.tgz
-URL:          http://eucalyptus.cs.ucsb.edu
-Provides:     euca-axis2c
+Summary:       Elastic Utility Computing Architecture - axis2c/rampartc
+Name:          euca-axis2c
+Version:       1.5
+Release:       1
+License:       Apache
+BuildRequires: apache2-devel, libapr1-devel 
+Group:         Applications/System
+Source:        http://open.eucalyptus.com/dependencies/1.5.0/axis2c-src-1.5.0.tgz
+URL:           http://open.eucalyptus.com
+Provides:      euca-axis2c
 
 %description
 EUCALYPTUS is an open source service overlay that implements elastic
@@ -43,7 +44,10 @@ rm -rf /opt/euca-axis2c
 
 %changelog
 
-*Tue Dec  9 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Fri Apr 10 2009 mayhem group (support@open.eucalyptus.com)
+- packaged for euca version 1.5
+
+*Tue Dec  9 2008 mayhem group (support@open.eucalyptus.com)
 - packaged version 1.5.0
 
 *Sat May 20 2008 mayhem group (virtual@pompone.cs.ucsb.edu)

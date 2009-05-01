@@ -151,9 +151,9 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
     }
 
     private static String[] getTarget(String operationPath) {
+        operationPath = operationPath.replaceAll("/{2,}", "/");
         if(operationPath.startsWith("/"))
             operationPath = operationPath.substring(1);
-        operationPath = operationPath.replaceAll("//", "/");
         return operationPath.split("/");
     }
 

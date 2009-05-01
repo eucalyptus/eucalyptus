@@ -1,4 +1,34 @@
-*Mon Jan  5 2009 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Thu Apr 30 2009 mayhem group (support@open.eucalyptus.com)
+    * Elastic Block Store (EBS) support (volumes & snapshots)
+    * Walrus improvements:
+          o Support for groups in ACLS
+          o Fixed issues with meta data support
+          o Web browser form-based uploads via HTTP POST
+          o Object copying
+          o Query string authentication
+          o Support for arbitrary key names
+          o Compressed image downloads and fixes to image caching
+          o Reduced memory requirement 
+    * Network improvement: new MANAGED-NOVLAN mode
+    * Node-side improvements:
+          o Support for the KVM hypervisor
+          o Compression & retries on Walrus downloads
+          o Reworked caching (now with configurable limit) 
+    * Web UI improvements:
+          o Cloud registration with Rightscale (from admin's 'Credentials'
+tab)
+          o New configuration options for Walrus
+          o Better screening of usernames
+          o Fixed account confirmation glitches 
+    * Building and installation improvements
+          o Better Java installation checking
+          o New command-line administration: euca_conf -addcluster ...
+-addnode ...
+          o Non-root user deployment of Eucalyptus
+          o Binary packages for more distributions (Ubuntu et al) 
+
+
+*Mon Jan  5 2009 mayhem group (support@open.eucalyptus.com)
 
 - Added new networking subsystem that no longer depends on VDE
 - Added support for elastic IP assignment and security using the 'MANAGED'
@@ -40,12 +70,12 @@
     - GetConsole and RebootInstances support
     - Working Security Groups support for clusters in MANAGED network mode
     - see website for additional details, extensions, and caveats:
-      http://eucalyptus.cs.ucsb.edu/wiki/API_v1.4
+      http://open.eucalyptus.com/wiki/API_v1.4
   - Instance Metadata service (including userData)
   - Workaround to use standard tools for registering kernels & ramdisks
 
 
-*Mon Jul 28 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Mon Jul 28 2008 mayhem group (support@open.eucalyptus.com)
 - Removed cloud, cluster controller and node controller and created their
   own packages.
 - Added the possibility of installing Eucalyptus from RPMs (without
@@ -54,7 +84,7 @@
 - More robust checking for running instances.
 - Fix the instance ID naming collision.
 
-*Tue Jul 01 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Tue Jul 01 2008 mayhem group (support@open.eucalyptus.com)
 - Added WS-security for internal communication
 - Added URL Query Interface for interacting with Eucalyptus
 - Cluster Controller improvements:
@@ -82,6 +112,6 @@
    - Timeout-related error reporting
    - Slimmer log files, with timestamps
 
-*Sat May 21 2008 mayhem group (support@eucalyptus.cs.ucsb.edu)
+*Sat May 21 2008 mayhem group (support@open.eucalyptus.com)
 - first release of eucalyptus
 

@@ -7,14 +7,14 @@
 ####
 
 # This variable point to where eucalyptus has been installed.
-EUCALYPTUS="not_configured"
+EUCALYPTUS="/opt/eucalyptus/"
 
 # This is the username that you require eucalyptus to run as
 EUCA_USER="root"
 
 # Uncomment this field if you do not plan on using the dynamic block
 # store functionality of Eucalyptus
-# DISABLE_EBS="Y"
+#DISABLE_EBS="Y"
 
 # This variable controls whether ws-security is enabled between
 # eucalyptus components.  The default settings provide secure
@@ -50,7 +50,7 @@ CC_PORT="8774"
 # Currently, this option can be set to GREEDY (first node that is
 # found that can run the VM will be chosen) or ROUNDROBIN (nodes are
 # selected one after another until one is found that can run the VM).
-SCHEDPOLICY="GREEDY"
+SCHEDPOLICY="ROUNDROBIN"
 
 # The list of Node Controllers the Cluster Controller will be in charge
 # of. For example on the rocks cluster you can run rocks list host to
@@ -72,7 +72,7 @@ NC_PORT="8775"
 # The hypervisor that the Node Controller will interact with in order
 # to manage virtual machines.  Currently, supported values are 'kvm'
 # and 'xen'.
-HYPERVISOR="not_configured"
+HYPERVISOR="xen"
 
 # The maximum amount of memory Eucalyptus is allowed to use on the node:
 # if you leave this commented out, Eucalyptus will use all available
@@ -113,7 +113,7 @@ HYPERVISOR="not_configured"
 # needed by the maximum number of instances allowed on the node, combined.
 # Finally, this directory should be local to the Node Controller (as
 # opposed to an NFS share) for performance reasons.
-INSTANCE_PATH="not_configured"
+INSTANCE_PATH="/opt/eucalyptus/var/lib/eucalyptus/instances"
 
 # The maximum amount of disk space, in Megabytes, that Eucalyptus is 
 # allowed to use in the cache directory (INSTANCES_PATH/eucalyptus/cache).
@@ -138,7 +138,7 @@ VNET_INTERFACE="eth0"
 # xenbr1, etc' on older Xen versions, and 'eth0, eth1, etc' on newer
 # Xen versions.  The command 'brctl show' will give you more
 # information on your local bridge setup.
-VNET_BRIDGE="xenbr0"
+VNET_BRIDGE="eth0"
 
 # This indicates where we have a dhcp server binary. We use it to provide
 # the images with IPs: Eucalyptus provides its own configuration per

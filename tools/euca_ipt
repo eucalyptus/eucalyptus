@@ -22,7 +22,19 @@ if (!$table || !$rulefile || !($table eq "filter" || $table eq "nat") || $rulefi
 if ($table eq "nat") {
 #    system("cp $rulefile $rulefile.save.input");
 }
-$rc = system("iptables-save -t $table > $rulefile.orig");
+
+#$output=`iptables-save -ddasdast $table`;
+#print "MEH: $meh\n$$ $? $!";
+
+#$rc = system "iptables-save", "-t", "$table", > $rulefile.orig");
+open my $fh, '-|' or exec 'iptables-save', ("-t", "$table") or die "iptables-save failed: $!\n";
+open(OFH, ">$rulefile.orig") or die "cannot open $rulefile.orig";
+$outbuf = "";
+while(<$fh>) {
+    print OFH "$_";
+}
+close($fh) || die "iptables-save failed\n";
+close(OFH);
 if ($table eq "nat") {
 #    system("cp $rulefile.orig $rulefile.save.saved");
 }
@@ -71,8 +83,16 @@ if (!-f "$rulefile.new") {
 }
 
 
-$rc = system("iptables-restore < $rulefile.new");
-$rc = $rc>>8;
+open my $fh, '|-' or exec 'iptables-restore' or die "iptables-restore failed: $!\n";
+open(IFH, "$rulefile.new") or die "cannot open $rulefile.new";
+while(<IFH>) {
+    print $fh "$_";
+}
+close($fh) || die "iptables-restore failed\n";
+close(IFH);
+
+#$rc = system("iptables-restore < $rulefile.new");
+#$rc = $rc>>8;
 
 if ($table eq "nat") {
 #    system("cp $rulefile.new $rulefile.save.torestore");
