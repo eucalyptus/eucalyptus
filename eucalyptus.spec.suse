@@ -22,7 +22,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= 1.5.1, java >= 1.6.0, ant, ant-nodeps, lvm2
+Requires:     eucalyptus >= 1.5.1, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -109,6 +109,7 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/usr/sbin/euca_sync_key
 /opt/eucalyptus/usr/sbin/euca_killall
 /opt/eucalyptus/etc/eucalyptus/httpd.conf
+/opt/eucalyptus/etc/eucalyptus/eucalytpus-version
 
 %files cloud
 %config(noreplace) /opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml

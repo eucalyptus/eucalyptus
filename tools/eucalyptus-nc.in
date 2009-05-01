@@ -285,7 +285,7 @@ case "$1" in
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 0
 			else
-				echo "."
+				echo "done."
 			fi
 		fi
 		;;

@@ -57,6 +57,7 @@ deploy: build
 install: deploy
 	@$(INSTALL) -d $(prefix)
 	@$(INSTALL) -d $(etcdir)/eucalyptus/cloud.d
+	@$(INSTALL) -m 0644 VERSION $(etcdir)/eucalyptus/eucalyptus-version
 	@$(INSTALL) -d $(etcdir)/init.d
 	@$(INSTALL) -d $(vardir)/run/eucalyptus/net
 	@$(INSTALL) -m 0700 -d $(vardir)/eucalyptus/keys

@@ -62,21 +62,23 @@ export EUCALYPTUS
 check_java() {
 	java_min_version="1.6.0"
 
-	
-	#  let's check the default java
-	if [ -n "$JAVA" ]; then
-		java_version=`java -version 2>&1 | grep "java version" | sed -e 's/.*java version "\(.*\)".*/\1/'`
-		if [ `expr $java_version "<" $java_min_version` -eq 0 ]; then
-			return 
+	# we need a good JAVA_HOME
+	if [ -z "$JAVA_HOME" ]; then
+		# user didn't setup JAVA_HOME, let's look for it
+		if [ -z "$JAVA" ]; then
+			echo "Cannot find java!"
+			exit 1
+		fi
+		JAVA_HOME="`readlink -f $JAVA`"
+		JAVA_HOME="`dirname $JAVA_HOME|sed 's:/jre/bin::'`"
+		if [ ! -d $JAVA_HOME ]; then
+			echo "Cannot find a good JAVA_HOME"
+			exit 1
 		fi
 	fi
-
-	# we don't have a good java, let's look at JAVA_HOME (defined one
-	# or the one which was defined at compile time)
-	if [ -z "$JAVA_HOME" ]; then
-		JAVA_HOME="@JAVA_HOME@"
-	fi
-	JAVA="$JAVA_HOME/bin/java"
+	
+	# to be sure we are using the right java/JAVA_HOME
+	JAVA="$JAVA_HOME/jre/bin/java"
 
 	# let's see if we can find a decent java
 	if [ -x "$JAVA" ]; then
@@ -198,7 +200,7 @@ case "$1" in
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 0
 			else
-				echo "."
+				echo "done."
 			fi
 		fi
 		;;
