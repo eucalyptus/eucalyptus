@@ -52,7 +52,8 @@ JAVA="`which java 2> /dev/null`"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
-	EUCALYPTUS="@prefix@"
+#       EUCALYPTUS="@prefix@" this breaks builds into a chroot
+        EUCALYPTUS="/"
 fi
 export EUCALYPTUS
 

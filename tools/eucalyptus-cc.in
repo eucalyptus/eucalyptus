@@ -45,7 +45,8 @@ NAME=eucalyptus-cc
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
-	EUCALYPTUS="@prefix@"
+#       EUCALYPTUS="@prefix@" this breaks builds into a chroot
+        EUCALYPTUS="/"
 fi
 export EUCALYPTUS
 
