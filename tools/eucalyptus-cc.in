@@ -237,6 +237,8 @@ done
 if [ -z "$AXIS2C_HOME" ]; then
 	echo "Cannot find Eucalyptus webservices: missing AXIS2C_HOME?"
 	exit 1
+else
+        export AXIS2C_HOME
 fi
 
 # set the library path correctly
