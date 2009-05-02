@@ -5,34 +5,6 @@ $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 
 $ret = 0;
 
-chomp($str = untaint(`xm info | grep total_memory`));
-$str =~ s/\s+:\s+/=/g;
-if ($str =~ /.+=\d+/) {
-    print "$str\n";
-} else {
-    $ret = 1;
-}
-
-chomp($str = untaint(`xm info | grep free_memory`));
-$str =~ s/\s+:\s+/=/g;
-if ($str =~ /.+=\d+/) {
-    print "$str\n";
-} else {
-    $ret = 1;
-}
-
-chomp($str = untaint(`xm info | grep nr_cpus`));
-$str =~ s/\s+:\s+/=/g;
-if ($str =~ /.+=\d+/) {
-    print "$str\n";
-} else {
-    $ret = 1;
-}
-
-chomp($str = untaint(`xm info | grep nr_nodes`));
-$str =~ s/\s+:\s+/=/g;
-print "$str\n";
-
 open(FH, "/etc/xen/xend-config.sxp");
 while(<FH>) {
     chomp;

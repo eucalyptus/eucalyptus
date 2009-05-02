@@ -47,7 +47,7 @@ my $last_sector = $first_sector + $root_size_sectors;
 
 my $magic=`$FILE $partition`;
 chomp($magic);
-if (not ($magic =~ /boot sector/)) { # if not a disk image already
+if (!($magic =~ /boot sector/) && !($magic =~ /Qcow/)) { # if not a disk image already
 
     # create the disk image
     run ("$DD if=/dev/zero of=$partition.disk bs=1M seek=$disk_size_mb count=1 >/dev/null 2>&1", 2);
@@ -100,8 +100,8 @@ if (not ($magic =~ /boot sector/)) { # if not a disk image already
             # enlarge the disk to accommodate ephemeral and swap
             run ("$DD if=/dev/zero of=$partition bs=1M seek=$disk_size_mb count=1 >/dev/null 2>&1", 15);
         } else {
-            print STDERR "cannot find the first partition on this disk, aborting\n";
-            do_exit(16);
+            print STDERR "cannot find the first partition on this disk, giving up\n";
+            do_exit(0);
         }
     }
 }

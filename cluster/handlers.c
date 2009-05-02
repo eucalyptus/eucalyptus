@@ -1031,7 +1031,7 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
 }
 
 int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, ccInstance **outInsts, int *outInstsLen) {
-  int rc, i, j, done, runCount, resid, foundnet=0;
+  int rc, i, j, done, runCount, resid, foundnet=0, error=0;
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
   char *instId=NULL, 
@@ -1066,7 +1066,8 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   // get updated resource information
   rc = refresh_resources(ccMeta, OP_TIMEOUT - (time(NULL) - op_start));
   
-  for (i=0; i<maxCount; i++) {
+  done=0;
+  for (i=0; i<maxCount && !done; i++) {
     logprintfl(EUCAINFO,"\trunning instance %d with emiId %s...\n", i, amiId);
     
     // generate new mac
@@ -1108,9 +1109,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     sem_post(vnetConfigLock);
     
     logprintfl(EUCAINFO,"\tassigning MAC/IP: %s/%s/%s\n", mac, pubip, privip);
-    
+
     if (mac[0] == '\0' || !foundnet) {
-      logprintfl(EUCAERROR,"could not find any free network address, failing doRunInstances()\n");
+      logprintfl(EUCAERROR,"could not find/initialize any free network address, failing doRunInstances()\n");
     } else {
       // "run" the instance
       instId = strdup(instIds[i]);
@@ -1216,11 +1217,11 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  myInstance->ncHostIdx = resid;
 	  if (ccvm) memcpy(&(myInstance->ccvm), ccvm, sizeof(virtualMachine));
 	  if (config->resourcePool[resid].ncURL) strncpy(myInstance->serviceTag, config->resourcePool[resid].ncURL, 64);
-
+	  
 	  // start up DHCP
 	  rc = vnetKickDHCP(vnetconfig);
 	  if (rc) {
-	    logprintfl(EUCAERROR, "cannot start DHCP daemon, please check your network settings\n");
+	    logprintfl(EUCAERROR, "cannot start DHCP daemon, for instance %s please check your network settings\n", myInstance->instanceId);
 	  }
 	  
 	  // add the instance to the cache, and continue on
@@ -1239,6 +1240,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   
   shawn();
   if (instId) free(instId);
+  if (error) {
+    return(1);
+  }
   return(0);
 }
 

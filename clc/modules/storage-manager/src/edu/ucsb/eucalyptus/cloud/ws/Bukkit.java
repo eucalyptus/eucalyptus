@@ -66,6 +66,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.GZIPInputStream;
 
 public class Bukkit {
@@ -79,6 +80,8 @@ public class Bukkit {
     private static boolean enableSnapshots = false;
 
     private static boolean sharedMode = false;
+    private final long CACHE_PROGRESS_TIMEOUT = 60000L; //a minute
+    private ConcurrentHashMap<String, ImageCacher> imageCachers = new ConcurrentHashMap<String, ImageCacher>();
 
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
@@ -1687,6 +1690,40 @@ public class Bukkit {
         }
     }
 
+    private boolean isCached(String bucketName, String manifestKey) {
+        EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+        try {
+            ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
+            if(foundImageCacheInfo.getInCache())
+                return true;
+            else
+                return false;
+        } catch(Exception ex) {
+            return false;
+        } finally {
+            db.commit();
+        }
+    }
+
+    private long checkCachingProgress(String bucketName, String manifestKey, long oldBytesRead) {
+        EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+        ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+        try {
+            ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
+            String cacheImageKey = foundImageCacheInfo.getImageName().replaceAll(".tgz", "");
+            long objectSize = storageManager.getObjectSize(bucketName, cacheImageKey);
+            if(objectSize > 0) {
+                return objectSize - oldBytesRead;
+            }
+            return oldBytesRead;
+        } catch (Exception ex) {
+            return oldBytesRead;
+        } finally {
+            db.commit();
+        }
+    }
+
     public GetDecryptedImageResponseType GetDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {
         GetDecryptedImageResponseType reply = (GetDecryptedImageResponseType) request.getReply();
         String bucketName = request.getBucket();
@@ -1723,10 +1760,22 @@ public class Bukkit {
                         }
                         ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
                         if(!foundImageCacheInfo.getInCache()) {
+                            boolean cached = false;
                             WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
                             synchronized (monitor) {
                                 try {
-                                    monitor.wait();
+                                    boolean caching;
+                                    long bytesCached = 0;
+                                    do {
+                                        monitor.wait(CACHE_PROGRESS_TIMEOUT);
+                                        if(isCached(bucketName, objectKey)) {
+                                            cached = true;
+                                            break;
+                                        }
+                                        long newBytesCached = checkCachingProgress(bucketName, objectKey, bytesCached);
+                                        caching = (newBytesCached - bytesCached) > 0 ? true : false;
+                                        bytesCached = newBytesCached;
+                                    } while(caching);
                                 } catch(Exception ex) {
                                     LOG.error(ex);
                                     db2.rollback();
@@ -1816,23 +1865,32 @@ public class Bukkit {
     }
 
     private synchronized void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
+
         EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
         ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
         List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
-
-        if(imageCacheInfos.size() == 0) {
-            String decryptedImageKey = decryptImage(bucketName, manifestKey, userId, isAdministrator);
-//decryption worked. Add it.
+        String decryptedImageKey;
+        if(imageCacheInfos.size() != 0) {
+            ImageCacheInfo icInfo = imageCacheInfos.get(0);
+            if(!icInfo.getInCache())
+                decryptedImageKey = icInfo.getImageName();
+            else
+                decryptedImageKey = "invalid";
+        } else {
+            decryptedImageKey = decryptImage(bucketName, manifestKey, userId, isAdministrator);
+            //decryption worked. Add it.
             ImageCacheInfo foundImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
             foundImageCacheInfo.setImageName(decryptedImageKey);
             foundImageCacheInfo.setInCache(false);
-            foundImageCacheInfo.setCaching(true);
             foundImageCacheInfo.setUseCount(0);
             foundImageCacheInfo.setSize(0L);
             db.add(foundImageCacheInfo);
-            db.commit();
-//decrypt, unzip, untar image in the background
-            ImageCacher imageCacher = new ImageCacher(bucketName, manifestKey, decryptedImageKey);
+        }
+        db.commit();
+        //unzip, untar image in the background
+        ImageCacher imageCacher = imageCachers.putIfAbsent(bucketName + manifestKey, new ImageCacher(bucketName, manifestKey, decryptedImageKey));
+        if(imageCacher == null) {
+            imageCacher = imageCachers.get(bucketName + manifestKey);
             imageCacher.start();
         }
     }
@@ -1887,8 +1945,8 @@ public class Bukkit {
 
         if(foundImageCacheInfos.size() > 0) {
             ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
-            if(foundImageCacheInfo.getInCache() && !foundImageCacheInfo.getCaching()) {
-//check that there are no operations in progress and then flush cache and delete image file
+            if(foundImageCacheInfo.getInCache() && (imageCachers.get(bucketName + manifestKey) == null)) {
+                //check that there are no operations in progress and then flush cache and delete image file
                 db.commit();
                 ImageCacheFlusher imageCacheFlusher = new ImageCacheFlusher(bucketName, manifestKey);
                 imageCacheFlusher.start();
@@ -1922,7 +1980,7 @@ public class Bukkit {
 
             if(foundImageCacheInfos.size() > 0) {
                 ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
-                if(foundImageCacheInfo.getInCache() && !foundImageCacheInfo.getCaching()) {
+                if(foundImageCacheInfo.getInCache() && (imageCachers.get(bucketName + objectKey) == null)) {
                     db.delete(foundImageCacheInfo);
                     storageManager.deleteObject(bucketName, foundImageCacheInfo.getImageName());
                 }
@@ -1949,6 +2007,7 @@ public class Bukkit {
             flushCachedImage(bucketName, objectKey);
         }
     }
+
 
     private class ImageCacher extends Thread {
 
@@ -2003,6 +2062,7 @@ public class Bukkit {
                 monitor.notifyAll();
             }
             imageMessenger.removeMonitor(bucketName + "/" + manifestKey);
+            imageCachers.remove(bucketName + manifestKey);
         }
 
         public void run() {
@@ -2053,7 +2113,6 @@ public class Bukkit {
                     ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
                     foundImageCacheInfo.setImageName(imageKey);
                     foundImageCacheInfo.setInCache(true);
-                    foundImageCacheInfo.setCaching(false);
                     foundImageCacheInfo.setSize(unencryptedSize);
                     db.commit();
                     //wake up waiters
