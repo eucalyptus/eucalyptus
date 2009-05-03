@@ -47,6 +47,8 @@ static int save_instance_files = 0;
 static char * admin_user_id = EUCALYPTUS_ADMIN;
 static char gen_libvirt_xml_command_path [BUFSIZE] = "";
 static char get_xen_info_command_path [BUFSIZE] = "";
+static char virsh_command_path [BUFSIZE] = "";
+
 
 #define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
 #define SWAP_SIZE 512 /* for now, the only possible swap size, in MBs */
@@ -381,6 +383,7 @@ static int doInitialize (void)
     /* set up paths of Eucalyptus commands NC relies on */
     snprintf (gen_libvirt_xml_command_path, BUFSIZE, EUCALYPTUS_GEN_LIBVIRT_XML, home, home);
     snprintf (get_xen_info_command_path,    BUFSIZE, EUCALYPTUS_GET_XEN_INFO,    home, home);
+    snprintf (virsh_command_path, BUFSIZE, EUCALYPTUS_VIRSH, home);
     
     /* open the connection to hypervisor */
     if (check_hypervisor_conn () == ERROR) {
@@ -1136,14 +1139,33 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     } else {
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
         if (dom) {
-            int err = 0;
-            char xml [1024];
+            int err = 0, fd;
+            char xml [1024], tmpfile[32], cmd[1024];
+	    FILE *FH;
+	    
             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
-            err = virDomainDetachDevice (dom, xml);
+	    if (!getuid()) {
+	      err = virDomainDetachDevice (dom, xml);
+	    } else {
+	      /* virsh detach function does not work as non-root user on xen (bug). workaround is to shellout to virsh */
+	      snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
+	      fd = mkstemp(tmpfile);
+	      if (fd > 0) {
+		write(fd, xml, strlen(xml));
+		close(fd);
+		unlink(tmpfile);
+		snprintf(cmd, 1024, "%s detach-device %s %s",virsh_command_path, instanceId, tmpfile);
+		logprintfl(EUCADEBUG, "Running command: %s\n", cmd);
+		err = WEXITSTATUS(system(cmd));
+	      } else {
+		err = 1;
+	      }
+	    }
             sem_v (xen_sem);
+
             if (err) {
                 logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
                 ret = ERROR;

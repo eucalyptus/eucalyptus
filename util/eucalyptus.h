@@ -12,6 +12,7 @@
 #define EUCALYPTUS_GET_XEN_INFO    "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_xen_info"
 #define EUCALYPTUS_GET_KVM_INFO    "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_sys_info"
 #define EUCALYPTUS_DISK_CONVERT    "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/partition2disk"
+#define EUCALYPTUS_VIRSH           "%s/usr/share/eucalyptus/euca_rootwrap virsh"
 #define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
 #define CC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
 
