@@ -285,6 +285,7 @@ case "$1" in
 			echo -n "Starting $DESC: "
 		fi
 	fi
+	rm -f /dev/shm/sem.eucalyptus-nc* /dev/shm/sem.eucalyptus-st*
 	do_start
 	case "$?" in
 	0|1) 
@@ -316,6 +317,7 @@ case "$1" in
                 fi
         fi
 	do_stop
+	rm -f /dev/shm/sem.eucalyptus-nc* /dev/shm/sem.eucalyptus-st*
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_end_msg

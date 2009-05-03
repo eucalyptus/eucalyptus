@@ -261,7 +261,7 @@ case "$1" in
 		fi
 	fi
 	# start and stop are hard: we loose the CC state
-	rm -f /dev/shm/*eucalyptus*
+	rm -f /dev/shm/*eucalyptusCC*
 	do_start
 	case "$?" in
 	0|1) 
@@ -294,7 +294,7 @@ case "$1" in
         fi
 	# start and stop are hard: we loose the CC state
 	do_stop
-	rm -f /dev/shm/*eucalyptus*
+	rm -f /dev/shm/*eucalyptusCC*
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_end_msg
