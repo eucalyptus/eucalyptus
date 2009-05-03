@@ -874,9 +874,11 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	    char *ip;
 	    
 	    if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
-	      rc = discover_mac(vnetconfig, myInstance->ccnet.publicMac, &ip);
-	      if (!rc) {
-		strncpy(myInstance->ccnet.publicIp, ip, 24);
+	      if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
+		rc = discover_mac(vnetconfig, myInstance->ccnet.publicMac, &ip);
+		if (!rc) {
+		  strncpy(myInstance->ccnet.publicIp, ip, 24);
+		}
 	      }
 	    }
 	    if (!strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {

@@ -190,15 +190,15 @@ static void refresh_instance_info (ncInstance * instance)
         int rc;
 
         if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 32)) {
-	    logprintfl(EUCADEBUG, "no publicIp detected, trying to discover\n");
+	  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
             rc = discover_mac(vnetconfig, instance->ncnet.publicMac, &ip);
             if (!rc) {
-                logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
-                strncpy(instance->ncnet.publicIp, ip, 32);
+	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
+	      strncpy(instance->ncnet.publicIp, ip, 32);
             }
+	  }
         }
         if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 32)) {
-	    logprintfl(EUCADEBUG, "no privateIp detected, trying to discover\n");
             rc = discover_mac(vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
                 logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
