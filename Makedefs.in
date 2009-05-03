@@ -7,7 +7,7 @@
 # which version
 export VERSION		= @VERSION@
 
-# pacakges we depend upon 
+# packages we depend upon 
 export AXIS2C_HOME	= @AXIS2C_HOME@
 export AXIS2C_SERVICES	= @AXIS2C_SERVICES@
 export AXIS2_HOME	= @AXIS2_HOME@

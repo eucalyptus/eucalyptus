@@ -166,7 +166,7 @@ do_stop() {
 		return	
 	fi
 	timeout=5
-	while [ $timeout -ge 0 ]; do
+	while [ $timeout -gt 0 ]; do
 		if ps $pid > /dev/null 2>&1 ; then
 			sleep 1
 			timeout=$(($timeout - 1))
@@ -260,13 +260,20 @@ for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 	done
 done
 
-# finally let's see if the basics tools are here
+# if we didn't find AXIS2C we'll pick the one we used at configuration
+# time
 if [ -z "$AXIS2C_HOME" ]; then
-	echo "Cannot find Eucalyptus webservices: missing AXIS2C_HOME?"
+	AXIS2C_HOME="@AXIS2C_HOME@"
+fi
+
+# finally let's check the path
+if [ ! -d "$AXIS2C_HOME" ]; then
+	echo "Cannot find AXIS2C_HOME?"
 	exit 1
 fi
 
 # set the library path correctly
+export AXIS2C_HOME
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$EUCALYPTUS/lib:$LD_LIBRARY_PATH"
 
 case "$1" in
