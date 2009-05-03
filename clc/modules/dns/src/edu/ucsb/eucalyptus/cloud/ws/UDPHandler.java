@@ -34,14 +34,16 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import org.apache.log4j.Logger;
+import java.net.Socket;
+import java.net.DatagramSocket;
 
-public class UDPHandler extends Thread {
-    private static Logger LOG = Logger.getLogger( UDPHandler.class );
 
-    public UDPHandler(String address, int port) {
-
+public class UDPHandler extends ConnectionHandler {
+    DatagramSocket socket;
+    public UDPHandler(DatagramSocket s) {
+        this.socket = s;
     }
+
     public void run() {
 
     }

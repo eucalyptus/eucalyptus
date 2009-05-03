@@ -56,7 +56,6 @@ public class ARecordInfo {
     private String address;
 
     public ARecordInfo() {}
-
     public ARecordInfo(String name, String address, int ttl) {}
 
     public String getName() {

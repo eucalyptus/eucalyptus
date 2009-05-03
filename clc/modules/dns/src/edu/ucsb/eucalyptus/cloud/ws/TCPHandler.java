@@ -34,15 +34,16 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import org.apache.log4j.Logger;
+import java.net.Socket;
 
-public class TCPHandler extends Thread {
-    private static Logger LOG = Logger.getLogger( TCPHandler.class );
 
-    public TCPHandler(String address, int port) {
-
+public class TCPHandler extends ConnectionHandler {
+    Socket socket;
+    public TCPHandler(Socket s) {
+        this.socket = s;
     }
-    public void run() {
 
+    public void run() {
+        
     }
 }

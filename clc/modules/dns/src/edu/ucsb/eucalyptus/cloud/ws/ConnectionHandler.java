@@ -32,42 +32,7 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.ic;
+package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.constants.EventType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
-import edu.ucsb.eucalyptus.transport.OverloadedWebserviceMethod;
-import org.apache.log4j.Logger;
-
-public class DNS {
-
-	private static Logger LOG = Logger.getLogger( DNS.class );
-
-    @OverloadedWebserviceMethod( actions = {
-			"UpdateARecord", "AddZone"} )
-
-	public EucalyptusMessage handle( EucalyptusMessage msg )
-	{
-		LOG.warn("DNS is queuing message");
-		LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() )) ;
-		long startTime = System.currentTimeMillis();
-		try
-		{
-			WalrusMessaging.enqueue( msg );
-		}
-		catch ( EucalyptusCloudException e )
-		{
-			return new EucalyptusErrorMessageType( this.getClass().getSimpleName(), msg, e.getMessage() );
-		}
-		EucalyptusMessage reply = null;
-		reply = WalrusMessaging.dequeue( msg.getCorrelationId() );
-		LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
-		if ( reply == null )
-			return new EucalyptusErrorMessageType( this.getClass().getSimpleName(), msg, "Received a NULL reply" );
-		return reply;
-	}
-
+public abstract class ConnectionHandler extends Thread {
 }

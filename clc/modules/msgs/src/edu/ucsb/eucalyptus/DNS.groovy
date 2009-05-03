@@ -58,3 +58,14 @@ public class UpdateARecordType extends DNSRequestType {
 public class UpdateARecordResponseType extends DNSResponseType {
   def UpdateARecordResponseType() {}
 }
+
+public class AddZoneType extends DNSRequestType {
+  String name;
+  def AddZoneType() {}
+  def AddZoneType(String name) {
+    this.name = name;
+  }
+}
+
+public class AddZoneResponseType extends DNSResponseType {
+}

@@ -35,10 +35,15 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
+import org.xbill.DNS.Address;
 import edu.ucsb.eucalyptus.msgs.UpdateARecordResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
+import edu.ucsb.eucalyptus.msgs.AddZoneResponseType;
+import edu.ucsb.eucalyptus.msgs.AddZoneType;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.util.DNSProperties;
+
+import java.net.UnknownHostException;
 
 public class DNSControl {
 
@@ -48,13 +53,21 @@ public class DNSControl {
     }
 
     private static void initializeUDP() {
-        UDPHandler udpHandler = new UDPHandler(DNSProperties.ADDRESS, DNSProperties.PORT);
-        udpHandler.start();
+        try {
+            UDPListener udpListener = new UDPListener(Address.getByAddress(DNSProperties.ADDRESS), DNSProperties.PORT);
+            udpListener.start();
+        } catch(UnknownHostException ex) {
+            LOG.error(ex);
+        }
     }
 
     private static void initializeTCP() {
-        TCPHandler tcpHandler = new TCPHandler(DNSProperties.ADDRESS, DNSProperties.PORT);
-        tcpHandler.start();
+        try {
+            TCPListener tcpListener = new TCPListener(Address.getByAddress(DNSProperties.ADDRESS), DNSProperties.PORT);
+            tcpListener.start();
+        } catch(UnknownHostException ex) {
+            LOG.error(ex);
+        }
     }
 
     private static void initializeDNS() {
@@ -69,6 +82,12 @@ public class DNSControl {
         String name = request.getName();
         String address = request.getAddress();
         int ttl = request.getTtl();
+        return reply;
+    }
+
+    public AddZoneResponseType AddZone(AddZoneType request) throws EucalyptusCloudException {
+        AddZoneResponseType reply = (AddZoneResponseType) request.getReply();
+
         return reply;
     }
 }
