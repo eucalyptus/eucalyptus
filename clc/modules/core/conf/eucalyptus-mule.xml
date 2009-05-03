@@ -67,5 +67,10 @@
         <spring:import resource="classpath:storage-model.xml"/>
     </spring:beans>
 
+    <!--===========  This enables DNS ===========-->
+    <spring:beans>
+        <spring:import resource="classpath:dns-services.xml"/>
+        <spring:import resource="classpath:dns-model.xml"/>
+    </spring:beans>
 </mule>
 
