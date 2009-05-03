@@ -98,7 +98,7 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 %files
 %config(noreplace) /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 %doc LICENSE INSTALL README CHANGELOG
-/opt/eucalyptus/var/eucalyptus/keys
+/opt/eucalyptus/var/lib/eucalyptus/keys
 /opt/eucalyptus/var/log
 /opt/eucalyptus/var/run
 /opt/eucalyptus/usr/share/eucalyptus/add_key.pl
@@ -116,9 +116,9 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/etc/eucalyptus/cloud.d
 /opt/eucalyptus/etc/eucalyptus/cloud.xml
 /opt/eucalyptus/usr/share/eucalyptus/*jar
-/opt/eucalyptus/var/eucalyptus/db
-/opt/eucalyptus/var/eucalyptus/modules
-/opt/eucalyptus/var/eucalyptus/webapps
+/opt/eucalyptus/var/lib/eucalyptus/db
+/opt/eucalyptus/var/lib/eucalyptus/modules
+/opt/eucalyptus/var/lib/eucalyptus/webapps
 /opt/eucalyptus/usr/lib/libfsstorage.so
 /opt/eucalyptus/usr/lib/liblvm2control.so
 /opt/eucalyptus/etc/init.d/eucalyptus-cloud
@@ -156,14 +156,14 @@ then
 	fi
 
 	# let's try to save the old configuration
-	if [ -d /opt/eucalyptus/var/eucalyptus/db ]; 
+	if [ -d /opt/eucalyptus/var/lib/eucalyptus/db ]; 
 	then
-		if [ -d /opt/eucalyptus/var/eucalyptus/db ]; 
+		if [ -d /opt/eucalyptus/var/lib/eucalyptus/db ]; 
 		then
 			cd /opt/eucalyptus
 		fi
-		rm -f var/eucalyptus/db/eucalyptus.lck
-		tar cf /root/eucalyptus-pre%{version}-rollback.tar var/eucalyptus/db/eucalyptus.* var/eucalyptus/keys etc/eucalyptus/eucalyptus.conf etc/eucalyptus/cloud.d/*.bks
+		rm -f var/lib/eucalyptus/db/eucalyptus.lck
+		tar cf /root/eucalyptus-pre%{version}-rollback.tar var/lib/eucalyptus/db/eucalyptus.* var/lib/eucalyptus/keys etc/eucalyptus/eucalyptus.conf etc/eucalyptus/cloud.d/*.bks
 	fi
 fi
 
@@ -264,7 +264,7 @@ fi
 - User-initiated password recovery mechanism
 - Fixed a couple of bugs: ' ' in username, spurious double additions
 - User, Cluster, and System keys are now stored in PKCS#12 keystores and
-  have moved to var/eucalyptus/keys
+  have moved to var/lib/eucalyptus/keys
 - Configuration is handled entirely through the web interface
 - Clusters dynamically added/started/stopped
 - Webservices operations complete up to EC2 2008-05-05 (w/o EBS):

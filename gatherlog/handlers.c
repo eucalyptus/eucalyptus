@@ -176,7 +176,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
       home = strdup("");
     }
     
-    snprintf(file, 1024, "%s/var/eucalyptus/keys/cluster-cert.pem", home);
+    snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/cluster-cert.pem", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);
@@ -191,7 +191,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
     }
     
     bzero(buf, bufsize);
-    snprintf(file, 1024, "%s/var/eucalyptus/keys/node-cert.pem", home);
+    snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/node-cert.pem", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);

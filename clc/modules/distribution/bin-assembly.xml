@@ -60,7 +60,7 @@
         </fileSet>
         <fileSet>
             <directory>../www/webapps</directory>
-            <outputDirectory>var/eucalyptus/webapps</outputDirectory>
+            <outputDirectory>var/lib/eucalyptus/webapps</outputDirectory>
             <includes>
                 <include>root.war</include>
             </includes>
@@ -90,7 +90,7 @@
             </excludes>
         </dependencySet>
         <dependencySet>
-            <outputDirectory>var/eucalyptus/modules</outputDirectory>
+            <outputDirectory>var/lib/eucalyptus/modules</outputDirectory>
             <includes>
                 <include>org.apache.axis2:addressing:mar</include>
                 <include>org.apache.rampart:rahas:mar</include>

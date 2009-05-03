@@ -85,9 +85,9 @@ deploy:
 # ws-sec
 	cat generated/services.xml | ../tools/add_wsdllocation.pl $(AXIS2C_SERVICES)/$(SERVICE_NAME)/$(NCWSDLNAME) | ../tools/add_service_policy.pl ../tools/service-policy-template.xml | sed "s:CLIENT-CERT:cluster-cert.pem:g" | sed "s:CLIENT-KEY:cluster-pk.pem:g" | sed "s:SERVER-CERT:node-cert.pem:g" | sed "s:SERVER-KEY:node-pk.pem:g" | sed "s:CLIENT-USERNAME:eucalyptus:g" > $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_WS.xml
 	cat ../tools/client-policy-template.xml | sed "s:EUCALYPTUS_HOME:$(EUCALYPTUS):g" | sed "s:AXIS2C_HOME:$(AXIS2C_HOME):g"  | sed "s:CLIENT-CERT:cluster-cert.pem:g" | sed "s:CLIENT-KEY:cluster-pk.pem:g" | sed "s:SERVER-CERT:node-cert.pem:g" | sed "s:SERVER-KEY:node-pk.pem:g" | sed "s:CLIENT-USERNAME:eucalyptus:g" > nc-client-policy.xml
-#	cp nc-client-policy.xml $(EUCALYPTUS)/var/eucalyptus/keys/
-##	cp ../tools/*.pem $(EUCALYPTUS)/var/eucalyptus/keys/
-#	chmod -R 0600 $(EUCALYPTUS)/var/eucalyptus/keys/*
+#	cp nc-client-policy.xml $(EUCALYPTUS)/var/lib/eucalyptus/keys/
+##	cp ../tools/*.pem $(EUCALYPTUS)/var/lib/eucalyptus/keys/
+#	chmod -R 0600 $(EUCALYPTUS)/var/lib/eucalyptus/keys/*
 # ws
 	$(INSTALL) $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_WS.xml $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services.xml
 # no ws
@@ -100,5 +100,5 @@ distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#*
 
 install: deploy
-	$(INSTALL) -m 0600 nc-client-policy.xml $(vardir)/eucalyptus/keys/
+	$(INSTALL) -m 0600 nc-client-policy.xml $(vardir)/lib/eucalyptus/keys/
 	$(INSTALL) -m 0755 test_nc $(sbindir)/euca_test_nc

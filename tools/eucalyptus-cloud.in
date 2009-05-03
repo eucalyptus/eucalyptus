@@ -104,7 +104,7 @@ do_start() {
 	mkdir -p $EUCALYPTUS/var/log/eucalyptus
 
 	# set up eucalyptus var locations to be owned by EUCA_USER
-	for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
+	for y in $EUCALYPTUS/var/lib/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
 		if [ $y != "/" -a -d $y ]; then
 			chown -R $EUCA_USER:$EUCA_USER $y
 		fi

@@ -257,8 +257,8 @@ if [ -n "$NEWCLUS" ]; then
     
     if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
 	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
-    elif [ -d "$EUCALYPTUS/var/eucalyptus/db/" ]; then
-	DBDIR="$EUCALYPTUS/var/eucalyptus/db/"
+    elif [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
+	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
     else
 	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface"
 	exit 1
@@ -328,8 +328,8 @@ if [ -n "$NEWNODE" ]; then
     
     if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
 	KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
-    elif [ -d "$EUCALYPTUS/var/eucalyptus/keys/" ]; then
-	KEYDIR="$EUCALYPTUS/var/eucalyptus/keys/"
+    elif [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
+	KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
     else
 	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface"
 	exit 1

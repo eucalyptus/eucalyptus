@@ -1618,7 +1618,7 @@ int init_config(void) {
   snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, home);
   snprintf(netPath, 1024, CC_NET_PATH_DEFAULT, home);
   snprintf(logFile, 1024, "%s/var/log/eucalyptus/cc.log", home);
-  snprintf(policyFile, 1024, "%s/var/eucalyptus/keys/nc-client-policy.xml", home);
+  snprintf(policyFile, 1024, "%s/var/lib/eucalyptus/keys/nc-client-policy.xml", home);
   snprintf(eucahome, 1024, "%s/", home);
   free(home);
 
