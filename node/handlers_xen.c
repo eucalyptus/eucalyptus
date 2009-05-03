@@ -729,8 +729,12 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
     strcpy (instance->ncnet.publicIp, "0.0.0.0");
 
     /* do the potentially long tasks in a thread */
-
-    if ( pthread_create (&(instance->tcb), NULL, startup_thread, (void *)instance) ) {
+    pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
+    pthread_attr_init(attr);
+    pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
+    
+    if ( pthread_create (&(instance->tcb), attr, startup_thread, (void *)instance) ) {
+        pthread_attr_destroy(attr);
         logprintfl (EUCAFATAL, "failed to spawn a VM startup thread\n");
         sem_p (inst_sem);
         remove_instance (&global_instances, instance);
@@ -738,7 +742,8 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
         free_instance (&instance);
         return 1;
     }
-    
+    pthread_attr_destroy(attr);
+
     * outInst = instance;
     return 0;
 
