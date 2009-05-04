@@ -730,11 +730,11 @@ int diff (const char * path1, const char * path2)
 /* sums up sizes of files in the directory, as well as the size of the
  * directory itself; no subdirectories are allowed - if there are any, this
  * returns -1 */
-int dir_size (const char * path)
+long long dir_size (const char * path)
 {
     struct stat mystat;
     DIR * dir;
-    int size = 0;
+    long long size = 0;
 
     if ((dir=opendir(path))==NULL) {
         logprintfl (EUCAWARN, "warning: unopeneable directory %s\n", path);
@@ -744,7 +744,7 @@ int dir_size (const char * path)
         logprintfl (EUCAWARN, "warning: could not stat %s\n", path);
         return -1;
     }
-    size += mystat.st_size;
+    size += (long long)mystat.st_size;
 
     struct dirent * dir_entry;
     while ((dir_entry=readdir(dir))!=NULL) {
@@ -769,7 +769,7 @@ int dir_size (const char * path)
             break;
         }
         
-        size += mystat.st_size;
+        size += (long long)mystat.st_size;
     }
 
     closedir (dir);

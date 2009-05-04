@@ -501,7 +501,7 @@ long long scFSCK (bunchOfInstances ** instances)
 
             /* spare directories of running instances, but count their usage */
             if (find_instance (instances, iname)) {
-                int bytes = dir_size (instance_path);
+                long long bytes = dir_size (instance_path);
                 if (bytes>0) {
                     logprintfl (EUCAINFO, "- running instance %s directory, size=%d\n", iname, bytes);
                     total_size += bytes;
