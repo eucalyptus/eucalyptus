@@ -42,13 +42,15 @@ public class DNSRequestType extends EucalyptusMessage {
 }
 
 public class UpdateARecordType extends DNSRequestType {
+  String zone;
   String name;
   String address;
-  int ttl;
+  long ttl;
 
   def UpdateARecordType() {}
 
-  def UpdateARecordType(String name, String address, int ttl) {
+  def UpdateARecordType(String zone, String name, String address, long ttl) {
+      this.zone = zone;
       this.name = name;
       this.address = address;
       this.ttl = ttl;

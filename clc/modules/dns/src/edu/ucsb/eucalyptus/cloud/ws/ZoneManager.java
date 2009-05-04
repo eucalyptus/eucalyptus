@@ -36,8 +36,18 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Zone;
+import org.xbill.DNS.Name;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ZoneManager {
-    private static Zone zone;
+    private static ConcurrentHashMap<Name, Zone> zones;
     private static Logger LOG = Logger.getLogger( ZoneManager.class );
+
+    public static Zone getZone(Name name) {
+        return zones.get(name);
+    }
+
+    public static Zone addZone(Name name, Zone zone) {        
+        return zones.putIfAbsent(name, zone);
+    }
 }

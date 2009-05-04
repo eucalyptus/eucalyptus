@@ -48,6 +48,8 @@ public class ARecordInfo {
     private Long id = -1l;
     @Column( name = "name" )
     private String name;
+    @Column( name = "zone")
+    private String zone;
     @Column( name = "recordclass" )
     private Integer recordclass;
     @Column( name = "ttl" )
@@ -64,6 +66,14 @@ public class ARecordInfo {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getZone() {
+        return zone;
+    }
+
+    public void setZone(String zone) {
+        this.zone = zone;
     }
 
     public Long getTtl() {

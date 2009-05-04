@@ -34,16 +34,49 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import org.apache.log4j.Logger;
+import org.xbill.DNS.Message;
+
 import java.net.Socket;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.DataOutputStream;
+
+import edu.ucsb.eucalyptus.util.DNSProperties;
 
 
 public class TCPHandler extends ConnectionHandler {
+    private static Logger LOG = Logger.getLogger( TCPHandler.class );
     Socket socket;
     public TCPHandler(Socket s) {
         this.socket = s;
     }
 
     public void run() {
-        
+        try {
+            int inputLength;
+            DataInputStream inStream = new DataInputStream(socket.getInputStream());
+            DataOutputStream outStream = new DataOutputStream(socket.getOutputStream());
+            inputLength = inStream.readUnsignedShort();
+            if(inputLength > DNSProperties.MAX_MESSAGE_SIZE) {
+                LOG.error("Maximum message size exceeded. Ignoring request.");
+            }
+            byte[] inBytes = new byte[inputLength];
+            inStream.readFully(inBytes);
+            Message query;
+            byte [] response = null;
+            try {
+                query = new Message(inBytes);
+                response = null;
+                if (response == null)
+                    return;
+            }
+            catch (IOException exception) {
+            }
+            outStream.writeShort(response.length);
+            outStream.write(response);
+        } catch(IOException ex) {
+            LOG.error(ex);
+        }
     }
 }

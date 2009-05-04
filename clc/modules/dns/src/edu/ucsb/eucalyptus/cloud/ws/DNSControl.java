@@ -41,9 +41,13 @@ import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
 import edu.ucsb.eucalyptus.msgs.AddZoneResponseType;
 import edu.ucsb.eucalyptus.msgs.AddZoneType;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
 import edu.ucsb.eucalyptus.util.DNSProperties;
 
 import java.net.UnknownHostException;
+import java.util.List;
 
 public class DNSControl {
 
@@ -79,14 +83,34 @@ public class DNSControl {
 
     public UpdateARecordResponseType UpdateARecord(UpdateARecordType request)  throws EucalyptusCloudException {
         UpdateARecordResponseType reply = (UpdateARecordResponseType) request.getReply();
+        String zone = request.getZone();
         String name = request.getName();
         String address = request.getAddress();
-        int ttl = request.getTtl();
+        long ttl = request.getTtl();
+        if(!request.isAdministrator()) {
+            throw new AccessDeniedException(name);
+        }
+        EntityWrapper<ARecordInfo> db = new EntityWrapper<ARecordInfo>();
+        ARecordInfo aRecordInfo = new ARecordInfo();
+        aRecordInfo.setName(name);
+        List<ARecordInfo> arecords = db.query(aRecordInfo);
+        if(arecords.size() > 0) {
+            aRecordInfo = arecords.get(0);
+            aRecordInfo.setAddress(address);
+            aRecordInfo.setTtl(ttl);
+        }  else {
+            aRecordInfo = new ARecordInfo();
+            aRecordInfo.setAddress(address);
+            aRecordInfo.setTtl(ttl);
+            aRecordInfo.setZone(zone);
+        }
+        db.commit();
         return reply;
     }
 
     public AddZoneResponseType AddZone(AddZoneType request) throws EucalyptusCloudException {
         AddZoneResponseType reply = (AddZoneResponseType) request.getReply();
+        String name = request.getName();
 
         return reply;
     }
