@@ -226,7 +226,7 @@ case "$1" in
 	do_stop
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_end_msg
+			log_end_msg 0
 		else
 			echo "done."
 		fi
@@ -244,7 +244,7 @@ case "$1" in
 	do_start
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_end_msg
+			log_end_msg 0
 		else
 			echo "done."
 		fi

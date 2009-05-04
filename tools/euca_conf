@@ -210,7 +210,7 @@ done
 
 # some basic check
 if [ -z "${FILE}" -o ! -f "${FILE}" ]; then
-	echo "Is <$FILE> a valid eucalyptus configuration file?"
+	usage
 	exit 
 fi
 
