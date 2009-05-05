@@ -145,7 +145,7 @@ public class SystemConfiguration {
     this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
   }
 
-  public int getStorageMaxBucketSizeInMB() {
+  public Integer getStorageMaxBucketSizeInMB() {
     return storageMaxBucketSizeInMB;
   }
 
