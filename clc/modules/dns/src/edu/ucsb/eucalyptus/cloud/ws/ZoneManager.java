@@ -37,6 +37,8 @@ package edu.ucsb.eucalyptus.cloud.ws;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Zone;
 import org.xbill.DNS.Name;
+import org.xbill.DNS.Record;
+
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ZoneManager {
