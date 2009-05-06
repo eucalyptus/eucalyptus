@@ -35,7 +35,7 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
-import org.xbill.DNS.Address;
+import org.xbill.DNS.*;
 import edu.ucsb.eucalyptus.msgs.UpdateARecordResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
 import edu.ucsb.eucalyptus.msgs.AddZoneResponseType;
@@ -75,9 +75,14 @@ public class DNSControl {
         }
     }
 
+    private static void populateRecords() {
+
+    }
+
     private static void initializeDNS() {
         initializeUDP();
         initializeTCP();
+        populateRecords();
     }
 
     public DNSControl() {}
@@ -97,21 +102,33 @@ public class DNSControl {
         List<ARecordInfo> arecords = db.query(aRecordInfo);
         if(arecords.size() > 0) {
             aRecordInfo = arecords.get(0);
+            if(zone != aRecordInfo.getZone()) {
+                db.rollback();
+                throw new EucalyptusCloudException("Sorry, record already associated with a zone. Remove the record and try again.");
+            }
             aRecordInfo.setAddress(address);
             aRecordInfo.setTtl(ttl);
-            aRecordInfo.setZone(zone);
+            //update record
+            try {
+                ARecord arecord = new ARecord(new Name(name), DClass.IN, ttl, Address.getByAddress(address));
+                ZoneManager.updateRecord(zone, arecord);
+            } catch(Exception ex) {
+                LOG.error(ex);
+            }
         }  else {
-            aRecordInfo = new ARecordInfo();
-            aRecordInfo.setAddress(address);
-            aRecordInfo.setTtl(ttl);
-            aRecordInfo.setZone(zone);
-        }
-        EntityWrapper<ZoneInfo> dbZone = db.recast(ZoneInfo.class);
-        ZoneInfo zoneInfo = new ZoneInfo(zone);
-        List<ZoneInfo> zoneInfos = dbZone.query(zoneInfo);
-        if(zoneInfos.size() == 0) {
-            dbZone.add(zoneInfo);
-            //add zone
+            try {
+                ARecordInfo searchARecInfo = new ARecordInfo();
+                searchARecInfo.setZone(zone);
+                List<ARecordInfo> aRecInfos = db.query(searchARecInfo);
+                ARecord record = new ARecord(new Name(name), DClass.IN, ttl, Address.getByAddress(address));
+                ZoneManager.addRecord(zone, record);
+                aRecordInfo = new ARecordInfo();
+                aRecordInfo.setAddress(address);
+                aRecordInfo.setTtl(ttl);
+                aRecordInfo.setZone(zone);
+            } catch(Exception ex) {
+                LOG.error(ex);
+            }
         }
         db.commit();
         return reply;

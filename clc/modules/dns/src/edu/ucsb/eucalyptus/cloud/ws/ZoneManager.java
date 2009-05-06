@@ -38,18 +38,49 @@ import org.apache.log4j.Logger;
 import org.xbill.DNS.Zone;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
+import org.xbill.DNS.RRset;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Iterator;
 
 public class ZoneManager {
-    private static ConcurrentHashMap<Name, Zone> zones;
+    private static ConcurrentHashMap<String, Zone> zones;
     private static Logger LOG = Logger.getLogger( ZoneManager.class );
 
-    public static Zone getZone(Name name) {
-        return zones.get(name);
+
+    public static Zone addZone(String name, Zone zone) {
+        return zones.putIfAbsent(name, zone);
     }
 
-    public static Zone addZone(Name name, Zone zone) {        
-        return zones.putIfAbsent(name, zone);
+    public static Zone getZone(String name) {
+        try {
+            return zones.putIfAbsent(name, new Zone(new Name(name), new Record[0]));
+        } catch(Exception ex) {
+            LOG.error(ex);
+        }
+        return null;
+    }
+
+    public static void addRecord(String name, Record record) {
+        Zone zone = getZone(name);
+        zone.addRecord(record);
+    }
+
+    public static void updateRecord(String zoneName, Record record) {
+        try {
+            Zone zone = getZone(zoneName);
+            RRset rrSet = zone.findExactMatch(record.getName(), record.getDClass());
+            Iterator<Record> rrIterator = rrSet.rrs();
+            while(rrIterator.hasNext()) {
+                Record rec = rrIterator.next();
+                if(rec.getName().equals(record.getName())) {
+                    zone.removeRecord(rec);
+                }
+            }
+            zone.addRecord(record);
+        } catch(Exception ex) {
+            LOG.error(ex);
+        }
+
     }
 }

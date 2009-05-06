@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module relativePaths="true" MavenProjectsManager.isMavenModule="true" type="JAVA_MODULE" version="4">
+  <component name="FacetManager">
+    <facet type="jpa" name="JPA">
+      <configuration>
+        <setting name="validation-enabled" value="true" />
+        <setting name="provider-name" value="" />
+        <setting name="targe-facet" value="" />
+        <datasource-mapping />
+        <deploymentDescriptor name="persistence.xml" url="file://$MODULE_DIR$/resources/META-INF/persistence.xml" optional="false" version="1.0" />
+      </configuration>
+    </facet>
+  </component>
   <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_5" inherit-compiler-output="true">
     <exclude-output />
     <content url="file://$MODULE_DIR$">

@@ -72,6 +72,7 @@ public class TCPHandler extends ConnectionHandler {
                     return;
             }
             catch (IOException exception) {
+                LOG.error(exception);
             }
             outStream.writeShort(response.length);
             outStream.write(response);
