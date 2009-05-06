@@ -31,16 +31,7 @@ rm -rf /opt/euca-axis2c
 rm -rf $RPM_BUILD_DIR/euca-axis2c-%{version}
 
 %files
-%doc /opt/euca-axis2c/AUTHORS
-%doc /opt/euca-axis2c/COPYING
-%doc /opt/euca-axis2c/CREDITS
-%doc /opt/euca-axis2c/LICENSE
-%doc /opt/euca-axis2c/NEWS
-%doc /opt/euca-axis2c/NOTICE
 /opt/euca-axis2c
-
-%postun
-rm -rf /opt/euca-axis2c
 
 %changelog
 
