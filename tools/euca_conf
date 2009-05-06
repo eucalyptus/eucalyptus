@@ -36,9 +36,6 @@ usage () {
 	echo "   -delnode <hostname>         remove node from EUCALYPTUS"
 	echo "   -addcluster <clusname> <hostname> add new cluster to EUCALYPTUS"
 #	echo "   -delcluster <clusname> <hostname> remove cluster from EUCALYPTUS"
-	echo "   -cc {Y|N}                   enable/disable CC"
-	echo "   -nc {Y|N}                   enable/disable NC"
-	echo "   -cloud {Y|N}                enable/disable Cloud Controller"
 	echo "   -nodes \"host host ...\"    list of NCs"
 	echo "   -ccp <port>                 set CC port"
 	echo "   -ncp <port>                 set NC port"
@@ -95,6 +92,13 @@ while [ $# -gt 0 ]; do
 	if [ $# -lt 2 ]; then
 		usage
 		exit 1
+	fi
+
+	# old command line options not used anylonger
+	if [ "$1" = "-cc" -o "$1" = "-nc" -o "$1" = "-cloud" ]; then
+		echo "-cc, -nc and -cloud are not used anymore"
+		shift; shift;
+		continue
 	fi
 
 	# now let's parse the command line

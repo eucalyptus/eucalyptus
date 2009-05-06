@@ -4,7 +4,7 @@ Version:       1.5.1
 Release:       1
 License:       BSD
 Group:         Applications/System
-BuildRequires: gcc, make, euca-libvirt, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c
+BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5
 Requires:      vconfig, aoetools, vblade
 Vendor:        Mayhem lab
 #Icon:          someicon.xpm
@@ -23,6 +23,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
 Requires:     eucalyptus >= 1.5.1, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
 Group:        Applications/System
 
 %description cloud
@@ -35,7 +36,8 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, iptables, bridge-utils, eucalyptus-gl, dhcp
+Requires:     eucalyptus >= 1.5.1, euca-httpd >= 1.5, euca-axis2c >= 1.5, iptables, bridge-utils, eucalyptus-gl >= 1.5, dhcp
+Conflicts:    eucalyptus < 1.5, eucalyptus-nc < 1.5
 Group:        Applications/System
 
 %description cc
@@ -48,7 +50,8 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, euca-libvirt, curl, xen
+Requires:     eucalyptus >= 1.5.1, euca-httpd >= 1.5, euca-axis2c >= 1.5, bridge-utils, eucalyptus-gl >= 1.5, euca-libvirt >= 1.5, curl, xen
+Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
 Group:        Applications/System
 
 %description nc
@@ -61,7 +64,8 @@ This package contains the node controller part of eucalyptus.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus, euca-httpd, euca-axis2c
+Requires:     eucalyptus >= 1.5, euca-httpd >= 1.5, euca-axis2c >= 1.5
+Conflicts:    eucalyptus < 1.5
 Group:        Applications/System
 
 %description gl
@@ -112,7 +116,7 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/etc/eucalyptus/eucalyptus-version
 
 %files cloud
-%config(noreplace) /opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
+%config /opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
 /opt/eucalyptus/etc/eucalyptus/cloud.d
 /opt/eucalyptus/etc/eucalyptus/cloud.xml
 /opt/eucalyptus/usr/share/eucalyptus/*jar
@@ -214,14 +218,19 @@ fi
 
 
 %post
+# eucalyptus.conf was marked noreplace, so the new one could be named
+# *.rpmnew. Let's move it over (we did take a copy anyway)
+if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew ]; then
+	cp /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+fi
 # let's be sure we point to right eucalyptus installation
 /opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 if [ "$1" = "2" ];
 then
-	# if we have an lof config file we try to upgrade
-	if [ -e /opt/eucalyptus/etc/eucalyputs/eucalyptus.conf.old ];
+	# if we have an old config file we try to upgrade
+	if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.old ];
 	then
-		/opt/eucalyptus/usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyputs/eucalyptus.conf.old /opt/eucalyptus/etc/eucalyputs/eucalyptus.conf
+		/opt/eucalyptus/usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.old /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 	fi
 fi
 
@@ -232,7 +241,7 @@ then
 	if [ -e /root/eucalyptus-pre%{version}-cloud-rollback.tar ];
 	then
 		cd /opt/eucalyptus
-		tar xzf /root/eucalyptus-pre%{version}-cloud-rollback.tar
+		tar xf /root/eucalyptus-pre%{version}-cloud-rollback.tar
 		mv var/eucalyptus/db var/lib/eucalyptus/db
 		mv var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
 	fi
@@ -246,7 +255,7 @@ then
 	if [ -e /root/eucalyptus-pre%{version}-cc-rollback.tar ];
 	then
 		cd /opt/eucalyptus
-		tar xzf /root/eucalyptus-pre%{version}-cc-rollback.tar
+		tar xf /root/eucalyptus-pre%{version}-cc-rollback.tar
 		mv var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
 	fi
 fi
@@ -259,7 +268,7 @@ then
 	if [ -e /root/eucalyptus-pre%{version}-nc-rollback.tar ];
 	then
 		cd /opt/eucalyptus
-		tar xzf /root/eucalyptus-pre%{version}-nc-rollback.tar
+		tar xf /root/eucalyptus-pre%{version}-nc-rollback.tar
 		mv var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
 	fi
 fi
@@ -270,10 +279,6 @@ chkconfig --add eucalyptus-nc
 
 %preun cloud
 if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
-	if [ -x /etc/init.d/eucalyptus ]; 
-	then
-		/etc/init.d/eucalyptus stop || /bin/true
-	fi
 	if [ -x /etc/init.d/eucalyptus-cloud ]; 
 	then
 		/etc/init.d/eucalyptus-cloud stop || /bin/true
@@ -285,10 +290,6 @@ fi
 
 %preun cc
 if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
-	if [ -x /etc/init.d/eucalyptus ]; 
-	then
-		/etc/init.d/eucalyptus stop || /bin/true
-	fi
 	if [ -x /etc/init.d/eucalyptus-cc ]; 
 	then
 		/etc/init.d/eucalyptus-cc stop || /bin/true
@@ -300,10 +301,6 @@ fi
 
 %preun nc
 if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
-	if [ -x /etc/init.d/eucalyptus ]; 
-	then
-		/etc/init.d/eucalyptus stop || /bin/true
-	fi
 	if [ -x /etc/init.d/eucalyptus-nc ]; 
 	then
 		/etc/init.d/eucalyptus-nc stop || /bin/true
