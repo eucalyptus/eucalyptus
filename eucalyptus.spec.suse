@@ -6,6 +6,7 @@ License:       BSD
 Group:         Applications/System
 BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0
 Requires:      vlan, aoetools, vblade
+Conflicts:     eucalyptus-cloud < 1.5, eucalyptus-cc < 1.5, eucalyptus-nc < 1.5
 Vendor:        Mayhem lab
 #Icon:          someicon.xpm
 Source:        http://open.eucalyptus.com/downloads/eucalyptus-%{version}.tgz
@@ -63,7 +64,7 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the node controller part of eucalyptus.
 
 %package gl
-Summary:      Elastic Utility Computing Architecture - log service 
+Summary:      Elastic Utility Computing Architecture - log service
 Requires:     eucalyptus >= 1.5, euca-httpd >= 1.5, euca-axis2c >= 1.5
 Conflicts:    eucalyptus < 1.5
 Group:        Applications/System
@@ -81,8 +82,9 @@ This package contains the internal log service of eucalyptus.
 
 %build
 # let's be sure we have the right configuration file
-if [ -f tools/eucalyptus.conf.suse ]; then
-        cp tools/eucalyptus.conf.suse tools/eucalyptus.conf
+if [ -f tools/eucalyptus.conf.suse ];
+then
+	cp -f tools/eucalyptus.conf.suse tools/eucalyptus.conf
 fi
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
 cd clc
@@ -154,13 +156,14 @@ fi
 if [ "$1" = "2" ]; 
 then
 	# we upgrade only from 1.4
-	if [ ! -e /opt/eucalyptus/usr/share/eucalyptus/euca_ipt ]; then
+	if [ ! -e /opt/eucalyptus/usr/share/eucalyptus/euca_ipt ];
+	then
 		echo "Cannot upgrade from version earlier than 1.4"
 		exit 2
 	fi
 
 	# save a copy of the old conf file
-	cp /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.old
+	cp -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.old
 fi
 
 %pre cloud
@@ -172,11 +175,11 @@ then
 		cd /opt/eucalyptus
 		rm -f var/eucalyptus/db/eucalyptus.lck
 		# if we already have a backup let's save it
-		if [ -e /root/eucalyptus-pre%{version}-cloud-rollback.tar ];
+		if [ -e /root/eucalyptus-pre-%{version}-cloud-rollback.tar ];
 		then
-			cp /root/eucalyptus-pre%{version}-cloud-rollback.tar /root/eucalyptus-pre%{version}-cloud-rollback.tar.old
+			mv -f /root/eucalyptus-pre-%{version}-cloud-rollback.tar /root/eucalyptus-pre-%{version}-cloud-rollback.tar.old
 		fi
-		tar cf /root/eucalyptus-pre%{version}-cloud-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p*
+		tar cf /root/eucalyptus-pre-%{version}-cloud-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
 	fi
 fi
 
@@ -190,11 +193,11 @@ then
 		cd /opt/eucalyptus
 		rm -f var/eucalyptus/db/eucalyptus.lck
 		# if we already have a backup let's save it
-		if [ -e /root/eucalyptus-pre%{version}-cc-rollback.tar ];
+		if [ -e /root/eucalyptus-pre-%{version}-cc-rollback.tar ];
 		then
-			cp /root/eucalyptus-pre%{version}-cc-rollback.tar /root/eucalyptus-pre%{version}-cc-rollback.tar.old
+			mv -f /root/eucalyptus-pre-%{version}-cc-rollback.tar /root/eucalyptus-pre-%{version}-cc-rollback.tar.old
 		fi
-		tar cf /root/eucalyptus-pre%{version}-cc-rollback.tar var/eucalyptus/keys/*.p*
+		tar cf /root/eucalyptus-pre-%{version}-cc-rollback.tar var/eucalyptus/keys/*.p* 2> /dev/null || true
 	fi
 fi
 
@@ -208,11 +211,11 @@ then
 		cd /opt/eucalyptus
 		rm -f var/eucalyptus/db/eucalyptus.lck
 		# if we already have a backup let's save it
-		if [ -e /root/eucalyptus-pre%{version}-nc-rollback.tar ];
+		if [ -e /root/eucalyptus-pre-%{version}-nc-rollback.tar ];
 		then
-			cp /root/eucalyptus-pre%{version}-nc-rollback.tar /root/eucalyptus-pre%{version}-nc-rollback.tar.old
+			mv -f /root/eucalyptus-pre-%{version}-nc-rollback.tar /root/eucalyptus-pre-%{version}-nc-rollback.tar.old
 		fi
-		tar cf /root/eucalyptus-pre%{version}-cc-rollback.tar var/eucalyptus/keys/*.p*
+		tar cf /root/eucalyptus-pre-%{version}-cc-rollback.tar var/eucalyptus/keys/*.p* 2> /dev/null || true
 	fi
 fi
 
@@ -220,8 +223,9 @@ fi
 %post
 # eucalyptus.conf was marked noreplace, so the new one could be named
 # *.rpmnew. Let's move it over (we did take a copy anyway)
-if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew ]; then
-	cp /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew ];
+then
+	cp -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 fi
 # let's be sure we point to right eucalyptus installation
 /opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
@@ -235,15 +239,18 @@ then
 fi
 
 %post cloud
-# on upgrade let's look for the rollback file
+# on upgrade let's look for 1.4 directories and move them
 if [ "$1" = "2" ]; 
 then
-	if [ -e /root/eucalyptus-pre%{version}-cloud-rollback.tar ];
+	if [ -d var/eucalyptus/db ];
 	then
 		cd /opt/eucalyptus
-		tar xf /root/eucalyptus-pre%{version}-cloud-rollback.tar
-		mv var/eucalyptus/db var/lib/eucalyptus/db
-		mv var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
+		mv -f var/eucalyptus/db var/lib/eucalyptus/db
+	fi
+	if [ -d var/eucalyptus/keys ];
+	then
+		cd /opt/eucalyptus
+		mv -f var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
 	fi
 fi
 ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-cloud
@@ -252,11 +259,10 @@ chkconfig --add eucalyptus-cloud
 %post cc
 if [ "$1" = "2" ]; 
 then
-	if [ -e /root/eucalyptus-pre%{version}-cc-rollback.tar ];
+	if [ -d var/eucalyptus/keys ];
 	then
 		cd /opt/eucalyptus
-		tar xf /root/eucalyptus-pre%{version}-cc-rollback.tar
-		mv var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
+		mv -f var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
 	fi
 fi
 ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-cc
@@ -265,11 +271,10 @@ chkconfig --add eucalyptus-cc
 %post nc
 if [ "$1" = "2" ]; 
 then
-	if [ -e /root/eucalyptus-pre%{version}-nc-rollback.tar ];
+	if [ -d var/eucalyptus/keys ];
 	then
 		cd /opt/eucalyptus
-		tar xf /root/eucalyptus-pre%{version}-nc-rollback.tar
-		mv var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
+		mv -f var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
 	fi
 fi
 ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-nc
@@ -277,36 +282,54 @@ ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-nc
 chkconfig --add eucalyptus-nc
 [ -n "$INSTANCE_PATH" ] && mkdir -p $INSTANCE_PATH
 
+%postun
+# in case of removal let's try to clean up the best we can
+if [ "$1" = "0" ];
+then
+	rm -rf /opt/eucalyptus/var/log
+	rm -rf /opt/eucalyptus/var/log
+	rm -rf /opt/eucalyptus/usr
+	rm -rf /opt/eucalyptus/etc/eucalyptus/http*
+	rm -rf /opt/eucalyptus/etc/init.d
+	# for now we leave the keys, the database and the config file
+fi
+
 %preun cloud
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
+if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
+then
 	if [ -x /etc/init.d/eucalyptus-cloud ]; 
 	then
 		/etc/init.d/eucalyptus-cloud stop || /bin/true
 	fi
 fi
-if [ "$1" = "0" ]; then
+if [ "$1" = "0" ];
+then
 	chkconfig --del eucalyptus-cloud || true
 fi
 
 %preun cc
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
+if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
+then
 	if [ -x /etc/init.d/eucalyptus-cc ]; 
 	then
 		/etc/init.d/eucalyptus-cc stop || /bin/true
 	fi
 fi
-if [ "$1" = "0" ]; then
+if [ "$1" = "0" ];
+then
 	chkconfig --del eucalyptus-cc || true
 fi
 
 %preun nc
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
+if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
+then
 	if [ -x /etc/init.d/eucalyptus-nc ]; 
 	then
 		/etc/init.d/eucalyptus-nc stop || /bin/true
 	fi
 fi
-if [ "$1" = "0" ]; then
+if [ "$1" = "0" ];
+then
 	chkconfig --del eucalyptus-nc || true
 fi
 

@@ -3,7 +3,7 @@ Name:          euca-axis2c
 Version:       1.5
 Release:       1
 License:       Apache
-BuildRequires: apache2-devel, libapr1-devel 
+#BuildRequires: apache2-devel, libapr1-devel 
 Group:         Applications/System
 Source:        http://open.eucalyptus.com/dependencies/1.5.0/axis2c-src-1.5.0.tgz
 URL:           http://open.eucalyptus.com
