@@ -48,6 +48,7 @@ static char * admin_user_id = EUCALYPTUS_ADMIN;
 static char gen_libvirt_xml_command_path [BUFSIZE] = "";
 static char get_xen_info_command_path [BUFSIZE] = "";
 static char virsh_command_path [BUFSIZE] = "";
+static char xm_command_path [BUFSIZE] = "";
 
 
 #define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
@@ -384,6 +385,7 @@ static int doInitialize (void)
     snprintf (gen_libvirt_xml_command_path, BUFSIZE, EUCALYPTUS_GEN_LIBVIRT_XML, home, home);
     snprintf (get_xen_info_command_path,    BUFSIZE, EUCALYPTUS_GET_XEN_INFO,    home, home);
     snprintf (virsh_command_path, BUFSIZE, EUCALYPTUS_VIRSH, home);
+    snprintf (xm_command_path, BUFSIZE, EUCALYPTUS_XM);
     
     /* open the connection to hypervisor */
     if (check_hypervisor_conn () == ERROR) {
@@ -1160,6 +1162,12 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 		snprintf(cmd, 1024, "%s detach-device %s %s",virsh_command_path, instanceId, tmpfile);
 		logprintfl(EUCADEBUG, "Running command: %s\n", cmd);
 		err = WEXITSTATUS(system(cmd));
+		if (err) {
+		  logprintfl(EUCADEBUG, "first workaround command failed (%d), trying second workaround...\n", err);
+		  snprintf(cmd, 1024, "%s block-detach %s %s", xm_command_path, instanceId, localDevReal);
+		  logprintfl(EUCADEBUG, "Running command: %s\n", cmd);
+		  err = WEXITSTATUS(system(cmd));
+		}
 	      } else {
 		err = 1;
 	      }
