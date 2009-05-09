@@ -91,8 +91,7 @@ public class TCPHandler extends ConnectionHandler {
     static final int FLAG_SIGONLY = 2;
 
     Map caches;
-    Map znames;
-    Map TSIGs;
+    //Map TSIGs;
 
     byte []
     generateReply(Message query, byte [] in, int length, Socket s)
@@ -115,14 +114,14 @@ public class TCPHandler extends ConnectionHandler {
 
         Record queryRecord = query.getQuestion();
 
-        TSIGRecord queryTSIG = query.getTSIG();
+        /*TSIGRecord queryTSIG = query.getTSIG();
         TSIG tsig = null;
         if (queryTSIG != null) {
             tsig = (TSIG) TSIGs.get(queryTSIG.getName());
             if (tsig == null ||
                     tsig.verify(query, in, length, null) != Rcode.NOERROR)
                 return formerrMessage(in);
-        }
+        }*/
 
         OPTRecord queryOPT = query.getOPT();
         if (queryOPT != null && queryOPT.getVersion() > 0)
@@ -147,9 +146,9 @@ public class TCPHandler extends ConnectionHandler {
         Name name = queryRecord.getName();
         int type = queryRecord.getType();
         int dclass = queryRecord.getDClass();
-        if (type == Type.AXFR && s != null)
+/*        if (type == Type.AXFR && s != null)
             return doAXFR(name, query, tsig, queryTSIG, s);
-        if (!Type.isRR(type) && type != Type.ANY)
+  */    if (!Type.isRR(type) && type != Type.ANY)
             return errorMessage(query, Rcode.NOTIMP);
 
         byte rcode = addAnswer(response, name, type, dclass, 0, flags);
@@ -165,20 +164,20 @@ public class TCPHandler extends ConnectionHandler {
             response.addRecord(opt, Section.ADDITIONAL);
         }
 
-        response.setTSIG(tsig, Rcode.NOERROR, queryTSIG);
+        //response.setTSIG(tsig, Rcode.NOERROR, queryTSIG);
         return response.toWire(maxLength);
     }
 
     public Zone
     findBestZone(Name name) {
         Zone foundzone = null;
-        foundzone = (Zone) znames.get(name);
+        foundzone = (Zone) ZoneManager.getZone(name);
         if (foundzone != null)
             return foundzone;
         int labels = name.labels();
         for (int i = 1; i < labels; i++) {
             Name tname = new Name(name, i);
-            foundzone = (Zone) znames.get(tname);
+            foundzone = (Zone) ZoneManager.getZone(tname);
             if (foundzone != null)
                 return foundzone;
         }
@@ -348,7 +347,7 @@ public class TCPHandler extends ConnectionHandler {
 
     byte []
     doAXFR(Name name, Message query, TSIG tsig, TSIGRecord qtsig, Socket s) {
-        Zone zone = (Zone) znames.get(name);
+        Zone zone = (Zone) ZoneManager.getZone(name);
         boolean first = true;
         if (zone == null)
             return errorMessage(query, Rcode.REFUSED);

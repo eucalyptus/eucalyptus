@@ -36,15 +36,14 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;
+import org.xbill.DNS.Address;
 import edu.ucsb.eucalyptus.msgs.UpdateARecordResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
 import edu.ucsb.eucalyptus.msgs.AddZoneResponseType;
 import edu.ucsb.eucalyptus.msgs.AddZoneType;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
-import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
-import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
+import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.util.DNSProperties;
 
 import java.net.UnknownHostException;
@@ -76,7 +75,34 @@ public class DNSControl {
     }
 
     private static void populateRecords() {
+        try {
+            EntityWrapper<ZoneInfo> db = new EntityWrapper<ZoneInfo>();
+            ZoneInfo zInfo = new ZoneInfo();
+            List<ZoneInfo> zoneInfos = db.query(zInfo);
+            for(ZoneInfo zoneInfo : zoneInfos) {
+                String name = zoneInfo.getName();
+                EntityWrapper<SOARecordInfo> dbSOA = db.recast(SOARecordInfo.class);
+                SOARecordInfo searchSOARecordInfo = new SOARecordInfo();
+                searchSOARecordInfo.setName(name);
+                SOARecordInfo soaRecordInfo = dbSOA.getUnique(searchSOARecordInfo);
 
+                EntityWrapper<NSRecordInfo> dbNS = db.recast(NSRecordInfo.class);
+                NSRecordInfo searchNSRecordInfo = new NSRecordInfo();
+                searchNSRecordInfo.setName(name);
+                NSRecordInfo nsRecordInfo = dbNS.getUnique(searchNSRecordInfo);
+
+                ZoneManager.addZone(zoneInfo, soaRecordInfo, nsRecordInfo);
+            }
+
+            EntityWrapper<ARecordInfo> dbARec = db.recast(ARecordInfo.class);
+            ARecordInfo searchARecInfo = new ARecordInfo();
+            List<ARecordInfo> aRecInfos = dbARec.query(searchARecInfo);
+            for(ARecordInfo aRecInfo : aRecInfos) {
+                ZoneManager.addRecord(aRecInfo);
+            }
+        } catch(EucalyptusCloudException ex) {
+            LOG.error(ex);
+        }
     }
 
     private static void initializeDNS() {
@@ -93,9 +119,9 @@ public class DNSControl {
         String name = request.getName();
         String address = request.getAddress();
         long ttl = request.getTtl();
-        if(!request.isAdministrator()) {
+        /*if(!request.isAdministrator()) {
             throw new AccessDeniedException(name);
-        }
+        } */
         EntityWrapper<ARecordInfo> db = new EntityWrapper<ARecordInfo>();
         ARecordInfo aRecordInfo = new ARecordInfo();
         aRecordInfo.setName(name);
@@ -119,13 +145,15 @@ public class DNSControl {
             try {
                 ARecordInfo searchARecInfo = new ARecordInfo();
                 searchARecInfo.setZone(zone);
-                List<ARecordInfo> aRecInfos = db.query(searchARecInfo);
                 ARecord record = new ARecord(new Name(name), DClass.IN, ttl, Address.getByAddress(address));
                 ZoneManager.addRecord(zone, record);
                 aRecordInfo = new ARecordInfo();
+                aRecordInfo.setName(name);
                 aRecordInfo.setAddress(address);
                 aRecordInfo.setTtl(ttl);
                 aRecordInfo.setZone(zone);
+                aRecordInfo.setRecordclass(DClass.IN);
+                db.add(aRecordInfo);
             } catch(Exception ex) {
                 LOG.error(ex);
             }

@@ -106,6 +106,7 @@
     <orderEntry type="module" module-name="key-manager" />
     <orderEntry type="module" module-name="storage-manager" />
     <orderEntry type="module" module-name="storage-controller" />
+    <orderEntry type="module" module-name="dns" />
   </component>
   <component name="RSpecModuleSettingsStorage">
     <RSPEC_MODULE_SETTINGS_STORAGE_ID NAME="RSPEC_SUPPORT_TYPE" VALUE="NONE" />

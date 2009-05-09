@@ -50,6 +50,7 @@ public class ZoneInfo {
     private String name;
 
     public ZoneInfo() {}
+    
     public ZoneInfo(String name) {
         this.name = name;
     }

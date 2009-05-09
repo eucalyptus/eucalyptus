@@ -10,7 +10,7 @@
       <maximumStackSize value="32" />
       <properties />
       <executeOn event="beforeRun" target="install" />
-      <executeOn event="beforeRun" target="install" runConfigurationType="Application" runConfigurationName="Unnamed" />
+      <executeOn event="beforeRun" target="install" runConfigurationType="JUnit" runConfigurationName="DNSControlTest" />
     </buildFile>
   </component>
   <component name="BuildJarProjectSettings">
@@ -381,7 +381,7 @@
     <output url="file://$PROJECT_DIR$/out" />
   </component>
   <component name="ProjectRunConfigurationManager">
-    <configuration default="false" name="BukkitTest" type="JUnit" factoryName="JUnit" enabled="false" merge="false" sample_coverage="true" runner="emma">
+    <configuration default="false" name="DNSControlTest" type="JUnit" factoryName="JUnit" enabled="false" merge="false" sample_coverage="true" runner="emma">
       <pattern>
         <option name="PATTERN" value="edu.ucsb.eucalyptus.cloud.ws.*" />
         <option name="ENABLED" value="true" />
@@ -389,11 +389,11 @@
       <module name="Cloud" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
       <option name="ALTERNATIVE_JRE_PATH" value="" />
-      <option name="PACKAGE_NAME" value="edu.ucsb.eucalyptus.cloud.ws" />
-      <option name="MAIN_CLASS_NAME" value="edu.ucsb.eucalyptus.cloud.ws.BukkitTest" />
+      <option name="PACKAGE_NAME" value="edu.ucsb.eucalyptus.cloud.ws.tests" />
+      <option name="MAIN_CLASS_NAME" value="edu.ucsb.eucalyptus.cloud.ws.tests.DNSControlTest" />
       <option name="METHOD_NAME" value="" />
       <option name="TEST_OBJECT" value="class" />
-      <option name="VM_PARAMETERS" value="-server -Xmx64m -Xms64m -XX:+UseConcMarkSweepGC -Djava.security.policy=/home/nekro/euca2/etc/eucalyptus/cloud.d/security.policy -Deuca.home.0=/home/nekro/euca2 -Deuca.home=/home/nekro/euca2 -Deuca.var.dir=/home/nekro/euca2/var/eucalyptus -Deuca.lib.dir=/home/nekro/euca2/usr/share/eucalyptus -Deuca.conf.dir=/home/nekro/euca2/etc/eucalyptus/cloud.d -Deuca.log.dir=/home/nekro/euca2/var/log/eucalyptus -Deuca.template.dir=/home/nekro/euca2/var/eucalyptus -Deuca.version=1.0 " />
+      <option name="VM_PARAMETERS" value="-server -Xbootclasspath/p:/home/neil/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus/eucalyptus-crypto.jar:/home/neil/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus/eucalyptus-workarounds.jar -Xmx64m -Xms64m -XX:+UseConcMarkSweepGC -Djava.security.policy=/home/neil/eucalyptus/build/eucalyptus-main-dns/etc/eucalyptus/cloud.d/security.policy -Deuca.home.0=/home/neil/eucalyptus/build/eucalyptus-main-dns -Deuca.home=/home/neil/eucalyptus/build/eucalyptus-main-dns -Deuca.var.dir=/home/neil/eucalyptus/build/eucalyptus-main-dns/var/eucalyptus -Deuca.lib.dir=/home/neil/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus -Deuca.conf.dir=/home/neil/eucalyptus/build/eucalyptus-main-dns/etc/eucalyptus/cloud.d -Deuca.log.dir=/home/neil/eucalyptus/build/eucalyptus-main-dns/var/log/eucalyptus -Deuca.template.dir=/home/neil/eucalyptus/build/eucalyptus-main-dns/var/eucalyptus -Deuca.version=1.0 -Djava.library.path=/home/neil/eucalyptus/build/eucalyptus-main-dns/usr/lib" />
       <option name="PARAMETERS" value="" />
       <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
       <option name="ENV_VARIABLES" />
@@ -410,7 +410,8 @@
       </RunnerSettings>
       <ConfigurationWrapper RunnerId="Debug" />
       <method>
-        <option name="Make" value="true" />
+        <option name="Run Ant target" value="true" />
+        <option name="Make" value="false" />
       </method>
     </configuration>
   </component>

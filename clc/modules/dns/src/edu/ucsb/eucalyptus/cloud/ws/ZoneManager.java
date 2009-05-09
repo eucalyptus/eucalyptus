@@ -35,35 +35,112 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
-import org.xbill.DNS.Zone;
-import org.xbill.DNS.Name;
-import org.xbill.DNS.Record;
-import org.xbill.DNS.RRset;
+import org.xbill.DNS.*;
+import org.xbill.DNS.Address;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Iterator;
 
+import edu.ucsb.eucalyptus.cloud.entities.*;
+
 public class ZoneManager {
-    private static ConcurrentHashMap<String, Zone> zones;
+    private static ConcurrentHashMap<Name, Zone> zones = new ConcurrentHashMap<Name, Zone>();
     private static Logger LOG = Logger.getLogger( ZoneManager.class );
-
-
-    public static Zone addZone(String name, Zone zone) {
-        return zones.putIfAbsent(name, zone);
-    }
 
     public static Zone getZone(String name) {
         try {
-            return zones.putIfAbsent(name, new Zone(new Name(name), new Record[0]));
+            return zones.get(new Name(name));
         } catch(Exception ex) {
             LOG.error(ex);
         }
         return null;
     }
 
-    public static void addRecord(String name, Record record) {
-        Zone zone = getZone(name);
-        zone.addRecord(record);
+    public static Zone getZone(Name name) {
+        return zones.get(name);
+    }
+
+    public static void addZone(ZoneInfo zoneInfo, SOARecordInfo soaRecordInfo, NSRecordInfo nsRecordInfo) {
+        try {
+            String nameString = zoneInfo.getName();
+            Name name =  Name.fromString(nameString);
+            long soaTTL = soaRecordInfo.getTtl();
+            long serial = soaRecordInfo.getSerialNumber();
+            long refresh = soaRecordInfo.getRefresh();
+            long retry = soaRecordInfo.getRetry();
+            long expires = soaRecordInfo.getExpires();
+            long minimum = soaRecordInfo.getMinimum();
+            Record soarec = new SOARecord(name, DClass.IN, soaTTL, Name.root, Name.root, serial, refresh, retry, expires, minimum);
+            long nsTTL = nsRecordInfo.getTtl();
+            Record nsrec = new NSRecord(name, DClass.IN, nsTTL, Name.root);
+            zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec}));
+        } catch(Exception ex) {
+            LOG.error(ex);
+        }
+    }
+
+    public static void addRecord(ARecordInfo arecInfo) {
+        try {
+            ARecord arecord = new ARecord(Name.fromString(arecInfo.getName()), DClass.IN, arecInfo.getTtl(), Address.getByAddress(arecInfo.getAddress()));
+            addRecord(arecInfo.getZone(), arecord);
+        } catch(Exception ex) {
+            LOG.error(ex);
+        }
+    }
+
+    public static void addRecord(String nameString, Record record) {
+        Zone zone = getZone(nameString);
+        if(zone == null) {
+            try {
+                Record[] records = new Record[1];
+                records[0] = record;
+                Name name =  Name.fromString(nameString);
+                long soaTTL = 604800;
+                long serial = 1;
+                long refresh = 604800;
+                long retry = 86400;
+                long expires = 2419200;
+                long minimum = 604800;
+                Record soarec = new SOARecord(name, DClass.IN, soaTTL, Name.root, Name.root, serial, refresh, retry, expires, minimum);
+                long nsTTL = 0;
+                Record nsrec = new NSRecord(name, DClass.IN, nsTTL, Name.root);
+                zone =  zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec, record}));
+                if(zone == null) {
+                    zone = zones.get(name);
+                    EntityWrapper<ZoneInfo> db = new EntityWrapper<ZoneInfo>();
+                    ZoneInfo zoneInfo = new ZoneInfo(nameString);
+                    db.add(zoneInfo);
+                    EntityWrapper<SOARecordInfo> dbSOA = db.recast(SOARecordInfo.class);
+                    SOARecordInfo soaRecordInfo = new SOARecordInfo();
+                    soaRecordInfo.setName(nameString);
+                    soaRecordInfo.setRecordclass(DClass.IN);
+                    soaRecordInfo.setNameserver(Name.root.toString());
+                    soaRecordInfo.setAdmin(Name.root.toString());
+                    soaRecordInfo.setZone(nameString);
+                    soaRecordInfo.setSerialNumber(serial);
+                    soaRecordInfo.setTtl(soaTTL);
+                    soaRecordInfo.setExpires(expires);
+                    soaRecordInfo.setMinimum(minimum);
+                    soaRecordInfo.setRefresh(refresh);
+                    soaRecordInfo.setRetry(retry);
+                    dbSOA.add(soaRecordInfo);
+
+                    EntityWrapper<NSRecordInfo> dbNS = db.recast(NSRecordInfo.class);
+                    NSRecordInfo nsRecordInfo = new NSRecordInfo();
+                    nsRecordInfo.setName(nameString);
+                    nsRecordInfo.setZone(nameString);
+                    nsRecordInfo.setRecordClass(DClass.IN);
+                    nsRecordInfo.setTarget(Name.root.toString());
+                    nsRecordInfo.setTtl(nsTTL);
+                    dbNS.add(nsRecordInfo);
+                    db.commit();
+                }
+            } catch(Exception ex) {
+                LOG.error(ex);
+            }
+        } else {
+            zone.addRecord(record);
+        }
     }
 
     public static void updateRecord(String zoneName, Record record) {
@@ -81,6 +158,5 @@ public class ZoneManager {
         } catch(Exception ex) {
             LOG.error(ex);
         }
-
     }
 }
