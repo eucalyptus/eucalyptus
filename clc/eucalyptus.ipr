@@ -10,6 +10,7 @@
       <maximumStackSize value="32" />
       <properties />
       <executeOn event="beforeRun" target="install" />
+      <executeOn event="beforeRun" target="install" runConfigurationType="Application" runConfigurationName="Main" />
       <executeOn event="beforeRun" target="install" runConfigurationType="JUnit" runConfigurationName="DNSControlTest" />
     </buildFile>
   </component>

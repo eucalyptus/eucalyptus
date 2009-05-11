@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.io.DataOutputStream;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import edu.ucsb.eucalyptus.util.DNSProperties;
 
@@ -90,7 +91,7 @@ public class TCPHandler extends ConnectionHandler {
     static final int FLAG_DNSSECOK = 1;
     static final int FLAG_SIGONLY = 2;
 
-    Map caches;
+    Map caches = new ConcurrentHashMap();
     //Map TSIGs;
 
     byte []
@@ -114,9 +115,9 @@ public class TCPHandler extends ConnectionHandler {
 
         Record queryRecord = query.getQuestion();
 
-        /*TSIGRecord queryTSIG = query.getTSIG();
+        TSIGRecord queryTSIG = query.getTSIG();
         TSIG tsig = null;
-        if (queryTSIG != null) {
+      /*  if (queryTSIG != null) {
             tsig = (TSIG) TSIGs.get(queryTSIG.getName());
             if (tsig == null ||
                     tsig.verify(query, in, length, null) != Rcode.NOERROR)
@@ -164,7 +165,7 @@ public class TCPHandler extends ConnectionHandler {
             response.addRecord(opt, Section.ADDITIONAL);
         }
 
-        //response.setTSIG(tsig, Rcode.NOERROR, queryTSIG);
+        response.setTSIG(tsig, Rcode.NOERROR, queryTSIG);
         return response.toWire(maxLength);
     }
 
