@@ -37,10 +37,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Address;
-import edu.ucsb.eucalyptus.msgs.UpdateARecordResponseType;
-import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
-import edu.ucsb.eucalyptus.msgs.AddZoneResponseType;
-import edu.ucsb.eucalyptus.msgs.AddZoneType;
+import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.entities.*;
@@ -128,7 +125,7 @@ public class DNSControl {
         List<ARecordInfo> arecords = db.query(aRecordInfo);
         if(arecords.size() > 0) {
             aRecordInfo = arecords.get(0);
-            if(zone != aRecordInfo.getZone()) {
+            if(!zone.equals(aRecordInfo.getZone())) {
                 db.rollback();
                 throw new EucalyptusCloudException("Sorry, record already associated with a zone. Remove the record and try again.");
             }
@@ -136,8 +133,8 @@ public class DNSControl {
             aRecordInfo.setTtl(ttl);
             //update record
             try {
-                ARecord arecord = new ARecord(new Name(name), DClass.IN, ttl, Address.getByAddress(address));
-                ZoneManager.updateRecord(zone, arecord);
+                ARecord arecord = new ARecord(Name.fromString(name), DClass.IN, ttl, Address.getByAddress(address));
+                ZoneManager.updateARecord(zone, arecord);
             } catch(Exception ex) {
                 LOG.error(ex);
             }
@@ -159,6 +156,30 @@ public class DNSControl {
             }
         }
         db.commit();
+        return reply;
+    }
+
+    public RemoveARecordResponseType RemoveARecord(RemoveARecordType request) throws EucalyptusCloudException {
+        RemoveARecordResponseType reply = (RemoveARecordResponseType) request.getReply();
+        String zone = request.getZone();
+        String name = request.getName();
+        /*if(!request.isAdministrator()) {
+            throw new AccessDeniedException(name);
+        } */
+        EntityWrapper<ARecordInfo> db = new EntityWrapper<ARecordInfo>();
+        ARecordInfo aRecordInfo = new ARecordInfo();
+        aRecordInfo.setName(name);
+        aRecordInfo.setZone(zone);
+        try {
+            ARecordInfo foundARecordInfo = db.getUnique(aRecordInfo);
+            ARecord arecord = new ARecord(Name.fromString(name), DClass.IN, foundARecordInfo.getTtl(), Address.getByAddress(foundARecordInfo.getAddress()));
+            ZoneManager.deleteARecord(zone, arecord);
+            db.delete(foundARecordInfo);
+            db.commit();
+
+        } catch(Exception ex) {
+            LOG.error(ex);
+        }
         return reply;
     }
 

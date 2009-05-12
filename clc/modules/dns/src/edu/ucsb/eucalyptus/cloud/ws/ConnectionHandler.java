@@ -30,6 +30,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Neil Soman neil@eucalyptus.com
+ *
+ * Parts of this code are licensed under the BSD license and carry the following copyright,
+ * Copyright (c) 1999-2004 Brian Wellington (bwelling@xbill.org)
+ * @author Brian Wellington &lt;bwelling@xbill.org&gt;
+
  */
 
 package edu.ucsb.eucalyptus.cloud.ws;
@@ -44,10 +49,6 @@ import java.io.IOException;
 import java.io.DataOutputStream;
 
 public class ConnectionHandler extends Thread {
-
-    //The following code is licensed under the BSD license and carries the following copyright,
-    // Copyright (c) 1999-2004 Brian Wellington (bwelling@xbill.org)
-    /** @author Brian Wellington &lt;bwelling@xbill.org&gt; */
 
     static final int FLAG_DNSSECOK = 1;
     static final int FLAG_SIGONLY = 2;

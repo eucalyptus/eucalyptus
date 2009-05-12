@@ -1,4 +1,3 @@
-package edu.ucsb.eucalyptus.msgs
 /*
  * Software License Agreement (BSD License)
  *
@@ -32,58 +31,29 @@ package edu.ucsb.eucalyptus.msgs
  *
  * Author: Neil Soman neil@eucalyptus.com
  */
-public class DNSResponseType extends EucalyptusMessage {
-  def DNSResponseType() {}
-}
 
-public class DNSRequestType extends EucalyptusMessage {
+package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-  def DNSRequestType() {}
-}
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.cloud.ws.DNSControl;
+import junit.framework.TestCase;
 
-public class UpdateARecordType extends DNSRequestType {
-  String zone;
-  String name;
-  String address;
-  long ttl;
+public class RemoveARecordTest extends TestCase {
 
-  def UpdateARecordType() {}
+    private static DNSControl dnsControl;
 
-  def UpdateARecordType(String zone, String name, String address, long ttl) {
-      this.zone = zone;
-      this.name = name;
-      this.address = address;
-      this.ttl = ttl;
-  }
-}
+	public void testRemoveARecord() throws Throwable {
+        String userId = "admin";
+        RemoveARecordType request = new RemoveARecordType();
+        request.setUserId(userId);
+        request.setName("rich.walrus.localhost.");
+        request.setZone("localhost.");
+        RemoveARecordResponseType reply = dnsControl.RemoveARecord(request);
+        System.out.println(reply);
+	}
 
-public class RemoveARecordResponseType extends DNSResponseType {
-  def RemoveARecordResponseType() {}
-}
-
-public class RemoveARecordType extends DNSRequestType {
-  String zone;
-  String name;
-
-  def RemoveARecordType() {}
-
-  def RemoveARecordType(String zone, String name) {
-      this.zone = zone;
-      this.name = name;
-  }
-}
-
-public class UpdateARecordResponseType extends DNSResponseType {
-  def UpdateARecordResponseType() {}
-}
-
-public class AddZoneType extends DNSRequestType {
-  String name;
-  def AddZoneType() {}
-  def AddZoneType(String name) {
-    this.name = name;
-  }
-}
-
-public class AddZoneResponseType extends DNSResponseType {
+    public void setUp() {
+        dnsControl = new DNSControl();
+    }
 }

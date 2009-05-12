@@ -47,8 +47,8 @@ public class DNSControlTest extends TestCase {
         String userId = "admin";
         UpdateARecordType request = new UpdateARecordType();
         request.setUserId(userId);
-        request.setAddress("127.0.0.1");
-        request.setName("hithere.walrus.localhost.");
+        request.setAddress("192.168.7.1");
+        request.setName("rich.walrus.localhost.");
         request.setTtl(604800);
         request.setZone("localhost.");
         UpdateARecordResponseType reply = dnsControl.UpdateARecord(request);

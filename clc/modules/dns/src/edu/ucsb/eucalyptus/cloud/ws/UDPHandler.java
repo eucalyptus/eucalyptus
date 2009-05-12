@@ -30,6 +30,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Neil Soman neil@eucalyptus.com
+ *
+ * Parts of this code are licensed under the BSD license and carry the following copyright,
+ * Copyright (c) 1999-2004 Brian Wellington (bwelling@xbill.org)
+ * @author Brian Wellington &lt;bwelling@xbill.org&gt;         
+ *
  */
 
 package edu.ucsb.eucalyptus.cloud.ws;
@@ -37,7 +42,6 @@ package edu.ucsb.eucalyptus.cloud.ws;
 import org.xbill.DNS.Message;
 import org.apache.log4j.Logger;
 
-import java.net.Socket;
 import java.net.DatagramSocket;
 import java.net.DatagramPacket;
 import java.io.InterruptedIOException;
@@ -53,9 +57,6 @@ public class UDPHandler extends ConnectionHandler {
     }
 
     public void run() {
-        //The following code is licensed under the BSD license and carries the following copyright,
-        // Copyright (c) 1999-2004 Brian Wellington (bwelling@xbill.org)
-        /** @author Brian Wellington &lt;bwelling@xbill.org&gt; */        
         try {
             final short udpLength = 512;
             byte [] in = new byte[udpLength];

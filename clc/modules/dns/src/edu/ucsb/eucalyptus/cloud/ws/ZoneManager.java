@@ -143,7 +143,7 @@ public class ZoneManager {
         }
     }
 
-    public static void updateRecord(String zoneName, Record record) {
+    public static void updateARecord(String zoneName, ARecord record) {
         try {
             Zone zone = getZone(zoneName);
             RRset rrSet = zone.findExactMatch(record.getName(), record.getDClass());
@@ -155,8 +155,36 @@ public class ZoneManager {
                 }
             }
             zone.addRecord(record);
+            //now change the persistent store
+            EntityWrapper<ARecordInfo> db = new EntityWrapper<ARecordInfo>();
+            ARecordInfo arecInfo = new ARecordInfo();
+            arecInfo.setZone(zoneName);
+            arecInfo.setName(record.getName().toString());
+            ARecordInfo foundARecInfo = db.getUnique(arecInfo);
+            foundARecInfo.setName(record.getName().toString());
+            foundARecInfo.setAddress(record.getAddress().toString());
+            foundARecInfo.setRecordclass(record.getDClass());
+            foundARecInfo.setTtl(record.getTTL());
+            db.commit();
         } catch(Exception ex) {
             LOG.error(ex);
         }
     }
+
+    public static void deleteARecord(String zoneName, ARecord record) {
+        try {
+            Zone zone = getZone(zoneName);
+            RRset rrSet = zone.findExactMatch(record.getName(), record.getDClass());
+            Iterator<Record> rrIterator = rrSet.rrs();
+            while(rrIterator.hasNext()) {
+                Record rec = rrIterator.next();
+                if(rec.getName().equals(record.getName())) {
+                    zone.removeRecord(rec);
+                }
+            }
+        } catch(Exception ex) {
+            LOG.error(ex);
+        }
+    }
+
 }
