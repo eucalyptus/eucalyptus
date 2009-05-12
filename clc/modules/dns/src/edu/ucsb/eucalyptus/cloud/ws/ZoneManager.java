@@ -1,7 +1,7 @@
 /*
  * Software License Agreement (BSD License)
  *
- * Copyright (c) 2008, Regents of the University of California
+ * Copyright (c) 2009, Eucalyptus Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use of this software in source and binary forms, with or
@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman neil@eucalyptus.com
  */
 
 package edu.ucsb.eucalyptus.cloud.ws;
@@ -101,9 +101,9 @@ public class ZoneManager {
                 long retry = 86400;
                 long expires = 2419200;
                 long minimum = 604800;
-                Record soarec = new SOARecord(name, DClass.IN, soaTTL, Name.root, Name.root, serial, refresh, retry, expires, minimum);
-                long nsTTL = 0;
-                Record nsrec = new NSRecord(name, DClass.IN, nsTTL, Name.root);
+                Record soarec = new SOARecord(name, DClass.IN, soaTTL, name, Name.fromString("root." + nameString), serial, refresh, retry, expires, minimum);
+                long nsTTL = soaTTL;
+                Record nsrec = new NSRecord(name, DClass.IN, nsTTL, name);
                 zone =  zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec, record}));
                 if(zone == null) {
                     zone = zones.get(name);

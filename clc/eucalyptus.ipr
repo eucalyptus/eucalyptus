@@ -10,7 +10,6 @@
       <maximumStackSize value="32" />
       <properties />
       <executeOn event="beforeRun" target="install" />
-      <executeOn event="beforeRun" target="install" runConfigurationType="Application" runConfigurationName="Main" />
       <executeOn event="beforeRun" target="install" runConfigurationType="JUnit" runConfigurationName="DNSControlTest" />
     </buildFile>
   </component>
@@ -34,6 +33,15 @@
           <option name="LABEL_INDENT_ABSOLUTE" value="false" />
         </ADDITIONAL_INDENT_OPTIONS>
         <ADDITIONAL_INDENT_OPTIONS fileType="java">
+          <option name="INDENT_SIZE" value="4" />
+          <option name="CONTINUATION_INDENT_SIZE" value="8" />
+          <option name="TAB_SIZE" value="4" />
+          <option name="USE_TAB_CHARACTER" value="false" />
+          <option name="SMART_TABS" value="false" />
+          <option name="LABEL_INDENT_SIZE" value="0" />
+          <option name="LABEL_INDENT_ABSOLUTE" value="false" />
+        </ADDITIONAL_INDENT_OPTIONS>
+        <ADDITIONAL_INDENT_OPTIONS fileType="jsp">
           <option name="INDENT_SIZE" value="4" />
           <option name="CONTINUATION_INDENT_SIZE" value="8" />
           <option name="TAB_SIZE" value="4" />
@@ -359,7 +367,7 @@
   </component>
   <component name="ProjectFileVersion" converted="true" />
   <component name="ProjectKey">
-    <option name="state" value="project:///home/neil/eucalyptus/src/eucalyptus-main-dns/clc/eucalyptus.ipr" />
+    <option name="state" value="project:///disk1/eucalyptus/src/eucalyptus-main-dns/clc/eucalyptus.ipr" />
   </component>
   <component name="ProjectModuleManager">
     <modules>
@@ -394,7 +402,7 @@
       <option name="MAIN_CLASS_NAME" value="edu.ucsb.eucalyptus.cloud.ws.tests.DNSControlTest" />
       <option name="METHOD_NAME" value="" />
       <option name="TEST_OBJECT" value="class" />
-      <option name="VM_PARAMETERS" value="-server -Xbootclasspath/p:/home/neil/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus/eucalyptus-crypto.jar:/home/neil/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus/eucalyptus-workarounds.jar -Xmx64m -Xms64m -XX:+UseConcMarkSweepGC -Djava.security.policy=/home/neil/eucalyptus/build/eucalyptus-main-dns/etc/eucalyptus/cloud.d/security.policy -Deuca.home.0=/home/neil/eucalyptus/build/eucalyptus-main-dns -Deuca.home=/home/neil/eucalyptus/build/eucalyptus-main-dns -Deuca.var.dir=/home/neil/eucalyptus/build/eucalyptus-main-dns/var/eucalyptus -Deuca.lib.dir=/home/neil/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus -Deuca.conf.dir=/home/neil/eucalyptus/build/eucalyptus-main-dns/etc/eucalyptus/cloud.d -Deuca.log.dir=/home/neil/eucalyptus/build/eucalyptus-main-dns/var/log/eucalyptus -Deuca.template.dir=/home/neil/eucalyptus/build/eucalyptus-main-dns/var/eucalyptus -Deuca.version=1.0 -Djava.library.path=/home/neil/eucalyptus/build/eucalyptus-main-dns/usr/lib" />
+      <option name="VM_PARAMETERS" value="-server -Xbootclasspath/p:/disk1/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus/eucalyptus-crypto.jar:/disk1/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus/eucalyptus-workarounds.jar -Xmx64m -Xms64m -XX:+UseConcMarkSweepGC -Djava.security.policy=/disk1/eucalyptus/build/eucalyptus-main-dns/etc/eucalyptus/cloud.d/security.policy -Deuca.home.0=/disk1/eucalyptus/build/eucalyptus-main-dns -Deuca.home=/disk1/eucalyptus/build/eucalyptus-main-dns -Deuca.var.dir=/disk1/eucalyptus/build/eucalyptus-main-dns/var/eucalyptus -Deuca.lib.dir=/disk1/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus -Deuca.conf.dir=/disk1/eucalyptus/build/eucalyptus-main-dns/etc/eucalyptus/cloud.d -Deuca.log.dir=/disk1/eucalyptus/build/eucalyptus-main-dns/var/log/eucalyptus -Deuca.template.dir=/disk1/eucalyptus/build/eucalyptus-main-dns/var/eucalyptus -Deuca.version=1.0 -Djava.library.path=/disk1/eucalyptus/build/eucalyptus-main-dns/usr/lib" />
       <option name="PARAMETERS" value="" />
       <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
       <option name="ENV_VARIABLES" />
@@ -592,15 +600,15 @@
   <component name="libraryTable">
     <library name="eucalyptus-deps">
       <CLASSES>
-        <root url="file:///home/neil/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus" />
-        <root url="file:///home/neil/eucalyptus/build/eucalyptus-main-dns/etc/eucalyptus/cloud.d" />
+        <root url="file:///disk1/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus" />
+        <root url="file:///disk1/eucalyptus/build/eucalyptus-main-dns/etc/eucalyptus/cloud.d" />
       </CLASSES>
       <JAVADOC />
       <SOURCES>
         <root url="file://$PROJECT_DIR$/modules/storage-manager/src" />
       </SOURCES>
-      <jarDirectory url="file:///home/neil/eucalyptus/build/eucalyptus-main-dns/etc/eucalyptus/cloud.d" recursive="false" />
-      <jarDirectory url="file:///home/neil/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus" recursive="false" />
+      <jarDirectory url="file:///disk1/eucalyptus/build/eucalyptus-main-dns/etc/eucalyptus/cloud.d" recursive="false" />
+      <jarDirectory url="file:///disk1/eucalyptus/build/eucalyptus-main-dns/usr/share/eucalyptus" recursive="false" />
     </library>
   </component>
 </project>

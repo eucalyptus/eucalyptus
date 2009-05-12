@@ -2,7 +2,7 @@ package edu.ucsb.eucalyptus.msgs
 /*
  * Software License Agreement (BSD License)
  *
- * Copyright (c) 2008, Regents of the University of California
+ * Copyright (c) 2009, Eucalyptus Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use of this software in source and binary forms, with or
@@ -30,7 +30,7 @@ package edu.ucsb.eucalyptus.msgs
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman neil@eucalyptus.com
  */
 public class DNSResponseType extends EucalyptusMessage {
   def DNSResponseType() {}
