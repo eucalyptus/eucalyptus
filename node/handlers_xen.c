@@ -1158,10 +1158,10 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 	      if (fd > 0) {
 		write(fd, xml, strlen(xml));
 		close(fd);
-		unlink(tmpfile);
 		snprintf(cmd, 1024, "%s detach-device %s %s",virsh_command_path, instanceId, tmpfile);
 		logprintfl(EUCADEBUG, "Running command: %s\n", cmd);
 		err = WEXITSTATUS(system(cmd));
+		unlink(tmpfile);
 		if (err) {
 		  logprintfl(EUCADEBUG, "first workaround command failed (%d), trying second workaround...\n", err);
 		  snprintf(cmd, 1024, "%s block-detach %s %s", xm_command_path, instanceId, localDevReal);
