@@ -208,6 +208,21 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createEmp
 	return returnValue;
 }
 
+JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createAbsoluteEmptyFile
+(JNIEnv *env, jobject obj, jstring fileName, jlong size) {
+	char command[256];
+	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
+    fprintf(stderr, "hello\n");
+
+    size = size / (1024 * 1024);
+	snprintf(command, 256, "dd if=/dev/zero of=%s count=%ld bs=%s", filename, size, blockSize);
+
+	jstring returnValue = run_command(env, command, 2);
+
+	(*env)->ReleaseStringUTFChars(env, fileName, filename);
+	return returnValue;
+}
+
 JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createPhysicalVolume
 (JNIEnv *env, jobject obj, jstring loDevName) {
 	const jbyte* dev_name = (*env)->GetStringUTFChars(env, loDevName, NULL);
