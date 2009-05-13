@@ -6,7 +6,10 @@
         <setting name="validation-enabled" value="true" />
         <setting name="provider-name" value="" />
         <setting name="targe-facet" value="" />
-        <datasource-mapping />
+        <datasource-mapping>
+          <factory-entry name="eucalyptus" />
+          <factory-entry name="eucalyptus_volumes" />
+        </datasource-mapping>
         <deploymentDescriptor name="persistence.xml" url="file://$MODULE_DIR$/resources/META-INF/persistence.xml" optional="false" version="1.0" />
       </configuration>
     </facet>

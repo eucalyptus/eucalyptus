@@ -173,7 +173,7 @@ public class DNSControl {
         try {
             ARecordInfo foundARecordInfo = db.getUnique(aRecordInfo);
             ARecord arecord = new ARecord(Name.fromString(name), DClass.IN, foundARecordInfo.getTtl(), Address.getByAddress(foundARecordInfo.getAddress()));
-            ZoneManager.deleteARecord(zone, arecord);
+            ZoneManager.deleteRecord(zone, arecord);
             db.delete(foundARecordInfo);
             db.commit();
 
@@ -190,6 +190,80 @@ public class DNSControl {
             throw new AccessDeniedException(name);
         }
 
+        return reply;
+    }
+
+    public UpdateCNAMERecordResponseType UpdateCNAMERecord(UpdateCNAMERecordType request)  throws EucalyptusCloudException {
+        UpdateCNAMERecordResponseType reply = (UpdateCNAMERecordResponseType) request.getReply();
+        String zone = request.getZone();
+        String name = request.getName();
+        String alias = request.getAlias();
+        long ttl = request.getTtl();
+        /*if(!request.isAdministrator()) {
+            throw new AccessDeniedException(name);
+        } */
+        EntityWrapper<CNAMERecordInfo> db = new EntityWrapper<CNAMERecordInfo>();
+        CNAMERecordInfo cnameRecordInfo = new CNAMERecordInfo();
+        cnameRecordInfo.setName(name);
+        List<CNAMERecordInfo> cnamerecords = db.query(cnameRecordInfo);
+        if(cnamerecords.size() > 0) {
+            cnameRecordInfo = cnamerecords.get(0);
+            if(!zone.equals(cnameRecordInfo.getZone())) {
+                db.rollback();
+                throw new EucalyptusCloudException("Sorry, record already associated with a zone. Remove the record and try again.");
+            }
+            cnameRecordInfo.setAlias(alias);
+            cnameRecordInfo.setTtl(ttl);
+            //update record
+            try {
+                CNAMERecord cnameRecord = new CNAMERecord(Name.fromString(name), DClass.IN, ttl, Name.fromString(alias));
+                ZoneManager.updateCNAMERecord(zone, cnameRecord);
+            } catch(Exception ex) {
+                LOG.error(ex);
+            }
+        }  else {
+            try {
+                CNAMERecordInfo searchCNAMERecInfo = new CNAMERecordInfo();
+                searchCNAMERecInfo.setZone(zone);
+                CNAMERecord record = new CNAMERecord(new Name(name), DClass.IN, ttl, Name.fromString(alias));
+                ZoneManager.addRecord(zone, record);
+                cnameRecordInfo = new CNAMERecordInfo();
+                cnameRecordInfo.setName(name);
+                cnameRecordInfo.setAlias(alias);
+                cnameRecordInfo.setTtl(ttl);
+                cnameRecordInfo.setZone(zone);
+                cnameRecordInfo.setRecordclass(DClass.IN);
+                db.add(cnameRecordInfo);
+            } catch(Exception ex) {
+                LOG.error(ex);
+            }
+        }
+        db.commit();
+
+        return reply;
+    }
+
+    public RemoveCNAMERecordResponseType RemoveCNAMERecord(RemoveCNAMERecordType request) throws EucalyptusCloudException {
+        RemoveCNAMERecordResponseType reply = (RemoveCNAMERecordResponseType) request.getReply();
+        String zone = request.getZone();
+        String name = request.getName();
+        /*if(!request.isAdministrator()) {
+            throw new AccessDeniedException(name);
+        } */
+        EntityWrapper<CNAMERecordInfo> db = new EntityWrapper<CNAMERecordInfo>();
+        CNAMERecordInfo cnameRecordInfo = new CNAMERecordInfo();
+        cnameRecordInfo.setName(name);
+        cnameRecordInfo.setZone(zone);
+        try {
+            CNAMERecordInfo foundCNAMERecordInfo = db.getUnique(cnameRecordInfo);
+            CNAMERecord cnameRecord = new CNAMERecord(Name.fromString(name), DClass.IN, foundCNAMERecordInfo.getTtl(), Name.fromString(foundCNAMERecordInfo.getAlias()));
+            ZoneManager.deleteRecord(zone, cnameRecord);
+            db.delete(foundCNAMERecordInfo);
+            db.commit();
+
+        } catch(Exception ex) {
+            LOG.error(ex);
+        }
         return reply;
     }
 }

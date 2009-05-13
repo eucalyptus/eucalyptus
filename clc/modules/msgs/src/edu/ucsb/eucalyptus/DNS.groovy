@@ -57,8 +57,8 @@ public class UpdateARecordType extends DNSRequestType {
   }
 }
 
-public class RemoveARecordResponseType extends DNSResponseType {
-  def RemoveARecordResponseType() {}
+public class UpdateARecordResponseType extends DNSResponseType {
+  def UpdateARecordResponseType() {}
 }
 
 public class RemoveARecordType extends DNSRequestType {
@@ -73,8 +73,44 @@ public class RemoveARecordType extends DNSRequestType {
   }
 }
 
-public class UpdateARecordResponseType extends DNSResponseType {
-  def UpdateARecordResponseType() {}
+public class RemoveARecordResponseType extends DNSResponseType {
+  def RemoveARecordResponseType() {}
+}
+
+public class UpdateCNAMERecordType extends DNSRequestType {
+  String zone;
+  String name;
+  String alias;
+  long ttl;
+
+  def UpdateCNAMERecordType() {}
+
+  def UpdateCNAMERecordType(String zone, String name, String alias, long ttl) {
+      this.zone = zone;
+      this.name = name;
+      this.alias = alias;
+      this.ttl = ttl;
+  }
+}
+
+public class UpdateCNAMERecordResponseType extends DNSResponseType {
+  def UpdateCNAMERecordResponseType() {}
+}
+
+public class RemoveCNAMERecordType extends DNSRequestType {
+  String zone;
+  String name;
+
+  def RemoveCNAMERecordType() {}
+
+  def RemoveCNAMERecordType(String zone, String name) {
+      this.zone = zone;
+      this.name = name;
+  }
+}
+
+public class RemoveCNAMERecordResponseType extends DNSResponseType {
+  def RemoveCNAMERecordResponseType() {}
 }
 
 public class AddZoneType extends DNSRequestType {

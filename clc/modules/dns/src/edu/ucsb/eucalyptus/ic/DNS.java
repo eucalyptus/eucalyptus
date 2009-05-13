@@ -47,7 +47,8 @@ public class DNS {
 	private static Logger LOG = Logger.getLogger( DNS.class );
 
     @OverloadedWebserviceMethod( actions = {
-			"UpdateARecord", "RemoveARecord", "AddZone"} )
+			"UpdateARecord", "RemoveARecord", "AddZone",
+            "UpdateCNAMERecord", "RemoveCNAMERecord"} )
 
 	public EucalyptusMessage handle( EucalyptusMessage msg )
 	{

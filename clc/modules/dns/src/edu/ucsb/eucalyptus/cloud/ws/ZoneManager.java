@@ -171,7 +171,36 @@ public class ZoneManager {
         }
     }
 
-    public static void deleteARecord(String zoneName, ARecord record) {
+    
+    public static void updateCNAMERecord(String zoneName, CNAMERecord record) {
+        try {
+            Zone zone = getZone(zoneName);
+            RRset rrSet = zone.findExactMatch(record.getName(), record.getDClass());
+            Iterator<Record> rrIterator = rrSet.rrs();
+            while(rrIterator.hasNext()) {
+                Record rec = rrIterator.next();
+                if(rec.getName().equals(record.getName())) {
+                    zone.removeRecord(rec);
+                }
+            }
+            zone.addRecord(record);
+            //now change the persistent store
+            EntityWrapper<CNAMERecordInfo> db = new EntityWrapper<CNAMERecordInfo>();
+            CNAMERecordInfo cnameRecordInfo = new CNAMERecordInfo();
+            cnameRecordInfo.setZone(zoneName);
+            cnameRecordInfo.setName(record.getName().toString());
+            CNAMERecordInfo foundCNAMERecInfo = db.getUnique(cnameRecordInfo);
+            foundCNAMERecInfo.setName(record.getName().toString());
+            foundCNAMERecInfo.setAlias(record.getAlias().toString());
+            foundCNAMERecInfo.setRecordclass(record.getDClass());
+            foundCNAMERecInfo.setTtl(record.getTTL());
+            db.commit();
+        } catch(Exception ex) {
+            LOG.error(ex);
+        }
+    }
+
+    public static void deleteRecord(String zoneName, Record record) {
         try {
             Zone zone = getZone(zoneName);
             RRset rrSet = zone.findExactMatch(record.getName(), record.getDClass());
