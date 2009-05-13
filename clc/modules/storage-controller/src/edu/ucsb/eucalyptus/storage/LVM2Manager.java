@@ -711,9 +711,10 @@ public class LVM2Manager implements BlockStorageManager {
 
             String snapRawFileName = StorageProperties.storageRootDirectory + "/" + snapshotId;
             String snapLoDevName = createLoopback(snapRawFileName, size);
-            duplicateLogicalVolume(absoluteLVName, snapLoDevName);
-
             String absoluteSnapLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+
+            duplicateLogicalVolume(absoluteSnapLVName, snapLoDevName);
+
 
             String returnValue = removeLogicalVolume(absoluteSnapLVName);
             if(returnValue.length() == 0) {
