@@ -216,4 +216,8 @@ public class ZoneManager {
         }
     }
 
+    public static void deleteZone(String zoneName) {
+        zones.remove(zoneName);
+    }
+
 }
