@@ -200,6 +200,7 @@ public class Bukkit {
         String userId = request.getUserId();
 
         String bucketName = request.getBucket();
+        String locationConstraint = request.getLocationConstraint();
 
         if(userId == null) {
             throw new AccessDeniedException(bucketName);
@@ -210,49 +211,15 @@ public class Bukkit {
             accessControlList = new AccessControlListType();
         }
 
-        EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+        makeBucket(userId, bucketName, locationConstraint, accessControlList, request.isAdministrator());
 
-        if(shouldEnforceUsageLimits && !request.isAdministrator()) {
-            BucketInfo searchBucket = new BucketInfo();
-            searchBucket.setOwnerId(userId);
-            List<BucketInfo> bucketList = db.query(searchBucket);
-            if(bucketList.size() >= WalrusProperties.MAX_BUCKETS_PER_USER) {
-                db.rollback();
-                throw new TooManyBucketsException(bucketName);
-            }
+        //call the storage manager to save the bucket to disk
+        try {
+            storageManager.createBucket(bucketName);
+        } catch (IOException ex) {
+            LOG.error(ex);
+            throw new EucalyptusCloudException(bucketName);
         }
-
-        BucketInfo bucketInfo = new BucketInfo(bucketName);
-        List<BucketInfo> bucketList = db.query(bucketInfo);
-
-        if(bucketList.size() > 0) {
-            if(bucketList.get(0).getOwnerId().equals(userId)) {
-                //bucket already exists and you created it
-                db.rollback();
-                throw new BucketAlreadyOwnedByYouException(bucketName);
-            }
-            //bucket already exists
-            db.rollback();
-            throw new BucketAlreadyExistsException(bucketName);
-        }   else {
-            //create bucket and set its acl
-            BucketInfo bucket = new BucketInfo(userId, bucketName, new Date());
-            ArrayList<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-            bucket.addGrants(userId, grantInfos, accessControlList);
-            bucket.setGrants(grantInfos);
-            bucket.setBucketSize(0L);
-
-            //call the storage manager to save the bucket to disk
-            try {
-                storageManager.createBucket(bucketName);
-                db.add(bucket);
-            } catch (IOException ex) {
-                LOG.error(ex);
-                db.rollback();
-                throw new EucalyptusCloudException(bucketName);
-            }
-        }
-        db.commit();
 
         reply.setBucket(bucketName);
         return reply;
@@ -2977,4 +2944,55 @@ public class Bukkit {
 
         return reply;
     }
+
+    private void makeBucket(String userId, String bucketName, String locationConstraint, AccessControlListType accessControlList, boolean isAdministrator) throws EucalyptusCloudException {
+        if(userId == null) {
+            throw new AccessDeniedException(bucketName);
+        }
+
+        if (accessControlList == null) {
+            accessControlList = new AccessControlListType();
+        }
+
+        EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+
+        if(shouldEnforceUsageLimits && !isAdministrator) {
+            BucketInfo searchBucket = new BucketInfo();
+            searchBucket.setOwnerId(userId);
+            List<BucketInfo> bucketList = db.query(searchBucket);
+            if(bucketList.size() >= WalrusProperties.MAX_BUCKETS_PER_USER) {
+                db.rollback();
+                throw new TooManyBucketsException(bucketName);
+            }
+        }
+
+        BucketInfo bucketInfo = new BucketInfo(bucketName);
+        List<BucketInfo> bucketList = db.query(bucketInfo);
+
+        if(bucketList.size() > 0) {
+            if(bucketList.get(0).getOwnerId().equals(userId)) {
+                //bucket already exists and you created it
+                db.rollback();
+                throw new BucketAlreadyOwnedByYouException(bucketName);
+            }
+            //bucket already exists
+            db.rollback();
+            throw new BucketAlreadyExistsException(bucketName);
+        }   else {
+            //create bucket and set its acl
+            BucketInfo bucket = new BucketInfo(userId, bucketName, new Date());
+            ArrayList<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+            bucket.addGrants(userId, grantInfos, accessControlList);
+            bucket.setGrants(grantInfos);
+            bucket.setBucketSize(0L);
+            if(locationConstraint != null)
+                bucket.setLocation(locationConstraint);
+            else
+                bucket.setLocation("US");
+
+            db.add(bucket);
+        }
+        db.commit();
+    }
+
 }

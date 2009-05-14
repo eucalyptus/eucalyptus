@@ -1,0 +1,67 @@
+<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0"
+      xmlns:euca="http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0"
+      xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
+       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
+       http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0 http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0/euca.xsd">
+
+    <model name="dns">
+
+        <default-service-exception-strategy>
+            <outbound-endpoint ref="DNSReplyQueueWS"/>
+        </default-service-exception-strategy>
+
+        <service name="DNS">
+            <inbound>
+                <inbound-endpoint ref="DNSWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.ic.DNS"/>
+        </service>
+
+        <service name="DNSRequestQueue">
+            <inbound>
+                <vm:inbound-endpoint address="vm://DNSRequestQueue"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.ic.DNSRequestQueue"/>
+            <outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="DNSControlWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.DNSRequestType"/>
+                </filtering-router>
+            </outbound>
+        </service>
+
+        <service name="DNSControl">
+            <inbound>
+                <inbound-endpoint ref="DNSControlWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.DNSControl"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="DNSReplyQueueWS"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
+        <service name="DNSReplyQueue">
+            <inbound>
+                <inbound-endpoint ref="DNSReplyQueueWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.ic.DNSReplyQueue"/>
+        </service>
+
+    </model>
+    <model name="DNSInternal">
+        <service name="DNSControlInternal">
+            <inbound>
+                <inbound-endpoint ref="DNSControlInternalWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.DNSControl"/>
+        </service>        
+    </model>
+
+</mule>

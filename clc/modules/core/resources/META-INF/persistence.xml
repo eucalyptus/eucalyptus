@@ -67,7 +67,12 @@
         <class>edu.ucsb.eucalyptus.cloud.entities.Address</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.ProductCode</class>
-        <properties>
+	<class>edu.ucsb.eucalyptus.cloud.entities.ZoneInfo</class>
+ 	<class>edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo</class>
+ 	<class>edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo</class>
+ 	<class>edu.ucsb.eucalyptus.cloud.entities.ARecordInfo</class>
+ 	<class>edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo</class>
+     <properties>
             <property name="hibernate.connection.provider_class" value="org.hibernate.connection.C3P0ConnectionProvider"/>
             <property name="hibernate.cache.provider_class" value="org.hibernate.cache.EhCacheProvider"/>
             <property name="hibernate.cache.use_query_cache" value="true"/>

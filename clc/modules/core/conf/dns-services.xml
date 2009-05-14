@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?><!--
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
   ~ Software License Agreement (BSD License)
   ~
   ~ Copyright (c) 2008, Regents of the University of California
@@ -29,7 +30,7 @@
   ~ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   ~ POSSIBILITY OF SUCH DAMAGE.
   ~
-  ~ Author: Chris Grzegorczyk grze@cs.ucsb.edu
+ * Author: Sunil Soman sunils@cs.ucsb.edu
   -->
 
 <mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
@@ -43,34 +44,17 @@
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0 http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0/euca.xsd">
 
-    <euca:connector name="axis2" default-conf="${euca.conf.dir}/axis2.xml" default-wssec-policy="${euca.conf.dir}/policy.xml"/>
+    <euca:endpoint name="DNSWS"
+                   connector-ref="axis2"
+                   address="http://127.0.0.1:8773/services/DNS"
+                   wssec-policy="${euca.conf.dir}/policy.xml"
+                   wssec-flow="IN_ONLY"
+                   authenticator-class="edu.ucsb.eucalyptus.transport.auth.UserAuthentication"
+                   http-query-support="true"
+                   mep="IN_OUT"/>
 
-    <!--===========  This enables eucalyptus ===========-->
-    <spring:beans>
-        <spring:import resource="classpath:eucalyptus-services.xml"/>
-        <spring:import resource="classpath:eucalyptus-interface.xml"/>
-        <spring:import resource="classpath:eucalyptus-userdata.xml"/>
-        <spring:import resource="classpath:eucalyptus-verification.xml"/>
-        <spring:import resource="classpath:eucalyptus-runtime.xml"/>
-        <spring:import resource="classpath:eucalyptus-storage.xml"/>
-    </spring:beans>
+    <endpoint name="DNSControlWS" address="vm://DNSControl" synchronous="false"/>
+    <endpoint name="DNSControlInternalWS" address="vm://DNSControlInternal" synchronous="true"/>
+    <endpoint name="DNSReplyQueueWS" address="vm://DNSReplyQueue" synchronous="false"/>
 
-    <!--===========  This enables walrus ===========-->
-    <spring:beans>
-        <spring:import resource="classpath:walrus-services.xml"/>
-        <spring:import resource="classpath:walrus-model.xml"/>
-    </spring:beans>
-
-    <!--===========  This enables block storage ===========-->
-    <spring:beans>
-        <spring:import resource="classpath:storage-services.xml"/>
-        <spring:import resource="classpath:storage-model.xml"/>
-    </spring:beans>
-
-    <!--===========  This enables DNS ===========-->
-    <spring:beans>
-        <spring:import resource="classpath:dns-services.xml"/>
-        <spring:import resource="classpath:dns-model.xml"/>
-    </spring:beans>
 </mule>
-

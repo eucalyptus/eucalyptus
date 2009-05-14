@@ -80,10 +80,14 @@
     <target name="build-ebs-ws" depends="build-walrus-ws">
         <ant dir="modules/storage-controller" inheritall="false"/>
     </target>
+    <target name="build-dns-ws" depends="build-transport">
+        <ant dir="modules/dns" inheritall="false"/>
+    </target>
     <target name="build-eucalyptus" depends="build-core,build-www,build-eucalyptus-ws"/>
     <target name="build-walrus" depends="build-walrus-ws"/>
     <target name="build-ebs" depends="build-ebs-ws"/>
-    <target name="build" depends="deps,build-eucalyptus,build-walrus,build-ebs"/>
+    <target name="build-dns" depends="build-dns-ws"/>
+    <target name="build" depends="deps,build-eucalyptus,build-walrus,build-ebs,build-dns"/>
     <!--================================== clean targets ==================================-->
     <target name="clean-workarounds">
         <ant dir="modules/workarounds" inheritall="false" target="clean"/>
@@ -116,10 +120,14 @@
     <target name="clean-ebs-ws" depends="clean-transport">
         <ant dir="modules/storage-controller" inheritall="false" target="clean"/>
     </target>
-     <target name="clean-eucalyptus" depends="clean-core,clean-www,clean-eucalyptus-ws"/>
+    <target name="clean-dns-ws" depends="clean-transport">
+        <ant dir="modules/dns" inheritall="false" target="clean"/>
+    </target>
+    <target name="clean-eucalyptus" depends="clean-core,clean-www,clean-eucalyptus-ws"/>
     <target name="clean-walrus" depends="clean-walrus-ws"/>
     <target name="clean-ebs" depends="clean-ebs-ws"/>
-    <target name="clean" depends="clean-eucalyptus,clean-walrus,clean-ebs">
+    <target name="clean-dns" depends="clean-dns-ws"/>
+    <target name="clean" depends="clean-eucalyptus,clean-walrus,clean-ebs,clean-dns">
         <delete dir="${target.dir}"/>
     </target>
     <target name="distclean" depends="clean">
@@ -168,6 +176,7 @@
         <ant dir="modules/key-manager" inheritall="false" target="install"/>
         <ant dir="modules/storage-manager" inheritall="false" target="install"/>
         <ant dir="modules/storage-controller" inheritall="false" target="install"/>
+        <ant dir="modules/dns" inheritall="false" target="install"/>
     </target>
     <!--================================== unzipping target ==================================-->
     <target name="deps">

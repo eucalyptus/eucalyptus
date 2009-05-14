@@ -568,6 +568,14 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
         if(!walrusInternalOperation) {
             operationName = operationMap.get(operationKey);
         }
+
+        if("CreateBucket".equals(operationName)) {
+            InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
+            String locationConstraint = getLocationConstraint(in);
+            if(locationConstraint != null)
+                operationParams.put("LocationConstraint", locationConstraint);
+        }
+
         httpRequest.setBindingArguments(operationParams);
         messageContext.setProperty(WalrusProperties.WALRUS_OPERATION, operationName);
         return operationName;
@@ -702,6 +710,28 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
             throw new EucalyptusCloudException(ex.getMessage());
         }
         return accessControlPolicy;
+    }
+
+    private String getLocationConstraint(InputStream in) throws EucalyptusCloudException {
+        String locationConstraint = null;
+        try {
+            BufferedInputStream bufferedIn = new BufferedInputStream(in);
+            byte[] bytes = new byte[DATA_MESSAGE_SIZE];
+
+            int bytesRead;
+            String bucketConfiguration = "";
+            while ((bytesRead = bufferedIn.read(bytes)) > 0) {
+                bucketConfiguration += new String(bytes, 0, bytesRead);
+            }
+            if(bucketConfiguration.length() > 0) {
+                XMLParser xmlParser = new XMLParser(bucketConfiguration);
+                locationConstraint = xmlParser.getValue("/CreateBucketConfiguration/LocationConstraint");
+            }
+        } catch(Exception ex) {
+            LOG.warn(ex);
+            throw new EucalyptusCloudException(ex.getMessage());
+        }
+        return locationConstraint;
     }
 
     private AccessControlListType getAccessControlList(InputStream in) throws EucalyptusCloudException {

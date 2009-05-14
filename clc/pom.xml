@@ -19,6 +19,7 @@
         <module>modules/storage-controller</module>
         <module>modules/storage-manager/native</module>
         <module>modules/storage-controller/native</module>
+        <module>modules/dns</module>
         <module>modules/distribution</module>
     </modules>
     <developers>

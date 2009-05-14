@@ -224,6 +224,7 @@ public class ListAllMyBucketsList extends EucalyptusData {
 public class CreateBucketType extends WalrusRequestType {
   String bucket;
   AccessControlListType accessControlList;
+  String locationConstraint;
 
   //For unit testing
   public CreateBucketType() {
