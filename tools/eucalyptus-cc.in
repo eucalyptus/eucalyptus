@@ -45,7 +45,10 @@ NAME=eucalyptus-cc
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
-	EUCALYPTUS="@prefix@"
+       EUCALYPTUS="@prefix@"                                   
+       if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
+              EUCALYPTUS="/"                                   
+       fi   
 fi
 export EUCALYPTUS
 
@@ -86,7 +89,7 @@ do_start() {
 	mkdir -p $EUCALYPTUS/var/log/eucalyptus
 
 	# set up eucalyptus var locations to be owned by EUCA_USER
-	for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
+	for y in $EUCALYPTUS/var/lib/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
 		if [ $y != "/" -a -d $y ]; then
 			chown -R $EUCA_USER:$EUCA_USER $y
 		fi
@@ -136,26 +139,28 @@ do_start() {
 
 do_stop() {
 	# now kill the services
-	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid
-	if [ -s $pidfile ]; then
-		pid=`cat $pidfile 2> /dev/null`
-		kill $pid > /dev/null 2>&1 
-	else
-		return	
-	fi
-	timeout=5
-	while [ $timeout -ge 0 ]; do
-		if ps $pid > /dev/null 2>&1 ; then
-			sleep 1
-			timeout=$(($timeout - 1))
+	pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid"
+	for pidfile in $pidfiles ; do 
+		if [ -s $pidfile ]; then
+			pid=`cat $pidfile 2> /dev/null`
+			kill $pid > /dev/null 2>&1 
 		else
-			break
+			continue	
 		fi
+		timeout=5
+		while [ $timeout -gt 0 ]; do
+			if ps $pid > /dev/null 2>&1 ; then
+				sleep 1
+				timeout=$(($timeout - 1))
+			else
+				break
+			fi
+		done
+		if [ $timeout -eq 0 ]; then
+			kill -9 $pid > /dev/null 2>&1
+		fi
+		rm -f $pidfile
 	done
-	if [ $timeout -eq 0 ]; then
-		kill -9 $pid > /dev/null 2>&1
-	fi
-	rm -f $pidfile
 }
 
 # Read configuration variable file if it is present
@@ -230,13 +235,20 @@ for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 	done
 done
 
-# finally let's see if the basics tools are here
+# if we didn't find AXIS2C we'll pick the one we used at configuration
+# time
 if [ -z "$AXIS2C_HOME" ]; then
-	echo "Cannot find Eucalyptus webservices: missing AXIS2C_HOME?"
+	AXIS2C_HOME="@AXIS2C_HOME@"
+fi
+
+# finally let's check the path
+if [ ! -d "$AXIS2C_HOME" ]; then
+	echo "Cannot find AXIS2C_HOME?"
 	exit 1
 fi
 
 # set the library path correctly
+export AXIS2C_HOME
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$EUCALYPTUS/lib:$LD_LIBRARY_PATH"
 
 case "$1" in
@@ -249,7 +261,7 @@ case "$1" in
 		fi
 	fi
 	# start and stop are hard: we loose the CC state
-	rm -f /dev/shm/*eucalyptus*
+	rm -f /dev/shm/*eucalyptusCC*
 	do_start
 	case "$?" in
 	0|1) 
@@ -257,7 +269,7 @@ case "$1" in
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 0
 			else
-				echo "."
+				echo "done."
 			fi
 		fi
 		;;
@@ -282,10 +294,10 @@ case "$1" in
         fi
 	# start and stop are hard: we loose the CC state
 	do_stop
-	rm -f /dev/shm/*eucalyptus*
+	rm -f /dev/shm/*eucalyptusCC*
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_end_msg
+			log_end_msg 0
 		else
 			echo "done."
 		fi
@@ -304,7 +316,7 @@ case "$1" in
 	do_start
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_end_msg
+			log_end_msg 0
 		else
 			echo "done."
 		fi

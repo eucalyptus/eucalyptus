@@ -61,7 +61,7 @@ tab)
   - Fixed a couple of bugs: ' ' in username, spurious double additions
 - Revamped logging throughout, with five levels a la log4j
 - Cloud Controller:
-  - User, Cluster, and System keys are now stored in PKCS#12 keystores and have moved to var/eucalyptus/keys
+  - User, Cluster, and System keys are now stored in PKCS#12 keystores and have moved to var/lib/eucalyptus/keys
   - Configuration is handled entirely through the web interface
     - Clusters dynamically added/started/stopped
     - Webservices operations complete up to EC2 2008-05-05 (w/o EBS):

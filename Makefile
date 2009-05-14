@@ -41,13 +41,6 @@ help:
 	@echo 
 
 
-dep:
-	@echo Checking for dependencies...
-	@tools/make_dep.sh
-#	@echo Checking for Java dependencies...
-#	make -C cloud dep
-
-
 tags:
 	@echo making tags for emacs and vi
 	find cluster net node storage tools util -name "*.[chCH]" -print | ctags -L -
@@ -64,9 +57,10 @@ deploy: build
 install: deploy
 	@$(INSTALL) -d $(prefix)
 	@$(INSTALL) -d $(etcdir)/eucalyptus/cloud.d
+	@$(INSTALL) -m 0644 VERSION $(etcdir)/eucalyptus/eucalyptus-version
 	@$(INSTALL) -d $(etcdir)/init.d
 	@$(INSTALL) -d $(vardir)/run/eucalyptus/net
-	@$(INSTALL) -m 0700 -d $(vardir)/eucalyptus/keys
+	@$(INSTALL) -m 0700 -d $(vardir)/lib/eucalyptus/keys
 	@$(INSTALL) -d $(vardir)/log/eucalyptus
 	@$(INSTALL) -d $(datarootdir)/eucalyptus
 	@$(INSTALL) -d $(usrdir)/sbin

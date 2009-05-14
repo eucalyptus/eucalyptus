@@ -54,17 +54,17 @@
       </sp:SignedParts>
 
       <rampc:RampartConfig xmlns:rampc="http://ws.apache.org/rampart/c/policy">
-	<rampc:ReceiverCertificate>EUCALYPTUS_HOME/var/eucalyptus/keys/SERVER-CERT</rampc:ReceiverCertificate>
-	<rampc:Certificate>EUCALYPTUS_HOME/var/eucalyptus/keys/CLIENT-CERT</rampc:Certificate>
-	<rampc:PrivateKey>EUCALYPTUS_HOME/var/eucalyptus/keys/CLIENT-KEY</rampc:PrivateKey>
+	<rampc:ReceiverCertificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/SERVER-CERT</rampc:ReceiverCertificate>
+	<rampc:Certificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/CLIENT-CERT</rampc:Certificate>
+	<rampc:PrivateKey>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/CLIENT-KEY</rampc:PrivateKey>
 	<!-- <rampc:TimeToLive>14400</rampc:TimeToLive> -->
 	<!--
 	    <rampc:User>CLIENT-USERNAME</rampc:User>
 	    <rampc:PasswordType>Digest</rampc:PasswordType>
-	    <rampc:PasswordCallbackClass>EUCALYPTUS_HOME/var/eucalyptus/keys/libpwcb.so</rampc:PasswordCallbackClass>
-	    <rampc:ReceiverCertificate>EUCALYPTUS_HOME/var/eucalyptus/keys/SERVER-CERT</rampc:ReceiverCertificate>
-	    <rampc:Certificate>EUCALYPTUS_HOME/var/eucalyptus/keys/CLIENT-CERT</rampc:Certificate>
-	    <rampc:PrivateKey>EUCALYPTUS_HOME/var/eucalyptus/keys/CLIENT-KEY</rampc:PrivateKey>
+	    <rampc:PasswordCallbackClass>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/libpwcb.so</rampc:PasswordCallbackClass>
+	    <rampc:ReceiverCertificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/SERVER-CERT</rampc:ReceiverCertificate>
+	    <rampc:Certificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/CLIENT-CERT</rampc:Certificate>
+	    <rampc:PrivateKey>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/CLIENT-KEY</rampc:PrivateKey>
 	-->
       </rampc:RampartConfig>
     </wsp:All>

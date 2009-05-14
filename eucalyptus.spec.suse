@@ -6,6 +6,7 @@ License:       BSD
 Group:         Applications/System
 BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0
 Requires:      vlan, aoetools, vblade
+Conflicts:     eucalyptus-cloud < 1.5, eucalyptus-cc < 1.5, eucalyptus-nc < 1.5
 Vendor:        Mayhem lab
 #Icon:          someicon.xpm
 Source:        http://open.eucalyptus.com/downloads/eucalyptus-%{version}.tgz
@@ -22,7 +23,8 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= 1.5.1, java >= 1.6.0, ant, ant-nodeps, lvm2
+Requires:     eucalyptus >= 1.5.1, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
 Group:        Applications/System
 
 %description cloud
@@ -35,7 +37,8 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, iptables, bridge-utils, eucalyptus-gl, dhcp-server
+Requires:     eucalyptus >= 1.5.1, euca-httpd >= 1.5, euca-axis2c >= 1.5, iptables, bridge-utils, eucalyptus-gl >= 1.5, dhcp-server
+Conflicts:    eucalyptus < 1.5, eucalyptus-nc < 1.5
 Group:        Applications/System
 
 %description cc
@@ -48,7 +51,8 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.1, euca-httpd, euca-axis2c, bridge-utils, eucalyptus-gl, libvirt, libcurl4, xen, xen-tools
+Requires:     eucalyptus >= 1.5.1, euca-httpd >= 1.5, euca-axis2c >= 1.5, bridge-utils, eucalyptus-gl >= 1.5, libvirt, libcurl4, xen, xen-tools
+Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
 Group:        Applications/System
 
 %description nc
@@ -60,8 +64,9 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the node controller part of eucalyptus.
 
 %package gl
-Summary:      Elastic Utility Computing Architecture - log service 
-Requires:     eucalyptus, euca-httpd, euca-axis2c
+Summary:      Elastic Utility Computing Architecture - log service
+Requires:     eucalyptus >= 1.5, euca-httpd >= 1.5, euca-axis2c >= 1.5
+Conflicts:    eucalyptus < 1.5
 Group:        Applications/System
 
 %description gl
@@ -77,8 +82,9 @@ This package contains the internal log service of eucalyptus.
 
 %build
 # let's be sure we have the right configuration file
-if [ -f tools/eucalyptus.conf.suse ]; then
-        cp tools/eucalyptus.conf.suse tools/eucalyptus.conf
+if [ -f tools/eucalyptus.conf.suse ];
+then
+	cp -f tools/eucalyptus.conf.suse tools/eucalyptus.conf
 fi
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
 cd clc
@@ -98,7 +104,7 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 %files
 %config(noreplace) /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 %doc LICENSE INSTALL README CHANGELOG
-/opt/eucalyptus/var/eucalyptus/keys
+/opt/eucalyptus/var/lib/eucalyptus/keys
 /opt/eucalyptus/var/log
 /opt/eucalyptus/var/run
 /opt/eucalyptus/usr/share/eucalyptus/add_key.pl
@@ -109,15 +115,16 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/usr/sbin/euca_sync_key
 /opt/eucalyptus/usr/sbin/euca_killall
 /opt/eucalyptus/etc/eucalyptus/httpd.conf
+/opt/eucalyptus/etc/eucalyptus/eucalyptus-version
 
 %files cloud
-%config(noreplace) /opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
+%config /opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
 /opt/eucalyptus/etc/eucalyptus/cloud.d
 /opt/eucalyptus/etc/eucalyptus/cloud.xml
 /opt/eucalyptus/usr/share/eucalyptus/*jar
-/opt/eucalyptus/var/eucalyptus/db
-/opt/eucalyptus/var/eucalyptus/modules
-/opt/eucalyptus/var/eucalyptus/webapps
+/opt/eucalyptus/var/lib/eucalyptus/db
+/opt/eucalyptus/var/lib/eucalyptus/modules
+/opt/eucalyptus/var/lib/eucalyptus/webapps
 /opt/eucalyptus/usr/lib/libfsstorage.so
 /opt/eucalyptus/usr/lib/liblvm2control.so
 /opt/eucalyptus/etc/init.d/eucalyptus-cloud
@@ -145,33 +152,69 @@ if [ -x /etc/init.d/eucalyptus ];
 then
 	# stop the old services
 	/etc/init.d/eucalyptus stop || true
+	chkconfig --del eucalyptus || true
 fi
 if [ "$1" = "2" ]; 
 then
+	cd /opt/eucalyptus
+
 	# we upgrade only from 1.4
-	if [ ! -e /opt/eucalyptus/usr/share/eucalyptus/euca_ipt ]; then
+	if [ ! -e usr/share/eucalyptus/euca_ipt ];
+	then
 		echo "Cannot upgrade from version earlier than 1.4"
 		exit 2
 	fi
 
+	# save a copy of the old conf file
+	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.old
+
 	# let's try to save the old configuration
-	if [ -d /opt/eucalyptus/var/eucalyptus/db ]; 
+	if [ -e /root/eucalyptus-pre-%{version}-rollback.tar ];
 	then
-		if [ -d /opt/eucalyptus/var/eucalyptus/db ]; 
-		then
-			cd /opt/eucalyptus
-		fi
-		rm -f var/eucalyptus/db/eucalyptus.lck
-		tar cf /root/eucalyptus-pre%{version}-rollback.tar var/eucalyptus/db/eucalyptus.* var/eucalyptus/keys etc/eucalyptus/eucalyptus.conf etc/eucalyptus/cloud.d/*.bks
+		mv -f /root/eucalyptus-pre-%{version}-rollback.tar /root/eucalyptus-pre-%{version}-rollback.tar.old
+	fi
+
+	# let's save database and keys
+	rm -f var/eucalyptus/db/eucalyptus.lck
+	tar cf /root/eucalyptus-pre-%{version}-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
+fi
+
+%post
+# eucalyptus.conf was marked noreplace, so the new one could be named
+# *.rpmnew. Let's move it over (we did take a copy anyway)
+if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew ];
+then
+	cp -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+fi
+# let's be sure we point to right eucalyptus installation
+/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+if [ "$1" = "2" ];
+then
+	cd /opt/eucalyptus
+
+	# if we have an old config file we try to upgrade
+	if [ -e etc/eucalyptus/eucalyptus.conf.old ];
+	then
+		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.old /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+	fi
+	# and now let's move the keys into the new place
+	if [ -d var/eucalyptus/keys ];
+	then
+		mv -f var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
 	fi
 fi
 
-
-%post
-# let's be sure we point to right eucalyptus installation
-/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
-
 %post cloud
+# on upgrade let's look for 1.4 directories and move them
+if [ "$1" = "2" ]; 
+then
+	cd /opt/eucalyptus
+	if [ -d var/eucalyptus/db ];
+	then
+		mkdir -p var/lib/eucalyptus/db
+		cp -ar var/eucalyptus/db var/lib/eucalyptus
+	fi
+fi
 ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-cloud
 chkconfig --add eucalyptus-cloud
 
@@ -186,53 +229,52 @@ chkconfig --add eucalyptus-nc
 [ -n "$INSTANCE_PATH" ] && mkdir -p $INSTANCE_PATH
 
 %postun
-if [ "$1" = "0" ]; 
+# in case of removal let's try to clean up the best we can
+if [ "$1" = "0" ];
 then
-	rm -rf /opt/eucalyptus
+	rm -rf /opt/eucalyptus/var/log
+	rm -rf /opt/eucalyptus/usr
+	rm -rf /opt/eucalyptus/etc/eucalyptus/http*
+	rm -rf /opt/eucalyptus/etc/init.d
+	# for now we leave the keys, the database and the config file
 fi
 
 %preun cloud
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
-	if [ -x /etc/init.d/eucalyptus ]; 
-	then
-		/etc/init.d/eucalyptus stop || /bin/true
-	fi
+if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
+then
 	if [ -x /etc/init.d/eucalyptus-cloud ]; 
 	then
 		/etc/init.d/eucalyptus-cloud stop || /bin/true
 	fi
 fi
-if [ "$1" = "0" ]; then
+if [ "$1" = "0" ];
+then
 	chkconfig --del eucalyptus-cloud || true
 fi
 
 %preun cc
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
-	if [ -x /etc/init.d/eucalyptus ]; 
-	then
-		/etc/init.d/eucalyptus stop || /bin/true
-	fi
+if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
+then
 	if [ -x /etc/init.d/eucalyptus-cc ]; 
 	then
 		/etc/init.d/eucalyptus-cc stop || /bin/true
 	fi
 fi
-if [ "$1" = "0" ]; then
+if [ "$1" = "0" ];
+then
 	chkconfig --del eucalyptus-cc || true
 fi
 
 %preun nc
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ]; then
-	if [ -x /etc/init.d/eucalyptus ]; 
-	then
-		/etc/init.d/eucalyptus stop || /bin/true
-	fi
+if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
+then
 	if [ -x /etc/init.d/eucalyptus-nc ]; 
 	then
 		/etc/init.d/eucalyptus-nc stop || /bin/true
 	fi
 fi
-if [ "$1" = "0" ]; then
+if [ "$1" = "0" ];
+then
 	chkconfig --del eucalyptus-nc || true
 fi
 
@@ -263,7 +305,7 @@ fi
 - User-initiated password recovery mechanism
 - Fixed a couple of bugs: ' ' in username, spurious double additions
 - User, Cluster, and System keys are now stored in PKCS#12 keystores and
-  have moved to var/eucalyptus/keys
+  have moved to var/lib/eucalyptus/keys
 - Configuration is handled entirely through the web interface
 - Clusters dynamically added/started/stopped
 - Webservices operations complete up to EC2 2008-05-05 (w/o EBS):

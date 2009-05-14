@@ -32,9 +32,6 @@ rm -rf $RPM_BUILD_DIR/euca-httpd-%{version}
 %files
 /opt/euca-httpd
 
-%postun
-rm -rf /opt/euca-httpd
-
 %changelog
 
 *Mon Apr 13 2009 mayhem group (support@open.eucalyptus.com)

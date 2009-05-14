@@ -54,16 +54,16 @@
       </sp:SignedParts>
 
       <rampc:RampartConfig xmlns:rampc="http://ws.apache.org/rampart/c/policy">
-	<rampc:ReceiverCertificate>EUCALYPTUS_HOME/var/eucalyptus/keys/CLIENT-CERT</rampc:ReceiverCertificate>
-	<rampc:Certificate>EUCALYPTUS_HOME/var/eucalyptus/keys/SERVER-CERT</rampc:Certificate>
-	<rampc:PrivateKey>EUCALYPTUS_HOME/var/eucalyptus/keys/SERVER-KEY</rampc:PrivateKey>
+	<rampc:ReceiverCertificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/CLIENT-CERT</rampc:ReceiverCertificate>
+	<rampc:Certificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/SERVER-CERT</rampc:Certificate>
+	<rampc:PrivateKey>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/SERVER-KEY</rampc:PrivateKey>
 	<!-- <rampc:TimeToLive>14400</rampc:TimeToLive> -->
 	<!--
 	    <rampc:PasswordType>PlainText</rampc:PasswordType>
-	    <rampc:PasswordCallbackClass>/home/nurmi/eucalyptus/danroot//var/eucalyptus/keys/libpwcb.so</rampc:PasswordCallbackClass>
-	    <rampc:ReceiverCertificate>/home/nurmi/eucalyptus/danroot//var/eucalyptus/keys/cloud-cert.pem</rampc:ReceiverCertificate>
-	    <rampc:Certificate>/home/nurmi/eucalyptus/danroot//var/eucalyptus/keys/cluster-cert.pem</rampc:Certificate>
-	    <rampc:PrivateKey>/home/nurmi/eucalyptus/danroot//var/eucalyptus/keys/cluster-pk.pem</rampc:PrivateKey> 
+	    <rampc:PasswordCallbackClass>/home/nurmi/eucalyptus/danroot//var/lib/eucalyptus/keys/libpwcb.so</rampc:PasswordCallbackClass>
+	    <rampc:ReceiverCertificate>/home/nurmi/eucalyptus/danroot//var/lib/eucalyptus/keys/cloud-cert.pem</rampc:ReceiverCertificate>
+	    <rampc:Certificate>/home/nurmi/eucalyptus/danroot//var/lib/eucalyptus/keys/cluster-cert.pem</rampc:Certificate>
+	    <rampc:PrivateKey>/home/nurmi/eucalyptus/danroot//var/lib/eucalyptus/keys/cluster-pk.pem</rampc:PrivateKey> 
 	-->
       </rampc:RampartConfig>
     </wsp:All>

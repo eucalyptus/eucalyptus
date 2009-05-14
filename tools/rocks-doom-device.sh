@@ -114,7 +114,7 @@ fi
 mkdir -p $EUCA_DIR/etc/eucalyptus/cloud.d
 mkdir -p $EUCA_DIR/etc/init.d
 mkdir -p $EUCA_DIR/var/run/eucalyptus/net
-mkdir -p $EUCA_DIR/var/eucalyptus/keys/admin
+mkdir -p $EUCA_DIR/var/lib/eucalyptus/keys/admin
 mkdir -p $EUCA_DIR/var/log/eucalyptus
 mkdir -p $EUCA_DIR/usr/sbin
 mkdir -p $EUCA_DIR/usr/share/eucalyptus

@@ -47,9 +47,9 @@ axis2_char_t* AXIS2_CALL get_sample_password(rampart_callback_t *rcb, const axut
 
   euca_home = getenv("EUCALYPTUS");
   if (!euca_home) {
-    snprintf(pwFile, 1024, "/var/eucalyptus/keys/pw");
+    snprintf(pwFile, 1024, "/var/lib/eucalyptus/keys/pw");
   } else {
-    snprintf(pwFile, 1024, "%s/var/eucalyptus/keys/pw", euca_home);
+    snprintf(pwFile, 1024, "%s/var/lib/eucalyptus/keys/pw", euca_home);
   }
 
   if (0 == axutil_strcmp(username, "CLUSTER") || 0 == axutil_strcmp(username, "CLOUD") || 0 == axutil_strcmp(username, "eucalyptus")) {

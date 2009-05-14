@@ -80,7 +80,7 @@ public class EucalyptusProperties {
   public static String IMAGE_RAMDISK_PREFIX = "eri";
 
   public static String getDName( String name ) {
-    return String.format( "CN=eucalyptus.cs.ucsb.edu, OU=Eucalyptus, O=%s, L=UCSB, S=California, C=US", name );
+    return String.format( "CN=www.eucalyptus.com, OU=Eucalyptus, O=%s, L=Santa Barbara, ST=CA, C=US", name );
   }
 
   public static SystemConfiguration getSystemConfiguration() throws EucalyptusCloudException {

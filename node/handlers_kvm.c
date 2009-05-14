@@ -190,15 +190,15 @@ static void refresh_instance_info (ncInstance * instance)
         int rc;
 
         if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 32)) {
-	    logprintfl(EUCADEBUG, "no publicIp detected, trying to discover\n");
+	  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
             rc = discover_mac(vnetconfig, instance->ncnet.publicMac, &ip);
             if (!rc) {
-                logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
-                strncpy(instance->ncnet.publicIp, ip, 32);
+	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
+	      strncpy(instance->ncnet.publicIp, ip, 32);
             }
+	  }
         }
         if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 32)) {
-	    logprintfl(EUCADEBUG, "no privateIp detected, trying to discover\n");
             rc = discover_mac(vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
                 logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
@@ -717,8 +717,12 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
     strcpy (instance->ncnet.publicIp, "0.0.0.0");
 
     /* do the potentially long tasks in a thread */
+    pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
+    pthread_attr_init(attr);
+    pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
 
     if ( pthread_create (&(instance->tcb), NULL, kvm_startup_thread, (void *)instance) ) {
+        pthread_attr_destroy(attr);
         logprintfl (EUCAFATAL, "failed to spawn a VM startup thread\n");
         sem_p (inst_sem);
         remove_instance (&global_instances, instance);
@@ -726,7 +730,8 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
         free_instance (&instance);
         return 1;
     }
-    
+    pthread_attr_destroy(attr);
+
     * outInst = instance;
     return 0;
 

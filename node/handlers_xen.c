@@ -47,6 +47,9 @@ static int save_instance_files = 0;
 static char * admin_user_id = EUCALYPTUS_ADMIN;
 static char gen_libvirt_xml_command_path [BUFSIZE] = "";
 static char get_xen_info_command_path [BUFSIZE] = "";
+static char virsh_command_path [BUFSIZE] = "";
+static char xm_command_path [BUFSIZE] = "";
+
 
 #define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
 #define SWAP_SIZE 512 /* for now, the only possible swap size, in MBs */
@@ -200,11 +203,13 @@ static void refresh_instance_info (ncInstance * instance)
         int rc;
 
         if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 32)) {
+	  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
             rc = discover_mac(vnetconfig, instance->ncnet.publicMac, &ip);
             if (!rc) {
-                logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
-                strncpy(instance->ncnet.publicIp, ip, 32);
+	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
+	      strncpy(instance->ncnet.publicIp, ip, 32);
             }
+	  }
         }
         if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 32)) {
             rc = discover_mac(vnetconfig, instance->ncnet.privateMac, &ip);
@@ -379,6 +384,8 @@ static int doInitialize (void)
     /* set up paths of Eucalyptus commands NC relies on */
     snprintf (gen_libvirt_xml_command_path, BUFSIZE, EUCALYPTUS_GEN_LIBVIRT_XML, home, home);
     snprintf (get_xen_info_command_path,    BUFSIZE, EUCALYPTUS_GET_XEN_INFO,    home, home);
+    snprintf (virsh_command_path, BUFSIZE, EUCALYPTUS_VIRSH, home);
+    snprintf (xm_command_path, BUFSIZE, EUCALYPTUS_XM);
     
     /* open the connection to hypervisor */
     if (check_hypervisor_conn () == ERROR) {
@@ -729,8 +736,12 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
     strcpy (instance->ncnet.publicIp, "0.0.0.0");
 
     /* do the potentially long tasks in a thread */
-
-    if ( pthread_create (&(instance->tcb), NULL, startup_thread, (void *)instance) ) {
+    pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
+    pthread_attr_init(attr);
+    pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
+    
+    if ( pthread_create (&(instance->tcb), attr, startup_thread, (void *)instance) ) {
+        pthread_attr_destroy(attr);
         logprintfl (EUCAFATAL, "failed to spawn a VM startup thread\n");
         sem_p (inst_sem);
         remove_instance (&global_instances, instance);
@@ -738,7 +749,8 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
         free_instance (&instance);
         return 1;
     }
-    
+    pthread_attr_destroy(attr);
+
     * outInst = instance;
     return 0;
 
@@ -1129,14 +1141,39 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     } else {
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
         if (dom) {
-            int err = 0;
-            char xml [1024];
+            int err = 0, fd;
+            char xml [1024], tmpfile[32], cmd[1024];
+	    FILE *FH;
+	    
             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
-            err = virDomainDetachDevice (dom, xml);
+	    if (!getuid()) {
+	      err = virDomainDetachDevice (dom, xml);
+	    } else {
+	      /* virsh detach function does not work as non-root user on xen (bug). workaround is to shellout to virsh */
+	      snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
+	      fd = mkstemp(tmpfile);
+	      if (fd > 0) {
+		write(fd, xml, strlen(xml));
+		close(fd);
+		snprintf(cmd, 1024, "%s detach-device %s %s",virsh_command_path, instanceId, tmpfile);
+		logprintfl(EUCADEBUG, "Running command: %s\n", cmd);
+		err = WEXITSTATUS(system(cmd));
+		unlink(tmpfile);
+		if (err) {
+		  logprintfl(EUCADEBUG, "first workaround command failed (%d), trying second workaround...\n", err);
+		  snprintf(cmd, 1024, "%s block-detach %s %s", xm_command_path, instanceId, localDevReal);
+		  logprintfl(EUCADEBUG, "Running command: %s\n", cmd);
+		  err = WEXITSTATUS(system(cmd));
+		}
+	      } else {
+		err = 1;
+	      }
+	    }
             sem_v (xen_sem);
+
             if (err) {
                 logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
                 ret = ERROR;

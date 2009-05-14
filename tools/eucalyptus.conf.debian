@@ -149,7 +149,7 @@ VNET_DHCPDAEMON="/usr/sbin/dhcpd3"
 # user.  If this is the case, set the name of that user here (by
 # default, Eucalyptus will set up DHCPD configuration files and
 # directories as owned by root).
-#VNET_DHCPUSER="root"
+VNET_DHCPUSER="root"
 
 # Following are example eucalyptus VM networking configurations.
 # There are three modes to choose from (MANAGED, SYSTEM, or STATIC)

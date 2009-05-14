@@ -47,7 +47,10 @@ MODPROBE="`which modprobe 2> /dev/null`"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
-	EUCALYPTUS="@prefix@"
+       EUCALYPTUS="@prefix@"                                   
+       if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
+              EUCALYPTUS="/"                                   
+       fi   
 fi
 export EUCALYPTUS
 
@@ -87,7 +90,7 @@ do_start() {
 	mkdir -p $EUCALYPTUS/var/log/eucalyptus
 
 	# set up eucalyptus var locations to be owned by EUCA_USER
-	for y in $EUCALYPTUS/var/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
+	for y in $EUCALYPTUS/var/lib/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
 		if [ $y != "/" -a -d $y ]; then
 			chown -R $EUCA_USER:$EUCA_USER $y
 		fi
@@ -163,7 +166,7 @@ do_stop() {
 		return	
 	fi
 	timeout=5
-	while [ $timeout -ge 0 ]; do
+	while [ $timeout -gt 0 ]; do
 		if ps $pid > /dev/null 2>&1 ; then
 			sleep 1
 			timeout=$(($timeout - 1))
@@ -257,13 +260,20 @@ for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 	done
 done
 
-# finally let's see if the basics tools are here
+# if we didn't find AXIS2C we'll pick the one we used at configuration
+# time
 if [ -z "$AXIS2C_HOME" ]; then
-	echo "Cannot find Eucalyptus webservices: missing AXIS2C_HOME?"
+	AXIS2C_HOME="@AXIS2C_HOME@"
+fi
+
+# finally let's check the path
+if [ ! -d "$AXIS2C_HOME" ]; then
+	echo "Cannot find AXIS2C_HOME?"
 	exit 1
 fi
 
 # set the library path correctly
+export AXIS2C_HOME
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$EUCALYPTUS/lib:$LD_LIBRARY_PATH"
 
 case "$1" in
@@ -275,6 +285,7 @@ case "$1" in
 			echo -n "Starting $DESC: "
 		fi
 	fi
+	rm -f /dev/shm/sem.eucalyptus-nc* /dev/shm/sem.eucalyptus-st*
 	do_start
 	case "$?" in
 	0|1) 
@@ -282,7 +293,7 @@ case "$1" in
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 0
 			else
-				echo "."
+				echo "done."
 			fi
 		fi
 		;;
@@ -306,9 +317,10 @@ case "$1" in
                 fi
         fi
 	do_stop
+	rm -f /dev/shm/sem.eucalyptus-nc* /dev/shm/sem.eucalyptus-st*
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_end_msg
+			log_end_msg 0
 		else
 			echo "done."
 		fi
@@ -327,7 +339,7 @@ case "$1" in
 	do_start
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_end_msg
+			log_end_msg 0
 		else
 			echo "done."
 		fi

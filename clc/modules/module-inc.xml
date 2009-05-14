@@ -41,9 +41,9 @@
     </condition>
     <property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d"/>
     <property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus"/>
-    <property name="euca.var.dir" value="${euca.home}/var/eucalyptus"/>
+    <property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus"/>
     <property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus"/>
-    <property name="euca.template.dir" value="${euca.home}/var/eucalyptus"/>
+    <property name="euca.template.dir" value="${euca.home}/var/lib/eucalyptus"/>
     <propertyset id="euca-props">
         <propertyref prefix="euca"/>
     </propertyset>

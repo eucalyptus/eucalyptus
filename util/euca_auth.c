@@ -182,8 +182,8 @@ int euca_init_cert (void)
     if (!euca_home) {
         euca_home = root;
     }
-    snprintf (cert_file, FILENAME, "%s/var/eucalyptus/keys/node-cert.pem", euca_home);
-    snprintf (pk_file,   FILENAME, "%s/var/eucalyptus/keys/node-pk.pem", euca_home);
+    snprintf (cert_file, FILENAME, "%s/var/lib/eucalyptus/keys/node-cert.pem", euca_home);
+    snprintf (pk_file,   FILENAME, "%s/var/lib/eucalyptus/keys/node-pk.pem", euca_home);
 
 	#define ERR "Error: required file %s not found by euca_init_cert(). Is $EUCALYPTUS set?\n"
 	#define OK  "euca_init_cert(): using file %s\n"
