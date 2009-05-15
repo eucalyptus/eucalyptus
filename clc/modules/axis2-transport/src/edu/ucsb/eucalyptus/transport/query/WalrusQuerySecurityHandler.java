@@ -144,8 +144,11 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             throw new QuerySecurityException("User authentication failed.");
         } else {
             //external user request
-            String date =  (String) hdrs.remove( SecurityParameter.Date);
-            date = date == null ? "" : date;
+	    String date = (String) hdrs.remove("x-amz-date");
+	    if(date == null) {
+            	date =  (String) hdrs.remove( SecurityParameter.Date);
+            	date = date == null ? "" : date;
+	    }
             String content_md5 = (String) hdrs.remove ( "Content-MD5");
             content_md5 = content_md5 == null ? "" : content_md5;
             String content_type = (String) hdrs.remove ( "Content-Type");
