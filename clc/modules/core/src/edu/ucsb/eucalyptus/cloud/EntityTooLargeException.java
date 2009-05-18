@@ -43,7 +43,7 @@ public class EntityTooLargeException extends EucalyptusCloudException {
   }
   public EntityTooLargeException(String entity)
   {
-    super(entity);
+    super("Size too large: " + entity);
     entityName = entity;
   }
   public String getEntityName() {

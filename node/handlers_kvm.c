@@ -190,15 +190,15 @@ static void refresh_instance_info (ncInstance * instance)
         int rc;
 
         if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 32)) {
-	    logprintfl(EUCADEBUG, "no publicIp detected, trying to discover\n");
+	  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
             rc = discover_mac(vnetconfig, instance->ncnet.publicMac, &ip);
             if (!rc) {
-                logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
-                strncpy(instance->ncnet.publicIp, ip, 32);
+	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
+	      strncpy(instance->ncnet.publicIp, ip, 32);
             }
+	  }
         }
         if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 32)) {
-	    logprintfl(EUCADEBUG, "no privateIp detected, trying to discover\n");
             rc = discover_mac(vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
                 logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
@@ -717,8 +717,12 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
     strcpy (instance->ncnet.publicIp, "0.0.0.0");
 
     /* do the potentially long tasks in a thread */
+    pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
+    pthread_attr_init(attr);
+    pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
 
     if ( pthread_create (&(instance->tcb), NULL, kvm_startup_thread, (void *)instance) ) {
+        pthread_attr_destroy(attr);
         logprintfl (EUCAFATAL, "failed to spawn a VM startup thread\n");
         sem_p (inst_sem);
         remove_instance (&global_instances, instance);
@@ -726,7 +730,8 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
         free_instance (&instance);
         return 1;
     }
-    
+    pthread_attr_destroy(attr);
+
     * outInst = instance;
     return 0;
 
@@ -1021,7 +1026,6 @@ static int convert_dev_names (char *localDev, char *localDevReal, char *localDev
     char *strptr;
 
     bzero(localDevReal, 32);
-    bzero(localDevTag, 256);
     if ((strptr = strchr(localDev, '/')) != NULL) {
         sscanf(localDev, "/dev/%s", localDevReal);
     } else {
@@ -1031,7 +1035,10 @@ static int convert_dev_names (char *localDev, char *localDevReal, char *localDev
         logprintfl(EUCAERROR, "bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
         return(ERROR);
     }
-    snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+    if (localDevTag) {
+        bzero(localDevTag, 256);
+        snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+    }
 
     return 0;
 }
@@ -1089,6 +1096,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
     if (ret==OK) {
         ncVolume * volume;
+
         sem_p (inst_sem);
         volume = add_volume (instance, volumeId, remoteDev, localDevTag);
         scSaveInstanceInfo(instance); /* to enable NC recovery */
@@ -1105,8 +1113,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
     int ret = OK;
-    ncVolume * volume;
-    ncInstance *instance;
+    ncInstance * instance;
     char localDevReal[32], localDevTag[256];
 
     logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
@@ -1156,6 +1163,8 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     }
 
     if (ret==OK) {
+        ncVolume * volume;
+
         sem_p (inst_sem);
         volume = free_volume (instance, volumeId, remoteDev, localDevTag);
         scSaveInstanceInfo(instance); /* to enable NC recovery */

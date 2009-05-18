@@ -45,14 +45,17 @@
     <condition property="euca.ebs.disable">
         <isset property="DISABLE_EBS"/>
     </condition>
+    <condition property="euca.virtualhosting.disable">
+        <isset property="DISABLE_DYNAMIC_DNS"/>
+    </condition>
     <property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus"/>
-    <property name="euca.var.dir" value="${euca.home}/var/eucalyptus"/>
+    <property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus"/>
     <property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus"/>
     <propertyset id="euca-props">
         <propertyref prefix="euca"/>
     </propertyset>
     <!--================================== other vars ==================================-->
-    <property name="jvm.heap" value="512m"/>
+    <property name="jvm.heap" value="256m"/>
     <property name="security.policy" value="${euca.conf.dir}/security.policy"/>
     <property name="libpath" value="${euca.home}/usr/lib"/>
     <!--================================== classpaths ==================================-->

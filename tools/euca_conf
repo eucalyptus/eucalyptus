@@ -4,8 +4,6 @@
 
 FILE="$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
-START_CC=""
-START_NC=""
 CC_PORT=""
 NC_PORT=""
 CLOUD=""
@@ -22,9 +20,15 @@ NODEMODE=""
 CLUSNAME=""
 NEWCLUS=""
 CLUSMODE=""
+UPGRADE_CONF=""
 
 usage () {
 	echo "$0 [options] [<file>]"
+	echo
+	echo "Modify Eucalyptus configuration file. [<file>] is the"
+	echo "configuration file to be modified: if it's now specified"
+	echo "it will searched in $EUCALYPUTS/etc/eucalyptus"
+	echo
 	echo
 	echo "   -help                       this message"
 	echo "   -d <dir>                    point EUCALYPTUS to <dir>"
@@ -32,9 +36,6 @@ usage () {
 	echo "   -delnode <hostname>         remove node from EUCALYPTUS"
 	echo "   -addcluster <clusname> <hostname> add new cluster to EUCALYPTUS"
 #	echo "   -delcluster <clusname> <hostname> remove cluster from EUCALYPTUS"
-	echo "   -cc {Y|N}                   enable/disable CC"
-	echo "   -nc {Y|N}                   enable/disable NC"
-	echo "   -cloud {Y|N}                enable/disable Cloud Controller"
 	echo "   -nodes \"host host ...\"    list of NCs"
 	echo "   -ccp <port>                 set CC port"
 	echo "   -ncp <port>                 set NC port"
@@ -58,13 +59,13 @@ change_var_value () {
 # comment lines matching $2 ($1 is the file)
 comment () {
 	cp $1 /tmp/euca-tmp.$$
-	sed "s<[[:blank:]]*\(${2}.*\)<#\1<" /tmp/euca-tmp.$$ > $1
+	sed "s<^[[:blank:]]*\(${2}.*\)<#\1<" /tmp/euca-tmp.$$ > $1
 	rm -f /tmp/euca-tmp.$$
 }
 # comment lines matching $2 ($1 is the file)
 uncomment () {
 	cp $1 /tmp/euca-tmp.$$
-	sed "s<[#[:blank:]]*\(${2}.*\)<\1<" /tmp/euca-tmp.$$ > $1
+	sed "s<^[#[:blank:]]*\(${2}.*\)<\1<" /tmp/euca-tmp.$$ > $1
 	rm -f /tmp/euca-tmp.$$
 }
 
@@ -93,6 +94,13 @@ while [ $# -gt 0 ]; do
 		exit 1
 	fi
 
+	# old command line options not used anylonger
+	if [ "$1" = "-cc" -o "$1" = "-nc" -o "$1" = "-cloud" ]; then
+		echo "-cc, -nc and -cloud are not used anymore"
+		shift; shift;
+		continue
+	fi
+
 	# now let's parse the command line
 	if [ "$1" = "-d" ]; then
 		if [ ! -d "${2}" ]; then
@@ -113,13 +121,13 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi		
-	if [ "$1" = "-cloud" ]; then
-		START_CLOUD="$2"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "-cc" ]; then
-		START_CC="$2"
+	if [ "$1" = "-upgrade-conf" ]; then
+		# hidden options to upgrade from an older version
+		UPGRADE_CONF="$2"
+		if [ ! -e "$UPGRADE_CONF" ]; then
+			echo "Cannot read $UPGRADE_CONF"
+			exit 1
+		fi
 		shift; shift
 		continue
 	fi		
@@ -130,11 +138,6 @@ while [ $# -gt 0 ]; do
 	fi		
 	if [ "$1" = "-dhcp_user" ]; then
 		DHCPC_USER="$2"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "-nc" ]; then
-		START_NC="$2"
 		shift; shift
 		continue
 	fi		
@@ -183,20 +186,12 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "-addnode" ]; then 
-	    if [ $# -lt 2 ]; then
-		echo "Requires the hostname of the node to add"
-		exit 1
-	    fi
 	    NEWNODE="$2"
 	    NODEMODE="ADD"
 	    shift; shift
 	    continue
 	fi
 	if [ "$1" = "-delnode" ]; then 
-	    if [ $# -lt 2 ]; then
-		echo "Requires the hostname of the node to delete"
-		exit 1
-	    fi
 	    NEWNODE="$2"
 	    NODEMODE="REM"
 	    shift; shift
@@ -204,13 +199,13 @@ while [ $# -gt 0 ]; do
 	fi
 	if [ "$1" = "-addcluster" ]; then
 	    if [ $# -lt 3 ]; then
-		echo "Requires the cluster nice name, hostname and admin access key"
+		echo "Requires the cluster nice name and CC hostname"
 		exit 1
 	    fi
 	    CLUSNAME="$2"
 	    NEWCLUS="$3"
 	    CLUSMODE="ADD"
-	    shift; shift; shift; shift
+	    shift; shift; shift
 	    continue
 	fi
 	usage 
@@ -219,22 +214,13 @@ done
 
 # some basic check
 if [ -z "${FILE}" -o ! -f "${FILE}" ]; then
-	echo "Is <$FILE> a valid eucalyptus configuration file?"
-	exit 1
+	usage
+	exit 
 fi
 
 # let's change the value
 if [ -n "$EUCALYPTUS" ]; then
 	change_var_value $FILE EUCALYPTUS "${EUCALYPTUS}"
-fi
-if [ -n "$START_CLOUD" ]; then
-	change_var_value $FILE START_CLOUD "${START_CLOUD}"
-fi
-if [ -n "$START_CC" ]; then
-	change_var_value $FILE START_CC "${START_CC}"
-fi
-if [ -n "$START_NC" ]; then
-	change_var_value $FILE START_NC "${START_NC}"
 fi
 if [ -n "$CC_PORT" ]; then
 	change_var_value $FILE CC_PORT "${CC_PORT}"
@@ -272,19 +258,52 @@ if [ -n "$NAME" ]; then
 	VALUE=`cat $FILE |grep $NAME|cut -f 2 -d =|tr  '"' ' '`
 	echo $VALUE
 fi
-if [ -n "$NEWCLUS" ]; then
 
-    if [ -f "$FILE" ]; then
+# modify the current conf file based on an older configuration
+if [ -n "$UPGRADE_CONF" ]; then
+	VARS="EUCA_USER ENABLE_WS_SECURITY LOGLEVEL CLOUD_PORT CLOUD_SSL_PORT CC_PORT SCHEDPOLICY NODES NC_SERVICE NC_PORT MAX_MEM MAX_CORES INSTANCE_PATH VNET_INTERFACE VNET_BRIDGE VNET_DHCPDAEMON"
+	VNET_VARS="VNET_MODE VNET_SUBNET VNET_NETMASK VNET_DNS VNET_ADDRSPERNET VNET_PUBLICIPS VNET_BROADCAST VNET_ROUTER VNET_MACMAP"
+	
+	# source the old config
+	. $UPGRADE_CONF
+
+	# let's start from no network
+	for x in $VNET_VARS ; do
+		comment $FILE $x
+	done
+		
+	# modified the defined variables
+	for x in $VARS ; do
+		y="$(echo \$${x})"
+		eval y="$y"
+		if [ -z "$y" ]; then
+			# we just leave NODES uncomment even if it's empty
+			if [ "$x" != "NODES" ]; then
+				comment $FILE $x
+			fi
+		else
+			uncomment $FILE $x
+			change_var_value $FILE $x "${y}"
+		fi
+	done
+	# and add the network variables
+	echo >> $FILE
+	echo "# network configuration from the old configuration file" >> $FILE
+	for x in $VNET_VARS ; do
+		y="$(echo \$${x})"
+		eval y="$y"
+		if [ -n "$y" ]; then
+			echo "$x=\"${y}\"" >> $FILE
+		fi
+	done
+fi
+
+# adding a new cluster
+if [ -n "$NEWCLUS" ]; then
 	. $FILE
-    else
-	echo "ERROR: cannot find file '$EUCALYPTUS/etc/eucalyptus.conf'. Is your EUCALYPTUS enviroment variable set?"
-	exit 1
-    fi
     
     if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
 	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
-    elif [ -d "$EUCALYPTUS/var/eucalyptus/db/" ]; then
-	DBDIR="$EUCALYPTUS/var/eucalyptus/db/"
     else
 	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface"
 	exit 1
@@ -314,27 +333,25 @@ if [ -n "$NEWCLUS" ]; then
 	echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
 	exit 1
     fi
-    echo "New cluster '${NEWCLUS}' on host '${NEWCLUS}' successfully added."
+    echo "New cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully added."
 fi
 
+# adding a new node
 if [ -n "$NEWNODE" ]; then
-
-    if [ -f "$FILE" ]; then
-	. $FILE
-    else
-	echo "ERROR: cannot find file '$EUCALYPTUS/etc/eucalyptus.conf'. Is your EUCALYPTUS enviroment variable set?"
-	exit 1
-    fi
+    . $FILE
     TMPFILE="$FILE.$$"
-    
     
     if [ "$NODEMODE" = "ADD" ]; then
 	EUCA_HOME=`su - -c 'echo $HOME' $EUCA_USER`
 	echo $EUCA_HOME
-	SSHKEY=`cat ${EUCA_HOME}/.ssh/id_rsa.pub`
+	if [ -f "${EUCA_HOME}/.ssh/id_rsa.pub" ]; then
+	    SSHKEY=`cat ${EUCA_HOME}/.ssh/id_rsa.pub`
+        else
+	    SSHKEY=""
+        fi
 	
 	if [ "$SSHKEY" = "" ]; then
-	    echo "ERROR: cannot read ssh key ~${EUCA_USER}/.ssh/id_rsa.pub, syncronization will probably not work"
+	    echo "WARNING: cannot read ssh key ~${EUCA_USER}/.ssh/id_rsa.pub, syncronization will ask you to enter a password."
 	else
 	    echo "First, please run the following commands on '$NEWNODE':"
 	    echo ""
@@ -350,15 +367,13 @@ if [ -n "$NEWNODE" ]; then
     
     if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
 	KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
-    elif [ -d "$EUCALYPTUS/var/eucalyptus/keys/" ]; then
-	KEYDIR="$EUCALYPTUS/var/eucalyptus/keys/"
     else
 	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface"
 	exit 1
     fi
     
     if [ "$NODEMODE" = "ADD" ]; then
-	sudo -u eucalyptus scp ${KEYDIR}/* ${EUCA_USER}@${NEWNODE}:${KEYDIR}
+	sudo -u $EUCA_USER scp ${KEYDIR}/* ${EUCA_USER}@${NEWNODE}:${KEYDIR}
 	if [ "$?" != "0" ]; then
 	    echo "ERROR: could not syncronize keys, check authorized_keys on ${NEWNODE}, then run this command again."
 	    exit 1

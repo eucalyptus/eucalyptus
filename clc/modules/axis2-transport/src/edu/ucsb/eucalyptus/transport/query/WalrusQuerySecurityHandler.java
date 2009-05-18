@@ -161,8 +161,8 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
             if(addrStrings.length > 1) {
                 for(SubResource subResource : SubResource.values()) {
-                    if(addr.contains(subResource.toString())) {
-                        addrString += "?" + subResource.toString();
+                    if(addr.endsWith(subResource.toString().toLowerCase())) {
+                        addrString += "?" + subResource.toString().toLowerCase();
                         break;
                     }
                 }

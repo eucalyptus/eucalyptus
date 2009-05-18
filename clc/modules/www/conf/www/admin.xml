@@ -38,5 +38,5 @@
   <Set name="contextPath">/</Set>
   <Set name="parentLoaderPriority">true</Set>
   <Set name="logUrlOnStart">true</Set>
-  <Set name="war"><SystemProperty name="euca.var.dir" default="buildroot/var/eucalyptus"/>/webapps/root.war</Set>
+  <Set name="war"><SystemProperty name="euca.var.dir" default="buildroot/var/lib/eucalyptus"/>/webapps/root.war</Set>
 </Configure>

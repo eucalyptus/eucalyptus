@@ -51,7 +51,7 @@ import java.util.*;
 
 public class EucalyptusManagement {
 
-  private static Logger LOG = Logger.getLogger( EucalyptusManagement.class );
+    private static Logger LOG = Logger.getLogger( EucalyptusManagement.class );
 
     public static UserInfoWeb fromServer( UserInfo source )
     {
@@ -412,84 +412,111 @@ public class EucalyptusManagement {
         }
     }
 
-	private static String getInternalIpAddress ()
-	{
-		String ipAddr = null;
-    String localAddr = "127.0.0.1";
+    public static String getInternalIpAddress ()
+    {
+        String ipAddr = null;
+        String localAddr = "127.0.0.1";
 
-		List<NetworkInterface> ifaces = null;
-		try {
-			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-		}
-		catch ( SocketException e1 ) {}
-
-    for ( NetworkInterface iface : ifaces )
-      try {
-        if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-          for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-            if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
-              ipAddr = iaddr.getHostAddress();
-            } else if ( iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
-              localAddr = iaddr.getHostAddress();
-            }
-          }
+        List<NetworkInterface> ifaces = null;
+        try {
+            ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
         }
-      }
-      catch ( SocketException e1 ) {}
+        catch ( SocketException e1 ) {}
 
-    return ipAddr == null ? localAddr : ipAddr;
-	}
+        for ( NetworkInterface iface : ifaces )
+            try {
+                if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
+                    for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
+                        if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
+                            ipAddr = iaddr.getHostAddress();
+                        } else if ( iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
+                            localAddr = iaddr.getHostAddress();
+                        }
+                    }
+                }
+            }
+            catch ( SocketException e1 ) {}
+
+        return ipAddr == null ? localAddr : ipAddr;
+    }
 
     public static SystemConfigWeb getSystemConfig() throws SerializableException
     {
         EntityWrapper<SystemConfiguration> db = new EntityWrapper<SystemConfiguration>();
+        SystemConfiguration sysConf;
         try
         {
-            SystemConfiguration sysConf = db.getUnique( new SystemConfiguration() );
-
-            return new SystemConfigWeb( sysConf.getStorageUrl(), sysConf.getStorageDir(),
-                    sysConf.getStorageMaxBucketsPerUser(),
-					sysConf.getStorageMaxBucketSizeInMB(),
-					sysConf.getStorageMaxCacheSizeInMB(),
-					sysConf.getStorageMaxTotalSnapshotSizeInGb(),
-					sysConf.getStorageMaxTotalVolumeSizeInGb(),
-					sysConf.getStorageMaxVolumeSizeInGB(),
-					sysConf.getStorageVolumesDir(),
-                    sysConf.getDefaultKernel(), sysConf.getDefaultRamdisk() );
+            sysConf = db.getUnique( new SystemConfiguration() );
+            validateSystemConfiguration(sysConf);
+        } catch(EucalyptusCloudException e) {
+            sysConf = validateSystemConfiguration(null);
         }
-        catch ( EucalyptusCloudException e )
-        {
-			String ipAddr = getInternalIpAddress ();
-            String wUrl = String.format( "http://%s:8773/services/" + WalrusProperties.SERVICE_NAME, ipAddr );
+        finally {
+            db.commit();
+        }
+        return new SystemConfigWeb( sysConf.getStorageUrl(), sysConf.getStorageDir(),
+                sysConf.getStorageMaxBucketsPerUser(),
+                sysConf.getStorageMaxBucketSizeInMB(),
+                sysConf.getStorageMaxCacheSizeInMB(),
+                sysConf.getStorageMaxTotalSnapshotSizeInGb(),
+                sysConf.getStorageMaxTotalVolumeSizeInGb(),
+                sysConf.getStorageMaxVolumeSizeInGB(),
+                sysConf.getStorageVolumesDir(),
+                sysConf.getDefaultKernel(), sysConf.getDefaultRamdisk() );
+    }
 
-            String defKernel = "", defRamdisk="";
+    private static SystemConfiguration validateSystemConfiguration(SystemConfiguration sysConf) {
+        if(sysConf == null) {
+            sysConf = new SystemConfiguration();
+        }
+        if(sysConf.getStorageUrl() == null) {
+            String ipAddr = getInternalIpAddress ();
+            String wUrl = String.format( "http://%s:8773/services/" + WalrusProperties.SERVICE_NAME, ipAddr );
+            sysConf.setStorageUrl(wUrl);
+        }
+        if(sysConf.getStorageDir() == null) {
+            sysConf.setStorageDir(WalrusProperties.bucketRootDirectory.replaceAll( "//","/" ));
+        }
+        if(sysConf.getStorageMaxBucketsPerUser() == null) {
+            sysConf.setStorageMaxBucketsPerUser(WalrusProperties.MAX_BUCKETS_PER_USER);
+        }
+        if(sysConf.getStorageMaxBucketSizeInMB() == null) {
+            sysConf.setStorageMaxBucketSizeInMB((int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M));
+        }
+        if(sysConf.getStorageMaxCacheSizeInMB() == null) {
+            sysConf.setStorageMaxCacheSizeInMB((int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M));
+        }
+        if(sysConf.getStorageMaxTotalSnapshotSizeInGb() == null) {
+            sysConf.setStorageMaxTotalSnapshotSizeInGb(StorageProperties.MAX_TOTAL_SNAPSHOT_SIZE);
+        }
+        if(sysConf.getStorageMaxTotalVolumeSizeInGb() == null) {
+            sysConf.setStorageMaxTotalVolumeSizeInGb(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
+        }
+        if(sysConf.getStorageMaxVolumeSizeInGB() == null) {
+            sysConf.setStorageMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
+        }
+        if(sysConf.getStorageVolumesDir() == null) {
+            sysConf.setStorageVolumesDir(StorageProperties.storageRootDirectory);
+        }
+        if(sysConf.getDefaultKernel() == null) {
             ImageInfo q = new ImageInfo();
             EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
 
             q.setImageType( EucalyptusProperties.IMAGE_KERNEL );
             List<ImageInfo> res = db2.query(q);
             if( res.size() > 0 )
-                defKernel = res.get( 0 ).getImageId();
+                sysConf.setDefaultKernel(res.get(0).getImageId());
+        }
+        if(sysConf.getDefaultRamdisk() == null) {
+            ImageInfo q = new ImageInfo();
+            EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
 
             q.setImageType( EucalyptusProperties.IMAGE_RAMDISK );
-            res = db2.query(q);
+            List<ImageInfo> res = db2.query(q);
             if( res.size() > 0 )
-                defRamdisk = res.get( 0 ).getImageId();
-
-            return new SystemConfigWeb( wUrl,
-                    WalrusProperties.bucketRootDirectory.replaceAll( "//","/" ),
-                    WalrusProperties.MAX_BUCKETS_PER_USER,
-					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
-					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
-					StorageProperties.MAX_TOTAL_SNAPSHOT_SIZE,
-					StorageProperties.MAX_TOTAL_VOLUME_SIZE,
-					StorageProperties.MAX_VOLUME_SIZE,
-					StorageProperties.storageRootDirectory,
-                    defKernel, defRamdisk );
+                sysConf.setDefaultRamdisk(res.get(0).getImageId());
         }
-        finally {
-            db.commit();
-        }
+        return sysConf;
     }
 
     public static void setSystemConfig( final SystemConfigWeb systemConfig )
@@ -509,11 +536,11 @@ public class EucalyptusManagement {
 
             sysConf.setStorageMaxBucketsPerUser( systemConfig.getStorageMaxBucketsPerUser() );
             sysConf.setStorageMaxBucketSizeInMB( systemConfig.getStorageMaxBucketSizeInMB() );
-			sysConf.setStorageMaxCacheSizeInMB ( systemConfig.getStorageMaxCacheSizeInMB() );
-			sysConf.setStorageMaxTotalVolumeSizeInGb ( systemConfig.getStorageVolumesTotalInGB() );
-			sysConf.setStorageMaxTotalSnapshotSizeInGb( systemConfig.getStorageSnapshotsTotalInGB() );
-			sysConf.setStorageMaxVolumeSizeInGB (systemConfig.getStorageMaxVolumeSizeInGB());
-			sysConf.setStorageVolumesDir (systemConfig.getStorageVolumesPath());
+            sysConf.setStorageMaxCacheSizeInMB ( systemConfig.getStorageMaxCacheSizeInMB() );
+            sysConf.setStorageMaxTotalVolumeSizeInGb ( systemConfig.getStorageVolumesTotalInGB() );
+            sysConf.setStorageMaxTotalSnapshotSizeInGb( systemConfig.getStorageSnapshotsTotalInGB() );
+            sysConf.setStorageMaxVolumeSizeInGB (systemConfig.getStorageMaxVolumeSizeInGB());
+            sysConf.setStorageVolumesDir (systemConfig.getStorageVolumesPath());
             db.commit();
             WalrusProperties.update();
             StorageProperties.update();
@@ -524,69 +551,69 @@ public class EucalyptusManagement {
                     systemConfig.getDefaultKernelId(),
                     systemConfig.getDefaultRamdiskId(), systemConfig.getStoragePath(),
                     systemConfig.getStorageMaxBucketsPerUser() ,
-					systemConfig.getStorageMaxBucketSizeInMB(),
-					systemConfig.getStorageMaxCacheSizeInMB(),
-					systemConfig.getStorageVolumesTotalInGB(),
-					systemConfig.getStorageSnapshotsTotalInGB(),
-					systemConfig.getStorageMaxVolumeSizeInGB(),
-					systemConfig.getStorageVolumesPath() ) );
+                    systemConfig.getStorageMaxBucketSizeInMB(),
+                    systemConfig.getStorageMaxCacheSizeInMB(),
+                    systemConfig.getStorageVolumesTotalInGB(),
+                    systemConfig.getStorageSnapshotsTotalInGB(),
+                    systemConfig.getStorageMaxVolumeSizeInGB(),
+                    systemConfig.getStorageVolumesPath() ) );
             db.commit();
-          WalrusProperties.update();
-          StorageProperties.update();
+            WalrusProperties.update();
+            StorageProperties.update();
         }
     }
 
-	private static String getExternalIpAddress ()
-	{
-		String ipAddr = null;
-		HttpClient httpClient = new HttpClient();
-		// Use Rightscale's "whoami" service
-		GetMethod method = new GetMethod("https://my.rightscale.com/whoami?api_version=1.0&cloud=0");
-		Integer timeoutMs = new Integer(3 * 1000); // TODO: is this working?
-		method.getParams().setSoTimeout(timeoutMs);
+    private static String getExternalIpAddress ()
+    {
+        String ipAddr = null;
+        HttpClient httpClient = new HttpClient();
+        // Use Rightscale's "whoami" service
+        GetMethod method = new GetMethod("https://my.rightscale.com/whoami?api_version=1.0&cloud=0");
+        Integer timeoutMs = new Integer(3 * 1000); // TODO: is this working?
+        method.getParams().setSoTimeout(timeoutMs);
 
-		try {
-			httpClient.executeMethod(method);
-			String str = method.getResponseBodyAsString();
-			Matcher matcher = Pattern.compile(".*your ip is (.*)").matcher(str);
-			if (matcher.find()) {
-				ipAddr = matcher.group(1);
-			}
+        try {
+            httpClient.executeMethod(method);
+            String str = method.getResponseBodyAsString();
+            Matcher matcher = Pattern.compile(".*your ip is (.*)").matcher(str);
+            if (matcher.find()) {
+                ipAddr = matcher.group(1);
+            }
 
-		} catch (MalformedURLException e) {
-			LOG.warn ("Malformed URL exception: " + e.getMessage());
+        } catch (MalformedURLException e) {
+            LOG.warn ("Malformed URL exception: " + e.getMessage());
             e.printStackTrace();
 
-		} catch (IOException e) {
-			LOG.warn ("I/O exception: " + e.getMessage());
+        } catch (IOException e) {
+            LOG.warn ("I/O exception: " + e.getMessage());
             e.printStackTrace();
 
-		} finally {
-			method.releaseConnection();
-		}
+        } finally {
+            method.releaseConnection();
+        }
 
-		return ipAddr;
-	}
-
-  	public static CloudInfoWeb getCloudInfo (boolean setExternalHostPort) throws SerializableException
-	{
-    String cloudRegisterId = null;
-    try {
-      cloudRegisterId = EucalyptusProperties.getSystemConfiguration().getRegistrationId();
-    } catch ( EucalyptusCloudException e ) {
-      cloudRegisterId = "this should never be unset!";
+        return ipAddr;
     }
-    CloudInfoWeb cloudInfo = new CloudInfoWeb();
-		cloudInfo.setInternalHostPort (getInternalIpAddress() + ":8443");
-		if (setExternalHostPort) {
-			String ipAddr = getExternalIpAddress();
-			if (ipAddr!=null) {
-				cloudInfo.setExternalHostPort ( ipAddr + ":8443");
-			}
-		}
-		cloudInfo.setServicePath ("/register"); // TODO: what is the actual cloud registration service?
-		cloudInfo.setCloudId ( cloudRegisterId ); // TODO: what is the actual cloud registration ID?
-		return cloudInfo;
-	}
+
+    public static CloudInfoWeb getCloudInfo (boolean setExternalHostPort) throws SerializableException
+    {
+        String cloudRegisterId = null;
+        try {
+            cloudRegisterId = EucalyptusProperties.getSystemConfiguration().getRegistrationId();
+        } catch ( EucalyptusCloudException e ) {
+            cloudRegisterId = "this should never be unset!";
+        }
+        CloudInfoWeb cloudInfo = new CloudInfoWeb();
+        cloudInfo.setInternalHostPort (getInternalIpAddress() + ":8443");
+        if (setExternalHostPort) {
+            String ipAddr = getExternalIpAddress();
+            if (ipAddr!=null) {
+                cloudInfo.setExternalHostPort ( ipAddr + ":8443");
+            }
+        }
+        cloudInfo.setServicePath ("/register"); // TODO: what is the actual cloud registration service?
+        cloudInfo.setCloudId ( cloudRegisterId ); // TODO: what is the actual cloud registration ID?
+        return cloudInfo;
+    }
 
 }

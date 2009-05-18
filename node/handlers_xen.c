@@ -47,10 +47,14 @@ static int save_instance_files = 0;
 static char * admin_user_id = EUCALYPTUS_ADMIN;
 static char gen_libvirt_xml_command_path [BUFSIZE] = "";
 static char get_xen_info_command_path [BUFSIZE] = "";
+static char virsh_command_path [BUFSIZE] = "";
+static char xm_command_path [BUFSIZE] = "";
+
 
 #define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
 #define SWAP_SIZE 512 /* for now, the only possible swap size, in MBs */
 #define MAXDOMS 1024 /* max number of running domains on node */
+#define LIBVIRT_QUERY_RETRIES 5
 
 vnetConfig *vnetconfig = NULL;
 sem * xen_sem; /* semaphore for serializing domain creation */
@@ -91,6 +95,7 @@ static void change_state (ncInstance * instance, instance_states state)
     case SHUTOFF:
     case CRASHED:
         instance->stateCode = EXTANT;
+	instance->retries = LIBVIRT_QUERY_RETRIES;
         break;
     case TEARDOWN:
         instance->stateCode = TEARDOWN;
@@ -140,8 +145,13 @@ static void refresh_instance_info (ncInstance * instance)
             now==PAUSED ||
             now==SHUTDOWN) {
             /* Most likely the user has shut it down from the inside */
-            logprintfl (EUCAWARN, "warning: hypervisor failed to find domain %s, assuming it was shut off\n", instance->instanceId);
-            change_state (instance, SHUTOFF);
+            if (instance->retries) {
+		instance->retries--;
+		logprintfl (EUCAWARN, "warning: hypervisor failed to find domain %s, will retry %d more times\n", instance->instanceId, instance->retries);	
+            } else {
+            	logprintfl (EUCAWARN, "warning: hypervisor failed to find domain %s, assuming it was shut off\n", instance->instanceId);
+            	change_state (instance, SHUTOFF);
+            }
         }
         /* else 'now' stays in SHUTFOFF, BOOTING or CRASHED */
         return;
@@ -193,11 +203,13 @@ static void refresh_instance_info (ncInstance * instance)
         int rc;
 
         if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 32)) {
+	  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
             rc = discover_mac(vnetconfig, instance->ncnet.publicMac, &ip);
             if (!rc) {
-                logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
-                strncpy(instance->ncnet.publicIp, ip, 32);
+	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
+	      strncpy(instance->ncnet.publicIp, ip, 32);
             }
+	  }
         }
         if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 32)) {
             rc = discover_mac(vnetconfig, instance->ncnet.privateMac, &ip);
@@ -372,6 +384,8 @@ static int doInitialize (void)
     /* set up paths of Eucalyptus commands NC relies on */
     snprintf (gen_libvirt_xml_command_path, BUFSIZE, EUCALYPTUS_GEN_LIBVIRT_XML, home, home);
     snprintf (get_xen_info_command_path,    BUFSIZE, EUCALYPTUS_GET_XEN_INFO,    home, home);
+    snprintf (virsh_command_path, BUFSIZE, EUCALYPTUS_VIRSH, home);
+    snprintf (xm_command_path, BUFSIZE, EUCALYPTUS_XM);
     
     /* open the connection to hypervisor */
     if (check_hypervisor_conn () == ERROR) {
@@ -722,8 +736,12 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
     strcpy (instance->ncnet.publicIp, "0.0.0.0");
 
     /* do the potentially long tasks in a thread */
-
-    if ( pthread_create (&(instance->tcb), NULL, startup_thread, (void *)instance) ) {
+    pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
+    pthread_attr_init(attr);
+    pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
+    
+    if ( pthread_create (&(instance->tcb), attr, startup_thread, (void *)instance) ) {
+        pthread_attr_destroy(attr);
         logprintfl (EUCAFATAL, "failed to spawn a VM startup thread\n");
         sem_p (inst_sem);
         remove_instance (&global_instances, instance);
@@ -731,20 +749,43 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
         free_instance (&instance);
         return 1;
     }
-    
+    pthread_attr_destroy(attr);
+
     * outInst = instance;
     return 0;
 
 }
 
-static int doRebootInstance(ncMetadata *meta, char *instanceId) {
-  char cmd[256];
-  int rc;
+static int doRebootInstance(ncMetadata *meta, char *instanceId) 
+{
+    ncInstance *instance;
 
-  snprintf(cmd, 256, "xm reboot %s", instanceId);
-  rc = system(cmd);
+    logprintfl (EUCAINFO, "doRebootInstance() invoked (id=%s)\n", instanceId);
+    sem_p (inst_sem); 
+    instance = find_instance(&global_instances, instanceId);
+    sem_v (inst_sem);
+    if ( instance == NULL ) return NOT_FOUND;
+    
+    /* reboot the Xen domain */
+    if (check_hypervisor_conn () == OK) {
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        if (dom) {
+            /* also protect 'reboot', just in case */
+            sem_p (xen_sem);
+            int err=virDomainReboot (dom, 0);
+            sem_v (xen_sem);
+            if (err==0) {
+                logprintfl (EUCAINFO, "rebooting Xen domain for instance %s\n", instanceId);
+            }
+            virDomainFree(dom); /* necessary? */
+        } else {
+            if (instance->state != BOOTING) {
+                logprintfl (EUCAWARN, "warning: domain %s to be rebooted not running on hypervisor\n", instanceId);
+            }
+        }
+    }
 
-  return(WEXITSTATUS(rc));
+    return 0;
 }
 
 static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **consoleOutput) {
@@ -988,26 +1029,40 @@ static int doStartNetwork(ncMetadata *ccMeta, char **remoteHosts, int remoteHost
   return(ret);
 }
 
+static int convert_dev_names (char *localDev, char *localDevReal, char *localDevTag) 
+{
+    char *strptr;
+
+    bzero(localDevReal, 32);
+    if ((strptr = strchr(localDev, '/')) != NULL) {
+        sscanf(localDev, "/dev/%s", localDevReal);
+    } else {
+        snprintf(localDevReal, 32, "%s", localDev);
+    }
+    if (localDevReal[0] == 0) {
+        logprintfl(EUCAERROR, "bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
+        return(ERROR);
+    }
+    if (localDevTag) {
+        bzero(localDevTag, 256);
+        snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+    }
+
+    return 0;
+}
+
 static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
 {
-    ncInstance *instance;
     int ret = OK;
-    char localDevReal[32], *strptr;
-
+    ncInstance * instance;
+    char localDevReal[32];
 
     logprintfl (EUCAINFO, "doAttachVolume() invoked (id=%s vol=%s remote=%s local=%s)\n", instanceId, volumeId, remoteDev, localDev);
 
-    // fix up format of incoming local dev name, if we need to.
-    bzero(localDevReal, 32);
-    if ((strptr = strchr(localDev, '/')) != NULL) {
-      sscanf(localDev, "/dev/%s", localDevReal);
-    } else {
-      snprintf(localDevReal, 32, "%s", localDev);
-    }
-    if (localDevReal[0] == 0) {
-      logprintfl(EUCAERROR, "bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
-      return(ERROR);
-    }
+    // fix up format of incoming local dev name, if we need to
+    ret = convert_dev_names (localDev, localDevReal, NULL);
+    if (ret)
+        return ret;
 
     sem_p (inst_sem); 
     instance = find_instance(&global_instances, instanceId);
@@ -1048,6 +1103,7 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
     if (ret==OK) {
         ncVolume * volume;
+
         sem_p (inst_sem);
         volume = add_volume (instance, volumeId, remoteDev, localDevReal);
         sem_v (inst_sem);
@@ -1062,8 +1118,14 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
 static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
-    ncInstance *instance;
     int ret = OK;
+    ncInstance * instance;
+    char localDevReal[32];
+
+    // fix up format of incoming local dev name, if we need to
+    ret = convert_dev_names (localDev, localDevReal, NULL);
+    if (ret)
+        return ret;
 
     logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
     sem_p (inst_sem); 
@@ -1079,19 +1141,44 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     } else {
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
         if (dom) {
-            int err = 0;
-            char xml [1024];
-            snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDev);
+            int err = 0, fd;
+            char xml [1024], tmpfile[32], cmd[1024];
+	    FILE *FH;
+	    
+            snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
-            err = virDomainDetachDevice (dom, xml);
+	    if (!getuid()) {
+	      err = virDomainDetachDevice (dom, xml);
+	    } else {
+	      /* virsh detach function does not work as non-root user on xen (bug). workaround is to shellout to virsh */
+	      snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
+	      fd = mkstemp(tmpfile);
+	      if (fd > 0) {
+		write(fd, xml, strlen(xml));
+		close(fd);
+		snprintf(cmd, 1024, "%s detach-device %s %s",virsh_command_path, instanceId, tmpfile);
+		logprintfl(EUCADEBUG, "Running command: %s\n", cmd);
+		err = WEXITSTATUS(system(cmd));
+		unlink(tmpfile);
+		if (err) {
+		  logprintfl(EUCADEBUG, "first workaround command failed (%d), trying second workaround...\n", err);
+		  snprintf(cmd, 1024, "%s block-detach %s %s", xm_command_path, instanceId, localDevReal);
+		  logprintfl(EUCADEBUG, "Running command: %s\n", cmd);
+		  err = WEXITSTATUS(system(cmd));
+		}
+	      } else {
+		err = 1;
+	      }
+	    }
             sem_v (xen_sem);
+
             if (err) {
                 logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
                 ret = ERROR;
             } else {
-                logprintfl (EUCAINFO, "detached %s as %s in domain %s\n", remoteDev, localDev, instanceId);
+                logprintfl (EUCAINFO, "detached %s as %s in domain %s\n", remoteDev, localDevReal, instanceId);
             }
             virDomainFree(dom);
         } else {
@@ -1104,8 +1191,9 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
     if (ret==OK) {
         ncVolume * volume;
+
         sem_p (inst_sem);
-        volume = free_volume (instance, volumeId, remoteDev, localDev);
+        volume = free_volume (instance, volumeId, remoteDev, localDevReal);
         sem_v (inst_sem);
         if ( volume == NULL ) {
             logprintfl (EUCAFATAL, "ERROR: Failed to find and remove volume record, aborting volume detachment\n");

@@ -51,6 +51,7 @@ public class FileSystemStorageManager implements StorageManager {
     private static boolean initialized = false;
     private static String eucaHome = "/opt/eucalyptus";
     public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
+    public static final int MAX_LOOP_DEVICES = 256;    
     private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
 
     private String rootDirectory;
@@ -202,7 +203,9 @@ public class FileSystemStorageManager implements StorageManager {
 
     public native String removeLoopback(String loDevName);
 
-    public native String createLoopback(String fileName);
+    public native int losetup(String absoluteFileName, String loDevName);
+
+    public native String findFreeLoopback();
 
     public native String removeLogicalVolume(String lvName);
 
@@ -219,6 +222,26 @@ public class FileSystemStorageManager implements StorageManager {
     public native String removeVolumeGroup(String vgName);
 
     public native String getLvmVersion();
+
+    public String createLoopback(String fileName) throws EucalyptusCloudException {
+        int number_of_retries = 0;
+        int status = -1;
+        String loDevName;
+        do {
+            loDevName = findFreeLoopback();
+            if(loDevName.length() > 0) {
+                status = losetup(fileName, loDevName);
+            }
+            if(number_of_retries++ >= MAX_LOOP_DEVICES)
+                break;
+        } while(status != 0);
+
+        if(status != 0) {
+            throw new EucalyptusCloudException("Could not create loopback device for " + fileName +
+                    ". Please check the max loop value and permissions");
+        }
+        return loDevName;
+    }
 
     public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet, boolean removeVg) throws EucalyptusCloudException {
         //load the snapshot set

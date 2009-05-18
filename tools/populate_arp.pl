@@ -7,7 +7,7 @@ use Net::Ping;
 delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
 $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 
-@files = ('/var/log/syslog', '/var/log/kern.log');
+@files = ('/var/log/messages', '/var/log/firewall', '/var/log/syslog', '/var/log/kern.log');
 foreach $file (@files) {
 open(FH, "$file");
 while(<FH>) {

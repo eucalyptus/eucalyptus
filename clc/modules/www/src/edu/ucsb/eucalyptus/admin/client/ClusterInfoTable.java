@@ -54,7 +54,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 	public void onClick( final Widget widget ) /* Add cluster button */
 	{
-		this.clusterList.add (new ClusterInfoWeb ("name", "host", 8774, "/var/eucalyptus/volumes", 50, 500));
+		this.clusterList.add (new ClusterInfoWeb ("name", "host", 8774, "/var/lib/eucalyptus/volumes", 50, 500));
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");

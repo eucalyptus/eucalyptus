@@ -260,7 +260,6 @@ public class DNSControl {
             ZoneManager.deleteRecord(zone, cnameRecord);
             db.delete(foundCNAMERecordInfo);
             db.commit();
-
         } catch(Exception ex) {
             LOG.error(ex);
         }
@@ -271,6 +270,7 @@ public class DNSControl {
         DeleteZoneResponseType reply = (DeleteZoneResponseType) request.getReply();
         String name = request.getName();
         if(!request.isAdministrator()) {
+            
             throw new AccessDeniedException(name);
         }
         EntityWrapper<ZoneInfo> db = new EntityWrapper<ZoneInfo>();

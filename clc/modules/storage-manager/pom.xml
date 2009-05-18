@@ -53,7 +53,7 @@
             </property>
  	    <property>
 	      <name>euca.var.dir</name>
-	      <value>${env.EUCALYPTUS}/var/eucalyptus</value>	
+	      <value>${env.EUCALYPTUS}/var/lib/eucalyptus</value>	
 	    </property>
  	    <property>
 	      <name>euca.lib.dir</name>
@@ -69,7 +69,7 @@
 	    </property>
  	    <property>
 	      <name>euca.template.dir</name>
-	      <value>${env.EUCALYPTUS}/var/eucalyptus</value>	
+	      <value>${env.EUCALYPTUS}/var/lib/eucalyptus</value>	
 	    </property>
  	    <property>
 	      <name>java.library.path</name>

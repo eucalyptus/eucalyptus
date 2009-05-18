@@ -130,7 +130,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     } else {
       if (!strcmp(vnetconfig->mode, "SYSTEM")) {
 	// set up iptables rule to log DHCP replies to syslog
-	snprintf(cmd, 256, "-A FORWARD -p udp -m udp --sport 67:68 --dport 67:68 -j LOG --log-level 0");
+	snprintf(cmd, 256, "-A FORWARD -p udp -m udp --sport 67:68 --dport 67:68 -j LOG --log-level 6");
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
 	if (rc) {
 	  logprintfl(EUCAWARN, "could not add logging rule for DHCP replies, may not see instance IPs as they are assigned by system DHCP server");

@@ -70,15 +70,15 @@ fi
 for x in `echo $HOSTS`; do 
 	if [ "$VERBOSE" = "Y" ]; then
 		if [ -n "$RSYNC" ]; then
-			$RSYNC -avz -e ssh $EUCALYPTUS/var/eucalyptus/keys $x:$EUCALYPTUS/var/eucalyptus  > /dev/null 
+			$RSYNC -avz -e ssh $EUCALYPTUS/var/lib/eucalyptus/keys $x:$EUCALYPTUS/var/lib/eucalyptus  > /dev/null 
 		else
-			$SCP -r $EUCALYPTUS/var/eucalyptus/keys $x:$EUCALYPTUS/var/eucalyptus
+			$SCP -r $EUCALYPTUS/var/lib/eucalyptus/keys $x:$EUCALYPTUS/var/lib/eucalyptus
 		fi
 	else
 		if [ -n "$RSYNC" ]; then
-			($RSYNC -az -e ssh $EUCALYPTUS/var/eucalyptus/keys $x:$EUCALYPTUS/var/eucalyptus  > /dev/null &)
+			($RSYNC -az -e ssh $EUCALYPTUS/var/lib/eucalyptus/keys $x:$EUCALYPTUS/var/lib/eucalyptus  > /dev/null &)
 		else
-			($SCP -r $EUCALYPTUS/var/eucalyptus/keys $x:$EUCALYPTUS/var/eucalyptus &)
+			($SCP -r $EUCALYPTUS/var/lib/eucalyptus/keys $x:$EUCALYPTUS/var/lib/eucalyptus &)
 		fi
 	fi
 done

@@ -353,24 +353,6 @@ public class Storage {
             db.rollback();
             throw new NoSuchVolumeException(volumeId);
         }
-        SnapshotInfo snapInfo = new SnapshotInfo();
-        snapInfo.setVolumeId(volumeId);
-        EntityWrapper<SnapshotInfo> dbSnap = new EntityWrapper<SnapshotInfo>();
-        List<SnapshotInfo> snapInfos = dbSnap.query(snapInfo);
-        for(SnapshotInfo snapshotInfo : snapInfos) {
-            String snapshotId = snapInfo.getSnapshotId();
-            String status = snapshotInfo.getStatus();
-            if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
-                try {
-                    blockManager.deleteSnapshot(snapshotId);
-                    snapshotStorageManager.deleteObject("", snapshotId);
-                    dbSnap.delete(snapshotInfo);
-                } catch (IOException ex) {
-                    LOG.error("Could not delete snapshot " + snapshotId + ex);
-                }
-            }
-        }
-        dbSnap.commit();
         return reply;
     }
 
@@ -824,25 +806,6 @@ public class Storage {
 
         public void run() {
             try {
-                EntityWrapper<SnapshotInfo>dbS = new EntityWrapper<SnapshotInfo>();
-                EntityWrapper<VolumeInfo> dbVol = dbS.recast(VolumeInfo.class);
-                VolumeInfo vInfo = new VolumeInfo(volumeId);
-                VolumeInfo originalVolInfo = dbVol.getUnique(vInfo);
-
-                SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
-                SnapshotInfo foundSnapInfo = dbS.getUnique(snapInfo);
-                String dupedVolumeId;
-                if(originalVolInfo.getDupedVolumeId() == null) {
-                    //dup it so parent vol can be treated independently
-                    dupedVolumeId = volumeId + "-" + Hashes.getRandom(6);
-                    originalVolInfo.setDupedVolumeId(dupedVolumeId);
-                    foundSnapInfo.setDupedVolumeId(dupedVolumeId);
-                    blockManager.dupVolume(volumeId, dupedVolumeId);
-                    volumeId = dupedVolumeId;
-                } else {
-                    volumeId = originalVolInfo.getDupedVolumeId();
-                }
-                dbS.commit();
                 blockManager.createSnapshot(volumeId, snapshotId);
                 if(sharedMode) {
                     EntityWrapper<SnapshotInfo> dbSnap = new EntityWrapper<SnapshotInfo>();

@@ -893,9 +893,11 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	    char *ip;
 	    
 	    if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
-	      rc = discover_mac(vnetconfig, myInstance->ccnet.publicMac, &ip);
-	      if (!rc) {
-		strncpy(myInstance->ccnet.publicIp, ip, 24);
+	      if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
+		rc = discover_mac(vnetconfig, myInstance->ccnet.publicMac, &ip);
+		if (!rc) {
+		  strncpy(myInstance->ccnet.publicIp, ip, 24);
+		}
 	      }
 	    }
 	    if (!strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
@@ -1100,7 +1102,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     
     sem_wait(vnetConfigLock);
     
-    
     // define/get next mac and allocate IP
     foundnet = 0;
     if (!strcmp(vnetconfig->mode, "STATIC")) {
@@ -1142,7 +1143,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       
       resid = 0;
       rc = schedule_instance(ccvm, &resid);
-      
       res = &(config->resourcePool[resid]);
       if (rc) {
 	// could not find resource
@@ -1248,8 +1248,8 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  free_instance(&outInst);
 	  runCount++;
 	}
-	sem_post(configLock);
       }
+      sem_post(configLock);
     }
   }
   *outInstsLen = runCount;
@@ -1637,7 +1637,7 @@ int init_config(void) {
   snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, home);
   snprintf(netPath, 1024, CC_NET_PATH_DEFAULT, home);
   snprintf(logFile, 1024, "%s/var/log/eucalyptus/cc.log", home);
-  snprintf(policyFile, 1024, "%s/var/eucalyptus/keys/nc-client-policy.xml", home);
+  snprintf(policyFile, 1024, "%s/var/lib/eucalyptus/keys/nc-client-policy.xml", home);
   snprintf(eucahome, 1024, "%s/", home);
   free(home);
 
