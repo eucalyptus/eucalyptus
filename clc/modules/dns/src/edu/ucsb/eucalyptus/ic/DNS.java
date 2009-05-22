@@ -48,7 +48,7 @@ public class DNS {
 
     @OverloadedWebserviceMethod( actions = {
 			"UpdateARecord", "RemoveARecord", "AddZone",
-            "UpdateCNAMERecord", "RemoveCNAMERecord"} )
+            "DeleteZone", "UpdateCNAMERecord", "RemoveCNAMERecord"} )
 
 	public EucalyptusMessage handle( EucalyptusMessage msg )
 	{

@@ -260,10 +260,30 @@ public class DNSControl {
             ZoneManager.deleteRecord(zone, cnameRecord);
             db.delete(foundCNAMERecordInfo);
             db.commit();
-
         } catch(Exception ex) {
             LOG.error(ex);
         }
         return reply;
     }
+
+    public DeleteZoneResponseType DeleteZone(DeleteZoneType request) throws EucalyptusCloudException {
+        DeleteZoneResponseType reply = (DeleteZoneResponseType) request.getReply();
+        String name = request.getName();
+        if(!request.isAdministrator()) {
+            
+            throw new AccessDeniedException(name);
+        }
+        EntityWrapper<ZoneInfo> db = new EntityWrapper<ZoneInfo>();
+        ZoneInfo zoneInfo = new ZoneInfo(name);
+        try {
+            ZoneInfo foundZoneInfo = db.getUnique(zoneInfo);
+            db.delete(foundZoneInfo);
+            db.commit();
+        } catch(Exception ex) {
+            LOG.error(ex);
+        }
+        ZoneManager.deleteZone(name);
+        return reply;
+    }
+
 }

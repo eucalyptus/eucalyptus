@@ -88,6 +88,8 @@ public class Bukkit {
     private final int CACHE_RETRY_LIMIT = 3;
     private static ConcurrentHashMap<String, ImageCacher> imageCachers = new ConcurrentHashMap<String, ImageCacher>();
 
+    private static boolean enableVirtualHosting = true;
+
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
         String limits = System.getProperty(WalrusProperties.USAGE_LIMITS_PROPERTY);
@@ -97,6 +99,9 @@ public class Bukkit {
         initializeTracker();
         initializeForEBS();
         cleanFailedCachedImages();
+        if(System.getProperty("euca.virtualhosting.disable") != null) {
+            enableVirtualHosting = false;
+        }
     }
 
     public static void initializeTracker() {
@@ -221,6 +226,19 @@ public class Bukkit {
             throw new EucalyptusCloudException(bucketName);
         }
 
+        if(enableVirtualHosting) {
+            UpdateARecordType updateARecord = new UpdateARecordType();
+            updateARecord.setUserId(userId);
+            String address = WalrusProperties.WALRUS_IP;
+            String zone = WalrusProperties.WALRUS_DOMAIN + ".";
+            updateARecord.setAddress(address);
+            updateARecord.setName(bucketName + "." + zone);
+            updateARecord.setTtl(604800);
+            updateARecord.setZone(zone);
+            LOG.info("Mapping " + updateARecord.getName() + " to " + address);
+            Messaging.send(DNSProperties.DNS_REF, updateARecord);
+        }
+
         reply.setBucket(bucketName);
         return reply;
     }
@@ -262,6 +280,17 @@ public class Bukkit {
                         //set exception code in reply
                         LOG.error(ex);
                     }
+
+                    if(enableVirtualHosting) {
+                        RemoveARecordType removeARecordType = new RemoveARecordType();
+                        removeARecordType.setUserId(userId);
+                        String zone = WalrusProperties.WALRUS_DOMAIN + ".";
+                        removeARecordType.setName(bucketName + "." + zone);
+                        removeARecordType.setZone(zone);
+                        LOG.info("Removing mapping for " + removeARecordType.getName());
+                        Messaging.send(DNSProperties.DNS_REF, removeARecordType);
+                    }
+
                     Status status = new Status();
                     status.setCode(204);
                     status.setDescription("No Content");

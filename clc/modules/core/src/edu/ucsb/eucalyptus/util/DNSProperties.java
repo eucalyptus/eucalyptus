@@ -45,4 +45,5 @@ public class DNSProperties {
     public static String ADDRESS = "0.0.0.0";
     public static int PORT = 53;
     public static int MAX_MESSAGE_SIZE = 1024;
+    public static String DNS_REF = "vm://DNSControlInternal";    
 }
