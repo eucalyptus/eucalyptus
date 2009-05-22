@@ -229,8 +229,8 @@ public class Bukkit {
         if(enableVirtualHosting) {
             UpdateARecordType updateARecord = new UpdateARecordType();
             updateARecord.setUserId(userId);
-            String address = "127.0.0.1";
-            String zone = "walrus." + WalrusProperties.WALRUS_HOST + ".";
+            String address = WalrusProperties.WALRUS_IP;
+            String zone = WalrusProperties.WALRUS_DOMAIN + ".";
             updateARecord.setAddress(address);
             updateARecord.setName(bucketName + "." + zone);
             updateARecord.setTtl(604800);
@@ -284,7 +284,7 @@ public class Bukkit {
                     if(enableVirtualHosting) {
                         RemoveARecordType removeARecordType = new RemoveARecordType();
                         removeARecordType.setUserId(userId);
-                        String zone = "walrus." + WalrusProperties.WALRUS_HOST + ".";
+                        String zone = WalrusProperties.WALRUS_DOMAIN + ".";
                         removeARecordType.setName(bucketName + "." + zone);
                         removeARecordType.setZone(zone);
                         LOG.info("Removing mapping for " + removeARecordType.getName());

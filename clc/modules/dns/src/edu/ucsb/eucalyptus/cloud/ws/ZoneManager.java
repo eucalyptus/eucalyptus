@@ -42,6 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Iterator;
 
 import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
 
 public class ZoneManager {
     private static ConcurrentHashMap<Name, Zone> zones = new ConcurrentHashMap<Name, Zone>();
@@ -70,9 +71,10 @@ public class ZoneManager {
             long retry = soaRecordInfo.getRetry();
             long expires = soaRecordInfo.getExpires();
             long minimum = soaRecordInfo.getMinimum();
-            Record soarec = new SOARecord(name, DClass.IN, soaTTL, Name.root, Name.root, serial, refresh, retry, expires, minimum);
+            Record soarec = new SOARecord(name, DClass.IN, soaTTL, name, Name.fromString("root." + name.toString()), serial, refresh, retry, expires, minimum);
             long nsTTL = nsRecordInfo.getTtl();
-            Record nsrec = new NSRecord(name, DClass.IN, nsTTL, Name.root);
+            Record nsrec = new NSRecord(name, DClass.IN, nsTTL, Name.fromString(nsRecordInfo.getTarget()));
+            //Record aRecord = new ARecord(Name.fromString("pall.walrus.darkness."), DClass.IN, nsTTL, Address.getByAddress("192.168.7.117"));
             zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec}));
         } catch(Exception ex) {
             LOG.error(ex);
@@ -103,8 +105,11 @@ public class ZoneManager {
                 long minimum = 604800;
                 Record soarec = new SOARecord(name, DClass.IN, soaTTL, name, Name.fromString("root." + nameString), serial, refresh, retry, expires, minimum);
                 long nsTTL = soaTTL;
-                Record nsrec = new NSRecord(name, DClass.IN, nsTTL, name);
-                zone =  zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec, record}));
+                String nsHost = WalrusProperties.WALRUS_HOST + ".";
+                Name nsName = Name.fromString(nsHost);
+                Record nsrec = new NSRecord(name, DClass.IN, nsTTL, nsName);
+                ARecord nsARecord = new ARecord(nsName, DClass.IN, nsTTL, Address.getByAddress(WalrusProperties.WALRUS_IP));
+                zone =  zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec, nsARecord, record}));
                 if(zone == null) {
                     zone = zones.get(name);
                     EntityWrapper<ZoneInfo> db = new EntityWrapper<ZoneInfo>();
@@ -114,8 +119,8 @@ public class ZoneManager {
                     SOARecordInfo soaRecordInfo = new SOARecordInfo();
                     soaRecordInfo.setName(nameString);
                     soaRecordInfo.setRecordclass(DClass.IN);
-                    soaRecordInfo.setNameserver(Name.root.toString());
-                    soaRecordInfo.setAdmin(Name.root.toString());
+                    soaRecordInfo.setNameserver(nameString);
+                    soaRecordInfo.setAdmin("root." + nameString);
                     soaRecordInfo.setZone(nameString);
                     soaRecordInfo.setSerialNumber(serial);
                     soaRecordInfo.setTtl(soaTTL);
@@ -130,9 +135,19 @@ public class ZoneManager {
                     nsRecordInfo.setName(nameString);
                     nsRecordInfo.setZone(nameString);
                     nsRecordInfo.setRecordClass(DClass.IN);
-                    nsRecordInfo.setTarget(Name.root.toString());
+                    nsRecordInfo.setTarget(nsHost);
                     nsRecordInfo.setTtl(nsTTL);
                     dbNS.add(nsRecordInfo);
+
+                    EntityWrapper<ARecordInfo> dbARecord = db.recast(ARecordInfo.class);
+                    ARecordInfo aRecordInfo = new ARecordInfo();
+                    aRecordInfo.setName(nsHost);
+                    aRecordInfo.setAddress(WalrusProperties.WALRUS_IP);
+                    aRecordInfo.setTtl(nsTTL);
+                    aRecordInfo.setZone(nameString);
+                    aRecordInfo.setRecordclass(DClass.IN);
+                    dbARecord.add(aRecordInfo);
+
                     db.commit();
                 }
             } catch(Exception ex) {
@@ -171,7 +186,7 @@ public class ZoneManager {
         }
     }
 
-    
+
     public static void updateCNAMERecord(String zoneName, CNAMERecord record) {
         try {
             Zone zone = getZone(zoneName);
