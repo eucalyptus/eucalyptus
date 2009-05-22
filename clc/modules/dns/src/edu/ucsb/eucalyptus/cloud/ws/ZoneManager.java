@@ -74,7 +74,6 @@ public class ZoneManager {
             Record soarec = new SOARecord(name, DClass.IN, soaTTL, name, Name.fromString("root." + name.toString()), serial, refresh, retry, expires, minimum);
             long nsTTL = nsRecordInfo.getTtl();
             Record nsrec = new NSRecord(name, DClass.IN, nsTTL, Name.fromString(nsRecordInfo.getTarget()));
-            //Record aRecord = new ARecord(Name.fromString("pall.walrus.darkness."), DClass.IN, nsTTL, Address.getByAddress("192.168.7.117"));
             zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec}));
         } catch(Exception ex) {
             LOG.error(ex);
