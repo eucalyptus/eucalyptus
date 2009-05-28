@@ -185,6 +185,9 @@ HTTPD="`which apache2 2> /dev/null`"		# .deb based machines
 if [ -z  "$HTTPD" ]; then
 	HTTPD="`which httpd 2> /dev/null`"	# .rpm based machines
 fi
+if [ -z  "$HTTPD" ]; then
+	HTTPD="`which httpd2 2> /dev/null`"	# newer .rpm based machines
+fi
 HTTPD_HOME="/tmp/"
 
 # let's find our dependencies
