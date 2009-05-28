@@ -6,7 +6,6 @@ FILE="$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
 CC_PORT=""
 NC_PORT=""
-CLOUD=""
 CLOUD_PORT=""
 CLOUD_SSL_PORT=""
 NAME=""
@@ -27,7 +26,7 @@ usage () {
 	echo
 	echo "Modify Eucalyptus configuration file. [<file>] is the"
 	echo "configuration file to be modified: if it's now specified"
-	echo "it will searched in $EUCALYPUTS/etc/eucalyptus"
+	echo "it will searched in $EUCALYPTUS/etc/eucalyptus"
 	echo
 	echo
 	echo "   -help                       this message"
@@ -82,7 +81,7 @@ while [ $# -gt 0 ]; do
 		exit 1
 	fi
 
-	if [ "$1" = "-synckeys" ]; then 
+	if [ "$1" = "-synckeys" -o "$1" = "-synckey" ]; then 
 	    NODEMODE="SYNC"
 	    shift
 	    continue
@@ -114,16 +113,11 @@ while [ $# -gt 0 ]; do
 			exit 1
 		fi
 		EUCALYPTUS="${2}"
-		#FILE="$EUCALYPTUS/$FILE"
 		shift; shift
 		continue
 	fi
 	if [ "$1" = "-name" ]; then
-		if [ -n "$NAME" ]; then
-			echo "Only one -name can be specified!"
-			exit 1
-		fi
-		NAME="$2"
+		NAME="$NAME $2"
 		shift; shift
 		continue
 	fi		
@@ -263,10 +257,10 @@ fi
 if [ -n "$EUCA_USER" ]; then
 	change_var_value $FILE EUCA_USER "${EUCA_USER}"
 fi
-if [ -n "$NAME" ]; then
-	VALUE=`cat $FILE |grep $NAME|cut -f 2 -d =|tr  '"' ' '`
-	echo $VALUE
-fi
+for x in $NAME ; do
+	VALUE=`cat $FILE |grep $x|cut -f 2 -d =|tr  '"' ' '`
+	echo "$x=$VALUE"
+done
 
 # modify the current conf file based on an older configuration
 if [ -n "$UPGRADE_CONF" ]; then
@@ -345,7 +339,7 @@ if [ -n "$NEWCLUS" ]; then
     echo "New cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully added."
 fi
 
-# operations on the nodes?
+# operations on the nodes
 if [ -n "$NODEMODE" ]; then
 	. $FILE
 
@@ -358,49 +352,49 @@ if [ -n "$NODEMODE" ]; then
 			NODEMODE="ADD"
 		fi
 	fi
-fi
 
-# adding (or removing) nodes
-for NEWNODE in ${NEWNODES} ; do
-	# remove is simpler: just remove the node name
-	if [ "$NODEMODE" = "REM" ]; then
-		if ! echo "$NODES"|grep "${NEWNODE}" > /dev/null ; then
-			echo "Node ${NEWNODE} is not known"
+	# adding (or removing) nodes
+	for NEWNODE in ${NEWNODES} ; do
+		# remove is simpler: just remove the node name
+		if [ "$NODEMODE" = "REM" ]; then
+			if ! echo "$NODES"|grep "${NEWNODE}" > /dev/null ; then
+				echo "Node ${NEWNODE} is not known"
+				continue
+			fi
+			NODES="`echo $NODES|sed 's/${NEWNODE}//'|tr -s ' '`"
+			change_var_value $FILE NODES "${NODES}"
+			echo "SUCCESS: removed node '${NEWNODE}' from '$FILE'"
 			continue
 		fi
-		NODES="`echo $NODES|sed 's/${NEWNODE}//'|tr -s ' '`"
-		change_var_value $FILE NODES "${NODES}"
-		echo "SUCCESS: removed node '${NEWNODE}' from '$FILE'"
-		continue
-	fi
 	
-	# let's be sure the mode is now ADD
-	if [ "$NODEMODE" != "ADD" ]; then
-		echo "ERROR: unknown mode '$NODEMODE', don't know what to do"
-		exit 1
-	fi
-	echo
+		# let's be sure the mode is now ADD
+		if [ "$NODEMODE" != "ADD" ]; then
+			echo "ERROR: unknown mode '$NODEMODE', don't know what to do"
+			exit 1
+		fi
+		echo
  
-	# we need the keys
-	if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
-		KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
-	else
-		echo "ERROR: cannot find keys, did you configured eucalyptus?"
-		exit 1
-	fi
+		# we need the keys
+		if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
+			KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
+		else
+			echo "ERROR: cannot find keys, did you configured eucalyptus?"
+			exit 1
+		fi
 
-	# warn the user on what we are going to do
-	echo "Using scp to sync keys with node \"${NEWNODE}\" (user \"$EUCA_USER\")"
-	sudo -u $EUCA_USER scp ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR}
-	if [ "$?" != "0" ]; then
-		echo "ERROR: could not synchronize keys. Node ${NEWNODE} may not be available."
-		continue
-	fi
+		# warn the user on what we are going to do
+		echo "Using scp to sync keys with node \"${NEWNODE}\" (user \"$EUCA_USER\")"
+		sudo -u $EUCA_USER scp ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR}
+		if [ "$?" != "0" ]; then
+			echo "ERROR: could not synchronize keys. Node ${NEWNODE} may not be available."
+			continue
+		fi
  
-	# NODES list
-	if ! echo "${NODES}"|grep "${NEWNODE}" > /dev/null ; then
-		# node is not preset: we need to add it
-		NODES="${NODES} $NEWNODE"
-		change_var_value $FILE NODES "${NODES}"
-	fi
-done
+		# NODES list
+		if ! echo "${NODES}"|grep "${NEWNODE}" > /dev/null ; then
+			# node is not preset: we need to add it
+			NODES="${NODES} $NEWNODE"
+			change_var_value $FILE NODES "${NODES}"
+		fi
+	done
+fi
