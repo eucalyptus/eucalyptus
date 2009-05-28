@@ -104,8 +104,8 @@ do_start() {
 	fi
 
 	# NC needs the instance path
-	if [ -z "$INSTANCE_PATH" -o "! -d "$INSTANCE_PATH" ]; then
-		echo "INSTANCE_PATH is not valid!"
+	if [ -z "$INSTANCE_PATH" -o "$INSTANCE_PATH" = "not_configured" -o ! -d "$INSTANCE_PATH" ]; then
+		echo "INSTANCE_PATH is not valid! Did you run euca_conf -setup?"
 		exit 1
 	fi
 

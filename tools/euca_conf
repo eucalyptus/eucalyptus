@@ -95,7 +95,7 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
-	if [ "$1" = "-CHECK" ]; then 
+	if [ "$1" = "-check" ]; then 
 	    CHECK="Y"
 	    shift
 	    continue
@@ -228,7 +228,7 @@ done
 
 # some basic check
 if [ -z "${FILE}" -o ! -f "${FILE}" ]; then
-	usage
+	echo "$FILE is not a valid eucalyptus configuration file"
 	exit 
 fi
 
@@ -276,13 +276,12 @@ for x in $NAME ; do
 	echo "$x=$VALUE"
 done
 
-# root wrap (we need to check/set)
-ROOTWRAP="$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap"
-
 # pre-flight checks
 if [ -n "$CHECK" ]; then
 	. $FILE
 
+	ROOTWRAP="$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap"
+	
 	# first of all check euca_rootwrap
 	if [ ! -x $ROOTWRAP ]; then
 		echo "Cannot find euca_rootwrap!"
@@ -311,9 +310,9 @@ if [ -n "$CHECK" ]; then
 			exit 1
 		fi
 		# need to check if euca_rootwrap can run as EUCA_USER
-		TEST_EUID="`$ROOTWRAP $ID -u`"
+		TEST_EUID="`su -p $EUCA_USER -c \"$ROOTWRAP $ID -u\"`"
 		if [ "$?" != "0" -o "$TEST_EUID" != "0" ]; then
-			echo "Problem running $ROOTWRAP!"
+			echo "Problem running $ROOTWRAP! Did you run euca_conf -setup?"
 			exit 1
 		fi
 	fi
@@ -337,6 +336,8 @@ fi
 if [ -n "$SETUP" ]; then
 	. $FILE
 
+	ROOTWRAP="$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap"
+	
 	# first of all setup euca_rootwrap
 	if [ ! -x "$ROOTWRAP" ]; then
 		echo "Cannot find $ROOTWRAP!"
@@ -365,6 +366,15 @@ if [ -n "$SETUP" ]; then
 		fi
 		chown root:$EUCA_GROUP $ROOTWRAP
 		chmod 4750 $ROOTWRAP
+	fi
+	
+	# let's create the instance path
+	if [ -n "$INSTANCE_PATH" -a "$INSTANCE_PATH" != "not_configured" -a ! -d "$INSTANCE_PATH" ]; then
+		if ! mkdir -p $INSTANCE_PATH ; then
+			echo "Failed to create instance path!"
+			exit 1
+		fi
+		chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH
 	fi
 fi
 
