@@ -15,7 +15,7 @@ EUCA_USER=""
 HYPERVISOR=""
 DHCPD=""
 DHCP_USER=""
-NEWNODE=""
+NEWNODES=""
 NODEMODE=""
 CLUSNAME=""
 NEWCLUS=""
@@ -33,6 +33,7 @@ usage () {
 	echo "   -help                       this message"
 	echo "   -d <dir>                    point EUCALYPTUS to <dir>"
 	echo "   -addnode <hostname>         add new node to EUCALYPTUS"
+	echo "   -synckeys                   sync the keys with the nodes"
 	echo "   -delnode <hostname>         remove node from EUCALYPTUS"
 	echo "   -addcluster <clusname> <hostname> add new cluster to EUCALYPTUS"
 #	echo "   -delcluster <clusname> <hostname> remove cluster from EUCALYPTUS"
@@ -81,6 +82,11 @@ while [ $# -gt 0 ]; do
 		exit 1
 	fi
 
+	if [ "$1" = "-synckeys" ]; then 
+	    NODEMODE="SYNC"
+	    shift
+	    continue
+	fi
 	if [ $# -eq 1 ]; then
 		# we dont have options with no argument, so it has to be
 		# the file
@@ -186,13 +192,13 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "-addnode" ]; then 
-	    NEWNODE="$2"
+	    NEWNODES="${2}"
 	    NODEMODE="ADD"
 	    shift; shift
 	    continue
 	fi
 	if [ "$1" = "-delnode" ]; then 
-	    NEWNODE="$2"
+	    NEWNODES="${2}"
 	    NODEMODE="REM"
 	    shift; shift
 	    continue
@@ -217,6 +223,9 @@ if [ -z "${FILE}" -o ! -f "${FILE}" ]; then
 	usage
 	exit 
 fi
+
+# let's keep a copy of the original file before starting
+cp $FILE $FILE.bak
 
 # let's change the value
 if [ -n "$EUCALYPTUS" ]; then
@@ -336,78 +345,62 @@ if [ -n "$NEWCLUS" ]; then
     echo "New cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully added."
 fi
 
-# adding a new node
-if [ -n "$NEWNODE" ]; then
-    . $FILE
-    TMPFILE="$FILE.$$"
-    
-    if [ "$NODEMODE" = "ADD" ]; then
-	EUCA_HOME=`su - -c 'echo $HOME' $EUCA_USER`
-	echo $EUCA_HOME
-	if [ -f "${EUCA_HOME}/.ssh/id_rsa.pub" ]; then
-	    SSHKEY=`cat ${EUCA_HOME}/.ssh/id_rsa.pub`
-        else
-	    SSHKEY=""
-        fi
-	
-	if [ "$SSHKEY" = "" ]; then
-	    echo "WARNING: cannot read ssh key ~${EUCA_USER}/.ssh/id_rsa.pub, syncronization will ask you to enter a password."
-	else
-	    echo "First, please run the following commands on '$NEWNODE':"
-	    echo ""
-	    echo "sudo apt-get install eucalyptus-nc"
-	    echo "sudo tee ~${EUCA_USER}/.ssh/authorized_keys > /dev/null <<EOT"
-	    echo "$SSHKEY"
-	    echo "EOT"
-	    echo ""
-	    echo "hit return to continue"
-	    read
-	fi
-    fi
-    
-    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
-	KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
-    else
-	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface"
-	exit 1
-    fi
-    
-    if [ "$NODEMODE" = "ADD" ]; then
-	sudo -u $EUCA_USER scp ${KEYDIR}/* ${EUCA_USER}@${NEWNODE}:${KEYDIR}
-	if [ "$?" != "0" ]; then
-	    echo "ERROR: could not syncronize keys, check authorized_keys on ${NEWNODE}, then run this command again."
-	    exit 1
-	fi
-    fi
-    
-    export NODES=`echo $NODES | sed "s/ *$NEWNODE *//g"`
+# operations on the nodes?
+if [ -n "$NODEMODE" ]; then
+	. $FILE
 
-# sed in new value
-    if [ "$NODEMODE" = "ADD" ]; then
-	cat $FILE | sed "/NODES=/s/NODES=.*/NODES=\"$NODES $NEWNODE\"/" > $TMPFILE
-    elif [ "$NODEMODE" = "REM" ]; then
-	cat $FILE | sed "/NODES=/s/ *$NEWNODE *//g" > $TMPFILE
-    else
-	echo "ERROR: unknown mode '$NODEMODE', don't know what to do"
-	exit 1
-    fi    
-    
-    if [ ! -s "$TMPFILE" ]; then
-	echo "ERROR: failed to add node to $FILE"
-	exit 1
-    fi
-    
-# create backup
-    cp $FILE $FILE.bak && cp $TMPFILE $FILE
-    if [ "$?" != "0" ]; then
-	echo "ERROR: could not install new conf file"
-	exit 1
-    fi
-    
-    rm $TMPFILE
-    if [ "$NODEMODE" = "ADD" ]; then
-	echo "SUCCESS: added node '$NEWNODE' to '$FILE'"
-    elif [ "$NODEMODE" = "REM" ]; then
-	echo "SUCCESS: removed node '$NEWNODE' from '$FILE'"
-    fi
+	# for synckey we fake addnodes
+	if [ "$NODEMODE" = "SYNC" ]; then
+		if [ -z "$NODES" ]; then
+			echo "Warning: there are no NODES configured"
+		else
+			NEWNODES="${NODES}"
+			NODEMODE="ADD"
+		fi
+	fi
 fi
+
+# adding (or removing) nodes
+for NEWNODE in ${NEWNODES} ; do
+	# remove is simpler: just remove the node name
+	if [ "$NODEMODE" = "REM" ]; then
+		if ! echo "$NODES"|grep "${NEWNODE}" > /dev/null ; then
+			echo "Node ${NEWNODE} is not known"
+			continue
+		fi
+		NODES="`echo $NODES|sed 's/${NEWNODE}//'|tr -s ' '`"
+		change_var_value $FILE NODES "${NODES}"
+		echo "SUCCESS: removed node '${NEWNODE}' from '$FILE'"
+		continue
+	fi
+	
+	# let's be sure the mode is now ADD
+	if [ "$NODEMODE" != "ADD" ]; then
+		echo "ERROR: unknown mode '$NODEMODE', don't know what to do"
+		exit 1
+	fi
+	echo
+ 
+	# we need the keys
+	if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
+		KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
+	else
+		echo "ERROR: cannot find keys, did you configured eucalyptus?"
+		exit 1
+	fi
+
+	# warn the user on what we are going to do
+	echo "Using scp to sync keys with node \"${NEWNODE}\" (user \"$EUCA_USER\")"
+	sudo -u $EUCA_USER scp ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR}
+	if [ "$?" != "0" ]; then
+		echo "ERROR: could not synchronize keys. Node ${NEWNODE} may not be available."
+		continue
+	fi
+ 
+	# NODES list
+	if ! echo "${NODES}"|grep "${NEWNODE}" > /dev/null ; then
+		# node is not preset: we need to add it
+		NODES="${NODES} $NEWNODE"
+		change_var_value $FILE NODES "${NODES}"
+	fi
+done

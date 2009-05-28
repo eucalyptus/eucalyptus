@@ -49,6 +49,7 @@ DESC="Eucalyptus cloud controller"
 NAME=eucalyptus-cloud
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
+EUCA_USER="eucalyptus"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
@@ -58,6 +59,13 @@ if [ -z "$EUCALYPTUS" ] ; then
        fi
 fi
 export EUCALYPTUS
+
+# just a quick way to check if we have the package still installed: at
+# times we can still have the init.d script
+if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+	echo "Missing eucalyptus package?"
+	exit 1
+fi
 
 check_java() {
 	java_min_version="1.6.0"
