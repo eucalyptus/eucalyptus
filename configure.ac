@@ -1,7 +1,6 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 #
-# $Id: configure.ac,v 1.4 2008-12-24 18:28:07 nurmi Exp $
 
 # Usage:
 #   configure   [--with-axis2c=<dir>]

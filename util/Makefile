@@ -1,6 +1,5 @@
 # Makefile for eucalyptus/util
 # 
-# $Id: Makefile,v 1.6 2009-01-06 21:42:52 nurmi Exp $
 #
 
 include ../Makedefs

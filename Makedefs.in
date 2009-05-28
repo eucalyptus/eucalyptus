@@ -1,7 +1,6 @@
 #
 # parameters needed to compile eucalyptus: modified by autoconf
 #
-# $Id: Makedefs.in,v 1.4 2008-12-24 18:28:06 nurmi Exp $
 #
 
 # which version

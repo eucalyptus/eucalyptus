@@ -1,5 +1,4 @@
 #
-# $Id: Makefile,v 1.12 2008-12-09 21:24:33 graziano Exp $
 # 
 # An easy way to build a roll
 
