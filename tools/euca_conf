@@ -1,6 +1,5 @@
 #!/bin/bash
 #
-# $Id: euca_conf,v 1.7 2008-12-24 18:28:07 nurmi Exp $
 
 FILE="$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
