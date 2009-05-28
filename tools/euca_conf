@@ -20,6 +20,8 @@ CLUSNAME=""
 NEWCLUS=""
 CLUSMODE=""
 UPGRADE_CONF=""
+SETUP=""
+CHECK=""
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -46,6 +48,8 @@ usage () {
 	echo "   -dhcpd <dhcpd>              set the dhcpd binary to <name>"
 	echo "   -dhcp_user <user>           set the username to run dhcpd as"
 	echo "   -name <var>                 returns the value or <name>"
+	echo "   -setup                      perform initial setup"
+	echo "   -check                      pre-flight checks"
 	echo "where <file> is the configuration file ($FILE by default)"
 	echo
 }
@@ -83,6 +87,16 @@ while [ $# -gt 0 ]; do
 
 	if [ "$1" = "-synckeys" -o "$1" = "-synckey" ]; then 
 	    NODEMODE="SYNC"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "-setup" ]; then 
+	    SETUP="Y"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "-CHECK" ]; then 
+	    CHECK="Y"
 	    shift
 	    continue
 	fi
@@ -261,6 +275,98 @@ for x in $NAME ; do
 	VALUE=`cat $FILE |grep $x|cut -f 2 -d =|tr  '"' ' '`
 	echo "$x=$VALUE"
 done
+
+# root wrap (we need to check/set)
+ROOTWRAP="$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap"
+
+# pre-flight checks
+if [ -n "$CHECK" ]; then
+	. $FILE
+
+	# first of all check euca_rootwrap
+	if [ ! -x $ROOTWRAP ]; then
+		echo "Cannot find euca_rootwrap!"
+		exit 1
+	fi
+	# get EUCA group
+	if [ -z "$EUCA_USER" ]; then
+		echo "Running eucalyptus as root"
+		EUCA_USER="root"
+		EUCA_GROUP="root"
+	fi
+	# if running as root no need to do anything
+	if [ "$EUCA_USER" != "root" ]; then
+		ID="`which id 2> /dev/null`"
+		if [ -z "$ID" ]; then
+			echo "Cannot find command $ID"
+			exit 1
+		fi
+		if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
+			echo "User $EUCA_USER doesn't exists!"
+			exit 1
+		fi
+		EUCA_GROUP="`$ID -ng $EUCA_USER 2>/dev/null`"
+		if [ -z "$EUCA_GROUP" ]; then
+			echo "Cannot detect $EUCA_USER group: using $EUCA_USER"
+			exit 1
+		fi
+		# need to check if euca_rootwrap can run as EUCA_USER
+		TEST_EUID="`$ROOTWRAP $ID -u`"
+		if [ "$?" != "0" -o "$TEST_EUID" != "0" ]; then
+			echo "Problem running $ROOTWRAP!"
+			exit 1
+		fi
+	fi
+
+	# let's set up directories which could disappears if /var/run is
+	# in memory
+	mkdir -p $EUCALYPTUS/var/run/eucalyptus
+	mkdir -p $EUCALYPTUS/var/log/eucalyptus
+
+	# set up eucalyptus var locations to be owned by EUCA_USER
+	for y in $EUCALYPTUS/var/lib/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
+		if [ $y != "/" -a -d $y ]; then
+			if ! chown -R $EUCA_USER:$EUCA_GROUP $y ; then
+				echo "Problem setting permissions for $y"
+			fi
+		fi
+	done
+fi
+
+# first time setup
+if [ -n "$SETUP" ]; then
+	. $FILE
+
+	# first of all setup euca_rootwrap
+	if [ ! -x "$ROOTWRAP" ]; then
+		echo "Cannot find $ROOTWRAP!"
+		exit 1
+	fi
+	# get EUCA group
+	if [ -z "$EUCA_USER" ]; then
+		echo "Is EUCA_USER defined?"
+		exit 1
+	fi
+	# if running as root no need to do anything
+	if [ "$EUCA_USER" != "root" ]; then
+		ID="`which id 2> /dev/null`"
+		if [ -z "$ID" ]; then
+			echo "Cannot find command $ID"
+			exit 1
+		fi
+		if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
+			echo "User $EUCA_USER doesn't exists!"
+			exit 1
+		fi
+		EUCA_GROUP="`$ID -ng $EUCA_USER 2>/dev/null`"
+		if [ -z "$EUCA_GROUP" ]; then
+			echo "Cannot detect $EUCA_USER group: using $EUCA_USER"
+			exit 1
+		fi
+		chown root:$EUCA_GROUP $ROOTWRAP
+		chmod 4750 $ROOTWRAP
+	fi
+fi
 
 # modify the current conf file based on an older configuration
 if [ -n "$UPGRADE_CONF" ]; then

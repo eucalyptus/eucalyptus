@@ -92,20 +92,7 @@ do_start() {
 		exit 1
 	fi
 
-	# let's be sure we have needed directories
-	mkdir -p $EUCALYPTUS/var/run/eucalyptus
-	mkdir -p $EUCALYPTUS/var/log/eucalyptus
-
-	# set up eucalyptus var locations to be owned by EUCA_USER
-	for y in $EUCALYPTUS/var/lib/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
-		if [ $y != "/" -a -d $y ]; then
-			chown -R $EUCA_USER:$EUCA_USER $y
-		fi
-	done
-#	if [ -x "$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap" ]; then
-#		chown root:$EUCA_USER $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
-#		chmod 4750 $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
-#	fi
+	$EUCALYPTUS/usr/sbin/euca_conf -check
 
 	# we need IP forwarding and we need to use iptable over the bridge
 	if [ -w /proc/sys/net/ipv4/ip_forward ]; then
@@ -191,15 +178,6 @@ fi
 
 if [ -z "$EUCA_USER" ] ; then
 	EUCA_USER="root"
-fi
-
-# let's see if the user exists
-ID="`which id 2> /dev/null`"
-if [ -n "$ID" ]; then
-	if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
-		echo "User $EUCA_USER doesn't exists!"
-		exit 1
-	fi
 fi
 
 # let's try to pick the system apache2
