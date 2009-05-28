@@ -44,6 +44,7 @@ DESC="Eucalyptus services"
 NAME=eucalyptus-nc
 BRCTL="`which brctl 2> /dev/null`"
 MODPROBE="`which modprobe 2> /dev/null`"
+EUCA_USER="eucalyptus"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
@@ -53,6 +54,13 @@ if [ -z "$EUCALYPTUS" ] ; then
        fi   
 fi
 export EUCALYPTUS
+
+# just a quick way to check if we have the package still installed: at
+# times we can still have the init.d script
+if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+	echo "Missing eucalyptus package?"
+	exit 1
+fi
 
 create_httpd_config() {
 	if [ -x "/opt/rocks/bin/rocks" ]; then
@@ -85,20 +93,7 @@ do_start() {
 		exit 1
 	fi
 
-	# let's be sure we have needed directories
-        mkdir -p $EUCALYPTUS/var/run/eucalyptus
-	mkdir -p $EUCALYPTUS/var/log/eucalyptus
-
-	# set up eucalyptus var locations to be owned by EUCA_USER
-	for y in $EUCALYPTUS/var/lib/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
-		if [ $y != "/" -a -d $y ]; then
-			chown -R $EUCA_USER:$EUCA_USER $y
-		fi
-	done
-	if [ -x "$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap" ]; then
-		chown root:$EUCA_USER $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
-		chmod 4750 $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
-	fi
+	$EUCALYPTUS/usr/sbin/euca_conf -check
 
 	# we have a program to test the hypervisor and more for the NC
 	if [ ! -x $EUCALYPTUS/usr/sbin/euca_test_nc ]; then
@@ -110,7 +105,7 @@ do_start() {
 
 	# NC needs the instance path
 	if [ -z "$INSTANCE_PATH" -o "$INSTANCE_PATH" = "not_configured" -o ! -d "$INSTANCE_PATH" ]; then
-		echo "INSTANCE_PATH is not valid!"
+		echo "INSTANCE_PATH is not valid! Did you run euca_conf -setup?"
 		exit 1
 	fi
 
@@ -206,15 +201,6 @@ fi
 
 if [ -z "$EUCA_USER" ] ; then
 	EUCA_USER="root"
-fi
-
-# let's see if the user exists
-ID="`which id 2> /dev/null`"
-if [ -n "$ID" ]; then
-	if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
-		echo "User $EUCA_USER doesn't exists!"
-		exit 1
-	fi
 fi
 
 # let's try to pick the system apache2

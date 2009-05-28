@@ -42,6 +42,7 @@ fi
 PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus cluster controller"
 NAME=eucalyptus-cc
+EUCA_USER="eucalyptus"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
@@ -51,6 +52,13 @@ if [ -z "$EUCALYPTUS" ] ; then
        fi   
 fi
 export EUCALYPTUS
+
+# just a quick way to check if we have the package still installed: at
+# times we can still have the init.d script
+if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+	echo "Missing eucalyptus package?"
+	exit 1
+fi
 
 create_httpd_config() {
 	if [ -x "/opt/rocks/bin/rocks" ]; then
@@ -84,33 +92,22 @@ do_start() {
 		exit 1
 	fi
 
-	# let's be sure we have needed directories
-	mkdir -p $EUCALYPTUS/var/run/eucalyptus
-	mkdir -p $EUCALYPTUS/var/log/eucalyptus
-
-	# set up eucalyptus var locations to be owned by EUCA_USER
-	for y in $EUCALYPTUS/var/lib/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
-		if [ $y != "/" -a -d $y ]; then
-			chown -R $EUCA_USER:$EUCA_USER $y
-		fi
-	done
-	if [ -x "$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap" ]; then
-		chown root:$EUCA_USER $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
-		chmod 4750 $EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap
-	fi
+	$EUCALYPTUS/usr/sbin/euca_conf -check
 
 	# we need IP forwarding and we need to use iptable over the bridge
 	if [ -w /proc/sys/net/ipv4/ip_forward ]; then
 		VAL=`cat /proc/sys/net/ipv4/ip_forward`
 		if [ "$VAL" = "0" ]; then
-			echo "Enabling IP forwarding for eucalyptus."
+			echo
+			echo "Enabling IP forwarding"
 			echo -n 1 > /proc/sys/net/ipv4/ip_forward
 		fi
 	fi
 	if [ -w /proc/sys/net/bridge/bridge-nf-call-iptables ]; then
 		VAL=`cat /proc/sys/net/bridge/bridge-nf-call-iptables`
 		if [ "$VAL" = "0" ]; then
-			echo "Enabling bridge netfiltering for eucalyptus."
+			echo
+			echo "Enabling bridge netfiltering"
 			echo 1 >  /proc/sys/net/bridge/bridge-nf-call-iptables
 		fi
 	fi
@@ -181,15 +178,6 @@ fi
 
 if [ -z "$EUCA_USER" ] ; then
 	EUCA_USER="root"
-fi
-
-# let's see if the user exists
-ID="`which id 2> /dev/null`"
-if [ -n "$ID" ]; then
-	if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
-		echo "User $EUCA_USER doesn't exists!"
-		exit 1
-	fi
 fi
 
 # let's try to pick the system apache2

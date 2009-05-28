@@ -49,6 +49,7 @@ DESC="Eucalyptus cloud controller"
 NAME=eucalyptus-cloud
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
+EUCA_USER="eucalyptus"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
@@ -58,6 +59,13 @@ if [ -z "$EUCALYPTUS" ] ; then
        fi
 fi
 export EUCALYPTUS
+
+# just a quick way to check if we have the package still installed: at
+# times we can still have the init.d script
+if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+	echo "Missing eucalyptus package?"
+	exit 1
+fi
 
 check_java() {
 	java_min_version="1.6.0"
@@ -96,20 +104,10 @@ check_java() {
 do_start() {
 	local ret
 
-	# let's be sure we have java
+	# basic checks
 	check_java
-
-	# let's be sure we have some needed directories
-	mkdir -p $EUCALYPTUS/var/run/eucalyptus
-	mkdir -p $EUCALYPTUS/var/log/eucalyptus
-
-	# set up eucalyptus var locations to be owned by EUCA_USER
-	for y in $EUCALYPTUS/var/lib/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
-		if [ $y != "/" -a -d $y ]; then
-			chown -R $EUCA_USER:$EUCA_USER $y
-		fi
-	done
-
+	$EUCALYPTUS/usr/sbin/euca_conf -check
+	
 	cd $EUCALYPTUS/etc/eucalyptus
 	(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
 	ret="$?"
@@ -170,15 +168,6 @@ if [ -z "$LOOP_AVL" -o "$LOOP_AVL" = "0" ]; then
 	echo "Couldn't find loop devices (/dev/loop*): expect problems"
 elif [ $LOOP_AVL -lt 32 ]; then
 	echo "You should have at least 32 loop devices"
-fi
-
-# let's see if the user exists
-ID="`which id 2> /dev/null`"
-if [ -n "$ID" ]; then
-	if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
-		echo "User $EUCA_USER doesn't exists!"
-		exit 1
-	fi
 fi
 
 # set the library path correctly
