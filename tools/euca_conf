@@ -268,6 +268,12 @@ if [ -n "$HYPERVISOR" ]; then
 	uncomment $FILE HYPERVISOR
 fi
 if [ -n "$EUCA_USER" ]; then
+	ID="`which id 2> /dev/null`"
+	if [ -n "$ID" ]; then
+		if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
+			echo "WARNING: $EUCA_USER doesn't exists!"
+		fi
+	fi
 	change_var_value $FILE EUCA_USER "${EUCA_USER}"
 fi
 for x in $NAME ; do
@@ -499,7 +505,7 @@ if [ -n "$NODEMODE" ]; then
 
 		# warn the user on what we are going to do
 		echo "Using scp to sync keys with node \"${NEWNODE}\" (user \"$EUCA_USER\")"
-		sudo -u $EUCA_USER scp ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR}
+		sudo -u $EUCA_USER scp ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR} > /dev/null
 		if [ "$?" != "0" ]; then
 			echo "ERROR: could not synchronize keys. Node ${NEWNODE} may not be available."
 			continue
