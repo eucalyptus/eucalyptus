@@ -69,6 +69,7 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.GZIPInputStream;
+import com.eucalyptus.util.DNSProperties;
 
 public class Bukkit {
 

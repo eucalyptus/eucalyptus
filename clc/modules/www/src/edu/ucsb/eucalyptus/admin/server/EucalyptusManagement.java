@@ -48,6 +48,7 @@ import java.util.regex.Matcher;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import com.eucalyptus.util.DNSProperties;
 
 public class EucalyptusManagement {
 
@@ -462,7 +463,11 @@ public class EucalyptusManagement {
                 sysConf.getStorageMaxTotalVolumeSizeInGb(),
                 sysConf.getStorageMaxVolumeSizeInGB(),
                 sysConf.getStorageVolumesDir(),
-                sysConf.getDefaultKernel(), sysConf.getDefaultRamdisk() );
+                sysConf.getDefaultKernel(),
+                sysConf.getDefaultRamdisk(),
+                sysConf.getDnsDomain(),
+                sysConf.getNameserver(),
+                sysConf.getNameserverAddress());
     }
 
     private static SystemConfiguration validateSystemConfiguration(SystemConfiguration sysConf) {
@@ -516,6 +521,15 @@ public class EucalyptusManagement {
             if( res.size() > 0 )
                 sysConf.setDefaultRamdisk(res.get(0).getImageId());
         }
+        if(sysConf.getDnsDomain() == null) {
+            sysConf.setDnsDomain(DNSProperties.DOMAIN);
+        }
+        if(sysConf.getNameserver() == null) {
+            sysConf.setNameserver(DNSProperties.NS_HOST);
+        }
+        if(sysConf.getNameserverAddress() == null) {
+            sysConf.setNameserverAddress(DNSProperties.NS_IP);
+        }
         return sysConf;
     }
 
@@ -541,6 +555,9 @@ public class EucalyptusManagement {
             sysConf.setStorageMaxTotalSnapshotSizeInGb( systemConfig.getStorageSnapshotsTotalInGB() );
             sysConf.setStorageMaxVolumeSizeInGB (systemConfig.getStorageMaxVolumeSizeInGB());
             sysConf.setStorageVolumesDir (systemConfig.getStorageVolumesPath());
+            sysConf.setDnsDomain(systemConfig.getDnsDomain());
+            sysConf.setNameserver(systemConfig.getNameserver());
+            sysConf.setNameserverAddress(systemConfig.getNameserverAddress());
             db.commit();
             WalrusProperties.update();
             StorageProperties.update();
@@ -556,10 +573,14 @@ public class EucalyptusManagement {
                     systemConfig.getStorageVolumesTotalInGB(),
                     systemConfig.getStorageSnapshotsTotalInGB(),
                     systemConfig.getStorageMaxVolumeSizeInGB(),
-                    systemConfig.getStorageVolumesPath() ) );
+                    systemConfig.getStorageVolumesPath(),
+                    systemConfig.getDnsDomain(),
+                    systemConfig.getNameserver(),
+                    systemConfig.getNameserverAddress()));
             db.commit();
             WalrusProperties.update();
             StorageProperties.update();
+            DNSProperties.update();
         }
     }
 
