@@ -58,7 +58,7 @@ export EUCALYPTUS
 # just a quick way to check if we have the package still installed: at
 # times we can still have the init.d script
 if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
-	echo "Missing eucalyptus package?"
+	echo "Some eucalyptus components are missing"
 	exit 1
 fi
 
@@ -207,6 +207,9 @@ fi
 HTTPD="`which apache2 2> /dev/null`"		# .deb based machines
 if [ -z  "$HTTPD" ]; then
 	HTTPD="`which httpd 2> /dev/null`"	# .rpm based machines
+fi
+if [ -z  "$HTTPD" ]; then
+	HTTPD="`which httpd2 2> /dev/null`"	# newer .rpm based machines
 fi
 HTTPD_HOME="/tmp/"
 
