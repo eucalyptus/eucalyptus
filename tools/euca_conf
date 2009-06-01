@@ -25,11 +25,7 @@ CHECK=""
 usage () {
 	echo "$0 [options] [<file>]"
 	echo
-	echo "Modify Eucalyptus configuration file. [<file>] is the"
-	echo "configuration file to be modified: if it's now specified"
-	echo "it will searched in $EUCALYPTUS/etc/eucalyptus"
-	echo
-	echo
+	echo "where <file> is the configuration file ($FILE by default)"
 	echo "   -help                       this message"
 	echo "   -d <dir>                    point EUCALYPTUS to <dir>"
 	echo "   -addnode <hostname>         add new node to EUCALYPTUS"
@@ -49,7 +45,6 @@ usage () {
 	echo "   -name <var>                 returns the value or <name>"
 	echo "   -setup                      perform initial setup"
 	echo "   -check                      pre-flight checks"
-	echo "where <file> is the configuration file ($FILE by default)"
 	echo
 }
 
