@@ -93,7 +93,7 @@ do_start() {
 		exit 1
 	fi
 
-	$EUCALYPTUS/usr/sbin/euca_conf -check
+	$EUCALYPTUS/usr/sbin/euca_conf -check nc
 
 	# we have a program to test the hypervisor and more for the NC
 	if [ ! -x $EUCALYPTUS/usr/sbin/euca_test_nc ]; then

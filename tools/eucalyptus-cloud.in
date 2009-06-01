@@ -104,7 +104,7 @@ do_start() {
 
 	# basic checks
 	check_java
-	$EUCALYPTUS/usr/sbin/euca_conf -check
+	$EUCALYPTUS/usr/sbin/euca_conf -check cloud
 	
 	cd $EUCALYPTUS/etc/eucalyptus
 	(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
