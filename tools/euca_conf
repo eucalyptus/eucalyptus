@@ -21,6 +21,8 @@ CLUSMODE=""
 UPGRADE_CONF=""
 SETUP=""
 CHECK=""
+SCP="`which scp 2> /dev/null`"
+RSYNC="`which rsync 2> /dev/null`"
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -498,9 +500,19 @@ if [ -n "$NODEMODE" ]; then
 			exit 1
 		fi
 
-		# warn the user on what we are going to do
-		echo "Using scp to sync keys with node \"${NEWNODE}\" (user \"$EUCA_USER\")"
-		sudo -u $EUCA_USER scp ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR} > /dev/null
+		# we try rsync first then scp
+		if [ -n "$RSYNC" ]; then
+			echo "Using rsync to sync keys with node \"${NEWNODE}\" (user \"${EUCA_USER}\")"
+			$RSYNC -az ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR}/ > /dev/null
+		elif [ -n "$SCP" ]; then
+			echo "Using scp to sync keys with node \"${NEWNODE}\" (user \"${EUCA_USER}\")"
+			sudo -u ${EUCA_USER} $SCP ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR} > /dev/null
+		else
+			echo "Couldn't find neither rsync nor scp!"
+			exit 1
+		fi
+
+		# let's be sure we didn't fail
 		if [ "$?" != "0" ]; then
 			echo "ERROR: could not synchronize keys. Node ${NEWNODE} may not be available."
 			continue
