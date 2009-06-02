@@ -92,7 +92,9 @@ do_start() {
 		exit 1
 	fi
 
-	$EUCALYPTUS/usr/sbin/euca_conf -check cc
+	if ! $EUCALYPTUS/usr/sbin/euca_conf -check cc ; then
+		exit 1
+	fi
 
 	# we need IP forwarding and we need to use iptable over the bridge
 	if [ -w /proc/sys/net/ipv4/ip_forward ]; then
