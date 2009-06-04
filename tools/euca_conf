@@ -418,6 +418,18 @@ if [ -n "$CHECK" ]; then
 		fi
 	fi
 
+	# let's be sure we have the INSTANCE_PATH
+	if [ "$CHECK" = "nc" ]; then
+		if [ -z "$INSTANCE_PATH" ]; then
+			echo "INSTANCE_PATH is not defined"
+			exit 1
+		fi
+		if [ ! -d "$INSTANCE_PATH" ]; then
+			echo "$INSTANCE_PATH doesn't exist: did you run euca_conf -setup?"
+			exit 1
+		fi
+	fi
+
 	# let's set up directories which could disappears if /var/run is
 	# in memory
 	mkdir -p $EUCALYPTUS/var/run/eucalyptus

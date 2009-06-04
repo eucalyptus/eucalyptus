@@ -105,12 +105,6 @@ do_start() {
 		exit 1
 	fi
 
-	# NC needs the instance path
-	if [ -z "$INSTANCE_PATH" -o "$INSTANCE_PATH" = "not_configured" -o ! -d "$INSTANCE_PATH" ]; then
-		echo "INSTANCE_PATH is not valid! Did you run euca_conf -setup?"
-		exit 1
-	fi
-
 	# on SYSTEM or STATIC mode the bridge needs to exists
 	if [ "$VNET_MODE" = "SYSTEM" -o "$VNET_MODE" = "STATIC" ]; then
 		if [ -n "$BRCTL" -a -x $BRCTL ]; then
