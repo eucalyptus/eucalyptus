@@ -32,7 +32,7 @@
  * Author: Neil Soman neil@eucalyptus.com
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;
@@ -41,11 +41,8 @@ import java.net.Socket;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.DataOutputStream;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
-import edu.ucsb.eucalyptus.util.DNSProperties;
+import com.eucalyptus.util.DNSProperties;
 
 
 public class TCPHandler extends ConnectionHandler {

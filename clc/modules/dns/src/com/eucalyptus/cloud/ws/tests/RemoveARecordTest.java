@@ -32,36 +32,26 @@
  * Author: Neil Soman neil@eucalyptus.com
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.cloud.ws.tests;
 
-import org.apache.log4j.Logger;
+import edu.ucsb.eucalyptus.msgs.*;
+import junit.framework.TestCase;
 
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.InetAddress;
-import java.io.IOException;
+public class RemoveARecordTest extends TestCase {
 
-public class TCPListener extends Thread {
-    private static Logger LOG = Logger.getLogger( TCPListener.class );
-    InetAddress address;
-    int port;
+    private static com.eucalyptus.cloud.ws.DNSControl dnsControl;
 
-    public TCPListener(InetAddress address, int port) {
-        this.address = address;
-        this.port = port;
-    }
+	public void testRemoveARecord() throws Throwable {
+        String userId = "admin";
+        RemoveARecordType request = new RemoveARecordType();
+        request.setUserId(userId);
+        request.setName("rich.walrus.localhost.");
+        request.setZone("localhost.");
+        RemoveARecordResponseType reply = dnsControl.RemoveARecord(request);
+        System.out.println(reply);
+	}
 
-    public void run() {
-        try {
-            LOG.info("start");            
-            ServerSocket sock = new ServerSocket(port, 128, address);
-            while (true) {
-                LOG.info("Listening on port: " + port);
-                final Socket s = sock.accept();
-                ConnectionHandlerFactory.handle(s);
-            }
-        } catch(IOException ex) {
-            LOG.error(ex);
-        }
+    public void setUp() {
+        dnsControl = new com.eucalyptus.cloud.ws.DNSControl();
     }
 }

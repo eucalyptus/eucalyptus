@@ -48,8 +48,7 @@ public class WalrusProperties {
     public static final String SERVICE_NAME = "Walrus";
     public static final String VIRTUAL_SUBDOMAIN = "I_R_Bukkit";
     public static String WALRUS_DOMAIN = "walrus.darkness";
-    public static String WALRUS_HOST = "nshost." + WALRUS_DOMAIN;    
-    public static String WALRUS_IP = "192.168.7.117";
+    public static String WALRUS_IP = "127.0.0.1";
     public static final long G = 1024*1024*1024;
     public static final long M = 1024*1024;
     public static final long K = 1024;
@@ -63,10 +62,6 @@ public class WalrusProperties {
     public static int MAX_KEYS = 1000;
 
     public static final int IO_CHUNK_SIZE = 102400;
-
-    static {
-        updateHost();
-    }
 
     public static void update() {
         try {
@@ -177,35 +172,6 @@ public class WalrusProperties {
         CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince
     }
 
-    private static void updateHost ()
-    {
-        InetAddress ipAddr = null;
-        String localAddr = "127.0.0.1";
 
-        List<NetworkInterface> ifaces = null;
-        try {
-            ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-        }
-        catch ( SocketException e1 ) {}
-
-        for ( NetworkInterface iface : ifaces )
-            try {
-                if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-                    for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-                        if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address) ) {
-                            ipAddr = iaddr;
-                        } else if ( iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
-                            ipAddr = iaddr;
-                        }
-                    }
-                }
-            }
-            catch ( SocketException e1 ) {}
-
-        if(ipAddr != null) {
-            WALRUS_IP = ipAddr.getHostAddress();
-            WALRUS_HOST = ipAddr.getCanonicalHostName();
-        }
-    }
 
 }

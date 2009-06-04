@@ -32,7 +32,7 @@
  * Author: Neil Soman neil@eucalyptus.com
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;
@@ -41,7 +41,7 @@ import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.util.DNSProperties;
+import com.eucalyptus.util.DNSProperties;
 
 import java.net.UnknownHostException;
 import java.util.List;

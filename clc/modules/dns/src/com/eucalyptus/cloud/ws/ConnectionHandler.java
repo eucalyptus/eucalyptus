@@ -37,7 +37,7 @@
 
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.cloud.ws;
 
 import org.xbill.DNS.*;
 

@@ -32,7 +32,7 @@
  * Author: Neil Soman neil@eucalyptus.com
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;
@@ -42,7 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Iterator;
 
 import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.util.DNSProperties;
 
 public class ZoneManager {
     private static ConcurrentHashMap<Name, Zone> zones = new ConcurrentHashMap<Name, Zone>();
@@ -74,7 +74,6 @@ public class ZoneManager {
             Record soarec = new SOARecord(name, DClass.IN, soaTTL, name, Name.fromString("root." + name.toString()), serial, refresh, retry, expires, minimum);
             long nsTTL = nsRecordInfo.getTtl();
             Record nsrec = new NSRecord(name, DClass.IN, nsTTL, Name.fromString(nsRecordInfo.getTarget()));
-            //Record aRecord = new ARecord(Name.fromString("pall.walrus.darkness."), DClass.IN, nsTTL, Address.getByAddress("192.168.7.117"));
             zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec}));
         } catch(Exception ex) {
             LOG.error(ex);
@@ -105,10 +104,10 @@ public class ZoneManager {
                 long minimum = 604800;
                 Record soarec = new SOARecord(name, DClass.IN, soaTTL, name, Name.fromString("root." + nameString), serial, refresh, retry, expires, minimum);
                 long nsTTL = soaTTL;
-                String nsHost = WalrusProperties.WALRUS_HOST + ".";
+                String nsHost = DNSProperties.NS_HOST + ".";
                 Name nsName = Name.fromString(nsHost);
                 Record nsrec = new NSRecord(name, DClass.IN, nsTTL, nsName);
-                ARecord nsARecord = new ARecord(nsName, DClass.IN, nsTTL, Address.getByAddress(WalrusProperties.WALRUS_IP));
+                ARecord nsARecord = new ARecord(nsName, DClass.IN, nsTTL, Address.getByAddress(DNSProperties.NS_IP));
                 zone =  zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec, nsARecord, record}));
                 if(zone == null) {
                     zone = zones.get(name);
@@ -142,7 +141,7 @@ public class ZoneManager {
                     EntityWrapper<ARecordInfo> dbARecord = db.recast(ARecordInfo.class);
                     ARecordInfo aRecordInfo = new ARecordInfo();
                     aRecordInfo.setName(nsHost);
-                    aRecordInfo.setAddress(WalrusProperties.WALRUS_IP);
+                    aRecordInfo.setAddress(DNSProperties.NS_IP);
                     aRecordInfo.setTtl(nsTTL);
                     aRecordInfo.setZone(nameString);
                     aRecordInfo.setRecordclass(DClass.IN);

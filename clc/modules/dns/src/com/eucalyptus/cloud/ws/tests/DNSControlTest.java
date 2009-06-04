@@ -32,18 +32,29 @@
  * Author: Neil Soman neil@eucalyptus.com
  */
 
-package edu.ucsb.eucalyptus.util;
+package com.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
-import org.apache.log4j.Logger;
-import java.util.UUID;
+import edu.ucsb.eucalyptus.msgs.*;
+import com.eucalyptus.cloud.ws.DNSControl;
+import junit.framework.TestCase;
 
-public class DNSProperties {
+public class DNSControlTest extends TestCase {
 
-    private static Logger LOG = Logger.getLogger( DNSProperties.class );
-    public static String ADDRESS = "0.0.0.0";
-    public static int PORT = 53;
-    public static int MAX_MESSAGE_SIZE = 1024;
-    public static String DNS_REF = "vm://DNSControlInternal";    
+    private static DNSControl dnsControl;
+
+	public void testAddARecord() throws Throwable {
+        String userId = "admin";
+        UpdateARecordType request = new UpdateARecordType();
+        request.setUserId(userId);
+        request.setAddress("192.168.7.1");
+        request.setName("rich.walrus.localhost.");
+        request.setTtl(604800);
+        request.setZone("localhost.");
+        UpdateARecordResponseType reply = dnsControl.UpdateARecord(request);
+        System.out.println(reply);
+	}
+
+    public void setUp() {
+        dnsControl = new DNSControl();
+    }
 }
