@@ -20,16 +20,16 @@ NEWCLUS=""
 CLUSMODE=""
 UPGRADE_CONF=""
 SETUP=""
+VERSION=""
 CHECK=""
+TO_BACKUP="Y"
+SCP="`which scp 2> /dev/null`"
+RSYNC="`which rsync 2> /dev/null`"
 
 usage () {
 	echo "$0 [options] [<file>]"
 	echo
-	echo "Modify Eucalyptus configuration file. [<file>] is the"
-	echo "configuration file to be modified: if it's now specified"
-	echo "it will searched in $EUCALYPTUS/etc/eucalyptus"
-	echo
-	echo
+	echo "where <file> is the configuration file ($FILE by default)"
 	echo "   -help                       this message"
 	echo "   -d <dir>                    point EUCALYPTUS to <dir>"
 	echo "   -addnode <hostname>         add new node to EUCALYPTUS"
@@ -48,25 +48,43 @@ usage () {
 	echo "   -dhcp_user <user>           set the username to run dhcpd as"
 	echo "   -name <var>                 returns the value or <name>"
 	echo "   -setup                      perform initial setup"
-	echo "   -check                      pre-flight checks"
-	echo "where <file> is the configuration file ($FILE by default)"
+	echo "   -check [nc|cc|cloud]        pre-flight checks"
+	echo "   -version                    eucalyptus version"
 	echo
+}
+
+# utility function to make a copy of the conf file
+check_and_backup () {
+	# can we write to the configuration file?
+	if [ ! -w $1 ]; then
+		echo "Cannot write to $1!"
+		exit 1
+	fi
+
+	# let's see if we need a copy
+	if [ "$TO_BACKUP" = "Y" ]; then
+		cp $1 $1.bak
+		TO_BACKUP="N"
+	fi
 }
 
 # 3 paramenter: the file, the variable name, the new value
 change_var_value () {
+	check_and_backup $1
 	cp $1 /tmp/euca-tmp.$$
 	sed "s<\(${2}\).*<\1=\"${3}\"<" /tmp/euca-tmp.$$ > $1
 	rm -f /tmp/euca-tmp.$$
 }
 # comment lines matching $2 ($1 is the file)
 comment () {
+	check_and_backup $1
 	cp $1 /tmp/euca-tmp.$$
 	sed "s<^[[:blank:]]*\(${2}.*\)<#\1<" /tmp/euca-tmp.$$ > $1
 	rm -f /tmp/euca-tmp.$$
 }
 # comment lines matching $2 ($1 is the file)
 uncomment () {
+	check_and_backup $1
 	cp $1 /tmp/euca-tmp.$$
 	sed "s<^[#[:blank:]]*\(${2}.*\)<\1<" /tmp/euca-tmp.$$ > $1
 	rm -f /tmp/euca-tmp.$$
@@ -89,13 +107,13 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
-	if [ "$1" = "-setup" ]; then 
-	    SETUP="Y"
+	if [ "$1" = "-version" ]; then 
+	    VERSION="Y"
 	    shift
 	    continue
 	fi
-	if [ "$1" = "-check" ]; then 
-	    CHECK="Y"
+	if [ "$1" = "-setup" ]; then 
+	    SETUP="Y"
 	    shift
 	    continue
 	fi
@@ -212,7 +230,7 @@ while [ $# -gt 0 ]; do
 	fi
 	if [ "$1" = "-addcluster" ]; then
 	    if [ $# -lt 3 ]; then
-		echo "Requires the cluster nice name and CC hostname"
+		echo "-addcluster requires a user assigned name and CC hostname"
 		exit 1
 	    fi
 	    CLUSNAME="$2"
@@ -220,6 +238,15 @@ while [ $# -gt 0 ]; do
 	    CLUSMODE="ADD"
 	    shift; shift; shift
 	    continue
+	fi
+	if [ "$1" = "-check" ]; then 
+		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" ]; then
+			echo "-check requires cc, nc or cloud"
+			exit 1
+		fi
+		CHECK="$2"
+		shift; shift
+		continue
 	fi
 	usage 
 	exit 1
@@ -231,8 +258,19 @@ if [ -z "${FILE}" -o ! -f "${FILE}" ]; then
 	exit 
 fi
 
-# let's keep a copy of the original file before starting
-cp $FILE $FILE.bak
+# if asked to print the version that's all we do
+if [ "$VERSION" = "Y" ]; then
+	. $FILE
+
+	if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus-version ]; then
+		echo -n "Eucalyptus version "
+		cat $EUCALYPTUS/etc/eucalyptus/eucalyptus-version 
+		exit 0
+	else
+		echo "Cannot find eucalyptus version!"
+		exit 1
+	fi
+fi
 
 # let's change the value
 if [ -n "$EUCALYPTUS" ]; then
@@ -268,6 +306,12 @@ if [ -n "$HYPERVISOR" ]; then
 	uncomment $FILE HYPERVISOR
 fi
 if [ -n "$EUCA_USER" ]; then
+	ID="`which id 2> /dev/null`"
+	if [ -n "$ID" ]; then
+		if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
+			echo "WARNING: $EUCA_USER doesn't exists!"
+		fi
+	fi
 	change_var_value $FILE EUCA_USER "${EUCA_USER}"
 fi
 for x in $NAME ; do
@@ -283,7 +327,7 @@ if [ -n "$SETUP" ]; then
 	
 	# first of all setup euca_rootwrap
 	if [ ! -x "$ROOTWRAP" ]; then
-		echo "Cannot find $ROOTWRAP!"
+		echo "Cannot find $ROOTWRAP (or not readable)!"
 		exit 1
 	fi
 	# get EUCA group
@@ -326,6 +370,18 @@ if [ -n "$CHECK" ]; then
 	. $FILE
 
 	ROOTWRAP="$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap"
+
+	# vblade and aoe may be needed
+	if [ "$CHECK" != "cc" -a "$DISABLE_EBS" != "Y" -a "$DISABLE_EBS" != "y" ]; then
+		VBLADE="`which vblade 2> /dev/null`"
+		if [ -z "$VBLADE" ]; then
+			echo "WARNING: EBS is enabled and vblade was not found"
+		fi
+		AOE="`lsmod |grep aoe 2> /dev/null`"
+		if [ -z "$AOE" ]; then
+			echo "WARNING: EBS is enabled and the aoe module is not loaded"
+		fi
+	fi
 	
 	# first of all check euca_rootwrap
 	if [ ! -x $ROOTWRAP ]; then
@@ -358,6 +414,18 @@ if [ -n "$CHECK" ]; then
 		TEST_EUID="`su -p $EUCA_USER -c \"$ROOTWRAP $ID -u\"`"
 		if [ "$?" != "0" -o "$TEST_EUID" != "0" ]; then
 			echo "Problem running $ROOTWRAP! Did you run euca_conf -setup?"
+			exit 1
+		fi
+	fi
+
+	# let's be sure we have the INSTANCE_PATH
+	if [ "$CHECK" = "nc" ]; then
+		if [ -z "$INSTANCE_PATH" ]; then
+			echo "INSTANCE_PATH is not defined"
+			exit 1
+		fi
+		if [ ! -d "$INSTANCE_PATH" ]; then
+			echo "$INSTANCE_PATH doesn't exist: did you run euca_conf -setup?"
 			exit 1
 		fi
 	fi
@@ -476,7 +544,7 @@ if [ -n "$NODEMODE" ]; then
 				echo "Node ${NEWNODE} is not known"
 				continue
 			fi
-			NODES="`echo $NODES|sed 's/${NEWNODE}//'|tr -s ' '`"
+			NODES="`echo $NODES|sed \"s/${NEWNODE}//\"|tr -s ' '`"
 			change_var_value $FILE NODES "${NODES}"
 			echo "SUCCESS: removed node '${NEWNODE}' from '$FILE'"
 			continue
@@ -497,9 +565,19 @@ if [ -n "$NODEMODE" ]; then
 			exit 1
 		fi
 
-		# warn the user on what we are going to do
-		echo "Using scp to sync keys with node \"${NEWNODE}\" (user \"$EUCA_USER\")"
-		sudo -u $EUCA_USER scp ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR}
+		# we try rsync first then scp
+		if [ -n "$RSYNC" ]; then
+			echo "Using rsync to sync keys with node \"${NEWNODE}\" (user \"${EUCA_USER}\")"
+			$RSYNC -az ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR}/ > /dev/null
+		elif [ -n "$SCP" ]; then
+			echo "Using scp to sync keys with node \"${NEWNODE}\" (user \"${EUCA_USER}\")"
+			sudo -u ${EUCA_USER} $SCP ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR} > /dev/null
+		else
+			echo "Couldn't find neither rsync nor scp!"
+			exit 1
+		fi
+
+		# let's be sure we didn't fail
 		if [ "$?" != "0" ]; then
 			echo "ERROR: could not synchronize keys. Node ${NEWNODE} may not be available."
 			continue

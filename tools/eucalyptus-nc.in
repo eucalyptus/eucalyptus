@@ -93,19 +93,15 @@ do_start() {
 		exit 1
 	fi
 
-	$EUCALYPTUS/usr/sbin/euca_conf -check
+	if ! $EUCALYPTUS/usr/sbin/euca_conf -check nc ; then
+		exit 1
+	fi
 
 	# we have a program to test the hypervisor and more for the NC
 	if [ ! -x $EUCALYPTUS/usr/sbin/euca_test_nc ]; then
 		echo "Cannot check Node Controller: missing euca_test_nc."
 	elif ! $EUCALYPTUS/usr/sbin/euca_test_nc $HYPERVISOR > $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log 2>&1 ; then
 		echo "Node Controller cannot be started: errors in $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log"
-		exit 1
-	fi
-
-	# NC needs the instance path
-	if [ -z "$INSTANCE_PATH" -o "$INSTANCE_PATH" = "not_configured" -o ! -d "$INSTANCE_PATH" ]; then
-		echo "INSTANCE_PATH is not valid! Did you run euca_conf -setup?"
 		exit 1
 	fi
 
@@ -258,6 +254,12 @@ fi
 # finally let's check the path
 if [ ! -d "$AXIS2C_HOME" ]; then
 	echo "Cannot find AXIS2C_HOME?"
+	exit 1
+fi
+
+# do we have the httpd daemon?
+if [ -z "${HTTPD}" ]; then
+	echo "apache2/httpd daemon not found!"
 	exit 1
 fi
 
