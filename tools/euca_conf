@@ -532,7 +532,7 @@ if [ -n "$NODEMODE" ]; then
 				echo "Node ${NEWNODE} is not known"
 				continue
 			fi
-			NODES="`echo $NODES|sed 's/${NEWNODE}//'|tr -s ' '`"
+			NODES="`echo $NODES|sed \"s/${NEWNODE}//\"|tr -s ' '`"
 			change_var_value $FILE NODES "${NODES}"
 			echo "SUCCESS: removed node '${NEWNODE}' from '$FILE'"
 			continue

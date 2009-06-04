@@ -263,6 +263,12 @@ if [ ! -d "$AXIS2C_HOME" ]; then
 	exit 1
 fi
 
+# do we have the httpd daemon?
+if [ -z "${HTTPD}" ]; then
+	echo "apache2/httpd daemon not found!"
+	exit 1
+fi
+
 # set the library path correctly
 export AXIS2C_HOME
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$EUCALYPTUS/lib:$LD_LIBRARY_PATH"

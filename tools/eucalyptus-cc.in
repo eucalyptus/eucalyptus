@@ -101,7 +101,7 @@ do_start() {
 		VAL=`cat /proc/sys/net/ipv4/ip_forward`
 		if [ "$VAL" = "0" ]; then
 			echo
-			echo "Enabling IP forwarding"
+			echo -n "Enabling IP forwarding"
 			echo -n 1 > /proc/sys/net/ipv4/ip_forward
 		fi
 	fi
@@ -109,7 +109,7 @@ do_start() {
 		VAL=`cat /proc/sys/net/bridge/bridge-nf-call-iptables`
 		if [ "$VAL" = "0" ]; then
 			echo
-			echo "Enabling bridge netfiltering"
+			echo -n "Enabling bridge netfiltering"
 			echo 1 >  /proc/sys/net/bridge/bridge-nf-call-iptables
 		fi
 	fi
@@ -125,6 +125,7 @@ do_start() {
 			exit 1
 		fi
 		if ! $VNET_DHCPDAEMON --help 2>&1 |grep -- -tf > /dev/null ; then
+			echo
 			echo "dhcp server doesn't accept -tf option!"
 		fi
 	fi
@@ -237,6 +238,12 @@ fi
 # finally let's check the path
 if [ ! -d "$AXIS2C_HOME" ]; then
 	echo "Cannot find AXIS2C_HOME?"
+	exit 1
+fi
+
+# do we have the httpd daemon?
+if [ -z "${HTTPD}" ]; then
+	echo "apache2/httpd daemon not found!"
 	exit 1
 fi
 
