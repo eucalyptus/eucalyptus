@@ -95,7 +95,7 @@ public class LVM2Manager implements BlockStorageManager {
         }
         returnValue = getVblade();
         if(returnValue.length() == 0) {
-            throw new EucalyptusCloudException("vblade not found: Is aoetools installed?");
+            throw new EucalyptusCloudException("vblade not found: Is it installed?");
         } else {
             LOG.info(returnValue);
         }
