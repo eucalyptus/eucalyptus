@@ -265,13 +265,25 @@ public class GroupManager {
   private static List<NetworkRule> getNetworkRules( final IpPermissionType ipPerm ) {
     List<NetworkRule> ruleList = new ArrayList<NetworkRule>();
     if ( !ipPerm.getGroups().isEmpty() ) {
-      List<NetworkPeer> networkPeers = new ArrayList<NetworkPeer>();
-      for ( UserIdGroupPairType peerInfo : ipPerm.getGroups() ) {
-        networkPeers.add( new NetworkPeer( peerInfo.getUserId(), peerInfo.getGroupName() ) );
+      if( ipPerm.getFromPort() == 0 && ipPerm.getToPort() == 0 ) {
+        ipPerm.setToPort( 65535 );
       }
-      NetworkRule rule = new NetworkRule( ipPerm.getIpProtocol(), ipPerm.getFromPort(), ipPerm.getToPort() );
-      rule.getNetworkPeers().addAll( networkPeers );
-      ruleList.add( rule );
+      //:: fixes handling of under-specified named-network rules sent by some clients :://
+      if( ipPerm.getIpProtocol() == null ) {
+        NetworkRule rule = new NetworkRule( "tcp", ipPerm.getFromPort(), ipPerm.getToPort() );
+        rule.getNetworkPeers().addAll(  getNetworkPeers( ipPerm ) );
+        ruleList.add( rule );
+        NetworkRule rule1 = new NetworkRule( "udp", ipPerm.getFromPort(), ipPerm.getToPort() );
+        rule1.getNetworkPeers().addAll(  getNetworkPeers( ipPerm ) );
+        ruleList.add( rule1 );
+        NetworkRule rule2 = new NetworkRule( "icmp", -1, -1 );
+        rule2.getNetworkPeers().addAll( getNetworkPeers( ipPerm ) );
+        ruleList.add( rule2 );
+      } else {
+        NetworkRule rule = new NetworkRule( ipPerm.getIpProtocol(), ipPerm.getFromPort(), ipPerm.getToPort() );
+        rule.getNetworkPeers().addAll( getNetworkPeers( ipPerm ) );
+        ruleList.add( rule );
+      }
     } else if ( !ipPerm.getIpRanges().isEmpty() ) {
       List<IpRange> ipRanges = new ArrayList<IpRange>();
       for ( String range : ipPerm.getIpRanges() ) {
@@ -281,6 +293,14 @@ public class GroupManager {
       ruleList.add( rule );
     }
     return ruleList;
+  }
+
+  private static List<NetworkPeer> getNetworkPeers( final IpPermissionType ipPerm ) {
+    List<NetworkPeer> networkPeers = new ArrayList<NetworkPeer>();
+    for ( UserIdGroupPairType peerInfo : ipPerm.getGroups() ) {
+      networkPeers.add( new NetworkPeer( peerInfo.getSourceUserId(), peerInfo.getSourceGroupName() ) );
+    }
+    return networkPeers;
   }
 
   private static void makeDefault( String userId ) {
