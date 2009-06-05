@@ -223,6 +223,10 @@ public class Network implements HasName {
     return this.networkTokens.remove(cluster);
   }
 
+  public boolean isPeer( String peerName ) {
+    return (Boolean) this.rules.collect{ pf -> pf.getSourceNetworknames().contains( peerName ) }.max();
+  }
+
   public int compareTo(final Object o) {
     Network that = (Network) o;
     return this.getName().compareTo(that.getName());

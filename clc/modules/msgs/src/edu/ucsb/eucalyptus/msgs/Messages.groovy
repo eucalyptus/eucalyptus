@@ -323,6 +323,28 @@ public class VmNetworkPeer {
     this.sourceNetworkName = sourceNetworkName;
   }
 
+
+
+  boolean equals(final final o) {
+    if ( this.is(o) ) return true;
+
+    if ( !o || getClass() != o.class ) return false;
+
+
+
+    VmNetworkPeer that = (VmNetworkPee r) o;
+
+    if ( sourceNetworkName ? !sourceNetworkName.equals(that.sourceNetworkName) : that.sourceNetworkName != nu ll ) return false;
+    i f ( userName ? !userName.equals(that.userName) : that.userName != n ull ) return false;
+
+    return true;
+  }int hashCode() {
+    int result;
+
+    result = (userName ? userName.hashCode() : 0);
+    result = 31 * result + (sourceNetworkName ? sourceNetworkName.hashCode() : 0);
+    return result;
+  }
 }
 
 

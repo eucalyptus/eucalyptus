@@ -129,6 +129,11 @@ public class ConfigureNetworkType extends EucalyptusMessage {
     this.rules = rules;
   }
 
+  def ConfigureNetworkType(final ArrayList<PacketFilterRule> rules)
+  {
+    this.rules = rules;
+  }
+
   def ConfigureNetworkType(){}
 }
 public class ConfigureNetworkResponseType extends EucalyptusMessage {
