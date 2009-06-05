@@ -41,7 +41,7 @@ public class HttpRequest {
 
   private String hostAddr;
 
-
+  private boolean pureClient = false;
   private String service;
   private String servicePath;
   private String operation;
@@ -147,5 +147,13 @@ public class HttpRequest {
 
   public void setBindingArguments( Map bindingArguments ) {
     this.bindingArguments = bindingArguments;
+  }
+
+  public boolean isPureClient() {
+    return pureClient;
+  }
+
+  public void setPureClient( final boolean pureClient ) {
+    this.pureClient = pureClient;
   }
 }

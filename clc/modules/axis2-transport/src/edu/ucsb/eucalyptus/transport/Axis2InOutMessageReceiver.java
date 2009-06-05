@@ -35,8 +35,27 @@
 
 package edu.ucsb.eucalyptus.transport;
 
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.msgs.AddClusterResponseType;
+import edu.ucsb.eucalyptus.msgs.DeregisterImageType;
+import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType;
+import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeImagesType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.ImageDetails;
+import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
+import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType;
+import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
+import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
+import edu.ucsb.eucalyptus.msgs.WalrusDataResponseType;
+import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.transport.binding.Binding;
 import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 import edu.ucsb.eucalyptus.transport.http.Axis2HttpWorker;
@@ -69,6 +88,7 @@ import org.mule.api.MuleMessage;
 import org.mule.config.ExceptionHelper;
 
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
@@ -98,15 +118,43 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
         HttpRequest httprequest = ( HttpRequest ) msgContext.getProperty( GenericHttpDispatcher.HTTP_REQUEST );
         if ( httprequest == null )
         {
-            this.verifyUser( msgContext, wrappedParam );
+          this.verifyUser( msgContext, wrappedParam );
         }
         else
         {
-            bindingName = httprequest.getBindingName();
-            Policy p = new Policy();
-            newMsgContext.setProperty( RampartMessageData.KEY_RAMPART_POLICY, p );
+          bindingName = httprequest.getBindingName();
+          Policy p = new Policy();
+          newMsgContext.setProperty( RampartMessageData.KEY_RAMPART_POLICY, p );
+          //:: fixes the handling of certain kinds of client brain damage :://
+          if ( httprequest.isPureClient() ) {
+            if ( wrappedParam instanceof ModifyImageAttributeType ) {
+              ModifyImageAttributeType pure = ( ( ModifyImageAttributeType ) wrappedParam );
+              pure.setImageId( pure.getImageId().replaceFirst( "a", "e" ) );
+            } else if ( wrappedParam instanceof DescribeImageAttributeType ) {
+              DescribeImageAttributeType pure = ( ( DescribeImageAttributeType ) wrappedParam );
+              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ) );
+            } else if ( wrappedParam instanceof ResetImageAttributeType ) {
+              ResetImageAttributeType pure = ( ( ResetImageAttributeType ) wrappedParam );
+              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ) );
+            } else if ( wrappedParam instanceof DescribeImagesType ) {
+              ArrayList<String> strs = Lists.newArrayList();
+              for ( String imgId : ( ( DescribeImagesType ) wrappedParam ).getImagesSet() ) {
+                strs.add( imgId.replaceFirst( "^a", "e" ) );
+              }
+              ( ( DescribeImagesType ) wrappedParam ).setImagesSet( strs );
+            } else if ( wrappedParam instanceof DeregisterImageType ) {
+              DeregisterImageType pure = ( ( DeregisterImageType ) wrappedParam );
+              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ) );
+            } else if ( wrappedParam instanceof RunInstancesType ) {
+              RunInstancesType pure = ((RunInstancesType) wrappedParam);
+              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ) );
+              pure.setKernelId( pure.getKernelId().replaceFirst( "^a", "e" )  );
+              pure.setRamdiskId( pure.getRamdiskId().replaceFirst( "^a", "e" ) );
+            }
+          }
 
         }
+
         MuleMessage message = this.invokeService( methodName, wrappedParam );
 
         if ( message == null )
@@ -114,6 +162,29 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
 
         this.checkException( message );
 
+        if( httprequest != null ) {
+          //:: fixes the handling of certain kinds of client brain damage :://
+          if ( httprequest.isPureClient() ) {
+            if ( message.getPayload() instanceof DescribeImagesResponseType ) {
+              DescribeImagesResponseType purify = ( DescribeImagesResponseType ) message.getPayload();
+              for ( ImageDetails img : purify.getImagesSet() ) {
+                img.setImageId( img.getImageId().replaceFirst("^e","a" ));
+                if( img.getKernelId() != null ) img.setKernelId( img.getKernelId().replaceFirst("^e","a" ));
+                if( img.getRamdiskId() != null ) img.setRamdiskId( img.getRamdiskId().replaceFirst("^e","a" ));
+              }
+            } else if ( message.getPayload() instanceof DescribeInstancesResponseType ) {
+              DescribeInstancesResponseType purify = ( DescribeInstancesResponseType ) message.getPayload();
+              for( ReservationInfoType rsvInfo : purify.getReservationSet() ) {
+                for( RunningInstancesItemType r : rsvInfo.getInstancesSet() ) {
+                  r.setImageId( r.getImageId().replaceFirst( "^e", "a" ) );
+                  if( r.getKernel() != null ) r.setKernel( r.getKernel().replaceFirst( "^e", "a" ) );
+                  if( r.getRamdisk() != null ) r.setRamdisk( r.getRamdisk().replaceFirst( "^e", "a" ) );
+                }
+              }
+            }
+
+          }
+        }
 
         if ( newMsgContext != null )
         {
