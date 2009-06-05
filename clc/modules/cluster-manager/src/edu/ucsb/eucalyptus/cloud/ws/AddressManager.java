@@ -258,7 +258,7 @@ public class AddressManager implements Startable {
     reply.set_return( true );
 
     //:: made it here, means it looks legitimate :://
-    if ( address.isAssigned() ) {
+    if ( address.isAssigned() && address.getUserId().equals( request.getUserId() ) ) {
       LOG.debug( "Dispatching unassign message for: " + address );
       UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
       ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new UnassignAddressCallback( address ), unassignMsg ) );

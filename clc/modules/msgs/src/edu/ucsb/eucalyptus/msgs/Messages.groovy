@@ -325,20 +325,20 @@ public class VmNetworkPeer {
 
 
 
-  boolean equals(final final o) {
+  boolean equals(final Object o) {
     if ( this.is(o) ) return true;
 
     if ( !o || getClass() != o.class ) return false;
 
+    VmNetworkPeer that = (VmNetworkPeer) o;
 
-
-    VmNetworkPeer that = (VmNetworkPee r) o;
-
-    if ( sourceNetworkName ? !sourceNetworkName.equals(that.sourceNetworkName) : that.sourceNetworkName != nu ll ) return false;
-    i f ( userName ? !userName.equals(that.userName) : that.userName != n ull ) return false;
+    if ( sourceNetworkName ? !sourceNetworkName.equals(that.sourceNetworkName) : that.sourceNetworkName != null ) return false;
+    if ( userName ? !userName.equals(that.userName) : that.userName != null ) return false;
 
     return true;
-  }int hashCode() {
+  }
+
+  int hashCode() {
     int result;
 
     result = (userName ? userName.hashCode() : 0);
