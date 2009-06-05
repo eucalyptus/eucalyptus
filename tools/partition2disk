@@ -25,13 +25,14 @@ if (! defined $swap_size_mb) { $swap_size_mb = 0 }
 my $ephemeral_size_mb = untaint(shift @ARGV);
 if (! defined $ephemeral_size_mb) { $ephemeral_size_mb = 0 }
 
+my $SYNC=untaint(`which sync`);
 my $LOSETUP=untaint(`which losetup`);
 my $DD=untaint(`which dd`);
 my $PARTED=untaint(`which parted`);
 my $MV=untaint(`which mv`);
 my $FILE=untaint(`which file`);
 
-if (!$partition || !-f $partition || !-x $LOSETUP || !-x $DD || !-x $PARTED) {
+if (!$partition || !-f $partition || !-x $LOSETUP || !-x $DD || !-x $PARTED || !-x $SYNC) {
     print STDERR "USAGE: partition2disk <path/to/disk_or_partition_file> [swap-size-MB] [ephemeral-size-MB]\n";
     exit(1);
 }
@@ -82,7 +83,8 @@ if (!($magic =~ /boot sector/) && !($magic =~ /Qcow/)) { # if not a disk image a
         do_exit(10);
     }
     run ("$DD if=$partition of=$loopdevp bs=512k >/dev/null 2>&1", 11);
-    
+ 
+    run ("$SYNC", 16);
     run ("$LOSETUP -d $loopdev", 12);
     $loopdev="";
     run ("$LOSETUP -d $loopdevp", 13);
