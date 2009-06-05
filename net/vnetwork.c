@@ -515,12 +515,13 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   if (sourceNetName) {
     srcVlan = vnetGetVlan(vnetconfig, sourceUserName, sourceNetName);
     if (srcVlan < 0) {
-      logprintfl(EUCAERROR,"cannot locate source vlan for network %s/%s\n", sourceUserName, sourceNetName);
-      return(1);
+      logprintfl(EUCAWARN,"cannot locate source vlan for network %s/%s, skipping\n", sourceUserName, sourceNetName);
+      return(0);
+    } else {
+      tmp = hex2dot(vnetconfig->networks[srcVlan].nw);
+      snprintf(srcNet, 32, "%s/%d", tmp, slashnet);
+      free(tmp);
     }
-    tmp = hex2dot(vnetconfig->networks[srcVlan].nw);
-    snprintf(srcNet, 32, "%s/%d", tmp, slashnet);
-    free(tmp);
   } else {
     snprintf(srcNet, 32, "%s", sourceNet);
   }
