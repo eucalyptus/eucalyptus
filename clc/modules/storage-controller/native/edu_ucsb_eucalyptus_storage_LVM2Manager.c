@@ -200,7 +200,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createEmp
 	char command[256];
 	const jbyte* filename = (*env)->GetStringUTFChars(env, fileName, NULL);
     size = size * 1024;
-	snprintf(command, 256, "dd if=/dev/zero of=%s count=%d bs=%s", filename, size, blockSize);
+	snprintf(command, 256, "dd if=/dev/zero of=%s count=1 bs=%s seek=%d", filename, blockSize, size-1);
 
 	jstring returnValue = run_command(env, command, 2);
 
@@ -215,7 +215,7 @@ JNIEXPORT jstring JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_createAbs
     fprintf(stderr, "hello\n");
 
     size = size / (1024 * 1024);
-	snprintf(command, 256, "dd if=/dev/zero of=%s count=%ld bs=%s", filename, size, blockSize);
+	snprintf(command, 256, "dd if=/dev/zero of=%s count=1 bs=%s seek=%ld", filename, blockSize, size-1);
 
 	jstring returnValue = run_command(env, command, 2);
 

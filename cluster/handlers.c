@@ -918,6 +918,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   strncpy(dst->amiId, src->imageId, 16);
   strncpy(dst->kernelId, src->kernelId, 16);
   strncpy(dst->ramdiskId, src->ramdiskId, 16);
+  strncpy(dst->keyName, src->keyName, 1024);
   strncpy(dst->launchIndex, src->launchIndex, 64);
   strncpy(dst->userData, src->userData, 64);
   for (i=0; i<src->groupNamesSize || i >= 64; i++) {
