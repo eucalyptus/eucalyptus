@@ -440,3 +440,10 @@ public class HeartbeatMessage implements Cloneable, Serializable {
 
 }
 
+public class VmBundleMessage extends EucalyptusMessage {}
+
+public class DescribeBundleTasksType extends VmBundleMessage {
+  ArrayList<String> bundleIds = new ArrayList<String>();
+}
+public class DescribeBundleTasksResponseType extends VmBundleMessage {
+}
