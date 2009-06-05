@@ -120,6 +120,7 @@ public class SystemState {
         vm.setState( VmState.Mapper.get( runVm.getStateName() ) );
         for ( AttachedVolume vol : runVm.getVolumes() ) {
           vol.setInstanceId( vm.getInstanceId() );
+          vol.setStatus( "attached" );
         }
         vm.setVolumes( runVm.getVolumes() );
       }
@@ -150,7 +151,12 @@ public class SystemState {
       } catch ( NumberFormatException e ) {}
 
       //:: TODO: populate these asynchronously... :://
-      VmImageInfo imgInfo = new VmImageInfo( runVm.getImageId(), runVm.getKernelId(), runVm.getRamdiskId(), null, null, null );
+      VmImageInfo imgInfo = null;
+      try {
+        imgInfo = ( VmImageInfo ) Messaging.send( "vm://ImageResolve", runVm );
+      } catch ( EucalyptusCloudException e ) {
+        imgInfo = new VmImageInfo( runVm.getImageId(), runVm.getKernelId(), runVm.getRamdiskId(), null, null, null, null );
+      }
       VmKeyInfo keyInfo = null;
       try {
         keyInfo = ( VmKeyInfo ) Messaging.send( "vm://KeyPairResolve", runVm );
@@ -188,6 +194,8 @@ public class SystemState {
                                       imgInfo, keyInfo, vmType, networks );
       vm.setLaunchTime( runVm.getLaunchTime() );
       vm.getNetworkConfig().setIgnoredPublicIp( VmInstance.DEFAULT_IP );
+      vm.setKeyInfo( keyInfo );
+      vm.setImageInfo( imgInfo );
       VmInstances.getInstance().register( vm );
     } catch ( NoSuchElementException e ) {
       SystemState.dispatch( runVm.getPlacement(), new TerminateCallback(), Admin.makeMsg( TerminateInstancesType.class, runVm.getInstanceId() ) );
@@ -353,6 +361,7 @@ public class SystemState {
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>();
     if ( isAdmin ) {
       for ( VmInstance v : VmInstances.getInstance().listValues() ) {
+        if( !instancesSet.isEmpty() && !instancesSet.contains( v.getInstanceId() ) ) continue;
         if ( rsvMap.get( v.getReservationId() ) == null ) {
           ReservationInfoType reservation = new ReservationInfoType( v.getReservationId(), v.getOwnerId(), v.getNetworkNames() );
           rsvMap.put( reservation.getReservationId(), reservation );
@@ -361,6 +370,7 @@ public class SystemState {
       }
       for ( VmInstance v : VmInstances.getInstance().listDisabledValues() ) {
         if ( VmState.BURIED.equals( v.getState() ) ) continue;
+        if( !instancesSet.isEmpty() && !instancesSet.contains( v.getInstanceId() ) ) continue;
         if ( rsvMap.get( v.getReservationId() ) == null ) {
           ReservationInfoType reservation = new ReservationInfoType( v.getReservationId(), v.getOwnerId(), v.getNetworkNames() );
           rsvMap.put( reservation.getReservationId(), reservation );
