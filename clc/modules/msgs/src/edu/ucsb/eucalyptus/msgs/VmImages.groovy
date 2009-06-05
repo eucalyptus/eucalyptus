@@ -20,19 +20,15 @@ public class DescribeImageAttributeResponseType extends VmImageMessage {
   ArrayList<String> productCodes = new ArrayList<String>();
   ArrayList<String> kernel = new ArrayList<String>();
   ArrayList<String> ramdisk = new ArrayList<String>();
-  String blockDeviceMapping;
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>();
+  protected ArrayList realResponse;
 
-  public void setKernel(String kernel) {
-    this.launchPermission = null;
-    this.ramdisk = null;
-    this.kernel.add(kernel);
-  }
-
-  public void setRamdisk(String ramdisk) {
-    this.launchPermission = null;
-    this.kernel = null;
-    this.ramdisk.add(ramdisk);
-  }
+  public void setRealResponse( ArrayList r ) { this.realResponse = r; }
+  public boolean hasLaunchPermissions() { return this.realResponse.is(this.launchPermission); }
+  public boolean hasBlockDeviceMapping() { return this.realResponse.is(this.blockDeviceMapping); }
+  public boolean hasProductCodes() { return this.realResponse.is(this.productCodes); }
+  public boolean hasKernel() { return this.realResponse.is(this.kernel); }
+  public boolean hasRamdisk() { return this.realResponse.is(this.ramdisk); }
 }
 public class DescribeImageAttributeType extends VmImageMessage {
 
@@ -177,4 +173,18 @@ public class EucaRegisterImageType extends VmImageMessage {
 public class EucaRegisterImageResponseType extends VmImageMessage {
 
   String imageId;
+}
+
+public class ConfirmProductInstanceResponseType extends EucalyptusMessage {
+  boolean _return;
+  String ownerId;
+}
+public class ConfirmProductInstanceType extends VmImageMessage {
+  String productCode;
+  String instanceId;
+}
+public class ResolveVmImageInfo extends VmImageMessage {
+  String imageId;
+  String kernelId;
+  String ramdiskId;
 }

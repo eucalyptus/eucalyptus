@@ -70,6 +70,7 @@
     <endpoint name="FinishedVerifyWS" address="vm://VmVerified" synchronous="false"/>
 
     <endpoint name="KeyPairResolveWS" address="vm://KeyPairResolve" synchronous="true"/>
+    <endpoint name="ImageResolveWS" address="vm://ImageResolve" synchronous="true"/>
 
     <!--run-time system state services-->
     <endpoint name="ClusterEndpointWS" address="vm://ClusterEndpoint" synchronous="false"/>

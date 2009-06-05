@@ -107,5 +107,17 @@
             </collection>
         </structure>
     </mapping>
+    <mapping name="DescribeBundleTasks" class="edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType">
+        <structure usage="optional">
+            <collection name="bundlesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="bundleIds" item-type="java.lang.String">
+                <structure name="item">
+                    <value name="bundleId"/>
+                </structure>
+            </collection>
+        </structure>
+    </mapping>
+    <mapping name="DescribeBundleTasksResponse" class="edu.ucsb.eucalyptus.msgs.DescribeBundleTasksResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+    </mapping>
 
 </binding>

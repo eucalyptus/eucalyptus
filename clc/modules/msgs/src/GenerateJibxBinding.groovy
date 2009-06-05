@@ -59,29 +59,30 @@ classList.each({
                Class itsClass = Class.forName(it);
 
                if ( itsClass.getSuperclass().getSimpleName().equals("Object") )
-               baseMapping(itsClass.getSimpleName(), itsClass.getName());
+                 baseMapping(itsClass.getSimpleName(), itsClass.getName());
                else if ( itsClass.getSuperclass().getSimpleName().equals("EucalyptusData") )
-               childMapping(itsClass.getSimpleName().replaceAll("Type", ""), itsClass.getName(), itsClass.getSuperclass().getName(), true);
+                 childMapping(itsClass.getSimpleName().replaceAll("Type", ""), itsClass.getName(), itsClass.getSuperclass().getName(), true);
                else
-               childMapping(itsClass.getSimpleName().replaceAll("Type", ""), itsClass.getName(), itsClass.getSuperclass().getName(), false);
+                 childMapping(itsClass.getSimpleName().replaceAll("Type", ""), itsClass.getName(), itsClass.getSuperclass().getName(), false);
 
                def fieldList = itsClass.getDeclaredFields().findAll({Modifier.isPrivate(it.getModifiers())})
                fieldList.each({
                               Class itsType = it.getType();
-                              if ( itsType.getSuperclass().equals(edu.ucsb.eucalyptus.msgs.EucalyptusData) )
-                              typeBind(it.getName(), itsType.getName());
-                              else if ( it.getType().equals(java.util.ArrayList.class) )
-                              {
-                              if ( it.getGenericType().getActualTypeArguments()[ 0 ].equals(java.lang.String) )
-                              stringCollection(it.getName());
-                              else
-                              typedCollection(it.getName(), it.getGenericType().getActualTypeArguments()[ 0 ].getName());
+                              if ( itsType.getSuperclass().equals(edu.ucsb.eucalyptus.msgs.EucalyptusData) ) {
+                                typeBind(it.getName(), itsType.getName());
+                                } else if ( it.getType().equals(java.util.ArrayList.class) ) {
+                                if ( it.getGenericType() != null ) {
+                                  if ( it.getGenericType().getActualTypeArguments()[ 0 ].equals(java.lang.String) )
+                                    stringCollection(it.getName());
+                                  else
+                                    typedCollection(it.getName(), it.getGenericType().getActualTypeArguments()[ 0 ].getName());
+                                }
+                              } else {
+                                valueBind(it.getName());
                               }
-                              else
-                              valueBind(it.getName());
-                              /** date     **/
-                              /** arraylist     **/
-                              /** other     **/
+                              /** date       **/
+                              /** arraylist       **/
+                              /** other       **/
                               })
                bindingFile.append("</mapping>");
 

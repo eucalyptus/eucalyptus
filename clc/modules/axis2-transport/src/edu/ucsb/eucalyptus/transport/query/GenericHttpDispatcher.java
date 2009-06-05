@@ -49,7 +49,9 @@ import org.apache.log4j.Logger;
 import org.apache.neethi.Policy;
 import org.apache.rampart.RampartMessageData;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -117,9 +119,20 @@ public class GenericHttpDispatcher extends RequestURIBasedDispatcher {
 
   private void prepareRequest( final MessageContext messageContext ) throws AxisFault {
     try {
-      EndpointReference endpoint = messageContext.getTo();
-      URL url = new URL( "http://my.flavourite.host.com" + endpoint.getAddress() );
       HttpRequest httpRequest = new HttpRequest();
+      EndpointReference endpoint = messageContext.getTo();
+      //:: fixes trailing '/' added by some clients :://
+      if( endpoint.getAddress().contains( "Eucalyptus/" ) ) {
+        endpoint.setAddress( endpoint.getAddress().replaceAll( "Eucalyptus/", "Eucalyptus" ) );
+        httpRequest.setPureClient( true );
+      }
+      //:: fixes handling of arguments in POST :://
+      if( (messageContext.getProperty( HTTPConstants.HTTP_METHOD )).equals( HTTPConstants.HTTP_METHOD_POST )) {
+        BufferedReader in = new BufferedReader( new InputStreamReader( ( InputStream ) messageContext.getProperty( MessageContext.TRANSPORT_IN ) ) );
+        String postLine = in.readLine();
+        endpoint.setAddress( endpoint.getAddress() + (endpoint.getAddress().contains( "?" ) ? "&" : "?" ) + postLine );
+      }
+      URL url = new URL( "http://my.flavourite.host.com" + endpoint.getAddress() );
       httpRequest.setHostAddr( (String) messageContext.getProperty( MessageContext.TRANSPORT_ADDR ) );
       httpRequest.setRequestURL( messageContext.getTo().getAddress() );
 

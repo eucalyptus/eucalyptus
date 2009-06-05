@@ -38,7 +38,7 @@
         <value name="volumeId" field="volumeId" usage="required"/>
         <value name="size" field="size" usage="optional"/>
         <value name="snapshotId" field="snapshotId" usage="optional"/>
-        <value name="zone" field="availabilityZone" usage="required"/>
+        <value name="availabilityZone" field="availabilityZone" usage="required"/>
         <value name="status" field="status" usage="required"/>
         <value name="createTime" field="createTime" usage="required"/>
         <collection name="attachmentSet" field="attachmentSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">

@@ -55,8 +55,34 @@ import java.util.*;
 import java.util.zip.Adler32;
 
 public class ImageManager {
+  public static BlockDeviceMappingItemType EMI = new BlockDeviceMappingItemType("emi", "sda1");
+  public static BlockDeviceMappingItemType EPHEMERAL = new BlockDeviceMappingItemType("ephemeral0", "sda2");
+  public static BlockDeviceMappingItemType SWAP = new BlockDeviceMappingItemType("swap", "sda3");
+  public static BlockDeviceMappingItemType ROOT = new BlockDeviceMappingItemType("root", "/dev/sda1");
 
   private static Logger LOG = Logger.getLogger( ImageManager.class );
+
+  public VmImageInfo verify( VmInfo vmInfo ) throws EucalyptusCloudException {
+    SystemConfiguration conf = EucalyptusProperties.getSystemConfiguration();
+    String walrusUrl = getStorageUrl( conf );
+    ArrayList<String> productCodes = Lists.newArrayList();
+    ImageInfo diskInfo = null, kernelInfo = null, ramdiskInfo = null;
+    String diskUrl = null, kernelUrl = null, ramdiskUrl = null;
+
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
+    try {
+      diskInfo = db.getUnique( ImageInfo.named( vmInfo.getImageId() ) );
+      for( ProductCode p : diskInfo.getProductCodes() ) {
+        productCodes.add( p.getValue());
+      }
+      diskUrl = this.getImageUrl( walrusUrl, diskInfo );
+    } catch ( EucalyptusCloudException e ) {}
+
+    //:: create the response assets now since we might not have a ramdisk anyway :://
+    VmImageInfo vmImgInfo = new VmImageInfo( vmInfo.getImageId(), vmInfo.getKernelId(), vmInfo.getRamdiskId(),
+                                             diskUrl, null, null, productCodes );
+    return vmImgInfo;
+  }
 
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     SystemConfiguration conf = EucalyptusProperties.getSystemConfiguration();
@@ -66,8 +92,12 @@ public class ImageManager {
     ImageInfo searchDiskInfo = new ImageInfo( msg.getImageId() );
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
     ImageInfo diskInfo = null;
+    ArrayList<String> productCodes = Lists.newArrayList();
     try {
       diskInfo = db.getUnique( searchDiskInfo );
+      for( ProductCode p : diskInfo.getProductCodes() ) {
+        productCodes.add( p.getValue());
+      }
     } catch ( EucalyptusCloudException e ) {
       throw new EucalyptusCloudException( "Failed to find kernel image: " + msg.getImageId() );
     }
@@ -119,7 +149,7 @@ public class ImageManager {
     this.checkStoredImage( ramdiskInfo );
 
     //:: get together the required URLs ::/
-    VmImageInfo vmImgInfo = getVmImageInfo( walrusUrl, diskInfo, kernelInfo, ramdiskInfo );
+    VmImageInfo vmImgInfo = getVmImageInfo( walrusUrl, diskInfo, kernelInfo, ramdiskInfo, productCodes );
     vmAllocInfo.setImageInfo( vmImgInfo );
     return vmAllocInfo;
   }
@@ -218,7 +248,7 @@ public class ImageManager {
       }
   }
 
-  private VmImageInfo getVmImageInfo( final String walrusUrl, final ImageInfo diskInfo, final ImageInfo kernelInfo, final ImageInfo ramdiskInfo ) throws EucalyptusCloudException {
+  private VmImageInfo getVmImageInfo( final String walrusUrl, final ImageInfo diskInfo, final ImageInfo kernelInfo, final ImageInfo ramdiskInfo, final ArrayList<String> productCodes ) throws EucalyptusCloudException {
     String diskUrl = this.getImageUrl( walrusUrl, diskInfo );
     String kernelUrl = this.getImageUrl( walrusUrl, kernelInfo );
     String ramdiskUrl = null;
@@ -227,7 +257,7 @@ public class ImageManager {
 
     //:: create the response assets now since we might not have a ramdisk anyway :://
     VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId(), kernelInfo.getImageId(), ramdiskInfo == null ? null : ramdiskInfo.getImageId(),
-                                             diskUrl, kernelUrl, ramdiskInfo == null ? null : ramdiskUrl );
+                                             diskUrl, kernelUrl, ramdiskInfo == null ? null : ramdiskUrl, productCodes );
     return vmImgInfo;
   }
 
@@ -327,8 +357,9 @@ If you specify a list of executable users, only users that have launch permissio
 
     List<ImageDetails> repList = reply.getImagesSet();
     //:: handle easy case first ::/
-    if ( imageList.isEmpty() && owners.isEmpty() && executable.isEmpty() )
+    if ( owners.isEmpty() && executable.isEmpty() ) {
       executable.add( "self" );
+    }
 
     if ( !owners.isEmpty() ) {
       if ( owners.remove( "self" ) ) owners.add( user.getUserName() );
@@ -363,6 +394,16 @@ If you specify a list of executable users, only users that have launch permissio
       }
     }
     db.commit();
+
+    if( !imageList.isEmpty() ) {
+      ArrayList<ImageDetails> newList = Lists.newArrayList();
+      for( ImageDetails img : repList ) {
+        if( imageList.contains( img.getImageId() ) ) {
+          newList.add( img );
+        }
+      }
+      reply.setImagesSet( newList );
+    }
 
     return reply;
   }
@@ -543,19 +584,18 @@ If you specify a list of executable users, only users that have launch permissio
     VmInstance vm = null;
     try {
       vm = VmInstances.getInstance().lookup( request.getInstanceId() );
-    } catch ( NoSuchElementException e ) {
-      return reply;
-    }
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
-    try {
-      ImageInfo found = db.getUnique( new ImageInfo( vm.getImageInfo().getImageId() ) );
-      if ( vm.getImageInfo().getImageId().equals( found ) ) {
-        reply.set_return( true );
+      EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
+      try {
+        ImageInfo found = db.getUnique( new ImageInfo( vm.getImageInfo().getImageId() ) );
+        if ( found.getProductCodes().contains( new ProductCode( request.getProductCode() ) ) ) {
+          reply.set_return( true );
+          reply.setOwnerId( found.getImageOwnerId() );
+        }
+      } catch ( EucalyptusCloudException e ) {
+      } finally {
+        db.commit();
       }
-    } catch ( EucalyptusCloudException e ) {
-    } finally {
-      db.commit();
-    }
+    } catch ( NoSuchElementException e ) {}
     return reply;
   }
 
@@ -566,28 +606,34 @@ If you specify a list of executable users, only users that have launch permissio
     if ( request.getAttribute() != null )
       request.applyAttribute();
 
-    if ( request.getBlockDeviceMapping() != null )
-      throw new EucalyptusCloudException( "image attribute: block device mappings: not implemented" );
-
-    reply.setProductCodes( null );
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
     try {
       ImageInfo imgInfo = db.getUnique( new ImageInfo( request.getImageId() ) );
       if ( !imgInfo.isAllowed( db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId() ) ) ) )
         throw new EucalyptusCloudException( "image attribute: not authorized." );
       if ( request.getKernel() != null ) {
-        reply.setKernel( imgInfo.getKernelId() );
+        reply.setRealResponse( reply.getKernel() );
+        reply.getKernel().add(imgInfo.getKernelId() );
       } else if ( request.getRamdisk() != null ) {
-        reply.setRamdisk( imgInfo.getRamdiskId() );
+        reply.setRealResponse( reply.getRamdisk() );
+        reply.getRamdisk().add( imgInfo.getRamdiskId() );
       } else if ( request.getLaunchPermission() != null ) {
+        reply.setRealResponse( reply.getLaunchPermission() );
         for ( UserGroupInfo userGroup : imgInfo.getUserGroups() )
           reply.getLaunchPermission().add( LaunchPermissionItemType.getGroup( userGroup.getName() ) );
         for ( UserInfo user : imgInfo.getPermissions() )
           reply.getLaunchPermission().add( LaunchPermissionItemType.getUser( user.getUserName() ) );
-      } else if ( !request.getProductCodes().isEmpty() ) {
+      } else if ( request.getProductCodes() != null ) {
+        reply.setRealResponse( reply.getProductCodes() );
         for ( ProductCode p : imgInfo.getProductCodes() ) {
           reply.getProductCodes().add( p.getValue() );
         }
+      } else if ( request.getBlockDeviceMapping() != null ) {
+        reply.setRealResponse( reply.getBlockDeviceMapping() );
+        reply.getBlockDeviceMapping().add( EMI );
+        reply.getBlockDeviceMapping().add( EPHEMERAL );
+        reply.getBlockDeviceMapping().add( SWAP );
+        reply.getBlockDeviceMapping().add( ROOT );
       } else {
         throw new EucalyptusCloudException( "invalid image attribute request." );
       }
@@ -611,8 +657,12 @@ If you specify a list of executable users, only users that have launch permissio
       ImageInfo imgInfo = null;
       try {
         imgInfo = db.getUnique( new ImageInfo( request.getImageId() ) );
-        for ( String productCode : request.getProductCodes() )
-          imgInfo.getProductCodes().add( new ProductCode( productCode ) );
+        for ( String productCode : request.getProductCodes() ) {
+          ProductCode prodCode = new ProductCode( productCode );
+          if( !imgInfo.getProductCodes().contains( prodCode  ) ) {
+            imgInfo.getProductCodes().add( prodCode );
+          }
+        }
         db.commit();
         reply.set_return( true );
       }

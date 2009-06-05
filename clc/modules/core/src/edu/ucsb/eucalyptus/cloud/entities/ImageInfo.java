@@ -94,7 +94,7 @@ public class ImageInfo {
   )
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   private List<UserInfo> permissions = new ArrayList<UserInfo>();
-  @ManyToMany()
+  @ManyToMany( cascade = CascadeType.PERSIST )
   @JoinTable(
       name = "image_has_product_codes",
       joinColumns = { @JoinColumn( name = "image_id" ) },
@@ -323,5 +323,10 @@ public class ImageInfo {
       db.commit();
     }
     return image;
+  }
+
+  @Override
+  public String toString() {
+    return this.imageId;
   }
 }
