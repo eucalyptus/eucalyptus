@@ -129,27 +129,27 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
           if ( httprequest.isPureClient() ) {
             if ( wrappedParam instanceof ModifyImageAttributeType ) {
               ModifyImageAttributeType pure = ( ( ModifyImageAttributeType ) wrappedParam );
-              pure.setImageId( pure.getImageId().replaceFirst( "a", "e" ) );
+              pure.setImageId( pure.getImageId().replaceFirst( "a", "e" ).toLowerCase( ) );
             } else if ( wrappedParam instanceof DescribeImageAttributeType ) {
               DescribeImageAttributeType pure = ( ( DescribeImageAttributeType ) wrappedParam );
-              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ) );
+              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ).toLowerCase( ) );
             } else if ( wrappedParam instanceof ResetImageAttributeType ) {
               ResetImageAttributeType pure = ( ( ResetImageAttributeType ) wrappedParam );
-              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ) );
+              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ).toLowerCase( ) );
             } else if ( wrappedParam instanceof DescribeImagesType ) {
               ArrayList<String> strs = Lists.newArrayList();
               for ( String imgId : ( ( DescribeImagesType ) wrappedParam ).getImagesSet() ) {
-                strs.add( imgId.replaceFirst( "^a", "e" ) );
+                strs.add( imgId.replaceFirst( "^a", "e" ).toLowerCase( ) );
               }
               ( ( DescribeImagesType ) wrappedParam ).setImagesSet( strs );
             } else if ( wrappedParam instanceof DeregisterImageType ) {
               DeregisterImageType pure = ( ( DeregisterImageType ) wrappedParam );
-              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ) );
+              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ).toLowerCase( ) );
             } else if ( wrappedParam instanceof RunInstancesType ) {
               RunInstancesType pure = ((RunInstancesType) wrappedParam);
-              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ) );
-              pure.setKernelId( pure.getKernelId().replaceFirst( "^a", "e" )  );
-              pure.setRamdiskId( pure.getRamdiskId().replaceFirst( "^a", "e" ) );
+              pure.setImageId( pure.getImageId().replaceFirst( "^a", "e" ).toLowerCase( ) );
+              pure.setKernelId( pure.getKernelId().replaceFirst( "^a", "e" ).toLowerCase( )  );
+              pure.setRamdiskId( pure.getRamdiskId().replaceFirst( "^a", "e" ).toLowerCase( ) );
             }
           }
 
@@ -168,17 +168,17 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
             if ( message.getPayload() instanceof DescribeImagesResponseType ) {
               DescribeImagesResponseType purify = ( DescribeImagesResponseType ) message.getPayload();
               for ( ImageDetails img : purify.getImagesSet() ) {
-                img.setImageId( img.getImageId().replaceFirst("^e","a" ));
-                if( img.getKernelId() != null ) img.setKernelId( img.getKernelId().replaceFirst("^e","a" ));
-                if( img.getRamdiskId() != null ) img.setRamdiskId( img.getRamdiskId().replaceFirst("^e","a" ));
+                img.setImageId( img.getImageId().replaceFirst("^e","a" ).toLowerCase( ) );
+                if( img.getKernelId() != null ) img.setKernelId( img.getKernelId().replaceFirst("^e","a" ).toLowerCase( ) );
+                if( img.getRamdiskId() != null ) img.setRamdiskId( img.getRamdiskId().replaceFirst("^e","a" ).toLowerCase( ) );
               }
             } else if ( message.getPayload() instanceof DescribeInstancesResponseType ) {
               DescribeInstancesResponseType purify = ( DescribeInstancesResponseType ) message.getPayload();
               for( ReservationInfoType rsvInfo : purify.getReservationSet() ) {
                 for( RunningInstancesItemType r : rsvInfo.getInstancesSet() ) {
-                  r.setImageId( r.getImageId().replaceFirst( "^e", "a" ) );
-                  if( r.getKernel() != null ) r.setKernel( r.getKernel().replaceFirst( "^e", "a" ) );
-                  if( r.getRamdisk() != null ) r.setRamdisk( r.getRamdisk().replaceFirst( "^e", "a" ) );
+                  r.setImageId( r.getImageId().replaceFirst( "^e", "a" ).toLowerCase( ) );
+                  if( r.getKernel() != null ) r.setKernel( r.getKernel().replaceFirst( "^e", "a" ).toLowerCase( ) );
+                  if( r.getRamdisk() != null ) r.setRamdisk( r.getRamdisk().replaceFirst( "^e", "a" ).toLowerCase( ) );
                 }
               }
             }

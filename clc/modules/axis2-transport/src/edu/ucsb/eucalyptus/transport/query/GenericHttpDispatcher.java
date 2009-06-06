@@ -101,7 +101,7 @@ public class GenericHttpDispatcher extends RequestURIBasedDispatcher {
       throw new AxisFault( "Protocol failure: Could not identify the operation component of the request." ); //this is a dispatcher failure, shouldn't have "accept()"ed the request
 
     //:: find the operation :://
-    AxisOperation operation = service.getOperationByAction( httpRequest.getOperation() );
+    AxisOperation operation = service.getOperationByAction( httpRequest.getOperation().replaceAll("/*","") );
     if ( operation == null )
       throw new AxisFault( "Failed to process the request: Operation doesnt exist: " + httpRequest.getOperation() ); //this is a user failure, incorrectly specified Operation perhaps?
 
@@ -122,10 +122,11 @@ public class GenericHttpDispatcher extends RequestURIBasedDispatcher {
       HttpRequest httpRequest = new HttpRequest();
       EndpointReference endpoint = messageContext.getTo();
       //:: fixes trailing '/' added by some clients :://
-      if( endpoint.getAddress().contains( "Eucalyptus/" ) ) {
+      if( endpoint.getAddress().endsWith( "Eucalyptus/" ) ) {
         endpoint.setAddress( endpoint.getAddress().replaceAll( "Eucalyptus/", "Eucalyptus" ) );
         httpRequest.setPureClient( true );
       }
+
       //:: fixes handling of arguments in POST :://
       if( (messageContext.getProperty( HTTPConstants.HTTP_METHOD )).equals( HTTPConstants.HTTP_METHOD_POST )) {
         BufferedReader in = new BufferedReader( new InputStreamReader( ( InputStream ) messageContext.getProperty( MessageContext.TRANSPORT_IN ) ) );

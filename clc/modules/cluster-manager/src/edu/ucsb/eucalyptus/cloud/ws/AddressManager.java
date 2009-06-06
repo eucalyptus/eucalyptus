@@ -251,14 +251,14 @@ public class AddressManager implements Startable {
     if ( !request.isAdministrator() && !( request.getUserId().equals( address.getUserId() ) && request.getUserId().equals( vm.getOwnerId() ) ) )
       return reply;
 
-    if( VmInstance.DEFAULT_IP.equals( vm.getInstanceId() ) )
+    if( !vm.getNetworkConfig().getIpAddress().equals( vm.getNetworkConfig().getIgnoredPublicIp() ) && !VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) )
         return reply;
 
     //:: operation should be idempotent; request is legitimate so return true :://
     reply.set_return( true );
 
     //:: made it here, means it looks legitimate :://
-    if ( address.isAssigned() ) {
+    if ( address.isAssigned() && address.getUserId().equals( request.getUserId() ) ) {
       LOG.debug( "Dispatching unassign message for: " + address );
       UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
       ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new UnassignAddressCallback( address ), unassignMsg ) );
