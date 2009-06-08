@@ -52,6 +52,7 @@ public class HttpRequest {
   private Map<String, String> headers;
   private Map bindingArguments;
   private String bindingName;
+  private String originalNamespace;
   private String requestURL;
 
   public String getRequestURL() {
@@ -155,5 +156,13 @@ public class HttpRequest {
 
   public void setPureClient( final boolean pureClient ) {
     this.pureClient = pureClient;
+  }
+
+  public String getOriginalNamespace() {
+    return originalNamespace;
+  }
+
+  public void setOriginalNamespace( final String originalNamespace ) {
+    this.originalNamespace = originalNamespace;
   }
 }
