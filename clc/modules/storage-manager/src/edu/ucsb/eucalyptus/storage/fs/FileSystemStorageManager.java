@@ -50,7 +50,7 @@ public class FileSystemStorageManager implements StorageManager {
     public static final String lvmRootDirectory = "/dev";
     private static boolean initialized = false;
     private static String eucaHome = "/opt/eucalyptus";
-    public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
+    public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
     public static final int MAX_LOOP_DEVICES = 256;    
     private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
 

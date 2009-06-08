@@ -323,7 +323,7 @@ done
 if [ -n "$SETUP" ]; then
 	. $FILE
 
-	ROOTWRAP="$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap"
+	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
 	
 	# first of all setup euca_rootwrap
 	if [ ! -x "$ROOTWRAP" ]; then
@@ -369,7 +369,7 @@ fi
 if [ -n "$CHECK" ]; then
 	. $FILE
 
-	ROOTWRAP="$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap"
+	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
 
 	# vblade and aoe may be needed
 	if [ "$CHECK" != "cc" -a "$DISABLE_EBS" != "Y" -a "$DISABLE_EBS" != "y" ]; then

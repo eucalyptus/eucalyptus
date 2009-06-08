@@ -27,8 +27,8 @@ distclean:
 	rm -rf config.h
 
 install:
-	@$(INSTALL) -m 0755 euca_rootwrap $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 0755 euca_mountwrap $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 0755 euca_rootwrap $(usrdir)/eucalyptus
+	@$(INSTALL) -m 0755 euca_mountwrap $(usrdir)/eucalyptus
 
 deploy:
 

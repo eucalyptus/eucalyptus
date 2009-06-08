@@ -283,7 +283,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
       ret = 1;
     } else {
       if (!allocated) {
-	snprintf(cmd, 255, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
+	snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
 	logprintfl(EUCAINFO,"running cmd %s\n", cmd);
 	rc = system(cmd);
 	if (rc) {
@@ -383,7 +383,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
       }
       
 
-      snprintf(cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
+      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
       logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
       rc = system(cmd);
       if (rc) {
