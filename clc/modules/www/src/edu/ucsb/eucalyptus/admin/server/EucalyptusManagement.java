@@ -256,9 +256,9 @@ public class EucalyptusManagement {
 
         //String hash = BCrypt.hashpw( webUser.getBCryptedPassword(), BCrypt.gensalt() );
         //webUser.setBCryptedPassword( hash );
-        webUser.setIsApproved( false );
-        webUser.setIsAdministrator( false );
-        webUser.setIsEnabled( false );
+        //webUser.setIsApproved( false );
+        //webUser.setIsAdministrator( false );
+        //webUser.setIsEnabled( false );
 
         // TODO: add web user properly, with all keys and certs generated, too
         webUser.setConfirmationCode( UserManagement.generateConfirmationCode( webUser.getUserName() ) );
