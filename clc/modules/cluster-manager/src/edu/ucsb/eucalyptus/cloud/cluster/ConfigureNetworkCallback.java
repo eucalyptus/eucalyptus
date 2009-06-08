@@ -11,6 +11,7 @@ class ConfigureNetworkCallback extends QueuedEventCallback<ConfigureNetworkType>
   public ConfigureNetworkCallback() {}
 
   public void process( final Client clusterClient, final ConfigureNetworkType msg ) throws Exception {
+    LOG.info( "Sending networking rules for: " + msg.getUserId() + ":" + msg.getRules() );
     clusterClient.send( msg );
   }
 

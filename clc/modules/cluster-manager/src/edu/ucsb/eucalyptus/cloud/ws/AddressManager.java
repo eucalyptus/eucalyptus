@@ -251,11 +251,25 @@ public class AddressManager implements Startable {
     if ( !request.isAdministrator() && !( request.getUserId().equals( address.getUserId() ) && request.getUserId().equals( vm.getOwnerId() ) ) )
       return reply;
 
-    if( !vm.getNetworkConfig().getIpAddress().equals( vm.getNetworkConfig().getIgnoredPublicIp() ) && !VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) )
-        return reply;
+//    if( !vm.getNetworkConfig().getIpAddress().equals( vm.getNetworkConfig().getIgnoredPublicIp() ) && !VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) )
+//        return reply;
 
     //:: operation should be idempotent; request is legitimate so return true :://
     reply.set_return( true );
+
+    //:: check if the currently recorded address for the VM is a system managed public address, unassign if so :://
+    if( !vm.getNetworkConfig().getIpAddress().equals( vm.getNetworkConfig().getIgnoredPublicIp() ) && !VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) ) {
+      String currentPublicIp = vm.getNetworkConfig().getIgnoredPublicIp();
+      try {
+        Address currentAddr = Addresses.getInstance().lookup( currentPublicIp );
+        LOG.debug( "Dispatching unassign message for: " + address );
+        UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, currentAddr.getName(), currentAddr.getInstanceAddress() );
+        ClusterEnvelope.dispatch( currentAddr.getCluster(), QueuedEvent.make( new UnassignAddressCallback( currentAddr ), unassignMsg ) );
+        currentAddr.unassign();
+      } catch ( NoSuchElementException e ) {
+        return reply;
+      }
+    }
 
     //:: made it here, means it looks legitimate :://
     if ( address.isAssigned() && address.getUserId().equals( request.getUserId() ) ) {
@@ -263,8 +277,9 @@ public class AddressManager implements Startable {
       UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
       ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new UnassignAddressCallback( address ), unassignMsg ) );
     }
-    //:: record the assignment :://
     address.unassign();
+
+    //:: record the assignment :://
     address.assign( vm.getInstanceId(), vm.getNetworkConfig().getIpAddress() );
     EntityWrapper<Address> db = new EntityWrapper<Address>();
     try {
