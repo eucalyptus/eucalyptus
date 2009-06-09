@@ -222,13 +222,15 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
             /* enable the new user right away */
             user.setIsApproved(true);
             user.setIsEnabled(true);
-            EucalyptusManagement.commitWebUser(user);
             response = notifyUserApproved(user);
         } else {
             /* if anonymous, then notify admin */
+            user.setIsApproved(false);
+            user.setIsEnabled(false);
             notifyAdminOfSignup (user);
             response = thanks_for_signup;
         }
+        EucalyptusManagement.commitWebUser(user);
 
         return response;
     }
@@ -614,8 +616,11 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
         oldRecord.setIsAdministrator(newRecord.isAdministrator());
-        if (!oldRecord.isConfirmed()) { // once confirmed, cannot be unconfirmed
-            oldRecord.setIsConfirmed(newRecord.isConfirmed());
+		// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
+        if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) { 
+            oldRecord.setIsConfirmed(true);
+        	oldRecord.setIsEnabled(true);
+        	oldRecord.setIsApproved(true);
         }
 
         EucalyptusManagement.commitWebUser( oldRecord );

@@ -659,7 +659,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                         userToSave.setIsAdministrator( userIsAdmin.isChecked());
                         if ( showSkipConfirmed ) {
                             previousSkipConfirmation = skipConfirmation.isChecked(); // remember value for the future
-                            userToSave.setIsConfirmed( previousSkipConfirmation);
+                            userToSave.setIsConfirmed(previousSkipConfirmation);
                         }
                     }
                     if ( telephoneNumber_box.getText().length() > 0 )
@@ -1223,6 +1223,10 @@ public class EucalyptusWebInterface implements EntryPoint {
 			allTabs.addTab ("Configuration"); confTabIndex = nTabs++;
             allTabs.addTab ("Downloads"); downTabIndex = nTabs++;
         }
+		// can happen if admin user re-logs in as regular without reloading
+		if (currentTabIndex > (nTabs-1) ) { 
+			currentTabIndex = 0;
+		}
 		allTabs.addTabListener(new TabListener() {
             public void onTabSelected(SourcesTabEvents sender, int tabIndex) {
                 String error = "This tab is not implemented yet, sorry!";
@@ -1232,7 +1236,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 else if (tabIndex==imgTabIndex) { displayImagesTab(wrapper); }
                 else if (tabIndex==usrTabIndex) { displayUsersTab(wrapper); }
 				else if (tabIndex==confTabIndex) { displayConfTab(wrapper); }
-                else if (tabIndex==downTabIndex) { displayPrepackagedTab(wrapper); }
+                else if (tabIndex==downTabIndex) { displayDownloadsTab(wrapper); }
                 else { displayErrorPage("Invalid tab!"); }
             }
             public boolean onBeforeTabSelected(SourcesTabEvents sender, int tabIndex) {
@@ -1240,11 +1244,11 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         });
 
-        allTabs.selectTab(currentTabIndex);
         RootPanel.get().clear();
         RootPanel.get().add( top_bar );
         RootPanel.get().add( allTabs );
         RootPanel.get().add( wrapper );
+        allTabs.selectTab(currentTabIndex);
     }
 
 	public void displayCredentialsTab (final VerticalPanel parent)
@@ -1902,12 +1906,11 @@ public class EucalyptusWebInterface implements EntryPoint {
             final Grid g = new Grid(nusers + 1, 6);
             g.setStyleName("euca-table");
             g.setCellPadding(6);
-            g.setWidget(0, 0, new Label("Username"));
-            g.setWidget(0, 1, new Label("Email"));
-            g.setWidget(0, 2, new Label("Name"));
-            g.setWidget(0, 3, new Label("Status"));
-            g.setWidget(0, 4, new Label("Actions"));
-            //g.setWidget(0, 5, new Label("View"));
+            g.setWidget(0, 1, new Label("Username"));
+            g.setWidget(0, 2, new Label("Email"));
+            g.setWidget(0, 3, new Label("Name"));
+            g.setWidget(0, 4, new Label("Status"));
+            g.setWidget(0, 5, new Label("Actions"));
             g.getRowFormatter().setStyleName(0, "euca-table-heading-row");
 
             for (int i=0; i<nusers; i++) {
@@ -1918,12 +1921,15 @@ public class EucalyptusWebInterface implements EntryPoint {
                 } else {
                     g.getRowFormatter().setStyleName(row, "euca-table-even-row");
                 }
+				Label indexLabel = new Label(Integer.toString(i));
+				indexLabel.setStyleName("euca-remember-text");
+				g.setWidget(row, 0, indexLabel);
 				Label userLabel = new Label(u.getUserName());
-                g.setWidget(row, 0, userLabel);
+                g.setWidget(row, 1, userLabel);
 				Label emailLabel = new Label(u.getEmail());
-                g.setWidget(row, 1, emailLabel);
+                g.setWidget(row, 2, emailLabel);
 				Label nameLabel = new Label(u.getRealName());
-                g.setWidget(row, 2, nameLabel);
+                g.setWidget(row, 3, nameLabel);
                 String status;
                 if (!u.isApproved().booleanValue()) {
                     status = "unapproved";
@@ -1937,7 +1943,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 if (u.isAdministrator().booleanValue()) {
                      status += " & admin";
                 }
-                g.setWidget(row, 3, new Label(status) );
+                g.setWidget(row, 4, new Label(status) );
 
                 /* actions */
                 HorizontalPanel ops = new HorizontalPanel();
@@ -1968,7 +1974,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 					ops.add(del_button);
 				}
 				
-				g.setWidget(row, 4, ops );	
+				g.setWidget(row, 5, ops );	
 
                 /* view */
                 HorizontalPanel views = new HorizontalPanel();
@@ -2001,7 +2007,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         int nimages = imagesList.size();
         boolean showActions = false;
         if (loggedInUser.isAdministrator().booleanValue()) {
-            // Chris: comment out the next line if image deletion does not work on the back-end
             showActions = true;
         }
 
@@ -2065,9 +2070,9 @@ public class EucalyptusWebInterface implements EntryPoint {
 		parent.add (vpanel);
 	}
 
-    public void displayPrepackagedTab (final VerticalPanel parent)
+    public void displayDownloadsTab (final VerticalPanel parent)
     {
-		History.newItem("prepackaged");
+		History.newItem("downloads");
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
         vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
