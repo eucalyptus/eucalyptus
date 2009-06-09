@@ -222,14 +222,15 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
             /* enable the new user right away */
             user.setIsApproved(true);
             user.setIsEnabled(true);
-            user.setIsConfirmed(false);
-            EucalyptusManagement.commitWebUser(user);
             response = notifyUserApproved(user);
         } else {
             /* if anonymous, then notify admin */
+            user.setIsApproved(false);
+            user.setIsEnabled(false);
             notifyAdminOfSignup (user);
             response = thanks_for_signup;
         }
+        EucalyptusManagement.commitWebUser(user);
 
         return response;
     }
@@ -367,19 +368,22 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 
     private String notifyUserApproved(UserInfoWeb user)
     {
+        String confString = " and confirmed";
         try {
-            String http_eucalyptus = ServletUtils.getRequestUrl(getThreadLocalRequest());
-            String confirm_link = http_eucalyptus + "?action=confirm"
-                    + "&code=" + user.getConfirmationCode();
+            if (!user.isConfirmed().booleanValue()) {
+                confString = "";
+                String http_eucalyptus = ServletUtils.getRequestUrl(getThreadLocalRequest());
+                String confirm_link = http_eucalyptus + "?action=confirm"
+                        + "&code=" + user.getConfirmationCode();
 
-            String email_message = signup_approval_header + "\n\n" +
-                    confirm_link +
-                    "\n\n" + signup_approval_footer;
+                String email_message = signup_approval_header + "\n\n" +
+                        confirm_link +
+                        "\n\n" + signup_approval_footer;
 
-            ServletUtils.sendMail(reply_email, user.getEmail(),
-                    signup_approval_subject,
-                    email_message);
-
+                ServletUtils.sendMail(reply_email, user.getEmail(),
+                        signup_approval_subject,
+                        email_message);
+            }
         } catch (Exception e) {
             // TODO: log this using the proper procedure
             LOG.error ("Approval mailing problem: " + e.getMessage());
@@ -388,7 +392,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 
             return "Internal problem (failed to notify user " + user.getEmail() + " by email)";
         }
-        return "User '" + user.getUserName() + "' was approved, thank you.";
+        return "User '" + user.getUserName() + "' was approved" + confString + ", thank you.";
     }
 
     private String notifyUserRejected(UserInfoWeb user)
@@ -611,6 +615,13 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 		oldRecord.setAffiliation (newRecord.getAffiliation());
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
+        oldRecord.setIsAdministrator(newRecord.isAdministrator());
+		// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
+        if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) { 
+            oldRecord.setIsConfirmed(true);
+        	oldRecord.setIsEnabled(true);
+        	oldRecord.setIsApproved(true);
+        }
 
         EucalyptusManagement.commitWebUser( oldRecord );
 

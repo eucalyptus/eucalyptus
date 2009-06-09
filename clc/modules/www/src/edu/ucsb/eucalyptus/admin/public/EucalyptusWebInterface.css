@@ -35,7 +35,10 @@ body {
     font-size: x-small;
     font-style: italic;
 }
-
+.euca-small-text {
+    font-size: x-small;
+	color: gray;
+}
 .euca-section-header {
     padding: 5px 5px 5px 5px;
     font-weight: bold;
