@@ -486,9 +486,6 @@ public class Bukkit {
                     String tempObjectName = objectName;
                     MessageDigest digest = null;
                     long size = 0;
-                    synchronized(putQueue) {
-                        putQueue.notifyAll();
-                    }
                     while ((dataMessage = putQueue.take())!=null) {
                         if(WalrusDataMessage.isStart(dataMessage)) {
                             tempObjectName = objectName + "." + Hashes.getRandom(12);

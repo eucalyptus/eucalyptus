@@ -797,9 +797,6 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
 
 
             try {
-                synchronized(putQueue) {
-                    putQueue.wait();
-                }
                 LOG.info("Starting upload");                
                 putQueue.put(WalrusDataMessage.StartOfData(dataLength));
 

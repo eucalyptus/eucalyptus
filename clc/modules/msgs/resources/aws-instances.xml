@@ -63,7 +63,7 @@
             <value name="name" field="previousStateName" usage="required"/>
         </structure>
     </mapping>
-    
+
     <mapping class="edu.ucsb.eucalyptus.msgs.RunningInstancesItemType" abstract="true">
         <value name="instanceId" field="instanceId" usage="required"/>
         <value name="imageId" field="imageId" usage="required"/>
@@ -87,7 +87,9 @@
         <value name="instanceType" field="instanceType" usage="optional"/>
         <value name="launchTime" field="launchTime" usage="optional"/>
         <!--2008-02-01-->
-        <value name="placement" field="placement" usage="optional"/>
+        <structure name="placement">
+            <value name="availabilityZone" field="placement"/>            
+        </structure>
         <value name="kernelId" field="kernel" usage="optional"/>
         <value name="ramdiskId" field="ramdisk" usage="optional"/>
     </mapping>

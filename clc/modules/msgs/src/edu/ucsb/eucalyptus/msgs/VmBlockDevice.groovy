@@ -49,7 +49,7 @@ public class DetachVolumeType extends BlockVolumeMessage {
   String instanceId;
   String device;
   String remoteDevice;
-  Boolean force;
+  Boolean force = false;
 }
 public class DetachVolumeResponseType extends BlockVolumeMessage {
 

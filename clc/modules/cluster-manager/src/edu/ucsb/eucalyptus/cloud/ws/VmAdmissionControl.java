@@ -27,8 +27,13 @@ public class VmAdmissionControl {
     vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount() ) );
 
     String userData = vmAllocInfo.getRequest().getUserData();
-    if ( userData != null )
-      userData = new String( Base64.decode( vmAllocInfo.getRequest().getUserData() ) );
+    if ( userData != null ) {
+      try {
+        userData = new String( Base64.decode( vmAllocInfo.getRequest().getUserData() ) );
+      } catch ( Exception e ) {
+        userData = "";
+      }
+    }
     else { userData = ""; }
     vmAllocInfo.setUserData( userData );
     vmAllocInfo.getRequest().setUserData( new String( Base64.encode( userData.getBytes() ) ) );

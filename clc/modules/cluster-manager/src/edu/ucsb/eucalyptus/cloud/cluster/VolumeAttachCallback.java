@@ -31,6 +31,13 @@ public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType> 
         LOG.debug( "Removed failed attachment: " + failVol.getVolumeId() + " -> "+vm.getInstanceId());
         LOG.debug( "Final volume attachments for " + vm.getInstanceId() + " " + vm.getVolumes() );
       } catch ( NoSuchElementException e1 ) {}
+    } else {
+      try {
+        VmInstance vm = VmInstances.getInstance().lookup( msg.getInstanceId() );
+        AttachedVolume attachedVol = new AttachedVolume( msg.getVolumeId() );
+        LOG.debug( "Volumes marked as attached " + vm.getVolumes() + " to " + vm.getInstanceId() );
+        attachedVol.setStatus( "attached" );
+      } catch ( NoSuchElementException e1 ) {}
     }
   }
 

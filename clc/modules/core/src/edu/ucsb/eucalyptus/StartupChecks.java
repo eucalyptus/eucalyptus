@@ -7,6 +7,7 @@ import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.EucaKeyStore;
@@ -134,7 +135,20 @@ public class StartupChecks {
       LOG.debug( e, e );
     }
 
+    checkWalrus();
+
     return true;
+  }
+
+  private static void checkWalrus() {
+    EntityWrapper<ObjectInfo> db = new EntityWrapper<ObjectInfo>();
+    ObjectInfo searchObjectInfo = new ObjectInfo();
+    List<ObjectInfo> objectInfos = db.query(searchObjectInfo);
+    for(ObjectInfo objectInfo : objectInfos) {
+        if(objectInfo.getObjectKey() == null)
+           objectInfo.setObjectKey(objectInfo.getObjectName());
+    }
+    db.commit();
   }
 
   private static void importKeys( final AbstractKeyStore ks, final AbstractKeyStore newKs ) throws GeneralSecurityException, IOException {
@@ -190,8 +204,8 @@ public class StartupChecks {
   private static boolean createDb() {
     EntityWrapper<VmType> db2 = new EntityWrapper<VmType>();
     try {
-      db2.add( new VmType( "m1.small", 1, 1, 128 ) );
-      db2.add( new VmType( "c1.medium", 1, 2, 256 ) );
+      db2.add( new VmType( "m1.small", 1, 2, 128 ) );
+      db2.add( new VmType( "c1.medium", 1, 5, 256 ) );
       db2.add( new VmType( "m1.large", 2, 10, 512 ) );
       db2.add( new VmType( "m1.xlarge", 2, 20, 1024 ) );
       db2.add( new VmType( "c1.xlarge", 4, 20, 2048 ) );

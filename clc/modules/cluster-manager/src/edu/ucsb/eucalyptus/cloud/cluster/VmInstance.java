@@ -34,13 +34,23 @@
 
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.constants.*;
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.VmImageInfo;
+import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
+import edu.ucsb.eucalyptus.constants.HasName;
+import edu.ucsb.eucalyptus.constants.VmState;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class VmInstance implements HasName {
 
@@ -183,6 +193,7 @@ public class VmInstance implements HasName {
     runningInstance.setImageId( this.imageInfo.getImageId() );
     runningInstance.setKernel( this.imageInfo.getKernelId() );
     runningInstance.setRamdisk( this.imageInfo.getRamdiskId() );
+    runningInstance.setProductCodes( this.imageInfo.getProductCodes() );
 
     runningInstance.setPrivateDnsName( this.getNetworkConfig().getIpAddress() );
     runningInstance.setDnsName( this.getNetworkConfig().getIgnoredPublicIp() );
@@ -281,9 +292,9 @@ public class VmInstance implements HasName {
 
   public String getByKey( String path ) {
 
-
     Map<String, String> m = new HashMap<String, String>();
     m.put( "ami-id", this.getImageInfo().getImageId() );
+    m.put( "product-codes", this.getImageInfo().getProductCodes().toString().replaceAll("[\\Q[]\\E]","") );
     m.put( "ami-launch-index", "" + this.getLaunchIndex() );
     m.put( "ami-manifest-path", this.getImageInfo().getImageLocation() );
     m.put( "hostname", this.getNetworkConfig().getIgnoredPublicIp() );
@@ -293,30 +304,38 @@ public class VmInstance implements HasName {
     m.put( "local-ipv4", this.getNetworkConfig().getIpAddress() );
     m.put( "public-hostname", this.getNetworkConfig().getIgnoredPublicIp() );
     m.put( "public-ipv4", this.getNetworkConfig().getIgnoredPublicIp() );
-    m.put( "public-keys/", "0=" + this.getKeyInfo().getName() );
-    m.put( "placement/", "availability-zone" );
     m.put( "reservation-id", this.getReservationId() );
     m.put( "ancestor-ami-ids", "none" );
     m.put( "kernel-id", this.getImageInfo().getKernelId() );
     m.put( "ramdisk-id", this.getImageInfo().getRamdiskId() );
-    m.put( "security-groups", this.getNetworkNames().toString() );
-    m.put( "block-device-mapping", "not yet supported." );
-    m.put( "product-codes", "not yet supported." );
+    m.put( "security-groups", this.getNetworkNames().toString().replaceAll("[\\Q[]\\E]","") );
+
+    m.put( "block-device-mapping/", "emi\nephemeral\nroot\nswap" );
+    m.put( "block-device-mapping/emi", "sda1" );
+    m.put( "block-device-mapping/ami", "sda1" );
+    m.put( "block-device-mapping/ephemeral", "sda2" );
+    m.put( "block-device-mapping/swap", "sda3" );
+    m.put( "block-device-mapping/root", "/dev/sda1" );
+
+    m.put( "public-keys/", "0=" + this.getKeyInfo().getName() );
+    m.put( "public-keys/0", "openssh-key" );
+    m.put( "public-keys/0/", "openssh-key" );
+    m.put( "public-keys/0/openssh-key", this.getKeyInfo().getValue() );
+
+    m.put( "placement/", "availability-zone" );
+    m.put( "placement/availability-zone", this.getPlacement() );
 
     if( path == null ) path = "";
     String dir = "";
-    for( String entry : m.keySet() ) dir += entry + "\n";
+    for( String entry : m.keySet() ) {
+      if( entry.contains("/") && !entry.endsWith("/") ) continue;
+      dir += entry + "\n";
+    }
     m.put("",dir);
 
-    m.put( "public-keys/0", "openssh-key" );
-    m.put( "public-keys/0/", "openssh-key" );
-    m.put( "placement/availability-zone", this.getPlacement() );
-    m.put( "public-keys/0/openssh-key", this.getKeyInfo().getValue() );
-    m.put( "public-keys", "0=" + this.getKeyInfo().getName() );
-    m.put( "placement", "availability-zone" );
-
     LOG.debug("Servicing metadata request:" + path + " -> " + m.get(path) );
-    return m.get(path);
+    if( m.containsKey( path + "/" ) ) path+="/";
+    return m.get(path).replaceAll( "\n*\\z","" );
   }
 
   public int compareTo( final Object o ) {

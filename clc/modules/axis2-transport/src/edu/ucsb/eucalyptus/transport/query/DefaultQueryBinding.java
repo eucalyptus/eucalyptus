@@ -34,6 +34,7 @@
 
 package edu.ucsb.eucalyptus.transport.query;
 
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.annotation.HttpEmbedded;
 import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
@@ -122,19 +123,18 @@ public class DefaultQueryBinding implements QueryBinding {
   private List<String> populateObject( final GroovyObject obj, final Map<String, String> paramFieldMap, final Map<String, String> params )
   {
     List<String> failedMappings = new ArrayList<String>();
-    for ( Map.Entry<String, String> e : paramFieldMap.entrySet() )
-    {
-      try
-      {
+    for ( Map.Entry<String, String> e : paramFieldMap.entrySet() ) {
+      try {
         if ( obj.getClass().getDeclaredField( e.getValue() ).getType().equals( ArrayList.class ) )
           failedMappings.addAll( populateObjectList( obj, e, params, params.size() ) );
-        else if ( params.containsKey( e.getKey() ) && !populateObjectField( obj, e, params ) )
-          failedMappings.add( e.getKey() );
       }
-      catch ( NoSuchFieldException e1 )
-      {
+      catch ( NoSuchFieldException e1 ) {
         failedMappings.add( e.getKey() );
       }
+    }
+    for ( Map.Entry<String, String> e : paramFieldMap.entrySet() ) {
+      if ( params.containsKey( e.getKey() ) && !populateObjectField( obj, e, params ) )
+        failedMappings.add( e.getKey() );
     }
     return failedMappings;
   }
@@ -179,12 +179,16 @@ public class DefaultQueryBinding implements QueryBinding {
       //:: simple case: FieldName.# :://
       if ( String.class.equals( genericType ) )
       {
-        if ( params.containsKey( paramFieldPair.getKey() ) )
+        if ( params.containsKey( paramFieldPair.getKey() ) ) {
           theList.add( params.remove( paramFieldPair.getKey() ) );
-        else
-          for ( int i = 0; i < paramSize + 1; i++ )
-            if ( params.containsKey( paramFieldPair.getKey() + "." + i ) )
-              theList.add( params.remove( paramFieldPair.getKey() + "." + i ) );
+        } else {
+          List<String> keys = Lists.newArrayList(params.keySet());
+          for( String k : keys ) {
+            if( k.matches( paramFieldPair.getKey() + "\\.\\d*") ) {
+              theList.add( params.remove( k ) );
+            }
+          }
+        }
       }
       else if ( declaredField.isAnnotationPresent( HttpEmbedded.class ) )
       {
@@ -246,8 +250,10 @@ public class DefaultQueryBinding implements QueryBinding {
     Field[] fields = targetType.getDeclaredFields();
     for ( Field f : fields )
       if ( Modifier.isStatic( f.getModifiers() ) ) continue;
-      else if ( f.isAnnotationPresent( HttpParameterMapping.class ) )
+      else if ( f.isAnnotationPresent( HttpParameterMapping.class ) ) {
         fieldMap.put( f.getAnnotation( HttpParameterMapping.class ).parameter(), f.getName() );
+        fieldMap.put( f.getName().substring( 0, 1 ).toUpperCase().concat( f.getName().substring( 1 ) ), f.getName() );
+      }
       else
         fieldMap.put( f.getName().substring( 0, 1 ).toUpperCase().concat( f.getName().substring( 1 ) ), f.getName() );
     return fieldMap;

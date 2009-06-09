@@ -200,7 +200,7 @@ public class Address implements HasName {
     return "Address{" +
            "name='" + name + '\'' +
            ", cluster='" + cluster + '\'' +
-           ", userId='" + userId + '\'' +
+           ", sourceUserId='" + userId + '\'' +
            ", assigned=" + assigned +
            ", instanceId='" + instanceId + '\'' +
            ", instanceAddress='" + instanceAddress + '\'' +

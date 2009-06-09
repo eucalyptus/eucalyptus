@@ -155,14 +155,18 @@ public class VmImageInfo {
   String imageLocation;
   String kernelLocation;
   String ramdiskLocation;
+  ArrayList<String> productCodes = new ArrayList<String>();
 
-  def VmImageInfo(final imageId, final kernelId, final ramdiskId, final imageLocation, final kernelLocation, final ramdiskLocation) {
+
+
+  def VmImageInfo(final imageId, final kernelId, final ramdiskId, final imageLocation, final kernelLocation, final ramdiskLocation, final productCodes) {
     this.imageId = imageId;
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
     this.imageLocation = imageLocation;
     this.kernelLocation = kernelLocation;
     this.ramdiskLocation = ramdiskLocation;
+    this.productCodes = productCodes;
   }
 
   def VmImageInfo() {}
@@ -217,6 +221,10 @@ public class Network implements HasName {
 
   public NetworkToken removeToken(String cluster) {
     return this.networkTokens.remove(cluster);
+  }
+
+  public boolean isPeer( String peerName, String peerNetworkName ) {
+    return (Boolean) this.rules.collect{ pf -> pf.peers.contains( new VmNetworkPeer( peerName, peerNetworkName )) }.max();
   }
 
   public int compareTo(final Object o) {

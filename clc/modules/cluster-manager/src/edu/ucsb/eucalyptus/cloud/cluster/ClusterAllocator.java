@@ -2,6 +2,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -10,14 +11,13 @@ import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
+import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
-import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
 import edu.ucsb.eucalyptus.util.Admin;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.axis2.AxisFault;
@@ -86,10 +86,14 @@ class ClusterAllocator extends Thread {
     try {
       Network network = Networks.getInstance().lookup( networkToken.getName() );
       if ( network.getRules().isEmpty() ) return;
-      ConfigureNetworkCallback callback = new ConfigureNetworkCallback();
-      ConfigureNetworkType msg = new ConfigureNetworkType( this.vmAllocInfo.getRequest(), network.getRules() );
-      QueuedEvent event = new QueuedEvent<ConfigureNetworkType>( callback, msg );
+      QueuedEvent event = new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), new ConfigureNetworkType( this.vmAllocInfo.getRequest(), network.getRules() ) );
       this.msgMap.put( State.CREATE_NETWORK_RULES, event );
+      //:: need to refresh the rules on the backend for all active networks which point to this network :://
+      for( Network otherNetwork : Networks.getInstance().listValues() ) {
+        if( otherNetwork.isPeer( network.getUserName(), network.getNetworkName() ) ) {
+          this.msgMap.put( State.CREATE_NETWORK_RULES, new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), new ConfigureNetworkType( network.getRules() ) ) );
+        }
+      }
     } catch ( NoSuchElementException e ) {}/* just added this network, shouldn't happen, if so just smile and nod */
   }
 

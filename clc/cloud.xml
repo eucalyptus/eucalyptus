@@ -87,7 +87,7 @@
     <target name="debug" description="--> debug Eucalyptus (for debugging)." if="localenv.EUCALYPTUS">
         <java classname="edu.ucsb.eucalyptus.Main" fork="true" failonerror="true" dir="${euca.home}">
             <jvmarg value="-Xdebug"/>
-            <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"/>
+            <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"/>
             <jvmarg value="-server"/>
             <jvmarg value="-Xmx${jvm.heap}"/>
             <jvmarg value="-Xms${jvm.heap}"/>

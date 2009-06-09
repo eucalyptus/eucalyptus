@@ -97,7 +97,7 @@ public class Axis2HttpWorker implements Worker {
         String contentLength = headers[0].getValue();
         msgContext.setProperty(HTTP.CONTENT_LEN, contentLength);
     }
-      
+
     if ( method.equals( HTTPConstants.HEADER_GET ) ) {
       if ( ( uri.startsWith( "/latest/" ) || uri.matches("/\\d\\d\\d\\d-\\d\\d-\\d\\d/.*") ) && handleMetaData( response, msgContext, uri ) )
         return;
@@ -173,7 +173,7 @@ public class Axis2HttpWorker implements Worker {
         response.setStatus( HttpStatus.SC_OK );
         response.setContentType( "text/html" );
         OutputStream out = response.getOutputStream();
-        out.write( EncodingUtils.getBytes( ( ( String ) reply ) + "\n", HTTP.ISO_8859_1 ) );
+        out.write( EncodingUtils.getBytes( ( ( String ) reply ), HTTP.ISO_8859_1 ) );
       }
       else
         response.setStatus( HttpStatus.SC_NOT_FOUND );

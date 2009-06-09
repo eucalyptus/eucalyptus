@@ -77,16 +77,16 @@ public class IpPermissionType extends EucalyptusData {
 }
 public class UserIdGroupPairType extends EucalyptusData {
   @HttpParameterMapping(parameter = "SourceSecurityGroupOwnerId")
-  String userId;
+  String sourceUserId;
   @HttpParameterMapping(parameter = "SourceSecurityGroupName")
-  String groupName;
+  String sourceGroupName;
 
   def UserIdGroupPairType(){}
 
-  def UserIdGroupPairType(final userId, final groupName)
+  def UserIdGroupPairType(final sourceUserId, final sourceGroupName)
   {
-    this.userId = userId;
-    this.groupName = groupName;
+    this.sourceUserId = sourceUserId;
+    this.sourceGroupName = sourceGroupName;
   }
 
 
