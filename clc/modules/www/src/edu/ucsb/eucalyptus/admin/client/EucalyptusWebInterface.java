@@ -41,7 +41,6 @@ import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
-import com.google.gwt.http.client.URL;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -382,6 +381,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         final boolean admin;
 		final boolean newUser;
         final boolean showSkipConfirmed;
+        boolean isAdminChecked = false; // not admin by default
+        boolean skipConfirmationChecked = previousSkipConfirmation;
 
         if (loggedInUser != null
                 && loggedInUser.isAdministrator()) {
@@ -401,39 +402,34 @@ public class EucalyptusWebInterface implements EntryPoint {
 	        }
 		} else {
 			newUser = false;
-            showSkipConfirmed = !userToEdit.isConfirmed();
 			oldPassword = userToEdit.getBCryptedPassword();
+            isAdminChecked = userToEdit.isAdministrator();
+            showSkipConfirmed = !userToEdit.isConfirmed();
+            skipConfirmationChecked = userToEdit.isConfirmed();
 
             String status;
-            if (!userToEdit.isApproved().booleanValue()) {
+            if (!userToEdit.isApproved()) {
                 status = "unapproved";
-            } else if (!userToEdit.isEnabled().booleanValue()) {
+            } else if (!userToEdit.isEnabled()) {
                 status = "disabled";
-            } else if (!userToEdit.isConfirmed().booleanValue()) {
+            } else if (!userToEdit.isConfirmed()) {
                 status = "unconfirmed";
             } else {
                 status = "active";
             }
-            if (userToEdit.isAdministrator().booleanValue()) {
+            if (userToEdit.isAdministrator()) {
                 status += " & admin";
             }
 			label_box.setText ("Editing information for user '" + userToEdit.getUserName() +"' (" + status + ")" );
 		}
         label_box.setStyleName("euca-greeting-normal");
 
-        boolean isAdminChecked = false; // not admin by default
-        boolean skipConfirmationChecked = previousSkipConfirmation;
-        if ( !newUser ) {
-            isAdminChecked = userToEdit.isAdministrator();
-            skipConfirmationChecked = userToEdit.isConfirmed();
-        }
-
         int rowsMandatory = 5;
         if (admin) {
             rowsMandatory++; // for admin checkbox
-        }
-        if (admin && newUser) {
-            rowsMandatory++; // for skip confirmation checkbox
+            if (showSkipConfirmed) {
+                rowsMandatory++; // for skip confirmation checkbox
+            }
         }
         final Grid g1 = new Grid ( rowsMandatory, 3 );
         g1.getColumnFormatter().setWidth(0, "180");
@@ -456,7 +452,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         g1.setWidget( i++, 1, userName_box );
 
         // optional row
-        final CheckBox userIsAdmin = new CheckBox("Administrator", isAdminChecked);
+        final CheckBox userIsAdmin = new CheckBox("Administrator");
+        userIsAdmin.setChecked(isAdminChecked);
         userIsAdmin.setStyleName("euca-remember-text");
         if (admin) {
             g1.setWidget ( i++, 1, userIsAdmin);
@@ -501,7 +498,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         g1.setWidget( i++, 1, emailAddress_box );
 
         // optional row
-        final CheckBox skipConfirmation = new CheckBox("Skip email confirmation", skipConfirmationChecked);
+        final CheckBox skipConfirmation = new CheckBox("Skip email confirmation");
+        skipConfirmation.setChecked(skipConfirmationChecked);
         skipConfirmation.setStyleName("euca-remember-text");
         if (admin && showSkipConfirmed) {
             g1.setWidget ( i++, 1, skipConfirmation);
@@ -2073,7 +2071,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
         vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
-		vpanel.add (new PrepackagedTable (sessionId));
+		vpanel.add (new DownloadsTable(sessionId));
 		parent.clear();
 		parent.add (vpanel);
 	}

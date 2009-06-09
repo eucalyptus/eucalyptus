@@ -613,6 +613,10 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 		oldRecord.setAffiliation (newRecord.getAffiliation());
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
+        oldRecord.setIsAdministrator(newRecord.isAdministrator());
+        if (!oldRecord.isConfirmed()) { // once confirmed, cannot be unconfirmed
+            oldRecord.setIsConfirmed(newRecord.isConfirmed());
+        }
 
         EucalyptusManagement.commitWebUser( oldRecord );
 
