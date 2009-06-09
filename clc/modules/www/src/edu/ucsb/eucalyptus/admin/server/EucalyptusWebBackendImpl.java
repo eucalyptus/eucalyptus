@@ -39,11 +39,16 @@ import com.google.gwt.user.server.rpc.OpenRemoteServiceServlet;
 import edu.ucsb.eucalyptus.admin.client.*;
 import edu.ucsb.eucalyptus.util.BaseDirectory;
 import org.apache.log4j.Logger;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.methods.GetMethod;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.net.MalformedURLException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -683,4 +688,49 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
     //:: TODO-1.4: anything more to do here? :://
     return EucalyptusManagement.getCloudInfo(setExternalHostPort);	
   }
+
+    private static List<DownloadsWeb> getDownloadsFromUrl(final String downloadsUrl) {
+        List<DownloadsWeb> downloadsList = new ArrayList<DownloadsWeb>();
+
+        HttpClient httpClient = new HttpClient();
+        GetMethod method = new GetMethod(downloadsUrl);
+        Integer timeoutMs = new Integer(3 * 1000);
+        method.getParams().setSoTimeout(timeoutMs);
+
+        try {
+            httpClient.executeMethod(method);
+            String str = method.getResponseBodyAsString();
+            String entries[] = str.split("[\\r\\n]+");
+            for (int i=0; i<entries.length; i++) {
+                String entry[] = entries[i].split("\\t");
+                if (entry.length == 3) {
+                    downloadsList.add (new DownloadsWeb(entry[0], entry[1], entry[2]));
+                }
+            }
+
+        } catch (MalformedURLException e) {
+            LOG.warn("Malformed URL exception: " + e.getMessage());
+            e.printStackTrace();
+
+        } catch (IOException e) {
+            LOG.warn("I/O exception: " + e.getMessage());
+            e.printStackTrace();
+
+        } finally {
+            method.releaseConnection();
+        }
+
+        return downloadsList;
+    }
+
+    public List<DownloadsWeb> getDownloads(final String sessionId, final String downloadsUrl) throws SerializableException {
+        SessionInfo session = verifySession(sessionId);
+        UserInfoWeb user = verifyUser(session, session.getUserId(), true);
+
+        try {
+            Thread.sleep(2000);
+        } catch (Exception e) { }
+        
+        return getDownloadsFromUrl(downloadsUrl);
+    }
 }
