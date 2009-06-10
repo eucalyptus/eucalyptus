@@ -1216,6 +1216,8 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
 
     snprintf(cmd, 255, "-A PREROUTING -d %s -j DNAT --to %s", src, dst);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+    snprintf(cmd, 255, "-A OUTPUT -d %s -j DNAT --to %s", src, dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
     snprintf(cmd, 255, "-A POSTROUTING -s %s -j SNAT --to %s", dst, src);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
