@@ -90,6 +90,8 @@ public class UserInfoWeb implements IsSerializable
         this.realName = realName;
         this.emailAddress = emailAddress;
         this.bCryptedPassword = bCryptedPassword;
+        this.isAdministrator = false;
+        this.isConfirmed = false;
     }
 
     public String getUserName()
