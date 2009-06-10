@@ -23,6 +23,7 @@ body {
 .euca-greeting-pending {
     color: orange;
     text-decoration: blink;
+    text-align:center;
 }
 .euca-login-panel {
     border: solid;
@@ -36,6 +37,12 @@ body {
     font-style: italic;
 }
 .euca-small-text {
+    font-size: x-small;
+	color: gray;
+}
+
+.euca-small-text a {
+    text-decoration: none;
     font-size: x-small;
 	color: gray;
 }
@@ -81,24 +88,21 @@ body {
 }
 
 .gwt-TabBar .gwt-TabBarItem {
-    padding: 4px;
+    padding: 4px 10px 4px 10px;
+    margin: 4px 10px 0px 10px;
     cursor: pointer;
-    width: 100px;
     text-align: center;
     -moz-outline: none; /* fx 1.07*/ outline: none; /* fx 1.05, Safari, Mac IE*/
 }
 
 .gwt-TabBar .gwt-TabBarItem-selected {
     background-color: white;
-    margin-top: 6px;
-    padding: 4px;
     cursor: default;
-    width: 100px;
     text-align: center;
 }
 
 .gwt-TabBarItem:hover {
-    font-weight: bold;
+    text-decoration: underline;
 }
 
 .euca-text {

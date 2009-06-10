@@ -725,12 +725,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 
     public List<DownloadsWeb> getDownloads(final String sessionId, final String downloadsUrl) throws SerializableException {
         SessionInfo session = verifySession(sessionId);
-        UserInfoWeb user = verifyUser(session, session.getUserId(), true);
-
-        try {
-            Thread.sleep(2000);
-        } catch (Exception e) { }
-        
+        UserInfoWeb user = verifyUser(session, session.getUserId(), true);        
         return getDownloadsFromUrl(downloadsUrl);
     }
 }

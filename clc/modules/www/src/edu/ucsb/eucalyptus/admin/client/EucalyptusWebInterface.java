@@ -94,6 +94,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	private static int usrTabIndex;
 	private static int confTabIndex;
     private static int downTabIndex;
+    private static boolean sortUsersLastFirst = true;
 
     /* UI selections remembered for future use */
     private static boolean previousSkipConfirmation = false; // do not skip email confirmation by default
@@ -1852,6 +1853,29 @@ public class EucalyptusWebInterface implements EntryPoint {
         parent.add(msg);
     }
 
+    private class EucalyptusDialog extends DialogBox {
+
+		private boolean cancelled;
+
+		public EucalyptusDialog (String mainMsg, String extraMsg, Button okButton) {
+
+            super(true);
+            cancelled = false;
+			setHTML (mainMsg);
+            Button cancelButton = new Button ("Cancel", new ClickListener() {
+                	public void onClick(Widget sender) {
+					EucalyptusDialog.this.hide();
+					cancelled = true;
+				}
+            });
+			HorizontalPanel buttonPanel = new HorizontalPanel();
+			buttonPanel.add (okButton);
+			buttonPanel.add (cancelButton);
+			setWidget (buttonPanel);
+            center();
+		}
+	}
+
 	public void displayConfirmDeletePage( final String userName )
     {
 		Button deleteButton = new Button ("Delete", new ClickListener() {
@@ -1862,10 +1886,13 @@ public class EucalyptusWebInterface implements EntryPoint {
 					+ "&page=" + currentTabIndex);
 			}
         });
+
 		Button okButton = displayDialog ("Sure?",
 			"Do you want to delete user '" + userName + "'?", deleteButton);
 		okButton.setText ("Cancel");
 		label_box.setStyleName("euca-greeting-warning");
+		
+       //new EucalyptusDialog ("Sure?", "Do you want to delete user '" + userName + "'?", deleteButton);
     }
 
     private HTML userActionButton (String action, UserInfoWeb user)
@@ -1894,8 +1921,12 @@ public class EucalyptusWebInterface implements EntryPoint {
 		}
 	}
 
-    public void displayUsersList(List usersList, final VerticalPanel parent)
+    public void displayUsersList(final List usersList, final VerticalPanel parent)
     {
+        String sortSymbol = "&darr;"; // HTML down arrow
+        if (sortUsersLastFirst) {
+            sortSymbol = "&uarr;"; // HTML up arrow
+        }
         parent.clear();
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(5);
@@ -1903,9 +1934,19 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         int nusers = usersList.size();
         if (nusers>0) {
+            Hyperlink sort_button = new Hyperlink( sortSymbol, true, null );
+			sort_button.setStyleName ("euca-small-text");
+			sort_button.addClickListener( new ClickListener() {
+				public void onClick(Widget sender) {
+                    sortUsersLastFirst = !sortUsersLastFirst;
+					displayUsersList (usersList, parent);
+				}
+			});
+
             final Grid g = new Grid(nusers + 1, 6);
             g.setStyleName("euca-table");
             g.setCellPadding(6);
+            g.setWidget(0, 0, sort_button);
             g.setWidget(0, 1, new Label("Username"));
             g.setWidget(0, 2, new Label("Email"));
             g.setWidget(0, 3, new Label("Name"));
@@ -1914,14 +1955,18 @@ public class EucalyptusWebInterface implements EntryPoint {
             g.getRowFormatter().setStyleName(0, "euca-table-heading-row");
 
             for (int i=0; i<nusers; i++) {
-                final UserInfoWeb u = (UserInfoWeb) usersList.get(i);
+                int userIndex = i;
+                if (sortUsersLastFirst) {
+                    userIndex = nusers - i - 1;
+                }
+                final UserInfoWeb u = (UserInfoWeb) usersList.get(userIndex);
                 int row = i+1;
                 if ((row%2)==1) {
                     g.getRowFormatter().setStyleName(row, "euca-table-odd-row");
                 } else {
                     g.getRowFormatter().setStyleName(row, "euca-table-even-row");
                 }
-				Label indexLabel = new Label(Integer.toString(i));
+				Label indexLabel = new Label(Integer.toString(userIndex));
 				indexLabel.setStyleName("euca-small-text");
 				g.setWidget(row, 0, indexLabel);
 				Label userLabel = new Label(u.getUserName());
@@ -1964,7 +2009,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	                }
 	                ops.add(act_button);
 	
-					Hyperlink del_button = new Hyperlink( "Delete", "confirmdelete" );
+					Hyperlink del_button = new Hyperlink( "Delete", null );
 					del_button.setStyleName ("euca-action-link");
 					del_button.addClickListener( new ClickListener() {
 						public void onClick(Widget sender) {
@@ -2079,7 +2124,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		vpanel.add (new DownloadsTable(sessionId,
                 "http://www.eucalyptussoftware.com/downloads/eucalyptus-images/list.php",
                 "http://open.eucalyptus.com/wiki/EucalyptusUserImageCreatorGuide_v1.5",
-                "Eucalyptus Systems Images",
+                "Prepackaged Images by Eucalyptus Systems",
                 50));
 
 		parent.clear();
