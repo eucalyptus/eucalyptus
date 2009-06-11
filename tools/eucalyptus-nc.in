@@ -265,7 +265,7 @@ fi
 
 # set the library path correctly
 export AXIS2C_HOME
-export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$EUCALYPTUS/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
 
 case "$1" in
   start)

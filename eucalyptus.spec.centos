@@ -125,8 +125,8 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/var/lib/eucalyptus/db
 /opt/eucalyptus/var/lib/eucalyptus/modules
 /opt/eucalyptus/var/lib/eucalyptus/webapps
-/opt/eucalyptus/usr/lib/libfsstorage.so
-/opt/eucalyptus/usr/lib/liblvm2control.so
+/opt/eucalyptus/usr/lib/eucalyptus/libfsstorage.so
+/opt/eucalyptus/usr/lib/eucalyptus/liblvm2control.so
 /opt/eucalyptus/etc/init.d/eucalyptus-cloud
 
 %files cc
