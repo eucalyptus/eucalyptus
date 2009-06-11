@@ -63,6 +63,7 @@ install: deploy
 	@$(INSTALL) -d $(vardir)/log/eucalyptus
 	@$(INSTALL) -d $(datarootdir)/eucalyptus
 	@$(INSTALL) -d $(usrdir)/sbin
+	@$(INSTALL) -d $(usrdir)/lib/eucalyptus
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
