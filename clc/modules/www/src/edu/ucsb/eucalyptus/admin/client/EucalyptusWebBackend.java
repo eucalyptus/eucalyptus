@@ -102,6 +102,8 @@ public interface EucalyptusWebBackend extends RemoteService {
 
   public CloudInfoWeb getCloudInfo (String sessionId, boolean setExternalHostport) throws SerializableException;
 
+  public List<DownloadsWeb> getDownloads ( String sessionId, String downloadsUrl ) throws SerializableException;
+
 
   /**
    * Utility/Convenience class.

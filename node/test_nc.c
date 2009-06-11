@@ -59,9 +59,9 @@ int main (int argc, char * argv[] )
   }
   
   if (!strcmp(hypervisor, "kvm")) {
-    snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_sys_info", eucahome, eucahome);
+    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_sys_info", eucahome, eucahome);
   } else {
-    snprintf(cmd, 1024, "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_xen_info", eucahome, eucahome);
+    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_xen_info", eucahome, eucahome);
   }
   
   if ( system(cmd) ) {
