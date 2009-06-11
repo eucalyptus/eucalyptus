@@ -17,5 +17,5 @@ clean:
 	rm -f $(FS_STORE_SO) *.o *~* *#*  
 
 install:
-	mkdir -p $(EUCALYPTUS)/usr/lib 
-	cp $(LIBDIR)/$(FS_STORE_SO) $(EUCALYPTUS)/usr/lib
+	mkdir -p $(EUCALYPTUS)/usr/lib/eucalyptus/
+	cp $(LIBDIR)/$(FS_STORE_SO) $(EUCALYPTUS)/usr/lib/eucalyptus/
