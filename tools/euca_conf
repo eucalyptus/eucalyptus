@@ -369,6 +369,14 @@ if [ -n "$SETUP" ]; then
 		fi
 		chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH
 	fi
+
+	# let's create more needed directory with the right permissions
+	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
+	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/db
+	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/db
+	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/keys
+	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/keys
+	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/keys
 fi
 
 # pre-flight checks
@@ -568,7 +576,6 @@ if [ -n "$NODEMODE" ]; then
 	if [ "$NODEMODE" = "ADD" ]; then 
 		echo
 		echo "We expect all nodes to have eucalyptus installed in $EUCALYPTUS."
-		echo
 	fi
 
 	# adding (or removing) nodes
@@ -588,13 +595,15 @@ if [ -n "$NODEMODE" ]; then
 		# we try rsync first then scp
 		DONE="N"
 		if [ -n "$RSYNC" ]; then
-			echo "Using rsync to sync keys with node \"${NEWNODE}\" (user \"${EUCA_USER}\")"
-			if $RSYNC -az ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR}/ > /dev/null ; then
+			echo
+			echo "Trying rsync to sync keys with node \"${NEWNODE}\""
+			if $RSYNC -az ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${NEWNODE}:${KEYDIR}/ > /dev/null ; then
 				DONE="Y"
 			fi
 		fi
 		if [ -n "$SCP" -a "$DONE" = "N" ]; then
-			echo "Using scp to sync keys with node \"${NEWNODE}\" (user \"${EUCA_USER}\")"
+			echo
+			echo "Trying scp to sync keys with node \"${NEWNODE}\" (user \"${EUCA_USER}\")"
 			if sudo -u ${EUCA_USER} $SCP ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR} > /dev/null ; then
 				DONE="Y"
 			fi
@@ -602,14 +611,16 @@ if [ -n "$NODEMODE" ]; then
 
 		# let's warn user if we didn't sync
 		if [ "$DONE" = "N" ]; then
-			echo "Warning: could not synchronize keys with $NEWNODE!"
-			echo "and the node will not be added to the node list"
+			echo
+			echo "ERROR: could not synchronize keys with $NEWNODE!"
+			echo "The configuration will not have this node."
 			if [ "$SSHKEY" = "" ]; then
 				echo "User $EUCA_USER may have to run ssh-keygen!"
 			else
-				echo "To setup passwordless login to the nodes as user $EUCA_USER, you can"
+				echo "Hint: to setup passwordless login to the nodes as user $EUCA_USER, you can"
 				echo "run the following commands on node $NEWNODE:"
-				echo "sudo tee ~${EUCA_USER}/.ssh/authorized_keys > /dev/null <<EOT"
+				echo "sudo -u $EUCA_USER mkdir -p ~${EUCA_USER}/.ssh"
+				echo "sudo -u $EUCA_USER tee ~${EUCA_USER}/.ssh/authorized_keys > /dev/null <<EOT"
 				echo "$SSHKEY"
 				echo "EOT"
 				echo ""
