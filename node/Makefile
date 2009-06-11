@@ -99,5 +99,5 @@ distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#*
 
 install: deploy
-	$(INSTALL) -m 0600 nc-client-policy.xml $(vardir)/lib/eucalyptus/keys/
+	$(INSTALL) nc-client-policy.xml $(vardir)/lib/eucalyptus/keys/
 	$(INSTALL) -m 0755 test_nc $(sbindir)/euca_test_nc
