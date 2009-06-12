@@ -95,7 +95,10 @@ class ClusterAllocator extends Thread {
         if( otherNetwork.isPeer( network.getUserName(), network.getNetworkName() ) ) {
           LOG.warn( "Need to refresh rules for incoming named network ingress on: " + otherNetwork.getName() );
           LOG.debug( otherNetwork );
-          this.msgMap.put( State.CREATE_NETWORK_RULES, new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), new ConfigureNetworkType( otherNetwork.getRules() ) ) );
+          ConfigureNetworkType msg = new ConfigureNetworkType( otherNetwork.getRules() );
+          msg.setUserId( otherNetwork.getUserName() );
+          msg.setEffectiveUserId( EucalyptusProperties.NAME );
+          this.msgMap.put( State.CREATE_NETWORK_RULES, new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), msg ) );
         }
       }
     } catch ( NoSuchElementException e ) {}/* just added this network, shouldn't happen, if so just smile and nod */
