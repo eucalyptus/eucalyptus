@@ -82,7 +82,7 @@ if (!($magic =~ /boot sector/) && !($magic =~ /Qcow/)) { # if not a disk image a
         print STDERR "cannot find free loop device\n";
         do_exit(10);
     }
-    run ("$DD if=$partition of=$loopdevp bs=512k >/dev/null 2>&1", 11);
+    run ("$DD if=$partition of=$loopdevp bs=512k", 11);
  
     run ("$SYNC", 16);
     run ("$LOSETUP -d $loopdev", 12);
