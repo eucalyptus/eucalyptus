@@ -1271,6 +1271,14 @@ int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
       count++;
     }
 
+    snprintf(cmd, 255, "-D OUTPUT -d %s -j DNAT --to %s", src, dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+    count=0;
+    while(rc != 0 && count < 10) {
+      rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+      count++;
+    }
+
     snprintf(cmd, 255, "-D POSTROUTING -s %s -j SNAT --to %s", dst, src);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     count=0;
