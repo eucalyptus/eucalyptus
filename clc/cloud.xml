@@ -54,7 +54,7 @@
     <!--================================== other vars ==================================-->
     <property name="jvm.heap" value="256m"/>
     <property name="security.policy" value="${euca.conf.dir}/security.policy"/>
-    <property name="libpath" value="${euca.home}/usr/lib"/>
+    <property name="libpath" value="${euca.home}/usr/lib/eucalyptus"/>
     <!--================================== classpaths ==================================-->
     <path id="runtimeclasspath">
          <fileset dir="${euca.lib.dir}">

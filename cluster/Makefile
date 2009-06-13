@@ -79,4 +79,4 @@ distclean:
 
 install: deploy
 	@$(INSTALL) -m 0555 $(CLIENTKILLALL) $(sbindir)
-	@$(INSTALL) -m 0600 cc-client-policy.xml $(vardir)/lib/eucalyptus/keys/
+	@$(INSTALL) cc-client-policy.xml $(vardir)/lib/eucalyptus/keys/
