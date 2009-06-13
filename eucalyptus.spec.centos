@@ -1,13 +1,13 @@
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       1.5.1
+Version:       1.5.2
 Release:       1
 License:       BSD
 Group:         Applications/System
 BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5
 Requires:      vconfig, aoetools, vblade
 Conflicts:     eucalyptus-cloud < 1.5, eucalyptus-cc < 1.5, eucalyptus-nc < 1.5
-Vendor:        Mayhem lab
+Vendor:        Eucalyptus Systems
 #Icon:          someicon.xpm
 Source:        http://open.eucalyptus.com/downloads/eucalyptus-%{version}.tgz
 URL:           http://open.eucalyptus.com
@@ -23,7 +23,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= 1.5.1, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Requires:     eucalyptus >= 1.5.2, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
 Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
 Group:        Applications/System
 
@@ -37,7 +37,7 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= 1.5.1, euca-httpd >= 1.5, euca-axis2c >= 1.5, iptables, bridge-utils, eucalyptus-gl >= 1.5, dhcp
+Requires:     eucalyptus >= 1.5.2, euca-httpd >= 1.5, euca-axis2c >= 1.5, iptables, bridge-utils, eucalyptus-gl >= 1.5, dhcp
 Conflicts:    eucalyptus < 1.5, eucalyptus-nc < 1.5
 Group:        Applications/System
 
@@ -51,7 +51,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.1, euca-httpd >= 1.5, euca-axis2c >= 1.5, bridge-utils, eucalyptus-gl >= 1.5, euca-libvirt >= 1.5, curl, xen
+Requires:     eucalyptus >= 1.5.2, euca-httpd >= 1.5, euca-axis2c >= 1.5, bridge-utils, eucalyptus-gl >= 1.5, euca-libvirt >= 1.5, curl, xen
 Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
 Group:        Applications/System
 
@@ -279,6 +279,9 @@ then
 fi
 
 %changelog gl
+*Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
+- New version (1.5.2)
+
 *Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - New eucalyptus version
 
@@ -286,6 +289,9 @@ fi
 - Added new service
 
 %changelog cloud
+*Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
+- New version (1.5.2)
+
 *Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Support for groups in ACLS
 - Fixed issues with meta data support
@@ -324,6 +330,9 @@ fi
 - Fix the instance ID naming collision.
 
 %changelog cc
+*Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
+- New version (1.5.2)
+
 *Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Network improvement: new MANAGED-NOVLAN mode 
 
@@ -338,6 +347,9 @@ fi
   this module.
 
 %changelog nc
+*Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
+- New version (1.5.2)
+
 *Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Support for the KVM hypervisor
 - Compression & retries on Walrus downloads
@@ -361,6 +373,9 @@ fi
 - More robust checking for running instances.
 
 %changelog
+*Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
+- New version (1.5.2)
+
 *Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Elastic Block Store (EBS) support (volumes & snapshots) 
 - Better Java installation checking
