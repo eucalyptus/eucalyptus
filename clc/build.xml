@@ -146,15 +146,15 @@
             </fileset>
         </copy>
         <mkdir dir="${euca.conf.dir}"/>
-<!--	<chmod dir="${euca.conf.dir}" perm="0755"/> -->
+	<chmod dir="${euca.conf.dir}" perm="0755"/>
         <mkdir dir="${euca.var.dir}/"/>
-        <mkdir dir="${euca.var.dir}/webapps"/>
         <mkdir dir="${euca.var.dir}/db"/>
-	<chmod dir="${euca.var.dir}/db" perm="0700"/> 
         <mkdir dir="${euca.var.dir}/keys"/>
-	<chmod dir="${euca.var.dir}/keys" perm="0700"/> 
-        <mkdir dir="${euca.var.dir}/modules"/>
+<!--	<chmod dir="${euca.var.dir}/db" perm="0700"/> 
+	<chmod dir="${euca.var.dir}/keys" perm="0700"/> -->
         <mkdir dir="${euca.log.dir}"/>
+        <mkdir dir="${euca.var.dir}/webapps"/>
+        <mkdir dir="${euca.var.dir}/modules"/>
         <ant dir="modules/workarounds" inheritall="false" target="install"/>
         <ant dir="modules/crypto" inheritall="false" target="install"/>
         <ant dir="modules/msgs" inheritall="false" target="install"/>

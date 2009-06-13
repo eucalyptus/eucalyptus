@@ -110,7 +110,7 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/usr/share/eucalyptus/add_key.pl
 /opt/eucalyptus/usr/share/eucalyptus/euca_ipt
 /opt/eucalyptus/usr/share/eucalyptus/populate_arp.pl
-/opt/eucalyptus/usr/share/eucalyptus/euca_rootwrap
+/opt/eucalyptus/usr/lib/eucalyptus/euca_rootwrap
 /opt/eucalyptus/usr/sbin/euca_conf
 /opt/eucalyptus/usr/sbin/euca_sync_key
 /opt/eucalyptus/usr/sbin/euca_killall
@@ -125,8 +125,8 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/var/lib/eucalyptus/db
 /opt/eucalyptus/var/lib/eucalyptus/modules
 /opt/eucalyptus/var/lib/eucalyptus/webapps
-/opt/eucalyptus/usr/lib/libfsstorage.so
-/opt/eucalyptus/usr/lib/liblvm2control.so
+/opt/eucalyptus/usr/lib/eucalyptus/libfsstorage.so
+/opt/eucalyptus/usr/lib/eucalyptus/liblvm2control.so
 /opt/eucalyptus/etc/init.d/eucalyptus-cloud
 
 %files cc
@@ -134,7 +134,7 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/etc/init.d/eucalyptus-cc
 
 %files nc
-/opt/eucalyptus/usr/share/eucalyptus/euca_mountwrap
+/opt/eucalyptus/usr/lib/eucalyptus/euca_mountwrap
 /opt/eucalyptus/usr/share/eucalyptus/gen_libvirt_xml
 /opt/eucalyptus/usr/share/eucalyptus/gen_kvm_libvirt_xml
 /opt/eucalyptus/usr/share/eucalyptus/partition2disk

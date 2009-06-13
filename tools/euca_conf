@@ -34,6 +34,7 @@ usage () {
 	echo "   -d <dir>                    point EUCALYPTUS to <dir>"
 	echo "   -addnode <hostname>         add new node to EUCALYPTUS"
 	echo "   -synckeys                   sync the keys with the nodes"
+	echo "   -norsync                    don't use rsync (ie remote node have no root)"
 	echo "   -delnode <hostname>         remove node from EUCALYPTUS"
 	echo "   -addcluster <clusname> <hostname> add new cluster to EUCALYPTUS"
 #	echo "   -delcluster <clusname> <hostname> remove cluster from EUCALYPTUS"
@@ -104,6 +105,11 @@ while [ $# -gt 0 ]; do
 
 	if [ "$1" = "-synckeys" -o "$1" = "-synckey" ]; then 
 	    NODEMODE="SYNC"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "-norsync" ]; then 
+	    RSYNC=""
 	    shift
 	    continue
 	fi
@@ -323,7 +329,7 @@ done
 if [ -n "$SETUP" ]; then
 	. $FILE
 
-	ROOTWRAP="$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap"
+	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
 	
 	# first of all setup euca_rootwrap
 	if [ ! -x "$ROOTWRAP" ]; then
@@ -363,23 +369,37 @@ if [ -n "$SETUP" ]; then
 		fi
 		chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH
 	fi
+
+	# let's create more needed directory with the right permissions
+	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
+	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/db
+	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/db
+	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/keys
+	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/keys
+	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/keys
 fi
 
 # pre-flight checks
 if [ -n "$CHECK" ]; then
 	. $FILE
 
-	ROOTWRAP="$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap"
+	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
 
 	# vblade and aoe may be needed
-	if [ "$CHECK" != "cc" -a "$DISABLE_EBS" != "Y" -a "$DISABLE_EBS" != "y" ]; then
-		VBLADE="`which vblade 2> /dev/null`"
-		if [ -z "$VBLADE" ]; then
-			echo "WARNING: EBS is enabled and vblade was not found"
+	if [ "$DISABLE_EBS" != "Y" -a "$DISABLE_EBS" != "y" ]; then
+		if [ "$CHECK" = "cloud" ]; then
+			VBLADE="`which vblade 2> /dev/null`"
+			if [ -z "$VBLADE" ]; then
+				echo
+				echo "WARNING: EBS is enabled and vblade was not found"
+			fi
 		fi
-		AOE="`lsmod |grep aoe 2> /dev/null`"
-		if [ -z "$AOE" ]; then
-			echo "WARNING: EBS is enabled and the aoe module is not loaded"
+		if [ "$CHECK" = "cloud" -o "$CHECK" = "nc" ]; then
+			AOE="`lsmod |grep aoe 2> /dev/null`"
+			if [ -z "$AOE" ]; then
+				echo
+				echo "WARNING: EBS is enabled and the aoe module is not loaded"
+			fi
 		fi
 	fi
 	
@@ -536,6 +556,34 @@ if [ -n "$NODEMODE" ]; then
 		fi
 	fi
 
+	# check we have a valid command
+	if [ "$NODEMODE" != "ADD" -a "$NODEMODE" != "REM" ]; then
+		echo "ERROR: unknown mode '$NODEMODE', don't know what to do"
+		exit 1
+	fi
+
+	# we need the keys
+	if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
+		KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
+	elif [ "$NODEMODE" = "ADD" ]; then
+		echo "ERROR: cannot find keys, did you configured eucalyptus?"
+		exit 1
+	fi
+
+	# we may need the pub key to connect to remote hosts
+	EUCA_HOME=`su - -c 'echo $HOME' $EUCA_USER`
+	if [ -f "${EUCA_HOME}/.ssh/id_rsa.pub" ]; then
+		SSHKEY=`cat ${EUCA_HOME}/.ssh/id_rsa.pub`
+	else
+		SSHKEY=""
+	fi
+
+	# warn the user on where we expect the keys to be
+	if [ "$NODEMODE" = "ADD" ]; then 
+		echo
+		echo "We expect all nodes to have eucalyptus installed in $EUCALYPTUS."
+	fi
+
 	# adding (or removing) nodes
 	for NEWNODE in ${NEWNODES} ; do
 		# remove is simpler: just remove the node name
@@ -550,42 +598,46 @@ if [ -n "$NODEMODE" ]; then
 			continue
 		fi
 	
-		# let's be sure the mode is now ADD
-		if [ "$NODEMODE" != "ADD" ]; then
-			echo "ERROR: unknown mode '$NODEMODE', don't know what to do"
-			exit 1
-		fi
-		echo
- 
-		# we need the keys
-		if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
-			KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
-		else
-			echo "ERROR: cannot find keys, did you configured eucalyptus?"
-			exit 1
-		fi
-
 		# we try rsync first then scp
+		DONE="N"
 		if [ -n "$RSYNC" ]; then
-			echo "Using rsync to sync keys with node \"${NEWNODE}\" (user \"${EUCA_USER}\")"
-			$RSYNC -az ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR}/ > /dev/null
-		elif [ -n "$SCP" ]; then
-			echo "Using scp to sync keys with node \"${NEWNODE}\" (user \"${EUCA_USER}\")"
-			sudo -u ${EUCA_USER} $SCP ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR} > /dev/null
-		else
-			echo "Couldn't find neither rsync nor scp!"
-			exit 1
+			echo
+			echo "Trying rsync to sync keys with node \"${NEWNODE}\""
+			if $RSYNC -az ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${NEWNODE}:${KEYDIR}/ > /dev/null ; then
+				DONE="Y"
+			fi
+		fi
+		if [ -n "$SCP" -a "$DONE" = "N" ]; then
+			echo
+			echo "Trying scp to sync keys with node \"${NEWNODE}\" (user \"${EUCA_USER}\")"
+			if sudo -u ${EUCA_USER} $SCP ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR} > /dev/null ; then
+				DONE="Y"
+			fi
 		fi
 
-		# let's be sure we didn't fail
-		if [ "$?" != "0" ]; then
-			echo "ERROR: could not synchronize keys. Node ${NEWNODE} may not be available."
+		# let's warn user if we didn't sync
+		if [ "$DONE" = "N" ]; then
+			echo
+			echo "ERROR: could not synchronize keys with $NEWNODE!"
+			echo "The configuration will not have this node."
+			if [ "$SSHKEY" = "" ]; then
+				echo "User $EUCA_USER may have to run ssh-keygen!"
+			else
+				echo "Hint: to setup passwordless login to the nodes as user $EUCA_USER, you can"
+				echo "run the following commands on node $NEWNODE:"
+				echo "sudo -u $EUCA_USER mkdir -p ~${EUCA_USER}/.ssh"
+				echo "sudo -u $EUCA_USER tee ~${EUCA_USER}/.ssh/authorized_keys > /dev/null <<EOT"
+				echo "$SSHKEY"
+				echo "EOT"
+				echo ""
+				echo "Be sure that authorized_keys is not group/world readable or writable"
+			fi
 			continue
 		fi
  
 		# NODES list
 		if ! echo "${NODES}"|grep "${NEWNODE}" > /dev/null ; then
-			# node is not preset: we need to add it
+			# node is not present: we need to add it
 			NODES="${NODES} $NEWNODE"
 			change_var_value $FILE NODES "${NODES}"
 		fi

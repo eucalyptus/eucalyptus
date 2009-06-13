@@ -39,11 +39,16 @@ import com.google.gwt.user.server.rpc.OpenRemoteServiceServlet;
 import edu.ucsb.eucalyptus.admin.client.*;
 import edu.ucsb.eucalyptus.util.BaseDirectory;
 import org.apache.log4j.Logger;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.methods.GetMethod;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.net.MalformedURLException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -222,14 +227,15 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
             /* enable the new user right away */
             user.setIsApproved(true);
             user.setIsEnabled(true);
-            user.setIsConfirmed(false);
-            EucalyptusManagement.commitWebUser(user);
             response = notifyUserApproved(user);
         } else {
             /* if anonymous, then notify admin */
+            user.setIsApproved(false);
+            user.setIsEnabled(false);
             notifyAdminOfSignup (user);
             response = thanks_for_signup;
         }
+        EucalyptusManagement.commitWebUser(user);
 
         return response;
     }
@@ -367,19 +373,22 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 
     private String notifyUserApproved(UserInfoWeb user)
     {
+        String confString = " and confirmed";
         try {
-            String http_eucalyptus = ServletUtils.getRequestUrl(getThreadLocalRequest());
-            String confirm_link = http_eucalyptus + "?action=confirm"
-                    + "&code=" + user.getConfirmationCode();
+            if (!user.isConfirmed().booleanValue()) {
+                confString = "";
+                String http_eucalyptus = ServletUtils.getRequestUrl(getThreadLocalRequest());
+                String confirm_link = http_eucalyptus + "?action=confirm"
+                        + "&code=" + user.getConfirmationCode();
 
-            String email_message = signup_approval_header + "\n\n" +
-                    confirm_link +
-                    "\n\n" + signup_approval_footer;
+                String email_message = signup_approval_header + "\n\n" +
+                        confirm_link +
+                        "\n\n" + signup_approval_footer;
 
-            ServletUtils.sendMail(reply_email, user.getEmail(),
-                    signup_approval_subject,
-                    email_message);
-
+                ServletUtils.sendMail(reply_email, user.getEmail(),
+                        signup_approval_subject,
+                        email_message);
+            }
         } catch (Exception e) {
             // TODO: log this using the proper procedure
             LOG.error ("Approval mailing problem: " + e.getMessage());
@@ -388,7 +397,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 
             return "Internal problem (failed to notify user " + user.getEmail() + " by email)";
         }
-        return "User '" + user.getUserName() + "' was approved, thank you.";
+        return "User '" + user.getUserName() + "' was approved" + confString + ", thank you.";
     }
 
     private String notifyUserRejected(UserInfoWeb user)
@@ -611,6 +620,13 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 		oldRecord.setAffiliation (newRecord.getAffiliation());
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
+        oldRecord.setIsAdministrator(newRecord.isAdministrator());
+		// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
+        if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) { 
+            oldRecord.setIsConfirmed(true);
+        	oldRecord.setIsEnabled(true);
+        	oldRecord.setIsApproved(true);
+        }
 
         EucalyptusManagement.commitWebUser( oldRecord );
 
@@ -672,4 +688,44 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
     //:: TODO-1.4: anything more to do here? :://
     return EucalyptusManagement.getCloudInfo(setExternalHostPort);	
   }
+
+    private static List<DownloadsWeb> getDownloadsFromUrl(final String downloadsUrl) {
+        List<DownloadsWeb> downloadsList = new ArrayList<DownloadsWeb>();
+
+        HttpClient httpClient = new HttpClient();
+        GetMethod method = new GetMethod(downloadsUrl);
+        Integer timeoutMs = new Integer(3 * 1000);
+        method.getParams().setSoTimeout(timeoutMs);
+
+        try {
+            httpClient.executeMethod(method);
+            String str = method.getResponseBodyAsString();
+            String entries[] = str.split("[\\r\\n]+");
+            for (int i=0; i<entries.length; i++) {
+                String entry[] = entries[i].split("\\t");
+                if (entry.length == 3) {
+                    downloadsList.add (new DownloadsWeb(entry[0], entry[1], entry[2]));
+                }
+            }
+
+        } catch (MalformedURLException e) {
+            LOG.warn("Malformed URL exception: " + e.getMessage());
+            e.printStackTrace();
+
+        } catch (IOException e) {
+            LOG.warn("I/O exception: " + e.getMessage());
+            e.printStackTrace();
+
+        } finally {
+            method.releaseConnection();
+        }
+
+        return downloadsList;
+    }
+
+    public List<DownloadsWeb> getDownloads(final String sessionId, final String downloadsUrl) throws SerializableException {
+        SessionInfo session = verifySession(sessionId);
+        UserInfoWeb user = verifyUser(session, session.getUserId(), true);        
+        return getDownloadsFromUrl(downloadsUrl);
+    }
 }

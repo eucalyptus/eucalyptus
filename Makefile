@@ -59,10 +59,11 @@ install: deploy
 	@$(INSTALL) -m 0644 VERSION $(etcdir)/eucalyptus/eucalyptus-version
 	@$(INSTALL) -d $(etcdir)/init.d
 	@$(INSTALL) -d $(vardir)/run/eucalyptus/net
-	@$(INSTALL) -m 0700 -d $(vardir)/lib/eucalyptus/keys
+	@$(INSTALL) -d $(vardir)/lib/eucalyptus/keys
 	@$(INSTALL) -d $(vardir)/log/eucalyptus
 	@$(INSTALL) -d $(datarootdir)/eucalyptus
 	@$(INSTALL) -d $(usrdir)/sbin
+	@$(INSTALL) -d $(usrdir)/lib/eucalyptus
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 

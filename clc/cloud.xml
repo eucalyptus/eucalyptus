@@ -54,7 +54,7 @@
     <!--================================== other vars ==================================-->
     <property name="jvm.heap" value="256m"/>
     <property name="security.policy" value="${euca.conf.dir}/security.policy"/>
-    <property name="libpath" value="${euca.home}/usr/lib"/>
+    <property name="libpath" value="${euca.home}/usr/lib/eucalyptus"/>
     <!--================================== classpaths ==================================-->
     <path id="runtimeclasspath">
          <fileset dir="${euca.lib.dir}">
@@ -87,6 +87,7 @@
     <target name="debug" description="--> debug Eucalyptus (for debugging)." if="localenv.EUCALYPTUS">
         <java classname="edu.ucsb.eucalyptus.Main" fork="true" failonerror="true" dir="${euca.home}">
             <jvmarg value="-Xdebug"/>
+            <jvmarg value="-Xbootclasspath/p:${euca.lib.dir}/eucalyptus-crypto.jar:${euca.lib.dir}/eucalyptus-workarounds.jar"/>
             <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"/>
             <jvmarg value="-server"/>
             <jvmarg value="-Xmx${jvm.heap}"/>

@@ -56,7 +56,7 @@ jstring run_command(JNIEnv *env, char *cmd, int outfd) {
         home = strdup (home);
     }
 
-    snprintf(absolute_cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap %s", home, cmd);
+    snprintf(absolute_cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap %s", home, cmd);
     fprintf(stderr, "command: %s\n", absolute_cmd);
 	bzero(readbuffer, 256);
 	fd = popen(absolute_cmd, "r");
@@ -82,7 +82,7 @@ int run_command_and_get_status(JNIEnv *env, char *cmd, int outfd) {
         home = strdup (home);
     }
 
-    snprintf(absolute_cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap %s", home, cmd);
+    snprintf(absolute_cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap %s", home, cmd);
     fprintf(stderr, "command: %s\n", absolute_cmd);
 	fd = popen(absolute_cmd, "r");
 	status = pclose(fd);
@@ -278,7 +278,7 @@ JNIEXPORT jint JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_aoeExport
         home = strdup (home);
     }
 
-    snprintf(rootwrap, 256, "%s/usr/share/eucalyptus/euca_rootwrap", home);
+    snprintf(rootwrap, 256, "%s/usr/lib/eucalyptus/euca_rootwrap", home);
 
     snprintf(major_str, 4, "%d", major);
     snprintf(minor_str, 4, "%d", minor);

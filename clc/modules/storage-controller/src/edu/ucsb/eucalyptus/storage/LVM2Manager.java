@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.storage;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.ws.Storage;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
@@ -53,6 +54,7 @@ import java.util.List;
 
 public class LVM2Manager implements BlockStorageManager {
 
+
     public static final String lvmRootDirectory = "/dev";
     public static final String PATH_SEPARATOR = "/";
     public static String iface = "eth0";
@@ -60,7 +62,7 @@ public class LVM2Manager implements BlockStorageManager {
     public static String hostName = "localhost";
     public static final int MAX_LOOP_DEVICES = 256;
     public static final int MAX_MINOR_NUMBER = 16;
-    public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
+    public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
     public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
     private static final String CONFIG_FILE_PATH = "/etc/eucalyptus/eucalyptus.conf";
     private static Logger LOG = Logger.getLogger(LVM2Manager.class);
@@ -298,10 +300,13 @@ public class LVM2Manager implements BlockStorageManager {
             LVMMetaInfo foundMetaInfo = metaInfoList.get(0);
             majorNumber = foundMetaInfo.getMajorNumber();
             minorNumber = foundMetaInfo.getMinorNumber();
-            if(minorNumber >= MAX_MINOR_NUMBER) {
-                ++majorNumber;
-            }
-            minorNumber = (minorNumber + 1) % MAX_MINOR_NUMBER;
+            do {
+                if(minorNumber >= MAX_MINOR_NUMBER) {
+                    ++majorNumber;
+                }
+                minorNumber = (minorNumber + 1) % MAX_MINOR_NUMBER;
+                LOG.info("Trying e" + majorNumber + "." + minorNumber);
+            } while(new File(Storage.ETHERD_PREFIX + majorNumber + "." + minorNumber).exists());
             foundMetaInfo.setMajorNumber(majorNumber);
             foundMetaInfo.setMinorNumber(minorNumber);
         }
@@ -728,7 +733,7 @@ public class LVM2Manager implements BlockStorageManager {
             if(returnValue.length() == 0) {
                 throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
             }
-            returnValue = removeLoopback(loDevName);            
+            returnValue = removeLoopback(loDevName);
 
             snapshotInfo.setLoDevName(snapLoDevName);
             snapshotInfo.setStatus(StorageProperties.Status.available.toString());

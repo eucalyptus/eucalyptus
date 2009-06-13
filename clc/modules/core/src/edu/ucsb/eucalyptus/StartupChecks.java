@@ -7,6 +7,7 @@ import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.EucaKeyStore;
@@ -134,7 +135,20 @@ public class StartupChecks {
       LOG.debug( e, e );
     }
 
+    checkWalrus();
+
     return true;
+  }
+
+  private static void checkWalrus() {
+    EntityWrapper<ObjectInfo> db = new EntityWrapper<ObjectInfo>();
+    ObjectInfo searchObjectInfo = new ObjectInfo();
+    List<ObjectInfo> objectInfos = db.query(searchObjectInfo);
+    for(ObjectInfo objectInfo : objectInfos) {
+        if(objectInfo.getObjectKey() == null)
+           objectInfo.setObjectKey(objectInfo.getObjectName());
+    }
+    db.commit();
   }
 
   private static void importKeys( final AbstractKeyStore ks, final AbstractKeyStore newKs ) throws GeneralSecurityException, IOException {

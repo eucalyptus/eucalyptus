@@ -80,7 +80,7 @@ public class Storage {
     private static boolean enableStorage = false;
     static boolean shouldEnforceUsageLimits = true;
 
-    private static final String ETHERD_PREFIX = "/dev/etherd/e";
+    public static final String ETHERD_PREFIX = "/dev/etherd/e";
 
     public static boolean sharedMode;
 

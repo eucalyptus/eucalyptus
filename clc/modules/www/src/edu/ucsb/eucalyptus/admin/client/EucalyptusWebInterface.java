@@ -41,7 +41,6 @@ import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
-import com.google.gwt.http.client.URL;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -94,6 +93,11 @@ public class EucalyptusWebInterface implements EntryPoint {
     private static int imgTabIndex;
 	private static int usrTabIndex;
 	private static int confTabIndex;
+    private static int downTabIndex;
+    private static boolean sortUsersLastFirst = true;
+
+    /* UI selections remembered for future use */
+    private static boolean previousSkipConfirmation = false; // do not skip email confirmation by default
 
     /* globally visible UI widgets */
     private Label label_box = new Label();
@@ -375,15 +379,21 @@ public class EucalyptusWebInterface implements EntryPoint {
     public void displayUserRecordPage( Panel parent, UserInfoWeb userToEdit)
     {
 		final String oldPassword;
+        final boolean admin;
 		final boolean newUser;
-        boolean admin = false;
+        final boolean showSkipConfirmed;
+        boolean isAdminChecked = false; // not admin by default
+        boolean skipConfirmationChecked = previousSkipConfirmation;
 
         if (loggedInUser != null
-                && loggedInUser.isAdministrator().booleanValue()) {
-             admin = true;
+                && loggedInUser.isAdministrator()) {
+            admin = true;
+        } else {
+            admin = false;
         }
 		if (userToEdit==null) {
 			newUser = true;
+            showSkipConfirmed = true;
 			userToEdit = new UserInfoWeb();
 			oldPassword = "";
 			if ( admin ) {
@@ -394,11 +404,35 @@ public class EucalyptusWebInterface implements EntryPoint {
 		} else {
 			newUser = false;
 			oldPassword = userToEdit.getBCryptedPassword();
-			label_box.setText ("Editing information for user '" + userToEdit.getUserName() +"'");
+            isAdminChecked = userToEdit.isAdministrator();
+            showSkipConfirmed = !userToEdit.isConfirmed();
+            skipConfirmationChecked = userToEdit.isConfirmed();
+
+            String status;
+            if (!userToEdit.isApproved()) {
+                status = "unapproved";
+            } else if (!userToEdit.isEnabled()) {
+                status = "disabled";
+            } else if (!userToEdit.isConfirmed()) {
+                status = "unconfirmed";
+            } else {
+                status = "active";
+            }
+            if (userToEdit.isAdministrator()) {
+                status += " & admin";
+            }
+			label_box.setText ("Editing information for user '" + userToEdit.getUserName() +"' (" + status + ")" );
 		}
         label_box.setStyleName("euca-greeting-normal");
 
-        final Grid g1 = new Grid ( 5, 3 );
+        int rowsMandatory = 5;
+        if (admin) {
+            rowsMandatory++; // for admin checkbox
+            if (showSkipConfirmed) {
+                rowsMandatory++; // for skip confirmation checkbox
+            }
+        }
+        final Grid g1 = new Grid ( rowsMandatory, 3 );
         g1.getColumnFormatter().setWidth(0, "180");
         g1.getColumnFormatter().setWidth(1, "180");
         g1.getColumnFormatter().setWidth(2, "180");
@@ -418,13 +452,21 @@ public class EucalyptusWebInterface implements EntryPoint {
 		}
         g1.setWidget( i++, 1, userName_box );
 
+        // optional row
+        final CheckBox userIsAdmin = new CheckBox("Administrator");
+        userIsAdmin.setChecked(isAdminChecked);
+        userIsAdmin.setStyleName("euca-remember-text");
+        if (admin) {
+            g1.setWidget ( i++, 1, userIsAdmin);
+        }
+
         final int password1_row = i;
         g1.setWidget( i, 0, new Label( "Password:" ) );
         g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
         final PasswordTextBox cleartextPassword1_box = new PasswordTextBox();
 		cleartextPassword1_box.setText (userToEdit.getBCryptedPassword());
         cleartextPassword1_box.setWidth ("180");
-		if ( (! admin && ! newUser ) || userToEdit.isAdministrator()) {
+		if ( (! admin && ! newUser ) || userToEdit.isAdministrator().booleanValue()) {
 			cleartextPassword1_box.setEnabled (false);
 		}
         g1.setWidget( i++, 1, cleartextPassword1_box );
@@ -435,7 +477,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         final PasswordTextBox cleartextPassword2_box = new PasswordTextBox();
 		cleartextPassword2_box.setText (userToEdit.getBCryptedPassword());
         cleartextPassword2_box.setWidth("180");
-		if ( ( ! admin && ! newUser ) || userToEdit.isAdministrator()) {
+		if ( ( ! admin && ! newUser ) || userToEdit.isAdministrator().booleanValue()) {
 			cleartextPassword2_box.setEnabled (false);
 		}
         g1.setWidget( i++, 1, cleartextPassword2_box );
@@ -455,6 +497,14 @@ public class EucalyptusWebInterface implements EntryPoint {
 		emailAddress_box.setText (userToEdit.getEmail());
         emailAddress_box.setWidth("180");
         g1.setWidget( i++, 1, emailAddress_box );
+
+        // optional row
+        final CheckBox skipConfirmation = new CheckBox("Skip email confirmation");
+        skipConfirmation.setChecked(skipConfirmationChecked);
+        skipConfirmation.setStyleName("euca-remember-text");
+        if (admin && showSkipConfirmed) {
+            g1.setWidget ( i++, 1, skipConfirmation);
+        }
 
         /* these widgets are allocated, but not necessarily used */
         final Grid g2 = new Grid();
@@ -606,6 +656,13 @@ public class EucalyptusWebInterface implements EntryPoint {
                             realName_box.getText(),
                             emailAddress_box.getText(),
                             encryptedPassword);
+                    if ( admin ) {
+                        userToSave.setIsAdministrator( userIsAdmin.isChecked());
+                        if ( showSkipConfirmed ) {
+                            previousSkipConfirmation = skipConfirmation.isChecked(); // remember value for the future
+                            userToSave.setIsConfirmed(previousSkipConfirmation);
+                        }
+                    }
                     if ( telephoneNumber_box.getText().length() > 0 )
                     {
                         userToSave.setTelephoneNumber( telephoneNumber_box.getText() );
@@ -651,19 +708,20 @@ public class EucalyptusWebInterface implements EntryPoint {
 							sessionId,
 							userToSave,
 						new AsyncCallback() {
-							public void onSuccess( Object result )
-							{
-								displayDialog( "", ( String ) result );
-								loggedInUser.setRealName(userToSave.getRealName());
-								loggedInUser.setEmail(userToSave.getEmail());
-								loggedInUser.setBCryptedPassword(userToSave.getBCryptedPassword());
-								loggedInUser.setTelephoneNumber(userToSave.getTelephoneNumber());
-								loggedInUser.setAffiliation(userToSave.getAffiliation());
-								loggedInUser.setProjectDescription(userToSave.getProjectDescription());
-								loggedInUser.setProjectPIName(userToSave.getProjectPIName());
-							}
+                            public void onSuccess(Object result) {
+                                displayDialog("", (String) result);
+                                if (loggedInUser.getUserName().equals(userToSave.getUserName())) {
+                                    loggedInUser.setRealName(userToSave.getRealName());
+                                    loggedInUser.setEmail(userToSave.getEmail());
+                                    loggedInUser.setBCryptedPassword(userToSave.getBCryptedPassword());
+                                    loggedInUser.setTelephoneNumber(userToSave.getTelephoneNumber());
+                                    loggedInUser.setAffiliation(userToSave.getAffiliation());
+                                    loggedInUser.setProjectDescription(userToSave.getProjectDescription());
+                                    loggedInUser.setProjectPIName(userToSave.getProjectPIName());
+                                }
+                            }
 
-							public void onFailure( Throwable caught )
+                            public void onFailure( Throwable caught )
 							{
 								String m = caught.getMessage();
 								displayErrorPage(m);
@@ -1164,7 +1222,12 @@ public class EucalyptusWebInterface implements EntryPoint {
         if (loggedInUser.isAdministrator().booleanValue()) {
 			allTabs.addTab ("Users"); usrTabIndex = nTabs++;
 			allTabs.addTab ("Configuration"); confTabIndex = nTabs++;
+            allTabs.addTab ("Downloads"); downTabIndex = nTabs++;
         }
+		// can happen if admin user re-logs in as regular without reloading
+		if (currentTabIndex > (nTabs-1) ) { 
+			currentTabIndex = 0;
+		}
 		allTabs.addTabListener(new TabListener() {
             public void onTabSelected(SourcesTabEvents sender, int tabIndex) {
                 String error = "This tab is not implemented yet, sorry!";
@@ -1174,6 +1237,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 else if (tabIndex==imgTabIndex) { displayImagesTab(wrapper); }
                 else if (tabIndex==usrTabIndex) { displayUsersTab(wrapper); }
 				else if (tabIndex==confTabIndex) { displayConfTab(wrapper); }
+                else if (tabIndex==downTabIndex) { displayDownloadsTab(wrapper); }
                 else { displayErrorPage("Invalid tab!"); }
             }
             public boolean onBeforeTabSelected(SourcesTabEvents sender, int tabIndex) {
@@ -1181,11 +1245,11 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         });
 
-        allTabs.selectTab(currentTabIndex);
         RootPanel.get().clear();
         RootPanel.get().add( top_bar );
         RootPanel.get().add( allTabs );
         RootPanel.get().add( wrapper );
+        allTabs.selectTab(currentTabIndex);
     }
 
 	public void displayCredentialsTab (final VerticalPanel parent)
@@ -1789,6 +1853,29 @@ public class EucalyptusWebInterface implements EntryPoint {
         parent.add(msg);
     }
 
+    private class EucalyptusDialog extends DialogBox {
+
+		private boolean cancelled;
+
+		public EucalyptusDialog (String mainMsg, String extraMsg, Button okButton) {
+
+            super(true);
+            cancelled = false;
+			setHTML (mainMsg);
+            Button cancelButton = new Button ("Cancel", new ClickListener() {
+                	public void onClick(Widget sender) {
+					EucalyptusDialog.this.hide();
+					cancelled = true;
+				}
+            });
+			HorizontalPanel buttonPanel = new HorizontalPanel();
+			buttonPanel.add (okButton);
+			buttonPanel.add (cancelButton);
+			setWidget (buttonPanel);
+            center();
+		}
+	}
+
 	public void displayConfirmDeletePage( final String userName )
     {
 		Button deleteButton = new Button ("Delete", new ClickListener() {
@@ -1799,10 +1886,13 @@ public class EucalyptusWebInterface implements EntryPoint {
 					+ "&page=" + currentTabIndex);
 			}
         });
+
 		Button okButton = displayDialog ("Sure?",
 			"Do you want to delete user '" + userName + "'?", deleteButton);
 		okButton.setText ("Cancel");
 		label_box.setStyleName("euca-greeting-warning");
+		
+       //new EucalyptusDialog ("Sure?", "Do you want to delete user '" + userName + "'?", deleteButton);
     }
 
     private HTML userActionButton (String action, UserInfoWeb user)
@@ -1831,8 +1921,12 @@ public class EucalyptusWebInterface implements EntryPoint {
 		}
 	}
 
-    public void displayUsersList(List usersList, final VerticalPanel parent)
+    public void displayUsersList(final List usersList, final VerticalPanel parent)
     {
+        String sortSymbol = "&darr;"; // HTML down arrow
+        if (sortUsersLastFirst) {
+            sortSymbol = "&uarr;"; // HTML up arrow
+        }
         parent.clear();
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(5);
@@ -1840,31 +1934,47 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         int nusers = usersList.size();
         if (nusers>0) {
+            Hyperlink sort_button = new Hyperlink( sortSymbol, true, null );
+			sort_button.setStyleName ("euca-small-text");
+			sort_button.addClickListener( new ClickListener() {
+				public void onClick(Widget sender) {
+                    sortUsersLastFirst = !sortUsersLastFirst;
+					displayUsersList (usersList, parent);
+				}
+			});
+
             final Grid g = new Grid(nusers + 1, 6);
             g.setStyleName("euca-table");
             g.setCellPadding(6);
-            g.setWidget(0, 0, new Label("Username"));
-            g.setWidget(0, 1, new Label("Email"));
-            g.setWidget(0, 2, new Label("Name"));
-            g.setWidget(0, 3, new Label("Status"));
-            g.setWidget(0, 4, new Label("Actions"));
-            //g.setWidget(0, 5, new Label("View"));
+            g.setWidget(0, 0, sort_button);
+            g.setWidget(0, 1, new Label("Username"));
+            g.setWidget(0, 2, new Label("Email"));
+            g.setWidget(0, 3, new Label("Name"));
+            g.setWidget(0, 4, new Label("Status"));
+            g.setWidget(0, 5, new Label("Actions"));
             g.getRowFormatter().setStyleName(0, "euca-table-heading-row");
 
             for (int i=0; i<nusers; i++) {
-                final UserInfoWeb u = (UserInfoWeb) usersList.get(i);
+                int userIndex = i;
+                if (sortUsersLastFirst) {
+                    userIndex = nusers - i - 1;
+                }
+                final UserInfoWeb u = (UserInfoWeb) usersList.get(userIndex);
                 int row = i+1;
                 if ((row%2)==1) {
                     g.getRowFormatter().setStyleName(row, "euca-table-odd-row");
                 } else {
                     g.getRowFormatter().setStyleName(row, "euca-table-even-row");
                 }
+				Label indexLabel = new Label(Integer.toString(userIndex));
+				indexLabel.setStyleName("euca-small-text");
+				g.setWidget(row, 0, indexLabel);
 				Label userLabel = new Label(u.getUserName());
-                g.setWidget(row, 0, userLabel);
+                g.setWidget(row, 1, userLabel);
 				Label emailLabel = new Label(u.getEmail());
-                g.setWidget(row, 1, emailLabel);
+                g.setWidget(row, 2, emailLabel);
 				Label nameLabel = new Label(u.getRealName());
-                g.setWidget(row, 2, nameLabel);
+                g.setWidget(row, 3, nameLabel);
                 String status;
                 if (!u.isApproved().booleanValue()) {
                     status = "unapproved";
@@ -1878,7 +1988,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 if (u.isAdministrator().booleanValue()) {
                      status += " & admin";
                 }
-                g.setWidget(row, 3, new Label(status) );
+                g.setWidget(row, 4, new Label(status) );
 
                 /* actions */
                 HorizontalPanel ops = new HorizontalPanel();
@@ -1899,7 +2009,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	                }
 	                ops.add(act_button);
 	
-					Hyperlink del_button = new Hyperlink( "Delete", "confirmdelete" );
+					Hyperlink del_button = new Hyperlink( "Delete", null );
 					del_button.setStyleName ("euca-action-link");
 					del_button.addClickListener( new ClickListener() {
 						public void onClick(Widget sender) {
@@ -1909,7 +2019,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 					ops.add(del_button);
 				}
 				
-				g.setWidget(row, 4, ops );	
+				g.setWidget(row, 5, ops );	
 
                 /* view */
                 HorizontalPanel views = new HorizontalPanel();
@@ -1942,7 +2052,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         int nimages = imagesList.size();
         boolean showActions = false;
         if (loggedInUser.isAdministrator().booleanValue()) {
-            // Chris: comment out the next line if image deletion does not work on the back-end
             showActions = true;
         }
 
@@ -2001,6 +2110,22 @@ public class EucalyptusWebInterface implements EntryPoint {
 		vpanel.add (new SystemConfigTable (sessionId));
 		vpanel.add (new ClusterInfoTable (sessionId));
 		vpanel.add (new VmTypeTable (sessionId));
+
+		parent.clear();
+		parent.add (vpanel);
+	}
+
+    public void displayDownloadsTab (final VerticalPanel parent)
+    {
+		History.newItem("downloads");
+        VerticalPanel vpanel = new VerticalPanel();
+        vpanel.setSpacing(15);
+        vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+		vpanel.add (new DownloadsTable(sessionId,
+                "http://www.eucalyptussoftware.com/downloads/eucalyptus-images/list.php",
+                "http://open.eucalyptus.com/wiki/EucalyptusUserImageCreatorGuide_v1.5",
+                "Prepackaged Images by Eucalyptus Systems",
+                50));
 
 		parent.clear();
 		parent.add (vpanel);
