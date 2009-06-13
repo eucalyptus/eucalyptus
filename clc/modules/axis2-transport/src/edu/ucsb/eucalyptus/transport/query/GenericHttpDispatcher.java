@@ -83,6 +83,7 @@ public class GenericHttpDispatcher extends RequestURIBasedDispatcher {
     String nameSpace = dispatcher.getNamespace();
     if ( maybeVersion != null )
       nameSpace = nameSpace.replaceAll( dispatcher.getBinding().getName(), maybeVersion );
+    httpRequest.setOriginalNamespace( nameSpace );
     //:: set the operation name... this looks ugly... sigh :://
       String operationName;
       try {

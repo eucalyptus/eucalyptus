@@ -94,11 +94,9 @@
         <collection name="ramdisk" usage="optional"  field="ramdisk" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String" test-method="hasRamdisk">
             <value name="value"/>
         </collection>
-        <structure name="blockDeviceMapping">
-            <collection field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory">
-                <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType"/>
-            </collection>
-        </structure>
+        <collection name="blockDeviceMapping" usage="optional" field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory" test-method="hasBlockDeviceMapping">
+            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType"/>
+        </collection>
     </mapping>
 
     <mapping name="DescribeImageAttribute" class="edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType">

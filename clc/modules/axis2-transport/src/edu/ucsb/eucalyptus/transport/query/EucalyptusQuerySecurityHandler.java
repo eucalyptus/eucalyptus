@@ -95,13 +95,24 @@ public class EucalyptusQuerySecurityHandler extends HMACQuerySecurityHandler {
     String paramString2 = makePlusSubjectString( parameters );
     String paramString3 = makeV2SubjectString( verb, host, addr, parameters );
 
+    String headerHost = headers.get( "Host" );
+    if( headerHost != null && headerHost.contains( ":" ) ) {
+      headerHost = headerHost.split( ":" )[0];
+    }
+    String paramString4 = makeV2SubjectString( verb, headerHost, addr, parameters );
+
     String authSig = checkSignature( queryKey, paramString );
     String authSig2 = checkSignature( queryKey, paramString2 );
 
     String authv2sha1 = checkSignature( queryKey, paramString3 );
     String authv2sha256 = checkSignature256( queryKey, paramString3 );
-    LOG.info( "VERSION2-SHA256: " + authv2sha256 + " -- " + sig.replaceAll("=","") );
-    if ( !authSig.equals( sig ) && !authSig2.equals( sig ) && !authv2sha1.equals( sig.replaceAll("=","") ) && !authv2sha256.equals( sig.replaceAll("=","") ) )
+
+    String authv2sha256header = checkSignature256( queryKey, paramString4 );
+
+    LOG.info( "VERSION2-SHA256:        " + authv2sha256 + " -- " + sig.replaceAll("=","") );
+    LOG.info( "VERSION2-SHA256-HEADER: " + authv2sha256header + " -- " + sig.replaceAll("=","") );
+
+    if ( !authSig.equals( sig ) && !authSig2.equals( sig ) && !authv2sha1.equals( sig.replaceAll("=","") ) && !authv2sha256.equals( sig.replaceAll("=","") ) && !authv2sha256header.equals( sig.replaceAll("=","") ) )
       throw new QuerySecurityException( "User authentication failed." );
 
     //:: check the timestamp :://

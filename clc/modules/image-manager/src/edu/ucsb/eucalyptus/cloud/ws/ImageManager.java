@@ -613,10 +613,14 @@ If you specify a list of executable users, only users that have launch permissio
         throw new EucalyptusCloudException( "image attribute: not authorized." );
       if ( request.getKernel() != null ) {
         reply.setRealResponse( reply.getKernel() );
-        reply.getKernel().add(imgInfo.getKernelId() );
+        if( imgInfo.getKernelId() != null ) {
+          reply.getKernel().add(imgInfo.getKernelId() );
+        }
       } else if ( request.getRamdisk() != null ) {
         reply.setRealResponse( reply.getRamdisk() );
-        reply.getRamdisk().add( imgInfo.getRamdiskId() );
+        if( imgInfo.getRamdiskId() != null ) {
+          reply.getRamdisk().add( imgInfo.getRamdiskId() );
+        }
       } else if ( request.getLaunchPermission() != null ) {
         reply.setRealResponse( reply.getLaunchPermission() );
         for ( UserGroupInfo userGroup : imgInfo.getUserGroups() )

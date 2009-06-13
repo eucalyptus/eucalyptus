@@ -58,10 +58,15 @@ class ClusterAllocator extends Thread {
     } else if ( addresses.size() < runningVms.size() ) {
       LOG.error( "Number of running VMs is greater than number of assigned addresses!" );
     } else {
+      AddressManager.updateAddressingMode();
       for ( VmInfo vm : runningVms ) {
         String addr = addresses.remove( 0 );
         try {
-          new AddressManager().AssociateAddress( Admin.makeMsg( AssociateAddressType.class, addr, vm.getInstanceId() ) );
+          vm.getNetParams().setIgnoredPublicIp( addr );
+          AssociateAddressType msg = new AssociateAddressType( addr, vm.getInstanceId() );
+          msg.setUserId( vm.getOwnerId() );
+          msg.setEffectiveUserId( EucalyptusProperties.NAME );
+          new AddressManager().AssociateAddress( msg );
         } catch ( AxisFault axisFault ) {
           LOG.error( axisFault );
         }
@@ -87,11 +92,18 @@ class ClusterAllocator extends Thread {
       Network network = Networks.getInstance().lookup( networkToken.getName() );
       if ( network.getRules().isEmpty() ) return;
       QueuedEvent event = new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), new ConfigureNetworkType( this.vmAllocInfo.getRequest(), network.getRules() ) );
+      LOG.warn( "Setting up rules for: " + network.getName() );
+      LOG.debug( network );
       this.msgMap.put( State.CREATE_NETWORK_RULES, event );
       //:: need to refresh the rules on the backend for all active networks which point to this network :://
       for( Network otherNetwork : Networks.getInstance().listValues() ) {
         if( otherNetwork.isPeer( network.getUserName(), network.getNetworkName() ) ) {
-          this.msgMap.put( State.CREATE_NETWORK_RULES, new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), new ConfigureNetworkType( network.getRules() ) ) );
+          LOG.warn( "Need to refresh rules for incoming named network ingress on: " + otherNetwork.getName() );
+          LOG.debug( otherNetwork );
+          ConfigureNetworkType msg = new ConfigureNetworkType( otherNetwork.getRules() );
+          msg.setUserId( otherNetwork.getUserName() );
+          msg.setEffectiveUserId( EucalyptusProperties.NAME );
+          this.msgMap.put( State.CREATE_NETWORK_RULES, new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), msg ) );
         }
       }
     } catch ( NoSuchElementException e ) {}/* just added this network, shouldn't happen, if so just smile and nod */

@@ -9,7 +9,7 @@ import java.util.List;
 public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 	private static int maxClusters = 1; // TODO: bump this up once we can do more than 1
-	private static Label noClusterLabel = new Label(); 
+	private static Label noClusterLabel = new Label();
 	private static Label statusLabel = new Label();
 	private Grid grid = new Grid ();
 	private Button add_button = new Button ( "Add cluster", this );
@@ -18,7 +18,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	private SystemConfigWeb systemConfig = new SystemConfigWeb ();
 	private static String sessionId;
 	private static String warningMessage = "Note: adding a cluster requires synchronization of keys among all nodes, which cannot be done through this interface.  See documentation for details.";
-	
+
 	public ClusterInfoTable(String sessionId)
 	{
 		this.sessionId = sessionId;
@@ -46,13 +46,13 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		this.statusLabel.setStyleName ("euca-greeting-pending");
 		this.add ( hpanel );
 		rebuildTable();
-		EucalyptusWebBackend.App.getInstance().getClusterList( 
+		EucalyptusWebBackend.App.getInstance().getClusterList(
 			this.sessionId, new GetClusterListCallback( this ) );
-		EucalyptusWebBackend.App.getInstance().getSystemConfig( 
+		EucalyptusWebBackend.App.getInstance().getSystemConfig(
 			this.sessionId, new GetSystemConfigCallback( this ) );
 	}
 
-	public void onClick( final Widget widget ) /* Add cluster button */
+	public void onClick( final Widget widget ) // Add cluster button
 	{
 		this.clusterList.add (new ClusterInfoWeb ("name", "host", 8774, "/var/lib/eucalyptus/volumes", 50, 500));
 		this.rebuildTable();
@@ -66,7 +66,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			this.grid.setVisible (false);
 			this.noClusterLabel.setVisible (true);
 			this.add_button.setEnabled (true);
-			
+
 		} else {
 			this.noClusterLabel.setVisible (false);
 			this.grid.clear ();
@@ -74,7 +74,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			this.grid.setVisible (true);
 			this.grid.setStyleName( "euca-table" );
 			this.grid.setCellPadding( 2 );
-			
+
 			int row = 0;
 			for ( ClusterInfoWeb cluster : this.clusterList ) {
 				if ( ( row % 2 ) == 1 ) {
@@ -84,7 +84,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 				}
 				this.grid.setWidget (row, 0, addClusterEntry (row++, cluster));
 			}
-					
+
 			if ( row >= maxClusters ) {
 				this.add_button.setEnabled (false);
 			} else {
@@ -94,30 +94,30 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	}
 
 	private Grid addClusterEntry ( int row, ClusterInfoWeb clusterInfo )
-	{			
-		Grid g = new Grid (6, 2);
+	{
+		Grid g = new Grid (9, 2);
 		g.setStyleName( "euca-table" );
 		g.setCellPadding( 4 );
-		
+
 		// row 1
 		g.setWidget( 0, 0, new Label( "Name: " ) );
 		g.getCellFormatter().setHorizontalAlignment(0, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final HorizontalPanel namePanel = new HorizontalPanel ();
 		namePanel.setSpacing (6);
-		
+
 		if (clusterInfo.isCommitted()) {
 			namePanel.add (new Label ( clusterInfo.getName() ));
 		} else {
 			final TextBox nb = new TextBox();
 			nb.addChangeListener (new ChangeCallback (this, row));
-			nb.setVisibleLength( 12 );	
+			nb.setVisibleLength( 12 );
 			nb.setText( clusterInfo.getName() );
-			nb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));		
+			nb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 			namePanel.add ( nb );
 		}
 		namePanel.add (new Button ("Delete Cluster", new DeleteCallback( this, row )));
 		g.setWidget ( 0, 1, namePanel);
-		
+
 		// row 2
 		g.setWidget( 1, 0, new Label( "Host: " ) );
 		g.getCellFormatter().setHorizontalAlignment(1, 0, HasHorizontalAlignment.ALIGN_RIGHT);
@@ -127,7 +127,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		hb.setText( clusterInfo.getHost() );
 		hb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 		g.setWidget ( 1, 1, hb );
-		
+
 		// row 3
 		g.setWidget( 2, 0, new Label( "Port: " ) );
 		g.getCellFormatter().setHorizontalAlignment(2, 0, HasHorizontalAlignment.ALIGN_RIGHT);
@@ -137,7 +137,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		pb.setText( "" + clusterInfo.getPort() );
 		pb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 		g.setWidget( 2, 1, pb );
-		
+
 		// row 4
 		g.setWidget( 3, 0, new Label( "Volumes Path:" ) );
 		g.getCellFormatter().setHorizontalAlignment(3, 0, HasHorizontalAlignment.ALIGN_RIGHT);
@@ -147,10 +147,10 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		volumesPathBox.setText( systemConfig.getStorageVolumesPath() );
 		volumesPathBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 		g.setWidget( 3, 1, volumesPathBox );
-				
+
 		// row 5
 		g.setWidget( 4, 0, new Label( "Max volume size:" ) );
-		g.getCellFormatter().setHorizontalAlignment(5, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		g.getCellFormatter().setHorizontalAlignment(4, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox volumeMaxBox = new TextBox();
 		volumeMaxBox.addChangeListener (new ChangeCallback (this, row));
 		volumeMaxBox.setVisibleLength( 10 );
@@ -160,10 +160,10 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		volumesMaxPanel.add (volumeMaxBox);
 		volumesMaxPanel.add (new HTML ("&nbsp; GB"));
 		g.setWidget( 4, 1, volumesMaxPanel );
-		
+
 		// row 6
 		g.setWidget( 5, 0, new Label( "Disk space reserved for volumes:" ) );
-		g.getCellFormatter().setHorizontalAlignment(4, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		g.getCellFormatter().setHorizontalAlignment(5, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox volumesTotalBox = new TextBox();
 		volumesTotalBox.addChangeListener (new ChangeCallback (this, row));
 		volumesTotalBox.setVisibleLength( 10 );
@@ -173,7 +173,59 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		volumesTotalPanel.add (volumesTotalBox);
 		volumesTotalPanel.add (new HTML ("&nbsp; GB"));
 		g.setWidget( 5, 1, volumesTotalPanel );
-		
+
+
+        // row 9
+        g.setWidget( 8, 0, new Label( "Maximum of" ) );
+    g.getCellFormatter().setHorizontalAlignment(8, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+    final TextBox publicAddressesBox = new TextBox();
+    publicAddressesBox.addChangeListener (new ChangeCallback (this, row));
+    publicAddressesBox.setVisibleLength( 10 );
+    publicAddressesBox.setText( "" + systemConfig.getMaxUserPublicAddresses());
+    final HorizontalPanel publicAddressesPanel = new HorizontalPanel ();
+    publicAddressesPanel.add (publicAddressesBox);
+        publicAddressesPanel.add (new HTML ("&nbsp; public IP addresses per user"));
+    g.setWidget( 8, 1, publicAddressesPanel );
+
+        // row 8 (yes, swapped with row 7)
+        g.setWidget( 7, 0, new Label( "Total of" ) );
+		g.getCellFormatter().setHorizontalAlignment(7, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		final TextBox reservedAddressesBox = new TextBox();
+		reservedAddressesBox.addChangeListener (new ChangeCallback (this, row));
+		reservedAddressesBox.setVisibleLength( 10 );
+		reservedAddressesBox.setText( "" + systemConfig.getSystemReservedPublicAddresses());
+		final HorizontalPanel reservedAddressesPanel = new HorizontalPanel ();
+		reservedAddressesPanel.add (reservedAddressesBox);
+        reservedAddressesPanel.add (new HTML ("&nbsp; public IP addresses reserved for instances"));
+    reservedAddressesBox.setText(""+systemConfig.getSystemReservedPublicAddresses());
+		g.setWidget( 7, 1, reservedAddressesPanel );
+
+        // row 7 (yes, swapped with row 8)
+    final HorizontalPanel dynamicAddressesingPanel = new HorizontalPanel ();
+        final CheckBox dynamicAddressesCheckbox = new CheckBox ("Enable dynamic public IP address assignment");
+    dynamicAddressesingPanel.add( dynamicAddressesCheckbox );
+        if (systemConfig.isDoDynamicPublicAddresses()) {
+            dynamicAddressesCheckbox.setChecked(true);
+            reservedAddressesBox.setEnabled(false);
+        } else {
+            dynamicAddressesCheckbox.setChecked(false);
+            reservedAddressesBox.setEnabled(true);
+        }
+        dynamicAddressesCheckbox.addClickListener (new ClickListener() {
+            public void onClick( Widget sender )
+            {
+                if (((CheckBox)sender).isChecked()) {
+                    reservedAddressesBox.setEnabled(false);
+                    systemConfig.setDoDynamicPublicAddresses( true );
+                } else {
+                    reservedAddressesBox.setEnabled(true);
+                  systemConfig.setDoDynamicPublicAddresses( false );
+                }
+            }
+        });
+		g.setWidget( 6, 1, dynamicAddressesingPanel );
+
+
 		return g;
 	}
 
@@ -191,7 +243,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	{
 		ClusterInfoWeb cluster = this.clusterList.get (row);
 		Grid g = (Grid)this.grid.getWidget(row, 0);
-		HorizontalPanel p = (HorizontalPanel)g.getWidget(0, 1);		
+		HorizontalPanel p = (HorizontalPanel)g.getWidget(0, 1);
 		if (p.getWidget(0) instanceof TextBox) {
 			cluster.setName (((TextBox)p.getWidget(0)).getText());
 		} else {
@@ -204,45 +256,50 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		systemConfig.setStorageMaxVolumeSizeInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
 		p = (HorizontalPanel)g.getWidget(5, 1);
 		systemConfig.setStorageVolumesTotalInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
+        p = (HorizontalPanel)g.getWidget(8, 1);
+    systemConfig.setMaxUserPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
+        p = (HorizontalPanel)g.getWidget(7, 1);
+		systemConfig.setSystemReservedPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
+//    systemConfig.setDoDynamicPublicAddresses( !((TextBox)p.getWidget(0)).isEnabled() ? true : false );
 	}
-	
+
 	public void MarkCommitted ()
 	{
 		for ( ClusterInfoWeb cluster : this.clusterList ) {
 			cluster.setCommitted ();
 		}
 	}
-	
+
 	class ChangeCallback implements ChangeListener, ClickListener {
 		private ClusterInfoTable parent;
 		private int row;
-		
+
 		ChangeCallback ( final ClusterInfoTable parent, final int row )
 		{
 			this.parent = parent;
 			this.row = row;
 		}
-		
-		public void onChange (Widget sender) 
+
+		public void onChange (Widget sender)
 		{
 			this.parent.updateRow (this.row);
 			this.parent.statusLabel.setText ("Unsaved changes");
 			this.parent.statusLabel.setStyleName ("euca-greeting-warning");
 		}
-		
-		public void onClick (Widget sender) 
+
+		public void onClick (Widget sender)
 		{
 			this.parent.updateRow (this.row);
 			this.parent.statusLabel.setText ("Unsaved changes");
 			this.parent.statusLabel.setStyleName ("euca-greeting-warning");
 		}
 	}
-	
+
 	class DeleteCallback implements ClickListener {
 
 		private ClusterInfoTable parent;
 		private int row;
-		
+
 		DeleteCallback( final ClusterInfoTable parent, final int row )
 		{
 			this.parent = parent;
@@ -257,7 +314,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			this.parent.statusLabel.setStyleName ("euca-greeting-warning");
 		}
 	}
-	
+
 	class GetClusterListCallback implements AsyncCallback {
 
 		private ClusterInfoTable parent;
@@ -280,10 +337,10 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			this.parent.statusLabel.setStyleName ("euca-greeting-disabled");
 			this.parent.clusterList = newClusterList;
 			this.parent.MarkCommitted();
-			this.parent.rebuildTable(); 
+			this.parent.rebuildTable();
 		}
 	}
-	
+
 	class GetSystemConfigCallback implements AsyncCallback {
 
 		private ClusterInfoTable parent;
@@ -302,10 +359,10 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		public void onSuccess( final Object o )
 		{
 			this.parent.systemConfig = (SystemConfigWeb) o;
-			this.parent.rebuildTable(); 
+			this.parent.rebuildTable();
 		}
 	}
-	
+
 	class SaveCallback implements AsyncCallback, ClickListener {
 
 		private ClusterInfoTable parent;
@@ -319,9 +376,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		{
 			this.parent.statusLabel.setText ("Saving...");
 			this.parent.statusLabel.setStyleName ("euca-greeting-pending");
-			EucalyptusWebBackend.App.getInstance().setClusterList( 
+			EucalyptusWebBackend.App.getInstance().setClusterList(
 				this.parent.sessionId, this.parent.clusterList, this );
-			EucalyptusWebBackend.App.getInstance().setSystemConfig( 
+			EucalyptusWebBackend.App.getInstance().setSystemConfig(
 				this.parent.sessionId, this.parent.systemConfig, this );
 		}
 
@@ -336,25 +393,25 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			this.parent.statusLabel.setText ("Saved clusters to server");
 			this.parent.statusLabel.setStyleName ("euca-greeting-disabled");
 			this.parent.MarkCommitted ();
-			this.parent.rebuildTable(); /* so the commmitted ones show up */
+			this.parent.rebuildTable(); // so the commmitted ones show up
 		}
 	}
-	
+
 	class FocusHandler implements FocusListener {
 		private HTML parent;
 		private String message;
-		
-		FocusHandler (final HTML parent, String message) 
+
+		FocusHandler (final HTML parent, String message)
 		{
 			this.parent = parent;
 			this.message = message;
 		}
-		public void onLostFocus (Widget sender) 
+		public void onLostFocus (Widget sender)
 		{
 			this.parent.setHTML ("");
 			this.parent.setStyleName ("euca-text");
 		}
-		public void onFocus (Widget sender) 
+		public void onFocus (Widget sender)
 		{
 			this.parent.setHTML (message);
 			this.parent.setStyleName ("euca-error-hint");
