@@ -9,7 +9,7 @@
 EUCALYPTUS="/opt/eucalyptus/"
 
 # This is the username that you require eucalyptus to run as
-EUCA_USER="root"
+EUCA_USER="eucalyptus"
 
 # Uncomment this field if you do not plan on using the dynamic block
 # store functionality of Eucalyptus
@@ -137,7 +137,7 @@ VNET_INTERFACE="eth0"
 # xenbr1, etc' on older Xen versions, and 'eth0, eth1, etc' on newer
 # Xen versions.  The command 'brctl show' will give you more
 # information on your local bridge setup.
-VNET_BRIDGE="eth0"
+VNET_BRIDGE="xenbr0"
 
 # This indicates where we have a dhcp server binary. We use it to provide
 # the images with IPs: Eucalyptus provides its own configuration per
