@@ -19,6 +19,10 @@ public class SystemConfigWeb implements IsSerializable {
     private String storageVolumesPath;
     private String defaultKernelId;
     private String defaultRamdiskId;
+    private Integer maxUserPublicAddresses;
+    private boolean doDynamicPublicAddresses;
+    private Integer systemReservedPublicAddresses;
+
 
     public SystemConfigWeb() {}
 
@@ -32,7 +36,10 @@ public class SystemConfigWeb implements IsSerializable {
                             final Integer storageMaxVolumeSizeInGB,
                             final String storageVolumesPath,
                             final String defaultKernelId,
-                            final String defaultRamdiskId )
+                            final String defaultRamdiskId,
+                            final Integer maxUserPublicAddresses,
+                            final Boolean doDynamicPublicAddresses,
+                            final Integer systemReservedPublicAddresses )
     {
         this.storageUrl = storageUrl;
         this.storagePath = storagePath;
@@ -45,9 +52,12 @@ public class SystemConfigWeb implements IsSerializable {
         this.storageVolumesPath = storageVolumesPath;
         this.defaultKernelId = defaultKernelId;
         this.defaultRamdiskId = defaultRamdiskId;
+        this.maxUserPublicAddresses = maxUserPublicAddresses;
+        this.systemReservedPublicAddresses = systemReservedPublicAddresses;
+        this.doDynamicPublicAddresses = doDynamicPublicAddresses;
     }
 
-    public String getStorageUrl()
+  public String getStorageUrl()
     {
         return storageUrl;
     }
@@ -155,5 +165,29 @@ public class SystemConfigWeb implements IsSerializable {
     public void setDefaultRamdiskId( final String defaultRamdiskId )
     {
         this.defaultRamdiskId = defaultRamdiskId;
+    }
+
+    public Integer getMaxUserPublicAddresses() {
+      return maxUserPublicAddresses;
+    }
+
+    public void setMaxUserPublicAddresses( final Integer maxUserPublicAddresses ) {
+      this.maxUserPublicAddresses = maxUserPublicAddresses;
+    }
+
+    public Boolean isDoDynamicPublicAddresses() {
+      return doDynamicPublicAddresses;
+    }
+
+    public void setDoDynamicPublicAddresses( final Boolean doDynamicPublicAddresses ) {
+      this.doDynamicPublicAddresses = doDynamicPublicAddresses;
+    }
+
+    public Integer getSystemReservedPublicAddresses() {
+      return systemReservedPublicAddresses;
+    }
+
+    public void setSystemReservedPublicAddresses( final Integer systemReservedPublicAddresses ) {
+      this.systemReservedPublicAddresses = systemReservedPublicAddresses;
     }
 }

@@ -96,6 +96,15 @@ public class EucalyptusProperties {
     if( conf.getRegistrationId() == null ) {
       conf.setRegistrationId( UUID.randomUUID().toString() );
     }
+    if( conf.getSystemReservedPublicAddresses() == null ) {
+      conf.setSystemReservedPublicAddresses( 10 );
+    }
+    if( conf.getMaxUserPublicAddresses() == null ) {
+      conf.setMaxUserPublicAddresses( 5 );
+    }
+    if( conf.isDoDynamicPublicAddresses() == null ) {
+      conf.setDoDynamicPublicAddresses( true );
+    }
     confDb.commit();
     String walrusUrl = null;
     try {

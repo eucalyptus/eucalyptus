@@ -73,6 +73,12 @@ public class SystemConfiguration {
   private Integer storageMaxVolumeSizeInGB;
   @Column( name = "system_storage_volumes_dir" )
   private String storageVolumesDir;
+  @Column( name = "system_max_user_public_addresses" )
+  private Integer maxUserPublicAddresses;
+  @Column( name = "system_do_dynamic_public_addresses" )
+  private Boolean doDynamicPublicAddresses;
+  @Column( name = "system_reserved_public_addresses" )
+  private Integer systemReservedPublicAddresses;
 
     public SystemConfiguration() {}
 
@@ -86,7 +92,11 @@ public class SystemConfiguration {
 	final Integer storageMaxTotalVolumeSizeInGb,
 	final Integer storageMaxTotalSnapshotSizeInGb,
 	final Integer storageMaxVolumeSizeInGB,
-	final String storageVolumesDir)
+	final String storageVolumesDir,
+  final Integer maxUserPublicAddresses,
+  final Boolean doDynamicPublicAddresses,
+  final Integer systemReservedPublicAddresses )
+      //:: TODO-1.5.2: adjust constructor to take address related values :://
   {
     this.storageUrl = storageUrl;
     this.defaultKernel = defaultKernel;
@@ -99,6 +109,9 @@ public class SystemConfiguration {
 	this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
 	this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
 	this.storageVolumesDir = storageVolumesDir;
+    this.maxUserPublicAddresses = maxUserPublicAddresses;
+    this.doDynamicPublicAddresses = doDynamicPublicAddresses;
+    this.systemReservedPublicAddresses = systemReservedPublicAddresses;
   }
 
   public Long getId() {
@@ -199,5 +212,29 @@ public class SystemConfiguration {
 
   public void setStorageVolumesDir( final String storageVolumesDir ) {
     this.storageVolumesDir = storageVolumesDir;
+  }
+
+  public Integer getMaxUserPublicAddresses() {
+    return maxUserPublicAddresses;
+  }
+
+  public void setMaxUserPublicAddresses( final Integer maxUserPublicAddresses ) {
+    this.maxUserPublicAddresses = maxUserPublicAddresses;
+  }
+
+  public Integer getSystemReservedPublicAddresses() {
+    return systemReservedPublicAddresses;
+  }
+
+  public void setSystemReservedPublicAddresses( final Integer systemReservedPublicAddresses ) {
+    this.systemReservedPublicAddresses = systemReservedPublicAddresses;
+  }
+
+  public Boolean isDoDynamicPublicAddresses() {
+    return doDynamicPublicAddresses;
+  }
+
+  public void setDoDynamicPublicAddresses( final Boolean doDynamicPublicAddresses ) {
+    this.doDynamicPublicAddresses = doDynamicPublicAddresses;
   }
 }

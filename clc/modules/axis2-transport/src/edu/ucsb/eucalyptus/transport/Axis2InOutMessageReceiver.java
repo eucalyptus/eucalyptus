@@ -182,7 +182,7 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
     }
 
     if ( newMsgContext != null ) {
-      SOAPEnvelope envelope = generateMessage( methodName, factory, bindingName, message.getPayload(), httprequest.getOriginalNamespace() );
+      SOAPEnvelope envelope = generateMessage( methodName, factory, bindingName, message.getPayload(), httprequest == null ? null : httprequest.getOriginalNamespace() );
       newMsgContext.setEnvelope( envelope );
     }
 

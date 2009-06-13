@@ -17,8 +17,8 @@ import java.util.*;
 public class SystemState {
 
   private static Logger LOG = Logger.getLogger( SystemState.class );
-  public static final int BURY_TIME = 5 * 60 * 1000;
-  private static final int SHUT_DOWN_TIME = 2 * 60 * 1000;
+  public static final int BURY_TIME = 2 * 60 * 1000;
+  private static final int SHUT_DOWN_TIME = 30 * 1000;
   private static final String RULE_FILE = "/rules/describe/instances.drl";
   private static final String INSTANCE_EXPIRED = "Instance no longer reported as existing.";
   private static final String INSTANCE_TERMINATED = "User requested shutdown.";
@@ -85,7 +85,15 @@ public class SystemState {
   private static void cleanUp( final VmInstance vm ) {
     for ( Address address : Addresses.getInstance().listValues() ) {
       if ( vm.getInstanceId().equals( address.getInstanceId() ) ) {
-        SystemState.dispatch( vm.getPlacement(), new UnassignAddressCallback( address ), Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() ) );
+        if( address.getInstanceAddress() != null ) {
+          SystemState.dispatch( vm.getPlacement(), new UnassignAddressCallback( address ), Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() ) );
+        }
+        if( EucalyptusProperties.NAME.equals( address.getUserId() ) ) {
+          try {
+            (new AddressManager()).ReleaseAddress( Admin.makeMsg( ReleaseAddressType.class, address.getName() ) );
+          } catch ( EucalyptusCloudException e ) {
+          }
+        }
       }
     }
     SystemState.dispatch( vm.getPlacement(), new TerminateCallback(), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId() ) );
@@ -115,7 +123,7 @@ public class SystemState {
         vm.resetStopWatch();
         if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams().getIpAddress() ) && !"".equals( runVm.getNetParams().getIpAddress() ) && runVm.getNetParams().getIpAddress() != null )
           vm.getNetworkConfig().setIpAddress( runVm.getNetParams().getIpAddress() );
-        if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams().getIgnoredPublicIp() ) && !"".equals( runVm.getNetParams().getIgnoredPublicIp() ) && runVm.getNetParams().getIgnoredPublicIp() != null )
+        if( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) && !VmInstance.DEFAULT_IP.equals( runVm.getNetParams().getIgnoredPublicIp() ) && !"".equals( runVm.getNetParams().getIgnoredPublicIp() ) && runVm.getNetParams().getIgnoredPublicIp() != null )
           vm.getNetworkConfig().setIgnoredPublicIp( runVm.getNetParams().getIgnoredPublicIp() );
         vm.setState( VmState.Mapper.get( runVm.getStateName() ) );
         for ( AttachedVolume vol : runVm.getVolumes() ) {
@@ -215,7 +223,12 @@ public class SystemState {
           v.resetStopWatch();
           SystemState.cleanUp( v );
         } catch ( NoSuchElementException e ) {
-          LOG.debug( e, e );
+          try {
+            VmInstance v = VmInstances.getInstance().lookupDisabled( instanceId );
+            v.setState( VmState.BURIED );
+          } catch ( NoSuchElementException e1 ) {
+            LOG.debug( e, e );
+          }
 //Bug #334650: uncomment the following if it should throw an exception
 //          throw new EucalyptusCloudException( e.getMessage() );
         }

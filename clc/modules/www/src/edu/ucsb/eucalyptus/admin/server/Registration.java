@@ -77,29 +77,9 @@ public class Registration extends HttpServlet {
         "  </Services>\n" +
         "  <id>" + uuid + "</id>" +
         "  <CloudType>eucalyptus</CloudType>\n" +
-        "  <CloudVersion>1.5</CloudVersion>\n" +
+        "  <CloudVersion>1.5.2</CloudVersion>\n" +
         "  <SchemaVersion>1.0</SchemaVersion>\n" +
         "  <Description>Public cloud in the new cluster</Description>\n" +
-        "  <Credentials type=\"array\">\n" +
-        "    <Credential>\n" +
-        "      <Required type=\"boolean\">false</Required>\n" +
-        "      <Name>username</Name>\n" +
-        "      <Nickname>User ID</Nickname>\n" +
-        "      <Description>Username....</Description>\n" +
-        "    </Credential>\n" +
-        "    <Credential>\n" +
-        "      <Required type=\"boolean\">true</Required>\n" +
-        "      <Name>aws_access_key</Name>\n" +
-        "      <Nickname>Query ID</Nickname>\n" +
-        "      <Description>Access key....</Description>\n" +
-        "    </Credential>\n" +
-        "    <Credential>\n" +
-        "      <Required type=\"boolean\">true</Required>\n" +
-        "      <Name>aws_secret_access_key</Name>\n" +
-        "      <Nickname>Secret Key</Nickname>\n" +
-        "      <Description>Secret Access key....</Description>\n" +
-        "    </Credential>\n" +
-        "  </Credentials>\n" +
         "</CloudSchema>\n";
   }
 

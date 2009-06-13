@@ -91,50 +91,163 @@ public class AddressManager implements Startable {
     db.commit();
   }
 
-  public static NavigableSet<String> allocateAddresses( int count ) throws NotEnoughResourcesAvailable {
-    ConcurrentNavigableMap<String, Address> unusedAddresses = Addresses.getInstance().getDisabledMap();
-    //:: try to fail fast if needed :://
-    if ( unusedAddresses.size() < count ) throw new NotEnoughResourcesAvailable( );
-    List<Map.Entry<String, Address>> addressList = Lists.newArrayList();
-    for ( int i = 0; i < count; i++ ) {
-      Map.Entry<String, Address> addressEntry = unusedAddresses.pollFirstEntry();
-      if ( addressEntry != null ) {
-        addressList.add( addressEntry );
-      } else {
-        for ( Map.Entry<String, Address> a : addressList ) {
-          unusedAddresses.putIfAbsent( a.getKey(), a.getValue() );
+  public static void updateAddressingMode() {
+    //:: TODO-1.5.2: call this whenever addresses are described, allocated (run), or the system configuration changes :://
+    int allocatedCount = 0;
+    List<Address> activeList = Addresses.getInstance().listValues();
+    for( Address allocatedAddr : activeList ) {
+      if( EucalyptusProperties.NAME.equals( allocatedAddr.getUserId() ) ) {
+        allocatedCount++;
+        try {
+          if( EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses() && !allocatedAddr.isAssigned() && !allocatedAddr.isPending() ) {
+            //:: deallocate unassigned addresses owned by eucalyptus when switching to dynamic public addressing :://
+            LOG.debug("Deallocating unassigned public address in dynamic public addressing mode: " + allocatedAddr.getName() );
+            EntityWrapper<Address> db = new EntityWrapper<Address>();
+            try {
+              Address dbAddr = db.getUnique( allocatedAddr );
+              db.delete( dbAddr );
+              db.commit();
+            } catch ( EucalyptusCloudException e ) {
+              db.rollback();
+            }
+            allocatedAddr.release();
+            Addresses.getInstance().disable( allocatedAddr.getName() );
+          }
+        } catch ( EucalyptusCloudException e ) {
+        }
+      }
+    }
+    LOG.debug("Found " + allocatedCount + " addresses allocated to eucalyptus" );
+    try {
+      if( !EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses() ) {
+        int allocCount = EucalyptusProperties.getSystemConfiguration().getSystemReservedPublicAddresses() - allocatedCount;
+        LOG.debug("Allocating additional " + allocCount + " addresses in static public addresing mode" );
+        ConcurrentNavigableMap<String, Address> unusedAddresses = Addresses.getInstance().getDisabledMap();
+        allocCount = unusedAddresses.size() < allocCount ? unusedAddresses.size() : allocCount;
+        if( allocCount > 0 ) {
+          List<Map.Entry<String, Address>> addressList = Lists.newArrayList();
+          for ( int i = 0; i < allocCount; i++ ) {
+            Map.Entry<String, Address> addressEntry = unusedAddresses.pollFirstEntry();
+            if ( addressEntry != null ) {
+              addressList.add( addressEntry );
+            } else {
+              break; //:: out of unused addresses :://
+            }
+          }
+          NavigableSet<String> ipList = Sets.newTreeSet();
+          for ( Map.Entry<String, Address> addressEntry : addressList ) {
+            LOG.debug("Allocating address for static public addressing: " + addressEntry.getValue().getName() );
+            Address address = addressEntry.getValue();
+            address.allocate( EucalyptusProperties.NAME );
+            EntityWrapper<Address> db = new EntityWrapper<Address>();
+            try {
+              Address addr = db.getUnique( new Address( address.getName() ) );
+              addr.allocate( EucalyptusProperties.NAME );
+            } catch ( EucalyptusCloudException e ) {
+              db.merge( address );
+            }
+            db.commit();
+            ipList.add( address.getName() );
+            try {
+              Addresses.getInstance().register( address );
+            } catch ( Exception e ) {
+            }
+          }
+        } else {
+          for( String ipAddr : Addresses.getInstance().getActiveMap().descendingKeySet() ) {
+            Address addr = Addresses.getInstance().getActiveMap().get( ipAddr );
+            if( EucalyptusProperties.NAME.equals( addr.getUserId() ) && !addr.isAssigned() && !addr.isPending() ) {
+              if( allocCount++ >= 0 ) break;
+              EntityWrapper<Address> db = new EntityWrapper<Address>();
+              try {
+                Address dbAddr = db.getUnique( new Address(addr.getName()) );
+                db.delete( dbAddr );
+                db.commit();
+              } catch ( EucalyptusCloudException e ) {
+                db.rollback();
+              }
+              addr.release();
+              Addresses.getInstance().disable( addr.getName() );
+            }
+          }
+        }
+      }
+    } catch ( EucalyptusCloudException e ) {
+    }
+  }
+
+  public synchronized static NavigableSet<String> allocateAddresses( int count ) throws NotEnoughResourcesAvailable {
+    boolean doDynamic = true;
+    updateAddressingMode();  //:: make sure everything is up-to-date :://
+    try {
+      doDynamic = EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses();
+    } catch ( EucalyptusCloudException e ) {
+    }
+    NavigableSet<String> ipList = Sets.newTreeSet();
+    List<Address> addressList = Lists.newArrayList();
+    if( doDynamic ) {
+      ConcurrentNavigableMap<String, Address> unusedAddresses = Addresses.getInstance().getDisabledMap();
+      //:: try to fail fast if needed :://
+      if ( unusedAddresses.size() < count ) throw new NotEnoughResourcesAvailable( );
+      for ( int i = 0; i < count; i++ ) {
+        Map.Entry<String, Address> addressEntry = unusedAddresses.pollFirstEntry();
+        if ( addressEntry != null ) {
+          Address addr = addressEntry.getValue();
+          addressList.add( addr );
+          ipList.add( addr.getName() );
+        } else {
+          for ( Address a : addressList ) {
+            unusedAddresses.putIfAbsent( a.getName(), a );
+          }
+          throw new NotEnoughResourcesAvailable( );
+        }
+      }
+    } else {
+      List<Address> allocatedAddresses = Addresses.getInstance().listValues();
+      for( Address addr : allocatedAddresses ) {
+        if( !addr.isAssigned() && !addr.isPending() && EucalyptusProperties.NAME.equals( addr.getUserId() ) ) {
+          Addresses.getInstance().deregister( addr.getName() );
+          ipList.add( addr.getName() );
+          addressList.add( addr );
+          if( addressList.size() >= count ) break;
+        }
+      }
+      if( addressList.size() < count ) {
+        for( Address putBackAddr : addressList ) {
+          Addresses.getInstance().register( putBackAddr );
         }
         throw new NotEnoughResourcesAvailable( );
       }
     }
-    NavigableSet<String> ipList = Sets.newTreeSet();
-    for ( Map.Entry<String, Address> addressEntry : addressList ) {
-      Address address = addressEntry.getValue();
-      address.allocate( EucalyptusProperties.NAME );
-      EntityWrapper<Address> db = new EntityWrapper<Address>();
-      try {
-        Address addr = db.getUnique( new Address( address.getName() ) );
-        addr.allocate( EucalyptusProperties.NAME );
-      } catch ( EucalyptusCloudException e ) {
-        db.merge( address );
-      }
-      db.commit();
-      ipList.add( address.getName() );
-      try {
-        Addresses.getInstance().register( address );
-      } catch ( Exception e ) {
-      }
+    for ( Address address : addressList ) {
+      assignSystemPublicAddress( address );
     }
     return ipList;
   }
 
+  private static void assignSystemPublicAddress( final Address address ) {
+    address.allocate( EucalyptusProperties.NAME );
+    address.assign( Address.PENDING_ASSIGNMENT, Address.PENDING_ASSIGNMENT );
+    EntityWrapper<Address> db = new EntityWrapper<Address>();
+    try {
+      Address addr = db.getUnique( new Address( address.getName() ) );
+      addr.allocate( EucalyptusProperties.NAME );
+    } catch ( EucalyptusCloudException e ) {
+      db.merge( address );
+    }
+    db.commit();
+    try {
+      Addresses.getInstance().register( address );
+    } catch ( Exception e ) {
+    }
+  }
 
   public AllocateAddressResponseType AllocateAddress( AllocateAddressType request ) throws EucalyptusCloudException {
     int addrCount = 0;
     for( Address a : Addresses.getInstance().listValues() ) {
       if( request.getUserId().equals( a.getUserId() ) ) addrCount++;
     }
-    if( addrCount > 5 && !request.isAdministrator() )
+    if( addrCount >= EucalyptusProperties.getSystemConfiguration().getMaxUserPublicAddresses() && !request.isAdministrator() )
       throw new EucalyptusCloudException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
 
     ConcurrentNavigableMap<String, Address> unusedAddresses = Addresses.getInstance().getDisabledMap();
@@ -175,13 +288,17 @@ public class AddressManager implements Startable {
       if ( !request.isAdministrator() && !address.getUserId().equals( request.getUserId() ) )
         return reply;
       //:: dispatch the unassign if needed :://
-      if ( address.isAssigned() ) {
+      if ( address.isAssigned() && !address.isPending() ) {
         UnassignAddressType unassignMsg = new UnassignAddressType( request, address.getName(), address.getInstanceAddress() );
         UnassignAddressCallback unassignHandler = new UnassignAddressCallback( address );
         QueuedEvent<UnassignAddressType> event = new QueuedEvent<UnassignAddressType>( unassignHandler, unassignMsg );
         Messaging.dispatch( EucalyptusProperties.CLUSTERSINK_REF, new ClusterEnvelope( address.getCluster(), event ) );
       }
 
+      if( EucalyptusProperties.NAME.equals( address.getUserId() ) && !EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses() ) {
+        LOG.debug( "Not de-allocating system owned address in static public addressing mode: " + address.getName() );
+        return reply;
+      }
 
       EntityWrapper<Address> db = new EntityWrapper<Address>();
       try {
@@ -205,6 +322,7 @@ public class AddressManager implements Startable {
   }
 
   public DescribeAddressesResponseType DescribeAddresses( DescribeAddressesType request ) throws EucalyptusCloudException {
+    updateAddressingMode();
     DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply();
 
 
@@ -213,6 +331,14 @@ public class AddressManager implements Startable {
       try {
         VmInstances.getInstance().lookup( address.getInstanceId() );
       } catch ( NoSuchElementException e ) {
+        EntityWrapper<Address> db = new EntityWrapper<Address>();
+        try {
+          Address addr = db.getUnique( new Address( address.getName() ) );
+          addr.unassign();
+          db.commit();
+        } catch ( EucalyptusCloudException ex ) {
+          db.rollback();
+        }
         address.unassign();
       }
       if ( isAdmin || address.getUserId().equals( request.getUserId() ) ) {
@@ -272,7 +398,7 @@ public class AddressManager implements Startable {
     }
 
     //:: made it here, means it looks legitimate :://
-    if ( address.isAssigned() && address.getUserId().equals( request.getUserId() ) ) {
+    if ( address.isAssigned() && address.getUserId().equals( request.getUserId() ) && !address.isPending() ) {
       LOG.debug( "Dispatching unassign message for: " + address );
       UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
       ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new UnassignAddressCallback( address ), unassignMsg ) );

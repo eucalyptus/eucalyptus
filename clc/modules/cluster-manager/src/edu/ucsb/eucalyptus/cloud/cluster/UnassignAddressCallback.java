@@ -39,6 +39,7 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
     String addr = msg.getSource();
     try {
       Address a = Addresses.getInstance().lookup( addr );
+      a.unassign();
       if( EucalyptusProperties.NAME.equals( a.getUserId() ) ) {
         new AddressManager().ReleaseAddress( Admin.makeMsg( ReleaseAddressType.class, addr ) );
       }

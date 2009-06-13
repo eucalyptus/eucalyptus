@@ -462,7 +462,8 @@ public class EucalyptusManagement {
                 sysConf.getStorageMaxTotalVolumeSizeInGb(),
                 sysConf.getStorageMaxVolumeSizeInGB(),
                 sysConf.getStorageVolumesDir(),
-                sysConf.getDefaultKernel(), sysConf.getDefaultRamdisk() );
+                sysConf.getDefaultKernel(), sysConf.getDefaultRamdisk(),
+                sysConf.getMaxUserPublicAddresses(), sysConf.isDoDynamicPublicAddresses(), sysConf.getSystemReservedPublicAddresses() );
     }
 
     private static SystemConfiguration validateSystemConfiguration(SystemConfiguration sysConf) {
@@ -516,6 +517,15 @@ public class EucalyptusManagement {
             if( res.size() > 0 )
                 sysConf.setDefaultRamdisk(res.get(0).getImageId());
         }
+        if( sysConf.getMaxUserPublicAddresses() == null ) {
+          sysConf.setMaxUserPublicAddresses( 5 );
+        }
+        if( sysConf.isDoDynamicPublicAddresses() == null ) {
+          sysConf.setDoDynamicPublicAddresses( true );
+        }
+        if( sysConf.getSystemReservedPublicAddresses() == null ) {
+          sysConf.setSystemReservedPublicAddresses( 10 );
+        }
         return sysConf;
     }
 
@@ -541,6 +551,9 @@ public class EucalyptusManagement {
             sysConf.setStorageMaxTotalSnapshotSizeInGb( systemConfig.getStorageSnapshotsTotalInGB() );
             sysConf.setStorageMaxVolumeSizeInGB (systemConfig.getStorageMaxVolumeSizeInGB());
             sysConf.setStorageVolumesDir (systemConfig.getStorageVolumesPath());
+            sysConf.setMaxUserPublicAddresses( systemConfig.getMaxUserPublicAddresses() );
+            sysConf.setDoDynamicPublicAddresses( systemConfig.isDoDynamicPublicAddresses() );
+            sysConf.setSystemReservedPublicAddresses( systemConfig.getSystemReservedPublicAddresses() );
             db.commit();
             WalrusProperties.update();
             StorageProperties.update();
@@ -556,7 +569,10 @@ public class EucalyptusManagement {
                     systemConfig.getStorageVolumesTotalInGB(),
                     systemConfig.getStorageSnapshotsTotalInGB(),
                     systemConfig.getStorageMaxVolumeSizeInGB(),
-                    systemConfig.getStorageVolumesPath() ) );
+                    systemConfig.getStorageVolumesPath(),
+                    systemConfig.getMaxUserPublicAddresses(),
+                    systemConfig.isDoDynamicPublicAddresses(),
+                    systemConfig.getSystemReservedPublicAddresses()));
             db.commit();
             WalrusProperties.update();
             StorageProperties.update();

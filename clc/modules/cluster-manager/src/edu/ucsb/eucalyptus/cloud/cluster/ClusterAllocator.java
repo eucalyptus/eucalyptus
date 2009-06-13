@@ -58,10 +58,15 @@ class ClusterAllocator extends Thread {
     } else if ( addresses.size() < runningVms.size() ) {
       LOG.error( "Number of running VMs is greater than number of assigned addresses!" );
     } else {
+      AddressManager.updateAddressingMode();
       for ( VmInfo vm : runningVms ) {
         String addr = addresses.remove( 0 );
         try {
-          new AddressManager().AssociateAddress( Admin.makeMsg( AssociateAddressType.class, addr, vm.getInstanceId() ) );
+          vm.getNetParams().setIgnoredPublicIp( addr );
+          AssociateAddressType msg = new AssociateAddressType( addr, vm.getInstanceId() );
+          msg.setUserId( vm.getOwnerId() );
+          msg.setEffectiveUserId( EucalyptusProperties.NAME );
+          new AddressManager().AssociateAddress( msg );
         } catch ( AxisFault axisFault ) {
           LOG.error( axisFault );
         }
