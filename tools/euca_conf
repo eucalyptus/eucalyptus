@@ -386,14 +386,20 @@ if [ -n "$CHECK" ]; then
 	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
 
 	# vblade and aoe may be needed
-	if [ "$CHECK" != "cc" -a "$DISABLE_EBS" != "Y" -a "$DISABLE_EBS" != "y" ]; then
-		VBLADE="`which vblade 2> /dev/null`"
-		if [ -z "$VBLADE" ]; then
-			echo "WARNING: EBS is enabled and vblade was not found"
+	if [ "$DISABLE_EBS" != "Y" -a "$DISABLE_EBS" != "y" ]; then
+		if [ "$CHECK" = "cloud" ]; then
+			VBLADE="`which vblade 2> /dev/null`"
+			if [ -z "$VBLADE" ]; then
+				echo
+				echo "WARNING: EBS is enabled and vblade was not found"
+			fi
 		fi
-		AOE="`lsmod |grep aoe 2> /dev/null`"
-		if [ -z "$AOE" ]; then
-			echo "WARNING: EBS is enabled and the aoe module is not loaded"
+		if [ "$CHECK" = "cloud" -o "$CHECK" = "nc" ]; then
+			AOE="`lsmod |grep aoe 2> /dev/null`"
+			if [ -z "$AOE" ]; then
+				echo
+				echo "WARNING: EBS is enabled and the aoe module is not loaded"
+			fi
 		fi
 	fi
 	
