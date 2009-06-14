@@ -296,6 +296,7 @@ public class VmInstance implements HasName {
     m.put( "ami-id", this.getImageInfo().getImageId() );
     m.put( "product-codes", this.getImageInfo().getProductCodes().toString().replaceAll("[\\Q[]\\E]","") );
     m.put( "ami-launch-index", "" + this.getLaunchIndex() );
+    m.put( "ami-ancestor-ids", "" );
     m.put( "ami-manifest-path", this.getImageInfo().getImageLocation() );
     m.put( "hostname", this.getNetworkConfig().getIgnoredPublicIp() );
     m.put( "instance-id", this.getInstanceId() );
@@ -308,7 +309,7 @@ public class VmInstance implements HasName {
     m.put( "ancestor-ami-ids", "none" );
     m.put( "kernel-id", this.getImageInfo().getKernelId() );
     m.put( "ramdisk-id", this.getImageInfo().getRamdiskId() );
-    m.put( "security-groups", this.getNetworkNames().toString().replaceAll("[\\Q[]\\E]","") );
+    m.put( "security-groups", this.getNetworkNames().toString().replaceAll("[\\Q[]\\E]","").replaceAll( ", ", "\n" ) );
 
     m.put( "block-device-mapping/", "emi\nephemeral\nroot\nswap" );
     m.put( "block-device-mapping/emi", "sda1" );

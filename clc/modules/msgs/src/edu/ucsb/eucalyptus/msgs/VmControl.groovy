@@ -86,7 +86,7 @@ public class RunInstancesType extends VmControlMessage {
   String availabilityZone = "default"; //** added 2008-02-01  **/
   @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>(); //** added 2008-02-01  **/
-
+  boolean monitoring = false;
 
 
   String privateMacBase;
@@ -155,6 +155,7 @@ public class RunningInstancesItemType extends EucalyptusData {
   String placement;
   String kernel;
   String ramdisk;
+  boolean monitoring = false;
 }
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/
   String virtualName;

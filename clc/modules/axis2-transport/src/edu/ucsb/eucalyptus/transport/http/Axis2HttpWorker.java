@@ -110,6 +110,10 @@ public class Axis2HttpWorker implements Worker {
         handleServicesList( response, configurationContext );
         return;
       }
+      if ( uri.endsWith( "?wsdl" ) ) {
+        handleWSDL( response );
+        return;
+      }
       pi = handleGet( request, response, msgContext );
     }
     else if ( method.equals( HTTPConstants.HEADER_POST ) ) {
@@ -154,6 +158,14 @@ public class Axis2HttpWorker implements Worker {
 
   private void handleServicesList( final AxisHttpResponse response, final ConfigurationContext configurationContext ) throws IOException {
     String s = HTTPTransportReceiver.getServicesHTML( configurationContext );
+    response.setStatus( HttpStatus.SC_OK );
+    response.setContentType( "text/html" );
+    OutputStream out = response.getOutputStream();
+    out.write( EncodingUtils.getBytes( s, HTTP.ISO_8859_1 ) );
+  }
+
+  private void handleWSDL( final AxisHttpResponse response ) throws IOException {
+    String s = "A sensible response.";
     response.setStatus( HttpStatus.SC_OK );
     response.setContentType( "text/html" );
     OutputStream out = response.getOutputStream();
