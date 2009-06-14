@@ -225,7 +225,7 @@ for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 		fi
 		# this is for system or source installed
 		if [ "`echo $x | cut -f 1 -d -`" = "axis2c" ]; then
-			if [ -e $x/$y/lib/libmod_axis2.so ]; then
+			if [ -e $y/$x/lib/libmod_axis2.so ]; then
 				export AXIS2C_HOME="$y/$x"
 			fi
 		fi
