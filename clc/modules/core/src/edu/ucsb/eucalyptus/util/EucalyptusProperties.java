@@ -51,6 +51,7 @@ public class EucalyptusProperties {
 
   public static List<String> getDisabledOperations() {
     if( System.getProperty("euca.ebs.disable") != null ) {
+      disableBlockStorage = true;
       return Lists.newArrayList( "CreateVolume", "DeleteVolume", "DescribeVolumes", "AttachVolume", "DetachVolume",
                                  "CreateSnapshot", "DeleteSnapshot", "DescribeSnapshots" );
     }
@@ -58,6 +59,7 @@ public class EucalyptusProperties {
   }
 
   public static boolean disableNetworking = false;
+  public static boolean disableBlockStorage = false;
 
   public static String NAME = "eucalyptus";
   public static String WWW_NAME = "jetty";

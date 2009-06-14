@@ -51,15 +51,8 @@ public class Registration extends HttpServlet {
         "        <Resource>\n" +
         "          <Name>images</Name>\n" +
         "        </Resource>\n" +
-        "        <Resource>\n" +
-        "          <Name>ebs_snapshots</Name>\n" +
-        "        </Resource>\n" +
-        "        <Resource>\n" +
-        "          <Name>ebs_volumes</Name>\n" +
-        "        </Resource>\n" +
-        "        <Resource>\n" +
-        "          <Name>elastic_ips</Name>\n" +
-        "        </Resource>\n" +
+        blockStorageConfiguration() +
+        publicAddressConfiguration() +
         "      </Resources>\n" +
         "    </Service>\n" +
         "    <Service>\n" +
@@ -81,6 +74,29 @@ public class Registration extends HttpServlet {
         "  <SchemaVersion>1.0</SchemaVersion>\n" +
         "  <Description>Public cloud in the new cluster</Description>\n" +
         "</CloudSchema>\n";
+  }
+
+  private static String blockStorageConfiguration() {
+    if ( EucalyptusProperties.disableBlockStorage ) {
+      return "        <Resource>\n" +
+             "          <Name>ebs_snapshots</Name>\n" +
+             "        </Resource>\n" +
+             "        <Resource>\n" +
+             "          <Name>ebs_volumes</Name>\n" +
+             "        </Resource>\n";
+    } else {
+      return "";
+    }
+  }
+
+  private static String publicAddressConfiguration() {
+    if ( EucalyptusProperties.disableNetworking ) {
+      return "        <Resource>\n" +
+             "          <Name>elastic_ips</Name>\n" +
+             "        </Resource>\n";
+    } else {
+      return "";
+    }
   }
 
   private static String getStorageUrl() {

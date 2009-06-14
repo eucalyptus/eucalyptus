@@ -81,9 +81,6 @@ public class ModifyImageAttributeType extends VmImageMessage {
   ArrayList<String> productCodes = new ArrayList<String>();
 
   public void applyAttribute() {
-    if( "productCodes".equals( this.getAttribute() ) ) {
-      this.productCodes.add("hi");
-    }
     ArrayList<LaunchPermissionItemType> modifyMe = (operationType.equals( "add" )) ? this.add : this.remove;
     if ( !this.queryUserId.isEmpty() ) {
       for ( String userName: queryUserId ) {

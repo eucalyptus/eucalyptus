@@ -93,26 +93,35 @@ public class EucalyptusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
     String paramString = makeSubjectString( parameters );
     String paramString2 = makePlusSubjectString( parameters );
-    String paramString3 = makeV2SubjectString( verb, host, addr, parameters );
+
+    LOG.info( "VERSION1-SIG1: " + paramString );
+    LOG.info( "VERSION1-SIG2: " + paramString2 );
 
     String headerHost = headers.get( "Host" );
+    String headerPort = "8773";
     if( headerHost != null && headerHost.contains( ":" ) ) {
-      headerHost = headerHost.split( ":" )[0];
+      String[] hostTokens = headerHost.split( ":" );
+      headerHost = hostTokens[0];
+      if( hostTokens.length > 1 && hostTokens[1] != null && "".equals( hostTokens[1] ) ) {
+        headerPort = hostTokens[1];
+      }
     }
-    String paramString4 = makeV2SubjectString( verb, headerHost, addr, parameters );
+//    String paramString3 = makeV2SubjectString( verb, host, addr, parameters ); this should never work...
+    String paramString3 = makeV2SubjectString( verb, headerHost, addr, parameters );
+    String paramString4 = makeV2SubjectString( verb, headerHost+":"+headerPort, addr, parameters );
+    String paramString5 = makeV2SubjectString( verb, headerHost, addr.replaceFirst("/services",""), parameters );
 
     String authSig = checkSignature( queryKey, paramString );
     String authSig2 = checkSignature( queryKey, paramString2 );
 
-    String authv2sha1 = checkSignature( queryKey, paramString3 );
     String authv2sha256 = checkSignature256( queryKey, paramString3 );
+    String authv2sha256port = checkSignature256( queryKey, paramString4 );
+    String authv2sha256typica = checkSignature256( queryKey, paramString5 );
+    LOG.info( "VERSION2-SHA256:        " + authv2sha256 + " -- " + sig );
+    LOG.info( "VERSION2-SHA256-HEADER: " + authv2sha256port + " -- " + sig );
+    LOG.info( "VERSION2-SHA256-TYPICA: " + authv2sha256typica + " -- " + sig );
 
-    String authv2sha256header = checkSignature256( queryKey, paramString4 );
-
-    LOG.info( "VERSION2-SHA256:        " + authv2sha256 + " -- " + sig.replaceAll("=","") );
-    LOG.info( "VERSION2-SHA256-HEADER: " + authv2sha256header + " -- " + sig.replaceAll("=","") );
-
-    if ( !authSig.equals( sig ) && !authSig2.equals( sig ) && !authv2sha1.equals( sig.replaceAll("=","") ) && !authv2sha256.equals( sig.replaceAll("=","") ) && !authv2sha256header.equals( sig.replaceAll("=","") ) )
+    if ( !authSig.equals( sig ) && !authSig2.equals( sig ) && !authv2sha256.equals( sig ) && !authv2sha256port.equals( sig ) && !authv2sha256typica.equals( sig ) )
       throw new QuerySecurityException( "User authentication failed." );
 
     //:: check the timestamp :://

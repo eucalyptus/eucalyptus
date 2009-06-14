@@ -88,10 +88,13 @@
         <value name="launchTime" field="launchTime" usage="optional"/>
         <!--2008-02-01-->
         <structure name="placement">
-            <value name="availabilityZone" field="placement"/>            
+            <value name="availabilityZone" field="placement"/>
         </structure>
         <value name="kernelId" field="kernel" usage="optional"/>
         <value name="ramdiskId" field="ramdisk" usage="optional"/>
+        <structure name="monitoring" usage="optional">
+            <value name="state" field="monitoring"/>
+        </structure>
     </mapping>
 
     <mapping name="RunInstancesResponse" class="edu.ucsb.eucalyptus.msgs.RunInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -132,6 +135,9 @@
             <collection field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory">
                 <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType"/>
             </collection>
+        </structure>
+        <structure name="monitoring" usage="optional">
+            <value name="enabled" field="monitoring"/>
         </structure>
     </mapping>
 
