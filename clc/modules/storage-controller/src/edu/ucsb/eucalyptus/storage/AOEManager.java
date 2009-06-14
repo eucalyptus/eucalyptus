@@ -34,13 +34,46 @@
 
 package edu.ucsb.eucalyptus.storage;
 
+import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
+import org.apache.log4j.Logger;
+
 public class AOEManager implements StorageExportManager {
+    private static Logger LOG = Logger.getLogger(AOEManager.class);
     public native int exportVolume(String iface, String lvName, int major, int minor);
 
-    public native void unexportVolume(int vbladePid);
+    public void unexportVolume(int vbladePid) {
+        try
+        {
+            Runtime rt = Runtime.getRuntime();
+            Process proc = rt.exec(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "kill", "-9", String.valueOf(vbladePid)});
+            StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+            StreamConsumer output = new StreamConsumer(proc.getInputStream());
+            error.start();
+            output.start();
+            proc.waitFor();
+            output.join();
+        } catch (Throwable t) {
+            LOG.error(t);
+        }
+    }
 
-    public native void loadModule();
-    
+    public void loadModule() {
+        try
+        {
+            Runtime rt = Runtime.getRuntime();
+            Process proc = rt.exec(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "modprobe", "aoe"});
+            StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+            StreamConsumer output = new StreamConsumer(proc.getInputStream());
+            error.start();
+            output.start();
+            proc.waitFor();
+            output.join();
+        } catch (Throwable t) {
+            LOG.error(t);
+        }
+    }
+
+
     public AOEManager()  {
         loadModule();
     }

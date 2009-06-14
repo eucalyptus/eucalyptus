@@ -35,11 +35,14 @@
 package edu.ucsb.eucalyptus.storage;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.ws.Command;
+import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.util.StorageProperties;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
 
 import java.io.*;
@@ -60,11 +63,12 @@ public class LVM2Manager implements BlockStorageManager {
     public static String hostName = "localhost";
     public static final int MAX_LOOP_DEVICES = 256;
     public static final int MAX_MINOR_NUMBER = 16;
+    private  static final String blockSize = "1M";    
     public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
     public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
     private static final String CONFIG_FILE_PATH = "/etc/eucalyptus/eucalyptus.conf";
     private static Logger LOG = Logger.getLogger(LVM2Manager.class);
-    private static String eucaHome = System.getProperty("euca.home");
+    public static String eucaHome = System.getProperty("euca.home");
     private static final String IFACE_CONFIG_STRING = "VNET_INTERFACE";
     private static final boolean ifaceDiscovery = false;
     private static final long LVM_HEADER_LENGTH = 4 * StorageProperties.MB;
@@ -100,6 +104,126 @@ public class LVM2Manager implements BlockStorageManager {
             LOG.info(returnValue);
         }
     }
+
+    private String getLvmVersion() {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvm", "version"});
+    }
+
+    private String getISCSITargetVersion() {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "ietadm", "--version"});
+    }
+
+    private String findFreeLoopback() {
+           return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
+    }
+
+    private  String getLoopback(String loDevName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", loDevName});
+    }
+
+    private String createPhysicalVolume(String loDevName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvcreate", loDevName});
+    }
+
+    private String createVolumeGroup(String pvName, String vgName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgcreate", vgName, pvName});
+    }
+
+    private String extendVolumeGroup(String pvName, String vgName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgextend", vgName, pvName});
+    }
+
+    private String createLogicalVolume(String vgName, String lvName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-l", "100%FREE", vgName});
+    }
+
+    private String createSnapshotLogicalVolume(String lvName, String snapLvName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-l", "100%FREE", lvName});
+    }
+
+    private String removeLogicalVolume(String lvName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
+    }
+
+    private String disableLogicalVolume(String lvName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-an", lvName});
+    }
+
+    private String removeVolumeGroup(String vgName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgremove", vgName});
+    }
+
+    private String removePhysicalVolume(String loDevName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvremove", loDevName});
+    }
+
+    private String removeLoopback(String loDevName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
+    }
+
+    private String reduceVolumeGroup(String vgName, String pvName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
+    }
+
+    private String suspendDevice(String deviceName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dmsetup", "-v", "suspend", deviceName});
+    }
+
+    private String resumeDevice(String deviceName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dmsetup", "-v", "resume", deviceName});
+    }
+
+    private String getAoEStatus(String pid) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "cat", "/proc/", pid, "/cmdline"});
+    }
+
+    private String enableLogicalVolume(String lvName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
+    }
+
+    private String getVblade() {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "which", "vblade"});
+    }
+
+    private int losetup(String absoluteFileName, String loDevName) {
+        try
+        {
+            Runtime rt = Runtime.getRuntime();
+            Process proc = rt.exec(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", loDevName, absoluteFileName});
+            StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+            StreamConsumer output = new StreamConsumer(proc.getInputStream());
+            error.start();
+            output.start();
+            int errorCode = proc.waitFor();
+            output.join();
+            LOG.info("losetup " + loDevName + " " + absoluteFileName);
+            LOG.info(output.getReturnValue());
+            LOG.info(error.getReturnValue());
+            return errorCode;
+        } catch (Throwable t) {
+            LOG.error(t);
+        }
+        return -1;
+    }
+
+    private String duplicateLogicalVolume(String oldLvName, String newLvName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + blockSize});
+    }
+
+    private String createFile(String fileName, long size) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + blockSize, "seek=" + (size -1)});
+    }
+
+    private String createEmptyFile(String fileName, int size) {
+        long fileSize = size * 1024;
+        return createFile(fileName, fileSize);
+    }
+
+    public String createAbsoluteEmptyFile(String fileName, long size) {
+        size = size / WalrusProperties.M;
+        return createFile(fileName, size);
+    }
+
 
     public void initVolumeManager() {
         if(!initialized) {
@@ -226,13 +350,6 @@ public class LVM2Manager implements BlockStorageManager {
         if(lvmVolumeInfos.size() > 0) {
             LVMVolumeInfo lvmVolInfo = lvmVolumeInfos.get(0);
             String loDevName = lvmVolInfo.getLoDevName();
-/*            String vgName = lvmVolInfo.getVgName();
-            String lvName = lvmVolInfo.getLvName();
-            String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-
-            String returnValue = removeLogicalVolume(absoluteLVName);
-            returnValue = reduceVolumeGroup(vgName, loDevName);
-            returnValue = removePhysicalVolume(loDevName); */
             String returnValue = removeLoopback(loDevName);
             db.delete(lvmVolInfo);
             db.commit();
@@ -240,52 +357,6 @@ public class LVM2Manager implements BlockStorageManager {
     }
 
     public native void initialize();
-
-    public native int losetup(String absoluteFileName, String loDevName);
-
-    public native String findFreeLoopback();
-
-    public native String getLoopback(String loDevName);
-
-    public native String createEmptyFile(String fileName, int size);
-
-    public native String createAbsoluteEmptyFile(String fileName, long size);
-
-    public native String createPhysicalVolume(String loDevName);
-
-    public native String createVolumeGroup(String pvName, String vgName);
-
-    public native String extendVolumeGroup(String pvName, String vgName);
-
-    public native String createLogicalVolume(String vgName, String lvName);
-
-    public native String createSnapshotLogicalVolume(String lvName, String snapLvName);
-
-    public native String removeLogicalVolume(String lvName);
-
-    public native String disableLogicalVolume(String lvName);
-
-    public native String removeVolumeGroup(String vgName);
-
-    public native String removePhysicalVolume(String loDevName);
-
-    public native String removeLoopback(String loDevName);
-
-    public native String reduceVolumeGroup(String vgName, String pvName);
-
-    public native String suspendDevice(String deviceName);
-
-    public native String resumeDevice(String deviceName);
-
-    public native String duplicateLogicalVolume(String oldLvName, String newLvName);
-
-    public native String getAoEStatus(String pid);
-
-    public native String enableLogicalVolume(String absoluteLvName);
-
-    public native String getLvmVersion();
-
-    public native String getVblade();
 
     private synchronized List<Integer> allocateDeviceNumbers() throws EucalyptusCloudException {
         int majorNumber = -1;
