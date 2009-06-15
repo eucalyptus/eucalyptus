@@ -44,7 +44,7 @@ public class VmAdmissionControl {
     SLAs sla = new SLAs();
     List<ResourceToken> allocTokeList = null;
     boolean failed = false;
-    boolean hasAddr = false;
+    boolean hasVms = false;
     try {
       allocTokeList = sla.doVmAllocation( vmAllocInfo );
       int addrCount = 0;
@@ -59,7 +59,6 @@ public class VmAdmissionControl {
           }
         }
       }
-      hasAddr = true;
       vmAllocInfo.getAllocationTokens().addAll( allocTokeList );
       sla.doNetworkAllocation( vmAllocInfo.getRequest().getUserId(), vmAllocInfo.getAllocationTokens(), vmAllocInfo.getNetworks() );
     } catch ( FailScriptFailException e ) {
@@ -70,10 +69,13 @@ public class VmAdmissionControl {
       LOG.debug( e, e );
     }
     if ( failed ) {
-      if ( allocTokeList != null )
-        for ( ResourceToken token : allocTokeList )
+      if ( allocTokeList != null ) {
+        for ( ResourceToken token : allocTokeList ) {
           Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
-      throw new EucalyptusCloudException( "Not enough resources available: " + (hasAddr?"vms":" addresses (try --addressing private)") );
+        }
+        throw new EucalyptusCloudException( "Not enough resources available: addresses (try --addressing private)");
+      }
+      throw new EucalyptusCloudException( "Not enough resources available: vm resources.");
     }
 
     return vmAllocInfo;
