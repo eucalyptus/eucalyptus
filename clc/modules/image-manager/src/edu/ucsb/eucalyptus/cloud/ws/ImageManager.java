@@ -35,23 +35,71 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.cluster.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.keys.*;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.cloud.VmImageInfo;
+import edu.ucsb.eucalyptus.cloud.VmInfo;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
+import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ProductCode;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.keys.UserKeyStore;
+import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
+import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
+import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
+import edu.ucsb.eucalyptus.msgs.DeregisterImageResponseType;
+import edu.ucsb.eucalyptus.msgs.DeregisterImageType;
+import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType;
+import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeImagesType;
+import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
+import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType;
+import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.GetObjectType;
+import edu.ucsb.eucalyptus.msgs.ImageDetails;
+import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
+import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType;
+import edu.ucsb.eucalyptus.msgs.RegisterImageResponseType;
+import edu.ucsb.eucalyptus.msgs.RegisterImageType;
+import edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import edu.ucsb.eucalyptus.util.Admin;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.Messaging;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
+import edu.ucsb.eucalyptus.util.XMLParser;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.DOMException;
 
 import javax.crypto.Cipher;
-import javax.xml.parsers.*;
-import javax.xml.xpath.*;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 import java.io.ByteArrayInputStream;
-import java.net.*;
-import java.security.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.zip.Adler32;
 
 public class ImageManager {
@@ -78,10 +126,61 @@ public class ImageManager {
       diskUrl = this.getImageUrl( walrusUrl, diskInfo );
     } catch ( EucalyptusCloudException e ) {}
 
+    ArrayList<String> ancestorIds = this.getAncestors( vmInfo.getOwnerId(), diskInfo.getImageLocation() );
+
     //:: create the response assets now since we might not have a ramdisk anyway :://
     VmImageInfo vmImgInfo = new VmImageInfo( vmInfo.getImageId(), vmInfo.getKernelId(), vmInfo.getRamdiskId(),
                                              diskUrl, null, null, productCodes );
+    vmImgInfo.setAncestorIds( ancestorIds );
     return vmImgInfo;
+  }
+
+  private static Long getSize( String userId, String manifestPath ) {
+    Long size = 0l;
+    try {
+      String[] imagePathParts = manifestPath.split( "/" );
+      Document inputSource = ImageManager.getManifestData( userId, imagePathParts[ 0 ], imagePathParts[ 1 ] );
+      XPath xpath = XPathFactory.newInstance().newXPath();
+      String rootSize = "0";
+      try {
+        rootSize = ( String ) xpath.evaluate( "/manifest/image/size/text()", inputSource, XPathConstants.STRING );
+        try {
+          size = Long.parseLong( rootSize );
+        } catch ( NumberFormatException e ) {
+          LOG.error( e, e );
+        }
+      } catch ( XPathExpressionException e ) {
+        LOG.error( e, e );
+      }
+    } catch ( EucalyptusCloudException e ) {
+      LOG.error( e, e );
+    }
+    return size;
+  }
+
+  private static ArrayList<String> getAncestors( String userId, String manifestPath ) {
+    ArrayList<String> ancestorIds = Lists.newArrayList("emi-01234567","emi-7654321");
+    try {
+      String[] imagePathParts = manifestPath.split( "/" );
+      Document inputSource = ImageManager.getManifestData( userId, imagePathParts[ 0 ], imagePathParts[ 1 ] );
+      XPath xpath = XPathFactory.newInstance().newXPath();
+      NodeList ancestors = null;
+      try {
+        ancestors = ( NodeList ) xpath.evaluate( "/manifest/image/ancestry/ancestor_ami_id/text()", inputSource, XPathConstants.NODESET );
+        for(int i = 0; i < ancestors.getLength(); i++ ) {
+          for( String ancestorId : ancestors.item( i ).getNodeValue().split( "," ) ) {
+            ancestorIds.add( ancestorId );
+          }
+        }
+      } catch ( XPathExpressionException e ) {
+        LOG.error( e, e );
+      }
+    } catch ( EucalyptusCloudException e ) {
+      LOG.error( e, e );
+    } catch ( DOMException e ) {
+      LOG.error( e, e );
+    }
+    return ancestorIds;
   }
 
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
@@ -144,12 +243,17 @@ public class ImageManager {
       }
     }
 
+    //:: quietly add the ancestor and size information to the vm info object... this should never fail noisily :://
+    ArrayList<String> ancestorIds = this.getAncestors( msg.getUserId(), diskInfo.getImageLocation() );
+    Long imgSize = this.getSize( msg.getUserId(), diskInfo.getImageLocation() );
     this.checkStoredImage( kernelInfo );
     this.checkStoredImage( diskInfo );
     this.checkStoredImage( ramdiskInfo );
 
     //:: get together the required URLs ::/
     VmImageInfo vmImgInfo = getVmImageInfo( walrusUrl, diskInfo, kernelInfo, ramdiskInfo, productCodes );
+    vmImgInfo.setAncestorIds( ancestorIds );
+    vmImgInfo.setSize( imgSize );
     vmAllocInfo.setImageInfo( vmImgInfo );
     return vmAllocInfo;
   }
@@ -449,8 +553,7 @@ If you specify a list of executable users, only users that have launch permissio
     } catch ( EucalyptusCloudException e ) {
       throw e;
     }
-    XPath xpath = null;
-    xpath = XPathFactory.newInstance().newXPath();
+    XPath xpath = XPathFactory.newInstance().newXPath();
 
     String arch = null;
     try {
@@ -477,6 +580,18 @@ If you specify a list of executable users, only users that have launch permissio
       LOG.warn( e.getMessage() );
     }
     if ( !isSet( ramdiskId ) ) ramdiskId = null;
+
+    NodeList productCodes = null;
+    try {
+      productCodes = ( NodeList ) xpath.evaluate( "/manifest/machine_configuration/product_codes/product_code/text()", inputSource, XPathConstants.NODESET );
+      for(int i = 0; i < productCodes.getLength(); i++ ) {
+        for( String productCode : productCodes.item( i ).getNodeValue().split( "," ) ) {
+          imageInfo.getProductCodes().add( new ProductCode( productCode ) );
+        }
+      }
+    } catch ( XPathExpressionException e ) {
+      LOG.error( e, e );
+    }
 
 
     if ( "yes".equals( kernelId ) || "true".equals( kernelId ) || imagePathParts[ 1 ].startsWith( "vmlinuz" ) ) {

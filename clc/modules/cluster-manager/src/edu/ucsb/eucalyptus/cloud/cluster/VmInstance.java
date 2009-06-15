@@ -34,6 +34,7 @@
 
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
@@ -76,11 +77,12 @@ public class VmInstance implements HasName {
   private VmImageInfo imageInfo;
   private VmKeyInfo keyInfo;
   private VmTypeInfo vmTypeInfo;
-  private List<Network> networks = new ArrayList<Network>();
+  private List<Network> networks = Lists.newArrayList();
   private VmState state;
   private StringBuffer consoleOutput;
-  private List<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
+  private List<AttachedVolume> volumes = Lists.newArrayList();
   private NetworkConfigType networkConfig;
+  private List<String> ancestorIds = Lists.newArrayList();
 
   public VmInstance() {
     this.launchTime = new Date();
@@ -290,13 +292,22 @@ public class VmInstance implements HasName {
     this.volumes = volumes;
   }
 
+  public List<String> getAncestorIds() {
+    return ancestorIds;
+  }
+
+  public void setAncestorIds( final List<String> ancestorIds ) {
+    this.ancestorIds = ancestorIds;
+  }
+
   public String getByKey( String path ) {
 
     Map<String, String> m = new HashMap<String, String>();
     m.put( "ami-id", this.getImageInfo().getImageId() );
-    m.put( "product-codes", this.getImageInfo().getProductCodes().toString().replaceAll("[\\Q[]\\E]","") );
+    m.put( "product-codes", this.getImageInfo().getProductCodes().toString().replaceAll("[\\Q[]\\E]","").replaceAll( ", ", "\n" ) );
     m.put( "ami-launch-index", "" + this.getLaunchIndex() );
-    m.put( "ami-ancestor-ids", "" );
+    m.put( "ancestor-ami-ids", this.getImageInfo().getAncestorIds().toString().replaceAll("[\\Q[]\\E]","").replaceAll( ", ", "\n" ) );
+
     m.put( "ami-manifest-path", this.getImageInfo().getImageLocation() );
     m.put( "hostname", this.getNetworkConfig().getIgnoredPublicIp() );
     m.put( "instance-id", this.getInstanceId() );
@@ -306,7 +317,6 @@ public class VmInstance implements HasName {
     m.put( "public-hostname", this.getNetworkConfig().getIgnoredPublicIp() );
     m.put( "public-ipv4", this.getNetworkConfig().getIgnoredPublicIp() );
     m.put( "reservation-id", this.getReservationId() );
-    m.put( "ancestor-ami-ids", "none" );
     m.put( "kernel-id", this.getImageInfo().getKernelId() );
     m.put( "ramdisk-id", this.getImageInfo().getRamdiskId() );
     m.put( "security-groups", this.getNetworkNames().toString().replaceAll("[\\Q[]\\E]","").replaceAll( ", ", "\n" ) );

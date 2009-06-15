@@ -90,11 +90,12 @@ class ClusterAllocator extends Thread {
     }
     try {
       Network network = Networks.getInstance().lookup( networkToken.getName() );
-      if ( network.getRules().isEmpty() ) return;
-      QueuedEvent event = new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), new ConfigureNetworkType( this.vmAllocInfo.getRequest(), network.getRules() ) );
       LOG.warn( "Setting up rules for: " + network.getName() );
       LOG.debug( network );
-      this.msgMap.put( State.CREATE_NETWORK_RULES, event );
+      if ( !network.getRules().isEmpty() ) {
+        QueuedEvent event = new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), new ConfigureNetworkType( this.vmAllocInfo.getRequest(), network.getRules() ) );
+        this.msgMap.put( State.CREATE_NETWORK_RULES, event );
+      }
       //:: need to refresh the rules on the backend for all active networks which point to this network :://
       for( Network otherNetwork : Networks.getInstance().listValues() ) {
         if( otherNetwork.isPeer( network.getUserName(), network.getNetworkName() ) ) {
