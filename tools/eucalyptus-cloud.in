@@ -102,6 +102,17 @@ check_java() {
 do_start() {
 	local ret
 
+	# need to cehck if we have another cloud running
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
+	if [ -s $pidfile ]; then
+		if ps `cat $pidfile` > /dev/null  2> /dev/null ; then
+			# there is another process with the same pid
+			echo
+			echo "Is the cloud already running?"
+			exit 1
+		fi
+	fi
+
 	# basic checks
 	check_java
 	if ! $EUCALYPTUS/usr/sbin/euca_conf -check cloud ; then

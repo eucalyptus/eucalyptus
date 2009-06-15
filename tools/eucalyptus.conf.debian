@@ -1,14 +1,14 @@
 #
-# this is the configuration for Eucalyptus. 
+# Eucalyptus configuration. 
 
 ####
 # These are to instruct the init.d script on what to start.
 ####
 
-# This variable point to where eucalyptus has been installed.
+# This variable points to where eucalyptus has been installed.
 EUCALYPTUS="/"
 
-# This is the username that you require eucalyptus to run as
+# This is the username that you would like eucalyptus to run as
 EUCA_USER="eucalyptus"
 
 # Uncomment this field if you do not plan on using the dynamic block
@@ -18,20 +18,20 @@ EUCA_USER="eucalyptus"
 # This variable controls whether ws-security is enabled between
 # eucalyptus components.  The default settings provide secure
 # connections between the Cloud, Cluster, and Node Controllers and we
-# recommend that this feature remains enabled.  If you wish to disable,
+# recommend that this feature remains enabled.  If you wish to disable security,
 # you must change this variable to "N" and manually configure the
 # services.xml for both Cluster and Node Controllers (see documentation
 # for more details).
 ENABLE_WS_SECURITY="Y"
 
 # This variable controls the level of logging output that appears in
-# various eucalyptus log-files.  The options are, in descending order
+# various eucalyptus log files.  The options are, in descending order
 # of verbosity, 'DEBUG, INFO, WARN, ERROR, and
 # FATAL'. The default is DEBUG (everything).
 LOGLEVEL="DEBUG"
 
 ####
-# there are Cloud Controller configuration options.
+# The following are Cloud Controller configuration options.
 ####
 
 # The Cloud Controller needs 2 ports.
@@ -39,7 +39,7 @@ CLOUD_PORT="8773"
 CLOUD_SSL_PORT="8443"
 
 ####
-# These are Cluster Controller configuration options.
+# These following are Cluster Controller configuration options.
 ####
 
 # This is the port the Cluster Controller will be listening on.
@@ -49,20 +49,21 @@ CC_PORT="8774"
 # Currently, this option can be set to GREEDY (first node that is
 # found that can run the VM will be chosen) or ROUNDROBIN (nodes are
 # selected one after another until one is found that can run the VM).
-SCHEDPOLICY="GREEDY"
+SCHEDPOLICY="ROUNDROBIN"
 
-# The list of Node Controllers the Cluster Controller will be in charge
-# of. For example on the rocks cluster you can run rocks list host to
+# The list of Node Controllers the Cluster Controller will communicate with. 
+#
+# If you are running Rocks, you can run "rocks list host" to
 # find out the list of machines available to you (in our case we are
 # interested in the VM Container kind).
 NODES=""
 
-# The name of the Node Controller service: this could be used if you want
-# to plug in your own Node Controller.
+# The name of the Node Controller service. Change this if you want
+# to plug in your own Node Controller service.
 NC_SERVICE="axis2/services/EucalyptusNC"
 
 ####
-# These are Node Controller configuration options.
+# The following are Node Controller configuration options.
 ####
 
 # This is the port the Node Controller will be listening on. 
@@ -75,43 +76,41 @@ HYPERVISOR="xen"
 
 # The maximum amount of memory Eucalyptus is allowed to use on the node:
 # if you leave this commented out, Eucalyptus will use all available
-# memory, otherwise it will use at most the specify number of MB
-# for all running instances.
+# memory, otherwise it will use at most this value for ALL running instances.
 # MAX_MEM=2048
 
 # The maximum number of CPU/cores Eucalyptus is allowed to use on the
-# node (at the moment we don't differentiate between cores and CPU): if
+# node (at the moment we don't differentiate between cores and CPU). If
 # you leave this commented out, Eucalyptus will use all available
 # CPU/cores it can find. 
 # MAX_CORES="2"
 
 # The size of the swap partition, in MB, for each instance started on the 
-# node (default is 512MB).  If the maximum disk allowance for the instance 
+# node (default is 512MB).  If the maximum disk allowed for the instance 
 # is not big enough to accommodate the swap together with the root partition, 
 # then no swap is allocated.  If there is extra room left, then an "ephemeral" 
 # partition will be created, available as /dev/sda3 inside the VM.
 # SWAP_SIZE=512
 
 # Setting this to 1 disables the cleanup of instance files (root, kernel,
-# ramdisk) for failed and terminated instances.  Such setting is not 
-# recommended for normal use, but it can be useful in debugging the later
-# stages of VM startup.
+# ramdisk) for failed and terminated instances.  This is not 
+# recommended for normal use, but it can be useful in debugging VM startup.
 # MANUAL_INSTANCES_CLEANUP=0
 
 ####
-# These are options for storage of images on the Node Controller
+# The following are options for image storage on the Node Controller
 ####
 
 # This variable points to a directory which is used by the Node Controller
 # to store images of running instances as well as local cached copies of
-# images.  The running images will be deleted once the instance is
-# terminated, but the cached copies will persist, subject to the LRU cache
-# replacement policy and the size limit NC_CACHE_SIZE, below.  Hence, this
+# images.  The running images will be deleted after the instance is
+# terminated, but the cached copies will persist, subject to LRU cache
+# replacement and the NC_CACHE_SIZE size limit, below.  So, this
 # partition should be at least as big as the cache size (or the maximum
 # space needed by all images, whichever is bigger) plus the maximum space
-# needed by the maximum number of instances allowed on the node, combined.
-# Finally, this directory should be local to the Node Controller (as
-# opposed to an NFS share) for performance reasons.
+# needed by the maximum number of instances allowed on the node.
+# This directory should be local to the Node Controller (as
+# opposed to a NFS share) for performance reasons.
 INSTANCE_PATH="not_configured"
 
 # The maximum amount of disk space, in Megabytes, that Eucalyptus is 
@@ -120,7 +119,7 @@ INSTANCE_PATH="not_configured"
 # NC_CACHE_SIZE=99999
 
 ####
-# there are the options for the network
+# The following are networking options
 ####
 
 # VNET_INTERFACE specifies the local physical ethernet interface that
