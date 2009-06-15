@@ -158,68 +158,80 @@ if [ "$1" = "2" ];
 then
 	cd /opt/eucalyptus
 
-	# we upgrade only from 1.4
-	if [ ! -e usr/share/eucalyptus/euca_ipt ];
-	then
-		echo "Cannot upgrade from version earlier than 1.4"
-		exit 2
-	fi
-
 	# save a copy of the old conf file
 	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.old
 
-	# let's try to save the old configuration
-	if [ -e /root/eucalyptus-pre-%{version}-rollback.tar ];
+	# let's check if we have already the db in the right place, then
+	# it's an upgrade from >= 1.5.x and no special case
+	if [ ! -e etc/eucalyptus/eucalyptus-version ];
 	then
-		mv -f /root/eucalyptus-pre-%{version}-rollback.tar /root/eucalyptus-pre-%{version}-rollback.tar.old
-	fi
 
-	# let's save database and keys
-	rm -f var/eucalyptus/db/eucalyptus.lck
-	tar cf /root/eucalyptus-pre-%{version}-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
+		# we upgrade only from 1.4
+		if [ ! -e usr/share/eucalyptus/euca_ipt ];
+		then
+			echo "Cannot upgrade from version earlier than 1.4"
+			exit 2
+		fi
+
+		# let's try to save the old configuration
+		if [ -e /root/eucalyptus-pre-%{version}-rollback.tar ];
+		then
+			mv -f /root/eucalyptus-pre-%{version}-rollback.tar /root/eucalyptus-pre-%{version}-rollback.tar.old
+		fi
+
+		# let's save database and keys
+		rm -f var/eucalyptus/db/eucalyptus.lck
+		tar cf /root/eucalyptus-pre-%{version}-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
+	fi
 fi
 
 %post
-# eucalyptus.conf was marked noreplace, so the new one could be named
-# *.rpmnew. Let's move it over (we did take a copy anyway)
-#if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew ];
-#then
-#	cp -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
-#fi
-
-# we need a eucalyptus user
-if ! getent passwd eucalyptus > /dev/null ; then
-	useradd -M eucalyptus
+# we need a eucalyptus user (and group)
+if ! getent group eucalyptus > /dev/null ; then
+        groupadd eucalyptus
 fi
+if ! getent passwd eucalyptus > /dev/null ; then
+        useradd -M eucalyptus -g eucalyptus
+fi
+# let's get the default bridge for suse
+/opt/eucalyptus/usr/sbin/euca_conf -bridge eth0 /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 
-# let's be sure we point to right eucalyptus installation and the right
-# interface (eth0 for suse)
-/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus -bridge eth0 -setup /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+# upgrade?
 if [ "$1" = "2" ];
 then
 	cd /opt/eucalyptus
+	
+	# eucalyptus.conf was marked noreplace, so the new one could be named
+	# *.rpmnew. Let's move it over (we did take a copy anyway)
+	if [ -e etc/eucalyptus/eucalyptus.conf.rpmnew -a etc/eucalyptus/eucalyptus.conf.rpmnew -nt etc/eucalyptus/eucalyptus.conf ];
+	then
+		cp -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+	fi
 
 	# if we have an old config file we try to upgrade
 	if [ -e etc/eucalyptus/eucalyptus.conf.old ];
 	then
 		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.old /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 	fi
+
 	# and now let's move the keys into the new place
 	if [ -e var/eucalyptus/keys/cloud-cert.pem ];
 	then
 		mv -f var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
 	fi
 fi
+# final setup
+/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus -setup /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 
 %post cloud
-# on upgrade let's look for 1.4 directories and move them
 if [ "$1" = "2" ]; 
 then
 	cd /opt/eucalyptus
-	if [ -d var/eucalyptus/db ];
+
+	# if upgrading from version 1.5.x nothing to do
+	if [ ! -e var/lib/eucalyptus/db/eucalyptus.script ];
 	then
-		# let's be sure we don't blow away the new db
-		if [ ! -e var/lib/eucalyptus/db/eucalyptus.script ];
+		if [ -d var/eucalyptus/db ];
 		then
 			mkdir -p var/lib/eucalyptus/db
 			cp -ar var/eucalyptus/db var/lib/eucalyptus
@@ -289,7 +301,7 @@ then
 fi
 
 %changelog gl
-*Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
+*Mon Jun 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.5.2)
 
 *Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
