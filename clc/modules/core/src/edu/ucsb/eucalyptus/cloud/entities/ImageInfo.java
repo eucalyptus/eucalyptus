@@ -118,7 +118,7 @@ public class ImageInfo {
   public ImageInfo() {}
 
   public ImageInfo( final String imageId ) {
-    this.imageId = imageId;
+    this.imageId = imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase();
   }
 
   public ImageInfo( final String imageLocation, final String imageOwnerId, final String imageState, final Boolean aPublic ) {

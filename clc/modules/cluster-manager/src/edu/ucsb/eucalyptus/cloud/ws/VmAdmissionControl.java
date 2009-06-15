@@ -64,8 +64,10 @@ public class VmAdmissionControl {
       sla.doNetworkAllocation( vmAllocInfo.getRequest().getUserId(), vmAllocInfo.getAllocationTokens(), vmAllocInfo.getNetworks() );
     } catch ( FailScriptFailException e ) {
       failed = true;
-    } catch ( NotEnoughResourcesAvailable notEnoughResourcesAvailable ) {
+      LOG.debug( e, e );
+    } catch ( NotEnoughResourcesAvailable e ) {
       failed = true;
+      LOG.debug( e, e );
     }
     if ( failed ) {
       if ( allocTokeList != null )

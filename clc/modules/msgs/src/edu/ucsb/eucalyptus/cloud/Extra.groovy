@@ -156,8 +156,8 @@ public class VmImageInfo {
   String kernelLocation;
   String ramdiskLocation;
   ArrayList<String> productCodes = new ArrayList<String>();
-
-
+  ArrayList<String> ancestorIds = new ArrayList<String>();
+  Long size = 0l;
 
   def VmImageInfo(final imageId, final kernelId, final ramdiskId, final imageLocation, final kernelLocation, final ramdiskLocation, final productCodes) {
     this.imageId = imageId;
