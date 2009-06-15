@@ -403,13 +403,6 @@ if [ -n "$CHECK" ]; then
 				echo "WARNING: EBS is enabled and vblade was not found"
 			fi
 		fi
-		if [ "$CHECK" = "cloud" -o "$CHECK" = "nc" ]; then
-			AOE="`lsmod |grep aoe 2> /dev/null`"
-			if [ -z "$AOE" ]; then
-				echo
-				echo "WARNING: EBS is enabled and the aoe module is not loaded"
-			fi
-		fi
 	fi
 	
 	# first of all check euca_rootwrap
