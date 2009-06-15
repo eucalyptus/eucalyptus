@@ -38,13 +38,32 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.IpRange;
+import edu.ucsb.eucalyptus.cloud.entities.NetworkPeer;
+import edu.ucsb.eucalyptus.cloud.entities.NetworkRule;
+import edu.ucsb.eucalyptus.cloud.entities.NetworkRulesGroup;
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
+import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
+import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
+import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
+import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
+import edu.ucsb.eucalyptus.msgs.IpPermissionType;
+import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
+import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
+import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
+import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.Messaging;
 import org.apache.axis2.AxisFault;
 import org.apache.log4j.Logger;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -287,7 +306,16 @@ public class GroupManager {
     } else if ( !ipPerm.getIpRanges().isEmpty() ) {
       List<IpRange> ipRanges = new ArrayList<IpRange>();
       for ( String range : ipPerm.getIpRanges() ) {
-        ipRanges.add( new IpRange( range ) );
+        String[] rangeParts = range.split( "/" );
+        try {
+          if( Integer.parseInt( rangeParts[1] ) > 32 || Integer.parseInt( rangeParts[1] ) < 0 ) continue;
+          if( rangeParts.length != 2 ) continue;
+          if( InetAddress.getByName( rangeParts[0] ) != null ) {
+            ipRanges.add( new IpRange( range ) );
+          }
+        } catch ( NumberFormatException e ) {
+        } catch ( UnknownHostException e ) {
+        }
       }
       NetworkRule rule = new NetworkRule( ipPerm.getIpProtocol(), ipPerm.getFromPort(), ipPerm.getToPort(), ipRanges );
       ruleList.add( rule );
