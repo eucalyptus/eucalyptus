@@ -38,10 +38,10 @@
   <parameter name="enableMTOM">false</parameter>
   <parameter name="enableSwA">false</parameter>
   <parameter name="ConfigContextTimeoutInterval">30000</parameter>
-  <parameter name="sendStacktraceDetailsWithFaults">true</parameter>
-  <parameter name="DrillDownToRootCauseForFaultReason">true</parameter>
-  <parameter name="userName">mayhem</parameter>
-  <parameter name="password">zoomzoom</parameter>
+  <parameter name="sendStacktraceDetailsWithFaults">false</parameter>
+  <parameter name="DrillDownToRootCauseForFaultReason">false</parameter>
+  <parameter name="userName"></parameter>
+  <parameter name="password"></parameter>
   <parameter name="contextRoot">/</parameter>
   <parameter name="servicePath">services</parameter>
   <parameter name="enableREST" locked="false">false</parameter>
@@ -88,7 +88,7 @@
       <handler name="SOAPMessageBodyBasedDispatcher" class="org.apache.axis2.dispatchers.SOAPMessageBodyBasedDispatcher"/>
       <handler name="Axis2URIDispatcher" class="edu.ucsb.eucalyptus.transport.query.Axis2QueryDispatcher"/>
       <handler name="WalrusQueryDispatcher" class="edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher"/>
-      <handler name="StorageQueryDispatcher" class="edu.ucsb.eucalyptus.transport.query.StorageQueryDispatcher"/>                                                    
+      <handler name="StorageQueryDispatcher" class="edu.ucsb.eucalyptus.transport.query.StorageQueryDispatcher"/>
     </phase>
     <phase name="RMPhase"/>
     <phase name="OperationInPhase"/>
