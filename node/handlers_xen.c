@@ -49,7 +49,7 @@ static char gen_libvirt_xml_command_path [BUFSIZE] = "";
 static char get_xen_info_command_path [BUFSIZE] = "";
 static char virsh_command_path [BUFSIZE] = "";
 static char xm_command_path [BUFSIZE] = "";
-
+static char rootwrap [BUFSIZE] = "";
 
 #define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
 #define SWAP_SIZE 512 /* for now, the only possible swap size, in MBs */
@@ -386,7 +386,8 @@ static int doInitialize (void)
     snprintf (get_xen_info_command_path,    BUFSIZE, EUCALYPTUS_GET_XEN_INFO,    home, home);
     snprintf (virsh_command_path, BUFSIZE, EUCALYPTUS_VIRSH, home);
     snprintf (xm_command_path, BUFSIZE, EUCALYPTUS_XM);
-    
+    snprintf (rootwrap, BUFSIZE, EUCALYPTUS_ROOTWRAP, home);
+
     /* open the connection to hypervisor */
     if (check_hypervisor_conn () == ERROR) {
         free(home);
@@ -790,12 +791,10 @@ static int doRebootInstance(ncMetadata *meta, char *instanceId)
 
 static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **consoleOutput) {
   char *output;
-  char cmd[256];
   int pid, status, rc, bufsize, fd;
   char filename[1024];  
 
-  fprintf(stderr, "getconsoleoutput called\n");
-
+  logprintfl (EUCAINFO, "doGetConsoleOutput() invoked (id=%s)\n", instanceId);
   bufsize = sizeof(char) * 1024 * 64;
   output = malloc(bufsize);
   bzero(output, bufsize);
@@ -812,7 +811,7 @@ static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **console
       dup2(fd, 2);
       dup2(2, 1);
       close(0);
-      rc = execl("/usr/sbin/xm", "/usr/sbin/xm", "console", instanceId, NULL);
+      rc = execl(rootwrap, rootwrap, "virsh", "console", instanceId, NULL);
       fprintf(stderr, "execl() failed\n");
       close(fd);
     }
