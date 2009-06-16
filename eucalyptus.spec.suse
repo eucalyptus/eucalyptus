@@ -140,6 +140,7 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/usr/share/eucalyptus/partition2disk
 /opt/eucalyptus/usr/share/eucalyptus/get_xen_info
 /opt/eucalyptus/usr/share/eucalyptus/get_sys_info
+/opt/eucalyptus/usr/share/eucalyptus/detach.pl
 /opt/eucalyptus/usr/sbin/euca_test_nc
 /opt/euca-axis2c/services/EucalyptusNC
 /opt/eucalyptus/etc/init.d/eucalyptus-nc
