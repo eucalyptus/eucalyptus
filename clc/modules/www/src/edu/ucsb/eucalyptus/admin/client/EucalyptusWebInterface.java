@@ -319,6 +319,12 @@ public class EucalyptusWebInterface implements EntryPoint {
         recover_button.addClickListener( RecoverButtonListener );
         remember_label.setStyleName("euca-remember-text");
 
+        /* enable login by pressing Enter */
+        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button);
+        submit_button.addKeyboardListener(sl);
+        login_box.addKeyboardListener(sl);
+        pass_box.addKeyboardListener(sl);
+
         Grid g = new Grid( 4, 2 );
         g.setCellSpacing(4);
         g.setWidget(0, 0, new Label(MSG.usernameField()+":"));
