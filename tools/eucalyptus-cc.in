@@ -105,14 +105,6 @@ do_start() {
 			echo -n 1 > /proc/sys/net/ipv4/ip_forward
 		fi
 	fi
-	if [ -w /proc/sys/net/bridge/bridge-nf-call-iptables ]; then
-		VAL=`cat /proc/sys/net/bridge/bridge-nf-call-iptables`
-		if [ "$VAL" = "0" ]; then
-			echo
-			echo -n "Enabling bridge netfiltering"
-			echo 1 >  /proc/sys/net/bridge/bridge-nf-call-iptables
-		fi
-	fi
 
 	# let's be sure we have the right port for NC and CC
 	create_httpd_config
