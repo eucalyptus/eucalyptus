@@ -752,7 +752,9 @@ public class Bukkit {
                     //writes are unconditional
                     byte[] base64Data = request.getBase64Data().getBytes();
                     foundObject.setObjectName(objectName);
-                    storageManager.putObject(bucketName, objectName, base64Data, false);
+                    FileIO fileIO = storageManager.prepareForWrite(bucketName, objectName);
+                    fileIO.write(base64Data);
+                    fileIO.finish();                    
                     md5 = Hashes.getHexString(Hashes.Digest.MD5.get().digest(base64Data));
                     foundObject.setEtag(md5);
                     Long size = Long.parseLong(request.getContentLength());
