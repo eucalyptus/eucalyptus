@@ -62,10 +62,6 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     public void initialize() {
-        if(!initialized) {
-            System.loadLibrary("fsstorage");
-            initialized = true;
-        }
     }
 
     public void checkPreconditions() throws EucalyptusCloudException {
