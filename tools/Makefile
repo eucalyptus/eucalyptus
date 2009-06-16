@@ -33,6 +33,7 @@ install: deploy
 	@$(INSTALL) -m 755 add_key.pl $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 gen_libvirt_xml $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 gen_kvm_libvirt_xml $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 detach.pl $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 partition2disk $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 get_xen_info $(datarootdir)/eucalyptus/get_xen_info
 	@$(INSTALL) -m 755 get_sys_info $(datarootdir)/eucalyptus/get_sys_info

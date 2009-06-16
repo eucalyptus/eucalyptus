@@ -122,7 +122,6 @@ int init_config(void);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname);
 int refresh_resources(ncMetadata *ccMeta, int timeout);
 void shawn(void);
-pid_t timewait(pid_t pid, int *status, int timeout);
 int sem_timewait(sem_t *sem, time_t seconds);
 int sem_timepost(sem_t *sem);
 int timeread(int fd, void *buf, size_t bytes, int timeout);

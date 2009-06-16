@@ -49,7 +49,8 @@ static char gen_libvirt_xml_command_path [BUFSIZE] = "";
 static char get_xen_info_command_path [BUFSIZE] = "";
 static char virsh_command_path [BUFSIZE] = "";
 static char xm_command_path [BUFSIZE] = "";
-
+static char detach_command_path [BUFSIZE] = "";
+static char rootwrap_command_path [BUFSIZE] = "";
 
 #define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
 #define SWAP_SIZE 512 /* for now, the only possible swap size, in MBs */
@@ -386,6 +387,8 @@ static int doInitialize (void)
     snprintf (get_xen_info_command_path,    BUFSIZE, EUCALYPTUS_GET_XEN_INFO,    home, home);
     snprintf (virsh_command_path, BUFSIZE, EUCALYPTUS_VIRSH, home);
     snprintf (xm_command_path, BUFSIZE, EUCALYPTUS_XM);
+    snprintf (detach_command_path, BUFSIZE, EUCALYPTUS_DETACH, home, home);
+    snprintf (rootwrap_command_path, BUFSIZE, EUCALYPTUS_ROOTWRAP, home);
     
     /* open the connection to hypervisor */
     if (check_hypervisor_conn () == ERROR) {
@@ -1141,7 +1144,7 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     } else {
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
         if (dom) {
-            int err = 0, fd;
+	    int err = 0, fd, rc, pid, status;
             char xml [1024], tmpfile[32], cmd[1024];
 	    FILE *FH;
 	    
@@ -1149,9 +1152,36 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 
             /* protect Xen calls, just in case */
             sem_p (xen_sem);
+	    pid = fork();
+	    if (!pid) {
+	      char cmd[1024];
+	      snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
+	      fd = mkstemp(tmpfile);
+	      if (fd > 0) {
+		write(fd, xml, strlen(xml));
+		close(fd);
+		snprintf(cmd, 1024, "%s %s `which virsh` %s %s %s", detach_command_path, rootwrap_command_path, instanceId, localDevReal, tmpfile);
+		rc = system(cmd);
+		unlink(tmpfile);
+	      } else {
+		logprintfl(EUCAERROR, "could not write to tmpfile for detach XML: %s\n", tmpfile);
+		rc = 1;
+	      } 
+	      exit(rc);
+	    } else {
+	      rc = timewait(pid, &status, 10);
+	      if (WEXITSTATUS(status)) {
+		logprintfl(EUCAERROR, "failed to sucessfully run detach helper\n");
+		err = 1;
+	      } else {
+		err = 0;
+	      }
+	    }
+#if 0
 	    if (!getuid()) {
 	      err = virDomainDetachDevice (dom, xml);
 	    } else {
+	      
 	      /* virsh detach function does not work as non-root user on xen (bug). workaround is to shellout to virsh */
 	      snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
 	      fd = mkstemp(tmpfile);
@@ -1172,8 +1202,9 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 		err = 1;
 	      }
 	    }
+#endif
             sem_v (xen_sem);
-
+	    
             if (err) {
                 logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);
                 ret = ERROR;
@@ -1181,7 +1212,7 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
                 logprintfl (EUCAINFO, "detached %s as %s in domain %s\n", remoteDev, localDevReal, instanceId);
             }
             virDomainFree(dom);
-        } else {
+	} else {
             if (instance->state != BOOTING) {
                 logprintfl (EUCAWARN, "warning: domain %s not running on hypervisor, cannot detach device\n", instanceId);
             }
