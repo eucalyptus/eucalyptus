@@ -1162,6 +1162,7 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
 		close(fd);
 		snprintf(cmd, 1024, "%s %s `which virsh` %s %s %s", detach_command_path, rootwrap_command_path, instanceId, localDevReal, tmpfile);
 		rc = system(cmd);
+		rc = rc>>8;
 		unlink(tmpfile);
 	      } else {
 		logprintfl(EUCAERROR, "could not write to tmpfile for detach XML: %s\n", tmpfile);
