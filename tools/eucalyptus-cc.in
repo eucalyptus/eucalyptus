@@ -39,7 +39,7 @@ fi
 # I just wanted to set PATH to be the system PATH, but if a user install
 # eucalyptus manually, it may have binaries in a non-standard position:
 # hence we need to keep the PATH we receive.
-PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus cluster controller"
 NAME=eucalyptus-cc
 EUCA_USER="eucalyptus"
@@ -234,7 +234,7 @@ done
 # if we didn't find AXIS2C we'll pick the one we used at configuration
 # time
 if [ -z "$AXIS2C_HOME" ]; then
-	AXIS2C_HOME="@AXIS2C_HOME@"
+	export AXIS2C_HOME="@AXIS2C_HOME@"
 fi
 
 # finally let's check the path
@@ -249,9 +249,14 @@ if [ -z "${HTTPD}" ]; then
 	exit 1
 fi
 
+# if we have a custom libvirt let's use it
+if [ -n "$LIBVIRT_HOME" ]; then
+	export LD_LIBRARY_PATH="$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$LD_LIBRARY_PATH"
+	export PATH="$LIBVIRT_HOME/bin:$PATH"
+fi
+
 # set the library path correctly
-export AXIS2C_HOME
-export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
 
 case "$1" in
   start)
