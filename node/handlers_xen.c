@@ -793,11 +793,10 @@ static int doRebootInstance(ncMetadata *meta, char *instanceId)
 
 static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **consoleOutput) {
   char *output;
-  char cmd[256];
   int pid, status, rc, bufsize, fd;
   char filename[1024];  
 
-  logprintfl(EUCADEBUG, "getconsoleoutput called\n");
+  logprintfl (EUCAINFO, "doGetConsoleOutput() invoked (id=%s)\n", instanceId);
 
   if (getuid() != 0) {
     output = strdup("NOT SUPPORTED");
@@ -822,6 +821,8 @@ static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **console
       dup2(fd, 2);
       dup2(2, 1);
       close(0);
+      // TODO: test virsh console:
+      // rc = execl(rootwrap_command_path, rootwrap_command_path, "virsh", "console", instanceId, NULL);
       rc = execl("/usr/sbin/xm", "/usr/sbin/xm", "console", instanceId, NULL);
       fprintf(stderr, "execl() failed\n");
       close(fd);
