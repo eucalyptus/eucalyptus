@@ -24,11 +24,11 @@ Release:       1
 License:       BSD
 Group:         Applications/System
 %if %is_centos
-BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5
+BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
 Requires:      vconfig, aoetools, vblade
 %endif
 %if %is_suse
-BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5
+BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
 Requires:      vlan, aoetools, vblade
 %endif
 
@@ -63,7 +63,7 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5, iptables, bridge-utils, eucalyptus-gl >= 1.5, %{__dhcp}
+Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, iptables, bridge-utils, eucalyptus-gl >= 1.5, %{__dhcp}
 Conflicts:    eucalyptus < 1.5, eucalyptus-nc < 1.5
 Group:        Applications/System
 
@@ -77,7 +77,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
+Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
 Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
 Group:        Applications/System
 
@@ -91,7 +91,7 @@ This package contains the node controller part of eucalyptus.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus >= 1.5, %{__httpd}, euca-axis2c >= 1.5
+Requires:     eucalyptus >= 1.5, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
 Conflicts:    eucalyptus < 1.5
 Group:        Applications/System
 
