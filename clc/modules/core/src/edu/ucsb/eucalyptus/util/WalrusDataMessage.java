@@ -117,8 +117,6 @@ public class WalrusDataMessage {
     }
 
     public static void copyBytes(byte[]sourceBytes, byte[]destBytes, int offset, int length) {
-        for (int i = 0; i < length; ++ i) {
-            destBytes[i + offset] = sourceBytes[i];
-        }
+        System.arraycopy(sourceBytes, 0, destBytes, offset, length);
     }
 }

@@ -14,6 +14,8 @@
 #define EUCALYPTUS_GET_KVM_INFO    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_sys_info"
 #define EUCALYPTUS_DISK_CONVERT    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/partition2disk"
 #define EUCALYPTUS_VIRSH           "%s/usr/lib/eucalyptus/euca_rootwrap virsh"
+#define EUCALYPTUS_ROOTWRAP           "%s/usr/lib/eucalyptus/euca_rootwrap"
+#define EUCALYPTUS_DETACH           "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/detach.pl"
 #define EUCALYPTUS_XM           "sudo xm"
 
 #define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
