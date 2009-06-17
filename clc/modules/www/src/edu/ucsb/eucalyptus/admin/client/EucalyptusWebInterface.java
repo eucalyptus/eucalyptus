@@ -103,7 +103,8 @@ public class EucalyptusWebInterface implements EntryPoint {
     private Label label_box = new Label();
     private CheckBox check_box = new CheckBox("", false);
     private Label remember_label = new Label(MSG.rememberMe());
-	
+    private static Label statusMessage = new Label();
+
     public void onModuleLoad()
     {
         sessionId = Cookies.getCookie( cookie_name );
@@ -715,7 +716,6 @@ public class EucalyptusWebInterface implements EntryPoint {
 							userToSave,
 						new AsyncCallback() {
                             public void onSuccess(Object result) {
-                                displayDialog("", (String) result);
                                 if (loggedInUser.getUserName().equals(userToSave.getUserName())) {
                                     loggedInUser.setRealName(userToSave.getRealName());
                                     loggedInUser.setEmail(userToSave.getEmail());
@@ -724,6 +724,12 @@ public class EucalyptusWebInterface implements EntryPoint {
                                     loggedInUser.setAffiliation(userToSave.getAffiliation());
                                     loggedInUser.setProjectDescription(userToSave.getProjectDescription());
                                     loggedInUser.setProjectPIName(userToSave.getProjectPIName());
+                                    displayDialog("", (String) result);
+
+                                } else { // admin updating a user
+                                    displayBarAndTabs("");
+                                    statusMessage.setText( ( String ) result );
+                                    statusMessage.setStyleName("euca-small-text");
                                 }
                             }
 
@@ -1032,6 +1038,29 @@ public class EucalyptusWebInterface implements EntryPoint {
         );
     }
 
+    public void attemptActionNoReload( String action, String param, final VerticalPanel parent )
+    {
+        statusMessage.setText( "Contacting the server..." );
+        EucalyptusWebBackend.App.getInstance().performAction(
+                sessionId,
+                action,
+                param,
+                new AsyncCallback() {
+                    public void onSuccess( Object result )
+                    {
+                        displayBarAndTabs("");
+                        statusMessage.setText( ( String ) result );
+                        statusMessage.setStyleName("euca-small-text");                        
+                    }
+
+                    public void onFailure( Throwable caught )
+                    {
+                        displayErrorPage( caught.getMessage() );
+                    }
+                }
+        );
+    }
+
     public void executeAction( String action )
     {
         /* NOTE: some of the checks are repeated by the server,
@@ -1214,6 +1243,12 @@ public class EucalyptusWebInterface implements EntryPoint {
         top_bar.setCellHorizontalAlignment(upanel, HorizontalPanel.ALIGN_RIGHT);
         top_bar.setCellVerticalAlignment(upanel, HorizontalPanel.ALIGN_MIDDLE);
 
+        final HorizontalPanel messageBox = new HorizontalPanel();
+        messageBox.setSize("100%", "0"); // let the font determine the height
+        messageBox.setSpacing(3);
+        messageBox.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_RIGHT);
+        messageBox.add (statusMessage);
+
         final VerticalPanel wrapper = new VerticalPanel();
         wrapper.setSize("100%", "80%");
         wrapper.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
@@ -1237,6 +1272,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		allTabs.addTabListener(new TabListener() {
             public void onTabSelected(SourcesTabEvents sender, int tabIndex) {
                 String error = "This tab is not implemented yet, sorry!";
+                statusMessage.setText("");
                 wrapper.clear();
                 currentTabIndex = tabIndex;
                 if (tabIndex==credsTabIndex) { displayCredentialsTab(wrapper); }
@@ -1254,6 +1290,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         RootPanel.get().clear();
         RootPanel.get().add( top_bar );
         RootPanel.get().add( allTabs );
+        RootPanel.get().add( messageBox );
         RootPanel.get().add( wrapper );
         allTabs.selectTab(currentTabIndex);
     }
@@ -1897,8 +1934,20 @@ public class EucalyptusWebInterface implements EntryPoint {
 			"Do you want to delete user '" + userName + "'?", deleteButton);
 		okButton.setText ("Cancel");
 		label_box.setStyleName("euca-greeting-warning");
-		
-       //new EucalyptusDialog ("Sure?", "Do you want to delete user '" + userName + "'?", deleteButton);
+    }
+
+    public void displayConfirmDeletePageNoReload ( final String userName, final VerticalPanel parent )
+    {
+		Button deleteButton = new Button ("Delete", new ClickListener() {
+            public void onClick(Widget sender) {
+                attemptActionNoReload("delete", userName, parent);
+			}
+        });
+
+		Button okButton = displayDialog ("Sure?",
+			"Do you want to delete user '" + userName + "'?", deleteButton);
+		okButton.setText ("Cancel");
+		label_box.setStyleName("euca-greeting-warning");
     }
 
     private HTML userActionButton (String action, UserInfoWeb user)
@@ -1908,6 +1957,18 @@ public class EucalyptusWebInterface implements EntryPoint {
                 + "&user=" + user.getUserName()
                 + "&page=" + currentTabIndex
                 + "\">" + action + "</a>");
+    }
+
+    private HTML userActionButtonNoReload (final String action, final UserInfoWeb user, final VerticalPanel parent)
+    {
+        HTML link = new HTML (action);
+        link.setStyleName("euca-action-link");
+        link.addClickListener(new ClickListener() {
+            public void onClick (Widget sender) {
+                attemptActionNoReload(action.toLowerCase(), user.getUserName(), parent);
+            }
+        });
+        return link;
     }
 
 	class EditCallback implements ClickListener {
@@ -2007,11 +2068,11 @@ public class EucalyptusWebInterface implements EntryPoint {
 
 				// admin can't be disabled or deleted (that breaks things)
 				if (!u.isAdministrator().booleanValue()) {
-					HTML act_button = userActionButton ("Disable", u);
+					HTML act_button = userActionButtonNoReload ("Disable", u, parent);
 	                if (!u.isApproved().booleanValue()) {
-	                    act_button = userActionButton ("Approve", u);
+	                    act_button = userActionButtonNoReload ("Approve", u, parent);
 	                } else if (!u.isEnabled().booleanValue()) {
-	                    act_button = userActionButton ("Enable", u);
+	                    act_button = userActionButtonNoReload ("Enable", u, parent);
 	                }
 	                ops.add(act_button);
 	
@@ -2019,7 +2080,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 					del_button.setStyleName ("euca-action-link");
 					del_button.addClickListener( new ClickListener() {
 						public void onClick(Widget sender) {
-							displayConfirmDeletePage (u.getUserName());
+							displayConfirmDeletePageNoReload (u.getUserName(), parent);
 						}
 					});
 					ops.add(del_button);
