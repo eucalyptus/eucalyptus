@@ -1,11 +1,37 @@
+%define is_suse %(test -e /etc/SuSE-release && echo 1 || echo 0)
+%define is_centos %(test -e /etc/redhat-release && echo 1 || echo 0)
+%if %is_suse
+%define __dhcp    dhcp-server
+%define __httpd   apache2
+%define __libvirt libvirt
+%define __xen     xen, xen-tools
+%define __curl    libcurl4
+%define __bridge  eth0
+%endif
+%if %is_centos
+%define __dhcp    dhcp
+%define __httpd   httpd
+%define __libvirt euca-libvirt >= 1.5
+%define __xen     xen
+%define __curl    curl
+%define __bridge  xenbr0
+%endif
+
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       1.5.2
 Release:       1
 License:       BSD
 Group:         Applications/System
+%if %is_centos
 BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5
 Requires:      vconfig, aoetools, vblade
+%endif
+%if %is_suse
+BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5
+Requires:      vlan, aoetools, vblade
+%endif
+
 Conflicts:     eucalyptus-cloud < 1.5, eucalyptus-cc < 1.5, eucalyptus-nc < 1.5
 Vendor:        Eucalyptus Systems
 #Icon:          someicon.xpm
@@ -37,7 +63,7 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= 1.5.2, euca-httpd >= 1.5, euca-axis2c >= 1.5, iptables, bridge-utils, eucalyptus-gl >= 1.5, dhcp
+Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5, iptables, bridge-utils, eucalyptus-gl >= 1.5, %{__dhcp}
 Conflicts:    eucalyptus < 1.5, eucalyptus-nc < 1.5
 Group:        Applications/System
 
@@ -51,7 +77,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.2, euca-httpd >= 1.5, euca-axis2c >= 1.5, bridge-utils, eucalyptus-gl >= 1.5, euca-libvirt >= 1.5, curl, xen
+Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
 Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
 Group:        Applications/System
 
@@ -65,7 +91,7 @@ This package contains the node controller part of eucalyptus.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus >= 1.5, euca-httpd >= 1.5, euca-axis2c >= 1.5
+Requires:     eucalyptus >= 1.5, %{__httpd}, euca-axis2c >= 1.5
 Conflicts:    eucalyptus < 1.5
 Group:        Applications/System
 
@@ -86,7 +112,12 @@ if [ -f tools/eucalyptus.conf.rpmbased ];
 then
 	cp -f tools/eucalyptus.conf.rpmbased tools/eucalyptus.conf
 fi
+%if %is_suse
+./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
+%endif
+%if %is_centos
 ./configure --with-libvirt=/opt/euca-libvirt --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
+%endif
 cd clc
 make deps
 cd ..
@@ -140,6 +171,7 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/usr/share/eucalyptus/partition2disk
 /opt/eucalyptus/usr/share/eucalyptus/get_xen_info
 /opt/eucalyptus/usr/share/eucalyptus/get_sys_info
+/opt/eucalyptus/usr/share/eucalyptus/detach.pl
 /opt/eucalyptus/usr/sbin/euca_test_nc
 /opt/euca-axis2c/services/EucalyptusNC
 /opt/eucalyptus/etc/init.d/eucalyptus-nc
@@ -188,10 +220,16 @@ fi
 %post
 # we need a eucalyptus user
 if ! getent passwd eucalyptus > /dev/null ; then
+%if %is_suse
+	groupadd eucalyptus
+	useradd -M eucalyptus -g eucalyptus
+%endif
+%if %is_centos
 	adduser -M eucalyptus 
+%endif
 fi
-# let's get the default bridge for centos
-/opt/eucalyptus/usr/sbin/euca_conf -bridge xenbr0 /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+# let's get the default bridge 
+/opt/eucalyptus/usr/sbin/euca_conf -bridge %{__bridge} /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 
 # upgrade?
 if [ "$1" = "2" ];

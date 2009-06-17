@@ -82,6 +82,7 @@ public class VmInstance implements HasName {
   private StringBuffer consoleOutput;
   private List<AttachedVolume> volumes = Lists.newArrayList();
   private NetworkConfigType networkConfig;
+  private Boolean privateNetwork;
   private List<String> ancestorIds = Lists.newArrayList();
 
   public VmInstance() {
@@ -198,7 +199,10 @@ public class VmInstance implements HasName {
     runningInstance.setProductCodes( this.imageInfo.getProductCodes() );
 
     runningInstance.setPrivateDnsName( this.getNetworkConfig().getIpAddress() );
-    runningInstance.setDnsName( this.getNetworkConfig().getIgnoredPublicIp() );
+    if( !VmInstance.DEFAULT_IP.equals( this.getNetworkConfig().getIgnoredPublicIp() ) )
+      runningInstance.setDnsName( this.getNetworkConfig().getIgnoredPublicIp() );
+    else
+      runningInstance.setDnsName( this.getNetworkConfig().getIpAddress() );
 
     if ( this.getReason() != null || !"".equals( this.getReason() ) )
       runningInstance.setReason( this.getReason() );

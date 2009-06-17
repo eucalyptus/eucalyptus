@@ -2021,25 +2021,6 @@ int timeread(int fd, void *buf, size_t bytes, int timeout) {
   return(rc);
 }
 
-pid_t timewait(pid_t pid, int *status, int timeout) {
-  time_t timer=0;
-  int rc;
-
-  if (timeout <= 0) timeout = 1;
-
-  *status = 1;
-  rc = waitpid(pid, status, WNOHANG);
-  while(rc <= 0 && timer < (timeout * 1000000)) {
-    usleep(50000);
-    timer += 50000;
-    rc = waitpid(pid, status, WNOHANG);
-  }
-  if (rc < 0) {
-    logprintfl(EUCAERROR, "waitpid() timed out: pid=%d\n", pid);
-  }
-  return(rc);
-}
-
 int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char groupNames[][32], ncVolume *volumes, int volumesSize) {
   if (out != NULL) {
     bzero(out, sizeof(ccInstance));
