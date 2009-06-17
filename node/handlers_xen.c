@@ -797,7 +797,14 @@ static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **console
   int pid, status, rc, bufsize, fd;
   char filename[1024];  
 
-  fprintf(stderr, "getconsoleoutput called\n");
+  logprintfl(EUCADEBUG, "getconsoleoutput called\n");
+
+  if (getuid() != 0) {
+    output = strdup("NOT SUPPORTED");
+    *consoleOutput = base64_enc((unsigned char *)output, strlen(output));    
+    if (output) free(output);
+    return(0);
+  }
 
   bufsize = sizeof(char) * 1024 * 64;
   output = malloc(bufsize);
