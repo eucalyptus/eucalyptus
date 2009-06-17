@@ -139,7 +139,7 @@ public class ImageManager {
     Long size = 0l;
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = ImageManager.getManifestData( userId, imagePathParts[ 0 ], imagePathParts[ 1 ] );
+      Document inputSource = ImageManager.getManifestData( EucalyptusProperties.NAME, imagePathParts[ 0 ], imagePathParts[ 1 ] );
       XPath xpath = XPathFactory.newInstance().newXPath();
       String rootSize = "0";
       try {
@@ -159,10 +159,10 @@ public class ImageManager {
   }
 
   private static ArrayList<String> getAncestors( String userId, String manifestPath ) {
-    ArrayList<String> ancestorIds = Lists.newArrayList("emi-01234567","emi-7654321");
+    ArrayList<String> ancestorIds = Lists.newArrayList();
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = ImageManager.getManifestData( userId, imagePathParts[ 0 ], imagePathParts[ 1 ] );
+      Document inputSource = ImageManager.getManifestData( EucalyptusProperties.NAME, imagePathParts[ 0 ], imagePathParts[ 1 ] );
       XPath xpath = XPathFactory.newInstance().newXPath();
       NodeList ancestors = null;
       try {
