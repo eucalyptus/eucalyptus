@@ -39,7 +39,6 @@ import edu.ucsb.eucalyptus.cloud.ws.Command;
 import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.storage.BlockStorageManager;
 import org.apache.log4j.Logger;
 
 import java.io.*;
