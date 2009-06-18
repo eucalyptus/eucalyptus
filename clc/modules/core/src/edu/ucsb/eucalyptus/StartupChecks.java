@@ -160,9 +160,9 @@ public class StartupChecks {
 	SystemConfiguration systemConfig = db.getUnique(new SystemConfiguration());
 	if(systemConfig.getStorageVolumesDir() == null)
 	    systemConfig.setStorageVolumesDir(StorageProperties.storageRootDirectory);
-	db.commit();
     } catch(EucalyptusCloudException ex) {
     }
+    db.commit();
   }
 
   private static void importKeys( final AbstractKeyStore ks, final AbstractKeyStore newKs ) throws GeneralSecurityException, IOException {
