@@ -821,7 +821,9 @@ static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **console
       dup2(fd, 2);
       dup2(2, 1);
       close(0);
-      rc = execl(rootwrap_command_path, rootwrap_command_path, "virsh", "console", instanceId, NULL);
+      // TODO: test virsh console:
+      // rc = execl(rootwrap_command_path, rootwrap_command_path, "virsh", "console", instanceId, NULL);
+      rc = execl("/usr/sbin/xm", "/usr/sbin/xm", "console", instanceId, NULL);
       fprintf(stderr, "execl() failed\n");
       close(fd);
     }
