@@ -133,8 +133,8 @@ rm -rf $RPM_BUILD_DIR/eucalyptus
 rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-cc
 
 %files
-%config(noreplace) /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 %doc LICENSE INSTALL README CHANGELOG
+/opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 /opt/eucalyptus/var/lib/eucalyptus/keys
 /opt/eucalyptus/var/log
 /opt/eucalyptus/var/run
@@ -149,7 +149,7 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/etc/eucalyptus/eucalyptus-version
 
 %files cloud
-%config /opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
+/opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
 /opt/eucalyptus/etc/eucalyptus/cloud.d
 /opt/eucalyptus/etc/eucalyptus/cloud.xml
 /opt/eucalyptus/usr/share/eucalyptus/*jar
@@ -191,7 +191,7 @@ then
 	cd /opt/eucalyptus
 
 	# save a copy of the old conf file
-	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.old
+	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.preupgrade
 
 	# let's check if we have already the db in the right place, then
 	# it's an upgrade from >= 1.5.x and no special case
@@ -244,9 +244,9 @@ then
 	fi
 
 	# if we have an old config file we try to upgrade
-	if [ -e etc/eucalyptus/eucalyptus.conf.old ];
+	if [ -e etc/eucalyptus/eucalyptus.conf.preupgrade ];
 	then
-		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.old /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.preupgrade /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 	fi
 
 	# and now let's move the keys into the new place

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-FILE="$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
+FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
 CC_PORT=""
 NC_PORT=""
@@ -274,13 +274,18 @@ if [ "$VERSION" = "Y" ]; then
 	. $FILE
 
 	if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus-version ]; then
-		echo -n "Eucalyptus version "
-		cat $EUCALYPTUS/etc/eucalyptus/eucalyptus-version 
-		exit 0
+		VERSION="$EUCALYPTUS/etc/eucalyptus/eucalyptus-version"
+	elif [ -e @prefix@/etc/eucalyptus/eucalyptus-version ]; then
+		VERSION="@prefix@/etc/eucalyptus/eucalyptus-version"
+	fi
+	if [ -n "$VERSION" ]; then
+		echo -n "Eucalyptus version: "
+		cat $VERSION 
 	else
-		echo "Cannot find eucalyptus version!"
+		echo "Cannot find eucalyptus installation!"
 		exit 1
 	fi
+	exit 0
 fi
 
 # let's change the value
