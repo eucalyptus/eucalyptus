@@ -35,8 +35,11 @@
 package edu.ucsb.eucalyptus.storage.fs;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.ws.Command;
+import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.storage.StorageManager;
+import edu.ucsb.eucalyptus.storage.BlockStorageManager;
 import org.apache.log4j.Logger;
 
 import java.io.*;
@@ -51,7 +54,7 @@ public class FileSystemStorageManager implements StorageManager {
     private static boolean initialized = false;
     private static String eucaHome = "/opt/eucalyptus";
     public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
-    public static final int MAX_LOOP_DEVICES = 256;    
+    public static final int MAX_LOOP_DEVICES = 256;
     private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
 
     private String rootDirectory;
@@ -60,10 +63,6 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     public void initialize() {
-        if(!initialized) {
-            System.loadLibrary("fsstorage");
-            initialized = true;
-        }
     }
 
     public void checkPreconditions() throws EucalyptusCloudException {
@@ -81,7 +80,6 @@ public class FileSystemStorageManager implements StorageManager {
         } else {
             LOG.info(returnValue);
         }
-
     }
 
     public void setRootDirectory(String rootDirectory) {
@@ -119,6 +117,14 @@ public class FileSystemStorageManager implements StorageManager {
                 throw new IOException(object);
             }
         }
+    }
+
+    public FileIO prepareForRead(String bucket, String object) {
+        return new FileReader(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+    }
+
+    public FileIO prepareForWrite(String bucket, String object) {
+        return new FileWriter(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
     }
 
     public int readObject(String bucket, String object, byte[] bytes, long offset) throws IOException {
@@ -201,27 +207,68 @@ public class FileSystemStorageManager implements StorageManager {
         return -1;
     }
 
-    public native String removeLoopback(String loDevName);
+    private String removeLoopback(String loDevName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
+    }
 
-    public native int losetup(String absoluteFileName, String loDevName);
+    private int losetup(String absoluteFileName, String loDevName) {
+        try
+        {
+            Runtime rt = Runtime.getRuntime();
+            Process proc = rt.exec(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", loDevName, absoluteFileName});
+            StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+            StreamConsumer output = new StreamConsumer(proc.getInputStream());
+            error.start();
+            output.start();
+            int errorCode = proc.waitFor();
+            output.join();
+            LOG.info("losetup " + loDevName + " " + absoluteFileName);
+            LOG.info(output.getReturnValue());
+            LOG.info(error.getReturnValue());
+            return errorCode;
+        } catch (Throwable t) {
+            LOG.error(t);
+        }
+        return -1;
+    }
 
-    public native String findFreeLoopback();
+    private String findFreeLoopback() {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
+    }
 
-    public native String removeLogicalVolume(String lvName);
+    private String removeLogicalVolume(String lvName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
+    }
 
-    public native String reduceVolumeGroup(String vgName, String pvName);
+    private String reduceVolumeGroup(String vgName, String pvName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
+    }
 
-    public native String removePhysicalVolume(String loDevName);
+    private String removePhysicalVolume(String loDevName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvremove", loDevName});
+    }
 
-    public native String createVolumeFromLv(String lvName, String volumeKey);
+    private String createVolumeFromLv(String lvName, String volumeKey) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=" + lvName, "of=" + volumeKey, "bs=1M"});
+    }
 
-    public native String enableLogicalVolume(String lvName);
+    private String enableLogicalVolume(String lvName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
+    }
 
-    public native String disableLogicalVolume(String lvName);
+    private String disableLogicalVolume(String lvName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-an", lvName});
+    }
 
-    public native String removeVolumeGroup(String vgName);
+    private String removeVolumeGroup(String vgName) {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgremove", vgName});
+    }
 
-    public native String getLvmVersion();
+    private String getLvmVersion() {
+        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvm", "version"});
+    }
+
+
 
     public String createLoopback(String fileName) throws EucalyptusCloudException {
         int number_of_retries = 0;
@@ -333,4 +380,5 @@ public class FileSystemStorageManager implements StorageManager {
         }
         return volumeKey;
     }
+
 }

@@ -33,6 +33,8 @@
  */
 package edu.ucsb.eucalyptus.util;
 
+import java.nio.ByteBuffer;
+
 
 public class WalrusDataMessage {
     private Header header;
@@ -82,11 +84,18 @@ public class WalrusDataMessage {
         return new WalrusDataMessage(Header.DATA, data);
     }
 
-     public static WalrusDataMessage DataMessage(byte[] data, int length) {
+    public static WalrusDataMessage DataMessage(byte[] data, int length) {
         byte[] bytes = new byte[length];
         copyBytes(data, bytes, 0, length);
         return new WalrusDataMessage(Header.DATA, bytes);
     }
+
+    public static WalrusDataMessage DataMessage(ByteBuffer buffer, int length) {
+        byte[] bytes = new byte[length];
+        buffer.get(bytes, 0, length);
+        return new WalrusDataMessage(Header.DATA, bytes);
+    }
+
 
     public static boolean isStart(WalrusDataMessage message) {
         if(Header.START.equals(message.header)) {
@@ -117,8 +126,6 @@ public class WalrusDataMessage {
     }
 
     public static void copyBytes(byte[]sourceBytes, byte[]destBytes, int offset, int length) {
-        for (int i = 0; i < length; ++ i) {
-            destBytes[i + offset] = sourceBytes[i];
-        }
+        System.arraycopy(sourceBytes, 0, destBytes, offset, length);
     }
 }

@@ -35,7 +35,7 @@
 <project name="eucalyptus-storagemgr" basedir="." default="build">
     <import file="../module-inc.xml"/>
     <!--================================== BUILD TARGETS ==================================-->
-    <target name="build" depends="init,compile-src,jar,build-jni" description="--> build the jar file from source."/>
+    <target name="build" depends="init,compile-src,jar" description="--> build the jar file from source."/>
     <target name="install" depends="copy-conf"/>
     <target name="compile-src" depends="init">
         <javac srcdir="${src.dir}"
@@ -47,12 +47,6 @@
                sourcepathref="srcpath"
                target="1.5"
                listfiles="true"/>
-    </target>
-    <target name="build-jni" depends="compile-src">
-        <mkdir dir="include"/>
-        <javah classpath="${build.dir}" destdir="include" force="yes">
-            <class name="edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager"/>
-        </javah>
     </target>
 
     <target name="clean-jni">

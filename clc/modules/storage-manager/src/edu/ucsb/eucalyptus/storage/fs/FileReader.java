@@ -32,49 +32,55 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.storage;
+package edu.ucsb.eucalyptus.storage.fs;
 
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.ws.Command;
 import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.storage.StorageManager;
+import edu.ucsb.eucalyptus.storage.BlockStorageManager;
+import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
 import org.apache.log4j.Logger;
 
-public class AOEManager implements StorageExportManager {
-    private static Logger LOG = Logger.getLogger(AOEManager.class);
-    public native int exportVolume(String iface, String lvName, int major, int minor);
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.nio.channels.FileChannel;
+import java.nio.ByteBuffer;
 
-    public void unexportVolume(int vbladePid) {
-        try
-        {
-            Runtime rt = Runtime.getRuntime();
-            Process proc = rt.exec(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "kill", "-9", String.valueOf(vbladePid)});
-            StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-            StreamConsumer output = new StreamConsumer(proc.getInputStream());
-            error.start();
-            output.start();
-            proc.waitFor();
-            output.join();
-        } catch (Throwable t) {
-            LOG.error(t);
+public  class FileReader extends FileIO {
+
+    private static Logger LOG = Logger.getLogger(FileReader.class);
+    private ByteBuffer buffer;
+
+    public FileReader(String filename) {
+        try {
+            channel = new FileInputStream(filename).getChannel();
+            buffer = ByteBuffer.allocate(WalrusQueryDispatcher.DATA_MESSAGE_SIZE);
+        } catch(FileNotFoundException ex) {
+            LOG.error(ex);
         }
     }
 
-    public void loadModule() {
-        try
-        {
-            Runtime rt = Runtime.getRuntime();
-            Process proc = rt.exec(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "modprobe", "aoe"});
-            StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-            StreamConsumer output = new StreamConsumer(proc.getInputStream());
-            error.start();
-            output.start();
-            proc.waitFor();
-            output.join();
-        } catch (Throwable t) {
-            LOG.error(t);
-        }
+    public  int read(long offset) throws IOException {
+        buffer.clear();
+        int bytesRead = channel.read(buffer, offset);
+        buffer.flip();
+        return bytesRead;
     }
 
+    public  void write(byte[] bytes) throws IOException {}
 
-    public AOEManager()  {
-        loadModule();
+    public ByteBuffer getBuffer() {
+        return buffer;
+    }
+
+    public void finish() {
+        try {
+            channel.close();
+        } catch(IOException ex) {
+            LOG.error(ex);
+        }
     }
 }
