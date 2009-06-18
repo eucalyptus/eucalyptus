@@ -6,7 +6,7 @@
 %define __libvirt libvirt
 %define __xen     xen, xen-tools
 %define __curl    libcurl4
-%define __bridge  eth0
+%define __bridge  br0
 %endif
 %if %is_centos
 %define __dhcp    dhcp
@@ -25,7 +25,7 @@ License:       BSD
 Group:         Applications/System
 %if %is_centos
 BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
-Requires:      vconfig, aoetools, vblade
+Requires:      vconfig, aoetools, vblade, wget, rsync
 %endif
 %if %is_suse
 BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
