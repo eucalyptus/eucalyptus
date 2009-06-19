@@ -229,7 +229,7 @@ if ! getent passwd eucalyptus > /dev/null ; then
 %endif
 fi
 # let's get the default bridge 
-/opt/eucalyptus/usr/sbin/euca_conf -bridge %{__bridge} /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+/opt/eucalyptus/usr/sbin/euca_conf -bridge %{__bridge} 
 
 # upgrade?
 if [ "$1" = "2" ];
@@ -246,7 +246,7 @@ then
 	# if we have an old config file we try to upgrade
 	if [ -e etc/eucalyptus/eucalyptus.conf.preupgrade ];
 	then
-		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.preupgrade /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.preupgrade 
 	fi
 
 	# and now let's move the keys into the new place
@@ -255,8 +255,8 @@ then
 		mv -f var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
 	fi
 fi
-# final setup
-/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus -setup /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+# final setup and set the new user
+/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus -setup -user eucalyptus
 
 %post cloud
 if [ "$1" = "2" ]; 
