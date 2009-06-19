@@ -9,6 +9,7 @@ import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.EucaKeyStore;
 import edu.ucsb.eucalyptus.keys.Hashes;
@@ -20,6 +21,7 @@ import edu.ucsb.eucalyptus.util.BaseDirectory;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.SubDirectory;
 import edu.ucsb.eucalyptus.util.UserManagement;
+import edu.ucsb.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.encoders.UrlBase64;
@@ -136,6 +138,7 @@ public class StartupChecks {
     }
 
     checkWalrus();
+    checkStorage();
 
     return true;
   }
@@ -147,6 +150,17 @@ public class StartupChecks {
     for(ObjectInfo objectInfo : objectInfos) {
         if(objectInfo.getObjectKey() == null)
            objectInfo.setObjectKey(objectInfo.getObjectName());
+    }
+    db.commit();
+  }
+
+  private static void checkStorage() {
+    EntityWrapper<SystemConfiguration> db = new EntityWrapper<SystemConfiguration>();
+    try {
+	SystemConfiguration systemConfig = db.getUnique(new SystemConfiguration());
+	if(systemConfig.getStorageVolumesDir() == null)
+	    systemConfig.setStorageVolumesDir(StorageProperties.storageRootDirectory);
+    } catch(EucalyptusCloudException ex) {
     }
     db.commit();
   }

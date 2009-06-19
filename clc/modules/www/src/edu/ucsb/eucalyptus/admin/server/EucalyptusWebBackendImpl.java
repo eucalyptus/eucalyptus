@@ -591,7 +591,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
         user.setPasswordExpires( new Long(now + pass_expiration_ms) );
         EucalyptusManagement.commitWebUser( user );
 
-        return "Your password has been changed";
+        return "Password has been changed";
     }
 
     public String updateUserRecord (String sessionId, UserInfoWeb newRecord )
@@ -630,7 +630,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 
         EucalyptusManagement.commitWebUser( oldRecord );
 
-        return "Account updated";
+        return "Account of user '" + userName + "' was updated";
     }
 
   public List<ClusterInfoWeb> getClusterList(String sessionId) throws SerializableException

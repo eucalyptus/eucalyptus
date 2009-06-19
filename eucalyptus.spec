@@ -6,7 +6,7 @@
 %define __libvirt libvirt
 %define __xen     xen, xen-tools
 %define __curl    libcurl4
-%define __bridge  eth0
+%define __bridge  br0
 %endif
 %if %is_centos
 %define __dhcp    dhcp
@@ -24,11 +24,11 @@ Release:       1
 License:       BSD
 Group:         Applications/System
 %if %is_centos
-BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5
-Requires:      vconfig, aoetools, vblade
+BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
+Requires:      vconfig, aoetools, vblade, wget, rsync
 %endif
 %if %is_suse
-BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5
+BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
 Requires:      vlan, aoetools, vblade
 %endif
 
@@ -63,7 +63,7 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5, iptables, bridge-utils, eucalyptus-gl >= 1.5, %{__dhcp}
+Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, iptables, bridge-utils, eucalyptus-gl >= 1.5, %{__dhcp}
 Conflicts:    eucalyptus < 1.5, eucalyptus-nc < 1.5
 Group:        Applications/System
 
@@ -77,7 +77,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
+Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
 Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
 Group:        Applications/System
 
@@ -91,7 +91,7 @@ This package contains the node controller part of eucalyptus.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus >= 1.5, %{__httpd}, euca-axis2c >= 1.5
+Requires:     eucalyptus >= 1.5, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
 Conflicts:    eucalyptus < 1.5
 Group:        Applications/System
 
@@ -133,8 +133,8 @@ rm -rf $RPM_BUILD_DIR/eucalyptus
 rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-cc
 
 %files
-%config(noreplace) /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 %doc LICENSE INSTALL README CHANGELOG
+/opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 /opt/eucalyptus/var/lib/eucalyptus/keys
 /opt/eucalyptus/var/log
 /opt/eucalyptus/var/run
@@ -149,7 +149,7 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/etc/eucalyptus/eucalyptus-version
 
 %files cloud
-%config /opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
+/opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
 /opt/eucalyptus/etc/eucalyptus/cloud.d
 /opt/eucalyptus/etc/eucalyptus/cloud.xml
 /opt/eucalyptus/usr/share/eucalyptus/*jar
@@ -191,7 +191,7 @@ then
 	cd /opt/eucalyptus
 
 	# save a copy of the old conf file
-	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.old
+	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.preupgrade
 
 	# let's check if we have already the db in the right place, then
 	# it's an upgrade from >= 1.5.x and no special case
@@ -229,7 +229,7 @@ if ! getent passwd eucalyptus > /dev/null ; then
 %endif
 fi
 # let's get the default bridge 
-/opt/eucalyptus/usr/sbin/euca_conf -bridge %{__bridge} /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+/opt/eucalyptus/usr/sbin/euca_conf -bridge %{__bridge} 
 
 # upgrade?
 if [ "$1" = "2" ];
@@ -244,9 +244,9 @@ then
 	fi
 
 	# if we have an old config file we try to upgrade
-	if [ -e etc/eucalyptus/eucalyptus.conf.old ];
+	if [ -e etc/eucalyptus/eucalyptus.conf.preupgrade ];
 	then
-		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.old /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.preupgrade 
 	fi
 
 	# and now let's move the keys into the new place
@@ -255,8 +255,8 @@ then
 		mv -f var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
 	fi
 fi
-# final setup
-/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus -setup /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+# final setup and set the new user
+/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus -setup -user eucalyptus
 
 %post cloud
 if [ "$1" = "2" ]; 

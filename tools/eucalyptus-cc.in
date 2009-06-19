@@ -192,10 +192,6 @@ for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 		if [ "$x" = "euca-libvirt" ]; then
 			export LIBVIRT_HOME="$y/$x"
 		fi
-		if [ "$x" = "euca-httpd" ]; then
-			export HTTPD=$y/$x/bin/httpd
-			export HTTPD_HOME="$y/$x"
-		fi
 		if [ "$x" = "euca-axis2c" ]; then
 			export AXIS2C_HOME="$y/$x"
 		fi
@@ -207,18 +203,6 @@ for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 		fi
 		if [ "`echo $x | cut -f 1 -d -`" = "libvirt" ]; then
 			export LIBVIRT_HOME="$y/$x"
-		fi
-		if [ "`echo $x | cut -f 1 -d -`" = "httpd" ]; then
-			if [ -x $y/$x/bin/httpd ]; then
-				export HTTPD="$y/$x/bin/httpd"
-				export HTTPD_HOME="$y/$x"
-			elif [ -x $y/$x/usr/bin/httpd ]; then
-				export HTTPD="$y/$x/usr/bin/httpd"
-				export HTTPD_HOME="$y/$x"
-			elif [ -x $y/$x/usr/sbin/httpd ]; then
-				export HTTPD="$y/$x/usr/sbin/httpd"
-				export HTTPD_HOME="$y/$x"
-			fi
 		fi
 	done
 done
