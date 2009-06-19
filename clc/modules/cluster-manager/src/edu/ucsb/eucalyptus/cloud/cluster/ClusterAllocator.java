@@ -182,6 +182,16 @@ class ClusterAllocator extends Thread {
     }
   }
 
+  public void returnAllocationTokens() {
+    for( ResourceToken token : this.vmAllocInfo.getAllocationTokens() ) {
+      try {
+        Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
+      } catch ( NoSuchTokenException e ) {
+      }
+    }
+  }
+
+
   public AtomicBoolean getRollback() {
     return rollback;
   }
