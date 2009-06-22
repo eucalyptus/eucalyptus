@@ -1,26 +1,23 @@
 #!/bin/bash
 #
-# Pushes key to the nodes
+
+usage () {
+	# euca_sync_key is dead
+	echo
+	echo "euca_sync_key is deprecated: use euca_conf (-synckeys or -addnode)"
+	echo
+}
 
 KEYS=
 CONF=
-VERBOSE="Y"
 HOSTS=""
-RSYNC=`which rsync`
-SCP=`which scp`
+
+usage
 
 if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
 	CONF=$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
 fi
 
-usage() {
-	echo "$0: [-c <conf_file>][-f][host1 ... host2]"
-	echo
-	echo "     -c <conf>   read configuration from <conf>"
-	echo "     -q          run rsync in asynchrous mode"
-	echo
-	exit 1
-}
 
 while [ "$#" -gt 0 ]; do
 	if [ "$1" = "-c" ]; then
@@ -47,39 +44,20 @@ while [ "$#" -gt 0 ]; do
 done
 
 # we need the configuration
-if [ -z "${CONF}" -o ! -f "${CONF}" ]; then
-	echo "I need a configuration file"
-	exit 1
-else 
+if [ -n "${CONF}" -a -f "${CONF}" ]; then
 	echo "Using ${CONF} as configuration"
 fi
 . ${CONF}
-if [ -z "$EUCALYPTUS" ]; then
-	echo "I don't know where eucalyptus is"
+# we use euca_conf now
+if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+	echo "Cannot find euca_conf"
 	exit 1
 fi
 
-# let's do it
-if [ -z "$NODES" -a -z "$HOSTS" ]; then
-	echo "No nodes to operate on!"
-	exit 0
+# if we don't have hosts on the command line we call -synckeys otherwise
+# we do an add node
+if [ -n "$HOSTS" ]; then
+	$EUCALYPTUS/usr/sbin/euca_conf -addnode "${HOSTS}"
+else
+	$EUCALYPTUS/usr/sbin/euca_conf -synckeys
 fi
-if [ -z "$HOSTS" ]; then
-	HOSTS="$NODES"
-fi
-for x in `echo $HOSTS`; do 
-	if [ "$VERBOSE" = "Y" ]; then
-		if [ -n "$RSYNC" ]; then
-			$RSYNC -avz -e ssh $EUCALYPTUS/var/lib/eucalyptus/keys $x:$EUCALYPTUS/var/lib/eucalyptus  > /dev/null 
-		else
-			$SCP -r $EUCALYPTUS/var/lib/eucalyptus/keys $x:$EUCALYPTUS/var/lib/eucalyptus
-		fi
-	else
-		if [ -n "$RSYNC" ]; then
-			($RSYNC -az -e ssh $EUCALYPTUS/var/lib/eucalyptus/keys $x:$EUCALYPTUS/var/lib/eucalyptus  > /dev/null &)
-		else
-			($SCP -r $EUCALYPTUS/var/lib/eucalyptus/keys $x:$EUCALYPTUS/var/lib/eucalyptus &)
-		fi
-	fi
-done
-

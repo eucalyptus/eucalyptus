@@ -32,16 +32,14 @@
  * Author: Neil Soman neil@eucalyptus.com
  */
 
-package edu.ucsb.eucalyptus.cloud.ws.tests;
+package com.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.cloud.ws.DNSControl;
 import junit.framework.TestCase;
 
 public class RemoveARecordTest extends TestCase {
 
-    private static DNSControl dnsControl;
+    private static com.eucalyptus.cloud.ws.DNSControl dnsControl;
 
 	public void testRemoveARecord() throws Throwable {
         String userId = "admin";
@@ -54,6 +52,6 @@ public class RemoveARecordTest extends TestCase {
 	}
 
     public void setUp() {
-        dnsControl = new DNSControl();
+        dnsControl = new com.eucalyptus.cloud.ws.DNSControl();
     }
 }

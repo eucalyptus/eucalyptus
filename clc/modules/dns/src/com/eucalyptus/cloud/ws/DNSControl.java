@@ -32,7 +32,7 @@
  * Author: Neil Soman neil@eucalyptus.com
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;
@@ -41,7 +41,7 @@ import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.util.DNSProperties;
+import com.eucalyptus.util.DNSProperties;
 
 import java.net.UnknownHostException;
 import java.util.List;
@@ -260,10 +260,30 @@ public class DNSControl {
             ZoneManager.deleteRecord(zone, cnameRecord);
             db.delete(foundCNAMERecordInfo);
             db.commit();
-
         } catch(Exception ex) {
             LOG.error(ex);
         }
         return reply;
     }
+
+    public DeleteZoneResponseType DeleteZone(DeleteZoneType request) throws EucalyptusCloudException {
+        DeleteZoneResponseType reply = (DeleteZoneResponseType) request.getReply();
+        String name = request.getName();
+        if(!request.isAdministrator()) {
+            
+            throw new AccessDeniedException(name);
+        }
+        EntityWrapper<ZoneInfo> db = new EntityWrapper<ZoneInfo>();
+        ZoneInfo zoneInfo = new ZoneInfo(name);
+        try {
+            ZoneInfo foundZoneInfo = db.getUnique(zoneInfo);
+            db.delete(foundZoneInfo);
+            db.commit();
+        } catch(Exception ex) {
+            LOG.error(ex);
+        }
+        ZoneManager.deleteZone(name);
+        return reply;
+    }
+
 }

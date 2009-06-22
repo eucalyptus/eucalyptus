@@ -32,30 +32,54 @@
  * Author: Neil Soman neil@eucalyptus.com
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
+import org.xbill.DNS.*;
 
-import java.net.InetAddress;
-import java.net.DatagramSocket;
+import java.net.Socket;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.DataOutputStream;
 
-public class UDPListener extends Thread {
-    private static Logger LOG = Logger.getLogger( UDPListener.class );
-    InetAddress address;
-    int port;
+import com.eucalyptus.util.DNSProperties;
 
-    public UDPListener(InetAddress address, int port) {
-        this.address = address;
-        this.port = port;
+
+public class TCPHandler extends ConnectionHandler {
+    private static Logger LOG = Logger.getLogger( TCPHandler.class );
+    Socket socket;
+    public TCPHandler(Socket s) {
+        this.socket = s;
     }
 
     public void run() {
         try {
-            DatagramSocket socket = new DatagramSocket(port, address);
-            ConnectionHandlerFactory.handle(socket);
+            int inputLength;
+            DataInputStream inStream = new DataInputStream(socket.getInputStream());
+            DataOutputStream outStream = new DataOutputStream(socket.getOutputStream());
+            inputLength = inStream.readUnsignedShort();
+            if(inputLength > DNSProperties.MAX_MESSAGE_SIZE) {
+                LOG.error("Maximum message size exceeded. Ignoring request.");
+            }
+            byte[] inBytes = new byte[inputLength];
+            inStream.readFully(inBytes);
+            Message query;
+            byte [] response = null;
+            try {
+                query = new Message(inBytes);
+                response = generateReply(query, inBytes, inBytes.length, socket);
+                if (response == null)
+                    return;
+            }
+            catch (IOException exception) {
+                LOG.error(exception);
+            }
+            outStream.writeShort(response.length);
+            outStream.write(response);
         } catch(IOException ex) {
             LOG.error(ex);
         }
     }
+
+
 }

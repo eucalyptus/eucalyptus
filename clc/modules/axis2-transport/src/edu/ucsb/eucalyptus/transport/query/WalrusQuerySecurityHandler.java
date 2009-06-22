@@ -41,6 +41,7 @@ import edu.ucsb.eucalyptus.util.CaseInsensitiveMap;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
+import org.apache.commons.httpclient.util.DateUtil;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.Base64;
 
@@ -57,7 +58,7 @@ import java.util.TreeMap;
 public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
 
     private static Logger LOG = Logger.getLogger( WalrusQuerySecurityHandler.class );
-
+    private final static long EXPIRATION_LIMIT = 900000;
     public QuerySecurityHandler getInstance()
     {
         return new WalrusQuerySecurityHandler();
@@ -144,8 +145,26 @@ public class WalrusQuerySecurityHandler extends HMACQuerySecurityHandler {
             throw new QuerySecurityException("User authentication failed.");
         } else {
             //external user request
-            String date =  (String) hdrs.remove( SecurityParameter.Date);
-            date = date == null ? "" : date;
+            String date;
+            String verifyDate;
+            if(hdrs.containsKey("x-amz-date")) {
+                date = "";
+                verifyDate = (String) hdrs.get("x-amz-date");
+            } else {
+                date =  (String) hdrs.remove( SecurityParameter.Date);
+                verifyDate = date;
+                if(date == null || date.length() <= 0)
+                    throw new QuerySecurityException("User authentication failed. Date must be specified.");
+            }
+
+            try {
+                Date dateToVerify = DateUtil.parseDate(verifyDate);
+                Date currentDate = new Date();
+                if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > EXPIRATION_LIMIT)
+                    throw new QuerySecurityException("Message expired. Sorry.");
+            } catch(Exception ex) {
+                throw new QuerySecurityException("Unable to parse date.");
+            }
             String content_md5 = (String) hdrs.remove ( "Content-MD5");
             content_md5 = content_md5 == null ? "" : content_md5;
             String content_type = (String) hdrs.remove ( "Content-Type");

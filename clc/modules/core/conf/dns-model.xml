@@ -19,7 +19,7 @@
             <inbound>
                 <inbound-endpoint ref="DNSWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.ic.DNS"/>
+            <component class="com.eucalyptus.ic.DNS"/>
         </service>
 
         <service name="DNSRequestQueue">
@@ -39,7 +39,7 @@
             <inbound>
                 <inbound-endpoint ref="DNSControlWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.DNSControl"/>
+            <component class="com.eucalyptus.cloud.ws.DNSControl"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="DNSReplyQueueWS"/>
@@ -60,7 +60,7 @@
             <inbound>
                 <inbound-endpoint ref="DNSControlInternalWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.DNSControl"/>
+            <component class="com.eucalyptus.cloud.ws.DNSControl"/>
         </service>        
     </model>
 

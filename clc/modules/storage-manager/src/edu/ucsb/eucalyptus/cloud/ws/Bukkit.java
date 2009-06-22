@@ -42,6 +42,7 @@ import edu.ucsb.eucalyptus.keys.UserKeyStore;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
+import edu.ucsb.eucalyptus.storage.fs.FileIO;
 import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
 import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
@@ -69,6 +70,7 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.GZIPInputStream;
+import com.eucalyptus.util.DNSProperties;
 
 public class Bukkit {
 
@@ -88,6 +90,8 @@ public class Bukkit {
     private final int CACHE_RETRY_LIMIT = 3;
     private static ConcurrentHashMap<String, ImageCacher> imageCachers = new ConcurrentHashMap<String, ImageCacher>();
 
+    private static boolean enableVirtualHosting = true;
+
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
         String limits = System.getProperty(WalrusProperties.USAGE_LIMITS_PROPERTY);
@@ -97,6 +101,9 @@ public class Bukkit {
         initializeTracker();
         initializeForEBS();
         cleanFailedCachedImages();
+        if(System.getProperty("euca.virtualhosting.disable") != null) {
+            enableVirtualHosting = false;
+        }
     }
 
     public static void initializeTracker() {
@@ -221,6 +228,19 @@ public class Bukkit {
             throw new EucalyptusCloudException(bucketName);
         }
 
+        if(enableVirtualHosting) {
+            UpdateARecordType updateARecord = new UpdateARecordType();
+            updateARecord.setUserId(userId);
+            String address = WalrusProperties.WALRUS_IP;
+            String zone = WalrusProperties.WALRUS_DOMAIN + ".";
+            updateARecord.setAddress(address);
+            updateARecord.setName(bucketName + "." + zone);
+            updateARecord.setTtl(604800);
+            updateARecord.setZone(zone);
+            LOG.info("Mapping " + updateARecord.getName() + " to " + address);
+            Messaging.send(DNSProperties.DNS_REF, updateARecord);
+        }
+
         reply.setBucket(bucketName);
         return reply;
     }
@@ -262,6 +282,17 @@ public class Bukkit {
                         //set exception code in reply
                         LOG.error(ex);
                     }
+
+                    if(enableVirtualHosting) {
+                        RemoveARecordType removeARecordType = new RemoveARecordType();
+                        removeARecordType.setUserId(userId);
+                        String zone = WalrusProperties.WALRUS_DOMAIN + ".";
+                        removeARecordType.setName(bucketName + "." + zone);
+                        removeARecordType.setZone(zone);
+                        LOG.info("Removing mapping for " + removeARecordType.getName());
+                        Messaging.send(DNSProperties.DNS_REF, removeARecordType);
+                    }
+
                     Status status = new Status();
                     status.setCode(204);
                     status.setDescription("No Content");
@@ -497,10 +528,12 @@ public class Bukkit {
                     synchronized(putQueue) {
                         putQueue.notifyAll();
                     }
+                    FileIO fileIO = null;
                     while ((dataMessage = putQueue.take())!=null) {
                         if(WalrusDataMessage.isStart(dataMessage)) {
                             tempObjectName = objectName + "." + Hashes.getRandom(12);
                             digest = Hashes.Digest.MD5.get();
+                             fileIO = storageManager.prepareForWrite(bucketName, tempObjectName);
                         } else if(WalrusDataMessage.isEOF(dataMessage)) {
                             //commit object
                             try {
@@ -527,6 +560,7 @@ public class Bukkit {
                                 bucket.setBucketSize(newSize);
                             }
                             db.commit();
+                            fileIO.finish();
                             //restart all interrupted puts
                             WalrusMonitor monitor = messenger.getMonitor(key);
                             synchronized (monitor) {
@@ -551,6 +585,7 @@ public class Bukkit {
                             }
                             //ok we are done here
                             try {
+                                fileIO.finish();
                                 storageManager.deleteObject(bucketName, tempObjectName);
                             } catch (IOException ex) {
                                 LOG.error(ex);
@@ -561,9 +596,9 @@ public class Bukkit {
                         } else {
                             assert(WalrusDataMessage.isData(dataMessage));
                             byte[] data = dataMessage.getPayload();
-                            //start writing object (but do not committ yet)
+                            //start writing object (but do not commit yet)
                             try {
-                                storageManager.putObject(bucketName, tempObjectName, data, true);
+                                fileIO.write(data);
                             } catch (IOException ex) {
                                 LOG.error(ex);
                             }
@@ -717,7 +752,9 @@ public class Bukkit {
                     //writes are unconditional
                     byte[] base64Data = request.getBase64Data().getBytes();
                     foundObject.setObjectName(objectName);
-                    storageManager.putObject(bucketName, objectName, base64Data, false);
+                    FileIO fileIO = storageManager.prepareForWrite(bucketName, objectName);
+                    fileIO.write(base64Data);
+                    fileIO.finish();                    
                     md5 = Hashes.getHexString(Hashes.Digest.MD5.get().digest(base64Data));
                     foundObject.setEtag(md5);
                     Long size = Long.parseLong(request.getContentLength());
@@ -2566,7 +2603,7 @@ public class Bukkit {
         }
 
         public void run() {
-            byte[] bytes = new byte[WalrusQueryDispatcher.DATA_MESSAGE_SIZE];
+            FileIO fileIO = storageManager.prepareForRead(bucketName, objectName);
 
             long bytesRemaining = objectSize;
             long offset = byteRangeStart;
@@ -2583,19 +2620,20 @@ public class Bukkit {
                 getQueue.put(WalrusDataMessage.StartOfData(bytesRemaining));
 
                 while (bytesRemaining > 0) {
-                    int bytesRead = storageManager.readObject(bucketName, objectName, bytes, offset);
+                    int bytesRead = fileIO.read(offset);
                     if(bytesRead < 0) {
                         LOG.error("Unable to read object: " + bucketName + "/" + objectName);
                         break;
                     }
                     if((bytesRemaining - bytesRead) > 0)
-                        getQueue.put(WalrusDataMessage.DataMessage(bytes, bytesRead));
+                        getQueue.put(WalrusDataMessage.DataMessage(fileIO.getBuffer(), bytesRead));
                     else
-                        getQueue.put(WalrusDataMessage.DataMessage(bytes, (int)bytesRemaining));
+                        getQueue.put(WalrusDataMessage.DataMessage(fileIO.getBuffer(), (int)bytesRemaining));
 
                     bytesRemaining -= bytesRead;
                     offset += bytesRead;
                 }
+                fileIO.finish();
                 getQueue.put(WalrusDataMessage.EOF());
             } catch (Exception ex) {
                 LOG.error( ex,ex );

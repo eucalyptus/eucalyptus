@@ -91,8 +91,8 @@ public class StorageProperties {
                     MAX_VOLUME_SIZE = maxVolumeSize;
                 }
             }
-           
-   	    storageRootDirectory = systemConfiguration.getStorageVolumesDir(); 
+
+            storageRootDirectory = systemConfiguration.getStorageVolumesDir();
             updateConfig.setMaxTotalVolumeSize(MAX_TOTAL_VOLUME_SIZE);
             updateConfig.setMaxTotalSnapshotSize(MAX_TOTAL_SNAPSHOT_SIZE);
             updateConfig.setMaxVolumeSize(MAX_VOLUME_SIZE);

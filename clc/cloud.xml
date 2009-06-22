@@ -45,6 +45,9 @@
     <condition property="euca.ebs.disable">
         <isset property="DISABLE_EBS"/>
     </condition>
+    <condition property="euca.virtualhosting.disable">
+        <isset property="DISABLE_DYNAMIC_DNS"/>
+    </condition>
     <property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus"/>
     <property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus"/>
     <property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus"/>

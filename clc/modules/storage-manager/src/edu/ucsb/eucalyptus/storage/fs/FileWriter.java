@@ -1,7 +1,7 @@
 /*
  * Software License Agreement (BSD License)
  *
- * Copyright (c) 2009, Eucalyptus Systems, Inc.
+ * Copyright (c) 2008, Regents of the University of California
  * All rights reserved.
  *
  * Redistribution and use of this software in source and binary forms, with or
@@ -29,22 +29,55 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Neil Soman neil@eucalyptus.com
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.storage.fs;
 
-import java.net.Socket;
-import java.net.DatagramSocket;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.ws.Command;
+import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.storage.StorageManager;
+import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
+import org.apache.log4j.Logger;
 
-public class ConnectionHandlerFactory {
-    public static void handle(Object s) {
-        if (s instanceof Socket) {
-            TCPHandler handler = new TCPHandler((Socket)s);
-            handler.start();
-        } else if(s instanceof DatagramSocket) {
-            UDPHandler handler = new UDPHandler((DatagramSocket)s);
-            handler.start();
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.nio.channels.FileChannel;
+import java.nio.ByteBuffer;
+
+public  class FileWriter extends FileIO {
+
+    private static Logger LOG = Logger.getLogger(FileWriter.class);
+
+    public FileWriter(String filename) {
+        try {
+            channel = new FileOutputStream(filename).getChannel();
+        } catch(FileNotFoundException ex) {
+            LOG.error(ex);
+        }
+    }
+
+    public  int read(long offset) throws IOException {
+        return -1;
+    }
+
+    public void write(byte[] bytes) throws IOException {
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        channel.write(buffer);
+    }
+
+    public ByteBuffer getBuffer() {
+        return null;
+    }
+
+    public void finish() {
+        try {
+            channel.close();
+        } catch(IOException ex) {
+            LOG.error(ex);
         }
     }
 }

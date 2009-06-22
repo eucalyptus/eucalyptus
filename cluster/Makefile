@@ -1,5 +1,4 @@
 #
-# $Id: Makefile,v 1.6 2008-12-24 18:28:07 nurmi Exp $
 #
 
 include ../Makedefs

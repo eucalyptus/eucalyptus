@@ -35,6 +35,7 @@
 package edu.ucsb.eucalyptus.storage;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.storage.fs.FileIO;
 
 import java.io.IOException;
 import java.util.List;
@@ -54,6 +55,10 @@ public interface StorageManager {
     public void createObject(String bucket, String object) throws IOException;
 
     public void putObject(String bucket, String object, byte[] base64Data, boolean append) throws IOException;
+
+    public FileIO prepareForRead(String bucket, String object);
+
+    public FileIO prepareForWrite(String bucket, String object);
 
     public int readObject(String bucket, String object, byte[] bytes, long offset) throws IOException;
 

@@ -32,17 +32,19 @@
  * Author: Neil Soman neil@eucalyptus.com
  */
 
-package edu.ucsb.eucalyptus.util;
+package com.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
-import org.apache.log4j.Logger;
-import java.util.UUID;
+import java.net.Socket;
+import java.net.DatagramSocket;
 
-public class DNSProperties {
-
-    private static Logger LOG = Logger.getLogger( DNSProperties.class );
-    public static String ADDRESS = "0.0.0.0";
-    public static int PORT = 53;
-    public static int MAX_MESSAGE_SIZE = 1024;
+public class ConnectionHandlerFactory {
+    public static void handle(Object s) {
+        if (s instanceof Socket) {
+            TCPHandler handler = new TCPHandler((Socket)s);
+            handler.start();
+        } else if(s instanceof DatagramSocket) {
+            UDPHandler handler = new UDPHandler((DatagramSocket)s);
+            handler.start();
+        }
+    }
 }

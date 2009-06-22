@@ -1,7 +1,7 @@
 /*
  * Software License Agreement (BSD License)
  *
- * Copyright (c) 2009, Eucalyptus Systems, Inc.
+ * Copyright (c) 2008, Regents of the University of California
  * All rights reserved.
  *
  * Redistribution and use of this software in source and binary forms, with or
@@ -29,39 +29,33 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Neil Soman neil@eucalyptus.com
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.storage.fs;
 
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.ws.Command;
+import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.storage.StorageManager;
 import org.apache.log4j.Logger;
 
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.InetAddress;
-import java.io.IOException;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.nio.channels.FileChannel;
+import java.nio.ByteBuffer;
 
-public class TCPListener extends Thread {
-    private static Logger LOG = Logger.getLogger( TCPListener.class );
-    InetAddress address;
-    int port;
+public abstract class FileIO {
 
-    public TCPListener(InetAddress address, int port) {
-        this.address = address;
-        this.port = port;
-    }
+    protected FileChannel channel;
 
-    public void run() {
-        try {
-            LOG.info("start");            
-            ServerSocket sock = new ServerSocket(port, 128, address);
-            while (true) {
-                LOG.info("Listening on port: " + port);
-                final Socket s = sock.accept();
-                ConnectionHandlerFactory.handle(s);
-            }
-        } catch(IOException ex) {
-            LOG.error(ex);
-        }
-    }
+    public abstract int read(long offset) throws IOException;
+
+    public abstract void write(byte[] bytes) throws IOException;
+
+    public abstract ByteBuffer getBuffer();
+
+    public abstract void finish();
 }

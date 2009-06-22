@@ -32,11 +32,10 @@
  * Author: Neil Soman neil@eucalyptus.com
  */
 
-package edu.ucsb.eucalyptus.cloud.ws.tests;
+package com.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.cloud.ws.DNSControl;
+import com.eucalyptus.cloud.ws.DNSControl;
 import junit.framework.TestCase;
 
 public class DNSControlTest extends TestCase {

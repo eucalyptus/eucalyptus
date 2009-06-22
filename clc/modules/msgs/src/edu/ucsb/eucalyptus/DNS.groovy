@@ -123,3 +123,14 @@ public class AddZoneType extends DNSRequestType {
 
 public class AddZoneResponseType extends DNSResponseType {
 }
+
+public class DeleteZoneType extends DNSRequestType {
+  String name;
+  def DeleteZoneType() {}
+  def DeleteZoneType(String name) {
+    this.name = name;
+  }
+}
+
+public class DeleteZoneResponseType extends DNSResponseType {
+}
