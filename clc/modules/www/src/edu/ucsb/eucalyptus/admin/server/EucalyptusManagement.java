@@ -40,7 +40,6 @@ import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.ImageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
-import edu.ucsb.eucalyptus.cloud.Configuration;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
@@ -363,11 +362,6 @@ public class EucalyptusManagement {
         return addr;
 
         //return Configuration.getConfiguration().getAdminEmail();
-    }
-
-    public static String getReplyToEmail()
-    {
-        return Configuration.getConfiguration().getReplyToEmail();
     }
 
     public static void deleteImage(String imageId)
