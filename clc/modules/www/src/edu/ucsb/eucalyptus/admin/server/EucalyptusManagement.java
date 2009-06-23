@@ -34,21 +34,39 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
+import com.eucalyptus.util.DNSProperties;
 import com.google.gwt.user.client.rpc.SerializableException;
-import edu.ucsb.eucalyptus.admin.client.*;
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.ImageInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
+import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
+import edu.ucsb.eucalyptus.cloud.Configuration;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
+import edu.ucsb.eucalyptus.cloud.entities.NetworkRulesGroup;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.StorageProperties;
+import edu.ucsb.eucalyptus.util.UserManagement;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 
-import org.apache.commons.httpclient.*;
-import org.apache.commons.httpclient.methods.GetMethod;
-import java.util.regex.Pattern;
+import java.io.IOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.regex.Matcher;
-import java.io.*;
-import java.net.*;
-import java.util.*;
-import com.eucalyptus.util.DNSProperties;
+import java.util.regex.Pattern;
 
 public class EucalyptusManagement {
 
@@ -455,21 +473,23 @@ public class EucalyptusManagement {
         finally {
             db.commit();
         }
-        return new SystemConfigWeb( sysConf.getStorageUrl(), sysConf.getStorageDir(),
-                sysConf.getStorageMaxBucketsPerUser(),
-                sysConf.getStorageMaxBucketSizeInMB(),
-                sysConf.getStorageMaxCacheSizeInMB(),
-                sysConf.getStorageMaxTotalSnapshotSizeInGb(),
-                sysConf.getStorageMaxTotalVolumeSizeInGb(),
-                sysConf.getStorageMaxVolumeSizeInGB(),
-                sysConf.getStorageVolumesDir(),
-                sysConf.getDefaultKernel(),
-                sysConf.getDefaultRamdisk(),
-                sysConf.getDefaultKernel(), sysConf.getDefaultRamdisk(),
-                sysConf.getMaxUserPublicAddresses(), sysConf.isDoDynamicPublicAddresses(), sysConf.getSystemReservedPublicAddresses(),
-								sysConf.getDnsDomain(),
-                sysConf.getNameserver(),
-                sysConf.getNameserverAddress());
+        return new SystemConfigWeb( sysConf.getStorageUrl(),
+                                    sysConf.getStorageDir(),
+                                    sysConf.getStorageMaxBucketsPerUser(),
+                                    sysConf.getStorageMaxBucketSizeInMB(),
+                                    sysConf.getStorageMaxCacheSizeInMB(),
+                                    sysConf.getStorageMaxTotalSnapshotSizeInGb(),
+                                    sysConf.getStorageMaxTotalVolumeSizeInGb(),
+                                    sysConf.getStorageMaxVolumeSizeInGB(),
+                                    sysConf.getStorageVolumesDir(),
+                                    sysConf.getDefaultKernel(),
+                                    sysConf.getDefaultRamdisk(),
+                                    sysConf.getMaxUserPublicAddresses(),
+                                    sysConf.isDoDynamicPublicAddresses(),
+                                    sysConf.getSystemReservedPublicAddresses(),
+                                    sysConf.getDnsDomain(),
+                                    sysConf.getNameserver(),
+                                    sysConf.getNameserverAddress());
     }
 
     private static SystemConfiguration validateSystemConfiguration(SystemConfiguration sysConf) {
@@ -531,6 +551,7 @@ public class EucalyptusManagement {
         }
         if(sysConf.getNameserverAddress() == null) {
             sysConf.setNameserverAddress(DNSProperties.NS_IP);
+        }
         if( sysConf.getMaxUserPublicAddresses() == null ) {
           sysConf.setMaxUserPublicAddresses( 5 );
         }
@@ -579,7 +600,8 @@ public class EucalyptusManagement {
         {
             db.add( new SystemConfiguration(systemConfig.getStorageUrl(),
                     systemConfig.getDefaultKernelId(),
-                    systemConfig.getDefaultRamdiskId(), systemConfig.getStoragePath(),
+                    systemConfig.getDefaultRamdiskId(),
+                    systemConfig.getStoragePath(),
                     systemConfig.getStorageMaxBucketsPerUser() ,
                     systemConfig.getStorageMaxBucketSizeInMB(),
                     systemConfig.getStorageMaxCacheSizeInMB(),
@@ -589,7 +611,7 @@ public class EucalyptusManagement {
                     systemConfig.getStorageVolumesPath(),
                     systemConfig.getMaxUserPublicAddresses(),
                     systemConfig.isDoDynamicPublicAddresses(),
-                    systemConfig.getSystemReservedPublicAddresses()),
+                    systemConfig.getSystemReservedPublicAddresses(),
                     systemConfig.getDnsDomain(),
                     systemConfig.getNameserver(),
                     systemConfig.getNameserverAddress()));

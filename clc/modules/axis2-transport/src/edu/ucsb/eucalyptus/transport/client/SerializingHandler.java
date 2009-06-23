@@ -13,6 +13,9 @@ import java.io.ByteArrayOutputStream;
 public class SerializingHandler extends MessageStackHandler {
     private static Logger LOG = Logger.getLogger( SerializingHandler.class );
 
+  public void incomingMessage( final MessageEvent event ) throws Exception {
+  }
+
   public void outgoingMessage( final MessageEvent event ) throws Exception {
     Object o = event.getMessage();
     if( o instanceof MappingHttpRequest ) {

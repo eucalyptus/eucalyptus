@@ -226,6 +226,7 @@ public class SystemConfigWeb implements IsSerializable {
 
     public void setNameserverAddress(String nameserverAddress) {
         this.nameserverAddress = nameserverAddress;
+    }
 
     public Integer getMaxUserPublicAddresses() {
       return maxUserPublicAddresses;

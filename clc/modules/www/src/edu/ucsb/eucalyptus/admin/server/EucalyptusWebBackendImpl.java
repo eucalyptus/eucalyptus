@@ -35,20 +35,29 @@
 package edu.ucsb.eucalyptus.admin.server;
 
 import com.google.gwt.user.client.rpc.SerializableException;
-import com.google.gwt.user.server.rpc.OpenRemoteServiceServlet;
-import edu.ucsb.eucalyptus.admin.client.*;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.google.gwt.user.server.rpc.UnexpectedException;
+import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.DownloadsWeb;
+import edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackend;
+import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
+import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
 import edu.ucsb.eucalyptus.util.BaseDirectory;
-import org.apache.log4j.Logger;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Properties;
 
 /**
  * Created by IntelliJ IDEA.
@@ -57,7 +66,7 @@ import java.net.MalformedURLException;
  * Time: 2:57:31 PM
  * To change this template use File | Settings | File Templates.
  */
-public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implements EucalyptusWebBackend {
+public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements EucalyptusWebBackend {
 
 	private static Logger LOG = Logger.getLogger( EucalyptusWebBackendImpl.class );
     private static String PROPERTIES_FILE =  BaseDirectory.CONF.toString() + File.separator + "eucalyptus-web.properties";
@@ -622,7 +631,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
         oldRecord.setIsAdministrator(newRecord.isAdministrator());
 		// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
-        if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) { 
+        if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) {
             oldRecord.setIsConfirmed(true);
         	oldRecord.setIsEnabled(true);
         	oldRecord.setIsApproved(true);
@@ -686,7 +695,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
     //:: TODO-1.4: anything more to do here? :://
-    return EucalyptusManagement.getCloudInfo(setExternalHostPort);	
+    return EucalyptusManagement.getCloudInfo(setExternalHostPort);
   }
 
     private static List<DownloadsWeb> getDownloadsFromUrl(final String downloadsUrl) {
@@ -725,7 +734,36 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 
     public List<DownloadsWeb> getDownloads(final String sessionId, final String downloadsUrl) throws SerializableException {
         SessionInfo session = verifySession(sessionId);
-        UserInfoWeb user = verifyUser(session, session.getUserId(), true);        
+        UserInfoWeb user = verifyUser(session, session.getUserId(), true);
         return getDownloadsFromUrl(downloadsUrl);
     }
+
+  /**
+   * Overridden to really throw Jetty RetryRequest Exception (as opposed to sending failure to client).
+   *
+   * @param caught the exception
+   */
+  protected void doUnexpectedFailure(Throwable caught)
+  {
+      throwIfRetryRequest(caught);
+      super.doUnexpectedFailure(caught);
+  }
+private static final String JETTY_RETRY_REQUEST_EXCEPTION = "org.mortbay.jetty.RetryRequest";
+  /**
+   * Throws the Jetty RetryRequest if found.
+   *
+   * @param caught the exception
+   */
+  protected void throwIfRetryRequest(Throwable caught)
+  {
+      if (caught instanceof UnexpectedException )
+      {
+          caught = caught.getCause();
+      }
+
+      if (JETTY_RETRY_REQUEST_EXCEPTION.equals(caught.getClass().getName()))
+      {
+          throw (RuntimeException)caught;
+      }
+  }
 }

@@ -16,6 +16,9 @@ public class BindingHandler extends MessageStackHandler {
     this.binding = binding;
   }
 
+  public void incomingMessage( final MessageEvent event ) throws Exception {
+  }
+
   public void outgoingMessage( final MessageEvent event ) throws Exception {
     Object o = event.getMessage();
     if( o instanceof MappingHttpRequest ) {

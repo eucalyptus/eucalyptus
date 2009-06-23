@@ -31,6 +31,9 @@ public class SoapHandler extends MessageStackHandler {
   //:: worthwile to make this configurable later? :://
   private SOAPFactory soapFactory = OMAbstractFactory.getSOAP11Factory();
 
+  public void incomingMessage( final MessageEvent event ) throws Exception {
+  }
+
   public void outgoingMessage( final MessageEvent event ) throws Exception {
     Object o = event.getMessage();
     if( o instanceof MappingHttpRequest ) {
