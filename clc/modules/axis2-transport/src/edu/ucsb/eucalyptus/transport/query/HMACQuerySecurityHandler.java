@@ -125,7 +125,6 @@ public abstract class HMACQuerySecurityHandler implements QuerySecurityHandler {
     LOG.info( "VERSION2: " + subject );
     return subject;
   }
-
   protected String makePlusSubjectString( final Map<String, String> parameters )
   {
     String paramString = "";
@@ -140,7 +139,6 @@ public abstract class HMACQuerySecurityHandler implements QuerySecurityHandler {
     }
     return paramString;
   }
-
   protected String checkSignature( final String queryKey, final String subject ) throws QuerySecurityException
   {
     SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes(), Hashes.Mac.HmacSHA1.toString() );

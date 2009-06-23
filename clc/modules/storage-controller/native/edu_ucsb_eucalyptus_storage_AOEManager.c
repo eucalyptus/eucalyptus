@@ -59,7 +59,7 @@ JNIEXPORT jint JNICALL Java_edu_ucsb_eucalyptus_storage_AOEManager_exportVolume
         home = strdup (home);
     }
 
-    snprintf(rootwrap, 256, "%s/usr/share/eucalyptus/euca_rootwrap", home);
+    snprintf(rootwrap, 256, "%s/usr/lib/eucalyptus/euca_rootwrap", home);
 
     snprintf(major_str, 4, "%d", major);
     snprintf(minor_str, 4, "%d", minor);

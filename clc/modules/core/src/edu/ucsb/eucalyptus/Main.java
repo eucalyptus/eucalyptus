@@ -58,11 +58,14 @@ public class Main {
     descAz.setEffectiveUserId( EucalyptusProperties.NAME );
     descAz.setCorrelationId( "" );
     try {
+      WalrusProperties.update();      
       Messaging.send( WalrusProperties.WALRUS_REF, new InitializeWalrusType() );
     } catch (Exception e) {}
     try {
-      if( System.getProperty("euca.ebs.disable") == null )
+      if( System.getProperty("euca.ebs.disable") == null ) {
+        StorageProperties.update();
         Messaging.send( StorageProperties.STORAGE_REF, new InitializeStorageManagerType() );
+      }
     } catch (Exception e) {}
 
     try {

@@ -13,6 +13,7 @@
 #include <vnetwork.h>
 #include <fcntl.h> /* open */
 #include <utime.h> /* utime */
+#include <sys/wait.h>
 
 #ifndef NO_AXIS /* for compiling on systems without Axis */
 #include <neethi_policy.h>
@@ -20,6 +21,25 @@
 #include <axutil_utils.h>
 #include <axis2_client.h>
 #include <axis2_stub.h>
+
+pid_t timewait(pid_t pid, int *status, int timeout) {
+  time_t timer=0;
+  int rc;
+
+  if (timeout <= 0) timeout = 1;
+
+  *status = 1;
+  rc = waitpid(pid, status, WNOHANG);
+  while(rc <= 0 && timer < (timeout * 1000000)) {
+    usleep(50000);
+    timer += 50000;
+    rc = waitpid(pid, status, WNOHANG);
+  }
+  if (rc < 0) {
+    logprintfl(EUCAERROR, "waitpid() timed out: pid=%d\n", pid);
+  }
+  return(rc);
+}
 
 int InitWSSEC(axutil_env_t *env, axis2_stub_t *stub, char *policyFile) {
   axis2_svc_client_t *svc_client = NULL;

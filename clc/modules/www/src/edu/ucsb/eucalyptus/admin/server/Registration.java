@@ -51,15 +51,8 @@ public class Registration extends HttpServlet {
         "        <Resource>\n" +
         "          <Name>images</Name>\n" +
         "        </Resource>\n" +
-        "        <Resource>\n" +
-        "          <Name>ebs_snapshots</Name>\n" +
-        "        </Resource>\n" +
-        "        <Resource>\n" +
-        "          <Name>ebs_volumes</Name>\n" +
-        "        </Resource>\n" +
-        "        <Resource>\n" +
-        "          <Name>elastic_ips</Name>\n" +
-        "        </Resource>\n" +
+        blockStorageConfiguration() +
+        publicAddressConfiguration() +
         "      </Resources>\n" +
         "    </Service>\n" +
         "    <Service>\n" +
@@ -77,30 +70,33 @@ public class Registration extends HttpServlet {
         "  </Services>\n" +
         "  <id>" + uuid + "</id>" +
         "  <CloudType>eucalyptus</CloudType>\n" +
-        "  <CloudVersion>1.5</CloudVersion>\n" +
+        "  <CloudVersion>1.5.2</CloudVersion>\n" +
         "  <SchemaVersion>1.0</SchemaVersion>\n" +
         "  <Description>Public cloud in the new cluster</Description>\n" +
-        "  <Credentials type=\"array\">\n" +
-        "    <Credential>\n" +
-        "      <Required type=\"boolean\">false</Required>\n" +
-        "      <Name>username</Name>\n" +
-        "      <Nickname>User ID</Nickname>\n" +
-        "      <Description>Username....</Description>\n" +
-        "    </Credential>\n" +
-        "    <Credential>\n" +
-        "      <Required type=\"boolean\">true</Required>\n" +
-        "      <Name>aws_access_key</Name>\n" +
-        "      <Nickname>Query ID</Nickname>\n" +
-        "      <Description>Access key....</Description>\n" +
-        "    </Credential>\n" +
-        "    <Credential>\n" +
-        "      <Required type=\"boolean\">true</Required>\n" +
-        "      <Name>aws_secret_access_key</Name>\n" +
-        "      <Nickname>Secret Key</Nickname>\n" +
-        "      <Description>Secret Access key....</Description>\n" +
-        "    </Credential>\n" +
-        "  </Credentials>\n" +
         "</CloudSchema>\n";
+  }
+
+  private static String blockStorageConfiguration() {
+    if ( EucalyptusProperties.disableBlockStorage ) {
+      return "        <Resource>\n" +
+             "          <Name>ebs_snapshots</Name>\n" +
+             "        </Resource>\n" +
+             "        <Resource>\n" +
+             "          <Name>ebs_volumes</Name>\n" +
+             "        </Resource>\n";
+    } else {
+      return "";
+    }
+  }
+
+  private static String publicAddressConfiguration() {
+    if ( EucalyptusProperties.disableNetworking ) {
+      return "        <Resource>\n" +
+             "          <Name>elastic_ips</Name>\n" +
+             "        </Resource>\n";
+    } else {
+      return "";
+    }
   }
 
   private static String getStorageUrl() {

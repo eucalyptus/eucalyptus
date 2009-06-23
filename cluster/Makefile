@@ -78,5 +78,5 @@ distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) *~* *#*
 
 install: deploy
-	@$(INSTALL) -m 0550 $(CLIENTKILLALL) $(sbindir)
-	@$(INSTALL) -m 0600 cc-client-policy.xml $(vardir)/lib/eucalyptus/keys/
+	@$(INSTALL) -m 0555 $(CLIENTKILLALL) $(sbindir)
+	@$(INSTALL) cc-client-policy.xml $(vardir)/lib/eucalyptus/keys/

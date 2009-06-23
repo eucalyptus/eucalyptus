@@ -52,8 +52,8 @@ public class FileSystemStorageManager implements StorageManager {
     public static final String lvmRootDirectory = "/dev";
     private static boolean initialized = false;
     private static String eucaHome = "/opt/eucalyptus";
-    public static final String EUCA_ROOT_WRAPPER = "/usr/share/eucalyptus/euca_rootwrap";
-    public static final int MAX_LOOP_DEVICES = 256;
+    public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
+    public static final int MAX_LOOP_DEVICES = 256;    
     private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
 
     private String rootDirectory;
@@ -90,7 +90,7 @@ public class FileSystemStorageManager implements StorageManager {
         File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);
         if(!bukkit.exists()) {
             if(!bukkit.mkdirs()) {
-                throw new IOException(bucket);
+                throw new IOException("Unable to create bucket: " + bucket);
             }
         }
     }
@@ -105,7 +105,7 @@ public class FileSystemStorageManager implements StorageManager {
     public void deleteBucket(String bucket) throws IOException {
         File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);
         if(!bukkit.delete()) {
-            throw new IOException(bucket);
+            throw new IOException("Unable to delete bucket: " + bucket);
         }
     }
 
@@ -113,7 +113,7 @@ public class FileSystemStorageManager implements StorageManager {
         File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
         if (!objectFile.exists()) {
             if (!objectFile.createNewFile()) {
-                throw new IOException(object);
+                throw new IOException("Unable to create: " + objectFile.getAbsolutePath());
             }
         }
     }
@@ -133,7 +133,7 @@ public class FileSystemStorageManager implements StorageManager {
     public int readObject(String path, byte[] bytes, long offset) throws IOException {
         File objectFile = new File (path);
         if (!objectFile.exists()) {
-            throw new IOException(path);
+            throw new IOException("Unable to read: " + path);
         }
         BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(objectFile));
         if (offset > 0) {
@@ -148,7 +148,7 @@ public class FileSystemStorageManager implements StorageManager {
         File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
         if (objectFile.exists()) {
             if(!objectFile.delete()) {
-                throw new IOException(object);
+                throw new IOException("Unable to delete: " + objectFile.getAbsolutePath());
             }
         }
     }
@@ -157,7 +157,7 @@ public class FileSystemStorageManager implements StorageManager {
         File objectFile = new File (object);
         if (objectFile.exists()) {
             if(!objectFile.delete()) {
-                throw new IOException(object);
+                throw new IOException("Unable to delete: " + object);
             }
         }
     }
@@ -177,7 +177,7 @@ public class FileSystemStorageManager implements StorageManager {
         File newObjectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + newName);
         if(oldObjectFile.exists()) {
             if (!oldObjectFile.renameTo(newObjectFile)) {
-                throw new IOException(bucket + FILE_SEPARATOR + oldName);
+                throw new IOException("Unable to rename " + oldObjectFile.getAbsolutePath() + " to " + newObjectFile.getAbsolutePath());
             }
         }
     }
@@ -379,5 +379,4 @@ public class FileSystemStorageManager implements StorageManager {
         }
         return volumeKey;
     }
-
 }

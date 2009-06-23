@@ -257,9 +257,9 @@ public class EucalyptusManagement {
 
         //String hash = BCrypt.hashpw( webUser.getBCryptedPassword(), BCrypt.gensalt() );
         //webUser.setBCryptedPassword( hash );
-        webUser.setIsApproved( false );
-        webUser.setIsAdministrator( false );
-        webUser.setIsEnabled( false );
+        //webUser.setIsAdministrator( false );
+        //webUser.setIsApproved( false );
+        //webUser.setIsEnabled( false );
 
         // TODO: add web user properly, with all keys and certs generated, too
         webUser.setConfirmationCode( UserManagement.generateConfirmationCode( webUser.getUserName() ) );
@@ -465,7 +465,9 @@ public class EucalyptusManagement {
                 sysConf.getStorageVolumesDir(),
                 sysConf.getDefaultKernel(),
                 sysConf.getDefaultRamdisk(),
-                sysConf.getDnsDomain(),
+                sysConf.getDefaultKernel(), sysConf.getDefaultRamdisk(),
+                sysConf.getMaxUserPublicAddresses(), sysConf.isDoDynamicPublicAddresses(), sysConf.getSystemReservedPublicAddresses(),
+								sysConf.getDnsDomain(),
                 sysConf.getNameserver(),
                 sysConf.getNameserverAddress());
     }
@@ -529,6 +531,14 @@ public class EucalyptusManagement {
         }
         if(sysConf.getNameserverAddress() == null) {
             sysConf.setNameserverAddress(DNSProperties.NS_IP);
+        if( sysConf.getMaxUserPublicAddresses() == null ) {
+          sysConf.setMaxUserPublicAddresses( 5 );
+        }
+        if( sysConf.isDoDynamicPublicAddresses() == null ) {
+          sysConf.setDoDynamicPublicAddresses( true );
+        }
+        if( sysConf.getSystemReservedPublicAddresses() == null ) {
+          sysConf.setSystemReservedPublicAddresses( 10 );
         }
         return sysConf;
     }
@@ -558,6 +568,9 @@ public class EucalyptusManagement {
             sysConf.setDnsDomain(systemConfig.getDnsDomain());
             sysConf.setNameserver(systemConfig.getNameserver());
             sysConf.setNameserverAddress(systemConfig.getNameserverAddress());
+            sysConf.setMaxUserPublicAddresses( systemConfig.getMaxUserPublicAddresses() );
+            sysConf.setDoDynamicPublicAddresses( systemConfig.isDoDynamicPublicAddresses() );
+            sysConf.setSystemReservedPublicAddresses( systemConfig.getSystemReservedPublicAddresses() );
             db.commit();
             WalrusProperties.update();
             StorageProperties.update();
@@ -574,6 +587,9 @@ public class EucalyptusManagement {
                     systemConfig.getStorageSnapshotsTotalInGB(),
                     systemConfig.getStorageMaxVolumeSizeInGB(),
                     systemConfig.getStorageVolumesPath(),
+                    systemConfig.getMaxUserPublicAddresses(),
+                    systemConfig.isDoDynamicPublicAddresses(),
+                    systemConfig.getSystemReservedPublicAddresses()),
                     systemConfig.getDnsDomain(),
                     systemConfig.getNameserver(),
                     systemConfig.getNameserverAddress()));

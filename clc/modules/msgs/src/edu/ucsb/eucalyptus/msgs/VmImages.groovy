@@ -1,6 +1,8 @@
 package edu.ucsb.eucalyptus.msgs
 
 import edu.ucsb.eucalyptus.annotation.HttpParameterMapping
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
+import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType
 
 public class VmImageMessage extends EucalyptusMessage {}
 /** *******************************************************************************/
@@ -20,19 +22,15 @@ public class DescribeImageAttributeResponseType extends VmImageMessage {
   ArrayList<String> productCodes = new ArrayList<String>();
   ArrayList<String> kernel = new ArrayList<String>();
   ArrayList<String> ramdisk = new ArrayList<String>();
-  String blockDeviceMapping;
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>();
+  protected ArrayList realResponse;
 
-  public void setKernel(String kernel) {
-    this.launchPermission = null;
-    this.ramdisk = null;
-    this.kernel.add(kernel);
-  }
-
-  public void setRamdisk(String ramdisk) {
-    this.launchPermission = null;
-    this.kernel = null;
-    this.ramdisk.add(ramdisk);
-  }
+  public void setRealResponse( ArrayList r ) { this.realResponse = r; }
+  public boolean hasLaunchPermissions() { return this.realResponse.is(this.launchPermission); }
+  public boolean hasBlockDeviceMapping() { return this.realResponse.is(this.blockDeviceMapping); }
+  public boolean hasProductCodes() { return this.realResponse.is(this.productCodes); }
+  public boolean hasKernel() { return this.realResponse.is(this.kernel); }
+  public boolean hasRamdisk() { return this.realResponse.is(this.ramdisk); }
 }
 public class DescribeImageAttributeType extends VmImageMessage {
 
@@ -85,9 +83,6 @@ public class ModifyImageAttributeType extends VmImageMessage {
   ArrayList<String> productCodes = new ArrayList<String>();
 
   public void applyAttribute() {
-    if( "productCodes".equals( this.getAttribute() ) ) {
-      this.productCodes.add("hi");
-    }
     ArrayList<LaunchPermissionItemType> modifyMe = (operationType.equals( "add" )) ? this.add : this.remove;
     if ( !this.queryUserId.isEmpty() ) {
       for ( String userName: queryUserId ) {
@@ -177,4 +172,18 @@ public class EucaRegisterImageType extends VmImageMessage {
 public class EucaRegisterImageResponseType extends VmImageMessage {
 
   String imageId;
+}
+
+public class ConfirmProductInstanceResponseType extends EucalyptusMessage {
+  boolean _return;
+  String ownerId;
+}
+public class ConfirmProductInstanceType extends VmImageMessage {
+  String productCode;
+  String instanceId;
+}
+public class ResolveVmImageInfo extends VmImageMessage {
+  String imageId;
+  String kernelId;
+  String ramdiskId;
 }

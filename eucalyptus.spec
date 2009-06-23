@@ -1,13 +1,39 @@
+%define is_suse %(test -e /etc/SuSE-release && echo 1 || echo 0)
+%define is_centos %(test -e /etc/redhat-release && echo 1 || echo 0)
+%if %is_suse
+%define __dhcp    dhcp-server
+%define __httpd   apache2
+%define __libvirt libvirt
+%define __xen     xen, xen-tools
+%define __curl    libcurl4
+%define __bridge  br0
+%endif
+%if %is_centos
+%define __dhcp    dhcp
+%define __httpd   httpd
+%define __libvirt euca-libvirt >= 1.5
+%define __xen     xen
+%define __curl    curl
+%define __bridge  xenbr0
+%endif
+
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       1.5.1
+Version:       1.5.2
 Release:       1
 License:       BSD
 Group:         Applications/System
-BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5
-Requires:      vconfig, aoetools, vblade
+%if %is_centos
+BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
+Requires:      vconfig, aoetools, vblade, wget, rsync
+%endif
+%if %is_suse
+BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
+Requires:      vlan, aoetools, vblade
+%endif
+
 Conflicts:     eucalyptus-cloud < 1.5, eucalyptus-cc < 1.5, eucalyptus-nc < 1.5
-Vendor:        Mayhem lab
+Vendor:        Eucalyptus Systems
 #Icon:          someicon.xpm
 Source:        http://open.eucalyptus.com/downloads/eucalyptus-%{version}.tgz
 URL:           http://open.eucalyptus.com
@@ -23,7 +49,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= 1.5.1, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Requires:     eucalyptus >= 1.5.2, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
 Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
 Group:        Applications/System
 
@@ -37,7 +63,7 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= 1.5.1, euca-httpd >= 1.5, euca-axis2c >= 1.5, iptables, bridge-utils, eucalyptus-gl >= 1.5, dhcp
+Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, iptables, bridge-utils, eucalyptus-gl >= 1.5, %{__dhcp}
 Conflicts:    eucalyptus < 1.5, eucalyptus-nc < 1.5
 Group:        Applications/System
 
@@ -51,7 +77,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.1, euca-httpd >= 1.5, euca-axis2c >= 1.5, bridge-utils, eucalyptus-gl >= 1.5, euca-libvirt >= 1.5, curl, xen
+Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
 Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
 Group:        Applications/System
 
@@ -65,7 +91,7 @@ This package contains the node controller part of eucalyptus.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus >= 1.5, euca-httpd >= 1.5, euca-axis2c >= 1.5
+Requires:     eucalyptus >= 1.5, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
 Conflicts:    eucalyptus < 1.5
 Group:        Applications/System
 
@@ -82,11 +108,16 @@ This package contains the internal log service of eucalyptus.
 
 %build
 # let's be sure we have the right configuration file
-if [ -f tools/eucalyptus.conf.centos ];
+if [ -f tools/eucalyptus.conf.rpmbased ];
 then
-	cp -f tools/eucalyptus.conf.centos tools/eucalyptus.conf
+	cp -f tools/eucalyptus.conf.rpmbased tools/eucalyptus.conf
 fi
+%if %is_suse
+./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
+%endif
+%if %is_centos
 ./configure --with-libvirt=/opt/euca-libvirt --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
+%endif
 cd clc
 make deps
 cd ..
@@ -102,15 +133,15 @@ rm -rf $RPM_BUILD_DIR/eucalyptus
 rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-cc
 
 %files
-%config(noreplace) /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 %doc LICENSE INSTALL README CHANGELOG
+/opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 /opt/eucalyptus/var/lib/eucalyptus/keys
 /opt/eucalyptus/var/log
 /opt/eucalyptus/var/run
 /opt/eucalyptus/usr/share/eucalyptus/add_key.pl
 /opt/eucalyptus/usr/share/eucalyptus/euca_ipt
 /opt/eucalyptus/usr/share/eucalyptus/populate_arp.pl
-/opt/eucalyptus/usr/share/eucalyptus/euca_rootwrap
+/opt/eucalyptus/usr/lib/eucalyptus/euca_rootwrap
 /opt/eucalyptus/usr/sbin/euca_conf
 /opt/eucalyptus/usr/sbin/euca_sync_key
 /opt/eucalyptus/usr/sbin/euca_killall
@@ -118,15 +149,15 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/etc/eucalyptus/eucalyptus-version
 
 %files cloud
-%config /opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
+/opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
 /opt/eucalyptus/etc/eucalyptus/cloud.d
 /opt/eucalyptus/etc/eucalyptus/cloud.xml
 /opt/eucalyptus/usr/share/eucalyptus/*jar
 /opt/eucalyptus/var/lib/eucalyptus/db
 /opt/eucalyptus/var/lib/eucalyptus/modules
 /opt/eucalyptus/var/lib/eucalyptus/webapps
-/opt/eucalyptus/usr/lib/libfsstorage.so
-/opt/eucalyptus/usr/lib/liblvm2control.so
+/opt/eucalyptus/usr/lib/eucalyptus/libfsstorage.so
+/opt/eucalyptus/usr/lib/eucalyptus/liblvm2control.so
 /opt/eucalyptus/etc/init.d/eucalyptus-cloud
 
 %files cc
@@ -134,12 +165,13 @@ rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyp
 /opt/eucalyptus/etc/init.d/eucalyptus-cc
 
 %files nc
-/opt/eucalyptus/usr/share/eucalyptus/euca_mountwrap
+/opt/eucalyptus/usr/lib/eucalyptus/euca_mountwrap
 /opt/eucalyptus/usr/share/eucalyptus/gen_libvirt_xml
 /opt/eucalyptus/usr/share/eucalyptus/gen_kvm_libvirt_xml
 /opt/eucalyptus/usr/share/eucalyptus/partition2disk
 /opt/eucalyptus/usr/share/eucalyptus/get_xen_info
 /opt/eucalyptus/usr/share/eucalyptus/get_sys_info
+/opt/eucalyptus/usr/share/eucalyptus/detach.pl
 /opt/eucalyptus/usr/sbin/euca_test_nc
 /opt/euca-axis2c/services/EucalyptusNC
 /opt/eucalyptus/etc/init.d/eucalyptus-nc
@@ -158,61 +190,87 @@ if [ "$1" = "2" ];
 then
 	cd /opt/eucalyptus
 
-	# we upgrade only from 1.4
-	if [ ! -e usr/share/eucalyptus/euca_ipt ];
-	then
-		echo "Cannot upgrade from version earlier than 1.4"
-		exit 2
-	fi
-
 	# save a copy of the old conf file
-	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.old
+	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.preupgrade
 
-	# let's try to save the old configuration
-	if [ -e /root/eucalyptus-pre-%{version}-rollback.tar ];
+	# let's check if we have already the db in the right place, then
+	# it's an upgrade from >= 1.5.x and no special case
+	if [ ! -e etc/eucalyptus/eucalyptus-version ];
 	then
-		mv -f /root/eucalyptus-pre-%{version}-rollback.tar /root/eucalyptus-pre-%{version}-rollback.tar.old
-	fi
 
-	# let's save database and keys
-	rm -f var/eucalyptus/db/eucalyptus.lck
-	tar cf /root/eucalyptus-pre-%{version}-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
+		# we upgrade only from 1.4
+		if [ ! -e usr/share/eucalyptus/euca_ipt ];
+		then
+			echo "Cannot upgrade from version earlier than 1.4"
+			exit 2
+		fi
+
+		# let's try to save the old configuration
+		if [ -e /root/eucalyptus-pre-%{version}-rollback.tar ];
+		then
+			mv -f /root/eucalyptus-pre-%{version}-rollback.tar /root/eucalyptus-pre-%{version}-rollback.tar.old
+		fi
+
+		# let's save database and keys
+		rm -f var/eucalyptus/db/eucalyptus.lck
+		tar cf /root/eucalyptus-pre-%{version}-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
+	fi
 fi
 
 %post
-# eucalyptus.conf was marked noreplace, so the new one could be named
-# *.rpmnew. Let's move it over (we did take a copy anyway)
-if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew ];
-then
-	cp -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+# we need a eucalyptus user
+if ! getent passwd eucalyptus > /dev/null ; then
+%if %is_suse
+	groupadd eucalyptus
+	useradd -M eucalyptus -g eucalyptus
+%endif
+%if %is_centos
+	adduser -M eucalyptus 
+%endif
 fi
-# let's be sure we point to right eucalyptus installation
-/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+# let's get the default bridge 
+/opt/eucalyptus/usr/sbin/euca_conf -bridge %{__bridge} 
+
+# upgrade?
 if [ "$1" = "2" ];
 then
 	cd /opt/eucalyptus
+	
+	# eucalyptus.conf was marked noreplace, so the new one could be named
+	# *.rpmnew. Let's move it over (we did take a copy anyway)
+	if [ -e etc/eucalyptus/eucalyptus.conf.rpmnew -a etc/eucalyptus/eucalyptus.conf.rpmnew -nt etc/eucalyptus/eucalyptus.conf ];
+	then
+		cp -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+	fi
 
 	# if we have an old config file we try to upgrade
-	if [ -e etc/eucalyptus/eucalyptus.conf.old ];
+	if [ -e etc/eucalyptus/eucalyptus.conf.preupgrade ];
 	then
-		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.old /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.preupgrade 
 	fi
+
 	# and now let's move the keys into the new place
-	if [ -d var/eucalyptus/keys ];
+	if [ -e var/eucalyptus/keys/cloud-cert.pem ];
 	then
 		mv -f var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
 	fi
 fi
+# final setup and set the new user
+/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus -setup -user eucalyptus
 
 %post cloud
-# on upgrade let's look for 1.4 directories and move them
 if [ "$1" = "2" ]; 
 then
 	cd /opt/eucalyptus
-	if [ -d var/eucalyptus/db ];
+
+	# if upgrading from version 1.5.x nothing to do
+	if [ ! -e var/lib/eucalyptus/db/eucalyptus.script ];
 	then
-		mkdir -p var/lib/eucalyptus/db
-		cp -ar var/eucalyptus/db var/lib/eucalyptus
+		if [ -d var/eucalyptus/db ];
+		then
+			mkdir -p var/lib/eucalyptus/db
+			cp -ar var/eucalyptus/db var/lib/eucalyptus
+		fi
 	fi
 fi
 ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-cloud
@@ -226,7 +284,6 @@ chkconfig --add eucalyptus-cc
 ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-nc
 . /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 chkconfig --add eucalyptus-nc
-[ -n "$INSTANCE_PATH" ] && mkdir -p $INSTANCE_PATH
 
 %postun
 # in case of removal let's try to clean up the best we can
@@ -279,6 +336,9 @@ then
 fi
 
 %changelog gl
+*Mon Jun 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.5.2)
+
 *Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - New eucalyptus version
 
@@ -286,6 +346,9 @@ fi
 - Added new service
 
 %changelog cloud
+*Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
+- New version (1.5.2)
+
 *Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Support for groups in ACLS
 - Fixed issues with meta data support
@@ -324,6 +387,9 @@ fi
 - Fix the instance ID naming collision.
 
 %changelog cc
+*Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
+- New version (1.5.2)
+
 *Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Network improvement: new MANAGED-NOVLAN mode 
 
@@ -338,6 +404,9 @@ fi
   this module.
 
 %changelog nc
+*Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
+- New version (1.5.2)
+
 *Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Support for the KVM hypervisor
 - Compression & retries on Walrus downloads
@@ -361,6 +430,9 @@ fi
 - More robust checking for running instances.
 
 %changelog
+*Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
+- New version (1.5.2)
+
 *Thu Apr 16 2009 mayhem group (support@open.eucalyptus.com)
 - Elastic Block Store (EBS) support (volumes & snapshots) 
 - Better Java installation checking

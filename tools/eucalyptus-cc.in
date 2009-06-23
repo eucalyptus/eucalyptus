@@ -39,7 +39,7 @@ fi
 # I just wanted to set PATH to be the system PATH, but if a user install
 # eucalyptus manually, it may have binaries in a non-standard position:
 # hence we need to keep the PATH we receive.
-PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus cluster controller"
 NAME=eucalyptus-cc
 EUCA_USER="eucalyptus"
@@ -75,8 +75,8 @@ create_httpd_config() {
 	# let's configure the common parts for both CC and NC
 	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" |sed "s|EUCA_USER|$EUCA_USER|" >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
 
-	# Ubuntu: needs to load authz 
-	if [ -e /usr/lib/apache2/modules/mod_authz_host.so ]; then
+	# if we find authz load it (needed by ubuntu)
+	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
 		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
 	fi
 
@@ -92,23 +92,17 @@ do_start() {
 		exit 1
 	fi
 
-	$EUCALYPTUS/usr/sbin/euca_conf -check
+	if ! $EUCALYPTUS/usr/sbin/euca_conf -check cc ; then
+		exit 1
+	fi
 
 	# we need IP forwarding and we need to use iptable over the bridge
 	if [ -w /proc/sys/net/ipv4/ip_forward ]; then
 		VAL=`cat /proc/sys/net/ipv4/ip_forward`
 		if [ "$VAL" = "0" ]; then
 			echo
-			echo "Enabling IP forwarding"
+			echo -n "Enabling IP forwarding"
 			echo -n 1 > /proc/sys/net/ipv4/ip_forward
-		fi
-	fi
-	if [ -w /proc/sys/net/bridge/bridge-nf-call-iptables ]; then
-		VAL=`cat /proc/sys/net/bridge/bridge-nf-call-iptables`
-		if [ "$VAL" = "0" ]; then
-			echo
-			echo "Enabling bridge netfiltering"
-			echo 1 >  /proc/sys/net/bridge/bridge-nf-call-iptables
 		fi
 	fi
 
@@ -123,6 +117,7 @@ do_start() {
 			exit 1
 		fi
 		if ! $VNET_DHCPDAEMON --help 2>&1 |grep -- -tf > /dev/null ; then
+			echo
 			echo "dhcp server doesn't accept -tf option!"
 		fi
 	fi
@@ -188,7 +183,7 @@ fi
 if [ -z  "$HTTPD" ]; then
 	HTTPD="`which httpd2 2> /dev/null`"	# newer .rpm based machines
 fi
-HTTPD_HOME="/tmp/"
+HTTPD_HOME="/"
 
 # let's find our dependencies
 for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
@@ -197,31 +192,17 @@ for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 		if [ "$x" = "euca-libvirt" ]; then
 			export LIBVIRT_HOME="$y/$x"
 		fi
-		if [ "$x" = "euca-httpd" ]; then
-			export HTTPD=$y/$x/bin/httpd
-			export HTTPD_HOME="$y/$x"
-		fi
 		if [ "$x" = "euca-axis2c" ]; then
 			export AXIS2C_HOME="$y/$x"
 		fi
 		# this is for system or source installed
 		if [ "`echo $x | cut -f 1 -d -`" = "axis2c" ]; then
-			export AXIS2C_HOME="$y/$x"
+			if [ -e $y/$x/lib/libmod_axis2.so ]; then
+				export AXIS2C_HOME="$y/$x"
+			fi
 		fi
 		if [ "`echo $x | cut -f 1 -d -`" = "libvirt" ]; then
 			export LIBVIRT_HOME="$y/$x"
-		fi
-		if [ "`echo $x | cut -f 1 -d -`" = "httpd" ]; then
-			if [ -x $y/$x/bin/httpd ]; then
-				export HTTPD="$y/$x/bin/httpd"
-				export HTTPD_HOME="$y/$x"
-			elif [ -x $y/$x/usr/bin/httpd ]; then
-				export HTTPD="$y/$x/usr/bin/httpd"
-				export HTTPD_HOME="$y/$x"
-			elif [ -x $y/$x/usr/sbin/httpd ]; then
-				export HTTPD="$y/$x/usr/sbin/httpd"
-				export HTTPD_HOME="$y/$x"
-			fi
 		fi
 	done
 done
@@ -229,7 +210,7 @@ done
 # if we didn't find AXIS2C we'll pick the one we used at configuration
 # time
 if [ -z "$AXIS2C_HOME" ]; then
-	AXIS2C_HOME="@AXIS2C_HOME@"
+	export AXIS2C_HOME="@AXIS2C_HOME@"
 fi
 
 # finally let's check the path
@@ -238,9 +219,20 @@ if [ ! -d "$AXIS2C_HOME" ]; then
 	exit 1
 fi
 
+# do we have the httpd daemon?
+if [ -z "${HTTPD}" ]; then
+	echo "apache2/httpd daemon not found!"
+	exit 1
+fi
+
+# if we have a custom libvirt let's use it
+if [ -n "$LIBVIRT_HOME" ]; then
+	export LD_LIBRARY_PATH="$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$LD_LIBRARY_PATH"
+	export PATH="$LIBVIRT_HOME/bin:$PATH"
+fi
+
 # set the library path correctly
-export AXIS2C_HOME
-export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$EUCALYPTUS/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
 
 case "$1" in
   start)

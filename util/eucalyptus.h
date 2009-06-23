@@ -6,13 +6,16 @@
 
 /* file paths relative to $EUCALYPTUS */
 #define EUCALYPTUS_CONF_LOCATION   "%s/etc/eucalyptus/eucalyptus.conf"
-#define EUCALYPTUS_ADD_KEY         "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/add_key.pl %s/usr/share/eucalyptus/euca_mountwrap"
-#define EUCALYPTUS_GEN_LIBVIRT_XML "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/gen_libvirt_xml"
-#define EUCALYPTUS_GEN_KVM_LIBVIRT_XML "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/gen_kvm_libvirt_xml"
-#define EUCALYPTUS_GET_XEN_INFO    "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_xen_info"
-#define EUCALYPTUS_GET_KVM_INFO    "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_sys_info"
-#define EUCALYPTUS_DISK_CONVERT    "%s/usr/share/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/partition2disk"
-#define EUCALYPTUS_VIRSH           "%s/usr/share/eucalyptus/euca_rootwrap virsh"
+#define EUCALYPTUS_ROOTWRAP        "%s/usr/lib/eucalyptus/euca_rootwrap"
+#define EUCALYPTUS_ADD_KEY         "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/add_key.pl %s/usr/lib/eucalyptus/euca_mountwrap"
+#define EUCALYPTUS_GEN_LIBVIRT_XML "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/gen_libvirt_xml"
+#define EUCALYPTUS_GEN_KVM_LIBVIRT_XML "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/gen_kvm_libvirt_xml"
+#define EUCALYPTUS_GET_XEN_INFO    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_xen_info"
+#define EUCALYPTUS_GET_KVM_INFO    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_sys_info"
+#define EUCALYPTUS_DISK_CONVERT    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/partition2disk"
+#define EUCALYPTUS_VIRSH           "%s/usr/lib/eucalyptus/euca_rootwrap virsh"
+#define EUCALYPTUS_ROOTWRAP           "%s/usr/lib/eucalyptus/euca_rootwrap"
+#define EUCALYPTUS_DETACH           "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/detach.pl"
 #define EUCALYPTUS_XM           "sudo xm"
 
 #define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"

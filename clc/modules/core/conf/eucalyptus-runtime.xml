@@ -27,12 +27,18 @@
       </outbound>
     </service>
 
-    <service name="KeyPairResolve">
-      <inbound>
-        <inbound-endpoint ref="KeyPairResolveWS"/>
-      </inbound>
-      <component class="edu.ucsb.eucalyptus.cloud.ws.KeyPairBroker"/>
-    </service>
+      <service name="KeyPairResolve">
+        <inbound>
+          <inbound-endpoint ref="KeyPairResolveWS"/>
+        </inbound>
+        <component class="edu.ucsb.eucalyptus.cloud.ws.KeyPairBroker"/>
+      </service>
+      <service name="ImageResolve">
+        <inbound>
+          <inbound-endpoint ref="ImageResolveWS"/>
+        </inbound>
+        <component class="edu.ucsb.eucalyptus.cloud.ws.ImageManager"/>
+      </service>
 
     <service name="ClusterSink">
       <inbound>

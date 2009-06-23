@@ -45,6 +45,8 @@ public class Axis2QueryDispatcher extends GenericHttpDispatcher implements RESTf
   public static final String NAME = "Axis2QueryDispatcher";
   private static Logger LOG = Logger.getLogger( Axis2QueryDispatcher.class );
 
+  private String queryVersion = "2009-04-04";
+
   public boolean accepts( final HttpRequest httpRequest, final MessageContext messageContext )
   {
     //:: decide about whether or not to accept the request for processing :://
@@ -52,6 +54,7 @@ public class Axis2QueryDispatcher extends GenericHttpDispatcher implements RESTf
     for( Axis2QueryDispatcher.RequiredQueryParams p : Axis2QueryDispatcher.RequiredQueryParams.values() )
       if( !httpRequest.getParameters().containsKey( p.toString() ) ) return false;
     if( OperationParameter.getParameter( httpRequest.getParameters() ) == null ) return false;
+    this.queryVersion = httpRequest.getParameters(  ).get( Axis2QueryDispatcher.RequiredQueryParams.Version.toString() );
     return true;
   }
 
@@ -72,7 +75,7 @@ public class Axis2QueryDispatcher extends GenericHttpDispatcher implements RESTf
 
   public String getNamespace()
   {
-    return "http://ec2.amazonaws.com/doc/"+this.getBinding().getName()+"/";
+    return "http://ec2.amazonaws.com/doc/"+this.queryVersion+"/";
   }
 
   public void initDispatcher()

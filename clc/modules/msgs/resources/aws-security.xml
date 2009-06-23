@@ -77,8 +77,8 @@
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.UserIdGroupPairType" abstract="true">
-        <value name="userId" field="userId" usage="required"/>
-        <value name="groupName" field="groupName" usage="required"/>
+        <value name="userId" field="sourceUserId" usage="required"/>
+        <value name="groupName" field="sourceGroupName" usage="required"/>
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.SecurityGroupItemType" abstract="true">
