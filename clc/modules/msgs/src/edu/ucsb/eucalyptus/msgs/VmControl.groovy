@@ -86,7 +86,7 @@ public class RunInstancesType extends VmControlMessage {
   String availabilityZone = "default"; //** added 2008-02-01  **/
   @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>(); //** added 2008-02-01  **/
-
+  boolean monitoring = false;
 
 
   String privateMacBase;
@@ -120,6 +120,7 @@ public class GetConsoleOutputResponseType extends VmControlMessage {
   String output;
 }
 public class GetConsoleOutputType extends VmControlMessage {
+  @HttpParameterMapping (parameter = "InstanceId.1")
   String instanceId;
 }
 /** *******************************************************************************/
@@ -154,10 +155,19 @@ public class RunningInstancesItemType extends EucalyptusData {
   String placement;
   String kernel;
   String ramdisk;
+  boolean monitoring = false;
 }
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/
   String virtualName;
   String deviceName;
+
+  def BlockDeviceMappingItemType(final virtualName, final deviceName) {
+    this.virtualName = virtualName;
+    this.deviceName = deviceName;
+  }
+
+  def BlockDeviceMappingItemType() {
+  }
 }
 public class InstanceStateType extends EucalyptusData {
   int code;

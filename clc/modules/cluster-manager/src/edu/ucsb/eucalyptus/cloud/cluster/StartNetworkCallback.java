@@ -23,11 +23,14 @@ public class StartNetworkCallback extends QueuedEventCallback<StartNetworkType> 
     parent.msgMap.put( ClusterAllocator.State.ROLLBACK, new QueuedEvent<StopNetworkType>( new StopNetworkCallback( networkToken ), new StopNetworkType( msg ) ) );
     try {
       StartNetworkResponseType reply = ( StartNetworkResponseType ) clusterClient.send( msg );
-      if ( !reply.get_return() )
+      if ( !reply.get_return() ) {
         this.parent.getRollback().lazySet( true );
+        this.parent.returnAllocationTokens();
+      }
     }
     catch ( AxisFault axisFault ) {
       this.parent.getRollback().lazySet( true );
+      this.parent.returnAllocationTokens();
     }
   }
 

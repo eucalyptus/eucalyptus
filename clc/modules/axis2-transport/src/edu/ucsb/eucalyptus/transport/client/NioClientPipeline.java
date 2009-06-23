@@ -6,6 +6,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
+import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 
 public class NioClientPipeline implements ChannelPipelineFactory {
   private NioResponseHandler handler;
@@ -16,12 +17,15 @@ public class NioClientPipeline implements ChannelPipelineFactory {
 
   public ChannelPipeline getPipeline() throws Exception {
     ChannelPipeline pipeline = Channels.pipeline();
-    pipeline.addLast("decoder", new HttpResponseDecoder());
-    //Uncomment the following line if you don't want to handle HttpChunks.
-    pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
-    pipeline.addLast("encoder", new HttpRequestEncoder());
-    pipeline.addLast("handler", handler);
-    return pipeline;
 
+    pipeline.addLast( "decoder", new HttpResponseDecoder() );
+    pipeline.addLast( "aggregator", new HttpChunkAggregator( 1048576 ) );
+    pipeline.addLast( "encoder", new HttpRequestEncoder() );
+    pipeline.addLast( "serializer", new SerializingHandler() );
+    pipeline.addLast( "wssec", new WsSecHandler() );
+    pipeline.addLast( "soap", new SoapHandler() );
+    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "ec2_amazonaws_com_doc_2008_12_01" ) ) );
+    pipeline.addLast( "handler", handler );
+    return pipeline;
   }
 }

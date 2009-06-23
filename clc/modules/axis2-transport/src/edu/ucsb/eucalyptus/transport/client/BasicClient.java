@@ -124,10 +124,10 @@ public class BasicClient implements Client {
 
   public EucalyptusMessage send( EucalyptusMessage msg ) throws AxisFault {
     OMElement omMsg = this.properties.getBinding().toOM( msg );
-    LOG.debug( "Sending to " + this.uri + ": " + msg.getClass().getSimpleName() );
-    LOG.debug( omMsg );
+    LOG.trace( "Sending to " + this.uri + ": " + msg.getClass().getSimpleName() );
+    LOG.trace( omMsg );
     OMElement omResponse = this.sync( omMsg );
-    LOG.debug( omResponse );
+    LOG.trace( omResponse );
     EucalyptusMessage msgResponse = null;
     try {
       Class targetClass = msg.getClass();

@@ -23,6 +23,7 @@ public class Address implements HasName {
   public static String UNALLOCATED_USERID = "nobody";
   public static String UNASSIGNED_INSTANCEID = "available";
   public static String UNASSIGNED_INSTANCEADDR = "0.0.0.0";
+  public static String PENDING_ASSIGNMENT = "pending";
   @Id
   @GeneratedValue
   @Column( name = "address_id" )
@@ -107,6 +108,10 @@ public class Address implements HasName {
     } finally {
       this.canHas.writeLock().unlock();
     }
+  }
+
+  public boolean isPending() {
+    return PENDING_ASSIGNMENT.equals( this.instanceId ) && PENDING_ASSIGNMENT.equals( this.instanceAddress );
   }
 
   public String getUserId() {
@@ -200,7 +205,7 @@ public class Address implements HasName {
     return "Address{" +
            "name='" + name + '\'' +
            ", cluster='" + cluster + '\'' +
-           ", userId='" + userId + '\'' +
+           ", sourceUserId='" + userId + '\'' +
            ", assigned=" + assigned +
            ", instanceId='" + instanceId + '\'' +
            ", instanceAddress='" + instanceAddress + '\'' +

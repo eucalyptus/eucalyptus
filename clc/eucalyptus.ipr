@@ -85,7 +85,7 @@
   <component name="CopyrightManager" default="">
     <module2copyright />
   </component>
-  <component name="CppTools.Loader" reportImplicitCastToBool="false" warnedAboutFileOutOfSourceRoot="true" version="1" currentProject="$PROJECT_DIR$/Makefile" />
+  <component name="CppTools.Loader" reportImplicitCastToBool="false" warnedAboutFileOutOfSourceRoot="true" version="2" currentProject="$PROJECT_DIR$/Makefile" compilerSelect="AUTO" />
   <component name="DependenciesAnalyzeManager">
     <option name="myForwardDirection" value="false" />
   </component>
@@ -367,7 +367,7 @@
   </component>
   <component name="ProjectFileVersion" converted="true" />
   <component name="ProjectKey">
-    <option name="state" value="project:///disk1/eucalyptus/src/main-backend/clc/eucalyptus.ipr" />
+    <option name="state" value="project:///bzr/grze_main/clc/eucalyptus.ipr" />
   </component>
   <component name="ProjectModuleManager">
     <modules>
@@ -440,6 +440,7 @@
   </component>
   <component name="SvnBranchConfigurationManager">
     <option name="myVersion" value="123" />
+    <option name="mySupportsUserInfoFilter" value="true" />
   </component>
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="CVS" />
@@ -600,15 +601,13 @@
   <component name="libraryTable">
     <library name="eucalyptus-deps">
       <CLASSES>
-        <root url="file:///disk1/eucalyptus/build/main-backend/usr/share/eucalyptus" />
-        <root url="file:///disk1/eucalyptus/build/main-backend/etc/eucalyptus/cloud.d" />
+        <root url="file:///home/decker/deps-new/cloud-lib" />
       </CLASSES>
       <JAVADOC />
       <SOURCES>
         <root url="file://$PROJECT_DIR$/modules/storage-manager/src" />
       </SOURCES>
-      <jarDirectory url="file:///disk1/eucalyptus/build/main-backend/etc/eucalyptus/cloud.d" recursive="false" />
-      <jarDirectory url="file:///disk1/eucalyptus/build/main-backend/usr/share/eucalyptus" recursive="false" />
+      <jarDirectory url="file:///home/decker/deps-new/cloud-lib" recursive="false" />
     </library>
   </component>
 </project>

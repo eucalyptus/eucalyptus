@@ -40,9 +40,13 @@ class VmRunCallback extends QueuedEventCallback<VmRunType> {
         for ( VmInfo vmInfo : reply.getVms() ) {
           VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
           vm.getNetworkConfig().setIpAddress( vmInfo.getNetParams().getIpAddress() );
-          vm.getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
         }
         this.parent.setupAddressMessages( Lists.newArrayList( this.token.getAddresses() ), Lists.newArrayList( reply.getVms() ) );
+        for ( VmInfo vmInfo : reply.getVms() ) {
+          VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
+          if( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) )
+            vm.getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
+        }
       } else {
         this.parent.getRollback().lazySet( true );
       }

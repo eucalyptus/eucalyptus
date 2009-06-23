@@ -283,7 +283,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
       ret = 1;
     } else {
       if (!allocated) {
-	snprintf(cmd, 255, "%s/usr/share/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
+	snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
 	logprintfl(EUCAINFO,"running cmd %s\n", cmd);
 	rc = system(cmd);
 	if (rc) {
@@ -402,7 +402,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
       }
       
 
-      snprintf(cmd, 256, "%s/usr/share/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
+      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
       logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
       rc = system(cmd);
       if (rc) {
@@ -937,6 +937,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   strncpy(dst->amiId, src->imageId, 16);
   strncpy(dst->kernelId, src->kernelId, 16);
   strncpy(dst->ramdiskId, src->ramdiskId, 16);
+  strncpy(dst->keyName, src->keyName, 1024);
   strncpy(dst->launchIndex, src->launchIndex, 64);
   strncpy(dst->userData, src->userData, 64);
   for (i=0; i<src->groupNamesSize || i >= 64; i++) {
@@ -2036,25 +2037,6 @@ int timeread(int fd, void *buf, size_t bytes, int timeout) {
     return(-1);
   }
   rc = read(fd, buf, bytes);
-  return(rc);
-}
-
-pid_t timewait(pid_t pid, int *status, int timeout) {
-  time_t timer=0;
-  int rc;
-
-  if (timeout <= 0) timeout = 1;
-
-  *status = 1;
-  rc = waitpid(pid, status, WNOHANG);
-  while(rc <= 0 && timer < (timeout * 1000000)) {
-    usleep(50000);
-    timer += 50000;
-    rc = waitpid(pid, status, WNOHANG);
-  }
-  if (rc < 0) {
-    logprintfl(EUCAERROR, "waitpid() timed out: pid=%d\n", pid);
-  }
   return(rc);
 }
 

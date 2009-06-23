@@ -35,15 +35,29 @@
 package edu.ucsb.eucalyptus.admin.server;
 
 import com.google.gwt.user.client.rpc.SerializableException;
-import com.google.gwt.user.server.rpc.OpenRemoteServiceServlet;
-import edu.ucsb.eucalyptus.admin.client.*;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.google.gwt.user.server.rpc.UnexpectedException;
+import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.DownloadsWeb;
+import edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackend;
+import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
+import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
 import edu.ucsb.eucalyptus.util.BaseDirectory;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.*;
+import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Properties;
 
 /**
  * Created by IntelliJ IDEA.
@@ -52,7 +66,7 @@ import java.util.*;
  * Time: 2:57:31 PM
  * To change this template use File | Settings | File Templates.
  */
-public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implements EucalyptusWebBackend {
+public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements EucalyptusWebBackend {
 
 	private static Logger LOG = Logger.getLogger( EucalyptusWebBackendImpl.class );
     private static String PROPERTIES_FILE =  BaseDirectory.CONF.toString() + File.separator + "eucalyptus-web.properties";
@@ -222,14 +236,15 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
             /* enable the new user right away */
             user.setIsApproved(true);
             user.setIsEnabled(true);
-            user.setIsConfirmed(false);
-            EucalyptusManagement.commitWebUser(user);
             response = notifyUserApproved(user);
         } else {
             /* if anonymous, then notify admin */
+            user.setIsApproved(false);
+            user.setIsEnabled(false);
             notifyAdminOfSignup (user);
             response = thanks_for_signup;
         }
+        EucalyptusManagement.commitWebUser(user);
 
         return response;
     }
@@ -367,19 +382,22 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 
     private String notifyUserApproved(UserInfoWeb user)
     {
+        String confString = " and confirmed";
         try {
-            String http_eucalyptus = ServletUtils.getRequestUrl(getThreadLocalRequest());
-            String confirm_link = http_eucalyptus + "?action=confirm"
-                    + "&code=" + user.getConfirmationCode();
+            if (!user.isConfirmed().booleanValue()) {
+                confString = "";
+                String http_eucalyptus = ServletUtils.getRequestUrl(getThreadLocalRequest());
+                String confirm_link = http_eucalyptus + "?action=confirm"
+                        + "&code=" + user.getConfirmationCode();
 
-            String email_message = signup_approval_header + "\n\n" +
-                    confirm_link +
-                    "\n\n" + signup_approval_footer;
+                String email_message = signup_approval_header + "\n\n" +
+                        confirm_link +
+                        "\n\n" + signup_approval_footer;
 
-            ServletUtils.sendMail(reply_email, user.getEmail(),
-                    signup_approval_subject,
-                    email_message);
-
+                ServletUtils.sendMail(reply_email, user.getEmail(),
+                        signup_approval_subject,
+                        email_message);
+            }
         } catch (Exception e) {
             // TODO: log this using the proper procedure
             LOG.error ("Approval mailing problem: " + e.getMessage());
@@ -388,7 +406,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 
             return "Internal problem (failed to notify user " + user.getEmail() + " by email)";
         }
-        return "User '" + user.getUserName() + "' was approved, thank you.";
+        return "User '" + user.getUserName() + "' was approved" + confString + ", thank you.";
     }
 
     private String notifyUserRejected(UserInfoWeb user)
@@ -582,7 +600,7 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
         user.setPasswordExpires( new Long(now + pass_expiration_ms) );
         EucalyptusManagement.commitWebUser( user );
 
-        return "Your password has been changed";
+        return "Password has been changed";
     }
 
     public String updateUserRecord (String sessionId, UserInfoWeb newRecord )
@@ -611,10 +629,17 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
 		oldRecord.setAffiliation (newRecord.getAffiliation());
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
+        oldRecord.setIsAdministrator(newRecord.isAdministrator());
+		// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
+        if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) {
+            oldRecord.setIsConfirmed(true);
+        	oldRecord.setIsEnabled(true);
+        	oldRecord.setIsApproved(true);
+        }
 
         EucalyptusManagement.commitWebUser( oldRecord );
 
-        return "Account updated";
+        return "Account of user '" + userName + "' was updated";
     }
 
   public List<ClusterInfoWeb> getClusterList(String sessionId) throws SerializableException
@@ -670,6 +695,75 @@ public class EucalyptusWebBackendImpl extends OpenRemoteServiceServlet implement
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
     //:: TODO-1.4: anything more to do here? :://
-    return EucalyptusManagement.getCloudInfo(setExternalHostPort);	
+    return EucalyptusManagement.getCloudInfo(setExternalHostPort);
+  }
+
+    private static List<DownloadsWeb> getDownloadsFromUrl(final String downloadsUrl) {
+        List<DownloadsWeb> downloadsList = new ArrayList<DownloadsWeb>();
+
+        HttpClient httpClient = new HttpClient();
+        GetMethod method = new GetMethod(downloadsUrl);
+        Integer timeoutMs = new Integer(3 * 1000);
+        method.getParams().setSoTimeout(timeoutMs);
+
+        try {
+            httpClient.executeMethod(method);
+            String str = method.getResponseBodyAsString();
+            String entries[] = str.split("[\\r\\n]+");
+            for (int i=0; i<entries.length; i++) {
+                String entry[] = entries[i].split("\\t");
+                if (entry.length == 3) {
+                    downloadsList.add (new DownloadsWeb(entry[0], entry[1], entry[2]));
+                }
+            }
+
+        } catch (MalformedURLException e) {
+            LOG.warn("Malformed URL exception: " + e.getMessage());
+            e.printStackTrace();
+
+        } catch (IOException e) {
+            LOG.warn("I/O exception: " + e.getMessage());
+            e.printStackTrace();
+
+        } finally {
+            method.releaseConnection();
+        }
+
+        return downloadsList;
+    }
+
+    public List<DownloadsWeb> getDownloads(final String sessionId, final String downloadsUrl) throws SerializableException {
+        SessionInfo session = verifySession(sessionId);
+        UserInfoWeb user = verifyUser(session, session.getUserId(), true);
+        return getDownloadsFromUrl(downloadsUrl);
+    }
+
+  /**
+   * Overridden to really throw Jetty RetryRequest Exception (as opposed to sending failure to client).
+   *
+   * @param caught the exception
+   */
+  protected void doUnexpectedFailure(Throwable caught)
+  {
+      throwIfRetryRequest(caught);
+      super.doUnexpectedFailure(caught);
+  }
+private static final String JETTY_RETRY_REQUEST_EXCEPTION = "org.mortbay.jetty.RetryRequest";
+  /**
+   * Throws the Jetty RetryRequest if found.
+   *
+   * @param caught the exception
+   */
+  protected void throwIfRetryRequest(Throwable caught)
+  {
+      if (caught instanceof UnexpectedException )
+      {
+          caught = caught.getCause();
+      }
+
+      if (JETTY_RETRY_REQUEST_EXCEPTION.equals(caught.getClass().getName()))
+      {
+          throw (RuntimeException)caught;
+      }
   }
 }

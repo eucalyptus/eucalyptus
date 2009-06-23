@@ -525,9 +525,6 @@ public class Bukkit {
                     String tempObjectName = objectName;
                     MessageDigest digest = null;
                     long size = 0;
-                    synchronized(putQueue) {
-                        putQueue.notifyAll();
-                    }
                     FileIO fileIO = null;
                     while ((dataMessage = putQueue.take())!=null) {
                         if(WalrusDataMessage.isStart(dataMessage)) {

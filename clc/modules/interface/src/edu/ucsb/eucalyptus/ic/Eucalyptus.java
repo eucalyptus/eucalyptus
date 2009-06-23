@@ -37,12 +37,14 @@ package edu.ucsb.eucalyptus.ic;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.RegionInfoType;
+import edu.ucsb.eucalyptus.msgs.UnimplementedMessage;
 import edu.ucsb.eucalyptus.transport.OverloadedWebserviceMethod;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.Messaging;
@@ -68,15 +70,21 @@ public class Eucalyptus {
       "DescribeRegions",
       "BundleInstance","DescribeBundleTasks","CancelBundleTask",
       "DescribeReservedInstances","DescribeReservedInstancesOfferings","PurchaseReservedInstancesOffering" } )
-  public EucalyptusMessage handle( EucalyptusMessage msg ) {
+  public EucalyptusMessage handle( EucalyptusMessage msg )
+  {
+    if( msg instanceof UnimplementedMessage ) {
+      return msg.getReply();
+    }
     if( msg instanceof DescribeRegionsType ) {
-      DescribeRegionsResponseType reply = (DescribeRegionsResponseType ) msg.getReply();
+      DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) msg.getReply();
       try {
         SystemConfiguration config = EucalyptusProperties.getSystemConfiguration();
         reply.getRegionInfo().add(new RegionInfoType( "Eucalyptus", config.getStorageUrl().replaceAll( "Walrus", "Eucalyptus" )));
         reply.getRegionInfo().add(new RegionInfoType( "Walrus", config.getStorageUrl()));
       } catch ( EucalyptusCloudException e ) {}
       return reply;
+    } else if ( msg instanceof DescribeBundleTasksType ) {
+      return msg.getReply();
     }
     LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() ) );
     long startTime = System.currentTimeMillis();

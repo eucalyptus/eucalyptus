@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-FILE="$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
+FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
 CC_PORT=""
 NC_PORT=""
@@ -13,6 +13,7 @@ EUCA_USER=""
 HYPERVISOR=""
 DHCPD=""
 DHCP_USER=""
+BRIDGE=""
 NEWNODES=""
 NODEMODE=""
 CLUSNAME=""
@@ -20,20 +21,21 @@ NEWCLUS=""
 CLUSMODE=""
 UPGRADE_CONF=""
 SETUP=""
+VERSION=""
 CHECK=""
+TO_BACKUP="Y"
+SCP="`which scp 2> /dev/null`"
+RSYNC="`which rsync 2> /dev/null`"
 
 usage () {
 	echo "$0 [options] [<file>]"
 	echo
-	echo "Modify Eucalyptus configuration file. [<file>] is the"
-	echo "configuration file to be modified: if it's now specified"
-	echo "it will searched in $EUCALYPTUS/etc/eucalyptus"
-	echo
-	echo
+	echo "where <file> is the configuration file ($FILE by default)"
 	echo "   -help                       this message"
 	echo "   -d <dir>                    point EUCALYPTUS to <dir>"
 	echo "   -addnode <hostname>         add new node to EUCALYPTUS"
 	echo "   -synckeys                   sync the keys with the nodes"
+	echo "   -norsync                    don't use rsync (ie remote node have no root)"
 	echo "   -delnode <hostname>         remove node from EUCALYPTUS"
 	echo "   -addcluster <clusname> <hostname> add new cluster to EUCALYPTUS"
 #	echo "   -delcluster <clusname> <hostname> remove cluster from EUCALYPTUS"
@@ -48,25 +50,43 @@ usage () {
 	echo "   -dhcp_user <user>           set the username to run dhcpd as"
 	echo "   -name <var>                 returns the value or <name>"
 	echo "   -setup                      perform initial setup"
-	echo "   -check                      pre-flight checks"
-	echo "where <file> is the configuration file ($FILE by default)"
+	echo "   -check [nc|cc|cloud]        pre-flight checks"
+	echo "   -version                    eucalyptus version"
 	echo
+}
+
+# utility function to make a copy of the conf file
+check_and_backup () {
+	# can we write to the configuration file?
+	if [ ! -w $1 ]; then
+		echo "Cannot write to $1!"
+		exit 1
+	fi
+
+	# let's see if we need a copy
+	if [ "$TO_BACKUP" = "Y" ]; then
+		cp $1 $1.bak
+		TO_BACKUP="N"
+	fi
 }
 
 # 3 paramenter: the file, the variable name, the new value
 change_var_value () {
+	check_and_backup $1
 	cp $1 /tmp/euca-tmp.$$
-	sed "s<\(${2}\).*<\1=\"${3}\"<" /tmp/euca-tmp.$$ > $1
+	sed "s<^[[:blank:]#]*\(${2}\).*<\1=\"${3}\"<" /tmp/euca-tmp.$$ > $1
 	rm -f /tmp/euca-tmp.$$
 }
 # comment lines matching $2 ($1 is the file)
 comment () {
+	check_and_backup $1
 	cp $1 /tmp/euca-tmp.$$
 	sed "s<^[[:blank:]]*\(${2}.*\)<#\1<" /tmp/euca-tmp.$$ > $1
 	rm -f /tmp/euca-tmp.$$
 }
 # comment lines matching $2 ($1 is the file)
 uncomment () {
+	check_and_backup $1
 	cp $1 /tmp/euca-tmp.$$
 	sed "s<^[#[:blank:]]*\(${2}.*\)<\1<" /tmp/euca-tmp.$$ > $1
 	rm -f /tmp/euca-tmp.$$
@@ -89,13 +109,18 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
-	if [ "$1" = "-setup" ]; then 
-	    SETUP="Y"
+	if [ "$1" = "-norsync" ]; then 
+	    RSYNC=""
 	    shift
 	    continue
 	fi
-	if [ "$1" = "-check" ]; then 
-	    CHECK="Y"
+	if [ "$1" = "-version" ]; then 
+	    VERSION="Y"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "-setup" ]; then 
+	    SETUP="Y"
 	    shift
 	    continue
 	fi
@@ -119,7 +144,6 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 
-	# now let's parse the command line
 	if [ "$1" = "-d" ]; then
 		if [ ! -d "${2}" ]; then
 			echo "Is $2 where Eucalyptus is installed?"
@@ -131,6 +155,11 @@ while [ $# -gt 0 ]; do
 	fi
 	if [ "$1" = "-name" ]; then
 		NAME="$NAME $2"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "-bridge" ]; then
+		BRIDGE="$2"
 		shift; shift
 		continue
 	fi		
@@ -212,7 +241,7 @@ while [ $# -gt 0 ]; do
 	fi
 	if [ "$1" = "-addcluster" ]; then
 	    if [ $# -lt 3 ]; then
-		echo "Requires the cluster nice name and CC hostname"
+		echo "-addcluster requires a user assigned name and CC hostname"
 		exit 1
 	    fi
 	    CLUSNAME="$2"
@@ -220,6 +249,15 @@ while [ $# -gt 0 ]; do
 	    CLUSMODE="ADD"
 	    shift; shift; shift
 	    continue
+	fi
+	if [ "$1" = "-check" ]; then 
+		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" ]; then
+			echo "-check requires cc, nc or cloud"
+			exit 1
+		fi
+		CHECK="$2"
+		shift; shift
+		continue
 	fi
 	usage 
 	exit 1
@@ -231,8 +269,24 @@ if [ -z "${FILE}" -o ! -f "${FILE}" ]; then
 	exit 
 fi
 
-# let's keep a copy of the original file before starting
-cp $FILE $FILE.bak
+# if asked to print the version that's all we do
+if [ "$VERSION" = "Y" ]; then
+	. $FILE
+
+	if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus-version ]; then
+		VERSION="$EUCALYPTUS/etc/eucalyptus/eucalyptus-version"
+	elif [ -e @prefix@/etc/eucalyptus/eucalyptus-version ]; then
+		VERSION="@prefix@/etc/eucalyptus/eucalyptus-version"
+	fi
+	if [ -n "$VERSION" ]; then
+		echo -n "Eucalyptus version: "
+		cat $VERSION 
+	else
+		echo "Cannot find eucalyptus installation!"
+		exit 1
+	fi
+	exit 0
+fi
 
 # let's change the value
 if [ -n "$EUCALYPTUS" ]; then
@@ -267,7 +321,17 @@ if [ -n "$HYPERVISOR" ]; then
 	change_var_value $FILE HYPERVISOR "${HYPERVISOR}"
 	uncomment $FILE HYPERVISOR
 fi
+if [ -n "$BRIDGE" ]; then
+	change_var_value $FILE VNET_BRIDGE "${BRIDGE}"
+	uncomment $FILE VNET_BRIDGE
+fi
 if [ -n "$EUCA_USER" ]; then
+	ID="`which id 2> /dev/null`"
+	if [ -n "$ID" ]; then
+		if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
+			echo "WARNING: $EUCA_USER doesn't exists!"
+		fi
+	fi
 	change_var_value $FILE EUCA_USER "${EUCA_USER}"
 fi
 for x in $NAME ; do
@@ -279,11 +343,11 @@ done
 if [ -n "$SETUP" ]; then
 	. $FILE
 
-	ROOTWRAP="$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap"
+	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
 	
 	# first of all setup euca_rootwrap
 	if [ ! -x "$ROOTWRAP" ]; then
-		echo "Cannot find $ROOTWRAP!"
+		echo "Cannot find $ROOTWRAP (or not readable)!"
 		exit 1
 	fi
 	# get EUCA group
@@ -319,13 +383,32 @@ if [ -n "$SETUP" ]; then
 		fi
 		chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH
 	fi
+
+	# let's create more needed directory with the right permissions
+	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
+	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/db
+	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/db
+	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/keys
+	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/keys
+	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/keys
 fi
 
 # pre-flight checks
 if [ -n "$CHECK" ]; then
 	. $FILE
 
-	ROOTWRAP="$EUCALYPTUS/usr/share/eucalyptus/euca_rootwrap"
+	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
+
+	# vblade and aoe may be needed
+	if [ "$DISABLE_EBS" != "Y" -a "$DISABLE_EBS" != "y" ]; then
+		if [ "$CHECK" = "cloud" ]; then
+			VBLADE="`which vblade 2> /dev/null`"
+			if [ -z "$VBLADE" ]; then
+				echo
+				echo "WARNING: EBS is enabled and vblade was not found"
+			fi
+		fi
+	fi
 	
 	# first of all check euca_rootwrap
 	if [ ! -x $ROOTWRAP ]; then
@@ -362,6 +445,18 @@ if [ -n "$CHECK" ]; then
 		fi
 	fi
 
+	# let's be sure we have the INSTANCE_PATH
+	if [ "$CHECK" = "nc" ]; then
+		if [ -z "$INSTANCE_PATH" ]; then
+			echo "INSTANCE_PATH is not defined"
+			exit 1
+		fi
+		if [ ! -d "$INSTANCE_PATH" ]; then
+			echo "$INSTANCE_PATH doesn't exist: did you run euca_conf -setup?"
+			exit 1
+		fi
+	fi
+
 	# let's set up directories which could disappears if /var/run is
 	# in memory
 	mkdir -p $EUCALYPTUS/var/run/eucalyptus
@@ -379,7 +474,7 @@ fi
 
 # modify the current conf file based on an older configuration
 if [ -n "$UPGRADE_CONF" ]; then
-	VARS="EUCA_USER ENABLE_WS_SECURITY LOGLEVEL CLOUD_PORT CLOUD_SSL_PORT CC_PORT SCHEDPOLICY NODES NC_SERVICE NC_PORT MAX_MEM MAX_CORES INSTANCE_PATH VNET_INTERFACE VNET_BRIDGE VNET_DHCPDAEMON"
+	VARS="EUCA_USER ENABLE_WS_SECURITY DISABLE_EBS HYPERVISOR LOGLEVEL CLOUD_PORT CLOUD_SSL_PORT SWAP_SIZE CC_PORT SCHEDPOLICY NODES NC_SERVICE NC_PORT MAX_MEM MAX_CORES INSTANCE_PATH VNET_INTERFACE VNET_BRIDGE VNET_DHCPDAEMON"
 	VNET_VARS="VNET_MODE VNET_SUBNET VNET_NETMASK VNET_DNS VNET_ADDRSPERNET VNET_PUBLICIPS VNET_BROADCAST VNET_ROUTER VNET_MACMAP"
 	
 	# source the old config
@@ -395,7 +490,7 @@ if [ -n "$UPGRADE_CONF" ]; then
 		y="$(echo \$${x})"
 		eval y="$y"
 		if [ -z "$y" ]; then
-			# we just leave NODES uncomment even if it's empty
+			# we just leave NODES uncommented even if it's empty
 			if [ "$x" != "NODES" ]; then
 				comment $FILE $x
 			fi
@@ -468,6 +563,34 @@ if [ -n "$NODEMODE" ]; then
 		fi
 	fi
 
+	# check we have a valid command
+	if [ "$NODEMODE" != "ADD" -a "$NODEMODE" != "REM" ]; then
+		echo "ERROR: unknown mode '$NODEMODE', don't know what to do"
+		exit 1
+	fi
+
+	# we need the keys
+	if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
+		KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
+	elif [ "$NODEMODE" = "ADD" ]; then
+		echo "ERROR: cannot find keys, did you configured eucalyptus?"
+		exit 1
+	fi
+
+	# we may need the pub key to connect to remote hosts
+	EUCA_HOME=`su - -c 'echo $HOME' $EUCA_USER`
+	if [ -f "${EUCA_HOME}/.ssh/id_rsa.pub" ]; then
+		SSHKEY=`cat ${EUCA_HOME}/.ssh/id_rsa.pub`
+	else
+		SSHKEY=""
+	fi
+
+	# warn the user on where we expect the keys to be
+	if [ "$NODEMODE" = "ADD" ]; then 
+		echo
+		echo "We expect all nodes to have eucalyptus installed in $EUCALYPTUS."
+	fi
+
 	# adding (or removing) nodes
 	for NEWNODE in ${NEWNODES} ; do
 		# remove is simpler: just remove the node name
@@ -476,38 +599,52 @@ if [ -n "$NODEMODE" ]; then
 				echo "Node ${NEWNODE} is not known"
 				continue
 			fi
-			NODES="`echo $NODES|sed 's/${NEWNODE}//'|tr -s ' '`"
+			NODES="`echo $NODES|sed \"s/${NEWNODE}//\"|tr -s ' '`"
 			change_var_value $FILE NODES "${NODES}"
 			echo "SUCCESS: removed node '${NEWNODE}' from '$FILE'"
 			continue
 		fi
 	
-		# let's be sure the mode is now ADD
-		if [ "$NODEMODE" != "ADD" ]; then
-			echo "ERROR: unknown mode '$NODEMODE', don't know what to do"
-			exit 1
+		# we try rsync first then scp
+		DONE="N"
+		if [ -n "$RSYNC" ]; then
+			echo
+			echo "Trying rsync to sync keys with node \"${NEWNODE}\""
+			if $RSYNC -az ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${NEWNODE}:${KEYDIR}/ > /dev/null ; then
+				DONE="Y"
+			fi
 		fi
-		echo
- 
-		# we need the keys
-		if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
-			KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
-		else
-			echo "ERROR: cannot find keys, did you configured eucalyptus?"
-			exit 1
+		if [ -n "$SCP" -a "$DONE" = "N" ]; then
+			echo
+			echo "Trying scp to sync keys with node \"${NEWNODE}\" (user \"${EUCA_USER}\")"
+			if sudo -u ${EUCA_USER} $SCP ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR} > /dev/null ; then
+				DONE="Y"
+			fi
 		fi
 
-		# warn the user on what we are going to do
-		echo "Using scp to sync keys with node \"${NEWNODE}\" (user \"$EUCA_USER\")"
-		sudo -u $EUCA_USER scp ${KEYDIR}/*-cert.pem ${KEYDIR}/node-pk.pem ${EUCA_USER}@${NEWNODE}:${KEYDIR}
-		if [ "$?" != "0" ]; then
-			echo "ERROR: could not synchronize keys. Node ${NEWNODE} may not be available."
+		# let's warn user if we didn't sync
+		if [ "$DONE" = "N" ]; then
+			echo
+			echo "ERROR: could not synchronize keys with $NEWNODE!"
+			echo "The configuration will not have this node."
+			if [ "$SSHKEY" = "" ]; then
+				echo "User $EUCA_USER may have to run ssh-keygen!"
+			else
+				echo "Hint: to setup passwordless login to the nodes as user $EUCA_USER, you can"
+				echo "run the following commands on node $NEWNODE:"
+				echo "sudo -u $EUCA_USER mkdir -p ~${EUCA_USER}/.ssh"
+				echo "sudo -u $EUCA_USER tee ~${EUCA_USER}/.ssh/authorized_keys > /dev/null <<EOT"
+				echo "$SSHKEY"
+				echo "EOT"
+				echo ""
+				echo "Be sure that authorized_keys is not group/world readable or writable"
+			fi
 			continue
 		fi
  
 		# NODES list
 		if ! echo "${NODES}"|grep "${NEWNODE}" > /dev/null ; then
-			# node is not preset: we need to add it
+			# node is not present: we need to add it
 			NODES="${NODES} $NEWNODE"
 			change_var_value $FILE NODES "${NODES}"
 		fi

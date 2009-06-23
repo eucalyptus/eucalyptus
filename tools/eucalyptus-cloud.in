@@ -42,7 +42,7 @@ fi
 # I just wanted to set PATH to be the system PATH, but if a user install
 # eucalyptus manually, it may have binaries in a non-standard position:
 # hence we need to keep the PATH we receive.
-PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus cloud controller"
 NAME=eucalyptus-cloud
 ANT="`which ant 2> /dev/null`"
@@ -102,9 +102,22 @@ check_java() {
 do_start() {
 	local ret
 
+	# need to cehck if we have another cloud running
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
+	if [ -s $pidfile ]; then
+		if ps `cat $pidfile` > /dev/null  2> /dev/null ; then
+			# there is another process with the same pid
+			echo
+			echo "Is the cloud already running?"
+			exit 1
+		fi
+	fi
+
 	# basic checks
 	check_java
-	$EUCALYPTUS/usr/sbin/euca_conf -check
+	if ! $EUCALYPTUS/usr/sbin/euca_conf -check cloud ; then
+		exit 1
+	fi
 	
 	cd $EUCALYPTUS/etc/eucalyptus
 	(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
@@ -169,7 +182,7 @@ elif [ $LOOP_AVL -lt 32 ]; then
 fi
 
 # set the library path correctly
-export LD_LIBRARY_PATH="$EUCALYPTUS/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
 
 case "$1" in
   start)

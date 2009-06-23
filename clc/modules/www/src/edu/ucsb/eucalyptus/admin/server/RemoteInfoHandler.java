@@ -1,5 +1,6 @@
 package edu.ucsb.eucalyptus.admin.server;
 
+import com.google.common.collect.Sets;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
@@ -14,6 +15,7 @@ import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class RemoteInfoHandler {
 
@@ -45,16 +47,16 @@ public class RemoteInfoHandler {
     return ret;
   }
 
-  public static void setVmTypes( final List<VmTypeWeb> vmTypes ) throws SerializableException
-  {
-    for( VmTypeWeb vmw : vmTypes )
-      try
-      {
-        VmTypes.update( vmw.getName(), vmw.getCpu(), vmw.getDisk(), vmw.getMemory() );
-      }
-      catch ( EucalyptusCloudException e )
-      {
-        throw new SerializableException( e.getMessage() );
-      }
+  public static void setVmTypes( final List<VmTypeWeb> vmTypes ) throws SerializableException {
+    Set<VmType> newVms = Sets.newTreeSet();
+    for ( VmTypeWeb vmw : vmTypes ) {
+      newVms.add( new VmType( vmw.getName(), vmw.getCpu(), vmw.getDisk(), vmw.getMemory() ) );
+    }
+    try {
+      VmTypes.update( newVms );
+    }
+    catch ( EucalyptusCloudException e ) {
+      throw new SerializableException( e.getMessage() );
+    }
   }
 }

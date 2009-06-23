@@ -34,20 +34,30 @@
 
 package edu.ucsb.eucalyptus.transport.binding;
 
-import org.apache.axiom.om.*;
+import org.apache.axiom.om.OMAbstractFactory;
+import org.apache.axiom.om.OMDataSource;
+import org.apache.axiom.om.OMElement;
+import org.apache.axiom.om.OMFactory;
+import org.apache.axiom.om.OMNamespace;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
-import org.apache.axiom.soap.SOAPEnvelope;
-import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.jibx.JiBXDataSource;
 import org.apache.log4j.Logger;
-import org.jibx.runtime.*;
+import org.jibx.runtime.BindingDirectory;
+import org.jibx.runtime.IBindingFactory;
+import org.jibx.runtime.IMarshallable;
+import org.jibx.runtime.IXMLReader;
+import org.jibx.runtime.JiBXException;
 import org.jibx.runtime.impl.StAXReaderWrapper;
 import org.jibx.runtime.impl.UnmarshallingContext;
 
 import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;
 
 public class Binding {
@@ -104,74 +114,75 @@ public class Binding {
 
   private void buildRest()
   {
-    int[] indexes = null;
-    String[] prefixes = null;
-    if ( bindingFactory != null )
-    {
-      String[] nsuris = bindingFactory.getNamespaces();
-      int xsiindex = nsuris.length;
-      while ( --xsiindex >= 0 && !"http://www.w3.org/2001/XMLSchema-instance".equals( nsuris[ xsiindex ] ) ) ;
-      // get actual size of index and prefix arrays to be allocated
-      int nscount = 0;
-      int usecount = nscount;
-      if ( xsiindex >= 0 )
-        usecount++;
-      // allocate and initialize the arrays
-      indexes = new int[usecount];
-      prefixes = new String[usecount];
-      if ( xsiindex >= 0 )
-      {
-        indexes[ nscount ] = xsiindex;
-        prefixes[ nscount ] = "xsi";
-      }
-    }
-    this.bindingNamespaceIndexes = indexes;
-    this.bindingNamespacePrefixes = prefixes;
+//:: TODO: chop chop :://
+//    int[] indexes = null;
+//    String[] prefixes = null;
+//    if ( bindingFactory != null )
+//    {
+//      String[] nsuris = bindingFactory.getNamespaces();
+//      int xsiindex = nsuris.length;
+//      while ( --xsiindex >= 0 && !"http://www.w3.org/2001/XMLSchema-instance".equals( nsuris[ xsiindex ] ) ) ;
+//      // get actual size of index and prefix arrays to be allocated
+//      int nscount = 0;
+//      int usecount = nscount;
+//      if ( xsiindex >= 0 )
+//        usecount++;
+//      // allocate and initialize the arrays
+//      indexes = new int[usecount];
+//      prefixes = new String[usecount];
+//      if ( xsiindex >= 0 )
+//      {
+//        indexes[ nscount ] = xsiindex;
+//        prefixes[ nscount ] = "xsi";
+//      }
+//    }
+//    this.bindingNamespaceIndexes = indexes;
+//    this.bindingNamespacePrefixes = prefixes;
   }
 
-  public OMElement mappedChild( Object value, OMFactory factory )
-  {
-    IMarshallable mrshable = ( IMarshallable ) value;
+  public OMElement toOM( Object param ) {
+    return toOM( param, null );
+  }
+  public OMElement toOM( Object param, String altNs ) {
+    OMFactory factory = OMAbstractFactory.getOMFactory();
+    if ( param == null )
+      throw new RuntimeException( "Cannot bind null value" );
+    else if ( !( param instanceof IMarshallable ) )
+      throw new RuntimeException( "No JiBX <mapping> defined for class " + param.getClass() );
+    if ( bindingFactory == null ) {
+      try {
+        bindingFactory = BindingDirectory.getFactory( this.name, param.getClass() );
+      }
+      catch ( JiBXException e ) {
+        LOG.error( e, e );
+        throw new RuntimeException( this.bindingErrorMsg );
+      }
+    }
+
+    IMarshallable mrshable = ( IMarshallable ) param;
     OMDataSource src = new JiBXDataSource( mrshable, bindingFactory );
     int index = mrshable.JiBX_getIndex();
     OMNamespace appns = factory.createOMNamespace( bindingFactory.getElementNamespaces()[ index ], "" );
     OMElement retVal = factory.createOMElement( src, bindingFactory.getElementNames()[ index ], appns );
-    return retVal;
-  }
-
-  public OMElement toOM( Object param )
-  {
-    return this.toOM( param, OMAbstractFactory.getOMFactory() );
-  }
-
-  public OMElement toOM( Object param, OMFactory factory )
-  {
-    if ( param instanceof IMarshallable )
-    {
-      if ( bindingFactory == null )
-        try
-        {
-          bindingFactory = BindingDirectory.getFactory( this.name, param.getClass() );
-        }
-        catch ( JiBXException e )
-        {
-          LOG.error( e, e );
-          throw new RuntimeException( this.bindingErrorMsg );
-        }
-      return ( mappedChild( param, factory ) );
+    String origNs = retVal.getNamespace().getNamespaceURI();
+    if( altNs != null && !altNs.equals( origNs ) ) {
+      try {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream( );
+        XMLStreamWriter xmlStream = XMLOutputFactory.newInstance().createXMLStreamWriter(bos);
+        retVal.serialize( xmlStream );
+        xmlStream.flush();
+        xmlStream.close();
+        String retString = bos.toString();
+        retString = retString.replaceAll( origNs, altNs );
+        ByteArrayInputStream bis = new ByteArrayInputStream( retString.getBytes( ));
+        StAXOMBuilder stAXOMBuilder = new StAXOMBuilder(bis);
+        retVal = stAXOMBuilder.getDocumentElement();
+      } catch ( XMLStreamException e ) {
+        LOG.error( e, e );
+      }
     }
-    else if ( param == null )
-      throw new RuntimeException( "Cannot bind null value" );
-    else
-      throw new RuntimeException( "No JiBX <mapping> defined for class " + param.getClass() );
-  }
 
-  public SOAPEnvelope toEnvelope( SOAPFactory factory, Object param, boolean optimizeContent )
-  {
-    SOAPEnvelope envelope = factory.getDefaultEnvelope();
-    if ( param != null )
-      envelope.getBody().addChild( toOM( param, factory ) );
-    return envelope;
+    return retVal;
   }
 
   public UnmarshallingContext getNewUnmarshalContext( OMElement param ) throws JiBXException

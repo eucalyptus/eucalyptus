@@ -1,10 +1,15 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.cloud.entities.VmType;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.List;
+import java.util.NavigableSet;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 public class VmTypes {
 
@@ -17,30 +22,26 @@ public class VmTypes {
     this.update();
   }
 
-  public static synchronized void update( String name, int cpu, int disk, int memory ) throws EucalyptusCloudException
+  public static synchronized void update( Set<VmType> newVmTypes ) throws EucalyptusCloudException
   {
-    VmType sameVm = VmTypes.getVmType( name );
-    if( sameVm.getDisk() == disk
-        && sameVm.getCpu() == cpu
-        && sameVm.getMemory() == memory )
-      return;
-    VmType temp = new VmType(name, cpu, disk, memory );
-    for( VmType vm : VmTypes.list() )
-      if( !vm.getName().equals( name )  && vm.compareTo( temp ) == 0 && temp.compareTo( vm ) == 0 )
-        throw new EucalyptusCloudException( "Proposed VmType fails to satisfy well-ordering requirement.");
-    EntityWrapper<VmType> db = new EntityWrapper<VmType>();
-    try
-    {
-      sameVm = db.getUnique( new VmType( name ) );
-      sameVm.setCpu( cpu );
-      sameVm.setDisk( disk );
-      sameVm.setMemory( memory );
-      db.commit();
-    }
-    catch ( EucalyptusCloudException e )
-    {
-      db.rollback();
-      throw e;
+    NavigableSet<VmType> newList = VmTypes.list();
+    if( newVmTypes.size() != newList.size() )
+      throw new EucalyptusCloudException( "Proposed VmTypes fail to satisfy well-ordering requirement.");
+    for( VmType newVm : newVmTypes ) {
+      if( !singleton.vmTypeMap.containsValue( newVm ) ) {
+        EntityWrapper<VmType> db = new EntityWrapper<VmType>();
+        try {
+          VmType oldVm = db.getUnique( new VmType( newVm.getName() ) );
+          oldVm.setCpu( newVm.getCpu() );
+          oldVm.setDisk( newVm.getDisk() );
+          oldVm.setMemory( newVm.getMemory() );
+          db.commit();
+        }
+        catch ( EucalyptusCloudException e ) {
+          db.rollback();
+          throw e;
+        }
+      }
     }
   }
 
@@ -54,7 +55,7 @@ public class VmTypes {
       this.vmTypeMap.putIfAbsent( v.getName(), v );
 
       if( !this.vmTypeMap.get( v.getName()).equals( v ) )
-        this.vmTypeMap.replace( v.getName(), v ); 
+        this.vmTypeMap.replace( v.getName(), v );
     }
 
     if( vmTypeList.isEmpty() )

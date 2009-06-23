@@ -27,8 +27,13 @@ public class VmAdmissionControl {
     vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount() ) );
 
     String userData = vmAllocInfo.getRequest().getUserData();
-    if ( userData != null )
-      userData = new String( Base64.decode( vmAllocInfo.getRequest().getUserData() ) );
+    if ( userData != null ) {
+      try {
+        userData = new String( Base64.decode( vmAllocInfo.getRequest().getUserData() ) );
+      } catch ( Exception e ) {
+        userData = "";
+      }
+    }
     else { userData = ""; }
     vmAllocInfo.setUserData( userData );
     vmAllocInfo.getRequest().setUserData( new String( Base64.encode( userData.getBytes() ) ) );
@@ -39,7 +44,7 @@ public class VmAdmissionControl {
     SLAs sla = new SLAs();
     List<ResourceToken> allocTokeList = null;
     boolean failed = false;
-    boolean hasAddr = false;
+    boolean hasVms = false;
     try {
       allocTokeList = sla.doVmAllocation( vmAllocInfo );
       int addrCount = 0;
@@ -54,19 +59,23 @@ public class VmAdmissionControl {
           }
         }
       }
-      hasAddr = true;
       vmAllocInfo.getAllocationTokens().addAll( allocTokeList );
       sla.doNetworkAllocation( vmAllocInfo.getRequest().getUserId(), vmAllocInfo.getAllocationTokens(), vmAllocInfo.getNetworks() );
     } catch ( FailScriptFailException e ) {
       failed = true;
-    } catch ( NotEnoughResourcesAvailable notEnoughResourcesAvailable ) {
+      LOG.debug( e, e );
+    } catch ( NotEnoughResourcesAvailable e ) {
       failed = true;
+      LOG.debug( e, e );
     }
     if ( failed ) {
-      if ( allocTokeList != null )
-        for ( ResourceToken token : allocTokeList )
+      if ( allocTokeList != null ) {
+        for ( ResourceToken token : allocTokeList ) {
           Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
-      throw new EucalyptusCloudException( "Not enough resources available: " + (hasAddr?"vms":" addresses (try --addressing private)") );
+        }
+        throw new EucalyptusCloudException( "Not enough resources available: addresses (try --addressing private)");
+      }
+      throw new EucalyptusCloudException( "Not enough resources available: vm resources.");
     }
 
     return vmAllocInfo;

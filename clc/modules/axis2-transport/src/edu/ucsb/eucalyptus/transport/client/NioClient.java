@@ -39,7 +39,7 @@ public class NioClient {
       throw cause;
     }
   }
-
+  
   public ChannelFuture write( HttpRequest httpRequest ) throws Throwable {
     if ( this.channel == null || !this.channel.isOpen() ) {
       this.open();
