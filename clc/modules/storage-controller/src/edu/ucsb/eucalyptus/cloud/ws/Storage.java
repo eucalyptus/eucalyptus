@@ -34,22 +34,53 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-
-import edu.ucsb.eucalyptus.cloud.*;
+import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.NoSuchVolumeException;
+import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
+import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
+import edu.ucsb.eucalyptus.cloud.VolumeInUseException;
+import edu.ucsb.eucalyptus.cloud.VolumeNotReadyException;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
+import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.GetStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.GetStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.InitializeStorageManagerResponseType;
+import edu.ucsb.eucalyptus.msgs.InitializeStorageManagerType;
+import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
+import edu.ucsb.eucalyptus.msgs.StorageVolume;
+import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationResponseType;
+import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.storage.BlockStorageManager;
 import edu.ucsb.eucalyptus.storage.LVM2Manager;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
-import edu.ucsb.eucalyptus.util.*;
-import org.apache.commons.httpclient.*;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.util.StorageProperties;
+import edu.ucsb.eucalyptus.util.WalrusDataMessage;
+import edu.ucsb.eucalyptus.util.XMLParser;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpConnection;
+import org.apache.commons.httpclient.HttpMethodBase;
+import org.apache.commons.httpclient.HttpState;
+import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
@@ -57,16 +88,26 @@ import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.zip.GZIPOutputStream;
 import java.util.zip.GZIPInputStream;
-
+import java.util.zip.GZIPOutputStream;
 
 public class Storage {
 
@@ -342,7 +383,7 @@ public class Storage {
                     volumeStorageManager.deleteObject("", volumeId);
                     db.delete(foundVolume);
                     db.commit();
-                } catch (IOException ex) {
+                } catch ( IOException ex) {
                     LOG.error(ex);
                 }
             } else {
@@ -534,7 +575,7 @@ public class Storage {
             LOG.error("Storage has been disabled. Please check your setup");
             return reply;
         }
-       
+
         String snapshotId = request.getSnapshotId();
         String userId = request.getUserId();
         String volumeId = request.getVolumeId();
