@@ -273,6 +273,8 @@ public class WalrusDataResponseType extends WalrusResponseType {
   Long size;
   ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
   Integer errorCode;
+  String contentType;
+  String contentDisposition;  
 }
 
 public class PutObjectResponseType extends WalrusDataResponseType {
@@ -294,6 +296,10 @@ public class PutObjectType extends WalrusDataRequestType {
   ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
   AccessControlListType accessControlList = new AccessControlListType();
   String storageClass;
+  String contentType;
+  String contentDisposition;
+
+  def PutObjectType() {}
 }
 
 public class PostObjectType extends WalrusDataRequestType {
@@ -333,6 +339,8 @@ public class PutObjectInlineType extends WalrusDataRequestType {
   AccessControlListType accessControlList = new AccessControlListType();
   String storageClass;
   String base64Data;
+  String contentType;
+  String contentDisposition;  
 }
 
 public class DeleteObjectType extends WalrusDeleteType {

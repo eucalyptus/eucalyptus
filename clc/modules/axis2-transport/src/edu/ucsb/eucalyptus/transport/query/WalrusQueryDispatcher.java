@@ -441,7 +441,7 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                     } else {
                         messageContext.setProperty(WalrusProperties.STREAMING_HTTP_PUT, Boolean.TRUE);
                         InputStream in = (InputStream) messageContext.getProperty("TRANSPORT_IN");
-                        InputStream inStream = in;
+                        InputStream inStream;
                         if((!walrusInternalOperation) || (!WalrusProperties.StorageOperations.StoreSnapshot.toString().equals(operationName))) {
                             inStream = new BufferedInputStream(in);
                         } else {
@@ -454,13 +454,20 @@ public class WalrusQueryDispatcher extends GenericHttpDispatcher implements REST
                         }
                         String key = target[0] + "." + objectKey;
                         String randomKey = key + "." + Hashes.getRandom(10);
+
+                        String contentType = caseInsensitiveHeaders.get(HTTP.CONTENT_TYPE);
+                        if(contentType != null)
+                            operationParams.put("ContentType", contentType);
+                        String contentDisposition = caseInsensitiveHeaders.get("Content-Disposition");
+                        if(contentDisposition != null)
+                            operationParams.put("ContentDisposition", contentDisposition);
+                        operationParams.put("ContentLength", (new Long(contentLength).toString()));
+                        operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
+
                         LinkedBlockingQueue<WalrusDataMessage> putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
 
                         Writer writer = new Writer(inStream, contentLength, putQueue);
                         writer.start();
-
-                        operationParams.put("ContentLength", (new Long(contentLength).toString()));
-                        operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
                     }
                 } else if(verb.equals(HTTPVerb.GET.toString())) {
                     messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.TRUE);

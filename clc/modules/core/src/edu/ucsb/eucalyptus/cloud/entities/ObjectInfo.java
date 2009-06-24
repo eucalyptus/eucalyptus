@@ -110,6 +110,12 @@ public class ObjectInfo {
     @Column(name="metadata")
     private List<MetaDataInfo> metaData = new ArrayList<MetaDataInfo>();
 
+    @Column(name="content_type")
+    private String contentType;
+
+    @Column(name="content_disposition")
+    private String contentDisposition;
+
     private static Logger LOG = Logger.getLogger( ObjectInfo.class );
 
     public ObjectInfo() {
@@ -421,5 +427,21 @@ public class ObjectInfo {
 
     public void setMetaData(List<MetaDataInfo> metaData) {
         this.metaData = metaData;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
+    }
+
+    public String getContentDisposition() {
+        return contentDisposition;
+    }
+
+    public void setContentDisposition(String contentDisposition) {
+        this.contentDisposition = contentDisposition;
     }
 }

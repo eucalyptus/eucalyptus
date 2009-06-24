@@ -106,9 +106,8 @@ public class WalrusDataFormatter implements MessageFormatter {
 
     public String getContentType(MessageContext messageContext, OMOutputFormat format,
                                  String soapAction) {
-
-        String contentType = "text/plain";
-        return contentType;
+        String contentType = (String) messageContext.getProperty("CONTENT_TYPE");
+        return contentType != null ? contentType : "binary/octet-stream";
     }
 
 

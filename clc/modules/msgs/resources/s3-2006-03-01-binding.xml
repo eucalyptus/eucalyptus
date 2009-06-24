@@ -183,6 +183,8 @@
         </collection>
         <value name="ErrorCode" field="errorCode" usage="optional"/>
         <value name="Size" field="size" usage="optional"/>
+        <value name="ContentType" field="contentType" usage="optional"/>
+        <value name="ContentDisposition" field="contentDisposition" usage="optional"/>        
     </mapping>
 
     <mapping name="PutObjectResponse" class="edu.ucsb.eucalyptus.msgs.PutObjectResponseType">
@@ -232,6 +234,8 @@
         <value name="ContentLength" field="contentLength"/>
         <structure field="accessControlList" map-as="edu.ucsb.eucalyptus.msgs.AccessControlListType" usage="optional"/>
         <value name="StorageClass" field="storageClass" usage="optional"/>
+        <value name="ContentType" field="contentType" usage="optional"/>
+        <value name="ContentDisposition" field="contentDisposition" usage="optional"/>
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 
@@ -261,6 +265,8 @@
         <value name="ContentLength" field="contentLength"/>
         <structure field="accessControlList" map-as="edu.ucsb.eucalyptus.msgs.AccessControlListType" usage="optional"/>
         <value name="StorageClass" field="storageClass" usage="optional"/>
+        <value name="ContentType" field="contentType" usage="optional"/>
+        <value name="ContentDisposition" field="contentDisposition" usage="optional"/>
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
     </mapping>
 

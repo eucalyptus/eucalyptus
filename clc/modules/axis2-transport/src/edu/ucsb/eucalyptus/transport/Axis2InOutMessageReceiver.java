@@ -227,6 +227,13 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
         if ( getType.equals( Boolean.TRUE ) ) {
           newMsgContext.setProperty( "GET_KEY", request.getBucket() + "." + request.getKey() );
           newMsgContext.setProperty( "GET_RANDOM_KEY", request.getRandomKey() );
+          String contentType = reply.getContentType();
+          if(contentType != null) {
+              newMsgContext.setProperty("CONTENT_TYPE", contentType);
+          }
+          String contentDisposition = reply.getContentDisposition();
+          if(contentDisposition != null)
+              response.addHeader(new BasicHeader("Content-Disposition", contentDisposition));
         }
         //This selects the data formatter
         newMsgContext.setProperty( "messageType", "application/walrus" );

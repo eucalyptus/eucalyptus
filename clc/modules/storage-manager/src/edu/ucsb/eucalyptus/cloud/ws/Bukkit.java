@@ -546,6 +546,8 @@ public class Bukkit {
                             foundObject.setSize(size);
                             foundObject.setLastModified(lastModified);
                             foundObject.setStorageClass("STANDARD");
+                            foundObject.setContentType(request.getContentType());
+                            foundObject.setContentDisposition(request.getContentDisposition());
                             reply.setSize(size);
                             if(shouldEnforceUsageLimits && !request.isAdministrator()) {
                                 Long bucketSize = bucket.getBucketSize();
@@ -1308,6 +1310,8 @@ public class Bukkit {
                     reply.setEtag(objectInfo.getEtag());
                     reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"));
                     reply.setSize(objectInfo.getSize());
+                    reply.setContentType(objectInfo.getContentType());
+                    reply.setContentDisposition(objectInfo.getContentDisposition());
                     Status status = new Status();
                     status.setCode(200);
                     status.setDescription("OK");
