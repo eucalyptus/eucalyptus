@@ -41,10 +41,15 @@ import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import org.apache.log4j.Logger;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
-import java.nio.channels.FileChannel;
 
 public class FileSystemStorageManager implements StorageManager {
 
@@ -53,7 +58,7 @@ public class FileSystemStorageManager implements StorageManager {
     private static boolean initialized = false;
     private static String eucaHome = "/opt/eucalyptus";
     public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
-    public static final int MAX_LOOP_DEVICES = 256;    
+    public static final int MAX_LOOP_DEVICES = 256;
     private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
 
     private String rootDirectory;

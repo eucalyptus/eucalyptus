@@ -34,28 +34,21 @@
 
 package edu.ucsb.eucalyptus.storage.fs;
 
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.ws.Command;
-import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
 import org.apache.log4j.Logger;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.nio.channels.FileChannel;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public  class FileWriter extends FileIO {
+public  class FileWriter extends edu.ucsb.eucalyptus.storage.fs.FileIO {
 
     private static Logger LOG = Logger.getLogger(FileWriter.class);
 
     public FileWriter(String filename) {
         try {
             channel = new FileOutputStream(filename).getChannel();
-        } catch(FileNotFoundException ex) {
+        } catch( FileNotFoundException ex) {
             LOG.error(ex);
         }
     }

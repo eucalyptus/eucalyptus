@@ -31,10 +31,6 @@
             <artifactId>core</artifactId>
             <version>${euca.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-        </dependency>
     </dependencies>
   <build>
     <plugins>
@@ -53,27 +49,27 @@
             </property>
  	    <property>
 	      <name>euca.var.dir</name>
-	      <value>${env.EUCALYPTUS}/var/lib/eucalyptus</value>	
+	      <value>${env.EUCALYPTUS}/var/lib/eucalyptus</value>
 	    </property>
  	    <property>
 	      <name>euca.lib.dir</name>
-	      <value>${env.EUCALYPTUS}/usr/share/eucalyptus</value>	
+	      <value>${env.EUCALYPTUS}/usr/share/eucalyptus</value>
 	    </property>
  	    <property>
 	      <name>euca.conf.dir</name>
-	      <value>${env.EUCALYPTUS}/etc/eucalyptus/cloud.d</value>	
+	      <value>${env.EUCALYPTUS}/etc/eucalyptus/cloud.d</value>
 	    </property>
  	    <property>
 	      <name>euca.log.dir</name>
-	      <value>${env.EUCALYPTUS}/var/log/eucalyptus</value>	
+	      <value>${env.EUCALYPTUS}/var/log/eucalyptus</value>
 	    </property>
  	    <property>
 	      <name>euca.template.dir</name>
-	      <value>${env.EUCALYPTUS}/var/lib/eucalyptus</value>	
+	      <value>${env.EUCALYPTUS}/var/lib/eucalyptus</value>
 	    </property>
  	    <property>
 	      <name>java.library.path</name>
-	      <value>${env.EUCALYPTUS}/usr/lib</value>	
+	      <value>${env.EUCALYPTUS}/usr/lib</value>
 	    </property>
 	    <property>
 	      <name>java.security.policy</name>

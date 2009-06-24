@@ -34,21 +34,15 @@
 
 package edu.ucsb.eucalyptus.storage.fs;
 
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.ws.Command;
-import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
 import org.apache.log4j.Logger;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.nio.channels.FileChannel;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public  class FileReader extends FileIO {
+public  class FileReader extends edu.ucsb.eucalyptus.storage.fs.FileIO {
 
     private static Logger LOG = Logger.getLogger(FileReader.class);
     private ByteBuffer buffer;
@@ -57,7 +51,7 @@ public  class FileReader extends FileIO {
         try {
             channel = new FileInputStream(filename).getChannel();
             buffer = ByteBuffer.allocate(WalrusQueryDispatcher.DATA_MESSAGE_SIZE);
-        } catch(FileNotFoundException ex) {
+        } catch( FileNotFoundException ex) {
             LOG.error(ex);
         }
     }
