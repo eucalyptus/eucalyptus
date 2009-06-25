@@ -35,7 +35,8 @@
 
 <binding force-classes="true" add-constructors="true" xmlns:tns="http://s3.amazonaws.com/doc/2006-03-01/" name="s3_amazonaws_com_doc_2006_03_01">
     <namespace uri="http://s3.amazonaws.com/doc/2006-03-01/" default="elements"/>
-
+    <namespace prefix="xsi" uri="http://www.w3.org/2001/XMLSchema-instance" default="attributes"/>
+    
     <mapping class="edu.ucsb.eucalyptus.msgs.WalrusRequestType" abstract="true">
         <value name="AWSAccessKeyID" field="accessKeyID" usage="optional"/>
         <value name="Timestamp" field="timeStamp" usage="optional"/>
@@ -128,6 +129,7 @@
     <mapping name="Grantee" class="edu.ucsb.eucalyptus.msgs.Grantee">
         <structure field="canonicalUser" map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" usage="optional"/>
         <structure field="group" map-as="edu.ucsb.eucalyptus.msgs.Group" usage="optional"/>
+        <value name="type" style="attribute" field="type"/>        
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.CanonicalUserType" abstract="true">
