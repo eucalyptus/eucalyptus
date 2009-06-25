@@ -98,15 +98,18 @@ public class AccessControlPolicyType extends EucalyptusData {
 public class Grantee extends EucalyptusData {
   CanonicalUserType canonicalUser;
   Group group;
+  String type;
 
   public Grantee() {}
   
   public Grantee(CanonicalUserType canonicalUser) {
     this.canonicalUser = canonicalUser;
+    type = "CanonicalUser";
   }
 
   public Grantee(Group group) {
     this.group = group;
+    type = "Group";
   }
 }
 
