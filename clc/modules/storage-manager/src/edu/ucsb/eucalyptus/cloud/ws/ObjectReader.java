@@ -34,14 +34,13 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import edu.ucsb.eucalyptus.storage.StorageManager;
+import edu.ucsb.eucalyptus.storage.fs.FileIO;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusSemaphore;
-import edu.ucsb.eucalyptus.storage.fs.FileIO;
-import edu.ucsb.eucalyptus.storage.StorageManager;
+import org.apache.log4j.Logger;
 
 import java.util.concurrent.LinkedBlockingQueue;
-
-import org.apache.log4j.Logger;
 
 public class ObjectReader extends Thread {
 

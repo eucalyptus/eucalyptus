@@ -34,27 +34,14 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import com.eucalyptus.util.DNSProperties;
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.NotImplementedException;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.storage.fs.FileIO;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
-import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
-import edu.ucsb.eucalyptus.util.*;
+import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
-
-import java.io.*;
-import java.net.InetAddress;
-import java.net.URL;
-import java.security.*;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class Bukkit {
 
