@@ -42,8 +42,9 @@ import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.storage.BlockStorageManager;
-import edu.ucsb.eucalyptus.storage.LVM2Manager;
+import edu.ucsb.eucalyptus.storage.BlockStorageChecker;
+import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
+import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
@@ -66,198 +67,60 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-public class Storage {
+public class BlockStorage {
 
-    private static Logger LOG = Logger.getLogger(Storage.class);
+    private static Logger LOG = Logger.getLogger(BlockStorage.class);
 
     static StorageManager volumeStorageManager;
     static StorageManager snapshotStorageManager;
-    static BlockStorageManager blockManager;
-
-    private static boolean enableSnapshots = false;
-    private static boolean enableStorage = false;
-    static boolean shouldEnforceUsageLimits = true;
-
-    public static final String ETHERD_PREFIX = "/dev/etherd/e";
+    static LogicalStorageManager blockManager;
+    static BlockStorageChecker checker;
 
     static {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
     }
 
-    public static void initializeForEBS() {
-        enableSnapshots = enableStorage = true;
+    public static void initialize() {
+        StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
         String walrusAddr = StorageProperties.WALRUS_URL;
         if(walrusAddr == null) {
             LOG.warn("Walrus host addr not set");
         }
-        blockManager = new LVM2Manager();
-        blockManager.initVolumeManager();
+        blockManager = BlockStorageManagerFactory.getBlockStorageManager();
+        blockManager.initialize();
+        checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
         try {
             blockManager.checkPreconditions();
             blockManager.configure();
-            startup();
+            startupChecks();
             if(!WalrusProperties.sharedMode)
-                checkWalrusConnection();
+                BlockStorageChecker.checkWalrusConnection();
         } catch(Exception ex) {
-            enableStorage = false;
+            StorageProperties.enableStorage = false;
             LOG.error(ex.getMessage());
-            LOG.warn("Could not initialize block manager. Storage has been disabled.");
-	    LOG.error("Could not initialize block manager. Storage has been disabled.");
-	    if(System.getProperty("euca.ebs.disable") == null) {
-		LOG.error("EBS is enabled but preconditions failed. Please resolve preconditions or restart with euca.ebs.disable");
-		System.exit(0xEC2);
-	    }
-        }
-    }
-
-    public Storage() {}
-
-
-    private static void startup() {
-        cleanVolumes();
-        cleanSnapshots();
-        blockManager.startupChecks();
-    }
-
-    private static void cleanVolumes() {
-        EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
-        VolumeInfo volumeInfo = new VolumeInfo();
-        volumeInfo.setStatus(StorageProperties.Status.creating.toString());
-        List<VolumeInfo> volumeInfos = db.query(volumeInfo);
-        for(VolumeInfo volInfo : volumeInfos) {
-            String volumeId = volInfo.getVolumeId();
-            LOG.info("Cleaning failed volume " + volumeId);
-            blockManager.cleanVolume(volumeId);
-            try {
-                volumeStorageManager.deleteObject("", volumeId);
-            } catch(Exception ex) {
-                LOG.warn(ex);
+            LOG.warn("Could not initialize block manager. BlockStorage has been disabled.");
+            LOG.error("Could not initialize block manager. BlockStorage has been disabled.");
+            if(System.getProperty("euca.ebs.disable") == null) {
+                LOG.error("EBS is enabled but preconditions failed. Please resolve preconditions or restart with euca.ebs.disable");
+                System.exit(0xEC2);
             }
-            db.delete(volInfo);
-        }
-        db.commit();
-        cleanFailedVolumes();
-    }
-
-    private static void cleanFailedVolumes() {
-        EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
-        VolumeInfo volumeInfo = new VolumeInfo();
-        volumeInfo.setStatus(StorageProperties.Status.failed.toString());
-        List<VolumeInfo> volumeInfos = db.query(volumeInfo);
-        for(VolumeInfo volInfo : volumeInfos) {
-            String volumeId = volInfo.getVolumeId();
-            LOG.info("Cleaning failed volume " + volumeId);
-            blockManager.cleanVolume(volumeId);
-            try {
-                volumeStorageManager.deleteObject("", volumeId);
-            } catch(Exception ex) {
-                LOG.warn(ex);
-            }
-            db.delete(volInfo);
-        }
-        db.commit();
-    }
-
-    private static void cleanFailedVolume(String volumeId) {
-        EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
-        VolumeInfo volumeInfo = new VolumeInfo(volumeId);
-        List<VolumeInfo> volumeInfos = db.query(volumeInfo);
-        if(volumeInfos.size() > 0) {
-            VolumeInfo volInfo = volumeInfos.get(0);
-            LOG.info("Cleaning failed volume " + volumeId);
-            blockManager.cleanVolume(volumeId);
-            try {
-                volumeStorageManager.deleteObject("", volumeId);
-            } catch(Exception ex) {
-                LOG.warn(ex);
-            }
-            db.delete(volInfo);
-        }
-        db.commit();
-    }
-
-
-    private static void cleanSnapshots() {
-        EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
-        SnapshotInfo snapshotInfo = new SnapshotInfo();
-        snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
-        List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
-        for(SnapshotInfo snapInfo : snapshotInfos) {
-            String snapshotId = snapInfo.getSnapshotId();
-            LOG.info("Cleaning failed snapshot " + snapshotId);
-            blockManager.cleanSnapshot(snapshotId);
-            try {
-                snapshotStorageManager.deleteObject("", snapshotId);
-            } catch(Exception ex) {
-                LOG.warn(ex);
-            }
-            db.delete(snapInfo);
-        }
-        db.commit();
-        cleanFailedSnapshots();
-    }
-
-    private static void cleanFailedSnapshots() {
-        EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
-        SnapshotInfo snapshotInfo = new SnapshotInfo();
-        snapshotInfo.setStatus(StorageProperties.Status.failed.toString());
-        List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
-        for(SnapshotInfo snapInfo : snapshotInfos) {
-            String snapshotId = snapInfo.getSnapshotId();
-            LOG.info("Cleaning failed snapshot " + snapshotId);
-            blockManager.cleanSnapshot(snapshotId);
-            try {
-                snapshotStorageManager.deleteObject("", snapshotId);
-            } catch(Exception ex) {
-                LOG.warn(ex);
-            }
-            db.delete(snapInfo);
-        }
-        db.commit();
-    }
-
-    private static void cleanFailedSnapshot(String snapshotId) {
-        EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
-        SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-        List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
-        if(snapshotInfos.size() > 0) {
-            SnapshotInfo snapInfo = snapshotInfos.get(0);
-            LOG.info("Cleaning failed snapshot " + snapshotId);
-            blockManager.cleanSnapshot(snapshotId);
-            try {
-                snapshotStorageManager.deleteObject("", snapshotId);
-            } catch(Exception ex) {
-                LOG.warn(ex);
-            }
-            db.delete(snapInfo);
-        }
-        db.commit();
-    }
-
-    private static void checkWalrusConnection() {
-        HttpClient httpClient = new HttpClient();
-        GetMethod getMethod = null;
-        try {
-            java.net.URI addrUri = new URL(StorageProperties.WALRUS_URL).toURI();
-            String addrPath = addrUri.getPath();
-            String addr = StorageProperties.WALRUS_URL.replaceAll(addrPath, "");
-            getMethod = new GetMethod(addr);
-
-            httpClient.executeMethod(getMethod);
-            enableSnapshots = true;
-        } catch(Exception ex) {
-            LOG.error("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url.");
-            enableSnapshots = false;
-        } finally {
-            if(getMethod != null)
-                getMethod.releaseConnection();
         }
     }
+
+    public BlockStorage() {}
+
+    private static void startupChecks() {
+        if(checker != null) {
+            checker.cleanup();
+            blockManager.startupChecks();
+        }
+    }
+
 
     public InitializeStorageManagerResponseType InitializeStorageManager(InitializeStorageManagerType request) {
         InitializeStorageManagerResponseType reply = (InitializeStorageManagerResponseType) request.getReply();
-        initializeForEBS();
+        initialize();
         return reply;
     }
 
@@ -272,12 +135,12 @@ public class Storage {
 
         //test connection to Walrus
         if(!WalrusProperties.sharedMode)
-            checkWalrusConnection();
+            BlockStorageChecker.checkWalrusConnection();
         try {
             blockManager.checkPreconditions();
-            enableStorage = true;
+            StorageProperties.enableStorage = true;
         } catch (Exception ex) {
-            enableStorage = false;
+            StorageProperties.enableStorage = false;
             LOG.error(ex);
         }
         return reply;
@@ -285,8 +148,8 @@ public class Storage {
 
     public GetStorageVolumeResponseType GetStorageVolume(GetStorageVolumeType request) throws EucalyptusCloudException {
         GetStorageVolumeResponseType reply = (GetStorageVolumeResponseType) request.getReply();
-        if(!enableStorage) {
-            LOG.error("Storage has been disabled. Please check your setup");
+        if(!StorageProperties.enableStorage) {
+            LOG.error("BlockStorage has been disabled. Please check your setup");
             return reply;
         }
 
@@ -303,7 +166,7 @@ public class Storage {
             reply.setSize(foundVolumeInfo.getSize().toString());
             reply.setStatus(foundVolumeInfo.getStatus());
             reply.setSnapshotId(foundVolumeInfo.getSnapshotId());
-            reply.setActualDeviceName(ETHERD_PREFIX + returnValues.get(0) + "." + returnValues.get(1));
+            reply.setActualDeviceName(StorageProperties.ETHERD_PREFIX + returnValues.get(0) + "." + returnValues.get(1));
         } else {
             db.rollback();
             throw new NoSuchVolumeException(volumeId);
@@ -314,8 +177,8 @@ public class Storage {
 
     public DeleteStorageVolumeResponseType DeleteStorageVolume(DeleteStorageVolumeType request) throws EucalyptusCloudException {
         DeleteStorageVolumeResponseType reply = (DeleteStorageVolumeResponseType) request.getReply();
-        if(!enableStorage) {
-            LOG.error("Storage has been disabled. Please check your setup");
+        if(!StorageProperties.enableStorage) {
+            LOG.error("BlockStorage has been disabled. Please check your setup");
             return reply;
         }
 
@@ -355,9 +218,9 @@ public class Storage {
         CreateStorageSnapshotResponseType reply = ( CreateStorageSnapshotResponseType ) request.getReply();
 
         if(!WalrusProperties.sharedMode) {
-            if(!enableSnapshots || !enableStorage) {
-                checkWalrusConnection();
-                if(!enableSnapshots)
+            if(!StorageProperties.enableSnapshots || !StorageProperties.enableStorage) {
+                BlockStorageChecker.checkWalrusConnection();
+                if(!StorageProperties.enableSnapshots)
                     LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
                 return reply;
             }
@@ -373,7 +236,7 @@ public class Storage {
             //check status
             if(foundVolumeInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
                 //create snapshot
-                if(shouldEnforceUsageLimits && WalrusProperties.sharedMode) {
+                if(StorageProperties.shouldEnforceUsageLimits && WalrusProperties.sharedMode) {
                     int volSize = foundVolumeInfo.getSize();
                     int totalSnapshotSize = 0;
                     SnapshotInfo snapInfo = new SnapshotInfo();
@@ -447,7 +310,7 @@ public class Storage {
         for(SnapshotInfo snapshotInfo: snapshotInfos) {
             snapshots.add(convertSnapshotInfo(snapshotInfo));
             if(snapshotInfo.getStatus().equals(StorageProperties.Status.failed.toString()))
-                cleanFailedSnapshot(snapshotInfo.getSnapshotId());
+                checker.cleanFailedSnapshot(snapshotInfo.getSnapshotId());
         }
         return reply;
     }
@@ -457,9 +320,9 @@ public class Storage {
         DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
         if(!WalrusProperties.sharedMode) {
-            if(!enableSnapshots || !enableStorage) {
-                checkWalrusConnection();
-                if(!enableSnapshots)
+            if(!StorageProperties.enableSnapshots || !StorageProperties.enableStorage) {
+                BlockStorageChecker.checkWalrusConnection();
+                if(!StorageProperties.enableSnapshots)
                     LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
                 return reply;
             }
@@ -525,8 +388,8 @@ public class Storage {
     public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
         CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
-        if(!enableStorage) {
-            LOG.error("Storage has been disabled. Please check your setup");
+        if(!StorageProperties.enableStorage) {
+            LOG.error("BlockStorage has been disabled. Please check your setup");
             return reply;
         }
 
@@ -537,7 +400,7 @@ public class Storage {
         //in GB
         String size = request.getSize();
         int sizeAsInt = 0;
-        if(shouldEnforceUsageLimits) {
+        if(StorageProperties.shouldEnforceUsageLimits) {
             if(size != null) {
                 sizeAsInt = Integer.parseInt(size);
                 EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
@@ -641,7 +504,7 @@ public class Storage {
                 VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
                 if(foundVolumeInfo != null) {
                     if(success) {
-                        if(shouldEnforceUsageLimits) {
+                        if(StorageProperties.shouldEnforceUsageLimits) {
                             EntityWrapper<VolumeInfo> dbVol = new EntityWrapper<VolumeInfo>();
                             VolumeInfo volInfo = new VolumeInfo();
                             List<VolumeInfo> volInfos = db.query(volInfo);
@@ -676,8 +539,8 @@ public class Storage {
     }
 
     private String getVolume(String volumeId, String snapshotBucket, String snapshotId) throws EucalyptusCloudException {
-        checkWalrusConnection();
-        if(!enableSnapshots) {
+        BlockStorageChecker.checkWalrusConnection();
+        if(!StorageProperties.enableSnapshots) {
             LOG.error("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url");
             throw new EucalyptusCloudException("could not connect to Walrus.");
         }
@@ -718,7 +581,7 @@ public class Storage {
 
 
     public void GetSnapshots(String volumeId, String snapshotSetName, String snapshotId) throws EucalyptusCloudException {
-        checkWalrusConnection();
+        BlockStorageChecker.checkWalrusConnection();
         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
         int size = blockManager.createVolume(volumeId, volumePath);
     }
@@ -752,7 +615,7 @@ public class Storage {
             volumes.add(convertVolumeInfo(volumeInfo));
             if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString())) {
                 LOG.warn( "Volume looks like it has failed removing it: " + volumeInfo.getVolumeId() );
-                cleanFailedVolume(volumeInfo.getVolumeId());
+                checker.cleanFailedVolume(volumeInfo.getVolumeId());
             }
         }
         db.commit();
@@ -770,7 +633,7 @@ public class Storage {
         volume.setSnapshotId(volInfo.getSnapshotId());
         List<String> returnValues = blockManager.getVolume(volumeId);
         if(returnValues.size() > 0)
-            volume.setActualDeviceName(ETHERD_PREFIX + returnValues.get(0) + "." + returnValues.get(1));
+            volume.setActualDeviceName(StorageProperties.ETHERD_PREFIX + returnValues.get(0) + "." + returnValues.get(1));
         else
             volume.setActualDeviceName("invalid");
         return volume;

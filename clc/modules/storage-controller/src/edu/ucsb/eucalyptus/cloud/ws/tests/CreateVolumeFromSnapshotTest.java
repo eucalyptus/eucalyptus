@@ -34,7 +34,7 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.cloud.ws.Storage;
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
@@ -42,7 +42,8 @@ import junit.framework.TestCase;
 
 public class CreateVolumeFromSnapshotTest extends TestCase {
 
-    static Storage storage;
+    static BlockStorage blockStorage;
+
     public void testCreateVolume() throws Throwable {
 
         String userId = "admin";
@@ -53,24 +54,24 @@ public class CreateVolumeFromSnapshotTest extends TestCase {
         createVolumeFromSnapshotRequest.setVolumeId(volumeId);
         createVolumeFromSnapshotRequest.setUserId(userId);
         createVolumeFromSnapshotRequest.setSnapshotId(snapshotId);
-        CreateStorageVolumeResponseType createVolumeFromSnapshotResponse = storage.CreateStorageVolume(createVolumeFromSnapshotRequest);
+        CreateStorageVolumeResponseType createVolumeFromSnapshotResponse = blockStorage.CreateStorageVolume(createVolumeFromSnapshotRequest);
         System.out.println(createVolumeFromSnapshotResponse);
         while(true);
         /* DeleteStorageSnapshotType deleteSnapshotRequest = new DeleteStorageSnapshotType();
         deleteSnapshotRequest.setUserId(userId);
         deleteSnapshotRequest.setSnapshotId(snapshotId);
-        DeleteStorageSnapshotResponseType deleteSnapshotResponseType = storage.DeleteStorageSnapshot(deleteSnapshotRequest);
+        DeleteStorageSnapshotResponseType deleteSnapshotResponseType = blockStorage.DeleteStorageSnapshot(deleteSnapshotRequest);
         System.out.println(deleteSnapshotResponseType);
 
         DeleteStorageVolumeType deleteVolumeRequest = new DeleteStorageVolumeType();
         deleteVolumeRequest.setUserId(userId);
         deleteVolumeRequest.setVolumeId(volumeId);
-        DeleteStorageVolumeResponseType deleteVolumeResponse = storage.DeleteStorageVolume(deleteVolumeRequest);
+        DeleteStorageVolumeResponseType deleteVolumeResponse = blockStorage.DeleteStorageVolume(deleteVolumeRequest);
         System.out.println(deleteVolumeResponse);     */
     }
 
     public void setUp() {
-        storage = new Storage();
+        blockStorage = new BlockStorage();
     }
 
 

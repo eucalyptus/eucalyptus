@@ -34,7 +34,7 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.cloud.ws.Storage;
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
@@ -43,7 +43,8 @@ import java.util.ArrayList;
 
 public class VolumeTest extends TestCase {
 
-    static Storage storage;
+    static BlockStorage blockStorage;
+
     public void testVolume() throws Throwable {
 
 
@@ -55,7 +56,7 @@ public class VolumeTest extends TestCase {
         createVolumeRequest.setUserId(userId);
         createVolumeRequest.setVolumeId(volumeId);
         createVolumeRequest.setSize("1");
-        CreateStorageVolumeResponseType createVolumeResponse = storage.CreateStorageVolume(createVolumeRequest);
+        CreateStorageVolumeResponseType createVolumeResponse = blockStorage.CreateStorageVolume(createVolumeRequest);
         System.out.println(createVolumeResponse); 
         Thread.sleep(1000);
         DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
@@ -64,14 +65,14 @@ public class VolumeTest extends TestCase {
         ArrayList<String> volumeSet = new ArrayList<String>();
         volumeSet.add(volumeId);
         describeVolumesRequest.setVolumeSet(volumeSet);
-        DescribeStorageVolumesResponseType describeVolumesResponse = storage.DescribeStorageVolumes(describeVolumesRequest);
+        DescribeStorageVolumesResponseType describeVolumesResponse = blockStorage.DescribeStorageVolumes(describeVolumesRequest);
         StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
         System.out.println(vol);
         while(true);
     }
 
     public void setUp() {
-        storage = new Storage();
-        Storage.initializeForEBS();
+        blockStorage = new BlockStorage();
+        BlockStorage.initialize();
     }
 }

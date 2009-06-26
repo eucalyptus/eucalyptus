@@ -34,14 +34,14 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.cloud.ws.Storage;
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
 import junit.framework.TestCase;
 
 public class DeleteSnapshotTest extends TestCase {
 
-    static Storage storage;
+    static BlockStorage blockStorage;
 
 
     public void testDeleteSnapshot() throws Throwable {
@@ -52,7 +52,7 @@ public class DeleteSnapshotTest extends TestCase {
         DeleteStorageSnapshotType deleteSnapshot = new DeleteStorageSnapshotType();
         deleteSnapshot.setUserId("admin");
         deleteSnapshot.setSnapshotId(snapshotId);
-        DeleteStorageSnapshotResponseType deleteSnapshotResponse = storage.DeleteStorageSnapshot(deleteSnapshot);
+        DeleteStorageSnapshotResponseType deleteSnapshotResponse = blockStorage.DeleteStorageSnapshot(deleteSnapshot);
         System.out.println(deleteSnapshotResponse);
         while(true);
     }
@@ -60,11 +60,11 @@ public class DeleteSnapshotTest extends TestCase {
     public void testWalrusDeleteSnapshot() throws Throwable {
 
         String snapshotId = "snap-zVl2kZJmjhxnEg..";
-        storage.DeleteWalrusSnapshot(snapshotId);        
+        blockStorage.DeleteWalrusSnapshot(snapshotId);
     }
 
     public void setUp() {
-        storage = new Storage();
-        Storage.initializeForEBS();
+        blockStorage = new BlockStorage();
+        BlockStorage.initialize();
     }    
 }

@@ -39,7 +39,6 @@ import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.ws.Command;
-import edu.ucsb.eucalyptus.cloud.ws.Storage;
 import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.util.StorageProperties;
@@ -55,7 +54,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class LVM2Manager implements BlockStorageManager {
+public class LVM2Manager implements LogicalStorageManager {
 
 
     public static final String lvmRootDirectory = "/dev";
@@ -109,10 +108,6 @@ public class LVM2Manager implements BlockStorageManager {
 
     private String getLvmVersion() {
         return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvm", "version"});
-    }
-
-    private String getISCSITargetVersion() {
-        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "ietadm", "--version"});
     }
 
     private String findFreeLoopback() {
@@ -227,7 +222,7 @@ public class LVM2Manager implements BlockStorageManager {
     }
 
 
-    public void initVolumeManager() {
+    public void initialize() {
         if(!initialized) {
             System.loadLibrary("lvm2control");
             exportManager = new AOEManager();
@@ -244,7 +239,7 @@ public class LVM2Manager implements BlockStorageManager {
             if(iface == null || (iface.length() == 0)) {
                 NetworkInterface inface = NetworkInterface.getByName(iface);
                 if(inface == null) {
-                    LOG.error("Network interface " + iface + " is not valid. Storage may not function.");
+                    LOG.error("Network interface " + iface + " is not valid. BlockStorage may not function.");
                     if(ifaceDiscovery) {
                         List<NetworkInterface> ifaces = null;
                         try {
@@ -260,7 +255,7 @@ public class LVM2Manager implements BlockStorageManager {
                     }
                 } else {
                     if(!inface.isUp()) {
-                        LOG.error("Network interface " + iface + " is not available (up). Storage may not function.");
+                        LOG.error("Network interface " + iface + " is not available (up). BlockStorage may not function.");
                     }
                 }
             }
@@ -358,7 +353,7 @@ public class LVM2Manager implements BlockStorageManager {
         }
     }
 
-    public native void initialize();
+    public native void registerSignals();
 
     private synchronized List<Integer> allocateDeviceNumbers() throws EucalyptusCloudException {
         int majorNumber = -1;
@@ -377,7 +372,7 @@ public class LVM2Manager implements BlockStorageManager {
                 }
                 minorNumber = (minorNumber + 1) % MAX_MINOR_NUMBER;
                 LOG.info("Trying e" + majorNumber + "." + minorNumber);
-            } while(new File(Storage.ETHERD_PREFIX + majorNumber + "." + minorNumber).exists());
+            } while(new File(StorageProperties.ETHERD_PREFIX + majorNumber + "." + minorNumber).exists());
             foundMetaInfo.setMajorNumber(majorNumber);
             foundMetaInfo.setMinorNumber(minorNumber);
         }

@@ -32,42 +32,10 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws.tests;
+package edu.ucsb.eucalyptus.storage;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
-import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType;
-import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
-import junit.framework.TestCase;
-
-public class GetSnapshotTest extends TestCase {
-
-    static BlockStorage blockStorage;
-    static Bukkit bukkit;
-
-    public void testGetSnapshot() throws Throwable {
-
-        String userId = "admin";
-        ListAllMyBucketsType listBucketsRequest = new ListAllMyBucketsType();
-
-        listBucketsRequest.setUserId(userId);
-        ListAllMyBucketsResponseType response =  bukkit.ListAllMyBuckets(listBucketsRequest);
-        System.out.println(response);
-
-        String volumeId = "vol-" + Hashes.getRandom(10);
-        String snapshotBucket = "snapset-1234"; //irrelevant
-        String snapshotId = "snap-" + Hashes.getRandom(10);
-        snapshotId = "snap-xsO2qaH9xGSxYQ..";
-
-        blockStorage.GetSnapshots(volumeId, snapshotBucket, snapshotId);
-
-
-//        if ( EntityWrapper.getEntityManagerFactory().isOpen() )
-  //   EntityWrapper.getEntityManagerFactory().close();
-    }
-    public void setUp() {
-        blockStorage = new BlockStorage();
-        bukkit = new Bukkit();
+public class BlockStorageManagerFactory {
+    public static LogicalStorageManager getBlockStorageManager() {
+        return new LVM2Manager();
     }
 }

@@ -39,7 +39,7 @@
             <inbound>
                 <inbound-endpoint ref="StorageWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.Storage"/>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.BlockStorage"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="StorageReplyQueueWS"/>
@@ -60,7 +60,7 @@
             <inbound>
                 <inbound-endpoint ref="StorageInternalWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.Storage"/>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.BlockStorage"/>
         </service>        
     </model>
 

@@ -34,7 +34,7 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.cloud.ws.Storage;
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
@@ -49,7 +49,8 @@ import java.util.Date;
 
 public class CreateSnapshotTest extends TestCase {
 
-    static Storage storage;
+    static BlockStorage blockStorage;
+
     public void testCreateSnapshot() throws Throwable {
 
         String userId = "admin";
@@ -62,7 +63,7 @@ public class CreateSnapshotTest extends TestCase {
         createSnapshotRequest.setUserId(userId);
         createSnapshotRequest.setVolumeId(volumeId);
         createSnapshotRequest.setSnapshotId(snapshotId);
-        CreateStorageSnapshotResponseType createSnapshotResponse = storage.CreateStorageSnapshot(createSnapshotRequest);
+        CreateStorageSnapshotResponseType createSnapshotResponse = blockStorage.CreateStorageSnapshot(createSnapshotRequest);
         System.out.println(createSnapshotResponse);
 
         while(true);
@@ -73,7 +74,7 @@ public class CreateSnapshotTest extends TestCase {
         String snapshotId = "snap-zVl2kZJmjhxnEg..";
         String dupSnapshotId = "snap-zVl2kZJmjhxnEg...SrZ5iA..";
 
-        storage.transferSnapshot(volumeId, snapshotId, dupSnapshotId, true);
+        blockStorage.transferSnapshot(volumeId, snapshotId, dupSnapshotId, true);
         while(true);
     }
 
@@ -108,8 +109,8 @@ public class CreateSnapshotTest extends TestCase {
     }
 
     public void setUp() {
-        storage = new Storage();
-        Storage.initializeForEBS();
+        blockStorage = new BlockStorage();
+        BlockStorage.initialize();
     }
 
 }

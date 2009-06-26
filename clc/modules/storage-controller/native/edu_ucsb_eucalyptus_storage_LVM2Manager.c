@@ -483,7 +483,7 @@ void sigchld(int signal)
  while (0 < waitpid(-1, NULL, WNOHANG));
 }
 
-JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_initialize
+JNIEXPORT void JNICALL Java_edu_ucsb_eucalyptus_storage_LVM2Manager_registerSignals
   (JNIEnv *env, jobject obj) {
   signal(SIGCHLD, sigchld);
 }

@@ -38,8 +38,8 @@ import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 
 import java.util.List;
 
-public interface BlockStorageManager {
-    public void initVolumeManager();
+public interface LogicalStorageManager {
+    public void initialize();
 
     public void configure();
     
