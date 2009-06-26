@@ -41,12 +41,7 @@ import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,9 +59,6 @@ public class FileSystemStorageManager implements StorageManager {
     private String rootDirectory;
     public FileSystemStorageManager(String rootDirectory) {
         this.rootDirectory = rootDirectory;
-    }
-
-    public void initialize() {
     }
 
     public void checkPreconditions() throws EucalyptusCloudException {

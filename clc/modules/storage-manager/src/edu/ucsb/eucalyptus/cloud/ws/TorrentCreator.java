@@ -32,12 +32,12 @@ package edu.ucsb.eucalyptus.cloud.ws;
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
+
+import edu.ucsb.eucalyptus.keys.Hashes;
+import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
 
 import java.io.*;
-
-import edu.ucsb.eucalyptus.util.WalrusProperties;
-import edu.ucsb.eucalyptus.keys.Hashes;
 
 public class TorrentCreator {
     private static Logger LOG = Logger.getLogger( TorrentCreator.class );

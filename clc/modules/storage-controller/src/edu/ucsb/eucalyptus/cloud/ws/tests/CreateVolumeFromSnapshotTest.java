@@ -36,7 +36,8 @@ package edu.ucsb.eucalyptus.cloud.ws.tests;
 
 import edu.ucsb.eucalyptus.cloud.ws.Storage;
 import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
 import junit.framework.TestCase;
 
 public class CreateVolumeFromSnapshotTest extends TestCase {

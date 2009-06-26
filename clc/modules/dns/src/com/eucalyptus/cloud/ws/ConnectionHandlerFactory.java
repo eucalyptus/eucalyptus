@@ -34,8 +34,8 @@
 
 package com.eucalyptus.cloud.ws;
 
-import java.net.Socket;
 import java.net.DatagramSocket;
+import java.net.Socket;
 
 public class ConnectionHandlerFactory {
     public static void handle(Object s) {

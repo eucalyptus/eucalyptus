@@ -34,8 +34,9 @@
 
 package com.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.msgs.*;
 import com.eucalyptus.cloud.ws.DNSControl;
+import edu.ucsb.eucalyptus.msgs.UpdateARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
 import junit.framework.TestCase;
 
 public class DNSControlTest extends TestCase {

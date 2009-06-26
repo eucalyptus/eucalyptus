@@ -42,8 +42,6 @@ import java.util.List;
 
 public interface StorageManager {
 
-    public void initialize();
-
     public void checkPreconditions() throws EucalyptusCloudException;
 
     public void createBucket(String bucket) throws IOException;

@@ -48,16 +48,16 @@ import java.util.zip.Adler32;
 public class Hashes {
     private static Logger LOG = Logger.getLogger( Hashes.class );
 
-  public static byte[] getPemBytes( final Object o ) throws IOException {
-      PEMWriter pemOut;
-      ByteArrayOutputStream pemByteOut = new ByteArrayOutputStream();
-      pemOut = new PEMWriter( new OutputStreamWriter( pemByteOut ) );
-      pemOut.writeObject( o );
-      pemOut.close();
-      return pemByteOut.toByteArray();
+    public static byte[] getPemBytes( final Object o ) throws IOException {
+        PEMWriter pemOut;
+        ByteArrayOutputStream pemByteOut = new ByteArrayOutputStream();
+        pemOut = new PEMWriter( new OutputStreamWriter( pemByteOut ) );
+        pemOut.writeObject( o );
+        pemOut.close();
+        return pemByteOut.toByteArray();
     }
 
-  static
+    static
     {
         Security.addProvider( new BouncyCastleProvider() );
     }
@@ -163,26 +163,47 @@ public class Hashes {
         return new String(UrlBase64.encode(randomBytes));
     }
 
-  public static String generateId( final String userId, final String prefix ) {
-    Adler32 hash = new Adler32();
-    String key = userId + System.currentTimeMillis();
-    hash.update( key.getBytes() );
-    String imageId = String.format( "%s-%08X", prefix, hash.getValue() );
-    return imageId;
-  }
+    public static String generateId( final String userId, final String prefix ) {
+        Adler32 hash = new Adler32();
+        String key = userId + System.currentTimeMillis();
+        hash.update( key.getBytes() );
+        String imageId = String.format( "%s-%08X", prefix, hash.getValue() );
+        return imageId;
+    }
 
 
-  // borrowing from neil for the time being
-  public static byte[] hexToBytes(String data) {
-      int k = 0;
-      byte[] results = new byte[data.length() / 2];
-      for (int i = 0; i < data.length();) {
-          results[k] = (byte) (Character.digit(data.charAt(i++), 16) << 4);
-          results[k] += (byte) (Character.digit(data.charAt(i++), 16));
-          k++;
-      }
+    // borrowing from neil for the time being
+    public static byte[] hexToBytes(String data) {
+        int k = 0;
+        byte[] results = new byte[data.length() / 2];
+        for (int i = 0; i < data.length();) {
+            results[k] = (byte) (Character.digit(data.charAt(i++), 16) << 4);
+            results[k] += (byte) (Character.digit(data.charAt(i++), 16));
+            k++;
+        }
 
-      return results;
-  }
+        return results;
+    }
 
+    public static String bytesToHex(byte[] data) {
+        StringBuffer buffer = new StringBuffer();
+        for ( int i = 0; i < data.length; i++ ) {
+            buffer.append( byteToHex(data[i]) );
+        }
+        return(buffer.toString());
+    }
+
+    public static String byteToHex(byte data) {
+        StringBuffer hexString =  new StringBuffer();
+        hexString.append(toHex((data>>>4)&0x0F));
+        hexString.append(toHex(data&0x0F));
+        return hexString.toString();
+    }
+
+    public static char toHex(int value) {
+        if ((0 <= value) && (value <= 9 ))
+            return (char)('0' + value);
+        else
+            return (char)('a' + (value-10));
+    }
 }

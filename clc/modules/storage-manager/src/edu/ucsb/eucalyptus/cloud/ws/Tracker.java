@@ -32,19 +32,39 @@ package edu.ucsb.eucalyptus.cloud.ws;
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
+
 import edu.ucsb.eucalyptus.util.WalrusProperties;
-
-import java.io.*;
-
 import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.util.Collection;
 
 public class Tracker extends Thread {
     private static Logger LOG = Logger.getLogger( Tracker.class );
+    private static Tracker tracker;
 
     private Process proc;
 
+    public static void initialize() {
+        tracker = new Tracker();
+        if(tracker.exists())  {
+            WalrusProperties.enableTorrents = true;
+            tracker.start();
+            Runtime.getRuntime().addShutdownHook(new Thread()
+            {
+                public void run() {
+                    tracker.bye();
+                    Collection<TorrentClient> torrentClients = Torrents.getClients();
+                    for(TorrentClient torrentClient : torrentClients) {
+                        torrentClient.bye();
+                    }
+                }
+            });
+        }
+    }
+
     public boolean exists() {
-        return (new File(WalrusProperties.TRACKER_BINARY)).exists();     
+        return (new File(WalrusProperties.TRACKER_BINARY)).exists();
     }
 
     public void run() {

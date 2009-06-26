@@ -34,15 +34,14 @@
 
 package com.eucalyptus.cloud.ws;
 
+import com.eucalyptus.util.DNSProperties;
+import edu.ucsb.eucalyptus.cloud.entities.*;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Address;
 
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Iterator;
-
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import com.eucalyptus.util.DNSProperties;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ZoneManager {
     private static ConcurrentHashMap<Name, Zone> zones = new ConcurrentHashMap<Name, Zone>();

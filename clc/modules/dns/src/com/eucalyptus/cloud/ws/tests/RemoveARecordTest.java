@@ -34,7 +34,8 @@
 
 package com.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.msgs.RemoveARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.RemoveARecordType;
 import junit.framework.TestCase;
 
 public class RemoveARecordTest extends TestCase {

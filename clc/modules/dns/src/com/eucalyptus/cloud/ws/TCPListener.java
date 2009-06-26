@@ -36,10 +36,10 @@ package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.InetAddress;
-import java.io.IOException;
 
 public class TCPListener extends Thread {
     private static Logger LOG = Logger.getLogger( TCPListener.class );

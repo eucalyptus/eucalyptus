@@ -34,9 +34,9 @@
 
 package edu.ucsb.eucalyptus.storage.fs;
 
-import java.io.*;
-import java.nio.channels.FileChannel;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 public abstract class FileIO {
 

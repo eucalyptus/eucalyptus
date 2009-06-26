@@ -35,8 +35,8 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Torrents {
     private static Logger LOG = Logger.getLogger( Torrents.class );

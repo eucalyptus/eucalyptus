@@ -62,6 +62,14 @@ public class WalrusProperties {
     public static int MAX_KEYS = 1000;
 
     public static final int IO_CHUNK_SIZE = 102400;
+    public static boolean shouldEnforceUsageLimits = true;
+    public static boolean enableSnapshots = false;
+    public static boolean enableTorrents = false;
+    public static boolean sharedMode = false;
+    public static boolean enableVirtualHosting = true;
+    public static final long CACHE_PROGRESS_TIMEOUT = 600000L; //ten minutes
+    public static long IMAGE_CACHE_RETRY_TIMEOUT = 1000L;
+    public static final int IMAGE_CACHE_RETRY_LIMIT = 3;
 
     public static void update() {
         try {

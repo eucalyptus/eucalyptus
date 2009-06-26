@@ -36,11 +36,11 @@ package com.eucalyptus.ic;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.ic.WalrusMessaging;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.transport.OverloadedWebserviceMethod;
-import edu.ucsb.eucalyptus.ic.WalrusMessaging;
 import org.apache.log4j.Logger;
 
 public class DNS {

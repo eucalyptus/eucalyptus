@@ -36,9 +36,9 @@ package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 
-import java.net.InetAddress;
-import java.net.DatagramSocket;
 import java.io.IOException;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 
 public class UDPListener extends Thread {
     private static Logger LOG = Logger.getLogger( UDPListener.class );

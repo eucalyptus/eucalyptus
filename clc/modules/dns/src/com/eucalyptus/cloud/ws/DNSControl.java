@@ -34,14 +34,14 @@
 
 package com.eucalyptus.cloud.ws;
 
+import com.eucalyptus.util.DNSProperties;
+import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
+import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Address;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import com.eucalyptus.util.DNSProperties;
 
 import java.net.UnknownHostException;
 import java.util.List;

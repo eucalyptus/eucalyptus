@@ -39,13 +39,13 @@
 
 package com.eucalyptus.cloud.ws;
 
-import org.xbill.DNS.Message;
 import org.apache.log4j.Logger;
+import org.xbill.DNS.Message;
 
-import java.net.DatagramSocket;
-import java.net.DatagramPacket;
-import java.io.InterruptedIOException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 
 
 public class UDPHandler extends ConnectionHandler {

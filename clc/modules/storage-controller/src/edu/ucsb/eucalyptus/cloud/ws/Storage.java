@@ -34,53 +34,21 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.NoSuchVolumeException;
-import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
-import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
-import edu.ucsb.eucalyptus.cloud.VolumeInUseException;
-import edu.ucsb.eucalyptus.cloud.VolumeNotReadyException;
+import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
-import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
-import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
-import edu.ucsb.eucalyptus.msgs.GetStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.GetStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.InitializeStorageManagerResponseType;
-import edu.ucsb.eucalyptus.msgs.InitializeStorageManagerType;
-import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
-import edu.ucsb.eucalyptus.msgs.StorageVolume;
-import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationResponseType;
-import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
+import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.BlockStorageManager;
 import edu.ucsb.eucalyptus.storage.LVM2Manager;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.transport.query.WalrusQueryDispatcher;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import edu.ucsb.eucalyptus.util.StorageProperties;
-import edu.ucsb.eucalyptus.util.WalrusDataMessage;
-import edu.ucsb.eucalyptus.util.XMLParser;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpConnection;
-import org.apache.commons.httpclient.HttpMethodBase;
-import org.apache.commons.httpclient.HttpState;
-import org.apache.commons.httpclient.HttpStatus;
+import edu.ucsb.eucalyptus.util.*;
+import org.apache.commons.httpclient.*;
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
@@ -88,23 +56,12 @@ import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URL;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -123,8 +80,6 @@ public class Storage {
 
     public static final String ETHERD_PREFIX = "/dev/etherd/e";
 
-    public static boolean sharedMode;
-
     static {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
@@ -142,8 +97,7 @@ public class Storage {
             blockManager.checkPreconditions();
             blockManager.configure();
             startup();
-            sharedMode = Bukkit.getSharedMode();
-            if(!sharedMode)
+            if(!WalrusProperties.sharedMode)
                 checkWalrusConnection();
         } catch(Exception ex) {
             enableStorage = false;
@@ -317,7 +271,7 @@ public class Storage {
         }
 
         //test connection to Walrus
-        if(!sharedMode)
+        if(!WalrusProperties.sharedMode)
             checkWalrusConnection();
         try {
             blockManager.checkPreconditions();
@@ -400,7 +354,7 @@ public class Storage {
     public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
         CreateStorageSnapshotResponseType reply = ( CreateStorageSnapshotResponseType ) request.getReply();
 
-        if(!sharedMode) {
+        if(!WalrusProperties.sharedMode) {
             if(!enableSnapshots || !enableStorage) {
                 checkWalrusConnection();
                 if(!enableSnapshots)
@@ -419,7 +373,7 @@ public class Storage {
             //check status
             if(foundVolumeInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
                 //create snapshot
-                if(shouldEnforceUsageLimits && sharedMode) {
+                if(shouldEnforceUsageLimits && WalrusProperties.sharedMode) {
                     int volSize = foundVolumeInfo.getSize();
                     int totalSnapshotSize = 0;
                     SnapshotInfo snapInfo = new SnapshotInfo();
@@ -502,7 +456,7 @@ public class Storage {
     public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
         DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
-        if(!sharedMode) {
+        if(!WalrusProperties.sharedMode) {
             if(!enableSnapshots || !enableStorage) {
                 checkWalrusConnection();
                 if(!enableSnapshots)
@@ -539,7 +493,7 @@ public class Storage {
                     snapshotStorageManager.deleteObject("", snapshotId);
                     db.delete(foundSnapshotInfo);
                     db.commit();
-                    if(!sharedMode) {
+                    if(!WalrusProperties.sharedMode) {
                         SnapshotDeleter snapshotDeleter = new SnapshotDeleter(snapshotId);
                         snapshotDeleter.start();
                     }
@@ -848,7 +802,7 @@ public class Storage {
         public void run() {
             try {
                 blockManager.createSnapshot(volumeId, snapshotId);
-                if(sharedMode) {
+                if(WalrusProperties.sharedMode) {
                     EntityWrapper<SnapshotInfo> dbSnap = new EntityWrapper<SnapshotInfo>();
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     SnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
