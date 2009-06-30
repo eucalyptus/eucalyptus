@@ -79,6 +79,8 @@ public class BlockStorage {
     static {
         volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
         snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
+        blockManager = BlockStorageManagerFactory.getBlockStorageManager();
+        blockManager.initialize();
     }
 
     public static void initialize() {
@@ -87,8 +89,6 @@ public class BlockStorage {
         if(walrusAddr == null) {
             LOG.warn("Walrus host addr not set");
         }
-        blockManager = BlockStorageManagerFactory.getBlockStorageManager();
-        blockManager.initialize();
         checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
         try {
             blockManager.checkPreconditions();
