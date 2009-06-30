@@ -226,7 +226,6 @@ public class LVM2Manager implements LogicalStorageManager {
         if(!initialized) {
             System.loadLibrary("lvm2control");
             exportManager = new AOEManager();
-            initialize();
             initialized = true;
         }
     }
