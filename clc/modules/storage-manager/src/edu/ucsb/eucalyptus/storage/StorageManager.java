@@ -54,9 +54,9 @@ public interface StorageManager {
 
     public void putObject(String bucket, String object, byte[] base64Data, boolean append) throws IOException;
 
-    public FileIO prepareForRead(String bucket, String object);
+    public FileIO prepareForRead(String bucket, String object) throws Exception;
 
-    public FileIO prepareForWrite(String bucket, String object);
+    public FileIO prepareForWrite(String bucket, String object) throws Exception;
 
     public int readObject(String bucket, String object, byte[] bytes, long offset) throws IOException;
 

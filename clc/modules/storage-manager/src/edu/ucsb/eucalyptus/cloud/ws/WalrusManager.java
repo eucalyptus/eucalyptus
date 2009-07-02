@@ -66,6 +66,21 @@ public class WalrusManager {
         this.walrusImageManager = walrusImageManager;
     }
 
+    public void initialize() {
+        check();
+    }
+
+    public void check() {
+        File bukkitDir = new File(WalrusProperties.bucketRootDirectory);
+        if(!bukkitDir.exists()) {
+            if(!bukkitDir.mkdirs()) {
+                LOG.fatal("Unable to make bucket root directory: " + WalrusProperties.bucketRootDirectory);
+            }
+        } else if(!bukkitDir.canWrite()) {
+            LOG.fatal("Cannot write to bucket root directory: " + WalrusProperties.bucketRootDirectory);
+        }
+    }
+
     public ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws EucalyptusCloudException {
         ListAllMyBucketsResponseType reply = (ListAllMyBucketsResponseType) request.getReply();
         EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
@@ -443,7 +458,11 @@ public class WalrusManager {
                         if(WalrusDataMessage.isStart(dataMessage)) {
                             tempObjectName = objectName + "." + Hashes.getRandom(12);
                             digest = Hashes.Digest.MD5.get();
-                            fileIO = storageManager.prepareForWrite(bucketName, tempObjectName);
+                            try {
+                                fileIO = storageManager.prepareForWrite(bucketName, tempObjectName);
+                            } catch(Exception ex) {
+                                throw new EucalyptusCloudException(ex);
+                            }
                         } else if(WalrusDataMessage.isEOF(dataMessage)) {
                             //commit object
                             try {
@@ -664,9 +683,13 @@ public class WalrusManager {
                     //writes are unconditional
                     byte[] base64Data = request.getBase64Data().getBytes();
                     foundObject.setObjectName(objectName);
-                    FileIO fileIO = storageManager.prepareForWrite(bucketName, objectName);
-                    fileIO.write(base64Data);
-                    fileIO.finish();
+                    try {
+                        FileIO fileIO = storageManager.prepareForWrite(bucketName, objectName);
+                        fileIO.write(base64Data);
+                        fileIO.finish();
+                    } catch(Exception ex) {
+                        throw new EucalyptusCloudException(ex);
+                    }
                     md5 = Hashes.getHexString(Hashes.Digest.MD5.get().digest(base64Data));
                     foundObject.setEtag(md5);
                     Long size = Long.parseLong(request.getContentLength());

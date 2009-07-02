@@ -35,7 +35,7 @@
 package edu.ucsb.eucalyptus.storage.fs;
 
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.ws.Command;
+import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
 import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.storage.StorageManager;
@@ -115,11 +115,11 @@ public class FileSystemStorageManager implements StorageManager {
         }
     }
 
-    public FileIO prepareForRead(String bucket, String object) {
+    public FileIO prepareForRead(String bucket, String object) throws Exception {
         return new FileReader(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
     }
 
-    public FileIO prepareForWrite(String bucket, String object) {
+    public FileIO prepareForWrite(String bucket, String object) throws Exception {
         return new FileWriter(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
     }
 
@@ -204,7 +204,7 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     private String removeLoopback(String loDevName) {
-        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
+        return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
     }
 
     private int losetup(String absoluteFileName, String loDevName) {
@@ -229,39 +229,39 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     private String findFreeLoopback() {
-        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
+        return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
     }
 
     private String removeLogicalVolume(String lvName) {
-        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
+        return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
     }
 
     private String reduceVolumeGroup(String vgName, String pvName) {
-        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
+        return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
     }
 
     private String removePhysicalVolume(String loDevName) {
-        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvremove", loDevName});
+        return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvremove", loDevName});
     }
 
     private String createVolumeFromLv(String lvName, String volumeKey) {
-        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=" + lvName, "of=" + volumeKey, "bs=1M"});
+        return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=" + lvName, "of=" + volumeKey, "bs=1M"});
     }
 
     private String enableLogicalVolume(String lvName) {
-        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
+        return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
     }
 
     private String disableLogicalVolume(String lvName) {
-        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-an", lvName});
+        return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-an", lvName});
     }
 
     private String removeVolumeGroup(String vgName) {
-        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgremove", vgName});
+        return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgremove", vgName});
     }
 
     private String getLvmVersion() {
-        return Command.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvm", "version"});
+        return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvm", "version"});
     }
 
 

@@ -45,11 +45,12 @@ public  class FileWriter extends edu.ucsb.eucalyptus.storage.fs.FileIO {
 
     private static Logger LOG = Logger.getLogger(FileWriter.class);
 
-    public FileWriter(String filename) {
+    public FileWriter(String filename) throws Exception {
         try {
             channel = new FileOutputStream(filename).getChannel();
         } catch( FileNotFoundException ex) {
             LOG.error(ex);
+            throw ex;
         }
     }
 

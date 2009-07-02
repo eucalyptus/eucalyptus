@@ -83,52 +83,60 @@ public class ObjectReader extends Thread {
     }
 
     public void run() {
-        FileIO fileIO = storageManager.prepareForRead(bucketName, objectName);
-
-        long bytesRemaining = objectSize;
-        long offset = byteRangeStart;
-
-        if (byteRangeEnd > 0) {
-            assert (byteRangeEnd <= objectSize);
-            assert (byteRangeEnd >= byteRangeStart);
-            bytesRemaining = byteRangeEnd - byteRangeStart;
-            if (byteRangeEnd > objectSize || (byteRangeStart < 0))
-                bytesRemaining = 0;
-        }
-
         try {
-            getQueue.put(WalrusDataMessage.StartOfData(bytesRemaining));
+            FileIO fileIO = storageManager.prepareForRead(bucketName, objectName);
 
-            while (bytesRemaining > 0) {
-                int bytesRead = fileIO.read(offset);
-                if (bytesRead < 0) {
-                    LOG.error("Unable to read object: " + bucketName + "/" + objectName);
-                    break;
-                }
-                if ((bytesRemaining - bytesRead) > 0)
-                    getQueue.put(WalrusDataMessage.DataMessage(fileIO.getBuffer(), bytesRead));
-                else
-                    getQueue.put(WalrusDataMessage.DataMessage(fileIO.getBuffer(), (int) bytesRemaining));
+            long bytesRemaining = objectSize;
+            long offset = byteRangeStart;
 
-                bytesRemaining -= bytesRead;
-                offset += bytesRead;
+            if (byteRangeEnd > 0) {
+                assert (byteRangeEnd <= objectSize);
+                assert (byteRangeEnd >= byteRangeStart);
+                bytesRemaining = byteRangeEnd - byteRangeStart;
+                if (byteRangeEnd > objectSize || (byteRangeStart < 0))
+                    bytesRemaining = 0;
             }
-            fileIO.finish();
-            getQueue.put(WalrusDataMessage.EOF());
-        } catch (Exception ex) {
-            LOG.error(ex, ex);
-        }
-        if (semaphore != null) {
-            semaphore.release();
-            synchronized (semaphore) {
-                semaphore.notifyAll();
-            }
-        }
-        if (deleteAfterXfer) {
+
             try {
-                storageManager.deleteObject(bucketName, objectName);
+                getQueue.put(WalrusDataMessage.StartOfData(bytesRemaining));
+
+                while (bytesRemaining > 0) {
+                    int bytesRead = fileIO.read(offset);
+                    if (bytesRead < 0) {
+                        LOG.error("Unable to read object: " + bucketName + "/" + objectName);
+                        break;
+                    }
+                    if ((bytesRemaining - bytesRead) > 0)
+                        getQueue.put(WalrusDataMessage.DataMessage(fileIO.getBuffer(), bytesRead));
+                    else
+                        getQueue.put(WalrusDataMessage.DataMessage(fileIO.getBuffer(), (int) bytesRemaining));
+
+                    bytesRemaining -= bytesRead;
+                    offset += bytesRead;
+                }
+                fileIO.finish();
+                getQueue.put(WalrusDataMessage.EOF());
             } catch (Exception ex) {
                 LOG.error(ex, ex);
+            }
+            if (semaphore != null) {
+                semaphore.release();
+                synchronized (semaphore) {
+                    semaphore.notifyAll();
+                }
+            }
+            if (deleteAfterXfer) {
+                try {
+                    storageManager.deleteObject(bucketName, objectName);
+                } catch (Exception ex) {
+                    LOG.error(ex, ex);
+                }
+            }
+        } catch(Exception ex) {
+            try {
+                getQueue.put(WalrusDataMessage.EOF());
+            } catch(InterruptedException e) {
+                LOG.error(e);
             }
         }
     }

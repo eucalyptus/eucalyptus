@@ -1,13 +1,9 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.util.WalrusProperties;
-
-import java.io.*;
-
 import org.apache.log4j.Logger;
 
-public class Command {
-    private static Logger LOG = Logger.getLogger(Command.class);
+public class SystemUtil {
+    private static Logger LOG = Logger.getLogger(SystemUtil.class);
 
     public static String run(String[] command) {
         try
@@ -26,4 +22,9 @@ public class Command {
         }
         return "";
     }
+
+    public static void shutdownWithError(String errorMessage) {
+        LOG.fatal(errorMessage);
+        System.exit(0xEC2);
+    }        
 }

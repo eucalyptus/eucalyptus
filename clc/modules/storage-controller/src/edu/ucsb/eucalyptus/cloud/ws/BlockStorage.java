@@ -102,8 +102,7 @@ public class BlockStorage {
             LOG.warn("Could not initialize block manager. BlockStorage has been disabled.");
             LOG.error("Could not initialize block manager. BlockStorage has been disabled.");
             if(System.getProperty("euca.ebs.disable") == null) {
-                LOG.error("EBS is enabled but preconditions failed. Please resolve preconditions or restart with euca.ebs.disable");
-                System.exit(0xEC2);
+                SystemUtil.shutdownWithError("EBS is enabled but preconditions failed. Please resolve preconditions or restart with euca.ebs.disable");
             }
         }
     }
@@ -111,12 +110,24 @@ public class BlockStorage {
     public BlockStorage() {}
 
     private static void startupChecks() {
+        check();
         if(checker != null) {
             checker.cleanup();
             blockManager.startupChecks();
         }
     }
 
+    public static void check() {
+        File volumeDir = new File(StorageProperties.storageRootDirectory);
+        if(!volumeDir.exists()) {
+            if(!volumeDir.mkdirs()) {
+                LOG.fatal("Unable to make volume root directory: " + StorageProperties.storageRootDirectory);
+            }
+        } else if(!volumeDir.canWrite()) {
+            LOG.fatal("Cannot write to volume root directory: " + StorageProperties.storageRootDirectory);
+        }
+
+    }
 
     public InitializeStorageManagerResponseType InitializeStorageManager(InitializeStorageManagerType request) {
         InitializeStorageManagerResponseType reply = (InitializeStorageManagerResponseType) request.getReply();
@@ -132,7 +143,7 @@ public class BlockStorage {
             volumeStorageManager.setRootDirectory(storageRootDirectory);
             snapshotStorageManager.setRootDirectory(storageRootDirectory);
         }
-
+        check();
         //test connection to Walrus
         if(!WalrusProperties.sharedMode)
             BlockStorageChecker.checkWalrusConnection();

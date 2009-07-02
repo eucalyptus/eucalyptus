@@ -62,6 +62,7 @@ public class Bukkit {
         if(limits != null) {
             WalrusProperties.shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
         }
+        walrusManager.initialize();
         Tracker.initialize();
         walrusBlockStorageManager.initialize();
         if(System.getProperty("euca.virtualhosting.disable") != null) {
@@ -82,6 +83,7 @@ public class Bukkit {
         String rootDir = request.getBucketRootDirectory();
         if(rootDir != null)
             storageManager.setRootDirectory(rootDir);
+        walrusManager.check();
         return reply;
     }
 

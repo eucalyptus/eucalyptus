@@ -47,12 +47,13 @@ public  class FileReader extends edu.ucsb.eucalyptus.storage.fs.FileIO {
     private static Logger LOG = Logger.getLogger(FileReader.class);
     private ByteBuffer buffer;
 
-    public FileReader(String filename) {
+    public FileReader(String filename) throws Exception {
         try {
             channel = new FileInputStream(filename).getChannel();
             buffer = ByteBuffer.allocate(WalrusQueryDispatcher.DATA_MESSAGE_SIZE);
         } catch( FileNotFoundException ex) {
             LOG.error(ex);
+            throw ex;
         }
     }
 
