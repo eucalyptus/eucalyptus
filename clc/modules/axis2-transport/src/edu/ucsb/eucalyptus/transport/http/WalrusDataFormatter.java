@@ -32,6 +32,8 @@ public class WalrusDataFormatter implements MessageFormatter {
         Integer status = (Integer) messageContext.getProperty(Axis2HttpWorker.HTTP_STATUS);
         if(status == null) {
             Boolean getType = (Boolean) messageContext.getProperty(WalrusProperties.STREAMING_HTTP_GET);
+            if(getType == null)
+                return;
             if(getType != null && getType.equals(Boolean.FALSE)) {
                 try {
                     outputStream.flush();
@@ -87,7 +89,8 @@ public class WalrusDataFormatter implements MessageFormatter {
                                     gzipOutStream.finish();
                                     gzipOutStream.flush();
                                 } else {
-                                    outputStream.flush();
+
+        outputStream.flush();
                                 }
                                 messenger.removeQueue(key, randomKey);
                                 break;
@@ -107,7 +110,7 @@ public class WalrusDataFormatter implements MessageFormatter {
     public String getContentType(MessageContext messageContext, OMOutputFormat format,
                                  String soapAction) {
         String contentType = (String) messageContext.getProperty("CONTENT_TYPE");
-        return contentType != null ? contentType : "binary/octet-stream";
+        return contentType;
     }
 
 

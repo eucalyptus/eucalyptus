@@ -1204,6 +1204,7 @@ public class WalrusManager {
                                 status.setCode(200);
                                 status.setDescription("OK");
                                 reply.setStatus(status);
+                                reply.setContentType("binary/octet-stream");
                                 db.commit();
                                 return reply;
                             } else {
@@ -1356,6 +1357,7 @@ public class WalrusManager {
                     }
                     status.setCode(200);
                     status.setDescription("OK");
+                    reply.setContentType("binary/octet-stream");                    
                     reply.setStatus(status);
                 } else {
                     db.rollback();
