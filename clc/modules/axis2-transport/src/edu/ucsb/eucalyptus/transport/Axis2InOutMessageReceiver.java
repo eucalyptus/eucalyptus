@@ -37,25 +37,7 @@ package edu.ucsb.eucalyptus.transport;
 
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.msgs.AddClusterResponseType;
-import edu.ucsb.eucalyptus.msgs.DeregisterImageType;
-import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType;
-import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeImagesType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
-import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
-import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType;
-import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
-import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
-import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
-import edu.ucsb.eucalyptus.msgs.WalrusDataResponseType;
-import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.transport.binding.Binding;
 import edu.ucsb.eucalyptus.transport.binding.BindingManager;
 import edu.ucsb.eucalyptus.transport.http.Axis2HttpWorker;
@@ -198,6 +180,10 @@ public class Axis2InOutMessageReceiver extends AbstractInOutMessageReceiver {
       //This selects the data formatter
       newMsgContext.setProperty( "messageType", "application/walrus" );
       return;
+    } else if(message.getPayload() instanceof WalrusDeleteResponseType) {
+        msgContext.setProperty( Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_NO_CONTENT);
+        newMsgContext.setProperty( Axis2HttpWorker.HTTP_STATUS, HttpStatus.SC_NO_CONTENT);        
+        newMsgContext.setProperty( "messageType", "application/walrus" );        
     }
 
     Boolean putType = ( Boolean ) msgContext.getProperty( WalrusProperties.STREAMING_HTTP_PUT );
