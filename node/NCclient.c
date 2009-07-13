@@ -297,6 +297,8 @@ int main (int argc, char **argv)
         }
     
         /***********************************************************/
+    } else if (!strcmp(command, "powerDown")) {
+      int rc = ncPowerDownStub(stub, &meta);
     } else if (!strcmp(command, "terminateInstance")) {
         CHECK_PARAM(instance_id, "instance ID");
         

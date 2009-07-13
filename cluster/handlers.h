@@ -7,7 +7,7 @@
 #include <client-marshal.h>
 #include <vnetwork.h>
 
-#define OP_TIMEOUT 300
+#define OP_TIMEOUT 60
 
 typedef struct virtualMachine_t {
   int mem, cores, disk;
@@ -59,13 +59,17 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
 void print_ccInstance(ccInstance *in);
 //void free_ccInstance(ccInstance *inInst);
 
+enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};
+
 typedef struct resource_t {
   char ncURL[128];
   char ncService[128];
   int ncPort;
-  char hostname[128];
+  char hostname[128], mac[24], ip[24];
   int maxMemory, availMemory, maxDisk, availDisk, maxCores, availCores;
-  int isup;
+  // state information
+  int state, lastState;
+  time_t stateChange, idleStart;
 } resource;
 
 typedef struct ccConfig_t {
@@ -78,10 +82,11 @@ typedef struct ccConfig_t {
   int instanceCacheUpdate;
   int initialized;
   int schedPolicy, schedState;
+  int idleThresh, wakeThresh;
   time_t configMtime;
 } ccConfig;
 
-enum {SCHEDGREEDY, SCHEDROUNDROBIN};
+enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE};
 
 
 int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan);
@@ -91,7 +96,6 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan);
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev);
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
 
-int doDescribeNetworks(ncMetadata *ccMeta, char **outmode);
 int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst);
 int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst);
 int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *outAddressesLen);
@@ -128,6 +132,9 @@ int sem_timepost(sem_t *sem);
 int timeread(int fd, void *buf, size_t bytes, int timeout);
 int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHosts);
 int restoreNetworkState();
+int powerDown(ncMetadata *ccMeta, resource *node);
+int powerUp(resource *node);
+int changeState(resource *in, int newstate);
 
 #endif
 

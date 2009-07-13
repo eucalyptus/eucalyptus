@@ -578,15 +578,6 @@ int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network) {
   return(0);
 }
 
-int vnetDelVlan(vnetConfig *vnetconfig, int vlan) {
-  if (param_check("vnetDelVlan", vnetconfig, vlan)) return(1);
-  
-  vnetconfig->users[vlan].userName[0] = '\0';
-  vnetconfig->users[vlan].netName[0] = '\0';
-
-  return(0);
-}
-
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network) {
   int i, done;
   
@@ -1333,16 +1324,56 @@ int fill_arp(char *subnet) {
   return(0);
 }
 
-int discover_mac(vnetConfig *vnetconfig, char *mac, char **ip) {
-  int rc, i, j;
-  char cmd[1024], rbuf[256], *tok, lowbuf[256], lowmac[256];
-
+int ip2mac(vnetConfig *vnetconfig, char *ip, char **mac) {
+  char rc, i, j;
+  char cmd[1024], rbuf[256], *tok, ipspace[25];
   FILE *FH=NULL;
 
   if (mac == NULL || ip == NULL) {
     return(1);
   }
+  *mac = NULL;
+  
+  FH=fopen("/proc/net/arp", "r");
+  if (!FH) {
+    return(1);
+  }
+  
+  snprintf(ipspace, 25, "%s ", ip);
+  while(fgets(rbuf, 256, FH) != NULL) {
+    logprintfl(EUCADEBUG, "'%s' '%s' '%s'\n", rbuf, ip, strstr(rbuf, ip));
+    if (strstr(rbuf, ipspace)) {
+      int count=0;
+      tok = strtok(rbuf, " ");
+      while(tok && count < 4) {
+	logprintfl(EUCADEBUG, "COUNT: %d TOK: %s\n", count, tok);
+	count++;
+	if (count < 4) {
+	  tok = strtok(NULL, " ");
+	}
+      }
+      if (tok != NULL) {
+        *mac = strdup(tok);
+        fclose(FH);
+        return(0);
+      }
+    }
+  }
+  fclose(FH);
+  
+  return(1);
+}
 
+int mac2ip(vnetConfig *vnetconfig, char *mac, char **ip) {
+  int rc, i, j;
+  char cmd[1024], rbuf[256], *tok, lowbuf[256], lowmac[256];
+  
+  FILE *FH=NULL;
+  
+  if (mac == NULL || ip == NULL) {
+    return(1);
+  }
+  
   if (!strcmp(vnetconfig->mode, "SYSTEM")) {
     // try to fill up the arp cache
     snprintf(cmd, 1023, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/populate_arp.pl", vnetconfig->eucahome, vnetconfig->eucahome);
@@ -1351,24 +1382,23 @@ int discover_mac(vnetConfig *vnetconfig, char *mac, char **ip) {
       logprintfl(EUCAWARN, "could not execute arp cache populator script, check httpd log for errors\n");
     }
   }
-
-
+  
   FH=fopen("/proc/net/arp", "r");
   if (!FH) {
     return(1);
   }
-
+  
   bzero(lowmac, 256);
   for (i=0; i<strlen(mac); i++) {
     lowmac[i] = tolower(mac[i]);
   }
-
+  
   while(fgets(rbuf, 256, FH) != NULL) {
     bzero(lowbuf, 256);
     for (i=0; i<strlen(rbuf); i++) {
       lowbuf[i] = tolower(rbuf[i]);
     }
-
+    
     if (strstr(lowbuf, lowmac)) {
       tok = strtok(lowbuf, " ");
       if (tok != NULL) {
