@@ -58,11 +58,11 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, in
 
 int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
-int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
+int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx);
 int vnetDelHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetEnableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetDisableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
-int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
+int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx);
 
 int vnetAddDev(vnetConfig *vnetconfig, char *dev);
 int vnetDelDev(vnetConfig *vnetconfig, char *dev);

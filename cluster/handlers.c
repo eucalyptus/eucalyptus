@@ -691,8 +691,8 @@ int refresh_resources(ncMetadata *ccMeta, int timeout) {
       if (rc != 0) {
 	rc = powerUp(&(config->resourcePool[i]));
 	
-	if (config->resourcePool[i].state == RESWAKING && ((time(NULL) - config->resourcePool[i].stateChange) < OP_WAKEUPTIME)) {
-	  logprintfl(EUCAINFO, "resource still waking up (%d more seconds until marked as down)\n", OP_WAKEUPTIME - (time(NULL) - config->resourcePool[i].stateChange));
+	if (config->resourcePool[i].state == RESWAKING && ((time(NULL) - config->resourcePool[i].stateChange) < config->wakeThresh)) {
+	  logprintfl(EUCAINFO, "resource still waking up (%d more seconds until marked as down)\n", config->wakeThresh - (time(NULL) - config->resourcePool[i].stateChange));
 	} else{
 	  logprintfl(EUCAERROR,"bad return from ncDescribeResource(%s) (%d/%d)\n", config->resourcePool[i].hostname, pid, rc);
 	  config->resourcePool[i].maxMemory = 0;
@@ -841,6 +841,8 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 		logprintfl(EUCAWARN, "powerDown for %s failed\n", config->resourcePool[i].hostname);
 	      }
 	    }
+	  } else {
+	    config->resourcePool[i].idleStart = 0;
 	  }
 	}
 	close(filedes[0]);
@@ -1177,7 +1179,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     if (!strcmp(vnetconfig->mode, "STATIC")) {
       // get the next valid mac/ip pairing for this vlan
       bzero(mac, 32);
-      rc = vnetGetNextHost(vnetconfig, mac, privip, 0);
+      rc = vnetGetNextHost(vnetconfig, mac, privip, 0, -1);
       if (!rc) {
 	snprintf(pubip, 32, "%s", privip);
 	foundnet = 1;
@@ -1187,10 +1189,10 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     } else if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
       
       // add the mac address to the virtual network
-      rc = vnetAddHost(vnetconfig, mac, NULL, vlan);
+      rc = vnetAddHost(vnetconfig, mac, NULL, vlan, -1);
       if (!rc) {
 	// get the next valid mac/ip pairing for this vlan
-	rc = vnetGetNextHost(vnetconfig, mac, privip, vlan);
+	rc = vnetGetNextHost(vnetconfig, mac, privip, vlan, -1);
 	if (!rc) {
 	  foundnet = 1;
 	}
@@ -1926,7 +1928,7 @@ int init_config(void) {
 	mac = strtok_r(toka, "=", &ptrb);
 	ip = strtok_r(NULL, "=", &ptrb);
 	if (mac && ip) {
-	  vnetAddHost(vnetconfig, mac, ip, 0);
+	  vnetAddHost(vnetconfig, mac, ip, 0, -1);
 	}
 	toka = strtok_r(NULL, " ", &ptra);
       }
