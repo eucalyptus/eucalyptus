@@ -366,7 +366,7 @@ public class LVM2Manager implements LogicalStorageManager {
             majorNumber = foundMetaInfo.getMajorNumber();
             minorNumber = foundMetaInfo.getMinorNumber();
             do {
-                if(minorNumber >= MAX_MINOR_NUMBER) {
+                if(minorNumber >= MAX_MINOR_NUMBER - 1) {
                     ++majorNumber;
                 }
                 minorNumber = (minorNumber + 1) % MAX_MINOR_NUMBER;
