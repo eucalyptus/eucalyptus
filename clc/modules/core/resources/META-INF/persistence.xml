@@ -63,7 +63,6 @@
         <class>edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo</class>
-        <class>edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotSet</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.Address</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.ProductCode</class>

@@ -64,7 +64,7 @@ public class LVM2Manager implements LogicalStorageManager {
     public static String hostName = "localhost";
     public static final int MAX_LOOP_DEVICES = 256;
     public static final int MAX_MINOR_NUMBER = 16;
-    private  static final String blockSize = "1M";    
+    private  static final String blockSize = "1M";
     public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
     public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
     private static final String CONFIG_FILE_PATH = "/etc/eucalyptus/eucalyptus.conf";
@@ -111,7 +111,7 @@ public class LVM2Manager implements LogicalStorageManager {
     }
 
     private String findFreeLoopback() {
-           return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
+        return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
     }
 
     private  String getLoopback(String loDevName) {
@@ -814,29 +814,13 @@ public class LVM2Manager implements LogicalStorageManager {
 
     public List<String> prepareForTransfer(String volumeId, String snapshotId) throws EucalyptusCloudException {
         EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
-        LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
+        LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
         LVMVolumeInfo foundLVMVolumeInfo = db.getUnique(lvmVolumeInfo);
         ArrayList<String> returnValues = new ArrayList<String>();
 
         if(foundLVMVolumeInfo != null) {
-
             returnValues.add(StorageProperties.storageRootDirectory + PATH_SEPARATOR + foundLVMVolumeInfo.getVolumeId());
-            String dmDeviceName = foundLVMVolumeInfo.getVgName().replaceAll("-", "--") + "-" + foundLVMVolumeInfo.getLvName().replaceAll("-", "--");
-            lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
-            foundLVMVolumeInfo = db.getUnique(lvmVolumeInfo);
-            if(foundLVMVolumeInfo != null) {
-                String snapshotRawFileName = StorageProperties.storageRootDirectory + PATH_SEPARATOR + foundLVMVolumeInfo.getVolumeId();
-                String dupSnapshotDeltaFileName = snapshotRawFileName + "." + Hashes.getRandom(4);
-                String returnValue = suspendDevice(dmDeviceName);
-                if(!returnValue.contains(foundLVMVolumeInfo.getVgName().replaceAll("-", "--"))) {
-                    db.rollback();
-                    resumeDevice(dmDeviceName);
-                    throw new EucalyptusCloudException("Could not suspend device " + dmDeviceName);
-                }
-                dupFile(snapshotRawFileName, dupSnapshotDeltaFileName);
-                returnValue = resumeDevice(dmDeviceName);
-                returnValues.add(dupSnapshotDeltaFileName);
-            }
+            db.commit();
         } else {
             db.rollback();
             throw new EucalyptusCloudException();
