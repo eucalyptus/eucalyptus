@@ -50,14 +50,8 @@ public class WalrusSnapshotInfo {
     private Long id = -1l;
     @Column(name ="snapshot_name")
     private String snapshotId;
-    @Column(name = "snapshotset_id")
-    private String snapshotSetId;
-    @Column(name ="snapshot_vgname")
-    private String vgName;
-    @Column(name ="snapshot_lvname")
-    private String lvName;
-    @Column(name ="transferred")
-    private Boolean transferred;
+    @Column(name = "snapshot_bucket")
+    private String snapshotBucket;
     @Column(name = "size")
     private Integer size;
 
@@ -75,36 +69,12 @@ public class WalrusSnapshotInfo {
         this.snapshotId = snapshotId;
     }
 
-    public String getSnapshotSetId() {
-        return snapshotSetId;
+    public String getSnapshotBucket() {
+        return snapshotBucket;
     }
 
-    public void setSnapshotSetId(String snapshotSetId) {
-        this.snapshotSetId = snapshotSetId;
-    }
-
-    public String getVgName() {
-        return vgName;
-    }
-
-    public void setVgName(String vgName) {
-        this.vgName = vgName;
-    }
-
-    public String getLvName() {
-        return lvName;
-    }
-
-    public void setLvName(String lvName) {
-        this.lvName = lvName;
-    }
-
-    public Boolean getTransferred() {
-        return transferred;
-    }
-
-    public void setTransferred(Boolean transferred) {
-        this.transferred = transferred;
+    public void setSnapshotBucket(String snapshotBucket) {
+        this.snapshotBucket = snapshotBucket;
     }
 
     public Integer getSize() {

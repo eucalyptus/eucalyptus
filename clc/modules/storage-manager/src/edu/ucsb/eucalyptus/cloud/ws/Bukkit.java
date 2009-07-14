@@ -55,9 +55,9 @@ public class Bukkit {
 
     static {
         storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
-        walrusBlockStorageManager = new WalrusBlockStorageManager(storageManager);
         walrusImageManager = new WalrusImageManager(storageManager, imageMessenger);
         walrusManager = new WalrusManager(storageManager, walrusImageManager);
+        walrusBlockStorageManager = new WalrusBlockStorageManager(storageManager, walrusManager);
         String limits = System.getProperty(WalrusProperties.USAGE_LIMITS_PROPERTY);
         if(limits != null) {
             WalrusProperties.shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
@@ -190,14 +190,6 @@ public class Bukkit {
 
     public StoreSnapshotResponseType StoreSnapshot(StoreSnapshotType request) throws EucalyptusCloudException {
         return walrusBlockStorageManager.storeSnapshot(this, request);
-    }
-
-    public GetSnapshotInfoResponseType GetSnapshotInfo(GetSnapshotInfoType request) throws EucalyptusCloudException {
-        return walrusBlockStorageManager.getSnapshotInfo(request);
-    }
-
-    public GetVolumeResponseType GetVolume(GetVolumeType request) throws EucalyptusCloudException {
-        return walrusBlockStorageManager.getVolume(this, request);
     }
 
     public DeleteWalrusSnapshotResponseType DeleteWalrusSnapshot(DeleteWalrusSnapshotType request) throws EucalyptusCloudException {

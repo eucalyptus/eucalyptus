@@ -570,27 +570,6 @@ public class BlockStorage {
         return volumePath;
     }
 
-    private List<String> getSnapshots(String snapshotBucket, String snapshotId, List<String> snapshotFileNames) {
-        String walrusSnapshotPath = snapshotBucket + "/" + snapshotId;
-        HttpReader reader = new HttpReader(walrusSnapshotPath, null, null, "GetSnapshotInfo", "");
-        String snapshotDescription = reader.getResponseAsString();
-        XMLParser parser = new XMLParser(snapshotDescription);
-        //read the list of snapshots and issue requests to walrus to get all deltas
-        String bucketName = parser.getValue("/GetSnapshotInfoResponse/Bucket");
-        List<String> snapshotSet = parser.getValues("/GetSnapshotInfoResponse/snapshotId");
-        for(String snapshot: snapshotSet) {
-            walrusSnapshotPath = bucketName + "/" + snapshot;
-            String snapshotPath = StorageProperties.storageRootDirectory + "/" + snapshot + Hashes.getRandom(10);
-            snapshotFileNames.add(snapshotPath);
-            File file = new File(snapshotPath);
-            HttpReader snapshotReader = new HttpReader(walrusSnapshotPath, null, file, "GetSnapshot", "");
-            snapshotReader.run();
-        }
-        return snapshotSet;
-    }
-
-
-
     public void GetSnapshots(String volumeId, String snapshotSetName, String snapshotId) throws EucalyptusCloudException {
         BlockStorageChecker.checkWalrusConnection();
         String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
@@ -687,85 +666,23 @@ public class BlockStorage {
                     return;
                 } else {
                     List<String> returnValues = blockManager.prepareForTransfer(volumeId, snapshotId);
-                    volumeFileName = returnValues.get(0);
-                    snapshotFileName = returnValues.get(1);
-                    EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
-                    VolumeInfo volumeInfo = new VolumeInfo(volumeId);
-                    List <VolumeInfo> volumeInfos = db.query(volumeInfo);
-
-                    boolean shouldTransferVolume = false;
-                    if(volumeInfos.size() > 0) {
-                        VolumeInfo foundVolumeInfo = volumeInfos.get(0);
-                        if(!foundVolumeInfo.getTransferred()) {
-                            //transfer volume to Walrus
-                            foundVolumeInfo.setVolumeBucket(volumeBucket);
-                            shouldTransferVolume = true;
-                        }
-                        volumeBucket = foundVolumeInfo.getVolumeBucket();
-                        db.commit();
-                        EntityWrapper<SnapshotInfo> db2 = new EntityWrapper<SnapshotInfo>();
-                        SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-                        SnapshotInfo foundSnapshotInfo = db2.getUnique(snapshotInfo);
-                        if(foundSnapshotInfo != null) {
-                            transferSnapshot(shouldTransferVolume);
-                        }
-                        db2.commit();
-                    } else {
-                        db.rollback();
-                        throw new EucalyptusCloudException("Volume not found " + volumeId);
-                    }
+                    snapshotFileName = returnValues.get(0);
+                    transferSnapshot();
                 }
             } catch(EucalyptusCloudException ex) {
                 LOG.error(ex);
             }
         }
 
-        private void transferSnapshot(boolean shouldTransferVolume) {
+        private void transferSnapshot() {
             long size = 0;
 
-            File volumeFile = new File(volumeFileName);
             File snapshotFile = new File(snapshotFileName);
-
-            assert(snapshotFile.exists() && volumeFile.exists());
-            size += shouldTransferVolume ? snapshotFile.length() + volumeFile.length() : snapshotFile.length();
+            assert(snapshotFile.exists());
+            size += snapshotFile.length();
             SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
             Map<String, String> httpParamaters = new HashMap<String, String>();
             HttpWriter httpWriter;
-            if(shouldTransferVolume) {
-                try {
-                    List<String> returnValues = blockManager.getSnapshotValues(volumeId);
-                    if(returnValues.size() > 0) {
-                        httpParamaters.put("SnapshotVgName", returnValues.get(0));
-                        httpParamaters.put("SnapshotLvName", returnValues.get(1));
-                    }
-                } catch(Exception ex) {
-                    LOG.error(ex);
-                }
-                httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeId, "StoreSnapshot", null, httpParamaters);
-                try {
-                    httpWriter.run();
-                    EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
-                    VolumeInfo volumeInfo = new VolumeInfo(volumeId);
-                    List <VolumeInfo> volumeInfos = db.query(volumeInfo);
-                    if(volumeInfos.size() > 0) {
-                        VolumeInfo volInfo = volumeInfos.get(0);
-                        volInfo.setTransferred(true);
-                    }
-                    db.commit();
-                } catch(Exception ex) {
-                    LOG.error(ex);
-                    return;
-                }
-            }
-            try {
-                List<String> returnValues = blockManager.getSnapshotValues(snapshotId);
-                if(returnValues.size() > 0) {
-                    httpParamaters.put("SnapshotVgName", returnValues.get(0));
-                    httpParamaters.put("SnapshotLvName", returnValues.get(1));
-                }
-            } catch(Exception ex) {
-                LOG.error(ex);
-            }
             httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters, true);
             try {
                 httpWriter.run();
