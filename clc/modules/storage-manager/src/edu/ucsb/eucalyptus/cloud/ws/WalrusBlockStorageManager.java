@@ -54,6 +54,7 @@ public class WalrusBlockStorageManager {
 
     public WalrusBlockStorageManager(StorageManager storageManager, WalrusManager walrusManager) {
         this.storageManager = storageManager;
+        this.walrusManager = walrusManager;
     }
 
     public void initialize() {
@@ -91,7 +92,7 @@ public class WalrusBlockStorageManager {
         db.commit();
     }
 
-    public StoreSnapshotResponseType storeSnapshot(Bukkit bukkit, StoreSnapshotType request) throws EucalyptusCloudException {
+    public StoreSnapshotResponseType storeSnapshot(StoreSnapshotType request) throws EucalyptusCloudException {
         StoreSnapshotResponseType reply = (StoreSnapshotResponseType) request.getReply();
 
         if(!WalrusProperties.enableSnapshots) {
@@ -121,7 +122,7 @@ public class WalrusBlockStorageManager {
             createBucketRequest.setUserId(userId);
             createBucketRequest.setBucket(bucketName);
             try {
-                bukkit.CreateBucket(createBucketRequest);
+                walrusManager.createBucket(createBucketRequest);
             } catch(EucalyptusCloudException ex) {
                 if(!(ex instanceof BucketAlreadyExistsException || ex instanceof BucketAlreadyOwnedByYouException)) {
                     db.rollback();
@@ -137,7 +138,7 @@ public class WalrusBlockStorageManager {
         putObjectRequest.setKey(snapshotId);
         putObjectRequest.setRandomKey(request.getRandomKey());
         try {
-            PutObjectResponseType putObjectResponseType = bukkit.PutObject(putObjectRequest);
+            PutObjectResponseType putObjectResponseType = walrusManager.putObject(putObjectRequest);
             reply.setEtag(putObjectResponseType.getEtag());
             reply.setLastModified(putObjectResponseType.getLastModified());
             reply.setStatusMessage(putObjectResponseType.getStatusMessage());
@@ -166,6 +167,42 @@ public class WalrusBlockStorageManager {
         } catch (EucalyptusCloudException ex) {
             db.rollback();
             throw ex;
+        }
+        return reply;
+    }
+
+    public GetWalrusSnapshotResponseType getSnapshot(GetWalrusSnapshotType request) throws EucalyptusCloudException {
+        GetWalrusSnapshotResponseType reply = (GetWalrusSnapshotResponseType) request.getReply();
+        if(!WalrusProperties.enableSnapshots) {
+            LOG.warn("Snapshots not enabled. Please check pre-conditions and restart Walrus.");
+            return reply;
+        }
+        String snapshotId = request.getKey();
+        EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
+        WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+        List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+        if(snapshotInfos.size() > 0) {
+            WalrusSnapshotInfo foundSnapshotInfo = snapshotInfos.get(0);
+            String bucketName = foundSnapshotInfo.getSnapshotBucket();
+            GetObjectType getObjectType = new GetObjectType();
+            getObjectType.setBucket(bucketName);
+            getObjectType.setUserId(request.getUserId());
+            getObjectType.setEffectiveUserId(request.getEffectiveUserId());
+            getObjectType.setKey(snapshotId);
+            getObjectType.setDeleteAfterGet(false);
+            getObjectType.setGetData(true);
+            getObjectType.setInlineData(false);
+            getObjectType.setGetMetaData(false);
+            getObjectType.setIsCompressed(true);
+            try {
+                walrusManager.getObject(getObjectType);
+            } catch(EucalyptusCloudException ex) {
+                LOG.error(ex, ex);
+                throw ex;
+            }
+        } else {
+            db.rollback();
+            throw new NoSuchEntityException(snapshotId);
         }
         return reply;
     }
@@ -202,8 +239,6 @@ public class WalrusBlockStorageManager {
         }
         return reply;
     }
-
-
 
     private class SnapshotDeleter extends Thread {
         private String userId;

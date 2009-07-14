@@ -544,8 +544,8 @@ public class GetSnapshotInfoResponseType extends WalrusResponseType {
   ArrayList<String> snapshotSet = new ArrayList<String>();
 }
 
-public class GetVolumeType extends WalrusDataRequestType {
+public class GetWalrusSnapshotType extends WalrusDataRequestType {
 }
 
-public class GetVolumeResponseType extends WalrusDataResponseType {
+public class GetWalrusSnapshotResponseType extends WalrusDataResponseType {
 }

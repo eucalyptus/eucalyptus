@@ -189,7 +189,11 @@ public class Bukkit {
     }
 
     public StoreSnapshotResponseType StoreSnapshot(StoreSnapshotType request) throws EucalyptusCloudException {
-        return walrusBlockStorageManager.storeSnapshot(this, request);
+        return walrusBlockStorageManager.storeSnapshot(request);
+    }
+
+    public GetWalrusSnapshotResponseType GetWalrusSnapshot(GetWalrusSnapshotType request) throws EucalyptusCloudException {
+        return walrusBlockStorageManager.getSnapshot(request);
     }
 
     public DeleteWalrusSnapshotResponseType DeleteWalrusSnapshot(DeleteWalrusSnapshotType request) throws EucalyptusCloudException {

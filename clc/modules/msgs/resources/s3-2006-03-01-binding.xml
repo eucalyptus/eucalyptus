@@ -398,11 +398,11 @@
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 
-    <mapping name="GetVolume" class="edu.ucsb.eucalyptus.msgs.GetVolumeType">
+    <mapping name="GetWalrusSnapshot" class="edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType"/>
     </mapping>
 
-    <mapping name="GetVolumeResponse" class="edu.ucsb.eucalyptus.msgs.GetVolumeResponseType">
+    <mapping name="GetWalrusSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotResponseType">
         <structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType"/>
     </mapping>
 

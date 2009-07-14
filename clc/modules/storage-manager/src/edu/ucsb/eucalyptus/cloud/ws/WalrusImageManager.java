@@ -860,7 +860,6 @@ public class WalrusImageManager {
                     String imageKey = foundImageCacheInfo.getImageName();
                     String queueKey = bucketName + "." + objectKey;
                     String randomKey = queueKey + "." + Hashes.getRandom(10);
-                    request.setRandomKey(randomKey);
 
                     LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusQueryDispatcher.getReadMessenger().getQueue(queueKey, randomKey);
                     reply.setSize(unencryptedSize);

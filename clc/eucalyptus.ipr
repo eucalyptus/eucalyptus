@@ -11,6 +11,7 @@
       <properties />
       <executeOn event="beforeRun" target="install" />
       <executeOn event="beforeRun" target="install" runConfigurationType="JUnit" runConfigurationName="DNSControlTest" />
+      <executeOn event="beforeRun" target="install" runConfigurationType="Remote" runConfigurationName="Unnamed" />
     </buildFile>
   </component>
   <component name="BuildJarProjectSettings">
@@ -350,7 +351,7 @@
   </component>
   <component name="ProjectFileVersion" converted="true" />
   <component name="ProjectKey">
-    <option name="state" value="project:///disk1/eucalyptus/src/main/clc/eucalyptus.ipr" />
+    <option name="state" value="project:///disk1/eucalyptus/src/main-walrus-sc-multicluster/clc/eucalyptus.ipr" />
   </component>
   <component name="ProjectModuleManager">
     <modules>

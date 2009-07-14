@@ -559,7 +559,7 @@ public class BlockStorage {
         String volumePath = StorageProperties.storageRootDirectory + "/" + volumeId + Hashes.getRandom(10);
         File file = new File(volumePath);
         if(!file.exists()) {
-            HttpReader volumeReader = new HttpReader(walrusSnapshotPath, null, file, "GetVolume", "", true);
+            HttpReader volumeReader = new HttpReader(walrusSnapshotPath, null, file, "GetWalrusSnapshot", "", true);
             volumeReader.run();
         } else {
             throw new EucalyptusCloudException("volume file already exists");
