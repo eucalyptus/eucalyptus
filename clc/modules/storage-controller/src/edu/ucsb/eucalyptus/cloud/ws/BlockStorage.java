@@ -634,7 +634,9 @@ public class BlockStorage {
         snapshot.setVolumeId(snapInfo.getVolumeId());
         snapshot.setStatus(snapInfo.getStatus());
         snapshot.setSnapshotId(snapInfo.getSnapshotId());
-        snapshot.setProgress(snapInfo.getProgress());
+        String progress = snapInfo.getProgress();
+        progress = progress != null ? progress + "%" : progress;
+        snapshot.setProgress(progress);
         snapshot.setStartTime(DateUtils.format(snapInfo.getStartTime().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
         return snapshot;
     }
@@ -655,7 +657,7 @@ public class BlockStorage {
         public void run() {
             try {
                 blockManager.createSnapshot(volumeId, snapshotId);
-                if(WalrusProperties.sharedMode) {
+                if(false){//WalrusProperties.sharedMode) {
                     EntityWrapper<SnapshotInfo> dbSnap = new EntityWrapper<SnapshotInfo>();
                     SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
                     SnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
