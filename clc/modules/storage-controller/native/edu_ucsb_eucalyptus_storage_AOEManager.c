@@ -39,8 +39,6 @@
 
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
-extern jstring run_command(JNIEnv *env, char *cmd, int outfd); 
-
 extern int run_command_and_get_pid(char *cmd, char **args); 
 
 JNIEXPORT jint JNICALL Java_edu_ucsb_eucalyptus_storage_AOEManager_exportVolume
