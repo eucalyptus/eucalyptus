@@ -472,8 +472,8 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
       ret = 0;
     }
     
+    /*    
     sem_wait(configLock);
-    
     for (i=0; i<config->numResources; i++) {
       int pid, j, numHosts, done, k;
       ncStub *ncs=NULL;
@@ -503,8 +503,8 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
       }
       
     }
-    
     sem_post(configLock);
+    */
   }
   
   logprintfl(EUCADEBUG,"StartNetwork(): done\n");
@@ -1085,7 +1085,7 @@ int schedule_instance_roundrobin(virtualMachine *vm, int *outresid) {
 int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
   int i, rc, done, resid=0, downresid=0;
   resource *res, *downres;
-
+  
   *outresid = 0;
 
   logprintfl(EUCAINFO, "scheduler using GREEDY policy to find next resource\n");
@@ -1250,6 +1250,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  rc = 1;
 	  startRun = time(NULL);
 	  while(rc && ((time(NULL) - startRun) < config->wakeThresh)){
+	    rc = ncStartNetworkStub(ncs, ccMeta, NULL, 0, 0, vlan, NULL);
 	    rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, mac, mac, vlan, userData, launchIndex, netNames, netNamesLen, &outInst);
 	  }
 	  if (!rc) {
@@ -1969,12 +1970,12 @@ int init_config(void) {
   rc = get_conf_var(configFile, "POWER_IDLETHRESH", &tmpstr);
   if (rc != 1) {
     logprintfl(EUCAWARN,"parsing config file (%s) for POWER_IDLETHRESH, defaulting to 300 seconds\n", configFile);
-    idleThresh = 300;
+    idleThresh = 30;
   } else {
     idleThresh = atoi(tmpstr);
-    if (idleThresh < 300) {
+    if (idleThresh < 30) {
       logprintfl(EUCAWARN, "POWER_IDLETHRESH set too low (%d seconds), resetting to minimum (300 seconds)\n", idleThresh);
-      idleThresh = 300;
+      idleThresh = 30;
     }
   }
   if (tmpstr) free(tmpstr);
