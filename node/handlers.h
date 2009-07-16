@@ -6,6 +6,7 @@
 struct handlers {
     char name [CHAR_BUFFER_SIZE];
     int (*doInitialize) (void);
+    int (*doPowerDown) (ncMetadata *meta);
     int (*doDescribeInstances) (ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
     int (*doRunInstance)       (ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst);
     int (*doTerminateInstance) (ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
@@ -18,6 +19,7 @@ struct handlers {
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
+int doPowerDown (ncMetadata *meta);
 int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
 int doRunInstance       (ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst);
 int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);

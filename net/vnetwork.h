@@ -58,11 +58,11 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, in
 
 int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
-int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
+int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx);
 int vnetDelHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetEnableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetDisableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
-int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
+int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx);
 
 int vnetAddDev(vnetConfig *vnetconfig, char *dev);
 int vnetDelDev(vnetConfig *vnetconfig, char *dev);
@@ -72,7 +72,6 @@ int vnetKickDHCP(vnetConfig *vnetconfig);
 
 int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network);
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network);
-int vnetDelVlan(vnetConfig *vnetconfig, int vlan);
 
 int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName, char *protocol, int minPort, int maxPort);
 int vnetCreateChain(vnetConfig *vnetconfig, char *userName, char *netName);
@@ -103,10 +102,11 @@ int vnetLoadIPTables(vnetConfig *vnetconfig);
 int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule);
 char *hex2dot(uint32_t in);
 uint32_t dot2hex(char *in);
-int discover_mac(vnetConfig *vnetconfig, char *mac, char **ip);
+int mac2ip(vnetConfig *vnetconfig, char *mac, char **ip);
+int ip2mac(vnetConfig *vnetconfig, char *ip, char **mac);
+
 int check_chain(vnetConfig *vnetconfig, char *userName, char *netName);
 int check_device(char *dev);
 int check_bridge(char *dev);
-
 
 #endif

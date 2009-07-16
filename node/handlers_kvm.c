@@ -47,6 +47,7 @@ static int save_instance_files = 0;
 static char * admin_user_id = EUCALYPTUS_ADMIN;
 static char gen_kvm_libvirt_xml_command_path [BUFSIZE] = "";
 static char get_kvm_info_command_path [BUFSIZE] = "";
+static char rootwrap_command_path [BUFSIZE] = "";
 
 #define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
 #define SWAP_SIZE 512 /* for now, the only possible swap size, in MBs */
@@ -194,7 +195,7 @@ static void refresh_instance_info (ncInstance * instance)
 
         if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 32)) {
 	  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
-            rc = discover_mac(vnetconfig, instance->ncnet.publicMac, &ip);
+            rc = mac2ip(vnetconfig, instance->ncnet.publicMac, &ip);
             if (!rc) {
 	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
 	      strncpy(instance->ncnet.publicIp, ip, 32);
@@ -202,7 +203,7 @@ static void refresh_instance_info (ncInstance * instance)
 	  }
         }
         if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 32)) {
-            rc = discover_mac(vnetconfig, instance->ncnet.privateMac, &ip);
+            rc = mac2ip(vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
                 logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
                 strncpy(instance->ncnet.privateIp, ip, 32);
@@ -372,7 +373,8 @@ static int doInitialize (void)
 
     /* set up paths of Eucalyptus commands NC relies on */
     snprintf (gen_kvm_libvirt_xml_command_path, BUFSIZE, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, home, home);
-    snprintf (get_kvm_info_command_path,    BUFSIZE, EUCALYPTUS_GET_KVM_INFO,    home, home);
+    snprintf (get_kvm_info_command_path, BUFSIZE, EUCALYPTUS_GET_KVM_INFO,    home, home);
+    snprintf (rootwrap_command_path, BUFSIZE, EUCALYPTUS_ROOTWRAP, home);
 
     /* open the connection to hypervisor */
     if (check_hypervisor_conn () == ERROR) {
@@ -920,8 +922,9 @@ static int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen
                 }
             }
             * outInstsLen = k;
-        }
-        
+        } else {
+	  // PowerNap!
+	}
     } else { /* describe specific instances */
         ncInstance * instance;
         int i, j, k = 0;
@@ -1007,6 +1010,23 @@ static int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource 
     }
     * outRes = res;
     return 0;
+}
+
+static int doPowerDown(ncMetadata *ccMeta) {
+  char cmd[1024];
+  int rc;
+
+  logprintfl(EUCADEBUG, "PowerOff called\n");
+  snprintf(cmd, 1024, "%s /etc/init.d/powernap now", rootwrap_command_path);
+  logprintfl(EUCADEBUG, "saving power: %s\n", cmd);
+  rc = system(cmd);
+  rc = rc>>8;
+  if (rc) {
+    logprintfl(EUCAERROR, "cmd failed: %d\n", rc);
+  }
+  
+  logprintfl(EUCADEBUG, "PowerOff done\n");
+  return(0);
 }
 
 static int doStartNetwork(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan) {
@@ -1194,6 +1214,7 @@ struct handlers kvm_libvirt_handlers = {
     .doGetConsoleOutput  = doGetConsoleOutput,
     .doDescribeResource  = doDescribeResource,
     .doStartNetwork      = doStartNetwork,
+    .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume
 };

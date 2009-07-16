@@ -140,8 +140,8 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
   }
 }
 
-int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
-  int i, done, found;
+int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) {
+  int i, done, found, start, stop;
   char *newip;
 
   if (param_check("vnetAddHost", vnetconfig, mac, ip, vlan)) return(1);
@@ -151,10 +151,21 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
     return(1);
   }
   
+  if (idx < 0) {
+    start = 2;
+    stop = vnetconfig->numaddrs-2;
+  } else if (idx >= 2 && idx <= (vnetconfig->numaddrs-2)) {
+    start = idx;
+    stop = idx;
+  } else {
+    logprintfl(EUCAERROR, "index out of bounds: idx=%d, min=2 max=%d\n", idx, vnetconfig->numaddrs-2);
+    return(1);
+  }
+
   done=found=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  logprintfl(EUCAINFO,"NUMADDRS %d %d\n", vnetconfig->numaddrs, 2);
-  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
+  //  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=start; i<=stop && !done; i++) {
     if (vnetconfig->networks[vlan].addrs[i].mac[0] == '\0') {
       if (!found) found=i;
     } else if (!strcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) {
@@ -578,15 +589,6 @@ int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network) {
   return(0);
 }
 
-int vnetDelVlan(vnetConfig *vnetconfig, int vlan) {
-  if (param_check("vnetDelVlan", vnetconfig, vlan)) return(1);
-  
-  vnetconfig->users[vlan].userName[0] = '\0';
-  vnetconfig->users[vlan].netName[0] = '\0';
-
-  return(0);
-}
-
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network) {
   int i, done;
   
@@ -600,8 +602,8 @@ int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network) {
 }
 
 
-int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
-  int i, done;
+int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) {
+  int i, done, start, stop;
   char *newip;
   
   if (param_check("vnetGetNextHost", vnetconfig, mac, ip, vlan)) return(1);
@@ -611,9 +613,21 @@ int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
     return(1);
   }
   
+  if (idx < 0) {
+    start = 2;
+    stop = vnetconfig->numaddrs-2;
+  } else if (idx >= 2 && idx <= (vnetconfig->numaddrs-2)) {
+    start = idx;
+    stop = idx;
+  } else {
+    logprintfl(EUCAERROR, "index out of bounds: idx=%d, min=2 max=%d\n", idx, vnetconfig->numaddrs-2);
+    return(1);
+  }
+  
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
+  //  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=start; i<=stop && !done; i++) {
     if (vnetconfig->networks[vlan].addrs[i].mac[0] != '\0' && vnetconfig->networks[vlan].addrs[i].ip != 0 && vnetconfig->networks[vlan].addrs[i].active == 0) {
       strncpy(mac, vnetconfig->networks[vlan].addrs[i].mac, 24);
       newip = hex2dot(vnetconfig->networks[vlan].addrs[i].ip);
@@ -1333,16 +1347,56 @@ int fill_arp(char *subnet) {
   return(0);
 }
 
-int discover_mac(vnetConfig *vnetconfig, char *mac, char **ip) {
-  int rc, i, j;
-  char cmd[1024], rbuf[256], *tok, lowbuf[256], lowmac[256];
-
+int ip2mac(vnetConfig *vnetconfig, char *ip, char **mac) {
+  char rc, i, j;
+  char cmd[1024], rbuf[256], *tok, ipspace[25];
   FILE *FH=NULL;
 
   if (mac == NULL || ip == NULL) {
     return(1);
   }
+  *mac = NULL;
+  
+  FH=fopen("/proc/net/arp", "r");
+  if (!FH) {
+    return(1);
+  }
+  
+  snprintf(ipspace, 25, "%s ", ip);
+  while(fgets(rbuf, 256, FH) != NULL) {
+    logprintfl(EUCADEBUG, "'%s' '%s' '%s'\n", rbuf, ip, strstr(rbuf, ip));
+    if (strstr(rbuf, ipspace)) {
+      int count=0;
+      tok = strtok(rbuf, " ");
+      while(tok && count < 4) {
+	logprintfl(EUCADEBUG, "COUNT: %d TOK: %s\n", count, tok);
+	count++;
+	if (count < 4) {
+	  tok = strtok(NULL, " ");
+	}
+      }
+      if (tok != NULL) {
+        *mac = strdup(tok);
+        fclose(FH);
+        return(0);
+      }
+    }
+  }
+  fclose(FH);
+  
+  return(1);
+}
 
+int mac2ip(vnetConfig *vnetconfig, char *mac, char **ip) {
+  int rc, i, j;
+  char cmd[1024], rbuf[256], *tok, lowbuf[256], lowmac[256];
+  
+  FILE *FH=NULL;
+  
+  if (mac == NULL || ip == NULL) {
+    return(1);
+  }
+  
   if (!strcmp(vnetconfig->mode, "SYSTEM")) {
     // try to fill up the arp cache
     snprintf(cmd, 1023, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/populate_arp.pl", vnetconfig->eucahome, vnetconfig->eucahome);
@@ -1351,24 +1405,23 @@ int discover_mac(vnetConfig *vnetconfig, char *mac, char **ip) {
       logprintfl(EUCAWARN, "could not execute arp cache populator script, check httpd log for errors\n");
     }
   }
-
-
+  
   FH=fopen("/proc/net/arp", "r");
   if (!FH) {
     return(1);
   }
-
+  
   bzero(lowmac, 256);
   for (i=0; i<strlen(mac); i++) {
     lowmac[i] = tolower(mac[i]);
   }
-
+  
   while(fgets(rbuf, 256, FH) != NULL) {
     bzero(lowbuf, 256);
     for (i=0; i<strlen(rbuf); i++) {
       lowbuf[i] = tolower(rbuf[i]);
     }
-
+    
     if (strstr(lowbuf, lowmac)) {
       tok = strtok(lowbuf, " ");
       if (tok != NULL) {

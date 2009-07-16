@@ -34,7 +34,9 @@ int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, int
 {
     return doTerminateInstance (meta, instanceId, shutdownState, previousState);
 }
-
+int ncPowerDownStub (ncStub *st, ncMetadata *meta){
+  return(0);
+}
 int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
 {
     return doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);

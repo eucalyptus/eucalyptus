@@ -108,6 +108,11 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
     return H->doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);
 }
 
+int doPowerDown(ncMetadata *meta) {
+    if (init()) return 1;
+    return H->doPowerDown (meta);
+}
+
 int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
     if (init()) return 1;

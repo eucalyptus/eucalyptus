@@ -205,7 +205,7 @@ static void refresh_instance_info (ncInstance * instance)
 
         if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 32)) {
 	  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
-            rc = discover_mac(vnetconfig, instance->ncnet.publicMac, &ip);
+            rc = mac2ip(vnetconfig, instance->ncnet.publicMac, &ip);
             if (!rc) {
 	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
 	      strncpy(instance->ncnet.publicIp, ip, 32);
@@ -213,7 +213,7 @@ static void refresh_instance_info (ncInstance * instance)
 	  }
         }
         if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 32)) {
-            rc = discover_mac(vnetconfig, instance->ncnet.privateMac, &ip);
+            rc = mac2ip(vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
                 logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
                 strncpy(instance->ncnet.privateIp, ip, 32);
@@ -1020,6 +1020,10 @@ static int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource 
     }
     * outRes = res;
     return 0;
+}
+
+static int doPowerDown(ncMetadata *ccMeta) {
+  return(0);
 }
 
 static int doStartNetwork(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan) {

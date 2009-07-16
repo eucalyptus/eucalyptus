@@ -438,6 +438,40 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
     return status;
 }
 
+int ncPowerDownStub  (ncStub *st, ncMetadata *meta) {
+  axutil_env_t * env  = st->env;
+  axis2_stub_t * stub = st->stub;
+  adb_ncPowerDown_t     * input   = adb_ncPowerDown_create (env); 
+  adb_ncPowerDownType_t * request = adb_ncPowerDownType_create (env);
+  
+  // set standard input fields
+  if (meta) {
+    adb_ncPowerDownType_set_correlationId (request, env, meta->correlationId);
+    adb_ncPowerDownType_set_userId (request, env, meta->userId);
+  }
+  
+  // set op-specific input fields
+  adb_ncPowerDown_set_ncPowerDown(input, env, request);
+  
+  int status = 0;
+  { // do it
+    adb_ncPowerDownResponse_t * output = axis2_stub_op_EucalyptusNC_ncPowerDown (stub, env, input);
+    
+    if (!output) {
+      logprintfl (EUCAERROR, "ERROR: PowerDown" NULL_ERROR_MSG);
+      status = -1;
+    } else {
+      adb_ncPowerDownResponseType_t * response = adb_ncPowerDownResponse_get_ncPowerDownResponse (output, env);
+      if ( adb_ncPowerDownResponseType_get_return(response, env) == AXIS2_FALSE ) {
+	logprintfl (EUCAERROR, "ERROR: PowerDown returned an error\n");
+	status = 1;
+      }
+    }
+  }
+  
+  return status;
+}
+
 int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char **peers, int peersLen, int port, int vlan, char **outStatus) 
 {
     axutil_env_t * env  = st->env;

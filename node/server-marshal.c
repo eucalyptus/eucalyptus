@@ -11,6 +11,55 @@
 
 pthread_mutex_t ncHandlerLock = PTHREAD_MUTEX_INITIALIZER;
 
+adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, const axutil_env_t *env) 
+{
+  //    pthread_mutex_lock(&ncHandlerLock);
+    adb_ncPowerDownType_t * input          = adb_ncPowerDown_get_ncPowerDown(ncPowerDown, env);
+    adb_ncPowerDownResponse_t * response   = adb_ncPowerDownResponse_create(env);
+    adb_ncPowerDownResponseType_t * output = adb_ncPowerDownResponseType_create(env);
+
+    // get standard fields from input
+    axis2_char_t * correlationId = adb_ncPowerDownType_get_correlationId(input, env);
+    axis2_char_t * userId = adb_ncPowerDownType_get_userId(input, env);
+
+    // get operation-specific fields from input
+    axis2_char_t * cid = adb_ncPowerDownType_get_correlationId(input, env);
+    fprintf(stderr, "powerdown called\n\n");
+    eventlog("NC", userId, correlationId, "PowerDown", "begin");
+    { // do it
+        ncMetadata meta = { correlationId, userId };
+
+        int error = doPowerDown (&meta);
+
+        if (error) {
+	  logprintfl (EUCAERROR, "ERROR: doPowerDown() failed error=%d\n", error);
+	  adb_ncPowerDownResponseType_set_correlationId(output, env, correlationId);
+	  adb_ncPowerDownResponseType_set_userId(output, env, userId);
+	  adb_ncPowerDownResponseType_set_return(output, env, AXIS2_FALSE);
+	  
+	  // set operation-specific fields in output
+	  adb_ncPowerDownResponseType_set_statusMessage(output, env, 2);
+	  
+        } else {
+	  // set standard fields in output
+	  adb_ncPowerDownResponseType_set_return(output, env, AXIS2_TRUE);
+	  adb_ncPowerDownResponseType_set_correlationId(output, env, correlationId);
+	  adb_ncPowerDownResponseType_set_userId(output, env, userId);
+	  
+	  // set operation-specific fields in output
+	  adb_ncPowerDownResponseType_set_statusMessage(output, env, 0);
+        }
+    }
+
+    // set response to output
+    adb_ncPowerDownResponse_set_ncPowerDownResponse(response, env, output);
+    //    pthread_mutex_unlock(&ncHandlerLock);
+    
+    eventlog("NC", userId, correlationId, "PowerDown", "end");
+    fprintf(stderr, "powerdown done\n");
+    return response;
+}
+
 adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncStartNetwork, const axutil_env_t *env) 
 {
     pthread_mutex_lock(&ncHandlerLock);
