@@ -48,7 +48,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   op_start = time(NULL);
   op_timer = OP_TIMEOUT;
   
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -128,7 +128,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   op_start = time(NULL);
   op_timer = OP_TIMEOUT;
   
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -200,7 +200,7 @@ int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **source
   int rc, i, destVlan, slashnet, fail;
   char *destUserName;
 
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -263,7 +263,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   char cmd[256];
   ccInstance *myInstance=NULL;
 
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -330,7 +330,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
 int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *outAddressesLen) {
   int i, rc, count;
   
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -352,7 +352,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   char cmd[256];
   ccInstance *myInstance=NULL;
 
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -414,7 +414,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
 int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   int rc, ret;
   
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -445,7 +445,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   op_start = time(NULL);
   op_timer = OP_TIMEOUT;
 
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -528,7 +528,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   op_start = time(NULL);
   op_timer = OP_TIMEOUT;
 
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -749,7 +749,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   op_start = time(NULL);
   op_timer = OP_TIMEOUT;
 
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -1140,7 +1140,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   op_start = time(NULL);
   op_timer = OP_TIMEOUT;
   
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -1371,7 +1371,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
   
   *outConsoleOutput = NULL;
 
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -1486,7 +1486,7 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
   op_start = time(NULL);
   op_timer = OP_TIMEOUT;
 
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -1563,7 +1563,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   op_start = time(NULL);
   op_timer = OP_TIMEOUT;
 
-  rc = init_config();
+  rc = initialize();
   if (rc) {
     return(1);
   }
@@ -1700,46 +1700,113 @@ int sem_timewait(sem_t *sem, time_t seconds) {
   return(rc);
 }
 
+int initialize(void) {
+  int rc, ret;
+
+  ret=0;
+  rc = init_thread();
+  if (rc) ret=1;
+  rc = init_config();
+  if (rc) ret=1;
+  
+  if (ret) {
+  } else {
+    // initialization went well, this thread is now initialized
+    init=1;
+  }
+  
+  return(0);
+}
+
+int init_thread(void) {
+  int rc;
+  
+  if (init) {
+    // thread has already been initialized
+    fprintf(stderr, "already init\n");
+  } else {
+    // this thread has not been initialized, set up shared memory segments
+    srand(time(NULL));
+
+    initLock = sem_open("/eucalyptusCCinitLock", O_CREAT, 0644, 1);    
+    sem_wait(initLock);
+    
+    if (config == NULL) {
+      rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &configLock, "/eucalyptusCCConfigLock");
+      if (rc != 0) {
+	fprintf(stderr, "Cannot set up shared memory region for ccConfig, exiting...\n");
+	sem_post(initLock);
+	exit(1);
+      }
+    }
+    
+    if (instanceCache == NULL) {
+      rc = setup_shared_buffer((void **)&instanceCache, "/eucalyptusCCInstanceCache", sizeof(ccInstance) * MAXINSTANCES, &instanceCacheLock, "/eucalyptusCCInstanceCacheLock");
+      if (rc != 0) {
+	fprintf(stderr, "Cannot set up shared memory region for ccInstanceCache, exiting...\n");
+	sem_post(initLock);
+	exit(1);
+      }
+    }
+    
+    if (vnetconfig == NULL) {
+      rc = setup_shared_buffer((void **)&vnetconfig, "/eucalyptusCCVNETConfig", sizeof(vnetConfig), &vnetConfigLock, "/eucalyptusCCVNETConfigLock");
+      if (rc != 0) {
+	fprintf(stderr, "Cannot set up shared memory region for ccVNETConfig, exiting...\n");
+	sem_post(initLock);
+	exit(1);
+      }
+    }
+    sem_post(initLock);
+  }
+  return(0);
+}
+
 int init_config(void) {
   resource *res=NULL;
   char *tmpstr=NULL, **hosts=NULL, *hostname=NULL, *ncservice=NULL, *dhcp_deamon;
-  int ncport, rd, shd, val, rc, i, numHosts, tcount, use_wssec, loglevel, schedPolicy, idleThresh, wakeThresh;
+  int ncport, rd, shd, val, rc, i, numHosts, tcount, use_wssec, loglevel, schedPolicy, idleThresh, wakeThresh, ret;
   
-  char configFile[1024], netPath[1024], logFile[1024], eucahome[1024], policyFile[1024], buf[1024], *home=NULL, cmd[256];
+  char configFile[1024], netPath[1024], logFile[1024], eucahome[1024], policyFile[1024], buf[1024], home[1024], cmd[256];
   
   axutil_env_t *env = NULL;
   FILE *FH=NULL;
   time_t configMtime;
   struct stat statbuf;
-
+  
   // read in base config information
-  home = strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
-  if (!home) {
-    home = strdup("");
+  //  home = strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
+  tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
+  if (!tmpstr) {
+    snprintf(home, 1024, "/");
+  } else {
+    snprintf(home, 1024, "%s", tmpstr);
   }
   
   bzero(configFile, 1024);
   bzero(netPath, 1024);
   bzero(logFile, 1024);
   bzero(policyFile, 1024);
-
+  
   snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, home);
   snprintf(netPath, 1024, CC_NET_PATH_DEFAULT, home);
   snprintf(logFile, 1024, "%s/var/log/eucalyptus/cc.log", home);
   snprintf(policyFile, 1024, "%s/var/lib/eucalyptus/keys/nc-client-policy.xml", home);
   snprintf(eucahome, 1024, "%s/", home);
-  free(home);
 
+  // stat the config file, update modification time
+  rc = stat(configFile, &statbuf);
+  if (rc) {
+    logprintfl(EUCAERROR, "cannot stat configfile '%s'\n", configFile);
+    return(1);
+  } 
+  configMtime = statbuf.st_mtime;
+  
   if (init) {
     // this means that this thread has already been initialized
+    ret = 0;
+
     // check to see if the configfile has changed
-    rc = stat(configFile, &statbuf);
-    if (rc) {
-      logprintfl(EUCAERROR, "cannot stat configfile '%s'\n", configFile);
-      return(1);
-    } 
-    configMtime = statbuf.st_mtime;
-    
     if (config->configMtime != configMtime) {
       // something has changed
       config->configMtime = configMtime;
@@ -1753,76 +1820,39 @@ int init_config(void) {
 	config->numResources = 0;
 	bzero(config->resourcePool, sizeof(resource) * MAXNODES);
 	sem_post(configLock);
+	ret = 1;
 
-	return(1);
+      } else {
+	sem_wait(configLock);
+	config->numResources = numHosts;
+	memcpy(config->resourcePool, res, sizeof(resource) * numHosts);
+	if (res) free(res);
+	sem_post(configLock);
       }
-      
-      sem_wait(configLock);
-      config->numResources = numHosts;
-      memcpy(config->resourcePool, res, sizeof(resource) * numHosts);
-      if (res) free(res);
-      sem_post(configLock);
     }
+    
+    return(ret);
 
-    return(0);
-  }
-  
-  // this thread has not been initialized, set up shared memory segments
-  initLock = sem_open("/eucalyptusCCinitLock", O_CREAT, 0644, 1);    
-  sem_wait(initLock);
-
-  if (config == NULL) {
-    rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &configLock, "/eucalyptusCCConfigLock");
-    if (rc != 0) {
-      fprintf(stderr, "Cannot set up shared memory region for ccConfig, exiting...\n");
-      sem_post(initLock);
-      exit(1);
-    }
-  }
-  
-  if (instanceCache == NULL) {
-    rc = setup_shared_buffer((void **)&instanceCache, "/eucalyptusCCInstanceCache", sizeof(ccInstance) * MAXINSTANCES, &instanceCacheLock, "/eucalyptusCCInstanceCacheLock");
-    if (rc != 0) {
-      fprintf(stderr, "Cannot set up shared memory region for ccInstanceCache, exiting...\n");
-      sem_post(initLock);
-      exit(1);
-    }
-  }
-  
-  if (vnetconfig == NULL) {
-    rc = setup_shared_buffer((void **)&vnetconfig, "/eucalyptusCCVNETConfig", sizeof(vnetConfig), &vnetConfigLock, "/eucalyptusCCVNETConfigLock");
-    if (rc != 0) {
-      fprintf(stderr, "Cannot set up shared memory region for ccVNETConfig, exiting...\n");
-      sem_post(initLock);
-      exit(1);
-    }
-  }
-  sem_post(initLock);
-  srand(time(NULL));
-
-  rc = stat(configFile, &statbuf);
-  if (rc) {
-    fprintf(stderr, "ERROR: cannot stat configfile '%s'\n", configFile);
-    exit(1);
-  }
-  configMtime = statbuf.st_mtime;
-  
-  // now start reading the config file
-  rc = get_conf_var(configFile, "LOGLEVEL", &tmpstr);
-  if (rc != 1) {
-    loglevel = EUCADEBUG;
   } else {
-    if (!strcmp(tmpstr,"DEBUG")) {loglevel=EUCADEBUG;}
-    else if (!strcmp(tmpstr,"INFO")) {loglevel=EUCAINFO;}
-    else if (!strcmp(tmpstr,"WARN")) {loglevel=EUCAWARN;}
-    else if (!strcmp(tmpstr,"ERROR")) {loglevel=EUCAERROR;}
-    else if (!strcmp(tmpstr,"FATAL")) {loglevel=EUCAFATAL;}
-    else {loglevel=EUCADEBUG;}
-  }
-  if (tmpstr) free(tmpstr);
+    // thread is not initialized, run first time local state setup
+    // now start reading the config file
+    rc = get_conf_var(configFile, "LOGLEVEL", &tmpstr);
+    if (rc != 1) {
+      loglevel = EUCADEBUG;
+    } else {
+      if (!strcmp(tmpstr,"DEBUG")) {loglevel=EUCADEBUG;}
+      else if (!strcmp(tmpstr,"INFO")) {loglevel=EUCAINFO;}
+      else if (!strcmp(tmpstr,"WARN")) {loglevel=EUCAWARN;}
+      else if (!strcmp(tmpstr,"ERROR")) {loglevel=EUCAERROR;}
+      else if (!strcmp(tmpstr,"FATAL")) {loglevel=EUCAFATAL;}
+      else {loglevel=EUCADEBUG;}
+    }
+    if (tmpstr) free(tmpstr);
 
-  // set up logfile
-  logfile(logFile, loglevel);
+    // set up logfile
+    logfile(logFile, loglevel);
+  }
+
   
   if (config->initialized) {
     // some other thread has already initialized the configuration

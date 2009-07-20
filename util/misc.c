@@ -343,6 +343,7 @@ get_conf_var(	const char *path,
 			|| name[0] == '\0'|| value == NULL) {
 		return -1;
 	}
+	*value = NULL;
 
 	f = fopen(path, "r");
 	if (f == NULL) {
