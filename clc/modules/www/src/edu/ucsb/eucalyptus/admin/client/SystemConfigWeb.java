@@ -43,6 +43,7 @@ public class SystemConfigWeb implements IsSerializable {
     private Integer storageMaxBucketSizeInMB;
     private Integer storageMaxCacheSizeInMB;
     private Integer storageSnapshotsTotalInGB;
+    private String storageInterface;
     private Integer storageVolumesTotalInGB;
     private Integer storageMaxVolumeSizeInGB;
     private String storageVolumesPath;
@@ -63,6 +64,7 @@ public class SystemConfigWeb implements IsSerializable {
                             final Integer storageMaxBucketSizeInMB,
                             final Integer storageMaxCacheSizeInMB,
                             final Integer storageSnapshotsTotalInGB,
+                            final String storageInterface,
                             final Integer storageVolumesTotalInGB,
                             final Integer storageMaxVolumeSizeInGB,
                             final String storageVolumesPath,
@@ -81,6 +83,7 @@ public class SystemConfigWeb implements IsSerializable {
         this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
         this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
         this.storageSnapshotsTotalInGB = storageSnapshotsTotalInGB;
+        this.storageInterface = storageInterface;
         this.storageVolumesTotalInGB = storageVolumesTotalInGB;
         this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
         this.storageVolumesPath = storageVolumesPath;
@@ -152,6 +155,14 @@ public class SystemConfigWeb implements IsSerializable {
     public void setStorageSnapshotsTotalInGB( final Integer storageSnapshotsTotalInGB )
     {
         this.storageSnapshotsTotalInGB = storageSnapshotsTotalInGB;
+    }
+
+    public String getStorageInterface() {
+        return storageInterface;
+    }
+
+    public void setStorageInterface(String storageInterface) {
+        this.storageInterface = storageInterface;
     }
 
     public Integer getStorageVolumesTotalInGB()

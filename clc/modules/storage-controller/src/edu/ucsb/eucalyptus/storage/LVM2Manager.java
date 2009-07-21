@@ -59,7 +59,6 @@ public class LVM2Manager implements LogicalStorageManager {
 
     public static final String lvmRootDirectory = "/dev";
     public static final String PATH_SEPARATOR = "/";
-    public static String iface = "eth0";
     public static boolean initialized = false;
     public static String hostName = "localhost";
     public static final int MAX_LOOP_DEVICES = 256;
@@ -233,12 +232,12 @@ public class LVM2Manager implements LogicalStorageManager {
     public void configure() {
         try {
             hostName = InetAddress.getLocalHost().getHostName();
-            iface = parseConfig();
-            LOG.info("Will export volumes on interface: " + iface);
-            if(iface == null || (iface.length() == 0)) {
-                NetworkInterface inface = NetworkInterface.getByName(iface);
+            /*StorageProperties.iface = parseConfig();
+            LOG.info("Will export volumes on interface: " + StorageProperties.iface);
+            if(StorageProperties.iface == null || (StorageProperties.iface.length() == 0)) {
+                NetworkInterface inface = NetworkInterface.getByName(StorageProperties.iface);
                 if(inface == null) {
-                    LOG.error("Network interface " + iface + " is not valid. BlockStorage may not function.");
+                    LOG.error("Network interface " + StorageProperties.iface + " is not valid. BlockStorage may not function.");
                     if(ifaceDiscovery) {
                         List<NetworkInterface> ifaces = null;
                         try {
@@ -247,18 +246,18 @@ public class LVM2Manager implements LogicalStorageManager {
                         for ( NetworkInterface ifc : ifaces )
                             try {
                                 if ( !ifc.isLoopback() && !ifc.isVirtual() && ifc.isUp() ) {
-                                    iface = ifc.getName();
+                                    StorageProperties.iface = ifc.getName();
                                     break;
                                 }
                             } catch ( SocketException e1 ) {}
                     }
                 } else {
                     if(!inface.isUp()) {
-                        LOG.error("Network interface " + iface + " is not available (up). BlockStorage may not function.");
+                        LOG.error("Network interface " + StorageProperties.iface + " is not available (up). BlockStorage may not function.");
                     }
                 }
             }
-
+            */
             EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
             LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
             List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
@@ -302,7 +301,7 @@ public class LVM2Manager implements LogicalStorageManager {
     }
 
     public void setStorageInterface(String storageInterface) {
-        iface = storageInterface;
+        StorageProperties.iface = storageInterface;
     }
 
     public void cleanVolume(String volumeId) {
@@ -386,7 +385,7 @@ public class LVM2Manager implements LogicalStorageManager {
         int majorNumber = deviceNumbers.get(0);
         int minorNumber = deviceNumbers.get(1);
         String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-        int pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
+        int pid = exportManager.exportVolume(StorageProperties.iface, absoluteLVName, majorNumber, minorNumber);
         boolean success = false;
         String returnValue = "";
         int timeout = 300;
@@ -408,7 +407,7 @@ public class LVM2Manager implements LogicalStorageManager {
             }
         }
         if(!success) {
-            throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + iface + " pid: " + pid + " returnValue: " + returnValue);
+            throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + StorageProperties.iface + " pid: " + pid + " returnValue: " + returnValue);
         }
 
         File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
@@ -915,7 +914,7 @@ public class LVM2Manager implements LogicalStorageManager {
                 if(returnValue.length() == 0) {
                     int majorNumber = foundVolumeInfo.getMajorNumber();
                     int minorNumber = foundVolumeInfo.getMinorNumber();
-                    pid = exportManager.exportVolume(iface, absoluteLVName, majorNumber, minorNumber);
+                    pid = exportManager.exportVolume(StorageProperties.iface, absoluteLVName, majorNumber, minorNumber);
                     foundVolumeInfo.setVbladePid(pid);
                     File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
                     try {

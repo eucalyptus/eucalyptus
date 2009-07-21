@@ -468,22 +468,23 @@ public class EucalyptusManagement {
             db.commit();
         }
         return new SystemConfigWeb( sysConf.getStorageUrl(),
-                                    sysConf.getStorageDir(),
-                                    sysConf.getStorageMaxBucketsPerUser(),
-                                    sysConf.getStorageMaxBucketSizeInMB(),
-                                    sysConf.getStorageMaxCacheSizeInMB(),
-                                    sysConf.getStorageMaxTotalSnapshotSizeInGb(),
-                                    sysConf.getStorageMaxTotalVolumeSizeInGb(),
-                                    sysConf.getStorageMaxVolumeSizeInGB(),
-                                    sysConf.getStorageVolumesDir(),
-                                    sysConf.getDefaultKernel(),
-                                    sysConf.getDefaultRamdisk(),
-                                    sysConf.getMaxUserPublicAddresses(),
-                                    sysConf.isDoDynamicPublicAddresses(),
-                                    sysConf.getSystemReservedPublicAddresses(),
-                                    sysConf.getDnsDomain(),
-                                    sysConf.getNameserver(),
-                                    sysConf.getNameserverAddress());
+                sysConf.getStorageDir(),
+                sysConf.getStorageMaxBucketsPerUser(),
+                sysConf.getStorageMaxBucketSizeInMB(),
+                sysConf.getStorageMaxCacheSizeInMB(),
+                sysConf.getStorageMaxTotalSnapshotSizeInGb(),
+                sysConf.getStorageInterface(),
+                sysConf.getStorageMaxTotalVolumeSizeInGb(),
+                sysConf.getStorageMaxVolumeSizeInGB(),
+                sysConf.getStorageVolumesDir(),
+                sysConf.getDefaultKernel(),
+                sysConf.getDefaultRamdisk(),
+                sysConf.getMaxUserPublicAddresses(),
+                sysConf.isDoDynamicPublicAddresses(),
+                sysConf.getSystemReservedPublicAddresses(),
+                sysConf.getDnsDomain(),
+                sysConf.getNameserver(),
+                sysConf.getNameserverAddress());
     }
 
     private static SystemConfiguration validateSystemConfiguration(SystemConfiguration sysConf) {
@@ -509,6 +510,9 @@ public class EucalyptusManagement {
         }
         if(sysConf.getStorageMaxTotalSnapshotSizeInGb() == null) {
             sysConf.setStorageMaxTotalSnapshotSizeInGb(StorageProperties.MAX_TOTAL_SNAPSHOT_SIZE);
+        }
+        if(sysConf.getStorageInterface() == null) {
+            sysConf.setStorageInterface(StorageProperties.iface);
         }
         if(sysConf.getStorageMaxTotalVolumeSizeInGb() == null) {
             sysConf.setStorageMaxTotalVolumeSizeInGb(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
@@ -547,13 +551,13 @@ public class EucalyptusManagement {
             sysConf.setNameserverAddress(DNSProperties.NS_IP);
         }
         if( sysConf.getMaxUserPublicAddresses() == null ) {
-          sysConf.setMaxUserPublicAddresses( 5 );
+            sysConf.setMaxUserPublicAddresses( 5 );
         }
         if( sysConf.isDoDynamicPublicAddresses() == null ) {
-          sysConf.setDoDynamicPublicAddresses( true );
+            sysConf.setDoDynamicPublicAddresses( true );
         }
         if( sysConf.getSystemReservedPublicAddresses() == null ) {
-          sysConf.setSystemReservedPublicAddresses( 10 );
+            sysConf.setSystemReservedPublicAddresses( 10 );
         }
         return sysConf;
     }
@@ -578,6 +582,7 @@ public class EucalyptusManagement {
             sysConf.setStorageMaxCacheSizeInMB ( systemConfig.getStorageMaxCacheSizeInMB() );
             sysConf.setStorageMaxTotalVolumeSizeInGb ( systemConfig.getStorageVolumesTotalInGB() );
             sysConf.setStorageMaxTotalSnapshotSizeInGb( systemConfig.getStorageSnapshotsTotalInGB() );
+            sysConf.setStorageInterface(systemConfig.getStorageInterface());
             sysConf.setStorageMaxVolumeSizeInGB (systemConfig.getStorageMaxVolumeSizeInGB());
             sysConf.setStorageVolumesDir (systemConfig.getStorageVolumesPath());
             sysConf.setDnsDomain(systemConfig.getDnsDomain());
@@ -601,6 +606,7 @@ public class EucalyptusManagement {
                     systemConfig.getStorageMaxCacheSizeInMB(),
                     systemConfig.getStorageVolumesTotalInGB(),
                     systemConfig.getStorageSnapshotsTotalInGB(),
+                    systemConfig.getStorageInterface(),
                     systemConfig.getStorageMaxVolumeSizeInGB(),
                     systemConfig.getStorageVolumesPath(),
                     systemConfig.getMaxUserPublicAddresses(),
