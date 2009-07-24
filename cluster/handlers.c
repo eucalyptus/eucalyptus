@@ -1083,21 +1083,22 @@ int schedule_instance_roundrobin(virtualMachine *vm, int *outresid) {
 }
 
 int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
-  int i, rc, done, resid=0, downresid=0;
-  resource *res, *downres;
+  int i, rc, done, resid, sleepresid;
+  resource *res;
   
   *outresid = 0;
 
   logprintfl(EUCAINFO, "scheduler using GREEDY policy to find next resource\n");
 
   // find the best 'resource' on which to run the instance
+  resid = sleepresid = -1;
   done=0;
   for (i=0; i<config->numResources && !done; i++) {
     int mem, disk, cores;
     
     // new fashion way
     res = &(config->resourcePool[i]);
-    if (res->state != RESDOWN) {
+    if (res->state == RESUP && resid == -1) {
       mem = res->availMemory - vm->mem;
       disk = res->availDisk - vm->disk;
       cores = res->availCores - vm->cores;
@@ -1106,20 +1107,33 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
 	resid = i;
 	done++;
       }
+    } else if (res->state == RESASLEEP && sleepresid == -1) {
+      mem = res->availMemory - vm->mem;
+      disk = res->availDisk - vm->disk;
+      cores = res->availCores - vm->cores;
+      
+      if (mem >= 0 && disk >= 0 && cores >= 0) {
+	sleepresid = i;
+      }
     }
   }
   
-  if (!done) {
+  if (resid == -1 && sleepresid == -1) {
     // didn't find a resource
     return(1);
   }
   
-  res = &(config->resourcePool[resid]);
-  
+  if (resid != -1) {
+    res = &(config->resourcePool[resid]);
+    *outresid = resid;
+  } else if (sleepresid != -1) {
+    res = &(config->resourcePool[sleepresid]);
+    *outresid = sleepresid;
+  }
   if (res->state == RESASLEEP) {
     rc = powerUp(res);
   }
-  *outresid = resid;
+
   return(0);
 }
 
@@ -1706,6 +1720,10 @@ int initialize(void) {
   ret=0;
   rc = init_thread();
   if (rc) ret=1;
+
+  rc = init_localstate();
+  if (rc) ret = 1;
+
   rc = init_config();
   if (rc) ret=1;
   
@@ -1713,6 +1731,47 @@ int initialize(void) {
   } else {
     // initialization went well, this thread is now initialized
     init=1;
+  }
+  
+  return(0);
+}
+
+int init_localstate(void) {
+  int rc, loglevel;
+  char *tmpstr=NULL, logFile[1024], configFile[1024], home[1024];
+
+  if (init) {
+  } else {
+    // thread is not initialized, run first time local state setup
+    bzero(logFile, 1024);
+    bzero(home, 1024);
+    bzero(configFile, 1024);
+    
+    tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
+    if (!tmpstr) {
+      snprintf(home, 1024, "/");
+    } else {
+      snprintf(home, 1024, "%s", tmpstr);
+    }
+    
+    snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, home);
+    snprintf(logFile, 1024, "%s/var/log/eucalyptus/cc.log", home);  
+    
+    rc = get_conf_var(configFile, "LOGLEVEL", &tmpstr);
+    if (rc != 1) {
+      loglevel = EUCADEBUG;
+    } else {
+      if (!strcmp(tmpstr,"DEBUG")) {loglevel=EUCADEBUG;}
+      else if (!strcmp(tmpstr,"INFO")) {loglevel=EUCAINFO;}
+      else if (!strcmp(tmpstr,"WARN")) {loglevel=EUCAWARN;}
+      else if (!strcmp(tmpstr,"ERROR")) {loglevel=EUCAERROR;}
+      else if (!strcmp(tmpstr,"FATAL")) {loglevel=EUCAFATAL;}
+      else {loglevel=EUCADEBUG;}
+    }
+    if (tmpstr) free(tmpstr);
+    // set up logfile
+    logfile(logFile, loglevel);
+    
   }
   
   return(0);
@@ -1767,7 +1826,7 @@ int init_config(void) {
   char *tmpstr=NULL, **hosts=NULL, *hostname=NULL, *ncservice=NULL, *dhcp_deamon;
   int ncport, rd, shd, val, rc, i, numHosts, tcount, use_wssec, loglevel, schedPolicy, idleThresh, wakeThresh, ret;
   
-  char configFile[1024], netPath[1024], logFile[1024], eucahome[1024], policyFile[1024], buf[1024], home[1024], cmd[256];
+  char configFile[1024], netPath[1024], eucahome[1024], policyFile[1024], buf[1024], home[1024], cmd[256];
   
   axutil_env_t *env = NULL;
   FILE *FH=NULL;
@@ -1775,7 +1834,6 @@ int init_config(void) {
   struct stat statbuf;
   
   // read in base config information
-  //  home = strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
   tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
   if (!tmpstr) {
     snprintf(home, 1024, "/");
@@ -1785,12 +1843,10 @@ int init_config(void) {
   
   bzero(configFile, 1024);
   bzero(netPath, 1024);
-  bzero(logFile, 1024);
   bzero(policyFile, 1024);
   
   snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, home);
   snprintf(netPath, 1024, CC_NET_PATH_DEFAULT, home);
-  snprintf(logFile, 1024, "%s/var/log/eucalyptus/cc.log", home);
   snprintf(policyFile, 1024, "%s/var/lib/eucalyptus/keys/nc-client-policy.xml", home);
   snprintf(eucahome, 1024, "%s/", home);
 
@@ -1834,23 +1890,6 @@ int init_config(void) {
     return(ret);
 
   } else {
-    // thread is not initialized, run first time local state setup
-    // now start reading the config file
-    rc = get_conf_var(configFile, "LOGLEVEL", &tmpstr);
-    if (rc != 1) {
-      loglevel = EUCADEBUG;
-    } else {
-      if (!strcmp(tmpstr,"DEBUG")) {loglevel=EUCADEBUG;}
-      else if (!strcmp(tmpstr,"INFO")) {loglevel=EUCAINFO;}
-      else if (!strcmp(tmpstr,"WARN")) {loglevel=EUCAWARN;}
-      else if (!strcmp(tmpstr,"ERROR")) {loglevel=EUCAERROR;}
-      else if (!strcmp(tmpstr,"FATAL")) {loglevel=EUCAFATAL;}
-      else {loglevel=EUCADEBUG;}
-    }
-    if (tmpstr) free(tmpstr);
-
-    // set up logfile
-    logfile(logFile, loglevel);
   }
 
   
@@ -2069,27 +2108,63 @@ int init_config(void) {
 }
 
 int restoreNetworkState() {
-  int rc, ret=0;
-  
-  logprintfl(EUCAINFO, "restoring network state from memory\n");
-  // get DHCPD back up and running
+  int rc, ret=0, i;
+  char cmd[1024];
+
+  logprintfl(EUCAINFO, "restoring network state\n");
   sem_wait(vnetConfigLock);
-  
+
+  // restore iptables state                                                                                    
+  logprintfl(EUCAINFO, "restarting iptables\n");
+  rc = vnetRestoreTablesFromMemory(vnetconfig);
+  if (rc) {
+    logprintfl(EUCAERROR, "cannot restore iptables state\n");
+    ret = 1;
+  }
+
+  // restore ip addresses                                                                                      
+  logprintfl(EUCAINFO, "restarting ips\n");
+  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254/32 dev %s", config->eucahome, vnetconfig->pubInterface);
+    logprintfl(EUCAINFO,"running cmd %s\n", cmd);
+    rc = system(cmd);
+    if (rc) {
+      logprintfl(EUCAWARN, "cannot add ip 169.254.169.254\n");
+    }
+  }
+    
+  for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
+    if (vnetconfig->publicips[i].allocated) {
+      snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, hex2dot(vnetconfig->publicips[i].ip), vnetconfig->pubInterface);
+      logprintfl(EUCAINFO,"running cmd %s\n", cmd);
+      rc = system(cmd);
+      if (rc) {
+        logprintfl(EUCAWARN, "cannot add ip %s\n", hex2dot(vnetconfig->publicips[i].ip));
+      }
+    }
+  }
+
+  // re-create all active networks
+  logprintfl(EUCAINFO, "restarting networks\n");
+  for (i=2; i<NUMBER_OF_VLANS; i++) {
+    if (vnetconfig->networks[i].active) {
+      char *brname=NULL;
+      logprintfl(EUCADEBUG, "found active network: %d\n", i);
+      rc = vnetStartNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName, &brname);
+      if (rc) {
+        logprintfl(EUCADEBUG, "failed to reactivate network: %d", i);
+      }
+    }
+  }
+  // get DHCPD back up and running                                                                             
+  logprintfl(EUCAINFO, "restarting DHCPD\n");
   rc = vnetKickDHCP(vnetconfig);
   if (rc) {
     logprintfl(EUCAERROR, "cannot start DHCP daemon, please check your network settings\n");
     ret = 1;
   }
-  
-  // restore iptables state
-  rc = vnetRestoreTablesFromMemory(vnetconfig);
-  if (rc) {
-    logprintfl(EUCAERROR, "cannot restore iptables state from memory\n");
-    ret = 1;
-  }
-  
   sem_post(vnetConfigLock);
-  
+  logprintfl(EUCADEBUG, "done restoring network state\n");
   return(ret);
 }
 

@@ -125,6 +125,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src);
 
 int initialize(void);
 int init_thread(void);
+int init_localstate(void);
 int init_config(void);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname);
 int refresh_resources(ncMetadata *ccMeta, int timeout);

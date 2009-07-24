@@ -25,6 +25,7 @@ typedef struct networkEntry_t {
   int numhosts;
   uint32_t nw, nm, bc, dns, router;
   netEntry addrs[NUMBER_OF_HOSTS_PER_VLAN];
+  int active;
 } networkEntry;
 
 typedef struct publicip_t {
