@@ -60,6 +60,7 @@ install: deploy
 	@$(INSTALL) -d $(etcdir)/init.d
 	@$(INSTALL) -d $(vardir)/run/eucalyptus/net
 	@$(INSTALL) -d $(vardir)/lib/eucalyptus/keys
+	@$(INSTALL) -d $(vardir)/lib/eucalyptus/CC
 	@$(INSTALL) -d $(vardir)/log/eucalyptus
 	@$(INSTALL) -d $(datarootdir)/eucalyptus
 	@$(INSTALL) -d $(usrdir)/sbin

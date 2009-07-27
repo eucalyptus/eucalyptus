@@ -243,7 +243,7 @@ case "$1" in
 			echo -n "Starting $DESC: "
 		fi
 	fi
-	# start and stop are hard: we loose the CC state
+	# start and stop are hard: clear the semaphores
 	rm -f /dev/shm/*eucalyptusCC*
 	do_start
 	case "$?" in
@@ -286,6 +286,27 @@ case "$1" in
 		fi
 	fi
 	;;
+  reload)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Reloading $DESC"
+		else
+			echo -n "Reloading $DESC: "
+		fi
+	fi
+	# reload clears all CC state
+	do_stop
+	rm -f $EUCALYPTUS/var/lib/eucalyptus/CC/*
+	rm -f /dev/shm/*eucalyptusCC*
+	do_start
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg 0
+		else
+			echo "done."
+		fi
+	fi
+	;;
   restart)
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
@@ -306,7 +327,7 @@ case "$1" in
 	fi
   	;;
   *)
-	echo "Usage: $NAME {start|stop|restart}" >&2
+	echo "Usage: $NAME {start|stop|restart|reload}" >&2
 	exit 3
 	;;
 esac

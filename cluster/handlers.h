@@ -8,6 +8,8 @@
 #include <vnetwork.h>
 
 #define OP_TIMEOUT 60
+enum {SHARED_MEM, SHARED_FILE};
+
 
 typedef struct virtualMachine_t {
   int mem, cores, disk;
@@ -101,7 +103,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst);
 int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *outAddressesLen);
 
 int doDescribeInstances(ncMetadata *meta, char **instIds, int instIdsLen, ccInstance **outInsts, int *outInstsLen);
-int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, ccInstance **outInsts, int *outInstsLen);
+int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *targetNode, ccInstance **outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata *meta, char *instId, char **consoleOutput);
 int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen);
 int doTerminateInstances(ncMetadata *meta, char **instIds, int instIdsLen, int **outStatus);
@@ -110,10 +112,10 @@ int doRegisterImage(ncMetadata *meta, char *amiId, char *location);
 int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, char ***outServiceTags, int *outServiceTagsLen);
 int doFlushNetwork(ncMetadata *ccMeta, char *destName);
 
-int schedule_instance(virtualMachine *vm, int *outresid);
+int schedule_instance(virtualMachine *vm, char *targetNode, int *outresid);
 int schedule_instance_greedy(virtualMachine *vm, int *outresid);
 int schedule_instance_roundrobin(virtualMachine *vm, int *outresid);
-
+int schedule_instance_explicit(virtualMachine *vm, char *targetNode, int *outresid);
 int add_instanceCache(char *instanceId, ccInstance *in);
 int refresh_instanceCache(char *instanceId, ccInstance *in);
 int del_instanceCacheId(char *instanceId);
@@ -127,7 +129,7 @@ int initialize(void);
 int init_thread(void);
 int init_localstate(void);
 int init_config(void);
-int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname);
+int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname, int mode);
 int refresh_resources(ncMetadata *ccMeta, int timeout);
 void shawn(void);
 int sem_timewait(sem_t *sem, time_t seconds);

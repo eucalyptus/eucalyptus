@@ -476,7 +476,7 @@ static int doInitialize (void)
     bridge = getConfString(config, "VNET_BRIDGE");
     mode = getConfString(config, "VNET_MODE");
 
-    vnetInit(vnetconfig, mode, home, config_network_path, NC, pubInterface, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge);
+    vnetInit(vnetconfig, mode, home, config_network_path, NC, pubInterface, pubInterface, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge);
     
     /* cleanup from previous runs and verify integrity of instances
      * directory */
@@ -1023,6 +1023,19 @@ static int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource 
 }
 
 static int doPowerDown(ncMetadata *ccMeta) {
+  char cmd[1024];
+  int rc;
+
+  logprintfl(EUCADEBUG, "PowerOff called\n");
+  snprintf(cmd, 1024, "%s /etc/init.d/powernap now", rootwrap_command_path);
+  logprintfl(EUCADEBUG, "saving power: %s\n", cmd);
+  rc = system(cmd);
+  rc = rc>>8;
+  if (rc) {
+    logprintfl(EUCAERROR, "cmd failed: %d\n", rc);
+  }
+  
+  logprintfl(EUCADEBUG, "PowerOff done\n");
   return(0);
 }
 
@@ -1258,6 +1271,7 @@ struct handlers xen_libvirt_handlers = {
     .doGetConsoleOutput  = doGetConsoleOutput,
     .doDescribeResource  = doDescribeResource,
     .doStartNetwork      = doStartNetwork,
+    .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume
 };

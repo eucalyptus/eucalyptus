@@ -391,6 +391,9 @@ if [ -n "$SETUP" ]; then
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/keys
 	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/keys
 	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/keys
+	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/CC
+	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/CC
+	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/CC
 fi
 
 # pre-flight checks

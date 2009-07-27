@@ -24,6 +24,7 @@
 
 #define SUPERUSER "eucalyptus"
 
+// local globals
 int init=0;
 sem_t *initLock=NULL;
 
@@ -687,7 +688,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout) {
 	}
       }
       
-      config->lastResourceUpdate = time(NULL);
+      //      config->lastResourceUpdate = time(NULL);
       if (rc != 0) {
 	rc = powerUp(&(config->resourcePool[i]));
 	
@@ -1020,9 +1021,11 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   return(0);
 }
 
-int schedule_instance(virtualMachine *vm, int *outresid) {
+int schedule_instance(virtualMachine *vm, char *targetNode, int *outresid) {
   
-  if (config->schedPolicy == SCHEDGREEDY) {
+  if (targetNode != NULL) {
+    return(schedule_instance_explicit(vm, targetNode, outresid));
+  } else if (config->schedPolicy == SCHEDGREEDY) {
     return(schedule_instance_greedy(vm, outresid));
   } else if (config->schedPolicy == SCHEDROUNDROBIN) {
     return(schedule_instance_roundrobin(vm, outresid));
@@ -1082,13 +1085,74 @@ int schedule_instance_roundrobin(virtualMachine *vm, int *outresid) {
   return(0);
 }
 
+int schedule_instance_explicit(virtualMachine *vm, char *targetNode, int *outresid) {
+  int i, rc, done, resid, sleepresid;
+  resource *res;
+  
+  *outresid = 0;
+
+  logprintfl(EUCAINFO, "scheduler using EXPLICIT policy to run VM on target node '%s'\n", targetNode);
+
+  // find the best 'resource' on which to run the instance
+  resid = sleepresid = -1;
+  done=0;
+  for (i=0; i<config->numResources && !done; i++) {
+    int mem, disk, cores;
+    
+    // new fashion way
+    res = &(config->resourcePool[i]);
+    if (!strcmp(res->hostname, targetNode)) {
+      done++;
+      if (res->state == RESUP) {
+	mem = res->availMemory - vm->mem;
+	disk = res->availDisk - vm->disk;
+	cores = res->availCores - vm->cores;
+	
+	if (mem >= 0 && disk >= 0 && cores >= 0) {
+	  resid = i;
+	}
+      } else if (res->state == RESASLEEP) {
+	mem = res->availMemory - vm->mem;
+	disk = res->availDisk - vm->disk;
+	cores = res->availCores - vm->cores;
+	
+	if (mem >= 0 && disk >= 0 && cores >= 0) {
+	  sleepresid = i;
+	}
+      }
+    }
+  }
+  
+  if (resid == -1 && sleepresid == -1) {
+    // target resource is unavailable
+    return(1);
+  }
+  
+  if (resid != -1) {
+    res = &(config->resourcePool[resid]);
+    *outresid = resid;
+  } else if (sleepresid != -1) {
+    res = &(config->resourcePool[sleepresid]);
+    *outresid = sleepresid;
+  }
+  if (res->state == RESASLEEP) {
+    rc = powerUp(res);
+  }
+
+  return(0);
+}
+
 int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
   int i, rc, done, resid, sleepresid;
   resource *res;
   
   *outresid = 0;
 
-  logprintfl(EUCAINFO, "scheduler using GREEDY policy to find next resource\n");
+  if (config->schedPolicy == SCHEDGREEDY) {
+    logprintfl(EUCAINFO, "scheduler using GREEDY policy to find next resource\n");
+  } else if (config->schedPolicy == SCHEDPOWERSAVE) {
+    logprintfl(EUCAINFO, "scheduler using POWERSAVE policy to find next resource\n");
+  }
 
   // find the best 'resource' on which to run the instance
   resid = sleepresid = -1;
@@ -1137,7 +1201,7 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
   return(0);
 }
 
-int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, ccInstance **outInsts, int *outInstsLen) {
+int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
   int rc, i, j, done, runCount, resid, foundnet=0, error=0;
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
@@ -1228,7 +1292,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       sem_wait(configLock);
       
       resid = 0;
-      rc = schedule_instance(ccvm, &resid);
+      rc = schedule_instance(ccvm, targetNode, &resid);
       res = &(config->resourcePool[resid]);
       if (rc) {
 	// could not find resource
@@ -1661,31 +1725,63 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   return(0);
 }
 
-int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname) {
-  int shd, rc;
+int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname, int mode) {
+  int shd, rc, ret;
   sem_t *thelock;
   
   // create a lock and grab it
   *lock = sem_open(lockname, O_CREAT, 0644, 1);    
   sem_wait(*lock);
-  
-  // set up shared memory segment for config
-  shd = shm_open(bufname, O_CREAT | O_RDWR | O_EXCL, 0644);
-  if (shd >= 0) {
-    // if this is the first process to create the config, init to 0
-    rc = ftruncate(shd, bytes);
-  } else {
-    shd = shm_open(bufname, O_CREAT | O_RDWR, 0644);
+  ret=0;
+
+  if (mode == SHARED_MEM) {
+    // set up shared memory segment for config
+    shd = shm_open(bufname, O_CREAT | O_RDWR | O_EXCL, 0644);
+    if (shd >= 0) {
+      // if this is the first process to create the config, init to 0
+      rc = ftruncate(shd, bytes);
+    } else {
+      shd = shm_open(bufname, O_CREAT | O_RDWR, 0644);
+    }
+    if (shd < 0) {
+      fprintf(stderr, "cannot initialize shared memory segment\n");
+      sem_post(*lock);
+      sem_close(*lock);
+      return(1);
+    }
+    *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
+  } else if (mode == SHARED_FILE) {
+    char *tmpstr, path[1024];
+    struct stat mystat;
+    int fd;
+    
+    tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
+    if (!tmpstr) {
+      snprintf(path, 1024, "/var/lib/eucalyptus/CC/%s", bufname);
+    } else {
+      snprintf(path, 1024, "%s/var/lib/eucalyptus/CC/%s", tmpstr, bufname);
+    }
+    fd = open(path, O_RDWR | O_CREAT, 0600);
+    if (fd<0) {
+      fprintf(stderr, "ERROR: cannot open/create '%s' to set up mmapped buffer\n", path);
+      ret = 1;
+    } else {
+      mystat.st_size = 0;
+      rc = fstat(fd, &mystat);
+      // this is the check to make sure we're dealing with a valid prior config
+      if (mystat.st_size != bytes) {
+	rc = ftruncate(fd, bytes);
+      }
+      *buf = mmap(NULL, bytes, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+      if (*buf == NULL) {
+	fprintf(stderr, "ERROR: cannot mmap fd\n");
+	ret = 1;
+      }
+      close(fd);
+    }
   }
-  if (shd < 0) {
-    printf("cannot initialize shared memory segment\n");
-    sem_post(*lock);
-    sem_close(*lock);
-    return(1);
-  }
-  *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
   sem_post(*lock);
-  return(0);
+  return(ret);
 }
 
 int sem_timepost(sem_t *sem) {
@@ -1791,7 +1887,7 @@ int init_thread(void) {
     sem_wait(initLock);
     
     if (config == NULL) {
-      rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &configLock, "/eucalyptusCCConfigLock");
+      rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &configLock, "/eucalyptusCCConfigLock", SHARED_FILE);
       if (rc != 0) {
 	fprintf(stderr, "Cannot set up shared memory region for ccConfig, exiting...\n");
 	sem_post(initLock);
@@ -1800,7 +1896,7 @@ int init_thread(void) {
     }
     
     if (instanceCache == NULL) {
-      rc = setup_shared_buffer((void **)&instanceCache, "/eucalyptusCCInstanceCache", sizeof(ccInstance) * MAXINSTANCES, &instanceCacheLock, "/eucalyptusCCInstanceCacheLock");
+      rc = setup_shared_buffer((void **)&instanceCache, "/eucalyptusCCInstanceCache", sizeof(ccInstance) * MAXINSTANCES, &instanceCacheLock, "/eucalyptusCCInstanceCacheLock", SHARED_FILE);
       if (rc != 0) {
 	fprintf(stderr, "Cannot set up shared memory region for ccInstanceCache, exiting...\n");
 	sem_post(initLock);
@@ -1809,7 +1905,7 @@ int init_thread(void) {
     }
     
     if (vnetconfig == NULL) {
-      rc = setup_shared_buffer((void **)&vnetconfig, "/eucalyptusCCVNETConfig", sizeof(vnetConfig), &vnetConfigLock, "/eucalyptusCCVNETConfigLock");
+      rc = setup_shared_buffer((void **)&vnetconfig, "/eucalyptusCCVNETConfig", sizeof(vnetConfig), &vnetConfigLock, "/eucalyptusCCVNETConfigLock", SHARED_FILE);
       if (rc != 0) {
 	fprintf(stderr, "Cannot set up shared memory region for ccVNETConfig, exiting...\n");
 	sem_post(initLock);
@@ -1918,6 +2014,7 @@ int init_config(void) {
       *pubmacmap=NULL,
       *pubips=NULL,
       *pubInterface=NULL,
+      *privInterface=NULL,
       *pubSubnet=NULL,
       *pubSubnetMask=NULL,
       *pubBroadcastAddress=NULL,
@@ -1948,11 +2045,28 @@ int init_config(void) {
       pubmode = strdup("SYSTEM");
     }
     
-    pubInterface = getConfString(configFile, "VNET_INTERFACE");
+    pubInterface = NULL;
+    pubInterface = getConfString(configFile, "VNET_PUBINTERFACE");
     if (!pubInterface) {
-      logprintfl(EUCAWARN,"VNET_INTERFACE is not defined, defaulting to 'eth0'\n");
+      logprintfl(EUCAWARN,"VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n");
       pubInterface = strdup("eth0");
     }
+    
+    privInterface = NULL;
+    privInterface = getConfString(configFile, "VNET_PRIVINTERFACE");
+    if (!privInterface) {
+      logprintfl(EUCAWARN,"VNET_PRIVINTERFACE is not defined, defaulting to 'eth0'\n");
+      privInterface = strdup("eth0");
+    }
+    
+    tmpstr = NULL;
+    tmpstr = getConfString(configFile, "VNET_INTERFACE");
+    if (tmpstr) {
+      logprintfl(EUCAWARN, "VNET_INTERFACE is depricated, please use VNET_PUBINTERFACE and VNET_PRIVINTERFACE instead.  Will set both to value of VNET_INTERFACE for now.\n");
+      pubInterface = strdup(tmpstr);
+      privInterface = strdup(tmpstr);
+    }
+    if (tmpstr) free(tmpstr);
     
     if (!strcmp(pubmode, "STATIC")) {
       pubSubnet = getConfString(configFile, "VNET_SUBNET");
@@ -1986,9 +2100,9 @@ int init_config(void) {
     
     sem_wait(vnetConfigLock);
     
-    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubRouter, daemon, dhcpuser, NULL);
+    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubRouter, daemon, dhcpuser, NULL);
 
-    vnetAddDev(vnetconfig, vnetconfig->pubInterface);
+    vnetAddDev(vnetconfig, vnetconfig->privInterface);
 
     if (pubmacmap) {
       char *mac=NULL, *ip=NULL, *ptra=NULL, *toka=NULL, *ptrb=NULL, *tokb=NULL;
@@ -2125,14 +2239,13 @@ int restoreNetworkState() {
   // restore ip addresses                                                                                      
   logprintfl(EUCAINFO, "restarting ips\n");
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-    snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254/32 dev %s", config->eucahome, vnetconfig->pubInterface);
+    snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254/32 dev %s", config->eucahome, vnetconfig->privInterface);
     logprintfl(EUCAINFO,"running cmd %s\n", cmd);
     rc = system(cmd);
     if (rc) {
       logprintfl(EUCAWARN, "cannot add ip 169.254.169.254\n");
     }
   }
-    
   for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
     if (vnetconfig->publicips[i].allocated) {
       snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, hex2dot(vnetconfig->publicips[i].ip), vnetconfig->pubInterface);

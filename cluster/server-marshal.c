@@ -837,9 +837,9 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
 
   rc=1;
   if (!DONOTHING) {
-    rc = doRunInstances(&ccMeta, amiId, kernelId, ramdiskId, amiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, &outInsts, &outInstsLen);
+    rc = doRunInstances(&ccMeta, amiId, kernelId, ramdiskId, amiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, NULL, &outInsts, &outInstsLen);
   }
-
+  
   if (rc) {
     logprintf("ERROR: doRunInstances() failed %d\n", rc);
     status=AXIS2_FALSE;
@@ -867,7 +867,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   adb_RunInstancesResponse_set_RunInstancesResponse(ret, env, rirt);
   
   if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "runInstances", "end");
-
+  
   return(ret);
 }
 

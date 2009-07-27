@@ -12,8 +12,8 @@
 
 typedef struct netEntry_t {
   char mac[24];
+  char active;
   uint32_t ip;
-  int active;
 } netEntry;
 
 typedef struct userEntry_t {
@@ -23,9 +23,9 @@ typedef struct userEntry_t {
 
 typedef struct networkEntry_t {
   int numhosts;
+  char active;
   uint32_t nw, nm, bc, dns, router;
   netEntry addrs[NUMBER_OF_HOSTS_PER_VLAN];
-  int active;
 } networkEntry;
 
 typedef struct publicip_t {
@@ -40,6 +40,7 @@ typedef struct vnetConfig_t {
   char dhcpdaemon[1024];
   char dhcpuser[32];
   char pubInterface[32];
+  char privInterface[32];
   char bridgedev[32];
   char mode[32];
   int role;
@@ -47,7 +48,7 @@ typedef struct vnetConfig_t {
   int initialized;
   int numaddrs;
   int max_vlan;
-  char etherdevs[NUMBER_OF_VLANS][32];
+  char etherdevs[NUMBER_OF_VLANS][16];
   userEntry users[NUMBER_OF_VLANS];
   networkEntry networks[NUMBER_OF_VLANS];
   publicip publicips[NUMBER_OF_PUBLIC_IPS];
@@ -55,7 +56,7 @@ typedef struct vnetConfig_t {
 } vnetConfig;
 
 enum {NC, CC, CLC};
-void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *router, char *daemon, char *dhcpuser, char *bridgedev);
+void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *router, char *daemon, char *dhcpuser, char *bridgedev);
 
 int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
@@ -95,8 +96,6 @@ int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
 int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
 int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
 
-
-
 // helper functions
 int vnetSaveIPTables(vnetConfig *vnetconfig);
 int vnetLoadIPTables(vnetConfig *vnetconfig);
@@ -105,6 +104,10 @@ char *hex2dot(uint32_t in);
 uint32_t dot2hex(char *in);
 int mac2ip(vnetConfig *vnetconfig, char *mac, char **ip);
 int ip2mac(vnetConfig *vnetconfig, char *ip, char **mac);
+void mac2hex(char *in, unsigned char out[6]);
+void hex2mac(unsigned char in[6], char **out);
+int zeromac(unsigned char in[6]);
+int maccmp(char *ina, unsigned char inb[6]);
 
 int check_chain(vnetConfig *vnetconfig, char *userName, char *netName);
 int check_device(char *dev);

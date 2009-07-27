@@ -458,11 +458,14 @@ static int doInitialize (void)
     /* network startup */
     vnetconfig = malloc(sizeof(vnetConfig));
     snprintf (config_network_path, BUFSIZE, NC_NET_PATH_DEFAULT, home);
-    pubInterface = getConfString(config, "VNET_INTERFACE");
+    pubInterface = getConfString(config, "VNET_PUBINTERFACE");
+    if (!pubInterface) {
+      pubInterface = getConfString(config, "VNET_INTERFACE");
+    }
     bridge = getConfString(config, "VNET_BRIDGE");
     mode = getConfString(config, "VNET_MODE");
 
-    vnetInit(vnetconfig, mode, home, config_network_path, NC, pubInterface, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge);
+    vnetInit(vnetconfig, mode, home, config_network_path, NC, pubInterface, pubInterface, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge);
 
     /* cleanup from previous runs and verify integrity of instances
      * directory */

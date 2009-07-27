@@ -20,7 +20,7 @@
 #include <vnetwork.h>
 #include <misc.h>
 
-void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *router, char *daemon, char *dhcpuser, char *bridgedev) {
+void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *router, char *daemon, char *dhcpuser, char *bridgedev) {
   uint32_t nw=0, nm=0, unw=0, unm=0, dns=0, bc=0, rt=0, rc=0, slashnet=0;
   int vlan=0, numaddrs=1;
   char cmd[256];
@@ -32,6 +32,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     if (path) strncpy(vnetconfig->path, path, 1024);
     if (eucahome) strncpy(vnetconfig->eucahome, eucahome, 1024);
     if (pubInterface) strncpy(vnetconfig->pubInterface, pubInterface, 32);
+    if (privInterface) strncpy(vnetconfig->privInterface, privInterface, 32);
     if (mode) strncpy(vnetconfig->mode, mode, 32);
     if (bridgedev) strncpy(vnetconfig->bridgedev, bridgedev, 32);
     if (daemon) strncpy(vnetconfig->dhcpdaemon, daemon, 1024);
@@ -45,7 +46,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     // populate networks
     bzero(vnetconfig->users, sizeof(userEntry) * NUMBER_OF_VLANS);
     bzero(vnetconfig->networks, sizeof(networkEntry) * NUMBER_OF_VLANS);
-    bzero(vnetconfig->etherdevs, NUMBER_OF_VLANS * 32);
+    bzero(vnetconfig->etherdevs, NUMBER_OF_VLANS * 16);
 
     bzero(vnetconfig->publicips, sizeof(publicip) * NUMBER_OF_PUBLIC_IPS);
     
@@ -101,7 +102,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	snprintf(cmd, 256, "-A POSTROUTING -d ! %s/%d -j MASQUERADE", network, slashnet);
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
-	snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 dev %s", vnetconfig->eucahome, vnetconfig->pubInterface);
+	snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
 	rc = system(cmd);
 	
 	snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to 169.254.169.254:8773", network, slashnet);
@@ -167,6 +168,7 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) 
   //  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
   for (i=start; i<=stop && !done; i++) {
     if (vnetconfig->networks[vlan].addrs[i].mac[0] == '\0') {
+      //if (maczero(vnetconfig->networks[vlan].addrs[i].mac)) {
       if (!found) found=i;
     } else if (!strcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) {
       done++;
@@ -659,7 +661,7 @@ int vnetAddDev(vnetConfig *vnetconfig, char *dev) {
     }
   }
   if (foundone >= 0) {
-    strncpy(vnetconfig->etherdevs[foundone], dev, 32);
+    strncpy(vnetconfig->etherdevs[foundone], dev, 16);
   }
   return(0);
 }
@@ -671,8 +673,8 @@ int vnetDelDev(vnetConfig *vnetconfig, char *dev) {
 
   done=0;
   for (i=0; i<vnetconfig->max_vlan && !done; i++) {
-    if (!strncmp(vnetconfig->etherdevs[i], dev, 32)) {
-      bzero(vnetconfig->etherdevs[i], 32);
+    if (!strncmp(vnetconfig->etherdevs[i], dev, 16)) {
+      bzero(vnetconfig->etherdevs[i], 16);
       done++;
     }
   }
@@ -756,7 +758,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   for (i=0; i<vnetconfig->max_vlan; i++) {
     if (vnetconfig->etherdevs[i][0] != '\0') {
       strncat (dstring, " ", 512);
-      strncat (dstring, vnetconfig->etherdevs[i], 32);
+      strncat (dstring, vnetconfig->etherdevs[i], 16);
     }
   }
   
@@ -881,14 +883,14 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
 
     // first, create tagged interface
     if (!strcmp(vnetconfig->mode, "MANAGED")) {
-      snprintf(newdevname, 32, "%s.%d", vnetconfig->pubInterface, vlan);
+      snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
       rc = check_device(newdevname);
       if (rc) {
-	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, vnetconfig->pubInterface, vlan);
+	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, vnetconfig->privInterface, vlan);
 	rc = system(cmd);
 	if (rc != 0) {
 	  // failed to create vlan tagged device
-	  logprintfl(EUCAERROR, "cannot create new vlan device %s.%d\n", vnetconfig->pubInterface, vlan);
+	  logprintfl(EUCAERROR, "cannot create new vlan device %s.%d\n", vnetconfig->privInterface, vlan);
 	  return(1);
 	}
       }
@@ -938,17 +940,18 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
   } else if (vlan > 0 && (vnetconfig->role == CC || vnetconfig->role == CLC)) {
     //    char *newip, *netmask;
 
+    vnetconfig->networks[vlan].active = 1;
     rc = vnetSetVlan(vnetconfig, vlan, userName, netName);
     rc = vnetCreateChain(vnetconfig, userName, netName);
     
     if (!strcmp(vnetconfig->mode, "MANAGED")) {
-      snprintf(newdevname, 32, "%s.%d", vnetconfig->pubInterface, vlan);
+      snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
       rc = check_device(newdevname);
       if (rc) {
-	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, vnetconfig->pubInterface, vlan);
+	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, vnetconfig->privInterface, vlan);
 	rc = system(cmd);
 	if (rc) {
-	  logprintfl(EUCAERROR, "could not tag %s with vlan %d\n", vnetconfig->pubInterface, vlan);
+	  logprintfl(EUCAERROR, "could not tag %s with vlan %d\n", vnetconfig->privInterface, vlan);
 	  return(1);
 	}
       }
@@ -985,7 +988,7 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
 
       snprintf(newdevname, 32, "%s", newbrname);
     } else {
-      snprintf(newdevname, 32, "%s", vnetconfig->pubInterface);
+      snprintf(newdevname, 32, "%s", vnetconfig->privInterface);
     }
     
     rc = vnetAddGatewayIP(vnetconfig, vlan, newdevname);
@@ -1067,6 +1070,8 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
     return(0);
   }
 
+  vnetconfig->networks[vlan].active = 0;
+
   if (!strcmp(vnetconfig->mode, "MANAGED")) {
     snprintf(newbrname, 32, "eucabr%d", vlan);
     snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set dev %s down", vnetconfig->eucahome, newbrname);
@@ -1080,7 +1085,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
     //  }
   
   if (!strcmp(vnetconfig->mode, "MANAGED")) {
-    snprintf(newdevname, 32, "%s.%d", vnetconfig->pubInterface, vlan);
+    snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
     rc = check_device(newdevname);
     if (!rc) {
       snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set dev %s down", vnetconfig->eucahome, newdevname);
@@ -1100,7 +1105,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
     }
     snprintf(newdevname, 32, "%s", newbrname);
   } else {
-    snprintf(newdevname, 32, "%s", vnetconfig->pubInterface);
+    snprintf(newdevname, 32, "%s", vnetconfig->privInterface);
   }
   
   if ((vnetconfig->role == CC || vnetconfig->role == CLC)) {
@@ -1133,7 +1138,7 @@ int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *net
       if (vnetconfig->role == NC) {
 	*outbrname = strdup(vnetconfig->bridgedev);
       } else {
-	*outbrname = strdup(vnetconfig->pubInterface);
+	*outbrname = strdup(vnetconfig->privInterface);
       }
     }
     rc = 0;
@@ -1447,12 +1452,44 @@ uint32_t dot2hex(char *in) {
   return(a|b|c|d);
 }
 
+void hex2mac(unsigned char in[6], char **out) {
+  if (out == NULL) {
+    return;
+  }
+  *out = malloc(sizeof(char) * 24);
+  if (*out == NULL) {
+    return;
+  }
+  snprintf(*out, 24, "%02X:%02X:%02X:%02X:%02X:%02X", in[0], in[1], in[2], in[3], in[4], in[5]);
+  return;
+}
+
+void mac2hex(char *in, unsigned char out[6]) {
+  if (in == NULL) {
+    return;
+  }
+  sscanf(in, "%X:%X:%X:%X:%X:%X", (unsigned int *)&out[0], (unsigned int *)&out[1], (unsigned int *)&out[2], (unsigned int *)&out[3], (unsigned int *)&out[4], (unsigned int *)&out[5]);
+  return;
+}
+
+int maczero(unsigned char in[6]) {
+  unsigned char zeromac[6];
+  bzero(zeromac, sizeof(char)*6);
+  return(!memcmp(in, zeromac, sizeof(char)*6));
+}
+
+int maccmp(char *ina, unsigned char inb[6]) {
+  unsigned char mconv[6];
+  mac2hex(ina, mconv);
+  return(memcmp(mconv, inb, sizeof(unsigned char) * 6));
+}
+
 char *hex2dot(uint32_t in) {
   char out[16];
   bzero(out, 16);
-
+  
   snprintf(out, 16, "%u.%u.%u.%u", (in & 0xFF000000)>>24, (in & 0x00FF0000)>>16, (in & 0x0000FF00)>>8, in & 0x000000FF);
-
+  
   return(strdup(out));
 }
 
