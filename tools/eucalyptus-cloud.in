@@ -126,9 +126,28 @@ do_start() {
 	return $ret
 }
 
+do_status() {
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid
+	if [ -s $pidfile ]; then
+		pid=`cat $pidfile 2> /dev/null`
+		if ps ax|grep $pid|grep cloud.xml> /dev/null ; then
+			# we are good
+			return 0
+		fi
+	fi
+	return 0
+}
+
 do_stop() {
-	# now kill the service
 	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
+
+	# let's be sure we are killing the right process
+	if ! do_status ; then
+		rm $pidfile
+		return
+	fi
+
+	# now kill the service
 	if [ -s "$pidfile" ]; then
 		pid=`cat $pidfile 2> /dev/null`
 		kill $pid 2> /dev/null >/dev/null
@@ -193,6 +212,19 @@ case "$1" in
 			echo -n "Starting $DESC: "
 		fi
 	fi
+	
+	# let's check there is no previous cloud running
+	if do_status ; then
+		echo
+		echo "another CLC is already running!"
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			fi
+		fi
+		exit 1
+	fi
+
 	do_start
 	case "$?" in
 	0|1) 
@@ -250,6 +282,13 @@ case "$1" in
 		fi
 	fi
   	;;
+  status)
+	if do_status ; then
+		echo "CLC is running"
+	else
+		exit 3
+	fi
+	;;
   *)
 	echo "Usage: $NAME {start|stop|restart}" >&2
 	exit 3

@@ -7,7 +7,7 @@
 #
 ### BEGIN INIT INFO
 # Provides:                   eucalyptus-nc
-# Required-Start:             $remote_fs $syslog 
+# Required-Start:             $remote_fs $syslog libvirtd
 # Required-Stop:              $remote_fs $syslog 
 # Default-Start:              2 3 4 5
 # Default-Stop:               0 1 6
@@ -147,9 +147,28 @@ do_start() {
 	fi
 }
 
-do_stop() {
-	# now kill the services
+do_status() {
 	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid
+	if [ -s $pidfile ]; then
+		pid=`cat $pidfile 2> /dev/null`
+		if ps ax|grep $pid|grep httpd-nc.conf > /dev/null ; then
+			# we are good
+			return 0
+		fi
+	fi
+	return 1
+}
+
+do_stop() {
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid
+
+	# let's be sure we are killing the right process
+	if ! do_status ; then
+		rm $pidfile
+		return
+	fi
+	
+	# now kill the services
 	if [ -s $pidfile ]; then
 		pid=`cat $pidfile 2> /dev/null`
 		kill $pid > /dev/null 2>&1 
@@ -267,6 +286,19 @@ case "$1" in
 			echo -n "Starting $DESC: "
 		fi
 	fi
+
+	# let's check there is no previous NC running
+	if do_status ; then
+		echo
+		echo "another NC is already running!"
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			fi
+		fi
+		exit 1
+	fi
+		
 	rm -f /dev/shm/sem.eucalyptus-nc* /dev/shm/sem.eucalyptus-st*
 	do_start
 	case "$?" in
@@ -327,6 +359,13 @@ case "$1" in
 		fi
 	fi
   	;;
+  status)
+	if do_status ; then
+		echo "NC is running"
+	else
+		exit 3
+	fi 
+	;;
   *)
 	echo "Usage: $NAME {start|stop|restart}" >&2
 	exit 3
