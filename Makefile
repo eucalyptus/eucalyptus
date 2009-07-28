@@ -17,7 +17,7 @@ SUBDIRS			=	tools \
 # files we are going to package
 DIST_FILES		=	CHANGELOG \
 				configure \
-				eucalyptus.spec.in \
+				eucalyptus.spec \
 				INSTALL \
 				install-sh \
 				LICENSE \
@@ -82,7 +82,7 @@ clean:
 distclean: clean
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
-	@rm -f config.cache config.log config.status Makedefs tags TAGS eucalyptus*spec
+	@rm -f config.cache config.log config.status Makedefs tags TAGS
 	@# they where part of CLEAN
 	@rm -rf lib 
 
