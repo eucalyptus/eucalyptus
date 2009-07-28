@@ -39,8 +39,8 @@ vnetConfig *vnetconfig=NULL;
 sem_t *vnetConfigLock=NULL;
 
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
-  int i, j, rc, start, stop, k, done, ret=0;
-  ccInstance *myInstance, *out;
+  int i, j, rc, start, stop, ret=0;
+  ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start, op_timer;
   
@@ -119,8 +119,8 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 }
 
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force) {
-  int i, j, rc, start, stop, k, done, ret=0;
-  ccInstance *myInstance, *out;
+  int i, j, rc, start, stop, ret=0;
+  ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start, op_timer;
   
@@ -198,7 +198,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 }
 
 int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *protocol, int minPort, int maxPort) {
-  int rc, i, destVlan, slashnet, fail;
+  int rc, i, fail;
   char *destUserName;
 
   rc = initialize();
@@ -329,7 +329,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
 }
 
 int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *outAddressesLen) {
-  int i, rc, count;
+  int rc;
   
   rc = initialize();
   if (rc) {
@@ -349,7 +349,7 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
 }
 
 int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
-  int rc, allocated, addrdevno, ret, count;
+  int rc, allocated, addrdevno, ret;
   char cmd[256];
   ccInstance *myInstance=NULL;
 
@@ -439,7 +439,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
 }
 
 int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
-  int rc, ret, i, status;
+  int rc, ret;
   time_t op_start, op_timer;
   char *brname;
   
@@ -517,13 +517,10 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
 
 int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, char ***outServiceTags, int *outServiceTagsLen) {
   int i;
-  ncResource *ncRes;
+  //  ncResource *ncRes;
   int rc, diskpool, mempool, corepool;
-  int *numberOfTypes, j;
+  int j;
   resource *res;
-  ncStub *ncs;
-  axis2_svc_client_t *svc_client;  
-  char *ptr;
   time_t op_start, op_timer;
 
   op_start = time(NULL);
@@ -667,9 +664,6 @@ int refresh_resources(ncMetadata *ccMeta, int timeout) {
 	close(filedes[1]);
 	exit(ret);
       } else {
-	fd_set rfds;
-	struct timeval tv;
-	
 	close(filedes[1]);
 	ncRes = malloc(sizeof(ncResource));
 	bzero(ncRes, sizeof(ncResource));
@@ -740,7 +734,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout) {
 
 int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccInstance **outInsts, int *outInstsLen) {
   ccInstance *myInstance=NULL, *out=NULL, *cacheInstance=NULL;
-  int i, j, k, numInsts, found, ncOutInstsLen, rc, pid;
+  int i, k, numInsts, found, ncOutInstsLen, rc, pid;
   virtualMachine ccvm;
   time_t op_start, op_timer;
 
@@ -962,7 +956,7 @@ int powerUp(resource *res) {
 }
 
 int powerDown(ncMetadata *ccMeta, resource *node) {
-  int pid, j, numHosts, done, k, rc, status, i;
+  int pid, rc, status;
   ncStub *ncs=NULL;
   time_t op_start, op_timer;
   
@@ -1036,7 +1030,7 @@ int schedule_instance(virtualMachine *vm, char *targetNode, int *outresid) {
 }
 
 int schedule_instance_roundrobin(virtualMachine *vm, int *outresid) {
-  int i, rc, done, start, found, resid=0;
+  int i, done, start, found, resid=0;
   resource *res;
 
   *outresid = 0;
@@ -1202,11 +1196,10 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
 }
 
 int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
-  int rc, i, j, done, runCount, resid, foundnet=0, error=0;
+  int rc, i, done, runCount, resid, foundnet=0, error=0;
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
-  char *instId=NULL, 
-    *brname=NULL;
+  char *instId=NULL;
   time_t op_start, op_timer;
   resource *res;
   char mac[32], privip[32], pubip[32];
@@ -1435,7 +1428,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 }
 
 int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) {
-  int i, j, rc, numInsts, start, stop, k, done, ret;
+  int i, j, rc, numInsts, start, stop, done, ret, rbytes;
   ccInstance *myInstance;
   ncStub *ncs;
   char *consoleOutput;
@@ -1473,7 +1466,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
     // read the instance ids
     logprintfl(EUCAINFO,"getConsoleOutput(): calling GetConsoleOutput for instance (%s) on (%s)\n", instId, config->resourcePool[j].hostname);
     if (1) {
-      int pid, status, ret, rbytes, len;
+      int pid, status, ret, len;
       int filedes[2];
       rc = pipe(filedes);
       pid = fork();
@@ -1552,9 +1545,9 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
 }
 
 int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
-  int i, j, rc, numInsts, start, stop, k, done, ret;
+  int i, j, rc, numInsts, start, stop, done;
   char *instId;
-  ccInstance *myInstance, *out;
+  ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start, op_timer;
 
@@ -1589,7 +1582,7 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
       // read the instance ids
       logprintfl(EUCAINFO,"RebootInstances(): calling reboot instance (%s) on (%s)\n", instId, config->resourcePool[j].hostname);
       if (1) {
-	int pid, status, ret, rbytes;
+	int pid, status, ret;
 	pid = fork();
 	if (pid == 0) {
 	  ncs = ncStubCreate(config->resourcePool[j].ncURL, NULL, NULL);
@@ -1629,9 +1622,9 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
 }
 
 int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int **outStatus) {
-  int i, j, shutdownState, previousState, rc, start, stop, k, done;
+  int i, j, shutdownState, previousState, rc, start, stop;
   char *instId;
-  ccInstance *myInstance, *out;
+  ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start, op_timer;
 
@@ -1676,7 +1669,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
       // read the instance ids
       logprintfl(EUCAINFO,"TerminateInstances(): calling terminate instance (%s) on (%s)\n", instId, config->resourcePool[j].hostname);
       if (config->resourcePool[j].state == RESUP) {
-	int pid, status, ret, rbytes;
+	int pid, status, ret;
 	int filedes[2];
 	rc = pipe(filedes);
 	pid = fork();
@@ -1727,7 +1720,6 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname, int mode) {
   int shd, rc, ret;
-  sem_t *thelock;
   
   // create a lock and grab it
   *lock = sem_open(lockname, O_CREAT, 0644, 1);    
@@ -1815,21 +1807,29 @@ int initialize(void) {
 
   ret=0;
   rc = init_thread();
-  if (rc) ret=1;
+  if (rc) {
+    ret=1;
+    logprintfl(EUCAERROR, "cannot initialize thread\n");
+  }
 
   rc = init_localstate();
-  if (rc) ret = 1;
+  if (rc) {
+    ret = 1;
+    logprintfl(EUCAERROR, "cannot initialize local state\n");
+  }
 
   rc = init_config();
-  if (rc) ret=1;
+  if (rc) {
+    ret=1;
+    logprintfl(EUCAERROR, "cannot initialize from configuration file\n");
+  }
   
-  if (ret) {
-  } else {
+  if (!ret) {
     // initialization went well, this thread is now initialized
     init=1;
   }
   
-  return(0);
+  return(ret);
 }
 
 int init_localstate(void) {
@@ -1919,13 +1919,11 @@ int init_thread(void) {
 
 int init_config(void) {
   resource *res=NULL;
-  char *tmpstr=NULL, **hosts=NULL, *hostname=NULL, *ncservice=NULL, *dhcp_deamon;
-  int ncport, rd, shd, val, rc, i, numHosts, tcount, use_wssec, loglevel, schedPolicy, idleThresh, wakeThresh, ret;
+  char *tmpstr=NULL;
+  int rc, numHosts, use_wssec, schedPolicy, idleThresh, wakeThresh, ret;
   
-  char configFile[1024], netPath[1024], eucahome[1024], policyFile[1024], buf[1024], home[1024], cmd[256];
+  char configFile[1024], netPath[1024], eucahome[1024], policyFile[1024], home[1024];
   
-  axutil_env_t *env = NULL;
-  FILE *FH=NULL;
   time_t configMtime;
   struct stat statbuf;
   
@@ -1996,9 +1994,9 @@ int init_config(void) {
     print_instanceCache();
     rc = restoreNetworkState();
     if (rc) {
-      // error
+      // failed to restore network state, continue 
+      logprintfl(EUCAWARN, "restoreNetworkState returned false (may be already restored)\n");
     }
-
     init = 1;
     return(0);
   }
@@ -2019,12 +2017,7 @@ int init_config(void) {
       *pubSubnetMask=NULL,
       *pubBroadcastAddress=NULL,
       *pubRouter=NULL,
-      *pubDNS=NULL,
-      *pubRangeMin=NULL,
-      *pubRangeMax=NULL,
-      *privSubnet=NULL,
-      *privSubnetMask=NULL,
-      *privBroadcastAddress=NULL;
+      *pubDNS=NULL;
     int initFail=0;
     
     // DHCP Daemon Configuration Params
@@ -2105,7 +2098,7 @@ int init_config(void) {
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 
     if (pubmacmap) {
-      char *mac=NULL, *ip=NULL, *ptra=NULL, *toka=NULL, *ptrb=NULL, *tokb=NULL;
+      char *mac=NULL, *ip=NULL, *ptra=NULL, *toka=NULL, *ptrb=NULL;
       toka = strtok_r(pubmacmap, " ", &ptra);
       while(toka) {
 	mac = ip = NULL;
@@ -2235,7 +2228,7 @@ int restoreNetworkState() {
     logprintfl(EUCAERROR, "cannot restore iptables state\n");
     ret = 1;
   }
-
+  
   // restore ip addresses                                                                                      
   logprintfl(EUCAINFO, "restarting ips\n");
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
@@ -2269,7 +2262,7 @@ int restoreNetworkState() {
       }
     }
   }
-  // get DHCPD back up and running                                                                             
+  // get DHCPD back up and running
   logprintfl(EUCAINFO, "restarting DHCPD\n");
   rc = vnetKickDHCP(vnetconfig);
   if (rc) {
@@ -2278,6 +2271,7 @@ int restoreNetworkState() {
   }
   sem_post(vnetConfigLock);
   logprintfl(EUCADEBUG, "done restoring network state\n");
+
   return(ret);
 }
 
@@ -2469,8 +2463,8 @@ void invalidate_instanceCache(void) {
 }
 
 int refresh_instanceCache(char *instanceId, ccInstance *in){
-  int i, done, firstNull;
-
+  int i, done;
+  
   if (!instanceId || !in) {
     return(1);
   }

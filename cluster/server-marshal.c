@@ -166,7 +166,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  int rc, outAddressesLen, *outAllocated=NULL, i;
+  int rc, outAddressesLen, i;
   ncMetadata ccMeta;
   //  char **outAddresses=NULL;
   publicip *outAddresses;
@@ -321,7 +321,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   char statusMessage[256];
 
   char **sourceNets, **userNames, **sourceNames, *cid, *protocol, *user, *destName, *type, *destNameLast;
-  int len, minPort, maxPort, namedLen, netLen;
+  int minPort, maxPort, namedLen, netLen;
   ncMetadata ccMeta;
   
   cnt = adb_ConfigureNetwork_get_ConfigureNetwork(configureNetwork, env);
@@ -432,7 +432,7 @@ adb_GetConsoleOutputResponse_t* GetConsoleOutputMarshal (adb_GetConsoleOutput_t*
   adb_getConsoleOutputType_t *gcot=NULL;
 
   // working vars
-  int rc, i;
+  int rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
   char *instId, *output=NULL;
@@ -488,7 +488,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   adb_startNetworkType_t *snt=NULL;
 
   // working vars
-  int rc, i;
+  int rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
@@ -545,7 +545,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
   int vmLen=0, outTypesLen=0, outServiceTagsLen=0;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char *user, *cid, **outServiceTags;
+  char **outServiceTags;
   virtualMachine *vms;
   adb_virtualMachineType_t *vm;
   ncMetadata ccMeta;
@@ -635,7 +635,7 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
   
   // working vars
   adb_ccInstanceType_t *it=NULL;
-  char **instIds=NULL, numbuf[256];
+  char **instIds=NULL;
   int instIdsLen, outInstsLen, i, rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
@@ -765,15 +765,15 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   // working vars
   adb_ccInstanceType_t *it=NULL;
   adb_virtualMachineType_t *vm=NULL;
-  adb_netConfigType_t *netconf=NULL;
+  //  adb_netConfigType_t *netconf=NULL;
 
   ccInstance *outInsts=NULL, *myInstance=NULL;
   int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  axutil_date_time_t *dt;
-  char numbuf[256];
+  //  axutil_date_time_t *dt;
+  //char numbuf[256];
   char *amiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *amiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex;
   ncMetadata ccMeta;
   
@@ -879,7 +879,7 @@ adb_RebootInstancesResponse_t* RebootInstancesMarshal (adb_RebootInstances_t* re
   adb_rebootInstancesType_t *rit=NULL;
   
   // working vars
-  char **instIds, numbuf[256];
+  char **instIds;
   int instIdsLen, i, rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];

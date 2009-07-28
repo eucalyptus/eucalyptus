@@ -10,12 +10,9 @@
 int cc_killallInstances(axutil_env_t *env, axis2_stub_t *stub) {
   int rc, instIdsLen;
   char *instIds[256];
-  char *amiId;
-  char *state, *str_ret;
-  axutil_date_time_t *dt, *dta;
   adb_ccInstanceType_t *it;
-  axis2_char_t *resId, *instId=NULL;
-  int i, j;
+  axis2_char_t *instId=NULL;
+  int i;
   axis2_bool_t status;
 
   adb_DescribeInstances_t *diIn=NULL;
@@ -24,8 +21,8 @@ int cc_killallInstances(axutil_env_t *env, axis2_stub_t *stub) {
   adb_DescribeInstancesResponse_t *diOut=NULL;
   adb_describeInstancesResponseType_t *dirt=NULL;
   
-  adb_netConfigType_t *nct=NULL;
-  adb_virtualMachineType_t *vm=NULL;
+  //  adb_netConfigType_t *nct=NULL;
+  //  adb_virtualMachineType_t *vm=NULL;
 
   dit = adb_describeInstancesType_create(env);
   //    adb_describeInstancesType_add_instanceIds(dit, env, instId);
@@ -74,10 +71,9 @@ int cc_getConsoleOutput(char *instId, axutil_env_t *env, axis2_stub_t *stub) {
   
   adb_GetConsoleOutputResponse_t *tiOut;
   adb_getConsoleOutputResponseType_t *tirt;
-  int i, j;
+  int i;
   axis2_bool_t status;
   char *output;
-  
   
   printf("%s\n", instId);
 
@@ -122,7 +118,7 @@ int cc_rebootInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis2_
 
   adb_RebootInstancesResponse_t *tiOut;
   adb_rebootInstancesResponseType_t *tirt;
-  int i, j;
+  int i;
   axis2_bool_t status;
 
   printf("%d %s\n", instIdsLen, instIds[0]);
@@ -192,8 +188,8 @@ int cc_terminateInstances(char **instIds, int instIdsLen, axutil_env_t *env, axi
     printf("ERROR: TI failed NULL\n");
     return(1);
   } else {
-    axis2_char_t *instId;
-    int i, j;
+
+
     axis2_bool_t status;
 
     tirt = adb_TerminateInstancesResponse_get_TerminateInstancesResponse(tiOut, env);
@@ -211,7 +207,6 @@ int cc_terminateInstances(char **instIds, int instIdsLen, axutil_env_t *env, axi
 
 int cc_configureNetwork(char *sourceNet, char *destName, char *protocol, int min, int max, char *type, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
-  char meh[32];
   adb_ConfigureNetwork_t *input;
   adb_ConfigureNetworkResponse_t *output;
   adb_configureNetworkType_t *cn;
@@ -275,7 +270,6 @@ int cc_configureNetwork(char *sourceNet, char *destName, char *protocol, int min
 }
 int cc_stopNetwork(int vlan, char *netName, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
-  char meh[32];
   adb_StopNetwork_t *input;
   adb_StopNetworkResponse_t *output;
   adb_stopNetworkType_t *sn;
@@ -311,7 +305,7 @@ int cc_stopNetwork(int vlan, char *netName, axutil_env_t *env, axis2_stub_t *stu
 
 int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
-  char meh[32];
+  //  char meh[32];
   adb_AttachVolume_t *input;
   adb_AttachVolumeResponse_t *output;
   adb_attachVolumeType_t *sn;
@@ -349,7 +343,7 @@ int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
 
 int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
-  char meh[32];
+  //  char meh[32];
   adb_DetachVolume_t *input;
   adb_DetachVolumeResponse_t *output;
   adb_detachVolumeType_t *sn;
@@ -388,7 +382,7 @@ int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
 
 int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
-  char meh[32];
+  //  char meh[32];
   adb_AssignAddress_t *input;
   adb_AssignAddressResponse_t *output;
   adb_assignAddressType_t *sn;
@@ -423,7 +417,7 @@ int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub
 }
 int cc_unassignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub){
   int i;
-  char meh[32];
+  //  char meh[32];
   adb_UnassignAddress_t *input;
   adb_UnassignAddressResponse_t *output;
   adb_unassignAddressType_t *sn;
@@ -459,7 +453,7 @@ int cc_unassignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *st
 
 int cc_describePublicAddresses(axutil_env_t *env, axis2_stub_t *stub) {
   int i, len;
-  char meh[32];
+  //  char meh[32];
   adb_DescribePublicAddresses_t *input;
   adb_DescribePublicAddressesResponse_t *output;
   adb_describePublicAddressesType_t *sn;
@@ -502,7 +496,7 @@ int cc_describePublicAddresses(axutil_env_t *env, axis2_stub_t *stub) {
 
 int cc_startNetwork(int vlan, char *netName, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
-  char meh[32];
+  //  char meh[32];
   adb_StartNetwork_t *input;
   adb_StartNetworkResponse_t *output;
   adb_startNetworkType_t *sn;
@@ -651,8 +645,8 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
   } else {
     //    adb_reservationInfoType_t *resit;
     adb_ccInstanceType_t *it;
-    axis2_char_t *resId, *instId=NULL;
-    int i, j;
+    axis2_char_t *instId=NULL;
+    int i;
     axis2_bool_t status;
 
     dirt = adb_DescribeInstancesResponse_get_DescribeInstancesResponse(diOut, env);
@@ -665,7 +659,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	char *state;
 	char *reservationId;
 	char *ownerId, *keyName;
-	axutil_date_time_t *dt, *dta;
+	axutil_date_time_t *dt;
 	
 	it = adb_describeInstancesResponseType_get_instances_at(dirt, env, i);
 	instId = adb_ccInstanceType_get_instanceId(it, env);
@@ -726,7 +720,7 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
   adb_runInstancesResponseType_t *rirt;
   
   adb_virtualMachineType_t *vm;
-  char mac[32], meh[32];
+  //  char mac[32], meh[32];
   
   srand(time(NULL));
   
@@ -778,7 +772,7 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
   adb_runInstancesType_set_vlan(rit, env, vlan);
   
   {
-    char *instId, c, *resId, *mac;
+    char *instId, *resId, *mac;
     int j, i;
     resId = malloc(sizeof(char) * 32);
     instId = malloc(sizeof(char) * 32);
@@ -816,7 +810,7 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
     return(1);
   } else {
     adb_ccInstanceType_t *it;
-    axis2_char_t *resId, *instId;
+    axis2_char_t *instId;
     int i;
     axis2_bool_t status;
 
