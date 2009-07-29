@@ -51,7 +51,7 @@
             <inbound>
                 <inbound-endpoint ref="WalrusReplyQueueWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.ic.WalrusReplyQueue"/>
+            <component class="com.eucalyptus.ws.util.ReplyQueue"/>
         </service>
 
     </model>

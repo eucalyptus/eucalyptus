@@ -55,6 +55,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+import com.eucalyptus.ws.handlers.WalrusRESTBinding;
 
 public class WalrusManager {
     private static Logger LOG = Logger.getLogger( WalrusManager.class );
@@ -445,7 +446,7 @@ public class WalrusManager {
                 //writes are unconditional
                 String randomKey = request.getRandomKey();
 
-                WalrusDataMessenger messenger = null;// TODO: NEIL WalrusQueryDispatcher.getWriteMessenger();
+                WalrusDataMessenger messenger = WalrusRESTBinding.getWriteMessenger();
                 String key = bucketName + "." + objectKey;
                 LinkedBlockingQueue<WalrusDataMessage> putQueue = messenger.getQueue(key, randomKey);
 

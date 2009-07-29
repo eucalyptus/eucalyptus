@@ -27,6 +27,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jibx.runtime.JiBXException;
 
@@ -40,6 +41,7 @@ import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
 import com.eucalyptus.ws.util.Hashes;
 import com.eucalyptus.ws.util.HttpUtils;
+import com.eucalyptus.ws.util.EucalyptusProperties;
 import com.eucalyptus.ws.util.StorageProperties;
 import com.eucalyptus.ws.util.WalrusProperties;
 import com.eucalyptus.ws.util.XMLParser;
@@ -63,6 +65,9 @@ import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.bouncycastle.util.encoders.Base64;
+import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
+import edu.ucsb.eucalyptus.util.WalrusDataMessage;
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 
 public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static Logger LOG = Logger.getLogger( WalrusRESTBinding.class );
@@ -70,8 +75,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static final String BUCKET = "bucket";
 	private static final String OBJECT = "object";
 	private static final Map<String, String> operationMap = populateOperationMap();
+	private static WalrusDataMessenger putMessenger;
+	private static WalrusDataMessenger getMessenger;
 	public static final int DATA_MESSAGE_SIZE = 102400;
-	private LinkedBlockingQueue<String> putQ;
+	private LinkedBlockingQueue<WalrusDataMessage> putQueue;
 
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
@@ -80,9 +87,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			namespace = "http://s3.amazonaws.com/doc/" + WalrusProperties.NAMESPACE_VERSION;
 			// TODO: get real user data here too
 			httpRequest.setMessage( this.bind( "admin", true, httpRequest ) );
-		} else if(event.getMessage() instanceof DefaultHttpChunk) {
-			DefaultHttpChunk httpChunk = (DefaultHttpChunk) event.getMessage();
+		} else if(event.getMessage() instanceof HttpChunk) {
+			HttpChunk httpChunk = (HttpChunk) event.getMessage();
 			handleHttpChunk(httpChunk);
+			//ctx.sendDownstream(event);
 		}
 	}
 
@@ -97,7 +105,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			byte[] req = byteOut.toByteArray();
 			ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes() ) );
-			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "binary/octet-stream" );
+			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
 			httpResponse.setContent( buffer );
 		}
 	}
@@ -175,7 +183,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		populateObjectFromBindingMap(eucaMsg, fieldMap, httpRequest, bindingArguments);
 
 		//TODO: add userinfo
-		//setRequiredParams (eucaMsg, user);
+		//FIXME: this is a hack for now
+		UserInfo user = new UserInfo(EucalyptusProperties.NAME);
+		user.setIsAdministrator(Boolean.TRUE);
+		setRequiredParams (eucaMsg, user);
 
 		if ( !failedMappings.isEmpty() || !params.isEmpty() )
 		{
@@ -188,10 +199,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		}
 
 		//TODO: Set effective user id here
-		/*if(user != null) {
-            eucaMsg.setUserId( user.getUserName() );
-            eucaMsg.setEffectiveUserId( user.isAdministrator() ? "eucalyptus" : user.getUserName() );
-        }*/
+		if(user != null) {
+			eucaMsg.setUserId( user.getUserName() );
+			eucaMsg.setEffectiveUserId( user.isAdministrator() ? "eucalyptus" : user.getUserName() );
+		}
 
 		LOG.info(eucaMsg.toString());
 		try
@@ -206,6 +217,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 		return eucaMsg;
 
+	}
+
+	private void setRequiredParams(final GroovyObject msg, UserInfo user) {
+		if(user != null) {
+			msg.setProperty("accessKeyID", user.getQueryId() );
+		}
+		msg.setProperty("timeStamp", new Date());
 	}
 
 	private static String[] getTarget(String operationPath) {
@@ -483,12 +501,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						writer.start();*/
 						String key = target[0] + "." + objectKey;
 						String randomKey = key + "." + Hashes.getRandom(10);
-						putQ = new LinkedBlockingQueue<String>();
-						try {
-							putQ.put("hi");
-						} catch(InterruptedException ex) {
-							LOG.warn(ex, ex);
-						}
 						String contentType = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
 						if(contentType != null)
 							operationParams.put("ContentType", contentType);
@@ -497,7 +509,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 							operationParams.put("ContentDisposition", contentDisposition);
 						operationParams.put("ContentLength", (new Long(contentLength).toString()));
 						operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
-
+                        putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
+                        Writer writer = new Writer(httpRequest.getContent(), contentLength);
+                        writer.start();
 					}
 				} else if(verb.equals(WalrusProperties.HTTPVerb.GET.toString())) {
 					//TODO:handle streaming get
@@ -1030,14 +1044,58 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		return new String( read );
 	}
 
-	private void handleHttpChunk(DefaultHttpChunk httpChunk) throws Exception {
-		try {
-			String hi = putQ.take();
+	private void handleHttpChunk(HttpChunk httpChunk) throws Exception {
 			ChannelBuffer buffer = httpChunk.getContent();
-		} catch(InterruptedException ex) {
-			LOG.warn(ex, ex);
-		}
+            byte[] bytes = new byte[DATA_MESSAGE_SIZE];
+
+            try {
+                buffer.markReaderIndex( );
+        		byte[] read = new byte[buffer.readableBytes( )];
+        		buffer.readBytes( read );
+        		putQueue.put(WalrusDataMessage.DataMessage(read));
+        		if(httpChunk.isLast())
+                    putQueue.put(WalrusDataMessage.EOF());
+
+            } catch (Exception ex) {
+                LOG.error(ex, ex);
+            }
+
 	}
 
+	public static synchronized WalrusDataMessenger getWriteMessenger() {
+		if (putMessenger == null) {
+			putMessenger = new WalrusDataMessenger();
+		}
+		return putMessenger;
+	}	
+	
+    class Writer extends Thread {
+
+        private ChannelBuffer firstBuffer;
+        private long dataLength;
+        public Writer(ChannelBuffer firstBuffer, long dataLength) {
+            this.firstBuffer = firstBuffer;
+            this.dataLength = dataLength;
+        }
+
+        public void run() {
+            byte[] bytes = new byte[DATA_MESSAGE_SIZE];
+
+            try {
+                LOG.info("Starting upload");                
+                putQueue.put(WalrusDataMessage.StartOfData(dataLength));
+
+                firstBuffer.markReaderIndex( );
+        		byte[] read = new byte[firstBuffer.readableBytes( )];
+        		firstBuffer.readBytes( read );
+        		putQueue.put(WalrusDataMessage.DataMessage(read));
+                //putQueue.put(WalrusDataMessage.EOF());
+
+            } catch (Exception ex) {
+                LOG.error(ex, ex);
+            }
+        }
+
+    }
 
 }

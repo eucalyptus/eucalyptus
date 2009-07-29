@@ -20,7 +20,7 @@ public class ReplyCoordinator {
   private ConcurrentHashMap<String, String>            waitList;
 
   public ReplyCoordinator( ) {
-    this.MAP_TIMEOUT_MS = 15000;
+    this.MAP_TIMEOUT_MS = 360000;//15000;
     this.replyMap = new ConcurrentHashMap<String, EucalyptusMessage>( MAP_CAPACITY, MAP_BIN_AVG_THRESHOLD, MAP_NUM_CONCURRENT );
     this.waitList = new ConcurrentHashMap<String, String>( MAP_CAPACITY, MAP_BIN_AVG_THRESHOLD, MAP_NUM_CONCURRENT );
   }

@@ -39,181 +39,180 @@ import com.eucalyptus.ws.WebServicesException;
 
 public class Binding {
 
-  private static Logger   LOG = Logger.getLogger( Binding.class );
-  private final String    name;
-  private IBindingFactory bindingFactory;
-  private String          bindingErrorMsg;
-  private int[]           bindingNamespaceIndexes;
-  private String[]        bindingNamespacePrefixes;
+	private static Logger   LOG = Logger.getLogger( Binding.class );
+	private final String    name;
+	private IBindingFactory bindingFactory;
+	private String          bindingErrorMsg;
+	private int[]           bindingNamespaceIndexes;
+	private String[]        bindingNamespacePrefixes;
 
-  protected Binding( final String name ) throws BindingException {
-    this.name = name;
-    this.buildRest( );
-    try {
+	protected Binding( final String name ) throws BindingException {
+		this.name = name;
+		this.buildRest( );
+		/* try {
       this.bindingFactory = BindingDirectory.getFactory( name, edu.ucsb.eucalyptus.msgs.RunInstancesType.class );
     } catch ( JiBXException e ) {
       throw new BindingException( e );
-    }
-  }
+    }*/
+	}
 
-  public void seed( final Class seedClass ) throws BindingException {
-    // if ( seedClass.getSimpleName( ).equals( "Eucalyptus" ) ) {
-    try {
-      bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.RunInstancesType.class );
-    } catch ( JiBXException e1 ) {
-      throw new BindingException( e1 );
-    }
-    // } else if ( seedClass.getSimpleName( ).equals( "Walrus" ) ) {
-    // bindingFactory = BindingDirectory.getFactory( this.name,
-    // edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType.class );
-    // } else if ( seedClass.getSimpleName( ).equals( "StorageController" ) ) {
-    // bindingFactory = BindingDirectory.getFactory( this.name,
-    // edu.ucsb.eucalyptus.msgs.StorageRequestType.class );
-    // } else {
-    final Method[] methods = seedClass.getDeclaredMethods( );
-    for ( final Method m : methods ) {
-      try {
-        this.bindingFactory = BindingDirectory.getFactory( this.name, m.getReturnType( ) );
-        break;
-      } catch ( final Exception e ) {
-        this.bindingErrorMsg = e.getMessage( );
-        Binding.LOG.warn( "No binding for " + m.getName( ), e );
-      }
-    }
-    if ( this.bindingFactory == null ) { throw new BindingException( "Failed to construct BindingFactory for class: " + seedClass ); }
-    // }
-    this.buildRest( );
-  }
+	public void seed( final Class seedClass ) throws BindingException {
+		try {
+			if ( seedClass.getSimpleName( ).equals( "Eucalyptus" ) ) {
+				bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.RunInstancesType.class );
+			} else if ( seedClass.getSimpleName( ).equals( "Walrus" ) ) {
+				bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType.class );
+			} else if ( seedClass.getSimpleName( ).equals( "StorageController" ) ) {
+				bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.StorageRequestType.class );
+			} else {
+				final Method[] methods = seedClass.getDeclaredMethods( );
+				for ( final Method m : methods ) {
+					try {
+						this.bindingFactory = BindingDirectory.getFactory( this.name, m.getReturnType( ) );
+						break;
+					} catch ( final Exception e ) {
+						this.bindingErrorMsg = e.getMessage( );
+						Binding.LOG.warn( "No binding for " + m.getName( ), e );
+					}
+				}
+				if ( this.bindingFactory == null ) { throw new BindingException( "Failed to construct BindingFactory for class: " + seedClass ); }
+			}
+		} catch ( JiBXException e1 ) {
+			throw new BindingException( e1 );
+		}
 
-  private void buildRest( ) {
-    int[] indexes = null;
-    String[] prefixes = null;
-    if ( bindingFactory != null ) {
-      String[] nsuris = bindingFactory.getNamespaces( );
-      int xsiindex = nsuris.length;
-      while ( --xsiindex >= 0 && !"http://www.w3.org/2001/XMLSchema-instance".equals( nsuris[xsiindex] ) )
-        ;
-      // get actual size of index and prefix arrays to be allocated
-      int nscount = 0;
-      int usecount = nscount;
-      if ( xsiindex >= 0 ) usecount++;
-      // allocate and initialize the arrays
-      indexes = new int[usecount];
-      prefixes = new String[usecount];
-      if ( xsiindex >= 0 ) {
-        indexes[nscount] = xsiindex;
-        prefixes[nscount] = "xsi";
-      }
-    }
-    this.bindingNamespaceIndexes = indexes;
-    this.bindingNamespacePrefixes = prefixes;
-  }
+		this.buildRest( );
+	}
 
-  public OMElement toOM( final Object param ) {
-    return this.toOM( param, null );
-  }
+	private void buildRest( ) {
+		int[] indexes = null;
+		String[] prefixes = null;
+		if ( bindingFactory != null ) {
+			String[] nsuris = bindingFactory.getNamespaces( );
+			int xsiindex = nsuris.length;
+			while ( --xsiindex >= 0 && !"http://www.w3.org/2001/XMLSchema-instance".equals( nsuris[xsiindex] ) )
+				;
+			// get actual size of index and prefix arrays to be allocated
+			int nscount = 0;
+			int usecount = nscount;
+			if ( xsiindex >= 0 ) usecount++;
+			// allocate and initialize the arrays
+			indexes = new int[usecount];
+			prefixes = new String[usecount];
+			if ( xsiindex >= 0 ) {
+				indexes[nscount] = xsiindex;
+				prefixes[nscount] = "xsi";
+			}
+		}
+		this.bindingNamespaceIndexes = indexes;
+		this.bindingNamespacePrefixes = prefixes;
+	}
 
-  public OMElement toOM( final Object param, final String altNs ) {
-    final OMFactory factory = OMAbstractFactory.getOMFactory( );
-    if ( param == null ) {
-      throw new RuntimeException( "Cannot bind null value" );
-    } else if ( !( param instanceof IMarshallable ) ) { throw new RuntimeException( "No JiBX <mapping> defined for class " + param.getClass( ) ); }
-    if ( this.bindingFactory == null ) {
-      try {
-        this.bindingFactory = BindingDirectory.getFactory( this.name, param.getClass( ) );
-      } catch ( final JiBXException e ) {
-        Binding.LOG.error( e, e );
-        throw new RuntimeException( this.bindingErrorMsg );
-      }
-    }
+	public OMElement toOM( final Object param ) {
+		return this.toOM( param, null );
+	}
 
-    final IMarshallable mrshable = ( IMarshallable ) param;
-    final OMDataSource src = new JiBXDataSource( mrshable, this.bindingFactory );
-    final int index = mrshable.JiBX_getIndex( );
-    final OMNamespace appns = factory.createOMNamespace( this.bindingFactory.getElementNamespaces( )[index], "" );
-    OMElement retVal = factory.createOMElement( src, this.bindingFactory.getElementNames( )[index], appns );
-    final String origNs = retVal.getNamespace( ).getNamespaceURI( );
-    if ( ( altNs != null ) && !altNs.equals( origNs ) ) {
-      try {
-        final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
-        final XMLStreamWriter xmlStream = XMLOutputFactory.newInstance( ).createXMLStreamWriter( bos );
-        retVal.serialize( xmlStream );
-        xmlStream.flush( );
-        xmlStream.close( );
-        String retString = bos.toString( );
-        retString = retString.replaceAll( origNs, altNs );
-        final ByteArrayInputStream bis = new ByteArrayInputStream( retString.getBytes( ) );
-        final StAXOMBuilder stAXOMBuilder = new StAXOMBuilder( bis );
-        retVal = stAXOMBuilder.getDocumentElement( );
-      } catch ( final XMLStreamException e ) {
-        Binding.LOG.error( e, e );
-      }
-    }
+	public OMElement toOM( final Object param, final String altNs ) {
+		final OMFactory factory = OMAbstractFactory.getOMFactory( );
+		if ( param == null ) {
+			throw new RuntimeException( "Cannot bind null value" );
+		} else if ( !( param instanceof IMarshallable ) ) { throw new RuntimeException( "No JiBX <mapping> defined for class " + param.getClass( ) ); }
+		if ( this.bindingFactory == null ) {
+			try {
+				this.bindingFactory = BindingDirectory.getFactory( this.name, param.getClass( ) );
+			} catch ( final JiBXException e ) {
+				Binding.LOG.error( e, e );
+				throw new RuntimeException( this.bindingErrorMsg );
+			}
+		}
 
-    return retVal;
-  }
+		final IMarshallable mrshable = ( IMarshallable ) param;
+		final OMDataSource src = new JiBXDataSource( mrshable, this.bindingFactory );
+		final int index = mrshable.JiBX_getIndex( );
+		final OMNamespace appns = factory.createOMNamespace( this.bindingFactory.getElementNamespaces( )[index], "" );
+		OMElement retVal = factory.createOMElement( src, this.bindingFactory.getElementNames( )[index], appns );
+		final String origNs = retVal.getNamespace( ).getNamespaceURI( );
+		if ( ( altNs != null ) && !altNs.equals( origNs ) ) {
+			try {
+				final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
+				final XMLStreamWriter xmlStream = XMLOutputFactory.newInstance( ).createXMLStreamWriter( bos );
+				retVal.serialize( xmlStream );
+				xmlStream.flush( );
+				xmlStream.close( );
+				String retString = bos.toString( );
+				retString = retString.replaceAll( origNs, altNs );
+				final ByteArrayInputStream bis = new ByteArrayInputStream( retString.getBytes( ) );
+				final StAXOMBuilder stAXOMBuilder = new StAXOMBuilder( bis );
+				retVal = stAXOMBuilder.getDocumentElement( );
+			} catch ( final XMLStreamException e ) {
+				Binding.LOG.error( e, e );
+			}
+		}
 
-  public UnmarshallingContext getNewUnmarshalContext( final OMElement param ) throws JiBXException {
-    if ( this.bindingFactory == null ) {
-      try {
-        this.bindingFactory = BindingDirectory.getFactory( this.name, Class.forName( "edu.ucsb.eucalyptus.msgs." + param.getLocalName( ) + "Type" ) );
-      } catch ( final Exception e ) {
-        Binding.LOG.error( e, e );
-        throw new RuntimeException( this.bindingErrorMsg );
-      }
-    }
-    final UnmarshallingContext ctx = ( UnmarshallingContext ) this.bindingFactory.createUnmarshallingContext( );
-    final IXMLReader reader = new StAXReaderWrapper( param.getXMLStreamReaderWithoutCaching( ), "SOAP-message", true );
-    ctx.setDocument( reader );
-    ctx.toTag( );
-    return ctx;
-  }
+		return retVal;
+	}
 
-  public Object fromOM( final String text ) throws Exception {
-    final XMLStreamReader parser = XMLInputFactory.newInstance( ).createXMLStreamReader( new ByteArrayInputStream( text.getBytes( ) ) );
-    final StAXOMBuilder builder = new StAXOMBuilder( parser );
-    return this.fromOM( builder.getDocumentElement( ) );
-  }
+	public UnmarshallingContext getNewUnmarshalContext( final OMElement param ) throws JiBXException {
+		if ( this.bindingFactory == null ) {
+			try {
+				this.bindingFactory = BindingDirectory.getFactory( this.name, Class.forName( "edu.ucsb.eucalyptus.msgs." + param.getLocalName( ) + "Type" ) );
+			} catch ( final Exception e ) {
+				Binding.LOG.error( e, e );
+				throw new RuntimeException( this.bindingErrorMsg );
+			}
+		}
+		final UnmarshallingContext ctx = ( UnmarshallingContext ) this.bindingFactory.createUnmarshallingContext( );
+		final IXMLReader reader = new StAXReaderWrapper( param.getXMLStreamReaderWithoutCaching( ), "SOAP-message", true );
+		ctx.setDocument( reader );
+		ctx.toTag( );
+		return ctx;
+	}
 
-  public Object fromOM( final OMElement param, final Class type ) throws WebServicesException {
-    try {
-      final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
-      return ctx.unmarshalElement( type );
-    } catch ( final Exception e ) {
-      Binding.LOG.fatal( e, e );
-      throw new WebServicesException( e.getMessage( ) );
-    }
-  }
+	public Object fromOM( final String text ) throws Exception {
+		final XMLStreamReader parser = XMLInputFactory.newInstance( ).createXMLStreamReader( new ByteArrayInputStream( text.getBytes( ) ) );
+		final StAXOMBuilder builder = new StAXOMBuilder( parser );
+		return this.fromOM( builder.getDocumentElement( ) );
+	}
 
-  public Object fromOM( final OMElement param ) throws WebServicesException {
-    try {
-      final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
-      return ctx.unmarshalElement( Class.forName( "edu.ucsb.eucalyptus.msgs." + param.getLocalName( ) + "Type" ) );
-    } catch ( final Exception e ) {
-      Binding.LOG.fatal( e, e );
-      throw new WebServicesException( e.getMessage( ) );
-    }
-  }
+	public Object fromOM( final OMElement param, final Class type ) throws WebServicesException {
+		try {
+			final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
+			return ctx.unmarshalElement( type );
+		} catch ( final Exception e ) {
+			Binding.LOG.fatal( e, e );
+			throw new WebServicesException( e.getMessage( ) );
+		}
+	}
 
-  public static SOAPEnvelope createFault(  String faultCode, String faultReason, String faultDetails )  {
-    SOAPFactory soapFactory = OMAbstractFactory.getSOAP11Factory();
+	public Object fromOM( final OMElement param ) throws WebServicesException {
+		try {
+			final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
+			return ctx.unmarshalElement( Class.forName( "edu.ucsb.eucalyptus.msgs." + param.getLocalName( ) + "Type" ) );
+		} catch ( final Exception e ) {
+			Binding.LOG.fatal( e, e );
+			throw new WebServicesException( e.getMessage( ) );
+		}
+	}
 
-    SOAPFaultCode soapFaultCode = soapFactory.createSOAPFaultCode();
-    soapFaultCode.setText( faultCode );
+	public static SOAPEnvelope createFault(  String faultCode, String faultReason, String faultDetails )  {
+		SOAPFactory soapFactory = OMAbstractFactory.getSOAP11Factory();
 
-    SOAPFaultReason soapFaultReason = soapFactory.createSOAPFaultReason();
-    soapFaultReason.setText( faultReason );
-    
-    SOAPFaultDetail soapFaultDetail = soapFactory.createSOAPFaultDetail();
-    soapFaultDetail.setText( faultDetails );
-    
-    SOAPEnvelope soapEnv = soapFactory.getDefaultEnvelope( );
-    SOAPFault soapFault = soapFactory.createSOAPFault( );
-    soapFault.setCode( soapFaultCode );
-    soapFault.setDetail( soapFaultDetail );
-    soapFault.setReason( soapFaultReason );
-    soapEnv.getBody( ).addFault( soapFault );
-    return soapEnv;
-  }
-  
+		SOAPFaultCode soapFaultCode = soapFactory.createSOAPFaultCode();
+		soapFaultCode.setText( faultCode );
+
+		SOAPFaultReason soapFaultReason = soapFactory.createSOAPFaultReason();
+		soapFaultReason.setText( faultReason );
+
+		SOAPFaultDetail soapFaultDetail = soapFactory.createSOAPFaultDetail();
+		soapFaultDetail.setText( faultDetails );
+
+		SOAPEnvelope soapEnv = soapFactory.getDefaultEnvelope( );
+		SOAPFault soapFault = soapFactory.createSOAPFault( );
+		soapFault.setCode( soapFaultCode );
+		soapFault.setDetail( soapFaultDetail );
+		soapFault.setReason( soapFaultReason );
+		soapEnv.getBody( ).addFault( soapFault );
+		return soapEnv;
+	}
+
 }

@@ -74,7 +74,15 @@
                     <outbound-endpoint ref="GroupsWS"/>
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage"/>
                 </filtering-router>
-            </outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="BukkitWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.WalrusRequestType"/>
+                </filtering-router>
+                <filtering-router>
+                    <outbound-endpoint ref="StorageWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.StorageRequestType"/>
+                </filtering-router>
+             </outbound>
         </service>
 
         <service name="ReplyQueue">

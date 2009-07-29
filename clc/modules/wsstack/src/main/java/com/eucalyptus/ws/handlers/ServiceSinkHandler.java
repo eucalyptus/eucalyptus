@@ -42,14 +42,15 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
       LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() ) );
       long startTime = System.currentTimeMillis();
 //    Registry registry = MuleServer.getMuleContext( ).getRegistry( );
-      Messaging.dispatch( "vm://RequestQueue", msg );
+      /*Messaging.dispatch( "vm://RequestQueue", msg );
       EucalyptusMessage reply = null;
 
       reply = ReplyQueue.getReply( msg.getCorrelationId() );
       LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
       if ( reply == null ) {
         reply = new EucalyptusErrorMessageType( this.getClass().getSimpleName(), msg, "Received a NULL reply" );
-      }
+      }*/
+      EucalyptusMessage reply = new PutObjectResponseType();
       MappingHttpResponse response = new MappingHttpResponse( message.getProtocolVersion( ) ); 
       response.setMessage( reply );
       Channels.write( ctx.getChannel( ), response );
