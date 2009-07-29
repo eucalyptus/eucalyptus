@@ -50,9 +50,9 @@
     <!--================================== module-dir defines ==================================-->
     <property name="src.dir" value="${basedir}/src"/>
     <property name="build.dir" value="${basedir}/build"/>
-    <property name="src.dir" value="${basedir}/src"/>
+    <property name="src.dir" value="${basedir}/src/main/java"/>
     <property name="conf.dir" value="${basedir}/conf"/>
-    <property name="rsrc.dir" value="${basedir}/resources"/>
+    <property name="rsrc.dir" value="${basedir}/src/main/resources"/>
     <property name="target.dir" value="${basedir}/../../target"/>
     <property name="jar.file" value="${target.dir}/${ant.project.name}.jar"/>
     <property name="lib.dir" value="${basedir}/../../lib"/>
