@@ -59,28 +59,26 @@
         <ant dir="modules/msgs" inheritall="false"/>
     </target>
     <target name="build-core" depends="build-msgs">
+        <ant dir="modules/wsstack" inheritall="false"/>
         <ant dir="modules/core" inheritall="false"/>
     </target>
     <target name="build-www" depends="build-eucalyptus-ws">
         <ant dir="modules/www" inheritall="false"/>
     </target>
-    <target name="build-transport" depends="build-core">
-        <ant dir="modules/axis2-transport" inheritall="false"/>
-    </target>
-    <target name="build-eucalyptus-ws" depends="build-transport">
+    <target name="build-eucalyptus-ws" depends="build-core">
         <ant dir="modules/interface" inheritall="false"/>
         <ant dir="modules/cluster-manager" inheritall="false"/>
         <ant dir="modules/image-manager" inheritall="false"/>
         <ant dir="modules/group-manager" inheritall="false"/>
         <ant dir="modules/key-manager" inheritall="false"/>
     </target>
-    <target name="build-walrus-ws" depends="build-transport">
+    <target name="build-walrus-ws" depends="build-core">
         <ant dir="modules/storage-manager" inheritall="false"/>
     </target>
     <target name="build-ebs-ws" depends="build-walrus-ws">
         <ant dir="modules/storage-controller" inheritall="false"/>
     </target>
-    <target name="build-dns-ws" depends="build-transport">
+    <target name="build-dns-ws" depends="build-core">
         <ant dir="modules/dns" inheritall="false"/>
     </target>
     <target name="build-eucalyptus" depends="build-core,build-www,build-eucalyptus-ws"/>
@@ -104,23 +102,20 @@
     <target name="clean-www" depends="clean-eucalyptus-ws">
         <ant dir="modules/www" inheritall="false" target="clean"/>
     </target>
-    <target name="clean-transport" depends="clean-core">
-        <ant dir="modules/axis2-transport" inheritall="false" target="clean"/>
-    </target>
-    <target name="clean-eucalyptus-ws" depends="clean-transport">
+    <target name="clean-eucalyptus-ws" depends="clean-core">
         <ant dir="modules/interface" inheritall="false" target="clean"/>
         <ant dir="modules/cluster-manager" inheritall="false" target="clean"/>
         <ant dir="modules/image-manager" inheritall="false" target="clean"/>
         <ant dir="modules/group-manager" inheritall="false" target="clean"/>
         <ant dir="modules/key-manager" inheritall="false" target="clean"/>
     </target>
-    <target name="clean-walrus-ws" depends="clean-transport">
+    <target name="clean-walrus-ws" depends="clean-core">
         <ant dir="modules/storage-manager" inheritall="false" target="clean"/>
     </target>
-    <target name="clean-ebs-ws" depends="clean-transport">
+    <target name="clean-ebs-ws" depends="clean-core">
         <ant dir="modules/storage-controller" inheritall="false" target="clean"/>
     </target>
-    <target name="clean-dns-ws" depends="clean-transport">
+    <target name="clean-dns-ws" depends="clean-core">
         <ant dir="modules/dns" inheritall="false" target="clean"/>
     </target>
     <target name="clean-eucalyptus" depends="clean-core,clean-www,clean-eucalyptus-ws"/>
@@ -168,7 +163,6 @@
         <ant dir="modules/msgs" inheritall="false" target="install"/>
         <ant dir="modules/core" inheritall="false" target="install"/>
         <ant dir="modules/www" inheritall="false" target="install"/>
-        <ant dir="modules/axis2-transport" inheritall="false" target="install"/>
         <ant dir="modules/interface" inheritall="false" target="install"/>
         <ant dir="modules/cluster-manager" inheritall="false" target="install"/>
         <ant dir="modules/image-manager" inheritall="false" target="install"/>

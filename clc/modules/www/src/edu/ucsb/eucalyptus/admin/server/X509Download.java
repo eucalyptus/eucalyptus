@@ -35,7 +35,7 @@
 package edu.ucsb.eucalyptus.admin.server;
 
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
@@ -126,6 +126,8 @@ public class X509Download extends HttpServlet {
     }
     catch ( IOException e ) {
       e.printStackTrace();
+    } catch ( EucalyptusCloudException e ) {
+      e.printStackTrace();
     }
   }
 
@@ -139,7 +141,7 @@ public class X509Download extends HttpServlet {
     }
   }
 
-  public static byte[] getX509Zip( String userName, String newKeyName ) throws GeneralSecurityException, IOException {
+  public static byte[] getX509Zip( String userName, String newKeyName ) throws GeneralSecurityException, IOException, EucalyptusCloudException {
 
     KeyTool keyTool = new KeyTool();
     KeyPair keyPair = keyTool.getKeyPair();

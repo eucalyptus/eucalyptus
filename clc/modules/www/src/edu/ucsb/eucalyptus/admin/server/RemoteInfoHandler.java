@@ -4,7 +4,7 @@ import com.google.common.collect.Sets;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;

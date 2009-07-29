@@ -1,6 +1,6 @@
 package edu.ucsb.eucalyptus.admin.server;
 
-import edu.ucsb.eucalyptus.cloud.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;

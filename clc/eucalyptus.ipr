@@ -351,7 +351,7 @@
   </component>
   <component name="ProjectFileVersion" converted="true" />
   <component name="ProjectKey">
-    <option name="state" value="project:///disk1/eucalyptus/src/main/clc/eucalyptus.ipr" />
+    <option name="state" value="project:///bzr/no_axis2_main_clc/eucalyptus.ipr" />
   </component>
   <component name="ProjectModuleManager">
     <modules>
@@ -386,7 +386,7 @@
       <option name="MAIN_CLASS_NAME" value="edu.ucsb.eucalyptus.cloud.ws.tests.DNSControlTest" />
       <option name="METHOD_NAME" value="" />
       <option name="TEST_OBJECT" value="class" />
-      <option name="VM_PARAMETERS" value="-server -Xbootclasspath/p:$PROJECT_DIR$/../../../build/eucalyptus-main-dns/usr/share/eucalyptus/eucalyptus-crypto.jar:$PROJECT_DIR$/../../../build/eucalyptus-main-dns/usr/share/eucalyptus/eucalyptus-workarounds.jar -Xmx64m -Xms64m -XX:+UseConcMarkSweepGC -Djava.security.policy=$PROJECT_DIR$/../../../build/eucalyptus-main-dns/etc/eucalyptus/cloud.d/security.policy -Deuca.home.0=$PROJECT_DIR$/../../../build/eucalyptus-main-dns -Deuca.home=$PROJECT_DIR$/../../../build/eucalyptus-main-dns -Deuca.var.dir=$PROJECT_DIR$/../../../build/eucalyptus-main-dns/var/eucalyptus -Deuca.lib.dir=$PROJECT_DIR$/../../../build/eucalyptus-main-dns/usr/share/eucalyptus -Deuca.conf.dir=$PROJECT_DIR$/../../../build/eucalyptus-main-dns/etc/eucalyptus/cloud.d -Deuca.log.dir=$PROJECT_DIR$/../../../build/eucalyptus-main-dns/var/log/eucalyptus -Deuca.template.dir=$PROJECT_DIR$/../../../build/eucalyptus-main-dns/var/eucalyptus -Deuca.version=1.0 -Djava.library.path=$PROJECT_DIR$/../../../build/eucalyptus-main-dns/usr/lib" />
+      <option name="VM_PARAMETERS" value="-server -Xbootclasspath/p:/../build/eucalyptus-main-dns/usr/share/eucalyptus/eucalyptus-crypto.jar:/../build/eucalyptus-main-dns/usr/share/eucalyptus/eucalyptus-workarounds.jar -Xmx64m -Xms64m -XX:+UseConcMarkSweepGC -Djava.security.policy=/../build/eucalyptus-main-dns/etc/eucalyptus/cloud.d/security.policy -Deuca.home.0=/../build/eucalyptus-main-dns -Deuca.home=/../build/eucalyptus-main-dns -Deuca.var.dir=/../build/eucalyptus-main-dns/var/eucalyptus -Deuca.lib.dir=/../build/eucalyptus-main-dns/usr/share/eucalyptus -Deuca.conf.dir=/../build/eucalyptus-main-dns/etc/eucalyptus/cloud.d -Deuca.log.dir=/../build/eucalyptus-main-dns/var/log/eucalyptus -Deuca.template.dir=/../build/eucalyptus-main-dns/var/eucalyptus -Deuca.version=1.0 -Djava.library.path=/../build/eucalyptus-main-dns/usr/lib" />
       <option name="PARAMETERS" value="" />
       <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
       <option name="ENV_VARIABLES" />
