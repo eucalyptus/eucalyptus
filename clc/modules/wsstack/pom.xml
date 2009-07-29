@@ -23,6 +23,11 @@
     </plugins>
   </build>
   <dependencies>
+   	<dependency>
+  		<groupId>eucalyptus</groupId>
+  		<artifactId>msgs</artifactId>
+  		<version>${euca.version}</version>
+  	</dependency>
   	<dependency>
   		<groupId>org.jboss.netty</groupId>
   		<artifactId>netty</artifactId>
