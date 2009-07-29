@@ -59,8 +59,8 @@
         <ant dir="modules/msgs" inheritall="false"/>
     </target>
     <target name="build-core" depends="build-msgs">
-        <ant dir="modules/wsstack" inheritall="false"/>
         <ant dir="modules/core" inheritall="false"/>
+        <ant dir="modules/wsstack" inheritall="false"/>
     </target>
     <target name="build-www" depends="build-eucalyptus-ws">
         <ant dir="modules/www" inheritall="false"/>
