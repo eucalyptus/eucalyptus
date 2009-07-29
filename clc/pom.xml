@@ -18,8 +18,8 @@
         <module>modules/storage-manager</module>
         <module>modules/storage-controller</module>
         <module>modules/storage-controller/native</module>
-<!--        <module>modules/dns</module> -->
-        <module>modules/distribution</module>
+<!--        <module>modules/dns</module> -
+        <module>modules/distribution</modulei> -->
     </modules>
     <developers>
         <developer>
