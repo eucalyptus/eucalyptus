@@ -61,7 +61,7 @@
   	<dependency>
   		<groupId>org.mule</groupId>
   		<artifactId>mule-core</artifactId>
-  		<version>2.2.1</version>
+  		<version>2.0.1</version>
          <exclusions>
              <exclusion>
                  <groupId>javax.activation</groupId>
@@ -116,13 +116,13 @@
   	<dependency>
   		<groupId>org.mule.modules</groupId>
   		<artifactId>mule-module-spring-config</artifactId>
-  		<version>2.2.1</version>
+  		<version>2.0.1</version>
   		<scope>compile</scope>
   	</dependency>
   	<dependency>
   		<groupId>org.mule.modules</groupId>
   		<artifactId>mule-module-client</artifactId>
-  		<version>2.2.1</version>
+  		<version>2.0.1</version>
   	</dependency>
   	<dependency>
   		<groupId>commons-httpclient</groupId>
