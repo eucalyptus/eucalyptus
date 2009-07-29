@@ -23,9 +23,14 @@
     </plugins>
   </build>
   <dependencies>
-   	<dependency>
+    	<dependency>
   		<groupId>eucalyptus</groupId>
   		<artifactId>msgs</artifactId>
+  		<version>${euca.version}</version>
+  	</dependency>
+   	<dependency>
+  		<groupId>eucalyptus</groupId>
+  		<artifactId>core</artifactId>
   		<version>${euca.version}</version>
   	</dependency>
   	<dependency>
