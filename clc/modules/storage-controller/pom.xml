@@ -18,7 +18,7 @@
         </dependency>
         <dependency>
             <groupId>eucalyptus</groupId>
-            <artifactId>transport</artifactId>
+            <artifactId>wsstack</artifactId>
             <version>${euca.version}</version>
         </dependency>
         <dependency>

@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project>
+    <parent>
+        <groupId>eucalyptus</groupId>
+        <artifactId>cloud</artifactId>
+        <version>1</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.eucalyptus</groupId>
-  <artifactId>nio-server</artifactId>
-  <version>1.6-SNAPSHOT</version>
+  <groupId>eucalyptus</groupId>
+  <artifactId>wsstack</artifactId>
+  <version>${euca.version}</version>
+  <name>Eucalyptus Web Services Stack</name>
   <build>
     <plugins>
       <plugin>
