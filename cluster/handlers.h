@@ -91,7 +91,7 @@ typedef struct ccConfig_t {
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE};
 
 
-int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan);
+int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char **ccs, int ccsLen);
 int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *protocol, int minPort, int maxPort);
 int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan);
 

@@ -494,7 +494,7 @@ int cc_describePublicAddresses(axutil_env_t *env, axis2_stub_t *stub) {
   return(0);
 }
 
-int cc_startNetwork(int vlan, char *netName, axutil_env_t *env, axis2_stub_t *stub) {
+int cc_startNetwork(int vlan, char *netName, char **ccs, int ccsLen, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
   //  char meh[32];
   adb_StartNetwork_t *input;
@@ -517,6 +517,11 @@ int cc_startNetwork(int vlan, char *netName, axutil_env_t *env, axis2_stub_t *st
   }
   adb_startNetworkType_set_vlan(sn, env, vlan);
   adb_startNetworkType_set_netName(sn, env, netName);
+  
+  for (i=0; i<ccsLen; i++) {
+    printf("adding %s\n", ccs[i]);
+    adb_startNetworkType_add_clusterControllers(sn, env, ccs[i]);
+  }
 
   adb_StartNetwork_set_StartNetwork(input, env, sn);
 

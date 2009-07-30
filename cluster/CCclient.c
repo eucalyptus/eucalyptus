@@ -154,7 +154,12 @@ int main(int argc, char **argv) {
 	exit(1);
       }
     } else if (!strcmp(argv[2], "startNetwork")) {
-      rc = cc_startNetwork(atoi(argv[3]), argv[4], env, stub);
+      char **ccs;
+      int ccsLen=1;
+      ccs = malloc(sizeof(char *) * 2);
+      ccs[0] = strdup(argv[5]);
+      ccs[1] = strdup(argv[6]);
+      rc = cc_startNetwork(atoi(argv[3]), argv[4], ccs, 2, env, stub);
       if (rc != 0) {
 	printf("cc_startNetwork() failed\n");
 	exit(1);

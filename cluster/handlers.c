@@ -438,7 +438,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   return(ret);
 }
 
-int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
+int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char **ccs, int ccsLen) {
   int rc, ret;
   time_t op_start, op_timer;
   char *brname;
@@ -457,12 +457,10 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
     ret = 0;
   } else {
     sem_wait(vnetConfigLock);
+    rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
+    
     brname = NULL;
     rc = vnetStartNetwork(vnetconfig, vlan, ccMeta->userId, netName, &brname);
-    //    if (brname) {
-    //      vnetAddDev(vnetconfig, brname);
-    //    }
-    
     sem_post(vnetConfigLock);
     
     if (rc) {
@@ -473,6 +471,9 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
       ret = 0;
     }
     
+    rc = vnetSetupTunnels(vnetconfig);
+
+
     /*    
     sem_wait(configLock);
     for (i=0; i<config->numResources; i++) {
@@ -1374,12 +1375,10 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  
 	  // stuff from NC
 	  //	  rc = ccInstance_to_ncInstance(myInstance, outInst);
-	  //	  logprintfl(EUCADEBUG, "WTF: %s %s\n", myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
 	  //int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, ccInstance **outInsts, int *outInstsLen) {
 	  //rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, mac, mac, vlan, userData, launchIndex, netNames, netNamesLen, &outInst);
 	  
 	  allocate_ccInstance(myInstance, instId, amiId, kernelId, ramdiskId, amiURL, kernelURL, ramdiskURL, ownerId, "Pending", time(NULL), reservationId, &(myInstance->ccnet), &(myInstance->ccvm), myInstance->ncHostIdx, keyName, myInstance->serviceTag, userData, launchIndex, myInstance->groupNames, myInstance->volumes, myInstance->volumesSize);
-	  logprintfl(EUCADEBUG, "WTF3: %s %s\n", myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
 	  // instance info that CC has
 	  myInstance->ts = time(NULL);
 	  if (strcmp(pubip, "0.0.0.0")) {
@@ -1397,7 +1396,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  strncpy(myInstance->ccnet.publicMac, mac, 24);
 	  strncpy(myInstance->ccnet.privateMac, mac, 24);
 	  myInstance->ccnet.vlan = vlan;
-	  logprintfl(EUCADEBUG, "WTF2: %s %s\n", myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
 
 	  // start up DHCP
 	  rc = vnetKickDHCP(vnetconfig);
@@ -2017,7 +2015,8 @@ int init_config(void) {
       *pubSubnetMask=NULL,
       *pubBroadcastAddress=NULL,
       *pubRouter=NULL,
-      *pubDNS=NULL;
+      *pubDNS=NULL,
+      *localIp=NULL;
     int initFail=0;
     
     // DHCP Daemon Configuration Params
@@ -2026,12 +2025,12 @@ int init_config(void) {
       logprintfl(EUCAWARN,"no VNET_DHCPDAEMON defined in config, using default\n");
       daemon = NULL;
     }
-
+    
     dhcpuser = getConfString(configFile, "VNET_DHCPUSER");
     if (!dhcpuser) {
       dhcpuser = strdup("root");
     }
-
+    
     pubmode = getConfString(configFile, "VNET_MODE");
     if (!pubmode) {
       logprintfl(EUCAWARN,"VNET_MODE is not defined, defaulting to 'SYSTEM'\n");
@@ -2080,6 +2079,10 @@ int init_config(void) {
       pubSubnetMask = getConfString(configFile, "VNET_NETMASK");
       pubDNS = getConfString(configFile, "VNET_DNS");
       pubips = getConfString(configFile, "VNET_PUBLICIPS");
+      localIp = getConfString(configFile, "VNET_LOCALIP");
+      if (!localIp) {
+	logprintfl(EUCAWARN, "VNET_LOCALIP not defined, tunneling disabled\n");
+      }
       if (!pubSubnet || !pubSubnetMask || !pubDNS || !numaddrs) {
 	logprintfl(EUCAFATAL,"in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");
 	initFail = 1;
@@ -2093,7 +2096,7 @@ int init_config(void) {
     
     sem_wait(vnetConfigLock);
     
-    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubRouter, daemon, dhcpuser, NULL);
+    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubRouter, daemon, dhcpuser, NULL, localIp);
 
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 
