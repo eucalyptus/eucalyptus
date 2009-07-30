@@ -1240,7 +1240,7 @@ public class WalrusManager {
                             String key = bucketName + "." + objectKey;
                             String randomKey = key + "." + Hashes.getRandom(10);
                             request.setRandomKey(randomKey);
-                            LinkedBlockingQueue<WalrusDataMessage> getQueue = null; //TODO: NEIL WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
+                            LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusRESTBinding.getReadMessenger().getQueue(key, randomKey);
 
                             ObjectReader reader = new ObjectReader(bucketName, objectName, objectInfo.getSize(), getQueue, deleteAfterGet, null, storageManager);
                             reader.start();

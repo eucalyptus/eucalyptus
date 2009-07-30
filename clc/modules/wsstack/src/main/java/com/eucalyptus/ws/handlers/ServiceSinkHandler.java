@@ -22,38 +22,76 @@ import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
+import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
 
 @ChannelPipelineCoverage("one")
 public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler{
-  private static Logger LOG = Logger.getLogger( ServiceSinkHandler.class );
-  
-  @Override
-  public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-    ctx.sendDownstream( e );
-  }
+	private static Logger LOG = Logger.getLogger( ServiceSinkHandler.class );
 
-  @Override
-  public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + e );
-    if ( e instanceof MessageEvent ) {
-      final MessageEvent event = ( MessageEvent ) e;
-      MappingHttpMessage message = ( MappingHttpMessage ) event.getMessage( );
-      EucalyptusMessage msg = (EucalyptusMessage) message.getMessage( );
-      LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() ) );
-      long startTime = System.currentTimeMillis();
-//    Registry registry = MuleServer.getMuleContext( ).getRegistry( );
-      /*Messaging.dispatch( "vm://RequestQueue", msg );
-      EucalyptusMessage reply = null;
+	@Override
+	public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+		LOG.warn("handle downstream");	
+		ctx.sendDownstream( e );
+	}
 
-      reply = ReplyQueue.getReply( msg.getCorrelationId() );
-      LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
-      if ( reply == null ) {
-        reply = new EucalyptusErrorMessageType( this.getClass().getSimpleName(), msg, "Received a NULL reply" );
-      }*/
-      EucalyptusMessage reply = new PutObjectResponseType();
-      MappingHttpResponse response = new MappingHttpResponse( message.getProtocolVersion( ) ); 
-      response.setMessage( reply );
-      Channels.write( ctx.getChannel( ), response );
-    }
-  }
+	@Override
+	public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+		LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + e );
+		if ( e instanceof MessageEvent ) {
+			final MessageEvent event = ( MessageEvent ) e;
+			if(event.getMessage() instanceof MappingHttpMessage) {
+				MappingHttpMessage message = ( MappingHttpMessage ) event.getMessage( );
+				EucalyptusMessage msg = (EucalyptusMessage) message.getMessage( );
+				LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() ) );
+				long startTime = System.currentTimeMillis();
+				if(msg instanceof WalrusDataRequestType) {
+					Dispatcher dispatch = new Dispatcher(ctx, msg, message);
+					dispatch.start();
+				} else {
+					Registry registry = MuleServer.getMuleContext( ).getRegistry( );
+					Messaging.dispatch( "vm://RequestQueue", msg );
+					EucalyptusMessage reply = null;
+
+					LOG.warn("Message dispatched");
+					reply = ReplyQueue.getReply( msg.getCorrelationId() );
+					LOG.warn("Reply received");
+					LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
+					if ( reply == null ) {
+						reply = new EucalyptusErrorMessageType( this.getClass().getSimpleName(), msg, "Received a NULL reply" );
+					}
+					MappingHttpResponse response = new MappingHttpResponse( message.getProtocolVersion( ) ); 
+					response.setMessage( reply );
+					Channels.write( ctx.getChannel( ), response );
+				}
+			}
+		}
+	}
+
+	private class Dispatcher extends Thread {
+		private ChannelHandlerContext ctx;
+		private EucalyptusMessage msg;
+		private MappingHttpMessage message;
+
+		public Dispatcher(ChannelHandlerContext ctx, EucalyptusMessage msg, MappingHttpMessage message) {
+			this.ctx = ctx;
+			this.msg = msg;
+			this.message = message;
+		}
+
+		public void run() {
+			Registry registry = MuleServer.getMuleContext( ).getRegistry( );
+			Messaging.dispatch( "vm://RequestQueue", msg );
+
+			LOG.warn("Message dispatched");
+			EucalyptusMessage reply = ReplyQueue.getReply( msg.getCorrelationId() );
+			LOG.warn("Reply received");
+			//LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
+			if ( reply == null ) {
+				reply = new EucalyptusErrorMessageType( this.getClass().getSimpleName(), msg, "Received a NULL reply" );
+			}
+			MappingHttpResponse response = new MappingHttpResponse( message.getProtocolVersion( ) ); 
+			response.setMessage( reply );
+			Channels.write( ctx.getChannel( ), response );			
+		}
+	}
 }
