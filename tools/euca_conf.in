@@ -16,6 +16,10 @@ DHCP_USER=""
 BRIDGE=""
 NEWNODES=""
 NODEMODE=""
+WALRUS_MODE=""
+REGISTER_CLC=""
+WALRUS=""
+WALRUS_MODE=""
 CLUSNAME=""
 NEWCLUS=""
 CLUSMODE=""
@@ -26,32 +30,37 @@ CHECK=""
 TO_BACKUP="Y"
 SCP="`which scp 2> /dev/null`"
 RSYNC="`which rsync 2> /dev/null`"
+WGET="`which wget 2> /dev/null`"
 
 usage () {
 	echo "$0 [options] [<file>]"
 	echo
 	echo "where <file> is the configuration file ($FILE by default)"
-	echo "   -help                       this message"
-	echo "   -d <dir>                    point EUCALYPTUS to <dir>"
-	echo "   -addnode <hostname>         add new node to EUCALYPTUS"
-	echo "   -synckeys                   sync the keys with the nodes"
-	echo "   -norsync                    don't use rsync (ie remote node have no root)"
-	echo "   -delnode <hostname>         remove node from EUCALYPTUS"
-	echo "   -addcluster <clusname> <hostname> add new cluster to EUCALYPTUS"
-#	echo "   -delcluster <clusname> <hostname> remove cluster from EUCALYPTUS"
-	echo "   -nodes \"host host ...\"    list of NCs"
-	echo "   -ccp <port>                 set CC port"
-	echo "   -ncp <port>                 set NC port"
-	echo "   -instances <path>           set the INSTANCE path"
-	echo "   -cloudp <port1> <port2>     set the 2 cloud ports"
-	echo "   -hypervisor <kvm|xen>       set hypervisor to use"
-	echo "   -user <euca_user>           set the user to use"
-	echo "   -dhcpd <dhcpd>              set the dhcpd binary to <name>"
-	echo "   -dhcp_user <user>           set the username to run dhcpd as"
-	echo "   -name <var>                 returns the value or <name>"
-	echo "   -setup                      perform initial setup"
-	echo "   -check [nc|cc|cloud]        pre-flight checks"
-	echo "   -version                    eucalyptus version"
+	echo "   --help                           this message"
+	echo "   -d <dir>                         point EUCALYPTUS to <dir>"
+	echo "   --sync-keys                      sync the keys with the nodes"
+	echo "   --no-rsync                       don't use rsync (ie remote node have no root)"
+	echo "   --register-nodes \"host host ...\" add new nodes to EUCALYPTUS"
+	echo "   --delete-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
+	echo "   --register-cluster <name> <host> add new cluster to EUCALYPTUS"
+	echo "   --deregister-cluster <name>      remove cluster from EUCALYPTUS"
+	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
+	echo "   --deregister-walrus <host>       remove walrus to EUCALYPTUS"
+	echo "   --register-sc <host>             add storage controller"
+	echo "   --deregister-sc <host>           remove storage controller to EUCALYPTUS"
+	echo "   --register-clc <host>            point local walrus to CLC location"
+	echo "   --cc-port <port>                 set CC port"
+	echo "   --nc-port <port>                 set NC port"
+	echo "   --instances <path>               set the INSTANCE path"
+	echo "   --cloud-port <port1> <port2>     set the 2 cloud ports"
+	echo "   --hypervisor <kvm|xen>           set hypervisor to use"
+	echo "   --user <euca_user>               set the user to use"
+	echo "   --dhcpd <dhcpd>                  set the dhcpd binary to <name>"
+	echo "   --dhcp_user <user>               set the username to run dhcpd as"
+	echo "   --name <var>                     returns the value or <name>"
+	echo "   --setup                          perform initial setup"
+	echo "   --check [nc|cc|cloud]            pre-flight checks"
+	echo "   --version                        eucalyptus version"
 	echo
 }
 
@@ -104,22 +113,22 @@ while [ $# -gt 0 ]; do
 		exit 1
 	fi
 
-	if [ "$1" = "-synckeys" -o "$1" = "-synckey" ]; then 
+	if [ "$1" = "-synckeys" -o "$1" = "-synckey" -o "$1" = "--sync-keys" ]; then 
 	    NODEMODE="SYNC"
 	    shift
 	    continue
 	fi
-	if [ "$1" = "-norsync" ]; then 
+	if [ "$1" = "-norsync" -o "$1" = "--no-rsync" ]; then 
 	    RSYNC=""
 	    shift
 	    continue
 	fi
-	if [ "$1" = "-version" ]; then 
+	if [ "$1" = "-version" -o "$1" = "--version" ]; then 
 	    VERSION="Y"
 	    shift
 	    continue
 	fi
-	if [ "$1" = "-setup" ]; then 
+	if [ "$1" = "-setup" -o "$1" = "--setup" ]; then 
 	    SETUP="Y"
 	    shift
 	    continue
@@ -153,7 +162,7 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "-name" ]; then
+	if [ "$1" = "-name" -o "$1" = "--name" ]; then
 		NAME="$NAME $2"
 		shift; shift
 		continue
@@ -163,7 +172,7 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi		
-	if [ "$1" = "-upgrade-conf" ]; then
+	if [ "$1" = "-upgrade-conf" -o "$1" = "--upgrade-conf" ]; then
 		# hidden options to upgrade from an older version
 		UPGRADE_CONF="$2"
 		if [ ! -e "$UPGRADE_CONF" ]; then
@@ -173,12 +182,12 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi		
-	if [ "$1" = "-dhcpd" ]; then
+	if [ "$1" = "-dhcpd" -o "$1" = "--dhcpd" ]; then
 		DHCPD="$2"
 		shift; shift
 		continue
 	fi		
-	if [ "$1" = "-dhcp_user" ]; then
+	if [ "$1" = "-dhcp_user" -o "$1" = "--dhcp_user" ]; then
 		DHCPC_USER="$2"
 		shift; shift
 		continue
@@ -188,27 +197,27 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi		
-	if [ "$1" = "-ccp" ]; then
+	if [ "$1" = "-ccp" -o "$1" = "--cc-port" ]; then
 		CC_PORT="$2"
 		shift; shift
 		continue
 	fi		
-	if [ "$1" = "-ncp" ]; then
+	if [ "$1" = "-ncp" -o "$1" = "--nc-port" ]; then
 		NC_PORT="$2"
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "-instances" ]; then
+	if [ "$1" = "-instances" -o "$1" = "--instances" ]; then
 		INSTANCE="$2"
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "-user" ]; then
+	if [ "$1" = "-user" -o "$1" = "--user" ]; then
 		EUCA_USER="$2"
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "-hypervisor" ]; then
+	if [ "$1" = "-hypervisor" -o "$1" = "--hypervisor" ]; then
 		if [ "$2" != "xen" -a "$2" != "kvm" ]; then
 			echo "Only kvm or xen are supported at the moment"
 			exit 1
@@ -222,35 +231,71 @@ while [ $# -gt 0 ]; do
 			echo "We need 2 ports for cloud controller"
 			exit 1
 		fi
-		CLOUD_PORT="$2"
-		CLOUD_SSL_PORT="$3"
+# doesn't work right now
+#		CLOUD_PORT="$2"
+#		CLOUD_SSL_PORT="$3"
 		shift; shift; shift
 		continue
 	fi
-	if [ "$1" = "-addnode" ]; then 
-	    NEWNODES="${2}"
-	    NODEMODE="ADD"
-	    shift; shift
-	    continue
+	if [ "$1" = "-addnode" -o "$1" = "--register-nodes" ]; then 
+		NEWNODES="${2}"
+		NODEMODE="ADD"
+		shift; shift
+		continue
 	fi
-	if [ "$1" = "-delnode" ]; then 
-	    NEWNODES="${2}"
-	    NODEMODE="REM"
-	    shift; shift
-	    continue
+	if [ "$1" = "-delnode" -o "$1" = "--deregister-nodes" ]; then 
+		NEWNODES="${2}"
+		NODEMODE="REM"
+		shift; shift
+		continue
 	fi
-	if [ "$1" = "-addcluster" ]; then
-	    if [ $# -lt 3 ]; then
-		echo "-addcluster requires a user assigned name and CC hostname"
-		exit 1
-	    fi
-	    CLUSNAME="$2"
-	    NEWCLUS="$3"
-	    CLUSMODE="ADD"
-	    shift; shift; shift
-	    continue
+	if [ "$1" = "--deregister-walrus" ]; then
+		WALRUS_MODE="DEL"
+		WALRUS="$2"
+		shift; shift
+		continue
 	fi
-	if [ "$1" = "-check" ]; then 
+	if [ "$1" = "--register-walrus" ]; then
+		WALRUS_MODE="ADD"
+		WALRUS="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "--register-clc" ]; then
+		REGISTER_CLC="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "--deregister-sc" ]; then
+		SC_MODE="DEL"
+		SC="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "--register-sc" ]; then
+		SC_MODE="ADD"
+		SC="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "-addcluster" -o "$1" = "--register-cluster" ]; then
+		if [ $# -lt 3 ]; then
+			echo "--register-cluster requires a user assigned name and CC hostname"
+			exit 1
+		fi
+		CLUSNAME="$2"
+		NEWCLUS="$3"
+		CLUSMODE="ADD"
+		shift; shift; shift
+		continue
+	fi
+	if [ "$1" = "--deregister-cluster" ]; then
+		CLUSNAME="$2"
+		CLUSMDDE="DEL"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "-check" -o "$1" = "--check" ]; then 
 		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" ]; then
 			echo "-check requires cc, nc or cloud"
 			exit 1
@@ -264,6 +309,10 @@ while [ $# -gt 0 ]; do
 done
 
 # some basic check
+if [ "${FILE:0:1}" = "-" ]; then
+	usage
+	exit
+fi
 if [ -z "${FILE}" -o ! -f "${FILE}" ]; then
 	echo "$FILE is not a valid eucalyptus configuration file"
 	exit 
@@ -428,7 +477,7 @@ if [ -n "$CHECK" ]; then
 	if [ "$EUCA_USER" != "root" ]; then
 		ID="`which id 2> /dev/null`"
 		if [ -z "$ID" ]; then
-			echo "Cannot find command $ID"
+			echo "Cannot find command id"
 			exit 1
 		fi
 		if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
@@ -517,13 +566,22 @@ fi
 # adding a new cluster
 if [ -n "$NEWCLUS" ]; then
 	. $FILE
-    
-    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
-	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
-    else
-	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface"
-	exit 1
-    fi
+
+	if [ -n "$WGET" ]; then
+		if ! $WGET -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null ; then
+			echo "You need to be on the CLC host and the CLC needs to be running."
+			exit 1
+		fi
+	else
+		echo "wget is missing: cannot check if service is running."
+	fi
+
+	if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
+		DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
+	else
+		echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface"
+		exit 1
+	fi
     FIELD=`grep -i "CREATE .*TABLE USERS" ${DBDIR}/* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Ss][Ee][Cc][Rr][Ee][Tt][Kk][Ee][Yy]/ {print NR}'`
     if [ "$FIELD" = "" ]; then
 	echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
@@ -552,6 +610,47 @@ if [ -n "$NEWCLUS" ]; then
     echo "New cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully added."
 fi
 
+# walrus
+if [ -n "$WALRUS" ]; then
+	if [ -n "$WGET" ]; then
+		if ! $WGET -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null ; then
+			echo "You need to be on the CLC host and the CLC needs to be running."
+			exit 1
+		fi
+	else
+		echo "wget is missing: cannot check if service is running."
+	fi
+
+	if [ "$WALRUS_MODE" = "ADD" ]; then
+		echo "not implemented"
+	elif [ "$WALRUS_MODE" = "DEL" ]; then
+		echo "not implemented"
+	fi
+fi
+
+# sc
+if [ -n "$SC" ]; then
+	if [ -n "$WGET" ]; then
+		if ! $WGET -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null ; then
+			echo "You need to be on the CLC host and the CLC needs to be running."
+			exit 1
+		fi
+	else
+		echo "wget is missing: cannot check if service is running."
+	fi
+
+	if [ "$SC_MODE" = "ADD" ]; then
+		echo "not implemented"
+	elif [ "$SC_MODE" = "DEL" ]; then
+		echo "not implemented"
+	fi
+fi
+
+# CLC registration
+if [ -n "$REGISTER_CLC" ]; then
+	echo "not implemented"
+fi
+
 # operations on the nodes
 if [ -n "$NODEMODE" ]; then
 	. $FILE
@@ -570,6 +669,16 @@ if [ -n "$NODEMODE" ]; then
 	if [ "$NODEMODE" != "ADD" -a "$NODEMODE" != "REM" ]; then
 		echo "ERROR: unknown mode '$NODEMODE', don't know what to do"
 		exit 1
+	fi
+
+	# CC needs to be running 
+	if [ -n "$WGET" ]; then
+		if ! $WGET -O - -o /dev/null http://127.0.0.1::8774/axis2/services |grep EucalyptusCC > /dev/null ; then
+			echo "You need to be on the CC host and the CC service needs to be running."
+			exit 1
+		fi
+	else
+		echo "wget is missing: cannot check if service is running."
 	fi
 
 	# we need the keys
