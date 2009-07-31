@@ -36,7 +36,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
   }
 
   public NioHttpDecoder( ) {
-    this( 4096, 8192, 8192 );
+    this( 4096, 8192, 102400 );
   }
 
   protected NioHttpDecoder( int maxInitialLineLength, int maxHeaderSize, int maxChunkSize ) {
