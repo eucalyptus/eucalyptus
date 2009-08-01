@@ -9,6 +9,7 @@
 #define NUMBER_OF_VLANS 4096
 #define NUMBER_OF_HOSTS_PER_VLAN 256
 #define NUMBER_OF_PUBLIC_IPS 256
+#define NUMBER_OF_CCS 32
 
 typedef struct netEntry_t {
   char mac[24];
@@ -43,12 +44,14 @@ typedef struct vnetConfig_t {
   char privInterface[32];
   char bridgedev[32];
   char mode[32];
+  char localIp[32];
   int role;
   int enabled;
   int initialized;
   int numaddrs;
   int max_vlan;
   char etherdevs[NUMBER_OF_VLANS][16];
+  uint32_t ccs[NUMBER_OF_CCS];
   userEntry users[NUMBER_OF_VLANS];
   networkEntry networks[NUMBER_OF_VLANS];
   publicip publicips[NUMBER_OF_PUBLIC_IPS];
@@ -56,7 +59,7 @@ typedef struct vnetConfig_t {
 } vnetConfig;
 
 enum {NC, CC, CLC};
-void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *router, char *daemon, char *dhcpuser, char *bridgedev);
+void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp);
 
 int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
@@ -74,6 +77,9 @@ int vnetKickDHCP(vnetConfig *vnetconfig);
 
 int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network);
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network);
+
+int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen);
+int vnetSetupTunnels(vnetConfig *vnetconfig);
 
 int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName, char *protocol, int minPort, int maxPort);
 int vnetCreateChain(vnetConfig *vnetconfig, char *userName, char *netName);

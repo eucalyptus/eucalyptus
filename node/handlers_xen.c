@@ -476,7 +476,7 @@ static int doInitialize (void)
     bridge = getConfString(config, "VNET_BRIDGE");
     mode = getConfString(config, "VNET_MODE");
 
-    vnetInit(vnetconfig, mode, home, config_network_path, NC, pubInterface, pubInterface, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge);
+    vnetInit(vnetconfig, mode, home, config_network_path, NC, pubInterface, pubInterface, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL);
     
     /* cleanup from previous runs and verify integrity of instances
      * directory */

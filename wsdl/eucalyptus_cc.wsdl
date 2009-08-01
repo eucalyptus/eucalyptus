@@ -230,6 +230,7 @@
 	    <xs:sequence>
 	      <xs:element minOccurs="0" maxOccurs="1" name="vlan" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="netName" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="clusterControllers" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
