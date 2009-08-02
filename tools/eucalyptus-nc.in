@@ -366,6 +366,13 @@ case "$1" in
 		exit 3
 	fi 
 	;;
+  config)
+	echo "EUCALYPTUS=${EUCALYPTUS}"
+	echo "AXIS2C_HOME=${AXIS2C_HOME}"
+	echo "HTTPD_HOME=${HTTPD_HOME}"
+	echo "HTTPD=${HTTPD}"
+        ;;
+
   *)
 	echo "Usage: $NAME {start|stop|restart}" >&2
 	exit 3

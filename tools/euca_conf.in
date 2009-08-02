@@ -28,6 +28,9 @@ UPGRADE_CONF=""
 SETUP=""
 VERSION=""
 CHECK=""
+LIST_SERVICES=""
+ENABLE_SERVICE=""
+DISABLE_SERVICE=""
 TO_BACKUP="Y"
 SCP="`which scp 2> /dev/null`"
 RSYNC="`which rsync 2> /dev/null`"
@@ -39,7 +42,6 @@ usage () {
 	echo "where <file> is the configuration file ($FILE by default)"
 	echo "   --help                           this message"
 	echo "   -d <dir>                         point EUCALYPTUS to <dir>"
-#	echo "   --sync-keys                      sync the keys with the nodes"
 #	echo "   --no-rsync                       don't use rsync (ie remote node have no root)"
 	echo "   --register-nodes \"host host ...\" add new nodes to EUCALYPTUS"
 	echo "   --delete-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
@@ -51,6 +53,9 @@ usage () {
 	echo "   --deregister-sc <host>           remove storage controller to EUCALYPTUS"
 	echo "   --register-clc <host>            point local walrus to CLC location"
 	echo "   --sync                           used only with --register-* to sync keys"
+	echo "   --list-services                  list installed eucalyptus services"
+	echo "   --enable-service <service>       enable eucalyptus service"
+	echo "   --disable-service <service>      disable eucalyptus service"
 	echo "   --cc-port <port>                 set CC port"
 	echo "   --nc-port <port>                 set NC port"
 	echo "   --instances <path>               set the INSTANCE path"
@@ -191,6 +196,11 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
+	if [ "$1" = "--list-services" ]; then 
+	    LIST_SERVICES="Y"
+	    shift
+	    continue
+	fi
 	if [ "$1" = "-version" -o "$1" = "--version" ]; then 
 	    VERSION="Y"
 	    shift
@@ -242,6 +252,16 @@ while [ $# -gt 0 ]; do
 	fi		
 	if [ "$1" = "-bridge" ]; then
 		BRIDGE="$2"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "--disable-service" ]; then
+		DISABLE_SERVICE="$2"
+		shift; shift
+		continue
+	fi		
+	if [ "$1" = "--enable-service" ]; then
+		ENABLE_SERVICE="$2"
 		shift; shift
 		continue
 	fi		
@@ -461,6 +481,45 @@ for x in $NAME ; do
 	echo "$x=$VALUE"
 done
 
+# modify the current conf file based on an older configuration
+if [ -n "$UPGRADE_CONF" ]; then
+	VARS="EUCA_USER ENABLE_WS_SECURITY DISABLE_EBS HYPERVISOR LOGLEVEL CLOUD_PORT CLOUD_SSL_PORT SWAP_SIZE CC_PORT SCHEDPOLICY NODES NC_SERVICE NC_PORT MAX_MEM MAX_CORES INSTANCE_PATH VNET_INTERFACE VNET_BRIDGE VNET_DHCPDAEMON"
+	VNET_VARS="VNET_MODE VNET_SUBNET VNET_NETMASK VNET_DNS VNET_ADDRSPERNET VNET_PUBLICIPS VNET_BROADCAST VNET_ROUTER VNET_MACMAP"
+	
+	# source the old config
+	. $UPGRADE_CONF
+
+	# let's start from no network
+	for x in $VNET_VARS ; do
+		comment $FILE $x
+	done
+		
+	# modified the defined variables
+	for x in $VARS ; do
+		y="$(echo \$${x})"
+		eval y="$y"
+		if [ -z "$y" ]; then
+			# we just leave NODES uncommented even if it's empty
+			if [ "$x" != "NODES" ]; then
+				comment $FILE $x
+			fi
+		else
+			uncomment $FILE $x
+			change_var_value $FILE $x "${y}"
+		fi
+	done
+	# and add the network variables
+	echo >> $FILE
+	echo "# network configuration from the old configuration file" >> $FILE
+	for x in $VNET_VARS ; do
+		y="$(echo \$${x})"
+		eval y="$y"
+		if [ -n "$y" ]; then
+			echo "$x=\"${y}\"" >> $FILE
+		fi
+	done
+fi
+
 # we may need the location of the ssh key for eucalyptus
 EUCA_HOME="`getent passwd eucalyptus|cut -f 6 -d ':'`"
 if [ -f "${EUCA_HOME}/.ssh/id_rsa.pub" ]; then
@@ -469,10 +528,71 @@ else
 	SSHKEY=""
 fi
 
+# we need defaults in eucalyptus.conf
+. $FILE
+
+# list available services
+if [ -n "$LIST_SERVICES" -o -n "$ENABLE_SERVICE" -o -n "$DISABLE_SERVICE" ]; then
+	if [ -e $EUCALYPTUS/etc/init.d/eucalyptus-cc ]; then
+		CONFIG_OPTS="`$EUCALYPTUS/etc/init.d/eucalyptus-cc config 2> /dev/null`"
+	elif [ -e $EUCALYPTUS/etc/init.d/eucalyptus-nc ]; then
+		CONFIG_OPTS="`$EUCALYPTUS/etc/init.d/eucalyptus-nc config 2> /dev/null`"
+	fi
+	if [ -n "$CONFIG_OPTS" ]; then
+		eval $CONFIG_OPTS
+	fi
+
+	if [ -n "$LIST_SERVICES" ]; then
+		for x in ` ls $AXIS2C_HOME/services 2> /dev/null` ; do
+			if [ -d $AXIS2C_HOME/services/${x} ]; then
+				echo "${x} *"
+			fi
+		done
+		for x in `ls $AXIS2C_HOME/disabled 2> /dev/null` ; do
+			if [ -d $AXIS2C_HOME/disabled/${x} ]; then
+				echo "${x}"
+			fi
+		done
+	elif [ -n "$ENABLE_SERVICE" ]; then
+		DONE="N"
+		for x in `ls $AXIS2C_HOME/disabled 2> /dev/null` ; do
+			if [ "${x}" = "$ENABLE_SERVICE" ]; then
+				mv $AXIS2C_HOME/disabled/$x $AXIS2C_HOME/services 
+				DONE="Y"
+			fi
+		done
+		for x in `ls $AXIS2C_HOME/services 2> /dev/null` ; do
+			if [ "${x}" = "$ENABLE_SERVICE" ]; then
+				if [ "$DONE" = "N" ]; then
+					echo "$x already enabled"
+					break
+				fi
+			fi
+		done
+	elif [ -n "$DISABLE_SERVICE" ]; then
+		DONE="N"
+		for x in `ls $AXIS2C_HOME/services 2> /dev/null` ; do
+			if [ "${x}" = "$DISABLE_SERVICE" ]; then
+				if [ ! -d $AXIS2C_HOME/disabled ]; then
+					mkdir -p $AXIS2C_HOME/disabled
+				fi
+				mv $AXIS2C_HOME/services/$x $AXIS2C_HOME/disabled 
+				DONE="Y"
+			fi
+		done
+		for x in `ls $AXIS2C_HOME/disabled 2> /dev/null` ; do
+			if [ "${x}" = "$DISABLE_SERVICE" ]; then
+				if [ "$DONE" = "N" ]; then
+					echo "$x already disabled"
+					break
+				fi
+			fi
+		done
+	fi
+fi
+
 # first time setup
 if [ -n "$SETUP" ]; then
-	. $FILE
-
 	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
 	
 	# first of all setup euca_rootwrap
@@ -528,8 +648,6 @@ fi
 
 # pre-flight checks
 if [ -n "$CHECK" ]; then
-	. $FILE
-
 	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
 
 	# vblade and aoe may be needed
@@ -605,49 +723,8 @@ if [ -n "$CHECK" ]; then
 	done
 fi
 
-# modify the current conf file based on an older configuration
-if [ -n "$UPGRADE_CONF" ]; then
-	VARS="EUCA_USER ENABLE_WS_SECURITY DISABLE_EBS HYPERVISOR LOGLEVEL CLOUD_PORT CLOUD_SSL_PORT SWAP_SIZE CC_PORT SCHEDPOLICY NODES NC_SERVICE NC_PORT MAX_MEM MAX_CORES INSTANCE_PATH VNET_INTERFACE VNET_BRIDGE VNET_DHCPDAEMON"
-	VNET_VARS="VNET_MODE VNET_SUBNET VNET_NETMASK VNET_DNS VNET_ADDRSPERNET VNET_PUBLICIPS VNET_BROADCAST VNET_ROUTER VNET_MACMAP"
-	
-	# source the old config
-	. $UPGRADE_CONF
-
-	# let's start from no network
-	for x in $VNET_VARS ; do
-		comment $FILE $x
-	done
-		
-	# modified the defined variables
-	for x in $VARS ; do
-		y="$(echo \$${x})"
-		eval y="$y"
-		if [ -z "$y" ]; then
-			# we just leave NODES uncommented even if it's empty
-			if [ "$x" != "NODES" ]; then
-				comment $FILE $x
-			fi
-		else
-			uncomment $FILE $x
-			change_var_value $FILE $x "${y}"
-		fi
-	done
-	# and add the network variables
-	echo >> $FILE
-	echo "# network configuration from the old configuration file" >> $FILE
-	for x in $VNET_VARS ; do
-		y="$(echo \$${x})"
-		eval y="$y"
-		if [ -n "$y" ]; then
-			echo "$x=\"${y}\"" >> $FILE
-		fi
-	done
-fi
-
 # adding a new cluster
 if [ -n "$NEWCLUS" ]; then
-	. $FILE
-
 	if [ -n "$WGET" ]; then
 		if ! $WGET -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null ; then
 			echo "You need to be on the CLC host and the CLC needs to be running."
@@ -710,8 +787,6 @@ fi
 
 # walrus
 if [ -n "$WALRUS" ]; then
-	. $FILE
-
 	if [ -n "$WGET" ]; then
 		if ! $WGET -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null ; then
 			echo "You need to be on the CLC host and the CLC needs to be running."
@@ -731,8 +806,6 @@ fi
 
 # sc
 if [ -n "$SC" ]; then
-	. $FILE
-
 	if [ -n "$WGET" ]; then
 		if ! $WGET -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null ; then
 			echo "You need to be on the CLC host and the CLC needs to be running."
@@ -765,8 +838,6 @@ fi
 
 # operations on the nodes
 if [ -n "$NODEMODE" ]; then
-	. $FILE
-
 	# for synckey we fake addnodes
 	if [ "$NODEMODE" = "SYNC" ]; then
 		if [ -z "$NODES" ]; then
