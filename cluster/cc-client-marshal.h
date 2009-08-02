@@ -9,6 +9,7 @@
 int cc_registerImage(char *imageloc, axutil_env_t *, axis2_stub_t *);
 int cc_describeResources(axutil_env_t *, axis2_stub_t *);
 int cc_startNetwork(int, char *netName, char **ccs, int ccsLen, axutil_env_t *, axis2_stub_t *);
+int cc_describeNetworks(char **ccs, int ccsLen, axutil_env_t *, axis2_stub_t *);
 int cc_stopNetwork(int, char *netName, axutil_env_t *, axis2_stub_t *);
 int cc_assignAddress(char *src, char *dst, axutil_env_t *, axis2_stub_t *);
 int cc_unassignAddress(char *src, char *dst, axutil_env_t *, axis2_stub_t *);

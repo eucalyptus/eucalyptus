@@ -157,6 +157,58 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, co
   return(ret);
 }
 
+adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *describeNetworks, const axutil_env_t *env) {
+  // output vars
+  adb_DescribeNetworksResponse_t *ret=NULL;
+  adb_describeNetworksResponseType_t *snrt=NULL;
+  
+  //input vars
+  adb_describeNetworksType_t *snt=NULL;
+
+  // working vars
+  int rc, i;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+
+  char **clusterControllers;
+  int clusterControllersLen=0;
+  ncMetadata ccMeta;
+  
+  snt = adb_DescribeNetworks_get_DescribeNetworks(describeNetworks, env);
+  ccMeta.correlationId = adb_describeNetworksType_get_correlationId(snt, env);
+  ccMeta.userId = adb_describeNetworksType_get_userId(snt, env);
+  
+  clusterControllersLen = adb_describeNetworksType_sizeof_clusterControllers(snt, env);
+  clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
+  for (i=0; i<clusterControllersLen; i++) {
+    clusterControllers[i] = adb_describeNetworksType_get_clusterControllers_at(snt, env, i);
+  }
+  
+  snrt = adb_describeNetworksResponseType_create(env);
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doDescribeNetworks(&ccMeta, clusterControllers, clusterControllersLen);
+    if (rc) {
+      logprintf("ERROR: doDescribeNetworks() returned fail %d\n", rc);
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  if (clusterControllers) free(clusterControllers);
+  
+  adb_describeNetworksResponseType_set_return(snrt, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_describeNetworksResponseType_set_statusMessage(snrt, env, statusMessage);
+  }
+  
+  adb_describeNetworksResponseType_set_correlationId(snrt, env, ccMeta.correlationId);
+  adb_describeNetworksResponseType_set_userId(snrt, env, ccMeta.userId);
+  
+  ret = adb_DescribeNetworksResponse_create(env);
+  adb_DescribeNetworksResponse_set_DescribeNetworksResponse(ret, env, snrt);
+  
+  return(ret);
+}
 adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t *describePublicAddresses, const axutil_env_t *env) {
   adb_describePublicAddressesType_t *dpa=NULL;
 

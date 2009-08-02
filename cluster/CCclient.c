@@ -164,6 +164,17 @@ int main(int argc, char **argv) {
 	printf("cc_startNetwork() failed\n");
 	exit(1);
       }
+    } else if (!strcmp(argv[2], "describeNetworks")) {
+      char **ccs;
+      int ccsLen=2;
+      ccs = malloc(sizeof(char *) * 2);
+      ccs[0] = strdup(argv[3]);
+      ccs[1] = strdup(argv[4]);
+      rc = cc_describeNetworks(ccs, 2, env, stub);
+      if (rc != 0) {
+	printf("cc_describeNetworks() failed\n");
+	exit(1);
+      }
     } else if (!strcmp(argv[2], "configureNetwork")) {
       rc = cc_configureNetwork(argv[3], argv[4], argv[5], atoi(argv[6]), atoi(argv[7]), argv[8], env, stub);
       if (rc != 0) {

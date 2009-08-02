@@ -45,13 +45,15 @@ typedef struct vnetConfig_t {
   char bridgedev[32];
   char mode[32];
   char localIp[32];
+  uint32_t localIpId;
+  uint32_t ccs[NUMBER_OF_CCS];
+  time_t ccsTunnelStart[NUMBER_OF_CCS];
   int role;
   int enabled;
   int initialized;
   int numaddrs;
   int max_vlan;
   char etherdevs[NUMBER_OF_VLANS][16];
-  uint32_t ccs[NUMBER_OF_CCS];
   userEntry users[NUMBER_OF_VLANS];
   networkEntry networks[NUMBER_OF_VLANS];
   publicip publicips[NUMBER_OF_PUBLIC_IPS];
@@ -80,6 +82,10 @@ int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network);
 
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen);
 int vnetSetupTunnels(vnetConfig *vnetconfig);
+int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig);
+int vnetSetupTunnelsGRE(vnetConfig *vnetconfig);
+int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname);
+int vnetDetachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname);
 
 int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName, char *protocol, int minPort, int maxPort);
 int vnetCreateChain(vnetConfig *vnetconfig, char *userName, char *netName);

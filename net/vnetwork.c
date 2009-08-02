@@ -38,6 +38,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     if (daemon) strncpy(vnetconfig->dhcpdaemon, daemon, 1024);
     if (dhcpuser) strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
     if (localIp) strncpy(vnetconfig->localIp, localIp, 32);
+    vnetconfig->localIpId = -1;
     vnetconfig->role = role;
     vnetconfig->enabled=1;
     vnetconfig->initialized = 1;
@@ -869,6 +870,9 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   if (ccsLen > 0) {
     bzero(vnetconfig->ccs, sizeof(uint32_t) * NUMBER_OF_CCS);
     for (i=0; i<ccsLen; i++) {
+      if (!strcmp(ccs[i], vnetconfig->localIp)) {
+	vnetconfig->localIpId = i;
+      }
       vnetconfig->ccs[i] = dot2hex(ccs[i]);
     }
   }
@@ -971,6 +975,16 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
           logprintfl(EUCAERROR, "could not create new bridge %s\n", newbrname);
           return(1);
         }
+        snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s on", vnetconfig->eucahome, newbrname);
+        rc = system(cmd);
+        if (rc) {
+          logprintfl(EUCAWARN, "could enable stp on bridge %s\n", newbrname);
+        }
+        snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl sethello %s 2", vnetconfig->eucahome, newbrname);
+        rc = system(cmd);
+        if (rc) {
+          logprintfl(EUCAWARN, "could set hello time to 2 on bridge %s\n", newbrname);
+        }
       }
       
       snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, newbrname, newdevname);
@@ -986,6 +1000,9 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
       snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set dev %s up", vnetconfig->eucahome, newdevname);
       rc = system(cmd);
 
+      // attach tunnel(s)
+      rc = vnetAttachTunnels(vnetconfig, vlan, newbrname);
+      
       snprintf(newdevname, 32, "%s", newbrname);
     } else {
       snprintf(newdevname, 32, "%s", vnetconfig->privInterface);
@@ -998,6 +1015,113 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
     
     *outbrname = strdup(newdevname);
   }
+  return(0);
+}
+
+int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
+  int rc, i, slashnet;
+  char cmd[1024], tundev[32], tunvlandev[32], *network=NULL;
+  
+  slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
+  network = hex2dot(vnetconfig->networks[vlan].nw);
+  snprintf(cmd, 256, "-A FORWARD -s %s/%d -d %s/%d -j ACCEPT", network, slashnet, network, slashnet);
+  rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+  if (network) free(network);
+  
+  for (i=0; i<NUMBER_OF_CCS; i++) {
+    //    logprintfl(EUCADEBUG, "attaching for CC %d vlan %d\n", i, vlan);
+    if (i != vnetconfig->localIpId) {
+      snprintf(tundev, 32, "tap-%d-%d", vnetconfig->localIpId, i);
+      if (!check_device(tundev) && !check_device(newbrname)) {
+	snprintf(tunvlandev, 32, "tap-%d-%d.%d", vnetconfig->localIpId, i, vlan);
+	if (check_device(tunvlandev)) {
+	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, tundev, vlan);
+	  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	  rc = system(cmd);
+	  rc = rc>>8;
+	  logprintfl(EUCADEBUG, "done: %d\n", rc);
+	}
+	
+	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, newbrname, tunvlandev);
+	logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	rc = system(cmd);
+	rc = rc>>8;
+	logprintfl(EUCADEBUG, "done: %d\n", rc);
+	
+	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set up dev %s", vnetconfig->eucahome, tunvlandev);
+	logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	rc = system(cmd);
+	rc = rc>>8;
+	logprintfl(EUCADEBUG, "done: %d\n", rc);
+      }
+      
+      snprintf(tundev, 32, "tap-%d-%d", i, vnetconfig->localIpId);
+      if (!check_device(tundev) && !check_device(newbrname)) {
+	snprintf(tunvlandev, 32, "tap-%d-%d.%d", i, vnetconfig->localIpId, vlan);
+	if (check_device(tunvlandev)) {
+	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, tundev, vlan);
+	  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	  rc = system(cmd);
+	  rc = rc>>8;
+	  logprintfl(EUCADEBUG, "done: %d\n", rc);
+	}
+	
+	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, newbrname, tunvlandev);
+	logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	rc = system(cmd);
+	rc = rc>>8;
+	logprintfl(EUCADEBUG, "done: %d\n", rc);
+	
+	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set up dev %s", vnetconfig->eucahome, tunvlandev);
+	logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	rc = system(cmd);
+	rc = rc>>8;
+	logprintfl(EUCADEBUG, "done: %d\n", rc);
+      }
+    }
+  }
+  
+  return(0);
+}
+
+int vnetDetachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
+  int rc, i, slashnet;
+  char cmd[1024], tundev[32], tunvlandev[32], *network=NULL;
+  
+  slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
+  network = hex2dot(vnetconfig->networks[vlan].nw);
+  snprintf(cmd, 256, "-D FORWARD -s %s/%d -d %s/%d -j ACCEPT", network, slashnet, network, slashnet);
+  rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+  if (network) free(network);
+  
+  for (i=0; i<NUMBER_OF_CCS; i++) {
+    if (i != vnetconfig->localIpId) {
+      snprintf(tundev, 32, "tap-%d-%d", vnetconfig->localIpId, i);
+      if (!check_device(tundev) && !check_device(newbrname)) {
+	snprintf(tunvlandev, 32, "tap-%d-%d.%d", vnetconfig->localIpId, i, vlan);
+	if (!check_device(tunvlandev)) {
+	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig rem %s", vnetconfig->eucahome, tunvlandev);
+	  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	  rc = system(cmd);
+	  rc = rc>>8;
+	  logprintfl(EUCADEBUG, "done: %d\n", rc);
+	}
+      }
+
+      snprintf(tundev, 32, "tap-%d-%d", i, vnetconfig->localIpId);
+      if (!check_device(tundev) && !check_device(newbrname)) {
+	snprintf(tunvlandev, 32, "tap-%d-%d.%d", i, vnetconfig->localIpId, vlan);
+	if (!check_device(tunvlandev)) {
+	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig rem %s", vnetconfig->eucahome, tunvlandev);
+	  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	  rc = system(cmd);
+	  rc = rc>>8;
+	  logprintfl(EUCADEBUG, "done: %d\n", rc);
+	}
+      }
+    }
+  }
+  
   return(0);
 }
 
@@ -1030,67 +1154,46 @@ int vnetTeardownTunnels(vnetConfig *vnetconfig) {
   }
   return(0);
 }
-int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
+int vnetSetupTunnels(vnetConfig *vnetconfig) {
   return(vnetSetupTunnelsVTUN(vnetconfig));
 }
+
 int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
-  int i, done, j, rc;
+  int i, done, rc;
+  char cmd[1024], tundev[32], *remoteIp=NULL;
   
-  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -s -f %s/var/lib/CC/vtunall.conf", vnetconfig->eucahome, vnetconfig->eucahome);
+  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -s -f %s/etc/eucalyptus/vtunall.conf", vnetconfig->eucahome, vnetconfig->eucahome);
   logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
   rc = system(cmd);
   rc = rc>>8;
   logprintfl(EUCADEBUG, "done: %d\n", rc);
-
-  for (j=2; j<NUMBER_OF_VLANS; j++) {
-    char brdev[32];
-    snprintf(brdev, 32, "eucabr%d", j);
-    
-    if (vnetconfig->networks[j].active && !check_device(brdev)) {
-      done=0;
-      for (i=0; i<NUMBER_OF_CCS && !done; i++) {
-	if (vnetconfig->ccs[i] == 0) {
-	  done++;
-	} else {
-	  char cmd[1024], tundev[32], *remoteIp=NULL;
-	  remoteIp = hex2dot(vnetconfig->ccs[i]);
+  
+  done=0;
+  for (i=0; i<NUMBER_OF_CCS && !done; i++) {
+    if (vnetconfig->ccs[i] == 0) {
+      done++;
+    } else {
+      remoteIp = hex2dot(vnetconfig->ccs[i]);
+      if (vnetconfig->localIpId != i) {
+	logprintfl(EUCADEBUG, "setting up tunnel for endpoint: %s\n", remoteIp);
+	snprintf(tundev, 32, "tap-%d-%d", vnetconfig->localIpId, i);
+	rc = check_device(tundev);
+	if (rc && (vnetconfig->ccsTunnelStart[i] == 0 || (time(NULL) - vnetconfig->ccsTunnelStart[i]) > 120)) {
 	  
-	  if (strcmp(remoteIp, vnetconfig->localIp)) {
-	    logprintfl(EUCADEBUG, "setting up tunnel for endpoint: %s\n", remoteIp);
-	    snprintf(tundev, 32, "vtun%d.%d", i, j);
-	    rc = check_device(tundev);
-	    if (rc) {
-	      snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -f %s/var/lib/CC/vtunall.conf -p tun-%d-%d %s", vnetconfig->eucahome, vnetconfig->eucahome, i, j, remoteIp);
-	      logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
-	      rc = system(cmd);
-	      rc = rc>>8;
-	      logprintfl(EUCADEBUG, "done: %d\n", rc);
-
-	      //vtund -f /tmp/vtun.lespaul -p tun10 sg
-	      /*
-	      snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link add %s type gretap remote %s local %s ttl 15", vnetconfig->eucahome, tundev, remoteIp, vnetconfig->localIp);
-	      */
-	      
-	      snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, brdev, tundev);
-	      logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
-	      rc = system(cmd);
-	      rc = rc>>8;
-	      logprintfl(EUCADEBUG, "done: %d\n", rc);
-	      
-	      snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set up dev %s", vnetconfig->eucahome, tundev);
-	      logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
-	      rc = system(cmd);
-	      rc = rc>>8;
-	      logprintfl(EUCADEBUG, "done: %d\n", rc);
-	      
-	      if (remoteIp) free(remoteIp);
-	    }
-	  }
+	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -f %s/etc/eucalyptus/vtunall.conf -p tun-%d-%d %s", vnetconfig->eucahome, vnetconfig->eucahome, vnetconfig->localIpId, i, remoteIp);
+	  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	  rc = system(cmd);
+	  rc = rc>>8;
+	  logprintfl(EUCADEBUG, "done: %d\n", rc);
+	  
+	  logprintfl(EUCADEBUG, "setting tunnel start time (%d): %d/%d\n", i, vnetconfig->ccsTunnelStart[i], time(NULL));
+	  vnetconfig->ccsTunnelStart[i] = time(NULL);
+	  
+	  if (remoteIp) free(remoteIp);
 	}
       }
     }
-  }  
-  
+  }
   return(0);
 }
 int vnetSetupTunnelsGRE(vnetConfig *vnetconfig) {
@@ -1111,7 +1214,7 @@ int vnetSetupTunnelsGRE(vnetConfig *vnetconfig) {
 	  
 	  if (strcmp(remoteIp, vnetconfig->localIp)) {
 	    logprintfl(EUCADEBUG, "setting up tunnel for endpoint: %s\n", remoteIp);
-	    snprintf(tundev, 32, "gretun%d.%d", i, j);
+	    snprintf(tundev, 32, "tun-%d-%d", i, j);
 	    rc = check_device(tundev);
 	    if (rc) {
 	      snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link add %s type gretap remote %s local %s ttl 15", vnetconfig->eucahome, tundev, remoteIp, vnetconfig->localIp);
@@ -1211,7 +1314,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
     return(0);
   }
   
-  rc = vnetTeardownTunnels(vnetconfig);
+  //  rc = vnetTeardownTunnels(vnetconfig);
   
   vnetconfig->networks[vlan].active = 0;
 
@@ -1222,7 +1325,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
     if (rc) {
       logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
       ret = 1;
-    }
+    }    
   }
 
     //  }
@@ -1254,6 +1357,8 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
   if ((vnetconfig->role == CC || vnetconfig->role == CLC)) {
     
     if (!strcmp(vnetconfig->mode, "MANAGED")) {
+      rc = vnetDetachTunnels(vnetconfig, vlan, newbrname);
+      
       rc = vnetDelDev(vnetconfig, newdevname);
       if (rc) {
 	logprintfl(EUCAERROR, "could not remove '%s' from list of interfaces\n", newdevname);

@@ -306,6 +306,26 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:complexType name="describeNetworksType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="clusterControllers" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="describeNetworksResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="mode" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
       <xs:complexType name="describePublicAddressesType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
@@ -433,6 +453,9 @@
       <xs:element name="UnassignAddress" nillable="true" type="tns:unassignAddressType"/>
       <xs:element name="UnassignAddressResponse" nillable="true" type="tns:unassignAddressResponseType"/>
 
+      <xs:element name="DescribeNetworks" nillable="true" type="tns:describeNetworksType"/>
+      <xs:element name="DescribeNetworksResponse" nillable="true" type="tns:describeNetworksResponseType"/>
+
       <xs:element name="DescribePublicAddresses" nillable="true" type="tns:describePublicAddressesType"/>
       <xs:element name="DescribePublicAddressesResponse" nillable="true" type="tns:describePublicAddressesResponseType"/>
       
@@ -498,6 +521,11 @@
 
   <wsdl:message name="UnassignAddressResponse">
     <wsdl:part element="tns:UnassignAddressResponse" name="UnassignAddressResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeNetworksResponse">
+    <wsdl:part element="tns:DescribeNetworksResponse" name="DescribeNetworksResponse">
     </wsdl:part>
   </wsdl:message>
 
@@ -575,6 +603,11 @@
 
   <wsdl:message name="UnassignAddress">
     <wsdl:part element="tns:UnassignAddress" name="UnassignAddress">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeNetworks">
+    <wsdl:part element="tns:DescribeNetworks" name="DescribeNetworks">
     </wsdl:part>
   </wsdl:message>
 
@@ -672,6 +705,13 @@
       <wsdl:input message="tns:UnassignAddress" name="UnassignAddress">
       </wsdl:input>
       <wsdl:output message="tns:UnassignAddressResponse" name="UnassignAddressResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeNetworks">
+      <wsdl:input message="tns:DescribeNetworks" name="DescribeNetworks">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribeNetworksResponse" name="DescribeNetworksResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -809,6 +849,16 @@
         <soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="UnassignAddressResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeNetworks">
+      <soap:operation soapAction="EucalyptusCC#DescribeNetworks" style="document"/>
+      <wsdl:input name="DescribeNetworks">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribeNetworksResponse">
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>

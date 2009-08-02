@@ -113,8 +113,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   
   logprintfl(EUCADEBUG,"AttachVolume(): done.\n");
   
-  shawn();
-  
+  shawn(); 
   return(ret);
 }
 
@@ -438,6 +437,23 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   return(ret);
 }
 
+int doDescribeNetworks(ncMetadata *ccMeta, char **ccs, int ccsLen) {
+  int rc;
+  
+  rc = initialize();
+  if (rc) {
+    return(1);
+  }
+  logprintfl(EUCADEBUG, "DescribeNetworks(): called\n");
+  sem_wait(vnetConfigLock);
+  rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
+  rc = vnetSetupTunnels(vnetconfig);
+  sem_post(vnetConfigLock);
+  
+  logprintfl(EUCADEBUG, "DescribeNetworks(): done\n");
+  return(0);
+}
+
 int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char **ccs, int ccsLen) {
   int rc, ret;
   time_t op_start, op_timer;
@@ -471,7 +487,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char **ccs, int 
       ret = 0;
     }
     
-    rc = vnetSetupTunnels(vnetconfig);
+    //    rc = vnetSetupTunnels(vnetconfig);
 
 
     /*    
@@ -613,7 +629,6 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   logprintfl(EUCADEBUG,"DescribeResources(): done\n");
   
   shawn();
-
   return(0);
 }
 
@@ -2217,6 +2232,40 @@ int init_config(void) {
   return(0);
 }
 
+int maintainNetworkState() {
+  int rc, i, ret=0;
+
+  sem_wait(vnetConfigLock);
+
+  /*
+  rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
+  if (rc) {
+    logprintfl(EUCAERROR, "failed to set ccs\n");
+    ret = 1;
+  }
+  */
+
+  rc = vnetSetupTunnels(vnetconfig);
+  if (rc) {
+    logprintfl(EUCAERROR, "failed to setup tunnels during maintainNetworkState()\n");
+    ret = 1;
+  }
+  
+  for (i=2; i<NUMBER_OF_VLANS; i++) {
+    if (vnetconfig->networks[i].active) {
+      char brname[32];
+      snprintf(brname, 32, "eucabr%d", i);
+      rc = vnetAttachTunnels(vnetconfig, i, brname);
+      if (rc) {
+        logprintfl(EUCADEBUG, "failed to attach tunnels for vlan %d during maintainNetworkState()\n", i);
+	ret = 1;
+      }
+    }
+  }
+  sem_post(vnetConfigLock);
+  
+  return(ret);
+}
 int restoreNetworkState() {
   int rc, ret=0, i;
   char cmd[1024];
@@ -2347,7 +2396,7 @@ int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHos
 }
 
 void shawn() {
-  int p=1, status;
+  int p=1, status, rc;
 
   // clean up any orphaned child processes
   while(p > 0) {
@@ -2357,8 +2406,10 @@ void shawn() {
     config->instanceCacheUpdate = time(NULL);
   }
   
-  //  deadlock detection
-  //  rc = sem_getvalue(configLock,&status);
+  rc = maintainNetworkState();
+  if (rc) {
+    logprintfl(EUCAERROR, "network state maintainance failed\n");
+  }
 }
 
 int timeread(int fd, void *buf, size_t bytes, int timeout) {

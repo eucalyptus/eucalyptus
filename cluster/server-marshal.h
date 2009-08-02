@@ -18,6 +18,7 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, co
 adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t *assignAddress, const axutil_env_t *env);
 adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t *unassignAddress, const axutil_env_t *env);
 adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t *describePublicAddresses, const axutil_env_t *env);
+adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *describeNetworks, const axutil_env_t *env);
 adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *configureNetwork, const axutil_env_t *env);
 
 adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *attachVolume, const axutil_env_t *env);

@@ -535,6 +535,45 @@ int cc_startNetwork(int vlan, char *netName, char **ccs, int ccsLen, axutil_env_
   return(0);
 }
 
+int cc_describeNetworks(char **ccs, int ccsLen, axutil_env_t *env, axis2_stub_t *stub) {
+  int i;
+  //  char meh[32];
+  adb_DescribeNetworks_t *input;
+  adb_DescribeNetworksResponse_t *output;
+  adb_describeNetworksType_t *sn;
+  adb_describeNetworksResponseType_t *snrt;
+
+  sn = adb_describeNetworksType_create(env);
+  input = adb_DescribeNetworks_create(env);
+  
+  adb_describeNetworksType_set_userId(sn, env, "eucalyptus");
+  {
+    char cidstr[9];
+    bzero(cidstr, 9);
+    srand(time(NULL)+getpid());
+    for (i=0; i<8; i++) {
+      cidstr[i] = rand()%26+'a';
+    }
+    adb_describeNetworksType_set_correlationId(sn, env, cidstr);
+  }
+  
+  for (i=0; i<ccsLen; i++) {
+    printf("adding %s\n", ccs[i]);
+    adb_describeNetworksType_add_clusterControllers(sn, env, ccs[i]);
+  }
+
+  adb_DescribeNetworks_set_DescribeNetworks(input, env, sn);
+
+  output = axis2_stub_op_EucalyptusCC_DescribeNetworks(stub, env, input);
+  if (!output) {
+    printf("ERROR: describeNetworks returned NULL\n");
+    return(1);
+  }
+  snrt = adb_DescribeNetworksResponse_get_DescribeNetworksResponse(output, env);
+  printf("describenetworks returned status %d\n", adb_describeNetworksResponseType_get_return(snrt, env));
+  return(0);
+}
+
 int cc_describeResources(axutil_env_t *env, axis2_stub_t *stub) {
   adb_DescribeResourcesResponse_t *drOut=NULL;
   adb_describeResourcesResponseType_t *drrt=NULL;
