@@ -45,7 +45,7 @@
     <target name="compile-src" unless="groovyc.notRequired">
         <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath"/>
         <groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
-            <javac target="1.5"/>
+            <javac deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" target="1.5"/>
         </groovyc>
     </target>
     <target name="compile-jibx" unless="groovyc.notRequired">
