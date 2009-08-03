@@ -121,7 +121,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			byte[] req = byteOut.toByteArray();
 			ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes() ) );
-			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
+			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml" );
 			httpResponse.setContent( buffer );
 		}
 	}

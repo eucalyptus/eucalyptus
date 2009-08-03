@@ -9,7 +9,6 @@ import java.util.List;
 
 import com.eucalyptus.ws.MappingHttpResponse;
 
-import org.apache.commons.httpclient.HttpStatus;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
@@ -35,7 +34,6 @@ import edu.ucsb.eucalyptus.msgs.WalrusBucketErrorMessageType;
 public class WalrusOutboundHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusOutboundHandler.class );
 	private static String ipAddress;
-	private static int SC_DECRYPTION_FAILED = 566;
 
 	static {
 		ipAddress = "127.0.0.1";
@@ -75,75 +73,79 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 				Throwable ex = errorMessage.getException();
 				if ( ex instanceof NoSuchBucketException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( NoSuchBucketException ) ex ).getBucketName(), "NoSuchBucket", "The specified bucket was not found", HttpStatus.SC_NOT_FOUND, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( NoSuchBucketException ) ex ).getBucketName(), "NoSuchBucket", "The specified bucket was not found", HttpResponseStatus.NOT_FOUND, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof AccessDeniedException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( AccessDeniedException ) ex ).getBucketName(), "AccessDenied", "No U", HttpStatus.SC_FORBIDDEN, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( AccessDeniedException ) ex ).getBucketName(), "AccessDenied", "No U", HttpResponseStatus.FORBIDDEN, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof NotAuthorizedException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( NotAuthorizedException ) ex ).getValue(), "Unauthorized", "No U", HttpStatus.SC_UNAUTHORIZED, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( NotAuthorizedException ) ex ).getValue(), "Unauthorized", "No U", HttpResponseStatus.UNUATHORIZED, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof BucketAlreadyOwnedByYouException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( BucketAlreadyOwnedByYouException ) ex ).getBucketName(), "BucketAlreadyOwnedByYou", "Your previous request to create the named bucket succeeded and you already own it.", HttpStatus.SC_CONFLICT, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( BucketAlreadyOwnedByYouException ) ex ).getBucketName(), "BucketAlreadyOwnedByYou", "Your previous request to create the named bucket succeeded and you already own it.", HttpResponseStatus.CONFLICT, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof BucketAlreadyExistsException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( BucketAlreadyExistsException ) ex ).getBucketName(), "BucketAlreadyExists", "The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.", HttpStatus.SC_CONFLICT, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( BucketAlreadyExistsException ) ex ).getBucketName(), "BucketAlreadyExists", "The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.", HttpResponseStatus.CONFLICT, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof BucketNotEmptyException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( BucketNotEmptyException ) ex ).getBucketName(), "BucketNotEmpty", "The bucket you tried to delete is not empty.", HttpStatus.SC_CONFLICT, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( BucketNotEmptyException ) ex ).getBucketName(), "BucketNotEmpty", "The bucket you tried to delete is not empty.", HttpResponseStatus.CONFLICT, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof PreconditionFailedException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( PreconditionFailedException ) ex ).getPrecondition(), "PreconditionFailed", "At least one of the pre-conditions you specified did not hold.", HttpStatus.SC_PRECONDITION_FAILED, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( PreconditionFailedException ) ex ).getPrecondition(), "PreconditionFailed", "At least one of the pre-conditions you specified did not hold.", HttpResponseStatus.PRECONDITION_FAILED, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof NotModifiedException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( NotModifiedException ) ex ).getPrecondition(), "NotModified", "Object Not Modified", HttpStatus.SC_NOT_MODIFIED, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( NotModifiedException ) ex ).getPrecondition(), "NotModified", "Object Not Modified", HttpResponseStatus.NOT_MODIFIED, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof TooManyBucketsException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( TooManyBucketsException ) ex ).getBucketName(), "TooManyBuckets", "You have attempted to create more buckets than allowed.", HttpStatus.SC_BAD_REQUEST, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( TooManyBucketsException ) ex ).getBucketName(), "TooManyBuckets", "You have attempted to create more buckets than allowed.", HttpResponseStatus.BAD_REQUEST, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof EntityTooLargeException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( EntityTooLargeException ) ex ).getEntityName(), "EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", HttpStatus.SC_BAD_REQUEST, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( EntityTooLargeException ) ex ).getEntityName(), "EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", HttpResponseStatus.BAD_REQUEST, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof NoSuchEntityException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( NoSuchEntityException ) ex ).getBucketName(), "NoSuchEntity", "The specified entity was not found", HttpStatus.SC_NOT_FOUND, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( NoSuchEntityException ) ex ).getBucketName(), "NoSuchEntity", "The specified entity was not found", HttpResponseStatus.NOT_FOUND, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof DecryptionFailedException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( DecryptionFailedException ) ex ).getValue(), "Decryption Failed", "Fail", SC_DECRYPTION_FAILED, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( DecryptionFailedException ) ex ).getValue(), "Decryption Failed", "Fail", HttpResponseStatus.EXPECTATION_FAILED, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof ImageAlreadyExistsException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( ImageAlreadyExistsException ) ex ).getValue(), "Image Already Exists", "Fail", HttpStatus.SC_CONFLICT, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( ImageAlreadyExistsException ) ex ).getValue(), "Image Already Exists", "Fail", HttpResponseStatus.CONFLICT, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				}
 				else if ( ex instanceof NotImplementedException )
 				{
-					errMsg = new WalrusBucketErrorMessageType( ( ( NotImplementedException ) ex ).getValue(), "Not Implemented", "NA", HttpStatus.SC_NOT_IMPLEMENTED, msg.getCorrelationId(), ipAddress);
+					errMsg = new WalrusBucketErrorMessageType( ( ( NotImplementedException ) ex ).getValue(), "Not Implemented", "NA", HttpResponseStatus.NOT_IMPLEMENTED, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				} else {
 					errMsg = errorMessage;
+				}
+				if(errMsg instanceof WalrusBucketErrorMessageType) {
+					WalrusBucketErrorMessageType walrusErrorMsg = (WalrusBucketErrorMessageType) errMsg;
+					httpResponse.setStatus(walrusErrorMsg.getStatus());
 				}
 				httpResponse.setMessage(errMsg);
 
