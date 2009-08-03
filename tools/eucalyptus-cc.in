@@ -18,9 +18,6 @@
 
 # Do NOT "set -e"
 
-# if we are on rocks we need the rocks binaries 
-[ -e /etc/profile.d/rocks-binaries.sh ] && . /etc/profile.d/rocks-binaries.sh
-
 # if we have lsb functions let's source them
 WE_HAVE_LSB="N"
 if [ -e /lib/lsb/init-functions ]; then
@@ -32,7 +29,7 @@ if [ -e /lib/lsb/init-functions ]; then
 fi
 
 if [ "$EUID" != "0" ]; then
-	echo "Eucalyptus must be run as root."
+	echo "Eucalyptus init scripts must be run as root."
 	exit 1
 fi
 
@@ -61,16 +58,7 @@ if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
 fi
 
 create_httpd_config() {
-	if [ -x "/opt/rocks/bin/rocks" ]; then
-		# we are in the frontend: let's get frontend IP
-		MYNAME=`hostname -s`
-		IPS="127.0.0.1"
-		for x in "`/opt/rocks/bin/rocks list host interface $MYNAME|sed '1d'|tr -s ' '|cut -f 4 -d ' '|tr -s '\n' ' '`"; do 
-			IPS="$IPS $x"
-		done
-	else
-		IPS="all"
-	fi
+	IPS="all"
 	
 	# let's configure the common parts for both CC and NC
 	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" |sed "s|EUCA_USER|$EUCA_USER|" >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
@@ -185,10 +173,6 @@ else
 fi
 if [ "$EUCALYPTUS" = "not_configured" ]; then
 	echo "EUCALYPTUS not configured!" 
-	exit 1
-fi
-if [ -n "$TEMPLATE_PATH" ]; then
-	echo "TEMPLATE_PATH is defined: do you have an old configuration?"
 	exit 1
 fi
 

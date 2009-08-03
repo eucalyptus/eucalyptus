@@ -1,19 +1,20 @@
 #!/bin/bash
 #
-# Init script for the Eucalyptus cloud manager services.
+# Init script for the Eucalyptus storage controller services.
 #
 # chkconfig: 2345 99 05
-# description: script for starting and stopping eucalyptus cloud services
+# description: script for starting and stopping eucalyptus storage
+# controller services
 #
 ### BEGIN INIT INFO
-# Provides:                   eucalyptus-cloud
+# Provides:                   eucalyptus-sc
 # Required-Start:             $remote_fs $syslog 
-# Should-Start:               sendmail
+# Should-Start:               eucalyptus-walrus
 # Required-Stop:              $remote_fs $syslog 
 # Default-Start:              2 3 4 5
 # Default-Stop:	              0 1 6
-# Short-Description:          Start Eucalyptus cloud controller
-# Description:                Start the Eucalyptus cloud controller
+# Short-Description:          Start Eucalyptus storage controller
+# Description:                Start the Eucalyptus storage controller
 # X-UnitedLinux-Default-Enabled: yes
 ### END INIT INFO
 #
@@ -22,9 +23,9 @@
 
 # we need to source the current path in case of manual intallation
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
-DESC="Eucalyptus cloud controller"
-NAME=eucalyptus-cloud
-JAR_NAME="/usr/share/eucalyptus/eucalyptus-interface.jar"
+DESC="Eucalyptus storage controller"
+NAME=eucalyptus-storage
+JAR_NAME="/usr/share/eucalyptus/eucalyptus-storagecontroller.jar"
 JAR_ALL_NAMES="/usr/share/eucalyptus/eucalyptus-interface.jar /usr/share/eucalyptus/eucalyptus-storagecontroller.jar /usr/share/eucalyptus/eucalyptus-storagemgr.jar"
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
@@ -101,7 +102,7 @@ do_start() {
 
 	# basic checks
 	check_java
-	if ! $EUCALYPTUS/usr/sbin/euca_conf -check cloud ; then
+	if ! $EUCALYPTUS/usr/sbin/euca_conf -check sc ; then
 		exit 1
 	fi
 	
@@ -173,6 +174,14 @@ if [ -z "$EUCA_USER" ] ; then
 	EUCA_USER="root"
 fi
 
+# let's see how many loop devices we have available
+LOOP_AVL="`/bin/ls /dev/loop* 2> /dev/null|wc -l`"
+if [ -z "$LOOP_AVL" -o "$LOOP_AVL" = "0" ]; then
+	echo "Couldn't find loop devices (/dev/loop*): expect problems"
+elif [ $LOOP_AVL -lt 32 ]; then
+	echo "You should have at least 32 loop devices"
+fi
+
 # set the library path correctly
 export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
 
@@ -189,7 +198,7 @@ case "$1" in
 	# let's check there is no previous cloud running
 	if do_status ; then
 		echo
-		echo "another CLC is already running!"
+		echo "another storage controller is already running!"
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 1

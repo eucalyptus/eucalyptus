@@ -28,9 +28,6 @@ UPGRADE_CONF=""
 SETUP=""
 VERSION=""
 CHECK=""
-LIST_SERVICES=""
-ENABLE_SERVICE=""
-DISABLE_SERVICE=""
 TO_BACKUP="Y"
 SCP="`which scp 2> /dev/null`"
 RSYNC="`which rsync 2> /dev/null`"
@@ -53,9 +50,6 @@ usage () {
 	echo "   --deregister-sc <host>           remove storage controller to EUCALYPTUS"
 	echo "   --register-clc <host>            point local walrus to CLC location"
 	echo "   --sync                           used only with --register-* to sync keys"
-	echo "   --list-services                  list installed eucalyptus services"
-	echo "   --enable-service <service>       enable eucalyptus service"
-	echo "   --disable-service <service>      disable eucalyptus service"
 	echo "   --cc-port <port>                 set CC port"
 	echo "   --nc-port <port>                 set NC port"
 	echo "   --instances <path>               set the INSTANCE path"
@@ -66,7 +60,7 @@ usage () {
 	echo "   --dhcp_user <user>               set the username to run dhcpd as"
 	echo "   --name <var>                     returns the value or <name>"
 	echo "   --setup                          perform initial setup"
-	echo "   --check [nc|cc|cloud]            pre-flight checks"
+	echo "   --check [nc|cc|cloud|sc|walrus]  pre-flight checks"
 	echo "   --version                        eucalyptus version"
 	echo
 }
@@ -196,11 +190,6 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
-	if [ "$1" = "--list-services" ]; then 
-	    LIST_SERVICES="Y"
-	    shift
-	    continue
-	fi
 	if [ "$1" = "-version" -o "$1" = "--version" ]; then 
 	    VERSION="Y"
 	    shift
@@ -252,16 +241,6 @@ while [ $# -gt 0 ]; do
 	fi		
 	if [ "$1" = "-bridge" ]; then
 		BRIDGE="$2"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "--disable-service" ]; then
-		DISABLE_SERVICE="$2"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "--enable-service" ]; then
-		ENABLE_SERVICE="$2"
 		shift; shift
 		continue
 	fi		
@@ -531,66 +510,6 @@ fi
 # we need defaults in eucalyptus.conf
 . $FILE
 
-# list available services
-if [ -n "$LIST_SERVICES" -o -n "$ENABLE_SERVICE" -o -n "$DISABLE_SERVICE" ]; then
-	if [ -e $EUCALYPTUS/etc/init.d/eucalyptus-cc ]; then
-		CONFIG_OPTS="`$EUCALYPTUS/etc/init.d/eucalyptus-cc config 2> /dev/null`"
-	elif [ -e $EUCALYPTUS/etc/init.d/eucalyptus-nc ]; then
-		CONFIG_OPTS="`$EUCALYPTUS/etc/init.d/eucalyptus-nc config 2> /dev/null`"
-	fi
-	if [ -n "$CONFIG_OPTS" ]; then
-		eval $CONFIG_OPTS
-	fi
-
-	if [ -n "$LIST_SERVICES" ]; then
-		for x in ` ls $AXIS2C_HOME/services 2> /dev/null` ; do
-			if [ -d $AXIS2C_HOME/services/${x} ]; then
-				echo "${x} *"
-			fi
-		done
-		for x in `ls $AXIS2C_HOME/disabled 2> /dev/null` ; do
-			if [ -d $AXIS2C_HOME/disabled/${x} ]; then
-				echo "${x}"
-			fi
-		done
-	elif [ -n "$ENABLE_SERVICE" ]; then
-		DONE="N"
-		for x in `ls $AXIS2C_HOME/disabled 2> /dev/null` ; do
-			if [ "${x}" = "$ENABLE_SERVICE" ]; then
-				mv $AXIS2C_HOME/disabled/$x $AXIS2C_HOME/services 
-				DONE="Y"
-			fi
-		done
-		for x in `ls $AXIS2C_HOME/services 2> /dev/null` ; do
-			if [ "${x}" = "$ENABLE_SERVICE" ]; then
-				if [ "$DONE" = "N" ]; then
-					echo "$x already enabled"
-					break
-				fi
-			fi
-		done
-	elif [ -n "$DISABLE_SERVICE" ]; then
-		DONE="N"
-		for x in `ls $AXIS2C_HOME/services 2> /dev/null` ; do
-			if [ "${x}" = "$DISABLE_SERVICE" ]; then
-				if [ ! -d $AXIS2C_HOME/disabled ]; then
-					mkdir -p $AXIS2C_HOME/disabled
-				fi
-				mv $AXIS2C_HOME/services/$x $AXIS2C_HOME/disabled 
-				DONE="Y"
-			fi
-		done
-		for x in `ls $AXIS2C_HOME/disabled 2> /dev/null` ; do
-			if [ "${x}" = "$DISABLE_SERVICE" ]; then
-				if [ "$DONE" = "N" ]; then
-					echo "$x already disabled"
-					break
-				fi
-			fi
-		done
-	fi
-fi
-
 # first time setup
 if [ -n "$SETUP" ]; then
 	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
@@ -652,7 +571,7 @@ if [ -n "$CHECK" ]; then
 
 	# vblade and aoe may be needed
 	if [ "$DISABLE_EBS" != "Y" -a "$DISABLE_EBS" != "y" ]; then
-		if [ "$CHECK" = "cloud" ]; then
+		if [ "$CHECK" = "sc" ]; then
 			VBLADE="`which vblade 2> /dev/null`"
 			if [ -z "$VBLADE" ]; then
 				echo

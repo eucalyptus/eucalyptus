@@ -212,7 +212,9 @@ AC_CONFIG_FILES([Makedefs
 		tools/eucalyptus-cc:tools/eucalyptus-cc.in
 		tools/eucalyptus-nc:tools/eucalyptus-nc.in
 		tools/euca_conf:tools/euca_conf.in
-		tools/eucalyptus-cloud:tools/eucalyptus-cloud.in])
+		tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
+		tools/eucalyptus-walrus:tools/eucalyptus-walrus.in
+		tools/eucalyptus-sc:tools/eucalyptus-sc.in])
 
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
 
