@@ -13,6 +13,7 @@ import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.stages.HmacV2UserAuthenticationStage;
 import com.eucalyptus.ws.stages.QueryBindingStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
+import com.eucalyptus.ws.stages.WalrusOutboundStage;
 import com.eucalyptus.ws.stages.WalrusRESTBindingStage;
 import com.eucalyptus.ws.stages.WalrusUserAuthenticationStage;
 import com.eucalyptus.ws.util.WalrusProperties;
@@ -25,7 +26,7 @@ public class WalrusRESTPipeline extends FilteredPipeline {
 	protected void addStages( List<UnrollableStage> stages ) {
 		stages.add( new WalrusUserAuthenticationStage( ) );
 		stages.add( new WalrusRESTBindingStage( ) );
-		
+		stages.add( new WalrusOutboundStage());
 	}
 
 	@Override

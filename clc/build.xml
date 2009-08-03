@@ -98,6 +98,7 @@
     </target>
     <target name="clean-core" depends="clean-msgs">
         <ant dir="modules/core" inheritall="false" target="clean"/>
+        <ant dir="modules/wsstack" inheritall="false" target="clean"/>
     </target>
     <target name="clean-www" depends="clean-eucalyptus-ws">
         <ant dir="modules/www" inheritall="false" target="clean"/>

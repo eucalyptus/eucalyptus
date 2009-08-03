@@ -6,6 +6,7 @@ import com.eucalyptus.ws.handlers.HmacV2Handler;
 import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler;
+import com.eucalyptus.ws.handlers.WalrusOutboundHandler;
 
 public class WalrusOutboundStage implements UnrollableStage {
 

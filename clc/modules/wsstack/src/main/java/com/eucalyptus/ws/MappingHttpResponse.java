@@ -5,7 +5,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 public class MappingHttpResponse extends MappingHttpMessage implements HttpResponse {
-  private final HttpResponseStatus status;
+  private HttpResponseStatus status;
   
   public MappingHttpResponse( HttpVersion version ) {
     super( version );

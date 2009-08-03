@@ -52,6 +52,7 @@ import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.GetObjectType;
@@ -84,7 +85,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private LinkedBlockingQueue<WalrusDataMessage> putQueue;
 	private GetObjectType getObjectType;
 	public static Channel channel;
-	
+
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
@@ -108,48 +109,20 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
 			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
 			EucalyptusMessage msg = (EucalyptusMessage) httpResponse.getMessage( );
-			if(false) { //msg instanceof GetObjectResponseType) {
-				GetObjectResponseType getObjectResponse = (GetObjectResponseType) msg;
-				Long size = getObjectResponse.getSize();
-				String etag = getObjectResponse.getEtag();
-				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size) );
-				httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "binary/octet-stream" );
-				Channel channel = ctx.getChannel();                
-				channel.write(httpResponse);
-				WalrusDataMessenger messenger = getReadMessenger();
-				LinkedBlockingQueue<WalrusDataMessage> getQueue = messenger.getQueue(getObjectType.getKey(), getObjectType.getRandomKey());
-
-				WalrusDataMessage dataMessage;
-				try {
-					while ((dataMessage = getQueue.take())!=null) {
-						if(WalrusDataMessage.isStart(dataMessage)) {
-							//TODO: should read size and verify
-						} else if(WalrusDataMessage.isData(dataMessage)) {
-                            byte[] data = dataMessage.getPayload();
-                            LOG.warn("writing data message");
-                            channel.write(data);
-						} else {
-							return;
-						}
-					}
-				} catch (InterruptedException ex) {
-					LOG.error(ex, ex);
-				}
+			Binding binding;
+			if(!(msg instanceof EucalyptusErrorMessageType)) {
+				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
 			} else {
-				Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
-				if(httpResponse.getMessage() != null) {
-					if(!(httpResponse.getMessage() instanceof GetObjectResponseType)) {
-				OMElement omMsg = binding.toOM( httpResponse.getMessage( ) );
-				ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-				omMsg.serialize( byteOut );
-				byte[] req = byteOut.toByteArray();
-				ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
-				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes() ) );
-				httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
-				httpResponse.setContent( buffer );
-					}
-				}
+				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.ucsb.edu" ) );
 			}
+			OMElement omMsg = binding.toOM( httpResponse.getMessage( ) );
+			ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+			omMsg.serialize( byteOut );
+			byte[] req = byteOut.toByteArray();
+			ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
+			httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes() ) );
+			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
+			httpResponse.setContent( buffer );
 		}
 	}
 
@@ -1118,12 +1091,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	}
 
-    public static synchronized WalrusDataMessenger getReadMessenger() {
-        if (getMessenger == null) {
-            getMessenger = new WalrusDataMessenger();
-        }
-        return getMessenger;
-    }
+	public static synchronized WalrusDataMessenger getReadMessenger() {
+		if (getMessenger == null) {
+			getMessenger = new WalrusDataMessenger();
+		}
+		return getMessenger;
+	}
 
 
 	public static synchronized WalrusDataMessenger getWriteMessenger() {

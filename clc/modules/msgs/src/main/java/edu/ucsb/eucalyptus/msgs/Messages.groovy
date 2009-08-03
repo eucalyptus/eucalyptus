@@ -130,7 +130,8 @@ public class EucalyptusErrorMessageType extends EucalyptusMessage {
   String source;
   String message;
   String requestType = "not available";
-
+  Throwable exception;
+  
   public EucalyptusErrorMessageType() {}
 
   public EucalyptusErrorMessageType(String source, String message)
