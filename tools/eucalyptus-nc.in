@@ -189,10 +189,6 @@ if [ "$EUCALYPTUS" = "not_configured" ]; then
 	echo "EUCALYPTUS not configured!" 
 	exit 1
 fi
-if [ -n "$TEMPLATE_PATH" ]; then
-	echo "TEMPLATE_PATH is defined: do you have an old configuration?"
-	exit 1
-fi
 
 # let's see how many loop devices we have available
 LOOP_AVL="`/bin/ls /dev/loop* 2> /dev/null|wc -l`"
