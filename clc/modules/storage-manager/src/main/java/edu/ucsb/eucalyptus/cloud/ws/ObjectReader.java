@@ -98,6 +98,7 @@ public class ObjectReader extends Thread {
             }
 
             try {
+            	LOG.warn("putting data");
                 getQueue.put(WalrusDataMessage.StartOfData(bytesRemaining));
 
                 while (bytesRemaining > 0) {

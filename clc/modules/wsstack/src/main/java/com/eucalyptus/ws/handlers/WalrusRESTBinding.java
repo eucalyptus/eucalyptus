@@ -83,18 +83,20 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	public static final int DATA_MESSAGE_SIZE = 102400;
 	private LinkedBlockingQueue<WalrusDataMessage> putQueue;
 	private GetObjectType getObjectType;
-
+	public static Channel channel;
+	
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		LOG.warn("Incoming message");
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
 			namespace = "http://s3.amazonaws.com/doc/" + WalrusProperties.NAMESPACE_VERSION;
 			// TODO: get real user data here too
 			EucalyptusMessage msg = (EucalyptusMessage) this.bind( "admin", true, httpRequest );
 			httpRequest.setMessage( msg );
-			if(msg instanceof GetObjectType)
+			if(msg instanceof GetObjectType) {
 				getObjectType = (GetObjectType) msg;
+				channel = ctx.getChannel();
+			}
 		} else if(event.getMessage() instanceof HttpChunk) {
 			HttpChunk httpChunk = (HttpChunk) event.getMessage();
 			handleHttpChunk(httpChunk);
@@ -106,13 +108,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
 			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
 			EucalyptusMessage msg = (EucalyptusMessage) httpResponse.getMessage( );
-			if(msg instanceof GetObjectResponseType) {
+			if(false) { //msg instanceof GetObjectResponseType) {
 				GetObjectResponseType getObjectResponse = (GetObjectResponseType) msg;
 				Long size = getObjectResponse.getSize();
 				String etag = getObjectResponse.getEtag();
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size) );
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "binary/octet-stream" );
-				Channel channel = event.getChannel();
+				Channel channel = ctx.getChannel();                
 				channel.write(httpResponse);
 				WalrusDataMessenger messenger = getReadMessenger();
 				LinkedBlockingQueue<WalrusDataMessage> getQueue = messenger.getQueue(getObjectType.getKey(), getObjectType.getRandomKey());
@@ -124,9 +126,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 							//TODO: should read size and verify
 						} else if(WalrusDataMessage.isData(dataMessage)) {
                             byte[] data = dataMessage.getPayload();
+                            LOG.warn("writing data message");
                             channel.write(data);
 						} else {
-							
+							return;
 						}
 					}
 				} catch (InterruptedException ex) {
@@ -134,6 +137,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				}
 			} else {
 				Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
+				if(httpResponse.getMessage() != null) {
+					if(!(httpResponse.getMessage() instanceof GetObjectResponseType)) {
 				OMElement omMsg = binding.toOM( httpResponse.getMessage( ) );
 				ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 				omMsg.serialize( byteOut );
@@ -142,6 +147,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes() ) );
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
 				httpResponse.setContent( buffer );
+					}
+				}
 			}
 		}
 	}
@@ -1082,8 +1089,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	private void handleHttpChunk(HttpChunk httpChunk) throws Exception {
 		ChannelBuffer buffer = httpChunk.getContent();
-		byte[] bytes = new byte[DATA_MESSAGE_SIZE];
-
 		try {
 			buffer.markReaderIndex( );
 			byte[] read = new byte[buffer.readableBytes( )];

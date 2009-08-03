@@ -22,5 +22,7 @@ public class MappingHttpResponse extends MappingHttpMessage implements HttpRespo
     return status;
   }
 
-
+  public void setStatus(final HttpResponseStatus status) {
+	  this.status = status;
+  }
 }

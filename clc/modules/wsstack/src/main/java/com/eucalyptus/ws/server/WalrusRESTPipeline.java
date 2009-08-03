@@ -25,6 +25,7 @@ public class WalrusRESTPipeline extends FilteredPipeline {
 	protected void addStages( List<UnrollableStage> stages ) {
 		stages.add( new WalrusUserAuthenticationStage( ) );
 		stages.add( new WalrusRESTBindingStage( ) );
+		
 	}
 
 	@Override

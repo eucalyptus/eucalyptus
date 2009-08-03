@@ -7,16 +7,16 @@ import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler;
 
-public class WalrusUserAuthenticationStage implements UnrollableStage {
+public class WalrusOutboundStage implements UnrollableStage {
 
   @Override
   public String getStageName( ) {
-    return "walrus-user-authentication";
+    return "walrus-outbound";
   }
 
   @Override
   public void unrollStage( ChannelPipeline pipeline ) {
-    pipeline.addLast( "walrus-verify", new WalrusAuthenticationHandler( ) );
+    pipeline.addLast( "walrus-outbound", new WalrusOutboundHandler( ) );
   }
 
 }

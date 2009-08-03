@@ -23,6 +23,8 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
+import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
+
 
 @ChannelPipelineCoverage("one")
 public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler{
@@ -91,7 +93,8 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 			}
 			MappingHttpResponse response = new MappingHttpResponse( message.getProtocolVersion( ) ); 
 			response.setMessage( reply );
-			Channels.write( ctx.getChannel( ), response );			
+			if(!(reply instanceof GetObjectResponseType))
+			 Channels.write( ctx.getChannel( ), response );			
 		}
 	}
 }

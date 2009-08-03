@@ -43,8 +43,13 @@ import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileIO;
 import edu.ucsb.eucalyptus.util.*;
+import com.eucalyptus.ws.MappingHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.channel.Channel;
+
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +61,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import com.eucalyptus.ws.handlers.WalrusRESTBinding;
+import java.io.RandomAccessFile;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.handler.stream.ChunkedFile;
 
 public class WalrusManager {
     private static Logger LOG = Logger.getLogger( WalrusManager.class );
@@ -1242,11 +1251,23 @@ public class WalrusManager {
                             request.setRandomKey(randomKey);
                             LinkedBlockingQueue<WalrusDataMessage> getQueue = WalrusRESTBinding.getReadMessenger().getQueue(key, randomKey);
 
-                            ObjectReader reader = new ObjectReader(bucketName, objectName, objectInfo.getSize(), getQueue, deleteAfterGet, null, storageManager);
-                            reader.start();
+                            //ObjectReader reader = new ObjectReader(bucketName, objectName, objectInfo.getSize(), getQueue, deleteAfterGet, null, storageManager);
+                            //reader.start();
                         }
                     }
-                    reply.setEtag(objectInfo.getEtag());
+                    try {
+                    RandomAccessFile raf = new RandomAccessFile(new File("/disk1/eucalyptus/build/main/var/lib/eucalyptus/bukkits/" + bucketName + "/" + objectName), "r");
+                    
+					MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
+					httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(objectInfo.getSize()) );
+					httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "binary/octet-stream" );
+					WalrusRESTBinding.channel.write(httpResponse);
+					ChannelFuture writeFuture = WalrusRESTBinding.channel.write(new ChunkedFile(raf, 0, objectInfo.getSize(), 8192));
+					writeFuture.addListener(ChannelFutureListener.CLOSE);
+                    } catch(Exception ex) {
+                    	LOG.error(ex, ex);
+                    }
+					reply.setEtag(objectInfo.getEtag());
                     reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"));
                     reply.setSize(objectInfo.getSize());
                     reply.setContentType(objectInfo.getContentType());
