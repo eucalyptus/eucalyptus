@@ -23,7 +23,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
-import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 
 @ChannelPipelineCoverage("one")
@@ -47,7 +47,7 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 				LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() ) );
 				long startTime = System.currentTimeMillis();
 				if(msg instanceof WalrusDataRequestType) {
-					Dispatcher dispatch = new Dispatcher(ctx, msg, message);
+					Dispatcher dispatch = new Dispatcher(ctx, msg, message, startTime);
 					dispatch.start();
 				} else {
 					Registry registry = MuleServer.getMuleContext( ).getRegistry( );
@@ -73,11 +73,13 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 		private ChannelHandlerContext ctx;
 		private EucalyptusMessage msg;
 		private MappingHttpMessage message;
-
-		public Dispatcher(ChannelHandlerContext ctx, EucalyptusMessage msg, MappingHttpMessage message) {
+		private long startTime;
+		
+		public Dispatcher(ChannelHandlerContext ctx, EucalyptusMessage msg, MappingHttpMessage message, long startTime) {
 			this.ctx = ctx;
 			this.msg = msg;
 			this.message = message;
+			this.startTime = startTime;
 		}
 
 		public void run() {
@@ -87,13 +89,13 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 			LOG.warn("Message dispatched");
 			EucalyptusMessage reply = ReplyQueue.getReply( msg.getCorrelationId() );
 			LOG.warn("Reply received");
-			//LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
+			LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
 			if ( reply == null ) {
 				reply = new EucalyptusErrorMessageType( this.getClass().getSimpleName(), msg, "Received a NULL reply" );
 			}
 			MappingHttpResponse response = new MappingHttpResponse( message.getProtocolVersion( ) ); 
 			response.setMessage( reply );
-			if(!(reply instanceof GetObjectResponseType))
+			if(!(reply instanceof WalrusDataGetResponseType))
 			 Channels.write( ctx.getChannel( ), response );			
 		}
 	}

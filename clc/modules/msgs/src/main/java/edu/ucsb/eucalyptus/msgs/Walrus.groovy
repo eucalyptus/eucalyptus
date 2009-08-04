@@ -1,5 +1,6 @@
 package edu.ucsb.eucalyptus.msgs
-import org.jboss.netty.handler.codec.http.HttpResponseStatus/*
+import org.jboss.netty.handler.codec.http.HttpResponseStatusimport org.jboss.netty.channel.Channel;
+/*
  * Software License Agreement (BSD License)
  *
  * Copyright (c) 2008, Regents of the University of California
@@ -294,6 +295,10 @@ public class WalrusDataResponseType extends WalrusResponseType {
 	String contentDisposition;  
 }
 
+public class WalrusDataGetResponseType extends WalrusDataResponseType {
+	
+}
+
 public class PutObjectResponseType extends WalrusDataResponseType {
 }
 
@@ -437,6 +442,7 @@ public class GetObjectType extends WalrusDataRequestType {
 	Boolean inlineData;
 	Boolean deleteAfterGet;
 	Boolean getTorrent;
+	Channel channel;
 	
 	def GetObjectType() {
 	}
@@ -447,9 +453,13 @@ public class GetObjectType extends WalrusDataRequestType {
 		this.getMetaData = getMetaData;
 		this.inlineData = inlineData;
 	}
+	
+	public Channel getChannel() { 
+		return channel;
+	}
 }
 
-public class GetObjectResponseType extends WalrusDataResponseType {
+public class GetObjectResponseType extends WalrusDataGetResponseType {
 	Status status;
 	String base64Data;
 }
@@ -503,7 +513,7 @@ public class UpdateWalrusConfigurationResponseType extends WalrusResponseType {
 public class GetDecryptedImageType extends WalrusDataRequestType {
 }
 
-public class GetDecryptedImageResponseType extends WalrusDataResponseType {
+public class GetDecryptedImageResponseType extends WalrusDataGetResponseType {
 }
 
 public class CheckImageType extends WalrusDataRequestType {

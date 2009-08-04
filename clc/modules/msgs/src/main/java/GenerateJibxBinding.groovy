@@ -57,7 +57,6 @@ def typedCollection = {
 binding("http://msgs.eucalyptus.ucsb.edu");
 classList.each({
                Class itsClass = Class.forName(it);
-
                if ( itsClass.getSuperclass().getSimpleName().equals("Object") )
                  baseMapping(itsClass.getSimpleName(), itsClass.getName());
                else if ( itsClass.getSuperclass().getSimpleName().equals("EucalyptusData") )
@@ -68,7 +67,8 @@ classList.each({
                def fieldList = itsClass.getDeclaredFields().findAll({Modifier.isPrivate(it.getModifiers())})
                fieldList.each({
                               Class itsType = it.getType();
-                              if ( itsType.getSuperclass().equals(edu.ucsb.eucalyptus.msgs.EucalyptusData) ) {
+                              if (itsType.getSimpleName().endsWith("Channel")) {}               
+                              else if ( itsType.getSuperclass().equals(edu.ucsb.eucalyptus.msgs.EucalyptusData) ) {
                                 typeBind(it.getName(), itsType.getName());
                                 } else if ( it.getType().equals(java.util.ArrayList.class) ) {
                                 if ( it.getGenericType() != null ) {
