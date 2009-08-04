@@ -6,6 +6,7 @@
 #include <server-marshal.h>
 #include <handlers.h>
 #include <misc.h>
+#include <vnetwork.h>
       
 #define DONOTHING 0
 #define EVENTLOG 0
@@ -164,16 +165,19 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   
   //input vars
   adb_describeNetworksType_t *snt=NULL;
-
+  
   // working vars
-  int rc, i;
+  int rc, i, j;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
   char **clusterControllers;
   int clusterControllersLen=0;
   ncMetadata ccMeta;
+  vnetConfig *outvnetConfig=NULL;
   
+  outvnetConfig = malloc(sizeof(vnetConfig));
+
   snt = adb_DescribeNetworks_get_DescribeNetworks(describeNetworks, env);
   ccMeta.correlationId = adb_describeNetworksType_get_correlationId(snt, env);
   ccMeta.userId = adb_describeNetworksType_get_userId(snt, env);
@@ -187,11 +191,41 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   snrt = adb_describeNetworksResponseType_create(env);
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doDescribeNetworks(&ccMeta, clusterControllers, clusterControllersLen);
+    rc = doDescribeNetworks(&ccMeta, clusterControllers, clusterControllersLen, outvnetConfig);
     if (rc) {
       logprintf("ERROR: doDescribeNetworks() returned fail %d\n", rc);
       status = AXIS2_FALSE;
       snprintf(statusMessage, 255, "ERROR");
+    } else {
+      
+      if (!strcmp(outvnetConfig->mode, "MANAGED") || !strcmp(outvnetConfig->mode, "MANAGED-NOVLAN")) {
+	adb_describeNetworksResponseType_set_mode(snrt, env, 1);
+      } else {
+	adb_describeNetworksResponseType_set_mode(snrt, env, 0);
+      }
+      adb_describeNetworksResponseType_set_addrsPerNet(snrt, env, outvnetConfig->numaddrs);
+      
+      for (i=2; i<NUMBER_OF_VLANS; i++) {
+	if (outvnetConfig->networks[i].active) {
+	  adb_networkType_t *nt=NULL;
+	  nt = adb_networkType_create(env);
+	  adb_networkType_set_vlan(nt, env, i);
+	  adb_networkType_set_netName(nt, env, outvnetConfig->users[i].netName);
+	  adb_networkType_set_userName(nt, env, outvnetConfig->users[i].userName);
+	  logprintfl(EUCADEBUG, "ACTIVE VLAN: %d\n", i);
+	  logprintfl(EUCADEBUG, "NETNAME: %s USERNAME: %s\n", outvnetConfig->users[i].netName, outvnetConfig->users[i].userName);
+	  for (j=0; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
+	    if (outvnetConfig->networks[i].addrs[j].active) {
+	      adb_networkType_add_activeAddrs(nt, env, j);
+	      logprintfl(EUCADEBUG, "\tACTIVE ADDR: %s\n", hex2dot(outvnetConfig->networks[i].addrs[j].ip));
+	    }
+	  }
+	  adb_describeNetworksResponseType_add_activeNetworks(snrt, env, nt);
+	}
+      }
+      
+      status = AXIS2_TRUE;
+      //      snprintf(statusMessage, 255, "SUCCESS");
     }
   }
   if (clusterControllers) free(clusterControllers);
@@ -207,8 +241,10 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   ret = adb_DescribeNetworksResponse_create(env);
   adb_DescribeNetworksResponse_set_DescribeNetworksResponse(ret, env, snrt);
   
+  if (outvnetConfig) free(outvnetConfig);
   return(ret);
 }
+
 adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t *describePublicAddresses, const axutil_env_t *env) {
   adb_describePublicAddressesType_t *dpa=NULL;
 

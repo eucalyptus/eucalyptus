@@ -320,10 +320,21 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element minOccurs="0" maxOccurs="1" name="mode" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="mode" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="addrsPerNet" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="activeNetworks" type="tns:networkType"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="networkType">
+	<xs:sequence>
+	  <xs:element minOccurs="1" maxOccurs="1" name="vlan" type="xs:int"/>
+	  <xs:element minOccurs="1" maxOccurs="1" name="netName" type="xs:string"/>
+	  <xs:element minOccurs="1" maxOccurs="1" name="userName" type="xs:string"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="activeAddrs" type="xs:int"/>
+	</xs:sequence>
       </xs:complexType>
 
       <xs:complexType name="describePublicAddressesType">

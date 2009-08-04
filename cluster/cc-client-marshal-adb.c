@@ -571,6 +571,24 @@ int cc_describeNetworks(char **ccs, int ccsLen, axutil_env_t *env, axis2_stub_t 
   }
   snrt = adb_DescribeNetworksResponse_get_DescribeNetworksResponse(output, env);
   printf("describenetworks returned status %d\n", adb_describeNetworksResponseType_get_return(snrt, env));
+
+  printf("mode: %d addrspernet: %d\n", adb_describeNetworksResponseType_get_mode(snrt, env), adb_describeNetworksResponseType_get_addrsPerNet(snrt, env));
+  {
+    int i, numnets, numaddrs, j;
+    numnets = adb_describeNetworksResponseType_sizeof_activeNetworks(snrt, env);
+    printf("found %d active nets\n", numnets);
+    for (i=0; i<numnets; i++) {
+      adb_networkType_t *nt;
+      nt = adb_describeNetworksResponseType_get_activeNetworks_at(snrt, env, i);
+      printf("\tvlan: %d netName: %s userName: %s\n", adb_networkType_get_vlan(nt, env), adb_networkType_get_netName(nt, env), adb_networkType_get_userName(nt, env));
+      numaddrs = adb_networkType_sizeof_activeAddrs(nt, env);
+      printf("\tnumber of active addrs: %d - ", numaddrs);
+      for (j=0; j<numaddrs; j++) {
+	printf("%d ", adb_networkType_get_activeAddrs_at(nt, env, j));
+      }
+      printf("\n");
+    }
+  }
   return(0);
 }
 

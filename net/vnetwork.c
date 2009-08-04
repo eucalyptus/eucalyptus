@@ -949,6 +949,9 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
     //    char *newip, *netmask;
 
     vnetconfig->networks[vlan].active = 1;
+    vnetconfig->networks[vlan].addrs[0].active = 1;
+    vnetconfig->networks[vlan].addrs[1].active = 1;
+    
     rc = vnetSetVlan(vnetconfig, vlan, userName, netName);
     rc = vnetCreateChain(vnetconfig, userName, netName);
     
@@ -1159,14 +1162,27 @@ int vnetSetupTunnels(vnetConfig *vnetconfig) {
 }
 
 int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
-  int i, done, rc;
-  char cmd[1024], tundev[32], *remoteIp=NULL;
+  int i, done, rc, dpid;
+  char cmd[1024], tundev[32], *remoteIp=NULL, pidfile[1024];
   
-  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -s -f %s/etc/eucalyptus/vtunall.conf", vnetconfig->eucahome, vnetconfig->eucahome);
-  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
-  rc = system(cmd);
-  rc = rc>>8;
-  logprintfl(EUCADEBUG, "done: %d\n", rc);
+  snprintf(pidfile, 1024, "%s/var/run/eucalyptus/vtund-server.pid", vnetconfig->eucahome);
+  rc = check_file(pidfile);
+  if (rc) {
+    // pidfile does not exist, start vtund server
+    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -s -n -f %s/etc/eucalyptus/vtunall.conf", vnetconfig->eucahome, vnetconfig->eucahome);
+    logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+    rc = daemonrun(cmd, &dpid);
+    logprintfl(EUCADEBUG, "done: %d\n", rc);
+    if (!rc && dpid >= 0) {
+      char pidstr[32];
+      snprintf(pidstr, 32, "%d", dpid);
+      // write pid
+      rc = write2file(pidfile, pidstr);
+      if (rc) {
+	logprintfl(EUCAERROR, "cannot write pid '%s' to file '%s'\n", pidstr, pidfile);
+      }
+    }
+  }
   
   done=0;
   for (i=0; i<NUMBER_OF_CCS && !done; i++) {
@@ -1179,19 +1195,28 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
 	snprintf(tundev, 32, "tap-%d-%d", vnetconfig->localIpId, i);
 	rc = check_device(tundev);
 	if (rc && (vnetconfig->ccsTunnelStart[i] == 0 || (time(NULL) - vnetconfig->ccsTunnelStart[i]) > 120)) {
-	  
-	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -f %s/etc/eucalyptus/vtunall.conf -p tun-%d-%d %s", vnetconfig->eucahome, vnetconfig->eucahome, vnetconfig->localIpId, i, remoteIp);
-	  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
-	  rc = system(cmd);
-	  rc = rc>>8;
-	  logprintfl(EUCADEBUG, "done: %d\n", rc);
-	  
-	  logprintfl(EUCADEBUG, "setting tunnel start time (%d): %d/%d\n", i, vnetconfig->ccsTunnelStart[i], time(NULL));
-	  vnetconfig->ccsTunnelStart[i] = time(NULL);
-	  
-	  if (remoteIp) free(remoteIp);
+	  snprintf(pidfile, 1024, "%s/var/run/eucalyptus/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->localIpId, i);
+	  rc = check_file(pidfile);
+	  if (rc) {
+	    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -n -f %s/etc/eucalyptus/vtunall.conf -p tun-%d-%d %s", vnetconfig->eucahome, vnetconfig->eucahome, vnetconfig->localIpId, i, remoteIp);
+	    logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	    rc = daemonrun(cmd, &dpid);
+	    logprintfl(EUCADEBUG, "done: %d\n", rc);
+	    if (!rc && dpid >= 0) {
+	      char pidstr[32];
+	      snprintf(pidstr, 32, "%d", dpid);
+	      // write pid
+	      rc = write2file(pidfile, pidstr);
+	      if (rc) {
+		logprintfl(EUCAERROR, "cannot write pid '%s' to file '%s'\n", pidstr, pidfile);
+	      }
+	    }
+	    logprintfl(EUCADEBUG, "setting tunnel start time (%d): %d/%d\n", i, vnetconfig->ccsTunnelStart[i], time(NULL));
+	    vnetconfig->ccsTunnelStart[i] = time(NULL);
+	  }
 	}
       }
+      if (remoteIp) free(remoteIp);
     }
   }
   return(0);
@@ -1617,12 +1642,12 @@ int ip2mac(vnetConfig *vnetconfig, char *ip, char **mac) {
   
   snprintf(ipspace, 25, "%s ", ip);
   while(fgets(rbuf, 256, FH) != NULL) {
-    logprintfl(EUCADEBUG, "'%s' '%s' '%s'\n", rbuf, ip, strstr(rbuf, ip));
+    //    logprintfl(EUCADEBUG, "'%s' '%s' '%s'\n", rbuf, ip, strstr(rbuf, ip));
     if (strstr(rbuf, ipspace)) {
       int count=0;
       tok = strtok(rbuf, " ");
       while(tok && count < 4) {
-	logprintfl(EUCADEBUG, "COUNT: %d TOK: %s\n", count, tok);
+	//	logprintfl(EUCADEBUG, "COUNT: %d TOK: %s\n", count, tok);
 	count++;
 	if (count < 4) {
 	  tok = strtok(NULL, " ");
@@ -1768,3 +1793,4 @@ int vnetLoadIPTables(vnetConfig *vnetconfig) {
   }
   return(WEXITSTATUS(rc));
 }
+

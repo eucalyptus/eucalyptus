@@ -140,7 +140,7 @@ do_stop() {
 	fi
 
 	# now kill the services
-	pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid"
+	pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid `ls -1 $EUCALYPTUS/var/run/eucalyptus/vtund*.pid 2>/dev/null`"
 	for pidfile in $pidfiles ; do 
 		if [ -s $pidfile ]; then
 			pid=`cat $pidfile 2> /dev/null`

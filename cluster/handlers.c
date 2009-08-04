@@ -437,8 +437,8 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   return(ret);
 }
 
-int doDescribeNetworks(ncMetadata *ccMeta, char **ccs, int ccsLen) {
-  int rc;
+int doDescribeNetworks(ncMetadata *ccMeta, char **ccs, int ccsLen, vnetConfig *outvnetConfig) {
+  int rc, i, j;
   
   rc = initialize();
   if (rc) {
@@ -448,9 +448,13 @@ int doDescribeNetworks(ncMetadata *ccMeta, char **ccs, int ccsLen) {
   sem_wait(vnetConfigLock);
   rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
   rc = vnetSetupTunnels(vnetconfig);
+  
+  memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
+
   sem_post(vnetConfigLock);
   
   logprintfl(EUCADEBUG, "DescribeNetworks(): done\n");
+  shawn();
   return(0);
 }
 
@@ -756,7 +760,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 
   ncInstance **ncOutInsts=NULL;
   ncStub *ncs;
-
+  
   op_start = time(NULL);
   op_timer = OP_TIMEOUT;
 
@@ -2073,6 +2077,7 @@ int init_config(void) {
       pubInterface = strdup(tmpstr);
       privInterface = strdup(tmpstr);
     }
+
     if (tmpstr) free(tmpstr);
     
     if (!strcmp(pubmode, "STATIC")) {

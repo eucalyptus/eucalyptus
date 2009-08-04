@@ -92,6 +92,7 @@ int param_check(char *func, ...);
 
 int hash_code (const char * s);
 char * get_string_stats (const char * s);
+int daemonrun(char *cmd, int *dpid);
 int run (const char * arg1, ...);
 int vrun (const char * fmt, ...);
 int cat (const char * file_name);
@@ -100,6 +101,7 @@ int touch (const char * path);
 int diff (const char * path1, const char * path2);
 long long dir_size (const char * path);
 char * file2str (const char * path); /* read file 'path' into a new string */
+int write2file(const char *path, char *str);
 long long str2longlong (const char * str, const char * begin, const char * end); /* extract integer from str bound by 'begin' and 'end' */
 pid_t timewait(pid_t pid, int *status, int timeout);
 

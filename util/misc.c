@@ -655,6 +655,49 @@ char * get_string_stats (const char * s)
 
 #define BUFSIZE 1024
 
+/* daemonize and run 'cmd', returning pid of the daemonized process */
+int daemonrun(char *cmd, int *dpid) {
+  int pid, sid, i;
+  char **argv=NULL;
+
+  *dpid = -1;
+  pid = fork();
+  if (pid < 0) {
+    return(1);
+  }
+
+  if (!pid) {
+    char *tok, *ptr;
+    int idx;
+
+    // become parent of session                                                 
+    sid = setsid();
+
+    // construct argv                                                           
+    idx=0;
+    argv = realloc(NULL, sizeof(char *));
+    tok = strtok_r(cmd, " ", &ptr);
+    while(tok) {
+      argv[idx] = strdup(tok);
+      idx++;
+      tok = strtok_r(NULL, " ", &ptr);
+      argv = realloc(argv, sizeof(char *) * (idx+1));
+    }
+    argv[idx] = NULL;
+
+    // close all fds                                                            
+    for (i=0; i<sysconf(_SC_OPEN_MAX); i++) {
+      close(i);
+    }
+
+    // run                                                                      
+    exit(execvp(*argv, argv));
+  }
+
+  *dpid = pid;
+  return(0);
+}
+
 /* given printf-style arguments, run the resulting string in the shell */
 int vrun (const char * fmt, ...)
 {
@@ -801,6 +844,19 @@ long long dir_size (const char * path)
 
     closedir (dir);
     return size;
+}
+
+int write2file(const char *path, char *str) {
+  FILE *FH=NULL;
+  
+  FH = fopen(path, "w");
+  if (FH) {
+    fprintf(FH, "%s", str);
+    fclose(FH);
+  } else {
+    return(1);
+  }
+  return(0);
 }
 
 /* read file 'path' into a new string */
