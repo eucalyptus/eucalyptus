@@ -11,7 +11,9 @@ import com.eucalyptus.ws.MappingHttpResponse;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
@@ -30,7 +32,7 @@ import edu.ucsb.eucalyptus.cloud.PreconditionFailedException;
 import edu.ucsb.eucalyptus.cloud.TooManyBucketsException;
 import edu.ucsb.eucalyptus.msgs.WalrusBucketErrorMessageType;
 
-
+@ChannelPipelineCoverage("one")
 public class WalrusOutboundHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusOutboundHandler.class );
 	private static String ipAddress;
@@ -67,7 +69,15 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
 			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
 			EucalyptusMessage msg = (EucalyptusMessage) httpResponse.getMessage( );
-			if(msg instanceof EucalyptusErrorMessageType) {
+			if(msg instanceof PutObjectResponseType) {
+				PutObjectResponseType putObjectResponse = (PutObjectResponseType) msg;
+				httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + putObjectResponse.getEtag() + '\"');
+				httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, putObjectResponse.getLastModified());
+			} else if (msg instanceof PostObjectResponseType) {
+				PostObjectResponseType postObjectResponse = (PostObjectResponseType) msg;
+				//TODO: POST outbound processing
+			} else if(msg instanceof EucalyptusErrorMessageType) {
+
 				EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) msg;
 				EucalyptusMessage errMsg;
 				Throwable ex = errorMessage.getException();

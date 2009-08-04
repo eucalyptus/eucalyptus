@@ -1159,11 +1159,12 @@ public class WalrusManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(objectInfo.canRead(userId)) {
 					String objectName = objectInfo.getObjectName();
+					MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
 					if(getMetaData) {
-						ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-						objectInfo.returnMetaData(metaData);
-						reply.setMetaData(metaData);
-						reply.setMetaData(metaData);
+						List<MetaDataInfo> metaDataInfos = objectInfo.getMetaData();
+						for(MetaDataInfo metaDataInfo : metaDataInfos) {
+							httpResponse.addHeader(WalrusProperties.AMZ_META_HEADER_PREFIX + metaDataInfo.getName(), metaDataInfo.getValue());
+						}
 					}
 					if(getTorrent) {
 						if(objectInfo.isGlobalRead()) {
@@ -1205,7 +1206,7 @@ public class WalrusManager {
 							File torrent = new File(torrentFilePath);
 							if(torrent.exists()) {
 								long torrentLength = torrent.length();
-								sendObject(request.getChannel(), bucketName, torrentFile, torrentLength, null, 
+								sendObject(request.getChannel(), httpResponse, bucketName, torrentFile, torrentLength, null, 
 										DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN), 
 										null, null, request.getIsCompressed());
 								//TODO: this should reflect params for the torrent?
@@ -1247,10 +1248,15 @@ public class WalrusManager {
 							}
 						} else {
 							//support for large objects
-							sendObject(request.getChannel(), bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
+							sendObject(request.getChannel(), httpResponse, bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
 									DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
 									objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
 						}
+					} else {
+						sendHeaders(request.getChannel(), httpResponse, objectInfo.getSize(), objectInfo.getEtag(), 
+								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
+								objectInfo.getContentType(), objectInfo.getContentDisposition());                            
+
 					}
 					reply.setEtag(objectInfo.getEtag());
 					reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"));
@@ -1277,26 +1283,39 @@ public class WalrusManager {
 		}
 	}
 
-	private void sendObject(Channel channel, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
+	private void sendHeaders(Channel channel, MappingHttpResponse httpResponse, Long size, String etag,
+			String lastModified, String contentType, String contentDisposition) {
+		httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
+		httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
+		if(etag != null)
+			httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
+		httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
+		if(contentDisposition != null)
+			httpResponse.addHeader("Content-Disposition", contentDisposition);
+		channel.write(httpResponse);
+	}
+
+	private void sendObject(Channel channel, MappingHttpResponse httpResponse, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
 		try {
 			RandomAccessFile raf = new RandomAccessFile(new File(storageManager.getObjectPath(bucketName, objectName)), "r");
-			MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
-			httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
 			if(etag != null)
 				httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
 			httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
 			if(contentDisposition != null)
 				httpResponse.addHeader("Content-Disposition", contentDisposition);
-			channel.write(httpResponse);
 			ChunkedInput file;
 			isCompressed = isCompressed == null ? false : isCompressed;
-			if(isCompressed)
+			if(isCompressed) {
 				file = new CompressedChunkedFile(raf, size);
-			else
+			} else {
 				file = new ChunkedFile(raf, 0, size, 8192);
-			ChannelFuture writeFuture = channel.write(file);
-			writeFuture.addListener(ChannelFutureListener.CLOSE);
+				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
+			}
+			channel.write(httpResponse);
+			channel.write(file);
+			/*ChannelFuture writeFuture = channel.write(file);
+			writeFuture.addListener(ChannelFutureListener.CLOSE);*/
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
 		}	
@@ -1338,6 +1357,7 @@ public class WalrusManager {
 				if(objectInfo.canRead(userId)) {
 					String etag = objectInfo.getEtag();
 					String objectName = objectInfo.getObjectName();
+					MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
 					if(ifMatch != null) {
 						if(!ifMatch.equals(etag) && !returnCompleteObjectOnFailure) {
 							db.rollback();
@@ -1365,14 +1385,19 @@ public class WalrusManager {
 						}
 					}
 					if(request.getGetMetaData()) {
-						ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-						objectInfo.returnMetaData(metaData);
-						reply.setMetaData(metaData);
+						List<MetaDataInfo> metaDataInfos = objectInfo.getMetaData();
+						for(MetaDataInfo metaDataInfo : metaDataInfos) {
+							httpResponse.addHeader(WalrusProperties.AMZ_META_HEADER_PREFIX + metaDataInfo.getName(), metaDataInfo.getValue());
+						}
 					}
 					if(request.getGetData()) {
-						sendObject(request.getChannel(), bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
+						sendObject(request.getChannel(), httpResponse, bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
 								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
 								objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
+					} else {
+						sendHeaders(request.getChannel(), httpResponse, objectInfo.getSize(), objectInfo.getEtag(), 
+								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
+								objectInfo.getContentType(), objectInfo.getContentDisposition());                            
 					}
 					reply.setEtag(objectInfo.getEtag());
 					reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");

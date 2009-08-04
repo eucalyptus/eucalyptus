@@ -20,6 +20,7 @@ import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.ws.AuthenticationException;
@@ -36,6 +37,7 @@ import com.eucalyptus.ws.util.WalrusProperties;
 
 import org.apache.commons.httpclient.util.DateUtil;
 
+@ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusAuthenticationHandler.class );
 	private final static long EXPIRATION_LIMIT = 900000;

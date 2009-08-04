@@ -482,8 +482,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						handleFirstChunk(httpRequest, contentLength);
 					}
 				} else if(verb.equals(WalrusProperties.HTTPVerb.GET.toString())) {
-					//TODO:handle streaming get
-					/*messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.TRUE);*/
 					if(!walrusInternalOperation) {
 
 						if(params.containsKey("torrent")) {
@@ -518,7 +516,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					}
 
 				} else if(verb.equals(WalrusProperties.HTTPVerb.HEAD.toString())) {
-					//messageContext.setProperty(WalrusProperties.STREAMING_HTTP_GET, Boolean.FALSE);
 					if(!walrusInternalOperation) {
 						operationParams.put("GetData", Boolean.FALSE);
 						operationParams.put("InlineData", Boolean.FALSE);

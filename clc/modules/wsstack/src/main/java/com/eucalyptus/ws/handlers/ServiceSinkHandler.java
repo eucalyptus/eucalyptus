@@ -32,7 +32,6 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 
 	@Override
 	public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-		LOG.warn("handle downstream");	
 		ctx.sendDownstream( e );
 	}
 
@@ -53,9 +52,7 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 					Messaging.dispatch( "vm://RequestQueue", msg );
 					EucalyptusMessage reply = null;
 
-					LOG.warn("Message dispatched");
 					reply = ReplyQueue.getReply( msg.getCorrelationId() );
-					LOG.warn("Reply received");
 					LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
 					if ( reply == null ) {
 						reply = new EucalyptusErrorMessageType( this.getClass().getSimpleName(), msg, "Received a NULL reply" );
@@ -85,9 +82,7 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 		public void run() {
 			Messaging.dispatch( "vm://RequestQueue", msg );
 
-			LOG.warn("Message dispatched");
 			EucalyptusMessage reply = ReplyQueue.getReply( msg.getCorrelationId() );
-			LOG.warn("Reply received");
 			LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
 			if ( reply == null ) {
 				reply = new EucalyptusErrorMessageType( this.getClass().getSimpleName(), msg, "Received a NULL reply" );

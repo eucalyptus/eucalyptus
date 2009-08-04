@@ -894,22 +894,22 @@ public class WalrusImageManager {
 		try {
 			RandomAccessFile raf = new RandomAccessFile(new File(storageManager.getObjectPath(bucketName, objectName)), "r");
 			MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
-			httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
 			if(etag != null)
 				httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
 			httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
 			if(contentDisposition != null)
 				httpResponse.addHeader("Content-Disposition", contentDisposition);
-			channel.write(httpResponse);
 			ChunkedInput file;
 			isCompressed = isCompressed == null ? false : isCompressed;
-			if(isCompressed)
+			if(isCompressed) {
 				file = new CompressedChunkedFile(raf, size);
-			else
+			} else {
 				file = new ChunkedFile(raf, 0, size, 8192);
-			ChannelFuture writeFuture = channel.write(file);
-			writeFuture.addListener(ChannelFutureListener.CLOSE);
+				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));	
+			}
+			channel.write(httpResponse);
+			channel.write(file);
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
 		}	
