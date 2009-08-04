@@ -22,7 +22,7 @@ import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
-import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
+import edu.ucsb.eucalyptus.msgs.PutObjectType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 
@@ -46,11 +46,10 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 				EucalyptusMessage msg = (EucalyptusMessage) message.getMessage( );
 				LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() ) );
 				long startTime = System.currentTimeMillis();
-				if(msg instanceof WalrusDataRequestType) {
+				if(msg instanceof PutObjectType) {
 					Dispatcher dispatch = new Dispatcher(ctx, msg, message, startTime);
 					dispatch.start();
 				} else {
-					Registry registry = MuleServer.getMuleContext( ).getRegistry( );
 					Messaging.dispatch( "vm://RequestQueue", msg );
 					EucalyptusMessage reply = null;
 
@@ -63,7 +62,8 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 					}
 					MappingHttpResponse response = new MappingHttpResponse( message.getProtocolVersion( ) ); 
 					response.setMessage( reply );
-					Channels.write( ctx.getChannel( ), response );
+					if(!(reply instanceof WalrusDataGetResponseType))
+						Channels.write( ctx.getChannel( ), response );
 				}
 			}
 		}
@@ -74,7 +74,7 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 		private EucalyptusMessage msg;
 		private MappingHttpMessage message;
 		private long startTime;
-		
+
 		public Dispatcher(ChannelHandlerContext ctx, EucalyptusMessage msg, MappingHttpMessage message, long startTime) {
 			this.ctx = ctx;
 			this.msg = msg;
@@ -83,7 +83,6 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 		}
 
 		public void run() {
-			Registry registry = MuleServer.getMuleContext( ).getRegistry( );
 			Messaging.dispatch( "vm://RequestQueue", msg );
 
 			LOG.warn("Message dispatched");
@@ -95,8 +94,7 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 			}
 			MappingHttpResponse response = new MappingHttpResponse( message.getProtocolVersion( ) ); 
 			response.setMessage( reply );
-			if(!(reply instanceof WalrusDataGetResponseType))
-			 Channels.write( ctx.getChannel( ), response );			
+			Channels.write( ctx.getChannel( ), response );			
 		}
 	}
 }

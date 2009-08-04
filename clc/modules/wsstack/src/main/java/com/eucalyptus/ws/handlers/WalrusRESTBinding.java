@@ -55,6 +55,7 @@ import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
+import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import groovy.lang.GroovyObject;
@@ -69,7 +70,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static WalrusDataMessenger getMessenger;
 	public static final int DATA_MESSAGE_SIZE = 102400;
 	private LinkedBlockingQueue<WalrusDataMessage> putQueue;
-	public static Channel channel;
 
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
@@ -79,8 +79,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			// TODO: get real user data here too
 			EucalyptusMessage msg = (EucalyptusMessage) this.bind( "admin", true, httpRequest );
 			httpRequest.setMessage( msg );
-			if(msg instanceof GetObjectType) {
-				GetObjectType getObject = (GetObjectType) msg;
+			if(msg instanceof WalrusDataGetRequestType) {
+				WalrusDataGetRequestType getObject = (WalrusDataGetRequestType) msg;
 				getObject.setChannel(ctx.getChannel());
 			}
 		} else if(event.getMessage() instanceof HttpChunk) {

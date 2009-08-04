@@ -65,6 +65,7 @@ import java.io.RandomAccessFile;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.handler.stream.ChunkedFile;
+import org.jboss.netty.handler.stream.ChunkedInput;
 
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger( WalrusManager.class );
@@ -1204,7 +1205,9 @@ public class WalrusManager {
 							File torrent = new File(torrentFilePath);
 							if(torrent.exists()) {
 								long torrentLength = torrent.length();
-								sendObject(request.getChannel(), bucketName, torrentFile, torrentLength, "", DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN), null, null);
+								sendObject(request.getChannel(), bucketName, torrentFile, torrentLength, null, 
+										DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN), 
+										null, null, request.getIsCompressed());
 								//TODO: this should reflect params for the torrent?
 								reply.setEtag("");
 								reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
@@ -1244,7 +1247,9 @@ public class WalrusManager {
 							}
 						} else {
 							//support for large objects
-							sendObject(request.getChannel(), bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), objectInfo.getContentType(), objectInfo.getContentDisposition());                            
+							sendObject(request.getChannel(), bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
+									DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
+									objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
 						}
 					}
 					reply.setEtag(objectInfo.getEtag());
@@ -1272,18 +1277,25 @@ public class WalrusManager {
 		}
 	}
 
-	private void sendObject(Channel channel, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition) {
+	private void sendObject(Channel channel, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
 		try {
 			RandomAccessFile raf = new RandomAccessFile(new File(storageManager.getObjectPath(bucketName, objectName)), "r");
 			MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
-			httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
+			if(etag != null)
+				httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
 			httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
 			if(contentDisposition != null)
 				httpResponse.addHeader("Content-Disposition", contentDisposition);
 			channel.write(httpResponse);
-			ChannelFuture writeFuture = channel.write(new ChunkedFile(raf, 0, size, 8192));
+			ChunkedInput file;
+			isCompressed = isCompressed == null ? false : isCompressed;
+			if(isCompressed)
+				file = new CompressedChunkedFile(raf, size);
+			else
+				file = new ChunkedFile(raf, 0, size, 8192);
+			ChannelFuture writeFuture = channel.write(file);
 			writeFuture.addListener(ChannelFutureListener.CLOSE);
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
@@ -1358,13 +1370,9 @@ public class WalrusManager {
 						reply.setMetaData(metaData);
 					}
 					if(request.getGetData()) {
-						String key = bucketName + "." + objectKey;
-						String randomKey = key + "." + Hashes.getRandom(10);
-						request.setRandomKey(randomKey);
-						LinkedBlockingQueue<WalrusDataMessage> getQueue = null; //TODO: NEIL WalrusQueryDispatcher.getReadMessenger().getQueue(key, randomKey);
-
-						ObjectReader reader = new ObjectReader(bucketName, objectName, objectInfo.getSize(), getQueue, byteRangeStart, byteRangeEnd, storageManager);
-						reader.start();
+						sendObject(request.getChannel(), bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
+								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
+								objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
 					}
 					reply.setEtag(objectInfo.getEtag());
 					reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");

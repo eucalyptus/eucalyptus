@@ -295,6 +295,18 @@ public class WalrusDataResponseType extends WalrusResponseType {
 	String contentDisposition;  
 }
 
+public class WalrusDataGetRequestType extends WalrusDataRequestType {
+	protected Channel channel;
+
+	public Channel getChannel() {
+		return channel;
+	}
+	
+	public void setChannel(Channel channel) {
+		this.channel = channel;
+	}
+}
+
 public class WalrusDataGetResponseType extends WalrusDataResponseType {
 	
 }
@@ -436,13 +448,12 @@ public class SetObjectAccessControlPolicyResponseType extends WalrusResponseType
 	String description;
 }
 
-public class GetObjectType extends WalrusDataRequestType {
+public class GetObjectType extends WalrusDataGetRequestType {
 	Boolean getMetaData;
 	Boolean getData;
 	Boolean inlineData;
 	Boolean deleteAfterGet;
 	Boolean getTorrent;
-	Channel channel;
 	
 	def GetObjectType() {
 	}
@@ -453,10 +464,6 @@ public class GetObjectType extends WalrusDataRequestType {
 		this.getMetaData = getMetaData;
 		this.inlineData = inlineData;
 	}
-	
-	public Channel getChannel() { 
-		return channel;
-	}
 }
 
 public class GetObjectResponseType extends WalrusDataGetResponseType {
@@ -464,7 +471,7 @@ public class GetObjectResponseType extends WalrusDataGetResponseType {
 	String base64Data;
 }
 
-public class GetObjectExtendedType extends WalrusDataRequestType {
+public class GetObjectExtendedType extends WalrusDataGetRequestType {
 	Boolean getData;
 	Boolean getMetaData;
 	Boolean inlineData;
@@ -510,7 +517,7 @@ public class UpdateWalrusConfigurationType extends WalrusRequestType {
 public class UpdateWalrusConfigurationResponseType extends WalrusResponseType {
 }
 
-public class GetDecryptedImageType extends WalrusDataRequestType {
+public class GetDecryptedImageType extends WalrusDataGetRequestType {
 }
 
 public class GetDecryptedImageResponseType extends WalrusDataGetResponseType {
