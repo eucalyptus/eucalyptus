@@ -17,38 +17,6 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 public class EucalyptusQueryPipeline extends FilteredPipeline {
   private static Logger LOG = Logger.getLogger( EucalyptusQueryPipeline.class );
 
-  public enum RequiredQueryParams {
-    SignatureVersion,
-    Version
-  }
-  public enum OperationParameter {
-
-    Operation, Action;
-    private static String patterh = buildPattern();
-
-    private static String buildPattern()
-    {
-      StringBuilder s = new StringBuilder();
-      for ( OperationParameter op : OperationParameter.values() ) s.append( "(" ).append( op.name() ).append( ")|" );
-      s.deleteCharAt( s.length() - 1 );
-      return s.toString();
-    }
-
-    public static String toPattern()
-    {
-      return patterh;
-    }
-
-    public static String getParameter( Map<String,String> map )
-    {
-      for( OperationParameter op : OperationParameter.values() )
-        if( map.containsKey( op.toString() ) )
-          return map.get( op.toString() );
-      return null;
-    }
-  }
-
-
   @Override
   protected void addStages( List<UnrollableStage> stages ) {
     stages.add( new HmacV2UserAuthenticationStage( ) );
@@ -81,6 +49,38 @@ public class EucalyptusQueryPipeline extends FilteredPipeline {
   @Override
   public String getPipelineName( ) {
     return "eucalyptus-query";
+  }
+
+  public enum RequiredQueryParams {
+    SignatureVersion,
+    Version
+  }
+  
+  public enum OperationParameter {
+
+    Operation, Action;
+    private static String patterh = buildPattern();
+
+    private static String buildPattern()
+    {
+      StringBuilder s = new StringBuilder();
+      for ( OperationParameter op : OperationParameter.values() ) s.append( "(" ).append( op.name() ).append( ")|" );
+      s.deleteCharAt( s.length() - 1 );
+      return s.toString();
+    }
+
+    public static String toPattern()
+    {
+      return patterh;
+    }
+
+    public static String getParameter( Map<String,String> map )
+    {
+      for( OperationParameter op : OperationParameter.values() )
+        if( map.containsKey( op.toString() ) )
+          return map.get( op.toString() );
+      return null;
+    }
   }
 
 }

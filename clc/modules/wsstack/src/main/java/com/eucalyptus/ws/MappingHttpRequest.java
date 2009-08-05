@@ -8,6 +8,8 @@ import java.util.Map;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.net.URLCodec;
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -19,7 +21,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
 
   private final HttpMethod method;
   private final String     uri;
-  private final String     servicePath;
+  private String     servicePath;
   private String     query;
   private final Map<String,String> parameters;
   private String restNamespace;
@@ -29,14 +31,16 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.method = method;
     this.uri = uri;
     try {
-      URL url = new URL( "http://hi.com" + uri );
+      URL url = new URL( "http://eucalyptus" + uri );
       this.servicePath = url.getPath( );
       this.parameters = new HashMap<String, String>( );
-      this.query = url.toURI( ).getQuery( );
+      this.query = this.query == url.toURI( ).getQuery( ) ? this.query : new URLCodec().decode( url.toURI( ).getQuery( ) ).replaceAll( " ", "+" );
       this.populateParameters();
     } catch ( MalformedURLException e ) {
       throw new RuntimeException( e );
     } catch ( URISyntaxException e ) {
+      throw new RuntimeException( e );
+    } catch ( DecoderException e ) {
       throw new RuntimeException( e );
     }
   }
@@ -67,12 +71,21 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     return this.servicePath;
   }
 
+  public void setServicePath( String servicePath ) {
+    this.servicePath = servicePath;
+  }
+
+  
   public String getQuery( ) {
     return this.query;
   }
   
   public void setQuery( String query ) {
-    this.query = query;
+    try {
+      this.query = new URLCodec().decode( query );
+    } catch ( DecoderException e ) {
+      this.query = query;
+    }
     this.populateParameters( );
   }
 

@@ -3,6 +3,7 @@ package com.eucalyptus.ws.util;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.ws.server.DuplicatePipelineException;
@@ -11,6 +12,7 @@ import com.eucalyptus.ws.server.NoAcceptingPipelineException;
 
 public class PipelineRegistry {
   private static PipelineRegistry registry;
+  private static Logger           LOG = Logger.getLogger( PipelineRegistry.class );
 
   public static PipelineRegistry getInstance( ) {
     synchronized ( PipelineRegistry.class ) {
@@ -31,13 +33,14 @@ public class PipelineRegistry {
     FilteredPipeline candidate = null;
     for ( final FilteredPipeline f : this.pipelines ) {
       if ( f.accepts( request ) ) {
-        if ( candidate != null ) { throw new DuplicatePipelineException( ); }
-        candidate = f;
+        if ( candidate != null ) {
+          LOG.warn( "More than one candidate pipeline.  Ignoring offer by: " + f.getClass( ).getSimpleName( ) );
+        } else {
+          candidate = f;
+        }
       }
     }
-    if( candidate == null ) {
-      throw new NoAcceptingPipelineException();
-    }
+    if ( candidate == null ) { throw new NoAcceptingPipelineException( ); }
     return candidate;
   }
 

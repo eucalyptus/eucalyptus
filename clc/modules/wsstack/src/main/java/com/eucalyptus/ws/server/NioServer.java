@@ -21,6 +21,7 @@ public class NioServer {
     this.bootstrap = new ServerBootstrap( this.socketFactory );
     this.bootstrap.setPipelineFactory( new NioServerPipelineFactory( ) );
     PipelineRegistry.getInstance( ).register( new EucalyptusSoapPipeline( ) );
+    PipelineRegistry.getInstance( ).register( new ElasticFoxPipeline( ) );
     PipelineRegistry.getInstance( ).register( new EucalyptusQueryPipeline( ) );
     PipelineRegistry.getInstance( ).register( new WalrusRESTPipeline( ) );
   }

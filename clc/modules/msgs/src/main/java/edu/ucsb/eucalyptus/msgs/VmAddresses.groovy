@@ -1,7 +1,7 @@
 package edu.ucsb.eucalyptus.msgs
 
-import edu.ucsb.eucalyptus.annotation.HttpParameterMapping
-import edu.ucsb.eucalyptus.msgs.EucalyptusData
+import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class VmAddressMessage extends EucalyptusMessage{}

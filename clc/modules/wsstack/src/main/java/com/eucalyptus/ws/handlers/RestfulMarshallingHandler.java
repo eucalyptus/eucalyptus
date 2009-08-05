@@ -29,8 +29,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-      this.namespace = "http://ec2.amazonaws.com/doc/" + httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) );
-      LOG.error( "Setting namespace="+this.namespace);
+      this.namespace = "http://ec2.amazonaws.com/doc/" + httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) ) + "/";
       // TODO: get real user data here too
       httpRequest.setMessage( this.bind( "admin", true, httpRequest ) );
     }
@@ -42,7 +41,6 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-      LOG.error( "Getting namespace="+this.namespace);
       Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
       ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
       if( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType ) {

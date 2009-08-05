@@ -1,6 +1,6 @@
 package edu.ucsb.eucalyptus.msgs
 
-import edu.ucsb.eucalyptus.annotation.HttpParameterMapping
+import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
 
 public class BlockVolumeMessage extends EucalyptusMessage {}
 public class BlockSnapshotMessage extends EucalyptusMessage {}

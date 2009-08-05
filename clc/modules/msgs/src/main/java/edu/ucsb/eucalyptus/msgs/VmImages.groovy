@@ -1,8 +1,8 @@
 package edu.ucsb.eucalyptus.msgs
 
-import edu.ucsb.eucalyptus.annotation.HttpParameterMapping
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType
+import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 
 public class VmImageMessage extends EucalyptusMessage {}
 /** *******************************************************************************/
