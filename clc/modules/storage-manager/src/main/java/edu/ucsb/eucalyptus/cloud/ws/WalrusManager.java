@@ -1207,7 +1207,7 @@ public class WalrusManager {
 							if(torrent.exists()) {
 								long torrentLength = torrent.length();
 								sendObject(request.getChannel(), httpResponse, bucketName, torrentFile, torrentLength, null, 
-										DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN), 
+										DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
 										null, null, request.getIsCompressed());
 								//TODO: this should reflect params for the torrent?
 								reply.setEtag("");
@@ -1249,17 +1249,17 @@ public class WalrusManager {
 						} else {
 							//support for large objects
 							sendObject(request.getChannel(), httpResponse, bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
-									DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
+									DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
 									objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
 						}
 					} else {
 						sendHeaders(request.getChannel(), httpResponse, objectInfo.getSize(), objectInfo.getEtag(), 
-								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
+								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
 								objectInfo.getContentType(), objectInfo.getContentDisposition());                            
 
 					}
 					reply.setEtag(objectInfo.getEtag());
-					reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"));
+					reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
 					reply.setSize(objectInfo.getSize());
 					reply.setContentType(objectInfo.getContentType());
 					reply.setContentDisposition(objectInfo.getContentDisposition());
@@ -1313,9 +1313,8 @@ public class WalrusManager {
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 			}
 			channel.write(httpResponse);
-			channel.write(file);
-			/*ChannelFuture writeFuture = channel.write(file);
-			writeFuture.addListener(ChannelFutureListener.CLOSE);*/
+			ChannelFuture writeFuture = channel.write(file);
+			writeFuture.addListener(ChannelFutureListener.CLOSE);
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
 		}	

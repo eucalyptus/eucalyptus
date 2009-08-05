@@ -3,6 +3,7 @@ package com.eucalyptus.ws.handlers;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -62,7 +63,8 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 					MappingHttpResponse response = new MappingHttpResponse( message.getProtocolVersion( ) ); 
 					response.setMessage( reply );
 					if(!(reply instanceof WalrusDataGetResponseType)) {
-						Channels.write( ctx.getChannel( ), response );						
+						ChannelFuture writeFuture = Channels.write( ctx.getChannel( ), response );;
+						writeFuture.addListener(ChannelFutureListener.CLOSE);												
 					}
 				}
 			}

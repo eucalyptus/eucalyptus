@@ -10,8 +10,11 @@ import java.util.List;
 import com.eucalyptus.ws.MappingHttpResponse;
 
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -69,6 +72,7 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
 			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
 			EucalyptusMessage msg = (EucalyptusMessage) httpResponse.getMessage( );
+
 			if(msg instanceof PutObjectResponseType) {
 				PutObjectResponseType putObjectResponse = (PutObjectResponseType) msg;
 				httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + putObjectResponse.getEtag() + '\"');

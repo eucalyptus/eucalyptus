@@ -190,7 +190,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 		//TODO: add userinfo
 		//FIXME: this is a hack for now
-		UserInfo user = new UserInfo(EucalyptusProperties.NAME);
+		UserInfo user = new UserInfo("admin");
 		user.setIsAdministrator(Boolean.TRUE);
 		setRequiredParams (eucaMsg, user);
 
