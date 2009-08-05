@@ -29,8 +29,4 @@ public class NioServer {
     this.bootstrap.bind( new InetSocketAddress( this.port ) );
   }
 
-  public static void main( final String[] args ) {
-    NioServer test = new NioServer( 19191 );
-    test.start( );
-  }
 }

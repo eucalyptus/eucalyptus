@@ -19,7 +19,7 @@ public class NioHttpConnector extends AbstractConnector {
 
     public void doConnect() throws MuleException
     {
-      this.server = new NioServer( 19191 );
+      this.server = new NioServer( 8773 );
     }
 
     public String getProtocol()

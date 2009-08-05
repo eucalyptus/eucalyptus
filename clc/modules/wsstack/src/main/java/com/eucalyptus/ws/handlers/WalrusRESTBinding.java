@@ -29,6 +29,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -106,9 +107,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				omMsg.serialize( byteOut );
 				byte[] req = byteOut.toByteArray();
 				ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
-				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes() ) );
-				httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml" );
-				httpResponse.setContent( buffer );
+				if(!httpResponse.getStatus().equals(HttpResponseStatus.NO_CONTENT)) {
+					httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes() ) );
+					httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml" );
+					httpResponse.setContent( buffer );
+				}
 			}
 		}
 	}

@@ -75,7 +75,17 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 				httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, putObjectResponse.getLastModified());
 			} else if (msg instanceof PostObjectResponseType) {
 				PostObjectResponseType postObjectResponse = (PostObjectResponseType) msg;
-				//TODO: POST outbound processing
+				String redirectUrl = postObjectResponse.getRedirectUrl();
+				if ( redirectUrl != null ) {
+					httpResponse.addHeader(HttpHeaders.Names.LOCATION, redirectUrl);
+					httpResponse.setStatus(HttpResponseStatus.SEE_OTHER);
+				} else {
+					Integer successCode = postObjectResponse.getSuccessCode();
+					if ( successCode != null ) {
+						httpResponse.setStatus(new HttpResponseStatus(successCode, "redirect"));
+					}
+				}
+
 			} else if(msg instanceof EucalyptusErrorMessageType) {
 
 				EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) msg;
