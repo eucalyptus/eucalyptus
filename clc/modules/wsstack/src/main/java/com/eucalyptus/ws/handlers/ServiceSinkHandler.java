@@ -63,8 +63,8 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 					MappingHttpResponse response = new MappingHttpResponse( message.getProtocolVersion( ) ); 
 					response.setMessage( reply );
 					if(!(reply instanceof WalrusDataGetResponseType)) {
-						ChannelFuture writeFuture = Channels.write( ctx.getChannel( ), response );;
-						writeFuture.addListener(ChannelFutureListener.CLOSE);												
+						ChannelFuture writeFuture = Channels.write( ctx.getChannel( ), response );						
+						writeFuture.addListener( ChannelFutureListener.CLOSE );
 					}
 				}
 			}
@@ -85,6 +85,7 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 		}
 
 		public void run() {
+		  //:: register endpoint w/ mule specific to this message :://
 			Messaging.dispatch( "vm://RequestQueue", msg );
 
 			EucalyptusMessage reply = ReplyQueue.getReply( msg.getCorrelationId() );

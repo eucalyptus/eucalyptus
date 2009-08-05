@@ -1313,6 +1313,7 @@ public class WalrusManager {
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 			}
 			channel.write(httpResponse);
+//			channel.write(file);
 			ChannelFuture writeFuture = channel.write(file);
 			writeFuture.addListener(ChannelFutureListener.CLOSE);
 		} catch(Exception ex) {
