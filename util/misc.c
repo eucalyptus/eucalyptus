@@ -948,3 +948,15 @@ long long str2longlong (const char * str, const char * begin, const char * end)
 
     return value;
 }
+
+int uint32compar(const void *ina, const void *inb) {
+  uint32_t a, b;
+  a = *(uint32_t *)ina;
+  b = *(uint32_t *)inb;
+  if (a < b) {
+    return(-1);
+  } else if (a > b) {
+    return(1);
+  }
+  return(0);
+}

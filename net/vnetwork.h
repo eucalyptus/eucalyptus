@@ -45,6 +45,7 @@ typedef struct vnetConfig_t {
   char bridgedev[32];
   char mode[32];
   char localIp[32];
+  uint32_t nw, nm;
   uint32_t localIpId;
   uint32_t ccs[NUMBER_OF_CCS];
   time_t ccsTunnelStart[NUMBER_OF_CCS];
@@ -81,9 +82,15 @@ int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network);
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network);
 
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen);
+int vnetAddCCS(vnetConfig *vnetconfig, uint32_t cc);
+int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc);
+
 int vnetSetupTunnels(vnetConfig *vnetconfig);
 int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig);
 int vnetSetupTunnelsGRE(vnetConfig *vnetconfig);
+int vnetTeardownTunnels(vnetConfig *vnetconfig);
+int vnetTeardownTunnelsVTUN(vnetConfig *vnetconfig);
+int vnetTeardownTunnelsGRE(vnetConfig *vnetconfig);
 int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname);
 int vnetDetachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname);
 
@@ -124,5 +131,7 @@ int maccmp(char *ina, unsigned char inb[6]);
 int check_chain(vnetConfig *vnetconfig, char *userName, char *netName);
 int check_device(char *dev);
 int check_bridge(char *dev);
+int check_bridgedev(char *br, char *dev);
+int check_tablerule(vnetConfig *vnetconfig, char *table, char *rule);
 
 #endif

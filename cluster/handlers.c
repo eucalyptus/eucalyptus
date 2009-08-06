@@ -196,9 +196,9 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   return(ret);
 }
 
-int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *protocol, int minPort, int maxPort) {
+int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort) {
   int rc, i, fail;
-  char *destUserName;
+  //  char *destUserName;
 
   rc = initialize();
   if (rc) {
@@ -211,7 +211,9 @@ int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **source
     fail = 0;
   } else {
     
-    destUserName = meta->userId;
+    if (destUserName == NULL) {
+      destUserName = meta->userId;
+    }
     
     sem_wait(vnetConfigLock);
     
@@ -275,7 +277,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   }
   
   ret = 0;
-
+  
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
     ret = 0;
   } else {
@@ -290,7 +292,8 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
 	snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
 	logprintfl(EUCAINFO,"running cmd %s\n", cmd);
 	rc = system(cmd);
-	if (rc) {
+	rc = rc>>8;
+	if (rc && (rc != 2)) {
 	  logprintfl(EUCAERROR,"cmd '%s' failed\n", cmd);
 	  ret = 1;
 	} else {
@@ -445,15 +448,19 @@ int doDescribeNetworks(ncMetadata *ccMeta, char **ccs, int ccsLen, vnetConfig *o
     return(1);
   }
   logprintfl(EUCADEBUG, "DescribeNetworks(): called\n");
-  sem_wait(vnetConfigLock);
-  rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
-  rc = vnetSetupTunnels(vnetconfig);
   
+  sem_wait(vnetConfigLock);
+  
+  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
+    rc = vnetSetupTunnels(vnetconfig);
+  }
   memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
-
+  
   sem_post(vnetConfigLock);
   
   logprintfl(EUCADEBUG, "DescribeNetworks(): done\n");
+  
   shawn();
   return(0);
 }
@@ -1215,19 +1222,19 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
   return(0);
 }
 
-int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
-  int rc, i, done, runCount, resid, foundnet=0, error=0;
+int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
+  int rc=0, i=0, done=0, runCount=0, resid=0, foundnet=0, error=0, networkIdx=0, nidx=0;
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
   char *instId=NULL;
-  time_t op_start, op_timer;
-  resource *res;
+  time_t op_start=0, op_timer=0;
+  resource *res=NULL;
   char mac[32], privip[32], pubip[32];
 
   ncInstance *outInst=NULL;
   ncInstParams ncvm;
   ncStub *ncs=NULL;
-
+  
   op_start = time(NULL);
   op_timer = OP_TIMEOUT;
   
@@ -1250,6 +1257,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   // get updated resource information
   rc = refresh_resources(ccMeta, OP_TIMEOUT - (time(NULL) - op_start));
   
+  nidx=0;
   done=0;
   for (i=0; i<maxCount && !done; i++) {
     logprintfl(EUCAINFO,"\trunning instance %d with emiId %s...\n", i, amiId);
@@ -1278,21 +1286,32 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
       foundnet = 1;
     } else if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-      
-      // add the mac address to the virtual network
-      rc = vnetAddHost(vnetconfig, mac, NULL, vlan, -1);
-      if (!rc) {
-	// get the next valid mac/ip pairing for this vlan
-	rc = vnetGetNextHost(vnetconfig, mac, privip, vlan, -1);
+      if (nidx >= maxCount) {
+	foundnet = 0;
+      } else {
+
+	if (networkIndexList == NULL) {
+	  networkIdx = -1;
+	} else {
+	  networkIdx = nidx;
+	  nidx++;
+	}
+	
+	// add the mac address to the virtual network
+	rc = vnetAddHost(vnetconfig, mac, NULL, vlan, networkIdx);
 	if (!rc) {
-	  foundnet = 1;
+	  // get the next valid mac/ip pairing for this vlan
+	  rc = vnetGetNextHost(vnetconfig, mac, privip, vlan, networkIdx);
+	  if (!rc) {
+	    foundnet = 1;
+	  }
 	}
       }
     }
     sem_post(vnetConfigLock);
     
     logprintfl(EUCAINFO,"\tassigning MAC/IP: %s/%s/%s\n", mac, pubip, privip);
-
+    
     if (mac[0] == '\0' || !foundnet) {
       logprintfl(EUCAERROR,"could not find/initialize any free network address, failing doRunInstances()\n");
     } else {
@@ -1393,9 +1412,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  bzero(myInstance, sizeof(ccInstance));
 	  
 	  // stuff from NC
-	  //	  rc = ccInstance_to_ncInstance(myInstance, outInst);
-	  //int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, ccInstance **outInsts, int *outInstsLen) {
-	  //rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, mac, mac, vlan, userData, launchIndex, netNames, netNamesLen, &outInst);
 	  
 	  allocate_ccInstance(myInstance, instId, amiId, kernelId, ramdiskId, amiURL, kernelURL, ramdiskURL, ownerId, "Pending", time(NULL), reservationId, &(myInstance->ccnet), &(myInstance->ccvm), myInstance->ncHostIdx, keyName, myInstance->serviceTag, userData, launchIndex, myInstance->groupNames, myInstance->volumes, myInstance->volumesSize);
 	  // instance info that CC has
@@ -1895,7 +1911,6 @@ int init_thread(void) {
   
   if (init) {
     // thread has already been initialized
-    fprintf(stderr, "already init\n");
   } else {
     // this thread has not been initialized, set up shared memory segments
     srand(time(NULL));
@@ -2240,34 +2255,29 @@ int init_config(void) {
 int maintainNetworkState() {
   int rc, i, ret=0;
 
-  sem_wait(vnetConfigLock);
-
-  /*
-  rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
-  if (rc) {
-    logprintfl(EUCAERROR, "failed to set ccs\n");
-    ret = 1;
-  }
-  */
-
-  rc = vnetSetupTunnels(vnetconfig);
-  if (rc) {
-    logprintfl(EUCAERROR, "failed to setup tunnels during maintainNetworkState()\n");
-    ret = 1;
-  }
-  
-  for (i=2; i<NUMBER_OF_VLANS; i++) {
-    if (vnetconfig->networks[i].active) {
-      char brname[32];
-      snprintf(brname, 32, "eucabr%d", i);
-      rc = vnetAttachTunnels(vnetconfig, i, brname);
-      if (rc) {
-        logprintfl(EUCADEBUG, "failed to attach tunnels for vlan %d during maintainNetworkState()\n", i);
-	ret = 1;
+  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    sem_wait(vnetConfigLock);
+    
+    rc = vnetSetupTunnels(vnetconfig);
+    if (rc) {
+      logprintfl(EUCAERROR, "failed to setup tunnels during maintainNetworkState()\n");
+      ret = 1;
+    }
+    
+    for (i=2; i<NUMBER_OF_VLANS; i++) {
+      if (vnetconfig->networks[i].active) {
+	char brname[32];
+	snprintf(brname, 32, "eucabr%d", i);
+	rc = vnetAttachTunnels(vnetconfig, i, brname);
+	if (rc) {
+	  logprintfl(EUCADEBUG, "failed to attach tunnels for vlan %d during maintainNetworkState()\n", i);
+	  ret = 1;
+	}
       }
     }
+
+    sem_post(vnetConfigLock);
   }
-  sem_post(vnetConfigLock);
   
   return(ret);
 }

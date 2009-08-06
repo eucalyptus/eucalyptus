@@ -104,5 +104,6 @@ char * file2str (const char * path); /* read file 'path' into a new string */
 int write2file(const char *path, char *str);
 long long str2longlong (const char * str, const char * begin, const char * end); /* extract integer from str bound by 'begin' and 'end' */
 pid_t timewait(pid_t pid, int *status, int timeout);
+int uint32compar(const void *ina, const void *inb);
 
 #endif

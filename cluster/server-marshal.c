@@ -408,15 +408,13 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char **sourceNets, **userNames, **sourceNames, *cid, *protocol, *user, *destName, *type, *destNameLast;
+  char **sourceNets, **userNames, **sourceNames, *cid, *protocol, *user, *destName, *type, *destNameLast, *destUserName;
   int minPort, maxPort, namedLen, netLen;
   ncMetadata ccMeta;
   
   cnt = adb_ConfigureNetwork_get_ConfigureNetwork(configureNetwork, env);
   ccMeta.correlationId = adb_configureNetworkType_get_correlationId(cnt, env);
   ccMeta.userId = adb_configureNetworkType_get_userId(cnt, env);
-
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "configureNetwork", "begin");
   
   user = adb_configureNetworkType_get_userId(cnt, env);
   cid = adb_configureNetworkType_get_correlationId(cnt, env);
@@ -424,12 +422,13 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   ruleLen = adb_configureNetworkType_sizeof_rules(cnt, env);
   done=0;
   destNameLast = strdup("EUCAFIRST");
-
+  
   for (j=0; j<ruleLen && !done; j++) {
     nr = adb_configureNetworkType_get_rules_at(cnt, env, j);
-
+    
     type = adb_networkRule_get_type(nr, env);
     destName = adb_networkRule_get_destName(nr, env);
+    destUserName = adb_networkRule_get_destUserName(nr, env);
     protocol = adb_networkRule_get_protocol(nr, env);
     minPort = adb_networkRule_get_portRangeMin(nr, env);
     maxPort = adb_networkRule_get_portRangeMax(nr, env);
@@ -477,7 +476,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     
     rc=1;
     if (!DONOTHING) {
-      rc = doConfigureNetwork(&ccMeta, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, protocol, minPort, maxPort);
+      rc = doConfigureNetwork(&ccMeta, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol, minPort, maxPort);
     }
     
     if (userNames) free(userNames);
@@ -507,7 +506,6 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   ret = adb_ConfigureNetworkResponse_create(env);
   adb_ConfigureNetworkResponse_set_ConfigureNetworkResponse(ret, env, cnrt);
   
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "configureNetwork", "end");
   return(ret);
 }
 
@@ -529,8 +527,6 @@ adb_GetConsoleOutputResponse_t* GetConsoleOutputMarshal (adb_GetConsoleOutput_t*
   gcot = adb_GetConsoleOutput_get_GetConsoleOutput(getConsoleOutput, env);
   ccMeta.correlationId = adb_getConsoleOutputType_get_correlationId(gcot, env);
   ccMeta.userId = adb_getConsoleOutputType_get_userId(gcot, env);
-  
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "getConsoleOutput", "begin");
   
   instId = adb_getConsoleOutputType_get_instanceId(gcot, env);
   
@@ -562,8 +558,6 @@ adb_GetConsoleOutputResponse_t* GetConsoleOutputMarshal (adb_GetConsoleOutput_t*
   ret = adb_GetConsoleOutputResponse_create(env);
   adb_GetConsoleOutputResponse_set_GetConsoleOutputResponse(ret, env, gcort);
   
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "getConsoleOutput", "end");
-  
   return(ret);
 }
 
@@ -587,8 +581,6 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   snt = adb_StartNetwork_get_StartNetwork(startNetwork, env);
   ccMeta.correlationId = adb_startNetworkType_get_correlationId(snt, env);
   ccMeta.userId = adb_startNetworkType_get_userId(snt, env);
-  
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "startNetwork", "begin");
   
   vlan = adb_startNetworkType_get_vlan(snt, env);
   netName = adb_startNetworkType_get_netName(snt, env);
@@ -623,7 +615,6 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   ret = adb_StartNetworkResponse_create(env);
   adb_StartNetworkResponse_set_StartNetworkResponse(ret, env, snrt);
   
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "startNetwork", "end");
   return(ret);
 }
 
@@ -648,8 +639,6 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
   drt = adb_DescribeResources_get_DescribeResources(describeResources, env);
   ccMeta.correlationId = adb_describeResourcesType_get_correlationId(drt, env);
   ccMeta.userId = adb_describeResourcesType_get_userId(drt, env);
-
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "describeResources", "begin");
 
   vmLen = adb_describeResourcesType_sizeof_instanceTypes(drt, env);
   vms = malloc(sizeof(virtualMachine) * vmLen);
@@ -716,7 +705,6 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
   ret = adb_DescribeResourcesResponse_create(env);
   adb_DescribeResourcesResponse_set_DescribeResourcesResponse(ret, env, drrt);
 
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "describeResources", "end");
   return(ret);
 }
 
@@ -741,8 +729,6 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
   dit = adb_DescribeInstances_get_DescribeInstances(describeInstances, env);
   ccMeta.correlationId = adb_describeInstancesType_get_correlationId(dit, env);
   ccMeta.userId = adb_describeInstancesType_get_userId(dit, env);
-
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "describeInstances", "begin");
 
   instIdsLen = adb_describeInstancesType_sizeof_instanceIds(dit, env);
   instIds = malloc(sizeof(char *) * instIdsLen);
@@ -786,8 +772,6 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
   ret = adb_DescribeInstancesResponse_create(env);
   adb_DescribeInstancesResponse_set_DescribeInstancesResponse(ret, env, dirt);
   
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "describeInstances", "end");
-
   return(ret);
 }
 
@@ -860,16 +844,13 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   // working vars
   adb_ccInstanceType_t *it=NULL;
   adb_virtualMachineType_t *vm=NULL;
-  //  adb_netConfigType_t *netconf=NULL;
 
   ccInstance *outInsts=NULL, *myInstance=NULL;
-  int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen;
+  int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen, *networkIndexList=NULL, networkIndexListLen;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  //  axutil_date_time_t *dt;
-  //char numbuf[256];
-  char *amiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *amiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex;
+  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex;
   ncMetadata ccMeta;
   
   virtualMachine ccvm;
@@ -879,21 +860,15 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   ccMeta.userId = adb_runInstancesType_get_userId(rit, env);
   reservationId = adb_runInstancesType_get_reservationId(rit, env);
 
-  {
-    char other[256];
-    snprintf(other, 256, "begin,%s", reservationId);
-    if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "runInstances", other);
-  }
-
   maxCount = adb_runInstancesType_get_maxCount(rit, env);
   minCount = adb_runInstancesType_get_minCount(rit, env);
   keyName = adb_runInstancesType_get_keyName(rit, env);
 
-  amiId = adb_runInstancesType_get_imageId(rit, env);
+  emiId = adb_runInstancesType_get_imageId(rit, env);
   kernelId = adb_runInstancesType_get_kernelId(rit, env);
   ramdiskId = adb_runInstancesType_get_ramdiskId(rit, env);
 
-  amiURL = adb_runInstancesType_get_imageURL(rit, env);
+  emiURL = adb_runInstancesType_get_imageURL(rit, env);
   kernelURL = adb_runInstancesType_get_kernelURL(rit, env);
   ramdiskURL = adb_runInstancesType_get_ramdiskURL(rit, env);
 
@@ -926,13 +901,22 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   for (i=0; i<macAddrsLen; i++) {
     macAddrs[i] = adb_runInstancesType_get_macAddresses_at(rit, env, i);
   }
+
+  networkIndexList = NULL;
+  networkIndexListLen = adb_runInstancesType_sizeof_networkIndexList(rit, env);
+  if (networkIndexListLen) {
+    networkIndexList = malloc(sizeof(int) * networkIndexListLen);
+    for (i=0; i<networkIndexListLen; i++) {
+      networkIndexList[i] = adb_runInstancesType_get_networkIndexList_at(rit, env, i);
+    }
+  }
   
   // logic
   rirt = adb_runInstancesResponseType_create(env);
 
   rc=1;
   if (!DONOTHING) {
-    rc = doRunInstances(&ccMeta, amiId, kernelId, ramdiskId, amiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, NULL, &outInsts, &outInstsLen);
+    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, NULL, &outInsts, &outInstsLen);
   }
   
   if (rc) {
@@ -961,7 +945,6 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   ret = adb_RunInstancesResponse_create(env);
   adb_RunInstancesResponse_set_RunInstancesResponse(ret, env, rirt);
   
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "runInstances", "end");
   
   return(ret);
 }
@@ -983,8 +966,6 @@ adb_RebootInstancesResponse_t* RebootInstancesMarshal (adb_RebootInstances_t* re
   rit = adb_RebootInstances_get_RebootInstances(rebootInstances, env);
   ccMeta.correlationId = adb_rebootInstancesType_get_correlationId(rit, env);
   ccMeta.userId = adb_rebootInstancesType_get_userId(rit, env);
-  
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "rebootInstances", "begin");
   
   instIdsLen = adb_rebootInstancesType_sizeof_instanceIds(rit, env);
   instIds = malloc(sizeof(char *) * instIdsLen);  
@@ -1019,8 +1000,6 @@ adb_RebootInstancesResponse_t* RebootInstancesMarshal (adb_RebootInstances_t* re
   ret = adb_RebootInstancesResponse_create(env);
   adb_RebootInstancesResponse_set_RebootInstancesResponse(ret, env, rirt);
   
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "rebootInstances", "end");
-  
   return(ret);
 }
 
@@ -1043,8 +1022,6 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
   tit = adb_TerminateInstances_get_TerminateInstances(terminateInstances, env);
   ccMeta.correlationId = adb_terminateInstancesType_get_correlationId(tit, env);
   ccMeta.userId = adb_terminateInstancesType_get_userId(tit, env);
-  
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "terminateInstances", "begin");
   
   instIdsLen = adb_terminateInstancesType_sizeof_instanceIds(tit, env);
   instIds = malloc(sizeof(char *) * instIdsLen);  
@@ -1086,8 +1063,6 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
   ret = adb_TerminateInstancesResponse_create(env);
   adb_TerminateInstancesResponse_set_TerminateInstancesResponse(ret, env, tirt);
   
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "terminateInstances", "end");
-  
   return(ret);
 }
 
@@ -1095,55 +1070,3 @@ void print_adb_ccInstanceType(adb_ccInstanceType_t *in) {
   
 }
 
-/*
-adb_RegisterImageResponse_t *RegisterImageMarshal(adb_RegisterImage_t *registerImage, const axutil_env_t *env) {
-  int rc;
-  axis2_bool_t status=AXIS2_TRUE;
-  char statusMessage[256];
-  char *amiId, *location;
-
-  adb_registerImageType_t *rit=NULL;
-  adb_registerImageResponseType_t *rirt=NULL;                               
-  adb_RegisterImageResponse_t *ret;
-  ncMetadata ccMeta;
-
-  rit = adb_RegisterImage_get_RegisterImage(registerImage, env);
-  ccMeta.correlationId = adb_registerImageType_get_correlationId(rit, env);
-  ccMeta.userId = adb_registerImageType_get_userId(rit, env);
-
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "registerImage", "begin");
-
-  //  newImage = malloc(sizeof(ccImage));
-  location = adb_registerImageType_get_imageLocation(rit, env);
-  amiId = adb_registerImageType_get_amiId(rit, env);
-
-  rirt = adb_registerImageResponseType_create(env);
-
-  rc=1;
-  if (!DONOTHING) {
-    rc = doRegisterImage(&ccMeta, amiId, location);
-  }
-
-  if (rc != 0) {
-    logprintf("ERROR: doRegisterImage() failed %d\n", rc);
-    status=AXIS2_FALSE;
-    snprintf(statusMessage, 255, "ERROR");
-  } else {
-    adb_registerImageResponseType_set_imageId(rirt, env, amiId);
-  }
-  
-  adb_registerImageResponseType_set_correlationId(rirt, env, ccMeta.correlationId);
-  adb_registerImageResponseType_set_userId(rirt, env, ccMeta.userId);
-  adb_registerImageResponseType_set_return(rirt, env, status);
-  if (status == AXIS2_FALSE) {
-    adb_registerImageResponseType_set_statusMessage(rirt, env, statusMessage);
-  }
-
-  ret = adb_RegisterImageResponse_create(env);
-  adb_RegisterImageResponse_set_RegisterImageResponse(ret, env, rirt);
-  
-  if (EVENTLOG) eventlog("CC", ccMeta.userId, ccMeta.correlationId, "registerImage", "end");
-
-  return(ret);
-}
-*/

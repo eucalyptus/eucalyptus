@@ -44,6 +44,8 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     vnetconfig->initialized = 1;
     vnetconfig->max_vlan = NUMBER_OF_VLANS;
     if (numberofaddrs) vnetconfig->numaddrs = atoi(numberofaddrs);
+    if (network) vnetconfig->nw = dot2hex(network);
+    if (netmask) vnetconfig->nm = dot2hex(netmask);
 
     // populate networks
     bzero(vnetconfig->users, sizeof(userEntry) * NUMBER_OF_VLANS);
@@ -107,7 +109,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
 	rc = system(cmd);
 	
-	snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to 169.254.169.254:8773", network, slashnet);
+	snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination 169.254.169.254:8773", network, slashnet);
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
 	unm = 0xFFFFFFFF - numaddrs;
@@ -461,10 +463,14 @@ int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
   char *file, cmd[256];
   FILE *FH;
   
-  if (!rule) {
+  if (!rule || !table || !vnetconfig) {
     return(1);
   }
   
+  if (!check_tablerule(vnetconfig, table, rule)) {
+    return(0);
+  }
+
   file = strdup("/tmp/euca-ipt-XXXXXX");
   if (!file) {
     return(1);
@@ -814,68 +820,98 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   
 }
 
-int check_chain(vnetConfig *vnetconfig, char *userName, char *netName) {
-  char cmd[256];
-  int rc;
-  snprintf(cmd, 256, "-L %s-%s -n", userName, netName);
-  rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-  return(rc);
-}
-
-int check_device(char *dev) {
-  char rbuf[256], devbuf[256], *ptr;
-  FILE *FH=NULL;
-  
-  if (!dev) return(1);
-  
-  FH = fopen("/proc/net/dev", "r");
-  if (!FH) {
-    return(1);
-  }
-  
-  while(fgets(rbuf, 256, FH)) {
-    ptr = strrchr(rbuf, ':');
-    if (ptr) {
-      *ptr = '\0';
-      ptr = strrchr(rbuf, ' ');
-      if (ptr) {
-        ptr = ptr + 1;
-      } else {
-        ptr = rbuf;
-      }
-      if (!strcmp(ptr, dev)) {
-	// found it
-	fclose(FH);
-	return(0);
-      }
+int vnetAddCCS(vnetConfig *vnetconfig, uint32_t cc) {
+  int i;
+  for (i=0; i<NUMBER_OF_CCS; i++) {
+    if (vnetconfig->ccs[i] == 0) {
+      vnetconfig->ccs[i] = cc;
+      return(0);
     }
   }
-  fclose(FH);
-  
   return(1);
 }
 
-int check_bridge(char *brname) {
-  return(check_device(brname));
+int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc) {
+  int i;
+  char file[1024];
+  char *pidstr;
+
+  for (i=0; i<NUMBER_OF_CCS; i++) {
+    if (vnetconfig->ccs[i] == cc) {
+      // bring down the tunnel
+      snprintf(file, 1024, "%s/var/run/eucalyptus/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->localIpId, i);
+      pidstr = file2str(file);
+      if (pidstr) {
+	logprintfl(EUCADEBUG, "terminating vtund process (%d) for tunnel id %d-%d\n", atoi(pidstr), vnetconfig->localIpId, i);
+	kill(atoi(pidstr), 9);
+	unlink(file);
+	free(pidstr);
+      } else {
+	// cannot find pidfile
+      }
+      vnetconfig->ccs[i] = 0;
+      return(0);
+    }
+  }
+  return(1);
 }
 
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
-  int i;
-  
+  int i, j, found, lastj, localIpId=-1;
+  uint32_t tmpccs[NUMBER_OF_CCS];
+
   if (ccsLen > NUMBER_OF_CCS) {
     logprintfl(EUCAERROR, "specified number of cluster controllers exceeds max '%d'\n", NUMBER_OF_CCS);
     return(1);
+  }  else if (ccsLen <= 0) {
+    return(0);
   }
 
-  if (ccsLen > 0) {
-    bzero(vnetconfig->ccs, sizeof(uint32_t) * NUMBER_OF_CCS);
-    for (i=0; i<ccsLen; i++) {
-      if (!strcmp(ccs[i], vnetconfig->localIp)) {
-	vnetconfig->localIpId = i;
+  for (i=0; i<ccsLen; i++) {
+    
+    if (!strcmp(ccs[i], vnetconfig->localIp)) {
+      localIpId = i;
+    }
+    
+    found=0;
+    for (j=0; j<NUMBER_OF_CCS && !found; j++) {
+      if (dot2hex(ccs[i]) == vnetconfig->ccs[j]) {
+	found=1;
       }
-      vnetconfig->ccs[i] = dot2hex(ccs[i]);
+    }
+    if (!found) {
+      // exists in new list, but not locally, add it
+      logprintfl(EUCADEBUG, "adding CC %s\n", ccs[i]);
+      vnetAddCCS(vnetconfig, dot2hex(ccs[i]));
     }
   }
+  
+  if (localIpId >= 0) {
+    vnetconfig->localIpId = localIpId;
+  } else {
+    logprintfl(EUCAWARN, "VNET_LOCALIP is not in list of CCS, tearing down tunnels\n");
+    vnetTeardownTunnels(vnetconfig);
+    bzero(vnetconfig->ccs, sizeof(uint32_t) * NUMBER_OF_CCS);
+    vnetconfig->localIpId = -1;
+    return(0);
+  }
+  
+  for (i=0; i<NUMBER_OF_CCS; i++) {
+    if (vnetconfig->ccs[i] != 0) {
+      found=0;
+      for (j=0; j<ccsLen && !found; j++) {
+	if (vnetconfig->ccs[i] == dot2hex(ccs[j])) {
+	  found=1;
+	}
+      }
+      if (!found) {
+	// exists locally, but not in new list, remove it
+	logprintfl(EUCADEBUG, "removing CC %s,%d\n", hex2dot(vnetconfig->ccs[i]), i);
+	vnetDelCCS(vnetconfig, vnetconfig->ccs[i]);
+      }
+    }
+  }
+
   return(0);
 }
 
@@ -1003,14 +1039,14 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
       snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set dev %s up", vnetconfig->eucahome, newdevname);
       rc = system(cmd);
 
-      // attach tunnel(s)
-      rc = vnetAttachTunnels(vnetconfig, vlan, newbrname);
-      
       snprintf(newdevname, 32, "%s", newbrname);
     } else {
       snprintf(newdevname, 32, "%s", vnetconfig->privInterface);
     }
     
+    // attach tunnel(s)
+    rc = vnetAttachTunnels(vnetconfig, vlan, newbrname);
+
     rc = vnetAddGatewayIP(vnetconfig, vlan, newdevname);
     if (rc) {
       return(rc);
@@ -1025,63 +1061,86 @@ int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
   int rc, i, slashnet;
   char cmd[1024], tundev[32], tunvlandev[32], *network=NULL;
   
+  if (!vnetconfig || vlan < 0 || vlan > NUMBER_OF_VLANS || !newbrname || check_bridge(newbrname)) {
+    logprintfl(EUCAERROR, "bad input params to vnetAttachTunnels()\n");
+    return(1);
+  }
+  
   slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
   network = hex2dot(vnetconfig->networks[vlan].nw);
   snprintf(cmd, 256, "-A FORWARD -s %s/%d -d %s/%d -j ACCEPT", network, slashnet, network, slashnet);
-  rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+  if (check_tablerule(vnetconfig, "filter", cmd)) {
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+  }
   if (network) free(network);
   
-  for (i=0; i<NUMBER_OF_CCS; i++) {
-    //    logprintfl(EUCADEBUG, "attaching for CC %d vlan %d\n", i, vlan);
-    if (i != vnetconfig->localIpId) {
-      snprintf(tundev, 32, "tap-%d-%d", vnetconfig->localIpId, i);
-      if (!check_device(tundev) && !check_device(newbrname)) {
-	snprintf(tunvlandev, 32, "tap-%d-%d.%d", vnetconfig->localIpId, i, vlan);
-	if (check_device(tunvlandev)) {
-	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, tundev, vlan);
+  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    for (i=0; i<NUMBER_OF_CCS; i++) {
+      //    logprintfl(EUCADEBUG, "attaching for CC %d vlan %d\n", i, vlan);
+      if (i != vnetconfig->localIpId) {
+	snprintf(tundev, 32, "tap-%d-%d", vnetconfig->localIpId, i);
+	if (!check_device(tundev) && !check_device(newbrname)) {
+	  if (!strcmp(vnetconfig->mode, "MANAGED")) {
+	    snprintf(tunvlandev, 32, "tap-%d-%d.%d", vnetconfig->localIpId, i, vlan);
+	    if (check_device(tunvlandev)) {
+	      snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, tundev, vlan);
+	      logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	      rc = system(cmd);
+	      rc = rc>>8;
+	      logprintfl(EUCADEBUG, "done: %d\n", rc);
+	    }
+	  } else {
+	    snprintf(tunvlandev, 32, "%s", tundev);
+	  }
+	  
+	  if (check_bridgedev(newbrname, tunvlandev)) {
+	    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, newbrname, tunvlandev);
+	    logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	    rc = system(cmd);
+	    rc = rc>>8;
+	    logprintfl(EUCADEBUG, "done: %d\n", rc);
+	  }
+	  
+	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set up dev %s", vnetconfig->eucahome, tunvlandev);
 	  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
 	  rc = system(cmd);
 	  rc = rc>>8;
 	  logprintfl(EUCADEBUG, "done: %d\n", rc);
 	}
 	
-	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, newbrname, tunvlandev);
-	logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
-	rc = system(cmd);
-	rc = rc>>8;
-	logprintfl(EUCADEBUG, "done: %d\n", rc);
-	
-	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set up dev %s", vnetconfig->eucahome, tunvlandev);
-	logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
-	rc = system(cmd);
-	rc = rc>>8;
-	logprintfl(EUCADEBUG, "done: %d\n", rc);
-      }
-      
-      snprintf(tundev, 32, "tap-%d-%d", i, vnetconfig->localIpId);
-      if (!check_device(tundev) && !check_device(newbrname)) {
-	snprintf(tunvlandev, 32, "tap-%d-%d.%d", i, vnetconfig->localIpId, vlan);
-	if (check_device(tunvlandev)) {
-	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, tundev, vlan);
+	snprintf(tundev, 32, "tap-%d-%d", i, vnetconfig->localIpId);
+	if (!check_device(tundev) && !check_device(newbrname)) {
+	  if (!strcmp(vnetconfig->mode, "MANAGED")) {
+	    snprintf(tunvlandev, 32, "tap-%d-%d.%d", i, vnetconfig->localIpId, vlan);
+	    if (check_device(tunvlandev)) {
+	      snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vconfig add %s %d", vnetconfig->eucahome, tundev, vlan);
+	      logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	      rc = system(cmd);
+	      rc = rc>>8;
+	      logprintfl(EUCADEBUG, "done: %d\n", rc);
+	    }
+	  } else {
+	    snprintf(tunvlandev, 32, "%s", tundev);
+	  }
+	  
+	  if (check_bridgedev(newbrname, tunvlandev)) {
+	    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, newbrname, tunvlandev);
+	    logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+	    rc = system(cmd);
+	    rc = rc>>8;
+	    logprintfl(EUCADEBUG, "done: %d\n", rc);
+	  }
+	  
+	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set up dev %s", vnetconfig->eucahome, tunvlandev);
 	  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
 	  rc = system(cmd);
 	  rc = rc>>8;
 	  logprintfl(EUCADEBUG, "done: %d\n", rc);
 	}
-	
-	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl addif %s %s", vnetconfig->eucahome, newbrname, tunvlandev);
-	logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
-	rc = system(cmd);
-	rc = rc>>8;
-	logprintfl(EUCADEBUG, "done: %d\n", rc);
-	
-	snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set up dev %s", vnetconfig->eucahome, tunvlandev);
-	logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
-	rc = system(cmd);
-	rc = rc>>8;
-	logprintfl(EUCADEBUG, "done: %d\n", rc);
       }
     }
+  } else {
+    return(0);
   }
   
   return(0);
@@ -1129,6 +1188,45 @@ int vnetDetachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
 }
 
 int vnetTeardownTunnels(vnetConfig *vnetconfig) {
+  return(vnetTeardownTunnelsVTUN(vnetconfig));
+}
+
+int vnetTeardownTunnelsVTUN(vnetConfig *vnetconfig) {
+
+  int i;
+  char file[1024], *pidstr;
+  
+  snprintf(file, 1024, "%s/var/run/eucalyptus/vtund-server.pid", vnetconfig->eucahome);
+  if (!check_file(file)) {
+    pidstr = file2str(file);
+    if (pidstr) {
+      kill(atoi(pidstr), 9);
+      unlink(file);
+      free(pidstr);
+    }
+  }
+  
+  if (vnetconfig->localIpId != -1) {
+    for (i=0; i<NUMBER_OF_CCS; i++) {
+      if (vnetconfig->ccs[i] != 0) {
+	snprintf(file, 1024, "%s/var/run/eucalyptus/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->localIpId, i);
+	if (!check_file(file)) {
+	  pidstr = file2str(file);
+	  if (pidstr) {
+	    logprintfl(EUCADEBUG, "tearing down tunnel (%d)\n", atoi(pidstr));
+	    kill(atoi(pidstr), 9);
+	    unlink(file);
+	    free(pidstr);
+	  }
+	}
+      }
+    }
+  }
+
+  return(0);
+}
+
+int vnetTeardownTunnelsGRE(vnetConfig *vnetconfig) {
   int i, done, j, rc;
   
   for (j=2; j<NUMBER_OF_VLANS; j++) {
@@ -1164,6 +1262,11 @@ int vnetSetupTunnels(vnetConfig *vnetconfig) {
 int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   int i, done, rc, dpid;
   char cmd[1024], tundev[32], *remoteIp=NULL, pidfile[1024];
+
+  if (vnetconfig->localIpId == -1) {
+    logprintfl(EUCADEBUG, "tunneling not initialized\n");
+    return(0);
+  }
   
   snprintf(pidfile, 1024, "%s/var/run/eucalyptus/vtund-server.pid", vnetconfig->eucahome);
   rc = check_file(pidfile);
@@ -1186,15 +1289,14 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   
   done=0;
   for (i=0; i<NUMBER_OF_CCS && !done; i++) {
-    if (vnetconfig->ccs[i] == 0) {
-      done++;
-    } else {
+    //    logprintfl(EUCADEBUG, "HERE: %d/%s/%d\n", i, hex2dot(vnetconfig->ccs[i]), vnetconfig->localIpId);
+    if (vnetconfig->ccs[i] != 0) {
       remoteIp = hex2dot(vnetconfig->ccs[i]);
       if (vnetconfig->localIpId != i) {
 	logprintfl(EUCADEBUG, "setting up tunnel for endpoint: %s\n", remoteIp);
 	snprintf(tundev, 32, "tap-%d-%d", vnetconfig->localIpId, i);
 	rc = check_device(tundev);
-	if (rc && (vnetconfig->ccsTunnelStart[i] == 0 || (time(NULL) - vnetconfig->ccsTunnelStart[i]) > 120)) {
+	if (rc) {
 	  snprintf(pidfile, 1024, "%s/var/run/eucalyptus/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->localIpId, i);
 	  rc = check_file(pidfile);
 	  if (rc) {
@@ -1211,8 +1313,8 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
 		logprintfl(EUCAERROR, "cannot write pid '%s' to file '%s'\n", pidstr, pidfile);
 	      }
 	    }
-	    logprintfl(EUCADEBUG, "setting tunnel start time (%d): %d/%d\n", i, vnetconfig->ccsTunnelStart[i], time(NULL));
-	    vnetconfig->ccsTunnelStart[i] = time(NULL);
+	    //	    logprintfl(EUCADEBUG, "setting tunnel start time (%d): %d/%d\n", i, vnetconfig->ccsTunnelStart[i], time(NULL));
+	    //	    vnetconfig->ccsTunnelStart[i] = time(NULL);
 	  }
 	}
       }
@@ -1221,6 +1323,7 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   }
   return(0);
 }
+
 int vnetSetupTunnelsGRE(vnetConfig *vnetconfig) {
   int i, done, j, rc;
   
@@ -1363,7 +1466,6 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
       rc = system(cmd);
       if (rc) {
 	logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
-	//    return(1);
 	ret=1;
       }
   
@@ -1510,17 +1612,20 @@ int vnetAddPublicIP(vnetConfig *vnetconfig, char *inip) {
 }
 
 int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
-  int rc=0;
-  char cmd[256];
+  int rc=0, slashnet;
+  char cmd[256], *network;
 
   if ((vnetconfig->role == CC || vnetconfig->role == CLC) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
 
-    snprintf(cmd, 255, "-A PREROUTING -d %s -j DNAT --to %s", src, dst);
+    snprintf(cmd, 255, "-A PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
-    snprintf(cmd, 255, "-A OUTPUT -d %s -j DNAT --to %s", src, dst);
+    snprintf(cmd, 255, "-A OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
-    snprintf(cmd, 255, "-A POSTROUTING -s %s -j SNAT --to %s", dst, src);
+    slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
+    network = hex2dot(vnetconfig->nw);
+    snprintf(cmd, 255, "-A POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
+    if (network) free(network);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
   }
   return(rc);
@@ -1559,12 +1664,12 @@ int vnetSetPublicIP(vnetConfig *vnetconfig, char *ip, char *dstip, int setval) {
 }
 
 int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
-  int rc=0, count;
-  char cmd[256];
+  int rc=0, count, slashnet;
+  char cmd[256], *network;
   
   if ((vnetconfig->role == CC || vnetconfig->role == CLC) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
 
-    snprintf(cmd, 255, "-D PREROUTING -d %s -j DNAT --to %s", src, dst);
+    snprintf(cmd, 255, "-D PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     count=0;
     while(rc != 0 && count < 10) {
@@ -1572,7 +1677,7 @@ int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
       count++;
     }
 
-    snprintf(cmd, 255, "-D OUTPUT -d %s -j DNAT --to %s", src, dst);
+    snprintf(cmd, 255, "-D OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     count=0;
     while(rc != 0 && count < 10) {
@@ -1580,7 +1685,10 @@ int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
       count++;
     }
 
-    snprintf(cmd, 255, "-D POSTROUTING -s %s -j SNAT --to %s", dst, src);
+    slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
+    network = hex2dot(vnetconfig->nw);
+    snprintf(cmd, 255, "-D POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
+    if (network) free(network);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     count=0;
     while(rc != 0 && count < 10) {
@@ -1794,3 +1902,93 @@ int vnetLoadIPTables(vnetConfig *vnetconfig) {
   return(WEXITSTATUS(rc));
 }
 
+int check_chain(vnetConfig *vnetconfig, char *userName, char *netName) {
+  char cmd[256];
+  int rc;
+  snprintf(cmd, 256, "-L %s-%s -n", userName, netName);
+  rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+  return(rc);
+}
+
+int check_device(char *dev) {
+  char rbuf[256], devbuf[256], *ptr;
+  FILE *FH=NULL;
+  
+  if (!dev) return(1);
+  
+  FH = fopen("/proc/net/dev", "r");
+  if (!FH) {
+    return(1);
+  }
+  
+  while(fgets(rbuf, 256, FH)) {
+    ptr = strrchr(rbuf, ':');
+    if (ptr) {
+      *ptr = '\0';
+      ptr = strrchr(rbuf, ' ');
+      if (ptr) {
+        ptr = ptr + 1;
+      } else {
+        ptr = rbuf;
+      }
+      if (!strcmp(ptr, dev)) {
+	// found it
+	fclose(FH);
+	return(0);
+      }
+    }
+  }
+  fclose(FH);
+  
+  return(1);
+}
+
+int check_bridgedev(char *br, char *dev) {
+  char file[1024];
+  
+  if (!br || !dev || check_device(br) || check_device(dev)) {
+    return(1);
+  }
+
+  snprintf(file, 1024, "/sys/class/net/%s/brif/%s/", br, dev);
+  if (check_directory(file)) {
+    return(1);
+  }
+  return(0);
+}
+
+int check_bridge(char *brname) {
+  char file[1024];
+  
+  if (!brname || check_device(brname)) {
+    return(1);
+  }
+  snprintf(file, 1024, "/sys/class/net/%s/bridge/", brname);
+  if (check_directory(file)) {
+    return(1);
+  }
+  return(0);
+}
+
+int check_tablerule(vnetConfig *vnetconfig, char *table, char *rule) {
+  int rc;
+  char *out, *ptr, cmd[1024];
+  
+  if (!table || !rule) {
+    return(1);
+  }
+
+  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap iptables -S -t %s", vnetconfig->eucahome, table);
+  out = system_output(cmd);
+  
+  if (!out) {
+    return(1);
+  }
+  
+  ptr = strstr(out, rule);
+  if (out) free(out);
+  if (!ptr) {
+    return(1);
+  }
+  return(0);
+}

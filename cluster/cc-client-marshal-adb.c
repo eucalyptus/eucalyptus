@@ -505,7 +505,7 @@ int cc_startNetwork(int vlan, char *netName, char **ccs, int ccsLen, axutil_env_
   sn = adb_startNetworkType_create(env);
   input = adb_StartNetwork_create(env);
   
-  adb_startNetworkType_set_userId(sn, env, "eucalyptus");
+  adb_startNetworkType_set_userId(sn, env, "admin");
   {
     char cidstr[9];
     bzero(cidstr, 9);
