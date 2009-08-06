@@ -38,6 +38,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
@@ -1308,7 +1309,7 @@ public class WalrusManager {
 			if(isCompressed) {
 				file = new CompressedChunkedFile(raf, size);
 			} else {
-				file = new ChunkedFile(raf, 0, size, 8192);
+				file = new ChunkedDataFile(raf, 0, size, 8192);
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 			}
 			channel.write(httpResponse);
@@ -1320,6 +1321,14 @@ public class WalrusManager {
 		}	
 	}
 
+	public static class ChunkedDataFile extends ChunkedFile implements IsData {
+
+		public ChunkedDataFile(RandomAccessFile file, long offset, long length,
+				int chunkSize) throws IOException {
+			super(file, offset, length, chunkSize);
+		}		
+	}
+	
 	public GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws EucalyptusCloudException {
 		GetObjectExtendedResponseType reply = (GetObjectExtendedResponseType) request.getReply();
 		Long byteRangeStart = request.getByteRangeStart();

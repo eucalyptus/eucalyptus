@@ -8,7 +8,9 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
-public class CompressedChunkedFile implements ChunkedInput {
+import edu.ucsb.eucalyptus.constants.IsData;
+
+public class CompressedChunkedFile implements ChunkedInput, IsData {
 	private Logger LOG = Logger.getLogger( CompressedChunkedFile.class );
 	private RandomAccessFile file;
 	private long offset;

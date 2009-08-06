@@ -4,7 +4,9 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-public class MappingHttpResponse extends MappingHttpMessage implements HttpResponse {
+import edu.ucsb.eucalyptus.constants.IsData;
+
+public class MappingHttpResponse extends MappingHttpMessage implements HttpResponse, IsData {
   private HttpResponseStatus status;
   
   public MappingHttpResponse( HttpVersion version ) {

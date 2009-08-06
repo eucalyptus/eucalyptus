@@ -66,9 +66,9 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
   public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
     if ( e instanceof MessageEvent ) {
       MessageEvent msge = (MessageEvent) e;
-      if( msge instanceof IsData ) {//Pass through for chunked messaging
+      if( msge.getMessage() instanceof IsData ) {//Pass through for chunked messaging
         ctx.sendDownstream( msge );
-      } else if( msge instanceof EucalyptusMessage ) {//Handle single request-response MEP
+      } else if( msge.getMessage() instanceof EucalyptusMessage ) {//Handle single request-response MEP
         MappingHttpMessage request = requestLocal.get( ctx.getChannel( ) );
         EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
         if ( reply == null ) {// TODO: fix this error reporting

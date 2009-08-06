@@ -1,5 +1,6 @@
 package edu.ucsb.eucalyptus.msgs
 import org.jboss.netty.handler.codec.http.HttpResponseStatusimport org.jboss.netty.channel.Channel;
+import edu.ucsb.eucalyptus.constants.IsData;
 /*
  * Software License Agreement (BSD License)
  *
