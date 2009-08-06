@@ -596,7 +596,6 @@ public class WalrusManager {
 		reply.set_return(putObjectResponse.get_return());
 		reply.setMetaData(putObjectResponse.getMetaData());
 		reply.setErrorCode(putObjectResponse.getErrorCode());
-		reply.setSize(putObjectResponse.getSize());
 		reply.setStatusMessage(putObjectResponse.getStatusMessage());
 
 		String successActionRedirect = request.getSuccessActionRedirect();

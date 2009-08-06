@@ -102,16 +102,14 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.ucsb.edu" ) );
 			}
 			if(msg != null) {
-				OMElement omMsg = binding.toOM( httpResponse.getMessage( ) );
+				OMElement omMsg = binding.toOM( msg );
 				ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 				omMsg.serialize( byteOut );
 				byte[] req = byteOut.toByteArray();
 				ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
-				if(!httpResponse.getStatus().equals(HttpResponseStatus.NO_CONTENT)) {
-					httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes() ) );
-					httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml" );
-					httpResponse.setContent( buffer );
-				}
+				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes() ) );
+				httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml" );
+				httpResponse.setContent( buffer );
 			}
 		}
 	}
@@ -162,6 +160,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		Map bindingArguments = new HashMap();
 		final String operationName = getOperation(httpRequest, bindingArguments);
 
+		if(operationName == null)
+			throw new BindingException("Could not determine operation name for " + servicePath);
+		
 		Map<String, String> params = httpRequest.getParameters();
 
 		OMElement msg;
@@ -305,6 +306,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					if(formFields.containsKey(WalrusProperties.FormField.key.toString())) {
 						objectKey = formFields.get(WalrusProperties.FormField.key.toString());
 						objectKey = objectKey.replaceAll("\\$\\{filename\\}", file);
+						operationParams.put("Key", objectKey);
 					}
 					if(formFields.containsKey(WalrusProperties.FormField.acl.toString())) {
 						String acl = formFields.get(WalrusProperties.FormField.acl.toString());

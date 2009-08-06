@@ -86,7 +86,12 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 				} else {
 					Integer successCode = postObjectResponse.getSuccessCode();
 					if ( successCode != null ) {
-						httpResponse.setStatus(new HttpResponseStatus(successCode, "redirect"));
+						if(successCode != 201) {
+							httpResponse.setMessage(null);
+							httpResponse.setStatus(new HttpResponseStatus(successCode, "OK"));
+						} else {
+							httpResponse.setStatus(new HttpResponseStatus(successCode, "Created"));
+						}
 					}
 				}
 
@@ -175,6 +180,7 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 
 			} else if(msg instanceof WalrusDeleteResponseType) {
 				httpResponse.setStatus(HttpResponseStatus.NO_CONTENT);
+				httpResponse.setMessage(null);
 			}
 		}
 	}
