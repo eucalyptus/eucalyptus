@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" output="modules/msgs/build" path="modules/msgs/src/main/java"/>
+	<classpathentry kind="src" output="modules/core/build" path="modules/core/src/main/java"/>
+	<classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/main/java"/>
+	<classpathentry kind="src" output="modules/www/build" path="modules/www/src"/>
+	<classpathentry kind="src" output="modules/interface/build" path="modules/interface/src/main/java"/>
+	<classpathentry kind="src" output="modules/cluster-manager/build" path="modules/cluster-manager/src/main/java"/>
+	<classpathentry kind="src" output="modules/group-manager/build" path="modules/group-manager/src/main/java"/>
+	<classpathentry kind="src" output="modules/image-manager/build" path="modules/image-manager/src/main/java"/>
+	<classpathentry kind="src" output="modules/key-manager/build" path="modules/key-manager/src/main/java"/>
+	<classpathentry kind="src" output="modules/storage-controller/build" path="modules/storage-controller/src/main/java"/>
+	<classpathentry kind="src" output="modules/dns/build" path="modules/dns/src/main/java"/>
+	<classpathentry kind="src" output="modules/storage-manager/build" path="modules/storage-manager/src/main/java"/>
+	<classpathentry kind="src" output="modules/workarounds/build" path="modules/workarounds/src/main/java"/>
+	<classpathentry kind="src" output="modules/crypto/build" path="modules/crypto/src/main/java"/>
+	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>
+	<classpathentry kind="lib" path="lib/antlr3-3.0.1+dfsg.jar"/>
+	<classpathentry kind="lib" path="lib/antlrall.jar"/>
+	<classpathentry kind="lib" path="lib/asm2-2.2.3.jar"/>
+	<classpathentry kind="lib" path="lib/avalon-framework-4.2.0.jar"/>
+	<classpathentry kind="lib" path="lib/axiom-api-1.2.8.jar"/>
+	<classpathentry kind="lib" path="lib/axiom-dom-1.2.8.jar"/>
+	<classpathentry kind="lib" path="lib/axiom-impl-1.2.8.jar"/>
+	<classpathentry kind="lib" path="lib/backport-util-concurrent-2.2.jar"/>
+	<classpathentry kind="lib" path="lib/bcel-5.2.jar"/>
+	<classpathentry kind="lib" path="lib/bcprov.jar"/>
+	<classpathentry kind="lib" path="lib/bsf-2.4.0.jar"/>
+	<classpathentry kind="lib" path="lib/c3p0-0.9.1.2.jar"/>
+	<classpathentry kind="lib" path="lib/cglib-2.1.3.jar"/>
+	<classpathentry kind="lib" path="lib/commons-beanutils-1.8.0-BETA.jar"/>
+	<classpathentry kind="lib" path="lib/commons-cli-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-codec-1.3.jar"/>
+	<classpathentry kind="lib" path="lib/commons-collections3-3.2.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-discovery-0.4.jar"/>
+	<classpathentry kind="lib" path="lib/commons-fileupload-1.2.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-httpclient-3.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-io-1.4.jar"/>
+	<classpathentry kind="lib" path="lib/commons-jxpath-1.2.jar"/>
+	<classpathentry kind="lib" path="lib/commons-lang-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/commons-logging-1.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-logging-adapters-1.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-logging-api-1.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-pool-1.4.jar"/>
+	<classpathentry kind="lib" path="lib/dnsjava-2.0.6.jar"/>
+	<classpathentry kind="lib" path="lib/dom4j-1.6.1.jar"/>
+	<classpathentry kind="lib" path="lib/drools-compiler-4.0.7.jar"/>
+	<classpathentry kind="lib" path="lib/drools-core-4.0.7.jar"/>
+	<classpathentry kind="lib" path="lib/ecj.jar"/>
+	<classpathentry kind="lib" path="lib/ehcache-1.6.0+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/el-api-2.1.jar"/>
+	<classpathentry kind="lib" path="lib/excalibur-logkit.jar"/>
+	<classpathentry kind="lib" path="lib/ezmorph-1.0.5.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-activation-1.1-spec-1.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-ejb-3.0-spec-1.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-j2ee-connector-1.5-spec-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-javamail-1.4-provider-1.6.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-javamail-1.4-spec-1.2.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-jms-1.1-spec-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-jpa-3.0-spec-1.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-jta-1.0.1b-spec-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-stax-1.0-spec-1.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/google-collect-20080808.jar"/>
+	<classpathentry kind="lib" path="lib/groovy.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-dev-linux-1.6.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-servlet-1.6.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-user-1.6.4.jar"/>
+	<classpathentry kind="lib" path="lib/hibernate-3.3.1+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/hibernate-annotations-3.4.0.GA+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/hibernate-cache-ehcache-3.3.1+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/hibernate-commons-annotations-3.0.0.GA+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/hibernate-connection-c3p0-3.3.1+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/hibernate-entitymanager-3.4.0.GA+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
+	<classpathentry kind="lib" path="lib/hsqldbutil-1.8.0.10.jar"/>
+	<classpathentry kind="lib" path="lib/janino-2.5.15-1.jar"/>
+	<classpathentry kind="lib" path="lib/javassist-3.8.1.jar"/>
+	<classpathentry kind="lib" path="lib/jaxen-1.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/jaxp-1.3.jar"/>
+	<classpathentry kind="lib" path="lib/jcl-over-slf4j-1.5.2.jar"/>
+	<classpathentry kind="lib" path="lib/jettison-1.0.jar"/>
+	<classpathentry kind="lib" path="lib/jetty-6.1.18.jar"/>
+	<classpathentry kind="lib" path="lib/jetty-sslengine-6.1.18.jar"/>
+	<classpathentry kind="lib" path="lib/jetty-util-6.1.18.jar"/>
+	<classpathentry kind="lib" path="lib/jibx-bind-1.1.6a.jar"/>
+	<classpathentry kind="lib" path="lib/jibx-extras-1.1.6a.jar"/>
+	<classpathentry kind="lib" path="lib/jibx-run-1.1.6a.jar"/>
+	<classpathentry kind="lib" path="lib/json-lib-2.2.2.jar"/>
+	<classpathentry kind="lib" path="lib/jug-asl-2.0.0.jar"/>
+	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.5.2.jar"/>
+	<classpathentry kind="lib" path="lib/junit-3.8.2.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
+	<classpathentry kind="lib" path="lib/mule-core-2.0.1+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mvel-1.3.14.jar"/>
+	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar"/>
+	<classpathentry kind="lib" path="lib/regexp-1.4.jar"/>
+	<classpathentry kind="lib" path="lib/serializer.jar"/>
+	<classpathentry kind="lib" path="lib/servlet-api-2.5.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-api-1.5.2.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.2.jar"/>
+	<classpathentry kind="lib" path="lib/spring-beans-2.5.6.SEC01+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/spring-context-2.5.6.SEC01+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/spring-context-support-2.5.6.SEC01+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/spring-core-2.5.6.SEC01+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/spring-web-2.5.6.SEC01+euca1.jar"/>
+	<classpathentry kind="lib" path="lib/wsdl4j-1.6.2.jar"/>
+	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar"/>
+	<classpathentry kind="lib" path="lib/xalan2.jar"/>
+	<classpathentry kind="lib" path="lib/xercesImpl.jar"/>
+	<classpathentry kind="lib" path="lib/xml-security-1.4.2.jar"/>
+	<classpathentry kind="lib" path="lib/xom-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/xpp3-1.1.3.4.O.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry exported="true" kind="con" path="GROOVY_SUPPORT"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
