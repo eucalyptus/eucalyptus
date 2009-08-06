@@ -29,6 +29,7 @@ import com.eucalyptus.ws.util.Messaging;
 import com.eucalyptus.ws.util.ReplyQueue;
 
 import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
@@ -38,10 +39,10 @@ import edu.ucsb.eucalyptus.msgs.WalrusDeleteResponseType;
 
 @ChannelPipelineCoverage( "one" )
 public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
-  private static Logger      LOG              = Logger.getLogger( ServiceSinkHandler.class );
-  private long               QUEUE_TIMEOUT_MS = 2; //TODO: measure me
-  private long               startTime;
-  private ChannelLocal<MappingHttpMessage> requestLocal = new ChannelLocal<MappingHttpMessage>();
+  private static Logger                    LOG              = Logger.getLogger( ServiceSinkHandler.class );
+  private long                             QUEUE_TIMEOUT_MS = 2;                                           //TODO: measure me
+  private long                             startTime;
+  private ChannelLocal<MappingHttpMessage> requestLocal     = new ChannelLocal<MappingHttpMessage>( );
 
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
@@ -63,21 +64,25 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
   @SuppressWarnings( "unchecked" )
   @Override
   public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-    if ( e instanceof MessageEvent && ( ( MessageEvent ) e ).getMessage( ) instanceof EucalyptusMessage ) {
-      MappingHttpMessage request = requestLocal.get( ctx.getChannel( ) );
-      EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
-      if ( reply == null ) {
-        // TODO: fix this error reporting
-        LOG.warn( "Received a null response: " + request.getMessageString( ) );
-        reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
-      }
-      LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, ( System.currentTimeMillis( ) - startTime ) ) );      
-      MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
-      DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
-      response.setMessage( reply );
-      if ( !( reply instanceof WalrusDataGetResponseType ) ) {
-        ctx.sendDownstream( newEvent );
-        newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+    if ( e instanceof MessageEvent ) {
+      MessageEvent msge = (MessageEvent) e;
+      if( msge instanceof IsData ) {//Pass through for chunked messaging
+        ctx.sendDownstream( msge );
+      } else if( msge instanceof EucalyptusMessage ) {//Handle single request-response MEP
+        MappingHttpMessage request = requestLocal.get( ctx.getChannel( ) );
+        EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
+        if ( reply == null ) {// TODO: fix this error reporting
+          LOG.warn( "Received a null response: " + request.getMessageString( ) );
+          reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
+        }
+        LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, ( System.currentTimeMillis( ) - startTime ) ) );      
+        if ( !( reply instanceof WalrusDataGetResponseType ) ) {//TODO: is this condition needed anymore?
+          MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
+          DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
+          response.setMessage( reply );
+          ctx.sendDownstream( newEvent );
+          newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+        }
       }
     }
   }
