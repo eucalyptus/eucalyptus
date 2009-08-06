@@ -33,6 +33,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 
+import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.util.PipelineRegistry;
 
 @ChannelPipelineCoverage( "one" )
@@ -44,11 +45,11 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
     if ( this.first ) {
       lookupPipeline( ctx, e );
-      ctx.sendUpstream( e );
-    } else {
-      LOG.warn( "Hard close the socket on an attempt to do a second request." );//TODO: Keep-Alive support
+    } else if( e.getMessage( ) instanceof MappingHttpRequest ) {
+      LOG.warn( "Hard close the socket on an attempt to do a second request." );//TODO: fix Keep-Alive support
       ctx.getChannel( ).close( );
     }
+    ctx.sendUpstream( e );
   }
   
   private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {
