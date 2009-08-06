@@ -83,6 +83,7 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 				if ( redirectUrl != null ) {
 					httpResponse.addHeader(HttpHeaders.Names.LOCATION, redirectUrl);
 					httpResponse.setStatus(HttpResponseStatus.SEE_OTHER);
+					httpResponse.setMessage(null);
 				} else {
 					Integer successCode = postObjectResponse.getSuccessCode();
 					if ( successCode != null ) {
