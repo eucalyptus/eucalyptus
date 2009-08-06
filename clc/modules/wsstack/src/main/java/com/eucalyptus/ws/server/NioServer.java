@@ -22,6 +22,7 @@ public class NioServer {
     this.bootstrap = new ServerBootstrap( this.socketFactory );
     LOG.info( "Server bootstrap options:");
     this.bootstrap.setOption("child.tcpNoDelay", true);
+    this.bootstrap.setOption("child.reuseAddress", false);
     this.bootstrap.setOption("child.keepAlive", true);
     for( String key : this.bootstrap.getOptions( ).keySet( ) ) {
       Object value = this.bootstrap.getOption( key );
