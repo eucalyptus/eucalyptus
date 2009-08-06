@@ -42,23 +42,28 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
 
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
-    synchronized ( this ) {
-      if ( this.first ) {
-        try {
-          final HttpRequest request = ( HttpRequest ) e.getMessage( );
-          final ChannelPipeline pipeline = ctx.getPipeline( );
-          FilteredPipeline filteredPipeline = PipelineRegistry.getInstance( ).find( request );
-          filteredPipeline.unroll( pipeline );
-          this.first = false;
-        } catch ( DuplicatePipelineException e1 ) {
-          LOG.error( "This is a BUG: " + e1, e1 );
-          throw e1;
-        } catch ( NoAcceptingPipelineException e2 ) {
-          throw e2;
-        }
-      }
+    if ( this.first ) {
+      lookupPipeline( ctx, e );
+      ctx.sendUpstream( e );
+    } else {
+      LOG.warn( "Hard close the socket on an attempt to do a second request." );//TODO: Keep-Alive support
+      ctx.getChannel( ).close( );
     }
-    ctx.sendUpstream( e );
+  }
+  
+  private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {
+    try {
+      final HttpRequest request = ( HttpRequest ) e.getMessage( );
+      final ChannelPipeline pipeline = ctx.getPipeline( );
+      FilteredPipeline filteredPipeline = PipelineRegistry.getInstance( ).find( request );
+      filteredPipeline.unroll( pipeline );
+      this.first = false;
+    } catch ( DuplicatePipelineException e1 ) {
+      LOG.error( "This is a BUG: " + e1, e1 );
+      throw e1;
+    } catch ( NoAcceptingPipelineException e2 ) {
+      throw e2;
+    }
   }
 
   @Override
