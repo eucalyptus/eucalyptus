@@ -63,8 +63,9 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
 					MappingHttpResponse response = new MappingHttpResponse( message.getProtocolVersion( ) ); 
 					response.setMessage( reply );
 					if(!(reply instanceof WalrusDataGetResponseType)) {
-						ChannelFuture writeFuture = Channels.write( ctx.getChannel( ), response );						
-						writeFuture.addListener( ChannelFutureListener.CLOSE );
+						Channels.write(ctx.getChannel(), response);
+						//ChannelFuture writeFuture = Channels.write( ctx.getChannel( ), response );						
+						//writeFuture.addListener( ChannelFutureListener.CLOSE );
 					}
 				}
 			}

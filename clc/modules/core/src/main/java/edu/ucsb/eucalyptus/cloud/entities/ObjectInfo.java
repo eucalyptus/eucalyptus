@@ -49,7 +49,7 @@ import org.apache.log4j.Logger;
 @Entity
 @Table( name = "Objects" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class ObjectInfo {
+public class ObjectInfo implements Comparable {
     @Id
     @GeneratedValue
     @Column( name = "object_id" )
@@ -444,4 +444,8 @@ public class ObjectInfo {
     public void setContentDisposition(String contentDisposition) {
         this.contentDisposition = contentDisposition;
     }
+    
+    public int compareTo(Object o) {
+        return this.objectKey.compareTo(((ObjectInfo)o).getObjectKey());
+    }    
 }

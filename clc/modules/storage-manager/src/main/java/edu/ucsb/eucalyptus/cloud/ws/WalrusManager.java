@@ -66,6 +66,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedInput;
+import java.util.Collections;
 
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger( WalrusManager.class );
@@ -855,9 +856,6 @@ public class WalrusManager {
 			prefix = "";
 
 		String marker = request.getMarker();
-		if(marker == null)
-			marker = "";
-
 		int maxKeys = -1;
 		String maxKeysString = request.getMaxKeys();
 		if(maxKeysString != null)
@@ -890,11 +888,13 @@ public class WalrusManager {
 				List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 				if(objectInfos.size() > 0) {
 					int howManyProcessed = 0;
+					if(marker != null || objectInfos.size() < maxKeys)
+						Collections.sort(objectInfos);
 					ArrayList<ListEntry> contents = new ArrayList<ListEntry>();
 					for(ObjectInfo objectInfo: objectInfos) {
 						String objectKey = objectInfo.getObjectKey();
 						if(marker != null) {
-							if(objectKey.compareTo(marker) < 0)
+							if(objectKey.compareTo(marker) <= 0)
 								continue;
 						}
 						if(prefix != null) {
@@ -1313,7 +1313,7 @@ public class WalrusManager {
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 			}
 			channel.write(httpResponse);
-//			channel.write(file);
+			//			channel.write(file);
 			ChannelFuture writeFuture = channel.write(file);
 			writeFuture.addListener(ChannelFutureListener.CLOSE);
 		} catch(Exception ex) {
