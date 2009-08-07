@@ -916,8 +916,8 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
 }
 
 int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname) {
-  char cmd[1024], newdevname[32], newbrname[32];
-  int rc;
+  char cmd[1024], newdevname[32], newbrname[32], *network=NULL;
+  int rc, slashnet;
 
   // check input params...
   if (!vnetconfig || !outbrname) {
@@ -982,7 +982,6 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
     
     *outbrname = strdup(newbrname);
   } else if (vlan > 0 && (vnetconfig->role == CC || vnetconfig->role == CLC)) {
-    //    char *newip, *netmask;
 
     vnetconfig->networks[vlan].active = 1;
     vnetconfig->networks[vlan].addrs[0].active = 1;
@@ -990,6 +989,15 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
     
     rc = vnetSetVlan(vnetconfig, vlan, userName, netName);
     rc = vnetCreateChain(vnetconfig, userName, netName);
+    
+    // allow traffic on this net to flow freely
+    slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
+    network = hex2dot(vnetconfig->networks[vlan].nw);
+    snprintf(cmd, 256, "-A FORWARD -s %s/%d -d %s/%d -j ACCEPT", network, slashnet, network, slashnet);
+    if (check_tablerule(vnetconfig, "filter", cmd)) {
+      rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    }
+    if (network) free(network);
     
     if (!strcmp(vnetconfig->mode, "MANAGED")) {
       snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
@@ -1039,13 +1047,18 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
       snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set dev %s up", vnetconfig->eucahome, newdevname);
       rc = system(cmd);
 
+      // attach tunnel(s)
+      rc = vnetAttachTunnels(vnetconfig, vlan, newbrname);
+
       snprintf(newdevname, 32, "%s", newbrname);
     } else {
+      // attach tunnel(s)
+      
+      rc = vnetAttachTunnels(vnetconfig, vlan, vnetconfig->pubInterface);
+
       snprintf(newdevname, 32, "%s", vnetconfig->privInterface);
     }
     
-    // attach tunnel(s)
-    rc = vnetAttachTunnels(vnetconfig, vlan, newbrname);
 
     rc = vnetAddGatewayIP(vnetconfig, vlan, newdevname);
     if (rc) {
@@ -1061,19 +1074,18 @@ int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
   int rc, i, slashnet;
   char cmd[1024], tundev[32], tunvlandev[32], *network=NULL;
   
+  logprintfl(EUCADEBUG, "%d %s %d\n", vlan, newbrname, check_bridge(newbrname));
   if (!vnetconfig || vlan < 0 || vlan > NUMBER_OF_VLANS || !newbrname || check_bridge(newbrname)) {
     logprintfl(EUCAERROR, "bad input params to vnetAttachTunnels()\n");
     return(1);
   }
   
-  slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
-  network = hex2dot(vnetconfig->networks[vlan].nw);
-  snprintf(cmd, 256, "-A FORWARD -s %s/%d -d %s/%d -j ACCEPT", network, slashnet, network, slashnet);
-  if (check_tablerule(vnetconfig, "filter", cmd)) {
-    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s on", vnetconfig->eucahome, newbrname);
+  rc = system(cmd);
+  if (rc) {
+    logprintfl(EUCAWARN, "could enable stp on bridge %s\n", newbrname);
   }
-  if (network) free(network);
-  
+
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
     for (i=0; i<NUMBER_OF_CCS; i++) {
       //    logprintfl(EUCADEBUG, "attaching for CC %d vlan %d\n", i, vlan);
@@ -1387,7 +1399,7 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
 
   logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
   rc = system(cmd);
-  if (rc) {
+  if (rc && rc != 2) {
     logprintfl(EUCAERROR, "could not bring up new device %s with ip %s\n", devname, newip);
     if (newip) free(newip);
     if (broadcast) free(broadcast);
@@ -1432,8 +1444,8 @@ int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
 }
 
 int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName) {
-  char cmd[1024], newdevname[32], newbrname[32];
-  int rc, ret;
+  char cmd[1024], newdevname[32], newbrname[32], *network;
+  int rc, ret, slashnet;
   
   ret = 0;
   //if (vnetconfig->role == NC) {
@@ -1441,8 +1453,6 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
     logprintfl(EUCAWARN, "supplied vlan '%d' is out of range (%d - %d), nothing to do\n", vlan, 0, vnetconfig->max_vlan);
     return(0);
   }
-  
-  //  rc = vnetTeardownTunnels(vnetconfig);
   
   vnetconfig->networks[vlan].active = 0;
 
@@ -1482,8 +1492,18 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
   }
   
   if ((vnetconfig->role == CC || vnetconfig->role == CLC)) {
+
+    // disallow traffic on this net from flowing freely
+    slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
+    network = hex2dot(vnetconfig->networks[vlan].nw);
+    snprintf(cmd, 256, "-D FORWARD -s %s/%d -d %s/%d -j ACCEPT", network, slashnet, network, slashnet);
+    if (check_tablerule(vnetconfig, "filter", cmd)) {
+      rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    }
+    if (network) free(network);
     
     if (!strcmp(vnetconfig->mode, "MANAGED")) {
+
       rc = vnetDetachTunnels(vnetconfig, vlan, newbrname);
       
       rc = vnetDelDev(vnetconfig, newdevname);

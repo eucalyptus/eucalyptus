@@ -278,7 +278,7 @@ int cc_stopNetwork(int vlan, char *netName, axutil_env_t *env, axis2_stub_t *stu
   sn = adb_stopNetworkType_create(env);
   input = adb_StopNetwork_create(env);
   
-  adb_stopNetworkType_set_userId(sn, env, "eucalyptus");
+  adb_stopNetworkType_set_userId(sn, env, "admin");
   {
     char cidstr[9];
     bzero(cidstr, 9);

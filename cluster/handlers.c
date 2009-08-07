@@ -485,7 +485,8 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char **ccs, int 
   } else {
     sem_wait(vnetConfigLock);
     rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
-    
+    rc = vnetSetupTunnels(vnetconfig);
+
     brname = NULL;
     rc = vnetStartNetwork(vnetconfig, vlan, ccMeta->userId, netName, &brname);
     sem_post(vnetConfigLock);
@@ -2267,7 +2268,11 @@ int maintainNetworkState() {
     for (i=2; i<NUMBER_OF_VLANS; i++) {
       if (vnetconfig->networks[i].active) {
 	char brname[32];
-	snprintf(brname, 32, "eucabr%d", i);
+	if (!strcmp(vnetconfig->mode, "MANAGED")) {
+	  snprintf(brname, 32, "eucabr%d", i);
+	} else {
+	  snprintf(brname, 32, "%s", vnetconfig->pubInterface);
+	}
 	rc = vnetAttachTunnels(vnetconfig, i, brname);
 	if (rc) {
 	  logprintfl(EUCADEBUG, "failed to attach tunnels for vlan %d during maintainNetworkState()\n", i);
