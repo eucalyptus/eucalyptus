@@ -34,6 +34,8 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
+import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.util.DNSProperties;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
@@ -291,6 +293,12 @@ public class EucalyptusManagement {
 
         dbWrapper.add( newUser );
         dbWrapper.commit();
+        
+        try {//TODO: fix this nicely
+          Credentials.addUser(newUser.getUserName( ),newUser.isAdministrator( ));
+        } catch ( UserExistsException e ) {
+          LOG.error(e);
+        }
     }
 
     private static SerializableException makeFault(String message)

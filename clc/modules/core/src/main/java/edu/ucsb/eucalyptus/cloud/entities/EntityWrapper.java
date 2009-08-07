@@ -1,22 +1,17 @@
 /*
  * Software License Agreement (BSD License)
- *
  * Copyright (c) 2008, Regents of the University of California
  * All rights reserved.
- *
  * Redistribution and use of this software in source and binary forms, with or
  * without modification, are permitted provided that the following conditions
  * are met:
- *
  * * Redistributions of source code must retain the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer.
- *
+ * copyright notice, this list of conditions and the
+ * following disclaimer.
  * * Redistributions in binary form must reproduce the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer in the documentation and/or other
- *   materials provided with the distribution.
- *
+ * copyright notice, this list of conditions and the
+ * following disclaimer in the documentation and/or other
+ * materials provided with the distribution.
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -28,7 +23,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  * Author: Chris Grzegorczyk grze@cs.ucsb.edu
  */
 
@@ -48,116 +42,100 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 public class EntityWrapper<TYPE> {
 
-  private static Logger LOG = Logger.getLogger( EntityWrapper.class );
+  private static Logger                            LOG = Logger.getLogger( EntityWrapper.class );
 
-  private static Map<String,EntityManagerFactory> emf = new ConcurrentSkipListMap<String,EntityManagerFactory>();
+  private static Map<String, EntityManagerFactory> emf = new ConcurrentSkipListMap<String, EntityManagerFactory>( );
 
   public static EntityManagerFactory getEntityManagerFactory( ) {
     return EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME );
   }
 
-
-  public static EntityManagerFactory getEntityManagerFactory( String persistenceContext )
-  {
-    synchronized ( EntityWrapper.class )
-    {
-      if ( !emf.containsKey( persistenceContext ) )
-      {
-        emf.put( persistenceContext,  Persistence.createEntityManagerFactory( persistenceContext ) );
-        EntityManager em = emf.get( persistenceContext ).createEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        tx.begin();
-        Session s = ( Session ) em.getDelegate();
-        try
-        {
-          Connection conn = s.connection();
-          Statement stmt = conn.createStatement();
+  public static EntityManagerFactory getEntityManagerFactory( final String persistenceContext ) {
+    synchronized ( EntityWrapper.class ) {
+      if ( !emf.containsKey( persistenceContext ) ) {
+//        Map<String,String> props = new HashMap<String,String>() {{
+//          put("euca.db.name", persistenceContext );
+//        }};
+//      emf.put( persistenceContext,  Persistence.createEntityManagerFactory( persistenceContext, props ) );
+        emf.put( persistenceContext, Persistence.createEntityManagerFactory( persistenceContext ) );
+        EntityManager em = emf.get( persistenceContext ).createEntityManager( );
+        EntityTransaction tx = em.getTransaction( );
+        tx.begin( );
+        Session s = ( Session ) em.getDelegate( );
+        try {
+          Connection conn = s.connection( );
+          Statement stmt = conn.createStatement( );
           stmt.execute( "SET WRITE_DELAY 100 MILLIS" );
-          conn.commit();
-        }
-        catch ( SQLException e )
-        {
+          conn.commit( );
+        } catch ( SQLException e ) {
           LOG.error( e, e );
         }
-        tx.commit();
-        em.close();
+        tx.commit( );
+        em.close( );
       }
       return emf.get( persistenceContext );
     }
   }
 
-  private EntityManager em;
-  private Session session;
+  private EntityManager     em;
+  private Session           session;
   private EntityTransaction tx;
 
   public EntityWrapper( ) {
     this( EucalyptusProperties.NAME );
   }
 
-
-  public EntityWrapper( String persistenceContext )
-  {
-    this.em = EntityWrapper.getEntityManagerFactory( persistenceContext ).createEntityManager();
-    this.session = ( Session ) em.getDelegate();
-    this.tx = em.getTransaction();
-    tx.begin();
+  public EntityWrapper( String persistenceContext ) {
+    this.em = EntityWrapper.getEntityManagerFactory( persistenceContext ).createEntityManager( );
+    this.session = ( Session ) em.getDelegate( );
+    this.tx = em.getTransaction( );
+    tx.begin( );
   }
 
-  public List<TYPE> query( TYPE example )
-  {
+  public List<TYPE> query( TYPE example ) {
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-    List<TYPE> resultList = ( List<TYPE> ) session.createCriteria( example.getClass() ).add( qbe ).list();
+    List<TYPE> resultList = ( List<TYPE> ) session.createCriteria( example.getClass( ) ).add( qbe ).list( );
     return resultList;
   }
 
-  public TYPE getUnique( TYPE example ) throws EucalyptusCloudException
-  {
+  public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
     List<TYPE> res = this.query( example );
-    if ( res.size() != 1 )
-      throw new EucalyptusCloudException( "Error locating information for " + example.toString() );
+    if ( res.size( ) != 1 ) throw new EucalyptusCloudException( "Error locating information for " + example.toString( ) );
     return res.get( 0 );
   }
 
-  public void add( TYPE newObject )
-  {
+  public void add( TYPE newObject ) {
     em.persist( newObject );
   }
 
-  public void merge( TYPE newObject )
-  {
+  public void merge( TYPE newObject ) {
     em.merge( newObject );
   }
 
-
-  public void delete( TYPE deleteObject )
-  {
+  public void delete( TYPE deleteObject ) {
     em.remove( deleteObject );
   }
 
-  public void rollback()
-  {
-    this.tx.rollback();
-    this.em.close();
+  public void rollback( ) {
+    this.tx.rollback( );
+    this.em.close( );
   }
 
-  public void commit()
-  {
-    this.em.flush();
-    this.tx.commit();
-    this.em.close();
+  public void commit( ) {
+    this.em.flush( );
+    this.tx.commit( );
+    this.em.close( );
   }
 
   public <NEWTYPE> EntityWrapper<NEWTYPE> recast( Class<NEWTYPE> c ) {
-    return ( EntityWrapper<NEWTYPE>) this;
+    return ( EntityWrapper<NEWTYPE> ) this;
   }
 
-  public EntityManager getEntityManager()
-  {
+  public EntityManager getEntityManager( ) {
     return em;
   }
 
-  public Session getSession()
-  {
+  public Session getSession( ) {
     return session;
   }
 

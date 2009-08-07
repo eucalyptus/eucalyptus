@@ -91,22 +91,22 @@ public class UserManagement {
 
     public static String generateConfirmationCode( String userName )
     {
-        return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll( "\\.", "" );
+        return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll( "[_-\\.]", "" );
     }
 
     public static String generateCertificateCode( String userName )
     {
-        return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll( "\\.", "" );
+        return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll( "[_-\\.]", "" );
     }
 
     public static String generateSecretKey( String userName )
     {
-        return Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll( "\\.", "" );
+        return Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll( "[_-\\.]", "" );
     }
 
     public static String generateQueryId( String userName )
     {
-        return Hashes.getDigestBase64( userName, Hashes.Digest.MD5, false ).replaceAll( "\\.", "" );
+        return Hashes.getDigestBase64( userName, Hashes.Digest.MD5, false ).replaceAll( "[_-\\.]", "" );
     }
 
     public static boolean isAdministrator( String userId )

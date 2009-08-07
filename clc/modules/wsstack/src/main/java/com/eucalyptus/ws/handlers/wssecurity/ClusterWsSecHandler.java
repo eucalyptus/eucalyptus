@@ -6,13 +6,14 @@ import com.eucalyptus.ws.util.ServiceKeyStore;
 import com.google.common.collect.Lists;
 import org.apache.ws.security.WSEncryptionPart;
 
+import java.security.GeneralSecurityException;
 import java.util.Collection;
 
 public class ClusterWsSecHandler extends WsSecHandler {
   private static final String WSA_NAMESPACE = "http://www.w3.org/2005/08/addressing";
 
-  public ClusterWsSecHandler( ) {
-    super( new CredentialProxy( ServiceKeyStore.getInstance(), EucalyptusProperties.NAME, EucalyptusProperties.NAME ) );
+  public ClusterWsSecHandler( ) throws GeneralSecurityException {
+    super( new CredentialProxy( ServiceKeyStore.getInstance().getCertificate( EucalyptusProperties.NAME ), ServiceKeyStore.getInstance().getKeyPair( EucalyptusProperties.NAME, EucalyptusProperties.NAME ).getPrivate( ) ) );
   }
 
   @Override

@@ -47,6 +47,8 @@ public class Main {
   public static void main( String[] args ) throws Exception
   {
     StartupChecks.doChecks();
+//TODO: remove    Class.forName("com.eucalyptus.auth.Credentials").getMethod( "addUser", new Class[]{String.class,Boolean.class} ).invoke( null, new Object[]{"admin",true} );
+    
 
     MuleServer server = new MuleServer( "eucalyptus-mule.xml" );
     server.start( false, true );

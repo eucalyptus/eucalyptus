@@ -3,7 +3,6 @@
 	<classpathentry kind="src" output="modules/msgs/build" path="modules/msgs/src/main/java"/>
 	<classpathentry kind="src" output="modules/core/build" path="modules/core/src/main/java"/>
 	<classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/main/java"/>
-	<classpathentry kind="src" output="modules/www/build" path="modules/www/src"/>
 	<classpathentry kind="src" output="modules/interface/build" path="modules/interface/src/main/java"/>
 	<classpathentry kind="src" output="modules/cluster-manager/build" path="modules/cluster-manager/src/main/java"/>
 	<classpathentry kind="src" output="modules/group-manager/build" path="modules/group-manager/src/main/java"/>
@@ -14,7 +13,8 @@
 	<classpathentry kind="src" output="modules/storage-manager/build" path="modules/storage-manager/src/main/java"/>
 	<classpathentry kind="src" output="modules/workarounds/build" path="modules/workarounds/src/main/java"/>
 	<classpathentry kind="src" output="modules/crypto/build" path="modules/crypto/src/main/java"/>
-	<classpathentry kind="src" path="modules/authentication/src/main/java"/>
+	<classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/main/java"/>
+	<classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
 	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>
 	<classpathentry kind="lib" path="lib/antlr3-3.0.1+dfsg.jar"/>
 	<classpathentry kind="lib" path="lib/antlrall.jar"/>

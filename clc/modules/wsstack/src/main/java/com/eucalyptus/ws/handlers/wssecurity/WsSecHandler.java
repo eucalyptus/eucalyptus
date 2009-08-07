@@ -20,6 +20,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.util.CredentialProxy;
@@ -36,8 +37,8 @@ public abstract class WsSecHandler extends MessageStackHandler {
   @Override
   public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
     final Object o = event.getMessage( );
-    if ( o instanceof MappingHttpRequest ) {
-      final MappingHttpRequest httpRequest = ( MappingHttpRequest ) o;
+    if ( o instanceof MappingHttpMessage ) {
+      final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
       final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), httpRequest.getSoapEnvelope( ).getXMLStreamReader( ) );
       final OMElement elem = doomBuilder.getDocumentElement( );
       elem.build( );
@@ -51,7 +52,7 @@ public abstract class WsSecHandler extends MessageStackHandler {
       signer.setKeyIdentifierType( WSConstants.BST_DIRECT_REFERENCE );
       signer.setSigCanonicalization( WSConstants.C14N_EXCL_OMIT_COMMENTS );
       signer.prepare( doc, this.credentials, wsheader );
-
+      
       if ( this.shouldTimeStamp( ) ) {
         final WSSecTimestamp ts = new WSSecTimestamp( );
         ts.setTimeToLive( 300 );
@@ -79,7 +80,6 @@ public abstract class WsSecHandler extends MessageStackHandler {
 
   @Override
   public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
-    // :: TODO: handle authenticating return messages
   }
 
 }
