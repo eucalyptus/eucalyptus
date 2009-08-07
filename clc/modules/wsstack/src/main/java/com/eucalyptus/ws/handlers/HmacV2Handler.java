@@ -14,7 +14,7 @@ import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
-import com.eucalyptus.ws.util.Hashes;
+import com.eucalyptus.util.Hashes;
 import com.eucalyptus.ws.util.HmacUtils;
 
 @ChannelPipelineCoverage( "one" )

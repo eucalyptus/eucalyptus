@@ -8,7 +8,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.UrlBase64;
 
-import com.eucalyptus.ws.util.Hashes;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;

@@ -1,4 +1,4 @@
-package com.eucalyptus.ws.util;
+package com.eucalyptus.util;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
