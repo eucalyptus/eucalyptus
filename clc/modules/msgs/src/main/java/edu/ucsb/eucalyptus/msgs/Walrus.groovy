@@ -306,10 +306,17 @@ public class WalrusDataGetRequestType extends WalrusDataRequestType {
 	public void setChannel(Channel channel) {
 		this.channel = channel;
 	}
+	
+	def WalrusDataGetRequestType() {}
+	
+	def WalrusDataGetRequestType(String bucket, String key) {
+		super(bucket, key);
+	}
 }
 
 public class WalrusDataGetResponseType extends WalrusDataResponseType {
-	
+
+	def WalrusDataGetResponseType() {}
 }
 
 public class PutObjectResponseType extends WalrusDataResponseType {
