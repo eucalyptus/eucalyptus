@@ -19,7 +19,7 @@ import org.apache.xml.security.utils.Base64;
 import org.bouncycastle.util.encoders.UrlBase64;
 
 import com.eucalyptus.ws.AuthenticationException;
-import com.eucalyptus.util.Hashes;
+import com.eucalyptus.auth.Hashes;
 
 public class HmacUtils {
   private static Logger            LOG     = Logger.getLogger( HmacUtils.class );

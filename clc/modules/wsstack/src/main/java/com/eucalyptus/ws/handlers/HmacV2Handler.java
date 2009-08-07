@@ -9,12 +9,12 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
-import com.eucalyptus.util.Credentials;
+import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
-import com.eucalyptus.util.Hashes;
 import com.eucalyptus.ws.util.HmacUtils;
 
 @ChannelPipelineCoverage( "one" )

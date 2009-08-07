@@ -104,7 +104,7 @@ public abstract class AbstractKeyStore {
   }
 
   public static X509Certificate pemToX509( final String certPem ) throws CertificateException, NoSuchProviderException {
-    CertificateFactory certificatefactory = CertificateFactory.getInstance( "X.509", KeyTool.PROVIDER );
+    CertificateFactory certificatefactory = CertificateFactory.getInstance( "X.509", "BC" );
     X509Certificate cert = ( X509Certificate ) certificatefactory.generateCertificate( new ByteArrayInputStream( certPem.getBytes() ) );
     return cert;
   }
@@ -132,7 +132,7 @@ public abstract class AbstractKeyStore {
   }
 
   private void init() throws IOException, GeneralSecurityException {
-    this.keyStore = KeyStore.getInstance( this.format, KeyTool.PROVIDER );
+    this.keyStore = KeyStore.getInstance( this.format, "BC" );
     if ( ( new File( this.fileName ) ).exists() ) {
       FileInputStream fin = new FileInputStream( this.fileName );
       keyStore.load( fin, this.password.toCharArray() );

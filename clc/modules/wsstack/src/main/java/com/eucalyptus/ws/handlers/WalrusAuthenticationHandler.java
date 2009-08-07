@@ -29,7 +29,7 @@ import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
 import com.eucalyptus.ws.util.AbstractKeyStore;
 import com.eucalyptus.ws.util.EucalyptusProperties;
-import com.eucalyptus.util.Hashes;
+import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.ws.util.HmacUtils;
 import com.eucalyptus.ws.util.ServiceKeyStore;
 import com.eucalyptus.ws.util.StorageProperties;

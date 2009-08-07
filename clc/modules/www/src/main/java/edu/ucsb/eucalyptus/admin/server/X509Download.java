@@ -35,13 +35,14 @@
 package edu.ucsb.eucalyptus.admin.server;
 
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
+
+import com.eucalyptus.auth.KeyTool;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.keys.KeyTool;
 import edu.ucsb.eucalyptus.keys.UserKeyStore;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;

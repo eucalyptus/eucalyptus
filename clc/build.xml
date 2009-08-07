@@ -60,6 +60,7 @@
     </target>
     <target name="build-core" depends="build-msgs">
         <ant dir="modules/core" inheritall="false"/>
+        <ant dir="modules/authentication" inheritall="false"/>
         <ant dir="modules/wsstack" inheritall="false"/>
     </target>
     <target name="build-www" depends="build-eucalyptus-ws">

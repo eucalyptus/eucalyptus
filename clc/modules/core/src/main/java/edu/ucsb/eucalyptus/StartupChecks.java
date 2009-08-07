@@ -13,7 +13,6 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
 import edu.ucsb.eucalyptus.keys.EucaKeyStore;
 import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.keys.KeyTool;
 import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import edu.ucsb.eucalyptus.keys.UserKeyStore;
 import edu.ucsb.eucalyptus.msgs.Volume;
@@ -254,25 +253,25 @@ public class StartupChecks {
 
         try {
 
-            LOG.info( String.format( HEADER_FSTRING, "Create system keys" ) );
-            KeyTool keyTool = new KeyTool();
-
-            KeyPair sysKp = keyTool.getKeyPair();
-            X509Certificate sysX509 = keyTool.getCertificate( sysKp, EucalyptusProperties.getDName( EucalyptusProperties.NAME ) );
-            keyTool.writePem( String.format( "%s/cloud-cert.pem", SubDirectory.KEYS.toString() ), sysX509 );
-            keyTool.writePem( String.format( "%s/cloud-pk.pem", SubDirectory.KEYS.toString() ), sysKp.getPrivate() );
-
-            KeyPair wwwKp = keyTool.getKeyPair();
-            X509Certificate wwwX509 = keyTool.getCertificate( wwwKp, EucalyptusProperties.getDName( EucalyptusProperties.WWW_NAME ) );
-
-            LOG.info( String.format( HEADER_FSTRING, "Store system keys" ) );
-            serviceKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate(), EucalyptusProperties.NAME );
-            userKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate(), EucalyptusProperties.NAME );
-            eucaKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate(), EucalyptusProperties.NAME );
-            eucaKeyStore.addKeyPair( EucalyptusProperties.WWW_NAME, wwwX509, wwwKp.getPrivate(), EucalyptusProperties.NAME );
-            serviceKeyStore.store();
-            userKeyStore.store();
-            eucaKeyStore.store();
+//            LOG.info( String.format( HEADER_FSTRING, "Create system keys" ) );
+//            KeyTool keyTool = new KeyTool();
+//
+//            KeyPair sysKp = keyTool.getKeyPair();
+//            X509Certificate sysX509 = keyTool.getCertificate( sysKp, EucalyptusProperties.getDName( EucalyptusProperties.NAME ) );
+//            keyTool.writePem( String.format( "%s/cloud-cert.pem", SubDirectory.KEYS.toString() ), sysX509 );
+//            keyTool.writePem( String.format( "%s/cloud-pk.pem", SubDirectory.KEYS.toString() ), sysKp.getPrivate() );
+//
+//            KeyPair wwwKp = keyTool.getKeyPair();
+//            X509Certificate wwwX509 = keyTool.getCertificate( wwwKp, EucalyptusProperties.getDName( EucalyptusProperties.WWW_NAME ) );
+//
+//            LOG.info( String.format( HEADER_FSTRING, "Store system keys" ) );
+//            serviceKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate(), EucalyptusProperties.NAME );
+//            userKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate(), EucalyptusProperties.NAME );
+//            eucaKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate(), EucalyptusProperties.NAME );
+//            eucaKeyStore.addKeyPair( EucalyptusProperties.WWW_NAME, wwwX509, wwwKp.getPrivate(), EucalyptusProperties.NAME );
+//            serviceKeyStore.store();
+//            userKeyStore.store();
+//            eucaKeyStore.store();
         }
         catch ( Exception e ) {
             LOG.fatal(e,e);
