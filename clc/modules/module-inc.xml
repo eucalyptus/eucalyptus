@@ -48,7 +48,6 @@
         <propertyref prefix="euca"/>
     </propertyset>
     <!--================================== module-dir defines ==================================-->
-    <property name="src.dir" value="${basedir}/src"/>
     <property name="build.dir" value="${basedir}/build"/>
     <property name="src.dir" value="${basedir}/src/main/java"/>
     <property name="conf.dir" value="${basedir}/conf"/>

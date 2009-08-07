@@ -76,7 +76,7 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
           reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
         }
         LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, ( System.currentTimeMillis( ) - startTime ) ) );      
-        if ( !( reply instanceof WalrusDataGetResponseType ) ) {//TODO: is this condition needed anymore?
+        if ( !( reply instanceof WalrusDataGetResponseType ) ) {
           MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
           DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
           response.setMessage( reply );

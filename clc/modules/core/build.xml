@@ -34,19 +34,18 @@
 
 <project name="eucalyptus-core" basedir="." default="build">
     <import file="../module-inc.xml"/>
+    <uptodate property="groovyc.notRequired" targetfile="${jar.file}">
+        <srcfiles dir="${src.dir}" includes="**/*"/>
+        <srcfiles dir="${rsrc.dir}" includes="**/*-binding.xml"/>
+    </uptodate>
     <!--================================== BUILD TARGETS ==================================-->
-    <target name="build" depends="init,compile-src,jar" description="--> build the jar file from source."/>
+    <target name="build" depends="init,compile-src,jar" description="--> build the jar file from source." unless="groovyc.notRequired"/>
     <target name="install" depends="copy-conf"/>
-    <target name="compile-src" depends="init">
-        <javac srcdir="${src.dir}"
-               classpathref="classpath"
-               destdir="${build.dir}"
-               deprecation="false"
-               failonerror="true"
-               debug="true"
-               sourcepathref="srcpath"
-               target="1.5"
-               listfiles="true"/>
+    <target name="compile-src" unless="groovyc.notRequired">
+        <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath"/>
+        <groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
+            <javac deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" target="1.5" listfiles="true"/>
+        </groovyc>
     </target>
 </project>
 

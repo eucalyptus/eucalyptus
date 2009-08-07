@@ -34,7 +34,6 @@
 
 package edu.ucsb.eucalyptus.keys;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -165,7 +164,7 @@ public abstract class AbstractKeyStore {
     }
 
     public boolean check() throws KeyStoreException {
-      throw new NotImplementedException( "A GenericKeyStore does not have the notion of being checked for correctness." );
+      throw new RuntimeException( "A GenericKeyStore does not have the notion of being checked for correctness." );
     }
   }
 }

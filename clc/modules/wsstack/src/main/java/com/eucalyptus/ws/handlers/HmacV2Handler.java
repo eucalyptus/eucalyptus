@@ -9,6 +9,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
+import com.eucalyptus.util.Credentials;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
@@ -53,7 +54,12 @@ public class HmacV2Handler extends MessageStackHandler {
         }
       }
       // TODO: hook in user key lookup here
-      String secretKey = "e2GKUDmazmBLRlX3lYWi79ptPVzXdjMWqNaARg";
+      String secretKey;
+      try {
+        secretKey = Credentials.Users.getSecretKey( queryId );
+      } catch ( Exception e ) {
+        throw new AuthenticationException( "User authentication failed." );
+      }
       String sigVersionString = parameters.get( RequiredQueryParams.SignatureVersion.toString( ) );
       if ( sigVersionString != null ) {// really, it should never be...
         int sigVersion = Integer.parseInt( sigVersionString );
@@ -84,8 +90,6 @@ public class HmacV2Handler extends MessageStackHandler {
 
   @Override
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-    // TODO Auto-generated method stub
-
   }
 
 }
