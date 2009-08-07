@@ -35,10 +35,14 @@
 package edu.ucsb.eucalyptus.storage;
 
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.ws.MappingHttpResponse;
+
 import edu.ucsb.eucalyptus.storage.fs.FileIO;
 
 import java.io.IOException;
 import java.util.List;
+
+import org.jboss.netty.channel.Channel;
 
 public interface StorageManager {
 
@@ -74,6 +78,12 @@ public interface StorageManager {
 
     public long getObjectSize(String bucket, String object);
 
+	public void sendObject(Channel channel, MappingHttpResponse httpResponse, String bucketName, String objectName, 
+			long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed);
+
+	public void sendHeaders(Channel channel, MappingHttpResponse httpResponse, Long size, String etag,
+			String lastModified, String contentType, String contentDisposition);
+	
     public void setRootDirectory(String rootDirectory);
 
     public void deleteSnapshot(String bucket, String snapshotId, String vgName, String lvName, List<String> snapshotSet, boolean removeVg) throws EucalyptusCloudException;

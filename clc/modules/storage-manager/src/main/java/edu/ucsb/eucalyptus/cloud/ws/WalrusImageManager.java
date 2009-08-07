@@ -869,7 +869,8 @@ public class WalrusImageManager {
 					reply.setSize(unencryptedSize);
 					reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
 					reply.setEtag("");
-					sendObject(request.getChannel(), bucketName, imageKey, unencryptedSize, null, 
+					MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
+					storageManager.sendObject(request.getChannel(), httpResponse, bucketName, imageKey, unencryptedSize, null, 
 							DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
 							objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
 					db.commit();
@@ -888,31 +889,6 @@ public class WalrusImageManager {
 			db.rollback();
 			throw new NoSuchBucketException(bucketName);
 		}
-	}
-
-	private void sendObject(Channel channel, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
-		try {
-			RandomAccessFile raf = new RandomAccessFile(new File(storageManager.getObjectPath(bucketName, objectName)), "r");
-			MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
-			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
-			if(etag != null)
-				httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
-			httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
-			if(contentDisposition != null)
-				httpResponse.addHeader("Content-Disposition", contentDisposition);
-			ChunkedInput file;
-			isCompressed = isCompressed == null ? false : isCompressed;
-			if(isCompressed) {
-				file = new CompressedChunkedFile(raf, size);
-			} else {
-				file = new ChunkedFile(raf, 0, size, 8192);
-				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));	
-			}
-			channel.write(httpResponse);
-			channel.write(file);
-		} catch(Exception ex) {
-			LOG.error(ex, ex);
-		}	
 	}
 
 	public CheckImageResponseType checkImage(CheckImageType request) throws EucalyptusCloudException {

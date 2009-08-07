@@ -35,11 +35,20 @@
 package edu.ucsb.eucalyptus.storage.fs;
 
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.ws.MappingHttpResponse;
+
+import edu.ucsb.eucalyptus.cloud.ws.CompressedChunkedFile;
 import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
 import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
+import edu.ucsb.eucalyptus.cloud.ws.WalrusManager.ChunkedDataFile;
 import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.stream.ChunkedInput;
 
 import java.io.*;
 import java.nio.channels.FileChannel;
@@ -202,6 +211,44 @@ public class FileSystemStorageManager implements StorageManager {
             return objectFile.length();
         return -1;
     }
+
+	public void sendObject(Channel channel, MappingHttpResponse httpResponse, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
+		try {
+			RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
+			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
+			if(etag != null)
+				httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
+			httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
+			if(contentDisposition != null)
+				httpResponse.addHeader("Content-Disposition", contentDisposition);
+			ChunkedInput file;
+			isCompressed = isCompressed == null ? false : isCompressed;
+			if(isCompressed) {
+				file = new CompressedChunkedFile(raf, size);
+			} else {
+				file = new ChunkedDataFile(raf, 0, size, 8192);
+				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
+			}
+			channel.write(httpResponse);
+			ChannelFuture writeFuture = channel.write(file);
+			writeFuture.addListener(ChannelFutureListener.CLOSE);
+		} catch(Exception ex) {
+			LOG.error(ex, ex);
+		}	
+	}
+    
+	public void sendHeaders(Channel channel, MappingHttpResponse httpResponse, Long size, String etag,
+			String lastModified, String contentType, String contentDisposition) {
+		httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
+		httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
+		if(etag != null)
+			httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
+		httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
+		if(contentDisposition != null)
+			httpResponse.addHeader("Content-Disposition", contentDisposition);
+		ChannelFuture writeFuture = channel.write(httpResponse);
+		writeFuture.addListener(ChannelFutureListener.CLOSE);
+	}
 
     private String removeLoopback(String loDevName) {
         return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
