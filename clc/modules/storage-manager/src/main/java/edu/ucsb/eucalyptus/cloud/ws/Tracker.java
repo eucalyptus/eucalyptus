@@ -40,58 +40,60 @@ import java.io.File;
 import java.util.Collection;
 
 public class Tracker extends Thread {
-    private static Logger LOG = Logger.getLogger( Tracker.class );
-    private static Tracker tracker;
+	private static Logger LOG = Logger.getLogger( Tracker.class );
+	private static Tracker tracker;
 
-    private Process proc;
+	private Process proc;
 
-    public static void initialize() {
-        tracker = new Tracker();
-        if(tracker.exists())  {
-            WalrusProperties.enableTorrents = true;
-            tracker.start();
-            Runtime.getRuntime().addShutdownHook(new Thread()
-            {
-                public void run() {
-                    tracker.bye();
-                    Collection<TorrentClient> torrentClients = Torrents.getClients();
-                    for(TorrentClient torrentClient : torrentClients) {
-                        torrentClient.bye();
-                    }
-                }
-            });
-        }
-    }
+	public static void initialize() {
+		tracker = new Tracker();
+		if(tracker.exists())  {
+			WalrusProperties.enableTorrents = true;
+			tracker.start();
+			Runtime.getRuntime().addShutdownHook(new Thread()
+			{
+				public void run() {
+					tracker.bye();
+					Collection<TorrentClient> torrentClients = Torrents.getClients();
+					for(TorrentClient torrentClient : torrentClients) {
+						torrentClient.bye();
+					}
+				}
+			});
+		}
+	}
 
-    public boolean exists() {
-        return (new File(WalrusProperties.TRACKER_BINARY)).exists();
-    }
+	public boolean exists() {
+		return (new File(WalrusProperties.TRACKER_BINARY)).exists();
+	}
 
-    public void run() {
-        track();
-    }
+	public void run() {
+		track();
+	}
 
-    private void track() {
-        new File(WalrusProperties.TRACKER_DIR).mkdirs();
-        try {
-            Runtime rt = Runtime.getRuntime();
-            proc = rt.exec(new String[]{WalrusProperties.TRACKER_BINARY, "--port", WalrusProperties.TRACKER_PORT, "--dfile", WalrusProperties.TRACKER_DIR + "dstate", "--logfile", WalrusProperties.TRACKER_DIR + "tracker.log"});
-            StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-            StreamConsumer output = new StreamConsumer(proc.getInputStream());
-            error.start();
-            output.start();
-            Thread.sleep(300);
-            String errValue = error.getReturnValue();
-            if(errValue.length() > 0)
-                LOG.warn(errValue);
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
-    }
+	private void track() {
+		new File(WalrusProperties.TRACKER_DIR).mkdirs();
+		try {
+			Runtime rt = Runtime.getRuntime();
+			proc = rt.exec(new String[]{WalrusProperties.TRACKER_BINARY, "--port", WalrusProperties.TRACKER_PORT, "--dfile", WalrusProperties.TRACKER_DIR + "dstate", "--logfile", WalrusProperties.TRACKER_DIR + "tracker.log"});
+			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+			StreamConsumer output = new StreamConsumer(proc.getInputStream());
+			error.start();
+			output.start();
+			Thread.sleep(300);
+			String errValue = error.getReturnValue();
+			if(errValue.length() > 0) {
+				if(!errValue.contains("already in use"))
+					LOG.warn(errValue);
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+		}
+	}
 
-    public void bye() {
-        if(proc != null)
-            proc.destroy();
-    }
+	public void bye() {
+		if(proc != null)
+			proc.destroy();
+	}
 
 }

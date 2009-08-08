@@ -1211,7 +1211,7 @@ public class WalrusManager {
 								long torrentLength = torrent.length();
 								storageManager.sendObject(request.getChannel(), httpResponse, bucketName, torrentFile, torrentLength, null, 
 										DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-										null, null, request.getIsCompressed());
+										"application/x-bittorrent", "attachment; filename=" + objectKey + ".torrent;", request.getIsCompressed());
 								//TODO: this should reflect params for the torrent?
 								reply.setEtag("");
 								reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));

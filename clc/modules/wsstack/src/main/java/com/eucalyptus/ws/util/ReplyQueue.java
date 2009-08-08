@@ -17,6 +17,7 @@ import org.apache.commons.httpclient.HttpStatus;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.Channels;
