@@ -39,16 +39,32 @@ public class WalrusResponseType extends EucalyptusMessage {
 }
 
 public class WalrusRequestType extends EucalyptusMessage {
-	String accessKeyID;
-	Date timeStamp;
-	String signature;
-	String credential;
+	protected String accessKeyID;
+	protected Date timeStamp;
+	protected String signature;
+	protected String credential;
 	def WalrusRequestType() {}
 	
 	def WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
 		this.accessKeyID = accessKeyID;
 		this.timeStamp = timeStamp;
 		this.signature = signature;
+		this.credential = credential;
+	}
+	
+	public String getAccessKeyID() {
+		return accessKeyID;
+	}
+	
+	public void setAccessKeyID(String accessKeyID) {
+		this.accessKeyID = accessKeyID;
+	}
+	
+	public String getCredential() {
+		return credential;
+	}
+	
+	public void setCredential(String credential) {
 		this.credential = credential;
 	}
 }
@@ -255,6 +271,10 @@ public class CreateBucketType extends WalrusRequestType {
 }
 
 public class CreateBucketResponseType extends WalrusResponseType {
+	CreateBucketResponseMessage createBucketResponse;
+}
+
+public class CreateBucketResponseMessage extends EucalyptusData {
 	String bucket;
 }
 

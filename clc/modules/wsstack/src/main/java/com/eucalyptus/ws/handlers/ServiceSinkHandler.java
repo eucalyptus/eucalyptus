@@ -33,6 +33,7 @@ import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
+import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.PutObjectType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusDeleteResponseType;
@@ -76,14 +77,21 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
           reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
         }
         LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, ( System.currentTimeMillis( ) - startTime ) ) );      
-        if ( !( reply instanceof WalrusDataGetResponseType ) ) {
+        if(reply instanceof WalrusDataGetResponseType) {
+        	if(reply instanceof GetObjectResponseType) {
+        		GetObjectResponseType getObjectResponse = (GetObjectResponseType) reply;
+        		if(getObjectResponse.getBase64Data() == null)
+        			return;
+        	} else {
+        		return;
+        	}
+        }
           MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
           DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
           response.setMessage( reply );
           ctx.sendDownstream( newEvent );
           newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-        }
-      }
+        }     
     }
   }
 }

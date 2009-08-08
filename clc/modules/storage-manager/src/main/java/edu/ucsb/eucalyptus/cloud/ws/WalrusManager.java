@@ -222,7 +222,9 @@ public class WalrusManager {
 			Messaging.send(DNSProperties.DNS_REF, updateARecord);
 		}
 
-		reply.setBucket(bucketName);
+		CreateBucketResponseMessage createBucketResponse = new CreateBucketResponseMessage();
+		createBucketResponse.setBucket(bucketName);
+		reply.setCreateBucketResponse(createBucketResponse);
 		return reply;
 	}
 
@@ -717,7 +719,8 @@ public class WalrusManager {
 						bucket.setBucketSize(newSize);
 					}
 					//Add meta data if specified
-					foundObject.replaceMetaData(request.getMetaData());
+					if(request.getMetaData() != null)
+						foundObject.replaceMetaData(request.getMetaData());
 
 					//TODO: add support for other storage classes
 					foundObject.setStorageClass("STANDARD");
@@ -1290,7 +1293,7 @@ public class WalrusManager {
 			super(file, offset, length, chunkSize);
 		}		
 	}
-	
+
 	public GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws EucalyptusCloudException {
 		GetObjectExtendedResponseType reply = (GetObjectExtendedResponseType) request.getReply();
 		Long byteRangeStart = request.getByteRangeStart();

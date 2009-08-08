@@ -12,6 +12,7 @@ import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
 
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
@@ -48,6 +49,11 @@ public class BindingHandler extends MessageStackHandler {
       }
       try {
         msg = ( EucalyptusMessage ) this.binding.fromOM( httpMessage.getOmMessage( ), msgType );
+		/*UserInfo user = new UserInfo("admin");
+		user.setIsAdministrator(Boolean.TRUE);
+		msg.setUserId( user.getUserName() );
+		msg.setEffectiveUserId( user.isAdministrator() ? "eucalyptus" : user.getUserName() );*/
+
       } catch ( Exception e1 ) {
         LOG.fatal( "FAILED TO PARSE:\n" + httpMessage.getMessageString( ) );
         throw new WebServicesException(e1);
