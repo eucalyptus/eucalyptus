@@ -499,42 +499,6 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char **ccs, int 
       ret = 0;
     }
     
-    //    rc = vnetSetupTunnels(vnetconfig);
-
-
-    /*    
-    sem_wait(configLock);
-    for (i=0; i<config->numResources; i++) {
-      int pid, j, numHosts, done, k;
-      ncStub *ncs=NULL;
-      char *statusString=NULL, **hosts;
-      
-      hosts = malloc(sizeof(char *));
-      numHosts = 1;
-      hosts[0] = strdup("localhost");
-      
-      pid = fork();
-      if (pid == 0) {
-	ncs = ncStubCreate(config->resourcePool[i].ncURL, NULL, NULL);
-	if (config->use_wssec) {
-	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
-	}
-	rc = ncStartNetworkStub(ncs, ccMeta, hosts, numHosts, 1234, vlan, &statusString);
-	exit(rc);
-      }
-      op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-      rc = timewait(pid, &status, op_timer / (config->numResources - i));
-      
-      if (hosts != NULL) {
-	for (j=0; j<numHosts; j++) {
-	  if (hosts[j]) free(hosts[j]);
-	}
-	if (hosts) free(hosts);
-      }
-      
-    }
-    sem_post(configLock);
-    */
   }
   
   logprintfl(EUCADEBUG,"StartNetwork(): done\n");
@@ -1258,10 +1222,19 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   // get updated resource information
   rc = refresh_resources(ccMeta, OP_TIMEOUT - (time(NULL) - op_start));
   
-  nidx=0;
+    
+
+  if (networkIndexList == NULL) {
+    // disabled
+    nidx=-1;
+  } else {
+    nidx=0;
+  }
+
   done=0;
   for (i=0; i<maxCount && !done; i++) {
-    logprintfl(EUCAINFO,"\trunning instance %d with emiId %s...\n", i, amiId);
+    instId = strdup(instIds[i]);
+    logprintfl(EUCAINFO,"\trunning instance %s with emiId %s...\n", instId, amiId);
     
     // generate new mac
     bzero(mac, 32);
@@ -1270,10 +1243,27 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     
     strncpy(pubip, "0.0.0.0", 32);
     strncpy(privip, "0.0.0.0", 32);
-    strncpy(mac, macAddrs[i], 32);
+    if (macAddrsLen >= maxCount) {
+      strncpy(mac, macAddrs[i], 32);
+    }      
+
+    sem_wait(vnetConfigLock);
+    rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, &nidx, mac, pubip, privip);
+    if (rc) {
+      foundnet = 0;
+    } else {
+      foundnet = 1;
+    }
+    sem_post(vnetConfigLock);
+
+    /*
+    rc = instId2mac(instId, mac);
+    if (rc) {
+      logprintfl(EUCAERROR, "unable to convert instanceId (%s) to mac address\n", instId);
+    }
+    logprintfl(EUCADEBUG, "choose mac %s\n", mac);
     
     sem_wait(vnetConfigLock);
-    
     // define/get next mac and allocate IP
     foundnet = 0;
     if (!strcmp(vnetconfig->mode, "STATIC")) {
@@ -1290,7 +1280,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       if (nidx >= maxCount) {
 	foundnet = 0;
       } else {
-
+	
 	if (networkIndexList == NULL) {
 	  networkIdx = -1;
 	} else {
@@ -1310,6 +1300,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       }
     }
     sem_post(vnetConfigLock);
+    */
     
     logprintfl(EUCAINFO,"\tassigning MAC/IP: %s/%s/%s\n", mac, pubip, privip);
     
@@ -1317,7 +1308,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       logprintfl(EUCAERROR,"could not find/initialize any free network address, failing doRunInstances()\n");
     } else {
       // "run" the instance
-      instId = strdup(instIds[i]);
       ncvm.memorySize = ccvm->mem;
       ncvm.diskSize = ccvm->disk;
       ncvm.numberOfCores = ccvm->cores;
@@ -1386,8 +1376,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	    wait(&status);
 	    rc = -1;
 	  } else {
-	    //	    wait(&status);
-	    //	    rc = WEXITSTATUS(status);
 	    rc = 0;
 	  }
 	  logprintfl(EUCAINFO,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
@@ -1412,9 +1400,8 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  myInstance = &(retInsts[runCount]);
 	  bzero(myInstance, sizeof(ccInstance));
 	  
-	  // stuff from NC
-	  
 	  allocate_ccInstance(myInstance, instId, amiId, kernelId, ramdiskId, amiURL, kernelURL, ramdiskURL, ownerId, "Pending", time(NULL), reservationId, &(myInstance->ccnet), &(myInstance->ccvm), myInstance->ncHostIdx, keyName, myInstance->serviceTag, userData, launchIndex, myInstance->groupNames, myInstance->volumes, myInstance->volumesSize);
+
 	  // instance info that CC has
 	  myInstance->ts = time(NULL);
 	  if (strcmp(pubip, "0.0.0.0")) {
@@ -1426,13 +1413,13 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  myInstance->ncHostIdx = resid;
 	  if (ccvm) memcpy(&(myInstance->ccvm), ccvm, sizeof(virtualMachine));
 	  if (config->resourcePool[resid].ncURL) strncpy(myInstance->serviceTag, config->resourcePool[resid].ncURL, 64);
-
+	  
 	  strncpy(myInstance->ccnet.publicIp, pubip, 16);
 	  strncpy(myInstance->ccnet.privateIp, privip, 16);
 	  strncpy(myInstance->ccnet.publicMac, mac, 24);
 	  strncpy(myInstance->ccnet.privateMac, mac, 24);
 	  myInstance->ccnet.vlan = vlan;
-
+	  
 	  // start up DHCP
 	  rc = vnetKickDHCP(vnetconfig);
 	  if (rc) {
@@ -1441,12 +1428,14 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  
 	  // add the instance to the cache, and continue on
 	  add_instanceCache(myInstance->instanceId, myInstance);
-	  //	  free_instance(&outInst);
+
 	  runCount++;
 	}
       }
       sem_post(configLock);
     }
+    
+    if (instId) free(instId);
   }
   *outInstsLen = runCount;
   *outInsts = retInsts;
@@ -1454,7 +1443,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   logprintfl(EUCADEBUG,"RunInstances(): done\n");
   
   shawn();
-  if (instId) free(instId);
   if (error) {
     return(1);
   }
@@ -1858,6 +1846,44 @@ int initialize(void) {
     logprintfl(EUCAERROR, "cannot initialize from configuration file\n");
   }
   
+  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    int done=0;
+    char file[1024], *template=NULL, *pass=NULL;
+    
+    snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/vtunpass", config->eucahome);
+    if (check_file(file)) {
+      logprintfl(EUCAWARN, "cannot locate tunnel password file '%s', will not be able to initialize tunnels\n", file);
+    } else {
+      pass = file2str(file);
+      if (pass) {
+	char *newl;
+	newl = strchr(pass, '\n');
+	if (newl) *newl = '\0';
+	snprintf(file, 1024, "%s/etc/eucalyptus/vtunall.conf.template", config->eucahome);
+	template = file2str(file);
+	if (template) {
+	  replace_string(&template, "VPASS", pass);
+	  done++;
+	}
+	free(pass);
+      }
+    }
+    if (done) {
+      // success
+      snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/vtunall.conf", config->eucahome);
+      rc = write2file(file, template);
+      if (rc) {
+	// error
+      } else {
+	vnetconfig->tunneling = 1;
+      }
+    } else {
+      logprintfl(EUCAERROR, "cannot set up tunnel configuration file, tunneling is disabled\n");
+      vnetconfig->tunneling = 0;
+    }
+    if (template) free(template);
+  }
+
   if (!ret) {
     // initialization went well, this thread is now initialized
     init=1;
@@ -1868,7 +1894,7 @@ int initialize(void) {
 
 int init_localstate(void) {
   int rc, loglevel;
-  char *tmpstr=NULL, logFile[1024], configFile[1024], home[1024];
+  char *tmpstr=NULL, logFile[1024], configFile[1024], home[1024], vfile[1024];
 
   if (init) {
   } else {
@@ -1903,7 +1929,7 @@ int init_localstate(void) {
     logfile(logFile, loglevel);
     
   }
-  
+
   return(0);
 }
 

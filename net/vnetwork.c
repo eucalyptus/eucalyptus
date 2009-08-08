@@ -39,6 +39,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     if (dhcpuser) strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
     if (localIp) strncpy(vnetconfig->localIp, localIp, 32);
     vnetconfig->localIpId = -1;
+    vnetconfig->tunneling = 1;
     vnetconfig->role = role;
     vnetconfig->enabled=1;
     vnetconfig->initialized = 1;
@@ -611,7 +612,51 @@ int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network) {
   return(-1);
 }
 
+int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, int *nidx, char *outmac, char *outpubip, char *outprivip) {
+  int rc, ret=0, networkIdx;
+  
+  if (!instId || !outmac || !outpubip || !outprivip) {
+    return(1);
+  }
 
+  rc = instId2mac(instId, outmac);
+  if (rc) {
+    logprintfl(EUCAERROR, "unable to convert instanceId (%s) to mac address\n", instId);
+    return(1);
+  }
+  
+  ret = 1;
+  // define/get next mac and allocate IP
+  if (!strcmp(vnetconfig->mode, "STATIC")) {
+    // get the next valid mac/ip pairing for this vlan
+    outmac[0] = '\0';
+    rc = vnetGetNextHost(vnetconfig, outmac, outprivip, 0, -1);
+    if (!rc) {
+      snprintf(outpubip, strlen(outprivip), "%s", outprivip);
+      ret = 0;
+    }
+  } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
+    ret = 0;
+  } else if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    if (*nidx == -1) {
+      networkIdx = -1;
+    } else {
+      networkIdx = *nidx;
+      (*nidx)++;
+    }
+      
+    // add the mac address to the virtual network
+    rc = vnetAddHost(vnetconfig, outmac, NULL, vlan, networkIdx);
+    if (!rc) {
+      // get the next valid mac/ip pairing for this vlan
+      rc = vnetGetNextHost(vnetconfig, outmac, outprivip, vlan, networkIdx);
+      if (!rc) {
+	ret = 0;
+      }
+    }
+  }
+  return(ret);
+}
 int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) {
   int i, done, start, stop;
   char *newip;
@@ -635,8 +680,6 @@ int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int i
   }
   
   done=0;
-  //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  //  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
   for (i=start; i<=stop && !done; i++) {
     if (vnetconfig->networks[vlan].addrs[i].mac[0] != '\0' && vnetconfig->networks[vlan].addrs[i].ip != 0 && vnetconfig->networks[vlan].addrs[i].active == 0) {
       strncpy(mac, vnetconfig->networks[vlan].addrs[i].mac, 24);
@@ -1049,20 +1092,25 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
 
       // attach tunnel(s)
       rc = vnetAttachTunnels(vnetconfig, vlan, newbrname);
+      if (rc) {
+	logprintfl(EUCAWARN, "failed to attach tunnels for vlan %d on bridge %s\n", vlan, newbrname);
+      }
 
       snprintf(newdevname, 32, "%s", newbrname);
     } else {
       // attach tunnel(s)
       
       rc = vnetAttachTunnels(vnetconfig, vlan, vnetconfig->pubInterface);
-
+      if (rc) {
+	logprintfl(EUCAWARN, "failed to attach tunnels for vlan %d on bridge %s\n", vlan, vnetconfig->pubInterface);
+      }
+      
       snprintf(newdevname, 32, "%s", vnetconfig->privInterface);
     }
-    
 
     rc = vnetAddGatewayIP(vnetconfig, vlan, newdevname);
     if (rc) {
-      return(rc);
+      logprintfl(EUCAWARN, "failed to add gateway IP to device %s\n", newdevname);
     }
     
     *outbrname = strdup(newdevname);
@@ -1074,10 +1122,14 @@ int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
   int rc, i, slashnet;
   char cmd[1024], tundev[32], tunvlandev[32], *network=NULL;
   
-  logprintfl(EUCADEBUG, "%d %s %d\n", vlan, newbrname, check_bridge(newbrname));
   if (!vnetconfig || vlan < 0 || vlan > NUMBER_OF_VLANS || !newbrname || check_bridge(newbrname)) {
     logprintfl(EUCAERROR, "bad input params to vnetAttachTunnels()\n");
     return(1);
+  }
+  
+  if (!vnetconfig->tunneling) {
+    logprintfl(EUCAERROR, "tunneling is currently disabled\n");
+    return(0);
   }
   
   snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s on", vnetconfig->eucahome, newbrname);
@@ -1267,6 +1319,7 @@ int vnetTeardownTunnelsGRE(vnetConfig *vnetconfig) {
   }
   return(0);
 }
+
 int vnetSetupTunnels(vnetConfig *vnetconfig) {
   return(vnetSetupTunnelsVTUN(vnetconfig));
 }
@@ -1275,7 +1328,8 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   int i, done, rc, dpid;
   char cmd[1024], tundev[32], *remoteIp=NULL, pidfile[1024];
 
-  if (vnetconfig->localIpId == -1) {
+  if (!vnetconfig->tunneling || vnetconfig->localIpId == -1) {
+    // tunneling is either not initialized or is disabled
     logprintfl(EUCADEBUG, "tunneling not initialized\n");
     return(0);
   }
@@ -1284,7 +1338,7 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   rc = check_file(pidfile);
   if (rc) {
     // pidfile does not exist, start vtund server
-    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -s -n -f %s/etc/eucalyptus/vtunall.conf", vnetconfig->eucahome, vnetconfig->eucahome);
+    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -s -n -f %s/var/lib/eucalyptus/keys/vtunall.conf", vnetconfig->eucahome, vnetconfig->eucahome);
     logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
     rc = daemonrun(cmd, &dpid);
     logprintfl(EUCADEBUG, "done: %d\n", rc);
@@ -1312,7 +1366,7 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
 	  snprintf(pidfile, 1024, "%s/var/run/eucalyptus/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->localIpId, i);
 	  rc = check_file(pidfile);
 	  if (rc) {
-	    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -n -f %s/etc/eucalyptus/vtunall.conf -p tun-%d-%d %s", vnetconfig->eucahome, vnetconfig->eucahome, vnetconfig->localIpId, i, remoteIp);
+	    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -n -f %s/var/lib/eucalyptus/keys/vtunall.conf -p tun-%d-%d %s", vnetconfig->eucahome, vnetconfig->eucahome, vnetconfig->localIpId, i, remoteIp);
 	    logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
 	    rc = daemonrun(cmd, &dpid);
 	    logprintfl(EUCADEBUG, "done: %d\n", rc);
@@ -1505,13 +1559,19 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
     if (!strcmp(vnetconfig->mode, "MANAGED")) {
 
       rc = vnetDetachTunnels(vnetconfig, vlan, newbrname);
+      if (rc) {
+	logprintfl(EUCAWARN, "failed to detach tunnels\n");
+      }
       
       rc = vnetDelDev(vnetconfig, newdevname);
       if (rc) {
-	logprintfl(EUCAERROR, "could not remove '%s' from list of interfaces\n", newdevname);
+	logprintfl(EUCAWARN, "could not remove '%s' from list of interfaces\n", newdevname);
       }
     } 
     rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname);
+    if (rc) {
+      logprintfl(EUCAWARN, "failed to delete gateway IP from interface %s\n", newdevname);
+    }
     
     if (userName && netName) {
       rc = vnetDeleteChain(vnetconfig, userName, netName);
@@ -1750,6 +1810,33 @@ int fill_arp(char *subnet) {
   }
   wait(&status);
 
+  return(0);
+}
+
+int instId2mac(char *instId, char *outmac) {
+  char *p, dst[24];
+  int i;
+
+  if (!instId || !outmac) {
+    return(1);
+  }
+  dst[0] = '\0';
+  
+  p = strstr(instId, "i-");
+  p += 2;
+  if (strlen(p) == 8) {
+    strncat(dst, "d0:0d", 5);
+    for (i=0; i<4; i++) {
+      strncat(dst, ":", 1);
+      strncat(dst, p, 2);
+      p+=2;
+    }
+  } else {
+    logprintfl(EUCAERROR, "invalid instId passed to instId2mac()\n");
+    return(1);
+  }
+  
+  snprintf(outmac, 24, "%s", dst);
   return(0);
 }
 

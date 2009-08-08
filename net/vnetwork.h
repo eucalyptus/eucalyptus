@@ -9,7 +9,7 @@
 #define NUMBER_OF_VLANS 4096
 #define NUMBER_OF_HOSTS_PER_VLAN 256
 #define NUMBER_OF_PUBLIC_IPS 256
-#define NUMBER_OF_CCS 32
+#define NUMBER_OF_CCS 8
 
 typedef struct netEntry_t {
   char mac[24];
@@ -49,6 +49,7 @@ typedef struct vnetConfig_t {
   uint32_t localIpId;
   uint32_t ccs[NUMBER_OF_CCS];
   time_t ccsTunnelStart[NUMBER_OF_CCS];
+  int tunneling;
   int role;
   int enabled;
   int initialized;
@@ -71,6 +72,8 @@ int vnetDelHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetEnableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetDisableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx);
+
+int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, int *nidx, char *outmac, char *outpubip, char *outprivip);
 
 int vnetAddDev(vnetConfig *vnetconfig, char *dev);
 int vnetDelDev(vnetConfig *vnetconfig, char *dev);
@@ -125,6 +128,7 @@ int mac2ip(vnetConfig *vnetconfig, char *mac, char **ip);
 int ip2mac(vnetConfig *vnetconfig, char *ip, char **mac);
 void mac2hex(char *in, unsigned char out[6]);
 void hex2mac(unsigned char in[6], char **out);
+int instId2mac(char *instId, char *outmac);
 int zeromac(unsigned char in[6]);
 int maccmp(char *ina, unsigned char inb[6]);
 

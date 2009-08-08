@@ -206,26 +206,31 @@ char * replace_string (char ** stringp, char * source, char * destination )
 {
     char *start=NULL, *substart=NULL, *tok=NULL, * new_string=NULL;
     if (source==NULL || destination==NULL) return NULL;
-    char buf [2048];
-
-    new_string = malloc(sizeof(char) * 2048); /* TODO: this has to be dynamic */
-    bzero(new_string, 2048);
+    char * buf;
+    int maxlen = 32768;
+    
+    buf = malloc(sizeof(char) * maxlen);
+    new_string = malloc(sizeof(char) * maxlen); /* TODO: this has to be dynamic */
+    bzero(new_string, maxlen);
     
     start = * stringp;
     substart = start;
     tok = strstr(start, source);
     while(tok != NULL) {
         *tok = '\0';
-        snprintf (buf, 2048, "%s%s%s", new_string, substart, destination);
-        strncpy (new_string, buf, 2048);
+        snprintf (buf, maxlen, "%s%s%s", new_string, substart, destination);
+        strncpy (new_string, buf, maxlen);
         tok+=strlen(source);
         substart = tok;
         tok = strstr(substart, source);
     }
-    snprintf (buf, 2048, "%s%s", new_string, substart);
-    strncpy (new_string, buf, 2048);
+    snprintf (buf, maxlen, "%s%s", new_string, substart);
+    strncpy (new_string, buf, maxlen);
+    if (buf) free(buf);
+
     free (* stringp);
     * stringp = new_string;
+
     
     return new_string;
 }
