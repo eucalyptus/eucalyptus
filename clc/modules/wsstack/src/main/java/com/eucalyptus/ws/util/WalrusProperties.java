@@ -63,6 +63,7 @@ public class WalrusProperties {
 
 	public static final int IO_CHUNK_SIZE = 102400;
 	public static boolean shouldEnforceUsageLimits = true;
+	public static boolean trackUsageStatistics = true;
 	public static boolean enableSnapshots = false;
 	public static boolean enableTorrents = false;
 	public static boolean sharedMode = false;

@@ -74,7 +74,8 @@ public class WalrusManager {
 
 	private StorageManager storageManager;
 	private WalrusImageManager walrusImageManager;
-
+	private static WalrusStatistics walrusStatistics = new WalrusStatistics();
+	
 	public WalrusManager(StorageManager storageManager, WalrusImageManager walrusImageManager) {
 		this.storageManager = storageManager;
 		this.walrusImageManager = walrusImageManager;
@@ -506,6 +507,10 @@ public class WalrusManager {
 								}
 								bucket.setBucketSize(newSize);
 							}
+							if(WalrusProperties.trackUsageStatistics) {
+								walrusStatistics.updateBytesIn(size);
+								walrusStatistics.dumpBytesIn();
+							}
 							db.commit();
 							fileIO.finish();
 							//restart all interrupted puts
@@ -717,6 +722,10 @@ public class WalrusManager {
 							throw new EntityTooLargeException(objectKey);
 						}
 						bucket.setBucketSize(newSize);
+					}
+					if(WalrusProperties.trackUsageStatistics) {
+						walrusStatistics.updateBytesIn(size);
+						walrusStatistics.dumpBytesIn();
 					}
 					//Add meta data if specified
 					if(request.getMetaData() != null)
@@ -1222,6 +1231,10 @@ public class WalrusManager {
 								reply.setStatus(status);
 								reply.setContentType("binary/octet-stream");
 								db.commit();
+								if(WalrusProperties.trackUsageStatistics) {
+									walrusStatistics.updateBytesOut(torrentLength);
+									walrusStatistics.dumpBytesOut();
+								}
 								return reply;
 							} else {
 								String errorString = "Could not get torrent file " + torrentFilePath;
@@ -1251,6 +1264,10 @@ public class WalrusManager {
 							}
 						} else {
 							//support for large objects
+							if(WalrusProperties.trackUsageStatistics) {
+								walrusStatistics.updateBytesOut(objectInfo.getSize());
+								walrusStatistics.dumpBytesOut();
+							}
 							storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
 									DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
 									objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
@@ -1364,6 +1381,10 @@ public class WalrusManager {
 						}
 					}
 					if(request.getGetData()) {
+						if(WalrusProperties.trackUsageStatistics) {
+							walrusStatistics.updateBytesOut(objectInfo.getSize());
+							walrusStatistics.dumpBytesOut();
+						}
 						storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
 								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
 								objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
