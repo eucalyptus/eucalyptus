@@ -94,8 +94,8 @@
 		class="edu.ucsb.eucalyptus.msgs.SetBucketAccessControlPolicyType"
 		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
 		<value name="Bucket" field="bucket" />
-		<structure field="accessControlPolicy"
-			map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" />
+		<structure field="accessControlList"
+			map-as="edu.ucsb.eucalyptus.msgs.AccessControlListType" />
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
 			usage="optional" />
 	</mapping>
@@ -105,6 +105,23 @@
 		<value name="Code" field="code" />
 		<value name="Description" field="description" />
 	</mapping>
+
+	<mapping name="SetRESTBucketAccessControlPolicy"
+		class="edu.ucsb.eucalyptus.msgs.SetRESTBucketAccessControlPolicyType"
+		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<value name="Bucket" field="bucket" />
+		<structure field="accessControlPolicy"
+			map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" />
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
+			usage="optional" />
+	</mapping>
+
+	<mapping name="SetRESTBucketAccessControlPolicyResponse"
+		class="edu.ucsb.eucalyptus.msgs.SetRESTBucketAccessControlPolicyResponseType">
+		<value name="Code" field="code" />
+		<value name="Description" field="description" />
+	</mapping>
+
 
 	<mapping name="GetObjectAccessControlPolicy"
 		class="edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyType"
@@ -126,14 +143,31 @@
 		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
 		<value name="Bucket" field="bucket" />
 		<value name="Key" field="key" />
-		<structure field="accessControlPolicy"
-			map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" />
+		<structure field="accessControlList"
+			map-as="edu.ucsb.eucalyptus.msgs.AccessControlListType" />
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
 			usage="optional" />
 	</mapping>
 
 	<mapping name="SetObjectAccessControlPolicyResponse"
 		class="edu.ucsb.eucalyptus.msgs.SetObjectAccessControlPolicyResponseType">
+		<value name="Code" field="code" />
+		<value name="Description" field="description" />
+	</mapping>
+
+	<mapping name="SetRESTObjectAccessControlPolicy"
+		class="edu.ucsb.eucalyptus.msgs.SetRESTObjectAccessControlPolicyType"
+		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<value name="Bucket" field="bucket" />
+		<value name="Key" field="key" />
+		<structure field="accessControlPolicy"
+			map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" />
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
+			usage="optional" />
+	</mapping>
+
+	<mapping name="SetRESTObjectAccessControlPolicyResponse"
+		class="edu.ucsb.eucalyptus.msgs.SetRESTObjectAccessControlPolicyResponseType">
 		<value name="Code" field="code" />
 		<value name="Description" field="description" />
 	</mapping>

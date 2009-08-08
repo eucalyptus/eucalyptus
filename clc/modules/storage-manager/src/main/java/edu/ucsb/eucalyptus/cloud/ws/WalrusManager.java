@@ -1051,8 +1051,8 @@ public class WalrusManager {
 	{
 		SetBucketAccessControlPolicyResponseType reply = (SetBucketAccessControlPolicyResponseType) request.getReply();
 		String userId = request.getUserId();
-		AccessControlPolicyType accessControlPolicy = request.getAccessControlPolicy();
-		if(accessControlPolicy == null) {
+		AccessControlListType accessControlList = request.getAccessControlList();
+		if(accessControlList == null) {
 			throw new AccessDeniedException(userId);
 		}
 		String bucketName = request.getBucket();
@@ -1065,7 +1065,42 @@ public class WalrusManager {
 			BucketInfo bucket = bucketList.get(0);
 			if (bucket.canWriteACP(userId)) {
 				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-				AccessControlListType accessControlList = accessControlPolicy.getAccessControlList();
+				bucket.resetGlobalGrants();
+				bucket.addGrants(bucket.getOwnerId(), grantInfos, accessControlList);
+				bucket.setGrants(grantInfos);
+				reply.setCode("204");
+				reply.setDescription("OK");
+			} else {
+				db.rollback();
+				throw new AccessDeniedException(bucketName);
+			}
+		}   else {
+			db.rollback();
+			throw new NoSuchBucketException(bucketName);
+		}
+		db.commit();
+		return reply;
+	}
+	
+	public SetRESTBucketAccessControlPolicyResponseType setRESTBucketAccessControlPolicy(SetRESTBucketAccessControlPolicyType request) throws EucalyptusCloudException
+	{
+		SetRESTBucketAccessControlPolicyResponseType reply = (SetRESTBucketAccessControlPolicyResponseType) request.getReply();
+		String userId = request.getUserId();
+		AccessControlPolicyType accessControlPolicy = request.getAccessControlPolicy();
+		if(accessControlPolicy == null) {
+			throw new AccessDeniedException(userId);
+		}
+		AccessControlListType accessControlList = accessControlPolicy.getAccessControlList();
+		String bucketName = request.getBucket();
+
+		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		BucketInfo bucketInfo = new BucketInfo(bucketName);
+		List<BucketInfo> bucketList = db.query(bucketInfo);
+
+		if (bucketList.size() > 0) {
+			BucketInfo bucket = bucketList.get(0);
+			if (bucket.canWriteACP(userId)) {
+				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 				bucket.resetGlobalGrants();
 				bucket.addGrants(bucket.getOwnerId(), grantInfos, accessControlList);
 				bucket.setGrants(grantInfos);
@@ -1083,11 +1118,12 @@ public class WalrusManager {
 		return reply;
 	}
 
+
 	public SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(SetObjectAccessControlPolicyType request) throws EucalyptusCloudException
 	{
 		SetObjectAccessControlPolicyResponseType reply = (SetObjectAccessControlPolicyResponseType) request.getReply();
 		String userId = request.getUserId();
-		AccessControlPolicyType accessControlPolicy = request.getAccessControlPolicy();
+		AccessControlListType accessControlList = request.getAccessControlList();
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
 
@@ -1106,7 +1142,68 @@ public class WalrusManager {
 					throw new AccessDeniedException(objectKey);
 				}
 				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-				AccessControlListType accessControlList = accessControlPolicy.getAccessControlList();
+				objectInfo.resetGlobalGrants();
+				objectInfo.addGrants(objectInfo.getOwnerId(), grantInfos, accessControlList);
+				objectInfo.setGrants(grantInfos);
+
+				if(WalrusProperties.enableTorrents) {
+					if(!objectInfo.isGlobalRead()) {
+						EntityWrapper<TorrentInfo> dbTorrent = db.recast(TorrentInfo.class);
+						TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
+						List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
+						if(torrentInfos.size() > 0) {
+							TorrentInfo foundTorrentInfo = torrentInfos.get(0);
+							TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
+							if(torrentClient != null) {
+								torrentClient.bye();
+							}
+							dbTorrent.delete(foundTorrentInfo);
+						}
+					}
+				} else {
+					LOG.warn("Bittorrent support has been disabled. Please check pre-requisites");
+				}
+				reply.setCode("204");
+				reply.setDescription("OK");
+			} else {
+				db.rollback();
+				throw new NoSuchEntityException(objectKey);
+			}
+		}   else {
+			db.rollback();
+			throw new NoSuchBucketException(bucketName);
+		}
+		db.commit();
+		return reply;
+	}
+
+	public SetRESTObjectAccessControlPolicyResponseType setRESTObjectAccessControlPolicy(SetRESTObjectAccessControlPolicyType request) throws EucalyptusCloudException
+	{
+		SetRESTObjectAccessControlPolicyResponseType reply = (SetRESTObjectAccessControlPolicyResponseType) request.getReply();
+		String userId = request.getUserId();
+		AccessControlPolicyType accessControlPolicy = request.getAccessControlPolicy();
+		if(accessControlPolicy == null) {
+			throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
+		}
+		AccessControlListType accessControlList = accessControlPolicy.getAccessControlList();
+		String bucketName = request.getBucket();
+		String objectKey = request.getKey();
+
+		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		BucketInfo bucketInfo = new BucketInfo(bucketName);
+		List<BucketInfo> bucketList = db.query(bucketInfo);
+
+		if (bucketList.size() > 0) {
+			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			if(objectInfos.size() > 0)  {
+				ObjectInfo objectInfo = objectInfos.get(0);
+				if (!objectInfo.canWriteACP(userId)) {
+					db.rollback();
+					throw new AccessDeniedException(objectKey);
+				}
+				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 				objectInfo.resetGlobalGrants();
 				objectInfo.addGrants(objectInfo.getOwnerId(), grantInfos, accessControlList);
 				objectInfo.setGrants(grantInfos);

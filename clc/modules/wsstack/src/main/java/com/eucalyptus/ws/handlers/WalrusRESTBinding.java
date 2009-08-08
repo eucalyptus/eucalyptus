@@ -121,7 +121,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 		//Bucket operations
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.acl.toString(), "GetBucketAccessControlPolicy");
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.OperationParameter.acl.toString(), "SetBucketAccessControlPolicy");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.OperationParameter.acl.toString(), "SetRESTBucketAccessControlPolicy");
 
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString(), "ListBucket");
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.prefix.toString(), "ListBucket");
@@ -137,7 +137,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 		//Object operations
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.acl.toString(), "GetObjectAccessControlPolicy");
-		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.OperationParameter.acl.toString(), "SetObjectAccessControlPolicy");
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.OperationParameter.acl.toString(), "SetRESTObjectAccessControlPolicy");
 
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.POST.toString(), "PostObject");
 

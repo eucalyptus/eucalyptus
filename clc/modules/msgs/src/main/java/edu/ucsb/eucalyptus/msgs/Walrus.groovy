@@ -457,7 +457,7 @@ public class PrefixEntry extends EucalyptusData {
 
 public class SetBucketAccessControlPolicyType extends WalrusRequestType {
 	String bucket;
-	AccessControlPolicyType accessControlPolicy;
+	AccessControlListType accessControlList;
 }
 
 public class SetBucketAccessControlPolicyResponseType extends WalrusResponseType {
@@ -468,13 +468,35 @@ public class SetBucketAccessControlPolicyResponseType extends WalrusResponseType
 public class SetObjectAccessControlPolicyType extends WalrusRequestType {
 	String bucket;
 	String key;
-	AccessControlPolicyType accessControlPolicy;
+	AccessControlListType accessControlList;
 }
 
 public class SetObjectAccessControlPolicyResponseType extends WalrusResponseType {
 	String code;
 	String description;
 }
+
+public class SetRESTBucketAccessControlPolicyType extends WalrusRequestType {
+	String bucket;
+	AccessControlPolicyType accessControlPolicy;
+}
+
+public class SetRESTBucketAccessControlPolicyResponseType extends WalrusResponseType {
+	String code;
+	String description;
+}
+
+public class SetRESTObjectAccessControlPolicyType extends WalrusRequestType {
+	String bucket;
+	String key;
+	AccessControlPolicyType accessControlPolicy;
+}
+
+public class SetRESTObjectAccessControlPolicyResponseType extends WalrusResponseType {
+	String code;
+	String description;
+}
+
 
 public class GetObjectType extends WalrusDataGetRequestType {
 	Boolean getMetaData;

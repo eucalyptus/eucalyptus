@@ -104,7 +104,6 @@ public class Bukkit {
         return walrusManager.getBucketAccessControlPolicy(request);
     }
 
-
     public PutObjectResponseType PutObject (PutObjectType request) throws EucalyptusCloudException {
         return walrusManager.putObject(request);
     }
@@ -142,6 +141,16 @@ public class Bukkit {
     public SetObjectAccessControlPolicyResponseType SetObjectAccessControlPolicy(SetObjectAccessControlPolicyType request) throws EucalyptusCloudException
     {
         return walrusManager.setObjectAccessControlPolicy(request);
+    }
+    
+    public SetRESTBucketAccessControlPolicyResponseType SetRESTBucketAccessControlPolicy(SetRESTBucketAccessControlPolicyType request) throws EucalyptusCloudException
+    {
+        return walrusManager.setRESTBucketAccessControlPolicy(request);
+    }
+
+    public SetRESTObjectAccessControlPolicyResponseType SetRESTObjectAccessControlPolicy(SetRESTObjectAccessControlPolicyType request) throws EucalyptusCloudException
+    {
+        return walrusManager.setRESTObjectAccessControlPolicy(request);
     }
 
     public GetObjectResponseType GetObject(GetObjectType request) throws EucalyptusCloudException {
