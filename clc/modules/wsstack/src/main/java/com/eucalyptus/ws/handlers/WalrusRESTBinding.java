@@ -501,7 +501,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						boolean isExtendedGet = false;
 						for(String key : headerNames) {
 							for(WalrusProperties.ExtendedGetHeaders header: WalrusProperties.ExtendedGetHeaders.values()) {
-								if(key.replaceAll("-", "").equals(header.toString().toLowerCase())) {
+								if(key.replaceAll("-", "").equals(header.toString())) {
 									String value = httpRequest.getHeader(key);
 									isExtendedGet = true;
 									parseExtendedHeaders(operationParams, header.toString(), value);
@@ -716,7 +716,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			}
 		} catch(Exception ex) {
 			LOG.warn(ex);
-			throw new BindingException(ex.getMessage());
+			throw new BindingException("Unable to parse access control policy " + ex.getMessage());
 		}
 		return accessControlPolicy;
 	}
@@ -765,7 +765,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			}
 		} catch(Exception ex) {
 			LOG.warn(ex);
-			throw new BindingException(ex.getMessage());
+			throw new BindingException("Unable to parse access control list " + ex.getMessage());
 		}
 		return accessControlList;
 	}

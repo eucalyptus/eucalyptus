@@ -26,6 +26,7 @@ import edu.ucsb.eucalyptus.cloud.BucketNotEmptyException;
 import edu.ucsb.eucalyptus.cloud.DecryptionFailedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
 import edu.ucsb.eucalyptus.cloud.ImageAlreadyExistsException;
+import edu.ucsb.eucalyptus.cloud.InvalidRangeException;
 import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
 import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.NotAuthorizedException;
@@ -169,6 +170,10 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 				else if ( ex instanceof NotImplementedException )
 				{
 					errMsg = new WalrusBucketErrorMessageType( ( ( NotImplementedException ) ex ).getValue(), "Not Implemented", "NA", HttpResponseStatus.NOT_IMPLEMENTED, msg.getCorrelationId(), ipAddress);
+					errMsg.setCorrelationId( msg.getCorrelationId() );
+				} else if ( ex instanceof InvalidRangeException )
+				{
+					errMsg = new WalrusBucketErrorMessageType( ( ( InvalidRangeException ) ex ).getMessage(), "Invalid Range", "The requested range cannot be satisfied.", HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE, msg.getCorrelationId(), ipAddress);
 					errMsg.setCorrelationId( msg.getCorrelationId() );
 				} else {
 					errMsg = errorMessage;

@@ -81,6 +81,9 @@ public interface StorageManager {
 	public void sendObject(Channel channel, MappingHttpResponse httpResponse, String bucketName, String objectName, 
 			long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed);
 
+	public void sendObject(Channel channel, MappingHttpResponse httpResponse, String bucketName, String objectName, 
+			long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed);
+
 	public void sendHeaders(Channel channel, MappingHttpResponse httpResponse, Long size, String etag,
 			String lastModified, String contentType, String contentDisposition);
 	

@@ -237,6 +237,32 @@ public class FileSystemStorageManager implements StorageManager {
 		}	
 	}
     
+	public void sendObject(Channel channel, MappingHttpResponse httpResponse, String bucketName, String objectName, long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
+		try {
+			RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
+			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
+			if(etag != null)
+				httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
+			httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
+			if(contentDisposition != null)
+				httpResponse.addHeader("Content-Disposition", contentDisposition);
+			ChunkedInput file;
+			isCompressed = isCompressed == null ? false : isCompressed;
+			if(isCompressed) {
+				file = new CompressedChunkedFile(raf, start, end, (int)Math.min((end - start), 8192));
+			} else {
+				file = new ChunkedDataFile(raf, start, end, (int)Math.min((end - start), 8192));
+				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf((end - start)));
+			}
+			httpResponse.addHeader("Content-Range", start + "-" + end + "/" + size);
+			channel.write(httpResponse);
+			ChannelFuture writeFuture = channel.write(file);
+			writeFuture.addListener(ChannelFutureListener.CLOSE);
+		} catch(Exception ex) {
+			LOG.error(ex, ex);
+		}	
+	}
+
 	public void sendHeaders(Channel channel, MappingHttpResponse httpResponse, Long size, String etag,
 			String lastModified, String contentType, String contentDisposition) {
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));

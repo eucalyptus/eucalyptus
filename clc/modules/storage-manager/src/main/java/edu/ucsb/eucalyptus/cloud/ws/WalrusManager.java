@@ -1444,6 +1444,14 @@ public class WalrusManager {
 				if(objectInfo.canRead(userId)) {
 					String etag = objectInfo.getEtag();
 					String objectName = objectInfo.getObjectName();
+					if(byteRangeEnd == -1)
+						byteRangeEnd = objectInfo.getSize();
+					if((byteRangeStart > objectInfo.getSize()) || 
+							(byteRangeStart > byteRangeEnd) ||
+							(byteRangeEnd > objectInfo.getSize()) ||
+							(byteRangeStart < 0 || byteRangeEnd < 0)) {
+						throw new InvalidRangeException("Range: " + byteRangeStart + "-" + byteRangeEnd + "object: " + bucketName + "/" + objectKey);
+					}
 					MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
 					if(ifMatch != null) {
 						if(!ifMatch.equals(etag) && !returnCompleteObjectOnFailure) {
@@ -1482,7 +1490,7 @@ public class WalrusManager {
 							walrusStatistics.updateBytesOut(objectInfo.getSize());
 							walrusStatistics.dumpBytesOut();
 						}
-						storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
+						storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd, objectInfo.getSize(), objectInfo.getEtag(), 
 								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
 								objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
 					} else {

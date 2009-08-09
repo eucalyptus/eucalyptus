@@ -14,7 +14,7 @@ public class CompressedChunkedFile implements ChunkedInput, IsData {
 	private Logger LOG = Logger.getLogger( CompressedChunkedFile.class );
 	private RandomAccessFile file;
 	private long offset;
-	private final int CHUNK_SIZE = 8192;
+	private int CHUNK_SIZE = 8192;
 	private long fileLength;
 
 	public CompressedChunkedFile(RandomAccessFile file, long fileLength) {
@@ -23,6 +23,13 @@ public class CompressedChunkedFile implements ChunkedInput, IsData {
 		this.fileLength = fileLength;
 	}
 
+	public CompressedChunkedFile(RandomAccessFile file, long start, long end, int chunkSize) {
+		this.file = file;
+		this.offset = start;
+		this.fileLength = end;
+		CHUNK_SIZE = chunkSize;
+	}
+	
 	@Override
 	public void close() throws Exception {
 		file.close();
