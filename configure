@@ -2202,7 +2202,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-ac_config_headers="$ac_config_headers util/config.h"
+ac_config_headers="$ac_config_headers util/eucalyptus-config.h"
 
 
 ac_ext=c
@@ -7694,7 +7694,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "util/config.h") CONFIG_HEADERS="$CONFIG_HEADERS util/config.h" ;;
+    "util/eucalyptus-config.h") CONFIG_HEADERS="$CONFIG_HEADERS util/eucalyptus-config.h" ;;
     "Makedefs") CONFIG_FILES="$CONFIG_FILES Makedefs" ;;
     "tools/eucalyptus-cc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-cc:tools/eucalyptus-cc.in" ;;
     "tools/eucalyptus-nc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-nc:tools/eucalyptus-nc.in" ;;

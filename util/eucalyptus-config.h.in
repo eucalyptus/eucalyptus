@@ -1,13 +1,12 @@
-
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef EUCALYPTUS_CONFIG_H
+#define EUCALYPTUS_CONFIG_H
 
 #ifdef __cplusplus
 {
 #endif
 
 /* Current version */
-#define VERSION "@VERSION@"
+#define EUCA_VERSION "@VERSION@"
 
 /* headers on the system */
 

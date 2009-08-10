@@ -14,6 +14,7 @@
 #include <sys/vfs.h> /* statfs */
 #include <signal.h> /* SIGINT */
 
+#include "eucalyptus-config.h"
 #include "ipc.h"
 #include "misc.h"
 #define HANDLERS_FANOUT
@@ -104,8 +105,81 @@ static int init (void)
 
 int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
 {
+    int ret, len;
+    char *home, *file_name, *net_mode;
+    FILE *f;
+#define NC_MONIT_FILENAME "/var/run/eucalyptus/nc-stat"
+
     if (init()) return 1;
-    return H->doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);
+    ret=H->doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);
+
+    home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    if (!home) 
+        home = strdup (""); 
+    else 
+        home = strdup (home);
+
+    if (!home) {
+	logprintfl(EUCAERROR, "Out of memory!\n");
+	return ret;
+    }
+
+    /* allocate enough memory */
+    len = (strlen(EUCALYPTUS_CONF_LOCATION) > strlen(NC_MONIT_FILENAME)) ? strlen(EUCALYPTUS_CONF_LOCATION) : strlen(NC_MONIT_FILENAME);
+    len += 2 + strlen(home);
+    file_name = malloc(sizeof(char) * len);
+    if (!file_name) {
+	free(home);
+	logprintfl(EUCAERROR, "Out of memory!\n");
+	return ret;
+    }
+
+    if (ret == 0) {
+    	sprintf(file_name, EUCALYPTUS_CONF_LOCATION, home);
+	net_mode = getConfString(file_name, "VNET_MODE");
+	if (!net_mode) {
+		free(home);
+		logprintfl(EUCAERROR, "Failed to get VNET_MODE!\n");
+		return ret;
+	}
+    
+	sprintf(file_name, "%s/%s", home, NC_MONIT_FILENAME);
+	if (!strcmp(meta->userId, EUCALYPTUS_ADMIN)) {
+		f = fopen(file_name, "w");
+		if (f) {
+			int i;
+			ncInstance * instance;
+			char myName[256];
+
+			fprintf(f, "version: %s\n", EUCA_VERSION);
+			fprintf(f, "timestamp: %ld\n", time(NULL));
+			if (gethostname(myName, 256) == 0) {
+				fprintf(f, "node: %s\n", myName);
+			}
+			fprintf(f, "hypervisor: %s\n", H->name);
+			fprintf(f, "network: %s\n", net_mode);
+
+			for (i=0; i < (*outInstsLen); i++) {
+				instance = (* outInsts)[i];
+				fprintf(f, "id: %s", instance->instanceId);
+				fprintf(f, " userId: %s", instance->userId);
+				fprintf(f, " state: %s", instance->stateName);
+				fprintf(f, " mem: %d", instance->params.memorySize);
+				fprintf(f, " disk: %d", instance->params.diskSize);
+				fprintf(f, " cores: %d\n", instance->params.numberOfCores);
+			}
+			fclose(f);
+		} else {
+			/* file problem */
+			logprintfl(EUCAWARN, "Cannot write to nc-stat!\n");
+		}
+	}
+	free(net_mode);
+    }
+    free(home);
+    free(file_name);
+
+    return ret;
 }
 
 int doPowerDown(ncMetadata *meta) {

@@ -141,7 +141,7 @@ do_stop() {
 	fi
 
 	# let's way few seconds than kill harder
-	timeout=5
+	timeout=20
 	while [ $timeout -gt 0 ]; do
 		if ps $pid > /dev/null 2>&1 ; then
 			sleep 1

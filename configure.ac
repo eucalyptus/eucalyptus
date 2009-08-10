@@ -13,7 +13,7 @@ AC_INIT(Eucalyptus,
 	m4_esyscmd([cat VERSION| tr -d '\n']),
 	support@open.eucalyptus.com)
 AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
-AC_CONFIG_HEADER([util/config.h])
+AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
 AC_USE_SYSTEM_EXTENSIONS
 VERSION="`cat VERSION`"
