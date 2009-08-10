@@ -965,3 +965,63 @@ int uint32compar(const void *ina, const void *inb) {
   }
   return(0);
 }
+
+int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap) {
+  int rc;
+  char *pidstr;
+  
+  if (!pidfile || !procname || sig < 0 || check_file(pidfile)) {
+    return(1);
+  }
+
+  rc = 1;
+  pidstr = file2str(pidfile);
+  if (pidstr) {
+    logprintfl(EUCADEBUG, "calling safekill with pid %d\n", atoi(pidstr));
+    rc = safekill(atoi(pidstr), procname, sig, rootwrap);
+    free(pidstr);
+  }
+  unlink(pidfile);
+  return(rc);
+}
+
+int safekill(pid_t pid, char *procname, int sig, char *rootwrap) {
+  char cmdstr[1024], file[1024], cmd[1024];
+  FILE *FH;
+  int ret;
+
+  if (pid < 2 || !procname) {
+    return(1);
+  }
+  
+  snprintf(file, 1024, "/proc/%d/cmdline", pid);
+  if (check_file(file)) {
+    return(1);
+  }
+
+  FH = fopen(file, "r");
+  if (FH) {
+    if (!fgets(cmdstr, 1024, FH)) {
+      fclose(FH);
+      return(1);
+    }
+    fclose(FH);
+  } else {
+    return(1);
+  }
+  
+  ret=1;
+  
+  // found running process
+  if (strstr(cmdstr, procname)) {
+    // passed in cmd matches running cmd
+    if (rootwrap) {
+      snprintf(cmd, 1024, "%s kill -%d %d", rootwrap, sig, pid);
+      ret = system(cmd)>>8;
+    } else {
+      ret = kill(pid, sig);
+    }
+  }
+  
+  return(ret);
+}

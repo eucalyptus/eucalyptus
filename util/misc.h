@@ -105,5 +105,7 @@ int write2file(const char *path, char *str);
 long long str2longlong (const char * str, const char * begin, const char * end); /* extract integer from str bound by 'begin' and 'end' */
 pid_t timewait(pid_t pid, int *status, int timeout);
 int uint32compar(const void *ina, const void *inb);
+int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
+int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
 
 #endif

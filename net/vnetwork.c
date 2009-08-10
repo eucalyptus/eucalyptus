@@ -817,16 +817,17 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
 
   snprintf(file, 1024, "%s/euca-dhcp.pid", vnetconfig->path);
   if (stat(file, &statbuf) == 0) {
+    char rootwrap[1024];
+    
+    snprintf(rootwrap, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap", vnetconfig->eucahome);
+    snprintf(buf, 512, "%s/var/run/net/euca-dhcp.pid", vnetconfig->eucahome);
+    rc = safekillfile(buf, vnetconfig->dhcpdaemon, 9, rootwrap);
 
     /*
-      snprintf (buf, 512, "%s/usr/lib/eucalyptus/euca_rootwrap kill `cat %s/euca-dhcp.pid`", vnetconfig->eucahome, vnetconfig->path);
-      logprintfl(EUCADEBUG, "executing: %s\n", buf);
-      rc = system (buf);
-    */
-    
     snprintf (buf, 512, "%s/usr/lib/eucalyptus/euca_rootwrap kill -9 `cat %s/euca-dhcp.pid`", vnetconfig->eucahome, vnetconfig->path);
     logprintfl(EUCADEBUG, "executing: %s\n", buf);
     rc = system (buf);
+    */
     usleep(250000);
   }
   
@@ -875,14 +876,19 @@ int vnetAddCCS(vnetConfig *vnetconfig, uint32_t cc) {
 }
 
 int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc) {
-  int i;
-  char file[1024];
+  int i, rc;
+  char file[1024], rootwrap[1024];
   char *pidstr;
+  snprintf(rootwrap, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap", vnetconfig->eucahome);
 
   for (i=0; i<NUMBER_OF_CCS; i++) {
     if (vnetconfig->ccs[i] == cc) {
       // bring down the tunnel
+
       snprintf(file, 1024, "%s/var/run/eucalyptus/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->localIpId, i);
+      rc = safekillfile(file, "vtund", 9, rootwrap);
+
+      /*
       pidstr = file2str(file);
       if (pidstr) {
 	logprintfl(EUCADEBUG, "terminating vtund process (%d) for tunnel id %d-%d\n", atoi(pidstr), vnetconfig->localIpId, i);
@@ -892,6 +898,8 @@ int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc) {
       } else {
 	// cannot find pidfile
       }
+      */
+      
       vnetconfig->ccs[i] = 0;
       return(0);
     }
@@ -1256,11 +1264,15 @@ int vnetTeardownTunnels(vnetConfig *vnetconfig) {
 }
 
 int vnetTeardownTunnelsVTUN(vnetConfig *vnetconfig) {
-
-  int i;
-  char file[1024], *pidstr;
+  int i, rc;
+  char file[1024], rootwrap[1024];
   
+  snprintf(rootwrap, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap", vnetconfig->eucahome);
+
   snprintf(file, 1024, "%s/var/run/eucalyptus/vtund-server.pid", vnetconfig->eucahome);
+  rc = safekillfile(file, "vtund", 9, rootwrap);
+  
+  /*
   if (!check_file(file)) {
     pidstr = file2str(file);
     if (pidstr) {
@@ -1269,20 +1281,24 @@ int vnetTeardownTunnelsVTUN(vnetConfig *vnetconfig) {
       free(pidstr);
     }
   }
+  */
   
   if (vnetconfig->localIpId != -1) {
     for (i=0; i<NUMBER_OF_CCS; i++) {
       if (vnetconfig->ccs[i] != 0) {
 	snprintf(file, 1024, "%s/var/run/eucalyptus/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->localIpId, i);
-	if (!check_file(file)) {
+	rc = safekillfile(file, "vtund", 9, rootwrap);
+	/*
+	  if (!check_file(file)) {
 	  pidstr = file2str(file);
 	  if (pidstr) {
-	    logprintfl(EUCADEBUG, "tearing down tunnel (%d)\n", atoi(pidstr));
-	    kill(atoi(pidstr), 9);
-	    unlink(file);
-	    free(pidstr);
+	  logprintfl(EUCADEBUG, "tearing down tunnel (%d)\n", atoi(pidstr));
+	  kill(atoi(pidstr), 9);
+	  unlink(file);
+	  free(pidstr);
 	  }
-	}
+	  }
+	*/
       }
     }
   }
