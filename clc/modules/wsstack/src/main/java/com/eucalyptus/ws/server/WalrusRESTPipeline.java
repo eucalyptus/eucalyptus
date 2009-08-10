@@ -31,7 +31,6 @@ public class WalrusRESTPipeline extends FilteredPipeline {
 
 	@Override
 	protected boolean checkAccepts( HttpRequest message ) {
-		//TODO: Mangle uri for virtual hosting
 		return message.getUri().startsWith(WalrusProperties.walrusServicePath) ||
 		message.getHeader(HttpHeaders.Names.HOST).contains(".walrus");		
 	}

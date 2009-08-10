@@ -162,7 +162,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 		if(operationName == null)
 			throw new BindingException("Could not determine operation name for " + servicePath);
-		
+
 		Map<String, String> params = httpRequest.getParameters();
 
 		OMElement msg;
@@ -235,13 +235,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		String[] target = null;
 		String path = getOperationPath(httpRequest);
 		boolean walrusInternalOperation = false;
-		//TODO: Handle virtual subdomains
-		/*Object virtualSubdomain = httpRequest.getHeader(WalrusProperties.VIRTUAL_SUBDOMAIN);
-		if(virtualSubdomain != null) {
-			String bukkit = (String) virtualSubdomain;
-			path += bukkit + "/";
-			httpC.put(WalrusProperties.VIRTUAL_SUBDOMAIN, bukkit);
-		}*/
+
+		String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
+		if(targetHost.contains(".walrus")) {
+			String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
+			path += bucket + "/";
+		}
+
 		if(path.length() > 0) {
 			target = getTarget(path);
 		}

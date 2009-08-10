@@ -21,6 +21,7 @@ import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
@@ -117,10 +118,10 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			String content_type = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
 			content_type = content_type == null ? "" : content_type;
 
-			if(httpRequest.containsHeader(WalrusProperties.VIRTUAL_SUBDOMAIN)) {
-				String bukkit = httpRequest.getAndRemoveHeader(WalrusProperties.VIRTUAL_SUBDOMAIN);
-				addr = addr.replaceAll("services/" + WalrusProperties.SERVICE_NAME, "");
-				addr = "/" + bukkit + addr;
+			String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
+			if(targetHost.contains(".walrus")) {
+				String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
+				addr = "/" + bucket + addr;
 			}
 			String[] addrStrings = addr.split("\\?");
 			String addrString = addrStrings[0];
