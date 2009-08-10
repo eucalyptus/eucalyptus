@@ -39,9 +39,10 @@ import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.util.UserManagement;
-import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import com.eucalyptus.ws.util.WalrusProperties;
 
 import javax.persistence.*;
 import java.util.ArrayList;

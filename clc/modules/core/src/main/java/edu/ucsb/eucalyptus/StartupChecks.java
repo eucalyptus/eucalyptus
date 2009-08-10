@@ -11,7 +11,7 @@ import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.Volume;
 import edu.ucsb.eucalyptus.util.UserManagement;
-import edu.ucsb.eucalyptus.util.StorageProperties;
+import com.eucalyptus.ws.util.StorageProperties;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.encoders.UrlBase64;

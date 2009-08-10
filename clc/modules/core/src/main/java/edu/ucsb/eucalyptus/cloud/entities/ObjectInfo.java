@@ -36,7 +36,7 @@ package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.UserManagement;
-import edu.ucsb.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.ws.util.WalrusProperties;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 

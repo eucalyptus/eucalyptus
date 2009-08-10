@@ -76,7 +76,7 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.util.Admin;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.Messaging;
-import edu.ucsb.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.ws.util.WalrusProperties;
 import edu.ucsb.eucalyptus.util.XMLParser;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;

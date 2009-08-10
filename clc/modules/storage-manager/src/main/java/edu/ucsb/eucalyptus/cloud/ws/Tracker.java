@@ -33,7 +33,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-import edu.ucsb.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.ws.util.WalrusProperties;
 import org.apache.log4j.Logger;
 
 import java.io.File;

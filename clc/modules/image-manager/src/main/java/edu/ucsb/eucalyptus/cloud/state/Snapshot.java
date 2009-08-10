@@ -1,6 +1,6 @@
 package edu.ucsb.eucalyptus.cloud.state;
 
-import edu.ucsb.eucalyptus.util.StorageProperties;
+import com.eucalyptus.ws.util.StorageProperties;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
