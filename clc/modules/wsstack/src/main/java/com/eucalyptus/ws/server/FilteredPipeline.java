@@ -15,13 +15,13 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
+import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.handlers.ServiceSinkHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   private static Logger         LOG    = Logger.getLogger( FilteredPipeline.class );
   private List<UnrollableStage> stages = new ArrayList<UnrollableStage>( );
-
   public FilteredPipeline( ) {
     this.addStages( stages );
   }

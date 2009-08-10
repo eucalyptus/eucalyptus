@@ -35,9 +35,6 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.keys.UserKeyStore;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.util.*;
@@ -51,6 +48,10 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
+import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.MappingHttpResponse;
 
@@ -110,7 +111,6 @@ public class WalrusImageManager {
 					String encryptedIV = parser.getValue("//ec2_encrypted_iv");
 					String signature = parser.getValue("//signature");
 
-					AbstractKeyStore userKeyStore = UserKeyStore.getInstance();
 
 					String image = parser.getXML("image");
 					String machineConfiguration = parser.getXML("machine_configuration");
@@ -128,9 +128,9 @@ public class WalrusImageManager {
 					if(isAdministrator) {
 						try {
 							boolean verified = false;
-							List<String> aliases = userKeyStore.getAliases();
+							List<String> aliases = Credentials.Users.getAliases();
 							for(String alias : aliases) {
-								X509Certificate cert = userKeyStore.getCertificate(alias);
+								X509Certificate cert = Credentials.Users.getCertificate(alias);
 								verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if(verified)
 									break;
@@ -157,7 +157,7 @@ public class WalrusImageManager {
 						for(CertificateInfo certInfo: certInfos) {
 							String alias = certInfo.getCertAlias();
 							try {
-								X509Certificate cert = userKeyStore.getCertificate(alias);
+								X509Certificate cert = Credentials.Users.getCertificate(alias);
 								signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if (signatureVerified)
 									break;
@@ -197,7 +197,7 @@ public class WalrusImageManager {
 					byte[] key;
 					byte[] iv;
 					try {
-						PrivateKey pk = (PrivateKey) userKeyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
+						PrivateKey pk = (PrivateKey) EucaKeyStore.getInstance( ).getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						String keyString = new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey)));
@@ -266,8 +266,6 @@ public class WalrusImageManager {
 					String encryptedIV = parser.getValue("//ec2_encrypted_iv");
 					String signature = parser.getValue("//signature");
 
-					AbstractKeyStore userKeyStore = UserKeyStore.getInstance();
-
 					String image = parser.getXML("image");
 					String machineConfiguration = parser.getXML("machine_configuration");
 
@@ -294,7 +292,7 @@ public class WalrusImageManager {
 					for(CertificateInfo certInfo: certInfos) {
 						String alias = certInfo.getCertAlias();
 						try {
-							X509Certificate cert = userKeyStore.getCertificate(alias);
+							X509Certificate cert = Credentials.Users.getCertificate(alias);
 							PublicKey publicKey = cert.getPublicKey();
 							sigVerifier.initVerify(publicKey);
 							sigVerifier.update((machineConfiguration + image).getBytes());
@@ -318,7 +316,7 @@ public class WalrusImageManager {
 					byte[] key;
 					byte[] iv;
 					try {
-						PrivateKey pk = (PrivateKey) userKeyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
+						PrivateKey pk = (PrivateKey) EucaKeyStore.getInstance( ).getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						key = Hashes.hexToBytes(new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey))));

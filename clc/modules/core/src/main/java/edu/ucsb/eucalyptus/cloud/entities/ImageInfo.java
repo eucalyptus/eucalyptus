@@ -43,6 +43,7 @@ import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import javax.persistence.*;

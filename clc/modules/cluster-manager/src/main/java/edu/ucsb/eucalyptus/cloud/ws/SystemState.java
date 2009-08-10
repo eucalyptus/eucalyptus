@@ -1,5 +1,6 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.*;
 import edu.ucsb.eucalyptus.cloud.*;

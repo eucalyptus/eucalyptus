@@ -22,6 +22,10 @@
     <endpoint name="ImageWS" address="vm://Image" synchronous="false"/>
     <endpoint name="VolumeWS" address="vm://Volume" synchronous="false"/>
     <endpoint name="SnapshotWS" address="vm://Snapshot" synchronous="false"/>
+        <euca:endpoint name="KeyPairWSTest"
+                   connector-ref="eucaws"
+                   address="http://127.0.0.1:8773/services/KeyPair"
+                   synchronous="true"/>   
     <endpoint name="KeyPairWS" address="vm://KeyPair" synchronous="false"/>
     <endpoint name="GroupsWS" address="vm://Groups" synchronous="false"/>
 

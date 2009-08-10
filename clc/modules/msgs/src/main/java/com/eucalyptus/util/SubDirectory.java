@@ -1,9 +1,15 @@
-package com.eucalyptus.ws.util;
+package com.eucalyptus.util;
 
 import java.io.File;
 
+
 public enum SubDirectory {
-  DB( BaseDirectory.VAR, "db" ), MODULES( BaseDirectory.VAR, "modules" ), SERVICES( BaseDirectory.VAR, "services" ), WWW( BaseDirectory.CONF, "www" ), WEBAPPS( BaseDirectory.VAR, "webapps" ), KEYS( BaseDirectory.VAR, "keys" );
+  DB( BaseDirectory.VAR, "db" ),
+  MODULES( BaseDirectory.VAR, "modules" ),
+  SERVICES( BaseDirectory.VAR, "services" ),
+  WWW( BaseDirectory.CONF, "www" ),
+  WEBAPPS( BaseDirectory.VAR, "webapps" ),
+  KEYS( BaseDirectory.VAR, "keys" );
   BaseDirectory parent;
   String        dir;
 

@@ -3,29 +3,28 @@ package edu.ucsb.eucalyptus;
 import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
-import edu.ucsb.eucalyptus.keys.EucaKeyStore;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
-import edu.ucsb.eucalyptus.keys.UserKeyStore;
 import edu.ucsb.eucalyptus.msgs.Volume;
-import edu.ucsb.eucalyptus.util.BaseDirectory;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import edu.ucsb.eucalyptus.util.SubDirectory;
 import edu.ucsb.eucalyptus.util.UserManagement;
 import edu.ucsb.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.encoders.UrlBase64;
+import org.mortbay.jetty.security.Credential;
 
+import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.util.AbstractKeyStore;
+import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.util.SubDirectory;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,18 +39,12 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 public class StartupChecks {
 
-  private static String                 _KS_FORMAT     = "bks";
-  private static String                 _KS_PASS       = EucalyptusProperties.NAME;
-  private static String                 _USER_KS       = BaseDirectory.CONF.toString( ) + File.separator + "users." + _KS_FORMAT.toLowerCase( );
-  private static Logger                 LOG            = Logger.getLogger( StartupChecks.class );
-  private static String                 HEADER_FSTRING = "=================================:: %-20s ::=================================";
+  private static String _KS_FORMAT     = "bks";
+  private static String _KS_PASS       = EucalyptusProperties.NAME;
+  private static String _USER_KS       = BaseDirectory.CONF.toString( ) + File.separator + "users." + _KS_FORMAT.toLowerCase( );
+  private static Logger LOG            = Logger.getLogger( StartupChecks.class );
+  private static String HEADER_FSTRING = "=================================:: %-20s ::=================================";
 
-  private static ConcurrentNavigableMap testMap        = null;
-
-  static {
-    Security.insertProviderAt( new BouncyCastleProvider( ), 1 );
-    testMap = new ConcurrentSkipListMap( );
-  }
 
   private static void fail( String... error ) {
     for ( String s : error )
@@ -65,12 +58,8 @@ public class StartupChecks {
   public static boolean doChecks( ) {
     StartupChecks.checkDirectories( );
 
-    boolean userKs = false;
-    boolean serviceKs = false;
     boolean wwwKs = false;
     try {
-      userKs = UserKeyStore.getInstance( ).check( );
-      serviceKs = ServiceKeyStore.getInstance( ).check( );
       wwwKs = EucaKeyStore.getInstance( ).check( );
     } catch ( GeneralSecurityException e ) {
       LOG.error( e, e );
@@ -78,11 +67,9 @@ public class StartupChecks {
 
     boolean hasDb = StartupChecks.checkDatabase( );
 
-    if ( !userKs || !serviceKs || !wwwKs ) {
+    if ( !wwwKs ) {
       try {
         StartupChecks.createKeyStores( );
-        userKs = UserKeyStore.getInstance( ).check( );
-        serviceKs = ServiceKeyStore.getInstance( ).check( );
         wwwKs = EucaKeyStore.getInstance( ).check( );
       } catch ( Exception e ) {
         LOG.error( e, e );
@@ -94,12 +81,10 @@ public class StartupChecks {
       hasDb = StartupChecks.checkDatabase( );
     }
 
-    if ( !hasDb || !userKs || !serviceKs || !wwwKs ) {
+    if ( !hasDb || !wwwKs ) {
       LOG.fatal( String.format( HEADER_FSTRING, "STARTUP FAILURE" ) );
       if ( !hasDb ) LOG.fatal( "Failed to initialize the database in: " + SubDirectory.DB );
-      if ( !userKs ) LOG.fatal( "Failed to read the user keystore: " + UserKeyStore.getInstance( ).getFileName( ) );
       if ( !wwwKs ) LOG.fatal( "Failed to read the www keystore: " + EucaKeyStore.getInstance( ).getFileName( ) );
-      if ( !serviceKs ) LOG.fatal( "Failed to read the services keystore: " + ServiceKeyStore.getInstance( ).getFileName( ) );
       StartupChecks.fail( "See errors messages above." );
     }
 
@@ -125,14 +110,6 @@ public class StartupChecks {
       db2.commit( );
     } catch ( Exception e1 ) {
       db2.rollback( );
-    }
-
-    try {
-      StartupChecks.importKeys( AbstractKeyStore.getGenericKeystore( _USER_KS, _KS_PASS, _KS_FORMAT ), UserKeyStore.getInstance( ) );
-    } catch ( IOException e ) {
-    } catch ( GeneralSecurityException e ) {
-      LOG.error( e );
-      LOG.debug( e, e );
     }
 
     checkWalrus( );
@@ -161,39 +138,6 @@ public class StartupChecks {
     db.commit( );
   }
 
-  private static void importKeys( final AbstractKeyStore ks, final AbstractKeyStore newKs ) throws GeneralSecurityException, IOException {
-    for ( String alias : ks.getAliases( ) )
-      if ( !newKs.containsEntry( alias ) && !EucalyptusProperties.NAME.equals( alias ) ) {
-        LOG.info( String.format( "Importing -> alias=%10s", alias ) );
-        newKs.addCertificate( alias, ks.getCertificate( alias ) );
-      } else if ( !newKs.containsEntry( "v13-" + alias ) && EucalyptusProperties.NAME.equals( alias ) ) {
-        LOG.info( String.format( "Importing -> alias=%10s", alias ) );
-        newKs.addKeyPair( "v13-" + EucalyptusProperties.NAME, ks.getCertificate( alias ), ( PrivateKey ) ks.getKey( alias, EucalyptusProperties.NAME ), EucalyptusProperties.NAME );
-      }
-    newKs.store( );
-    LOG.info( "Backporting keys into database" );
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( );
-    try {
-      for ( UserInfo user : db.query( new UserInfo( ) ) ) {
-        for ( CertificateInfo certInfo : user.getCertificates( ) ) {
-          LOG.info( String.format( "- Trying for user %s with alias %s", user.getUserName( ), certInfo.getCertAlias( ) ) );
-          if ( newKs.containsEntry( certInfo.getCertAlias( ) ) ) {
-            try {
-              X509Certificate cert = newKs.getCertificate( certInfo.getCertAlias( ) );
-              certInfo.setValue( new String( UrlBase64.encode( Hashes.getPemBytes( cert ) ) ) );
-              db.recast( CertificateInfo.class ).merge( certInfo );
-              LOG.info( String.format( "- Backedup for user %s with alias %s", user.getUserName( ), certInfo.getCertAlias( ) ) );
-            } catch ( Exception e ) {
-              LOG.error( String.format( "- Failed for user %s with alias %s: %s", user.getUserName( ), certInfo.getCertAlias( ), e ) );
-            }
-          }
-        }
-      }
-    } catch ( Exception e ) {
-    }
-    db.commit( );
-  }
-
   private static boolean checkDatabase( ) {
     /** initialize the counters **/
 
@@ -208,7 +152,6 @@ public class StartupChecks {
       db.rollback( );
     }
 
-    
   }
 
   private static boolean createDb( ) {
@@ -225,7 +168,7 @@ public class StartupChecks {
       return false;
     }
     try {
-      Class.forName( "com.eucalyptus.auth.Credentials" ).getMethod( "init", new Class[]{} ).invoke( null, new Object[]{} );
+      Credentials.init( );
     } catch ( Exception e ) {
       LOG.error( e, e );
     }
@@ -241,45 +184,18 @@ public class StartupChecks {
       db.rollback( );
       return false;
     }
-    
+
   }
 
   private static void createKeyStores( ) throws IOException, GeneralSecurityException {
-    LOG.info( String.format( HEADER_FSTRING, "Create service keystore" ) );
-    AbstractKeyStore serviceKeyStore = ServiceKeyStore.getInstance( );
-    LOG.info( String.format( HEADER_FSTRING, "Create user keystore" ) );
-    AbstractKeyStore userKeyStore = UserKeyStore.getInstance( );
     LOG.info( String.format( HEADER_FSTRING, "Create www keystore" ) );
     AbstractKeyStore eucaKeyStore = EucaKeyStore.getInstance( );
-
     try {
-
-//            LOG.info( String.format( HEADER_FSTRING, "Create system keys" ) );
-//            KeyTool keyTool = new KeyTool();
-//
-//            KeyPair sysKp = keyTool.getKeyPair();
-//            X509Certificate sysX509 = keyTool.getCertificate( sysKp, EucalyptusProperties.getDName( EucalyptusProperties.NAME ) );
-//            keyTool.writePem( String.format( "%s/cloud-cert.pem", SubDirectory.KEYS.toString() ), sysX509 );
-//            keyTool.writePem( String.format( "%s/cloud-pk.pem", SubDirectory.KEYS.toString() ), sysKp.getPrivate() );
-//
-//            KeyPair wwwKp = keyTool.getKeyPair();
-//            X509Certificate wwwX509 = keyTool.getCertificate( wwwKp, EucalyptusProperties.getDName( EucalyptusProperties.WWW_NAME ) );
-//
-//            LOG.info( String.format( HEADER_FSTRING, "Store system keys" ) );
-//            serviceKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate(), EucalyptusProperties.NAME );
-//            userKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate(), EucalyptusProperties.NAME );
-//            eucaKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate(), EucalyptusProperties.NAME );
-//            eucaKeyStore.addKeyPair( EucalyptusProperties.WWW_NAME, wwwX509, wwwKp.getPrivate(), EucalyptusProperties.NAME );
-//            serviceKeyStore.store();
-//            userKeyStore.store();
-//            eucaKeyStore.store();
+      LOG.info( String.format( HEADER_FSTRING, "Create system keys" ) );
+      Credentials.createSystemKeys( eucaKeyStore );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
-      serviceKeyStore.remove( );
-      userKeyStore.remove( );
       eucaKeyStore.remove( );
-      new File( String.format( "%s/cloud-pk.pem", SubDirectory.KEYS.toString( ) ) ).delete( );
-      new File( String.format( "%s/cloud-cert.pem", SubDirectory.KEYS.toString( ) ) ).delete( );
       StartupChecks.fail( "Eucalyptus requires the unlimited strength jurisdiction policy files for the JCE.", "Please see the documentation for more information." );
     }
   }

@@ -5,6 +5,7 @@ import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import java.util.Date;

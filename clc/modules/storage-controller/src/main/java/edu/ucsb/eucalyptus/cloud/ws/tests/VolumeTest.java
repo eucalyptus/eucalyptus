@@ -35,11 +35,12 @@
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 
 import java.util.ArrayList;
+
+import com.eucalyptus.auth.Hashes;
 
 public class VolumeTest extends TestCase {
 

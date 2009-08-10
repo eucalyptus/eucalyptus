@@ -42,6 +42,11 @@
     <!--================================== BUILD TARGETS ==================================-->
     <target name="build" depends="init,compile-src,compile-jibx,jar" description="--> build the jar file from source." unless="groovyc.notRequired"/>
     <target name="install" depends="copy-conf"/>
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+        <delete file="${jar.file}"/>
+    	<delete file="${rsrc.dir}/msgs-binding.xml"/>
+    </target>
     <target name="compile-src" unless="groovyc.notRequired">
         <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath"/>
         <groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
@@ -54,7 +59,7 @@
                 <include name="**/JiBX*.class"/>
             </fileset>
         </delete>
-        <java classname="GenerateJibxBinding" fork="true">
+        <java classname="com.eucalyptus.util.GenerateJiBXBinding" fork="true">
             <classpath refid="classpath"/>
             <classpath path="build"/>
             <syspropertyset refid="euca-props"/>

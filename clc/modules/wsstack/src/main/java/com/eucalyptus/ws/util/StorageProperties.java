@@ -38,6 +38,8 @@ package com.eucalyptus.ws.util;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.util.BaseDirectory;
+
 import java.util.UUID;
 
 public class StorageProperties {

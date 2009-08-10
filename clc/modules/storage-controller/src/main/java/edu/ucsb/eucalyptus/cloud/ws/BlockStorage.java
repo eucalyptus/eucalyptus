@@ -35,12 +35,8 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
-import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.BlockStorageChecker;
 import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
@@ -56,6 +52,9 @@ import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 
+import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import java.io.*;
@@ -849,12 +848,6 @@ public class BlockStorage {
     //All HttpTransfer operations should be called asynchronously. The operations themselves are synchronous.
     class HttpTransfer {
         public HttpMethodBase constructHttpMethod(String verb, String addr, String eucaOperation, String eucaHeader) {
-            AbstractKeyStore keyStore = null;
-            try {
-                keyStore = ServiceKeyStore.getInstance();
-            } catch(Exception ex) {
-                LOG.error(ex, ex);
-            }
             String date = new Date().toString();
             String httpVerb = verb;
             String addrPath;
@@ -889,8 +882,8 @@ public class BlockStorage {
             try {
                 //TODO: Get credentials for SC from keystore
 
-                PrivateKey ccPrivateKey = (PrivateKey) keyStore.getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
-                X509Certificate cert = keyStore.getCertificate(EucalyptusProperties.NAME);
+                PrivateKey ccPrivateKey = (PrivateKey) EucaKeyStore.getInstance( ).getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
+                X509Certificate cert = EucaKeyStore.getInstance( ).getCertificate(EucalyptusProperties.NAME);
                 if(cert == null)
                     return null;
                 byte[] pemCertBytes = Hashes.getPemBytes(cert);

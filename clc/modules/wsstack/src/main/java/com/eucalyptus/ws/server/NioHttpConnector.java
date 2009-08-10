@@ -7,39 +7,45 @@ import org.mule.transport.AbstractConnector;
 
 public class NioHttpConnector extends AbstractConnector {
 
-    private static Logger LOG = Logger.getLogger( NioHttpConnector.class );
+  private static Logger LOG      = Logger.getLogger( NioHttpConnector.class );
 
-    public static String PROTOCOL = "euca";
-    private NioServer server;
+  public static String  PROTOCOL = "euca";
+  private NioServer     server;
 
-    public NioHttpConnector() {
-      super.registerSupportedProtocol( "http" );
-      super.registerSupportedProtocol( "https" );
+  public NioHttpConnector( ) {
+    super.registerSupportedProtocol( "http" );
+    super.registerSupportedProtocol( "https" );
+  }
+
+  public void doConnect( ) throws MuleException {
+    this.server = new NioServer( 8773 );
+  }
+
+  public String getProtocol( ) {
+    return PROTOCOL;
+  }
+
+  @Override
+  public void doDisconnect( ) throws MuleException {
+  }
+
+  @Override
+  public void doStart( ) throws MuleException {
+    if ( this.server == null ) {
+      this.doConnect( );
     }
+    this.server.start( );
+  }
 
-    public void doConnect() throws MuleException
-    {
-      this.server = new NioServer( 8773 );
-    }
+  @Override
+  public void doStop( ) throws MuleException {
+  }
 
-    public String getProtocol()
-    {
-      return PROTOCOL;
-    }
+  @Override
+  public void doDispose( ) {
+  }
 
-    public void doDisconnect() throws MuleException {}
-
-    public void doStart() throws MuleException {
-      if( this.server == null ) {
-        this.doConnect( );
-      }
-      this.server.start( );
-    }
-
-    public void doStop() throws MuleException {}
-
-    public void doDispose() {}
-
-    @Override
-    protected void doInitialise( ) throws InitialisationException {}
+  @Override
+  protected void doInitialise( ) throws InitialisationException {
+  }
 }

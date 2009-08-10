@@ -1,4 +1,4 @@
-package com.eucalyptus.ws.util;
+package com.eucalyptus.auth.util;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -21,14 +21,6 @@ public abstract class AbstractKeyStore {
 
   private static Logger LOG = Logger.getLogger( AbstractKeyStore.class );
 
-  static {
-    Security.addProvider( new BouncyCastleProvider( ) );
-    // TODO: uncomment this later
-    // WSSConfig.getDefaultWSConfig( ).addJceProvider( "BC",
-    // BouncyCastleProvider.class.getCanonicalName( ) );
-    // WSSConfig.getDefaultWSConfig( ).setTimeStampStrict( true );
-    // WSSConfig.getDefaultWSConfig( ).setEnableSignatureConfirmation( true );
-  }
 
   private KeyStore      keyStore;
   private final String  fileName;

@@ -6,8 +6,6 @@ import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.UrlBase64;
 
-import edu.ucsb.eucalyptus.keys.Hashes.Digest;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -154,7 +152,6 @@ public class Hashes {
     return imageId;
   }
 
-  // borrowing from neil for the time being
   public static byte[] hexToBytes( String data ) {
     int k = 0;
     byte[] results = new byte[data.length( ) / 2];

@@ -35,7 +35,11 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
+import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.ws.util.StorageProperties;
+
 import edu.ucsb.eucalyptus.cloud.cluster.Cluster;
 import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
@@ -43,11 +47,9 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.cluster.VolumeAttachCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VolumeDetachCallback;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -66,7 +68,6 @@ import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.util.Messaging;
-import edu.ucsb.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;
 
 import java.util.HashMap;

@@ -33,9 +33,10 @@ package edu.ucsb.eucalyptus.cloud.ws;
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.Hashes;
 
 import java.io.*;
 

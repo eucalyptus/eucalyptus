@@ -26,14 +26,12 @@
  * Author: Chris Grzegorczyk grze@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.entities;
+package com.eucalyptus.util;
 
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.criterion.*;
 
-import com.eucalyptus.util.EucalyptusCloudException;
 
 import javax.persistence.*;
 import java.sql.*;
@@ -47,9 +45,10 @@ public class EntityWrapper<TYPE> {
   private static Map<String, EntityManagerFactory> emf = new ConcurrentSkipListMap<String, EntityManagerFactory>( );
 
   public static EntityManagerFactory getEntityManagerFactory( ) {
-    return EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME );
+    return EntityWrapper.getEntityManagerFactory( "eucalyptus" );
   }
 
+  @SuppressWarnings( "deprecation" )
   public static EntityManagerFactory getEntityManagerFactory( final String persistenceContext ) {
     synchronized ( EntityWrapper.class ) {
       if ( !emf.containsKey( persistenceContext ) ) {
@@ -82,7 +81,7 @@ public class EntityWrapper<TYPE> {
   private EntityTransaction tx;
 
   public EntityWrapper( ) {
-    this( EucalyptusProperties.NAME );
+    this( "eucalyptus" );
   }
 
   public EntityWrapper( String persistenceContext ) {
@@ -92,6 +91,7 @@ public class EntityWrapper<TYPE> {
     tx.begin( );
   }
 
+  @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     List<TYPE> resultList = ( List<TYPE> ) session.createCriteria( example.getClass( ) ).add( qbe ).list( );
@@ -127,8 +127,9 @@ public class EntityWrapper<TYPE> {
     this.em.close( );
   }
 
+  @SuppressWarnings( "unchecked" )
   public <NEWTYPE> EntityWrapper<NEWTYPE> recast( Class<NEWTYPE> c ) {
-    return ( EntityWrapper<NEWTYPE> ) this;
+    return (EntityWrapper<NEWTYPE> ) this;
   }
 
   public EntityManager getEntityManager( ) {

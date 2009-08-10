@@ -1,5 +1,6 @@
 package com.eucalyptus.ws.server;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,17 +29,29 @@ public class EucalyptusQueryPipeline extends FilteredPipeline {
     if ( message instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
       if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
+        Map<String,String> parameters = new HashMap<String,String>( httpRequest.getParameters( ) );
         ChannelBuffer buffer = httpRequest.getContent( );
         buffer.markReaderIndex( );
         byte[] read = new byte[buffer.readableBytes( )];
         buffer.readBytes( read );
         String query = new String( read );
-        httpRequest.setQuery( query );
         buffer.resetReaderIndex( );
-      }
-      for ( RequiredQueryParams p : RequiredQueryParams.values( ) ) {
-        if ( !httpRequest.getParameters( ).containsKey( p.toString( ) ) ) {
-          return false;
+        for ( String p : query.split( "&" ) ) {
+          String[] splitParam = p.split( "=" );
+          String lhs = splitParam[0];
+          String rhs = splitParam.length == 2 ? splitParam[1] : null;
+          parameters.put( lhs, rhs );
+        }
+        for ( RequiredQueryParams p : RequiredQueryParams.values( ) ) {
+          if ( !parameters.containsKey( p.toString( ) ) ) {
+            return false;
+          }
+        }
+      } else {
+        for ( RequiredQueryParams p : RequiredQueryParams.values( ) ) {
+          if ( !httpRequest.getParameters( ).containsKey( p.toString( ) ) ) {
+            return false;
+          }
         }
       }
       return true;

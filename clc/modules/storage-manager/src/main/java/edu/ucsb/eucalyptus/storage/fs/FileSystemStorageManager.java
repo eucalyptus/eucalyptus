@@ -34,6 +34,7 @@
 
 package edu.ucsb.eucalyptus.storage.fs;
 
+import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.MappingHttpResponse;
 
@@ -41,7 +42,6 @@ import edu.ucsb.eucalyptus.cloud.ws.CompressedChunkedFile;
 import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
 import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusManager.ChunkedDataFile;
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;

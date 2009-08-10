@@ -35,6 +35,8 @@
 package com.eucalyptus.cloud.ws;
 
 import com.eucalyptus.util.DNSProperties;
+import com.eucalyptus.util.EntityWrapper;
+
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;

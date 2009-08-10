@@ -1,11 +1,14 @@
-package com.eucalyptus.ws.util;
+package com.eucalyptus.util;
 
 import java.io.File;
 
 import org.apache.log4j.Logger;
 
 public enum BaseDirectory {
-  HOME( "euca.home" ), VAR( "euca.var.dir" ), CONF( "euca.conf.dir" ), LOG( "euca.log.dir" );
+  HOME( "euca.home" ),
+  VAR( "euca.var.dir" ),
+  CONF( "euca.conf.dir" ),
+  LOG( "euca.log.dir" );
   private static Logger LOGG = Logger.getLogger( BaseDirectory.class );
 
   private String        key;

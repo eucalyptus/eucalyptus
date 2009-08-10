@@ -31,12 +31,12 @@ import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
-import com.eucalyptus.ws.util.EucalyptusProperties;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.ws.util.StorageProperties;
 import com.eucalyptus.ws.util.WalrusProperties;

@@ -1,12 +1,15 @@
 package com.eucalyptus.auth;
 
+import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.apache.ws.security.WSSConfig;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.hibernate.HibernateException;
@@ -14,10 +17,14 @@ import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 
+import com.eucalyptus.auth.util.AbstractKeyStore;
+import com.eucalyptus.auth.util.KeyTool;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusProperties;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+
 
 public class Credentials {
   private static Logger LOG            = Logger.getLogger( Credentials.class );
@@ -29,6 +36,9 @@ public class Credentials {
   public static void init( ) {
     Security.addProvider( new BouncyCastleProvider( ) );
     org.apache.xml.security.Init.init( );
+     WSSConfig.getDefaultWSConfig( ).addJceProvider( "BC", BouncyCastleProvider.class.getCanonicalName( ) );
+     WSSConfig.getDefaultWSConfig( ).setTimeStampStrict( true );
+     WSSConfig.getDefaultWSConfig( ).setEnableSignatureConfirmation( true );
     try {
       getUser( "admin" );
     } catch ( NoSuchUserException e ) {
@@ -231,6 +241,17 @@ public class Credentials {
       }
       return certAliases;
     }
+  }
+
+  public static void createSystemKeys( AbstractKeyStore eucaKeyStore ) throws IOException, GeneralSecurityException {
+    KeyTool keyTool = new KeyTool( );
+    KeyPair sysKp = keyTool.getKeyPair( );
+    X509Certificate sysX509 = keyTool.getCertificate( sysKp, EucalyptusProperties.getDName( EucalyptusProperties.NAME ) );
+    KeyPair wwwKp = keyTool.getKeyPair( );
+    X509Certificate wwwX509 = keyTool.getCertificate( wwwKp, EucalyptusProperties.getDName( EucalyptusProperties.WWW_NAME ) );
+    eucaKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate( ), EucalyptusProperties.NAME );
+    eucaKeyStore.addKeyPair( EucalyptusProperties.WWW_NAME, wwwX509, wwwKp.getPrivate( ), EucalyptusProperties.NAME );
+    eucaKeyStore.store( );
   }
 
 }

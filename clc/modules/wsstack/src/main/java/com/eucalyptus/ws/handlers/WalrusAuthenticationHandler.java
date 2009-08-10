@@ -5,7 +5,6 @@ import java.net.URLDecoder;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
@@ -15,27 +14,21 @@ import java.util.TreeMap;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.Base64;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
+import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.AbstractKeyStore;
+import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
-import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
-import com.eucalyptus.ws.util.AbstractKeyStore;
-import com.eucalyptus.ws.util.EucalyptusProperties;
-import com.eucalyptus.auth.Hashes;
-import com.eucalyptus.ws.util.HmacUtils;
-import com.eucalyptus.ws.util.ServiceKeyStore;
 import com.eucalyptus.ws.util.StorageProperties;
 import com.eucalyptus.ws.util.WalrusProperties;
-
-import org.apache.commons.httpclient.util.DateUtil;
 
 @ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {
@@ -84,7 +77,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				String certString = new String(bytes);
 				PEMReader pemReader = new PEMReader(new StringReader(certString));
 				X509Certificate cert = (X509Certificate) pemReader.readObject();
-				AbstractKeyStore keyStore = ServiceKeyStore.getInstance();
+				AbstractKeyStore keyStore = EucaKeyStore.getInstance();
 				if (keyStore.getCertificateAlias(cert) != null) {
 					//cert found in keystore
 					PublicKey publicKey = cert.getPublicKey();

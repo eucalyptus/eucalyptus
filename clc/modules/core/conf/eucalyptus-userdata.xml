@@ -18,6 +18,7 @@
         <service name="KeyPair">
             <inbound>
                 <inbound-endpoint ref="KeyPairWS"/>
+                <inbound-endpoint ref="KeyPairWSTest"/>
             </inbound>
             <component class="edu.ucsb.eucalyptus.cloud.ws.KeyPairBroker"/>
             <outbound>

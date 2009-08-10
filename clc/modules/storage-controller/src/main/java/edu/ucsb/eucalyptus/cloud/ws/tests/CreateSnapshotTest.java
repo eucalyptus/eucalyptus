@@ -35,7 +35,6 @@
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 import edu.ucsb.eucalyptus.util.WalrusProperties;
@@ -44,6 +43,8 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
+
+import com.eucalyptus.auth.Hashes;
 
 import java.util.Date;
 

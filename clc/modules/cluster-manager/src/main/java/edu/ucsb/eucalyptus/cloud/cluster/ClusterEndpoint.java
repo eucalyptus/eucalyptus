@@ -7,7 +7,6 @@ import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.cloud.net.Addresses;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.Admin;
-import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleException;
@@ -187,12 +186,13 @@ public class ClusterEndpoint implements Startable {
         String certs = "certs[cc=%s,nc=%s] @ %s";
         String ccAlias = "";
         String ncAlias = "";
-        try {
-          ccAlias = ServiceKeyStore.getInstance().getCertificateAlias( node.getCerts().getCcCert() );
-          if ( ccAlias == null ) ccAlias = "FALSE";
-          ncAlias = ServiceKeyStore.getInstance().getCertificateAlias( node.getCerts().getNcCert() );
-          if ( ncAlias == null ) ncAlias = "FALSE";
-        } catch ( GeneralSecurityException e ) {}
+        //TODO: IMPORTANT fix me
+//        try {
+//          ccAlias = ServiceKeyStore.getInstance().getCertificateAlias( node.getCerts().getCcCert() );
+//          if ( ccAlias == null ) ccAlias = "FALSE";
+//          ncAlias = ServiceKeyStore.getInstance().getCertificateAlias( node.getCerts().getNcCert() );
+//          if ( ncAlias == null ) ncAlias = "FALSE";
+//        } catch ( GeneralSecurityException e ) {}
         info.add( s( node.getName(), String.format( certs, ccAlias.startsWith( "cc-" ), ncAlias.startsWith( "nc-" ), node.getLastSeen() ) ) );
       }
     }

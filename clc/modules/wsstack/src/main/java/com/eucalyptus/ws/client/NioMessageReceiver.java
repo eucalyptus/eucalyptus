@@ -23,28 +23,9 @@ public class NioMessageReceiver extends AbstractMessageReceiver {
  }
 
  public void doConnect() throws ConnectException {
-//   try {
-//     this.axisService = Axis2ServiceBuilder.getAxisService( this );
-//   }
-//   catch ( AxisFault axisFault ) {
-//     throw new ConnectException( axisFault, this );
-//   }
-//   Iterator iter = this.axisService.getOperations();
-//   while ( iter.hasNext() ) {
-//     AxisOperation op = (AxisOperation)iter.next();
-//     if ( EucalyptusProperties.getDisabledOperations().contains( op.getName().getLocalPart() ) )
-//       this.disableOperation( op.getName().getLocalPart() );
-//   }
  }
 
  public void doStart() {
-//   try {
-//     Axis2Connector connector = ( Axis2Connector ) this.getConnector();
-//     this.axisService.setActive( true );
-//     connector.getAxisConfig().deployService( this.axisService );
-//     connector.addHttpPortListener( this.getEndpointURI().getAddress(), this.getEndpointURI().getPort() );
-//   }
-//   catch ( AxisFault axisFault ) {}
  }
 
  public void doStop() {}

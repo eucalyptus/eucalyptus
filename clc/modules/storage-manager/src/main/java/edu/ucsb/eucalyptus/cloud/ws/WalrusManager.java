@@ -33,13 +33,14 @@ package edu.ucsb.eucalyptus.cloud.ws;
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
+import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.util.DNSProperties;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.constants.IsData;
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileIO;

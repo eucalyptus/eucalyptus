@@ -238,7 +238,7 @@ public class NetworkParameters extends EucalyptusData {
   int vlan;
 }
 
-public class PacketFilterRule {
+public class PacketFilterRule extends EucalyptusData {
   public static String ACCEPT = "firewall-open";
   public static String DENY = "firewall-close";
 
@@ -302,7 +302,7 @@ public class PacketFilterRule {
 
 }
 
-public class VmNetworkPeer {
+public class VmNetworkPeer  extends EucalyptusData {
 
   String userName;
   String sourceNetworkName;
@@ -444,7 +444,7 @@ public class NodeLogInfo extends EucalyptusData implements Comparable {
 
 }
 
-public class HeartbeatMessage implements Cloneable, Serializable {
+public class HeartbeatMessage extends EucalyptusMessage implements Cloneable, Serializable {
   String heartbeatId;
 
   def HeartbeatMessage(final String heartbeatId) {

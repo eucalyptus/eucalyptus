@@ -34,8 +34,9 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
+import com.eucalyptus.auth.Hashes;
+
 import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 

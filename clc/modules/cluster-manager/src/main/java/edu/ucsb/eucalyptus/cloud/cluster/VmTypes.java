@@ -1,7 +1,7 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 
 import java.util.List;

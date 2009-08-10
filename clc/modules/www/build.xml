@@ -83,6 +83,7 @@
 	<target name="clean">
 		<delete dir="${build.dir}" />
 		<delete dir="${gwt.war.dir}" />
+		<delete dir="${gwt.war.build.dir}" />
 		<delete file="${jar.file}" />
 	</target>
 

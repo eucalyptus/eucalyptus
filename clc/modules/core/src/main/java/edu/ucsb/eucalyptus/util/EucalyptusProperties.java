@@ -34,9 +34,9 @@
 
 package edu.ucsb.eucalyptus.util;
 
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import org.apache.log4j.Logger;
 

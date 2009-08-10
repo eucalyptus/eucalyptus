@@ -2,15 +2,13 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.cloud.AbstractNamedRegistry;
 import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
-import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
-import edu.ucsb.eucalyptus.keys.ServiceKeyStore;
 import edu.ucsb.eucalyptus.msgs.ClusterStateType;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import edu.ucsb.eucalyptus.util.SubDirectory;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.KeyTool;
+import com.eucalyptus.auth.util.KeyTool;
+import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.util.SubDirectory;
 
 import java.io.File;
 import java.io.IOException;
@@ -155,29 +153,30 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
 
   private static void addClusterKeys( String name ) throws IOException, GeneralSecurityException
   {
+    //TODO: IMPORTANT generation of cluster keys here
     /** generate the cluster keys **/
-    LOG.info( "creating keys in " + SubDirectory.KEYS.toString() );
-    KeyTool keyTool = new KeyTool();
-    AbstractKeyStore serviceKs = ServiceKeyStore.getInstance();
-
-    String ccAlias = String.format( CLUSTER_KEY_FSTRING, name );
-    String ncAlias = String.format( NODE_KEY_FSTRING, name );
-
-    if ( !serviceKs.containsEntry( ccAlias ) || !serviceKs.containsEntry( ncAlias ) )
-    {
-      KeyPair clusterKp = keyTool.getKeyPair();
-      X509Certificate clusterX509 = keyTool.getCertificate( clusterKp, EucalyptusProperties.getDName( "cc-" + name ) );
-      keyTool.writePem( SubDirectory.KEYS.toString() + File.separator + "cluster-pk.pem", clusterKp.getPrivate() );
-      keyTool.writePem( SubDirectory.KEYS.toString() + File.separator + "cluster-cert.pem", clusterX509 );
-      serviceKs.addKeyPair( ccAlias, clusterX509, clusterKp.getPrivate(), ccAlias );
-
-      KeyPair nodeKp = keyTool.getKeyPair();
-      X509Certificate nodeX509 = keyTool.getCertificate( nodeKp, EucalyptusProperties.getDName( "nc-" + name ) );
-      keyTool.writePem( SubDirectory.KEYS.toString() + File.separator + "node-pk.pem", nodeKp.getPrivate() );
-      keyTool.writePem( SubDirectory.KEYS.toString() + File.separator + "node-cert.pem", nodeX509 );
-      serviceKs.addKeyPair( ncAlias, nodeX509, nodeKp.getPrivate(), ncAlias );
-
-      serviceKs.store();
-    }
+//    LOG.info( "creating keys in " + SubDirectory.KEYS.toString() );
+//    KeyTool keyTool = new KeyTool();
+//    AbstractKeyStore serviceKs = ServiceKeyStore.getInstance();
+//
+//    String ccAlias = String.format( CLUSTER_KEY_FSTRING, name );
+//    String ncAlias = String.format( NODE_KEY_FSTRING, name );
+//
+//    if ( !serviceKs.containsEntry( ccAlias ) || !serviceKs.containsEntry( ncAlias ) )
+//    {
+//      KeyPair clusterKp = keyTool.getKeyPair();
+//      X509Certificate clusterX509 = keyTool.getCertificate( clusterKp, EucalyptusProperties.getDName( "cc-" + name ) );
+//      keyTool.writePem( SubDirectory.KEYS.toString() + File.separator + "cluster-pk.pem", clusterKp.getPrivate() );
+//      keyTool.writePem( SubDirectory.KEYS.toString() + File.separator + "cluster-cert.pem", clusterX509 );
+//      serviceKs.addKeyPair( ccAlias, clusterX509, clusterKp.getPrivate(), ccAlias );
+//
+//      KeyPair nodeKp = keyTool.getKeyPair();
+//      X509Certificate nodeX509 = keyTool.getCertificate( nodeKp, EucalyptusProperties.getDName( "nc-" + name ) );
+//      keyTool.writePem( SubDirectory.KEYS.toString() + File.separator + "node-pk.pem", nodeKp.getPrivate() );
+//      keyTool.writePem( SubDirectory.KEYS.toString() + File.separator + "node-cert.pem", nodeX509 );
+//      serviceKs.addKeyPair( ncAlias, nodeX509, nodeKp.getPrivate(), ncAlias );
+//
+//      serviceKs.store();
+//    }
   }
 }

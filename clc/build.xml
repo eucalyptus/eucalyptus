@@ -45,7 +45,6 @@
     <property name="deps.url" value="http://open.eucalyptus.com/dependencies/${euca.version}"/>
     <property name="deps.dir" value="deps"/>
     <property name="deps.lib.dir" value="lib"/>
-    <property name="deps.axis2modules.dir" value="axis2-modules"/>
     <property name="deps.lib" value="cloud-lib"/>
     <property name="deps.deploy" value="cloud-deploy"/>
     <!--================================== build targets ==================================-->
@@ -59,8 +58,8 @@
         <ant dir="modules/msgs" inheritall="false"/>
     </target>
     <target name="build-core" depends="build-msgs">
-        <ant dir="modules/core" inheritall="false"/>
         <ant dir="modules/authentication" inheritall="false"/>
+        <ant dir="modules/core" inheritall="false"/>
         <ant dir="modules/wsstack" inheritall="false"/>
     </target>
     <target name="build-www" depends="build-eucalyptus-ws">
@@ -88,13 +87,7 @@
     <target name="build-dns" depends="build-dns-ws"/>
     <target name="build" depends="deps,build-eucalyptus,build-walrus,build-ebs,build-dns"/>
     <!--================================== clean targets ==================================-->
-    <target name="clean-workarounds">
-        <ant dir="modules/workarounds" inheritall="false" target="clean"/>
-    </target>
-    <target name="clean-crypto" depends="clean-workarounds">
-        <ant dir="modules/crypto" inheritall="false" target="clean"/>
-    </target>
-    <target name="clean-msgs" depends="clean-crypto">
+    <target name="clean-msgs">
         <ant dir="modules/msgs" inheritall="false" target="clean"/>
     </target>
     <target name="clean-core" depends="clean-msgs">
@@ -103,7 +96,7 @@
         <ant dir="modules/wsstack" inheritall="false" target="clean"/>
     </target>
     <target name="clean-www" depends="clean-eucalyptus-ws">
-        <ant dir="modules/www" inheritall="false" target="clean"/>
+        <ant dir="modules/www" inheritall="false" target="clean"/> 
     </target>
     <target name="clean-eucalyptus-ws" depends="clean-core">
         <ant dir="modules/interface" inheritall="false" target="clean"/>
@@ -117,6 +110,7 @@
     </target>
     <target name="clean-ebs-ws" depends="clean-core">
         <ant dir="modules/storage-controller" inheritall="false" target="clean"/>
+        <ant dir="modules/storage-controller" inheritall="false" target="clean-jni"/>
     </target>
     <target name="clean-dns-ws" depends="clean-core">
         <ant dir="modules/dns" inheritall="false" target="clean"/>
@@ -131,6 +125,9 @@
     <target name="distclean" depends="clean">
         <delete dir="${deps.dir}"/>
         <delete dir="${deps.lib.dir}"/>
+        <delete dir="target"/>
+        <ant dir="modules/workarounds" inheritall="false" target="clean"/>
+        <ant dir="modules/crypto" inheritall="false" target="clean"/>
     </target>
     <!--================================== install target ==================================-->
     <target name="install" depends="build">
@@ -143,11 +140,6 @@
         </copy>
         <copy todir="${euca.lib.dir}">
             <fileset dir="${deps.lib.dir}">
-                <include name="**/*"/>
-            </fileset>
-        </copy>
-        <copy todir="${euca.var.dir}/modules">
-            <fileset dir="${deps.axis2modules.dir}/modules">
                 <include name="**/*"/>
             </fileset>
         </copy>
@@ -182,17 +174,12 @@
         <condition property="needDownload">
             <and>
                 <not>
-                    <available file="${deps.lib.dir}/jibx-run-1.1.6a.jar"/>
+                    <available file="${deps.lib.dir}/jibx-run*.jar"/>
                 </not>
                 <and>
-                    <or>
-                        <not>
-                            <available file="${deps.dir}/${deps.lib}.tar.gz"/>
-                        </not>
-                        <not>
-                            <available file="${deps.dir}/${deps.deploy}.tar.gz"/>
-                        </not>
-                    </or>
+                    <not>
+                        <available file="${deps.dir}/${deps.lib}.tar.gz"/>
+                    </not>
                 </and>
             </and>
         </condition>
@@ -200,11 +187,10 @@
         <condition property="needUnzipping">
             <and>
                 <not>
-                    <available file="${deps.lib.dir}/jibx-run.jar"/>
+                    <available file="${deps.lib.dir}/jibx-run*.jar"/>
                 </not>
                 <and>
                     <available file="${deps.dir}/${deps.lib}.tar.gz"/>
-                    <available file="${deps.dir}/${deps.deploy}.tar.gz"/>
                 </and>
             </and>
         </condition>
@@ -215,13 +201,11 @@
     </target>
     <target name="untar" if="needUnzipping">
         <untar compression="gzip" src="${deps.dir}/${deps.lib}.tar.gz" dest="${deps.lib.dir}"/>
-        <untar compression="gzip" src="${deps.dir}/${deps.deploy}.tar.gz" dest="${deps.axis2modules.dir}"/>
     </target>
     <target name="download-deps" if="needDownload">
         <mkdir dir="${deps.dir}"/>
         <mkdir dir="${deps.lib.dir}"/>
         <!--===========  download the dependency libraries  ===========-->
         <get src="${deps.url}/${deps.lib}.tar.gz" dest="${deps.dir}/${deps.lib}.tar.gz"/>
-        <get src="${deps.url}/${deps.deploy}.tar.gz" dest="${deps.dir}/${deps.deploy}.tar.gz"/>
     </target>
 </project>

@@ -35,10 +35,8 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.SSHKeyPair;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.*;
 
 import org.apache.log4j.Logger;
@@ -52,7 +50,9 @@ import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPublicKey;
 
-import com.eucalyptus.auth.KeyTool;
+import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.KeyTool;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public class KeyPairBroker {

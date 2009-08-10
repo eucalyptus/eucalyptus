@@ -35,11 +35,13 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
+import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
+import com.eucalyptus.ws.util.StorageProperties;
+
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
@@ -54,7 +56,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 import edu.ucsb.eucalyptus.util.Messaging;
-import edu.ucsb.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;
 
 import java.util.List;

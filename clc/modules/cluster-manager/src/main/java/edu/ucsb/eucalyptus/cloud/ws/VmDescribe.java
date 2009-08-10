@@ -41,6 +41,7 @@ import edu.ucsb.eucalyptus.msgs.*;
 
 import java.util.*;
 
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public class VmDescribe extends DescribeInstancesType implements Cloneable {

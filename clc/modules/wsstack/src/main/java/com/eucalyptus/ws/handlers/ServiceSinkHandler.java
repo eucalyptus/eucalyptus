@@ -14,6 +14,7 @@ import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpResponse;
+import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.Messaging;
 import com.eucalyptus.ws.util.ReplyQueue;
 
@@ -31,6 +32,19 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
   private long                             QUEUE_TIMEOUT_MS = 2;                                           //TODO: measure me
   private long                             startTime;
   private ChannelLocal<MappingHttpMessage> requestLocal     = new ChannelLocal<MappingHttpMessage>( );
+
+  private NioMessageReceiver msgReceiver;
+  
+  public ServiceSinkHandler( ) {
+    super( );
+  }
+
+  public ServiceSinkHandler( NioMessageReceiver msgReceiver ) {
+    super( );
+    this.msgReceiver = msgReceiver;
+  }
+
+
 
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {

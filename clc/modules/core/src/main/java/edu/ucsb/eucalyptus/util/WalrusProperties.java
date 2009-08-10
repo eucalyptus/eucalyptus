@@ -38,6 +38,8 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.util.BaseDirectory;
+
 import java.net.*;
 import java.util.List;
 import java.util.Collections;

@@ -36,6 +36,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.ClusterEnvelope;
@@ -45,7 +46,6 @@ import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.Address;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.cloud.net.Addresses;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;

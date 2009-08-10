@@ -1,22 +1,17 @@
 /*
  * Software License Agreement (BSD License)
- *
  * Copyright (c) 2008, Regents of the University of California
  * All rights reserved.
- *
  * Redistribution and use of this software in source and binary forms, with or
  * without modification, are permitted provided that the following conditions
  * are met:
- *
  * * Redistributions of source code must retain the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer.
- *
+ * copyright notice, this list of conditions and the
+ * following disclaimer.
  * * Redistributions in binary form must reproduce the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer in the documentation and/or other
- *   materials provided with the distribution.
- *
+ * copyright notice, this list of conditions and the
+ * following disclaimer in the documentation and/or other
+ * materials provided with the distribution.
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -28,11 +23,10 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  * Author: Chris Grzegorczyk grze@cs.ucsb.edu
  */
 
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.util;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.asn1.x509.BasicConstraints;
@@ -50,88 +44,73 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
 
-public class KeyTool
-{
-  private static Logger LOG = Logger.getLogger( KeyTool.class );
+public class KeyTool {
+  private static Logger LOG      = Logger.getLogger( KeyTool.class );
 
-  private String keyAlgorithm;
-  private String keySigningAlgorithm;
-  private int keySize;
-  public static String PROVIDER = "BC";
+  private String        keyAlgorithm;
+  private String        keySigningAlgorithm;
+  private int           keySize;
+  public static String  PROVIDER = "BC";
 
-  public KeyTool()
-  {
+  public KeyTool( ) {
     this.keyAlgorithm = "RSA";
     this.keySigningAlgorithm = "SHA512WithRSA";
     this.keySize = 2048;
   }
 
-  public KeyTool( final String keyAlgorithm, final String keySigningAlgorithm, final int keySize )
-  {
+  public KeyTool( final String keyAlgorithm, final String keySigningAlgorithm, final int keySize ) {
     this.keyAlgorithm = keyAlgorithm;
     this.keySigningAlgorithm = keySigningAlgorithm;
     this.keySize = keySize;
   }
 
-  public KeyPair getKeyPair()
-  {
+  public KeyPair getKeyPair( ) {
     KeyPairGenerator keyGen = null;
-    try
-    {
+    try {
       keyGen = KeyPairGenerator.getInstance( this.keyAlgorithm );
-      SecureRandom random = new SecureRandom();
-      random.setSeed( System.currentTimeMillis() );
+      SecureRandom random = new SecureRandom( );
+      random.setSeed( System.currentTimeMillis( ) );
       keyGen.initialize( this.keySize, random );
-      KeyPair keyPair = keyGen.generateKeyPair();
+      KeyPair keyPair = keyGen.generateKeyPair( );
       return keyPair;
-    }
-    catch ( Exception e )
-    {
+    } catch ( Exception e ) {
       System.exit( 1 );
       return null;
     }
   }
 
-  public X509Certificate getCertificate( KeyPair keyPair, String certDn )
-  {
-    X509V3CertificateGenerator certGen = new X509V3CertificateGenerator();
+  public X509Certificate getCertificate( KeyPair keyPair, String certDn ) {
+    X509V3CertificateGenerator certGen = new X509V3CertificateGenerator( );
     X500Principal dnName = new X500Principal( certDn );
 
-    certGen.setSerialNumber( BigInteger.valueOf( System.currentTimeMillis() ) );
+    certGen.setSerialNumber( BigInteger.valueOf( System.currentTimeMillis( ) ) );
     certGen.setIssuerDN( dnName );
-    certGen.addExtension( X509Extensions.BasicConstraints, true, new BasicConstraints(true));
+    certGen.addExtension( X509Extensions.BasicConstraints, true, new BasicConstraints( true ) );
 
-    Calendar cal = Calendar.getInstance();
-    certGen.setNotBefore( cal.getTime() );
+    Calendar cal = Calendar.getInstance( );
+    certGen.setNotBefore( cal.getTime( ) );
     cal.add( Calendar.YEAR, 5 );
-    certGen.setNotAfter( cal.getTime() );
+    certGen.setNotAfter( cal.getTime( ) );
     certGen.setSubjectDN( dnName );
-    certGen.setPublicKey( keyPair.getPublic() );
+    certGen.setPublicKey( keyPair.getPublic( ) );
     certGen.setSignatureAlgorithm( this.keySigningAlgorithm );
-    try
-    {
-      X509Certificate cert = certGen.generate( keyPair.getPrivate(), PROVIDER );
+    try {
+      X509Certificate cert = certGen.generate( keyPair.getPrivate( ), PROVIDER );
       return cert;
-    }
-    catch ( Exception e )
-    {
-      LOG.fatal(e,e);
+    } catch ( Exception e ) {
+      LOG.fatal( e, e );
       System.exit( 1 );
       return null;
     }
   }
 
-  public void writePem( String fileName, Object securityToken )
-  {
+  public void writePem( String fileName, Object securityToken ) {
     PEMWriter privOut = null;
-    try
-    {
+    try {
       privOut = new PEMWriter( new FileWriter( fileName ) );
       privOut.writeObject( securityToken );
-      privOut.close();
-    }
-    catch ( IOException e )
-    {
+      privOut.close( );
+    } catch ( IOException e ) {
       LOG.error( e, e );
     }
   }

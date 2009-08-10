@@ -35,6 +35,10 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
+import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
@@ -42,15 +46,11 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ProductCode;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.keys.UserKeyStore;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
@@ -292,7 +292,7 @@ public class ImageManager {
     if ( !found ) throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature." );
 
     try {
-      PrivateKey pk = ( PrivateKey ) UserKeyStore.getInstance().getKey( EucalyptusProperties.NAME, EucalyptusProperties.NAME );
+      PrivateKey pk = ( PrivateKey ) EucaKeyStore.getInstance().getKey( EucalyptusProperties.NAME, EucalyptusProperties.NAME );
       Cipher cipher = Cipher.getInstance( "RSA/ECB/PKCS1Padding" );
       cipher.init( Cipher.DECRYPT_MODE, pk );
       cipher.doFinal( Hashes.hexToBytes( encryptedKey ) );
@@ -305,9 +305,8 @@ public class ImageManager {
   private boolean verifyManifestSignature( final String signature, final String alias, String pad ) {
     boolean ret = false;
     try {
-      final AbstractKeyStore userKeyStore = UserKeyStore.getInstance();
       Signature sigVerifier = Signature.getInstance( "SHA1withRSA" );
-      X509Certificate cert = userKeyStore.getCertificate( alias );
+      X509Certificate cert = Credentials.Users.getCertificate( alias );
       PublicKey publicKey = cert.getPublicKey();
       sigVerifier.initVerify( publicKey );
       sigVerifier.update( pad.getBytes() );
@@ -315,9 +314,8 @@ public class ImageManager {
       ret = true;
     } catch ( Exception ex ) {
       LOG.warn( ex.getMessage() );
-    } finally {
-      return ret;
     }
+    return ret;
   }
 
   private void checkStoredImage( final ImageInfo imgInfo ) throws EucalyptusCloudException {

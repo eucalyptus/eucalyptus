@@ -3,11 +3,12 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
 import edu.ucsb.eucalyptus.cloud.net.AddressUpdateCallback;
-import edu.ucsb.eucalyptus.keys.*;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.constants.HasName;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+
+import com.eucalyptus.auth.util.AbstractKeyStore;
 
 import java.net.*;
 import java.security.*;
@@ -82,24 +83,25 @@ public class Cluster implements HasName {
     LOG.info( "===============================================================" );
     LOG.info( " Trying to verify the certificates for " + this.getClusterInfo().getName() );
     LOG.info( "---------------------------------------------------------------" );
-    try {
-      X509Certificate x509 = AbstractKeyStore.pemToX509( ccCert );
-      String alias = ServiceKeyStore.getInstance().getCertificateAlias( x509 );
-      LOG.info( "FOUND: alias " + alias );
-    }
-    catch ( GeneralSecurityException e ) {
-      LOG.error( e );
-      ret = false;
-    }
+//    try {
+      //TODO: IMPORTANT fix me
+//      X509Certificate x509 = AbstractKeyStore.pemToX509( ccCert );
+//      String alias = ServiceKeyStore.getInstance().getCertificateAlias( x509 );
+//      LOG.info( "FOUND: alias " + alias );
+//    }
+//    catch ( GeneralSecurityException e ) {
+//      LOG.error( e );
+//      ret = false;
+//    }
     LOG.info( "---------------------------------------------------------------" );
-    try {
-      String alias = ServiceKeyStore.getInstance().getCertificateAlias( ncCert );
-      LOG.info( "FOUND: alias " + alias );
-    }
-    catch ( GeneralSecurityException e ) {
-      ret = false;
-      LOG.error( e );
-    }
+//    try {
+//      String alias = ServiceKeyStore.getInstance().getCertificateAlias( ncCert );
+//      LOG.info( "FOUND: alias " + alias );
+//    }
+//    catch ( GeneralSecurityException e ) {
+//      ret = false;
+//      LOG.error( e );
+//    }
     LOG.info( "===============================================================" );
     return ret;
   }

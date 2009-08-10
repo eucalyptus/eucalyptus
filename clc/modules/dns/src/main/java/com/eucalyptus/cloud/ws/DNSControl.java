@@ -35,6 +35,8 @@
 package com.eucalyptus.cloud.ws;
 
 import com.eucalyptus.util.DNSProperties;
+import com.eucalyptus.util.EntityWrapper;
+
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.*;

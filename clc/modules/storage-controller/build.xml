@@ -59,6 +59,7 @@
 
     <target name="clean-jni">
         <delete dir="h"/>
+        <delete dir="include"/>
     </target>
 </project>
 

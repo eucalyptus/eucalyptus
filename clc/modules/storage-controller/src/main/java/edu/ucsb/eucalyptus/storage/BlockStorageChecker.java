@@ -34,13 +34,14 @@
 
 package edu.ucsb.eucalyptus.storage;
 
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.util.StorageProperties;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.util.EntityWrapper;
 
 import java.net.URL;
 import java.util.List;

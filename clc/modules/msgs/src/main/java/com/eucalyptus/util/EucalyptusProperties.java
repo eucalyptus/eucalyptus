@@ -1,4 +1,4 @@
-package com.eucalyptus.ws.util;
+package com.eucalyptus.util;
 
 import java.util.List;
 
@@ -10,7 +10,7 @@ public class EucalyptusProperties {
 
   private static Logger LOG = Logger.getLogger( EucalyptusProperties.class );
 
-  public static List<String> getDisabledOperations( ) {
+  public static List<String> getDisabledOperations( ) {//TODO: move me
     if ( System.getProperty( "euca.ebs.disable" ) != null ) {
       EucalyptusProperties.disableBlockStorage = true;
       return Lists.newArrayList( "CreateVolume", "DeleteVolume", "DescribeVolumes", "AttachVolume", "DetachVolume", "CreateSnapshot", "DeleteSnapshot", "DescribeSnapshots" );
@@ -27,8 +27,7 @@ public class EucalyptusProperties {
   public static String  DEBUG_FSTRING        = "[%12s] %s";
   public static String  CLUSTERSINK_REF      = "vm://ClusterSink";
 
-  public enum NETWORK_PROTOCOLS {
-
+  public enum NETWORK_PROTOCOLS {//TODO: move me
     tcp, udp, icmp
   }
 
@@ -85,7 +84,6 @@ public class EucalyptusProperties {
   // }
 
   public enum TokenState {
-
     preallocate, returned, accepted, submitted, allocated, redeemed;
   }
 }

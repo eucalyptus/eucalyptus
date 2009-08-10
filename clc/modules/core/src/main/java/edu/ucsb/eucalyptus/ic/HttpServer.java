@@ -34,11 +34,12 @@
 
 package edu.ucsb.eucalyptus.ic;
 
-import edu.ucsb.eucalyptus.util.BaseDirectory;
 import org.apache.log4j.Logger;
 import org.mortbay.xml.XmlConfiguration;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
+
+import com.eucalyptus.util.BaseDirectory;
 
 import java.io.File;
 

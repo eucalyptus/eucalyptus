@@ -34,13 +34,13 @@
 
 package edu.ucsb.eucalyptus.storage;
 
+import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
 import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
-import edu.ucsb.eucalyptus.keys.Hashes;
 import edu.ucsb.eucalyptus.util.StorageProperties;
 import edu.ucsb.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;

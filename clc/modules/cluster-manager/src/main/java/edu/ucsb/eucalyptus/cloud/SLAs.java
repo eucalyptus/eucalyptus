@@ -6,6 +6,8 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import groovy.lang.*;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.util.BaseDirectory;
+
 import javax.script.ScriptEngineManager;
 import java.io.File;
 import java.util.*;
