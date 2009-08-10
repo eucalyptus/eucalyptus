@@ -2,7 +2,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.msgs.*;
 import com.eucalyptus.ws.client.Client;
-import edu.ucsb.eucalyptus.util.Messaging;
+import com.eucalyptus.ws.util.Messaging;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 

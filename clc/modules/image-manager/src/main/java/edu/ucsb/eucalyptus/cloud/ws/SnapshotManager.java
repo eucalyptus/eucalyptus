@@ -55,7 +55,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
-import edu.ucsb.eucalyptus.util.Messaging;
+import com.eucalyptus.ws.util.Messaging;
 import org.apache.log4j.Logger;
 
 import java.util.List;

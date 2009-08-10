@@ -67,7 +67,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
-import edu.ucsb.eucalyptus.util.Messaging;
+import com.eucalyptus.ws.util.Messaging;
 import org.apache.log4j.Logger;
 
 import java.util.HashMap;

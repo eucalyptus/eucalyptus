@@ -58,7 +58,7 @@ import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import edu.ucsb.eucalyptus.util.Messaging;
+import com.eucalyptus.ws.util.Messaging;
 
 import org.apache.log4j.Logger;
 

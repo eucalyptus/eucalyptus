@@ -1,6 +1,7 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.util.*;
+import com.eucalyptus.ws.util.Messaging;
 
 /**
  * User: decker

@@ -38,7 +38,7 @@ import edu.ucsb.eucalyptus.msgs.CacheImageType;
 import edu.ucsb.eucalyptus.msgs.CheckImageType;
 import edu.ucsb.eucalyptus.msgs.FlushCachedImageType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
-import edu.ucsb.eucalyptus.util.Messaging;
+import com.eucalyptus.ws.util.Messaging;
 import com.eucalyptus.util.WalrusProperties;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;

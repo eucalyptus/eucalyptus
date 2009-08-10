@@ -46,7 +46,7 @@ import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.RegionInfoType;
 import edu.ucsb.eucalyptus.msgs.UnimplementedMessage;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import edu.ucsb.eucalyptus.util.Messaging;
+import com.eucalyptus.ws.util.Messaging;
 import org.apache.log4j.Logger;
 
 public class Eucalyptus {

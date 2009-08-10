@@ -13,6 +13,7 @@ import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 import org.drools.*;
 import org.mule.RequestContext;
+import com.eucalyptus.ws.util.Messaging;
 
 import java.util.*;
 

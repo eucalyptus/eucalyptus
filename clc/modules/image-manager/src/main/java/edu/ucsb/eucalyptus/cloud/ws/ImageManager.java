@@ -75,7 +75,7 @@ import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.util.Admin;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import edu.ucsb.eucalyptus.util.Messaging;
+import com.eucalyptus.ws.util.Messaging;
 import com.eucalyptus.util.WalrusProperties;
 import edu.ucsb.eucalyptus.util.XMLParser;
 import org.apache.log4j.Logger;

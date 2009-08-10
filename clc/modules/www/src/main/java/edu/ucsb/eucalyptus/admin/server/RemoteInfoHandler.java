@@ -10,7 +10,7 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.msgs.ClusterStateType;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import edu.ucsb.eucalyptus.util.Messaging;
+import com.eucalyptus.ws.util.Messaging;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;

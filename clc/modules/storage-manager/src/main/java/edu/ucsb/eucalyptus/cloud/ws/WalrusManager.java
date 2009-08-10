@@ -38,6 +38,7 @@ import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.ws.util.Messaging;
 
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
