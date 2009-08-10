@@ -2086,7 +2086,6 @@ int init_config(void) {
       pubInterface = strdup(tmpstr);
       privInterface = strdup(tmpstr);
     }
-
     if (tmpstr) free(tmpstr);
     
     if (!strcmp(pubmode, "STATIC")) {

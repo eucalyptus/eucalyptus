@@ -156,8 +156,8 @@ int vnetInitTunnels(vnetConfig *vnetconfig) {
     if (vnetconfig->localIp[0] == '\0') {
       // localIp not set, no tunneling
       return(0);
-    } else if (!strcmp(vnetconfig->mode, "MANAGED-NOVLAN") && check_bridge(vnetconfig->pubInterface)) {
-      logprintfl(EUCAERROR, "in MANAGED-NOVLAN mode, public interface '%s' must be a bridge, tunneling disabled\n", vnetconfig->pubInterface);
+    } else if (!strcmp(vnetconfig->mode, "MANAGED-NOVLAN") && check_bridge(vnetconfig->privInterface)) {
+      logprintfl(EUCAERROR, "in MANAGED-NOVLAN mode, priv interface '%s' must be a bridge, tunneling disabled\n", vnetconfig->privInterface);
       return(1);
     } else {
 
@@ -1163,9 +1163,9 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
     } else {
       // attach tunnel(s)
       
-      rc = vnetAttachTunnels(vnetconfig, vlan, vnetconfig->pubInterface);
+      rc = vnetAttachTunnels(vnetconfig, vlan, vnetconfig->privInterface);
       if (rc) {
-	logprintfl(EUCAWARN, "failed to attach tunnels for vlan %d on bridge %s\n", vlan, vnetconfig->pubInterface);
+	logprintfl(EUCAWARN, "failed to attach tunnels for vlan %d on bridge %s\n", vlan, vnetconfig->privInterface);
       }
       
       snprintf(newdevname, 32, "%s", vnetconfig->privInterface);
@@ -1190,6 +1190,8 @@ int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
     return(1);
   }
   
+  logprintfl(EUCADEBUG, "ATTACHING TUNNEL: %d/%s\n", vlan, newbrname);
+
   if (!vnetconfig->tunneling) {
     //    logprintfl(EUCAERROR, "tunneling is currently disabled\n");
     return(0);
