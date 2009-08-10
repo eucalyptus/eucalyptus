@@ -26,16 +26,16 @@ public class HttpUtils {
     }
   }
 
-  static final byte SP = 32;
-  static final byte HT = 9;
+  public static final byte SP = 32;
+  public static final byte HT = 9;
   public static final byte CR = 13;
-  static final byte EQUALS = 61;
+  public static final byte EQUALS = 61;
   public static final byte LF = 10;
-  static final byte[] CRLF = new byte[] { CR, LF };
-  static final byte COLON = 58;
-  static final byte SEMICOLON = 59;
-  static final byte COMMA = 44;
-  static final byte DOUBLE_QUOTE = '"';
-  static final String DEFAULT_CHARSET = "UTF-8";
+  public static final byte[] CRLF = new byte[] { CR, LF };
+  public static final byte COLON = 58;
+  public static final byte SEMICOLON = 59;
+  public static final byte COMMA = 44;
+  public static final byte DOUBLE_QUOTE = '"';
+  public static final String DEFAULT_CHARSET = "UTF-8";
 
 }

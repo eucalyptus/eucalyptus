@@ -14,6 +14,7 @@ import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.WsSecHandler;
 
@@ -45,7 +46,7 @@ public class NioClientPipeline implements ChannelPipelineFactory {
 
     pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
     pipeline.addLast( "aggregator", new HttpChunkAggregator( 1048576 ) );
-    pipeline.addLast( "encoder", new HttpRequestEncoder( ) );
+    pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
     pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
     if ( this.wssecHandler != null ) {
       pipeline.addLast( "wssec", this.wssecHandler );

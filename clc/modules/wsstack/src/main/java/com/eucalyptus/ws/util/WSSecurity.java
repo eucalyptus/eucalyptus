@@ -107,7 +107,7 @@ public class WSSecurity {
 
   public static Element getSecurityElement( final Element env ) {
     final SOAPConstants soapConstants = WSSecurityUtil.getSOAPConstants( env );
-    final Element soapHeaderElement = ( Element ) WSSecurityUtil.getDirectChildElement( env.getFirstChild( ), soapConstants.getHeaderQName( ).getLocalPart( ), soapConstants.getEnvelopeURI( ) );
+    final Element soapHeaderElement = ( Element ) WSSecurityUtil.getDirectChildElement( env, soapConstants.getHeaderQName( ).getLocalPart( ), soapConstants.getEnvelopeURI( ) );
     final Element securityNode = ( Element ) WSSecurityUtil.getDirectChildElement( soapHeaderElement, WSConstants.WSSE_LN, WSConstants.WSSE_NS );
     return securityNode;
   }
@@ -116,7 +116,7 @@ public class WSSecurity {
     final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), envelope.getXMLStreamReader( ) );
     final OMElement elem = doomBuilder.getDocumentElement( );
     elem.build( );
-//      final Document doc = ( ( Element ) elem ).getOwnerDocument( );
+//    final Document doc = ( ( Element ) elem ).getOwnerDocument( );
     final Element env = ( ( Element ) elem );
     final Element securityNode = getSecurityElement( env );
     final Element signatureNode = getSignatureElement( securityNode );

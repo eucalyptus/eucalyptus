@@ -32,6 +32,7 @@ public class Credentials {
   private static String KEY_STORE_PASS = "eucalyptus";                         //TODO: change the way this is handled
   private static String FILENAME       = "euca.p12";
   public static String  DB_NAME        = "eucalyptus_auth";
+  public static User SYSTEM = getSystemUser();
 
   public static void init( ) {
     Security.addProvider( new BouncyCastleProvider( ) );
@@ -51,6 +52,15 @@ public class Credentials {
   }
   
   
+
+  private static User getSystemUser( ) {
+    User system = new User();
+    system.setUserName( EucalyptusProperties.NAME );
+    system.setIsAdministrator( Boolean.TRUE );
+    return system;
+  }
+
+
 
   public static User getUser( String userName ) throws NoSuchUserException {
     User user = null;

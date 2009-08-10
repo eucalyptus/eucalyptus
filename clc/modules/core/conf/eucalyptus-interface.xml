@@ -33,7 +33,6 @@
 
         --><service name="RequestQueue">
             <inbound>
-                <inbound-endpoint ref="EucalyptusWS"/>
                 <vm:inbound-endpoint address="vm://RequestQueue"/>
             </inbound>
             <component class="edu.ucsb.eucalyptus.ic.RequestQueue"/>
@@ -51,7 +50,7 @@
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ClusterMessage"/>
                 </filtering-router>
                 <filtering-router>
-                    <outbound-endpoint ref="KeyPairWS"/>
+                    <outbound-endpoint ref="KeyPairWSTest"/>
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmKeyPairMessage"/>
                 </filtering-router>
                 <filtering-router>

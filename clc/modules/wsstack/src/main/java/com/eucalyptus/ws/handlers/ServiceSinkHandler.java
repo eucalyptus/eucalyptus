@@ -10,8 +10,11 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.mule.DefaultMuleMessage;
+import org.mule.api.MuleMessage;
 
 import com.eucalyptus.auth.User;
+import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.client.NioMessageReceiver;
@@ -55,16 +58,20 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
       if ( event.getMessage( ) instanceof MappingHttpMessage ) {
         MappingHttpMessage request = ( MappingHttpMessage ) event.getMessage( );
         User user = request.getUser( );
-        if( user != null ) {
-          EucalyptusMessage msg = (EucalyptusMessage) request.getMessage( );
-          msg.setUserId( user.getUserName( ) );
-          msg.setEffectiveUserId( user.getIsAdministrator( )?"eucalyptus":user.getUserName( ) );
-        }
         requestLocal.set( ctx.getChannel( ), request );
-        EucalyptusMessage msg = ( EucalyptusMessage ) request.getMessage( );
+        EucalyptusMessage msg = (EucalyptusMessage) request.getMessage( );
+        if( user != null && msgReceiver == null) {
+          msg.setUserId( user.getUserName( ) );
+          msg.setEffectiveUserId( user.getIsAdministrator( )?EucalyptusProperties.NAME:user.getUserName( ) );
+        }
         LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
-        ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
-        Messaging.dispatch( "vm://RequestQueue", msg );
+        if( this.msgReceiver == null ) {
+          ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
+          Messaging.dispatch( "vm://RequestQueue", msg );
+        } else if (user == null){
+          MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( this.msgReceiver.getConnector().getMessageAdapter( msg ) ), true );
+          ctx.getChannel( ).write( reply.getPayload( ) );
+        }
       }
     }
   }
@@ -80,7 +87,7 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
         MappingHttpMessage request = requestLocal.get( ctx.getChannel( ) );
         EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
         if ( reply == null ) {// TODO: fix this error reporting
-          LOG.warn( "Received a null response: " + request.getMessageString( ) );
+          LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
           reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
         }
         LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, ( System.currentTimeMillis( ) - startTime ) ) );

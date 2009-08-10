@@ -23,19 +23,27 @@ public class NioMessageDispatcher extends AbstractMessageDispatcher {
 
   public NioMessageDispatcher( OutboundEndpoint outboundEndpoint ) {
     super( outboundEndpoint );
+    this.doActivate( outboundEndpoint );
+  }
+  
+  public void doActivate( OutboundEndpoint outboundEndpoint ) {
+    if( this.client != null ) {
+      this.client.cleanup();
+      this.client = null;
+    }
     String host = outboundEndpoint.getEndpointURI( ).getHost( );
     int port = outboundEndpoint.getEndpointURI( ).getPort( );
     String servicePath = outboundEndpoint.getEndpointURI( ).getPath( );
     try {
-      Client nioClient = new NioClient( host, port, servicePath, new InternalClientPipeline( new NioResponseHandler( ) ) );
+      this.client = new NioClient( host, port, servicePath, new InternalClientPipeline( new NioResponseHandler( ) ) );
     } catch ( GeneralSecurityException e ) {
       LOG.error( e );
-    }
+    }    
   }
-
+  
   @Override
   protected void doDispatch( final MuleEvent muleEvent ) throws Exception {
-    client.dispatch( (EucalyptusMessage) muleEvent.getMessage( ).getPayload( ) );
+    this.client.dispatch( (EucalyptusMessage) muleEvent.getMessage( ).getPayload( ) );
   }
 
   @Override

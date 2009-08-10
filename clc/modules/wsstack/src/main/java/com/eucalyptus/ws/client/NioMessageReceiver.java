@@ -12,6 +12,9 @@ import org.mule.api.transport.Connector;
 import org.mule.transport.AbstractMessageReceiver;
 import org.mule.transport.ConnectException;
 
+import com.eucalyptus.ws.server.InternalSoapPipeline;
+import com.eucalyptus.ws.util.PipelineRegistry;
+
 public class NioMessageReceiver extends AbstractMessageReceiver {
 
  private static Logger LOG = Logger.getLogger( NioMessageReceiver.class );
@@ -23,6 +26,7 @@ public class NioMessageReceiver extends AbstractMessageReceiver {
  }
 
  public void doConnect() throws ConnectException {
+   PipelineRegistry.getInstance( ).register( new InternalSoapPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) ) );
  }
 
  public void doStart() {

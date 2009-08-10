@@ -26,12 +26,13 @@ public class PipelineRegistry {
   private final NavigableSet<FilteredPipeline> pipelines = new ConcurrentSkipListSet<FilteredPipeline>( );
 
   public void register( final FilteredPipeline pipeline ) {
+    LOG.info( "Registering pipeline: " + pipeline.getPipelineName( ) );
     this.pipelines.add( pipeline );
   }
 
   public FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     FilteredPipeline candidate = null;
-    for ( final FilteredPipeline f : this.pipelines ) {
+    for ( FilteredPipeline f : this.pipelines ) {
       if ( f.accepts( request ) ) {
         if ( candidate != null ) {
           LOG.warn( "More than one candidate pipeline.  Ignoring offer by: " + f.getClass( ).getSimpleName( ) );

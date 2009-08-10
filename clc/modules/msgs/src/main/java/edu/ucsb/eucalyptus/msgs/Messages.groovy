@@ -28,7 +28,6 @@ public class ClusterStateType extends EucalyptusMessage{
   }
 }
 
-
 public class EucalyptusMessage implements Cloneable, Serializable {
 
   String correlationId;

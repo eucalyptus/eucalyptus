@@ -14,7 +14,7 @@ public class EucalyptusSoapPipeline extends FilteredPipeline {
 
   @Override
   public boolean checkAccepts( final HttpRequest message ) {
-    return message.getHeaderNames().contains( "SOAPAction" );
+    return (message.getUri( ).endsWith( "/services/Walrus" ) || message.getUri( ).endsWith( "/services/Eucalyptus" )) && message.getHeaderNames().contains( "SOAPAction" );
   }
 
   @Override

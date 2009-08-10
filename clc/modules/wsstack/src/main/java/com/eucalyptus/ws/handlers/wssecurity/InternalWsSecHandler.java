@@ -9,7 +9,9 @@ import org.apache.axiom.soap.SOAPConstants;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.ws.security.WSConstants;
 import org.apache.ws.security.WSEncryptionPart;
+import org.apache.ws.security.WSSecurityException;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.auth.Credentials;
@@ -21,6 +23,7 @@ import com.eucalyptus.ws.util.CredentialProxy;
 import com.eucalyptus.ws.util.WSSecurity;
 import com.google.common.collect.Lists;
 
+@ChannelPipelineCoverage("one")
 public class InternalWsSecHandler extends WsSecHandler {
 
   public InternalWsSecHandler( ) throws GeneralSecurityException {
@@ -44,9 +47,10 @@ public class InternalWsSecHandler extends WsSecHandler {
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
       SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
       X509Certificate cert = WSSecurity.getVerifiedCertificate( envelope );
-      String userName = Credentials.Users.getUserName( cert );
-      User user = Credentials.getUser( userName );
-      httpRequest.setUser( user );
+      if( !cert.equals( EucaKeyStore.getInstance( ).getCertificate( EucalyptusProperties.NAME ) ) ) {
+        throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );
+      }
+//      httpRequest.setUser( Credentials.SYSTEM );
     }
   }
 }

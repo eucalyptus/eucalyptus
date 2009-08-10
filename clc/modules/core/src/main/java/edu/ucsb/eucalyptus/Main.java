@@ -40,14 +40,16 @@ import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 import org.mule.MuleServer;
 
+import com.eucalyptus.auth.Credentials;
+
 public class Main {
 
   private static Logger LOG = Logger.getLogger( Main.class );
 
   public static void main( String[] args ) throws Exception
   {
+    Credentials.init( );
     StartupChecks.doChecks();
-//TODO: remove    Class.forName("com.eucalyptus.auth.Credentials").getMethod( "addUser", new Class[]{String.class,Boolean.class} ).invoke( null, new Object[]{"admin",true} );
     
 
     MuleServer server = new MuleServer( "eucalyptus-mule.xml" );

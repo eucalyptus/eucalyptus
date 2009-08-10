@@ -22,9 +22,17 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   private static Logger         LOG    = Logger.getLogger( FilteredPipeline.class );
   private List<UnrollableStage> stages = new ArrayList<UnrollableStage>( );
+  private NioMessageReceiver msgReceiver;
+
   public FilteredPipeline( ) {
     this.addStages( stages );
   }
+
+  public FilteredPipeline( NioMessageReceiver msgReceiver ) {
+    this.addStages( stages );
+    this.msgReceiver = msgReceiver;
+  }
+
 
   public boolean accepts( HttpRequest message ) {
     boolean result = this.checkAccepts( message );
@@ -46,7 +54,11 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
       s.unrollStage( pipeline );
       pipeline.addLast( "post-" + s.getStageName( ), new StageTopHandler( s ) );
     }
-    pipeline.addLast( "service-sink", new ServiceSinkHandler( ) );
+    if( this.msgReceiver != null ){
+      pipeline.addLast( "service-sink", new ServiceSinkHandler( this.msgReceiver ) );      
+    } else {
+      pipeline.addLast( "service-sink", new ServiceSinkHandler( ) );
+    }
     for ( Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
       LOG.info( " - handler: key=" + e.getKey( ) + " class=" + e.getValue( ).getClass( ).getSimpleName( ) );
     }
@@ -54,7 +66,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
 
   @Override
   public int compareTo( final FilteredPipeline o ) {
-    return this.getClass( ).getCanonicalName( ).compareTo( o.getClass( ).getCanonicalName( ) );
+    return (this.getClass( ).getCanonicalName( ) + this.getPipelineName( ) ).compareTo( (o.getClass( ).getCanonicalName( ) + o.getPipelineName( ) ) );
   }
 
   public List<UnrollableStage> getStages( ) {

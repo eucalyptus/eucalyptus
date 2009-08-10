@@ -11,4 +11,6 @@ public interface Client {
 
   String getUri( );//TODO: change to endpoint
 
+  void cleanup( );
+
 }
