@@ -1846,42 +1846,9 @@ int initialize(void) {
     logprintfl(EUCAERROR, "cannot initialize from configuration file\n");
   }
   
-  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-    int done=0;
-    char file[1024], *template=NULL, *pass=NULL;
-    
-    snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/vtunpass", config->eucahome);
-    if (check_file(file)) {
-      logprintfl(EUCAWARN, "cannot locate tunnel password file '%s', will not be able to initialize tunnels\n", file);
-    } else {
-      pass = file2str(file);
-      if (pass) {
-	char *newl;
-	newl = strchr(pass, '\n');
-	if (newl) *newl = '\0';
-	snprintf(file, 1024, "%s/etc/eucalyptus/vtunall.conf.template", config->eucahome);
-	template = file2str(file);
-	if (template) {
-	  replace_string(&template, "VPASS", pass);
-	  done++;
-	}
-	free(pass);
-      }
-    }
-    if (done) {
-      // success
-      snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/vtunall.conf", config->eucahome);
-      rc = write2file(file, template);
-      if (rc) {
-	// error
-      } else {
-	vnetconfig->tunneling = 1;
-      }
-    } else {
-      logprintfl(EUCAERROR, "cannot set up tunnel configuration file, tunneling is disabled\n");
-      vnetconfig->tunneling = 0;
-    }
-    if (template) free(template);
+  rc = vnetInitTunnels(vnetconfig);
+  if (rc) {
+    logprintfl(EUCAERROR, "cannot initialize tunnels\n");
   }
 
   if (!ret) {
@@ -2143,7 +2110,7 @@ int init_config(void) {
       pubips = getConfString(configFile, "VNET_PUBLICIPS");
       localIp = getConfString(configFile, "VNET_LOCALIP");
       if (!localIp) {
-	logprintfl(EUCAWARN, "VNET_LOCALIP not defined, tunneling disabled\n");
+	logprintfl(EUCAWARN, "VNET_LOCALIP not defined, tunneling is disabled\n");
       }
       if (!pubSubnet || !pubSubnetMask || !pubDNS || !numaddrs) {
 	logprintfl(EUCAFATAL,"in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");

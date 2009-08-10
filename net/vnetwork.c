@@ -39,7 +39,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     if (dhcpuser) strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
     if (localIp) strncpy(vnetconfig->localIp, localIp, 32);
     vnetconfig->localIpId = -1;
-    vnetconfig->tunneling = 1;
+    vnetconfig->tunneling = 0;
     vnetconfig->role = role;
     vnetconfig->enabled=1;
     vnetconfig->initialized = 1;
@@ -145,6 +145,62 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     }
   }
 }
+
+int vnetInitTunnels(vnetConfig *vnetconfig) {
+  int done=0, ret=0, rc=0;
+  char file[1024], *template=NULL, *pass=NULL;
+
+  vnetconfig->tunneling = 0;
+  ret = 0;
+  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    if (vnetconfig->localIp[0] == '\0') {
+      // localIp not set, no tunneling
+      return(0);
+    } else if (!strcmp(vnetconfig->mode, "MANAGED-NOVLAN") && check_bridge(vnetconfig->pubInterface)) {
+      logprintfl(EUCAERROR, "in MANAGED-NOVLAN mode, public interface '%s' must be a bridge, tunneling disabled\n", vnetconfig->pubInterface);
+      return(1);
+    } else {
+
+      ret = 1;
+      snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/vtunpass", vnetconfig->eucahome);
+      if (check_file(file)) {
+	logprintfl(EUCAWARN, "cannot locate tunnel password file '%s', tunneling disabled\n", file);
+      } else {
+	pass = file2str(file);
+	if (pass) {
+	  char *newl;
+	  newl = strchr(pass, '\n');
+	  if (newl) *newl = '\0';
+	  snprintf(file, 1024, "%s/etc/eucalyptus/vtunall.conf.template", vnetconfig->eucahome);
+	  template = file2str(file);
+	  if (template) {
+	    replace_string(&template, "VPASS", pass);
+	    done++;
+	  }
+	  free(pass);
+	}
+      }
+      
+      if (done) {
+	// success
+	snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/vtunall.conf", vnetconfig->eucahome);
+	rc = write2file(file, template);
+	if (rc) {
+	  // error
+	  logprintfl(EUCAERROR, "cannot write vtun config file '%s', tunneling disabled\n", file);
+	} else {
+	  vnetconfig->tunneling = 1;
+	  ret = 0;
+	}
+      } else {
+	logprintfl(EUCAERROR, "cannot set up tunnel configuration file, tunneling is disabled\n");
+      }
+      if (template) free(template);
+    }
+  }
+  return(ret);
+}
+
 
 int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) {
   int i, done, found, start, stop;
@@ -910,16 +966,15 @@ int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc) {
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   int i, j, found, lastj, localIpId=-1;
   uint32_t tmpccs[NUMBER_OF_CCS];
-
+  
   if (ccsLen > NUMBER_OF_CCS) {
     logprintfl(EUCAERROR, "specified number of cluster controllers exceeds max '%d'\n", NUMBER_OF_CCS);
     return(1);
   }  else if (ccsLen <= 0) {
     return(0);
   }
-
+  
   for (i=0; i<ccsLen; i++) {
-    
     if (!strcmp(ccs[i], vnetconfig->localIp)) {
       localIpId = i;
     }
@@ -1136,7 +1191,7 @@ int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
   }
   
   if (!vnetconfig->tunneling) {
-    logprintfl(EUCAERROR, "tunneling is currently disabled\n");
+    //    logprintfl(EUCAERROR, "tunneling is currently disabled\n");
     return(0);
   }
   
@@ -1346,7 +1401,7 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
 
   if (!vnetconfig->tunneling || vnetconfig->localIpId == -1) {
     // tunneling is either not initialized or is disabled
-    logprintfl(EUCADEBUG, "tunneling not initialized\n");
+    //    logprintfl(EUCADEBUG, "tunneling not initialized\n");
     return(0);
   }
   

@@ -88,6 +88,7 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen);
 int vnetAddCCS(vnetConfig *vnetconfig, uint32_t cc);
 int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc);
 
+int vnetInitTunnels(vnetConfig *vnetconfig);
 int vnetSetupTunnels(vnetConfig *vnetconfig);
 int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig);
 int vnetSetupTunnelsGRE(vnetConfig *vnetconfig);
