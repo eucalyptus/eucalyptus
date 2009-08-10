@@ -142,9 +142,15 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
     {
         file_name = rampart_context_get_receiver_certificate_file(rampart_context, env);
         if(!file_name) NO_U_FAIL("Policy for the service is incorrect -- ReceiverCertificate is not set!!");
+	if (check_file(file_name)) NO_U_FAIL("No cert file, failing");
         recv_cert = oxs_key_mgr_load_x509_cert_from_pem_file(env, file_name);
     }
-    recv_x509_buf = oxs_x509_cert_get_data(recv_cert,env);
+    
+    if (recv_cert) {
+      recv_x509_buf = oxs_x509_cert_get_data(recv_cert,env);
+    } else {
+      NO_U_FAIL("could not populate receiver cert");
+    }
 
     if( axutil_strcmp(recv_x509_buf,msg_x509_buf)!=0){
       AXIS2_LOG_CRITICAL(env->log,AXIS2_LOG_SI," --------- Received x509 certificate value ---------" );
@@ -178,7 +184,7 @@ int euca_init_cert (void)
     if (initialized) return 0;
     
     char root [] = "";
-	char * euca_home = getenv("EUCALYPTUS");
+    char * euca_home = getenv("EUCALYPTUS");
     if (!euca_home) {
         euca_home = root;
     }
