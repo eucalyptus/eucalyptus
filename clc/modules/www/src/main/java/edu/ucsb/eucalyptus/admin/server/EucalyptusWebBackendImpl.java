@@ -34,6 +34,7 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
+import com.eucalyptus.util.BaseDirectory;
 import com.google.gwt.user.client.rpc.SerializableException;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 import com.google.gwt.user.server.rpc.UnexpectedException;
@@ -44,7 +45,6 @@ import edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackend;
 import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
-import edu.ucsb.eucalyptus.util.BaseDirectory;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;

@@ -31,16 +31,15 @@ package edu.ucsb.eucalyptus.admin.server;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 
 import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.keys.AbstractKeyStore;
-import edu.ucsb.eucalyptus.keys.Hashes;
-import edu.ucsb.eucalyptus.keys.UserKeyStore;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.UrlBase64;
@@ -143,12 +142,7 @@ public class X509Download extends HttpServlet {
     try {
       x509.checkValidity( );
       Credentials.Users.addCertificate( userName, newKeyName, x509 );
-      AbstractKeyStore ks = UserKeyStore.getInstance( );
-      ks.addCertificate( newKeyName, x509 );
-      cloudCert = ks.getCertificate( EucalyptusProperties.NAME );
-      ks.store( );
-    } catch ( IOException e ) {
-      LOG.fatal( e, e );
+      cloudCert = EucaKeyStore.getInstance( ).getCertificate( EucalyptusProperties.NAME );
     } catch ( GeneralSecurityException e ) {
       LOG.fatal( e, e );
     }
