@@ -2,24 +2,11 @@ package com.eucalyptus.ws.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 
-import org.apache.commons.httpclient.HttpStatus;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.Channels;
 import org.mule.api.MessagingException;
 import org.mule.api.MuleMessage;
@@ -80,7 +67,6 @@ public class ReplyQueue {
       EucalyptusErrorMessageType errMsg = getErrorMessageType( exMsg, msg );
       errMsg.setException( exception.getCause( ) );
       this.handle( errMsg );
-//      replies.putMessage( errMsg );
     }
   }
 

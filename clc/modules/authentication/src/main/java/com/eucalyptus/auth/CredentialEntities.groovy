@@ -12,6 +12,8 @@ import javax.persistence.Lob
 import javax.persistence.OneToMany
 import javax.persistence.FetchType
 import javax.persistence.CascadeType
+import javax.persistence.JoinTable
+import javax.persistence.JoinColumn
 import org.hibernate.sql.Alias
 @Entity
 @Table(name="auth_x509")
@@ -21,7 +23,7 @@ public class X509Cert implements Serializable {
   @GeneratedValue(generator = "system-uuid")
   @GenericGenerator(name="system-uuid", strategy = "uuid")
   @Column( name = "auth_x509_id" )
-   String id
+  String id
   @Column( name = "auth_x509_alias", unique=true )
   String alias
   @Lob
@@ -51,6 +53,7 @@ public class User implements Serializable {
   @Column( name = "auth_user_is_admin" )
   Boolean isAdministrator
   @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
+  @JoinTable(name = "user_has_certificates", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   List<X509Cert> certificates = []
   public User(){}

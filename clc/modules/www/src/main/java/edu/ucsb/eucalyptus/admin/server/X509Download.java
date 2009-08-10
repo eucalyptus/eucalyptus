@@ -142,6 +142,7 @@ public class X509Download extends HttpServlet {
     X509Certificate cloudCert = null;
     try {
       x509.checkValidity( );
+      Credentials.Users.addCertificate( userName, newKeyName, x509 );
       AbstractKeyStore ks = UserKeyStore.getInstance( );
       ks.addCertificate( newKeyName, x509 );
       cloudCert = ks.getCertificate( EucalyptusProperties.NAME );

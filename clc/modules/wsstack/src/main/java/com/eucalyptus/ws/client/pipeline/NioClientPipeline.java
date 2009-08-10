@@ -7,6 +7,9 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 
+import com.eucalyptus.ws.BindingException;
+import com.eucalyptus.ws.binding.Binding;
+import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
@@ -20,7 +23,7 @@ public class NioClientPipeline implements ChannelPipelineFactory {
   private final NioResponseHandler handler;
   private BindingHandler           bindingHandler;
   private final WsSecHandler       wssecHandler;
-
+  
   public NioClientPipeline( final NioResponseHandler handler, final String clientBinding ) {
     this( handler, clientBinding, null );
   }
@@ -28,12 +31,12 @@ public class NioClientPipeline implements ChannelPipelineFactory {
   public NioClientPipeline( final NioResponseHandler handler, final String clientBinding, final WsSecHandler wssecHandler ) {
     this.handler = handler;
     // TODO: Fix wrapping of the binding
-    // try {
-    // Binding binding = BindingManager.getBinding( clientBinding );
-    // this.bindingHandler = new BindingHandler( binding );
-    // } catch ( JiBXException e ) {
-    // LOG.error( e, e );
-    // }
+    try {
+      Binding binding = BindingManager.getBinding( clientBinding );
+      this.bindingHandler = new BindingHandler( binding );
+    } catch ( BindingException e ) {
+      LOG.error( e, e );
+    }
     this.wssecHandler = wssecHandler;
   }
 

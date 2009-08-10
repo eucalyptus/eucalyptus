@@ -6,12 +6,15 @@ import org.jboss.netty.handler.codec.http.DefaultHttpMessage;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
+import com.eucalyptus.auth.User;
+
 public abstract class MappingHttpMessage extends DefaultHttpMessage implements HttpMessage {
 
   private String       messageString;
   private SOAPEnvelope soapEnvelope;
   private OMElement    omMessage;
   private Object       message;
+  private User         user;
 
   protected MappingHttpMessage( HttpVersion version ) {
     super( version );
@@ -49,4 +52,13 @@ public abstract class MappingHttpMessage extends DefaultHttpMessage implements H
     this.messageString = messageString;
   }
 
+  public User getUser( ) {
+    return user;
+  }
+
+  public void setUser( User user ) {
+    this.user = user;
+  }
+
+  
 }

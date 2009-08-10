@@ -20,6 +20,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
@@ -29,6 +30,9 @@ import com.eucalyptus.ws.util.CredentialProxy;
 public abstract class WsSecHandler extends MessageStackHandler {
   private static Logger         LOG = Logger.getLogger( WsSecHandler.class );
   private final CredentialProxy credentials;
+  static {
+    Credentials.init( );
+  }
 
   public WsSecHandler( final CredentialProxy credentials ) {
     this.credentials = credentials;

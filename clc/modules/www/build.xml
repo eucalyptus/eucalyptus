@@ -62,31 +62,42 @@
 		</fileset>
 		<pathelement path="${src.dir}" />
 	</path>
-    <property name="gwt.build.dir" value="build" />
-    <property name="gwt.war.build.dir" value="build-war" />
-    <property name="gwt.module" value="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
-    <property name="gwt.module.dir" value="edu/ucsb/eucalyptus/admin" />
-    <property name="gwt.war.dir" value="webapps" />
-    <property name="gwt.war" value="${gwt.war.dir}/root.war" />
-    <uptodate property="gwtc.notRequired" targetfile="${gwt.war}">
-        <srcfiles dir="${src.dir}" includes="**/*" />
-        <srcfiles dir="${conf.dir}" includes="**/*" />
-    </uptodate>
+	<property name="gwt.build.dir" value="build" />
+	<property name="gwt.war.build.dir" value="build-war" />
+	<property name="gwt.module" value="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
+	<property name="gwt.module.dir" value="edu/ucsb/eucalyptus/admin" />
+	<property name="gwt.war.dir" value="webapps" />
+	<property name="gwt.war" value="${gwt.war.dir}/root.war" />
 
-	<target name="compile-src" unless="gwtc.notRequired">
+	<target name="check-src">
+		<uptodate property="gwtc.notRequired" targetfile="${gwt.war}">
+			<srcfiles dir="${src.dir}" includes="**/*" />
+			<srcfiles dir="${conf.dir}" includes="**/*" />
+		</uptodate>
+	</target>
+
+	<target name="compile-src">
 		<javac deprecation="false" srcdir="${src.dir}" destdir="${build.dir}" classpathref="gwtclasspath" failonerror="true" debug="true" target="1.5" />
 	</target>
 
-	<target name="compile-gwt" unless="gwtc.notRequired">
+	<target name="clean">
+		<delete dir="${build.dir}" />
+		<delete dir="${gwt.war.dir}" />
+		<delete file="${jar.file}" />
+	</target>
+
+
+	<target name="compile-gwt" depends="check-src" unless="gwtc.notRequired">
 		<delete dir="${gwt.war.build.dir}" />
 		<mkdir dir="${gwt.war.build.dir}" />
-        <mkdir dir="${gwt.war.dir}" />
+		<mkdir dir="${gwt.war.dir}" />
 		<java classpathref="gwtcompilerclasspath" fork="true" failonerror="true" classname="com.google.gwt.dev.Compiler">
 			<jvmarg value="-Xmx1024m" />
 			<arg line="-war ${gwt.war.build.dir}" />
 			<arg line="-style OBF" />
 			<arg line="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
 		</java>
+		<copydir dest="${gwt.war.build.dir}/${gwt.module}/WEB-INF/classes" src="${build.dir}" />
 		<war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module}/" />
 	</target>
 

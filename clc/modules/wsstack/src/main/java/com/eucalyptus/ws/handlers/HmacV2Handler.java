@@ -11,6 +11,7 @@ import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.User;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
@@ -81,6 +82,9 @@ public class HmacV2Handler extends MessageStackHandler {
           if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) throw new AuthenticationException( "User authentication failed." );
         }
       }
+      String userName = Credentials.Users.getUserName( queryId );
+      User user = Credentials.getUser( userName );
+      httpRequest.setUser( user );
       parameters.remove( RequiredQueryParams.SignatureVersion.toString( ) );
       parameters.remove( "SignatureMethod" );
       // :: find user, remove query key to prepare for marshalling :://

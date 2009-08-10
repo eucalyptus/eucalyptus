@@ -19,7 +19,7 @@ public class EucalyptusSoapPipeline extends FilteredPipeline {
 
   @Override
   public String getPipelineName( ) {
-    return "eucalyptus-SOAP";
+    return "eucalyptus-soap";
   }
 
   @Override

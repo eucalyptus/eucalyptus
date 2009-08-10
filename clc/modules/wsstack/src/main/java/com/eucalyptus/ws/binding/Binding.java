@@ -187,7 +187,7 @@ public class Binding {
 	public Object fromOM( final OMElement param ) throws WebServicesException {
 		try {
 			final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
-			return ctx.unmarshalElement( Class.forName( "edu.ucsb.eucalyptus.msgs." + param.getLocalName( ) + "Type" ) );
+			return ctx.unmarshalElement( ); // Class.forName( "edu.ucsb.eucalyptus.msgs." + param.getLocalName( ) + "Type" ) );
 		} catch ( final Exception e ) {
 			Binding.LOG.fatal( e, e );
 			throw new WebServicesException( e.getMessage( ) );

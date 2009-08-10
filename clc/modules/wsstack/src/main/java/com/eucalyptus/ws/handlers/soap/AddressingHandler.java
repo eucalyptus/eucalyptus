@@ -9,11 +9,13 @@ import org.apache.axiom.soap.SOAPHeader;
 import org.apache.axiom.soap.SOAPHeaderBlock;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
+@ChannelPipelineCoverage("one")
 public class AddressingHandler extends MessageStackHandler {
   
   private static Logger     LOG                              = Logger.getLogger( AddressingHandler.class );

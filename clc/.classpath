@@ -98,7 +98,7 @@
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1+euca1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mvel-1.3.14.jar"/>
-	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar"/>
+	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar" sourcepath="/home/decker/jbproject/netty-3.1.0.CR1/src/main/java"/>
 	<classpathentry kind="lib" path="lib/regexp-1.4.jar"/>
 	<classpathentry kind="lib" path="lib/serializer.jar"/>
 	<classpathentry kind="lib" path="lib/servlet-api-2.5.jar"/>
@@ -110,7 +110,7 @@
 	<classpathentry kind="lib" path="lib/spring-core-2.5.6.SEC01+euca1.jar"/>
 	<classpathentry kind="lib" path="lib/spring-web-2.5.6.SEC01+euca1.jar"/>
 	<classpathentry kind="lib" path="lib/wsdl4j-1.6.2.jar"/>
-	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar"/>
+	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar" sourcepath="/home/decker/jbproject/wss4j-src-svn/src"/>
 	<classpathentry kind="lib" path="lib/xalan2.jar"/>
 	<classpathentry kind="lib" path="lib/xercesImpl.jar"/>
 	<classpathentry kind="lib" path="lib/xml-security-1.4.2.jar"/>

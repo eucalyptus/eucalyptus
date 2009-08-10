@@ -32,7 +32,7 @@
   ~ Author: Chris Grzegorczyk grze@cs.ucsb.edu
   -->
 
-<binding name="cc_eucalyptus_ucsb_edu" force-classes="true">
+<binding name="eucalyptus_ucsb_edu" force-classes="true">
     <namespace uri="http://eucalyptus.ucsb.edu/" default="elements"/>
     <include path="cc-types.xml"/>
     <include path="cc-network.xml"/>
