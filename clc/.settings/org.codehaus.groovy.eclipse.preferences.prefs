@@ -1,4 +1,4 @@
-#Fri Aug 07 03:38:12 PDT 2009
+#Mon Aug 10 09:54:36 PDT 2009
 eclipse.preferences.version=1
 groovy.compiler.output.path=bin-groovy
-groovy.dont.check.package.vs.src.path=true
+support.groovy=true

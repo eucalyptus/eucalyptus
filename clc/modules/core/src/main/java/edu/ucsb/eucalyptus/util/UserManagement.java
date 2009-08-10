@@ -80,19 +80,19 @@ public class UserManagement {
   }
 
   public static String generateConfirmationCode( String userName ) {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll( "[_-\\.]", "" );
+    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll("\\p{Punct}", "" );
   }
 
   public static String generateCertificateCode( String userName ) {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll( "[_-\\.]", "" );
+    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll("\\p{Punct}", "" );
   }
 
   public static String generateSecretKey( String userName ) {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll( "[_-\\.]", "" );
+    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll("\\p{Punct}", "" );
   }
 
   public static String generateQueryId( String userName ) {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.MD5, false ).replaceAll( "[_-\\.]", "" );
+    return Hashes.getDigestBase64( userName, Hashes.Digest.MD5, false ).replaceAll("\\p{Punct}", "" );
   }
 
   public static boolean isAdministrator( String userId ) {

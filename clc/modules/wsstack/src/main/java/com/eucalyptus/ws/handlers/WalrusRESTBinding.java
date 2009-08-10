@@ -45,7 +45,6 @@ import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.annotation.HttpEmbedded;
 import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
-import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
@@ -60,6 +59,7 @@ import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import groovy.lang.GroovyObject;
+import com.eucalyptus.auth.User;
 
 public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static Logger LOG = Logger.getLogger( WalrusRESTBinding.class );
@@ -189,10 +189,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		List<String> failedMappings = populateObject( eucaMsg, fieldMap, params);
 		populateObjectFromBindingMap(eucaMsg, fieldMap, httpRequest, bindingArguments);
 
-		//TODO: add userinfo
-		//FIXME: this is a hack for now
-		UserInfo user = new UserInfo("admin");
-		user.setIsAdministrator(Boolean.TRUE);
+		User user = httpRequest.getUser();
 		setRequiredParams (eucaMsg, user);
 
 		if ( !failedMappings.isEmpty() || !params.isEmpty() )
@@ -203,12 +200,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			for ( Map.Entry<String, String> f : params.entrySet() )
 				errMsg.append( f.getKey() ).append( " = " ).append( f.getValue() ).append( '\n' );
 			throw new BindingException( errMsg.toString() );
-		}
-
-		//TODO: Set effective user id here
-		if(user != null) {
-			eucaMsg.setUserId( user.getUserName() );
-			eucaMsg.setEffectiveUserId( user.isAdministrator() ? "eucalyptus" : user.getUserName() );
 		}
 
 		LOG.info(eucaMsg.toString());
@@ -226,9 +217,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	}
 
-	private void setRequiredParams(final GroovyObject msg, UserInfo user) {
+	private void setRequiredParams(final GroovyObject msg, User user) {
 		if(user != null) {
-			msg.setProperty("accessKeyID", user.getQueryId() );
+			msg.setProperty("accessKeyID", user.getQueryId());
 		}
 		msg.setProperty("timeStamp", new Date());
 	}

@@ -22,6 +22,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
@@ -29,6 +30,7 @@ import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.util.StorageProperties;
 import com.eucalyptus.ws.util.WalrusProperties;
+import com.eucalyptus.auth.User;
 
 @ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {
@@ -49,9 +51,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-			Map<String,String> parameters = httpRequest.getParameters( );
-			String verb = httpRequest.getMethod().getName();
-			String addr = httpRequest.getUri();
 			handle(httpRequest);
 		}
 	}
@@ -62,7 +61,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		String verb = httpRequest.getMethod().getName();
 		String addr = httpRequest.getUri();
 
-		Set<String> headerNames = httpRequest.getHeaderNames();
 		if(httpRequest.containsHeader(StorageProperties.StorageSecurityParameters.EucaSignature.toString())) {
 			//possible internal request -- perform authentication using internal credentials
 			String date = httpRequest.getAndRemoveHeader(SecurityParameter.Date.toString());
@@ -108,9 +106,8 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 
 			if(auth_part != null) {
 				String sigString[] = getSigInfo(auth_part);
-				String signature = sigString[1];
-				//TODO: set userinfo in message
-				//return getUserInfo(sigString[0], signature, data, false);
+				String signature = sigString[1];				
+				authenticate(httpRequest, sigString[0], signature, data);
 			}
 			throw new AuthenticationException("User authentication failed.");
 		} else {
@@ -159,12 +156,11 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 					throw new AuthenticationException("Unable to parse date.");
 				}
 				String data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" +  getCanonicalizedAmzHeaders(httpRequest) + addrString;
-				
+
 				String auth_part = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
 				String sigString[] = getSigInfo(auth_part);
 				String signature = sigString[1];
-				//TODO: set userinfo in message
-				//return getUserInfo(sigString[0], signature, data, false);
+				authenticate(httpRequest, sigString[0], signature, data);
 			} else if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())) {
 				//query string authentication
 				String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
@@ -179,8 +175,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 					}
 					if(checkExpires(expires)) {
 						String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + getCanonicalizedAmzHeaders(httpRequest) + addrString;
-						//TODO: set userinfo in message
-						//return getUserInfo(accesskeyid, signature, stringToSign, true);
+						authenticate(httpRequest, accesskeyid, signature, stringToSign);
 					} else {
 						throw new AuthenticationException("Cannot process request. Expired.");
 					}
@@ -201,27 +196,20 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		return true;
 	}
 
-	//TODO: fixme
-	/*private UserInfo getUserInfo(String accessKeyID, String signature, String data, boolean decode) throws AuthenticationException {
-      signature = signature.replaceAll("=", "");
-
-      String queryKey = findQueryKey(accessKeyID);
-
-      String authSig = checkSignature( queryKey, data );
-
-      if(decode) {
-          try {
-              authSig = URLDecoder.decode(authSig, "UTF-8");
-          } catch(Exception ex) {
-              throw new AuthenticationException(ex.getMessage());
-          }
-      }
-
-      if (!authSig.equals(signature))
-          throw new AuthenticationException( "User authentication failed. Could not verify signature" );
-
-      return findUserId(accessKeyID);
-  }*/
+	private void authenticate(MappingHttpRequest httpRequest, String accessKeyID, String signature, String data) throws AuthenticationException {
+		signature = signature.replaceAll("=", "");
+		try {
+			String queryKey = Credentials.Users.getSecretKey(accessKeyID);
+			String authSig = checkSignature( queryKey, data );
+			if (!authSig.equals(signature))
+				throw new AuthenticationException( "User authentication failed. Could not verify signature" );
+			String userName = Credentials.Users.getUserName( accessKeyID );
+			User user = Credentials.getUser( userName );  
+			httpRequest.setUser( user );
+		} catch(Exception ex) {
+			throw new AuthenticationException( "User authentication failed. Unable to obtain query key" );
+		}
+	}
 
 	private String[] getSigInfo (String auth_part) {
 		int index = auth_part.lastIndexOf(" ");
@@ -267,45 +255,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		}
 	}
 
-	//TODO: stick these in a common parent class
-	//TODO: fixme
-	/* protected UserInfo findUserId( final String queryId ) throws QuerySecurityException
-  {
-    String queryKey;
-    UserInfo searchUser = new UserInfo();
-    searchUser.setQueryId( queryId );
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-    List<UserInfo> userList = db.query( searchUser );
-    if ( userList.size() != 1 )
-    {
-      db.rollback();
-      throw new QuerySecurityException( "Invalid user query id: " + queryId );
-    }
-    db.commit();
-    return userList.get( 0 );
-  }
-
-  protected String findQueryKey( final String queryId ) throws QuerySecurityException
-  {
-    String queryKey;
-    UserInfo searchUser = new UserInfo();
-    searchUser.setQueryId( queryId );
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-    List<UserInfo> userList = db.query( searchUser );
-    if ( userList.size() != 1 )
-    {
-      db.rollback();
-      throw new QuerySecurityException( "Invalid user query id: " + queryId );
-    }
-    queryKey = userList.get( 0 ).getSecretKey();
-    db.commit();
-    return queryKey;
-  }*/
-
 	@Override
 	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		// TODO Auto-generated method stub
-
 	}
-
 }
