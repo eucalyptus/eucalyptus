@@ -76,6 +76,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
+import com.eucalyptus.util.WalrusProperties;
 
 public class WalrusImageManager {
 	private static Logger LOG = Logger.getLogger( WalrusImageManager.class );

@@ -36,11 +36,14 @@ package edu.ucsb.eucalyptus;
 
 import edu.ucsb.eucalyptus.ic.HttpServer;
 import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 import org.mule.MuleServer;
 
 import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.ws.util.Messaging;
+import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.util.WalrusProperties;
 
 public class Main {
 

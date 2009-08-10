@@ -38,8 +38,8 @@ import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.auth.Hashes;
-import com.eucalyptus.ws.util.StorageProperties;
-import com.eucalyptus.ws.util.WalrusProperties;
+import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.collect.Lists;
 

@@ -29,8 +29,8 @@ import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.util.StorageProperties;
-import com.eucalyptus.ws.util.WalrusProperties;
+import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.auth.User;
 
 @ChannelPipelineCoverage("one")

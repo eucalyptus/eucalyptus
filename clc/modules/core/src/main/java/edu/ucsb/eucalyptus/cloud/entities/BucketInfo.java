@@ -42,7 +42,7 @@ import edu.ucsb.eucalyptus.util.UserManagement;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import com.eucalyptus.ws.util.WalrusProperties;
+import com.eucalyptus.util.WalrusProperties;
 
 import javax.persistence.*;
 import java.util.ArrayList;

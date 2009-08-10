@@ -16,7 +16,7 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.stages.WalrusOutboundStage;
 import com.eucalyptus.ws.stages.WalrusRESTBindingStage;
 import com.eucalyptus.ws.stages.WalrusUserAuthenticationStage;
-import com.eucalyptus.ws.util.WalrusProperties;
+import com.eucalyptus.util.WalrusProperties;
 
 
 public class WalrusRESTPipeline extends FilteredPipeline {

@@ -37,7 +37,7 @@ package edu.ucsb.eucalyptus.cloud.ws.tests;
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
-import com.eucalyptus.ws.util.WalrusProperties;
+import com.eucalyptus.util.WalrusProperties;
 import junit.framework.TestCase;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;

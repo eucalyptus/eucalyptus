@@ -40,7 +40,7 @@ import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
-import com.eucalyptus.ws.util.WalrusProperties;
+import com.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
 
 public class Bukkit {

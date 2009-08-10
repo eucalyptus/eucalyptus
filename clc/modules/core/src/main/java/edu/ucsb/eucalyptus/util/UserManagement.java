@@ -38,6 +38,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.SubDirectory;
 
 import java.security.NoSuchAlgorithmException;
+import com.eucalyptus.util.WalrusProperties;
 
 public class UserManagement {
 

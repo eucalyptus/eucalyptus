@@ -38,7 +38,7 @@ import com.google.common.collect.Lists;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.ws.util.StorageProperties;
+import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.Volume;

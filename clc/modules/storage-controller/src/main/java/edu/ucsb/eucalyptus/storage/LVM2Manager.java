@@ -41,8 +41,8 @@ import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
 import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
-import com.eucalyptus.ws.util.StorageProperties;
-import com.eucalyptus.ws.util.WalrusProperties;
+import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
 
 import java.io.*;

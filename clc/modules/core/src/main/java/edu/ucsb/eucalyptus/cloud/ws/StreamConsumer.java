@@ -1,6 +1,6 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import com.eucalyptus.ws.util.WalrusProperties;
+import com.eucalyptus.util.WalrusProperties;
 
 import java.io.*;
 
