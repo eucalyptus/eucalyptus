@@ -2263,7 +2263,7 @@ int maintainNetworkState() {
 	if (!strcmp(vnetconfig->mode, "MANAGED")) {
 	  snprintf(brname, 32, "eucabr%d", i);
 	} else {
-	  snprintf(brname, 32, "%s", vnetconfig->pubInterface);
+	  snprintf(brname, 32, "%s", vnetconfig->privInterface);
 	}
 	rc = vnetAttachTunnels(vnetconfig, i, brname);
 	if (rc) {
@@ -2272,7 +2272,7 @@ int maintainNetworkState() {
 	}
       }
     }
-
+    
     sem_post(vnetConfigLock);
   }
   

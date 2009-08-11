@@ -876,7 +876,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
     char rootwrap[1024];
     
     snprintf(rootwrap, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap", vnetconfig->eucahome);
-    snprintf(buf, 512, "%s/var/run/net/euca-dhcp.pid", vnetconfig->eucahome);
+    snprintf(buf, 512, "%s/var/run/eucalyptus/net/euca-dhcp.pid", vnetconfig->eucahome);
     rc = safekillfile(buf, vnetconfig->dhcpdaemon, 9, rootwrap);
 
     /*
@@ -1193,7 +1193,6 @@ int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
   logprintfl(EUCADEBUG, "ATTACHING TUNNEL: %d/%s\n", vlan, newbrname);
 
   if (!vnetconfig->tunneling) {
-    //    logprintfl(EUCAERROR, "tunneling is currently disabled\n");
     return(0);
   }
   
@@ -1402,8 +1401,6 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   char cmd[1024], tundev[32], *remoteIp=NULL, pidfile[1024];
 
   if (!vnetconfig->tunneling || vnetconfig->localIpId == -1) {
-    // tunneling is either not initialized or is disabled
-    //    logprintfl(EUCADEBUG, "tunneling not initialized\n");
     return(0);
   }
   
@@ -1428,7 +1425,6 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   
   done=0;
   for (i=0; i<NUMBER_OF_CCS && !done; i++) {
-    //    logprintfl(EUCADEBUG, "HERE: %d/%s/%d\n", i, hex2dot(vnetconfig->ccs[i]), vnetconfig->localIpId);
     if (vnetconfig->ccs[i] != 0) {
       remoteIp = hex2dot(vnetconfig->ccs[i]);
       if (vnetconfig->localIpId != i) {
@@ -1452,8 +1448,6 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
 		logprintfl(EUCAERROR, "cannot write pid '%s' to file '%s'\n", pidstr, pidfile);
 	      }
 	    }
-	    //	    logprintfl(EUCADEBUG, "setting tunnel start time (%d): %d/%d\n", i, vnetconfig->ccsTunnelStart[i], time(NULL));
-	    //	    vnetconfig->ccsTunnelStart[i] = time(NULL);
 	  }
 	}
       }

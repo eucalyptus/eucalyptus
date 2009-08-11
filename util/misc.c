@@ -901,6 +901,7 @@ char * file2str (const char * path)
             to_read = file_size-bytes_total;
         }
     }
+    close(fp);
 
     if ( bytes < 0 ) {
         logprintfl (EUCAERROR, "error: file2str() failed to read file %s\n", path);
