@@ -95,7 +95,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
     private Grid addClusterEntry ( int row, ClusterInfoWeb clusterInfo )
     {
-        Grid g = new Grid (10, 2);
+        Grid g = new Grid (11, 2);
         g.setStyleName( "euca-table" );
         g.setCellPadding( 4 );
 
@@ -183,10 +183,29 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
         volumesTotalPanel.add (new HTML ("&nbsp; GB"));
         g.setWidget( 6, 1, volumesTotalPanel );
 
-
+        final HorizontalPanel zeroFillVolumesPanel = new HorizontalPanel ();
+        final CheckBox zeroFillVolumesCheckbox = new CheckBox ("Zero fill volumes");
+        zeroFillVolumesPanel.add( zeroFillVolumesCheckbox );
+        if (systemConfig.getZeroFillVolumes()) {
+        	zeroFillVolumesCheckbox.setChecked(true);
+        } else {
+        	zeroFillVolumesCheckbox.setChecked(false);
+        }
+        zeroFillVolumesCheckbox.addClickListener (new ClickListener() {
+            public void onClick( Widget sender )
+            {
+                if (((CheckBox)sender).isChecked()) {
+                    systemConfig.setZeroFillVolumes( true );
+                } else {
+                    systemConfig.setZeroFillVolumes( false );
+                }
+            }
+        });
+        g.setWidget( 7, 1, zeroFillVolumesPanel );
+        
         // row 9
-        g.setWidget( 9, 0, new Label( "Maximum of" ) );
-        g.getCellFormatter().setHorizontalAlignment(9, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+        g.setWidget( 10, 0, new Label( "Maximum of" ) );
+        g.getCellFormatter().setHorizontalAlignment(10, 0, HasHorizontalAlignment.ALIGN_RIGHT);
         final TextBox publicAddressesBox = new TextBox();
         publicAddressesBox.addChangeListener (new ChangeCallback (this, row));
         publicAddressesBox.setVisibleLength( 10 );
@@ -194,11 +213,11 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
         final HorizontalPanel publicAddressesPanel = new HorizontalPanel ();
         publicAddressesPanel.add (publicAddressesBox);
         publicAddressesPanel.add (new HTML ("&nbsp; public IP addresses per user"));
-        g.setWidget( 9, 1, publicAddressesPanel );
+        g.setWidget( 10, 1, publicAddressesPanel );
 
-        // row 8 (yes, swapped with row 7)
-        g.setWidget( 8, 0, new Label( "Total of" ) );
-        g.getCellFormatter().setHorizontalAlignment(8, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+        // row 9 (yes, swapped with row 8)
+        g.setWidget( 9, 0, new Label( "Total of" ) );
+        g.getCellFormatter().setHorizontalAlignment(9, 0, HasHorizontalAlignment.ALIGN_RIGHT);
         final TextBox reservedAddressesBox = new TextBox();
         reservedAddressesBox.addChangeListener (new ChangeCallback (this, row));
         reservedAddressesBox.setVisibleLength( 10 );
@@ -207,9 +226,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
         reservedAddressesPanel.add (reservedAddressesBox);
         reservedAddressesPanel.add (new HTML ("&nbsp; public IP addresses reserved for instances"));
         reservedAddressesBox.setText(""+systemConfig.getSystemReservedPublicAddresses());
-        g.setWidget( 8, 1, reservedAddressesPanel );
+        g.setWidget( 9, 1, reservedAddressesPanel );
 
-        // row 7 (yes, swapped with row 8)
+        // row 8 (yes, swapped with row 9)
         final HorizontalPanel dynamicAddressesingPanel = new HorizontalPanel ();
         final CheckBox dynamicAddressesCheckbox = new CheckBox ("Enable dynamic public IP address assignment");
         dynamicAddressesingPanel.add( dynamicAddressesCheckbox );
@@ -232,7 +251,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
                 }
             }
         });
-        g.setWidget( 7, 1, dynamicAddressesingPanel );
+        g.setWidget( 8, 1, dynamicAddressesingPanel );
 
 
         return g;
@@ -266,9 +285,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
         systemConfig.setStorageMaxVolumeSizeInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
         p = (HorizontalPanel)g.getWidget(6, 1);
         systemConfig.setStorageVolumesTotalInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
-        p = (HorizontalPanel)g.getWidget(9, 1);
+        p = (HorizontalPanel)g.getWidget(10, 1);
         systemConfig.setMaxUserPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
-        p = (HorizontalPanel)g.getWidget(8, 1);
+        p = (HorizontalPanel)g.getWidget(9, 1);
         systemConfig.setSystemReservedPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
 //    systemConfig.setDoDynamicPublicAddresses( !((TextBox)p.getWidget(0)).isEnabled() ? true : false );
     }

@@ -490,6 +490,7 @@ public class EucalyptusManagement {
                 sysConf.getMaxUserPublicAddresses(),
                 sysConf.isDoDynamicPublicAddresses(),
                 sysConf.getSystemReservedPublicAddresses(),
+                sysConf.getZeroFillVolumes(),
                 sysConf.getDnsDomain(),
                 sysConf.getNameserver(),
                 sysConf.getNameserverAddress());
@@ -567,7 +568,10 @@ public class EucalyptusManagement {
         if( sysConf.getSystemReservedPublicAddresses() == null ) {
             sysConf.setSystemReservedPublicAddresses( 10 );
         }
-        return sysConf;
+        if(sysConf.getZeroFillVolumes() == null) {
+        	sysConf.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
+        }
+         return sysConf;
     }
 
     public static void setSystemConfig( final SystemConfigWeb systemConfig )
@@ -599,6 +603,7 @@ public class EucalyptusManagement {
             sysConf.setMaxUserPublicAddresses( systemConfig.getMaxUserPublicAddresses() );
             sysConf.setDoDynamicPublicAddresses( systemConfig.isDoDynamicPublicAddresses() );
             sysConf.setSystemReservedPublicAddresses( systemConfig.getSystemReservedPublicAddresses() );
+            sysConf.setZeroFillVolumes(systemConfig.getZeroFillVolumes());
             db.commit();
             WalrusProperties.update();
             StorageProperties.update();
@@ -620,6 +625,7 @@ public class EucalyptusManagement {
                     systemConfig.getMaxUserPublicAddresses(),
                     systemConfig.isDoDynamicPublicAddresses(),
                     systemConfig.getSystemReservedPublicAddresses(),
+                    systemConfig.getZeroFillVolumes(),
                     systemConfig.getDnsDomain(),
                     systemConfig.getNameserver(),
                     systemConfig.getNameserverAddress()));

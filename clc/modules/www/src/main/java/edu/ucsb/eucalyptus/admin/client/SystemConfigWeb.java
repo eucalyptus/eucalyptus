@@ -50,8 +50,9 @@ public class SystemConfigWeb implements IsSerializable {
     private String defaultKernelId;
     private String defaultRamdiskId;
     private Integer maxUserPublicAddresses;
-    private boolean doDynamicPublicAddresses;
+    private Boolean doDynamicPublicAddresses;
     private Integer systemReservedPublicAddresses;
+    private Boolean zeroFillVolumes;
     private String dnsDomain;
     private String nameserver;
     private String nameserverAddress;
@@ -73,6 +74,7 @@ public class SystemConfigWeb implements IsSerializable {
                             final Integer maxUserPublicAddresses,
                             final Boolean doDynamicPublicAddresses,
                             final Integer systemReservedPublicAddresses,
+                            final Boolean zeroFillVolumes,
                             final String dnsDomain,
                             final String nameserver,
                             final String nameserverAddress)
@@ -95,6 +97,7 @@ public class SystemConfigWeb implements IsSerializable {
         this.maxUserPublicAddresses = maxUserPublicAddresses;
         this.systemReservedPublicAddresses = systemReservedPublicAddresses;
         this.doDynamicPublicAddresses = doDynamicPublicAddresses;
+        this.zeroFillVolumes = zeroFillVolumes;
     }
 
   public String getStorageUrl()
@@ -262,4 +265,12 @@ public class SystemConfigWeb implements IsSerializable {
     public void setSystemReservedPublicAddresses( final Integer systemReservedPublicAddresses ) {
       this.systemReservedPublicAddresses = systemReservedPublicAddresses;
     }
+
+	public Boolean getZeroFillVolumes() {
+		return zeroFillVolumes;
+	}
+
+	public void setZeroFillVolumes(Boolean zeroFillVolumes) {
+		this.zeroFillVolumes = zeroFillVolumes;
+	}    
 }

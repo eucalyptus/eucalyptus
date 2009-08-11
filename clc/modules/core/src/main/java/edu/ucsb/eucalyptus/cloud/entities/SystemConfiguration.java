@@ -81,6 +81,8 @@ public class SystemConfiguration {
     private Boolean doDynamicPublicAddresses;
     @Column( name = "system_reserved_public_addresses" )
     private Integer systemReservedPublicAddresses;
+    @Column( name = "zero_fill_volumes" )
+    private Boolean zeroFillVolumes;
     @Column( name = "dns_domain" )
     private String dnsDomain;
     @Column( name = "nameserver" )
@@ -105,6 +107,7 @@ public class SystemConfiguration {
                                    final Integer maxUserPublicAddresses,
                                    final Boolean doDynamicPublicAddresses,
                                    final Integer systemReservedPublicAddresses,
+                                   final Boolean zeroFillVolumes,
                                    final String dnsDomain,
                                    final String nameserver,
                                    final String nameserverAddress)
@@ -125,6 +128,7 @@ public class SystemConfiguration {
         this.doDynamicPublicAddresses = doDynamicPublicAddresses;
         this.systemReservedPublicAddresses = systemReservedPublicAddresses;
         this.dnsDomain = dnsDomain;
+        this.zeroFillVolumes = zeroFillVolumes;
         this.nameserver = nameserver;
         this.nameserverAddress = nameserverAddress;
     }
@@ -285,4 +289,11 @@ public class SystemConfiguration {
         this.nameserverAddress = nameserverAddress;
     }
 
+	public Boolean getZeroFillVolumes() {
+		return zeroFillVolumes;
+	}
+
+	public void setZeroFillVolumes(Boolean zeroFillVolumes) {
+		this.zeroFillVolumes = zeroFillVolumes;
+	}
 }
