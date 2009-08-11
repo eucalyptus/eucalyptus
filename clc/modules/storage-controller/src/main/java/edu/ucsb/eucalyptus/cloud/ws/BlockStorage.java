@@ -56,6 +56,7 @@ import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusProperties;
 
 import java.io.*;
 import java.net.URL;
@@ -131,20 +132,35 @@ public class BlockStorage {
 
     }
 
-    public InitializeStorageManagerResponseType InitializeStorageManager(InitializeStorageManagerType request) {
+    public InitializeStorageManagerResponseType InitializeStorageManager(InitializeStorageManagerType request) throws EucalyptusCloudException {
         InitializeStorageManagerResponseType reply = (InitializeStorageManagerResponseType) request.getReply();
         initialize();
         return reply;
     }
 
-    public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) {
+    public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
         UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
+        if(EucalyptusProperties.NAME.equals(request.getEffectiveUserId()))
+        	throw new AccessDeniedException("Only admin can change walrus properties.");
         String storageRootDirectory = request.getStorageRootDirectory();
-
         if(storageRootDirectory != null)  {
             volumeStorageManager.setRootDirectory(storageRootDirectory);
             snapshotStorageManager.setRootDirectory(storageRootDirectory);
+            StorageProperties.storageRootDirectory = storageRootDirectory;
         }
+        
+        Integer maxTotalVolumeSize = request.getMaxTotalVolumeSize();
+        if(maxTotalVolumeSize != null) 
+        	StorageProperties.MAX_TOTAL_VOLUME_SIZE = maxTotalVolumeSize;        
+        Integer maxVolumeSize = request.getMaxVolumeSize();
+        if(maxVolumeSize != null)
+        	StorageProperties.MAX_VOLUME_SIZE = maxVolumeSize;
+        String storageInterface = request.getStorageInterface();
+        if(storageInterface != null)
+        	StorageProperties.iface = storageInterface;
+        Boolean zeroFillVolumes = request.getZeroFillVolumes();
+        if(zeroFillVolumes != null)
+        	StorageProperties.zeroFillVolumes = zeroFillVolumes;        
         check();
         //test connection to Walrus
         if(!WalrusProperties.sharedMode)

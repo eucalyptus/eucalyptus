@@ -52,7 +52,8 @@ public class DNSControl {
 
     private static Logger LOG = Logger.getLogger( DNSControl.class );
     static {
-        initializeDNS();
+        initialize();
+        populateRecords();
     }
 
     private static void initializeUDP() {
@@ -104,10 +105,9 @@ public class DNSControl {
         }
     }
 
-    private static void initializeDNS() {
+    public static void initialize() {
         initializeUDP();
         initializeTCP();
-        populateRecords();
     }
 
     public DNSControl() {}

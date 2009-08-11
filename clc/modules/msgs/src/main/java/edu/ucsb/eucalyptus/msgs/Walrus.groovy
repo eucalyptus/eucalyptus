@@ -562,6 +562,12 @@ public class SetBucketLoggingStatusResponseType extends WalrusResponseType {
 
 public class UpdateWalrusConfigurationType extends WalrusRequestType {
 	String bucketRootDirectory;
+	Integer maxBucketsPerUser;
+	Long maxBucketSize;
+	Long imageCacheSize;
+	Integer totalSnapshotSize;
+
+	def UpdateWalrusConfigurationType() {}
 }
 
 public class UpdateWalrusConfigurationResponseType extends WalrusResponseType {
@@ -613,16 +619,6 @@ public class DeleteWalrusSnapshotType extends WalrusRequestType {
 }
 
 public class DeleteWalrusSnapshotResponseType extends WalrusResponseType {
-}
-
-public class GetSnapshotInfoType extends WalrusRequestType {
-	String bucket;
-	String key;
-}
-
-public class GetSnapshotInfoResponseType extends WalrusResponseType {
-	String bucket;
-	ArrayList<String> snapshotSet = new ArrayList<String>();
 }
 
 public class GetWalrusSnapshotType extends WalrusDataRequestType {

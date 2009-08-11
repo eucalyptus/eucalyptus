@@ -35,6 +35,9 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusProperties;
+
+import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.NotImplementedException;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
@@ -78,11 +81,27 @@ public class Bukkit {
         return reply;
     }
 
-    public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) {
+    public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) throws EucalyptusCloudException {
         UpdateWalrusConfigurationResponseType reply = (UpdateWalrusConfigurationResponseType) request.getReply();
+        if(EucalyptusProperties.NAME.equals(request.getEffectiveUserId()))
+        	throw new AccessDeniedException("Only admin can change walrus properties.");
         String rootDir = request.getBucketRootDirectory();
-        if(rootDir != null)
+        if(rootDir != null) {
+        	WalrusProperties.bucketRootDirectory = rootDir;
             storageManager.setRootDirectory(rootDir);
+        }
+    	Integer maxBucketsPerUser = request.getMaxBucketsPerUser();
+    	if(maxBucketsPerUser != null)
+    		WalrusProperties.MAX_BUCKETS_PER_USER = maxBucketsPerUser;
+    	Long maxBucketSize = request.getMaxBucketSize();
+    	if(maxBucketSize != null)
+    		WalrusProperties.MAX_BUCKET_SIZE = maxBucketSize;    	
+    	Long imageCacheSize = request.getImageCacheSize();
+    	if(imageCacheSize != null)
+    		WalrusProperties.IMAGE_CACHE_SIZE = imageCacheSize;
+    	Integer totalSnapshotSize = request.getTotalSnapshotSize();
+    	if(totalSnapshotSize != null)
+    		WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE = totalSnapshotSize;
         walrusManager.check();
         return reply;
     }

@@ -248,7 +248,7 @@
 		class="edu.ucsb.eucalyptus.msgs.CreateBucketResponseMessage">
 		<value name="BucketName" field="bucket" />
 	</mapping>
-	
+
 	<mapping name="DeleteBucket" class="edu.ucsb.eucalyptus.msgs.DeleteBucketType">
 		<value name="Bucket" field="bucket" />
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
@@ -549,19 +549,19 @@
 		class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotResponseType">
 	</mapping>
 
-	<mapping name="GetSnapshotInfo" class="edu.ucsb.eucalyptus.msgs.GetSnapshotInfoType"
+	<mapping name="UpdateWalrusConfiguration"
+		class="edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType"
 		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
-		<value name="Bucket" field="bucket" />
-		<value name="Key" field="key" />
+		<value name="BucketRootDirectory" field="bucketRootDirectory" usage="optional"/>
+		<value name="MaxBucketsPerUser" field="maxBucketsPerUser" usage="optional"/>
+		<value name="MaxBucketSize" field="maxBucketSize" usage="optional"/>
+		<value name="ImageCacheSize" field="imageCacheSize" usage="optional"/>
+		<value name="TotalSnapshotSize" field="totalSnapshotSize" usage="optional"/>
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
+			usage="optional" />
 	</mapping>
 
-	<mapping name="GetSnapshotInfoResponse"
-		class="edu.ucsb.eucalyptus.msgs.GetSnapshotInfoResponseType">
-		<collection field="snapshotSet"
-			factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
-			<value name="snapshotId" />
-		</collection>
-		<value name="Bucket" field="bucket" />
+	<mapping name="UpdateWalrusConfigurationResponse"
+		class="edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationResponseType">
 	</mapping>
-
 </binding>

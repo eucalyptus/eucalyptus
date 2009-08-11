@@ -16,9 +16,9 @@
         </default-service-exception-strategy>
 
         <service name="KeyPair">
-            <inbound><!--
-                <inbound-endpoint ref="KeyPairVM"/>
-                --><inbound-endpoint ref="KeyPairWS"/>
+            <inbound>
+                <inbound-endpoint ref="KeyPairWSTest"/>
+                <inbound-endpoint ref="KeyPairWS"/>
             </inbound>
             <component class="edu.ucsb.eucalyptus.cloud.ws.KeyPairBroker"/>
             <outbound>

@@ -80,8 +80,11 @@ public class GetStorageVolumeResponseType extends StorageResponseType {
 public class UpdateStorageConfigurationType extends StorageRequestType {
   String storageRootDirectory;
   Integer maxTotalVolumeSize;
-  Integer maxTotalSnapshotSize;
   Integer maxVolumeSize;
+  String storageInterface;
+  Boolean zeroFillVolumes;
+
+  def UpdateStorageConfigurationType() {}
 }
 
 public class UpdateStorageConfigurationResponseType extends StorageResponseType {

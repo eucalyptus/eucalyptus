@@ -207,7 +207,7 @@ public class SystemConfigTable extends VerticalPanel {
         maxCacheSize_box.addFocusListener (new FocusHandler (w_hint,
                 "You are urged to consult the documentation before changing the default value!"));
         hpanel3.add ( maxCacheSize_box );
-        hpanel3.add ( new HTML ("&nbsp; MB of disk are reserved for cache"));
+        hpanel3.add ( new HTML ("&nbsp; MB of disk are reserved for the image cache"));
 
         // 4th row
         HorizontalPanel hpanel4 = new HorizontalPanel ();
