@@ -50,7 +50,6 @@ public class InternalWsSecHandler extends WsSecHandler {
       if( !cert.equals( EucaKeyStore.getInstance( ).getCertificate( EucalyptusProperties.NAME ) ) ) {
         throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );
       }
-//      httpRequest.setUser( Credentials.SYSTEM );
     }
   }
 }

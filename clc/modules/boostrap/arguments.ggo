@@ -1,0 +1,41 @@
+package "eucalyptus-cloud"
+version "v1.6"
+
+section "Eucalyptus Options"
+option "pidfile"       p   "Location for the pidfile."   string  typestr="filename"  default="/var/run/eucalyptus-cloud.pid" no
+option "user"       u   "User to drop privs to after starting."   string  typestr="username"  default="eucalyptus" no
+option "home"       h   "Eucalyptus home directory."   string  typestr="directory"  default="/" no
+option "check"       C   "Check on Eucalyptus."   flag   off
+option "stop"       S   "Stop Eucalyptus."   flag   off
+option "detach"       d   "Daemonize Eucalyptus."   flag   off
+option "verbose"       v   "Verbose loggin."   flag   off
+option "out"       o   "Redirect standard out to file."   string  typestr="filename"  default="&1" no
+option "err"       e   "Redirect standard error to file."   string  typestr="filename"  default="&2" no
+option "define"       D   "Set system properties."   string  optional  multiple
+
+section "Java VM Options"
+option "jvm-version"       V   "Show java -version of the underlying VM."   flag   off
+option "jvm-name"       J   "Which jvm type to run (see jvm.cfg)."   string  typestr="jvm-name"  default="-server" no
+option "jvm-args"       X   "Arguments to pass to the JVM."   string  optional  multiple
+option "java-home"       j   "Alternative way to specify JAVA_HOME."   string  typestr="directory"  default="/usr/lib/jvm/java-6-openjdk" no
+
+#    /** Options used to invoke the JVM. */
+#    char **opts;
+#    /** The name of the class to invoke. */
+#    char *clas;
+#    /** Command line arguments to the class. */
+#    char **args;
+#    /** Wether to detach from parent process or not. */
+#    bool dtch;
+#    /** Wether to display the help page or not. */
+#    bool help;
+#    /** Only check environment without running the service. */
+#    bool check;
+#    /** Stop running jsvc */
+#    bool stop;
+#    /** number of seconds to until service started */
+#    int wait;
+#    /** Destination for stdout */
+#    char *outfile;
+#    /** Destination for stderr */
+#    char *errfile;
