@@ -1190,8 +1190,6 @@ int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
     return(1);
   }
   
-  logprintfl(EUCADEBUG, "ATTACHING TUNNEL: %d/%s\n", vlan, newbrname);
-
   if (!vnetconfig->tunneling) {
     return(0);
   }
