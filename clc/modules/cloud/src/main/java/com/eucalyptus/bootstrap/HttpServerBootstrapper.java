@@ -7,7 +7,7 @@ import org.mortbay.xml.XmlConfiguration;
 
 import com.eucalyptus.util.BaseDirectory;
 
-public class HttpServerBootstrapper implements Bootstrapper {
+public class HttpServerBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( HttpServerBootstrapper.class );
   private static org.mortbay.jetty.Server jettyServer;
 
@@ -19,11 +19,6 @@ public class HttpServerBootstrapper implements Bootstrapper {
   @Override
   public boolean destroy( ) throws Exception {
     return false;
-  }
-
-  @Override
-  public String getVersion( ) {
-    return "";
   }
 
   @Override
@@ -46,3 +41,4 @@ public class HttpServerBootstrapper implements Bootstrapper {
   }
 
 }
+

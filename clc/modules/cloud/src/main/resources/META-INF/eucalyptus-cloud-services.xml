@@ -7,7 +7,7 @@
        http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
 
-    <spring:bean name="hsqldb" class="com.eucalyptus.bootstrap.HsqldbBootstrapper">
+    <spring:bean name="hsqldb" class="com.eucalyptus.bootstrap.HsqldbBootstrapper" factory-method="getInstance">
         <spring:property name="fileName" value="${euca.home}/var/lib/eucalyptus/db/eucalyptus"/>
     </spring:bean>
 

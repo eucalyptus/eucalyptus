@@ -12,14 +12,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 import org.apache.log4j.Logger;
-import org.mule.MuleServer;
 import org.mule.api.MuleContext;
-import org.mule.api.MuleException;
-import org.mule.api.config.ConfigurationException;
-import org.mule.api.lifecycle.InitialisationException;
-import org.mule.api.registry.Registry;
 import org.mule.config.ConfigResource;
-import org.mule.config.spring.MuleApplicationContext;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 
@@ -27,12 +21,13 @@ import com.eucalyptus.util.BaseDirectory;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.google.common.collect.Lists;
 
-public class SystemBootstrapper implements Bootstrapper {
+public class SystemBootstrapper extends Bootstrapper {
   private static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );
   static {
     LOG.info( "Loaded Bootstrapper." );
   }
   private static SystemBootstrapper singleton;
+
   public static Bootstrapper getInstance( ) {
     synchronized ( SystemBootstrapper.class ) {
       if ( singleton == null ) {
@@ -44,11 +39,13 @@ public class SystemBootstrapper implements Bootstrapper {
     }
     return singleton;
   }
-  private MuleContext        context;
-  private List<ConfigResource> configs = Lists.newArrayList( );
-  private List<Bootstrapper> bootstrappers = Lists.newArrayList( );
 
-  private SystemBootstrapper( ) { }
+  private MuleContext          context;
+  private List<ConfigResource> configs       = Lists.newArrayList( );
+  private List<Bootstrapper>   bootstrappers = Lists.newArrayList( );
+
+  private SystemBootstrapper( ) {
+  }
 
   @Override
   public boolean destroy( ) {
@@ -65,14 +62,14 @@ public class SystemBootstrapper implements Bootstrapper {
   public boolean start( ) throws Exception {
     LOG.info( "Starting Eucalyptus." );
     try {
-      context.start( );
-      for( Bootstrapper b : this.bootstrappers ) {
+      for ( Bootstrapper b : this.bootstrappers ) {
         LOG.info( "-> Invoking bootsrapper " + b.getClass( ).getSimpleName( ) + ".start()" );
-        b.load( );
+        b.start( );
       }
+      context.start( );
       return true;
     } catch ( Exception e ) {
-      LOG.error( e,e );
+      LOG.error( e, e );
       return false;
     }
   }
@@ -81,61 +78,76 @@ public class SystemBootstrapper implements Bootstrapper {
   @Override
   public boolean load( ) throws Exception {
     LOG.info( "Looking for Eucalyptus components in: " + BaseDirectory.LIB.toString( ) );
-    
+
     File libDir = new File( BaseDirectory.LIB.toString( ) );
     for ( File f : libDir.listFiles( ) ) {
       if ( f.getName( ).startsWith( EucalyptusProperties.NAME ) ) {
-        try {
-          JarFile jar = new JarFile( f );
-          JarEntry entry = jar.getJarEntry( Bootstrapper.PROPERTIES );
-          InputStream in = jar.getInputStream( entry );
-          Properties props = new Properties( );
-          Enumeration<JarEntry> jarList = jar.entries( );
-          URLClassLoader classLoader = URLClassLoader.newInstance( new URL[]{ f.getAbsoluteFile( ).toURL( ) } );
+        JarFile jar = new JarFile( f );
 
-          LOG.info( "Found eucalyptus component jar: " + f.getName( ) );
-          while( jarList.hasMoreElements( ) ) {
-            JarEntry j = jarList.nextElement( );
-              if( j.getName( ).endsWith( ".class" ) ) {
-                String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll(".class","");
-                Class c = classLoader.loadClass( classGuess );
-                if( Bootstrapper.class.isAssignableFrom( c ) ) {
-                  try {
-                    Bootstrapper b = (Bootstrapper) c.newInstance( );
-                    this.bootstrappers.add( b );
-                    LOG.info( "-> Registered bootsrapper instance: " + c.getSimpleName( ) );
-                  } catch ( Exception e ) {
-                    LOG.info( "-> Failed to create boostrapper instance: " + c.getSimpleName( ) );
-                  }
+        LOG.info( "Found eucalyptus component jar: " + f.getName( ) );
+        URLClassLoader classLoader = URLClassLoader.newInstance( new URL[] { f.getAbsoluteFile( ).toURL( ) } );
+        Enumeration<JarEntry> jarList = jar.entries( );
+        while ( jarList.hasMoreElements( ) ) {
+          JarEntry j = jarList.nextElement( );
+          if ( j.getName( ).endsWith( ".class" ) ) {
+            String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( ".class", "" );
+            try {
+              Class c = classLoader.loadClass( classGuess );
+              if ( Bootstrapper.class.isAssignableFrom( c ) && !Bootstrapper.class.equals( c ) ) {
+                try {
+                  Bootstrapper b = ( Bootstrapper ) c.newInstance( );
+                  this.bootstrappers.add( b );
+                  LOG.info( "-> Registered bootsrapper instance: " + c.getSimpleName( ) );
+                } catch ( Exception e ) {
+                  LOG.info( "-> Failed to create bootstrapper instance: " + c.getSimpleName( ), e );
                 }
-            }            
+              }
+            } catch ( Exception e ) {
+              LOG.error("Error occurred while trying to process class: " + classGuess );
+            }
           }
-
-          LOG.info( "-> Loaded properties..." );
-          props.load( in );
-          props.list( System.out );
-          String servicesEntryPath = props.getProperty( Bootstrapper.SERVICES_PROPERTY );//TODO: null check hi.
+        }
+        
+        LOG.info( "-> Loaded properties..." );
+        JarEntry entry = jar.getJarEntry( Bootstrapper.PROPERTIES );
+        InputStream in = jar.getInputStream( entry );
+        List<ConfigResource> conf = Lists.newArrayList( );
+        Properties props = new Properties( );
+        props.load( in );
+        props.list( System.out );
+        String servicesEntryPath = null;
+        try {
+          servicesEntryPath = props.getProperty( Bootstrapper.SERVICES_PROPERTY );//TODO: null check hi
           JarEntry servicesEntry = jar.getJarEntry( Bootstrapper.BASEDIR + servicesEntryPath );
-          ConfigResource rsc = new ConfigResource( servicesEntryPath, jar.getInputStream( servicesEntry ) );
-          configs.add( rsc );
-          //          String model = props.getProperty( Bootstrapper.MODEL_PROPERTY );
-//          JarEntry modelEntry = jar.getJarEntry( Bootstrapper.BASEDIR + model );
-          //TODO: finish up here.
+          ConfigResource servicesResource = new ConfigResource( servicesEntryPath, jar.getInputStream( servicesEntry ) );
+          conf.add( servicesResource );
+          LOG.info( "-> Added configuration " + servicesEntryPath + "..." );
         } catch ( Exception e ) {
-          LOG.trace( e, e );
+          if ( servicesEntryPath != null ) {
+            LOG.info( "-> Skipping " + servicesEntryPath + "..." );
+          }
+        }
+        String modelEntryPath = null;
+        try {
+          modelEntryPath = props.getProperty( Bootstrapper.MODEL_PROPERTY );
+          JarEntry modelEntry = jar.getJarEntry( Bootstrapper.BASEDIR + modelEntryPath );
+          ConfigResource modelResource = new ConfigResource( modelEntryPath, jar.getInputStream( modelEntry ) );
+          conf.add( modelResource );
+          LOG.info( "-> Added configuration " + modelEntryPath + "..." );
+        } catch ( Exception e ) {
+          if ( modelEntryPath != null ) {
+            LOG.info( "-> Skipping " + modelEntryPath + "..." );
+          }
         }
       }
     }
-    //load credentials
+    //load/check credentials
     //bind DNS
-    //bind http
-    //bind webservices 
-    //setup db
     try {
       LOG.info( "-> Configuring..." );
       configs.add( new ConfigResource( "eucalyptus-bootstrap.xml" ) );
-      context = new DefaultMuleContextFactory( ).createMuleContext( new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[]{} ) ) );
-      for( Bootstrapper b : this.bootstrappers ) {
+      context = new DefaultMuleContextFactory( ).createMuleContext( new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) ) );
+      for ( Bootstrapper b : this.bootstrappers ) {
         LOG.info( "-> Invoking bootsrapper " + b.getClass( ).getSimpleName( ) + ".load()" );
         b.load( );
       }
@@ -144,7 +156,8 @@ public class SystemBootstrapper implements Bootstrapper {
     }
     return true;
   }
-  
+
+
   @Override
   public String getVersion( ) {
     return System.getProperty( "euca.version" );

@@ -40,7 +40,10 @@
         <srcfiles dir="${rsrc.dir}" includes="**/*-binding.xml"/>
     </uptodate>
     <!--================================== BUILD TARGETS ==================================-->
-    <target name="build" depends="init,compile-src,compile-jibx,jar" description="--> build the jar file from source." unless="groovyc.notRequired"/>
+  <target name="build" depends="init,compile-src,compile-jibx,jar" description=" build the jar file from source." unless="groovyc.notRequired"/>
+  <!--
+  <target name="build" depends="init,compile-src,jar" description=" build the jar file from source." unless="groovyc.notRequired"/>
+    -->
     <target name="install" depends="copy-conf"/>
     <target name="clean">
         <delete dir="${build.dir}"/>
