@@ -16,7 +16,6 @@ public class ServiceBootstrapper implements Bootstrapper {
     return false;
   }
 
-  @Override
   public List<String> getDependencies( ) {
     // TODO Auto-generated method stub
     return null;
