@@ -132,7 +132,7 @@ public class StartupChecks {
     EntityWrapper<SystemConfiguration> db = new EntityWrapper<SystemConfiguration>( );
     try {
       SystemConfiguration systemConfig = db.getUnique( new SystemConfiguration( ) );
-      if ( systemConfig.getStorageVolumesDir( ) == null ) systemConfig.setStorageVolumesDir( StorageProperties.storageRootDirectory );
+      //if ( systemConfig.getStorageVolumesDir( ) == null ) systemConfig.setStorageVolumesDir( StorageProperties.storageRootDirectory );
     } catch ( EucalyptusCloudException ex ) {
     }
     db.commit( );

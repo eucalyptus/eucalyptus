@@ -1797,7 +1797,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 new AsyncCallback( ) {
                     public void onSuccess ( final Object result ) {
                         conf = (SystemConfigWeb) result;
-                        box.setText (conf.getStorageUrl());
+                        box.setText (conf.getWalrusUrl());
                     }
                     public void onFailure ( Throwable caught ) { }
                 }
@@ -1807,7 +1807,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 new ClickListener() {
                     public void onClick( Widget sender )
                     {
-                        conf.setStorageUrl(box.getText());
+                        conf.setWalrusUrl(box.getText());
                         EucalyptusWebBackend.App.getInstance().setSystemConfig(sessionId,
                                 conf,
                                 new AsyncCallback() {

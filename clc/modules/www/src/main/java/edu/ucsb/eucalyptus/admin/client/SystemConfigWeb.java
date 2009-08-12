@@ -37,16 +37,12 @@ package edu.ucsb.eucalyptus.admin.client;
 import com.google.gwt.user.client.rpc.IsSerializable;
 
 public class SystemConfigWeb implements IsSerializable {
-    private String storageUrl;
-    private String storagePath;
-    private Integer storageMaxBucketsPerUser;
-    private Integer storageMaxBucketSizeInMB;
-    private Integer storageMaxCacheSizeInMB;
-    private Integer storageSnapshotsTotalInGB;
-    private String storageInterface;
-    private Integer storageVolumesTotalInGB;
-    private Integer storageMaxVolumeSizeInGB;
-    private String storageVolumesPath;
+    private String walrusUrl;
+    private String bucketsRootDirectory;
+    private Integer maxBucketsPerUser;
+    private Integer maxBucketSizeInMB;
+    private Integer maxCacheSizeInMB;
+    private Integer snapshotsTotalInGB;
     private String defaultKernelId;
     private String defaultRamdiskId;
     private Integer maxUserPublicAddresses;
@@ -59,16 +55,12 @@ public class SystemConfigWeb implements IsSerializable {
 
     public SystemConfigWeb() {}
 
-    public SystemConfigWeb( final String storageUrl,
-                            final String storagePath,
-                            final Integer storageMaxBucketsPerUser,
-                            final Integer storageMaxBucketSizeInMB,
-                            final Integer storageMaxCacheSizeInMB,
-                            final Integer storageSnapshotsTotalInGB,
-                            final String storageInterface,
-                            final Integer storageVolumesTotalInGB,
-                            final Integer storageMaxVolumeSizeInGB,
-                            final String storageVolumesPath,
+    public SystemConfigWeb( final String walrusUrl,
+                            final String bucketsRootDirectory,
+                            final Integer maxBucketsPerUser,
+                            final Integer maxBucketSizeInMB,
+                            final Integer maxCacheSizeInMB,
+                            final Integer snapshotsTotalInGB,
                             final String defaultKernelId,
                             final String defaultRamdiskId,
                             final Integer maxUserPublicAddresses,
@@ -79,16 +71,12 @@ public class SystemConfigWeb implements IsSerializable {
                             final String nameserver,
                             final String nameserverAddress)
     {
-        this.storageUrl = storageUrl;
-        this.storagePath = storagePath;
-        this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
-        this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
-        this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
-        this.storageSnapshotsTotalInGB = storageSnapshotsTotalInGB;
-        this.storageInterface = storageInterface;
-        this.storageVolumesTotalInGB = storageVolumesTotalInGB;
-        this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
-        this.storageVolumesPath = storageVolumesPath;
+        this.walrusUrl = walrusUrl;
+        this.bucketsRootDirectory = bucketsRootDirectory;
+        this.maxBucketsPerUser = maxBucketsPerUser;
+        this.maxBucketSizeInMB = maxBucketSizeInMB;
+        this.maxCacheSizeInMB = maxCacheSizeInMB;
+        this.snapshotsTotalInGB = snapshotsTotalInGB;
         this.defaultKernelId = defaultKernelId;
         this.defaultRamdiskId = defaultRamdiskId;
         this.dnsDomain = dnsDomain;
@@ -100,102 +88,64 @@ public class SystemConfigWeb implements IsSerializable {
         this.zeroFillVolumes = zeroFillVolumes;
     }
 
-  public String getStorageUrl()
+  public String getWalrusUrl()
     {
-        return storageUrl;
+        return walrusUrl;
     }
 
-    public void setStorageUrl( final String storageUrl )
+    public void setWalrusUrl( final String walrusUrl )
     {
-        this.storageUrl = storageUrl;
+        this.walrusUrl = walrusUrl;
     }
 
-    public String getStoragePath()
+    public String getBucketsRootDirectory()
     {
-        return storagePath;
+        return bucketsRootDirectory;
     }
 
-    public void setStoragePath( final String storagePath )
+    public void setBucketsRootDirectory( final String bucketsRootDirectory )
     {
-        this.storagePath = storagePath;
+        this.bucketsRootDirectory = bucketsRootDirectory;
     }
 
-    public Integer getStorageMaxBucketSizeInMB()
+    public Integer getMaxBucketSizeInMB()
     {
-        return storageMaxBucketSizeInMB;
+        return maxBucketSizeInMB;
     }
 
-    public void setStorageMaxBucketSizeInMB( final Integer storageMaxBucketSizeInMB )
+    public void setMaxBucketSizeInMB( final Integer maxBucketSizeInMB )
     {
-        this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
+        this.maxBucketSizeInMB = maxBucketSizeInMB;
     }
 
-    public Integer getStorageMaxBucketsPerUser()
+    public Integer getMaxBucketsPerUser()
     {
-        return storageMaxBucketsPerUser;
+        return maxBucketsPerUser;
     }
 
-    public void setStorageMaxBucketsPerUser( final Integer storageMaxBucketsPerUser )
+    public void setMaxBucketsPerUser( final Integer maxBucketsPerUser )
     {
-        this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
+        this.maxBucketsPerUser = maxBucketsPerUser;
     }
 
-    public Integer getStorageMaxCacheSizeInMB()
+    public Integer getMaxCacheSizeInMB()
     {
-        return storageMaxCacheSizeInMB;
+        return maxCacheSizeInMB;
     }
 
-    public void setStorageMaxCacheSizeInMB( final Integer storageMaxCacheSizeInMB )
+    public void setMaxCacheSizeInMB( final Integer maxCacheSizeInMB )
     {
-        this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
+        this.maxCacheSizeInMB = maxCacheSizeInMB;
     }
 
-    public Integer getStorageSnapshotsTotalInGB()
+    public Integer getSnapshotsTotalInGB()
     {
-        return storageSnapshotsTotalInGB;
+        return snapshotsTotalInGB;
     }
 
-    public void setStorageSnapshotsTotalInGB( final Integer storageSnapshotsTotalInGB )
+    public void setSnapshotsTotalInGB( final Integer snapshotsTotalInGB )
     {
-        this.storageSnapshotsTotalInGB = storageSnapshotsTotalInGB;
-    }
-
-    public String getStorageInterface() {
-        return storageInterface;
-    }
-
-    public void setStorageInterface(String storageInterface) {
-        this.storageInterface = storageInterface;
-    }
-
-    public Integer getStorageVolumesTotalInGB()
-    {
-        return storageVolumesTotalInGB;
-    }
-
-    public void setStorageVolumesTotalInGB( final Integer storageVolumesTotalInGB )
-    {
-        this.storageVolumesTotalInGB = storageVolumesTotalInGB;
-    }
-
-    public Integer getStorageMaxVolumeSizeInGB()
-    {
-        return storageMaxVolumeSizeInGB;
-    }
-
-    public void setStorageMaxVolumeSizeInGB( final Integer storageMaxVolumeSizeInGB )
-    {
-        this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
-    }
-
-    public String getStorageVolumesPath()
-    {
-        return storageVolumesPath;
-    }
-
-    public void setStorageVolumesPath( final String storageVolumesPath )
-    {
-        this.storageVolumesPath = storageVolumesPath;
+        this.snapshotsTotalInGB = snapshotsTotalInGB;
     }
 
     public String getDefaultKernelId()

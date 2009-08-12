@@ -43,6 +43,7 @@ import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.DownloadsWeb;
 import edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackend;
 import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
+import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
 import org.apache.commons.httpclient.HttpClient;
@@ -656,6 +657,22 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
     //:: TODO-1.4: anything more to do here? :://
     RemoteInfoHandler.setClusterList( clusterList );
+  }
+
+  public List<StorageInfoWeb> getStorageList(String sessionId) throws SerializableException
+  {
+    SessionInfo session = verifySession (sessionId);
+    UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+    //:: TODO-1.4: anything more to do here? :://
+    return RemoteInfoHandler.getStorageList();
+  }
+
+  public void setStorageList(String sessionId, List<StorageInfoWeb> storageList ) throws SerializableException
+  {
+    SessionInfo session = verifySession (sessionId);
+    UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+    //:: TODO-1.4: anything more to do here? :://
+    RemoteInfoHandler.setStorageList(storageList);
   }
 
   public SystemConfigWeb getSystemConfig( final String sessionId ) throws SerializableException

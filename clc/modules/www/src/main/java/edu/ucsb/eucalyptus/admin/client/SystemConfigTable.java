@@ -137,7 +137,7 @@ public class SystemConfigTable extends VerticalPanel {
         this.c_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
         walrusURL_box.addChangeListener (new ChangeCallback (this));
         walrusURL_box.setVisibleLength(55);
-        walrusURL_box.setText (SystemConfig.getStorageUrl());
+        walrusURL_box.setText (SystemConfig.getWalrusUrl());
         walrusURL_box.addFocusListener (new FocusHandler (c_hint,
                 "Warning! Changing the Walrus URL will invalidate any certificates created so far as well as any images uploaded into the system."));
         this.c_grid.setWidget( i++, 1, walrusURL_box );
@@ -171,7 +171,7 @@ public class SystemConfigTable extends VerticalPanel {
         this.w_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
         walrusPath_box.addChangeListener (new ChangeCallback (this));
         walrusPath_box.setVisibleLength(55);
-        walrusPath_box.setText (SystemConfig.getStoragePath());
+        walrusPath_box.setText (SystemConfig.getBucketsRootDirectory());
         walrusPath_box.addFocusListener (new FocusHandler (w_hint,
                 "Warning! Changing the path may make inaccessible any content uploaded to the old path, including images, kernels, and ramdisks."));
         this.w_grid.setWidget( i++, 1, walrusPath_box );
@@ -185,13 +185,13 @@ public class SystemConfigTable extends VerticalPanel {
 
         maxBuckets_box.addChangeListener (new ChangeCallback (this));
         maxBuckets_box.setVisibleLength(10);
-        maxBuckets_box.setText (""+SystemConfig.getStorageMaxBucketsPerUser());
+        maxBuckets_box.setText (""+SystemConfig.getMaxBucketsPerUser());
         hpanel.add (maxBuckets_box);
 
         hpanel.add ( new HTML ("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Max bucket size: &nbsp;"));
         maxBucketSize_box.addChangeListener (new ChangeCallback (this));
         maxBucketSize_box.setVisibleLength(10);
-        maxBucketSize_box.setText (""+SystemConfig.getStorageMaxBucketSizeInMB());
+        maxBucketSize_box.setText (""+SystemConfig.getMaxBucketSizeInMB());
         maxBucketSize_box.addFocusListener (new FocusHandler (w_hint,
                 "You are urged to consult the documentation before changing the default value!"));
         hpanel.add (maxBucketSize_box);
@@ -203,7 +203,7 @@ public class SystemConfigTable extends VerticalPanel {
         this.w_grid.setWidget( i++, 1, hpanel3 );
         maxCacheSize_box.addChangeListener (new ChangeCallback (this));
         maxCacheSize_box.setVisibleLength(10);
-        maxCacheSize_box.setText ("" + SystemConfig.getStorageMaxCacheSizeInMB());
+        maxCacheSize_box.setText ("" + SystemConfig.getMaxCacheSizeInMB());
         maxCacheSize_box.addFocusListener (new FocusHandler (w_hint,
                 "You are urged to consult the documentation before changing the default value!"));
         hpanel3.add ( maxCacheSize_box );
@@ -215,7 +215,7 @@ public class SystemConfigTable extends VerticalPanel {
         this.w_grid.setWidget( i++, 1, hpanel4 );
         totalSnapshots_box.addChangeListener (new ChangeCallback (this));
         totalSnapshots_box.setVisibleLength(10);
-        totalSnapshots_box.setText ("" + SystemConfig.getStorageSnapshotsTotalInGB());
+        totalSnapshots_box.setText ("" + SystemConfig.getSnapshotsTotalInGB());
         totalSnapshots_box.addFocusListener (new FocusHandler (w_hint,
                 "You are urged to consult the documentation before changing the default value!"));
         hpanel4.add ( totalSnapshots_box );
@@ -267,12 +267,12 @@ public class SystemConfigTable extends VerticalPanel {
 
     public void updateStruct ()
     {
-        this.SystemConfig.setStorageUrl                (this.walrusURL_box.getText());
-        this.SystemConfig.setStoragePath               (this.walrusPath_box.getText());
-        this.SystemConfig.setStorageMaxBucketsPerUser  (Integer.parseInt(this.maxBuckets_box.getText()));
-        this.SystemConfig.setStorageMaxBucketSizeInMB  (Integer.parseInt(this.maxBucketSize_box.getText()));
-        this.SystemConfig.setStorageMaxCacheSizeInMB   (Integer.parseInt(this.maxCacheSize_box.getText()));
-        this.SystemConfig.setStorageSnapshotsTotalInGB (Integer.parseInt(this.totalSnapshots_box.getText()));
+        this.SystemConfig.setWalrusUrl                (this.walrusURL_box.getText());
+        this.SystemConfig.setBucketsRootDirectory               (this.walrusPath_box.getText());
+        this.SystemConfig.setMaxBucketsPerUser  (Integer.parseInt(this.maxBuckets_box.getText()));
+        this.SystemConfig.setMaxBucketSizeInMB  (Integer.parseInt(this.maxBucketSize_box.getText()));
+        this.SystemConfig.setMaxCacheSizeInMB   (Integer.parseInt(this.maxCacheSize_box.getText()));
+        this.SystemConfig.setSnapshotsTotalInGB (Integer.parseInt(this.totalSnapshots_box.getText()));
         this.SystemConfig.setDefaultKernelId           (this.defaultKernel_box.getText());
         this.SystemConfig.setDefaultRamdiskId          (this.defaultRamdisk_box.getText());
     }

@@ -7,9 +7,6 @@ public class ClusterInfoWeb implements IsSerializable {
 	private String host;
 	private Integer port;
 	private Boolean committed;
-	private String storageVolumesPath;
-	private Integer storageMaxVolumeSizeInGB;
-	private Integer storageVolumesStorageInGB;
 
 	public ClusterInfoWeb()
 	{
@@ -17,17 +14,11 @@ public class ClusterInfoWeb implements IsSerializable {
 
 	public ClusterInfoWeb( final String name, 
 		final String host, 
-		final Integer port,
-		final String storageVolumesPath,
-		final Integer storageMaxVolumeSizeInGB,
-		final Integer storageVolumesStorageInGB )
+		final Integer port)
 	{
 		this.name = name;
 		this.host = host;
 		this.port = port;
-		this.storageVolumesPath = storageVolumesPath;
-		this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
-		this.storageVolumesStorageInGB = storageVolumesStorageInGB;
 		this.committed = false;
 	}
 
@@ -69,36 +60,6 @@ public class ClusterInfoWeb implements IsSerializable {
 	public Boolean isCommitted ()
 	{
 		return this.committed;
-	}
-
-	public Integer getStorageMaxVolumeSizeInGB()
-	{
-		return storageMaxVolumeSizeInGB;
-	}
-
-	public void setStorageMaxVolumeSizeInGB( final Integer storageMaxVolumeSizeInGB )
-	{
-		this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
-	}
-
-	public Integer getStorageVolumesStorageInGB()
-	{
-		return storageVolumesStorageInGB;
-	}
-
-	public void setStorageVolumesStorageInGB( final Integer storageVolumesStorageInGB )
-	{
-		this.storageVolumesStorageInGB = storageVolumesStorageInGB;
-	}
-
-	public String getStorageVolumesPath()
-	{
-		return storageVolumesPath;
-	}
-
-	public void setStorageVolumesPath( final String storageVolumesPath )
-	{
-		this.storageVolumesPath = storageVolumesPath;
 	}
 
 	@Override

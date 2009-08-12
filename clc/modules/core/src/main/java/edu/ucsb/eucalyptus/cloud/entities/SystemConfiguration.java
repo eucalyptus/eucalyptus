@@ -63,18 +63,10 @@ public class SystemConfiguration {
     private Integer storageMaxBucketSizeInMB;
     @Column( name = "system_storage_cache_size_mb" )
     private Integer storageMaxCacheSizeInMB;
-    @Column( name = "system_storage_volume_size_gb" )
-    private Integer storageMaxTotalVolumeSizeInGb;
     @Column( name = "system_storage_snapshot_size_gb" )
     private Integer storageMaxTotalSnapshotSizeInGb;
-    @Column( name = "storage_interface" )
-    private String storageInterface;
     @Column( name = "system_registration_id" )
     private String registrationId;
-    @Column( name = "system_storage_max_volume_size_gb")
-    private Integer storageMaxVolumeSizeInGB;
-    @Column( name = "system_storage_volumes_dir" )
-    private String storageVolumesDir;
     @Column( name = "system_max_user_public_addresses" )
     private Integer maxUserPublicAddresses;
     @Column( name = "system_do_dynamic_public_addresses" )
@@ -99,11 +91,7 @@ public class SystemConfiguration {
                                    final Integer storageMaxBucketsPerUser,
                                    final Integer storageMaxBucketSizeInMB,
                                    final Integer storageMaxCacheSizeInMB,
-                                   final Integer storageMaxTotalVolumeSizeInGb,
                                    final Integer storageMaxTotalSnapshotSizeInGb,
-                                   final String storageInterface,
-                                   final Integer storageMaxVolumeSizeInGB,
-                                   final String storageVolumesDir,
                                    final Integer maxUserPublicAddresses,
                                    final Boolean doDynamicPublicAddresses,
                                    final Integer systemReservedPublicAddresses,
@@ -119,11 +107,7 @@ public class SystemConfiguration {
         this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
         this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
         this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
-        this.storageMaxTotalVolumeSizeInGb = storageMaxTotalVolumeSizeInGb;
         this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
-        this.storageInterface = storageInterface;
-        this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
-        this.storageVolumesDir = storageVolumesDir;
         this.maxUserPublicAddresses = maxUserPublicAddresses;
         this.doDynamicPublicAddresses = doDynamicPublicAddresses;
         this.systemReservedPublicAddresses = systemReservedPublicAddresses;
@@ -193,14 +177,6 @@ public class SystemConfiguration {
         this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
     }
 
-    public Integer getStorageMaxTotalVolumeSizeInGb() {
-        return storageMaxTotalVolumeSizeInGb;
-    }
-
-    public void setStorageMaxTotalVolumeSizeInGb( Integer storageMaxTotalVolumeSizeInGb ) {
-        this.storageMaxTotalVolumeSizeInGb = storageMaxTotalVolumeSizeInGb;
-    }
-
     public Integer getStorageMaxTotalSnapshotSizeInGb() {
         return storageMaxTotalSnapshotSizeInGb;
     }
@@ -209,36 +185,12 @@ public class SystemConfiguration {
         this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
     }
 
-    public String getStorageInterface() {
-        return storageInterface;
-    }
-
-    public void setStorageInterface(String storageInterface) {
-        this.storageInterface = storageInterface;
-    }
-
     public String getRegistrationId() {
         return registrationId;
     }
 
     public void setRegistrationId( final String registrationId ) {
         this.registrationId = registrationId;
-    }
-
-    public Integer getStorageMaxVolumeSizeInGB() {
-        return storageMaxVolumeSizeInGB;
-    }
-
-    public void setStorageMaxVolumeSizeInGB( Integer storageMaxVolumeSizeInGB ) {
-        this.storageMaxVolumeSizeInGB = storageMaxVolumeSizeInGB;
-    }
-
-    public String getStorageVolumesDir() {
-        return storageVolumesDir;
-    }
-
-    public void setStorageVolumesDir( final String storageVolumesDir ) {
-        this.storageVolumesDir = storageVolumesDir;
     }
 
     public Integer getMaxUserPublicAddresses() {

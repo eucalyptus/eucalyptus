@@ -28,6 +28,28 @@ public class ClusterStateType extends EucalyptusMessage{
   }
 }
 
+public class StorageStateType extends EucalyptusMessage{
+  private String name;
+  private String volumesPath;
+  private Integer maxVolumeSizeInGB;
+  private Integer totalVolumesSizeInGB;
+  private String storageInterface;
+  private Boolean zeroFillVolumes;
+
+  def StorageStateType() {
+  }
+
+  def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
+		  final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes) {
+  this.name = name;
+  this.volumesPath = volumesPath;
+  this.maxVolumeSizeInGB = maxVolumeSizeInGB;
+  this.totalVolumesSizeInGB = totalVolumesSizeInGB;
+  this.storageInterface = storageInterface;
+  this.zeroFillVolumes = zeroFillVolumes;
+  }
+}
+
 public class EucalyptusMessage implements Cloneable, Serializable {
 
   String correlationId;

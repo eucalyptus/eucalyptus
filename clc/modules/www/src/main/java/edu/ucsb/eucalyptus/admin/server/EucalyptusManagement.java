@@ -481,10 +481,6 @@ public class EucalyptusManagement {
                 sysConf.getStorageMaxBucketSizeInMB(),
                 sysConf.getStorageMaxCacheSizeInMB(),
                 sysConf.getStorageMaxTotalSnapshotSizeInGb(),
-                sysConf.getStorageInterface(),
-                sysConf.getStorageMaxTotalVolumeSizeInGb(),
-                sysConf.getStorageMaxVolumeSizeInGB(),
-                sysConf.getStorageVolumesDir(),
                 sysConf.getDefaultKernel(),
                 sysConf.getDefaultRamdisk(),
                 sysConf.getMaxUserPublicAddresses(),
@@ -519,18 +515,6 @@ public class EucalyptusManagement {
         }
         if(sysConf.getStorageMaxTotalSnapshotSizeInGb() == null) {
             sysConf.setStorageMaxTotalSnapshotSizeInGb(StorageProperties.MAX_TOTAL_SNAPSHOT_SIZE);
-        }
-        if(sysConf.getStorageInterface() == null) {
-            sysConf.setStorageInterface(StorageProperties.iface);
-        }
-        if(sysConf.getStorageMaxTotalVolumeSizeInGb() == null) {
-            sysConf.setStorageMaxTotalVolumeSizeInGb(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
-        }
-        if(sysConf.getStorageMaxVolumeSizeInGB() == null) {
-            sysConf.setStorageMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
-        }
-        if(sysConf.getStorageVolumesDir() == null) {
-            sysConf.setStorageVolumesDir(StorageProperties.storageRootDirectory);
         }
         if(sysConf.getDefaultKernel() == null) {
             ImageInfo q = new ImageInfo();
@@ -581,22 +565,18 @@ public class EucalyptusManagement {
         {
             SystemConfiguration sysConf = db.getUnique( new SystemConfiguration() );
             //:: TODO: verify the URL :://
-            sysConf.setStorageUrl( systemConfig.getStorageUrl() );
+            sysConf.setStorageUrl( systemConfig.getWalrusUrl() );
             //:: TODO: check the path exists && is writeable, create directory if needed :://
-            sysConf.setStorageDir( systemConfig.getStoragePath() );
+            sysConf.setStorageDir( systemConfig.getBucketsRootDirectory() );
             //:: TODO: verify the EKI :://
             sysConf.setDefaultKernel( systemConfig.getDefaultKernelId() );
             //:: TODO: verify the ERI :://
             sysConf.setDefaultRamdisk( systemConfig.getDefaultRamdiskId() );
 
-            sysConf.setStorageMaxBucketsPerUser( systemConfig.getStorageMaxBucketsPerUser() );
-            sysConf.setStorageMaxBucketSizeInMB( systemConfig.getStorageMaxBucketSizeInMB() );
-            sysConf.setStorageMaxCacheSizeInMB ( systemConfig.getStorageMaxCacheSizeInMB() );
-            sysConf.setStorageMaxTotalVolumeSizeInGb ( systemConfig.getStorageVolumesTotalInGB() );
-            sysConf.setStorageMaxTotalSnapshotSizeInGb( systemConfig.getStorageSnapshotsTotalInGB() );
-            sysConf.setStorageInterface(systemConfig.getStorageInterface());
-            sysConf.setStorageMaxVolumeSizeInGB (systemConfig.getStorageMaxVolumeSizeInGB());
-            sysConf.setStorageVolumesDir (systemConfig.getStorageVolumesPath());
+            sysConf.setStorageMaxBucketsPerUser( systemConfig.getMaxBucketsPerUser() );
+            sysConf.setStorageMaxBucketSizeInMB( systemConfig.getMaxBucketSizeInMB() );
+            sysConf.setStorageMaxCacheSizeInMB ( systemConfig.getMaxCacheSizeInMB() );
+            sysConf.setStorageMaxTotalSnapshotSizeInGb( systemConfig.getSnapshotsTotalInGB() );
             sysConf.setDnsDomain(systemConfig.getDnsDomain());
             sysConf.setNameserver(systemConfig.getNameserver());
             sysConf.setNameserverAddress(systemConfig.getNameserverAddress());
@@ -610,18 +590,14 @@ public class EucalyptusManagement {
         }
         catch ( EucalyptusCloudException e )
         {
-            db.add( new SystemConfiguration(systemConfig.getStorageUrl(),
+            db.add( new SystemConfiguration(systemConfig.getWalrusUrl(),
                     systemConfig.getDefaultKernelId(),
                     systemConfig.getDefaultRamdiskId(),
-                    systemConfig.getStoragePath(),
-                    systemConfig.getStorageMaxBucketsPerUser() ,
-                    systemConfig.getStorageMaxBucketSizeInMB(),
-                    systemConfig.getStorageMaxCacheSizeInMB(),
-                    systemConfig.getStorageVolumesTotalInGB(),
-                    systemConfig.getStorageSnapshotsTotalInGB(),
-                    systemConfig.getStorageInterface(),
-                    systemConfig.getStorageMaxVolumeSizeInGB(),
-                    systemConfig.getStorageVolumesPath(),
+                    systemConfig.getBucketsRootDirectory(),
+                    systemConfig.getMaxBucketsPerUser() ,
+                    systemConfig.getMaxBucketSizeInMB(),
+                    systemConfig.getMaxCacheSizeInMB(),
+                    systemConfig.getSnapshotsTotalInGB(),
                     systemConfig.getMaxUserPublicAddresses(),
                     systemConfig.isDoDynamicPublicAddresses(),
                     systemConfig.getSystemReservedPublicAddresses(),

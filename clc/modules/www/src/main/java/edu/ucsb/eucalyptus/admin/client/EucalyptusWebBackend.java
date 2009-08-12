@@ -51,76 +51,82 @@ import java.util.List;
  */
 public interface EucalyptusWebBackend extends RemoteService {
 
-    public String getNewSessionID( String userId, String bCryptedPassword )
-            throws SerializableException;
+	public String getNewSessionID( String userId, String bCryptedPassword )
+	throws SerializableException;
 
-    public String addUserRecord( UserInfoWeb user)
-            throws SerializableException;
+	public String addUserRecord( UserInfoWeb user)
+	throws SerializableException;
 
-    public String addUserRecord( String sessionId, UserInfoWeb user )
-            throws SerializableException;
+	public String addUserRecord( String sessionId, UserInfoWeb user )
+	throws SerializableException;
 
 	public String recoverPassword( UserInfoWeb user )
-	        throws SerializableException;
+	throws SerializableException;
 
-  public List<UserInfoWeb> getUserRecord( String sessionId, String userId )
-      throws SerializableException;
+	public List<UserInfoWeb> getUserRecord( String sessionId, String userId )
+	throws SerializableException;
 
-   public List<ImageInfoWeb> getImageInfo( String sessionId, String userId )
-      throws SerializableException;
+	public List<ImageInfoWeb> getImageInfo( String sessionId, String userId )
+	throws SerializableException;
 
-  public String performAction( String sessionId, String action, String param )
-      throws SerializableException;
+	public String performAction( String sessionId, String action, String param )
+	throws SerializableException;
 
-  public void logoutSession( String sessionId )
-      throws SerializableException;
+	public void logoutSession( String sessionId )
+	throws SerializableException;
 
-  public String getNewCert( String sessionId )
-      throws SerializableException;
+	public String getNewCert( String sessionId )
+	throws SerializableException;
 
-  public HashMap<String,String> getProperties()
-      throws SerializableException;
+	public HashMap<String,String> getProperties()
+	throws SerializableException;
 
-  public String changePassword( String sessionId, String oldPassword, String newPassword )
-      throws SerializableException;
+	public String changePassword( String sessionId, String oldPassword, String newPassword )
+	throws SerializableException;
 
-  public String updateUserRecord( String sessionId, UserInfoWeb newRecord )
-      throws SerializableException;
+	public String updateUserRecord( String sessionId, UserInfoWeb newRecord )
+	throws SerializableException;
 
-  public List<ClusterInfoWeb> getClusterList( String sessionId )
-      throws SerializableException;
+	public List<ClusterInfoWeb> getClusterList( String sessionId )
+	throws SerializableException;
 
-  public void setClusterList( String sessionId, List<ClusterInfoWeb> clusterList )
-      throws SerializableException;
+	public void setClusterList( String sessionId, List<ClusterInfoWeb> clusterList )
+	throws SerializableException;
 
-  public SystemConfigWeb getSystemConfig( String sessionId ) throws SerializableException;
+	public List<StorageInfoWeb> getStorageList( String sessionId )
+	throws SerializableException;
 
-  public void setSystemConfig( String sessionId, SystemConfigWeb systemConfig ) throws SerializableException;
+	public void setStorageList( String sessionId, List<StorageInfoWeb> storageList )
+	throws SerializableException;
 
-  public List<VmTypeWeb> getVmTypes( String sessionId ) throws SerializableException;
-  public void setVmTypes( String sessionId, List<VmTypeWeb> vmTypes )throws SerializableException;
+	public SystemConfigWeb getSystemConfig( String sessionId ) throws SerializableException;
 
-  public CloudInfoWeb getCloudInfo (String sessionId, boolean setExternalHostport) throws SerializableException;
+	public void setSystemConfig( String sessionId, SystemConfigWeb systemConfig ) throws SerializableException;
 
-  public List<DownloadsWeb> getDownloads ( String sessionId, String downloadsUrl ) throws SerializableException;
+	public List<VmTypeWeb> getVmTypes( String sessionId ) throws SerializableException;
+	public void setVmTypes( String sessionId, List<VmTypeWeb> vmTypes )throws SerializableException;
+
+	public CloudInfoWeb getCloudInfo (String sessionId, boolean setExternalHostport) throws SerializableException;
+
+	public List<DownloadsWeb> getDownloads ( String sessionId, String downloadsUrl ) throws SerializableException;
 
 
-  /**
-   * Utility/Convenience class.
-   * Use EucalyptusWebBackend.App.getInstance() to access static instance of EucalyptusWebBackendAsync
-   */
-  public static class App {
+	/**
+	 * Utility/Convenience class.
+	 * Use EucalyptusWebBackend.App.getInstance() to access static instance of EucalyptusWebBackendAsync
+	 */
+	public static class App {
 
-    private static edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackendAsync ourInstance = null;
+		private static edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackendAsync ourInstance = null;
 
-    public static synchronized edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackendAsync getInstance()
-    {
-      if ( ourInstance == null )
-      {
-        ourInstance = ( edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackendAsync ) GWT.create( EucalyptusWebBackend.class );
-        ( ( ServiceDefTarget ) ourInstance ).setServiceEntryPoint( GWT.getModuleBaseURL() + "EucalyptusWebBackend" );
-      }
-      return ourInstance;
-    }
-  }
+		public static synchronized edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackendAsync getInstance()
+		{
+			if ( ourInstance == null )
+			{
+				ourInstance = ( edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackendAsync ) GWT.create( EucalyptusWebBackend.class );
+				( ( ServiceDefTarget ) ourInstance ).setServiceEntryPoint( GWT.getModuleBaseURL() + "EucalyptusWebBackend" );
+			}
+			return ourInstance;
+		}
+	}
 }

@@ -3,6 +3,7 @@ package edu.ucsb.eucalyptus.admin.server;
 import com.google.common.collect.Sets;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
@@ -35,8 +36,20 @@ public class RemoteInfoHandler {
   {
     List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>();
     for ( ClusterStateType c : Clusters.getInstance().getClusters() )
-      clusterList.add( new ClusterInfoWeb( c.getName(), c.getHost(), c.getPort(), "/foo/bar", 0, 0) ); // TODO Sunil: add SC configuration params
+      clusterList.add( new ClusterInfoWeb( c.getName(), c.getHost(), c.getPort()) ); 
     return clusterList;
+  }
+
+  public static synchronized void setStorageList( List<StorageInfoWeb> newStorageList )
+  {
+	  //TODO: Chris do messaging stuff
+  }
+
+  public static synchronized List<StorageInfoWeb> getStorageList()
+  {
+    List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>();
+	  //TODO: Chris iterate over StorageStateType and construct storageList
+    return storageList;
   }
 
   public static List<VmTypeWeb> getVmTypes()

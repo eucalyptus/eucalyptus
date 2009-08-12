@@ -48,63 +48,69 @@ import java.util.List;
  */
 public interface EucalyptusWebBackendAsync {
 
-    void getNewSessionID(String userId, String bCryptedPassword, final AsyncCallback<String> async)
-            ;
+	void getNewSessionID(String userId, String bCryptedPassword, final AsyncCallback<String> async)
+	;
 
-    void addUserRecord(UserInfoWeb user, final AsyncCallback<String> async)
-            ;
+	void addUserRecord(UserInfoWeb user, final AsyncCallback<String> async)
+	;
 
-    void addUserRecord(String sessionId, UserInfoWeb user, final AsyncCallback<String> async)
-            ;
+	void addUserRecord(String sessionId, UserInfoWeb user, final AsyncCallback<String> async)
+	;
 
-    void recoverPassword(UserInfoWeb user, final AsyncCallback<String> async)
-            ;
+	void recoverPassword(UserInfoWeb user, final AsyncCallback<String> async)
+	;
 
-    void getUserRecord(String sessionId, String userId, final AsyncCallback<List<UserInfoWeb>> async)
-            ;
+	void getUserRecord(String sessionId, String userId, final AsyncCallback<List<UserInfoWeb>> async)
+	;
 
-    void getImageInfo(String sessionId, String userId, final AsyncCallback<List<ImageInfoWeb>> async)
-            ;
+	void getImageInfo(String sessionId, String userId, final AsyncCallback<List<ImageInfoWeb>> async)
+	;
 
-    void performAction(String sessionId, String action, String param, final AsyncCallback<String> async)
-            ;
+	void performAction(String sessionId, String action, String param, final AsyncCallback<String> async)
+	;
 
-    void logoutSession(String sessionId, final AsyncCallback async)
-            ;
+	void logoutSession(String sessionId, final AsyncCallback async)
+	;
 
-    void getNewCert(String sessionId, final AsyncCallback<String> async)
-            ;
+	void getNewCert(String sessionId, final AsyncCallback<String> async)
+	;
 
-    void getProperties(final AsyncCallback<HashMap<String, String>> async)
-            ;
+	void getProperties(final AsyncCallback<HashMap<String, String>> async)
+	;
 
-    void changePassword(String sessionId, String oldPassword, String newPassword, final AsyncCallback<String> async)
-            ;
+	void changePassword(String sessionId, String oldPassword, String newPassword, final AsyncCallback<String> async)
+	;
 
-    void updateUserRecord(String sessionId, UserInfoWeb newRecord, final AsyncCallback<String> async)
-            ;
+	void updateUserRecord(String sessionId, UserInfoWeb newRecord, final AsyncCallback<String> async)
+	;
 
-    void getClusterList(String sessionId, final AsyncCallback<List<ClusterInfoWeb>> async)
-            ;
+	void getClusterList(String sessionId, final AsyncCallback<List<ClusterInfoWeb>> async)
+	;
 
-    void setClusterList(String sessionId, List<ClusterInfoWeb> clusterList, final AsyncCallback async)
-            ;
+	void setClusterList(String sessionId, List<ClusterInfoWeb> clusterList, final AsyncCallback async)
+	;
 
-    void getSystemConfig(String sessionId, final AsyncCallback<SystemConfigWeb> async)
-            ;
+	void getStorageList(String sessionId, final AsyncCallback<List<StorageInfoWeb>> async)
+	;
 
-    void setSystemConfig(String sessionId, SystemConfigWeb systemConfig, final AsyncCallback async)
-            ;
+	void setStorageList(String sessionId, List<StorageInfoWeb> storageList, final AsyncCallback async)
+	;
 
-    void getVmTypes(String sessionId, final AsyncCallback<List<VmTypeWeb>> async)
-            ;
+	void getSystemConfig(String sessionId, final AsyncCallback<SystemConfigWeb> async)
+	;
 
-    void setVmTypes(String sessionId, List<VmTypeWeb> vmTypes, final AsyncCallback async)
-            ;
+	void setSystemConfig(String sessionId, SystemConfigWeb systemConfig, final AsyncCallback async)
+	;
 
-    void getCloudInfo(String sessionId, boolean setExternalHostport, final AsyncCallback<CloudInfoWeb> async)
-            ;
+	void getVmTypes(String sessionId, final AsyncCallback<List<VmTypeWeb>> async)
+	;
 
-    void getDownloads(String sessionId, String downloadsUrl, final AsyncCallback<List<DownloadsWeb>> async)
-            ;
+	void setVmTypes(String sessionId, List<VmTypeWeb> vmTypes, final AsyncCallback async)
+	;
+
+	void getCloudInfo(String sessionId, boolean setExternalHostport, final AsyncCallback<CloudInfoWeb> async)
+	;
+
+	void getDownloads(String sessionId, String downloadsUrl, final AsyncCallback<List<DownloadsWeb>> async)
+	;
 }
