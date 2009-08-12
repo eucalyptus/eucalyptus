@@ -48,17 +48,11 @@
     <property name="deps.lib" value="cloud-lib"/>
     <property name="deps.deploy" value="cloud-deploy"/>
     <!--================================== build targets ==================================-->
-    <target name="build-crypto">
-        <ant dir="modules/crypto" inheritall="false"/>
-    </target>
-    <target name="build-workarounds" depends="build-crypto">
-        <ant dir="modules/workarounds" inheritall="false"/>
-    </target>
-    <target name="build-msgs" depends="build-workarounds">
+    <target name="build-msgs">
         <ant dir="modules/msgs" inheritall="false"/>
+        <ant dir="modules/authentication" inheritall="false"/>
     </target>
     <target name="build-core" depends="build-msgs">
-        <ant dir="modules/authentication" inheritall="false"/>
         <ant dir="modules/core" inheritall="false"/>
         <ant dir="modules/wsstack" inheritall="false"/>
     </target>
@@ -81,6 +75,7 @@
     <target name="build-dns-ws" depends="build-core">
         <ant dir="modules/dns" inheritall="false"/>
     </target>
+    <target name="build-nogwt" depends="build-core,build-eucalyptus-ws"/>
     <target name="build-eucalyptus" depends="build-core,build-www,build-eucalyptus-ws"/>
     <target name="build-walrus" depends="build-walrus-ws"/>
     <target name="build-ebs" depends="build-ebs-ws"/>
@@ -89,10 +84,10 @@
     <!--================================== clean targets ==================================-->
     <target name="clean-msgs">
         <ant dir="modules/msgs" inheritall="false" target="clean"/>
+        <ant dir="modules/authentication" inheritall="false" target="clean"/>
     </target>
     <target name="clean-core" depends="clean-msgs">
         <ant dir="modules/core" inheritall="false" target="clean"/>
-        <ant dir="modules/authentication" inheritall="false" target="clean"/>
         <ant dir="modules/wsstack" inheritall="false" target="clean"/>
     </target>
     <target name="clean-www" depends="clean-eucalyptus-ws">
@@ -126,8 +121,6 @@
         <delete dir="${deps.dir}"/>
         <delete dir="${deps.lib.dir}"/>
         <delete dir="target"/>
-        <ant dir="modules/workarounds" inheritall="false" target="clean"/>
-        <ant dir="modules/crypto" inheritall="false" target="clean"/>
     </target>
     <!--================================== install target ==================================-->
     <target name="install" depends="build">
@@ -144,7 +137,7 @@
             </fileset>
         </copy>
         <mkdir dir="${euca.conf.dir}"/>
-	<chmod dir="${euca.conf.dir}" perm="0755"/>
+  	<chmod dir="${euca.conf.dir}" perm="0755"/>
         <mkdir dir="${euca.var.dir}/"/>
         <mkdir dir="${euca.var.dir}/db"/>
         <mkdir dir="${euca.var.dir}/keys"/>
@@ -153,12 +146,10 @@
         <mkdir dir="${euca.log.dir}"/>
         <mkdir dir="${euca.var.dir}/webapps"/>
         <mkdir dir="${euca.var.dir}/modules"/>
-        <ant dir="modules/workarounds" inheritall="false" target="install"/>
-        <ant dir="modules/crypto" inheritall="false" target="install"/>
         <ant dir="modules/msgs" inheritall="false" target="install"/>
+        <ant dir="modules/authentication" inheritall="false" target="install"/>
         <ant dir="modules/core" inheritall="false" target="install"/>
         <ant dir="modules/wsstack" inheritall="false" target="install"/>
-        <ant dir="modules/authentication" inheritall="false" target="install"/>
         <ant dir="modules/www" inheritall="false" target="install"/>
         <ant dir="modules/interface" inheritall="false" target="install"/>
         <ant dir="modules/cluster-manager" inheritall="false" target="install"/>

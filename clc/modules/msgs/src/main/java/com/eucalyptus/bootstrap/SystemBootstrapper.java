@@ -4,10 +4,12 @@ import java.io.File;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.mule.MuleServer;
 
 import com.eucalyptus.util.BaseDirectory;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.google.common.collect.Lists;
+
 
 public class SystemBootstrapper implements Bootstrapper {
   private static Logger LOG = Logger.getLogger( SystemBootstrapper.class );
@@ -54,20 +56,26 @@ public class SystemBootstrapper implements Bootstrapper {
   }
   @Override
   public boolean start() {
-    LOG.info("Hello there in start.");
-    hello();
+    LOG.info("Starting Eucalyptus.");
     return true;
   }
   @Override
   public boolean load() {
     LOG.info("Looking for Eucalyptus components in: " + BaseDirectory.LIB.toString( ) );
+    MuleServer server = new MuleServer("eucalyptus-bootstrap.xml");
+//    MuleServer server = new MuleServer( "eucalyptus-mule.xml" );
+//    server.start( false, true );
     File libDir = new File( BaseDirectory.LIB.toString( ) );
     for( File f : libDir.listFiles( ) ) {
       if( f.getName( ).startsWith( EucalyptusProperties.NAME ) ) {
         LOG.info( "Found eucalyptus jar: " + f.getName( ) );
       }
     }
-    hello();
+    //load credentials
+    //bind DNS
+    //bind http
+    //bind webservices 
+    //setup db
     return true;
   }
   private static native void shutdown(boolean reload);

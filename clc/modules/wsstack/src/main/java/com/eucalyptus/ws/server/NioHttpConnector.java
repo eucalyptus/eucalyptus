@@ -2,10 +2,11 @@ package com.eucalyptus.ws.server;
 
 import org.apache.log4j.Logger;
 import org.mule.api.MuleException;
+import org.mule.api.lifecycle.Initialisable;
 import org.mule.api.lifecycle.InitialisationException;
 import org.mule.transport.AbstractConnector;
 
-public class NioHttpConnector extends AbstractConnector {
+public class NioHttpConnector extends AbstractConnector implements Initialisable {
 
   private static Logger LOG      = Logger.getLogger( NioHttpConnector.class );
 
@@ -47,5 +48,6 @@ public class NioHttpConnector extends AbstractConnector {
 
   @Override
   protected void doInitialise( ) throws InitialisationException {
+    LOG.info("Setting up web services stack.");
   }
 }

@@ -101,10 +101,9 @@ typedef struct {
     char temp[1024]; \
     snprintf(temp,1024,arg,##__VA_ARGS__); \
     jvm_opt.optionString=strdup(temp); \
-    jvm_opt.extraInfo=NULL; \
 } while(0)
 static char *jvm_default_opts[] = {
-	    "-Xbootclasspath/p:%1$s/usr/share/eucalyptus/eucalyptus-crypto.jar:%1$s/usr/share/eucalyptus/eucalyptus-workarounds.jar",
+	    "-Xbootclasspath/p:%1$s/usr/share/eucalyptus/openjdk-crypto.jar:%1$s/usr/share/eucalyptus/eucalyptus-workarounds.jar",
 	    "-Xmx256m",
 	    "-XX:+UseConcMarkSweepGC",
 	    "-Djava.security.policy=%1$s/etc/eucalyptus/cloud.d/security.policy",

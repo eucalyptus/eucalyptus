@@ -40,6 +40,9 @@ public class Credentials {
      WSSConfig.getDefaultWSConfig( ).addJceProvider( "BC", BouncyCastleProvider.class.getCanonicalName( ) );
      WSSConfig.getDefaultWSConfig( ).setTimeStampStrict( true );
      WSSConfig.getDefaultWSConfig( ).setEnableSignatureConfirmation( true );
+  }
+  
+  public static void check() {
     try {
       getUser( "admin" );
     } catch ( NoSuchUserException e ) {

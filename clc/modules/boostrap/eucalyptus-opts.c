@@ -23,35 +23,39 @@
 
 const char *eucalyptus_opts_purpose = "";
 
-const char *eucalyptus_opts_usage = "Usage: eucalyptus-cloud [OPTIONS]...";
+const char *eucalyptus_opts_usage = "Usage: Eucalyptus [OPTIONS]...";
 
 const char *eucalyptus_opts_description = "";
 
 const char *eucalyptus_opts_help[] = {
   "      --help                 Print help and exit",
-  "      --version              Print version and exit",
-  "\nEucalyptus Options:",
-  "  -p, --pidfile=filename     Location for the pidfile.  \n                               (default=`/var/run/eucalyptus-cloud.pid')",
+  "  -V, --version              Print version and exit",
+  "\nEucalyptus Configuration & Environment:",
   "  -u, --user=username        User to drop privs to after starting.  \n                               (default=`eucalyptus')",
   "  -h, --home=directory       Eucalyptus home directory.  (default=`/')",
-  "  -C, --check                Check on Eucalyptus.  (default=off)",
-  "  -S, --stop                 Stop Eucalyptus.  (default=off)",
-  "  -d, --detach               Daemonize Eucalyptus.  (default=off)",
-  "  -v, --verbose              Verbose logging.  (default=off)",
+  "  -D, --define=STRING        Set system properties.",
+  "  -v, --verbose              Verbose console output. Note: log file output is \n                               not controlled by this flag.  (default=off)",
   "  -o, --out=filename         Redirect standard out to file.  (default=`&1')",
   "  -e, --err=filename         Redirect standard error to file.  (default=`&2')",
-  "  -D, --define=STRING        Set system properties.",
+  "\nEucalyptus Runtime Options:",
+  "  -C, --check                Check on Eucalyptus.  (default=off)",
+  "  -S, --stop                 Stop Eucalyptus.  (default=off)",
+  "  -f, --fork                 Fork and daemonize Eucalyptus.  (default=on)",
+  "      --pidfile=filename     Location for the pidfile.  \n                               (default=`/var/run/eucalyptus-cloud.pid')",
   "\nJava VM Options:",
-  "  -V, --jvm-version          Show java -version of the underlying VM.  \n                               (default=off)",
-  "  -J, --jvm-name=jvm-name    Which jvm type to run (see jvm.cfg).  \n                               (default=`-server')",
-  "  -X, --jvm-args=STRING      Arguments to pass to the JVM.",
   "  -j, --java-home=directory  Alternative way to specify JAVA_HOME.  \n                               (default=`/usr/lib/jvm/java-6-openjdk')",
+  "  -J, --jvm-name=jvm-name    Which JVM type to run (see jvm.cfg).  \n                               (default=`-server')",
+  "  -X, --jvm-args=STRING      Arguments to pass to the JVM.",
+  "  -d, --debug                Launch with debugger enabled.  (default=off)",
+  "      --debug-port=INT       Set the port to use for the debugger.  \n                               (default=`5005')",
+  "      --debug-suspend        Set the port to use for the debugger.  \n                               (default=on)",
     0
 };
 
 typedef enum {ARG_NO
   , ARG_FLAG
   , ARG_STRING
+  , ARG_INT
 } arguments_arg_type;
 
 static
@@ -74,48 +78,53 @@ void clear_given (struct eucalyptus_opts *args_info)
 {
   args_info->help_given = 0 ;
   args_info->version_given = 0 ;
-  args_info->pidfile_given = 0 ;
   args_info->user_given = 0 ;
   args_info->home_given = 0 ;
-  args_info->check_given = 0 ;
-  args_info->stop_given = 0 ;
-  args_info->detach_given = 0 ;
+  args_info->define_given = 0 ;
   args_info->verbose_given = 0 ;
   args_info->out_given = 0 ;
   args_info->err_given = 0 ;
-  args_info->define_given = 0 ;
-  args_info->jvm_version_given = 0 ;
+  args_info->check_given = 0 ;
+  args_info->stop_given = 0 ;
+  args_info->fork_given = 0 ;
+  args_info->pidfile_given = 0 ;
+  args_info->java_home_given = 0 ;
   args_info->jvm_name_given = 0 ;
   args_info->jvm_args_given = 0 ;
-  args_info->java_home_given = 0 ;
+  args_info->debug_given = 0 ;
+  args_info->debug_port_given = 0 ;
+  args_info->debug_suspend_given = 0 ;
 }
 
 static
 void clear_args (struct eucalyptus_opts *args_info)
 {
-  args_info->pidfile_arg = gengetopt_strdup ("/var/run/eucalyptus-cloud.pid");
-  args_info->pidfile_orig = NULL;
   args_info->user_arg = gengetopt_strdup ("eucalyptus");
   args_info->user_orig = NULL;
   args_info->home_arg = gengetopt_strdup ("/");
   args_info->home_orig = NULL;
-  args_info->check_flag = 0;
-  args_info->stop_flag = 0;
-  args_info->detach_flag = 0;
+  args_info->define_arg = NULL;
+  args_info->define_orig = NULL;
   args_info->verbose_flag = 0;
   args_info->out_arg = gengetopt_strdup ("&1");
   args_info->out_orig = NULL;
   args_info->err_arg = gengetopt_strdup ("&2");
   args_info->err_orig = NULL;
-  args_info->define_arg = NULL;
-  args_info->define_orig = NULL;
-  args_info->jvm_version_flag = 0;
+  args_info->check_flag = 0;
+  args_info->stop_flag = 0;
+  args_info->fork_flag = 1;
+  args_info->pidfile_arg = gengetopt_strdup ("/var/run/eucalyptus-cloud.pid");
+  args_info->pidfile_orig = NULL;
+  args_info->java_home_arg = gengetopt_strdup ("/usr/lib/jvm/java-6-openjdk");
+  args_info->java_home_orig = NULL;
   args_info->jvm_name_arg = gengetopt_strdup ("-server");
   args_info->jvm_name_orig = NULL;
   args_info->jvm_args_arg = NULL;
   args_info->jvm_args_orig = NULL;
-  args_info->java_home_arg = gengetopt_strdup ("/usr/lib/jvm/java-6-openjdk");
-  args_info->java_home_orig = NULL;
+  args_info->debug_flag = 0;
+  args_info->debug_port_arg = 5005;
+  args_info->debug_port_orig = NULL;
+  args_info->debug_suspend_flag = 1;
   
 }
 
@@ -126,24 +135,26 @@ void init_args_info(struct eucalyptus_opts *args_info)
 
   args_info->help_help = eucalyptus_opts_help[0] ;
   args_info->version_help = eucalyptus_opts_help[1] ;
-  args_info->pidfile_help = eucalyptus_opts_help[3] ;
-  args_info->user_help = eucalyptus_opts_help[4] ;
-  args_info->home_help = eucalyptus_opts_help[5] ;
-  args_info->check_help = eucalyptus_opts_help[6] ;
-  args_info->stop_help = eucalyptus_opts_help[7] ;
-  args_info->detach_help = eucalyptus_opts_help[8] ;
-  args_info->verbose_help = eucalyptus_opts_help[9] ;
-  args_info->out_help = eucalyptus_opts_help[10] ;
-  args_info->err_help = eucalyptus_opts_help[11] ;
-  args_info->define_help = eucalyptus_opts_help[12] ;
+  args_info->user_help = eucalyptus_opts_help[3] ;
+  args_info->home_help = eucalyptus_opts_help[4] ;
+  args_info->define_help = eucalyptus_opts_help[5] ;
   args_info->define_min = 0;
   args_info->define_max = 0;
-  args_info->jvm_version_help = eucalyptus_opts_help[14] ;
-  args_info->jvm_name_help = eucalyptus_opts_help[15] ;
-  args_info->jvm_args_help = eucalyptus_opts_help[16] ;
+  args_info->verbose_help = eucalyptus_opts_help[6] ;
+  args_info->out_help = eucalyptus_opts_help[7] ;
+  args_info->err_help = eucalyptus_opts_help[8] ;
+  args_info->check_help = eucalyptus_opts_help[10] ;
+  args_info->stop_help = eucalyptus_opts_help[11] ;
+  args_info->fork_help = eucalyptus_opts_help[12] ;
+  args_info->pidfile_help = eucalyptus_opts_help[13] ;
+  args_info->java_home_help = eucalyptus_opts_help[15] ;
+  args_info->jvm_name_help = eucalyptus_opts_help[16] ;
+  args_info->jvm_args_help = eucalyptus_opts_help[17] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->java_home_help = eucalyptus_opts_help[17] ;
+  args_info->debug_help = eucalyptus_opts_help[18] ;
+  args_info->debug_port_help = eucalyptus_opts_help[19] ;
+  args_info->debug_suspend_help = eucalyptus_opts_help[20] ;
   
 }
 
@@ -219,6 +230,7 @@ free_string_field (char **s)
 
 /** @brief generic value variable */
 union generic_value {
+    int int_arg;
     char *string_arg;
 };
 
@@ -265,22 +277,23 @@ static void
 arguments_release (struct eucalyptus_opts *args_info)
 {
 
-  free_string_field (&(args_info->pidfile_arg));
-  free_string_field (&(args_info->pidfile_orig));
   free_string_field (&(args_info->user_arg));
   free_string_field (&(args_info->user_orig));
   free_string_field (&(args_info->home_arg));
   free_string_field (&(args_info->home_orig));
+  free_multiple_string_field (args_info->define_given, &(args_info->define_arg), &(args_info->define_orig));
   free_string_field (&(args_info->out_arg));
   free_string_field (&(args_info->out_orig));
   free_string_field (&(args_info->err_arg));
   free_string_field (&(args_info->err_orig));
-  free_multiple_string_field (args_info->define_given, &(args_info->define_arg), &(args_info->define_orig));
+  free_string_field (&(args_info->pidfile_arg));
+  free_string_field (&(args_info->pidfile_orig));
+  free_string_field (&(args_info->java_home_arg));
+  free_string_field (&(args_info->java_home_orig));
   free_string_field (&(args_info->jvm_name_arg));
   free_string_field (&(args_info->jvm_name_orig));
   free_multiple_string_field (args_info->jvm_args_given, &(args_info->jvm_args_arg), &(args_info->jvm_args_orig));
-  free_string_field (&(args_info->java_home_arg));
-  free_string_field (&(args_info->java_home_orig));
+  free_string_field (&(args_info->debug_port_orig));
   
   
 
@@ -322,32 +335,36 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "help", 0, 0 );
   if (args_info->version_given)
     write_into_file(outfile, "version", 0, 0 );
-  if (args_info->pidfile_given)
-    write_into_file(outfile, "pidfile", args_info->pidfile_orig, 0);
   if (args_info->user_given)
     write_into_file(outfile, "user", args_info->user_orig, 0);
   if (args_info->home_given)
     write_into_file(outfile, "home", args_info->home_orig, 0);
-  if (args_info->check_given)
-    write_into_file(outfile, "check", 0, 0 );
-  if (args_info->stop_given)
-    write_into_file(outfile, "stop", 0, 0 );
-  if (args_info->detach_given)
-    write_into_file(outfile, "detach", 0, 0 );
+  write_multiple_into_file(outfile, args_info->define_given, "define", args_info->define_orig, 0);
   if (args_info->verbose_given)
     write_into_file(outfile, "verbose", 0, 0 );
   if (args_info->out_given)
     write_into_file(outfile, "out", args_info->out_orig, 0);
   if (args_info->err_given)
     write_into_file(outfile, "err", args_info->err_orig, 0);
-  write_multiple_into_file(outfile, args_info->define_given, "define", args_info->define_orig, 0);
-  if (args_info->jvm_version_given)
-    write_into_file(outfile, "jvm-version", 0, 0 );
+  if (args_info->check_given)
+    write_into_file(outfile, "check", 0, 0 );
+  if (args_info->stop_given)
+    write_into_file(outfile, "stop", 0, 0 );
+  if (args_info->fork_given)
+    write_into_file(outfile, "fork", 0, 0 );
+  if (args_info->pidfile_given)
+    write_into_file(outfile, "pidfile", args_info->pidfile_orig, 0);
+  if (args_info->java_home_given)
+    write_into_file(outfile, "java-home", args_info->java_home_orig, 0);
   if (args_info->jvm_name_given)
     write_into_file(outfile, "jvm-name", args_info->jvm_name_orig, 0);
   write_multiple_into_file(outfile, args_info->jvm_args_given, "jvm-args", args_info->jvm_args_orig, 0);
-  if (args_info->java_home_given)
-    write_into_file(outfile, "java-home", args_info->java_home_orig, 0);
+  if (args_info->debug_given)
+    write_into_file(outfile, "debug", 0, 0 );
+  if (args_info->debug_port_given)
+    write_into_file(outfile, "debug-port", args_info->debug_port_orig, 0);
+  if (args_info->debug_suspend_given)
+    write_into_file(outfile, "debug-suspend", 0, 0 );
   
 
   i = EXIT_SUCCESS;
@@ -605,6 +622,16 @@ arguments_required2 (struct eucalyptus_opts *args_info, const char *prog_name, c
   
   
   /* checks for dependences among options */
+  if (args_info->debug_port_given && ! args_info->debug_given)
+    {
+      fprintf (stderr, "%s: '--debug-port' option depends on option 'debug'%s\n", prog_name, (additional_error ? additional_error : ""));
+      error = 1;
+    }
+  if (args_info->debug_suspend_given && ! args_info->debug_given)
+    {
+      fprintf (stderr, "%s: '--debug-suspend' option depends on option 'debug'%s\n", prog_name, (additional_error ? additional_error : ""));
+      error = 1;
+    }
 
   return error;
 }
@@ -675,6 +702,9 @@ int update_arg(void *field, char **orig_field,
   case ARG_FLAG:
     *((int *)field) = !*((int *)field);
     break;
+  case ARG_INT:
+    if (val) *((int *)field) = strtol (val, &stop_char, 0);
+    break;
   case ARG_STRING:
     if (val) {
       string_field = (char **)field;
@@ -687,6 +717,17 @@ int update_arg(void *field, char **orig_field,
     break;
   };
 
+  /* check numeric conversion */
+  switch(arg_type) {
+  case ARG_INT:
+    if (val && !(stop_char && *stop_char == '\0')) {
+      fprintf(stderr, "%s: invalid numeric value: %s\n", package_name, val);
+      return 1; /* failure */
+    }
+    break;
+  default:
+    ;
+  };
 
   /* store the original value */
   switch(arg_type) {
@@ -789,6 +830,8 @@ void update_multiple_arg(void *field, char ***orig_field,
     *orig_field = (char **) realloc (*orig_field, (field_given + prev_given) * sizeof (char *));
 
     switch(arg_type) {
+    case ARG_INT:
+      *((int **)field) = (int *)realloc (*((int **)field), (field_given + prev_given) * sizeof (int)); break;
     case ARG_STRING:
       *((char ***)field) = (char **)realloc (*((char ***)field), (field_given + prev_given) * sizeof (char *)); break;
     default:
@@ -800,6 +843,8 @@ void update_multiple_arg(void *field, char ***orig_field,
         tmp = list;
         
         switch(arg_type) {
+        case ARG_INT:
+          (*((int **)field))[i + field_given] = tmp->arg.int_arg; break;
         case ARG_STRING:
           (*((char ***)field))[i + field_given] = tmp->arg.string_arg; break;
         default:
@@ -812,6 +857,12 @@ void update_multiple_arg(void *field, char ***orig_field,
   } else { /* set the default value */
     if (default_value && ! field_given) {
       switch(arg_type) {
+      case ARG_INT:
+        if (! *((int **)field)) {
+          *((int **)field) = (int *)malloc (sizeof (int));
+          (*((int **)field))[0] = default_value->int_arg; 
+        }
+        break;
       case ARG_STRING:
         if (! *((char ***)field)) {
           *((char ***)field) = (char **)malloc (sizeof (char *));
@@ -867,42 +918,37 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
 
       static struct option long_options[] = {
         { "help",	0, NULL, 0 },
-        { "version",	0, NULL, 0 },
-        { "pidfile",	1, NULL, 'p' },
+        { "version",	0, NULL, 'V' },
         { "user",	1, NULL, 'u' },
         { "home",	1, NULL, 'h' },
-        { "check",	0, NULL, 'C' },
-        { "stop",	0, NULL, 'S' },
-        { "detach",	0, NULL, 'd' },
+        { "define",	1, NULL, 'D' },
         { "verbose",	0, NULL, 'v' },
         { "out",	1, NULL, 'o' },
         { "err",	1, NULL, 'e' },
-        { "define",	1, NULL, 'D' },
-        { "jvm-version",	0, NULL, 'V' },
+        { "check",	0, NULL, 'C' },
+        { "stop",	0, NULL, 'S' },
+        { "fork",	0, NULL, 'f' },
+        { "pidfile",	1, NULL, 0 },
+        { "java-home",	1, NULL, 'j' },
         { "jvm-name",	1, NULL, 'J' },
         { "jvm-args",	1, NULL, 'X' },
-        { "java-home",	1, NULL, 'j' },
+        { "debug",	0, NULL, 'd' },
+        { "debug-port",	1, NULL, 0 },
+        { "debug-suspend",	0, NULL, 0 },
         { NULL,	0, NULL, 0 }
       };
 
-      c = getopt_long (argc, argv, "p:u:h:CSdvo:e:D:VJ:X:j:", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:D:vo:e:CSfj:J:X:d", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
       switch (c)
         {
-        case 'p':	/* Location for the pidfile..  */
-        
-        
-          if (update_arg( (void *)&(args_info->pidfile_arg), 
-               &(args_info->pidfile_orig), &(args_info->pidfile_given),
-              &(local_args_info.pidfile_given), optarg, 0, "/var/run/eucalyptus-cloud.pid", ARG_STRING,
-              check_ambiguity, override, 0, 0,
-              "pidfile", 'p',
-              additional_error))
-            goto failure;
-        
-          break;
+        case 'V':	/* Print version and exit.  */
+          arguments_print_version ();
+          arguments_free (&local_args_info);
+          exit (EXIT_SUCCESS);
+
         case 'u':	/* User to drop privs to after starting..  */
         
         
@@ -927,37 +973,16 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
             goto failure;
         
           break;
-        case 'C':	/* Check on Eucalyptus..  */
+        case 'D':	/* Set system properties..  */
         
-        
-          if (update_arg((void *)&(args_info->check_flag), 0, &(args_info->check_given),
-              &(local_args_info.check_given), optarg, 0, 0, ARG_FLAG,
-              check_ambiguity, override, 1, 0, "check", 'C',
+          if (update_multiple_arg_temp(&define_list, 
+              &(local_args_info.define_given), optarg, 0, 0, ARG_STRING,
+              "define", 'D',
               additional_error))
             goto failure;
         
           break;
-        case 'S':	/* Stop Eucalyptus..  */
-        
-        
-          if (update_arg((void *)&(args_info->stop_flag), 0, &(args_info->stop_given),
-              &(local_args_info.stop_given), optarg, 0, 0, ARG_FLAG,
-              check_ambiguity, override, 1, 0, "stop", 'S',
-              additional_error))
-            goto failure;
-        
-          break;
-        case 'd':	/* Daemonize Eucalyptus..  */
-        
-        
-          if (update_arg((void *)&(args_info->detach_flag), 0, &(args_info->detach_given),
-              &(local_args_info.detach_given), optarg, 0, 0, ARG_FLAG,
-              check_ambiguity, override, 1, 0, "detach", 'd',
-              additional_error))
-            goto failure;
-        
-          break;
-        case 'v':	/* Verbose logging..  */
+        case 'v':	/* Verbose console output. Note: log file output is not controlled by this flag..  */
         
         
           if (update_arg((void *)&(args_info->verbose_flag), 0, &(args_info->verbose_given),
@@ -991,26 +1016,49 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
             goto failure;
         
           break;
-        case 'D':	/* Set system properties..  */
+        case 'C':	/* Check on Eucalyptus..  */
         
-          if (update_multiple_arg_temp(&define_list, 
-              &(local_args_info.define_given), optarg, 0, 0, ARG_STRING,
-              "define", 'D',
+        
+          if (update_arg((void *)&(args_info->check_flag), 0, &(args_info->check_given),
+              &(local_args_info.check_given), optarg, 0, 0, ARG_FLAG,
+              check_ambiguity, override, 1, 0, "check", 'C',
               additional_error))
             goto failure;
         
           break;
-        case 'V':	/* Show java -version of the underlying VM..  */
+        case 'S':	/* Stop Eucalyptus..  */
         
         
-          if (update_arg((void *)&(args_info->jvm_version_flag), 0, &(args_info->jvm_version_given),
-              &(local_args_info.jvm_version_given), optarg, 0, 0, ARG_FLAG,
-              check_ambiguity, override, 1, 0, "jvm-version", 'V',
+          if (update_arg((void *)&(args_info->stop_flag), 0, &(args_info->stop_given),
+              &(local_args_info.stop_given), optarg, 0, 0, ARG_FLAG,
+              check_ambiguity, override, 1, 0, "stop", 'S',
               additional_error))
             goto failure;
         
           break;
-        case 'J':	/* Which jvm type to run (see jvm.cfg)..  */
+        case 'f':	/* Fork and daemonize Eucalyptus..  */
+        
+        
+          if (update_arg((void *)&(args_info->fork_flag), 0, &(args_info->fork_given),
+              &(local_args_info.fork_given), optarg, 0, 0, ARG_FLAG,
+              check_ambiguity, override, 1, 0, "fork", 'f',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'j':	/* Alternative way to specify JAVA_HOME..  */
+        
+        
+          if (update_arg( (void *)&(args_info->java_home_arg), 
+               &(args_info->java_home_orig), &(args_info->java_home_given),
+              &(local_args_info.java_home_given), optarg, 0, "/usr/lib/jvm/java-6-openjdk", ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "java-home", 'j',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'J':	/* Which JVM type to run (see jvm.cfg)..  */
         
         
           if (update_arg( (void *)&(args_info->jvm_name_arg), 
@@ -1031,14 +1079,12 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
             goto failure;
         
           break;
-        case 'j':	/* Alternative way to specify JAVA_HOME..  */
+        case 'd':	/* Launch with debugger enabled..  */
         
         
-          if (update_arg( (void *)&(args_info->java_home_arg), 
-               &(args_info->java_home_orig), &(args_info->java_home_given),
-              &(local_args_info.java_home_given), optarg, 0, "/usr/lib/jvm/java-6-openjdk", ARG_STRING,
-              check_ambiguity, override, 0, 0,
-              "java-home", 'j',
+          if (update_arg((void *)&(args_info->debug_flag), 0, &(args_info->debug_given),
+              &(local_args_info.debug_given), optarg, 0, 0, ARG_FLAG,
+              check_ambiguity, override, 1, 0, "debug", 'd',
               additional_error))
             goto failure;
         
@@ -1051,12 +1097,48 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
             exit (EXIT_SUCCESS);
           }
 
-          if (strcmp (long_options[option_index].name, "version") == 0) {
-            arguments_print_version ();
-            arguments_free (&local_args_info);
-            exit (EXIT_SUCCESS);
+          /* Location for the pidfile..  */
+          if (strcmp (long_options[option_index].name, "pidfile") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->pidfile_arg), 
+                 &(args_info->pidfile_orig), &(args_info->pidfile_given),
+                &(local_args_info.pidfile_given), optarg, 0, "/var/run/eucalyptus-cloud.pid", ARG_STRING,
+                check_ambiguity, override, 0, 0,
+                "pidfile", '-',
+                additional_error))
+              goto failure;
+          
           }
-
+          /* Set the port to use for the debugger..  */
+          else if (strcmp (long_options[option_index].name, "debug-port") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->debug_port_arg), 
+                 &(args_info->debug_port_orig), &(args_info->debug_port_given),
+                &(local_args_info.debug_port_given), optarg, 0, "5005", ARG_INT,
+                check_ambiguity, override, 0, 0,
+                "debug-port", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Set the port to use for the debugger..  */
+          else if (strcmp (long_options[option_index].name, "debug-suspend") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->debug_suspend_flag), 0, &(args_info->debug_suspend_given),
+                &(local_args_info.debug_suspend_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "debug-suspend", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          
+          break;
         case '?':	/* Invalid option.  */
           /* `getopt_long' already printed an error message.  */
           goto failure;

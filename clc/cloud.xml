@@ -78,7 +78,7 @@
     <target name="run" description="--> run Eucalyptus (for production)." if="localenv.EUCALYPTUS">
         <java classname="edu.ucsb.eucalyptus.Main" fork="true" failonerror="true" dir="${euca.home}">
             <jvmarg value="-server"/>
-            <jvmarg value="-Xbootclasspath/p:${euca.lib.dir}/eucalyptus-crypto.jar:${euca.lib.dir}/eucalyptus-workarounds.jar"/>
+            <jvmarg value="-Xbootclasspath/p:${euca.lib.dir}/openjdk-crypto.jar:${euca.lib.dir}/eucalyptus-workarounds.jar"/>
             <jvmarg value="-Xmx${jvm.heap}"/>
             <jvmarg value="-XX:+UseConcMarkSweepGC"/>
             <jvmarg value="-Djava.security.policy=${security.policy}"/>
@@ -90,7 +90,7 @@
     <target name="debug" description="--> debug Eucalyptus (for debugging)." if="localenv.EUCALYPTUS">
         <java classname="edu.ucsb.eucalyptus.Main" fork="true" failonerror="true" dir="${euca.home}">
             <jvmarg value="-Xdebug"/>
-            <jvmarg value="-Xbootclasspath/p:${euca.lib.dir}/eucalyptus-crypto.jar:${euca.lib.dir}/eucalyptus-workarounds.jar"/>
+            <jvmarg value="-Xbootclasspath/p:${euca.lib.dir}/openjdk-crypto.jar:${euca.lib.dir}/eucalyptus-workarounds.jar"/>
             <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"/>
             <jvmarg value="-server"/>
             <jvmarg value="-Xbootclasspath/p:${euca.lib.dir}/eucalyptus-crypto.jar:${euca.lib.dir}/eucalyptus-workarounds.jar"/>

@@ -21,7 +21,7 @@ extern "C" {
 
 #ifndef ARGUMENTS_PACKAGE
 /** @brief the program name */
-#define ARGUMENTS_PACKAGE "eucalyptus-cloud"
+#define ARGUMENTS_PACKAGE "Eucalyptus"
 #endif
 
 #ifndef ARGUMENTS_VERSION
@@ -34,64 +34,71 @@ struct eucalyptus_opts
 {
   const char *help_help; /**< @brief Print help and exit help description.  */
   const char *version_help; /**< @brief Print version and exit help description.  */
-  char * pidfile_arg;	/**< @brief Location for the pidfile. (default='/var/run/eucalyptus-cloud.pid').  */
-  char * pidfile_orig;	/**< @brief Location for the pidfile. original value given at command line.  */
-  const char *pidfile_help; /**< @brief Location for the pidfile. help description.  */
   char * user_arg;	/**< @brief User to drop privs to after starting. (default='eucalyptus').  */
   char * user_orig;	/**< @brief User to drop privs to after starting. original value given at command line.  */
   const char *user_help; /**< @brief User to drop privs to after starting. help description.  */
   char * home_arg;	/**< @brief Eucalyptus home directory. (default='/').  */
   char * home_orig;	/**< @brief Eucalyptus home directory. original value given at command line.  */
   const char *home_help; /**< @brief Eucalyptus home directory. help description.  */
-  int check_flag;	/**< @brief Check on Eucalyptus. (default=off).  */
-  const char *check_help; /**< @brief Check on Eucalyptus. help description.  */
-  int stop_flag;	/**< @brief Stop Eucalyptus. (default=off).  */
-  const char *stop_help; /**< @brief Stop Eucalyptus. help description.  */
-  int detach_flag;	/**< @brief Daemonize Eucalyptus. (default=off).  */
-  const char *detach_help; /**< @brief Daemonize Eucalyptus. help description.  */
-  int verbose_flag;	/**< @brief Verbose logging. (default=off).  */
-  const char *verbose_help; /**< @brief Verbose logging. help description.  */
+  char ** define_arg;	/**< @brief Set system properties..  */
+  char ** define_orig;	/**< @brief Set system properties. original value given at command line.  */
+  unsigned int define_min; /**< @brief Set system properties.'s minimum occurreces */
+  unsigned int define_max; /**< @brief Set system properties.'s maximum occurreces */
+  const char *define_help; /**< @brief Set system properties. help description.  */
+  int verbose_flag;	/**< @brief Verbose console output. Note: log file output is not controlled by this flag. (default=off).  */
+  const char *verbose_help; /**< @brief Verbose console output. Note: log file output is not controlled by this flag. help description.  */
   char * out_arg;	/**< @brief Redirect standard out to file. (default='&1').  */
   char * out_orig;	/**< @brief Redirect standard out to file. original value given at command line.  */
   const char *out_help; /**< @brief Redirect standard out to file. help description.  */
   char * err_arg;	/**< @brief Redirect standard error to file. (default='&2').  */
   char * err_orig;	/**< @brief Redirect standard error to file. original value given at command line.  */
   const char *err_help; /**< @brief Redirect standard error to file. help description.  */
-  char ** define_arg;	/**< @brief Set system properties..  */
-  char ** define_orig;	/**< @brief Set system properties. original value given at command line.  */
-  unsigned int define_min; /**< @brief Set system properties.'s minimum occurreces */
-  unsigned int define_max; /**< @brief Set system properties.'s maximum occurreces */
-  const char *define_help; /**< @brief Set system properties. help description.  */
-  int jvm_version_flag;	/**< @brief Show java -version of the underlying VM. (default=off).  */
-  const char *jvm_version_help; /**< @brief Show java -version of the underlying VM. help description.  */
-  char * jvm_name_arg;	/**< @brief Which jvm type to run (see jvm.cfg). (default='-server').  */
-  char * jvm_name_orig;	/**< @brief Which jvm type to run (see jvm.cfg). original value given at command line.  */
-  const char *jvm_name_help; /**< @brief Which jvm type to run (see jvm.cfg). help description.  */
+  int check_flag;	/**< @brief Check on Eucalyptus. (default=off).  */
+  const char *check_help; /**< @brief Check on Eucalyptus. help description.  */
+  int stop_flag;	/**< @brief Stop Eucalyptus. (default=off).  */
+  const char *stop_help; /**< @brief Stop Eucalyptus. help description.  */
+  int fork_flag;	/**< @brief Fork and daemonize Eucalyptus. (default=on).  */
+  const char *fork_help; /**< @brief Fork and daemonize Eucalyptus. help description.  */
+  char * pidfile_arg;	/**< @brief Location for the pidfile. (default='/var/run/eucalyptus-cloud.pid').  */
+  char * pidfile_orig;	/**< @brief Location for the pidfile. original value given at command line.  */
+  const char *pidfile_help; /**< @brief Location for the pidfile. help description.  */
+  char * java_home_arg;	/**< @brief Alternative way to specify JAVA_HOME. (default='/usr/lib/jvm/java-6-openjdk').  */
+  char * java_home_orig;	/**< @brief Alternative way to specify JAVA_HOME. original value given at command line.  */
+  const char *java_home_help; /**< @brief Alternative way to specify JAVA_HOME. help description.  */
+  char * jvm_name_arg;	/**< @brief Which JVM type to run (see jvm.cfg). (default='-server').  */
+  char * jvm_name_orig;	/**< @brief Which JVM type to run (see jvm.cfg). original value given at command line.  */
+  const char *jvm_name_help; /**< @brief Which JVM type to run (see jvm.cfg). help description.  */
   char ** jvm_args_arg;	/**< @brief Arguments to pass to the JVM..  */
   char ** jvm_args_orig;	/**< @brief Arguments to pass to the JVM. original value given at command line.  */
   unsigned int jvm_args_min; /**< @brief Arguments to pass to the JVM.'s minimum occurreces */
   unsigned int jvm_args_max; /**< @brief Arguments to pass to the JVM.'s maximum occurreces */
   const char *jvm_args_help; /**< @brief Arguments to pass to the JVM. help description.  */
-  char * java_home_arg;	/**< @brief Alternative way to specify JAVA_HOME. (default='/usr/lib/jvm/java-6-openjdk').  */
-  char * java_home_orig;	/**< @brief Alternative way to specify JAVA_HOME. original value given at command line.  */
-  const char *java_home_help; /**< @brief Alternative way to specify JAVA_HOME. help description.  */
+  int debug_flag;	/**< @brief Launch with debugger enabled. (default=off).  */
+  const char *debug_help; /**< @brief Launch with debugger enabled. help description.  */
+  int debug_port_arg;	/**< @brief Set the port to use for the debugger. (default='5005').  */
+  char * debug_port_orig;	/**< @brief Set the port to use for the debugger. original value given at command line.  */
+  const char *debug_port_help; /**< @brief Set the port to use for the debugger. help description.  */
+  int debug_suspend_flag;	/**< @brief Set the port to use for the debugger. (default=on).  */
+  const char *debug_suspend_help; /**< @brief Set the port to use for the debugger. help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int version_given ;	/**< @brief Whether version was given.  */
-  unsigned int pidfile_given ;	/**< @brief Whether pidfile was given.  */
   unsigned int user_given ;	/**< @brief Whether user was given.  */
   unsigned int home_given ;	/**< @brief Whether home was given.  */
-  unsigned int check_given ;	/**< @brief Whether check was given.  */
-  unsigned int stop_given ;	/**< @brief Whether stop was given.  */
-  unsigned int detach_given ;	/**< @brief Whether detach was given.  */
+  unsigned int define_given ;	/**< @brief Whether define was given.  */
   unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
   unsigned int out_given ;	/**< @brief Whether out was given.  */
   unsigned int err_given ;	/**< @brief Whether err was given.  */
-  unsigned int define_given ;	/**< @brief Whether define was given.  */
-  unsigned int jvm_version_given ;	/**< @brief Whether jvm-version was given.  */
+  unsigned int check_given ;	/**< @brief Whether check was given.  */
+  unsigned int stop_given ;	/**< @brief Whether stop was given.  */
+  unsigned int fork_given ;	/**< @brief Whether fork was given.  */
+  unsigned int pidfile_given ;	/**< @brief Whether pidfile was given.  */
+  unsigned int java_home_given ;	/**< @brief Whether java-home was given.  */
   unsigned int jvm_name_given ;	/**< @brief Whether jvm-name was given.  */
   unsigned int jvm_args_given ;	/**< @brief Whether jvm-args was given.  */
-  unsigned int java_home_given ;	/**< @brief Whether java-home was given.  */
+  unsigned int debug_given ;	/**< @brief Whether debug was given.  */
+  unsigned int debug_port_given ;	/**< @brief Whether debug-port was given.  */
+  unsigned int debug_suspend_given ;	/**< @brief Whether debug-suspend was given.  */
 
 } ;
 

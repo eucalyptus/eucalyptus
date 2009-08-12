@@ -75,7 +75,13 @@ public class GenerateJiBXBinding {
 
   public static void processField( Field field ) {
     Class itsType = field.getType( );
-    if ( field.getName( ).startsWith( "__" ) || field.getName( ).startsWith( "class$" ) || field.getName( ).equals( "metaClass" ) || field.getName( ).startsWith( "JiBX_" ) || itsType.getSimpleName( ).endsWith( "Channel" ) || itsType.getSimpleName( ).endsWith( "HttpResponseStatus" ) ) {
+    if ( field.getName( ).startsWith( "__" ) 
+        || field.getName( ).startsWith( "$" ) 
+        || field.getName( ).startsWith( "class$" ) 
+        || field.getName( ).equals( "metaClass" ) 
+        || field.getName( ).startsWith( "JiBX_" ) 
+        || itsType.getSimpleName( ).endsWith( "Channel" ) 
+        || itsType.getSimpleName( ).endsWith( "HttpResponseStatus" ) ) {
       return;
     } else if ( itsType.getSuperclass( ) != null && "EucalyptusData".equals( itsType.getSuperclass( ).getSimpleName( ) ) ) {
       typeBind( field.getName( ), itsType.getName( ) );

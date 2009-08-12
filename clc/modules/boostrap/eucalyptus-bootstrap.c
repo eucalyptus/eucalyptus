@@ -292,7 +292,7 @@ int main( int argc, char *argv[ ] ) {
 	uid_t uid = 0;
 	gid_t gid = 0;
 	if( arguments( argc, argv, args ) != 0 ) exit( 1 );
-	debug = args->verbose_flag;
+	debug = args->verbose_flag || args->debug_flag;
 	if( args->stop_flag == 1 ) return stop_child( args );
 	if( checkuser( GETARG( args, user ), &uid, &gid ) == 0 ) return 1;
 	char* java_home_user = GETARG(args,java_home);
@@ -342,20 +342,15 @@ int main( int argc, char *argv[ ] ) {
 		return 1;
 	}
 	__debug( "Running w/ LD_LIBRARY_PATH=%s", getenv( "LD_LIBRARY_PATH" ) );
-	if( args->detach_flag == 1 ) {
-		pid = fork( );
-		if( pid == -1 ) {
-			__error( "Cannot detach from parent process" );
-			return 1;
+	if(args->fork_flag) {
+		if(args->debug_flag) {
+			__debug("Ignoring --fork because of --debug.");
+		} else {
+			pid = fork( );
+			__die(( pid == -1 ),"Cannot detach from parent process" );
+			if( pid != 0 ) return wait_child( args, pid );
+			setsid( );
 		}
-		if( pid != 0 ) {
-			if( 200 >= 10 )//HACK: args->wait
-				return wait_child( args, pid );
-			else return 0;
-		}
-#ifndef NO_SETSID
-		setsid( );
-#endif
 	}
 	set_output(GETARG(args,out), GETARG(args,err));
 	while( ( pid = fork( ) ) != -1 ) {
@@ -367,7 +362,7 @@ int main( int argc, char *argv[ ] ) {
 		while( waitpid( pid, &status, 0 ) != pid );
 		if( WIFEXITED( status ) ) {
 			status = WEXITSTATUS( status );
-			if( args->jvm_version_flag != 1 && status != 122 ) unlink( GETARG( args, pidfile ) );
+			if( status != 122 ) unlink( GETARG( args, pidfile ) );
 			if( status == 123 ) {
 				__debug( "Reloading service" );
 				continue;
@@ -505,16 +500,19 @@ int java_init(euca_opts *args, java_home_t *data) {
     char* java_class_path = java_library_path(args);
     __debug("Using classpath:\n%s",java_class_path);
 #define JVM_MAX_OPTS 128
-    opt=(JavaVMOption *)malloc(JVM_MAX_OPTS*sizeof(JavaVMOption));
     int x = -1, i;
-
-    while(jvm_default_opts[++x] != NULL) JVM_ARG(opt[x],jvm_default_opts[x],GETARG(args,home));
+    opt=(JavaVMOption *)malloc(JVM_MAX_OPTS*sizeof(JavaVMOption));
+    for(i=0;i<JVM_MAX_OPTS;i++) opt[i].extraInfo=NULL;
+    if(args->debug_flag) {
+    	JVM_ARG(opt[++x],"-Xdebug");
+    	JVM_ARG(opt[++x],"-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=%1$d",GETARG(args,debug_port));
+    }
+    while(jvm_default_opts[++x]!= NULL) JVM_ARG(opt[x],jvm_default_opts[x],GETARG(args,home));
     for (i=0; i<args->jvm_args_given; i++,x++) JVM_ARG(opt[x],"-X%s",args->jvm_args_arg[i]);
     for (i=0; i<args->define_given; i++,x++) JVM_ARG(opt[x],"-D%s",args->define_arg[i]);
 
     opt[x].optionString=java_class_path;
     opt[x].extraInfo=NULL;
-
     opt[++x].optionString="abort";
     opt[x].extraInfo=java_fail;
 
@@ -528,6 +526,7 @@ int java_init(euca_opts *args, java_home_t *data) {
         for (x=0; x<arg.nOptions; x++) __debug("|   \"%-80.80s\" (0x%p)",opt[x].optionString, opt[x].extraInfo);
         __debug("+-------------------------------------------------------");
     }
+    __debug("Starting JVM.");
     jint ret=(*hotspot_main)(&jvm, &env, &arg);
     __die(ret<0,"Failed to create JVM");
     java_load_bootstrapper();

@@ -52,6 +52,8 @@ public class Main {
   public static void main( String[] args ) throws Exception
   {
     Credentials.init( );
+
+    Credentials.check( );
     StartupChecks.doChecks();
     
 
@@ -68,6 +70,7 @@ public class Main {
       WalrusProperties.update();      
       Messaging.send( WalrusProperties.WALRUS_REF, new InitializeWalrusType() );
     } catch (Exception e) {}
+
     try {
       if( System.getProperty("euca.ebs.disable") == null ) {
         StorageProperties.update();
