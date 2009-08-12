@@ -8,9 +8,9 @@ public interface Bootstrapper {
   public static String SERVICES_PROPERTY = "euca.services";
   public static String MODEL_PROPERTY = "euca.model";
   public String getVersion();
-  public boolean check();
-  public boolean destroy();
-  public boolean stop();
-  public boolean start();
-  public boolean load();
+  public boolean check() throws Exception;
+  public boolean destroy() throws Exception;
+  public boolean stop() throws Exception;
+  public boolean start() throws Exception;
+  public boolean load() throws Exception;
 }

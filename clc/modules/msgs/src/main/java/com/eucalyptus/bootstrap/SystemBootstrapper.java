@@ -3,6 +3,9 @@ package com.eucalyptus.bootstrap;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import java.util.jar.JarEntry;
@@ -26,17 +29,10 @@ import com.google.common.collect.Lists;
 
 public class SystemBootstrapper implements Bootstrapper {
   private static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );
-  private static SystemBootstrapper singleton;
-  private static MuleContext        context;
-
-  private SystemBootstrapper( ) {
-  }
-
   static {
     LOG.info( "Loaded Bootstrapper." );
   }
-  private static MuleServer server;
-
+  private static SystemBootstrapper singleton;
   public static Bootstrapper getInstance( ) {
     synchronized ( SystemBootstrapper.class ) {
       if ( singleton == null ) {
@@ -48,42 +44,44 @@ public class SystemBootstrapper implements Bootstrapper {
     }
     return singleton;
   }
+  private MuleContext        context;
+  private List<ConfigResource> configs = Lists.newArrayList( );
+  private List<Bootstrapper> bootstrappers = Lists.newArrayList( );
 
-  @Override
-  public String getVersion( ) {
-    return System.getProperty( "euca.version" );
-  }
-
-  @Override
-  public boolean check( ) {
-    LOG.info( "Hello there in check." );
-    return true;
-  }
+  private SystemBootstrapper( ) { }
 
   @Override
   public boolean destroy( ) {
-    LOG.info( "Hello there in destroy." );
     return true;
   }
 
   @Override
-  public boolean stop( ) {
-    LOG.info( "Hello there in stop." );
+  public boolean stop( ) throws Exception {
+    this.context.stop( );
     return true;
   }
 
   @Override
-  public boolean start( ) {
+  public boolean start( ) throws Exception {
     LOG.info( "Starting Eucalyptus." );
-    return true;
+    try {
+      context.start( );
+      for( Bootstrapper b : this.bootstrappers ) {
+        LOG.info( "-> Invoking bootsrapper " + b.getClass( ).getSimpleName( ) + ".start()" );
+        b.load( );
+      }
+      return true;
+    } catch ( Exception e ) {
+      LOG.error( e,e );
+      return false;
+    }
   }
 
+  @SuppressWarnings( "deprecation" )
   @Override
-  public boolean load( ) {
+  public boolean load( ) throws Exception {
     LOG.info( "Looking for Eucalyptus components in: " + BaseDirectory.LIB.toString( ) );
-//    server = new MuleServer("eucalyptus-bootstrap.xml");
-//    server.start( true, true );
-    List<ConfigResource> confs = Lists.newArrayList( );
+    
     File libDir = new File( BaseDirectory.LIB.toString( ) );
     for ( File f : libDir.listFiles( ) ) {
       if ( f.getName( ).startsWith( EucalyptusProperties.NAME ) ) {
@@ -91,22 +89,40 @@ public class SystemBootstrapper implements Bootstrapper {
           JarFile jar = new JarFile( f );
           JarEntry entry = jar.getJarEntry( Bootstrapper.PROPERTIES );
           InputStream in = jar.getInputStream( entry );
-          LOG.info( "Found eucalyptus jar: " + f.getName( ) );
           Properties props = new Properties( );
-          props.load( in );
+          Enumeration<JarEntry> jarList = jar.entries( );
+          URLClassLoader classLoader = URLClassLoader.newInstance( new URL[]{ f.getAbsoluteFile( ).toURL( ) } );
+
+          LOG.info( "Found eucalyptus component jar: " + f.getName( ) );
+          while( jarList.hasMoreElements( ) ) {
+            JarEntry j = jarList.nextElement( );
+              if( j.getName( ).endsWith( ".class" ) ) {
+                String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll(".class","");
+                Class c = classLoader.loadClass( classGuess );
+                if( Bootstrapper.class.isAssignableFrom( c ) ) {
+                  try {
+                    Bootstrapper b = (Bootstrapper) c.newInstance( );
+                    this.bootstrappers.add( b );
+                    LOG.info( "-> Registered bootsrapper instance: " + c.getSimpleName( ) );
+                  } catch ( Exception e ) {
+                    LOG.info( "-> Failed to create boostrapper instance: " + c.getSimpleName( ) );
+                  }
+                }
+            }            
+          }
+
           LOG.info( "-> Loaded properties..." );
+          props.load( in );
           props.list( System.out );
           String servicesEntryPath = props.getProperty( Bootstrapper.SERVICES_PROPERTY );//TODO: null check hi.
           JarEntry servicesEntry = jar.getJarEntry( Bootstrapper.BASEDIR + servicesEntryPath );
           ConfigResource rsc = new ConfigResource( servicesEntryPath, jar.getInputStream( servicesEntry ) );
-          confs.add( rsc );
-//          new MuleApplicationContext(server.getMuleContext( ), server.getMuleContext( ).getRegistry( ), conf);
-
+          configs.add( rsc );
           //          String model = props.getProperty( Bootstrapper.MODEL_PROPERTY );
 //          JarEntry modelEntry = jar.getJarEntry( Bootstrapper.BASEDIR + model );
           //TODO: finish up here.
         } catch ( Exception e ) {
-          LOG.info( e, e );
+          LOG.trace( e, e );
         }
       }
     }
@@ -117,12 +133,25 @@ public class SystemBootstrapper implements Bootstrapper {
     //setup db
     try {
       LOG.info( "-> Configuring..." );
-      confs.add( new ConfigResource( "eucalyptus-bootstrap.xml" ) );
-      context = new DefaultMuleContextFactory( ).createMuleContext( new SpringXmlConfigurationBuilder( confs.toArray( new ConfigResource[]{} ) ) );
-      context.start( );
+      configs.add( new ConfigResource( "eucalyptus-bootstrap.xml" ) );
+      context = new DefaultMuleContextFactory( ).createMuleContext( new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[]{} ) ) );
+      for( Bootstrapper b : this.bootstrappers ) {
+        LOG.info( "-> Invoking bootsrapper " + b.getClass( ).getSimpleName( ) + ".load()" );
+        b.load( );
+      }
     } catch ( Exception e ) {
       LOG.info( e, e );
     }
+    return true;
+  }
+  
+  @Override
+  public String getVersion( ) {
+    return System.getProperty( "euca.version" );
+  }
+
+  @Override
+  public boolean check( ) {
     return true;
   }
 

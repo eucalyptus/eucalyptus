@@ -30,7 +30,6 @@ public class HsqldbBootstrapper implements Bootstrapper {
   
   @Override
   public boolean load( ) {
-    //TODO: setup hsqldb server properties here.
     Server db = new Server( );
     db.setProperties(null/*props*/);
     db.start();
@@ -38,8 +37,7 @@ public class HsqldbBootstrapper implements Bootstrapper {
   }
 
   @Override
-  public boolean start( ) {
-    //TODO: load discovered hibernate stuff here.
+  public boolean start( ) throws Exception {
     return false;
   }
 
@@ -53,6 +51,7 @@ public class HsqldbBootstrapper implements Bootstrapper {
   }
 
   public void setFileName( String fileName ) {
+    LOG.info("Setting hsqldb filename="+fileName);
     this.fileName = fileName;
   }
   
