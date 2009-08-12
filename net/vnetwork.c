@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdarg.h>
+#include <ifaddrs.h>
 
 #include <sys/ioctl.h>
 #include <net/if.h>  
@@ -24,7 +25,20 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
   uint32_t nw=0, nm=0, unw=0, unm=0, dns=0, bc=0, rt=0, rc=0, slashnet=0;
   int vlan=0, numaddrs=1;
   char cmd[256];
-  
+
+  {
+    uint32_t *ips=NULL, *nms=NULL;
+    int len, i;
+    len=0;
+    rc = getdevinfo("eth0", &ips, &nms, &len);
+    logprintfl(EUCADEBUG, "NET: %d/%d\n", rc, len);
+    for (i=0; i<len-1; i++) {
+      logprintfl(EUCADEBUG, "%s/%s\n", hex2dot(ips[i]), hex2dot(nms[i]));
+    }
+    if (ips) free(ips);
+    if (nms) free(nms);
+  }
+
   if (param_check("vnetInit", vnetconfig, mode, eucahome, path, role, pubInterface, numberofaddrs, network, netmask, broadcast, nameserver, router, daemon, bridgedev)) return;
   
   if (!vnetconfig->initialized) {
@@ -2003,6 +2017,55 @@ uint32_t dot2hex(char *in) {
   c = c<<8;
   
   return(a|b|c|d);
+}
+
+int getdevinfo(char *dev, uint32_t **outips, uint32_t **outnms, int *len) {
+  struct ifaddrs *ifaddr, *ifa;
+  char host[NI_MAXHOST];
+  int rc, count;
+  
+  rc = getifaddrs(&ifaddr);
+  if (rc) {
+    return(1);
+  }
+  *outips = *outnms = NULL;
+  *len = 0;
+  
+  count=0;
+  for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+    if (!strcmp(ifa->ifa_name, dev)) {
+      if (ifa->ifa_addr->sa_family == AF_INET) {
+	rc = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+	if (!rc) {
+	  void *tmpAddrPtr;
+	  char buf[32];
+	  char *dot;
+	  uint32_t ip, nm;
+	  
+	  count++;
+	  *outips = realloc(*outips, sizeof(uint32_t) * count);
+	  *outnms = realloc(*outnms, sizeof(uint32_t) * count);
+	  
+	  (*outips)[count-1] = dot2hex(host);
+	  
+	  tmpAddrPtr=&((struct sockaddr_in *)ifa->ifa_netmask)->sin_addr;
+	  if (inet_ntop(AF_INET, tmpAddrPtr, buf, 32)) {
+	    (*outnms)[count-1] = dot2hex(buf);
+	    //(0xFFFFFFFF - dot2hex(buf)) | (dot2hex(host) & dot2hex(buf));
+	    //	  nm = dot2hex(buf);
+	    //	  ip = dot2hex(host);
+	    //	  dot = hex2dot( (0xFFFFFFFF - nm) | (ip & nm));
+	    //	  printf("\tnetmask: <%s> <%s>\n", buf, dot);
+	    //	  if (dot) free(dot);
+	  }
+	}
+      }
+    }
+  }
+  freeifaddrs(ifaddr);
+  logprintfl(EUCADEBUG, "SETTING LEN: %d\n", count);
+  *len = count;
+  return(0);
 }
 
 void hex2mac(unsigned char in[6], char **out) {

@@ -818,7 +818,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	  
 	  // power down
 	  if (rc == 0 && len == 0) {
-	    logprintfl(EUCADEBUG, "node idle since %d: %d seconds\n", config->resourcePool[i].idleStart, time(NULL) - config->resourcePool[i].idleStart);
+	    logprintfl(EUCADEBUG, "node %s idle since %d: (%d/%d) seconds\n", config->resourcePool[i].hostname, config->resourcePool[i].idleStart, time(NULL) - config->resourcePool[i].idleStart, config->idleThresh); 
 	    if (!config->resourcePool[i].idleStart) {
 	      config->resourcePool[i].idleStart = time(NULL);
 	    } else if ((time(NULL) - config->resourcePool[i].idleStart) > config->idleThresh) {
@@ -913,37 +913,58 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
       
   return(0);
 }
-int powerUp(resource *res) {
-  int rc,ret;
-  char cmd[256];
 
+int powerUp(resource *res) {
+  int rc,ret,len, i;
+  char cmd[256], *bc=NULL;
+  uint32_t *ips=NULL, *nms=NULL;
+  
   if (config->schedPolicy != SCHEDPOWERSAVE) {
     return(0);
   }
-  logprintfl(EUCADEBUG, "attempting to wake up resource %s(%s/%s)\n", res->hostname, res->ip, res->mac);
-  // try to wake up res
-  rc = 0;
-  ret = 0;
-  if (res->mac[0] != '\0') {
-    snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake %s", vnetconfig->eucahome, res->mac);
-  } else if (res->ip[0] != '\0') {
-    snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake %s", vnetconfig->eucahome, res->ip);
-  } else {
-    ret = rc = 1;
+
+  rc = getdevinfo(vnetconfig->privInterface, &ips, &nms, &len);
+  if (rc) {
+    ips = malloc(sizeof(uint32_t));
+    nms = malloc(sizeof(uint32_t));
+    len = 1;
   }
-  if (!rc) {
-    logprintfl(EUCADEBUG, "waking up powered off host %s(%s/%s): %s\n", res->hostname, res->ip, res->mac, cmd);
-    rc = system(cmd);
-    rc = rc>>8;
-    if (rc) {
-      logprintfl(EUCAERROR, "cmd failed: %d\n", rc);
-      ret = 1;
+  
+  for (i=0; i<len; i++) {
+    logprintfl(EUCADEBUG, "attempting to wake up resource %s(%s/%s)\n", res->hostname, res->ip, res->mac);
+    // try to wake up res
+
+    // broadcast
+    bc = hex2dot((0xFFFFFFFF - nms[i]) | (ips[i] & nms[i]));
+    logprintfl(EUCADEBUG, "trying; %s\n", bc);
+
+    rc = 0;
+    ret = 0;
+    if (res->mac[0] != '\0') {
+      //      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake %s", vnetconfig->eucahome, res->mac);
+      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap wakeonlan -i %s %s", vnetconfig->eucahome, bc, res->mac);
+    } else if (res->ip[0] != '\0') {
+      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake %s", vnetconfig->eucahome, res->ip);
     } else {
-      logprintfl(EUCAERROR, "cmd success: %d\n", rc);
-      changeState(res, RESWAKING);
-      ret = 0;
+      ret = rc = 1;
+    }
+    if (bc) free(bc);
+    if (!rc) {
+      logprintfl(EUCADEBUG, "waking up powered off host %s(%s/%s): %s\n", res->hostname, res->ip, res->mac, cmd);
+      rc = system(cmd);
+      rc = rc>>8;
+      if (rc) {
+	logprintfl(EUCAERROR, "cmd failed: %d\n", rc);
+	ret = 1;
+      } else {
+	logprintfl(EUCAERROR, "cmd success: %d\n", rc);
+	changeState(res, RESWAKING);
+	ret = 0;
+      }
     }
   }
+  if (ips) free(ips);
+  if (nms) free(nms);
   return(ret);
 }
 
@@ -1148,7 +1169,7 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
     
     // new fashion way
     res = &(config->resourcePool[i]);
-    if (res->state == RESUP && resid == -1) {
+    if ((res->state == RESUP || res->state == RESWAKING) && resid == -1) {
       mem = res->availMemory - vm->mem;
       disk = res->availDisk - vm->disk;
       cores = res->availCores - vm->cores;
@@ -2177,12 +2198,12 @@ int init_config(void) {
   rc = get_conf_var(configFile, "POWER_IDLETHRESH", &tmpstr);
   if (rc != 1) {
     logprintfl(EUCAWARN,"parsing config file (%s) for POWER_IDLETHRESH, defaulting to 300 seconds\n", configFile);
-    idleThresh = 30;
+    idleThresh = 300;
   } else {
     idleThresh = atoi(tmpstr);
-    if (idleThresh < 30) {
+    if (idleThresh < 300) {
       logprintfl(EUCAWARN, "POWER_IDLETHRESH set too low (%d seconds), resetting to minimum (300 seconds)\n", idleThresh);
-      idleThresh = 30;
+      idleThresh = 300;
     }
   }
   if (tmpstr) free(tmpstr);
@@ -2398,6 +2419,8 @@ int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHos
       (*res)[*numHosts-1].ncPort = ncport;
       snprintf((*res)[*numHosts-1].ncService, 128, "%s", ncservice);
       snprintf((*res)[*numHosts-1].ncURL, 128, "http://%s:%d/%s", hosts[i], ncport, ncservice);	
+      (*res)[*numHosts-1].state = RESDOWN;
+      (*res)[*numHosts-1].lastState = RESDOWN;
       free(hosts[i]);
       i++;
     }

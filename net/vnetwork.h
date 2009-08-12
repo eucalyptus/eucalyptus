@@ -123,6 +123,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
 int vnetSaveIPTables(vnetConfig *vnetconfig);
 int vnetLoadIPTables(vnetConfig *vnetconfig);
 int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule);
+
 char *hex2dot(uint32_t in);
 uint32_t dot2hex(char *in);
 int mac2ip(vnetConfig *vnetconfig, char *mac, char **ip);
@@ -132,6 +133,8 @@ void hex2mac(unsigned char in[6], char **out);
 int instId2mac(char *instId, char *outmac);
 int zeromac(unsigned char in[6]);
 int maccmp(char *ina, unsigned char inb[6]);
+int getdevinfo(char *dev, uint32_t **outips, uint32_t **outnms, int *len);
+
 
 int check_chain(vnetConfig *vnetconfig, char *userName, char *netName);
 int check_device(char *dev);
