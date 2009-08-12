@@ -21,7 +21,7 @@
 ###############################################################################
 #  Author: Chris Grzegorczyk grze@eucalyptus.com
 ###############################################################################
-
+include ../../../Makedefs
 CC = gcc
 JAVAC = /usr/lib/jvm/java-6-openjdk/bin/javac
 JAR = /usr/lib/jvm/java-6-openjdk/bin/jar
@@ -45,7 +45,12 @@ eucalyptus-cloud: $(OBJS)
 
 ggo:
 	gengetopt --input=arguments.ggo --file-name=eucalyptus-opts --func-name=arguments --arg-struct-name=eucalyptus_opts
-	
+
+install:
+	#$(INSTALL) -m 4750 -o root eucalyptus-cloud $(sbindir)
+	$(INSTALL) -d $(sbindir)
+	$(INSTALL) -m 4750 eucalyptus-cloud $(sbindir)/eucalyptus-cloud
+
 clean:
 	rm -f $(OBJS) eucalyptus-cloud
 

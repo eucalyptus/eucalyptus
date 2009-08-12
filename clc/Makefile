@@ -17,6 +17,7 @@ build:
 #		echo "Cannot find java deps, please run 'make deps' in the 'clc/' subdirectory."; exit 1; fi
 	ANT_OPTS="-Xmx512m" $(ANT) build
 	make -C modules/storage-controller/native
+	make -C modules/bootstrap
 
 run: install 
 	$(ANT) run
@@ -29,8 +30,9 @@ distclean: clean
 
 install: build
 	$(ANT) install
-	@$(INSTALL) -m 644 cloud.xml $(etcdir)/eucalyptus
+#	@$(INSTALL) -m 644 cloud.xml $(etcdir)/eucalyptus
 	make -C modules/storage-controller/native install
+	make -C modules/bootstrap install
 
 deploy: install
 
