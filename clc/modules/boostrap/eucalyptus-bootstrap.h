@@ -103,7 +103,7 @@ typedef struct {
     jvm_opt.optionString=strdup(temp); \
 } while(0)
 static char *jvm_default_opts[] = {
-	    "-Xbootclasspath/p:%1$s/usr/share/eucalyptus/openjdk-crypto.jar:%1$s/usr/share/eucalyptus/eucalyptus-workarounds.jar",
+	    "-Xbootclasspath/p:%1$s/usr/share/eucalyptus/openjdk-crypto.jar",
 	    "-Xmx256m",
 	    "-XX:+UseConcMarkSweepGC",
 	    "-Djava.security.policy=%1$s/etc/eucalyptus/cloud.d/security.policy",
