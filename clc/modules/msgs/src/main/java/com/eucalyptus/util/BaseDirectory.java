@@ -8,6 +8,7 @@ public enum BaseDirectory {
   HOME( "euca.home" ),
   VAR( "euca.var.dir" ),
   CONF( "euca.conf.dir" ),
+  LIB( "euca.lib.dir" ),
   LOG( "euca.log.dir" );
   private static Logger LOGG = Logger.getLogger( BaseDirectory.class );
 

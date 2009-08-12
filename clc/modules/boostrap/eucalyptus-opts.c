@@ -37,7 +37,7 @@ const char *eucalyptus_opts_help[] = {
   "  -C, --check                Check on Eucalyptus.  (default=off)",
   "  -S, --stop                 Stop Eucalyptus.  (default=off)",
   "  -d, --detach               Daemonize Eucalyptus.  (default=off)",
-  "  -v, --verbose              Verbose loggin.  (default=on)",
+  "  -v, --verbose              Verbose logging.  (default=off)",
   "  -o, --out=filename         Redirect standard out to file.  (default=`&1')",
   "  -e, --err=filename         Redirect standard error to file.  (default=`&2')",
   "  -D, --define=STRING        Set system properties.",
@@ -102,7 +102,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->check_flag = 0;
   args_info->stop_flag = 0;
   args_info->detach_flag = 0;
-  args_info->verbose_flag = 1;
+  args_info->verbose_flag = 0;
   args_info->out_arg = gengetopt_strdup ("&1");
   args_info->out_orig = NULL;
   args_info->err_arg = gengetopt_strdup ("&2");
@@ -957,7 +957,7 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
             goto failure;
         
           break;
-        case 'v':	/* Verbose loggin..  */
+        case 'v':	/* Verbose logging..  */
         
         
           if (update_arg((void *)&(args_info->verbose_flag), 0, &(args_info->verbose_given),

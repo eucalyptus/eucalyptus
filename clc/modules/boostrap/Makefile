@@ -1,3 +1,27 @@
+###############################################################################
+#  Copyright (c) 2009  Eucalyptus Systems, Inc.
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, only version 3 of the License.
+#
+#
+#  This file is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#  for more details.
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#  Please contact Eucalyptus Systems, Inc., 130 Castilian
+#  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+#  if you need additional information or have any questions.
+#
+###############################################################################
+#  Author: Chris Grzegorczyk grze@eucalyptus.com
+###############################################################################
+
 CC = gcc
 JAVAC = /usr/lib/jvm/java-6-openjdk/bin/javac
 JAR = /usr/lib/jvm/java-6-openjdk/bin/jar

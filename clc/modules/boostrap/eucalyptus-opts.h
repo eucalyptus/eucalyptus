@@ -49,8 +49,8 @@ struct eucalyptus_opts
   const char *stop_help; /**< @brief Stop Eucalyptus. help description.  */
   int detach_flag;	/**< @brief Daemonize Eucalyptus. (default=off).  */
   const char *detach_help; /**< @brief Daemonize Eucalyptus. help description.  */
-  int verbose_flag;	/**< @brief Verbose loggin. (default=on).  */
-  const char *verbose_help; /**< @brief Verbose loggin. help description.  */
+  int verbose_flag;	/**< @brief Verbose logging. (default=off).  */
+  const char *verbose_help; /**< @brief Verbose logging. help description.  */
   char * out_arg;	/**< @brief Redirect standard out to file. (default='&1').  */
   char * out_orig;	/**< @brief Redirect standard out to file. original value given at command line.  */
   const char *out_help; /**< @brief Redirect standard out to file. help description.  */

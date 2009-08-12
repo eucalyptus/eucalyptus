@@ -67,7 +67,6 @@ public class GenerateJiBXBinding {
     append( "<mapping abstract=\"true\" class=\"" + name + "\">" );
     indent++;
     for ( Field f : clazz.getDeclaredFields( ) ) {
-      System.out.println("processing "+clazz+"  field="+f.getName( ));
       processField( f );
     }
     indent--;

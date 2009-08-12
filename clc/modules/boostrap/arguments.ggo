@@ -8,7 +8,7 @@ option "home"       h   "Eucalyptus home directory."   string  typestr="director
 option "check"       C   "Check on Eucalyptus."   flag   off
 option "stop"       S   "Stop Eucalyptus."   flag   off
 option "detach"       d   "Daemonize Eucalyptus."   flag   off
-option "verbose"       v   "Verbose loggin."   flag   off
+option "verbose"       v   "Verbose logging."   flag   off
 option "out"       o   "Redirect standard out to file."   string  typestr="filename"  default="&1" no
 option "err"       e   "Redirect standard error to file."   string  typestr="filename"  default="&2" no
 option "define"       D   "Set system properties."   string  optional  multiple
