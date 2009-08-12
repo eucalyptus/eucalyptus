@@ -33,170 +33,173 @@
   -->
 
 <project name="eucalyptus" basedir=".">
-    <import file="modules/module-inc.xml"/>
-    <import file="cloud.xml"/>
-    <!--================================== other vars ==================================-->
-    <loadfile srcfile="../VERSION" property="euca.version">
-        <filterchain>
-            <filterreader classname="org.apache.tools.ant.filters.StripLineBreaks"/>
-        </filterchain>
-    </loadfile>
-    <property name="jvm.heap" value="256m"/>
-    <property name="deps.url" value="http://open.eucalyptus.com/dependencies/${euca.version}"/>
-    <property name="deps.dir" value="deps"/>
-    <property name="deps.lib.dir" value="lib"/>
-    <property name="deps.lib" value="cloud-lib"/>
-    <property name="deps.deploy" value="cloud-deploy"/>
-    <!--================================== build targets ==================================-->
-    <target name="build-msgs">
-        <ant dir="modules/msgs" inheritall="false"/>
-        <ant dir="modules/authentication" inheritall="false"/>
-    </target>
-    <target name="build-core" depends="build-msgs">
-        <ant dir="modules/core" inheritall="false"/>
-        <ant dir="modules/wsstack" inheritall="false"/>
-    </target>
-    <target name="build-www" depends="build-eucalyptus-ws">
-        <ant dir="modules/www" inheritall="false"/> 
-    </target>
-    <target name="build-eucalyptus-ws" depends="build-core">
-        <ant dir="modules/interface" inheritall="false"/>
-        <ant dir="modules/cluster-manager" inheritall="false"/>
-        <ant dir="modules/image-manager" inheritall="false"/>
-        <ant dir="modules/group-manager" inheritall="false"/>
-        <ant dir="modules/key-manager" inheritall="false"/>
-    </target>
-    <target name="build-walrus-ws" depends="build-core">
-        <ant dir="modules/storage-manager" inheritall="false"/>
-    </target>
-    <target name="build-ebs-ws" depends="build-walrus-ws">
-        <ant dir="modules/storage-controller" inheritall="false"/>
-    </target>
-    <target name="build-dns-ws" depends="build-core">
-        <ant dir="modules/dns" inheritall="false"/>
-    </target>
-    <target name="build-nogwt" depends="build-core,build-eucalyptus-ws"/>
-    <target name="build-eucalyptus" depends="build-core,build-www,build-eucalyptus-ws"/>
-    <target name="build-walrus" depends="build-walrus-ws"/>
-    <target name="build-ebs" depends="build-ebs-ws"/>
-    <target name="build-dns" depends="build-dns-ws"/>
-    <target name="build" depends="deps,build-eucalyptus,build-walrus,build-ebs,build-dns"/>
-    <!--================================== clean targets ==================================-->
-    <target name="clean-msgs">
-        <ant dir="modules/msgs" inheritall="false" target="clean"/>
-        <ant dir="modules/authentication" inheritall="false" target="clean"/>
-    </target>
-    <target name="clean-core" depends="clean-msgs">
-        <ant dir="modules/core" inheritall="false" target="clean"/>
-        <ant dir="modules/wsstack" inheritall="false" target="clean"/>
-    </target>
-    <target name="clean-www" depends="clean-eucalyptus-ws">
-        <ant dir="modules/www" inheritall="false" target="clean"/> 
-    </target>
-    <target name="clean-eucalyptus-ws" depends="clean-core">
-        <ant dir="modules/interface" inheritall="false" target="clean"/>
-        <ant dir="modules/cluster-manager" inheritall="false" target="clean"/>
-        <ant dir="modules/image-manager" inheritall="false" target="clean"/>
-        <ant dir="modules/group-manager" inheritall="false" target="clean"/>
-        <ant dir="modules/key-manager" inheritall="false" target="clean"/>
-    </target>
-    <target name="clean-walrus-ws" depends="clean-core">
-        <ant dir="modules/storage-manager" inheritall="false" target="clean"/>
-    </target>
-    <target name="clean-ebs-ws" depends="clean-core">
-        <ant dir="modules/storage-controller" inheritall="false" target="clean"/>
-        <ant dir="modules/storage-controller" inheritall="false" target="clean-jni"/>
-    </target>
-    <target name="clean-dns-ws" depends="clean-core">
-        <ant dir="modules/dns" inheritall="false" target="clean"/>
-    </target>
-    <target name="clean-eucalyptus" depends="clean-core,clean-www,clean-eucalyptus-ws"/>
-    <target name="clean-walrus" depends="clean-walrus-ws"/>
-    <target name="clean-ebs" depends="clean-ebs-ws"/>
-    <target name="clean-dns" depends="clean-dns-ws"/>
-    <target name="clean" depends="clean-eucalyptus,clean-walrus,clean-ebs,clean-dns">
-        <delete dir="${target.dir}"/>
-    </target>
-    <target name="distclean" depends="clean">
-        <delete dir="${deps.dir}"/>
-        <delete dir="${deps.lib.dir}"/>
-        <delete dir="target"/>
-    </target>
-    <!--================================== install target ==================================-->
-    <target name="install" depends="build">
-        <!-- copy libraries over -->
-        <mkdir dir="${euca.lib.dir}"/>
-        <copy todir="${euca.lib.dir}">
-            <fileset dir="${basedir}/target">
-                <include name="**/*.jar"/>
-            </fileset>
-        </copy>
-        <copy todir="${euca.lib.dir}">
-            <fileset dir="${deps.lib.dir}">
-                <include name="**/*"/>
-            </fileset>
-        </copy>
-        <mkdir dir="${euca.conf.dir}"/>
-  	<chmod dir="${euca.conf.dir}" perm="0755"/>
-        <mkdir dir="${euca.var.dir}/"/>
-        <mkdir dir="${euca.var.dir}/db"/>
-        <mkdir dir="${euca.var.dir}/keys"/>
-<!--	<chmod dir="${euca.var.dir}/db" perm="0700"/> 
+  <import file="modules/module-inc.xml"/>
+  <import file="cloud.xml"/>
+  <!--================================== other vars ==================================-->
+  <loadfile srcfile="../VERSION" property="euca.version">
+    <filterchain>
+      <filterreader classname="org.apache.tools.ant.filters.StripLineBreaks"/>
+    </filterchain>
+  </loadfile>
+  <property name="jvm.heap" value="256m"/>
+  <property name="deps.url" value="http://open.eucalyptus.com/dependencies/${euca.version}"/>
+  <property name="deps.dir" value="deps"/>
+  <property name="deps.lib.dir" value="lib"/>
+  <property name="deps.lib" value="cloud-lib"/>
+  <property name="deps.deploy" value="cloud-deploy"/>
+  <!--================================== build targets ==================================-->
+  <target name="build-msgs">
+    <ant dir="modules/msgs" inheritall="false"/>
+    <ant dir="modules/cloud" inheritall="false"/>
+    <ant dir="modules/authentication" inheritall="false"/>
+  </target>
+  <target name="build-core" depends="build-msgs">
+    <ant dir="modules/core" inheritall="false"/>
+    <ant dir="modules/wsstack" inheritall="false"/>
+  </target>
+  <target name="build-www" depends="build-eucalyptus-ws">
+    <ant dir="modules/www" inheritall="false"/>
+  </target>
+  <target name="build-eucalyptus-ws" depends="build-core">
+    <ant dir="modules/interface" inheritall="false"/>
+    <ant dir="modules/cluster-manager" inheritall="false"/>
+    <ant dir="modules/image-manager" inheritall="false"/>
+    <ant dir="modules/group-manager" inheritall="false"/>
+    <ant dir="modules/key-manager" inheritall="false"/>
+  </target>
+  <target name="build-walrus-ws" depends="build-core">
+    <ant dir="modules/storage-manager" inheritall="false"/>
+  </target>
+  <target name="build-ebs-ws" depends="build-walrus-ws">
+    <ant dir="modules/storage-controller" inheritall="false"/>
+  </target>
+  <target name="build-dns-ws" depends="build-core">
+    <ant dir="modules/dns" inheritall="false"/>
+  </target>
+  <target name="build-nogwt" depends="build-core,build-eucalyptus-ws"/>
+  <target name="build-eucalyptus" depends="build-core,build-www,build-eucalyptus-ws"/>
+  <target name="build-walrus" depends="build-walrus-ws"/>
+  <target name="build-ebs" depends="build-ebs-ws"/>
+  <target name="build-dns" depends="build-dns-ws"/>
+  <target name="build" depends="deps,build-eucalyptus,build-walrus,build-ebs,build-dns"/>
+  <!--================================== clean targets ==================================-->
+  <target name="clean-msgs">
+    <ant dir="modules/msgs" inheritall="false" target="clean"/>
+    <ant dir="modules/cloud" inheritall="false" target="clean"/>
+    <ant dir="modules/authentication" inheritall="false" target="clean" />
+  </target>
+  <target name="clean-core" depends="clean-msgs">
+    <ant dir="modules/core" inheritall="false" target="clean" />
+    <ant dir="modules/wsstack" inheritall="false" target="clean"/>
+  </target>
+  <target name="clean-www" depends="clean-eucalyptus-ws">
+    <ant dir="modules/www" inheritall="false" target="clean"/>
+  </target>
+  <target name="clean-eucalyptus-ws" depends="clean-core">
+    <ant dir="modules/interface" inheritall="false" target="clean"/>
+    <ant dir="modules/cluster-manager" inheritall="false" target="clean"/>
+    <ant dir="modules/image-manager" inheritall="false" target="clean"/>
+    <ant dir="modules/group-manager" inheritall="false" target="clean"/>
+    <ant dir="modules/key-manager" inheritall="false" target="clean"/>
+  </target>
+  <target name="clean-walrus-ws" depends="clean-core">
+    <ant dir="modules/storage-manager" inheritall="false" target="clean"/>
+  </target>
+  <target name="clean-ebs-ws" depends="clean-core">
+    <ant dir="modules/storage-controller" inheritall="false" target="clean"/>
+    <ant dir="modules/storage-controller" inheritall="false" target="clean-jni"/>
+  </target>
+  <target name="clean-dns-ws" depends="clean-core">
+    <ant dir="modules/dns" inheritall="false" target="clean"/>
+  </target>
+  <target name="clean-eucalyptus" depends="clean-core,clean-www,clean-eucalyptus-ws"/>
+  <target name="clean-walrus" depends="clean-walrus-ws"/>
+  <target name="clean-ebs" depends="clean-ebs-ws"/>
+  <target name="clean-dns" depends="clean-dns-ws"/>
+  <target name="clean" depends="clean-eucalyptus,clean-walrus,clean-ebs,clean-dns">
+    <delete dir="${target.dir}"/>
+  </target>
+  <target name="distclean" depends="clean">
+    <delete dir="${deps.dir}"/>
+    <delete dir="${deps.lib.dir}"/>
+    <delete dir="target"/>
+  </target>
+  <!--================================== install target ==================================-->
+  <target name="install" depends="build">
+    <!-- copy libraries over -->
+    <mkdir dir="${euca.lib.dir}"/>
+    <copy todir="${euca.lib.dir}">
+      <fileset dir="${basedir}/target">
+        <include name="**/*.jar"/>
+      </fileset>
+    </copy>
+    <copy todir="${euca.lib.dir}">
+      <fileset dir="${deps.lib.dir}">
+        <include name="**/*"/>
+      </fileset>
+    </copy>
+    <mkdir dir="${euca.conf.dir}"/>
+    <chmod dir="${euca.conf.dir}" perm="0755"/>
+    <mkdir dir="${euca.var.dir}/"/>
+    <mkdir dir="${euca.var.dir}/db"/>
+    <mkdir dir="${euca.var.dir}/keys"/>
+    <!--	<chmod dir="${euca.var.dir}/db" perm="0700"/> 
 	<chmod dir="${euca.var.dir}/keys" perm="0700"/> -->
-        <mkdir dir="${euca.log.dir}"/>
-        <mkdir dir="${euca.var.dir}/webapps"/>
-        <mkdir dir="${euca.var.dir}/modules"/>
-        <ant dir="modules/msgs" inheritall="false" target="install"/>
-        <ant dir="modules/authentication" inheritall="false" target="install"/>
-        <ant dir="modules/core" inheritall="false" target="install"/>
-        <ant dir="modules/wsstack" inheritall="false" target="install"/>
-        <ant dir="modules/www" inheritall="false" target="install"/>
-        <ant dir="modules/interface" inheritall="false" target="install"/>
-        <ant dir="modules/cluster-manager" inheritall="false" target="install"/>
-        <ant dir="modules/image-manager" inheritall="false" target="install"/>
-        <ant dir="modules/group-manager" inheritall="false" target="install"/>
-        <ant dir="modules/key-manager" inheritall="false" target="install"/>
-        <ant dir="modules/storage-manager" inheritall="false" target="install"/>
-        <ant dir="modules/storage-controller" inheritall="false" target="install"/>
-        <ant dir="modules/dns" inheritall="false" target="install"/>
-    </target>
-    <!--================================== unzipping target ==================================-->
-    <target name="deps">
-        <condition property="needDownload">
-            <and>
-                <not>
-                    <available file="${deps.lib.dir}/jibx-run*.jar"/>
-                </not>
-                <and>
-                    <not>
-                        <available file="${deps.dir}/${deps.lib}.tar.gz"/>
-                    </not>
-                </and>
-            </and>
-        </condition>
-        <ant target="download-deps"/>
-        <condition property="needUnzipping">
-            <and>
-                <not>
-                    <available file="${deps.lib.dir}/jibx-run*.jar"/>
-                </not>
-                <and>
-                    <available file="${deps.dir}/${deps.lib}.tar.gz"/>
-                </and>
-            </and>
-        </condition>
-        <ant target="untar"/>
-    </target>
-    <target name="dist-deps" depends="deps">
-        <delete dir="${deps.dir}"/>
-    </target>
-    <target name="untar" if="needUnzipping">
-        <untar compression="gzip" src="${deps.dir}/${deps.lib}.tar.gz" dest="${deps.lib.dir}"/>
-    </target>
-    <target name="download-deps" if="needDownload">
-        <mkdir dir="${deps.dir}"/>
-        <mkdir dir="${deps.lib.dir}"/>
-        <!--===========  download the dependency libraries  ===========-->
-        <get src="${deps.url}/${deps.lib}.tar.gz" dest="${deps.dir}/${deps.lib}.tar.gz"/>
-    </target>
+    <mkdir dir="${euca.log.dir}"/>
+    <mkdir dir="${euca.var.dir}/webapps"/>
+    <mkdir dir="${euca.var.dir}/modules"/>
+    <ant dir="modules/msgs" inheritall="false" target="install"/>
+    <ant dir="modules/cloud" inheritall="false" target="install"/>
+    <ant dir="modules/authentication" inheritall="false" target="install"/>
+    <ant dir="modules/core" inheritall="false" target="install"/>
+    <ant dir="modules/wsstack" inheritall="false" target="install"/>
+    <ant dir="modules/www" inheritall="false" target="install"/>
+    <ant dir="modules/interface" inheritall="false" target="install"/>
+    <ant dir="modules/cluster-manager" inheritall="false" target="install"/>
+    <ant dir="modules/image-manager" inheritall="false" target="install"/>
+    <ant dir="modules/group-manager" inheritall="false" target="install"/>
+    <ant dir="modules/key-manager" inheritall="false" target="install"/>
+    <ant dir="modules/storage-manager" inheritall="false" target="install"/>
+    <ant dir="modules/storage-controller" inheritall="false" target="install"/>
+    <ant dir="modules/dns" inheritall="false" target="install"/>
+  </target>
+  <!--================================== unzipping target ==================================-->
+  <target name="deps">
+    <condition property="needDownload">
+      <and>
+        <not>
+          <available file="${deps.lib.dir}/jibx-run*.jar"/>
+        </not>
+        <and>
+          <not>
+            <available file="${deps.dir}/${deps.lib}.tar.gz"/>
+          </not>
+        </and>
+      </and>
+    </condition>
+    <ant target="download-deps"/>
+    <condition property="needUnzipping">
+      <and>
+        <not>
+          <available file="${deps.lib.dir}/jibx-run*.jar"/>
+        </not>
+        <and>
+          <available file="${deps.dir}/${deps.lib}.tar.gz"/>
+        </and>
+      </and>
+    </condition>
+    <ant target="untar"/>
+  </target>
+  <target name="dist-deps" depends="deps">
+    <delete dir="${deps.dir}"/>
+  </target>
+  <target name="untar" if="needUnzipping">
+    <untar compression="gzip" src="${deps.dir}/${deps.lib}.tar.gz" dest="${deps.lib.dir}"/>
+  </target>
+  <target name="download-deps" if="needDownload">
+    <mkdir dir="${deps.dir}"/>
+    <mkdir dir="${deps.lib.dir}"/>
+    <!--===========  download the dependency libraries  ===========-->
+    <get src="${deps.url}/${deps.lib}.tar.gz" dest="${deps.dir}/${deps.lib}.tar.gz"/>
+  </target>
 </project>

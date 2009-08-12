@@ -22,5 +22,5 @@ option "jvm-name"       J   "Which JVM type to run (see jvm.cfg)."   string  typ
 option "jvm-args"       X   "Arguments to pass to the JVM."   string  optional  multiple
 option "debug"       d   "Launch with debugger enabled."   flag   off
 option "debug-port"       -   "Set the port to use for the debugger." int dependon="debug" default="5005" no
-option "debug-suspend"       -   "Set the port to use for the debugger." flag dependon="debug" on
+option "debug-suspend"       -   "Set the port to use for the debugger." flag dependon="debug" off
 

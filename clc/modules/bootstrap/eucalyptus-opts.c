@@ -48,7 +48,7 @@ const char *eucalyptus_opts_help[] = {
   "  -X, --jvm-args=STRING      Arguments to pass to the JVM.",
   "  -d, --debug                Launch with debugger enabled.  (default=off)",
   "      --debug-port=INT       Set the port to use for the debugger.  \n                               (default=`5005')",
-  "      --debug-suspend        Set the port to use for the debugger.  \n                               (default=on)",
+  "      --debug-suspend        Set the port to use for the debugger.  \n                               (default=off)",
     0
 };
 
@@ -124,7 +124,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->debug_flag = 0;
   args_info->debug_port_arg = 5005;
   args_info->debug_port_orig = NULL;
-  args_info->debug_suspend_flag = 1;
+  args_info->debug_suspend_flag = 0;
   
 }
 

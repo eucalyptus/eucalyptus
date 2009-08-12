@@ -505,7 +505,7 @@ int java_init(euca_opts *args, java_home_t *data) {
     for(i=0;i<JVM_MAX_OPTS;i++) opt[i].extraInfo=NULL;
     if(args->debug_flag) {
     	JVM_ARG(opt[++x],"-Xdebug");
-    	JVM_ARG(opt[++x],"-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=%1$d",GETARG(args,debug_port));
+    	JVM_ARG(opt[++x],"-Xrunjdwp:transport=dt_socket,server=y,suspend=%2$s,address=%1$d",GETARG(args,debug_port),(args->debug_suspend_flag?"y":"n"));
     }
     while(jvm_default_opts[++x]!= NULL) JVM_ARG(opt[x],jvm_default_opts[x],GETARG(args,home));
     for (i=0; i<args->jvm_args_given; i++,x++) JVM_ARG(opt[x],"-X%s",args->jvm_args_arg[i]);

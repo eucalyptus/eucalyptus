@@ -2,10 +2,17 @@ package com.eucalyptus.bootstrap;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hsqldb.Server;
+
+import com.eucalyptus.bootstrap.Bootstrapper;
 
 public class HsqldbBootstrapper implements Bootstrapper {
 //TODO: do tsl/ssl using x509
+  private static Logger LOG = Logger.getLogger( HsqldbBootstrapper.class );
+
+  private String fileName;
+
   @Override
   public boolean check( ) {
     return false;
@@ -14,11 +21,6 @@ public class HsqldbBootstrapper implements Bootstrapper {
   @Override
   public boolean destroy( ) {
     return false;
-  }
-
-  @Override
-  public List<String> getDependencies( ) {
-    return null;
   }
 
   @Override
@@ -46,14 +48,15 @@ public class HsqldbBootstrapper implements Bootstrapper {
     return false;
   }
 
-  public static class Config {
-    public static final String driverName = "org.hsqldb.jdbcDriver";
-    public static final String userName = "sa";
-    public static final String password = "eucalyptus";
-    public static final String address = "127.0.0.1";
-    public static final int port = 9001;
-    public static final boolean DEFAULT_NO_SYSTEM_EXIT = true;
-    private static final String URL_PREFIX = "jdbc:hsqldb:hsql://";
+  public String getFileName( ) {
+    return fileName;
+  }
+
+  public void setFileName( String fileName ) {
+    this.fileName = fileName;
+  }
+  
+
 /*
  * hsqldb.script_format=0
 runtime.gc_interval=0
@@ -85,21 +88,4 @@ hsqldb.compatible_version=1.8.0
 122  * | --remote_open   | true|false  | false    | can open databases remotely  |
 123  * +-----------------+-------------+----------+------------------------------+
  */
-    public static String getDrivername( ) {
-      return driverName;
-    }
-    public static String getUsername( ) {
-      return userName;
-    }
-    public static String getPassword( ) {
-      return password;
-    }
-    public static String getAddress( ) {
-      return address;
-    }
-    public static int getPort( ) {
-      return port;
-    }
-    
-  }
 }

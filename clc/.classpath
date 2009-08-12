@@ -15,6 +15,7 @@
 	<classpathentry kind="src" output="modules/crypto/build" path="modules/crypto/src/main/java"/>
 	<classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/main/java"/>
 	<classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
+	<classpathentry kind="src" output="modules/cloud/build" path="modules/cloud/src/main/java"/>
 	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>
 	<classpathentry kind="lib" path="lib/antlr3-3.0.1+dfsg.jar"/>
 	<classpathentry kind="lib" path="lib/antlrall.jar"/>

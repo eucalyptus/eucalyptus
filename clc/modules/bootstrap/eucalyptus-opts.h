@@ -78,7 +78,7 @@ struct eucalyptus_opts
   int debug_port_arg;	/**< @brief Set the port to use for the debugger. (default='5005').  */
   char * debug_port_orig;	/**< @brief Set the port to use for the debugger. original value given at command line.  */
   const char *debug_port_help; /**< @brief Set the port to use for the debugger. help description.  */
-  int debug_suspend_flag;	/**< @brief Set the port to use for the debugger. (default=on).  */
+  int debug_suspend_flag;	/**< @brief Set the port to use for the debugger. (default=off).  */
   const char *debug_suspend_help; /**< @brief Set the port to use for the debugger. help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
