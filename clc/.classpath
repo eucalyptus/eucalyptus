@@ -73,7 +73,7 @@
 	<classpathentry kind="lib" path="lib/hibernate-commons-annotations-3.0.0.GA+euca1.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate-connection-c3p0-3.3.1+euca1.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate-entitymanager-3.4.0.GA+euca1.jar"/>
-	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
+	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar" sourcepath="/home/decker/jbproject/hsqldb-1.8.0.10"/>
 	<classpathentry kind="lib" path="lib/hsqldbutil-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/janino-2.5.15-1.jar"/>
 	<classpathentry kind="lib" path="lib/javassist-3.8.1.jar"/>

@@ -15,13 +15,6 @@ import com.eucalyptus.util.SubDirectory;
 public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
   private static Logger             LOG = Logger.getLogger( HsqldbBootstrapper.class );
   private static HsqldbBootstrapper singleton;
-  /**
-   * 
-   * ${euca.db.host}
-   * ${euca.db.port}
-   * ${euca.db.name}
-   * ${euca.db.jpaname}
-   */
 
   public static HsqldbBootstrapper getInstance( ) {
     synchronized ( HsqldbBootstrapper.class ) {

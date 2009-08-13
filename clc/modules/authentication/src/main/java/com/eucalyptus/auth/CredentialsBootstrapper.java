@@ -30,8 +30,7 @@ public class CredentialsBootstrapper extends Bootstrapper {
 
   @Override
   public boolean start( ) throws Exception {
-    //TODO: this depends on the DB
-//    Credentials.checkAdmin( );
+    Credentials.checkAdmin( );
     return true;
   }
 

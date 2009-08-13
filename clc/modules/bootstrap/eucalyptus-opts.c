@@ -41,7 +41,7 @@ const char *eucalyptus_opts_help[] = {
   "\nEucalyptus Runtime Options:",
   "  -C, --check                   Check on Eucalyptus.  (default=off)",
   "  -S, --stop                    Stop Eucalyptus.  (default=off)",
-  "  -f, --fork                    Fork and daemonize Eucalyptus.  (default=on)",
+  "  -f, --fork                    Fork and daemonize Eucalyptus.  (default=off)",
   "      --pidfile=filename        Location for the pidfile.  \n                                  (default=`/var/run/eucalyptus-cloud.pid')",
   "\nJava VM Options:",
   "  -j, --java-home=directory     Alternative way to specify JAVA_HOME.  \n                                  (default=`/usr/lib/jvm/java-6-openjdk')",
@@ -116,7 +116,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->err_orig = NULL;
   args_info->check_flag = 0;
   args_info->stop_flag = 0;
-  args_info->fork_flag = 1;
+  args_info->fork_flag = 0;
   args_info->pidfile_arg = gengetopt_strdup ("/var/run/eucalyptus-cloud.pid");
   args_info->pidfile_orig = NULL;
   args_info->java_home_arg = gengetopt_strdup ("/usr/lib/jvm/java-6-openjdk");

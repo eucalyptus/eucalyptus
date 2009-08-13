@@ -74,22 +74,16 @@
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage"/>
                 </filtering-router>
                 <filtering-router>
-                    <outbound-endpoint ref="BukkitWS"/>
+                    <outbound-endpoint address="vm://Bukkit" synchronous="false"/>
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.WalrusRequestType"/>
                 </filtering-router>
                 <filtering-router>
-                    <outbound-endpoint ref="StorageWS"/>
+                    <outbound-endpoint address="vm://Storage" synchronous="false"/>
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.StorageRequestType"/>
                 </filtering-router>
              </outbound>
         </service>
 
-        <service name="ReplyQueue">
-            <inbound>
-                <inbound-endpoint ref="ReplyQueueWS"/>
-            </inbound>
-            <component class="com.eucalyptus.ws.util.ReplyQueue"/>
-        </service>
 
     </model>
 </mule>

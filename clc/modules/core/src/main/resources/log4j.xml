@@ -40,20 +40,15 @@
         <param name="Target" value="System.out"/>
         <param name="Threshold" value="INFO"/>
         <layout class="org.apache.log4j.PatternLayout">
-            <param name="ConversionPattern" value="[%c{1}:%t] %m%n"/>
+            <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%-.20c{1}:%.10t] %m%n"/>
         </layout>
     </appender>
-
-<!--    <appender name="logfile" class="org.apache.log4j.AsyncAppender">
-        <appender-ref ref="rolling-logfile"/>
-    </appender>
--->
     <appender name="logfile" class="org.apache.log4j.RollingFileAppender">
         <param name="File" value="${euca.log.dir}/cloud-debug.log"/>
         <param name="MaxFileSize" value="10MB"/>
         <param name="MaxBackupIndex" value="10"/>
         <layout class="org.apache.log4j.PatternLayout">
-            <param name="ConversionPattern" value="%d{HH:mm:ss} [%c{1}:%t] %x %-5p %m%n"/>
+            <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%-.20c{1}:%.10t] %m%n"/>
         </layout>
     </appender>
 

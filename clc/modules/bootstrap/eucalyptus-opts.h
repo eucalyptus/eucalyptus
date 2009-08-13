@@ -60,7 +60,7 @@ struct eucalyptus_opts
   const char *check_help; /**< @brief Check on Eucalyptus. help description.  */
   int stop_flag;	/**< @brief Stop Eucalyptus. (default=off).  */
   const char *stop_help; /**< @brief Stop Eucalyptus. help description.  */
-  int fork_flag;	/**< @brief Fork and daemonize Eucalyptus. (default=on).  */
+  int fork_flag;	/**< @brief Fork and daemonize Eucalyptus. (default=off).  */
   const char *fork_help; /**< @brief Fork and daemonize Eucalyptus. help description.  */
   char * pidfile_arg;	/**< @brief Location for the pidfile. (default='/var/run/eucalyptus-cloud.pid').  */
   char * pidfile_orig;	/**< @brief Location for the pidfile. original value given at command line.  */

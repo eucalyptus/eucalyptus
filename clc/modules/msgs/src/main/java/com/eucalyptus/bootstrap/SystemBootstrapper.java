@@ -26,6 +26,9 @@ public class SystemBootstrapper extends Bootstrapper {
   private static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );
   static {
     LOG.info( "Loaded Bootstrapper." );
+    System.setProperty( "euca.db.host", "127.0.0.1" );
+    System.setProperty( "euca.db.port", "9001" );
+    System.setProperty( "euca.db.password", "" );
   }
   private static SystemBootstrapper singleton;
 
@@ -62,9 +65,10 @@ public class SystemBootstrapper extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     LOG.info( "Starting Eucalyptus." );
+    BootstrapFactory.findAll( );
     try {
       for ( Bootstrapper b : this.bootstrappers ) {
-        LOG.info( "-> Invoking bootsrapper " + b.getClass( ).getSimpleName( ) + ".start()Z" );
+        LOG.info( "-> Invoking bootstrapper " + b.getClass( ).getSimpleName( ) + ".start()Z" );
         b.start( );
       }
       context.start( );
@@ -78,8 +82,20 @@ public class SystemBootstrapper extends Bootstrapper {
   @SuppressWarnings( "deprecation" )
   @Override
   public boolean load( ) throws Exception {
+    ClassLoader currentLoader = Thread.currentThread().getContextClassLoader();
+    try {
+      Enumeration resources = currentLoader.getResources("com.eucalyptus.CloudServiceProvider");
+      while (resources.hasMoreElements()) {
+        System.out.println("========================\n\nElements found:" + resources.nextElement() + "\n\n========================");
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    //TODO: discovery persistence contexts
+    //TODO: determine the role of this component 
     String bootstrapConfig = System.getProperty( Bootstrapper.BOOTSTRAP_CONFIG_PROPERTY );
-    if( bootstrapConfig == null ) {
+    Enumeration<URL> test = SystemBootstrapper.class.getClassLoader( ).getResources( "com.eucalyptus.CloudServiceProvider" );
+    if( bootstrapConfig == null || test == null ) {
       LOG.fatal( "Bootstrap configuration property is undefined: " + Bootstrapper.BOOTSTRAP_CONFIG_PROPERTY );
       return false;
     }
@@ -106,8 +122,6 @@ public class SystemBootstrapper extends Bootstrapper {
         }
       }
     }
-    //load/check credentials
-    //bind DNS
     try {
       LOG.info( "-> Configuring..." );
       context = new DefaultMuleContextFactory( ).createMuleContext( new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) ) );
@@ -115,7 +129,7 @@ public class SystemBootstrapper extends Bootstrapper {
         LOG.info( "-> Found bootsrapper " + b.getClass( ).getSimpleName( ) + ".load()Z" );
       }
       for ( Bootstrapper b : this.bootstrappers ) {
-        LOG.info( "-> Invoking bootsrapper " + b.getClass( ).getSimpleName( ) + ".load()Z" );
+        LOG.info( "-> Invoking bootstrapper " + b.getClass( ).getSimpleName( ) + ".load()Z" );
         b.load( );
       }
     } catch ( Exception e ) {

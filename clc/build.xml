@@ -181,7 +181,7 @@
     <condition property="needUnzipping">
       <and>
         <not>
-          <available file="${deps.lib.dir}/jibx-run*.jar"/>
+          <available file="${deps.lib.dir}/bcprov.jar"/>
         </not>
         <and>
           <available file="${deps.dir}/${deps.lib}.tar.gz"/>

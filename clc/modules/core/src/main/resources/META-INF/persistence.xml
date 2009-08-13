@@ -81,10 +81,10 @@
             <property name="hibernate.connection.driver_class" value="org.hsqldb.jdbcDriver"/>
             <property name="hibernate.connection.url" value="jdbc:hsqldb:hsql://${euca.db.host}:${euca.db.port}/eucalyptus"/>
             <property name="hibernate.connection.username" value="sa"/>
-            <property name="hibernate.connection.password" value="eucalyptus"/>
-            <property name="hibernate.connection.autocommit" value="true"/>
+            <property name="hibernate.connection.password" value="${euca.db.password}"/>
+            <property name="hibernate.connection.autocommit" value="false"/>
             <property name="hibernate.c3p0.min_size" value="16"/>
-            <property name="hibernate.c3p0.max_size" value="16384"/>
+            <property name="hibernate.c3p0.max_size" value="1024"/>
             <property name="hibernate.c3p0.timeout" value="20"/>
             <property name="hibernate.c3p0.max_statements" value="0"/>
             <property name="hibernate.c3p0.idle_test_period" value="20"/>

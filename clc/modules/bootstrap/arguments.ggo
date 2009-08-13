@@ -14,7 +14,7 @@ option "err"       e   "Redirect standard error to file."   string  typestr="fil
 section "Eucalyptus Runtime Options"
 option "check"       C   "Check on Eucalyptus."   flag   off
 option "stop"       S   "Stop Eucalyptus."   flag   off
-option "fork"       f   "Fork and daemonize Eucalyptus."   flag   on
+option "fork"       f   "Fork and daemonize Eucalyptus."   flag   off
 option "pidfile"       -   "Location for the pidfile."   string  typestr="filename"  default="/var/run/eucalyptus-cloud.pid" no
 
 
