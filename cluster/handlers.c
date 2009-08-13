@@ -78,6 +78,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
       int pid, status;
       pid = fork();
       if (pid == 0) {
+	ret = 0;
 	ncs = ncStubCreate(config->resourcePool[j].ncURL, NULL, NULL);
 	if (config->use_wssec) {
 	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
@@ -157,6 +158,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
       int pid, status;
       pid = fork();
       if (pid == 0) {
+	ret=0;
 	ncs = ncStubCreate(config->resourcePool[j].ncURL, NULL, NULL);
 	if (config->use_wssec) {
 	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
@@ -622,7 +624,7 @@ int changeState(resource *in, int newstate) {
 
 int refresh_resources(ncMetadata *ccMeta, int timeout) {
   int i, rc;
-  int pid, status, ret;
+  int pid, status, ret=0;
   int filedes[2];  
   time_t op_start, op_timer;
   ncStub *ncs;
@@ -641,6 +643,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout) {
       logprintfl(EUCADEBUG, "calling %s\n", config->resourcePool[i].ncURL);
       pid = fork();
       if (pid == 0) {
+	ret=0;
 	close(filedes[0]);
 	ncs = ncStubCreate(config->resourcePool[i].ncURL, NULL, NULL);
 	if (config->use_wssec) {
@@ -754,13 +757,14 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   sem_wait(configLock);  
   for (i=0; i<config->numResources; i++) {
     if (config->resourcePool[i].state == RESUP) {
-      int status, ret;
+      int status, ret=0;
       int filedes[2];
       int len, j;
       
       rc = pipe(filedes);
       pid = fork();
       if (pid == 0) {
+	ret=0;
 	close(filedes[0]);
 	ncs = ncStubCreate(config->resourcePool[i].ncURL, NULL, NULL);
 	if (config->use_wssec) {
@@ -940,10 +944,10 @@ int powerUp(resource *res) {
 
     rc = 0;
     ret = 0;
-    if (res->mac[0] != '\0') {
+    if (strcmp(res->mac, "00:00:00:00:00:00")) {
       //      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake %s", vnetconfig->eucahome, res->mac);
       snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap wakeonlan -i %s %s", vnetconfig->eucahome, bc, res->mac);
-    } else if (res->ip[0] != '\0') {
+    } else if (strcmp(res->ip, "0.0.0.0")) {
       snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake %s", vnetconfig->eucahome, res->ip);
     } else {
       ret = rc = 1;
@@ -1362,6 +1366,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	pid = fork();
 	if (pid == 0) {
 	  time_t startRun;
+	  ret=0;
 	  close(filedes[0]);
 	  ncs = ncStubCreate(res->ncURL, NULL, NULL);
 	  if (config->use_wssec) {
@@ -1514,6 +1519,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
       rc = pipe(filedes);
       pid = fork();
       if (pid == 0) {
+	ret=0;
 	close(filedes[0]);
 	ncs = ncStubCreate(config->resourcePool[j].ncURL, NULL, NULL);
 	if (config->use_wssec) {
@@ -1628,6 +1634,7 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
 	int pid, status, ret;
 	pid = fork();
 	if (pid == 0) {
+	  ret=0;
 	  ncs = ncStubCreate(config->resourcePool[j].ncURL, NULL, NULL);
 	  if (config->use_wssec) {
 	    rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
@@ -1717,6 +1724,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	rc = pipe(filedes);
 	pid = fork();
 	if (pid == 0) {
+	  ret=0;
 	  close(filedes[0]);
 	  ncs = ncStubCreate(config->resourcePool[j].ncURL, NULL, NULL);
 	  if (config->use_wssec) {
@@ -2069,6 +2077,7 @@ int init_config(void) {
     int initFail=0;
     
     // DHCP Daemon Configuration Params
+    daemon = NULL;
     daemon = getConfString(configFile, "VNET_DHCPDAEMON");
     if (!daemon) {
       logprintfl(EUCAWARN,"no VNET_DHCPDAEMON defined in config, using default\n");
@@ -2146,7 +2155,7 @@ int init_config(void) {
     sem_wait(vnetConfigLock);
     
     vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubRouter, daemon, dhcpuser, NULL, localIp);
-
+    
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 
     if (pubmacmap) {
@@ -2408,7 +2417,7 @@ int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHos
       bzero(&((*res)[*numHosts-1]), sizeof(resource));
       snprintf((*res)[*numHosts-1].hostname, 128, "%s", hosts[i]);
       {
-	struct hostent *he;
+	struct hostent *he=NULL;
 	struct in_addr ia;
 	he = gethostbyname(hosts[i]);
 	if (he != NULL) {

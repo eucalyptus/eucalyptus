@@ -38,7 +38,8 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
 
     /* zeroed out for cleaner-looking checkpoints and
      * strings that are empty unless set */
-    if (!(inst = calloc(1, sizeof(ncInstance)))) return NULL; 
+    inst = calloc(1, sizeof(ncInstance));
+    if (!inst) return(NULL);
 
     if (userData) {
         strncpy(inst->userData, userData, CHAR_BUFFER_SIZE*10);

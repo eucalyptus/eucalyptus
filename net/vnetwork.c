@@ -26,19 +26,6 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
   int vlan=0, numaddrs=1;
   char cmd[256];
 
-  {
-    uint32_t *ips=NULL, *nms=NULL;
-    int len, i;
-    len=0;
-    rc = getdevinfo("eth0", &ips, &nms, &len);
-    logprintfl(EUCADEBUG, "NET: %d/%d\n", rc, len);
-    for (i=0; i<len-1; i++) {
-      logprintfl(EUCADEBUG, "%s/%s\n", hex2dot(ips[i]), hex2dot(nms[i]));
-    }
-    if (ips) free(ips);
-    if (nms) free(nms);
-  }
-
   if (param_check("vnetInit", vnetconfig, mode, eucahome, path, role, pubInterface, numberofaddrs, network, netmask, broadcast, nameserver, router, daemon, bridgedev)) return;
   
   if (!vnetconfig->initialized) {
@@ -1073,7 +1060,7 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
 
       // create new bridge
       snprintf(newbrname, 32, "eucabr%d", vlan);
-      *outbrname = strdup(newbrname);
+      //      *outbrname = strdup(newbrname);
       rc = check_bridge(newbrname);
       if (rc) {
 	// bridge does not yet exist
