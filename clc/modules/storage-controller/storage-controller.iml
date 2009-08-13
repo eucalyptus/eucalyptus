@@ -17,7 +17,7 @@
     <orderEntry type="module" module-name="core" exported="" />
     <orderEntry type="module" module-name="interface" exported="" />
     <orderEntry type="module" module-name="axis2-transport" exported="" />
-    <orderEntry type="module" module-name="storage-manager" exported="" />
+    <orderEntry type="module" module-name="walrus" exported="" />
   </component>
 </module>
 

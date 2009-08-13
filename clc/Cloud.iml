@@ -104,7 +104,7 @@
     <orderEntry type="module" module-name="group-manager" />
     <orderEntry type="module" module-name="image-manager" />
     <orderEntry type="module" module-name="key-manager" />
-    <orderEntry type="module" module-name="storage-manager" />
+    <orderEntry type="module" module-name="walrus" />
     <orderEntry type="module" module-name="storage-controller" />
     <orderEntry type="module" module-name="dns" />
     <orderEntry type="module" module-name="cluster-manager" />

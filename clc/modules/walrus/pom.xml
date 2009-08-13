@@ -7,7 +7,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <groupId>eucalyptus</groupId>
-    <artifactId>storage-manager</artifactId>
+    <artifactId>walrus</artifactId>
     <version>${euca.version}</version>
     <name>Walrus</name>
     <dependencies>

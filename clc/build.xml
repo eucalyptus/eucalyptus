@@ -68,7 +68,7 @@
     <ant dir="modules/key-manager" inheritall="false"/>
   </target>
   <target name="build-walrus-ws" depends="build-core">
-    <ant dir="modules/storage-manager" inheritall="false"/>
+    <ant dir="modules/walrus" inheritall="false"/>
   </target>
   <target name="build-ebs-ws" depends="build-walrus-ws">
     <ant dir="modules/storage-controller" inheritall="false"/>
@@ -103,7 +103,7 @@
     <ant dir="modules/key-manager" inheritall="false" target="clean"/>
   </target>
   <target name="clean-walrus-ws" depends="clean-core">
-    <ant dir="modules/storage-manager" inheritall="false" target="clean"/>
+    <ant dir="modules/walrus" inheritall="false" target="clean"/>
   </target>
   <target name="clean-ebs-ws" depends="clean-core">
     <ant dir="modules/storage-controller" inheritall="false" target="clean"/>
@@ -159,7 +159,7 @@
     <ant dir="modules/image-manager" inheritall="false" target="install"/>
     <ant dir="modules/group-manager" inheritall="false" target="install"/>
     <ant dir="modules/key-manager" inheritall="false" target="install"/>
-    <ant dir="modules/storage-manager" inheritall="false" target="install"/>
+    <ant dir="modules/walrus" inheritall="false" target="install"/>
     <ant dir="modules/storage-controller" inheritall="false" target="install"/>
     <ant dir="modules/dns" inheritall="false" target="install"/>
   </target>

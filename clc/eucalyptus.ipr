@@ -366,7 +366,7 @@
       <module fileurl="file://$PROJECT_DIR$/modules/key-manager/key-manager.iml" filepath="$PROJECT_DIR$/modules/key-manager/key-manager.iml" />
       <module fileurl="file://$PROJECT_DIR$/modules/msgs/msgs.iml" filepath="$PROJECT_DIR$/modules/msgs/msgs.iml" />
       <module fileurl="file://$PROJECT_DIR$/modules/storage-controller/storage-controller.iml" filepath="$PROJECT_DIR$/modules/storage-controller/storage-controller.iml" />
-      <module fileurl="file://$PROJECT_DIR$/modules/storage-manager/storage-manager.iml" filepath="$PROJECT_DIR$/modules/storage-manager/storage-manager.iml" />
+      <module fileurl="file://$PROJECT_DIR$/modules/walrus/walrus.iml" filepath="$PROJECT_DIR$/modules/walrus/walrus.iml" />
       <module fileurl="file://$PROJECT_DIR$/modules/www/www.iml" filepath="$PROJECT_DIR$/modules/www/www.iml" />
     </modules>
   </component>

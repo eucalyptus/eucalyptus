@@ -33,7 +33,7 @@
         </dependency>
         <dependency>
             <groupId>eucalyptus</groupId>
-            <artifactId>storage-manager</artifactId>
+            <artifactId>walrus</artifactId>
             <version>${euca.version}</version>
         </dependency>
     </dependencies>
