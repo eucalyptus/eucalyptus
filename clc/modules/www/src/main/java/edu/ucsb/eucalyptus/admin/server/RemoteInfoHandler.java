@@ -44,7 +44,7 @@ public class RemoteInfoHandler {
 
   public static synchronized void setStorageList( List<StorageInfoWeb> newStorageList )
   {
-	  //TODO: Chris do messaging stuff
+	  //TODO: Chris do messaging stuff. new UpdateStorageConfigurationType(storageStateType) and send that.
   }
 
   public static synchronized List<StorageInfoWeb> getStorageList()
@@ -56,7 +56,7 @@ public class RemoteInfoHandler {
 
   public static synchronized void setWalrusList( List<WalrusInfoWeb> walrusInfo)
   {
-	  //TODO: Chris do messaging stuff
+	  //TODO: Chris do messaging stuff. new UpdateWalrusConfigurationType(walrusStateType) and send that.
   }
 
   public static List<VmTypeWeb> getVmTypes()

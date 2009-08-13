@@ -568,6 +568,14 @@ public class UpdateWalrusConfigurationType extends WalrusRequestType {
 	Integer totalSnapshotSize;
 
 	def UpdateWalrusConfigurationType() {}
+
+	def UpdateWalrusConfigurationType(WalrusStateType walrusState) {
+		this.bucketRootDirectory = walrusState.getBucketsRootDirectory();
+		this.maxBucketsPerUser = walrusState.getMaxBucketsPerUser();
+		this.maxBucketSize = walrusState.getMaxBucketSizeInMB();
+		this.imageCacheSize = walrusState.getMaxCacheSizeInMB();
+		this.totalSnapshotSize = walrusState.getSnapshotsTotalInGB();
+	}
 }
 
 public class UpdateWalrusConfigurationResponseType extends WalrusResponseType {

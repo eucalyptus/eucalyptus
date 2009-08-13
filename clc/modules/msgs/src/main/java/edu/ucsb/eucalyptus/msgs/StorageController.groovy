@@ -33,28 +33,28 @@ package edu.ucsb.eucalyptus.msgs
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 public class StorageResponseType extends EucalyptusMessage {
-  def StorageResponseType() {}
+	def StorageResponseType() {}
 }
 
 public class StorageRequestType extends EucalyptusMessage {
-  def StorageRequestType() {}
+	def StorageRequestType() {}
 }
 
 
 public class StorageErrorMessageType extends EucalyptusMessage {
-  def StorageErrorMessageType() {
-  }
+	def StorageErrorMessageType() {
+	}
 
-  def StorageErrorMessageType(String code, String message, Integer httpCode, String requestId) {
-    this.code = code;
-    this.message = message;
-    this.requestId = requestId;
-    this.httpCode = httpCode;
-  }
+	def StorageErrorMessageType(String code, String message, Integer httpCode, String requestId) {
+		this.code = code;
+		this.message = message;
+		this.requestId = requestId;
+		this.httpCode = httpCode;
+	}
 
-  public String toString() {
-    return "StrorageErrorMessage:" + message;
-  }
+	public String toString() {
+		return "StrorageErrorMessage:" + message;
+	}
 }
 
 public class InitializeStorageManagerType extends StorageRequestType {
@@ -64,84 +64,92 @@ public class InitializeStorageManagerResponseType extends StorageResponseType {
 }
 
 public class GetStorageVolumeType extends StorageRequestType {
-  String volumeId;
+	String volumeId;
 }
 
 public class GetStorageVolumeResponseType extends StorageResponseType {
-  String volumeId;
-  String size;
-  String status;
-  String createTime;
-  String snapshotId;
-  //These fields are implementation specific. Major and minor device numbers for AoE
-  String actualDeviceName;
+	String volumeId;
+	String size;
+	String status;
+	String createTime;
+	String snapshotId;
+	//These fields are implementation specific. Major and minor device numbers for AoE
+	String actualDeviceName;
 }
 
 public class UpdateStorageConfigurationType extends StorageRequestType {
-  String storageRootDirectory;
-  Integer maxTotalVolumeSize;
-  Integer maxVolumeSize;
-  String storageInterface;
-  Boolean zeroFillVolumes;
+	String storageRootDirectory;
+	Integer maxTotalVolumeSize;
+	Integer maxVolumeSize;
+	String storageInterface;
+	Boolean zeroFillVolumes;
 
-  def UpdateStorageConfigurationType() {}
+	def UpdateStorageConfigurationType() {}
+
+	def UpdateStorageConfigurationType(StorageStateType storageState) {
+		this.storageRootDirectory = storageState.getVolumesPath();
+		this.maxTotalVolumeSize = storageState.getMaxVolumeSizeInGB();
+		this.maxVolumeSize = storageState.getTotalVolumesSizeInGB();
+		this.storageInterface = storageState.getStorageInterface();
+		this.zeroFillVolumes = storageState.getZeroFillVolumes();
+	}
 }
 
 public class UpdateStorageConfigurationResponseType extends StorageResponseType {
 }
 
 public class CreateStorageVolumeType extends StorageRequestType {
-  String volumeId;
-  String size;
-  String snapshotId;
+	String volumeId;
+	String size;
+	String snapshotId;
 
-  def CreateStorageVolumeType() {
-  }
+	def CreateStorageVolumeType() {
+	}
 
-  def CreateStorageVolumeType(final String volumeId, final String size, final String snapshotId) {
-    this.volumeId = volumeId;
-    this.size = size;
-    this.snapshotId = snapshotId;
-  }
+	def CreateStorageVolumeType(final String volumeId, final String size, final String snapshotId) {
+		this.volumeId = volumeId;
+		this.size = size;
+		this.snapshotId = snapshotId;
+	}
 }
 
 public class CreateStorageVolumeResponseType extends StorageResponseType {
-  String size;
-  String volumeId;
-  String snapshotId;
-  String status;
-  String createTime;
+	String size;
+	String volumeId;
+	String snapshotId;
+	String status;
+	String createTime;
 }
 
 public class CreateStorageSnapshotType extends StorageRequestType {
-  String volumeId;
-  String snapshotId;
+	String volumeId;
+	String snapshotId;
 
-  def CreateStorageSnapshotType(final String volumeId, final String snapshotId) {
-    this.volumeId = volumeId;
-    this.snapshotId = snapshotId;
-  }
+	def CreateStorageSnapshotType(final String volumeId, final String snapshotId) {
+		this.volumeId = volumeId;
+		this.snapshotId = snapshotId;
+	}
 
-  def CreateStorageSnapshotType() {
-  }
+	def CreateStorageSnapshotType() {
+	}
 }
 public class CreateStorageSnapshotResponseType extends StorageResponseType {
-  String snapshotId;
-  String volumeId;
-  String status;
-  String startTime;
-  String progress;
+	String snapshotId;
+	String volumeId;
+	String status;
+	String startTime;
+	String progress;
 }
 
 public class DeleteStorageVolumeType extends StorageRequestType {
-  String volumeId;
+	String volumeId;
 
-  def DeleteStorageVolumeType() {
-  }
+	def DeleteStorageVolumeType() {
+	}
 
-  def DeleteStorageVolumeType(final String volumeId) {
-    this.volumeId = volumeId;
-  }
+	def DeleteStorageVolumeType(final String volumeId) {
+		this.volumeId = volumeId;
+	}
 
 }
 
@@ -149,14 +157,14 @@ public class DeleteStorageVolumeResponseType extends StorageResponseType {
 }
 
 public class DeleteStorageSnapshotType extends StorageRequestType {
-  String snapshotId;
+	String snapshotId;
 
-  def DeleteStorageSnapshotType() {
-  }
+	def DeleteStorageSnapshotType() {
+	}
 
-  def DeleteStorageSnapshotType(final String snapshotId) {
-    this.snapshotId = snapshotId;
-  }
+	def DeleteStorageSnapshotType(final String snapshotId) {
+		this.snapshotId = snapshotId;
+	}
 }
 
 public class DeleteStorageSnapshotResponseType extends StorageResponseType {
@@ -164,62 +172,62 @@ public class DeleteStorageSnapshotResponseType extends StorageResponseType {
 
 public class StorageVolume extends EucalyptusData {
 
-  String volumeId;
-  String size;
-  String snapshotId;
-  String status;
-  String createTime;
-  String actualDeviceName;
-  def StorageVolume() {}
+	String volumeId;
+	String size;
+	String snapshotId;
+	String status;
+	String createTime;
+	String actualDeviceName;
+	def StorageVolume() {}
 
-  def StorageVolume(String volumeId) {
-    this.volumeId = volumeId;
-  }
+	def StorageVolume(String volumeId) {
+		this.volumeId = volumeId;
+	}
 }
 
 public class DescribeStorageVolumesType extends StorageRequestType {
-  ArrayList<String> volumeSet = new ArrayList<String>();
+	ArrayList<String> volumeSet = new ArrayList<String>();
 
-  def DescribeStorageVolumesType() {
-  }
+	def DescribeStorageVolumesType() {
+	}
 
-  def DescribeStorageVolumesType(final volumeSet) {
-    this.volumeSet = volumeSet;
-  }
+	def DescribeStorageVolumesType(final volumeSet) {
+		this.volumeSet = volumeSet;
+	}
 
 }
 public class DescribeStorageVolumesResponseType extends StorageResponseType {
-  ArrayList<StorageVolume> volumeSet = new ArrayList<StorageVolume>();
+	ArrayList<StorageVolume> volumeSet = new ArrayList<StorageVolume>();
 }
 
 public class StorageSnapshot extends EucalyptusData {
-  String snapshotId;
-  String volumeId;
-  String status;
-  String startTime;
-  String progress;
+	String snapshotId;
+	String volumeId;
+	String status;
+	String startTime;
+	String progress;
 }
 
 public class DescribeStorageSnapshotsType extends StorageRequestType {
-  ArrayList<String> snapshotSet = new ArrayList<String>();
+	ArrayList<String> snapshotSet = new ArrayList<String>();
 
-  def DescribeStorageSnapshotsType() {
-  }
+	def DescribeStorageSnapshotsType() {
+	}
 
-  def DescribeStorageSnapshotsType(final snapshotSet) {
-    this.snapshotSet = snapshotSet;
-  }
+	def DescribeStorageSnapshotsType(final snapshotSet) {
+		this.snapshotSet = snapshotSet;
+	}
 
 }
 public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
-  ArrayList<StorageSnapshot> snapshotSet = new ArrayList<StorageSnapshot>();
+	ArrayList<StorageSnapshot> snapshotSet = new ArrayList<StorageSnapshot>();
 }
 
 public class StorageControllerHeartbeatMessage extends HeartbeatMessage {
 
-  def StorageControllerHeartbeatMessage() {}
+	def StorageControllerHeartbeatMessage() {}
 
-  def StorageControllerHeartbeatMessage(final String heartbeatId) {
-    super(heartbeatId);
-  }
+	def StorageControllerHeartbeatMessage(final String heartbeatId) {
+		super(heartbeatId);
+	}
 }
