@@ -58,33 +58,17 @@ public class StartupChecks {
   public static boolean doChecks( ) {
     StartupChecks.checkDirectories( );
 
-    boolean wwwKs = false;
-    try {
-      wwwKs = EucaKeyStore.getInstance( ).check( );
-    } catch ( GeneralSecurityException e ) {
-      LOG.error( e, e );
-    }
 
     boolean hasDb = StartupChecks.checkDatabase( );
 
-    if ( !wwwKs ) {
-      try {
-        StartupChecks.createKeyStores( );
-        wwwKs = EucaKeyStore.getInstance( ).check( );
-      } catch ( Exception e ) {
-        LOG.error( e, e );
-        StartupChecks.fail( "Error creating keystore instance." );
-      }
-    }
     if ( !hasDb ) {
       StartupChecks.createDb( );
       hasDb = StartupChecks.checkDatabase( );
     }
 
-    if ( !hasDb || !wwwKs ) {
+    if ( !hasDb ) {
       LOG.fatal( String.format( HEADER_FSTRING, "STARTUP FAILURE" ) );
       if ( !hasDb ) LOG.fatal( "Failed to initialize the database in: " + SubDirectory.DB );
-      if ( !wwwKs ) LOG.fatal( "Failed to read the www keystore: " + EucaKeyStore.getInstance( ).getFileName( ) );
       StartupChecks.fail( "See errors messages above." );
     }
 
