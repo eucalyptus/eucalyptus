@@ -187,19 +187,6 @@ public class StartupChecks {
 
   }
 
-  private static void createKeyStores( ) throws IOException, GeneralSecurityException {
-    LOG.info( String.format( HEADER_FSTRING, "Create www keystore" ) );
-    AbstractKeyStore eucaKeyStore = EucaKeyStore.getInstance( );
-    try {
-      LOG.info( String.format( HEADER_FSTRING, "Create system keys" ) );
-      Credentials.createSystemKeys( eucaKeyStore );
-    } catch ( Exception e ) {
-      LOG.fatal( e, e );
-      eucaKeyStore.remove( );
-      StartupChecks.fail( "Eucalyptus requires the unlimited strength jurisdiction policy files for the JCE.", "Please see the documentation for more information." );
-    }
-  }
-
   private static void checkDirectories( ) {
     for ( BaseDirectory dir : BaseDirectory.values( ) )
       dir.check( );

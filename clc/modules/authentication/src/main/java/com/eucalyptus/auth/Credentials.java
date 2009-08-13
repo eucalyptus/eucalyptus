@@ -267,13 +267,17 @@ public class Credentials {
   protected static void createSystemKeys( ) throws IOException, GeneralSecurityException {
     AbstractKeyStore eucaKeyStore = EucaKeyStore.getInstance( );
     KeyTool keyTool = new KeyTool( );
-    KeyPair sysKp = keyTool.getKeyPair( );
-    X509Certificate sysX509 = keyTool.getCertificate( sysKp, EucalyptusProperties.getDName( EucalyptusProperties.NAME ) );
-    KeyPair wwwKp = keyTool.getKeyPair( );
-    X509Certificate wwwX509 = keyTool.getCertificate( wwwKp, EucalyptusProperties.getDName( EucalyptusProperties.WWW_NAME ) );
-    eucaKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate( ), EucalyptusProperties.NAME );
-    eucaKeyStore.addKeyPair( EucalyptusProperties.WWW_NAME, wwwX509, wwwKp.getPrivate( ), EucalyptusProperties.NAME );
-    eucaKeyStore.store( );
+    try {
+      KeyPair sysKp = keyTool.getKeyPair( );
+      X509Certificate sysX509 = keyTool.getCertificate( sysKp, EucalyptusProperties.getDName( EucalyptusProperties.NAME ) );
+      KeyPair wwwKp = keyTool.getKeyPair( );
+      X509Certificate wwwX509 = keyTool.getCertificate( wwwKp, EucalyptusProperties.getDName( EucalyptusProperties.WWW_NAME ) );
+      eucaKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate( ), EucalyptusProperties.NAME );
+      eucaKeyStore.addKeyPair( EucalyptusProperties.WWW_NAME, wwwX509, wwwKp.getPrivate( ), EucalyptusProperties.NAME );
+      eucaKeyStore.store( );
+    } catch ( Exception e ) {
+      EucaKeyStore.getInstance( ).remove( );
+    }
     if( !eucaKeyStore.check( ) ) {
       throw new GeneralSecurityException( "Created new keystore, but check still fails. eeek." );
     }
