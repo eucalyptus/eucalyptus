@@ -46,6 +46,8 @@ import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
 import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
+import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
+
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
@@ -673,6 +675,25 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
     //:: TODO-1.4: anything more to do here? :://
     RemoteInfoHandler.setStorageList(storageList);
+  }
+
+  public List<WalrusInfoWeb> getWalrusList(String sessionId) throws SerializableException
+  {
+    SessionInfo session = verifySession (sessionId);
+    UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+    //TODO: for now
+    WalrusInfoWeb walrusInfo = EucalyptusManagement.getWalrusConfig();
+    List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>();
+    walrusList.add(walrusInfo);
+    return walrusList;
+  }
+
+  public void setWalrusList(String sessionId, List<WalrusInfoWeb> walrusList ) throws SerializableException
+  {
+    SessionInfo session = verifySession (sessionId);
+    UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+    //:: TODO-1.4: anything more to do here? :://
+    RemoteInfoHandler.setWalrusList(walrusList);
   }
 
   public SystemConfigWeb getSystemConfig( final String sessionId ) throws SerializableException

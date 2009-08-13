@@ -55,16 +55,6 @@ public class SystemConfiguration {
     private String defaultKernel;
     @Column( name = "system_info_default_ramdisk" )
     private String defaultRamdisk;
-    @Column( name = "system_storage_dir" )
-    private String storageDir;
-    @Column( name = "system_storage_max_buckets_per_user" )
-    private Integer storageMaxBucketsPerUser;
-    @Column( name = "system_storage_max_bucket_size_mb" )
-    private Integer storageMaxBucketSizeInMB;
-    @Column( name = "system_storage_cache_size_mb" )
-    private Integer storageMaxCacheSizeInMB;
-    @Column( name = "system_storage_snapshot_size_gb" )
-    private Integer storageMaxTotalSnapshotSizeInGb;
     @Column( name = "system_registration_id" )
     private String registrationId;
     @Column( name = "system_max_user_public_addresses" )
@@ -87,11 +77,6 @@ public class SystemConfiguration {
     public SystemConfiguration(	final String storageUrl,
                                    final String defaultKernel,
                                    final String defaultRamdisk,
-                                   final String storageDir,
-                                   final Integer storageMaxBucketsPerUser,
-                                   final Integer storageMaxBucketSizeInMB,
-                                   final Integer storageMaxCacheSizeInMB,
-                                   final Integer storageMaxTotalSnapshotSizeInGb,
                                    final Integer maxUserPublicAddresses,
                                    final Boolean doDynamicPublicAddresses,
                                    final Integer systemReservedPublicAddresses,
@@ -103,11 +88,6 @@ public class SystemConfiguration {
         this.storageUrl = storageUrl;
         this.defaultKernel = defaultKernel;
         this.defaultRamdisk = defaultRamdisk;
-        this.storageDir = storageDir;
-        this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
-        this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
-        this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
-        this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
         this.maxUserPublicAddresses = maxUserPublicAddresses;
         this.doDynamicPublicAddresses = doDynamicPublicAddresses;
         this.systemReservedPublicAddresses = systemReservedPublicAddresses;
@@ -143,46 +123,6 @@ public class SystemConfiguration {
 
     public void setDefaultRamdisk( final String defaultRamdisk ) {
         this.defaultRamdisk = defaultRamdisk;
-    }
-
-    public String getStorageDir() {
-        return storageDir;
-    }
-
-    public void setStorageDir( final String storageDir ) {
-        this.storageDir = storageDir;
-    }
-
-    public Integer getStorageMaxBucketsPerUser() {
-        return storageMaxBucketsPerUser;
-    }
-
-    public void setStorageMaxBucketsPerUser( final Integer storageMaxBucketsPerUser ) {
-        this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
-    }
-
-    public Integer getStorageMaxBucketSizeInMB() {
-        return storageMaxBucketSizeInMB;
-    }
-
-    public void setStorageMaxBucketSizeInMB( final Integer storageMaxBucketSizeInMB ) {
-        this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
-    }
-
-    public Integer getStorageMaxCacheSizeInMB() {
-        return storageMaxCacheSizeInMB;
-    }
-
-    public void setStorageMaxCacheSizeInMB( Integer storageMaxCacheSizeInMB ) {
-        this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
-    }
-
-    public Integer getStorageMaxTotalSnapshotSizeInGb() {
-        return storageMaxTotalSnapshotSizeInGb;
-    }
-
-    public void setStorageMaxTotalSnapshotSizeInGb( Integer storageMaxTotalSnapshotSizeInGb) {
-        this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
     }
 
     public String getRegistrationId() {

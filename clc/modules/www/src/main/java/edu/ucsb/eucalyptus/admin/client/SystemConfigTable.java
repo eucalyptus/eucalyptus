@@ -34,370 +34,414 @@
 
 package edu.ucsb.eucalyptus.admin.client;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
 
+import edu.ucsb.eucalyptus.admin.client.ClusterInfoTable.GetClusterListCallback;
+
 public class SystemConfigTable extends VerticalPanel {
 
-    private static Label c_status = new Label ();
-    private static Label w_status = new Label ();
-    private static Label dns_status = new Label ();
-    private Grid c_grid = new Grid ();
-    private Grid w_grid = new Grid ();
-    private Grid dns_grid = new Grid();
-    private static HTML c_hint = new HTML ();
-    private static HTML w_hint = new HTML ();
-    private static HTML dns_hint = new HTML();
-    private SystemConfigWeb SystemConfig = new SystemConfigWeb ();
-    private static String sessionId;
-    private static TextBox walrusURL_box = new TextBox();
-    private static TextBox walrusPath_box = new TextBox();
-    private static TextBox maxBuckets_box = new TextBox();
-    private static TextBox maxBucketSize_box = new TextBox();
-    private static TextBox maxCacheSize_box = new TextBox();
-    private static TextBox totalSnapshots_box = new TextBox();
-    private static TextBox defaultKernel_box = new TextBox();
-    private static TextBox defaultRamdisk_box = new TextBox();
-    private static TextBox dnsDomain_box = new TextBox();
-    private static TextBox nameserver_box = new TextBox();
-    private static TextBox nameserverAddress_box = new TextBox();
+	private static Label c_status = new Label ();
+	private static Label w_status = new Label ();
+	private static Label dns_status = new Label ();
+	private Grid c_grid = new Grid ();
+	private Grid w_grid = new Grid ();
+	private Grid dns_grid = new Grid();
+	private static HTML c_hint = new HTML ();
+	private static HTML w_hint = new HTML ();
+	private static HTML dns_hint = new HTML();
+	private SystemConfigWeb SystemConfig = new SystemConfigWeb ();
+	private static String sessionId;
+	private static TextBox walrusURL_box = new TextBox();
+	private static TextBox walrusPath_box = new TextBox();
+	private static TextBox maxBuckets_box = new TextBox();
+	private static TextBox maxBucketSize_box = new TextBox();
+	private static TextBox maxCacheSize_box = new TextBox();
+	private static TextBox totalSnapshots_box = new TextBox();
+	private static TextBox defaultKernel_box = new TextBox();
+	private static TextBox defaultRamdisk_box = new TextBox();
+	private static TextBox dnsDomain_box = new TextBox();
+	private static TextBox nameserver_box = new TextBox();
+	private static TextBox nameserverAddress_box = new TextBox();
+	private List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>();
 
-    public SystemConfigTable(String sessionId)
-    {
-        this.sessionId = sessionId;
-        this.setSpacing (10);
-        this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
-        this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
-        Label SystemConfigsHeader = new Label( "Cloud configuration:" );
-        SystemConfigsHeader.setStyleName ( "euca-section-header" );
-        this.add ( SystemConfigsHeader );
-        HorizontalPanel c_hpanel = new HorizontalPanel ();
-        c_hpanel.add ( this.c_grid );
-        c_hpanel.add ( this.c_hint );
-        c_hint.setWidth ("180");
-        this.add ( c_hpanel );
-        HorizontalPanel c_hpanel2 = new HorizontalPanel ();
-        c_hpanel2.setSpacing (10);
-        c_hpanel2.add ( new Button( "Save Configuration", new SaveCallback( this ) ) );
-        c_hpanel2.add ( this.c_status );
-        this.c_status.setText ("");
-        this.c_status.setStyleName ("euca-greeting-pending");
-        this.c_status.setWidth ("250");
-        this.add ( c_hpanel2 );
+	public SystemConfigTable(String sessionId)
+	{
+		this.sessionId = sessionId;
+		this.setSpacing (10);
+		this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
+		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+		Label SystemConfigsHeader = new Label( "Cloud configuration:" );
+		SystemConfigsHeader.setStyleName ( "euca-section-header" );
+		this.add ( SystemConfigsHeader );
+		HorizontalPanel c_hpanel = new HorizontalPanel ();
+		c_hpanel.add ( this.c_grid );
+		c_hpanel.add ( this.c_hint );
+		c_hint.setWidth ("180");
+		this.add ( c_hpanel );
+		HorizontalPanel c_hpanel2 = new HorizontalPanel ();
+		c_hpanel2.setSpacing (10);
+		c_hpanel2.add ( new Button( "Save Configuration", new SaveCallback( this ) ) );
+		c_hpanel2.add ( this.c_status );
+		this.c_status.setText ("");
+		this.c_status.setStyleName ("euca-greeting-pending");
+		this.c_status.setWidth ("250");
+		this.add ( c_hpanel2 );
 
-        Label WalrusConfigsHeader = new Label( "Walrus configuration:" );
-        WalrusConfigsHeader.setStyleName ( "euca-section-header" );
-        this.add ( WalrusConfigsHeader );
-        HorizontalPanel w_hpanel = new HorizontalPanel ();
-        w_hpanel.add ( this.w_grid );
-        w_hpanel.add ( this.w_hint );
-        w_hint.setWidth ("180");
-        this.add ( w_hpanel );
-        HorizontalPanel w_hpanel2 = new HorizontalPanel ();
-        w_hpanel2.setSpacing (10);
-        w_hpanel2.add ( new Button( "Save Configuration", new SaveCallback( this ) ) );
-        w_hpanel2.add ( this.w_status );
-        this.w_status.setText ("");
-        this.w_status.setStyleName ("euca-greeting-pending");
-        this.w_status.setWidth ("250");
-        this.add ( w_hpanel2 );
+		Label WalrusConfigsHeader = new Label( "Walrus configuration:" );
+		WalrusConfigsHeader.setStyleName ( "euca-section-header" );
+		this.add ( WalrusConfigsHeader );
+		HorizontalPanel w_hpanel = new HorizontalPanel ();
+		w_hpanel.add ( this.w_grid );
+		w_hpanel.add ( this.w_hint );
+		w_hint.setWidth ("180");
+		this.add ( w_hpanel );
+		HorizontalPanel w_hpanel2 = new HorizontalPanel ();
+		w_hpanel2.setSpacing (10);
+		w_hpanel2.add ( new Button( "Save Configuration", new SaveCallback( this ) ) );
+		w_hpanel2.add ( this.w_status );
+		this.w_status.setText ("");
+		this.w_status.setStyleName ("euca-greeting-pending");
+		this.w_status.setWidth ("250");
+		this.add ( w_hpanel2 );
 
-        Label DNSConfigHeader = new Label( "DNS configuration:" );
-        DNSConfigHeader.setStyleName ( "euca-section-header" );
-        this.add ( DNSConfigHeader );
-        HorizontalPanel dns_hpanel = new HorizontalPanel ();
-        dns_hpanel.add ( this.dns_grid );
-        dns_hpanel.add ( this.dns_hint );
-        dns_hint.setWidth ("180");
-        this.add ( dns_hpanel );
-        HorizontalPanel dns_hpanel2 = new HorizontalPanel ();
-        dns_hpanel2.setSpacing (10);
-        dns_hpanel2.add ( new Button( "Save Configuration", new SaveCallback( this ) ) );
-        dns_hpanel2.add ( this.dns_status );
-        this.dns_status.setText ("");
-        this.dns_status.setStyleName ("euca-greeting-pending");
-        this.dns_status.setWidth ("250");
-        this.add ( dns_hpanel2 );
+		Label DNSConfigHeader = new Label( "DNS configuration:" );
+		DNSConfigHeader.setStyleName ( "euca-section-header" );
+		this.add ( DNSConfigHeader );
+		HorizontalPanel dns_hpanel = new HorizontalPanel ();
+		dns_hpanel.add ( this.dns_grid );
+		dns_hpanel.add ( this.dns_hint );
+		dns_hint.setWidth ("180");
+		this.add ( dns_hpanel );
+		HorizontalPanel dns_hpanel2 = new HorizontalPanel ();
+		dns_hpanel2.setSpacing (10);
+		dns_hpanel2.add ( new Button( "Save Configuration", new SaveCallback( this ) ) );
+		dns_hpanel2.add ( this.dns_status );
+		this.dns_status.setText ("");
+		this.dns_status.setStyleName ("euca-greeting-pending");
+		this.dns_status.setWidth ("250");
+		this.add ( dns_hpanel2 );
 
-        this.rebuildTable ();
-        EucalyptusWebBackend.App.getInstance().getSystemConfig(
-                this.sessionId, new GetCallback( this ) );
-    }
+		this.rebuildTable ();
+		EucalyptusWebBackend.App.getInstance().getSystemConfig(
+				this.sessionId, new GetCallback( this ) );
+		EucalyptusWebBackend.App.getInstance().getWalrusList(
+				this.sessionId, new GetWalrusListCallback( this ) );
+	}
 
-    private void rebuildTable()
-    {
-        this.c_grid.clear ();
-        this.c_grid.resize ( 2, 2 );
-        this.c_grid.getColumnFormatter().setWidth(0, "190");
-        this.c_grid.getColumnFormatter().setWidth(1, "260");
-        int i = 0;
+	private void rebuildTable()
+	{
+		this.c_grid.clear ();
+		this.c_grid.resize ( 2, 2 );
+		this.c_grid.getColumnFormatter().setWidth(0, "190");
+		this.c_grid.getColumnFormatter().setWidth(1, "260");
+		int i = 0;
 
-        // cloud parameters
-        this.c_grid.setWidget( i, 0, new Label( "Walrus URL:" ) );
-        this.c_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        walrusURL_box.addChangeListener (new ChangeCallback (this));
-        walrusURL_box.setVisibleLength(55);
-        walrusURL_box.setText (SystemConfig.getWalrusUrl());
-        walrusURL_box.addFocusListener (new FocusHandler (c_hint,
-                "Warning! Changing the Walrus URL will invalidate any certificates created so far as well as any images uploaded into the system."));
-        this.c_grid.setWidget( i++, 1, walrusURL_box );
+		// cloud parameters
+		this.c_grid.setWidget( i, 0, new Label( "Walrus URL:" ) );
+		this.c_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		walrusURL_box.addChangeListener (new ChangeCallback (this));
+		walrusURL_box.setVisibleLength(55);
+		walrusURL_box.setText (SystemConfig.getWalrusUrl());
+		walrusURL_box.addFocusListener (new FocusHandler (c_hint,
+		"Warning! Changing the Walrus URL will invalidate any certificates created so far as well as any images uploaded into the system."));
+		this.c_grid.setWidget( i++, 1, walrusURL_box );
 
-        // 2nd row
-        this.c_grid.setWidget( i, 0, new Label( "Default kernel:" ) );
-        this.c_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        HorizontalPanel hpanel2 = new HorizontalPanel ();
-        hpanel2.setSpacing (0);
-        this.c_grid.setWidget( i++, 1, hpanel2 );
+		// 2nd row
+		this.c_grid.setWidget( i, 0, new Label( "Default kernel:" ) );
+		this.c_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		HorizontalPanel hpanel2 = new HorizontalPanel ();
+		hpanel2.setSpacing (0);
+		this.c_grid.setWidget( i++, 1, hpanel2 );
 
-        defaultKernel_box.addChangeListener (new ChangeCallback (this));
-        defaultKernel_box.setVisibleLength(10);
-        defaultKernel_box.setText (SystemConfig.getDefaultKernelId());
-        hpanel2.add (defaultKernel_box);
+		defaultKernel_box.addChangeListener (new ChangeCallback (this));
+		defaultKernel_box.setVisibleLength(10);
+		defaultKernel_box.setText (SystemConfig.getDefaultKernelId());
+		hpanel2.add (defaultKernel_box);
 
-        hpanel2.add ( new HTML ("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Default ramdisk: &nbsp;"));
-        defaultRamdisk_box.addChangeListener (new ChangeCallback (this));
-        defaultRamdisk_box.setVisibleLength(10);
-        defaultRamdisk_box.setText (SystemConfig.getDefaultRamdiskId());
-        hpanel2.add (defaultRamdisk_box);
+		hpanel2.add ( new HTML ("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Default ramdisk: &nbsp;"));
+		defaultRamdisk_box.addChangeListener (new ChangeCallback (this));
+		defaultRamdisk_box.setVisibleLength(10);
+		defaultRamdisk_box.setText (SystemConfig.getDefaultRamdiskId());
+		hpanel2.add (defaultRamdisk_box);
 
-        // walrus params
-        this.w_grid.clear ();
-        this.w_grid.resize ( 4, 2 );
-        this.w_grid.getColumnFormatter().setWidth(0, "190");
-        this.w_grid.getColumnFormatter().setWidth(1, "260");
-        i = 0;
+		// walrus params
+		//TODO: for now only 1
 
-        this.w_grid.setWidget( i, 0, new Label( "Buckets path:" ) );
-        this.w_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        walrusPath_box.addChangeListener (new ChangeCallback (this));
-        walrusPath_box.setVisibleLength(55);
-        walrusPath_box.setText (SystemConfig.getBucketsRootDirectory());
-        walrusPath_box.addFocusListener (new FocusHandler (w_hint,
-                "Warning! Changing the path may make inaccessible any content uploaded to the old path, including images, kernels, and ramdisks."));
-        this.w_grid.setWidget( i++, 1, walrusPath_box );
+		WalrusInfoWeb walrusInfo;
+		if(walrusList.size() > 0)
+			walrusInfo = walrusList.get(0);
+		else 
+			walrusInfo = new WalrusInfoWeb("walrus-name", "hi", 5, 5120, 50000, 50000);
 
-        // 2nd row
-        this.w_grid.setWidget( i, 0, new Label( "Max buckets per user:" ) );
-        this.w_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        HorizontalPanel hpanel = new HorizontalPanel ();
-        hpanel.setSpacing (0);
-        this.w_grid.setWidget( i++, 1, hpanel );
+		this.w_grid.clear ();
+		this.w_grid.resize ( 4, 2 );
+		this.w_grid.getColumnFormatter().setWidth(0, "190");
+		this.w_grid.getColumnFormatter().setWidth(1, "260");
+		i = 0;
 
-        maxBuckets_box.addChangeListener (new ChangeCallback (this));
-        maxBuckets_box.setVisibleLength(10);
-        maxBuckets_box.setText (""+SystemConfig.getMaxBucketsPerUser());
-        hpanel.add (maxBuckets_box);
+		this.w_grid.setWidget( i, 0, new Label( "Buckets path:" ) );
+		this.w_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		walrusPath_box.addChangeListener (new ChangeCallback (this));
+		walrusPath_box.setVisibleLength(55);
+		walrusPath_box.setText (walrusInfo.getBucketsRootDirectory());
+		walrusPath_box.addFocusListener (new FocusHandler (w_hint,
+		"Warning! Changing the path may make inaccessible any content uploaded to the old path, including images, kernels, and ramdisks."));
+		this.w_grid.setWidget( i++, 1, walrusPath_box );
 
-        hpanel.add ( new HTML ("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Max bucket size: &nbsp;"));
-        maxBucketSize_box.addChangeListener (new ChangeCallback (this));
-        maxBucketSize_box.setVisibleLength(10);
-        maxBucketSize_box.setText (""+SystemConfig.getMaxBucketSizeInMB());
-        maxBucketSize_box.addFocusListener (new FocusHandler (w_hint,
-                "You are urged to consult the documentation before changing the default value!"));
-        hpanel.add (maxBucketSize_box);
-        hpanel.add ( new HTML ("&nbsp; MB"));
+		// 2nd row
+		this.w_grid.setWidget( i, 0, new Label( "Max buckets per user:" ) );
+		this.w_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		HorizontalPanel hpanel = new HorizontalPanel ();
+		hpanel.setSpacing (0);
+		this.w_grid.setWidget( i++, 1, hpanel );
 
-        // 3rd row
-        HorizontalPanel hpanel3 = new HorizontalPanel ();
-        hpanel3.setSpacing (0);
-        this.w_grid.setWidget( i++, 1, hpanel3 );
-        maxCacheSize_box.addChangeListener (new ChangeCallback (this));
-        maxCacheSize_box.setVisibleLength(10);
-        maxCacheSize_box.setText ("" + SystemConfig.getMaxCacheSizeInMB());
-        maxCacheSize_box.addFocusListener (new FocusHandler (w_hint,
-                "You are urged to consult the documentation before changing the default value!"));
-        hpanel3.add ( maxCacheSize_box );
-        hpanel3.add ( new HTML ("&nbsp; MB of disk are reserved for the image cache"));
+		maxBuckets_box.addChangeListener (new ChangeCallback (this));
+		maxBuckets_box.setVisibleLength(10);
+		maxBuckets_box.setText (""+walrusInfo.getMaxBucketsPerUser());
+		hpanel.add (maxBuckets_box);
 
-        // 4th row
-        HorizontalPanel hpanel4 = new HorizontalPanel ();
-        hpanel4.setSpacing (0);
-        this.w_grid.setWidget( i++, 1, hpanel4 );
-        totalSnapshots_box.addChangeListener (new ChangeCallback (this));
-        totalSnapshots_box.setVisibleLength(10);
-        totalSnapshots_box.setText ("" + SystemConfig.getSnapshotsTotalInGB());
-        totalSnapshots_box.addFocusListener (new FocusHandler (w_hint,
-                "You are urged to consult the documentation before changing the default value!"));
-        hpanel4.add ( totalSnapshots_box );
-        hpanel4.add ( new HTML ("&nbsp; GB of disk are reserved for snapshots"));
+		hpanel.add ( new HTML ("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Max bucket size: &nbsp;"));
+		maxBucketSize_box.addChangeListener (new ChangeCallback (this));
+		maxBucketSize_box.setVisibleLength(10);
+		maxBucketSize_box.setText (""+walrusInfo.getMaxBucketSizeInMB());
+		maxBucketSize_box.addFocusListener (new FocusHandler (w_hint,
+		"You are urged to consult the documentation before changing the default value!"));
+		hpanel.add (maxBucketSize_box);
+		hpanel.add ( new HTML ("&nbsp; MB"));
 
-        // dns params
-        this.dns_grid.clear ();
-        this.dns_grid.resize ( 2, 2 );
-        this.dns_grid.getColumnFormatter().setWidth(0, "190");
-        this.dns_grid.getColumnFormatter().setWidth(1, "260");
-        i = 0;
+		// 3rd row
+		HorizontalPanel hpanel3 = new HorizontalPanel ();
+		hpanel3.setSpacing (0);
+		this.w_grid.setWidget( i++, 1, hpanel3 );
+		maxCacheSize_box.addChangeListener (new ChangeCallback (this));
+		maxCacheSize_box.setVisibleLength(10);
+		maxCacheSize_box.setText ("" + walrusInfo.getMaxCacheSizeInMB());
+		maxCacheSize_box.addFocusListener (new FocusHandler (w_hint,
+		"You are urged to consult the documentation before changing the default value!"));
+		hpanel3.add ( maxCacheSize_box );
+		hpanel3.add ( new HTML ("&nbsp; MB of disk are reserved for the image cache"));
 
-        this.dns_grid.setWidget( i, 0, new Label( "Domain name:" ) );
-        this.dns_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        dnsDomain_box.addChangeListener (new ChangeCallback (this));
-        dnsDomain_box.setVisibleLength(20);
-        dnsDomain_box.setText (SystemConfig.getDnsDomain());
-        this.dns_grid.setWidget( i++, 1, dnsDomain_box );
+		// 4th row
+		HorizontalPanel hpanel4 = new HorizontalPanel ();
+		hpanel4.setSpacing (0);
+		this.w_grid.setWidget( i++, 1, hpanel4 );
+		totalSnapshots_box.addChangeListener (new ChangeCallback (this));
+		totalSnapshots_box.setVisibleLength(10);
+		totalSnapshots_box.setText ("" + walrusInfo.getSnapshotsTotalInGB());
+		totalSnapshots_box.addFocusListener (new FocusHandler (w_hint,
+		"You are urged to consult the documentation before changing the default value!"));
+		hpanel4.add ( totalSnapshots_box );
+		hpanel4.add ( new HTML ("&nbsp; GB of disk are reserved for snapshots"));
 
-        this.dns_grid.setWidget( i, 0, new Label( "Nameserver:" ) );
-        this.dns_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        HorizontalPanel dns_hpanel2 = new HorizontalPanel ();
-        dns_hpanel2.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_LEFT);
-        //dns_hpanel2.add(new Label("Nameserver:"));
-        dns_hpanel2.setSpacing (0);
-        this.dns_grid.setWidget( i++, 1, dns_hpanel2 );
+		// dns params
+		this.dns_grid.clear ();
+		this.dns_grid.resize ( 2, 2 );
+		this.dns_grid.getColumnFormatter().setWidth(0, "190");
+		this.dns_grid.getColumnFormatter().setWidth(1, "260");
+		i = 0;
 
-        nameserver_box.addChangeListener (new ChangeCallback (this));
-        nameserver_box.setVisibleLength(15);
-        nameserver_box.setText (SystemConfig.getNameserver());
-        dns_hpanel2.add (nameserver_box);
+		this.dns_grid.setWidget( i, 0, new Label( "Domain name:" ) );
+		this.dns_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		dnsDomain_box.addChangeListener (new ChangeCallback (this));
+		dnsDomain_box.setVisibleLength(20);
+		dnsDomain_box.setText (SystemConfig.getDnsDomain());
+		this.dns_grid.setWidget( i++, 1, dnsDomain_box );
 
-        dns_hpanel2.add ( new HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IP:  &nbsp;"));
-        nameserverAddress_box.addChangeListener (new ChangeCallback (this));
-        nameserverAddress_box.setVisibleLength(10);
-        nameserverAddress_box.setText (SystemConfig.getNameserverAddress());
-        dns_hpanel2.add (nameserverAddress_box);
-    }
+		this.dns_grid.setWidget( i, 0, new Label( "Nameserver:" ) );
+		this.dns_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		HorizontalPanel dns_hpanel2 = new HorizontalPanel ();
+		dns_hpanel2.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_LEFT);
+		//dns_hpanel2.add(new Label("Nameserver:"));
+		dns_hpanel2.setSpacing (0);
+		this.dns_grid.setWidget( i++, 1, dns_hpanel2 );
 
-    public SystemConfigWeb getSystemConfig()
-    {
-        return SystemConfig;
-    }
+		nameserver_box.addChangeListener (new ChangeCallback (this));
+		nameserver_box.setVisibleLength(15);
+		nameserver_box.setText (SystemConfig.getNameserver());
+		dns_hpanel2.add (nameserver_box);
 
-    public void setSystemConfig( final SystemConfigWeb SystemConfig )
-    {
-        this.SystemConfig = SystemConfig;
-    }
+		dns_hpanel2.add ( new HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IP:  &nbsp;"));
+		nameserverAddress_box.addChangeListener (new ChangeCallback (this));
+		nameserverAddress_box.setVisibleLength(10);
+		nameserverAddress_box.setText (SystemConfig.getNameserverAddress());
+		dns_hpanel2.add (nameserverAddress_box);
+	}
 
-    public void updateStruct ()
-    {
-        this.SystemConfig.setWalrusUrl                (this.walrusURL_box.getText());
-        this.SystemConfig.setBucketsRootDirectory               (this.walrusPath_box.getText());
-        this.SystemConfig.setMaxBucketsPerUser  (Integer.parseInt(this.maxBuckets_box.getText()));
-        this.SystemConfig.setMaxBucketSizeInMB  (Integer.parseInt(this.maxBucketSize_box.getText()));
-        this.SystemConfig.setMaxCacheSizeInMB   (Integer.parseInt(this.maxCacheSize_box.getText()));
-        this.SystemConfig.setSnapshotsTotalInGB (Integer.parseInt(this.totalSnapshots_box.getText()));
-        this.SystemConfig.setDefaultKernelId           (this.defaultKernel_box.getText());
-        this.SystemConfig.setDefaultRamdiskId          (this.defaultRamdisk_box.getText());
-    }
+	public SystemConfigWeb getSystemConfig()
+	{
+		return SystemConfig;
+	}
 
-    class ChangeCallback implements ChangeListener, ClickListener {
-        private SystemConfigTable parent;
+	public void setSystemConfig( final SystemConfigWeb SystemConfig )
+	{
+		this.SystemConfig = SystemConfig;
+	}
 
-        ChangeCallback ( final SystemConfigTable parent )
-        {
-            this.parent = parent;
-        }
+	public void updateStruct ()
+	{
+		WalrusInfoWeb walrusInfo = walrusList.get(0);
+		this.SystemConfig.setWalrusUrl                (this.walrusURL_box.getText());
+		walrusInfo.setBucketsRootDirectory               (this.walrusPath_box.getText());
+		walrusInfo.setMaxBucketsPerUser  (Integer.parseInt(this.maxBuckets_box.getText()));
+		walrusInfo.setMaxBucketSizeInMB  (Integer.parseInt(this.maxBucketSize_box.getText()));
+		walrusInfo.setMaxCacheSizeInMB   (Integer.parseInt(this.maxCacheSize_box.getText()));
+		walrusInfo.setSnapshotsTotalInGB (Integer.parseInt(this.totalSnapshots_box.getText()));
+		this.SystemConfig.setDefaultKernelId           (this.defaultKernel_box.getText());
+		this.SystemConfig.setDefaultRamdiskId          (this.defaultRamdisk_box.getText());
+	}
 
-        public void onChange (Widget sender)
-        {
-            this.parent.updateStruct ();
-            this.parent.c_status.setText ("Unsaved changes");
-            this.parent.c_status.setStyleName ("euca-greeting-warning");
-            this.parent.w_status.setText ("Unsaved changes");
-            this.parent.w_status.setStyleName ("euca-greeting-warning");
-            this.parent.dns_status.setText ("Unsaved changes");
-            this.parent.dns_status.setStyleName ("euca-greeting-warning");            
-        }
+	class ChangeCallback implements ChangeListener, ClickListener {
+		private SystemConfigTable parent;
 
-        public void onClick (Widget sender)
-        {
-            this.parent.updateStruct ();
-            this.parent.c_status.setText ("Unsaved changes");
-            this.parent.c_status.setStyleName ("euca-greeting-warning");
-            this.parent.w_status.setText ("Unsaved changes");
-            this.parent.w_status.setStyleName ("euca-greeting-warning");
-            this.parent.dns_status.setText ("Unsaved changes");
-            this.parent.dns_status.setStyleName ("euca-greeting-warning");
-        }
-    }
+		ChangeCallback ( final SystemConfigTable parent )
+		{
+			this.parent = parent;
+		}
 
-    class GetCallback implements AsyncCallback {
+		public void onChange (Widget sender)
+		{
+			this.parent.updateStruct ();
+			this.parent.c_status.setText ("Unsaved changes");
+			this.parent.c_status.setStyleName ("euca-greeting-warning");
+			this.parent.w_status.setText ("Unsaved changes");
+			this.parent.w_status.setStyleName ("euca-greeting-warning");
+			this.parent.dns_status.setText ("Unsaved changes");
+			this.parent.dns_status.setStyleName ("euca-greeting-warning");            
+		}
 
-        private SystemConfigTable parent;
+		public void onClick (Widget sender)
+		{
+			this.parent.updateStruct ();
+			this.parent.c_status.setText ("Unsaved changes");
+			this.parent.c_status.setStyleName ("euca-greeting-warning");
+			this.parent.w_status.setText ("Unsaved changes");
+			this.parent.w_status.setStyleName ("euca-greeting-warning");
+			this.parent.dns_status.setText ("Unsaved changes");
+			this.parent.dns_status.setStyleName ("euca-greeting-warning");
+		}
+	}
 
-        GetCallback( final SystemConfigTable parent )
-        {
-            this.parent = parent;
-        }
+	class GetCallback implements AsyncCallback {
 
-        public void onFailure( final Throwable throwable )
-        {
-            this.parent.c_status.setText ("Failed to contact server!");
-            this.parent.c_status.setStyleName ("euca-greeting-error");
-            this.parent.w_status.setText ("Failed to contact server!");
-            this.parent.w_status.setStyleName ("euca-greeting-error");
-            this.parent.dns_status.setText ("Failed to contact server!");
-            this.parent.dns_status.setStyleName ("euca-greeting-error");
-        }
+		private SystemConfigTable parent;
 
-        public void onSuccess( final Object o )
-        {
-            this.parent.c_status.setText ("Loaded configuration from server");
-            this.parent.c_status.setStyleName ("euca-greeting-disabled");
-            this.parent.w_status.setText ("Loaded configuration from server");
-            this.parent.w_status.setStyleName ("euca-greeting-disabled");
-            this.parent.dns_status.setText ("Loaded configuration from server");
-            this.parent.dns_status.setStyleName ("euca-greeting-disabled");            
-            this.parent.SystemConfig = (SystemConfigWeb) o;
-            this.parent.rebuildTable();
-        }
-    }
+		GetCallback( final SystemConfigTable parent )
+		{
+			this.parent = parent;
+		}
 
-    class SaveCallback implements AsyncCallback, ClickListener {
+		public void onFailure( final Throwable throwable )
+		{
+			this.parent.c_status.setText ("Failed to contact server!");
+			this.parent.c_status.setStyleName ("euca-greeting-error");
+			this.parent.w_status.setText ("Failed to contact server!");
+			this.parent.w_status.setStyleName ("euca-greeting-error");
+			this.parent.dns_status.setText ("Failed to contact server!");
+			this.parent.dns_status.setStyleName ("euca-greeting-error");
+		}
 
-        private SystemConfigTable parent;
+		public void onSuccess( final Object o )
+		{
+			this.parent.c_status.setText ("Loaded configuration from server");
+			this.parent.c_status.setStyleName ("euca-greeting-disabled");
+			this.parent.w_status.setText ("Loaded configuration from server");
+			this.parent.w_status.setStyleName ("euca-greeting-disabled");
+			this.parent.dns_status.setText ("Loaded configuration from server");
+			this.parent.dns_status.setStyleName ("euca-greeting-disabled");            
+			this.parent.SystemConfig = (SystemConfigWeb) o;
+			this.parent.rebuildTable();
+		}
+	}
 
-        SaveCallback( final SystemConfigTable parent )
-        {
-            this.parent = parent;
-        }
+	class SaveCallback implements AsyncCallback, ClickListener {
 
-        public void onClick( final Widget widget )
-        {
-            this.parent.c_status.setText ("Saving...");
-            this.parent.c_status.setStyleName ("euca-greeting-pending");
-            this.parent.w_status.setText ("Saving...");
-            this.parent.w_status.setStyleName ("euca-greeting-pending");
-            this.parent.dns_status.setText ("Saving...");
-            this.parent.dns_status.setStyleName ("euca-greeting-pending");            
-            EucalyptusWebBackend.App.getInstance().setSystemConfig(
-                    this.parent.sessionId, this.parent.SystemConfig, this );
-        }
+		private SystemConfigTable parent;
 
-        public void onFailure( final Throwable throwable )
-        {
-            this.parent.c_status.setText ("Failed to save!");
-            this.parent.c_status.setStyleName ("euca-greeting-error");
-            this.parent.w_status.setText ("Failed to save!");
-            this.parent.w_status.setStyleName ("euca-greeting-error");
-        }
+		SaveCallback( final SystemConfigTable parent )
+		{
+			this.parent = parent;
+		}
 
-        public void onSuccess( final Object o )
-        {
-            this.parent.c_status.setText ("Saved configuration to server");
-            this.parent.c_status.setStyleName ("euca-greeting-disabled");
-            this.parent.w_status.setText ("Saved configuration to server");
-            this.parent.w_status.setStyleName ("euca-greeting-disabled");
-            this.parent.dns_status.setText ("Saved configuration to server");
-            this.parent.dns_status.setStyleName ("euca-greeting-disabled");            
-        }
-    }
+		public void onClick( final Widget widget )
+		{
+			this.parent.c_status.setText ("Saving...");
+			this.parent.c_status.setStyleName ("euca-greeting-pending");
+			this.parent.w_status.setText ("Saving...");
+			this.parent.w_status.setStyleName ("euca-greeting-pending");
+			this.parent.dns_status.setText ("Saving...");
+			this.parent.dns_status.setStyleName ("euca-greeting-pending");            
+			EucalyptusWebBackend.App.getInstance().setSystemConfig(
+					this.parent.sessionId, this.parent.SystemConfig, this );
+			EucalyptusWebBackend.App.getInstance().setWalrusList(this.parent.sessionId, 
+					this.parent.walrusList, this);
+		}
 
-    class FocusHandler implements FocusListener {
-        private HTML parent;
-        private String message;
+		public void onFailure( final Throwable throwable )
+		{
+			this.parent.c_status.setText ("Failed to save!");
+			this.parent.c_status.setStyleName ("euca-greeting-error");
+			this.parent.w_status.setText ("Failed to save!");
+			this.parent.w_status.setStyleName ("euca-greeting-error");
+		}
 
-        FocusHandler (final HTML parent, String message)
-        {
-            this.parent = parent;
-            this.message = message;
-        }
-        public void onLostFocus (Widget sender)
-        {
-            this.parent.setHTML ("");
-            this.parent.setStyleName ("euca-text");
-        }
-        public void onFocus (Widget sender)
-        {
-            this.parent.setHTML (message);
-            this.parent.setStyleName ("euca-error-hint");
-        }
-    }
+		public void onSuccess( final Object o )
+		{
+			this.parent.c_status.setText ("Saved configuration to server");
+			this.parent.c_status.setStyleName ("euca-greeting-disabled");
+			this.parent.w_status.setText ("Saved configuration to server");
+			this.parent.w_status.setStyleName ("euca-greeting-disabled");
+			this.parent.dns_status.setText ("Saved configuration to server");
+			this.parent.dns_status.setStyleName ("euca-greeting-disabled");            
+		}
+	}
+
+	class FocusHandler implements FocusListener {
+		private HTML parent;
+		private String message;
+
+		FocusHandler (final HTML parent, String message)
+		{
+			this.parent = parent;
+			this.message = message;
+		}
+		public void onLostFocus (Widget sender)
+		{
+			this.parent.setHTML ("");
+			this.parent.setStyleName ("euca-text");
+		}
+		public void onFocus (Widget sender)
+		{
+			this.parent.setHTML (message);
+			this.parent.setStyleName ("euca-error-hint");
+		}
+	}
+
+	class GetWalrusListCallback implements AsyncCallback {
+
+		private SystemConfigTable parent;
+
+		GetWalrusListCallback( final SystemConfigTable parent )
+		{
+			this.parent = parent;
+		}
+
+		public void onFailure( final Throwable throwable )
+		{
+			this.parent.w_status.setText ("Failed to contact server!");
+			this.parent.w_status.setStyleName ("euca-greeting-error");
+		}
+
+		public void onSuccess( final Object o )
+		{
+			List<WalrusInfoWeb> newWalrusList = (List<WalrusInfoWeb>) o;
+			this.parent.walrusList = newWalrusList;
+			this.parent.w_status.setText ("Saved configuration to server");
+			this.parent.w_status.setStyleName ("euca-greeting-disabled");
+			this.parent.rebuildTable();
+		}
+	}
 }

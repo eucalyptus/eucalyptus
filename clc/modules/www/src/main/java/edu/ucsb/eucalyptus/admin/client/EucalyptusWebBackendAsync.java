@@ -96,6 +96,12 @@ public interface EucalyptusWebBackendAsync {
 	void setStorageList(String sessionId, List<StorageInfoWeb> storageList, final AsyncCallback async)
 	;
 
+	void getWalrusList(String sessionId, final AsyncCallback<List<WalrusInfoWeb>> async)
+	;
+
+	void setWalrusList(String sessionId, List<WalrusInfoWeb> walrusList, final AsyncCallback async)
+	;
+
 	void getSystemConfig(String sessionId, final AsyncCallback<SystemConfigWeb> async)
 	;
 

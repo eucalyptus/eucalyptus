@@ -7,7 +7,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import javax.persistence.*;
 
 @Entity
-@Table( name = "clusters" )
+@Table( name = "storage_info" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class
 StorageInfo {
@@ -39,7 +39,6 @@ StorageInfo {
 	{
 		return id;
 	}
-
 
 	public String getName() {
 		return name;

@@ -34,15 +34,13 @@
  */
 package edu.ucsb.eucalyptus.admin.client;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.google.gwt.user.client.rpc.IsSerializable;
 
 public class SystemConfigWeb implements IsSerializable {
     private String walrusUrl;
-    private String bucketsRootDirectory;
-    private Integer maxBucketsPerUser;
-    private Integer maxBucketSizeInMB;
-    private Integer maxCacheSizeInMB;
-    private Integer snapshotsTotalInGB;
     private String defaultKernelId;
     private String defaultRamdiskId;
     private Integer maxUserPublicAddresses;
@@ -56,11 +54,6 @@ public class SystemConfigWeb implements IsSerializable {
     public SystemConfigWeb() {}
 
     public SystemConfigWeb( final String walrusUrl,
-                            final String bucketsRootDirectory,
-                            final Integer maxBucketsPerUser,
-                            final Integer maxBucketSizeInMB,
-                            final Integer maxCacheSizeInMB,
-                            final Integer snapshotsTotalInGB,
                             final String defaultKernelId,
                             final String defaultRamdiskId,
                             final Integer maxUserPublicAddresses,
@@ -72,11 +65,6 @@ public class SystemConfigWeb implements IsSerializable {
                             final String nameserverAddress)
     {
         this.walrusUrl = walrusUrl;
-        this.bucketsRootDirectory = bucketsRootDirectory;
-        this.maxBucketsPerUser = maxBucketsPerUser;
-        this.maxBucketSizeInMB = maxBucketSizeInMB;
-        this.maxCacheSizeInMB = maxCacheSizeInMB;
-        this.snapshotsTotalInGB = snapshotsTotalInGB;
         this.defaultKernelId = defaultKernelId;
         this.defaultRamdiskId = defaultRamdiskId;
         this.dnsDomain = dnsDomain;
@@ -96,56 +84,6 @@ public class SystemConfigWeb implements IsSerializable {
     public void setWalrusUrl( final String walrusUrl )
     {
         this.walrusUrl = walrusUrl;
-    }
-
-    public String getBucketsRootDirectory()
-    {
-        return bucketsRootDirectory;
-    }
-
-    public void setBucketsRootDirectory( final String bucketsRootDirectory )
-    {
-        this.bucketsRootDirectory = bucketsRootDirectory;
-    }
-
-    public Integer getMaxBucketSizeInMB()
-    {
-        return maxBucketSizeInMB;
-    }
-
-    public void setMaxBucketSizeInMB( final Integer maxBucketSizeInMB )
-    {
-        this.maxBucketSizeInMB = maxBucketSizeInMB;
-    }
-
-    public Integer getMaxBucketsPerUser()
-    {
-        return maxBucketsPerUser;
-    }
-
-    public void setMaxBucketsPerUser( final Integer maxBucketsPerUser )
-    {
-        this.maxBucketsPerUser = maxBucketsPerUser;
-    }
-
-    public Integer getMaxCacheSizeInMB()
-    {
-        return maxCacheSizeInMB;
-    }
-
-    public void setMaxCacheSizeInMB( final Integer maxCacheSizeInMB )
-    {
-        this.maxCacheSizeInMB = maxCacheSizeInMB;
-    }
-
-    public Integer getSnapshotsTotalInGB()
-    {
-        return snapshotsTotalInGB;
-    }
-
-    public void setSnapshotsTotalInGB( final Integer snapshotsTotalInGB )
-    {
-        this.snapshotsTotalInGB = snapshotsTotalInGB;
     }
 
     public String getDefaultKernelId()

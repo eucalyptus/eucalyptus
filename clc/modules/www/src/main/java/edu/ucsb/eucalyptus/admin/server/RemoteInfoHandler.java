@@ -5,6 +5,8 @@ import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
+import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
+
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
@@ -50,6 +52,11 @@ public class RemoteInfoHandler {
     List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>();
 	  //TODO: Chris iterate over StorageStateType and construct storageList
     return storageList;
+  }
+
+  public static synchronized void setWalrusList( List<WalrusInfoWeb> walrusInfo)
+  {
+	  //TODO: Chris do messaging stuff
   }
 
   public static List<VmTypeWeb> getVmTypes()

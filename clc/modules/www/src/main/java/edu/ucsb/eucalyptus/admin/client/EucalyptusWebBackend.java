@@ -99,6 +99,12 @@ public interface EucalyptusWebBackend extends RemoteService {
 	public void setStorageList( String sessionId, List<StorageInfoWeb> storageList )
 	throws SerializableException;
 
+	public List<WalrusInfoWeb> getWalrusList( String sessionId )
+	throws SerializableException;
+
+	public void setWalrusList( String sessionId, List<WalrusInfoWeb> storageList )
+	throws SerializableException;
+
 	public SystemConfigWeb getSystemConfig( String sessionId ) throws SerializableException;
 
 	public void setSystemConfig( String sessionId, SystemConfigWeb systemConfig ) throws SerializableException;
