@@ -19,6 +19,7 @@ import org.mule.context.DefaultMuleContextFactory;
 
 import com.eucalyptus.util.BaseDirectory;
 import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.util.ServiceJarFile;
 import com.google.common.collect.Lists;
 
 public class SystemBootstrapper extends Bootstrapper {
@@ -63,7 +64,7 @@ public class SystemBootstrapper extends Bootstrapper {
     LOG.info( "Starting Eucalyptus." );
     try {
       for ( Bootstrapper b : this.bootstrappers ) {
-        LOG.info( "-> Invoking bootsrapper " + b.getClass( ).getSimpleName( ) + ".start()" );
+        LOG.info( "-> Invoking bootsrapper " + b.getClass( ).getSimpleName( ) + ".start()Z" );
         b.start( );
       }
       context.start( );
@@ -77,67 +78,31 @@ public class SystemBootstrapper extends Bootstrapper {
   @SuppressWarnings( "deprecation" )
   @Override
   public boolean load( ) throws Exception {
-    LOG.info( "Looking for Eucalyptus components in: " + BaseDirectory.LIB.toString( ) );
+    String bootstrapConfig = System.getProperty( Bootstrapper.BOOTSTRAP_CONFIG_PROPERTY );
+    if( bootstrapConfig == null ) {
+      LOG.fatal( "Bootstrap configuration property is undefined: " + Bootstrapper.BOOTSTRAP_CONFIG_PROPERTY );
+      return false;
+    }
+    try {
+      this.configs.add( new ConfigResource( bootstrapConfig ) );
+    } catch ( Exception e ) {
+      LOG.fatal( "Couldn't load bootstrap configuration file: " + bootstrapConfig, e );
+      return false;
+    }
 
+    LOG.info( "Eucalyptus component discovery [" + BaseDirectory.LIB.toString( ) +"]" );
     File libDir = new File( BaseDirectory.LIB.toString( ) );
     for ( File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( EucalyptusProperties.NAME ) ) {
-        JarFile jar = new JarFile( f );
-
-        LOG.info( "Found eucalyptus component jar: " + f.getName( ) );
-        URLClassLoader classLoader = URLClassLoader.newInstance( new URL[] { f.getAbsoluteFile( ).toURL( ) } );
-        Enumeration<JarEntry> jarList = jar.entries( );
-        while ( jarList.hasMoreElements( ) ) {
-          JarEntry j = jarList.nextElement( );
-          if ( j.getName( ).endsWith( ".class" ) ) {
-            String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( ".class", "" );
-            try {
-              Class c = classLoader.loadClass( classGuess );
-              if ( Bootstrapper.class.isAssignableFrom( c ) && !Bootstrapper.class.equals( c ) ) {
-                try {
-                  Bootstrapper b = ( Bootstrapper ) c.newInstance( );
-                  this.bootstrappers.add( b );
-                  LOG.info( "-> Registered bootsrapper instance: " + c.getSimpleName( ) );
-                } catch ( Exception e ) {
-                  LOG.info( "-> Failed to create bootstrapper instance: " + c.getSimpleName( ), e );
-                }
-              }
-            } catch ( Exception e ) {
-              LOG.error("Error occurred while trying to process class: " + classGuess );
-            }
-          }
-        }
-        
-        LOG.info( "-> Loaded properties..." );
-        JarEntry entry = jar.getJarEntry( Bootstrapper.PROPERTIES );
-        InputStream in = jar.getInputStream( entry );
-        List<ConfigResource> conf = Lists.newArrayList( );
-        Properties props = new Properties( );
-        props.load( in );
-        props.list( System.out );
-        String servicesEntryPath = null;
+      if ( f.getName( ).startsWith( EucalyptusProperties.NAME ) && f.getName( ).endsWith( ".jar" ) ) {
         try {
-          servicesEntryPath = props.getProperty( Bootstrapper.SERVICES_PROPERTY );//TODO: null check hi
-          JarEntry servicesEntry = jar.getJarEntry( Bootstrapper.BASEDIR + servicesEntryPath );
-          ConfigResource servicesResource = new ConfigResource( servicesEntryPath, jar.getInputStream( servicesEntry ) );
-          conf.add( servicesResource );
-          LOG.info( "-> Added configuration " + servicesEntryPath + "..." );
-        } catch ( Exception e ) {
-          if ( servicesEntryPath != null ) {
-            LOG.info( "-> Skipping " + servicesEntryPath + "..." );
-          }
-        }
-        String modelEntryPath = null;
-        try {
-          modelEntryPath = props.getProperty( Bootstrapper.MODEL_PROPERTY );
-          JarEntry modelEntry = jar.getJarEntry( Bootstrapper.BASEDIR + modelEntryPath );
-          ConfigResource modelResource = new ConfigResource( modelEntryPath, jar.getInputStream( modelEntry ) );
-          conf.add( modelResource );
-          LOG.info( "-> Added configuration " + modelEntryPath + "..." );
-        } catch ( Exception e ) {
-          if ( modelEntryPath != null ) {
-            LOG.info( "-> Skipping " + modelEntryPath + "..." );
-          }
+          LOG.info( "Found eucalyptus component jar: " + f.getName( ) );
+          ServiceJarFile jar = new ServiceJarFile( f );
+          this.bootstrappers.addAll( jar.getBootstrappers( this.getClass( ) ) );
+          this.configs.addAll( jar.getConfigResources( ) );
+        } catch ( IOException e ) {
+          LOG.fatal( e,e );
+          SystemBootstrapper.shutdown( false );
+          return false;
         }
       }
     }
@@ -145,10 +110,12 @@ public class SystemBootstrapper extends Bootstrapper {
     //bind DNS
     try {
       LOG.info( "-> Configuring..." );
-      configs.add( new ConfigResource( "eucalyptus-bootstrap.xml" ) );
       context = new DefaultMuleContextFactory( ).createMuleContext( new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) ) );
       for ( Bootstrapper b : this.bootstrappers ) {
-        LOG.info( "-> Invoking bootsrapper " + b.getClass( ).getSimpleName( ) + ".load()" );
+        LOG.info( "-> Found bootsrapper " + b.getClass( ).getSimpleName( ) + ".load()Z" );
+      }
+      for ( Bootstrapper b : this.bootstrappers ) {
+        LOG.info( "-> Invoking bootsrapper " + b.getClass( ).getSimpleName( ) + ".load()Z" );
         b.load( );
       }
     } catch ( Exception e ) {
@@ -156,7 +123,6 @@ public class SystemBootstrapper extends Bootstrapper {
     }
     return true;
   }
-
 
   @Override
   public String getVersion( ) {

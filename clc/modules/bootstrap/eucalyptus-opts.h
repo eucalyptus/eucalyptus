@@ -45,6 +45,9 @@ struct eucalyptus_opts
   unsigned int define_min; /**< @brief Set system properties.'s minimum occurreces */
   unsigned int define_max; /**< @brief Set system properties.'s maximum occurreces */
   const char *define_help; /**< @brief Set system properties. help description.  */
+  char * bootstrap_config_arg;	/**< @brief Use this file as the configuration for early runtime service bootstrapping. (default='eucalyptus-bootstrap.xml').  */
+  char * bootstrap_config_orig;	/**< @brief Use this file as the configuration for early runtime service bootstrapping. original value given at command line.  */
+  const char *bootstrap_config_help; /**< @brief Use this file as the configuration for early runtime service bootstrapping. help description.  */
   int verbose_flag;	/**< @brief Verbose console output. Note: log file output is not controlled by this flag. (default=off).  */
   const char *verbose_help; /**< @brief Verbose console output. Note: log file output is not controlled by this flag. help description.  */
   char * out_arg;	/**< @brief Redirect standard out to file. (default='&1').  */
@@ -86,6 +89,7 @@ struct eucalyptus_opts
   unsigned int user_given ;	/**< @brief Whether user was given.  */
   unsigned int home_given ;	/**< @brief Whether home was given.  */
   unsigned int define_given ;	/**< @brief Whether define was given.  */
+  unsigned int bootstrap_config_given ;	/**< @brief Whether bootstrap-config was given.  */
   unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
   unsigned int out_given ;	/**< @brief Whether out was given.  */
   unsigned int err_given ;	/**< @brief Whether err was given.  */

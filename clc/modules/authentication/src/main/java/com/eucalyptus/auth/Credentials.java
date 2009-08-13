@@ -18,13 +18,12 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 
 import com.eucalyptus.auth.util.AbstractKeyStore;
+import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.google.common.collect.Lists;
-
-
 
 public class Credentials {
   private static Logger LOG            = Logger.getLogger( Credentials.class );
@@ -32,17 +31,27 @@ public class Credentials {
   private static String KEY_STORE_PASS = "eucalyptus";                         //TODO: change the way this is handled
   private static String FILENAME       = "euca.p12";
   public static String  DB_NAME        = "eucalyptus_auth";
-  public static User SYSTEM = getSystemUser();
+  public static User    SYSTEM         = getSystemUser( );
+  
 
   public static void init( ) {
     Security.addProvider( new BouncyCastleProvider( ) );
     org.apache.xml.security.Init.init( );
-     WSSConfig.getDefaultWSConfig( ).addJceProvider( "BC", BouncyCastleProvider.class.getCanonicalName( ) );
-     WSSConfig.getDefaultWSConfig( ).setTimeStampStrict( true );
-     WSSConfig.getDefaultWSConfig( ).setEnableSignatureConfirmation( true );
+    WSSConfig.getDefaultWSConfig( ).addJceProvider( "BC", BouncyCastleProvider.class.getCanonicalName( ) );
+    WSSConfig.getDefaultWSConfig( ).setTimeStampStrict( true );
+    WSSConfig.getDefaultWSConfig( ).setEnableSignatureConfirmation( true );
   }
-  
-  public static void check() {
+
+  public static boolean checkKeystore( ) {
+    try {
+      return EucaKeyStore.getInstance( ).check( );
+    } catch ( GeneralSecurityException e ) {
+      LOG.debug(e,e);
+      return false;
+    }
+  }
+
+  public static boolean checkAdmin( ) {
     try {
       getUser( "admin" );
     } catch ( NoSuchUserException e ) {
@@ -50,20 +59,18 @@ public class Credentials {
         addUser( "admin", Boolean.TRUE );
       } catch ( UserExistsException e1 ) {
         LOG.fatal( e1, e1 );
+        return false;
       }
     }
+    return true;
   }
-  
-  
 
   private static User getSystemUser( ) {
-    User system = new User();
+    User system = new User( );
     system.setUserName( EucalyptusProperties.NAME );
     system.setIsAdministrator( Boolean.TRUE );
     return system;
   }
-
-
 
   public static User getUser( String userName ) throws NoSuchUserException {
     User user = null;
@@ -102,7 +109,8 @@ public class Credentials {
     }
     return newUser;
   }
-  public static <T> EntityWrapper<T> getEntityWrapper() {
+
+  public static <T> EntityWrapper<T> getEntityWrapper( ) {
     return new EntityWrapper<T>( Credentials.DB_NAME );
   }
 
@@ -222,7 +230,7 @@ public class Credentials {
     public static String getCertificateAlias( final X509Certificate cert ) throws GeneralSecurityException {
       return getCertificateAlias( new String( Hashes.getPemBytes( cert ) ) );
     }
-    
+
     public static void addCertificate( final String userName, final String alias, final X509Certificate cert ) throws GeneralSecurityException {
       String certPem = new String( UrlBase64.encode( Hashes.getPemBytes( cert ) ) );
       EntityWrapper<User> db = getEntityWrapper( );
@@ -234,7 +242,7 @@ public class Credentials {
         u.getCertificates( ).add( x509cert );
         db.commit( );
       } catch ( EucalyptusCloudException e ) {
-        LOG.error( e,e );
+        LOG.error( e, e );
         LOG.error( "username=" + userName + " \nalias=" + alias + " \ncert=" + cert );
         db.rollback( );
         throw new GeneralSecurityException( e );
@@ -256,7 +264,8 @@ public class Credentials {
     }
   }
 
-  public static void createSystemKeys( AbstractKeyStore eucaKeyStore ) throws IOException, GeneralSecurityException {
+  protected static void createSystemKeys( ) throws IOException, GeneralSecurityException {
+    AbstractKeyStore eucaKeyStore = EucaKeyStore.getInstance( );
     KeyTool keyTool = new KeyTool( );
     KeyPair sysKp = keyTool.getKeyPair( );
     X509Certificate sysX509 = keyTool.getCertificate( sysKp, EucalyptusProperties.getDName( EucalyptusProperties.NAME ) );
@@ -265,6 +274,9 @@ public class Credentials {
     eucaKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate( ), EucalyptusProperties.NAME );
     eucaKeyStore.addKeyPair( EucalyptusProperties.WWW_NAME, wwwX509, wwwKp.getPrivate( ), EucalyptusProperties.NAME );
     eucaKeyStore.store( );
+    if( !eucaKeyStore.check( ) ) {
+      throw new GeneralSecurityException( "Created new keystore, but check still fails. eeek." );
+    }
   }
 
 }

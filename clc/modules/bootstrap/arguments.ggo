@@ -5,9 +5,11 @@ section "Eucalyptus Configuration & Environment"
 option "user"       u   "User to drop privs to after starting."   string  typestr="username"  default="eucalyptus" no
 option "home"       h   "Eucalyptus home directory."   string  typestr="directory"  default="/" no
 option "define"       D   "Set system properties."   string  optional  multiple
+option "bootstrap-config"       c   "Use this file as the configuration for early runtime service bootstrapping."   string  typestr="config.xml" default="eucalyptus-bootstrap.xml" no
 option "verbose"       v   "Verbose console output. Note: log file output is not controlled by this flag."   flag   off
 option "out"       o   "Redirect standard out to file."   string  typestr="filename"  default="&1" no
 option "err"       e   "Redirect standard error to file."   string  typestr="filename"  default="&2" no
+
 
 section "Eucalyptus Runtime Options"
 option "check"       C   "Check on Eucalyptus."   flag   off

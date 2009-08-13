@@ -1,12 +1,15 @@
 package com.eucalyptus.auth;
 
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrapper;
 
-public class CredentialsBootstrapper implements Bootstrapper {
-
+public class CredentialsBootstrapper extends Bootstrapper {
+  private static Logger LOG = Logger.getLogger( CredentialsBootstrapper.class );
   @Override
   public boolean check( ) throws Exception {
-    return true;
+    return Credentials.checkKeystore( );
   }
 
   @Override
@@ -15,21 +18,20 @@ public class CredentialsBootstrapper implements Bootstrapper {
   }
 
   @Override
-  public String getVersion( ) {
-    return "";
-  }
-
-  @Override
   public boolean load( ) throws Exception {
     Credentials.init( );
-    //TODO: first time start up check
+    if( !Credentials.checkKeystore( ) ) {
+      LOG.info("Looks like this is the first time?");//TODO: need to handle distinction between Cloud and Walrus/EBS here?!
+      LOG.info("Generating system keys.");
+      Credentials.createSystemKeys( );
+    }
     return false;
   }
 
   @Override
   public boolean start( ) throws Exception {
     //TODO: this depends on the DB
-    Credentials.check( );
+//    Credentials.checkAdmin( );
     return true;
   }
 

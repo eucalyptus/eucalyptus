@@ -53,7 +53,7 @@ public class Main {
   {
     Credentials.init( );
 
-    Credentials.check( );
+    Credentials.checkAdmin( );
     StartupChecks.doChecks();
     
 

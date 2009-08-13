@@ -1,5 +1,6 @@
 package com.eucalyptus.bootstrap;
 
+import java.io.File;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -9,10 +10,18 @@ import org.hsqldb.persist.HsqlProperties;
 
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.util.SubDirectory;
 
-public class HsqldbBootstrapper extends Bootstrapper {
+public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
   private static Logger             LOG = Logger.getLogger( HsqldbBootstrapper.class );
   private static HsqldbBootstrapper singleton;
+  /**
+   * 
+   * ${euca.db.host}
+   * ${euca.db.port}
+   * ${euca.db.name}
+   * ${euca.db.jpaname}
+   */
 
   public static HsqldbBootstrapper getInstance( ) {
     synchronized ( HsqldbBootstrapper.class ) {
@@ -22,6 +31,7 @@ public class HsqldbBootstrapper extends Bootstrapper {
     }
     return singleton;
   }
+
   private Server db;
   private String fileName;
   private HsqldbBootstrapper( ) {}
@@ -40,16 +50,29 @@ public class HsqldbBootstrapper extends Bootstrapper {
   public boolean load( ) throws Exception {
     db = new Server( );
     HsqlProperties props = new HsqlProperties( );
-    props.setProperty( ServerConstants.SC_KEY_DATABASE, EucalyptusProperties.NAME );
-    props.setProperty( ServerConstants.SC_KEY_DBNAME, EucalyptusProperties.NAME );
+    props.setProperty( ServerConstants.SC_KEY_NO_SYSTEM_EXIT, true );
+    props.setProperty( ServerConstants.SC_KEY_PORT, 9001 );
+    props.setProperty( ServerConstants.SC_KEY_REMOTE_OPEN_DB, true );
+    props.setProperty( ServerConstants.SC_KEY_DATABASE+".0", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME );
+    props.setProperty( ServerConstants.SC_KEY_DBNAME+".0", EucalyptusProperties.NAME );
+    String vol = "_volumes";
+    props.setProperty( ServerConstants.SC_KEY_DATABASE+".1", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME + vol );
+    props.setProperty( ServerConstants.SC_KEY_DBNAME+".1", EucalyptusProperties.NAME + vol );
+    String auth = "_auth";
+    props.setProperty( ServerConstants.SC_KEY_DATABASE+".2", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME + auth );
+    props.setProperty( ServerConstants.SC_KEY_DBNAME+".2", EucalyptusProperties.NAME + auth );
     db.setProperties( props );
     return true;
   }
 
   @Override
   public boolean start( ) throws Exception {
-    db.start( );
-    return false;
+    (new Thread(this)).start( );
+    return true;
+  }
+  
+  public void run() {
+    this.db.start( );
   }
 
   @Override

@@ -79,9 +79,9 @@
             <property name="hibernate.show_sql" value="false"/>
             <property name="hibernate.format_sql" value="false"/>
             <property name="hibernate.connection.driver_class" value="org.hsqldb.jdbcDriver"/>
-            <property name="hibernate.connection.url" value="jdbc:hsqldb:file:${euca.var.dir}/db/eucalyptus;shutdown=true"/>
+            <property name="hibernate.connection.url" value="jdbc:hsqldb:hsql://${euca.db.host}:${euca.db.port}/eucalyptus"/>
             <property name="hibernate.connection.username" value="sa"/>
-            <property name="hibernate.connection.password" value=""/>
+            <property name="hibernate.connection.password" value="eucalyptus"/>
             <property name="hibernate.connection.autocommit" value="true"/>
             <property name="hibernate.c3p0.min_size" value="16"/>
             <property name="hibernate.c3p0.max_size" value="16384"/>

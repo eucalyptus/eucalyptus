@@ -37,7 +37,6 @@ public class EucaKeyStore extends AbstractKeyStore {
 
   @Override
   public boolean check( ) throws GeneralSecurityException {
-    final X509Certificate cert = this.getCertificate( EucalyptusProperties.WWW_NAME );
-    return cert != null;
+    return (this.getCertificate( EucalyptusProperties.WWW_NAME )!= null)&&(this.getCertificate( EucalyptusProperties.NAME )!=null);
   }
 }

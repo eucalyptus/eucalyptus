@@ -28,27 +28,28 @@ const char *eucalyptus_opts_usage = "Usage: Eucalyptus [OPTIONS]...";
 const char *eucalyptus_opts_description = "";
 
 const char *eucalyptus_opts_help[] = {
-  "      --help                 Print help and exit",
-  "  -V, --version              Print version and exit",
+  "      --help                    Print help and exit",
+  "  -V, --version                 Print version and exit",
   "\nEucalyptus Configuration & Environment:",
-  "  -u, --user=username        User to drop privs to after starting.  \n                               (default=`eucalyptus')",
-  "  -h, --home=directory       Eucalyptus home directory.  (default=`/')",
-  "  -D, --define=STRING        Set system properties.",
-  "  -v, --verbose              Verbose console output. Note: log file output is \n                               not controlled by this flag.  (default=off)",
-  "  -o, --out=filename         Redirect standard out to file.  (default=`&1')",
-  "  -e, --err=filename         Redirect standard error to file.  (default=`&2')",
+  "  -u, --user=username           User to drop privs to after starting.  \n                                  (default=`eucalyptus')",
+  "  -h, --home=directory          Eucalyptus home directory.  (default=`/')",
+  "  -D, --define=STRING           Set system properties.",
+  "  -c, --bootstrap-config=config.xml\n                                Use this file as the configuration for early \n                                  runtime service bootstrapping.  \n                                  (default=`eucalyptus-bootstrap.xml')",
+  "  -v, --verbose                 Verbose console output. Note: log file output \n                                  is not controlled by this flag.  \n                                  (default=off)",
+  "  -o, --out=filename            Redirect standard out to file.  (default=`&1')",
+  "  -e, --err=filename            Redirect standard error to file.  \n                                  (default=`&2')",
   "\nEucalyptus Runtime Options:",
-  "  -C, --check                Check on Eucalyptus.  (default=off)",
-  "  -S, --stop                 Stop Eucalyptus.  (default=off)",
-  "  -f, --fork                 Fork and daemonize Eucalyptus.  (default=on)",
-  "      --pidfile=filename     Location for the pidfile.  \n                               (default=`/var/run/eucalyptus-cloud.pid')",
+  "  -C, --check                   Check on Eucalyptus.  (default=off)",
+  "  -S, --stop                    Stop Eucalyptus.  (default=off)",
+  "  -f, --fork                    Fork and daemonize Eucalyptus.  (default=on)",
+  "      --pidfile=filename        Location for the pidfile.  \n                                  (default=`/var/run/eucalyptus-cloud.pid')",
   "\nJava VM Options:",
-  "  -j, --java-home=directory  Alternative way to specify JAVA_HOME.  \n                               (default=`/usr/lib/jvm/java-6-openjdk')",
-  "  -J, --jvm-name=jvm-name    Which JVM type to run (see jvm.cfg).  \n                               (default=`-server')",
-  "  -X, --jvm-args=STRING      Arguments to pass to the JVM.",
-  "  -d, --debug                Launch with debugger enabled.  (default=off)",
-  "      --debug-port=INT       Set the port to use for the debugger.  \n                               (default=`5005')",
-  "      --debug-suspend        Set the port to use for the debugger.  \n                               (default=off)",
+  "  -j, --java-home=directory     Alternative way to specify JAVA_HOME.  \n                                  (default=`/usr/lib/jvm/java-6-openjdk')",
+  "  -J, --jvm-name=jvm-name       Which JVM type to run (see jvm.cfg).  \n                                  (default=`-server')",
+  "  -X, --jvm-args=STRING         Arguments to pass to the JVM.",
+  "  -d, --debug                   Launch with debugger enabled.  (default=off)",
+  "      --debug-port=INT          Set the port to use for the debugger.  \n                                  (default=`5005')",
+  "      --debug-suspend           Set the port to use for the debugger.  \n                                  (default=off)",
     0
 };
 
@@ -81,6 +82,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->user_given = 0 ;
   args_info->home_given = 0 ;
   args_info->define_given = 0 ;
+  args_info->bootstrap_config_given = 0 ;
   args_info->verbose_given = 0 ;
   args_info->out_given = 0 ;
   args_info->err_given = 0 ;
@@ -105,6 +107,8 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->home_orig = NULL;
   args_info->define_arg = NULL;
   args_info->define_orig = NULL;
+  args_info->bootstrap_config_arg = gengetopt_strdup ("eucalyptus-bootstrap.xml");
+  args_info->bootstrap_config_orig = NULL;
   args_info->verbose_flag = 0;
   args_info->out_arg = gengetopt_strdup ("&1");
   args_info->out_orig = NULL;
@@ -140,21 +144,22 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->define_help = eucalyptus_opts_help[5] ;
   args_info->define_min = 0;
   args_info->define_max = 0;
-  args_info->verbose_help = eucalyptus_opts_help[6] ;
-  args_info->out_help = eucalyptus_opts_help[7] ;
-  args_info->err_help = eucalyptus_opts_help[8] ;
-  args_info->check_help = eucalyptus_opts_help[10] ;
-  args_info->stop_help = eucalyptus_opts_help[11] ;
-  args_info->fork_help = eucalyptus_opts_help[12] ;
-  args_info->pidfile_help = eucalyptus_opts_help[13] ;
-  args_info->java_home_help = eucalyptus_opts_help[15] ;
-  args_info->jvm_name_help = eucalyptus_opts_help[16] ;
-  args_info->jvm_args_help = eucalyptus_opts_help[17] ;
+  args_info->bootstrap_config_help = eucalyptus_opts_help[6] ;
+  args_info->verbose_help = eucalyptus_opts_help[7] ;
+  args_info->out_help = eucalyptus_opts_help[8] ;
+  args_info->err_help = eucalyptus_opts_help[9] ;
+  args_info->check_help = eucalyptus_opts_help[11] ;
+  args_info->stop_help = eucalyptus_opts_help[12] ;
+  args_info->fork_help = eucalyptus_opts_help[13] ;
+  args_info->pidfile_help = eucalyptus_opts_help[14] ;
+  args_info->java_home_help = eucalyptus_opts_help[16] ;
+  args_info->jvm_name_help = eucalyptus_opts_help[17] ;
+  args_info->jvm_args_help = eucalyptus_opts_help[18] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->debug_help = eucalyptus_opts_help[18] ;
-  args_info->debug_port_help = eucalyptus_opts_help[19] ;
-  args_info->debug_suspend_help = eucalyptus_opts_help[20] ;
+  args_info->debug_help = eucalyptus_opts_help[19] ;
+  args_info->debug_port_help = eucalyptus_opts_help[20] ;
+  args_info->debug_suspend_help = eucalyptus_opts_help[21] ;
   
 }
 
@@ -282,6 +287,8 @@ arguments_release (struct eucalyptus_opts *args_info)
   free_string_field (&(args_info->home_arg));
   free_string_field (&(args_info->home_orig));
   free_multiple_string_field (args_info->define_given, &(args_info->define_arg), &(args_info->define_orig));
+  free_string_field (&(args_info->bootstrap_config_arg));
+  free_string_field (&(args_info->bootstrap_config_orig));
   free_string_field (&(args_info->out_arg));
   free_string_field (&(args_info->out_orig));
   free_string_field (&(args_info->err_arg));
@@ -340,6 +347,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
   if (args_info->home_given)
     write_into_file(outfile, "home", args_info->home_orig, 0);
   write_multiple_into_file(outfile, args_info->define_given, "define", args_info->define_orig, 0);
+  if (args_info->bootstrap_config_given)
+    write_into_file(outfile, "bootstrap-config", args_info->bootstrap_config_orig, 0);
   if (args_info->verbose_given)
     write_into_file(outfile, "verbose", 0, 0 );
   if (args_info->out_given)
@@ -922,6 +931,7 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { "user",	1, NULL, 'u' },
         { "home",	1, NULL, 'h' },
         { "define",	1, NULL, 'D' },
+        { "bootstrap-config",	1, NULL, 'c' },
         { "verbose",	0, NULL, 'v' },
         { "out",	1, NULL, 'o' },
         { "err",	1, NULL, 'e' },
@@ -938,7 +948,7 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { NULL,	0, NULL, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vu:h:D:vo:e:CSfj:J:X:d", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:D:c:vo:e:CSfj:J:X:d", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -978,6 +988,18 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
           if (update_multiple_arg_temp(&define_list, 
               &(local_args_info.define_given), optarg, 0, 0, ARG_STRING,
               "define", 'D',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'c':	/* Use this file as the configuration for early runtime service bootstrapping..  */
+        
+        
+          if (update_arg( (void *)&(args_info->bootstrap_config_arg), 
+               &(args_info->bootstrap_config_orig), &(args_info->bootstrap_config_given),
+              &(local_args_info.bootstrap_config_given), optarg, 0, "eucalyptus-bootstrap.xml", ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "bootstrap-config", 'c',
               additional_error))
             goto failure;
         

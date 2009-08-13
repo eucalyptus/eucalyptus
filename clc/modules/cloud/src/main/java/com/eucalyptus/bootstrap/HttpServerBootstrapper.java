@@ -25,6 +25,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
   public boolean load( ) throws Exception {
     jettyServer = new org.mortbay.jetty.Server();
     XmlConfiguration jettyConfig = new XmlConfiguration( new File( BaseDirectory.CONF.toString() + File.separator + "eucalyptus-jetty.xml" ).toURL() );
+    jettyConfig.configure( jettyServer );
     return true;
   }
 
