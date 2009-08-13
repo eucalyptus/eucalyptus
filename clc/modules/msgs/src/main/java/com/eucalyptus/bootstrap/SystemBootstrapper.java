@@ -150,5 +150,5 @@ public class SystemBootstrapper extends Bootstrapper {
 
   private static native void shutdown( boolean reload );
 
-  private static native void hello( );
+  public static native void hello( );
 }

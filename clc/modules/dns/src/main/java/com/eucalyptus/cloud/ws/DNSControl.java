@@ -51,10 +51,10 @@ import java.util.List;
 public class DNSControl {
 
     private static Logger LOG = Logger.getLogger( DNSControl.class );
-    static {
+    /*static {
         initialize();
         populateRecords();
-    }
+    }*/
 
     private static void initializeUDP() {
         try {

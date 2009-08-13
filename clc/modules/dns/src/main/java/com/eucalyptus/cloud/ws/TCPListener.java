@@ -42,26 +42,37 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class TCPListener extends Thread {
-    private static Logger LOG = Logger.getLogger( TCPListener.class );
-    InetAddress address;
-    int port;
+	private static Logger LOG = Logger.getLogger( TCPListener.class );
+	InetAddress address;
+	int port;
+	ServerSocket socket;
 
-    public TCPListener(InetAddress address, int port) {
-        this.address = address;
-        this.port = port;
-    }
+	public TCPListener(InetAddress address, int port) {
+		this.address = address;
+		this.port = port;
+		try {
+			socket = new ServerSocket(port, 128, address);
+		} catch(IOException ex) {
+			LOG.error(ex);
+		}
 
-    public void run() {
-        try {
-            LOG.info("start");            
-            ServerSocket sock = new ServerSocket(port, 128, address);
-            while (true) {
-                LOG.info("Listening on port: " + port);
-                final Socket s = sock.accept();
-                ConnectionHandlerFactory.handle(s);
-            }
-        } catch(IOException ex) {
-            LOG.error(ex);
-        }
-    }
+	}
+
+	public void run() {
+		while (true) {
+			Socket s;
+			try {
+				if(socket != null) {
+					LOG.info("Listening on port: " + port);
+					s = socket.accept();
+					ConnectionHandlerFactory.handle(s);
+				} else {
+					LOG.error("Cannot start service. Invalid socket.");
+					return;
+				}
+			} catch (IOException e) {
+				LOG.error(e);
+			}
+		}
+	}
 }

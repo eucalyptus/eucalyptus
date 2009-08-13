@@ -38,6 +38,7 @@ public class ServiceJarFile extends JarFile {
     while ( jarList.hasMoreElements( ) ) {
       JarEntry j = jarList.nextElement( );
       if ( Bootstrapper.PROPERTIES.equals( j.getName( ) ) ) {
+    	  LOG.info("Found properties: " + j.getName());
         try {
           InputStream in = this.getInputStream( j );
           props.load( in );
@@ -104,6 +105,7 @@ public class ServiceJarFile extends JarFile {
         throw new InstantiationException( candidate.getCanonicalName( ) + " does not declare public <init>()V or public static getInstance()L;" ); 
       }
     }
+    LOG.info("Found bootstrapper: " + candidate.getName());
     return candidate;
   }
 }

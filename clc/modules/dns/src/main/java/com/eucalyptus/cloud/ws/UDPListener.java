@@ -41,21 +41,25 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 
 public class UDPListener extends Thread {
-    private static Logger LOG = Logger.getLogger( UDPListener.class );
-    InetAddress address;
-    int port;
+	private static Logger LOG = Logger.getLogger( UDPListener.class );
+	InetAddress address;
+	int port;
+	DatagramSocket socket;
 
-    public UDPListener(InetAddress address, int port) {
-        this.address = address;
-        this.port = port;
-    }
+	public UDPListener(InetAddress address, int port) {
+		this.address = address;
+		this.port = port;
+		try {
+			socket = new DatagramSocket(port, address);
+		} catch(Exception ex) {
+			LOG.error(ex);
+		}
+	}
 
-    public void run() {
-        try {
-            DatagramSocket socket = new DatagramSocket(port, address);
-            ConnectionHandlerFactory.handle(socket);
-        } catch(IOException ex) {
-            LOG.error(ex);
-        }
-    }
+	public void run() {
+		if(socket != null)
+			ConnectionHandlerFactory.handle(socket);
+		else
+			LOG.error("Cannot start service. Invalid socket.");
+	}
 }
