@@ -43,7 +43,7 @@ EUCA_USER="eucalyptus"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
-       EUCALYPTUS="@prefix@"                                   
+       EUCALYPTUS="@prefix@"
        if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
               EUCALYPTUS="/"                                   
        fi   
@@ -129,6 +129,33 @@ do_status() {
 	return 1
 }
 
+# fully clean up all local CC state
+do_fullclean() {
+	pidfiles="`ls -1 $EUCALYPTUS/var/run/eucalyptus/vtund*.pid 2>/dev/null`"
+	for pidfile in $pidfiles ; do 
+		if [ -s $pidfile ]; then
+			pid=`cat $pidfile 2> /dev/null`
+			kill $pid > /dev/null 2>&1 
+		else
+			continue	
+		fi
+		timeout=5
+		while [ $timeout -gt 0 ]; do
+			if ps $pid > /dev/null 2>&1 ; then
+				sleep 1
+				timeout=$(($timeout - 1))
+			else
+				break
+			fi
+		done
+		if [ $timeout -eq 0 ]; then
+			kill -9 $pid > /dev/null 2>&1
+		fi
+		rm -f $pidfile
+	done
+	rm -f $EUCALYPTUS/var/lib/eucalyptus/CC/*
+	rm -f /dev/shm/*eucalyptusCC*    
+}
 
 do_stop() {
 	pidfile="$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid"
@@ -215,7 +242,7 @@ done
 # if we didn't find AXIS2C we'll pick the one we used at configuration
 # time
 if [ -z "$AXIS2C_HOME" ]; then
-	export AXIS2C_HOME="@AXIS2C_HOME@"
+        export AXIS2C_HOME="@AXIS2C_HOME@"
 fi
 
 # finally let's check the path
@@ -285,6 +312,52 @@ case "$1" in
 		;;
 	esac
 	;;
+  cleanstart)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_daemon_msg "Starting $DESC" "$NAME"
+		else
+			echo -n "Starting $DESC: "
+		fi
+	fi
+	
+	# let's check there is no previous CC running
+	if do_status ; then
+		echo
+		echo "another CC is already running!"
+		if [ "$VERBOSE" != no ]; then
+			 if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			fi
+		fi
+		exit 1
+	fi
+
+	# start and stop are hard: clear the semaphores
+	rm -f /dev/shm/*eucalyptusCC*
+	do_fullclean
+	do_start
+	case "$?" in
+	0|1) 
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 0
+			else
+				echo "done."
+			fi
+		fi
+		;;
+	*)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			else
+				echo "failed!"
+			fi
+		fi
+		;;
+	esac
+	;;
   stop)
 	if [ "$VERBOSE" != no ]; then
        		if [ "$WE_HAVE_LSB" = "Y" ]; then
@@ -304,43 +377,18 @@ case "$1" in
 		fi
 	fi
 	;;
-  reload)
+  cleanstop)
 	if [ "$VERBOSE" != no ]; then
-		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_begin_msg "Reloading $DESC"
+       		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Stopping $DESC"
 		else
-			echo -n "Reloading $DESC: "
-		fi
-	fi
-	# reload clears all CC state
+			echo -n "Stopping $DESC: "
+                fi
+        fi
+	# start and stop are hard: we loose the CC state
 	do_stop
-
-	pidfiles="`ls -1 $EUCALYPTUS/var/run/eucalyptus/vtund*.pid 2>/dev/null`"
-	for pidfile in $pidfiles ; do 
-		if [ -s $pidfile ]; then
-			pid=`cat $pidfile 2> /dev/null`
-			kill $pid > /dev/null 2>&1 
-		else
-			continue	
-		fi
-		timeout=5
-		while [ $timeout -gt 0 ]; do
-			if ps $pid > /dev/null 2>&1 ; then
-				sleep 1
-				timeout=$(($timeout - 1))
-			else
-				break
-			fi
-		done
-		if [ $timeout -eq 0 ]; then
-			kill -9 $pid > /dev/null 2>&1
-		fi
-		rm -f $pidfile
-	done
-
-	rm -f $EUCALYPTUS/var/lib/eucalyptus/CC/*
+	do_fullclean
 	rm -f /dev/shm/*eucalyptusCC*
-	do_start
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_end_msg 0
@@ -368,6 +416,28 @@ case "$1" in
 		fi
 	fi
   	;;
+  cleanrestart)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Restarting $DESC"
+		else
+			echo -n "Restarting $DESC: "
+		fi
+	fi
+	do_stop
+
+	do_fullclean
+	rm -f /dev/shm/*eucalyptusCC*
+
+	do_start
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg 0
+		else
+			echo "done."
+		fi
+	fi
+	;;
   config)
 	echo "EUCALYPTUS=${EUCALYPTUS}"
 	echo "AXIS2C_HOME=${AXIS2C_HOME}"
@@ -383,7 +453,7 @@ case "$1" in
         ;;
 
   *)
-	echo "Usage: $NAME {start|stop|restart|reload}" >&2
+	echo "Usage: $NAME {start|stop|restart|cleanstart|cleanstop|cleanrestart}" >&2
 	exit 3
 	;;
 esac

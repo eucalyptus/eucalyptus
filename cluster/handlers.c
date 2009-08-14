@@ -454,8 +454,11 @@ int doDescribeNetworks(ncMetadata *ccMeta, char **ccs, int ccsLen, vnetConfig *o
   sem_wait(vnetConfigLock);
   
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    logprintfl(EUCADEBUG, "WTF: %s/%d\n", vnetconfig->localIp, vnetconfig->tunnels.localIpId);
     rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
+    logprintfl(EUCADEBUG, "WTF: %s/%d\n", vnetconfig->localIp, vnetconfig->tunnels.localIpId);
     rc = vnetSetupTunnels(vnetconfig);
+    logprintfl(EUCADEBUG, "WTF: %s/%d\n", vnetconfig->localIp, vnetconfig->tunnels.localIpId);
   }
   memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
   
@@ -940,15 +943,14 @@ int powerUp(resource *res) {
 
     // broadcast
     bc = hex2dot((0xFFFFFFFF - nms[i]) | (ips[i] & nms[i]));
-    logprintfl(EUCADEBUG, "trying; %s\n", bc);
 
     rc = 0;
     ret = 0;
     if (strcmp(res->mac, "00:00:00:00:00:00")) {
-      //      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake %s", vnetconfig->eucahome, res->mac);
-      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap wakeonlan -i %s %s", vnetconfig->eucahome, bc, res->mac);
+      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake -b %s %s", vnetconfig->eucahome, bc, res->mac);
+      //      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap wakeonlan -i %s %s", vnetconfig->eucahome, bc, res->mac);
     } else if (strcmp(res->ip, "0.0.0.0")) {
-      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake %s", vnetconfig->eucahome, res->ip);
+      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake -b %s %s", vnetconfig->eucahome, bc, res->ip);
     } else {
       ret = rc = 1;
     }

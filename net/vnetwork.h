@@ -35,6 +35,14 @@ typedef struct publicip_t {
   int allocated;
 } publicip;
 
+typedef struct tunnelData_t {
+  uint32_t localIpId;
+  uint32_t ccs[NUMBER_OF_CCS];
+  time_t ccsTunnelStart[NUMBER_OF_CCS];
+  time_t tunpassMtime;
+  int tunneling;
+} tunnelData;
+
 typedef struct vnetConfig_t {
   char eucahome[1024];
   char path[1024];
@@ -46,15 +54,12 @@ typedef struct vnetConfig_t {
   char mode[32];
   char localIp[32];
   uint32_t nw, nm;
-  uint32_t localIpId;
-  uint32_t ccs[NUMBER_OF_CCS];
-  time_t ccsTunnelStart[NUMBER_OF_CCS];
-  int tunneling;
   int role;
   int enabled;
   int initialized;
   int numaddrs;
   int max_vlan;
+  tunnelData tunnels;
   char etherdevs[NUMBER_OF_VLANS][16];
   userEntry users[NUMBER_OF_VLANS];
   networkEntry networks[NUMBER_OF_VLANS];
@@ -91,10 +96,8 @@ int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc);
 int vnetInitTunnels(vnetConfig *vnetconfig);
 int vnetSetupTunnels(vnetConfig *vnetconfig);
 int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig);
-int vnetSetupTunnelsGRE(vnetConfig *vnetconfig);
 int vnetTeardownTunnels(vnetConfig *vnetconfig);
 int vnetTeardownTunnelsVTUN(vnetConfig *vnetconfig);
-int vnetTeardownTunnelsGRE(vnetConfig *vnetconfig);
 int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname);
 int vnetDetachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname);
 
@@ -138,6 +141,7 @@ int getdevinfo(char *dev, uint32_t **outips, uint32_t **outnms, int *len);
 
 int check_chain(vnetConfig *vnetconfig, char *userName, char *netName);
 int check_device(char *dev);
+int check_deviceup(char *dev);
 int check_bridge(char *dev);
 int check_bridgedev(char *br, char *dev);
 int check_tablerule(vnetConfig *vnetconfig, char *table, char *rule);

@@ -68,6 +68,8 @@ void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *oth
 int logfile(char *file, int in_loglevel);
 int check_directory(char *dir);
 int check_file(char *file);
+int check_file_newer_than(char *file, time_t mtime);
+
 // argument checker
 int param_check(char *func, ...);
 // end of dan't functions
@@ -93,6 +95,7 @@ int param_check(char *func, ...);
 int hash_code (const char * s);
 char * get_string_stats (const char * s);
 int daemonrun(char *cmd, int *dpid);
+int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap, int *dpid);
 int run (const char * arg1, ...);
 int vrun (const char * fmt, ...);
 int cat (const char * file_name);

@@ -185,6 +185,27 @@ int check_directory(char *dir) {
   return(0);
 }
 
+int check_file_newer_than(char *file, time_t mtime) {
+  struct stat mystat;
+  int rc;
+
+  if (!file) {
+    return(1);
+  } else if (mtime <= 0) {
+    return(0);
+  }
+  
+  bzero(&mystat, sizeof(struct stat));
+  rc = stat(file, &mystat);
+  if (rc) {
+    return(1);
+  }
+  if (mystat.st_mtime > mtime) {
+    return(0);
+  }
+  return(1);
+}
+
 int check_file(char *file) {
   int rc;
   struct stat mystat;
@@ -660,42 +681,129 @@ char * get_string_stats (const char * s)
 
 #define BUFSIZE 1024
 
-/* daemonize and run 'cmd', returning pid of the daemonized process */
-int daemonrun(char *cmd, int *dpid) {
-  int pid, sid, i;
-  char **argv=NULL;
+/* daemonize and store pid in pidfile. if pidfile exists and contained
+   pid is daemon already running, do nothing.  force option will first
+   kill and then re-daemonize */
+int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap, int *dpid) {
+  int rc, found, ret;
+  char cmdstr[1024], file[1024];
+  FILE *FH;
+  
+  if (!cmd || !procname) {
+    return(1);
+  }
+  
+  if (pidfile) {
+    found=0;
+    rc = check_file(pidfile);
+    if (!rc) {
+      char *pidstr=NULL;
+      //      printf("found pidfile\n");
+      // pidfile exists
+      pidstr = file2str(pidfile);
+      if (pidstr) {
+	//	printf("pidfile has pid in it %s\n", pidstr);
+	snprintf(file, 1024, "/proc/%s/cmdline", pidstr);
+	if (!check_file(file)) {
+	  //	  printf("process already running\n");
+	  FH = fopen(file, "r");
+	  if (FH) {
+	    if (fgets(cmdstr, 1024, FH)) {
+	      if (strstr(cmdstr, procname)) {
+		//		printf("process match\n");
+		// process is running, and is indeed procname
+		found=1;
+	      }
+	    }
+	    fclose(FH);
+	  }
+	}
+	free(pidstr);
+      }
+    }
+    
+    if (found) {
+      //      printf("process found running\n");
+      // pidfile passed in and process is already running
+      if (force) {
+	//	printf("process forced, killing\n");
+	// kill process and remove pidfile
+	rc = safekillfile(pidfile, procname, 9, rootwrap);
+      } else {
+	//	printf("process already running, not forced; done\n");
+	// nothing to do
+	return(0);
+      }
+    } else {
+      //      printf("removing stale pidfile\n");
+      // pidfile passed in but process is not running
+      if (!check_file(pidfile)) {
+	unlink(pidfile);
+      }
+    }
+  }
+  
+  //  printf("running cmd\n");
+  rc = daemonrun(cmd, dpid);
+  if (!rc) {
+    // success
+    //    printf("success: %d\n", *dpid);
+    if (pidfile) {
+      char pidstr[32];
+      snprintf(pidstr, 32, "%d", *dpid);
+      rc = write2file(pidfile, pidstr);
+      //      printf("wrote pidfile\n");
+    }
+    ret = 0;
+  } else {
+    ret = 1;
+  }
+  return(ret);
+}
 
+/* daemonize and run 'cmd', returning pid of the daemonized process */
+int daemonrun(char *incmd, int *dpid) {
+  int pid, sid, i;
+  char **argv=NULL, *cmd;
+  
+  if (!incmd || !dpid) {
+    return(1);
+  }
+  
   *dpid = -1;
   pid = fork();
   if (pid < 0) {
     return(1);
   }
-
   if (!pid) {
-    char *tok, *ptr;
+    char *tok=NULL, *ptr=NULL;
     int idx;
 
     // become parent of session                                                 
     sid = setsid();
 
-    // construct argv                                                           
+    // construct argv
+    cmd = strdup(incmd);
     idx=0;
     argv = realloc(NULL, sizeof(char *));
     tok = strtok_r(cmd, " ", &ptr);
     while(tok) {
+      fflush(stdout);
       argv[idx] = strdup(tok);
       idx++;
       tok = strtok_r(NULL, " ", &ptr);
       argv = realloc(argv, sizeof(char *) * (idx+1));
     }
     argv[idx] = NULL;
+    free(cmd);
 
-    // close all fds                                                            
+    // close all fds
+    //    printf("ready to run: %s %s\n", argv[0], argv[1]);
     for (i=0; i<sysconf(_SC_OPEN_MAX); i++) {
       close(i);
     }
-
-    // run                                                                      
+    
+    // run
     exit(execvp(*argv, argv));
   }
 
