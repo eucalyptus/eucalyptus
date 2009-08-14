@@ -39,8 +39,17 @@ import com.eucalyptus.util.EntityWrapper;
 
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import org.apache.log4j.Logger;
-import org.xbill.DNS.*;
+import com.eucalyptus.dns.Zone;
 import org.xbill.DNS.Address;
+import org.xbill.DNS.CNAMERecord;
+import org.xbill.DNS.Record;
+import org.xbill.DNS.RRset;
+import org.xbill.DNS.DClass;
+import org.xbill.DNS.SOARecord;
+import org.xbill.DNS.ARecord;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.NSRecord;
+import org.xbill.DNS.Type;
 
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
@@ -163,12 +172,15 @@ public class ZoneManager {
             Zone zone = getZone(zoneName);
             RRset rrSet = zone.findExactMatch(record.getName(), record.getDClass());
             Iterator<Record> rrIterator = rrSet.rrs();
+            Record recordToRemove = null;
             while(rrIterator.hasNext()) {
                 Record rec = rrIterator.next();
                 if(rec.getName().equals(record.getName())) {
-                    zone.removeRecord(rec);
+        		recordToRemove = rec;            
                 }
             }
+	    if(recordToRemove != null) 
+		zone.removeRecord(recordToRemove);
             zone.addRecord(record);
             //now change the persistent store
             EntityWrapper<ARecordInfo> db = new EntityWrapper<ARecordInfo>();
@@ -192,12 +204,15 @@ public class ZoneManager {
             Zone zone = getZone(zoneName);
             RRset rrSet = zone.findExactMatch(record.getName(), record.getDClass());
             Iterator<Record> rrIterator = rrSet.rrs();
+	    Record recordToRemove = null;
             while(rrIterator.hasNext()) {
                 Record rec = rrIterator.next();
                 if(rec.getName().equals(record.getName())) {
-                    zone.removeRecord(rec);
+		    recordToRemove = rec;
                 }
             }
+	    if(recordToRemove != null)
+		zone.removeRecord(recordToRemove);
             zone.addRecord(record);
             //now change the persistent store
             EntityWrapper<CNAMERecordInfo> db = new EntityWrapper<CNAMERecordInfo>();
@@ -220,12 +235,15 @@ public class ZoneManager {
             Zone zone = getZone(zoneName);
             RRset rrSet = zone.findExactMatch(record.getName(), record.getDClass());
             Iterator<Record> rrIterator = rrSet.rrs();
+            Record recordToRemove = null;
             while(rrIterator.hasNext()) {
                 Record rec = rrIterator.next();
                 if(rec.getName().equals(record.getName())) {
-                    zone.removeRecord(rec);
+                    recordToRemove = rec;
                 }
             }
+            if(recordToRemove != null)
+            	zone.removeRecord(recordToRemove);
         } catch(Exception ex) {
             LOG.error(ex);
         }

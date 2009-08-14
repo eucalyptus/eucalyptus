@@ -36,7 +36,7 @@ public class SystemBootstrapper {
 
   private MuleContext          context;
 
-  private SystemBootstrapper( ) {}
+  public SystemBootstrapper( ) {}
 
   public boolean destroy( ) {
     return true;

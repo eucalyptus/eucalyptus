@@ -39,14 +39,36 @@
 
 package com.eucalyptus.cloud.ws;
 
-import org.xbill.DNS.*;
-
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.xbill.DNS.CNAMERecord;
+import org.xbill.DNS.Credibility;
+import org.xbill.DNS.DClass;
+import org.xbill.DNS.DNAMERecord;
+import org.xbill.DNS.ExtendedFlags;
+import org.xbill.DNS.Flags;
+import org.xbill.DNS.Header;
+import org.xbill.DNS.Message;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.NameTooLongException;
+import org.xbill.DNS.OPTRecord;
+import org.xbill.DNS.Opcode;
+import org.xbill.DNS.RRset;
+import org.xbill.DNS.Rcode;
+import org.xbill.DNS.Record;
+import org.xbill.DNS.Section;
+import org.xbill.DNS.TSIG;
+import org.xbill.DNS.TSIGRecord;
+import org.xbill.DNS.Type;
+
+import com.eucalyptus.dns.SetResponse;
+import com.eucalyptus.dns.Zone;
+import com.eucalyptus.dns.Cache;
 
 public class ConnectionHandler extends Thread {
 
