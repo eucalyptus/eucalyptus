@@ -3,6 +3,7 @@ package com.eucalyptus.auth.util;
 import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 
 import org.apache.log4j.Logger;
@@ -33,6 +34,7 @@ public class EucaKeyStore extends AbstractKeyStore {
 
   private EucaKeyStore( ) throws GeneralSecurityException, IOException {
     super( SubDirectory.KEYS.toString( ) + File.separator + EucaKeyStore.FILENAME, EucaKeyStore.KEY_STORE_PASS, EucaKeyStore.FORMAT );
+    
   }
 
   @Override

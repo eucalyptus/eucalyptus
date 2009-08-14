@@ -76,6 +76,7 @@ typedef struct {
 } java_method_t;
 static java_method_t euca_get_instance = { "getInstance", "()Lcom/eucalyptus/bootstrap/Bootstrapper;"};
 static java_method_t euca_load = { "load", "()Z" };
+static java_method_t euca_init = { "init", "()Z" };
 static java_method_t euca_start = { "start", "()Z" };
 static java_method_t euca_stop = { "stop", "()Z" };
 static java_method_t euca_check = { "check", "()Z" };
@@ -87,8 +88,9 @@ typedef struct {
 	jstring class_name;
 	jobject class_ref;
 	jobject instance;
-	jmethodID init;
+	jmethodID constructor;
 	jmethodID get_instance;
+	jmethodID init;
 	jmethodID load;
 	jmethodID start;
 	jmethodID stop;

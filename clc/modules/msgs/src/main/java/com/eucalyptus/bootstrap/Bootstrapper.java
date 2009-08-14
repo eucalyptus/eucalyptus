@@ -17,9 +17,15 @@ public abstract class Bootstrapper {
 
   public abstract boolean load() throws Exception;
   public abstract boolean start() throws Exception;
-  public abstract boolean check() throws Exception;
-  public abstract boolean stop() throws Exception;
-  public abstract boolean destroy() throws Exception;
+  public boolean check() throws Exception {
+    return true;
+  }
+  public boolean stop() throws Exception {
+    return true;
+  }
+  public boolean destroy() throws Exception {
+    return true;
+  }
 
   
 }

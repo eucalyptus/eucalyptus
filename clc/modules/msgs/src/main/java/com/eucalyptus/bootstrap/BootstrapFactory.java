@@ -23,16 +23,9 @@ public class BootstrapFactory {
   private static Multimap<Resource, ResourceProvider> resources     = Multimaps.newArrayListMultimap( );
   private static Multimap<Resource, Bootstrapper>     bootstrappers = Multimaps.newArrayListMultimap( );
 
-  public static List<ResourceProvider> getResourceProviders( Resource r ){
-    return Lists.newArrayList( resources.get( r ) );
-  }
-  public static List<Bootstrapper> getBootstrappers( Resource r ){
-    return Lists.newArrayList( bootstrappers.get( r ) );
-  }  
   public static void initResourceProviders( ) {
     for ( Resource r : Resource.values( ) ) {
       for ( ResourceProvider p : r.getProviders( ) ) {
-        resources.put( r, p );
         LOG.info( "Loaded " + LogUtils.dumpObject( p ) );
       }
     }
@@ -40,9 +33,10 @@ public class BootstrapFactory {
 
   public static void initConfigurationResources( ) throws IOException {
     for ( Resource r : Resource.values( ) ) {
-      for ( ResourceProvider p : resources.get( r ) ) {
-        for( ConfigResource cfg : p.initConfigurationResources( ) ) {
-          LOG.info( "Loaded " + LogUtils.dumpObject( cfg ) );
+      for ( ResourceProvider p : r.initProviders( ) ) {
+        for( ConfigResource cfg : p.getConfigurations( ) ) {
+          LOG.info( "Loading resource provider:" + p.getName( ) + " -- " + p.getOrigin( ) );
+          LOG.info( "--> " + cfg.getUrl( ) );
         }
       }
     }
@@ -64,7 +58,7 @@ public class BootstrapFactory {
         for ( Bootstrapper bootstrap : bsList ) {
           for ( Resource r : Resource.values( ) ) {
             if ( r.providedBy( bootstrap.getClass( ) ) || Resource.Nothing.equals( r ) ) {
-              bootstrappers.put( r, bootstrap );
+              r.add( bootstrap );
               LOG.info( "--> Associated bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " with resource " + r.toString( ) );
               break;
             }

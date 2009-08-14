@@ -32,24 +32,12 @@
   ~ Author: Sunil Soman sunils@cs.ucsb.edu
   -->
 
-<project name="eucalyptus-storagecontroller" basedir="." default="build">
-    <import file="../module-inc.xml"/>
+<project name="eucalyptus-storagecontroller" basedir=".">
+
+  <import file="../module-inc.xml"/>
+  <target name="builder" depends="init,build-java,build-jni,jar"/>
     <!--================================== BUILD TARGETS ==================================-->
-    <target name="build-jar" depends="init,compile-src,jar"/>
-    <target name="build" depends="build-jar,build-jni"/>
-    <target name="install" depends="copy-conf"/>
-    <target name="compile-src" depends="init">
-        <javac srcdir="${src.dir}"
-               classpathref="classpath"
-               destdir="${build.dir}"
-               deprecation="false"
-               failonerror="true"
-               debug="true"
-               sourcepathref="srcpath"
-               target="1.5"
-               listfiles="true"/>
-    </target>
-    <target name="build-jni" depends="build-jar">
+    <target name="build-jni">
         <mkdir dir="include"/>
         <javah classpath="${build.dir}" destdir="include" force="yes">
             <class name="edu.ucsb.eucalyptus.storage.LVM2Manager"/>

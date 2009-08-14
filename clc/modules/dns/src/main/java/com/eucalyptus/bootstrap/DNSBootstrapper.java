@@ -6,6 +6,7 @@ import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.cloud.ws.DNSControl;
 
+@Provides(resource=Resource.PrivilegedContext)
 public class DNSBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DNSBootstrapper.class );
   private static DNSBootstrapper singleton;

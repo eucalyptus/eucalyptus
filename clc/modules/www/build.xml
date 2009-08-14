@@ -33,13 +33,13 @@
   ~ Author: Dmitrii Zagorodnov dmitrii@cs.ucsb.edu
   -->
 
-<project name="eucalyptus-www" basedir="." default="build">
+<project name="eucalyptus-www" basedir=".">
 	<import file="../module-inc.xml" />
 	<condition property="osMask" value="linux" else="mac">
 		<os family="mac" />
 	</condition>
 	<!--================================== BUILD TARGET ==================================-->
-	<target name="build" depends="init,compile-src,jar,compile-gwt" description="--> build the jar file from source." unless="gwtc.notRequired" />
+	<target name="builder" depends="init,compile-src,jar,compile-gwt" description="--> build the jar file from source." unless="gwtc.notRequired" />
 	<!--================================== GWT-ONLY TARGET ==================================-->
 	<property environment="env" />
 	<path id="gwtclasspath">

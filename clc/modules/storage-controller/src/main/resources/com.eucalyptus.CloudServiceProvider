@@ -1,1 +1,3 @@
-name=sc
+name=storage
+euca.model.storage=storage-model.xml
+euca.model.storage.services=storage-services.xml

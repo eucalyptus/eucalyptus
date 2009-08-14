@@ -10,7 +10,7 @@ public class EucaLayout extends PatternLayout {
       LINE_BYTES = Integer.parseInt( System.getenv( "COLUMNS" ) );
     } catch ( NumberFormatException e ) {}
   }
-  public static String PATTERN = "%d{HH:mm:ss} %5p %-20.20c{1} | %-100.100m%n";
+  public static String PATTERN = "%d{HH:mm:ss} %5p %-20.20c{1} | %m%n";
   private String CONTINUATION = "%m%n";
   private PatternLayout continuation = null;
   

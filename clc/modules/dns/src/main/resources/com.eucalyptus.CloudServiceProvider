@@ -1,1 +1,3 @@
-dns
+name=dns
+euca.model.dns=dns-model.xml
+euca.model.dns.services=dns-services.xml

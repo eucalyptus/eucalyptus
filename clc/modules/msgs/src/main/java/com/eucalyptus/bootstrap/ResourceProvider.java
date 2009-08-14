@@ -22,7 +22,7 @@ public class ResourceProvider {
   private final URL                 origin;
   private final String              name;
   private final Map<String, String> properties;
-  private final List<ConfigResource> configs;
+  private final List<ConfigResource> configurations;
 
   @SuppressWarnings( "unchecked" )
   public ResourceProvider( Resource resource, Properties props, URL origin ) {
@@ -30,19 +30,19 @@ public class ResourceProvider {
     this.properties = Maps.newHashMap( ( Hashtable ) props );
     this.name = this.properties.remove( "name" );
     this.origin = origin;
-    this.configs = Lists.newArrayList( );
+    this.configurations = Lists.newArrayList( );
   }
   
   public List<ConfigResource> initConfigurationResources() throws IOException {
     for(String rscName : this.properties.keySet( )) {
       try {
-        this.configs.add( new ConfigResource( this.properties.get( rscName ) ) );
+        this.configurations.add( new ConfigResource( this.properties.get( rscName ) ) );
       } catch ( IOException e ) {
         LOG.error( String.format("Processing %s caused an error %s: %s", this.origin, e.getClass().getSimpleName( ), e.getMessage( )), e );
         throw e;
       } 
     }
-    return this.configs;
+    return this.configurations;
   }
   
   public Resource getResource( ) {
@@ -55,6 +55,12 @@ public class ResourceProvider {
 
   public URL getOrigin( ) {
     return origin;
+  }
+
+
+
+  public List<ConfigResource> getConfigurations( ) {
+    return configurations;
   }
 
 }

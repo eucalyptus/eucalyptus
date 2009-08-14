@@ -1,12 +1,13 @@
 package com.eucalyptus.auth;
 
-import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.log4j.Logger;
 import org.apache.ws.security.WSSConfig;
@@ -17,9 +18,12 @@ import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 
-import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.KeyTool;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Depends;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.Resource;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
@@ -114,7 +118,9 @@ public class Credentials {
     return new EntityWrapper<T>( Credentials.DB_NAME );
   }
 
-  public static class Users {
+  @Provides(resource=Resource.UserCredentials)
+  @Depends(resources={Resource.Database})
+  public static class Users extends Bootstrapper {
     public static boolean hasCertificate( final String alias ) {
       X509Cert certInfo = null;
       EntityWrapper<X509Cert> db = getEntityWrapper( );
@@ -262,25 +268,98 @@ public class Credentials {
       }
       return certAliases;
     }
+
+    @Override
+    public boolean load( ) throws Exception {
+      return true;//TODO: check the DB connection here.
+    }
+
+    @Override
+    public boolean start( ) throws Exception {
+      return Credentials.checkAdmin( );
+    }
   }
 
-  protected static void createSystemKeys( ) throws IOException, GeneralSecurityException {
-    AbstractKeyStore eucaKeyStore = EucaKeyStore.getInstance( );
-    KeyTool keyTool = new KeyTool( );
-    try {
-      KeyPair sysKp = keyTool.getKeyPair( );
-      X509Certificate sysX509 = keyTool.getCertificate( sysKp, EucalyptusProperties.getDName( EucalyptusProperties.NAME ) );
-      KeyPair wwwKp = keyTool.getKeyPair( );
-      X509Certificate wwwX509 = keyTool.getCertificate( wwwKp, EucalyptusProperties.getDName( EucalyptusProperties.WWW_NAME ) );
-      eucaKeyStore.addKeyPair( EucalyptusProperties.NAME, sysX509, sysKp.getPrivate( ), EucalyptusProperties.NAME );
-      eucaKeyStore.addKeyPair( EucalyptusProperties.WWW_NAME, wwwX509, wwwKp.getPrivate( ), EucalyptusProperties.NAME );
-      eucaKeyStore.store( );
-    } catch ( Exception e ) {
-      EucaKeyStore.getInstance( ).remove( );
+  @Provides(resource=Resource.SystemCredentials)
+  public static class System extends Bootstrapper {
+    private static System singleton = new System();
+    private ConcurrentMap<CertAlias,X509Certificate> certs = new ConcurrentHashMap<CertAlias, X509Certificate>( );
+    private ConcurrentMap<CertAlias,KeyPair> keypairs = new ConcurrentHashMap<CertAlias, KeyPair>( );
+
+    private enum CertAlias {
+      eucalyptus, walrus, jetty, hsqldb;
+      public X509Certificate getCertificate() {
+        return System.singleton.certs.get( this );
+      }
+      public PrivateKey getPrivateKey() {
+        return System.singleton.keypairs.get( this ).getPrivate( );
+      }
+      public KeyPair getKeyPair() {
+        return System.singleton.keypairs.get( this );
+      }      
+      private void init() throws Exception {
+        if(EucaKeyStore.getInstance( ).containsEntry( this.name( ) )) {
+          try {
+            System.singleton.certs.put( this, EucaKeyStore.getInstance( ).getCertificate( this.name( ) ) );
+            System.singleton.keypairs.put( this, EucaKeyStore.getInstance( ).getKeyPair( this.name( ),this.name( ) ) );
+          } catch ( Exception e ) {
+            System.singleton.certs.remove( this );
+            System.singleton.keypairs.remove( this );
+            LOG.fatal( "Failed to read keys from the keystore.  Please repair the keystore by hand." );
+            LOG.fatal( e, e );
+          }
+        } else {
+          System.singleton.createSystemKey( this );
+        }
+      }
+      public boolean check() {
+        return (System.singleton.keypairs.containsKey( this ) && System.singleton.certs.containsKey( this ))&&EucaKeyStore.getInstance( ).containsEntry( this.name( ) );
+      }
     }
-    if( !eucaKeyStore.check( ) ) {
-      throw new GeneralSecurityException( "Created new keystore, but check still fails. eeek." );
+    private System( ) {}
+    private void loadSystemKey( String name ) throws Exception {
+      CertAlias alias = CertAlias.valueOf( name );
+      if( this.certs.containsKey( alias ) ) {
+        return;
+      } else {
+        createSystemKey( alias );
+      }
+    }
+    private void createSystemKey( CertAlias name ) throws Exception {
+      KeyTool keyTool = new KeyTool( );
+      try {
+        KeyPair sysKp = keyTool.getKeyPair( );
+        X509Certificate sysX509 = keyTool.getCertificate( sysKp, EucalyptusProperties.getDName( name.name( ) ) );
+        System.singleton.certs.put( name, sysX509 );
+        System.singleton.keypairs.put( name, sysKp );
+        //TODO: might need separate keystore for euca/hsqldb/ssl/jetty/etc.
+        EucaKeyStore.getInstance( ).addKeyPair( name.name( ), sysX509, sysKp.getPrivate( ), name.name( ));
+        EucaKeyStore.getInstance( ).store( );
+      } catch ( Exception e ) {
+        System.singleton.certs.remove( name );
+        System.singleton.keypairs.remove( name );
+        EucaKeyStore.getInstance( ).remove( );
+        throw e;
+      }
+    }
+    @Override
+    public boolean load( ) throws Exception {
+      Credentials.init( );
+      for( CertAlias c : CertAlias.values( ) ) {
+        try {
+          if(!c.check( )) c.init( );
+        } catch ( Exception e ) {
+          LOG.error( e );
+          return false;
+        }
+      }
+      return true;
+    }
+    @Override
+    public boolean start( ) throws Exception {
+      return true;
     }
   }
+  
 
 }

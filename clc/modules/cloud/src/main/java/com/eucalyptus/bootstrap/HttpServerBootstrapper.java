@@ -7,19 +7,10 @@ import org.mortbay.xml.XmlConfiguration;
 
 import com.eucalyptus.util.BaseDirectory;
 
+@Depends(resources={Resource.SystemCredentials})
 public class HttpServerBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( HttpServerBootstrapper.class );
   private static org.mortbay.jetty.Server jettyServer;
-
-  @Override
-  public boolean check( ) throws Exception {
-    return false;
-  }
-
-  @Override
-  public boolean destroy( ) throws Exception {
-    return false;
-  }
 
   @Override
   public boolean load( ) throws Exception {
@@ -33,11 +24,6 @@ public class HttpServerBootstrapper extends Bootstrapper {
   public boolean start( ) throws Exception {
     LOG.info("Starting admin interface.");
     jettyServer.start();
-    return false;
-  }
-
-  @Override
-  public boolean stop( ) throws Exception {
     return false;
   }
 

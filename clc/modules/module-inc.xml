@@ -1,109 +1,103 @@
-<!--
-  ~ Software License Agreement (BSD License)
-  ~
-  ~ Copyright (c) 2008, Regents of the University of California
-  ~ All rights reserved.
-  ~
-  ~ Redistribution and use of this software in source and binary forms, with or
-  ~ without modification, are permitted provided that the following conditions
-  ~ are met:
-  ~
-  ~ * Redistributions of source code must retain the above
-  ~   copyright notice, this list of conditions and the
-  ~   following disclaimer.
-  ~
-  ~ * Redistributions in binary form must reproduce the above
-  ~   copyright notice, this list of conditions and the
-  ~   following disclaimer in the documentation and/or other
-  ~   materials provided with the distribution.
-  ~
-  ~ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  ~ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  ~ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-  ~ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-  ~ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-  ~ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-  ~ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-  ~ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-  ~ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-  ~ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-  ~ POSSIBILITY OF SUCH DAMAGE.
-  ~
-  ~ Author: Chris Grzegorczyk grze@cs.ucsb.edu
-  -->
-
 <project name="eucalyptus-module-import">
-    <!--================================== euca defines ==================================-->
-    <property environment="localenv"/>
-    <property name="euca.home.0" value="${localenv.EUCALYPTUS}"/>
-    <condition property="euca.home" value="/opt/eucalyptus" else="${localenv.EUCALYPTUS}">
-        <contains string="${euca.home.0}" substring="localenv"/>
-    </condition>
-    <property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d"/>
-    <property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus"/>
-    <property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus"/>
-    <property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus"/>
-    <property name="euca.template.dir" value="${euca.home}/var/lib/eucalyptus"/>
-    <propertyset id="euca-props">
-        <propertyref prefix="euca"/>
-    </propertyset>
-    <!--================================== module-dir defines ==================================-->
-    <property name="build.dir" value="${basedir}/build"/>
-    <property name="src.dir" value="${basedir}/src/main/java"/>
-    <property name="conf.dir" value="${basedir}/conf"/>
-    <property name="rsrc.dir" value="${basedir}/src/main/resources"/>
-    <property name="target.dir" value="${basedir}/../../target"/>
-    <property name="jar.file" value="${target.dir}/${ant.project.name}.jar"/>
-    <property name="lib.dir" value="${basedir}/../../lib"/>
-    <!--================================== classpaths ==================================-->
-    <path id="classpath">
-        <pathelement path="${conf.dir}"/>
-        <fileset dir="${target.dir}">
-            <include name="**/*.jar"/>
-        </fileset>
-        <fileset dir="${lib.dir}">
-            <include name="**/*.jar"/>
-        </fileset>
-    </path>
-    <path id="runtimeclasspath">
-        <pathelement path="${euca.conf.dir}"/>
-        <fileset dir="${euca.lib.dir}">
-            <include name="**/*.jar"/>
-        </fileset>
-    </path>
-    <path id="srcpath">
-        <fileset dir="${build.dir}">
-            <include name="**/*"/>
-        </fileset>
-    </path>
-    <!--================================== copy conf ==================================-->
-    <target name="copy-conf">
-        <copy todir="${euca.conf.dir}">
-            <fileset dir="conf">
-                <include name="**/*"/>
-                <exclude name="**/CVS"/>
-            </fileset>
-        </copy>
-    </target>
-    <!--================================== init target ==================================-->
-    <target name="init">
-        <mkdir dir="${build.dir}"/>
-        <mkdir dir="${target.dir}"/>
-    </target>
-    <!--================================== clean target ==================================-->
-    <target name="clean">
-        <delete dir="${build.dir}"/>
-        <delete file="${jar.file}"/>
-    </target>
-    <!--================================== jar target ==================================-->
-    <target name="jar">
-        <jar destfile="${jar.file}">
-            <fileset dir="${build.dir}">
-                <include name="**/*"/>
-            </fileset>
-            <fileset dir="${rsrc.dir}">
-                <include name="**/*"/>
-            </fileset>
-        </jar>
-    </target>
+  <!--================================== euca defines ==================================-->
+  <property environment="localenv"/>
+  <property name="euca.home.0" value="${localenv.EUCALYPTUS}"/>
+  <condition property="euca.home" value="/opt/eucalyptus" else="${localenv.EUCALYPTUS}">
+    <contains string="${euca.home.0}" substring="localenv"/>
+  </condition>
+  <property name="project.basedir" value="${basedir}/../../"/>
+  <loadfile srcfile="${project.basedir}/../VERSION" property="euca.version">
+    <filterchain>
+      <filterreader classname="org.apache.tools.ant.filters.StripLineBreaks"/>
+    </filterchain>
+  </loadfile>
+  <property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d"/>
+  <property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus"/>
+  <property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus"/>
+  <property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus"/>
+  <propertyset id="euca-props">
+    <propertyref prefix="euca"/>
+  </propertyset>
+  <!--================================== module-dir defines ==================================-->
+  <property name="build.dir" value="${basedir}/build"/>
+  <property name="src.dir" value="${basedir}/src/main/java"/>
+  <property name="conf.dir" value="${basedir}/conf"/>
+  <property name="rsrc.dir" value="${basedir}/src/main/resources"/>
+  <property name="target.dir" value="${project.basedir}/target"/>
+  <property name="jar.file" value="${target.dir}/${ant.project.name}-${euca.version}.jar"/>
+  <property name="lib.dir" value="${project.basedir}/lib"/>
+  <!--================================== classpaths ==================================-->
+  <path id="classpath">
+    <pathelement path="${conf.dir}"/>
+    <fileset dir="${target.dir}">
+      <include name="**/*.jar"/>
+    </fileset>
+    <fileset dir="${lib.dir}">
+      <include name="**/*.jar"/>
+    </fileset>
+  </path>
+  <path id="runtimeclasspath">
+    <pathelement path="${euca.conf.dir}"/>
+    <fileset dir="${euca.lib.dir}">
+      <include name="**/*.jar"/>
+    </fileset>
+  </path>
+  <path id="srcpath">
+    <fileset dir="${build.dir}">
+      <include name="**/*"/>
+    </fileset>
+  </path>
+  <!--================================== copy conf ==================================-->
+  <target name="copy-conf">
+    <copy todir="${euca.conf.dir}">
+      <fileset dir="conf">
+        <include name="**/*"/>
+      </fileset>
+    </copy>
+  </target>
+  <!--================================== init target ==================================-->
+  <target name="init">
+    <mkdir dir="${build.dir}"/>
+    <mkdir dir="${target.dir}"/>
+  </target>
+  <target name="builder" depends="init" description="--> build the jar file from source.">
+    <condition property="builder.target" value="build-${builder.suffix}" else="build-java"><isset property="builder.suffix"/></condition>
+    <echo message="builder.target=${builder.target}"/>
+    <antcall target="${builder.target}" inheritall="true" inheritrefs="true"/>
+    <antcall target="jar"/>
+  </target>
+  <target name="build-java">
+      <javac srcdir="src/main/java/"
+             classpathref="classpath"
+             destdir="${build.dir}"
+             deprecation="false"
+             failonerror="true"
+             debug="true"
+             sourcepathref="srcpath"
+             target="1.5"
+             listfiles="true"/>
+  </target>
+  <target name="build-groovy">
+    <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath"/>
+    <groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true" >
+        <javac target="1.5"/>
+    </groovyc>
+  </target>
+  <target name="install" depends="copy-conf"/>
+  <!--================================== clean target ==================================-->
+  <target name="clean">
+    <delete dir="${build.dir}" />
+    <delete file="${jar.file}" />
+  </target>
+  <!--================================== jar target ==================================-->
+  <target name="jar">
+    <jar destfile="${jar.file}">
+      <fileset dir="${build.dir}">
+        <include name="**/*"/>
+      </fileset>
+      <fileset dir="${rsrc.dir}">
+        <include name="**/*"/>
+      </fileset>
+    </jar>
+  </target>
 </project>

@@ -32,23 +32,8 @@
   ~ Author: Sunil Soman sunils@cs.ucsb.edu
   -->
 
-<project name="eucalyptus-storagemgr" basedir="." default="build">
+<project name="eucalyptus-storagemgr" basedir=".">
     <import file="../module-inc.xml"/>
-    <!--================================== BUILD TARGETS ==================================-->
-    <target name="build" depends="init,compile-src,jar" description="--> build the jar file from source."/>
-    <target name="install" depends="copy-conf"/>
-    <target name="compile-src" depends="init">
-        <javac srcdir="${src.dir}"
-               classpathref="classpath"
-               destdir="${build.dir}"
-               deprecation="false"
-               failonerror="true"
-               debug="true"
-               sourcepathref="srcpath"
-               target="1.5"
-               listfiles="true"/>
-    </target>
-
     <target name="clean-jni">
         <delete dir="h"/>
     </target>

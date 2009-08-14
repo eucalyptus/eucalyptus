@@ -240,8 +240,9 @@ static int child( euca_opts *args, java_home_t *data, uid_t uid, gid_t gid ) {
 	__write_pid( GETARG(args,pidfile) );
 	setpgrp( );
 	__die(java_init( args, data ) != 1, "Failed to initialize Eucalyptus.");
+    __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.init))==0,"Failed to init Eucalyptus.");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.load))==0,"Failed to load Eucalyptus.");
-	__abort(4, linuxset_user_group( GETARG( args, user ), uid, gid ) != 0,"" );
+	__abort(4, linuxset_user_group( GETARG( args, user ), uid, gid ) != 0,"Setting the user failed." );
 	__abort(4, (set_caps(0)!=0), "set_caps (0) failed");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.start))==0,"Failed to start Eucalyptus.");
 	handle._hup = signal_set( SIGHUP, handler );
@@ -443,9 +444,11 @@ void java_load_bootstrapper(void) {
     __die((*env)->RegisterNatives(env,bootstrap.clazz,&hello_method,1)!=0,"Cannot register native method: hello.");
     __debug("Native methods registered.");
 
-    __die((bootstrap.init=(*env)->GetStaticMethodID(env, bootstrap.clazz,euca_get_instance.method_name, euca_get_instance.method_signature))==NULL,"Failed to get reference to default constructor.");
-    __die((bootstrap.instance=(*env)->CallStaticObjectMethod(env,bootstrap.clazz,bootstrap.init))==NULL,"Failed to create instance of bootstrapper.");
-    __debug("Created bootstrapper instance.");
+    __die((bootstrap.constructor=(*env)->GetStaticMethodID(env, bootstrap.clazz,euca_get_instance.method_name, euca_get_instance.method_signature))==NULL,"Failed to get reference to default constructor.");
+    __die((bootstrap.instance=(*env)->CallStaticObjectMethod(env,bootstrap.clazz,bootstrap.constructor))==NULL,"Failed to create instance of bootstrapper.");
+    __debug("Created bootstrapper instance.");//TODO: fix all these error messages..
+    __die((bootstrap.init=(*env)->GetMethodID(env,bootstrap.clazz,euca_init.method_name,euca_init.method_signature))==NULL,"Failed to get method reference for load.");
+    __debug("-> bound method: init");
     __die((bootstrap.load=(*env)->GetMethodID(env,bootstrap.clazz,euca_load.method_name,euca_load.method_signature))==NULL,"Failed to get method reference for load.");
     __debug("-> bound method: load");
     __die((bootstrap.start=(*env)->GetMethodID(env,bootstrap.clazz,euca_start.method_name,euca_start.method_signature))==NULL,"Failed to get method reference for start.");

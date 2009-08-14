@@ -1,1 +1,3 @@
-walrus
+name=walrus
+euca.model.walrus=walrus-model.xml
+euca.model.walrus.services=walrus-services.xml
