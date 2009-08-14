@@ -35,7 +35,8 @@ const char *eucalyptus_opts_help[] = {
   "  -h, --home=directory          Eucalyptus home directory.  (default=`/')",
   "  -D, --define=STRING           Set system properties.",
   "  -c, --bootstrap-config=config.xml\n                                Use this file as the configuration for early \n                                  runtime service bootstrapping.  \n                                  (default=`eucalyptus-bootstrap.xml')",
-  "  -v, --verbose                 Verbose console output. Note: log file output \n                                  is not controlled by this flag.  \n                                  (default=off)",
+  "  -v, --verbose                 Verbose bootstrapper output. Note: This only \n                                  controls the level of output from the native \n                                  bootstrapper.  (default=off)",
+  "  -l, --log-level=filename      Control the log level for console output.  \n                                  (default=`INFO')",
   "  -o, --out=filename            Redirect standard out to file.  (default=`&1')",
   "  -e, --err=filename            Redirect standard error to file.  \n                                  (default=`&2')",
   "\nEucalyptus Runtime Options:",
@@ -84,6 +85,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->define_given = 0 ;
   args_info->bootstrap_config_given = 0 ;
   args_info->verbose_given = 0 ;
+  args_info->log_level_given = 0 ;
   args_info->out_given = 0 ;
   args_info->err_given = 0 ;
   args_info->check_given = 0 ;
@@ -110,6 +112,8 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->bootstrap_config_arg = gengetopt_strdup ("eucalyptus-bootstrap.xml");
   args_info->bootstrap_config_orig = NULL;
   args_info->verbose_flag = 0;
+  args_info->log_level_arg = gengetopt_strdup ("INFO");
+  args_info->log_level_orig = NULL;
   args_info->out_arg = gengetopt_strdup ("&1");
   args_info->out_orig = NULL;
   args_info->err_arg = gengetopt_strdup ("&2");
@@ -146,20 +150,21 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->define_max = 0;
   args_info->bootstrap_config_help = eucalyptus_opts_help[6] ;
   args_info->verbose_help = eucalyptus_opts_help[7] ;
-  args_info->out_help = eucalyptus_opts_help[8] ;
-  args_info->err_help = eucalyptus_opts_help[9] ;
-  args_info->check_help = eucalyptus_opts_help[11] ;
-  args_info->stop_help = eucalyptus_opts_help[12] ;
-  args_info->fork_help = eucalyptus_opts_help[13] ;
-  args_info->pidfile_help = eucalyptus_opts_help[14] ;
-  args_info->java_home_help = eucalyptus_opts_help[16] ;
-  args_info->jvm_name_help = eucalyptus_opts_help[17] ;
-  args_info->jvm_args_help = eucalyptus_opts_help[18] ;
+  args_info->log_level_help = eucalyptus_opts_help[8] ;
+  args_info->out_help = eucalyptus_opts_help[9] ;
+  args_info->err_help = eucalyptus_opts_help[10] ;
+  args_info->check_help = eucalyptus_opts_help[12] ;
+  args_info->stop_help = eucalyptus_opts_help[13] ;
+  args_info->fork_help = eucalyptus_opts_help[14] ;
+  args_info->pidfile_help = eucalyptus_opts_help[15] ;
+  args_info->java_home_help = eucalyptus_opts_help[17] ;
+  args_info->jvm_name_help = eucalyptus_opts_help[18] ;
+  args_info->jvm_args_help = eucalyptus_opts_help[19] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->debug_help = eucalyptus_opts_help[19] ;
-  args_info->debug_port_help = eucalyptus_opts_help[20] ;
-  args_info->debug_suspend_help = eucalyptus_opts_help[21] ;
+  args_info->debug_help = eucalyptus_opts_help[20] ;
+  args_info->debug_port_help = eucalyptus_opts_help[21] ;
+  args_info->debug_suspend_help = eucalyptus_opts_help[22] ;
   
 }
 
@@ -289,6 +294,8 @@ arguments_release (struct eucalyptus_opts *args_info)
   free_multiple_string_field (args_info->define_given, &(args_info->define_arg), &(args_info->define_orig));
   free_string_field (&(args_info->bootstrap_config_arg));
   free_string_field (&(args_info->bootstrap_config_orig));
+  free_string_field (&(args_info->log_level_arg));
+  free_string_field (&(args_info->log_level_orig));
   free_string_field (&(args_info->out_arg));
   free_string_field (&(args_info->out_orig));
   free_string_field (&(args_info->err_arg));
@@ -351,6 +358,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "bootstrap-config", args_info->bootstrap_config_orig, 0);
   if (args_info->verbose_given)
     write_into_file(outfile, "verbose", 0, 0 );
+  if (args_info->log_level_given)
+    write_into_file(outfile, "log-level", args_info->log_level_orig, 0);
   if (args_info->out_given)
     write_into_file(outfile, "out", args_info->out_orig, 0);
   if (args_info->err_given)
@@ -933,6 +942,7 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { "define",	1, NULL, 'D' },
         { "bootstrap-config",	1, NULL, 'c' },
         { "verbose",	0, NULL, 'v' },
+        { "log-level",	1, NULL, 'l' },
         { "out",	1, NULL, 'o' },
         { "err",	1, NULL, 'e' },
         { "check",	0, NULL, 'C' },
@@ -948,7 +958,7 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { NULL,	0, NULL, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vu:h:D:c:vo:e:CSfj:J:X:d", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:D:c:vl:o:e:CSfj:J:X:d", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -1004,12 +1014,24 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
             goto failure;
         
           break;
-        case 'v':	/* Verbose console output. Note: log file output is not controlled by this flag..  */
+        case 'v':	/* Verbose bootstrapper output. Note: This only controls the level of output from the native bootstrapper..  */
         
         
           if (update_arg((void *)&(args_info->verbose_flag), 0, &(args_info->verbose_given),
               &(local_args_info.verbose_given), optarg, 0, 0, ARG_FLAG,
               check_ambiguity, override, 1, 0, "verbose", 'v',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'l':	/* Control the log level for console output..  */
+        
+        
+          if (update_arg( (void *)&(args_info->log_level_arg), 
+               &(args_info->log_level_orig), &(args_info->log_level_given),
+              &(local_args_info.log_level_given), optarg, 0, "INFO", ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "log-level", 'l',
               additional_error))
             goto failure;
         

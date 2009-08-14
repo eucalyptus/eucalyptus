@@ -32,7 +32,7 @@
  * Author: Chris Grzegorczyk grze@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.ic;
+package com.eucalyptus.ws.util;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 

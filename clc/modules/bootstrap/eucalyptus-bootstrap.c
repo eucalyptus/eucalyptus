@@ -503,7 +503,7 @@ int java_init(euca_opts *args, java_home_t *data) {
     int x = -1, i;
     opt=(JavaVMOption *)malloc(JVM_MAX_OPTS*sizeof(JavaVMOption));
     for(i=0;i<JVM_MAX_OPTS;i++) opt[i].extraInfo=NULL;
-    JVM_ARG(opt[++x],"-Deuca.bootstrap.config=%1$s",GETARG(args,bootstrap_config));
+    JVM_ARG(opt[++x],"-Deuca.log.level=%1$s",GETARG(args,log_level));
     if(args->debug_flag) {
     	JVM_ARG(opt[++x],"-Xdebug");
     	JVM_ARG(opt[++x],"-Xrunjdwp:transport=dt_socket,server=y,suspend=%2$s,address=%1$d",GETARG(args,debug_port),(args->debug_suspend_flag?"y":"n"));

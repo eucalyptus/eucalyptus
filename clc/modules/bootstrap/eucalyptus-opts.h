@@ -48,8 +48,11 @@ struct eucalyptus_opts
   char * bootstrap_config_arg;	/**< @brief Use this file as the configuration for early runtime service bootstrapping. (default='eucalyptus-bootstrap.xml').  */
   char * bootstrap_config_orig;	/**< @brief Use this file as the configuration for early runtime service bootstrapping. original value given at command line.  */
   const char *bootstrap_config_help; /**< @brief Use this file as the configuration for early runtime service bootstrapping. help description.  */
-  int verbose_flag;	/**< @brief Verbose console output. Note: log file output is not controlled by this flag. (default=off).  */
-  const char *verbose_help; /**< @brief Verbose console output. Note: log file output is not controlled by this flag. help description.  */
+  int verbose_flag;	/**< @brief Verbose bootstrapper output. Note: This only controls the level of output from the native bootstrapper. (default=off).  */
+  const char *verbose_help; /**< @brief Verbose bootstrapper output. Note: This only controls the level of output from the native bootstrapper. help description.  */
+  char * log_level_arg;	/**< @brief Control the log level for console output. (default='INFO').  */
+  char * log_level_orig;	/**< @brief Control the log level for console output. original value given at command line.  */
+  const char *log_level_help; /**< @brief Control the log level for console output. help description.  */
   char * out_arg;	/**< @brief Redirect standard out to file. (default='&1').  */
   char * out_orig;	/**< @brief Redirect standard out to file. original value given at command line.  */
   const char *out_help; /**< @brief Redirect standard out to file. help description.  */
@@ -91,6 +94,7 @@ struct eucalyptus_opts
   unsigned int define_given ;	/**< @brief Whether define was given.  */
   unsigned int bootstrap_config_given ;	/**< @brief Whether bootstrap-config was given.  */
   unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
+  unsigned int log_level_given ;	/**< @brief Whether log-level was given.  */
   unsigned int out_given ;	/**< @brief Whether out was given.  */
   unsigned int err_given ;	/**< @brief Whether err was given.  */
   unsigned int check_given ;	/**< @brief Whether check was given.  */

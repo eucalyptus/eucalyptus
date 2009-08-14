@@ -38,10 +38,9 @@
 
     <appender name="console" class="org.apache.log4j.ConsoleAppender">
         <param name="Target" value="System.out"/>
-        <param name="Threshold" value="INFO"/>
-        <layout class="org.apache.log4j.PatternLayout">
-            <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%-.20c{1}:%.10t] %m%n"/>
-        </layout>
+        <param name="Threshold" value="${euca.log.level}"/>
+<!--          <layout class="org.apache.log4j.PatternLayout"> -->
+        <layout class="com.eucalyptus.util.EucaLayout"/>
     </appender>
     <appender name="logfile" class="org.apache.log4j.RollingFileAppender">
         <param name="File" value="${euca.log.dir}/cloud-debug.log"/>
@@ -64,6 +63,10 @@
 
     <category name="edu.ucsb.eucalyptus" additivity="true">
         <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <category name="org.apache.commons.beanutils.converters" additivity="false">
+        <priority value="ERROR"/>
         <appender-ref ref="logfile"/>
     </category>
     <category name="org.apache.xml.security.signature.Reference" additivity="false">

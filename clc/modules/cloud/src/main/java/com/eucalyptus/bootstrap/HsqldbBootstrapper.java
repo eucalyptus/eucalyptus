@@ -11,7 +11,8 @@ import org.hsqldb.persist.HsqlProperties;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.SubDirectory;
-
+@Provides(resource=Resource.Database)
+@Depends(resources={Resource.SystemCredentials})
 public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
   private static Logger             LOG = Logger.getLogger( HsqldbBootstrapper.class );
   private static HsqldbBootstrapper singleton;

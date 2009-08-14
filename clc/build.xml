@@ -116,6 +116,7 @@
   <target name="clean-walrus" depends="clean-walrus-ws"/>
   <target name="clean-ebs" depends="clean-ebs-ws"/>
   <target name="clean-dns" depends="clean-dns-ws"/>
+  <target name="clean-nogwt" depends="clean-core,clean-www,clean-eucalyptus-ws,clean-walrus,clean-ebs,clean-dns"/>
   <target name="clean" depends="clean-eucalyptus,clean-walrus,clean-ebs,clean-dns">
     <delete dir="${target.dir}"/>
   </target>
@@ -126,6 +127,9 @@
   </target>
   <!--================================== install target ==================================-->
   <target name="install" depends="build">
+    <ant dir="modules/www" inheritall="false" target="install"/>
+  </target>
+  <target name="install-nogwt" depends="build-nogwt">
     <!-- copy libraries over -->
     <mkdir dir="${euca.lib.dir}"/>
     <copy todir="${euca.lib.dir}">
@@ -153,7 +157,6 @@
     <ant dir="modules/authentication" inheritall="false" target="install"/>
     <ant dir="modules/core" inheritall="false" target="install"/>
     <ant dir="modules/wsstack" inheritall="false" target="install"/>
-    <ant dir="modules/www" inheritall="false" target="install"/>
     <ant dir="modules/interface" inheritall="false" target="install"/>
     <ant dir="modules/cluster-manager" inheritall="false" target="install"/>
     <ant dir="modules/image-manager" inheritall="false" target="install"/>
