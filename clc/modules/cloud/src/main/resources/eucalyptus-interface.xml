@@ -35,7 +35,7 @@
             <inbound>
                 <vm:inbound-endpoint address="vm://RequestQueue"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.ic.RequestQueue"/>
+            <component class="com.eucalyptus.ws.util.RequestQueue"/>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="StartVerifyWS"/>

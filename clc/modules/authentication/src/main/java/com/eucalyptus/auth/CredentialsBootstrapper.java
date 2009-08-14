@@ -4,7 +4,9 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrapper;
-
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.Resource;
+@Provides(resource=Resource.SystemCredentials)
 public class CredentialsBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( CredentialsBootstrapper.class );
   @Override

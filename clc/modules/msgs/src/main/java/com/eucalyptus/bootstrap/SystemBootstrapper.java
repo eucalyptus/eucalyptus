@@ -19,13 +19,13 @@ import org.mule.context.DefaultMuleContextFactory;
 
 import com.eucalyptus.util.BaseDirectory;
 import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.util.LogUtils;
 import com.eucalyptus.util.ServiceJarFile;
 import com.google.common.collect.Lists;
 
 public class SystemBootstrapper extends Bootstrapper {
   private static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );
   static {
-    LOG.info( "Loaded Bootstrapper." );
     System.setProperty( "euca.db.host", "127.0.0.1" );
     System.setProperty( "euca.db.port", "9001" );
     System.setProperty( "euca.db.password", "" );
@@ -45,7 +45,6 @@ public class SystemBootstrapper extends Bootstrapper {
   }
 
   private MuleContext          context;
-  private List<ConfigResource> configs       = Lists.newArrayList( );
   private List<Bootstrapper>   bootstrappers = Lists.newArrayList( );
 
   private SystemBootstrapper( ) {
@@ -65,12 +64,12 @@ public class SystemBootstrapper extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     LOG.info( "Starting Eucalyptus." );
-    BootstrapFactory.findAll( );
     try {
       for ( Bootstrapper b : this.bootstrappers ) {
         LOG.info( "-> Invoking bootstrapper " + b.getClass( ).getSimpleName( ) + ".start()Z" );
         b.start( );
       }
+      LOG.info( LogUtils.header( "Starting Eucalyptus." ) );
       context.start( );
       return true;
     } catch ( Exception e ) {
@@ -78,63 +77,39 @@ public class SystemBootstrapper extends Bootstrapper {
       return false;
     }
   }
-
-  @SuppressWarnings( "deprecation" )
+  
   @Override
   public boolean load( ) throws Exception {
-    ClassLoader currentLoader = Thread.currentThread().getContextClassLoader();
-    try {
-      Enumeration resources = currentLoader.getResources("com.eucalyptus.CloudServiceProvider");
-      while (resources.hasMoreElements()) {
-        System.out.println("========================\n\nElements found:" + resources.nextElement() + "\n\n========================");
+    LOG.info( LogUtils.header( "Initializing resource providers." ) );
+    BootstrapFactory.initResourceProviders( );
+    LOG.info( LogUtils.header( "Initializing configuration resources." ) );
+    BootstrapFactory.initConfigurationResources( );
+    LOG.info( LogUtils.header( "Initializing bootstrappers." ) );
+    BootstrapFactory.initBootstrappers( );
+    for( Resource r : Resource.values( ) ) {
+      LOG.info( LogUtils.header( "Bootstrapping " + r ) );
+      for( Bootstrapper b : BootstrapFactory.getBootstrappers( r ) ) {
+        LOG.info( b.getClass( ) );
       }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    //TODO: discovery persistence contexts
-    //TODO: determine the role of this component 
-    String bootstrapConfig = System.getProperty( Bootstrapper.BOOTSTRAP_CONFIG_PROPERTY );
-    Enumeration<URL> test = SystemBootstrapper.class.getClassLoader( ).getResources( "com.eucalyptus.CloudServiceProvider" );
-    if( bootstrapConfig == null || test == null ) {
-      LOG.fatal( "Bootstrap configuration property is undefined: " + Bootstrapper.BOOTSTRAP_CONFIG_PROPERTY );
-      return false;
-    }
-    try {
-      this.configs.add( new ConfigResource( bootstrapConfig ) );
-    } catch ( Exception e ) {
-      LOG.fatal( "Couldn't load bootstrap configuration file: " + bootstrapConfig, e );
-      return false;
     }
 
-    LOG.info( "Eucalyptus component discovery [" + BaseDirectory.LIB.toString( ) +"]" );
-    File libDir = new File( BaseDirectory.LIB.toString( ) );
-    for ( File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( EucalyptusProperties.NAME ) && f.getName( ).endsWith( ".jar" ) ) {
-        try {
-          LOG.info( "Found eucalyptus component jar: " + f.getName( ) );
-          ServiceJarFile jar = new ServiceJarFile( f );
-          this.bootstrappers.addAll( jar.getBootstrappers( this.getClass( ) ) );
-          this.configs.addAll( jar.getConfigResources( ) );
-        } catch ( IOException e ) {
-          LOG.fatal( e,e );
-          SystemBootstrapper.shutdown( false );
-          return false;
-        }
-      }
-    }
-    try {
-      LOG.info( "-> Configuring..." );
-      context = new DefaultMuleContextFactory( ).createMuleContext( new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) ) );
-      for ( Bootstrapper b : this.bootstrappers ) {
-        LOG.info( "-> Found bootsrapper " + b.getClass( ).getSimpleName( ) + ".load()Z" );
-      }
-      for ( Bootstrapper b : this.bootstrappers ) {
-        LOG.info( "-> Invoking bootstrapper " + b.getClass( ).getSimpleName( ) + ".load()Z" );
-        b.load( );
-      }
-    } catch ( Exception e ) {
-      LOG.info( e, e );
-    }
+    //TODO: discovery persistence contexts
+    //TODO: determine the role of this component 
+
+    LOG.info( "-> Configuring..." );
+    
+//    context = new DefaultMuleContextFactory( ).createMuleContext( new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) ) );
+//    for ( Bootstrapper b : this.bootstrappers ) {
+//      LOG.info( "-> Found bootstrapper " + b.getClass( ).getSimpleName( ) + ".load()Z" );
+//    }
+//    for ( Bootstrapper b : this.bootstrappers ) {
+//      LOG.info( "-> Invoking bootstrapper " + b.getClass( ).getSimpleName( ) + ".load()Z" );
+//      try {
+//        b.load( );
+//      } catch ( Exception e ) {
+//        LOG.info( e, e );
+//      }
+//    }
     return true;
   }
 
