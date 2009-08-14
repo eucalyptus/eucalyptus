@@ -34,9 +34,9 @@ public class BootstrapFactory {
   public static void initConfigurationResources( ) throws IOException {
     for ( Resource r : Resource.values( ) ) {
       for ( ResourceProvider p : r.initProviders( ) ) {
+        LOG.info( "Loading resource provider:" + p.getName( ) + " -- " + p.getOrigin( ) );
         for( ConfigResource cfg : p.getConfigurations( ) ) {
-          LOG.info( "Loading resource provider:" + p.getName( ) + " -- " + p.getOrigin( ) );
-          LOG.info( "--> " + cfg.getUrl( ) );
+          LOG.info( "-> " + cfg.getUrl( ) );
         }
       }
     }
@@ -59,7 +59,7 @@ public class BootstrapFactory {
           for ( Resource r : Resource.values( ) ) {
             if ( r.providedBy( bootstrap.getClass( ) ) || Resource.Nothing.equals( r ) ) {
               r.add( bootstrap );
-              LOG.info( "--> Associated bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " with resource " + r.toString( ) );
+              LOG.info( "-> Associated bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " with resource " + r.toString( ) );
               break;
             }
           }

@@ -41,7 +41,7 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
   }
 
   @Override
-  public boolean load( ) throws Exception {
+  public boolean load(Resource current, List<Resource> dependencies ) throws Exception {
     db = new Server( );
     HsqlProperties props = new HsqlProperties( );
     props.setProperty( ServerConstants.SC_KEY_NO_SYSTEM_EXIT, true );

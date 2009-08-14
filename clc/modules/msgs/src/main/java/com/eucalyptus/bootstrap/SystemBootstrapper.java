@@ -1,5 +1,8 @@
 package com.eucalyptus.bootstrap;
 
+import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -8,7 +11,9 @@ import org.mule.api.MuleContext;
 import com.eucalyptus.util.LogUtils;
 import com.google.common.collect.Lists;
 
-public class SystemBootstrapper extends Bootstrapper {
+import edu.emory.mathcs.backport.java.util.Arrays;
+
+public class SystemBootstrapper {
   private static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );
   static {
     System.setProperty( "euca.db.host", "127.0.0.1" );
@@ -17,7 +22,7 @@ public class SystemBootstrapper extends Bootstrapper {
   }
   private static SystemBootstrapper singleton;
 
-  public static Bootstrapper getInstance( ) {
+  public static SystemBootstrapper getInstance( ) {
     synchronized ( SystemBootstrapper.class ) {
       if ( singleton == null ) {
         singleton = new SystemBootstrapper( );
@@ -30,16 +35,13 @@ public class SystemBootstrapper extends Bootstrapper {
   }
 
   private MuleContext          context;
-  private List<Bootstrapper>   bootstrappers = Lists.newArrayList( );
 
   private SystemBootstrapper( ) {}
 
-  @Override
   public boolean destroy( ) {
     return true;
   }
 
-  @Override
   public boolean stop( ) throws Exception {
     this.context.stop( );
     return true;
@@ -67,8 +69,10 @@ public class SystemBootstrapper extends Bootstrapper {
    * configure db/load bootstrap stack & wait for dbconfig
    * TODO: discovery persistence contexts
    * TODO: determine the role of this component 
+   * TODO: depends callbacks
+   * TODO: remote config
+   * TODO: bootstrap bindings
    */
-  @Override
   public boolean load( ) throws Exception {
     for( Resource r : Resource.values( ) ) {
       if( r.getBootstrappers( ).isEmpty( ) ) {
@@ -79,18 +83,19 @@ public class SystemBootstrapper extends Bootstrapper {
       for( Bootstrapper b : r.getBootstrappers( ) ) {
         try {
           LOG.info( "-> load: " + b.getClass( ) );
-//          boolean result = b.load( );          
+          Depends deps = b.getClass( ).getAnnotation( Depends.class );
+          Resource[] depResources = deps!=null?deps.resources( ):new Resource[]{Resource.Nothing};
+          List<Resource> depList =Arrays.asList( depResources );
+          boolean result = b.load( r, depList );          
         } catch ( Exception e ) {
           LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e);
           return false;
         }
       }
     }
-//    context = new DefaultMuleContextFactory( ).createMuleContext( new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) ) );
     return true;
   }
 
-  @Override
   public boolean start( ) throws Exception {
     for( Resource r : Resource.values( ) ) {
       if( r.getBootstrappers( ).isEmpty( ) ) {
@@ -101,7 +106,7 @@ public class SystemBootstrapper extends Bootstrapper {
       for( Bootstrapper b : r.getBootstrappers( ) ) {
         try {
           LOG.info( "-> start: " + b.getClass( ) );
-//          boolean result = b.start( );          
+          boolean result = b.start( );          
         } catch ( Exception e ) {
           LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e);
           return false;
@@ -109,27 +114,12 @@ public class SystemBootstrapper extends Bootstrapper {
       }
     }
     return true;
-//    LOG.info( "Starting Eucalyptus." );
-//    try {
-//      for ( Bootstrapper b : this.bootstrappers ) {
-//        LOG.info( "-> Invoking bootstrapper " + b.getClass( ).getSimpleName( ) + ".start()Z" );
-//        b.start( );
-//      }
-//      LOG.info( LogUtils.header( "Starting Eucalyptus." ) );
-//      context.start( );
-//      return true;
-//    } catch ( Exception e ) {
-//      LOG.error( e, e );
-//      return false;
-//    }
   }
 
-  @Override
   public String getVersion( ) {
     return System.getProperty( "euca.version" );
   }
 
-  @Override
   public boolean check( ) {
     return true;
   }

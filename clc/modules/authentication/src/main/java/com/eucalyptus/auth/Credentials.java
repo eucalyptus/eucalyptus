@@ -21,9 +21,11 @@ import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
+import com.eucalyptus.bootstrap.Component.Name;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
@@ -36,7 +38,6 @@ public class Credentials {
   private static String FILENAME       = "euca.p12";
   public static String  DB_NAME        = "eucalyptus_auth";
   public static User    SYSTEM         = getSystemUser( );
-  
 
   public static void init( ) {
     Security.addProvider( new BouncyCastleProvider( ) );
@@ -50,7 +51,7 @@ public class Credentials {
     try {
       return EucaKeyStore.getInstance( ).check( );
     } catch ( GeneralSecurityException e ) {
-      LOG.debug(e,e);
+      LOG.debug( e, e );
       return false;
     }
   }
@@ -118,8 +119,8 @@ public class Credentials {
     return new EntityWrapper<T>( Credentials.DB_NAME );
   }
 
-  @Provides(resource=Resource.UserCredentials)
-  @Depends(resources={Resource.Database})
+  @Provides( resource = Resource.UserCredentials )
+  @Depends( resources = { Resource.Database } )
   public static class Users extends Bootstrapper {
     public static boolean hasCertificate( final String alias ) {
       X509Cert certInfo = null;
@@ -270,7 +271,7 @@ public class Credentials {
     }
 
     @Override
-    public boolean load( ) throws Exception {
+    public boolean load( Resource current, List<Resource> dependencies ) throws Exception {
       return true;//TODO: check the DB connection here.
     }
 
@@ -279,87 +280,5 @@ public class Credentials {
       return Credentials.checkAdmin( );
     }
   }
-
-  @Provides(resource=Resource.SystemCredentials)
-  public static class System extends Bootstrapper {
-    private static System singleton = new System();
-    private ConcurrentMap<CertAlias,X509Certificate> certs = new ConcurrentHashMap<CertAlias, X509Certificate>( );
-    private ConcurrentMap<CertAlias,KeyPair> keypairs = new ConcurrentHashMap<CertAlias, KeyPair>( );
-
-    private enum CertAlias {
-      eucalyptus, walrus, jetty, hsqldb;
-      public X509Certificate getCertificate() {
-        return System.singleton.certs.get( this );
-      }
-      public PrivateKey getPrivateKey() {
-        return System.singleton.keypairs.get( this ).getPrivate( );
-      }
-      public KeyPair getKeyPair() {
-        return System.singleton.keypairs.get( this );
-      }      
-      private void init() throws Exception {
-        if(EucaKeyStore.getInstance( ).containsEntry( this.name( ) )) {
-          try {
-            System.singleton.certs.put( this, EucaKeyStore.getInstance( ).getCertificate( this.name( ) ) );
-            System.singleton.keypairs.put( this, EucaKeyStore.getInstance( ).getKeyPair( this.name( ),this.name( ) ) );
-          } catch ( Exception e ) {
-            System.singleton.certs.remove( this );
-            System.singleton.keypairs.remove( this );
-            LOG.fatal( "Failed to read keys from the keystore.  Please repair the keystore by hand." );
-            LOG.fatal( e, e );
-          }
-        } else {
-          System.singleton.createSystemKey( this );
-        }
-      }
-      public boolean check() {
-        return (System.singleton.keypairs.containsKey( this ) && System.singleton.certs.containsKey( this ))&&EucaKeyStore.getInstance( ).containsEntry( this.name( ) );
-      }
-    }
-    private System( ) {}
-    private void loadSystemKey( String name ) throws Exception {
-      CertAlias alias = CertAlias.valueOf( name );
-      if( this.certs.containsKey( alias ) ) {
-        return;
-      } else {
-        createSystemKey( alias );
-      }
-    }
-    private void createSystemKey( CertAlias name ) throws Exception {
-      KeyTool keyTool = new KeyTool( );
-      try {
-        KeyPair sysKp = keyTool.getKeyPair( );
-        X509Certificate sysX509 = keyTool.getCertificate( sysKp, EucalyptusProperties.getDName( name.name( ) ) );
-        System.singleton.certs.put( name, sysX509 );
-        System.singleton.keypairs.put( name, sysKp );
-        //TODO: might need separate keystore for euca/hsqldb/ssl/jetty/etc.
-        EucaKeyStore.getInstance( ).addKeyPair( name.name( ), sysX509, sysKp.getPrivate( ), name.name( ));
-        EucaKeyStore.getInstance( ).store( );
-      } catch ( Exception e ) {
-        System.singleton.certs.remove( name );
-        System.singleton.keypairs.remove( name );
-        EucaKeyStore.getInstance( ).remove( );
-        throw e;
-      }
-    }
-    @Override
-    public boolean load( ) throws Exception {
-      Credentials.init( );
-      for( CertAlias c : CertAlias.values( ) ) {
-        try {
-          if(!c.check( )) c.init( );
-        } catch ( Exception e ) {
-          LOG.error( e );
-          return false;
-        }
-      }
-      return true;
-    }
-    @Override
-    public boolean start( ) throws Exception {
-      return true;
-    }
-  }
-  
 
 }

@@ -1,5 +1,7 @@
 package com.eucalyptus.bootstrap;
 
+import java.util.List;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.EucaKeyStore;
@@ -34,7 +36,7 @@ public class DNSBootstrapper extends Bootstrapper {
   }
 
   @Override
-  public boolean load( ) throws Exception {
+  public boolean load(Resource current, List<Resource> dependencies ) throws Exception {
 	  SystemBootstrapper.hello();
 	  LOG.info("Initializing DNS");
 	  DNSControl.initialize();

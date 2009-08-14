@@ -1,6 +1,8 @@
 package com.eucalyptus.bootstrap;
 
 import java.io.File;
+import java.net.URL;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.mortbay.xml.XmlConfiguration;
@@ -13,9 +15,10 @@ public class HttpServerBootstrapper extends Bootstrapper {
   private static org.mortbay.jetty.Server jettyServer;
 
   @Override
-  public boolean load( ) throws Exception {
+  public boolean load(Resource current, List<Resource> dependencies ) throws Exception {
     jettyServer = new org.mortbay.jetty.Server();
-    XmlConfiguration jettyConfig = new XmlConfiguration( new File( BaseDirectory.CONF.toString() + File.separator + "eucalyptus-jetty.xml" ).toURL() );
+    URL defaultConfig = ClassLoader.getSystemResource( "eucalyptus-jetty.xml" );
+    XmlConfiguration jettyConfig = new XmlConfiguration( defaultConfig );
     jettyConfig.configure( jettyServer );
     return true;
   }

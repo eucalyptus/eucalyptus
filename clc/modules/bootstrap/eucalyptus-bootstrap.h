@@ -74,7 +74,7 @@ typedef struct {
 	char* method_name;
 	char* method_signature;
 } java_method_t;
-static java_method_t euca_get_instance = { "getInstance", "()Lcom/eucalyptus/bootstrap/Bootstrapper;"};
+static java_method_t euca_get_instance = { "getInstance", "()Lcom/eucalyptus/bootstrap/SystemBootstrapper;"};
 static java_method_t euca_load = { "load", "()Z" };
 static java_method_t euca_init = { "init", "()Z" };
 static java_method_t euca_start = { "start", "()Z" };

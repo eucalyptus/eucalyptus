@@ -77,6 +77,7 @@ public class ServiceJarFile extends JarFile {
     Class candidate = this.classLoader.loadClass( classGuess );
     if ( Bootstrapper.class.equals( candidate ) ) throw new InstantiationException( Bootstrapper.class + " is abstract." );
     if ( !Bootstrapper.class.isAssignableFrom( candidate ) ) throw new InstantiationException( candidate + " does not conform to " + Bootstrapper.class );
+    LOG.warn("Candidate bootstrapper: " + candidate.getName());
     if ( !Modifier.isPublic( candidate.getDeclaredConstructor( new Class[] {} ).getModifiers( ) ) ) {
       Method factory = candidate.getDeclaredMethod( "getInstance", new Class[] {} );
       if ( !Modifier.isStatic( factory.getModifiers( ) ) || !Modifier.isPublic( factory.getModifiers( ) ) ) { throw new InstantiationException( candidate.getCanonicalName( ) + " does not declare public <init>()V or public static getInstance()L;" ); }

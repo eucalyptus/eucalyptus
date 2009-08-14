@@ -1,4 +1,5 @@
 name=eucalyptus
+euca.model.services=eucalyptus-services.xml
 euca.model.interface=eucalyptus-interface.xml
 euca.model.runtime=eucalyptus-runtime.xml
 euca.model.storage=eucalyptus-storage.xml

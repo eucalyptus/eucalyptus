@@ -21,17 +21,17 @@
                 <vm:inbound-endpoint address="vm://HttpServer" synchronous="false"/>
             </inbound>
             <component class="edu.ucsb.eucalyptus.ic.HttpServer"/>
-        </service><!--
-
+        </service>
         <service name="Eucalyptus">
             <inbound>
                 <inbound-endpoint ref="EucalyptusWS"/>
             </inbound>
             <component class="edu.ucsb.eucalyptus.ic.Eucalyptus"/>
         </service>
+<!--
 
 
-        --><service name="RequestQueue">
+<service name="RequestQueue">
             <inbound>
                 <vm:inbound-endpoint address="vm://RequestQueue"/>
             </inbound>
@@ -83,7 +83,7 @@
                 </filtering-router>
              </outbound>
         </service>
-
+-->
 
     </model>
 </mule>

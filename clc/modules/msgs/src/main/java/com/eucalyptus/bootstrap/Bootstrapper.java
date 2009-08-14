@@ -1,5 +1,7 @@
 package com.eucalyptus.bootstrap;
 
+import java.util.List;
+
 import org.apache.log4j.Logger;
 
 @Provides(resource=Resource.Nothing)
@@ -15,7 +17,7 @@ public abstract class Bootstrapper {
     return System.getProperty( VERSION_PROPERTY );
   }
 
-  public abstract boolean load() throws Exception;
+  public abstract boolean load(Resource current, List<Resource> dependencies) throws Exception;
   public abstract boolean start() throws Exception;
   public boolean check() throws Exception {
     return true;

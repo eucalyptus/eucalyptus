@@ -80,7 +80,7 @@
   <target name="build-groovy">
     <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath"/>
     <groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true" >
-        <javac target="1.5"/>
+        <javac target="1.5" debug="true"/>
     </groovyc>
   </target>
   <target name="install" depends="copy-conf"/>

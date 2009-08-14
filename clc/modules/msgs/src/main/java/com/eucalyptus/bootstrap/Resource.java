@@ -56,7 +56,8 @@ public enum Resource {
               LOG.debug( "Found resource provider: " + u );
               Properties props = new Properties( );
               props.load( u.openStream( ) );
-              providers.add( new ResourceProvider( this, props, u ) );
+              ResourceProvider p = new ResourceProvider( this, props, u );
+              providers.add( p );
             }
           } catch ( IOException e ) {
             LOG.error( e, e );
