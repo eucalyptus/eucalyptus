@@ -114,8 +114,8 @@ public class DNSControl {
 
     public UpdateARecordResponseType UpdateARecord(UpdateARecordType request)  throws EucalyptusCloudException {
         UpdateARecordResponseType reply = (UpdateARecordResponseType) request.getReply();
-        String zone = request.getZone();
-        String name = request.getName();
+        String zone = request.getZone() + DNSProperties.DOMAIN + ".";
+        String name = request.getName()  + DNSProperties.DOMAIN + ".";
         String address = request.getAddress();
         long ttl = request.getTtl();
         /*if(!request.isAdministrator()) {
@@ -163,8 +163,8 @@ public class DNSControl {
 
     public RemoveARecordResponseType RemoveARecord(RemoveARecordType request) throws EucalyptusCloudException {
         RemoveARecordResponseType reply = (RemoveARecordResponseType) request.getReply();
-        String zone = request.getZone();
-        String name = request.getName();
+        String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
+        String name = request.getName()  + DNSProperties.DOMAIN + ".";
         /*if(!request.isAdministrator()) {
             throw new AccessDeniedException(name);
         } */
@@ -197,8 +197,8 @@ public class DNSControl {
 
     public UpdateCNAMERecordResponseType UpdateCNAMERecord(UpdateCNAMERecordType request)  throws EucalyptusCloudException {
         UpdateCNAMERecordResponseType reply = (UpdateCNAMERecordResponseType) request.getReply();
-        String zone = request.getZone();
-        String name = request.getName();
+        String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
+        String name = request.getName()  + DNSProperties.DOMAIN + ".";
         String alias = request.getAlias();
         long ttl = request.getTtl();
         /*if(!request.isAdministrator()) {
@@ -247,8 +247,8 @@ public class DNSControl {
 
     public RemoveCNAMERecordResponseType RemoveCNAMERecord(RemoveCNAMERecordType request) throws EucalyptusCloudException {
         RemoveCNAMERecordResponseType reply = (RemoveCNAMERecordResponseType) request.getReply();
-        String zone = request.getZone();
-        String name = request.getName();
+        String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
+        String name = request.getName()  + DNSProperties.DOMAIN + ".";
         /*if(!request.isAdministrator()) {
             throw new AccessDeniedException(name);
         } */

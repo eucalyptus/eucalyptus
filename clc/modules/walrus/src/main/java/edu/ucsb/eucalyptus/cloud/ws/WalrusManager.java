@@ -217,7 +217,7 @@ public class WalrusManager {
 			UpdateARecordType updateARecord = new UpdateARecordType();
 			updateARecord.setUserId(userId);
 			String address = WalrusProperties.WALRUS_IP;
-			String zone = WalrusProperties.WALRUS_DOMAIN + ".";
+			String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
 			updateARecord.setAddress(address);
 			updateARecord.setName(bucketName + "." + zone);
 			updateARecord.setTtl(604800);
@@ -272,7 +272,7 @@ public class WalrusManager {
 					if(WalrusProperties.enableVirtualHosting) {
 						RemoveARecordType removeARecordType = new RemoveARecordType();
 						removeARecordType.setUserId(userId);
-						String zone = WalrusProperties.WALRUS_DOMAIN + ".";
+						String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
 						removeARecordType.setName(bucketName + "." + zone);
 						removeARecordType.setZone(zone);
 						LOG.info("Removing mapping for " + removeARecordType.getName());

@@ -53,7 +53,7 @@ public class DNSProperties {
     public static int PORT = 53;
     public static int MAX_MESSAGE_SIZE = 1024;
     public static String DNS_REF = "vm://DNSControlInternal";
-    public static String DOMAIN = "localdomain";
+    public static String DOMAIN = "localhost";
     public static String NS_HOST = "nshost." + DOMAIN;
     public static String NS_IP = "127.0.0.1";
 
