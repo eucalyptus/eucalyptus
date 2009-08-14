@@ -47,9 +47,11 @@ import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
 
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
+import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.NetworkRulesGroup;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
@@ -230,8 +232,22 @@ public class EucalyptusManagement {
 		List<UserInfo> userList = dbWrapper.query( new UserInfo( userName ) );
 		if ( userList.size() != 1 )
 		{
-			dbWrapper.rollback();
-			throw EucalyptusManagement.makeFault("User does not exist" );
+	    try {//TODO: temporary hack to support older user info objects
+	      if( "admin".equals( userName )) {
+  	      UserInfo u = UserManagement.generateAdmin( );
+  	      dbWrapper.add( u );
+  	      UserGroupInfo allGroup = new UserGroupInfo( "all" );
+  	      dbWrapper.getSession( ).persist( new Counters( ) );
+  	      dbWrapper.commit( );
+  	      return EucalyptusManagement.fromServer( u );
+	      } else {
+	        dbWrapper.rollback( );
+	        throw EucalyptusManagement.makeFault("User does not exist" );	        
+	      }
+	    } catch ( Exception e ) {
+	      dbWrapper.rollback( );
+	      throw EucalyptusManagement.makeFault("User does not exist" );
+	    }
 		}
 		dbWrapper.commit();
 		return EucalyptusManagement.fromServer( userList.get( 0 ) );

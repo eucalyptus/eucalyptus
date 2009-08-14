@@ -120,7 +120,7 @@
     <delete dir="target"/>
   </target>
   <!--================================== install target ==================================-->
-  <target name="install" depends="build">
+  <target name="install" depends="build,install-nogwt">
     <ant dir="modules/www" inheritall="false" target="install"/>
   </target>
   <property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d"/>
