@@ -141,7 +141,7 @@ sync_keys() {
 			echo "ERROR: cannot find cluster credentials."
 			exit 1
 		    else
-			if ! cp $i $DESTDIR ; then
+			if ! rsync $i $DESTDIR ; then
 			    echo "ERROR: cannot copy file (${i}) to destination (${DESTDIR})"
 			    return 1
 			fi
@@ -692,6 +692,13 @@ createCloudURL () {
 }
 
 getSecretKey() {
+    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
+	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
+    else
+	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface."
+	exit 1
+    fi
+
     FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Ss][Ee][Cc][Rr][Ee][Tt][Kk][Ee][Yy]/ {print NR}'`
     if [ "$FIELD" = "" ]; then
 	echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
@@ -715,6 +722,16 @@ checkLocalService() {
 	echo "ERROR: must pass in service name (CLC, CC)"
 	return 1
     elif [ "$SERVICE" = "CLC" ]; then
+	if [ -n "$FAKEREG" ]; then
+	    local SOURCEDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
+	    for i in cloud
+	    do 
+		if [ ! -e "$SOURCEDIR/${i}-cert.pem" -o ! -e "$SOURCEDIR/${i}-pk.pem" ]; then
+		    openssl req -new -nodes -x509 -out $SOURCEDIR/${i}-cert.pem -keyout $SOURCEDIR/${i}-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
+		fi
+	    done
+	fi
+
 	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null"
     elif [ "$SERVICE" = "CC" ]; then
 	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC > /dev/null"
@@ -736,12 +753,6 @@ if [ -n "$NEWCLUS" ]; then
 	exit 1
     fi
     
-    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
-	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
-    else
-	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface."
-	exit 1
-    fi
     if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
 	SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${CLUSNAME}/
 	DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
@@ -784,13 +795,19 @@ if [ -n "$NEWCLUS" ]; then
 
     if [ -n "${FAKEREG}" ]; then
 	mkdir -p $SOURCEDIR
-	openssl req -new -nodes -x509 -out $SOURCEDIR/cloud-cert.pem -keyout $SOURCEDIR/cloud-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
-	openssl req -new -nodes -x509 -out $SOURCEDIR/cluster-cert.pem -keyout $SOURCEDIR/cluster-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
-	openssl req -new -nodes -x509 -out $SOURCEDIR/node-cert.pem -keyout $SOURCEDIR/node-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
+	if [ -n "${FAKEREG}" ]; then
+	    mkdir -p $SOURCEDIR
+	    for i in cluster node
+	    do 
+		if [ ! -e "$SOURCEDIR/${i}-cert.pem" -o ! -e "$SOURCEDIR/${i}-pk.pem" ]; then
+		    openssl req -new -nodes -x509 -out $SOURCEDIR/${i}-cert.pem -keyout $SOURCEDIR/${i}-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
+		fi
+	    done
+	fi
     fi
 
     # create tunnel password
-    TUNPASS=`md5sum $SOURCEDIR/cloud-pk.pem | awk '{print $1}'`
+    TUNPASS=`md5sum $DESTDIR/cloud-pk.pem | awk '{print $1}'`
     if [ ${TUNPASS} != "" ]; then
 	echo ${TUNPASS} > $SOURCEDIR/vtunpass
 	chmod 0600 $SOURCEDIR/vtunpass
@@ -813,8 +830,48 @@ if [ -n "$WALRUS" ]; then
     fi
 
     if [ "$WALRUS_MODE" = "ADD" ]; then
-		# if ! sync_keys walrus_host files ; then
-	echo "Adding WALRUS host $WALRUS: not implemented"
+	echo "Adding WALRUS host $WALRUS"
+	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
+	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+	    DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+	else
+	    echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful!"
+	    exit 1
+	fi
+	
+	SKEY=""
+	if ! getSecretKey ; then
+	    exit 1
+	fi
+	
+	URL=""
+	if ! createCloudURL "KEY" "$SKEY" "Action" "AddWalrus" "Host" "${WALRUS}" ; then
+	    exit 1
+	fi
+	CMD="wget -O - \"$URL\" 2>/dev/null"
+	if [ -n "${FAKEREG}" ]; then
+	    CMD="echo"
+	fi
+	if ! eval $CMD ; then
+	    echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
+	    exit 1
+	fi
+	if [ -n "${FAKEREG}" ]; then
+	    mkdir -p $SOURCEDIR
+	    for i in walrus
+	    do 
+		if [ ! -e "$SOURCEDIR/${i}-cert.pem" -o ! -e "$SOURCEDIR/${i}-pk.pem" ]; then
+		    openssl req -new -nodes -x509 -out $SOURCEDIR/${i}-cert.pem -keyout $SOURCEDIR/${i}-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
+		fi
+	    done
+	fi
+    
+    # sync the keys
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${WALRUS} walrus-cert.pem walrus-pk.pem ; then
+	    echo "ERROR: failed to sync keys with ${WALRUS}."
+	fi
+	echo "SUCCESS: new walrus on host '${WALRUS}' successfully registered."
+	
     elif [ "$WALRUS_MODE" = "DEL" ]; then
 	echo "not implemented"
     fi
@@ -827,8 +884,48 @@ if [ -n "$SCHOST" ]; then
     fi
     
     if [ "$SC_MODE" = "ADD" ]; then
-		# if ! sync_keys sc-host files-cert ; then
-	echo "Adding SC $SCHOST to cluster $SCNAME: not implemented"
+	echo "Adding SC $SCHOST to cluster $SCNAME"
+	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
+	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${SCNAME}
+	    DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+	else
+	    echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful!"
+	    exit 1
+	fi
+	
+	SKEY=""
+	if ! getSecretKey ; then
+	    exit 1
+	fi
+	
+	URL=""
+	if ! createCloudURL "KEY" "$SKEY" "Action" "AddStorageController" "Host" "${SCHOST}" "Name" "${SCNAME}"; then
+	    exit 1
+	fi
+	CMD="wget -O - \"$URL\" 2>/dev/null"
+	if [ -n "${FAKEREG}" ]; then
+	    CMD="echo"
+	fi
+	if ! eval $CMD ; then
+	    echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
+	    exit 1
+	fi
+	if [ -n "${FAKEREG}" ]; then
+	    mkdir -p $SOURCEDIR
+	    for i in sc
+	    do 
+		if [ ! -e "$SOURCEDIR/${i}-cert.pem" -o ! -e "$SOURCEDIR/${i}-pk.pem" ]; then
+		    openssl req -new -nodes -x509 -out $SOURCEDIR/${i}-cert.pem -keyout $SOURCEDIR/${i}-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
+		fi
+	    done
+	fi
+    
+    # sync the keys
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${SCHOST} sc-cert.pem sc-pk.pem; then
+	    echo "ERROR: failed to sync keys with ${SCHOST}."
+	fi
+	echo "SUCCESS: new SC for cluster '${SCNAME}' on host '${SCHOST}' successfully registered."
+
     elif [ "$SC_MODE" = "DEL" ]; then
 	echo "not implemented"
     fi
@@ -873,7 +970,6 @@ if [ -n "$NODEMODE" ]; then
 	    exit 1
 	fi
 	
-    echo "$NODEMODE: $NODES: "
 	# CC needs to be running 
 	if ! checkLocalService "CC" ; then
 	    exit 1
