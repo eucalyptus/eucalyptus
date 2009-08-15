@@ -106,65 +106,90 @@ uncomment () {
 # $1 is the remote host
 # everything else are the files to copy
 sync_keys() {
-	local FILES=""
+        local SOURCEDIR=""
+	local DESTDIR=""
 	local REMOTE=""
+	local FILES=""
 
-	if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
-		KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
-	else
-		echo "Cannot find keys directory!"
+	if [ $# -lt 4 ]; then
 		return 1
 	fi
 
-	if [ $# -lt 2 ]; then
-		return 1
-	fi
+	SOURCEDIR="$1"
+	shift
+	DESTDIR="$1"
+	shift
 	REMOTE="$1"
 	shift
-	 
 	while [ $# -ge 1 ]; do 
-		if [ ! -e ${KEYDIR}/${1} ]; then
-			echo "warning: ${KEYDIR}/${1} doesn't exists!"
+		if [ ! -e "${SOURCEDIR}/${1}" ]; then
+			echo "warning: ${SOURCEDIR}/${1} doesn't exists!"
 		else
-			FILES="$FILES ${KEYDIR}/${1}"
+			FILES="$FILES ${SOURCEDIR}/${1}"
 		fi
 		shift
 	done
-	
+
+	# is REMOTE actually localhost?
+	if [ ${REMOTE} = "127.0.0.1" -o ${REMOTE} = localhost -o ${REMOTE} = "`hostname -s`" -o ${REMOTE} = "`hostname -f`" ]; then
+	    # machine is localhost, not need for remote syncing
+	    if [ -d "$SOURCEDIR" ]; then
+		echo "FILES: $FILES"
+		for i in $FILES
+		do
+		    echo "FILE: $i"
+		    if [ ! -e $i ]; then
+			echo "ERROR: cannot find cluster credentials."
+			exit 1
+		    else
+			echo "cp $i $DESTDIR"
+			if ! cp $i $DESTDIR ; then
+			    echo "ERROR: cannot copy file (${i}) to destination (${DESTDIR})"
+			    return 1
+			fi
+		    fi
+		done		    
+	    else
+		echo "ERROR: Cannot find source keys directory."
+		return 1
+	    fi
+	    return 0
+	fi
+
 	# try rsync first 
 	if [ -n "$RSYNC" ]; then
-		echo
-		echo  -n "Trying rsync to sync keys with \"${REMOTE}\"..."
-		if $RSYNC -az ${FILES} ${REMOTE}:${KEYDIR}/ > /dev/null ; then
-			echo "done."
-			return 0
-		else
-			echo"failed."
-		fi
-		
+	    echo
+	    echo  -n "Trying rsync to sync keys with \"${REMOTE}\"..."
+	    if $RSYNC -az ${FILES} ${REMOTE}:${DESTDIR}/ > /dev/null ; then
+		echo "done."
+		return 0
+	    else
+		echo "failed."
+	    fi
 	fi
 
 	# scp next
 	if [ -n "$SCP" ]; then
-		if [ "$EUCA_USER" = "" ]; then
-			if getent passwd eucalyptus > /dev/null ; then
-				echo "Using 'eucalyptus' as EUCA_USER"
-				EUCA_USER="eucalyptus"
-			else
-				echo "EUCA_USER is not defined!"
-				return 1
-			fi
-		fi
-		echo
-		echo -n "Trying scp to sync keys with \"${1}\" (user \"${EUCA_USER}\")..."
-		if sudo -u ${EUCA_USER} $SCP ${FILES} ${EUCA_USER}@${REMOTE}:${KEYDIR} > /dev/null ; then
-			echo "done."
-			return 0
+	    echo
+	    if [ "$EUCA_USER" = "" ]; then
+		if getent passwd eucalyptus > /dev/null ; then
+		    echo "Using 'eucalyptus' as EUCA_USER"
+		    EUCA_USER="eucalyptus"
 		else
-			echo "failed."
+		    echo "EUCA_USER is not defined!"
+		    return 1
 		fi
+	    fi
+	    echo
+	    echo "Trying scp to sync keys with \"${1}\" (user \"${EUCA_USER}\")..."
+	    if sudo -u ${EUCA_USER} $SCP ${FILES} ${EUCA_USER}@${REMOTE}:${DESTDIR} > /dev/null ; then
+		echo "done."
+		return 0
+	    else
+		echo "failed."
+	    fi
 	fi
-
+	
 	return 1
 }
 
@@ -381,13 +406,13 @@ while [ $# -gt 0 ]; do
 done
 
 # some basic check
-if [ "${FILE:0:1}" = "-" ]; then
-	usage
-	exit
-fi
+#if [ "${FILE:0:1}" = "-" ]; then
+#	usage
+#	exit 1
+#fi
 if [ -z "${FILE}" -o ! -f "${FILE}" ]; then
 	echo "$FILE is not a valid eucalyptus configuration file"
-	exit 
+	exit  1
 fi
 
 # if asked to print the version that's all we do
@@ -642,114 +667,178 @@ if [ -n "$CHECK" ]; then
 	done
 fi
 
+createCloudURL () {
+    SKEY=""
+    ARGS="AWSAccessKeyId=ISMvKXpXpadDiUoOSoAfww"
+    KEY=$1
+    shift
+    VAL=$1
+    shift
+    while ( test -n "$KEY" -a -n "$VAL")
+    do
+	if [ "${KEY}" = "KEY" ]; then
+	    SKEY=$VAL
+	else
+	    ARGS="${ARGS}&${KEY}=${VAL}"
+	fi
+	KEY=$1
+	shift
+	VAL=$1
+	shift
+    done
+    if [ -z "$SKEY" ]; then
+	echo "ERROR: need to pass in KEY parameter."
+	export URL=""
+	return 1
+    fi
+    ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=2008-12-01"
+    SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Eucalyptus\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
+    export URL="http://127.0.0.1:8773/services/Eucalyptus?${ARGS}&Signature=${SIGNATURE}"
+    return 0
+}
+
+getSecretKey() {
+    FIELD=`grep -i "CREATE .*TABLE USERS" ${DBDIR}/* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Ss][Ee][Cc][Rr][Ee][Tt][Kk][Ee][Yy]/ {print NR}'`
+    if [ "$FIELD" = "" ]; then
+	echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
+	export SKEY=""
+	return 1
+    fi
+    SKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1))
+    return 0
+}
+
+checkLocalService() {
+    local SERVICE=""
+
+    if [ -z "$WGET" -o ! -x "$WGET" ]; then
+	echo "ERROR: wget is missing, cannot continue."
+	return 1
+    fi
+
+    SERVICE="$1"
+    if [ -z "$SERVICE" ]; then
+	echo "ERROR: must pass in service name (CLC, CC)"
+	return 1
+    elif [ "$SERVICE" = "CLC" ]; then
+	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null"
+    elif [ "$SERVICE" = "CC" ]; then
+	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8443/axis2/services/|grep EucalyptusCC > /dev/null"
+    fi
+    
+    if [ -n "${DRYRUN}" ]; then
+	CMD="echo $CMD"
+    fi
+    if ! $CMD ; then
+	echo "ERROR: you need to be on the $SERVICE host and the $SERVICE needs to be running."
+	return 1
+    fi  
+    return 0
+}
+
 # adding a new cluster
 if [ -n "$NEWCLUS" ]; then
-	if [ -n "$WGET" ]; then
-		if ! $WGET -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null ; then
-			echo "You need to be on the CLC host and the CLC needs to be running."
-			exit 1
-		fi
-	else
-		echo "wget is missing: cannot check if service is running."
-	fi
-
-	if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
-		DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
-	else
-		echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface"
-		exit 1
-	fi
-	FIELD=`grep -i "CREATE .*TABLE USERS" ${DBDIR}/* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Ss][Ee][Cc][Rr][Ee][Tt][Kk][Ee][Yy]/ {print NR}'`
-	if [ "$FIELD" = "" ]; then
-		echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
-		exit 1
-	fi
-	KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1))
+#    DRYRUN="yes"
+    if ! checkLocalService "CLC" ; then
+	exit 1
+    fi
     
-	ARGS="AWSAccessKeyId=ISMvKXpXpadDiUoOSoAfww&Action=DescribeAvailabilityZones"
-	ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=2008-12-01"
-	SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Eucalyptus\n${ARGS}" | openssl dgst -sha256 -hmac ${KEY} -binary | openssl base64)
-	ISUP=`wget -O - "http://127.0.0.1:8773/services/Eucalyptus?${ARGS}&Signature=${SIGNATURE}" 2>/dev/null | grep UP`
-	if [ -n "$ISUP" ]; then
-		echo "ERROR: there is already a cluster registered with the system."
-		exit 1
-	fi
+    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
+	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
+    else
+	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface."
+	exit 1
+    fi
+    if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
+	SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${CLUSNAME}/
+	DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+    else
+	echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful!"
+	exit 1
+    fi
 
-	ARGS="AWSAccessKeyId=ISMvKXpXpadDiUoOSoAfww&Action=AddCluster&Host=${NEWCLUS}&Name=${CLUSNAME}&Port=${CC_PORT}"
-	ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=2008-12-01"
-	SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Eucalyptus\n${ARGS}" | openssl dgst -sha256 -hmac ${KEY} -binary | openssl base64)
+    SKEY=""
+    if ! getSecretKey ; then
+	exit 1
+    fi
     
-	ISREG=`wget -O - "http://127.0.0.1:8773/services/Eucalyptus?${ARGS}&Signature=${SIGNATURE}" 2>/dev/null`
-	if [ ! -n "$ISREG" ]; then
-		echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
-		exit 1
-	fi
+    URL=""
+    if ! createCloudURL "KEY" "$SKEY" "Action" "DescribeAvailabilityZones"; then
+	exit 1
+    fi
 
-	# create tunnel password
-	TUNPASS=`md5sum $EUCALYPTUS/var/lib/eucalyptus/keys/cloud-pk.pem | awk '{print $1}'`
-	if [ ${TUNPASS} != "" ]; then
-	    echo ${TUNPASS} > ${EUCALYPTUS}/var/lib/eucalyptus/keys/vtunpass
-	    chmod 0600 ${EUCALYPTUS}/var/lib/eucalyptus/keys/vtunpass
-	    chown ${EUCA_USER} ${EUCALYPTUS}/var/lib/eucalyptus/keys/vtunpass
-	else
-	    echo "ERROR: Unable to create tunnel password, tunneling will not function"
-	fi
+    CMD="wget -O - \"$URL\" 2>/dev/null | grep UP"
+    if [ -n "${DRYRUN}" ]; then
+	CMD="echo $CMD"
+    fi
+    if ! $CMD ; then 
+	echo "ERROR: there is already a cluster registered with the system."
+	exit 1
+    fi
 
-	# sync the keys
-	if [ ${NEWCLUS} = "127.0.0.1" -o ${NEWCLUS} = localhost -o ${NEWCLUS} = "`hostname -s`" -o ${NEWCLUS} = "`hostname -f`" ]; then
-		# machine is localhost, not need for remote syncing
-		if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
-			KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
-			if [ ! -e $KEYDIR/cluster-cert.pem -a ! -e $KEYDIR/cluster-pk.pem ]; then
-				echo "Missing cluster's credentials!"
-				exit 1
-			fi
-		else
-			echo "Cannot find keys directory!"
-			exit 1
-		fi
-	elif ! sync_keys ${NEWCLUS} "node-cert.pem cluster-cert.pem node-pk.pem" ; then
-		echo "Failed to sync keys with ${NEWCLUS}"
-	fi
-	echo "New cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully added."
+    URL=""
+    if ! createCloudURL "KEY" "$SKEY" "Action" "AddCluster" "Host" "${NEWCLUS}" "Name" "${CLUSNAME}" "Port" "${CC_PORT}"; then
+	exit 1
+    fi
+    CMD="wget -O - \"$URL\" 2>/dev/null"
+    if [ -n "${DRYRUN}" ]; then
+	CMD="echo $CMD"
+    fi
+    if ! $CMD ; then
+	echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
+	exit 1
+    fi
+
+    if [ -n "${DRYRUN}" ]; then
+	mkdir -p $SOURCEDIR
+	openssl req -new -nodes -x509 -out $SOURCEDIR/cloud-cert.pem -keyout $SOURCEDIR/cloud-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
+	openssl req -new -nodes -x509 -out $SOURCEDIR/cluster-cert.pem -keyout $SOURCEDIR/cluster-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
+	openssl req -new -nodes -x509 -out $SOURCEDIR/node-cert.pem -keyout $SOURCEDIR/node-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
+    fi
+
+    # create tunnel password
+    TUNPASS=`md5sum $SOURCEDIR/cloud-pk.pem | awk '{print $1}'`
+    if [ ${TUNPASS} != "" ]; then
+	echo ${TUNPASS} > $SOURCEDIR/vtunpass
+	chmod 0600 $SOURCEDIR/vtunpass
+	chown ${EUCA_USER} $SOURCEDIR/vtunpass
+    else
+	echo "WARN: Unable to create tunnel password file, tunneling will not function"
+    fi
+    
+    # sync the keys
+    if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass ; then
+	echo "ERROR: failed to sync keys with ${NEWCLUS}."
+    fi
+    echo "SUCCESS: new cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully registered."
 fi
 
 # walrus
 if [ -n "$WALRUS" ]; then
-	if [ -n "$WGET" ]; then
-		if ! $WGET -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null ; then
-			echo "You need to be on the CLC host and the CLC needs to be running."
-			exit 1
-		fi
-	else
-		echo "wget is missing: cannot check if service is running."
-	fi
+    if ! checkLocalService "CLC"
+	exit 1
+    fi
 
-	if [ "$WALRUS_MODE" = "ADD" ]; then
+    if [ "$WALRUS_MODE" = "ADD" ]; then
 		# if ! sync_keys walrus_host files ; then
-		echo "not implemented"
-	elif [ "$WALRUS_MODE" = "DEL" ]; then
-		echo "not implemented"
-	fi
+	echo "not implemented"
+    elif [ "$WALRUS_MODE" = "DEL" ]; then
+	echo "not implemented"
+    fi
 fi
 
 # sc
 if [ -n "$SC" ]; then
-	if [ -n "$WGET" ]; then
-		if ! $WGET -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null ; then
-			echo "You need to be on the CLC host and the CLC needs to be running."
-			exit 1
-		fi
-	else
-		echo "wget is missing: cannot check if service is running."
-	fi
-
-	if [ "$SC_MODE" = "ADD" ]; then
+    if ! checkLocalService "CLC"
+	exit 1
+    fi
+    
+    if [ "$SC_MODE" = "ADD" ]; then
 		# if ! sync_keys sc-host files-cert ; then
-		echo "not implemented"
-	elif [ "$SC_MODE" = "DEL" ]; then
-		echo "not implemented"
-	fi
+	echo "not implemented"
+    elif [ "$SC_MODE" = "DEL" ]; then
+	echo "not implemented"
+    fi
 fi
 
 # CLC registration
@@ -783,20 +872,23 @@ if [ -n "$NODEMODE" ]; then
 		exit 1
 	fi
 
-	# CC needs to be running 
-	if [ -n "$WGET" ]; then
-		if ! $WGET -O - -o /dev/null http://127.0.0.1::8774/axis2/services |grep EucalyptusCC > /dev/null ; then
-			echo "You need to be on the CC host and the CC service needs to be running."
-			exit 1
-		fi
+	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
+	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+	    DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
 	else
-		echo "wget is missing: cannot check if service is running."
+	    echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful and that this cluster is already registered!"
+	    exit 1
+	fi
+	
+	# CC needs to be running 
+	if ! checkLocalService "CC" ; then
+	    exit 1
 	fi
 
 	# warn the user on where we expect the keys to be
 	if [ "$NODEMODE" = "ADD" ]; then 
 		echo
-		echo "We expect all nodes to have eucalyptus installed in $EUCALYPTUS."
+		echo "INFO: We expect all nodes to have eucalyptus installed in $EUCALYPTUS for key synchronization."
 	fi
 
 	# adding (or removing) nodes
@@ -814,7 +906,7 @@ if [ -n "$NODEMODE" ]; then
 		fi
 	
 		# let's sync keys with the nodes
-		if ! sync_keys ${NEWNODE} "node-cert.pem cluster-cert.pem node-pk.pem" ; then
+		if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWNODE} node-cert.pem cluster-cert.pem node-pk.pem ; then
 			echo
 			echo "ERROR: could not synchronize keys with $NEWNODE!"
 			echo "The configuration will not have this node."
