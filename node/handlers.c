@@ -721,9 +721,10 @@ static int init (void)
 
 int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
 {
-	int ret, len;
+	int ret, len, used_cores;
 	char *file_name;
 	FILE *f;
+	long long used_mem, used_disk;
 #define NC_MONIT_FILENAME "/var/run/eucalyptus/nc-stat"
 
 	if (init())
@@ -736,6 +737,9 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	else 
 		ret = nc_state.D->doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);
 
+	if (ret)
+		return ret;
+
 	/* allocate enough memory */
 	len = (strlen(EUCALYPTUS_CONF_LOCATION) > strlen(NC_MONIT_FILENAME)) ? strlen(EUCALYPTUS_CONF_LOCATION) : strlen(NC_MONIT_FILENAME);
 	len += 2 + strlen(nc_state.home);
@@ -745,36 +749,46 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 		return ret;
 	}
 
-	if (ret == 0) {
-		sprintf(file_name, "%s/%s", nc_state.home, NC_MONIT_FILENAME);
-		if (!strcmp(meta->userId, EUCALYPTUS_ADMIN)) {
-			f = fopen(file_name, "w");
-			if (f) {
-				int i;
-				ncInstance * instance;
-				char myName[256];
+	sprintf(file_name, "%s/%s", nc_state.home, NC_MONIT_FILENAME);
+	if (!strcmp(meta->userId, EUCALYPTUS_ADMIN)) {
+		f = fopen(file_name, "w");
+		if (f) {
+			int i;
+			ncInstance * instance;
+			char myName[256];
 
-				fprintf(f, "version: %s\n", EUCA_VERSION);
-				fprintf(f, "timestamp: %ld\n", time(NULL));
-				if (gethostname(myName, 256) == 0)
-					fprintf(f, "node: %s\n", myName);
-				fprintf(f, "hypervisor: %s\n", nc_state.H->name);
-				fprintf(f, "network: %s\n", nc_state.vnetconfig->mode);
+			fprintf(f, "version: %s\n", EUCA_VERSION);
+			fprintf(f, "timestamp: %ld\n", time(NULL));
+			if (gethostname(myName, 256) == 0)
+				fprintf(f, "node: %s\n", myName);
+			fprintf(f, "hypervisor: %s\n", nc_state.H->name);
+			fprintf(f, "network: %s\n", nc_state.vnetconfig->mode);
 
-				for (i=0; i < (*outInstsLen); i++) {
-					instance = (* outInsts)[i];
-					fprintf(f, "id: %s", instance->instanceId);
-					fprintf(f, " userId: %s", instance->userId);
-					fprintf(f, " state: %s", instance->stateName);
-					fprintf(f, " mem: %d", instance->params.memorySize);
-					fprintf(f, " disk: %d", instance->params.diskSize);
-					fprintf(f, " cores: %d\n", instance->params.numberOfCores);
-				}
-				fclose(f);
-			} else {
-				/* file problem */
-				logprintfl(EUCAWARN, "Cannot write to nc-stat!\n");
+			used_disk = used_mem = used_cores = 0;
+			for (i=0; i < (*outInstsLen); i++) {
+				instance = (*outInsts)[i];
+				used_disk += instance->params.diskSize;
+				used_mem += instance->params.memorySize;
+				used_cores += instance->params.numberOfCores;
 			}
+
+			fprintf(f, "memory (max/avail/used) MB: %lld/%lld/%lld\n", nc_state.mem_max, nc_state.mem_max - used_mem, used_mem);
+			fprintf(f, "disk (max/avail/used) GB: %lld/%lld/%lld\n", nc_state.disk_max, nc_state.disk_max - used_disk, used_disk);
+			fprintf(f, "cores (max/avail/used): %d/%d/%d\n", nc_state.cores_max, nc_state.cores_max - used_cores, used_cores);
+
+			for (i=0; i < (*outInstsLen); i++) {
+				instance = (*outInsts)[i];
+				fprintf(f, "id: %s", instance->instanceId);
+				fprintf(f, " userId: %s", instance->userId);
+				fprintf(f, " state: %s", instance->stateName);
+				fprintf(f, " mem: %d", instance->params.memorySize);
+				fprintf(f, " disk: %d", instance->params.diskSize);
+				fprintf(f, " cores: %d\n", instance->params.numberOfCores);
+			}
+			fclose(f);
+		} else {
+			/* file problem */
+			logprintfl(EUCAWARN, "Cannot write to nc-stat!\n");
 		}
 	}
 	free(file_name);
