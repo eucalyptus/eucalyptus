@@ -1,42 +1,24 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.StringReader;
-import java.net.URLDecoder;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.cert.X509Certificate;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamReader;
 
-import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.om.impl.dom.DOOMAbstractFactory;
 import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAPBody;
 import org.apache.axiom.soap.SOAPEnvelope;
-import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
-import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
-import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.Base64;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -44,22 +26,15 @@ import org.w3c.dom.NodeList;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
-import com.eucalyptus.auth.util.AbstractKeyStore;
-import com.eucalyptus.auth.util.EucaKeyStore;
-import com.eucalyptus.ws.AuthenticationException;
-import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.binding.Binding;
-import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
-import com.eucalyptus.auth.User;
+import com.eucalyptus.ws.AuthenticationException;
+import com.eucalyptus.ws.MappingHttpRequest;
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import com.eucalyptus.auth.User;
 
 @ChannelPipelineCoverage("one")
 public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusSoapUserAuthenticationHandler.class );
-	private final SOAPFactory soapFactory                      = OMAbstractFactory.getSOAP11Factory( );
 
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
@@ -70,10 +45,6 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 			XMLStreamReader xmlStreamReader = XMLInputFactory.newInstance( ).createXMLStreamReader( byteIn );
 			StAXSOAPModelBuilder soapBuilder = new StAXSOAPModelBuilder( xmlStreamReader, SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI );
 			SOAPEnvelope envelope = ( SOAPEnvelope ) soapBuilder.getDocumentElement( );
-			httpRequest.setMessageString( content );
-			httpRequest.setSoapEnvelope( envelope );
-			if(!envelope.hasFault())
-				httpRequest.setOmMessage( envelope.getBody( ).getFirstElement( ) );
 			SOAPBody body = envelope.getBody();
 			final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), body.getXMLStreamReader( ) );
 			final OMElement elem = doomBuilder.getDocumentElement( );
@@ -155,22 +126,5 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 
 	@Override
 	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		if ( event.getMessage( ) instanceof MappingHttpMessage ) {
-			final MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
-			if( httpMessage.getMessage( ) instanceof EucalyptusErrorMessageType ) {
-				EucalyptusErrorMessageType errMsg = (EucalyptusErrorMessageType) httpMessage.getMessage( );
-				httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ) );
-			} else {
-				// :: assert sourceElem != null :://
-				httpMessage.setSoapEnvelope( this.soapFactory.getDefaultEnvelope( ) );
-				httpMessage.getSoapEnvelope( ).getBody( ).addChild( httpMessage.getOmMessage( ) );
-			}
-			ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
-			httpMessage.getSoapEnvelope( ).serialize( byteOut );
-			ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) );
-			httpMessage.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
-			httpMessage.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );
-			httpMessage.setContent( buffer );
-		}
 	}
 }
