@@ -685,8 +685,18 @@ if [ -n "$NEWCLUS" ]; then
 		exit 1
 	fi
 
+	# create tunnel password
+	TUNPASS=`md5sum $EUCALYPTUS/var/lib/eucalyptus/keys/cloud-pk.pem | awk '{print $1}'`
+	if [ ${TUNPASS} != "" ]; then
+	    echo ${TUNPASS} > ${EUCALYPTUS}/var/lib/eucalyptus/keys/vtunpass
+	    chmod 0600 ${EUCALYPTUS}/var/lib/eucalyptus/keys/vtunpass
+	    chown ${EUCA_USER} ${EUCALYPTUS}/var/lib/eucalyptus/keys/vtunpass
+	else
+	    echo "ERROR: Unable to create tunnel password, tunneling will not function"
+	fi
+
 	# sync the keys
-	if [ $NEWCLUS} = "127.0.0.1" -o ${NEWCLUS} = localhost -o ${NEWCLUS} = "`hostname -s`" -o ${NEWCLUS} = "`hostname -f`" ]; then
+	if [ ${NEWCLUS} = "127.0.0.1" -o ${NEWCLUS} = localhost -o ${NEWCLUS} = "`hostname -s`" -o ${NEWCLUS} = "`hostname -f`" ]; then
 		# machine is localhost, not need for remote syncing
 		if [ -d "$EUCALYPTUS/var/lib/eucalyptus/keys/" ]; then
 			KEYDIR="$EUCALYPTUS/var/lib/eucalyptus/keys/"
