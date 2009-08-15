@@ -40,11 +40,7 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-			String content = httpRequest.getContent( ).toString( "UTF-8" );
-			ByteArrayInputStream byteIn = new ByteArrayInputStream( content.getBytes( ) );
-			XMLStreamReader xmlStreamReader = XMLInputFactory.newInstance( ).createXMLStreamReader( byteIn );
-			StAXSOAPModelBuilder soapBuilder = new StAXSOAPModelBuilder( xmlStreamReader, SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI );
-			SOAPEnvelope envelope = ( SOAPEnvelope ) soapBuilder.getDocumentElement( );
+			SOAPEnvelope envelope = httpRequest.getSoapEnvelope();
 			SOAPBody body = envelope.getBody();
 			final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), body.getXMLStreamReader( ) );
 			final OMElement elem = doomBuilder.getDocumentElement( );

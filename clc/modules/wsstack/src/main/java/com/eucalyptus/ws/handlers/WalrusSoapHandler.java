@@ -1,16 +1,22 @@
 package com.eucalyptus.ws.handlers;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamReader;
+
 import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMElement;
+import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axiom.soap.SOAPFault;
 import org.apache.axiom.soap.SOAPHeader;
 import org.apache.axiom.soap.SOAPHeaderBlock;
+import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -21,6 +27,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.MappingHttpMessage;
+import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.binding.Binding;
 import com.google.common.collect.Lists;
 
@@ -35,7 +42,13 @@ public class WalrusSoapHandler extends MessageStackHandler {
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpMessage ) {
 			final MappingHttpMessage message = ( MappingHttpMessage ) event.getMessage( );
-			final SOAPEnvelope env = message.getSoapEnvelope( );
+			String content = message.getContent( ).toString( "UTF-8" );
+			ByteArrayInputStream byteIn = new ByteArrayInputStream( content.getBytes( ) );
+			XMLStreamReader xmlStreamReader = XMLInputFactory.newInstance( ).createXMLStreamReader( byteIn );
+			StAXSOAPModelBuilder soapBuilder = new StAXSOAPModelBuilder( xmlStreamReader, SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI );
+			SOAPEnvelope env = ( SOAPEnvelope ) soapBuilder.getDocumentElement( );
+			message.setSoapEnvelope( env );
+			message.setMessageString( content );
 			if ( !env.hasFault( ) ) {
 				message.setOmMessage( env.getBody( ).getFirstElement( ) );
 			} else {
