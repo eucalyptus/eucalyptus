@@ -23,6 +23,7 @@ public class NioServer {
     PipelineRegistry.getInstance( ).register( new ElasticFoxPipeline( ) );
     PipelineRegistry.getInstance( ).register( new WalrusRESTPipeline( ) );
     PipelineRegistry.getInstance( ).register( new EucalyptusQueryPipeline( ) );
+    PipelineRegistry.getInstance( ).register( new WalrusSoapPipeline( ) );
   }
 
   public void start( ) {

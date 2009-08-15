@@ -9,22 +9,23 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.BindingStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
+import com.eucalyptus.ws.stages.WalrusSoapUserAuthenticationStage;
 
-public class EucalyptusSoapPipeline extends FilteredPipeline {
+public class WalrusSoapPipeline extends FilteredPipeline {
 
   @Override
   public boolean checkAccepts( final HttpRequest message ) {
-    return message.getUri( ).endsWith( "/services/Eucalyptus" ) && message.getHeaderNames().contains( "SOAPAction" );
+    return message.getUri( ).endsWith( "/services/Walrus" ) && message.getHeaderNames().contains( "SOAPAction" );
   }
 
   @Override
   public String getPipelineName( ) {
-    return "eucalyptus-soap";
+    return "walrus-soap";
   }
 
   @Override
   protected void addStages( List<UnrollableStage> stages ) {
-    stages.add( new SoapUserAuthenticationStage( ) );
+    stages.add( new WalrusSoapUserAuthenticationStage( ) );
     stages.add( new BindingStage( ) );
   }
 

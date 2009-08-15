@@ -15,12 +15,12 @@
             <outbound-endpoint ref="WalrusReplyQueueWS"/>
         </default-service-exception-strategy>
 
-        <service name="Walrus">
+        <!--  <service name="Walrus">
             <inbound>
                 <inbound-endpoint ref="WalrusWS"/>
             </inbound>
             <component class="edu.ucsb.eucalyptus.ic.Walrus"/>
-        </service>
+        </service>-->
 
         <service name="WalrusRequestQueue">
             <inbound>

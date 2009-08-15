@@ -205,4 +205,8 @@ public class WalrusProperties {
     public enum RequiredQueryParams {
         Date
     }
+    
+    public enum RequiredSOAPTags {
+    	AWSAccessKeyId, Timestamp, Signature
+    }
 }
