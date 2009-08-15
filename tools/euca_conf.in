@@ -1,5 +1,6 @@
 #!/bin/bash
 #
+FAKEREG="yes"
 
 FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
@@ -46,7 +47,7 @@ usage () {
 	echo "   --deregister-cluster <name>      remove cluster from EUCALYPTUS"
 	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
 	echo "   --deregister-walrus <host>       remove walrus to EUCALYPTUS"
-	echo "   --register-sc <host>             add storage controller"
+	echo "   --register-sc <name> <host>      add storage controller"
 	echo "   --deregister-sc <host>           remove storage controller to EUCALYPTUS"
 	echo "   --register-clc <host>            point local walrus to CLC location"
 	echo "   --sync                           used only with --register-* to sync keys"
@@ -134,15 +135,12 @@ sync_keys() {
 	if [ ${REMOTE} = "127.0.0.1" -o ${REMOTE} = localhost -o ${REMOTE} = "`hostname -s`" -o ${REMOTE} = "`hostname -f`" ]; then
 	    # machine is localhost, not need for remote syncing
 	    if [ -d "$SOURCEDIR" ]; then
-		echo "FILES: $FILES"
 		for i in $FILES
 		do
-		    echo "FILE: $i"
 		    if [ ! -e $i ]; then
 			echo "ERROR: cannot find cluster credentials."
 			exit 1
 		    else
-			echo "cp $i $DESTDIR"
 			if ! cp $i $DESTDIR ; then
 			    echo "ERROR: cannot copy file (${i}) to destination (${DESTDIR})"
 			    return 1
@@ -365,14 +363,15 @@ while [ $# -gt 0 ]; do
 	fi
 	if [ "$1" = "--deregister-sc" ]; then
 		SC_MODE="DEL"
-		SC="$2"
+		SCNAME="$2"
 		shift; shift
 		continue
 	fi
 	if [ "$1" = "--register-sc" ]; then
 		SC_MODE="ADD"
-		SC="$2"
-		shift; shift
+		SCNAME="$2"
+		SCHOST="$3"
+		shift; shift; shift
 		continue
 	fi
 	if [ "$1" = "-addcluster" -o "$1" = "--register-cluster" ]; then
@@ -405,11 +404,6 @@ while [ $# -gt 0 ]; do
 	exit 1
 done
 
-# some basic check
-#if [ "${FILE:0:1}" = "-" ]; then
-#	usage
-#	exit 1
-#fi
 if [ -z "${FILE}" -o ! -f "${FILE}" ]; then
 	echo "$FILE is not a valid eucalyptus configuration file"
 	exit  1
@@ -698,19 +692,19 @@ createCloudURL () {
 }
 
 getSecretKey() {
-    FIELD=`grep -i "CREATE .*TABLE USERS" ${DBDIR}/* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Ss][Ee][Cc][Rr][Ee][Tt][Kk][Ee][Yy]/ {print NR}'`
+    FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Ss][Ee][Cc][Rr][Ee][Tt][Kk][Ee][Yy]/ {print NR}'`
     if [ "$FIELD" = "" ]; then
 	echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
 	export SKEY=""
 	return 1
     fi
-    SKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1))
+    SKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1))
     return 0
 }
 
 checkLocalService() {
     local SERVICE=""
-
+    
     if [ -z "$WGET" -o ! -x "$WGET" ]; then
 	echo "ERROR: wget is missing, cannot continue."
 	return 1
@@ -723,13 +717,13 @@ checkLocalService() {
     elif [ "$SERVICE" = "CLC" ]; then
 	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null"
     elif [ "$SERVICE" = "CC" ]; then
-	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8443/axis2/services/|grep EucalyptusCC > /dev/null"
+	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC > /dev/null"
     fi
     
-    if [ -n "${DRYRUN}" ]; then
-	CMD="echo $CMD"
+    if [ -n "${FAKEREG}" ]; then
+	CMD="echo"
     fi
-    if ! $CMD ; then
+    if ! eval $CMD ; then
 	echo "ERROR: you need to be on the $SERVICE host and the $SERVICE needs to be running."
 	return 1
     fi  
@@ -738,7 +732,6 @@ checkLocalService() {
 
 # adding a new cluster
 if [ -n "$NEWCLUS" ]; then
-#    DRYRUN="yes"
     if ! checkLocalService "CLC" ; then
 	exit 1
     fi
@@ -768,10 +761,10 @@ if [ -n "$NEWCLUS" ]; then
     fi
 
     CMD="wget -O - \"$URL\" 2>/dev/null | grep UP"
-    if [ -n "${DRYRUN}" ]; then
-	CMD="echo $CMD"
+    if [ -n "${FAKEREG}" ]; then
+	CMD="echo"
     fi
-    if ! $CMD ; then 
+    if ! eval $CMD ; then 
 	echo "ERROR: there is already a cluster registered with the system."
 	exit 1
     fi
@@ -781,15 +774,15 @@ if [ -n "$NEWCLUS" ]; then
 	exit 1
     fi
     CMD="wget -O - \"$URL\" 2>/dev/null"
-    if [ -n "${DRYRUN}" ]; then
-	CMD="echo $CMD"
+    if [ -n "${FAKEREG}" ]; then
+	CMD="echo"
     fi
-    if ! $CMD ; then
+    if ! eval $CMD ; then
 	echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
 	exit 1
     fi
 
-    if [ -n "${DRYRUN}" ]; then
+    if [ -n "${FAKEREG}" ]; then
 	mkdir -p $SOURCEDIR
 	openssl req -new -nodes -x509 -out $SOURCEDIR/cloud-cert.pem -keyout $SOURCEDIR/cloud-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
 	openssl req -new -nodes -x509 -out $SOURCEDIR/cluster-cert.pem -keyout $SOURCEDIR/cluster-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
@@ -815,27 +808,27 @@ fi
 
 # walrus
 if [ -n "$WALRUS" ]; then
-    if ! checkLocalService "CLC"
+    if ! checkLocalService "CLC" ; then
 	exit 1
     fi
 
     if [ "$WALRUS_MODE" = "ADD" ]; then
 		# if ! sync_keys walrus_host files ; then
-	echo "not implemented"
+	echo "Adding WALRUS host $WALRUS: not implemented"
     elif [ "$WALRUS_MODE" = "DEL" ]; then
 	echo "not implemented"
     fi
 fi
 
 # sc
-if [ -n "$SC" ]; then
-    if ! checkLocalService "CLC"
+if [ -n "$SCHOST" ]; then
+    if ! checkLocalService "CLC" ; then
 	exit 1
     fi
     
     if [ "$SC_MODE" = "ADD" ]; then
 		# if ! sync_keys sc-host files-cert ; then
-	echo "not implemented"
+	echo "Adding SC $SCHOST to cluster $SCNAME: not implemented"
     elif [ "$SC_MODE" = "DEL" ]; then
 	echo "not implemented"
     fi
@@ -880,6 +873,7 @@ if [ -n "$NODEMODE" ]; then
 	    exit 1
 	fi
 	
+    echo "$NODEMODE: $NODES: "
 	# CC needs to be running 
 	if ! checkLocalService "CC" ; then
 	    exit 1

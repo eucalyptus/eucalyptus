@@ -24,8 +24,6 @@
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus cloud controller"
 NAME=eucalyptus-cloud
-JAR_NAME="/usr/share/eucalyptus/eucalyptus-interface.jar"
-JAR_ALL_NAMES="/usr/share/eucalyptus/eucalyptus-interface.jar /usr/share/eucalyptus/eucalyptus-storagecontroller.jar /usr/share/eucalyptus/eucalyptus-storagemgr.jar"
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
 EUCA_USER="eucalyptus"
@@ -54,6 +52,10 @@ if [ -z "$EUCALYPTUS" ] ; then
        fi
 fi
 export EUCALYPTUS
+export EUCA_VERSION=`cat $EUCALYPTUS/etc/eucalyptus/eucalyptus-version`
+JAR_NAME="/usr/share/eucalyptus/eucalyptus-interface-${EUCA_VERSION}.jar"
+JAR_ALL_NAMES="/usr/share/eucalyptus/eucalyptus-interface-${EUCA_VERSION}.jar /usr/share/eucalyptus/eucalyptus-storagecontroller-${EUCA_VERSION}.jar /usr/share/eucalyptus/eucalyptus-storagemgr-${EUCA_VERSION}.jar"
+
 
 # just a quick way to check if we have the package still installed: at
 # times we can still have the init.d script
@@ -106,9 +108,10 @@ do_start() {
 	fi
 	
 	cd $EUCALYPTUS/etc/eucalyptus
-	(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
+#	(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
+	$EUCALYPTUS/usr/sbin/eucalyptus-cloud -h $EUCALYPTUS -u $EUCA_USER --pidfile $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
 	ret="$?"
-	echo "$!" > $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
+#	echo "$!" > $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
 	return $ret
 }
 
@@ -131,7 +134,7 @@ do_status() {
 
 do_stop() {
 	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
-
+	echo $pidfile
 	# now kill the service
 	if [ -s "$pidfile" ]; then
 		pid=`cat $pidfile 2> /dev/null`
@@ -244,6 +247,7 @@ case "$1" in
 	# if we don't have the JAR file we are not running
 	if [ ! -e ${EUCALYPTUS}${JAR_NAME} ]; then
 		# service is not running
+	        echo "service is not running ${EUCALYPTUS}${JAR_NAME}"
 		exit 0
 	fi
 

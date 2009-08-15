@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Init script for the Eucalyptus walrusservices.
+# Init script for the Eucalyptus cloud manager services.
 #
 # chkconfig: 2345 99 05
-# description: script for starting and stopping eucalyptus walrusservices
+# description: script for starting and stopping eucalyptus cloud services
 #
 ### BEGIN INIT INFO
 # Provides:                   eucalyptus-walrus
@@ -12,8 +12,8 @@
 # Required-Stop:              $remote_fs $syslog 
 # Default-Start:              2 3 4 5
 # Default-Stop:	              0 1 6
-# Short-Description:          Start Eucalyptus walrus
-# Description:                Start the Eucalyptus walrus
+# Short-Description:          Start Eucalyptus Walrus
+# Description:                Start the Eucalyptus Walrus
 # X-UnitedLinux-Default-Enabled: yes
 ### END INIT INFO
 #
@@ -22,10 +22,8 @@
 
 # we need to source the current path in case of manual intallation
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
-DESC="Eucalyptus walrus"
-NAME=eucalyptus-walrus
-JAR_NAME="/usr/share/eucalyptus/eucalyptus-storagemgr.jar"
-JAR_ALL_NAMES="/usr/share/eucalyptus/eucalyptus-interface.jar /usr/share/eucalyptus/eucalyptus-storagecontroller.jar /usr/share/eucalyptus/eucalyptus-storagemgr.jar"
+DESC="Eucalyptus cloud controller"
+NAME=eucalyptus-cloud
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
 EUCA_USER="eucalyptus"
@@ -54,6 +52,10 @@ if [ -z "$EUCALYPTUS" ] ; then
        fi
 fi
 export EUCALYPTUS
+export EUCA_VERSION=`cat $EUCALYPTUS/etc/eucalyptus/eucalyptus-version`
+JAR_NAME="/usr/share/eucalyptus/eucalyptus-storagemgr-${EUCA_VERSION}.jar"
+JAR_ALL_NAMES="/usr/share/eucalyptus/eucalyptus-interface-${EUCA_VERSION}.jar /usr/share/eucalyptus/eucalyptus-storagecontroller-${EUCA_VERSION}.jar /usr/share/eucalyptus/eucalyptus-storagemgr-${EUCA_VERSION}.jar"
+
 
 # just a quick way to check if we have the package still installed: at
 # times we can still have the init.d script
@@ -101,14 +103,15 @@ do_start() {
 
 	# basic checks
 	check_java
-	if ! $EUCALYPTUS/usr/sbin/euca_conf -check walrus ; then
+	if ! $EUCALYPTUS/usr/sbin/euca_conf -check cloud ; then
 		exit 1
 	fi
 	
 	cd $EUCALYPTUS/etc/eucalyptus
-	(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
+#	(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
+	$EUCALYPTUS/usr/sbin/eucalyptus-cloud -h $EUCALYPTUS -u $EUCA_USER --pidfile $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
 	ret="$?"
-	echo "$!" > $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
+#	echo "$!" > $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
 	return $ret
 }
 
@@ -131,7 +134,7 @@ do_status() {
 
 do_stop() {
 	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
-
+	echo $pidfile
 	# now kill the service
 	if [ -s "$pidfile" ]; then
 		pid=`cat $pidfile 2> /dev/null`
@@ -141,7 +144,7 @@ do_stop() {
 	fi
 
 	# let's way few seconds than kill harder
-	timeout=5
+	timeout=20
 	while [ $timeout -gt 0 ]; do
 		if ps $pid > /dev/null 2>&1 ; then
 			sleep 1
@@ -244,6 +247,7 @@ case "$1" in
 	# if we don't have the JAR file we are not running
 	if [ ! -e ${EUCALYPTUS}${JAR_NAME} ]; then
 		# service is not running
+	        echo "service is not running ${EUCALYPTUS}${JAR_NAME}"
 		exit 0
 	fi
 
@@ -296,7 +300,7 @@ case "$1" in
   	;;
   status)
 	if do_status ; then
-		echo "CLC is running"
+		echo "Walrus is running"
 	else
 		exit 3
 	fi

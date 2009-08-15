@@ -24,6 +24,8 @@ install: deploy
 	@if test -e $(etcdir)/init.d/eucalyptus ; then \
 		mv $(etcdir)/init.d/eucalyptus $(etcdir)/init.d/eucalyptus.old ; fi
 	@$(INSTALL) -m 755 eucalyptus-cloud $(etcdir)/init.d
+	@$(INSTALL) -m 755 eucalyptus-walrus $(etcdir)/init.d
+	@$(INSTALL) -m 755 eucalyptus-sc $(etcdir)/init.d
 	@$(INSTALL) -m 755 eucalyptus-nc $(etcdir)/init.d
 	@$(INSTALL) -m 755 eucalyptus-cc $(etcdir)/init.d
 	@$(INSTALL) -m 644 httpd.conf $(etcdir)/eucalyptus
