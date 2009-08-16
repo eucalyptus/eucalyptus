@@ -268,7 +268,7 @@
 		</structure>
 	</mapping>
 
-	<mapping name="Status" class="edu.ucsb.eucalyptus.msgs.Status">
+	<mapping class="edu.ucsb.eucalyptus.msgs.Status" abstract="true">
 		<value name="Code" field="code" />
 		<value name="Description" field="description" />
 	</mapping>
@@ -494,7 +494,7 @@
 		<value name="LastModified" field="lastModified" />
 		<value name="ETag" field="etag" />
 		<value name="Size" field="size" />
-		<structure field="owner"
+		<structure name="Owner" field="owner"
 			map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" usage="optional" />
 		<value name="StorageClass" field="storageClass" />
 	</mapping>
