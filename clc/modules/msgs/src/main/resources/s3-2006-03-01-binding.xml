@@ -53,12 +53,14 @@
 			usage="optional" />
 	</mapping>
 
-	<mapping name="ListAllMyBucketsResult"
+	<mapping name="ListAllMyBucketsResponse"
 		class="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType">
+		<structure name="ListAllMyBucketsResponse">
 		<structure name="Owner" field="owner"
 			map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" />
 		<structure name="Buckets" field="bucketList"
 			map-as="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsList" />
+		</structure>
 	</mapping>
 
 	<mapping class="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsList"
@@ -85,8 +87,10 @@
 
 	<mapping name="GetBucketAccessControlPolicyResponse"
 		class="edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType">
+		<structure name="GetBucketAccessControlPolicyResponse">
 		<structure field="accessControlPolicy"
 			map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" usage="optional" />
+		</structure>
 	</mapping>
 
 
@@ -134,8 +138,10 @@
 
 	<mapping name="GetObjectAccessControlPolicyResponse"
 		class="edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType">
+		<structure name="GetObjectAccessControlPolicyResponse">
 		<structure field="accessControlPolicy"
 			map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" />
+		</structure>
 	</mapping>
 
 	<mapping name="SetObjectAccessControlPolicy"
@@ -257,7 +263,9 @@
 
 	<mapping name="DeleteBucketResponse"
 		class="edu.ucsb.eucalyptus.msgs.DeleteBucketResponseType">
+		<structure name="DeleteBucketResponse">
 		<structure field="status" map-as="edu.ucsb.eucalyptus.msgs.Status" />
+		</structure>
 	</mapping>
 
 	<mapping name="Status" class="edu.ucsb.eucalyptus.msgs.Status">
@@ -281,7 +289,9 @@
 	</mapping>
 
 	<mapping name="PutObjectResponse" class="edu.ucsb.eucalyptus.msgs.PutObjectResponseType">
+		<structure name="PutObjectResponse">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+		</structure>
 	</mapping>
 
 	<mapping name="PostResponse" class="edu.ucsb.eucalyptus.msgs.PostObjectResponseType">
@@ -299,7 +309,9 @@
 	</mapping>
 
 	<mapping name="CopyObjectResponse" class="edu.ucsb.eucalyptus.msgs.CopyObjectResponseType">
+		<structure name="CopyObjectResult">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+		</structure>
 	</mapping>
 
 	<mapping name="CopyObject" class="edu.ucsb.eucalyptus.msgs.CopyObjectType"
@@ -378,7 +390,9 @@
 
 	<mapping name="PutObjectInlineResponse"
 		class="edu.ucsb.eucalyptus.msgs.PutObjectInlineResponseType">
+		<structure name="PutObjectInlineResponse">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+		</structure>
 	</mapping>
 
 	<mapping name="GetObject" class="edu.ucsb.eucalyptus.msgs.GetObjectType">
@@ -393,9 +407,11 @@
 	</mapping>
 
 	<mapping name="GetObjectResponse" class="edu.ucsb.eucalyptus.msgs.GetObjectResponseType">
+		<structure name="GetObjectResponse">
 		<structure field="status" map-as="edu.ucsb.eucalyptus.msgs.Status" />
 		<value name="Data" field="base64Data" usage="optional" />
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+		</structure>
 	</mapping>
 
 	<mapping name="GetObjectExtended" class="edu.ucsb.eucalyptus.msgs.GetObjectExtendedType">
@@ -416,8 +432,10 @@
 
 	<mapping name="GetObjectExtendedResponse"
 		class="edu.ucsb.eucalyptus.msgs.GetObjectExtendedResponseType">
+		<structure name="GetObjectResponse">
 		<structure field="status" map-as="edu.ucsb.eucalyptus.msgs.Status" />
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+		</structure>
 	</mapping>
 
 	<mapping name="DeleteObject" class="edu.ucsb.eucalyptus.msgs.DeleteObjectType">
@@ -429,8 +447,10 @@
 
 	<mapping name="DeleteObjectResponse"
 		class="edu.ucsb.eucalyptus.msgs.DeleteObjectResponseType">
+		<structure name="DeleteObjectResponse">
 		<value name="Code" field="code" />
 		<value name="Description" field="description" />
+		</structure>
 	</mapping>
 
 	<mapping name="ListBucket" class="edu.ucsb.eucalyptus.msgs.ListBucketType"
@@ -444,7 +464,8 @@
 			usage="optional" />
 	</mapping>
 
-	<mapping name="ListBucketResult" class="edu.ucsb.eucalyptus.msgs.ListBucketResponseType">
+	<mapping name="ListBucketResponse" class="edu.ucsb.eucalyptus.msgs.ListBucketResponseType">
+		<structure name="ListBucketResponse">
 		<collection field="metaData"
 			factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
 			<structure map-as="edu.ucsb.eucalyptus.msgs.MetaDataEntry" />
@@ -464,6 +485,7 @@
 			factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
 			<structure map-as="edu.ucsb.eucalyptus.msgs.PrefixEntry" />
 		</collection>
+		</structure>
 	</mapping>
 
 	<mapping name="Contents" class="edu.ucsb.eucalyptus.msgs.ListEntry"
@@ -513,7 +535,9 @@
 
 	<mapping name="GetDecryptedImageResponse"
 		class="edu.ucsb.eucalyptus.msgs.GetDecryptedImageResponseType">
+		<structure name="GetDecryptedImageResponse">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+		</structure>
 	</mapping>
 
 	<mapping name="StoreSnapshot" class="edu.ucsb.eucalyptus.msgs.StoreSnapshotType">
