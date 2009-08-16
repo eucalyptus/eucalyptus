@@ -457,11 +457,8 @@ int doDescribeNetworks(ncMetadata *ccMeta, char **ccs, int ccsLen, vnetConfig *o
   sem_wait(vnetConfigLock);
   
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-    logprintfl(EUCADEBUG, "WTF: %s/%d\n", vnetconfig->localIp, vnetconfig->tunnels.localIpId);
     rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
-    logprintfl(EUCADEBUG, "WTF: %s/%d\n", vnetconfig->localIp, vnetconfig->tunnels.localIpId);
     rc = vnetSetupTunnels(vnetconfig);
-    logprintfl(EUCADEBUG, "WTF: %s/%d\n", vnetconfig->localIp, vnetconfig->tunnels.localIpId);
   }
   memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
   
