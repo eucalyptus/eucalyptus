@@ -22,6 +22,49 @@
 #include <axis2_client.h>
 #include <axis2_stub.h>
 
+int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
+  int i, done, rc, j;
+  char *tok, *toka, *path, *helper, file[1024], *save, *savea;
+  struct stat statbuf;
+
+  for (i=0; i<LASTHELPER; i++) {
+    path = strdup(getenv("PATH"));
+    if (!path) {
+      return(1);
+    }
+
+    tok = strtok_r(path, ":", &save);
+    done=0;
+    while(tok && !done) {
+      helper = strdup(helpers[i]);
+      toka = strtok_r(helper, ",", &savea);
+      while(toka && !done) {
+        snprintf(file, 1024, "%s/%s", tok, toka);
+        rc = stat(file, &statbuf);
+        if (rc) {
+        } else {
+          if (S_ISREG(statbuf.st_mode)) {
+            done++;
+          }
+        }
+        toka = strtok_r(NULL, ":", &savea);
+      }
+      tok = strtok_r(NULL, ":", &save);
+      if (helper) free(helper);
+    }
+    if (!done) {
+      logprintfl(EUCAERROR, "cannot find helper '%s' in your path\n", helpers[i]);
+      return(1);
+    }
+
+    helpers_path[i] = strdup(file);
+    free(path);
+  }
+
+  return(0);
+}
+
+
 pid_t timewait(pid_t pid, int *status, int timeout) {
   time_t timer=0;
   int rc;

@@ -775,7 +775,7 @@ if [ -n "$NEWCLUS" ]; then
     if [ -n "${FAKEREG}" ]; then
 	CMD="echo"
     fi
-    if ! eval $CMD ; then 
+    if eval $CMD ; then 
 	echo "ERROR: there is already a cluster registered with the system."
 	exit 1
     fi

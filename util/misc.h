@@ -111,4 +111,8 @@ int uint32compar(const void *ina, const void *inb);
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
 int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
 
+int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER);
+
+
+
 #endif

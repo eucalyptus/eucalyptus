@@ -9,6 +9,7 @@
 
 #define OP_TIMEOUT 60
 enum {SHARED_MEM, SHARED_FILE};
+enum{IP, KILL, LASTHELPER};
 
 
 typedef struct virtualMachine_t {

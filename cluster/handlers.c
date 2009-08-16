@@ -38,6 +38,9 @@ sem_t *instanceCacheLock=NULL;
 vnetConfig *vnetconfig=NULL;
 sem_t *vnetConfigLock=NULL;
 
+char *helpers[LASTHELPER] = {"ip", "kill"};
+char *helpers_path[LASTHELPER];
+
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
   int i, j, rc, start, stop, ret=0;
   ccInstance *myInstance;
