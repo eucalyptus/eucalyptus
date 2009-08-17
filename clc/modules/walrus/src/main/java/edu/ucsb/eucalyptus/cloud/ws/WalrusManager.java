@@ -226,9 +226,7 @@ public class WalrusManager {
 			Messaging.send(DNSProperties.DNS_REF, updateARecord);
 		}
 
-		CreateBucketResponseMessage createBucketResponse = new CreateBucketResponseMessage();
-		createBucketResponse.setBucket(bucketName);
-		reply.setCreateBucketResponse(createBucketResponse);
+		reply.setBucket(bucketName);
 		return reply;
 	}
 

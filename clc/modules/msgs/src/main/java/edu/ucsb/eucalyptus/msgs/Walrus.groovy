@@ -279,10 +279,6 @@ public class CreateBucketType extends WalrusRequestType {
 }
 
 public class CreateBucketResponseType extends WalrusResponseType {
-	CreateBucketResponseMessage createBucketResponse;
-}
-
-public class CreateBucketResponseMessage extends EucalyptusData {
 	String bucket;
 }
 
