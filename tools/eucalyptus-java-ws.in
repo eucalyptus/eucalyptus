@@ -246,7 +246,6 @@ case "$1" in
 	# if we don't have the JAR file we are not running
 	if [ ! -e ${EUCALYPTUS}${JAR_NAME} ]; then
 		# service is not running
-	        echo "service is not running ${EUCALYPTUS}${JAR_NAME}"
 		exit 0
 	fi
 
@@ -280,22 +279,8 @@ case "$1" in
 	fi
 	;;
   restart)
-	if [ "$VERBOSE" != no ]; then
-		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_begin_msg "Restarting $DESC"
-		else
-			echo -n "Restarting $DESC: "
-		fi
-	fi
-	do_stop
-	do_start
-	if [ "$VERBOSE" != no ]; then
-		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_end_msg 0
-		else
-			echo "done."
-		fi
-	fi
+	$0 stop
+	$0 start
   	;;
   status)
 	if do_status ; then
