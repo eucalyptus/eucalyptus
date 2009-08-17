@@ -1,19 +1,17 @@
 #!/bin/bash
 #
-# Init script for the Eucalyptus cloud manager services.
-#
 # chkconfig: 2345 99 05
-# description: script for starting and stopping eucalyptus cloud services
+# description: script for starting and stopping eucalyptus java ws services
 #
 ### BEGIN INIT INFO
-# Provides:                   eucalyptus-walrus
+# Provides:                   eucalyptus-WS
 # Required-Start:             $remote_fs $syslog 
-# Should-Start:               eucalyptus-cloud
+# Should-Start:               START
 # Required-Stop:              $remote_fs $syslog 
 # Default-Start:              2 3 4 5
 # Default-Stop:	              0 1 6
-# Short-Description:          Start Eucalyptus Walrus
-# Description:                Start the Eucalyptus Walrus
+# Short-Description:          Start Eucalyptus CONFNAME
+# Description:                Start the Eucalyptus CONFNAME
 # X-UnitedLinux-Default-Enabled: yes
 ### END INIT INFO
 #
@@ -22,12 +20,14 @@
 
 # we need to source the current path in case of manual intallation
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
-DESC="Eucalyptus cloud controller"
-NAME=eucalyptus-cloud
+DESC="Eucalyptus CONFNAME"
+NAME=eucalyptus-WS
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
 EUCA_USER="eucalyptus"
 
+JAR_NAME="/usr/share/eucalyptus/eucalyptus-JARNAME-@VERSION@.jar"
+JAR_ALL_NAMES="/usr/share/eucalyptus/eucalyptus-interface-@VERSION@.jar /usr/share/eucalyptus/eucalyptus-storagecontroller-@VERSION@.jar /usr/share/eucalyptus/eucalyptus-storagemgr-@VERSION@.jar"
 
 if [ "$EUID" != "0" ]; then
     echo "Eucalyptus init scripts must be run as root."
@@ -51,11 +51,29 @@ if [ -z "$EUCALYPTUS" ] ; then
               EUCALYPTUS="/"
        fi
 fi
-export EUCALYPTUS
-export EUCA_VERSION=`cat $EUCALYPTUS/etc/eucalyptus/eucalyptus-version`
-JAR_NAME="/usr/share/eucalyptus/eucalyptus-storagemgr-${EUCA_VERSION}.jar"
-JAR_ALL_NAMES="/usr/share/eucalyptus/eucalyptus-interface-${EUCA_VERSION}.jar /usr/share/eucalyptus/eucalyptus-storagecontroller-${EUCA_VERSION}.jar /usr/share/eucalyptus/eucalyptus-storagemgr-${EUCA_VERSION}.jar"
 
+# Read configuration variable file if it is present
+if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
+	EUCA_TMP="$EUCALYPTUS"
+	. $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+
+	# has eucalyptus been configured?
+	if [ "$EUCALYPTUS" = "not_configured" ]; then
+		echo "EUCALYPTUS not configured!" 
+		exit 1
+	fi
+
+	# there may be inconsistencied between conf file and env variable
+	if [ "$EUCA_TMP" != "$EUCALYPTUS" ]; then
+		echo "Warning: you should check EUCALYPTUS in conf file"
+	fi
+else
+	echo "Cannot find eucalyptus configuration file!"
+	exit 1
+fi
+export EUCALYPTUS
+
+pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
 
 # just a quick way to check if we have the package still installed: at
 # times we can still have the init.d script
@@ -108,11 +126,8 @@ do_start() {
 	fi
 	
 	cd $EUCALYPTUS/etc/eucalyptus
-#	(su -p $EUCA_USER -c "/bin/bash $ANT -f cloud.xml run" > $EUCALYPTUS/var/log/eucalyptus/cloud-output.log 2>&1)  &
-	$EUCALYPTUS/usr/sbin/eucalyptus-cloud -h $EUCALYPTUS -u $EUCA_USER --pidfile $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
-	ret="$?"
-#	echo "$!" > $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
-	return $ret
+	$EUCALYPTUS/usr/sbin/eucalyptus-cloud -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
+	return $?
 }
 
 do_status() {
@@ -121,10 +136,9 @@ do_status() {
 		return 1
 	fi
 
-	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
-	if [ -s $pidfile ]; then
-		pid=`cat $pidfile 2> /dev/null`
-		if ps ax|grep $pid|grep cloud.xml> /dev/null ; then
+	if [ -s ${pidfile} ]; then
+		pid=`cat ${pidfile} 2> /dev/null`
+		if ps ax|grep $pid|grep eucalyptus-cloud.pid > /dev/null ; then
 			# we are good
 			return 0
 		fi
@@ -133,12 +147,9 @@ do_status() {
 }
 
 do_stop() {
-	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
-	echo $pidfile
-	# now kill the service
-	if [ -s "$pidfile" ]; then
+	# now stop the service
+	if [ -s "${pidfile}" ]; then
 		pid=`cat $pidfile 2> /dev/null`
-		kill $pid 2> /dev/null >/dev/null
 	else
 		return
 	fi
@@ -146,7 +157,7 @@ do_stop() {
 	# let's way few seconds than kill harder
 	timeout=20
 	while [ $timeout -gt 0 ]; do
-		if ps $pid > /dev/null 2>&1 ; then
+		if do_status ; then
 			sleep 1
 			timeout=$(($timeout - 1))
 		else
@@ -158,18 +169,6 @@ do_stop() {
 	fi
 	rm -f $pidfile
 }
-
-# Read configuration variable file if it is present
-if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
-	. $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
-else
-	echo "Cannot find eucalyptus configuration file!"
-	exit 1
-fi
-if [ "$EUCALYPTUS" = "not_configured" ]; then
-	echo "EUCALYPTUS not configured!" 
-	exit 1
-fi
 
 # let's get the user to use
 if [ -z "$EUCA_USER" ] ; then
@@ -192,7 +191,7 @@ case "$1" in
 	# let's check there is no previous cloud running
 	if do_status ; then
 		echo
-		echo "another Walrus is already running!"
+		echo "another $DESC is already running!"
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 1
@@ -251,15 +250,15 @@ case "$1" in
 		exit 0
 	fi
 
+	# let's stop the service before moving the jar
+	do_stop
+
 	# move the jar in the right place
 	if ! cp ${EUCALYPTUS}${JAR_NAME} ${EUCALYPTUS}${JAR_NAME}.disabled ; then
 		echo "Failed to copy jar file into place!"
 		exit 1
 	fi
 	rm -f ${EUCALYPTUS}${JAR_NAME}
-
-	# now let's stop the service
-	do_stop
 
 	# if we have more services running, we'll need to restart
 	__restart="N"
@@ -300,7 +299,7 @@ case "$1" in
   	;;
   status)
 	if do_status ; then
-		echo "Walrus is running"
+		echo "$DESC is running"
 	else
 		exit 3
 	fi

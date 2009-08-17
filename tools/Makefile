@@ -5,7 +5,22 @@
 include ../Makedefs
 
 all:
-	@echo nothing to do here
+	@echo "generating init.d scripts ..."
+	@# create the clc init script
+	@sed "s/WS/cloud/g" < eucalyptus-java-ws > eucalyptus-cloud
+	@sed -i "s/START/sendmail/g" eucalyptus-cloud
+	@sed -i "s/CONFNAME/Cloud Controller/g" eucalyptus-cloud
+	@sed -i "s/JARNAME/interface/g" eucalyptus-cloud
+	@# create the walrus init script
+	@sed "s/WS/walrus/g" < eucalyptus-java-ws > eucalyptus-walrus
+	@sed -i "s/START/eucalyptus-cloud/g" eucalyptus-walrus
+	@sed -i "s/CONFNAME/Walrus/g" eucalyptus-walrus
+	@sed -i "s/JARNAME/storagemgr/g" eucalyptus-walrus
+	@# create the sc init script
+	@sed "s/WS/sc/g" < eucalyptus-java-ws > eucalyptus-sc
+	@sed -i "s/START/eucalyptus-walrus/g" eucalyptus-sc
+	@sed -i "s/CONFNAME/Storage Controller/g" eucalyptus-sc
+	@sed -i "s/JARNAME/storagecontroller/g" eucalyptus-sc
 
 build: all
 
@@ -15,9 +30,10 @@ clean:
 	rm -f *~ *.o
 
 distclean:
-	@rm -rf eucalyptus
+	@echo "removing generated files scripts ..."
+	@rm -rf eucalyptus eucalyptus-cloud eucalyptus-walrus 
 
-install: deploy
+install: build
 	@if test -e /etc/init.d/eucalyptus ; then \
 		mv /etc/init.d/eucalyptus /etc/init.d/eucalyptus.old ; \
 		echo "Moving away old init.d script"; fi

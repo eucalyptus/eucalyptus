@@ -6990,7 +6990,7 @@ done
 
 
 # Time to substitute and generate the files
-ac_config_files="$ac_config_files Makedefs tools/eucalyptus-cc:tools/eucalyptus-cc.in tools/eucalyptus-nc:tools/eucalyptus-nc.in tools/euca_conf:tools/euca_conf.in tools/eucalyptus-cloud:tools/eucalyptus-cloud.in tools/eucalyptus-walrus:tools/eucalyptus-walrus.in tools/eucalyptus-sc:tools/eucalyptus-sc.in"
+ac_config_files="$ac_config_files Makedefs tools/eucalyptus-cc:tools/eucalyptus-cc.in tools/eucalyptus-nc:tools/eucalyptus-nc.in tools/euca_conf:tools/euca_conf.in tools/eucalyptus-java-ws:tools/eucalyptus-java-ws.in"
 
 
 cat >>confdefs.h <<_ACEOF
@@ -7699,9 +7699,7 @@ do
     "tools/eucalyptus-cc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-cc:tools/eucalyptus-cc.in" ;;
     "tools/eucalyptus-nc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-nc:tools/eucalyptus-nc.in" ;;
     "tools/euca_conf") CONFIG_FILES="$CONFIG_FILES tools/euca_conf:tools/euca_conf.in" ;;
-    "tools/eucalyptus-cloud") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-cloud:tools/eucalyptus-cloud.in" ;;
-    "tools/eucalyptus-walrus") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-walrus:tools/eucalyptus-walrus.in" ;;
-    "tools/eucalyptus-sc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-sc:tools/eucalyptus-sc.in" ;;
+    "tools/eucalyptus-java-ws") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-java-ws:tools/eucalyptus-java-ws.in" ;;
 
   *) as_fn_error "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
