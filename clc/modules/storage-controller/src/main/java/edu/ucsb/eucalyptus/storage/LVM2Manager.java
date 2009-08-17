@@ -620,7 +620,7 @@ public class LVM2Manager implements LogicalStorageManager {
 				createLogicalVolume(loDevName, vgName, lvName);
 				//duplicate snapshot volume
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				duplicateLogicalVolume(foundSnapshotInfo.getLoDevName(), absoluteLVName);
+				duplicateLogicalVolume(foundSnapshotInfo.getLoFileName(), absoluteLVName);
 				//export logical volume
 				try {
 					int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
@@ -782,11 +782,9 @@ public class LVM2Manager implements LogicalStorageManager {
 			createSnapshotLogicalVolume(loDevName, vgName, absoluteLVName, lvName);
 
 			String snapRawFileName = StorageProperties.storageRootDirectory + "/" + snapshotId;
-			String snapLoDevName = createLoopback(snapRawFileName, size);
 			String absoluteSnapLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
-			duplicateLogicalVolume(absoluteSnapLVName, snapLoDevName);
-
+			duplicateLogicalVolume(absoluteSnapLVName, snapRawFileName);
 
 			String returnValue = removeLogicalVolume(absoluteSnapLVName);
 			if(returnValue.length() == 0) {
@@ -802,7 +800,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			}
 			returnValue = removeLoopback(loDevName);
 
-			snapshotInfo.setLoDevName(snapLoDevName);
+			snapshotInfo.setLoFileName(snapRawFileName);
 			snapshotInfo.setStatus(StorageProperties.Status.available.toString());
 			snapshotInfo.setVbladePid(-1);
 			snapshotInfo.setSize(size);
@@ -837,22 +835,6 @@ public class LVM2Manager implements LogicalStorageManager {
 
 		if(foundLVMVolumeInfo != null) {
 			String loDevName = foundLVMVolumeInfo.getLoDevName();
-			/*     String vgName = foundLVMVolumeInfo.getVgName();
-          String lvName = foundLVMVolumeInfo.getLvName();
-          String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-
-          String returnValue = removeLogicalVolume(absoluteLVName);
-          if(returnValue.length() == 0) {
-              throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
-          }
-          returnValue = reduceVolumeGroup(vgName, loDevName);
-          if(returnValue.length() == 0) {
-              throw new EucalyptusCloudException("Unable to reduce volume group " + vgName + " logical volume: " + loDevName);
-          }
-          returnValue = removePhysicalVolume(loDevName);
-          if(returnValue.length() == 0) {
-              throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
-          }  */
 			String returnValue = removeLoopback(loDevName);
 			db.delete(foundLVMVolumeInfo);
 			db.commit();
