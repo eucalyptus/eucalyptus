@@ -442,7 +442,8 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
 
     valueStart = findNonWhitespace( sb, colonEnd );
     valueEnd = findEndOfString( sb );
-
+    valueStart = valueStart > valueEnd ? valueEnd: valueStart;
+    
     return new String[] { sb.substring( nameStart, nameEnd ), sb.substring( valueStart, valueEnd ) };
   }
 
