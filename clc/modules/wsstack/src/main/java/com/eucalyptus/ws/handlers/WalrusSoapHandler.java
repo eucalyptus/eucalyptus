@@ -27,6 +27,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
+import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -34,6 +35,8 @@ import com.eucalyptus.ws.binding.Binding;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.WalrusBucketErrorMessageType;
 
 @ChannelPipelineCoverage("one")
 public class WalrusSoapHandler extends MessageStackHandler {
@@ -87,8 +90,14 @@ public class WalrusSoapHandler extends MessageStackHandler {
 		if ( event.getMessage( ) instanceof MappingHttpMessage ) {
 			final MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
 			if( httpMessage.getMessage( ) instanceof EucalyptusErrorMessageType ) {
-				EucalyptusErrorMessageType errMsg = (EucalyptusErrorMessageType) httpMessage.getMessage( );
-				httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ) );
+				EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) httpMessage.getMessage( );
+				EucalyptusMessage errMsg = WalrusUtil.convertErrorMessage(errorMessage);
+				if(errMsg instanceof WalrusBucketErrorMessageType) {
+					WalrusBucketErrorMessageType walrusErrMsg = (WalrusBucketErrorMessageType) errMsg;
+					httpMessage.setSoapEnvelope( Binding.createFault( walrusErrMsg.getCode(), walrusErrMsg.getMessage(), walrusErrMsg.getStatus().getReasonPhrase()));
+				} else {
+					httpMessage.setSoapEnvelope( Binding.createFault( errorMessage.getSource( ), errorMessage.getMessage( ), errorMessage.getStatusMessage( ) ) );
+				}
 			} else {
 				// :: assert sourceElem != null :://
 				httpMessage.setSoapEnvelope( this.soapFactory.getDefaultEnvelope( ) );

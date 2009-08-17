@@ -179,6 +179,14 @@ public class WalrusErrorMessageType extends EucalyptusMessage {
 	public HttpResponseStatus getStatus() {
 		return status;
 	}
+
+	public String getCode() {
+		return code;
+	}
+
+	public String getMessage() {
+		return message;
+	}
 }
 
 public class WalrusBucketErrorMessageType extends WalrusErrorMessageType {
