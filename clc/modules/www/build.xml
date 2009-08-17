@@ -98,7 +98,9 @@
 			<arg line="-style OBF" />
 			<arg line="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
 		</java>
-		<copydir dest="${gwt.war.build.dir}/${gwt.module}/WEB-INF/classes" src="${build.dir}" />
+		<copy todir="${gwt.war.build.dir}/${gwt.module}/WEB-INF/classes">
+			<fileset dir="${build.dir}"/>
+		</copy>
 		<war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module}/" />
 	</target>
 
