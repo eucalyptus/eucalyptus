@@ -53,7 +53,7 @@ typedef struct vnetConfig_t {
   char bridgedev[32];
   char mode[32];
   char localIp[32];
-  uint32_t nw, nm;
+  uint32_t nw, nm, euca_ns;
   int role;
   int enabled;
   int initialized;

@@ -448,7 +448,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   return(ret);
 }
 
-int doDescribeNetworks(ncMetadata *ccMeta, char **ccs, int ccsLen, vnetConfig *outvnetConfig) {
+int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccsLen, vnetConfig *outvnetConfig) {
   int rc, i, j;
   
   rc = initialize();
@@ -458,7 +458,9 @@ int doDescribeNetworks(ncMetadata *ccMeta, char **ccs, int ccsLen, vnetConfig *o
   logprintfl(EUCADEBUG, "DescribeNetworks(): called\n");
   
   sem_wait(vnetConfigLock);
-  
+  if (nameserver) {
+    vnetconfig->euca_ns = dot2hex(nameserver);
+  }
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
     rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
     rc = vnetSetupTunnels(vnetconfig);
@@ -473,7 +475,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char **ccs, int ccsLen, vnetConfig *o
   return(0);
 }
 
-int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char **ccs, int ccsLen) {
+int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen) {
   int rc, ret;
   time_t op_start, op_timer;
   char *brname;
@@ -492,6 +494,10 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char **ccs, int 
     ret = 0;
   } else {
     sem_wait(vnetConfigLock);
+    if (nameserver) {
+      vnetconfig->euca_ns = dot2hex(nameserver);
+    }
+    
     rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
     rc = vnetSetupTunnels(vnetconfig);
 

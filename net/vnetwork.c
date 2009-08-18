@@ -799,11 +799,18 @@ int vnetDelDev(vnetConfig *vnetconfig, char *dev) {
 }
 
 int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
-  FILE *fp;
+  FILE *fp=NULL;
   char fname[1024],
-    *network, *netmask,
-    *broadcast, *nameserver,
-    *router, *mac, *newip;
+    *network=NULL, 
+    *netmask=NULL,
+    *broadcast=NULL,
+    *nameserver=NULL,
+    *router=NULL, 
+    *euca_nameserver=NULL,
+    *mac=NULL, 
+    *newip=NULL;
+  char nameservers[1024];
+
   int i,j;
 
   *numHosts = 0;
@@ -821,24 +828,38 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
   fprintf(fp, "shared-network euca {\n");
   for (i=0; i<vnetconfig->max_vlan; i++) {
     if (vnetconfig->networks[i].numhosts > 0) {
+
       network = hex2dot(vnetconfig->networks[i].nw);
       netmask = hex2dot(vnetconfig->networks[i].nm);
       broadcast = hex2dot(vnetconfig->networks[i].bc);
-      nameserver = hex2dot(vnetconfig->networks[i].dns);
+      nameserver = hex2dot(vnetconfig->networks[i].dns);      
       router = hex2dot(vnetconfig->networks[i].router);
       
-      fprintf(fp, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n  option domain-name-servers %s;\n  option routers %s;\n}\n", network, netmask, netmask, broadcast, nameserver, router);
+      if (vnetconfig->euca_ns != 0) {
+	euca_nameserver = hex2dot(vnetconfig->euca_ns);
+	snprintf(nameservers, 1024, "%s, %s", nameserver, euca_nameserver);
+      } else {
+	snprintf(nameservers, 1024, "%s", nameserver);
+      }	
       
+      fprintf(fp, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n  option domain-name-servers %s;\n  option routers %s;\n}\n", network, netmask, netmask, broadcast, nameservers, router);
+      
+      if (euca_nameserver) free(euca_nameserver);
+      if (nameserver) free(nameserver);
+      if (network) free(network);
+      if (netmask) free(netmask);
+      if (broadcast) free(broadcast);
+      if (router) free(router);
+      
+
       //      for (j=2; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
       for (j=2; j<=vnetconfig->numaddrs-2; j++) {
 	if (vnetconfig->networks[i].addrs[j].active == 1) {
 	  newip = hex2dot(vnetconfig->networks[i].addrs[j].ip);
-	  printf("%s ACTIVE\n", newip);
 	  mac = vnetconfig->networks[i].addrs[j].mac;
 	  fprintf(fp, "\nhost node-%s {\n  hardware ethernet %s;\n  fixed-address %s;\n}\n", newip, mac, newip);
 	  (*numHosts)++;
 	  if (newip) free(newip);
-	  
 	}
       }
     }

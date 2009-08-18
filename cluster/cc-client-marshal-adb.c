@@ -535,7 +535,7 @@ int cc_startNetwork(int vlan, char *netName, char **ccs, int ccsLen, axutil_env_
   return(0);
 }
 
-int cc_describeNetworks(char **ccs, int ccsLen, axutil_env_t *env, axis2_stub_t *stub) {
+int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
   //  char meh[32];
   adb_DescribeNetworks_t *input;
@@ -546,6 +546,9 @@ int cc_describeNetworks(char **ccs, int ccsLen, axutil_env_t *env, axis2_stub_t 
   sn = adb_describeNetworksType_create(env);
   input = adb_DescribeNetworks_create(env);
   
+  if (nameserver) {
+    adb_describeNetworksType_set_nameserver(sn, env, nameserver);
+  }
   adb_describeNetworksType_set_userId(sn, env, "eucalyptus");
   {
     char cidstr[9];

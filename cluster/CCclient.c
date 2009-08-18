@@ -165,12 +165,15 @@ int main(int argc, char **argv) {
 	exit(1);
       }
     } else if (!strcmp(argv[2], "describeNetworks")) {
-      char **ccs;
+      char **ccs, *nameserver;
       int ccsLen=2;
       ccs = malloc(sizeof(char *) * 2);
       ccs[0] = strdup(argv[3]);
       ccs[1] = strdup(argv[4]);
-      rc = cc_describeNetworks(ccs, 2, env, stub);
+      if (argv[5]) {
+	nameserver = strdup(argv[5]);
+      }
+      rc = cc_describeNetworks(nameserver, ccs, 2, env, stub);
       if (rc != 0) {
 	printf("cc_describeNetworks() failed\n");
 	exit(1);

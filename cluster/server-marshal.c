@@ -171,7 +171,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char **clusterControllers;
+  char **clusterControllers=NULL, *nameserver=NULL;
   int clusterControllersLen=0;
   ncMetadata ccMeta;
   vnetConfig *outvnetConfig=NULL;
@@ -182,6 +182,8 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   ccMeta.correlationId = adb_describeNetworksType_get_correlationId(snt, env);
   ccMeta.userId = adb_describeNetworksType_get_userId(snt, env);
   
+  nameserver = adb_describeNetworksType_get_nameserver(snt, env);
+  
   clusterControllersLen = adb_describeNetworksType_sizeof_clusterControllers(snt, env);
   clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
   for (i=0; i<clusterControllersLen; i++) {
@@ -191,7 +193,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   snrt = adb_describeNetworksResponseType_create(env);
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doDescribeNetworks(&ccMeta, clusterControllers, clusterControllersLen, outvnetConfig);
+    rc = doDescribeNetworks(&ccMeta, nameserver, clusterControllers, clusterControllersLen, outvnetConfig);
     if (rc) {
       logprintf("ERROR: doDescribeNetworks() returned fail %d\n", rc);
       status = AXIS2_FALSE;
@@ -574,7 +576,8 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *netName, **clusterControllers;
+  char *netName=NULL, **clusterControllers=NULL, *nameserver=NULL;
+  
   int vlan, clusterControllersLen=0;
   ncMetadata ccMeta;
   
@@ -584,7 +587,8 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   
   vlan = adb_startNetworkType_get_vlan(snt, env);
   netName = adb_startNetworkType_get_netName(snt, env);
-  
+  nameserver = adb_startNetworkType_get_nameserver(snt, env);
+
   clusterControllersLen = adb_startNetworkType_sizeof_clusterControllers(snt, env);
   clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
   for (i=0; i<clusterControllersLen; i++) {
@@ -595,7 +599,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   snrt = adb_startNetworkResponseType_create(env);
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doStartNetwork(&ccMeta, netName, vlan, clusterControllers, clusterControllersLen);
+    rc = doStartNetwork(&ccMeta, netName, vlan, nameserver, clusterControllers, clusterControllersLen);
     if (rc) {
       logprintf("ERROR: doStartNetwork() returned fail %d\n", rc);
       status = AXIS2_FALSE;
