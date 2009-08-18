@@ -85,6 +85,9 @@ public class BucketInfo {
     @Column(name="bucket_location")
     private String location;
 
+    @Column(name="hidden")
+    private Boolean hidden;
+    
     @OneToMany( cascade = CascadeType.ALL )
     @JoinTable(
             name = "bucket_has_grants",
@@ -339,4 +342,12 @@ public class BucketInfo {
     public void setLocation(String location) {
         this.location = location;
     }
+
+	public Boolean getHidden() {
+		return hidden;
+	}
+
+	public void setHidden(Boolean hidden) {
+		this.hidden = hidden;
+	}
 }

@@ -33,6 +33,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
@@ -78,7 +79,7 @@ public class WalrusManager {
 	private StorageManager storageManager;
 	private WalrusImageManager walrusImageManager;
 	private static WalrusStatistics walrusStatistics = new WalrusStatistics();
-	
+
 	public WalrusManager(StorageManager storageManager, WalrusImageManager walrusImageManager) {
 		this.storageManager = storageManager;
 		this.walrusImageManager = walrusImageManager;
@@ -97,41 +98,47 @@ public class WalrusManager {
 		} else if(!bukkitDir.canWrite()) {
 			LOG.fatal("Cannot write to bucket root directory: " + WalrusProperties.bucketRootDirectory);
 		}
+		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		BucketInfo bucketInfo = new BucketInfo();
+		List<BucketInfo> bucketInfos = db.query(bucketInfo);
+		for(BucketInfo bucket : bucketInfos) {
+			if(!storageManager.bucketExists(bucket.getBucketName()))
+				bucket.setHidden(true);
+			else
+				bucket.setHidden(false);
+		}
+		db.commit();
 	}
 
 	public ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws EucalyptusCloudException {
 		ListAllMyBucketsResponseType reply = (ListAllMyBucketsResponseType) request.getReply();
-		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
 		String userId = request.getUserId();
 
 		if(userId == null) {
 			throw new AccessDeniedException("no such user");
 		}
 
-		EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-		UserInfo searchUser = new UserInfo(userId);
-		List<UserInfo> userInfoList = db2.query(searchUser);
+		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		BucketInfo searchBucket = new BucketInfo();
+		searchBucket.setOwnerId(userId);
+		searchBucket.setHidden(false);
+		List<BucketInfo> bucketInfoList = db.query(searchBucket);
 
-		if(userInfoList.size() > 0) {
-			UserInfo user = userInfoList.get(0);
-			BucketInfo searchBucket = new BucketInfo();
-			searchBucket.setOwnerId(userId);
-			List<BucketInfo> bucketInfoList = db.query(searchBucket);
+		ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
-			ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
-
-			for(BucketInfo bucketInfo: bucketInfoList) {
-				buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z"));
-			}
-
-			CanonicalUserType owner = new CanonicalUserType(user.getQueryId(), user.getUserName());
+		for(BucketInfo bucketInfo: bucketInfoList) {
+			buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z"));
+		}
+		try {
+			CanonicalUserType owner = new CanonicalUserType(Credentials.Users.getQueryId(userId), userId);
 			ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
 			reply.setOwner(owner);
 			bucketList.setBuckets(buckets);
-			reply.setBucketList(bucketList);
-		} else {
+			reply.setBucketList(bucketList);	
+		} catch(Exception ex) {
 			db.rollback();
-			throw new AccessDeniedException(userId);
+			LOG.error(ex);
+			throw new AccessDeniedException("User: " + userId + " not found");
 		}
 		db.commit();
 		return reply;
@@ -178,6 +185,7 @@ public class WalrusManager {
 			bucket.addGrants(userId, grantInfos, accessControlList);
 			bucket.setGrants(grantInfos);
 			bucket.setBucketSize(0L);
+			bucket.setHidden(false);
 			if(locationConstraint != null)
 				bucket.setLocation(locationConstraint);
 			else
@@ -880,6 +888,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
+		bucketInfo.setHidden(false);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
 		ArrayList<PrefixEntry> prefixes = new ArrayList<PrefixEntry>();
@@ -1082,7 +1091,7 @@ public class WalrusManager {
 		db.commit();
 		return reply;
 	}
-	
+
 	public SetRESTBucketAccessControlPolicyResponseType setRESTBucketAccessControlPolicy(SetRESTBucketAccessControlPolicyType request) throws EucalyptusCloudException
 	{
 		SetRESTBucketAccessControlPolicyResponseType reply = (SetRESTBucketAccessControlPolicyResponseType) request.getReply();

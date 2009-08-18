@@ -91,6 +91,10 @@ public class FileSystemStorageManager implements StorageManager {
         this.rootDirectory = rootDirectory;
     }
 
+    public boolean bucketExists(String bucket) {
+        return new File (rootDirectory + FILE_SEPARATOR + bucket).exists();        
+    }
+    
 
     public void createBucket(String bucket) throws IOException {
         File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);

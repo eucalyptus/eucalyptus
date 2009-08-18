@@ -48,6 +48,8 @@ public interface StorageManager {
 
     public void checkPreconditions() throws EucalyptusCloudException;
 
+    public boolean bucketExists(String bucket);
+    
     public void createBucket(String bucket) throws IOException;
 
     public long getSize(String bucket, String object);
