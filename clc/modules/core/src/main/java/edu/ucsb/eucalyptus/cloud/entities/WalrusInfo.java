@@ -20,18 +20,19 @@ public class WalrusInfo {
 	@Column( name = "storage_max_buckets_per_user" )
 	private Integer storageMaxBucketsPerUser;
 	@Column( name = "storage_max_bucket_size_mb" )
-	private Integer storageMaxBucketSizeInMB;
+	private Long storageMaxBucketSizeInMB;
 	@Column( name = "storage_cache_size_mb" )
-	private Integer storageMaxCacheSizeInMB;
+	private Long storageMaxCacheSizeInMB;
 	@Column( name = "storage_snapshot_size_gb" )
 	private Integer storageMaxTotalSnapshotSizeInGb;
 
 	public WalrusInfo() {}
 
-	public WalrusInfo(final String name, final String storageDir,
+	public WalrusInfo(final String name, 
+			final String storageDir,
 			final Integer storageMaxBucketsPerUser,
-			final Integer storageMaxBucketSizeInMB,
-			final Integer storageMaxCacheSizeInMB,
+			final Long storageMaxBucketSizeInMB,
+			final Long storageMaxCacheSizeInMB,
 			final Integer storageMaxTotalSnapshotSizeInGb)
 	{
 		this.name = name;
@@ -70,19 +71,19 @@ public class WalrusInfo {
 		this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
 	}
 
-	public Integer getStorageMaxBucketSizeInMB() {
+	public Long getStorageMaxBucketSizeInMB() {
 		return storageMaxBucketSizeInMB;
 	}
 
-	public void setStorageMaxBucketSizeInMB( final Integer storageMaxBucketSizeInMB ) {
+	public void setStorageMaxBucketSizeInMB( final Long storageMaxBucketSizeInMB ) {
 		this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
 	}
 
-	public Integer getStorageMaxCacheSizeInMB() {
+	public Long getStorageMaxCacheSizeInMB() {
 		return storageMaxCacheSizeInMB;
 	}
 
-	public void setStorageMaxCacheSizeInMB( Integer storageMaxCacheSizeInMB ) {
+	public void setStorageMaxCacheSizeInMB( final Long storageMaxCacheSizeInMB ) {
 		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
 	}
 

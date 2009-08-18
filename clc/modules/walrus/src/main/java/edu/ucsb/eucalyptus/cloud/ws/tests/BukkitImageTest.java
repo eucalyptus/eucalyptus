@@ -34,7 +34,7 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
+import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.msgs.GetDecryptedImageResponseType;
 import edu.ucsb.eucalyptus.msgs.GetDecryptedImageType;
 import junit.framework.TestCase;
@@ -44,7 +44,7 @@ public class BukkitImageTest extends TestCase {
 
     public void testGetImage() throws Throwable {
 
-		Bukkit bukkit = new Bukkit();
+		WalrusControl bukkit = new WalrusControl();
         String userId = "admin";
         String bucket = "vol-image-test-222";
         String key = "image.manifest.xml";

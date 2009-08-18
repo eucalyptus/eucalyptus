@@ -29,17 +29,17 @@
             <component class="edu.ucsb.eucalyptus.ic.WalrusRequestQueue"/>
             <outbound>
                 <filtering-router>
-                    <outbound-endpoint ref="BukkitWS"/>
+                    <outbound-endpoint ref="WalrusControlWS"/>
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.WalrusRequestType"/>
                 </filtering-router>
             </outbound>
         </service>
 
-        <service name="Bukkit">
+        <service name="WalrusControl">
             <inbound>
-                <inbound-endpoint ref="BukkitWS"/>
+                <inbound-endpoint ref="WalrusControlWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.Bukkit"/>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.WalrusControl"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="WalrusReplyQueueWS"/>
@@ -56,11 +56,11 @@
 
     </model>
     <model name="WalrusInternal">
-        <service name="BukkitInternal">
+        <service name="WalrusControlInternal">
             <inbound>
-                <inbound-endpoint ref="BukkitInternalWS"/>
+                <inbound-endpoint ref="WalrusControlInternalWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.Bukkit"/>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.WalrusControl"/>
         </service>
 
     </model>

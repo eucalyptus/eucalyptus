@@ -34,6 +34,17 @@ StorageInfo {
 		this.name = name;
 	}
 
+	public StorageInfo(final String name, 
+			final Integer maxTotalVolumeSizeInGb,
+			final String storageInterface, 
+			final Integer maxVolumeSizeInGB,
+			final String volumesDir) {
+		this.name = name;
+		this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
+		this.storageInterface = storageInterface;
+		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
+		this.volumesDir = volumesDir;
+	}
 
 	public Long getId()
 	{

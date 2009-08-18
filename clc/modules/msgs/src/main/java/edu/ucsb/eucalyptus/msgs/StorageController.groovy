@@ -78,6 +78,7 @@ public class GetStorageVolumeResponseType extends StorageResponseType {
 }
 
 public class UpdateStorageConfigurationType extends StorageRequestType {
+	String name;
 	String storageRootDirectory;
 	Integer maxTotalVolumeSize;
 	Integer maxVolumeSize;
@@ -87,6 +88,7 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 	def UpdateStorageConfigurationType() {}
 
 	def UpdateStorageConfigurationType(StorageStateType storageState) {
+		this.name = storageState.getName();
 		this.storageRootDirectory = storageState.getVolumesPath();
 		this.maxTotalVolumeSize = storageState.getMaxVolumeSizeInGB();
 		this.maxVolumeSize = storageState.getTotalVolumesSizeInGB();

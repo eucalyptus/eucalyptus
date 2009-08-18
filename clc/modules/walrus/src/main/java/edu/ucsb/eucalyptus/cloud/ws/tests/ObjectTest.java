@@ -34,7 +34,7 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
+import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 
@@ -44,7 +44,7 @@ import com.eucalyptus.auth.Hashes;
 
 public class ObjectTest extends TestCase {
 
-	static Bukkit bukkit;
+	static WalrusControl bukkit;
 	public void testObject() throws Throwable {
 
 		String bucketName = "halo" + Hashes.getRandom(6);
@@ -114,6 +114,6 @@ public class ObjectTest extends TestCase {
 	}
 
     public void setUp() {
-        bukkit = new Bukkit();
+        bukkit = new WalrusControl();
    }        
 }

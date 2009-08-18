@@ -37,7 +37,7 @@ package edu.ucsb.eucalyptus.cloud.ws.tests;
 import com.eucalyptus.auth.Hashes;
 
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
-import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
+import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
 import junit.framework.TestCase;
@@ -45,7 +45,7 @@ import junit.framework.TestCase;
 public class GetSnapshotTest extends TestCase {
 
     static BlockStorage blockStorage;
-    static Bukkit bukkit;
+    static WalrusControl bukkit;
 
     public void testGetSnapshot() throws Throwable {
 
@@ -69,6 +69,6 @@ public class GetSnapshotTest extends TestCase {
     }
     public void setUp() {
         blockStorage = new BlockStorage();
-        bukkit = new Bukkit();
+        bukkit = new WalrusControl();
     }
 }

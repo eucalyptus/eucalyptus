@@ -565,6 +565,7 @@ public class SetBucketLoggingStatusResponseType extends WalrusResponseType {
 }
 
 public class UpdateWalrusConfigurationType extends WalrusRequestType {
+	String name;
 	String bucketRootDirectory;
 	Integer maxBucketsPerUser;
 	Long maxBucketSize;
@@ -574,6 +575,7 @@ public class UpdateWalrusConfigurationType extends WalrusRequestType {
 	def UpdateWalrusConfigurationType() {}
 
 	def UpdateWalrusConfigurationType(WalrusStateType walrusState) {
+		this.name = walrusState.getName();
 		this.bucketRootDirectory = walrusState.getBucketsRootDirectory();
 		this.maxBucketsPerUser = walrusState.getMaxBucketsPerUser();
 		this.maxBucketSize = walrusState.getMaxBucketSizeInMB();

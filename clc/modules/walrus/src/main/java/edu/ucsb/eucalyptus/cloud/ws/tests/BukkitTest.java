@@ -36,14 +36,14 @@ package edu.ucsb.eucalyptus.cloud.ws.tests;
 
 import com.eucalyptus.auth.Hashes;
 
-import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
+import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 
 public class BukkitTest extends TestCase {
 
-	static Bukkit bukkit;
-	public void testBukkit() throws Throwable {
+	static WalrusControl bukkit;
+	public void testWalrusControl() throws Throwable {
 
 		String bucketName = "halo" + Hashes.getRandom(6);
 		String userId = "admin";
@@ -78,6 +78,6 @@ public class BukkitTest extends TestCase {
 	}
 
     public void setUp() {
-        bukkit = new Bukkit();
+        bukkit = new WalrusControl();
     }
 }

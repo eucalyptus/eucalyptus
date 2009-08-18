@@ -34,7 +34,7 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.cloud.ws.Bukkit;
+import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.msgs.*;
 import junit.framework.TestCase;
 
@@ -43,7 +43,7 @@ public class ImageCacheTest extends TestCase {
 
     public void testGetImage() throws Throwable {
 
-		Bukkit bukkit = new Bukkit();
+		WalrusControl bukkit = new WalrusControl();
         String userId = "admin";
         String bucket = "halothar1221";
         String key = "ttylinux.img.manifest.xml";
