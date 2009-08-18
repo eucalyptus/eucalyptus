@@ -65,7 +65,7 @@ public class ServiceJarFile extends JarFile {
       } catch ( Exception e ) {
         LOG.warn( "Error in <init>()V and getInstance()L; in bootstrapper: " + c.getCanonicalName( ) );
         LOG.warn( e.getMessage( ) );
-        LOG.debug( e, e );
+        //LOG.debug( e, e );
       }
     }
     return ret;

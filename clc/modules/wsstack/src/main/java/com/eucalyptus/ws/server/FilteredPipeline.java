@@ -101,7 +101,6 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
       }
       ctx.sendUpstream( e );
     }
-
   }
 
   @ChannelPipelineCoverage( "one" )

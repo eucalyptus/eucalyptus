@@ -82,9 +82,9 @@ public class WalrusControl {
 		WalrusInfo walrusInfo = getConfig();
 		WalrusProperties.NAME = walrusInfo.getName();
 		WalrusProperties.MAX_BUCKETS_PER_USER = walrusInfo.getStorageMaxBucketsPerUser();
-		WalrusProperties.MAX_BUCKET_SIZE = walrusInfo.getStorageMaxBucketSizeInMB();
+		WalrusProperties.MAX_BUCKET_SIZE = walrusInfo.getStorageMaxBucketSizeInMB() * WalrusProperties.M;
 		WalrusProperties.bucketRootDirectory = walrusInfo.getStorageDir();
-		WalrusProperties.IMAGE_CACHE_SIZE = walrusInfo.getStorageMaxCacheSizeInMB();
+		WalrusProperties.IMAGE_CACHE_SIZE = walrusInfo.getStorageMaxCacheSizeInMB() * WalrusProperties.M;
 		WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE = walrusInfo.getStorageMaxTotalSnapshotSizeInGb();
 	}
 	
@@ -97,8 +97,8 @@ public class WalrusControl {
 			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
 					WalrusProperties.bucketRootDirectory, 
 					WalrusProperties.MAX_BUCKETS_PER_USER, 
-					WalrusProperties.MAX_BUCKET_SIZE,
-					WalrusProperties.IMAGE_CACHE_SIZE,
+					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
+					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
 					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
 			db.add(walrusInfo);
 		} finally {

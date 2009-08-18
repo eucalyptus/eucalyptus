@@ -17,6 +17,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -67,7 +68,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     }
   }
 
-  @Override
+  /*@Override
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) throws Exception {
     final Channel ch = e.getChannel( );
     final Throwable cause = e.getCause( );
@@ -79,12 +80,15 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     if ( ch.isConnected( ) ) {
       this.sendError( ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR );
     }
-  }
+    ch.close();
+  }*/
 
   private void sendError( final ChannelHandlerContext ctx, final HttpResponseStatus status ) {
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
     response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n", "UTF-8" ) );
-    ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
+    DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel().getCloseFuture(), response, null );
+    ctx.sendDownstream( newEvent );
+    newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
   }
 }

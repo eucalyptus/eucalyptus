@@ -18,10 +18,17 @@ import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.Base64;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.DownstreamMessageEvent;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
@@ -29,6 +36,7 @@ import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.auth.User;
@@ -256,6 +264,15 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		}
 	}
 
+	@Override
+	public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
+	    LOG.info("[exception " + exceptionEvent + "]");
+		final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR );
+        DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel().getCloseFuture(), response, null );
+        ctx.sendDownstream( newEvent );
+        newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+	}
+	
 	@Override
 	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 	}
