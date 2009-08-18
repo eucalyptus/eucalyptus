@@ -38,8 +38,11 @@ sem_t *instanceCacheLock=NULL;
 vnetConfig *vnetconfig=NULL;
 sem_t *vnetConfigLock=NULL;
 
-char *helpers[LASTHELPER] = {"ip", "kill"};
+/*
+enum{IP, POWERWAKE, LASTHELPER};
+char *helpers[LASTHELPER] = {"ip", "powerwake"};
 char *helpers_path[LASTHELPER];
+*/
 
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
   int i, j, rc, start, stop, ret=0;
@@ -1891,9 +1894,10 @@ int initialize(void) {
 }
 
 int init_localstate(void) {
-  int rc, loglevel;
+  int rc, loglevel, ret;
   char *tmpstr=NULL, logFile[1024], configFile[1024], home[1024], vfile[1024];
 
+  ret=0;
   if (init) {
   } else {
     // thread is not initialized, run first time local state setup
@@ -1925,10 +1929,17 @@ int init_localstate(void) {
     if (tmpstr) free(tmpstr);
     // set up logfile
     logfile(logFile, loglevel);
-    
+   
+    /*
+      rc = verify_helpers(helpers, helpers_path, LASTHELPER);
+      if (rc) {
+      logprintfl(EUCAERROR, "Cannot verify required external helpers.");
+      ret=1;
+      }
+    */
   }
 
-  return(0);
+  return(ret);
 }
 
 int init_thread(void) {
@@ -2054,7 +2065,7 @@ int init_config(void) {
       // failed to restore network state, continue 
       logprintfl(EUCAWARN, "restoreNetworkState returned false (may be already restored)\n");
     }
-    init = 1;
+    //init = 1;
     return(0);
   }
   
@@ -2272,7 +2283,7 @@ int init_config(void) {
   sem_post(configLock);
   
   logprintfl(EUCADEBUG,"init_config(): done\n");
-  init=1;
+  //  init=1;
   
   return(0);
 }

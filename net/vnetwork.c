@@ -156,7 +156,7 @@ int vnetInitTunnels(vnetConfig *vnetconfig) {
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
     if (vnetconfig->localIp[0] == '\0') {
       // localIp not set, no tunneling
-      logprintfl(EUCAWARN, "VNET_LOCALIP not set, tunneling is disabled\n");
+      //      logprintfl(EUCAWARN, "VNET_LOCALIP not set, tunneling is disabled\n");
       return(0);
     } else if (!strcmp(vnetconfig->mode, "MANAGED-NOVLAN") && check_bridge(vnetconfig->privInterface)) {
       logprintfl(EUCAERROR, "in MANAGED-NOVLAN mode, priv interface '%s' must be a bridge, tunneling disabled\n", vnetconfig->privInterface);
@@ -1351,7 +1351,6 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   char cmd[1024], tundev[32], *remoteIp=NULL, pidfile[1024], rootwrap[1024];
 
   if (!vnetconfig->tunnels.tunneling || vnetconfig->tunnels.localIpId == -1) {
-    logprintfl(EUCADEBUG, "WTF: %d %d\n", vnetconfig->tunnels.tunneling, vnetconfig->tunnels.localIpId);
     return(0);
   }
   snprintf(rootwrap, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap", vnetconfig->eucahome);  
@@ -1390,10 +1389,10 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
     if (vnetconfig->tunnels.ccs[i] != 0) {
       remoteIp = hex2dot(vnetconfig->tunnels.ccs[i]);
       if (vnetconfig->tunnels.localIpId != i) {
-	logprintfl(EUCADEBUG, "setting up tunnel for endpoint: %s\n", remoteIp);
 	snprintf(tundev, 32, "tap-%d-%d", vnetconfig->tunnels.localIpId, i);
 	rc = check_device(tundev);
 	if (rc) {
+	  logprintfl(EUCADEBUG, "setting up tunnel for endpoint: %s\n", remoteIp);
 	  snprintf(pidfile, 1024, "%s/var/run/eucalyptus/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->tunnels.localIpId, i);
 	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -n -f %s/var/lib/eucalyptus/keys/vtunall.conf -p tun-%d-%d %s", vnetconfig->eucahome, vnetconfig->eucahome, vnetconfig->tunnels.localIpId, i, remoteIp);
 	  //	  logprintfl(EUCADEBUG, "Running: %s,%s,%s\n", cmd, pidfile, rootwrap);
@@ -1974,7 +1973,6 @@ int getdevinfo(char *dev, uint32_t **outips, uint32_t **outnms, int *len) {
     }
   }
   freeifaddrs(ifaddr);
-  logprintfl(EUCADEBUG, "SETTING LEN: %d\n", count);
   *len = count;
   return(0);
 }
@@ -2020,32 +2018,19 @@ char *hex2dot(uint32_t in) {
   return(strdup(out));
 }
 
-int vnetSaveIPTables(vnetConfig *vnetconfig) {
-  char cmd[256];
-  int rc;
-
-  snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap iptables-save > %s/iptables-state", vnetconfig->eucahome, vnetconfig->path);
-  rc = system(cmd);
-  return(WEXITSTATUS(rc));
-}
-
 int vnetLoadIPTables(vnetConfig *vnetconfig) {
   char cmd[256], file[1024];
   struct stat statbuf;
-  int rc=0;
+  int rc=0, ret;
 
+  ret = 0;
   snprintf(file, 1023, "%s/iptables-preload", vnetconfig->path);
   if (stat(file, &statbuf) == 0) {
     snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap iptables-restore < %s", vnetconfig->eucahome, file);
     rc = system(cmd);
+    ret = WEXITSTATUS(rc);
   }
-
-  snprintf(file, 1023, "%s/iptables-state", vnetconfig->path);
-  if (stat(file, &statbuf) == 0) {
-    snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap iptables-restore < %s", vnetconfig->eucahome, file);
-    rc = system(cmd);
-  }
-  return(WEXITSTATUS(rc));
+  return(ret);
 }
 
 int check_chain(vnetConfig *vnetconfig, char *userName, char *netName) {

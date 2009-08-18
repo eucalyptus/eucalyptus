@@ -17,27 +17,44 @@ if ($rulefile =~ /^([ &:#-\@\w.]+)$/) {
     exit(1);
 }
 
-if (!$table || !$rulefile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile) {exit 1;}
-
-if ($table eq "nat") {
-#    system("cp $rulefile $rulefile.save.input");
+$postrules = shift @ARGV;
+if ($postrules =~ /^([ &:#-\@\w.]+)$/) {
+    $postrules = $1; #data is now untainted
+} else {
+    $postfules = "UNSET";
 }
 
-#$output=`iptables-save -ddasdast $table`;
-#print "MEH: $meh\n$$ $? $!";
+if (!$table || !$rulefile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile) {exit 1;}
 
-#$rc = system "iptables-save", "-t", "$table", > $rulefile.orig");
+
+if ($postrules ne "UNSET") {
+    open (RFH, "$postrules");
+    while(<RFH>) {
+	chomp;
+	my $line = $_;
+	$line =~ s/\s+$//g;
+	$line =~ s/^\s+//g;
+	if ($line ne "") {
+	    $postruleshash{"$line"} = 1;
+	}
+    }
+    close(RFH);    
+}
+
 open my $fh, '-|' or exec 'iptables-save', ("-t", "$table") or die "iptables-save failed: $!\n";
 open(OFH, ">$rulefile.orig") or die "cannot open $rulefile.orig";
 $outbuf = "";
 while(<$fh>) {
-    print OFH "$_";
+    chomp;
+    my $line = $_;
+    $line =~ s/\s+$//g;
+    $line =~ s/^\s+//g;
+    if (!$postruleshash{"$line"}) {
+	print OFH "$line\n";
+    }
 }
 close($fh) || die "iptables-save failed\n";
 close(OFH);
-if ($table eq "nat") {
-#    system("cp $rulefile.orig $rulefile.save.saved");
-}
 
 $rc = $rc>>8;
 if ($rc) {
@@ -65,6 +82,22 @@ while(<FH>) {
 	    }
 	}
 	close(RFH);
+	
+	# do we have post rules?
+	if ($postrules ne "UNSET") {
+	    open (RFH, "$postrules");
+	    while(<RFH>) {
+		chomp;
+		my $line = $_;
+		$line =~ s/\s+$//g;
+		$line =~ s/^\s+//g;
+		if ($line ne "" && !$rulehash{$line}) {
+		    $buf .= "$line\n";
+		    $rulehash{$line} = 1;
+		}
+	    }
+	    close(RFH);
+	}
     }
     if ($line ne "" && !$rulehash{$line}) {
 	$buf .= "$line\n";
@@ -90,14 +123,6 @@ while(<IFH>) {
 }
 close($fh) || die "iptables-restore failed\n";
 close(IFH);
-
-#$rc = system("iptables-restore < $rulefile.new");
-#$rc = $rc>>8;
-
-if ($table eq "nat") {
-#    system("cp $rulefile.new $rulefile.save.torestore");
-#    system("iptables-save > $rulefile.save.final");
-}
 
 unlink("$rulefile.orig");
 unlink("$rulefile.new");

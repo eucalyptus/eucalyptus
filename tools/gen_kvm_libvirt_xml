@@ -49,6 +49,7 @@ print <<EOF;
         <interface type='bridge'>
             <source bridge='BRIDGEDEV'/>
             <mac address='PRIVMACADDR'/>
+            <model type='e1000'/>
         </interface>
         <serial type="file">
             <source path='BASEPATH/console.log'/>

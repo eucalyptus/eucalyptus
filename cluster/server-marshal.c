@@ -631,11 +631,11 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
   int vmLen=0, outTypesLen=0, outServiceTagsLen=0;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char **outServiceTags;
-  virtualMachine *vms;
-  adb_virtualMachineType_t *vm;
+  char **outServiceTags=NULL;
+  virtualMachine *vms=NULL;
+  adb_virtualMachineType_t *vm=NULL;
   ncMetadata ccMeta;
-  
+
   drt = adb_DescribeResources_get_DescribeResources(describeResources, env);
   ccMeta.correlationId = adb_describeResourcesType_get_correlationId(drt, env);
   ccMeta.userId = adb_describeResourcesType_get_userId(drt, env);
@@ -672,7 +672,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
 	free(outServiceTags[i]);
       }
     }
-    free(outServiceTags);
+    if (outServiceTags) free(outServiceTags);
 
     for (i=0; i<outTypesLen; i++) {
       adb_ccResourceType_t *rt=NULL;
