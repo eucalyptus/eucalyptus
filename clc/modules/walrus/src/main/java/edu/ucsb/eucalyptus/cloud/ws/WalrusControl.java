@@ -59,6 +59,7 @@ public class WalrusControl {
 	private static WalrusImageManager walrusImageManager;
 
 	static {
+		configure();
 		storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
 		walrusImageManager = new WalrusImageManager(storageManager, imageMessenger);
 		walrusManager = new WalrusManager(storageManager, walrusImageManager);
@@ -76,7 +77,36 @@ public class WalrusControl {
 	}
 
 	public WalrusControl() {}
-
+	
+	private static void configure() {
+		WalrusInfo walrusInfo = getConfig();
+		WalrusProperties.NAME = walrusInfo.getName();
+		WalrusProperties.MAX_BUCKETS_PER_USER = walrusInfo.getStorageMaxBucketsPerUser();
+		WalrusProperties.MAX_BUCKET_SIZE = walrusInfo.getStorageMaxBucketSizeInMB();
+		WalrusProperties.bucketRootDirectory = walrusInfo.getStorageDir();
+		WalrusProperties.IMAGE_CACHE_SIZE = walrusInfo.getStorageMaxCacheSizeInMB();
+		WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE = walrusInfo.getStorageMaxTotalSnapshotSizeInGb();
+	}
+	
+	private static WalrusInfo getConfig() {
+		EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>();
+		WalrusInfo walrusInfo;
+		try {
+			walrusInfo = db.getUnique(new WalrusInfo());
+		} catch(EucalyptusCloudException ex) {
+			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
+					WalrusProperties.bucketRootDirectory, 
+					WalrusProperties.MAX_BUCKETS_PER_USER, 
+					WalrusProperties.MAX_BUCKET_SIZE,
+					WalrusProperties.IMAGE_CACHE_SIZE,
+					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
+			db.add(walrusInfo);
+		} finally {
+			db.commit();
+		}
+		return walrusInfo;
+	}
+	
 	public InitializeWalrusResponseType InitializeWalrus(InitializeWalrusType request) {
 		InitializeWalrusResponseType reply = (InitializeWalrusResponseType) request.getReply();
 		walrusBlockStorageManager.initialize();
@@ -87,6 +117,9 @@ public class WalrusControl {
 		UpdateWalrusConfigurationResponseType reply = (UpdateWalrusConfigurationResponseType) request.getReply();
 		if(EucalyptusProperties.NAME.equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
+		String name = request.getName();
+		if(name != null)
+			WalrusProperties.NAME = name;
 		String rootDir = request.getBucketRootDirectory();
 		if(rootDir != null) {
 			WalrusProperties.bucketRootDirectory = rootDir;
@@ -105,18 +138,7 @@ public class WalrusControl {
 		if(totalSnapshotSize != null)
 			WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE = totalSnapshotSize;
 		walrusManager.check();
-		EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>();
-		WalrusInfo walrusInfo;
-		try {
-			walrusInfo = db.getUnique(new WalrusInfo());
-		} catch(EucalyptusCloudException ex) {
-			walrusInfo = new WalrusInfo(request.getName(), WalrusProperties.bucketRootDirectory, 
-					WalrusProperties.MAX_BUCKETS_PER_USER, WalrusProperties.MAX_BUCKET_SIZE,
-					WalrusProperties.IMAGE_CACHE_SIZE, WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
-			db.add(walrusInfo);
-		} finally {
-			db.commit();
-		}
+		getConfig();
 		return reply;
 	}
 

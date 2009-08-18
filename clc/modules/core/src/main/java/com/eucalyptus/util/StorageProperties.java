@@ -47,6 +47,7 @@ public class StorageProperties {
     private static Logger LOG = Logger.getLogger( StorageProperties.class );
 
     public static final String SERVICE_NAME = "StorageController";
+    public static String NAME = "StorageController";
     public static String SC_ID = SERVICE_NAME + UUID.randomUUID();
     public static String STORAGE_REF = "vm://StorageInternal";
     public static final String EUCALYPTUS_OPERATION = "EucaOperation";

@@ -48,6 +48,7 @@ public class WalrusProperties {
 	private static Logger LOG = Logger.getLogger( WalrusProperties.class );
 
 	public static final String SERVICE_NAME = "Walrus";
+	public static String NAME = "Walrus";
 	public static final String VIRTUAL_SUBDOMAIN = "I_R_Bukkit";
 	public static String WALRUS_SUBDOMAIN = "walrus";
 	public static String WALRUS_IP = "127.0.0.1";

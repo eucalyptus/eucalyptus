@@ -86,6 +86,7 @@ public class BlockStorage {
 		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();
 		blockManager.initialize();
+		configure();
 	}
 
 	public static void initialize() {
@@ -110,6 +111,33 @@ public class BlockStorage {
 				SystemUtil.shutdownWithError("EBS is enabled but preconditions failed. Please resolve preconditions or restart with euca.ebs.disable");
 			}
 		}
+	}
+
+	private static void configure() {
+		StorageInfo storageInfo = getConfig();
+		StorageProperties.NAME = storageInfo.getName();
+		StorageProperties.MAX_TOTAL_VOLUME_SIZE = storageInfo.getMaxTotalVolumeSizeInGb();
+		StorageProperties.iface = storageInfo.getStorageInterface();
+		StorageProperties.MAX_VOLUME_SIZE = storageInfo.getMaxVolumeSizeInGB();
+		StorageProperties.storageRootDirectory = storageInfo.getVolumesDir();
+	}
+	
+	private static StorageInfo getConfig() {
+		EntityWrapper<StorageInfo> db = new EntityWrapper<StorageInfo>();
+		StorageInfo storageInfo;
+		try {
+			storageInfo = db.getUnique(new StorageInfo());
+		} catch(EucalyptusCloudException ex) {
+			storageInfo = new StorageInfo(StorageProperties.NAME, 
+					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
+					StorageProperties.iface, 
+					StorageProperties.MAX_VOLUME_SIZE, 
+					StorageProperties.storageRootDirectory);
+			db.add(storageInfo);
+		} finally {
+			db.commit();
+		}
+		return storageInfo;
 	}
 
 	public BlockStorage() {}
@@ -174,20 +202,7 @@ public class BlockStorage {
 			StorageProperties.enableStorage = false;
 			LOG.error(ex);
 		}
-		EntityWrapper<StorageInfo> db = new EntityWrapper<StorageInfo>();
-		StorageInfo storageInfo;
-		try {
-			storageInfo = db.getUnique(new StorageInfo());
-		} catch(EucalyptusCloudException ex) {
-			storageInfo = new StorageInfo(request.getName(), 
-					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
-					StorageProperties.iface, 
-					StorageProperties.MAX_VOLUME_SIZE, 
-					StorageProperties.storageRootDirectory);
-			db.add(storageInfo);
-		} finally {
-			db.commit();
-		}
+		getConfig();
 		return reply;
 	}
 
