@@ -162,7 +162,7 @@ do_stop() {
 
 	# let's be sure we are killing the right process
 	if ! do_status ; then
-		rm $pidfile
+		rm -f $pidfile
 		return 
 	fi
 

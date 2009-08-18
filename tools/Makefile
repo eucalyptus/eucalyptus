@@ -31,7 +31,7 @@ clean:
 
 distclean:
 	@echo "removing generated files scripts ..."
-	@rm -rf eucalyptus eucalyptus-cloud eucalyptus-walrus 
+	@rm -rf eucalyptus eucalyptus-cloud eucalyptus-walrus eucalyptus-sc
 
 install: build
 	@if test -e /etc/init.d/eucalyptus ; then \
