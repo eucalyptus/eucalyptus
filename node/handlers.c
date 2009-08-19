@@ -752,15 +752,25 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 
 	sprintf(file_name, "%s/%s", nc_state.home, NC_MONIT_FILENAME);
 	if (!strcmp(meta->userId, EUCALYPTUS_ADMIN)) {
-		f = fopen(file_name, "w");
+		f = fopen(file_name, "r+");
+		if (!f) {
+			f = fopen(file_name, "w+");
+			if (!f)
+				logprintfl(EUCAWARN, "Cannot create %s!\n", file_name);
+			else {
+				len = fileno(f);
+				if (len > 0)
+					fchmod(len, S_IRUSR|S_IWUSR);
+			}
+		}
 		if (f) {
 			int i;
 			ncInstance * instance;
-			char myName[256];
+			char myName[CHAR_BUFFER_SIZE];
 
 			fprintf(f, "version: %s\n", EUCA_VERSION);
 			fprintf(f, "timestamp: %ld\n", time(NULL));
-			if (gethostname(myName, 256) == 0)
+			if (gethostname(myName, CHAR_BUFFER_SIZE) == 0)
 				fprintf(f, "node: %s\n", myName);
 			fprintf(f, "hypervisor: %s\n", nc_state.H->name);
 			fprintf(f, "network: %s\n", nc_state.vnetconfig->mode);
@@ -784,12 +794,11 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 				fprintf(f, " state: %s", instance->stateName);
 				fprintf(f, " mem: %d", instance->params.memorySize);
 				fprintf(f, " disk: %d", instance->params.diskSize);
-				fprintf(f, " cores: %d\n", instance->params.numberOfCores);
+				fprintf(f, " cores: %d", instance->params.numberOfCores);
+				fprintf(f, " private: %s", instance->ncnet.privateIp);
+				fprintf(f, " public: %s\n", instance->ncnet.publicIp);
 			}
 			fclose(f);
-		} else {
-			/* file problem */
-			logprintfl(EUCAWARN, "Cannot write to nc-stat!\n");
 		}
 	}
 	free(file_name);
