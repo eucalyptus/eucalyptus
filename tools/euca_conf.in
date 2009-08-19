@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-FAKEREG="yes"
+#FAKEREG="yes"
 
 FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
@@ -662,19 +662,15 @@ if [ -n "$CHECK" ]; then
 fi
 
 createCloudURL () {
-    SKEY=""
-    ARGS="AWSAccessKeyId=ISMvKXpXpadDiUoOSoAfww"
+    getSecretKey
+    ARGS="AWSAccessKeyId=$AKEY"
     KEY=$1
     shift
     VAL=$1
     shift
     while ( test -n "$KEY" -a -n "$VAL")
     do
-	if [ "${KEY}" = "KEY" ]; then
-	    SKEY=$VAL
-	else
-	    ARGS="${ARGS}&${KEY}=${VAL}"
-	fi
+	ARGS="${ARGS}&${KEY}=${VAL}"
 	KEY=$1
 	shift
 	VAL=$1
@@ -685,9 +681,9 @@ createCloudURL () {
 	export URL=""
 	return 1
     fi
-    ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=2008-12-01"
-    SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Eucalyptus\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
-    export URL="http://127.0.0.1:8773/services/Eucalyptus?${ARGS}&Signature=${SIGNATURE}"
+    ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=eucalyptus"
+    SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Configuration\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
+    export URL="http://127.0.0.1:8773/services/Configuration?${ARGS}&Signature=${SIGNATURE}"
     return 0
 }
 
@@ -706,6 +702,15 @@ getSecretKey() {
 	return 1
     fi
     SKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1))
+
+   FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Qq][Uu][Ee][Rr][Yy]_[Ii][Dd]/ {print NR}'`
+   if [ "$FIELD" = "" ]; then
+     echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
+     export AKEY=""
+     return 1
+   fi
+   AKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1))
+
     return 0
 }
 
@@ -740,6 +745,7 @@ checkLocalService() {
     if [ -n "${FAKEREG}" ]; then
 	CMD="echo"
     fi
+    return 0
     if ! eval $CMD ; then
 	echo "ERROR: you need to be on the $SERVICE host and the $SERVICE needs to be running."
 	return 1
@@ -761,29 +767,25 @@ if [ -n "$NEWCLUS" ]; then
 	exit 1
     fi
 
-    SKEY=""
-    if ! getSecretKey ; then
-	exit 1
-    fi
-    
+#    URL=""
+#    if ! createCloudURL "Action" "DescribeAvailabilityZones"; then
+#	exit 1
+#    fi
+
+#    CMD="wget -O - \"$URL\" 2>/dev/null | grep UP"
+#    if [ -n "${FAKEREG}" ]; then
+#	CMD="echo"
+#    fi
+#    if eval $CMD ; then 
+#	echo "ERROR: there is already a cluster registered with the system."
+#	exit 1
+#    fi
+
     URL=""
-    if ! createCloudURL "KEY" "$SKEY" "Action" "DescribeAvailabilityZones"; then
+    if ! createCloudURL "Action" "RegisterCluster" "Host" "${NEWCLUS}" "Name" "${CLUSNAME}" "Port" "${CC_PORT}"; then
 	exit 1
     fi
 
-    CMD="wget -O - \"$URL\" 2>/dev/null | grep UP"
-    if [ -n "${FAKEREG}" ]; then
-	CMD="echo"
-    fi
-    if eval $CMD ; then 
-	echo "ERROR: there is already a cluster registered with the system."
-	exit 1
-    fi
-
-    URL=""
-    if ! createCloudURL "KEY" "$SKEY" "Action" "AddCluster" "Host" "${NEWCLUS}" "Name" "${CLUSNAME}" "Port" "${CC_PORT}"; then
-	exit 1
-    fi
     CMD="wget -O - \"$URL\" 2>/dev/null"
     if [ -n "${FAKEREG}" ]; then
 	CMD="echo"
@@ -828,7 +830,7 @@ if [ -n "$WALRUS" ]; then
     if ! checkLocalService "CLC" ; then
 	exit 1
     fi
-
+    
     if [ "$WALRUS_MODE" = "ADD" ]; then
 	echo "Adding WALRUS host $WALRUS"
 	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
@@ -839,13 +841,8 @@ if [ -n "$WALRUS" ]; then
 	    exit 1
 	fi
 	
-	SKEY=""
-	if ! getSecretKey ; then
-	    exit 1
-	fi
-	
 	URL=""
-	if ! createCloudURL "KEY" "$SKEY" "Action" "AddWalrus" "Host" "${WALRUS}" ; then
+	if ! createCloudURL "Action" "AddWalrus" "Host" "${WALRUS}" ; then
 	    exit 1
 	fi
 	CMD="wget -O - \"$URL\" 2>/dev/null"
@@ -893,13 +890,8 @@ if [ -n "$SCHOST" ]; then
 	    exit 1
 	fi
 	
-	SKEY=""
-	if ! getSecretKey ; then
-	    exit 1
-	fi
-	
 	URL=""
-	if ! createCloudURL "KEY" "$SKEY" "Action" "AddStorageController" "Host" "${SCHOST}" "Name" "${SCNAME}"; then
+	if ! createCloudURL "Action" "AddStorageController" "Host" "${SCHOST}" "Name" "${SCNAME}"; then
 	    exit 1
 	fi
 	CMD="wget -O - \"$URL\" 2>/dev/null"
