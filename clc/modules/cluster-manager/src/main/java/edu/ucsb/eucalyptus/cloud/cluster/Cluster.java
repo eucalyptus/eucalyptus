@@ -9,6 +9,7 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.util.AbstractKeyStore;
+import com.eucalyptus.config.ClusterConfiguration;
 
 import java.net.*;
 import java.security.*;
@@ -20,7 +21,7 @@ public class Cluster implements HasName {
 
   private static Logger LOG = Logger.getLogger( Cluster.class );
 
-  private ClusterInfo clusterInfo;
+  private ClusterConfiguration clusterConfiguration;
   private ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private ClusterState state;
   private ClusterNodeState nodeState;
@@ -39,8 +40,8 @@ public class Cluster implements HasName {
   private boolean stopped = false;
   private boolean reachable = false;
 
-  public Cluster( ClusterInfo clusterInfo ) {
-    this.clusterInfo = clusterInfo;
+  public Cluster( ClusterConfiguration clusterConfiguration ) {
+    this.clusterConfiguration = clusterConfiguration;
     this.state = new ClusterState( this );
     this.nodeState = new ClusterNodeState( this );
     this.messageQueue = new ClusterMessageQueue( this );
@@ -81,7 +82,7 @@ public class Cluster implements HasName {
     String ncCert = new String( Base64.decode( certs.getNcCert() ) );
     boolean ret = true;
     LOG.info( "===============================================================" );
-    LOG.info( " Trying to verify the certificates for " + this.getClusterInfo().getName() );
+    LOG.info( " Trying to verify the certificates for " + this.getClusterInfo().getClusterName() );
     LOG.info( "---------------------------------------------------------------" );
 //    try {
       //TODO: IMPORTANT fix me
@@ -125,7 +126,7 @@ public class Cluster implements HasName {
 
   public void startThreads() {
     //:: should really be organized as a thread group etc etc :://
-    LOG.warn( "Starting cluster: " + this.clusterInfo.getUri() );
+    LOG.warn( "Starting cluster: " + this.clusterConfiguration );
     this.waitForCerts();
     if( !stopped ) {
     if ( this.mqThread == null || this.mqThread.isAlive() )
@@ -158,7 +159,7 @@ public class Cluster implements HasName {
   }
 
   public void stop() {
-    LOG.warn( "Stopping cluster: " + this.clusterInfo.getUri() );
+    LOG.warn( "Stopping cluster: " + this.clusterConfiguration );
     this.reachable = false;
     this.stopped = true;
     this.rscUpdater.stop();
@@ -170,8 +171,8 @@ public class Cluster implements HasName {
   }
 
   public ClusterInfoType getInfo() {
-    String state = String.format( "%4s %s", this.isReachable() ? "UP" : "DOWN", this.clusterInfo.getHost() );
-    return new ClusterInfoType( this.clusterInfo.getName(), state );
+    String state = String.format( "%4s %s", this.isReachable() ? "UP" : "DOWN", this.clusterConfiguration.getHostName() );
+    return new ClusterInfoType( this.clusterConfiguration.getClusterName(), state );
   }
 
   public ClusterState getState() {
@@ -223,7 +224,7 @@ public class Cluster implements HasName {
   }
 
   public RegisterClusterType getWeb() {
-    String host = this.getClusterInfo().getUri();
+    String host = this.getClusterInfo().getHostName( );
     int port = 0;
     try {
       URI uri = new URI( this.getClusterInfo().getUri() );
@@ -234,12 +235,12 @@ public class Cluster implements HasName {
     return new RegisterClusterType( this.getName(), host, port );
   }
 
-  public ClusterInfo getClusterInfo() {
-    return clusterInfo;
+  public ClusterConfiguration getClusterInfo() {
+    return clusterConfiguration;
   }
 
   public String getName() {
-    return this.clusterInfo.getName();
+    return this.clusterConfiguration.getClusterName();
   }
 
   public boolean isReachable() {
@@ -253,7 +254,7 @@ public class Cluster implements HasName {
   @Override
   public String toString() {
     return "Cluster{" +
-           "clusterInfo=" + clusterInfo +
+           "clusterInfo=" + clusterConfiguration +
            "\n" + this.getName() + ".state=" + state +
            "\n" + this.getName() + ".messageQueue=" + messageQueue +
            "\n" + this.getName() + ".nodeMap=" + nodeMap +

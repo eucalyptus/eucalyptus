@@ -1,7 +1,10 @@
 package com.eucalyptus.config;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.security.KeyPair;
+import java.security.SecureRandom;
+import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
@@ -9,8 +12,11 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.util.KeyTool;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
@@ -35,7 +41,11 @@ public class Configuration {
   }
 
   public RegisterClusterResponseType registerCluster( RegisterClusterType request ) throws EucalyptusCloudException {
-    this.checkClusterExists( request );
+    RegisterClusterResponseType  reply = ( RegisterClusterResponseType ) request.getReply( );
+    reply.set_return( true );
+    if( this.checkClusterExists( request ) ) {
+      return reply;
+    }
 
     EntityWrapper<ClusterConfiguration> db = Configuration.getEntityWrapper( );
     ClusterConfiguration newCluster;
@@ -70,6 +80,18 @@ public class Configuration {
       keyTool.writePem( directory + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
       keyTool.writePem( directory + File.separator + "node-cert.pem", nodeX509 );
 
+      X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.Name.eucalyptus ).getCertificate( ); 
+      keyTool.writePem( directory + File.separator + "cloud-cert.pem", systemX509 );
+      Signature signer = Signature.getInstance( "SHA256withRSA" );
+      signer.initSign( SystemCredentialProvider.getCredentialProvider( Component.Name.eucalyptus ).getPrivateKey( ) );
+      signer.update( "eucalyptus".getBytes( ) );
+      byte[] sig = signer.sign( );
+      FileWriter out = new FileWriter( directory + File.separator + "vtunpass" );
+      String hexSig = Hashes.bytesToHex(sig);
+      out.write( hexSig );  
+      out.flush( );
+      out.close( );
+      
       ClusterCredentials clusterCredentials = new ClusterCredentials( newCluster.getClusterName( ) );
       clusterCredentials.setClusterCertificate( X509Cert.fromCertificate( ccAlias, clusterX509 ) );
       clusterCredentials.setNodeCertificate( X509Cert.fromCertificate( ncAlias, nodeX509 ) );
@@ -85,27 +107,31 @@ public class Configuration {
      * 2. generate key pairs
      * 3. update registry
      */
-    RegisterClusterResponseType  reply = ( RegisterClusterResponseType ) request.getReply( );
-    reply.set_return( true );
     return reply;
   }
 
-  private void checkClusterExists( RegisterClusterType request ) throws EucalyptusCloudException {
+  private boolean checkClusterExists( RegisterClusterType request ) throws EucalyptusCloudException {
     EntityWrapper<ClusterConfiguration> db = Configuration.getEntityWrapper( );    
     ClusterConfiguration existingName = null;
     ClusterConfiguration existingHost = null;
     try {
-      existingName = db.getUnique( ClusterConfiguration.byClusterName( request.getName( ) ) );
-      existingHost = db.getUnique( ClusterConfiguration.byHostName( request.getHost( ) ) );
-    } catch ( Exception e ) {
-      if ( existingHost != null ) {
-        throw new EucalyptusCloudException( "Cluster already exists: " + request.getName( ) + " at " + existingHost.getHostName( ) );
-      } else if ( existingName != null ) {
-        throw new EucalyptusCloudException( "Cluster already exists: " + existingName.getClusterName( ) + " at " + request.getHost( ) );
+      existingName = db.getUnique( new ClusterConfiguration( request.getName( ), request.getHost(), request.getPort() ) );
+      return true;
+    } catch ( Exception e1 ) {
+      try {
+        existingName = db.getUnique( ClusterConfiguration.byClusterName( request.getName( ) ) );
+        existingHost = db.getUnique( ClusterConfiguration.byHostName( request.getHost( ) ) );
+      } catch ( Exception e ) {
+        if ( existingHost != null ) {
+          throw new EucalyptusCloudException( "Cluster at host=" + existingHost.getHostName( ) + " already exists with name=" + request.getName() );
+        } else if ( existingName != null ) {
+          throw new EucalyptusCloudException( "Cluster with name=" + request.getName( ) + " already exists at host=" + existingName.getHostName( ) );
+        }
       }
     } finally {
       db.rollback( );
     }
+    return false;
   }
 
   public DeregisterClusterResponseType deregisterCluster( DeregisterClusterType request ) throws EucalyptusCloudException {

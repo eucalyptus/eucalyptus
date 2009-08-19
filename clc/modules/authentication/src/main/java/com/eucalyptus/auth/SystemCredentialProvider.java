@@ -31,17 +31,21 @@ public class SystemCredentialProvider extends Bootstrapper {
   private SystemCredentialProvider( Name name ) {
     this.name = name;
   }
+  
+  public static SystemCredentialProvider getCredentialProvider( Component.Name name ) {
+    return new SystemCredentialProvider( name );
+  }
 
   public X509Certificate getCertificate( ) {
-    return SystemCredentialProvider.certs.get( this );
+    return SystemCredentialProvider.certs.get( this.name );
   }
 
   public PrivateKey getPrivateKey( ) {
-    return SystemCredentialProvider.keypairs.get( this ).getPrivate( );
+    return SystemCredentialProvider.keypairs.get( this.name ).getPrivate( );
   }
 
   public KeyPair getKeyPair( ) {
-    return SystemCredentialProvider.keypairs.get( this );
+    return SystemCredentialProvider.keypairs.get( this.name );
   }
 
   private static void init( Component.Name name ) throws Exception {

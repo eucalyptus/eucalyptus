@@ -35,6 +35,12 @@ public class ClusterConfiguration implements Serializable {
   @Column( name = "config_cluster_port" )
   Integer port
   public ClusterConfiguration(){}
+  public String getUri() {
+    return this.getProtocol() + "://" + this.getHost() + ":" + this.getPort() + this.getServicePath();
+  }
+  public String getInsecureUri() {
+    return this.getProtocol() + "://" + this.getHost() + ":" + this.getPort() + this.getInsecureServicePath();
+  }
 
   public ClusterConfiguration( String clusterName, String hostName, Integer port ) {
     this.clusterName = clusterName;

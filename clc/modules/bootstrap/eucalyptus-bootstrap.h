@@ -119,8 +119,10 @@ static char *jvm_default_opts[] = {
 	    NULL,
 };
 static char *libjvm_paths[ ] = {
-	"%1$s/jre/lib/" CPU "/server/libjvm.so",
-	"%1$s/lib/" CPU "/server/libjvm.so",
+	"%1$s/jre/lib/amd64/server/libjvm.so",
+	"%1$s/lib/amd64/server/libjvm.so",
+	"%1$s/jre/lib/i386/server/libjvm.so",
+	"%1$s/lib/i386/server/libjvm.so",
 	NULL,
 };
 static struct stat home;

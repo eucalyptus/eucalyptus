@@ -1,6 +1,8 @@
 package com.eucalyptus.ws.handlers;
 
 import org.apache.log4j.Logger;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -9,7 +11,15 @@ import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.DownstreamMessageEvent;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.handler.codec.frame.TooLongFrameException;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.mule.DefaultMuleMessage;
 import org.mule.api.MuleMessage;
 
@@ -30,7 +40,7 @@ import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )
-public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
+public class ServiceSinkHandler extends SimpleChannelHandler {
   private static Logger                    LOG              = Logger.getLogger( ServiceSinkHandler.class );
   private long                             QUEUE_TIMEOUT_MS = 2;                                           //TODO: measure me
   private long                             startTime;
@@ -52,7 +62,9 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + e );
-    if ( e instanceof MessageEvent ) {
+    if( e instanceof ExceptionEvent) {
+      this.exceptionCaught( ctx, (ExceptionEvent)e );
+    } else if ( e instanceof MessageEvent ) {
       this.startTime = System.currentTimeMillis( );
       final MessageEvent event = ( MessageEvent ) e;
       if ( event.getMessage( ) instanceof MappingHttpMessage ) {
@@ -65,8 +77,8 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
           msg.setEffectiveUserId( user.getIsAdministrator( )?EucalyptusProperties.NAME:user.getUserName( ) );
         }
         LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
+        ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
         if( this.msgReceiver == null ) {
-          ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
           Messaging.dispatch( "vm://RequestQueue", msg );
         } else if (user == null||user.getIsAdministrator( )){
           MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( this.msgReceiver.getConnector().getMessageAdapter( msg ) ) );
@@ -104,6 +116,8 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
         response.setMessage( reply );
         ctx.sendDownstream( newEvent );
         newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+      } else {
+        
       }
     }
   }
