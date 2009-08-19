@@ -17,7 +17,6 @@
 		</buildCommand>
 	</buildSpec>
 	<natures>
-		<nature>org.codehaus.groovy.eclipse.groovyNature</nature>
 		<nature>org.eclipse.jdt.groovy.core.groovyNature</nature>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>org.eclipse.wst.common.project.facet.core.nature</nature>
