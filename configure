@@ -603,7 +603,7 @@ AXIS2C_HOME
 JAVA_HOME
 WSDL2C
 TOP
-VERSION
+EUCA_VERSION
 LIBOBJS
 JAVA
 ANT
@@ -3432,7 +3432,7 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
   $as_echo "#define _TANDEM_SOURCE 1" >>confdefs.h
 
 
-VERSION="`cat VERSION`"
+EUCA_VERSION="`cat VERSION`"
 
 # let's figure out where is the source tree
 if test ${srcdir} = "." ; then
@@ -6994,7 +6994,7 @@ ac_config_files="$ac_config_files Makedefs tools/eucalyptus-cc:tools/eucalyptus-
 
 
 cat >>confdefs.h <<_ACEOF
-#define VERSION "$VERSION"
+#define EUCA_VERSION "$EUCA_VERSION"
 _ACEOF
 
 

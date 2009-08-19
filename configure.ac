@@ -16,7 +16,7 @@ AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
 AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
 AC_USE_SYSTEM_EXTENSIONS
-VERSION="`cat VERSION`"
+EUCA_VERSION="`cat VERSION`"
 
 # let's figure out where is the source tree
 if test ${srcdir} = "." ; then
@@ -214,9 +214,9 @@ AC_CONFIG_FILES([Makedefs
 		tools/euca_conf:tools/euca_conf.in
 		tools/eucalyptus-java-ws:tools/eucalyptus-java-ws.in])
 
-AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
+AC_DEFINE_UNQUOTED(EUCA_VERSION, "$EUCA_VERSION")
 
-AC_SUBST(VERSION)
+AC_SUBST(EUCA_VERSION)
 AC_SUBST(TOP)
 AC_SUBST(ANT)
 AC_SUBST(WSDL2C)

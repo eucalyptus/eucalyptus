@@ -6,7 +6,7 @@
 #endif
 
 /* Current version */
-#undef VERSION
+#undef EUCA_VERSION
 
 /* headers on the system */
 
