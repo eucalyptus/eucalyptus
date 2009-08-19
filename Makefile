@@ -14,20 +14,7 @@ SUBDIRS			=	tools \
 				cluster \
 				clc
 
-# files we are going to package
-DIST_FILES		=	CHANGELOG \
-				configure \
-				eucalyptus.spec \
-				INSTALL \
-				install-sh \
-				LICENSE \
-				Makedefs.in \
-				Makefile \
-				README \
-				VERSION
-DIST_NAME		= $(DIST_DIR).tgz
-
-.PHONY: all clean distclean build dist
+.PHONY: all clean distclean build 
 
 all: build
 
@@ -65,13 +52,6 @@ install: deploy
 	@$(INSTALL) -d $(datarootdir)/eucalyptus
 	@$(INSTALL) -d $(usrdir)/sbin
 	@$(INSTALL) -d $(usrdir)/lib/eucalyptus
-	@for subdir in $(SUBDIRS); do \
-		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
-
-dist:
-	@rm -rf $(DIST_ROOT) $(DIST_NAME)
-	@$(INSTALL) -d $(DIST_ROOT)
-	@$(INSTALL) $(DIST_FILES) $(DIST_ROOT)
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 

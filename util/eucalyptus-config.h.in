@@ -6,7 +6,7 @@
 #endif
 
 /* Current version */
-#define EUCA_VERSION "@VERSION@"
+#undef VERSION
 
 /* headers on the system */
 

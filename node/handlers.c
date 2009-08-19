@@ -40,10 +40,10 @@ const int teardown_state_duration = 60; /* after this many seconds in TEARDOWN s
 
 // a NULL-terminated array of available handlers
 static struct handlers * available_handlers [] = {
-    &default_libvirt_handlers,
-    &xen_libvirt_handlers,
-    &kvm_libvirt_handlers,
-    NULL
+	&default_libvirt_handlers,
+	&xen_libvirt_handlers,
+	&kvm_libvirt_handlers,
+	NULL
 };
 
 struct nc_state_t nc_state;
@@ -563,6 +563,7 @@ static int init (void)
 	struct handlers ** h; 
 	long long fs_free_blocks = 0;
 	long long fs_block_size  = 0;
+	long long instances_bytes = 0;
 
 	if (initialized>0) /* 0 => hasn't run, -1 => failed, 1 => ok */
 		return 0;
@@ -633,7 +634,7 @@ static int init (void)
 			return ERROR_FATAL;
 		}
 
-		/* set dearfult in the paths. the driver will override */
+		/* set default in the paths. the driver will override */
 		nc_state.config_network_path[0] = '\0';
 		nc_state.gen_libvirt_cmd_path[0] = '\0';
 		nc_state.xm_cmd_path[0] = '\0';
@@ -662,10 +663,10 @@ static int init (void)
 		/* cleanup from previous runs and verify integrity of
 		 * instances directory */
 		sem_p (inst_sem);
-		nc_state.instances_bytes = scFSCK (&global_instances);
+		instances_bytes = scFSCK (&global_instances);
 		sem_v (inst_sem);
-		if (nc_state.instances_bytes < 0) {
-			logprintfl (EUCAFATAL, "instances store failed integrity check (error=%lld)\n", nc_state.instances_bytes);
+		if (instances_bytes < 0) {
+			logprintfl (EUCAFATAL, "instances store failed integrity check (error=%lld)\n", instances_bytes);
 			return ERROR_FATAL;
 		}
 
@@ -675,7 +676,7 @@ static int init (void)
 		if (statfs(log, &fs) == -1) {
 			logprintfl(EUCAWARN, "Failed to stat %s\n", log);
 		}  else {
-			nc_state.disk_max = fs.f_bsize * fs.f_bavail + nc_state.instances_bytes; /* max for Euca, not total */
+			nc_state.disk_max = fs.f_bsize * fs.f_bavail + instances_bytes; /* max for Euca, not total */
 			nc_state.disk_max /= BYTES_PER_DISK_UNIT;
 			if (nc_state.config_max_disk && nc_state.config_max_disk < nc_state.disk_max)
 				nc_state.disk_max = nc_state.config_max_disk;
@@ -733,9 +734,9 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	logprintfl(EUCADEBUG, "doDescribeInstances() invoked\n");
 
 	if (nc_state.H->doDescribeInstances)
-		ret = nc_state.H->doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);
+		ret = nc_state.H->doDescribeInstances (&nc_state, meta, instIds, instIdsLen, outInsts, outInstsLen);
 	else 
-		ret = nc_state.D->doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);
+		ret = nc_state.D->doDescribeInstances (&nc_state, meta, instIds, instIdsLen, outInsts, outInstsLen);
 
 	if (ret)
 		return ret;
@@ -805,9 +806,9 @@ int doPowerDown(ncMetadata *meta) {
 	logprintfl(EUCADEBUG, "doPowerDown() invoked\n");
 
 	if (nc_state.H->doPowerDown) 
-		ret = nc_state.H->doPowerDown(meta);
+		ret = nc_state.H->doPowerDown(&nc_state, meta);
 	else 
-		ret = nc_state.D->doPowerDown(meta);
+		ret = nc_state.D->doPowerDown(&nc_state, meta);
 
 	return ret;
 }
@@ -819,12 +820,18 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, ncIn
 	if (init())
 		return 1;
 
-	logprintfl(EUCADEBUG, "doRunInstance() invoked\n");
+	logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d)\n", instanceId, params->numberOfCores, params->diskSize, params->memorySize);
+	logprintfl (EUCAINFO, "                         image=%s at %s\n", imageId, imageURL);
+	logprintfl (EUCAINFO, "                         krnel=%s at %s\n", kernelId, kernelURL);
+	if (ramdiskId)
+		logprintfl (EUCAINFO, "                         rmdsk=%s at %s\n", ramdiskId, ramdiskURL);
+	logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s pubMAC=%s\n", vlan, privMac, pubMac);
+
 
 	if (nc_state.H->doRunInstance)
-		ret = nc_state.H->doRunInstance (meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, privMac, pubMac, vlan, userData, launchIndex, groupNames, groupNamesSize, outInst);
+		ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, privMac, pubMac, vlan, userData, launchIndex, groupNames, groupNamesSize, outInst);
 	else
-		ret = nc_state.D->doRunInstance (meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, privMac, pubMac, vlan, userData, launchIndex, groupNames, groupNamesSize, outInst);
+		ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, privMac, pubMac, vlan, userData, launchIndex, groupNames, groupNamesSize, outInst);
 
 	return ret;
 }
@@ -836,12 +843,12 @@ int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdownState,
 	if (init())
 		return 1;
 
-	logprintfl(EUCADEBUG, "doTerminateInstance() invoked\n");
+	logprintfl (EUCAINFO, "doTerminateInstance() invoked (id=%s)\n", instanceId);
 
 	if (nc_state.H->doTerminateInstance) 
-		ret = nc_state.H->doTerminateInstance(meta, instanceId, shutdownState, previousState);
+		ret = nc_state.H->doTerminateInstance(&nc_state, meta, instanceId, shutdownState, previousState);
 	else 
-		ret = nc_state.D->doTerminateInstance(meta, instanceId, shutdownState, previousState);
+		ret = nc_state.D->doTerminateInstance(&nc_state, meta, instanceId, shutdownState, previousState);
 
 	return ret;
 }
@@ -853,12 +860,12 @@ int doRebootInstance (ncMetadata *meta, char *instanceId)
 	if (init())
 		return 1;
 		
-	logprintfl(EUCADEBUG, "doRebootInstance() invoked\n");
+	logprintfl(EUCAINFO, "doRebootInstance() invoked  (id=%s)\n", instanceId);
 
 	if (nc_state.H->doRebootInstance)
-		ret = nc_state.H->doRebootInstance (meta, instanceId);
+		ret = nc_state.H->doRebootInstance (&nc_state, meta, instanceId);
 	else
-		ret = nc_state.D->doRebootInstance (meta, instanceId);
+		ret = nc_state.D->doRebootInstance (&nc_state, meta, instanceId);
 
 	return ret;
 }
@@ -870,12 +877,12 @@ int doGetConsoleOutput (ncMetadata *meta, char *instanceId, char **consoleOutput
 	if (init())
 		return 1;
 
-	logprintfl(EUCADEBUG, "doGetConsoleOutput() invoked\n");
+	logprintfl (EUCAINFO, "doGetConsoleOutput() invoked (id=%s)\n", instanceId);
 
 	if (nc_state.H->doGetConsoleOutput) 
-		ret = nc_state.H->doGetConsoleOutput (meta, instanceId, consoleOutput);
+		ret = nc_state.H->doGetConsoleOutput (&nc_state, meta, instanceId, consoleOutput);
 	else
-		ret = nc_state.D->doGetConsoleOutput (meta, instanceId, consoleOutput);
+		ret = nc_state.D->doGetConsoleOutput (&nc_state, meta, instanceId, consoleOutput);
 
 	return ret;
 }
@@ -890,9 +897,9 @@ int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource **outRe
 	logprintfl(EUCADEBUG, "doDescribeResource() invoked\n");
 
 	if (nc_state.H->doDescribeResource)
-		ret = nc_state.H->doDescribeResource (meta, resourceType, outRes);
+		ret = nc_state.H->doDescribeResource (&nc_state, meta, resourceType, outRes);
 	else 
-		ret = nc_state.D->doDescribeResource (meta, resourceType, outRes);
+		ret = nc_state.D->doDescribeResource (&nc_state, meta, resourceType, outRes);
 
 	return ret;
 }
@@ -912,9 +919,9 @@ doStartNetwork (	ncMetadata *ccMeta,
 	logprintfl(EUCADEBUG, "doStartNetwork() invoked\n");
 
 	if (nc_state.H->doStartNetwork) 
-		ret = nc_state.H->doStartNetwork (nc_state.vnetconfig, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
+		ret = nc_state.H->doStartNetwork (&nc_state, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
 	else 
-		ret = nc_state.D->doStartNetwork (nc_state.vnetconfig, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
+		ret = nc_state.D->doStartNetwork (&nc_state, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
 	
 	return ret;
 }
@@ -926,12 +933,12 @@ int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	if (init())
 		return 1;
 
-	logprintfl(EUCADEBUG, "doAttachVolume() invoked\n");
+	logprintfl (EUCAINFO, "doAttachVolume() invoked (id=%s vol=%s remote=%s local=%s)\n", instanceId, volumeId, remoteDev, localDev);
 
 	if (nc_state.H->doAttachVolume)
-		ret = nc_state.H->doAttachVolume(meta, instanceId, volumeId, remoteDev, localDev);
+		ret = nc_state.H->doAttachVolume(&nc_state, meta, instanceId, volumeId, remoteDev, localDev);
 	else
-		ret = nc_state.D->doAttachVolume(meta, instanceId, volumeId, remoteDev, localDev);
+		ret = nc_state.D->doAttachVolume(&nc_state, meta, instanceId, volumeId, remoteDev, localDev);
 	
 	return ret;
 }
@@ -943,12 +950,12 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	if (init())
 		return 1;
 
-	logprintfl(EUCADEBUG, "doDetachVolume() invoked\n");
+	logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
 
 	if (nc_state.H->doDetachVolume)
-		ret = nc_state.H->doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force);
+		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force);
 	else 
-		ret = nc_state.D->doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force);
+		ret = nc_state.D->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force);
 
 	return ret;
 }

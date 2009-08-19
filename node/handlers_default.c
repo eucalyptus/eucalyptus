@@ -31,22 +31,14 @@ extern sem * xen_sem;
 extern sem * inst_sem;
 extern bunchOfInstances * global_instances;
 
-/* temporary: will be cleaned out*/
-static struct nc_state_t *nc = NULL;
-
 static int
-doInitialize (struct nc_state_t *parent_nc) 
+doInitialize (struct nc_state_t *nc) 
 {
-	if (!parent_nc)
-		return ERROR_FATAL;
-
-	nc = parent_nc;
-
 	return OK;
 }
 
 static int
-doRunInstance (	ncMetadata *meta, char *instanceId,
+doRunInstance (	struct nc_state_t *nc, ncMetadata *meta, char *instanceId,
 		char *reservationId, ncInstParams *params, 
 		char *imageId, char *imageURL, 
 		char *kernelId, char *kernelURL, 
@@ -55,25 +47,30 @@ doRunInstance (	ncMetadata *meta, char *instanceId,
 		char *userData, char *launchIndex, 
 		char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
+	logprintfl(EUCAERROR, "no default for doRunInstance!\n");
 	return ERROR_FATAL;
 }
 
 static int
-doRebootInstance(ncMetadata *meta, char *instanceId) 
+doRebootInstance(struct nc_state_t *nc, ncMetadata *meta, char *instanceId) 
 {    
-    return ERROR_FATAL;
+	logprintfl(EUCAERROR, "no default for doRebootInstance!\n");
+	return ERROR_FATAL;
 }
 
 static int
-doGetConsoleOutput(	ncMetadata *meta,
+doGetConsoleOutput(	struct nc_state_t *nc, 
+			ncMetadata *meta,
 			char *instanceId,
 			char **consoleOutput)
 {
+	logprintfl(EUCAERROR, "no default for doGetConsoleOutput!\n");
 	return ERROR_FATAL;
 }
 
 static int
-doTerminateInstance(	ncMetadata *meta,
+doTerminateInstance(	struct nc_state_t *nc,
+			ncMetadata *meta,
 			char *instanceId,
 			int *shutdownState,
 			int *previousState)
@@ -81,8 +78,6 @@ doTerminateInstance(	ncMetadata *meta,
 	ncInstance *instance, *vninstance;
 	virConnectPtr *conn;
 	int err;
-
-	logprintfl (EUCAINFO, "doTerminateInstance() invoked (id=%s)\n", instanceId);
 
 	sem_p (inst_sem); 
 	instance = find_instance(&global_instances, instanceId);
@@ -118,7 +113,8 @@ doTerminateInstance(	ncMetadata *meta,
 }
 
 static int
-doDescribeInstances(	ncMetadata *meta,
+doDescribeInstances(	struct nc_state_t *nc,
+			ncMetadata *meta,
 			char **instIds,
 			int instIdsLen,
 			ncInstance ***outInsts,
@@ -168,7 +164,8 @@ doDescribeInstances(	ncMetadata *meta,
 }
 
 static int
-doDescribeResource(	ncMetadata *meta,
+doDescribeResource(	struct nc_state_t *nc,
+			ncMetadata *meta,
 			char *resourceType,
 			ncResource **outRes)
 {
@@ -229,12 +226,12 @@ doDescribeResource(	ncMetadata *meta,
 }
 
 static int
-doPowerDown(ncMetadata *ccMeta)
+doPowerDown(	struct nc_state_t *nc,
+		ncMetadata *ccMeta)
 {
 	char cmd[1024];
 	int rc;
 
-	logprintfl(EUCADEBUG, "PowerOff called\n");
 	snprintf(cmd, 1024, "%s /etc/init.d/powernap now", nc->rootwrap_cmd_path);
 	logprintfl(EUCADEBUG, "saving power: %s\n", cmd);
 	rc = system(cmd);
@@ -242,13 +239,11 @@ doPowerDown(ncMetadata *ccMeta)
 	if (rc)
 		logprintfl(EUCAERROR, "cmd failed: %d\n", rc);
   
-	logprintfl(EUCADEBUG, "PowerOff done\n");
-
 	return OK;
 }
 
 static int
-doStartNetwork(	vnetConfig *vnetconfig,
+doStartNetwork(	struct nc_state_t *nc,
 		ncMetadata *ccMeta, 
 		char **remoteHosts, 
 		int remoteHostsLen, 
@@ -257,9 +252,7 @@ doStartNetwork(	vnetConfig *vnetconfig,
 	int rc, ret, i, status;
 	char *brname;
 
-	logprintfl (EUCAINFO, "StartNetwork(): called\n");
-
-	rc = vnetStartNetwork(vnetconfig, vlan, NULL, NULL, &brname);
+	rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, &brname);
 	if (rc) {
 		ret = 1;
 		logprintfl (EUCAERROR, "StartNetwork(): ERROR return from vnetStartNetwork %d\n", rc);
@@ -273,23 +266,27 @@ doStartNetwork(	vnetConfig *vnetconfig,
 }
 
 static int
-doAttachVolume(	ncMetadata *meta,
+doAttachVolume(	struct nc_state_t *nc,
+		ncMetadata *meta,
 		char *instanceId,
 		char *volumeId,
 		char *remoteDev,
 		char *localDev)
 {
+	logprintfl(EUCAERROR, "no default for doAttachVolume!\n");
 	return ERROR_FATAL;
 }
 
 static int
-doDetachVolume(	ncMetadata *meta,
+doDetachVolume(	struct nc_state_t *nc,
+		ncMetadata *meta,
 		char *instanceId,
 		char *volumeId,
 		char *remoteDev,
 		char *localDev,
 		int force)
 {
+	logprintfl(EUCAERROR, "no default for doDetachVolume!\n");
 	return ERROR_FATAL;
 }
 

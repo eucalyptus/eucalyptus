@@ -27,7 +27,6 @@ struct nc_state_t {
 	// defined max
 	long long config_max_disk;
 	long long config_max_mem;
-	long long instances_bytes;
 	int config_max_cores;
 	// current max
 	long long disk_max;
@@ -48,16 +47,69 @@ struct nc_state_t {
 struct handlers {
     char name [CHAR_BUFFER_SIZE];
     int (*doInitialize)		(struct nc_state_t *nc);
-    int (*doPowerDown)		(ncMetadata *meta);
-    int (*doDescribeInstances)	(ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
-    int (*doRunInstance)	(ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst);
-    int (*doTerminateInstance)	(ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
-    int (*doRebootInstance)	(ncMetadata *meta, char *instanceId);
-    int (*doGetConsoleOutput)	(ncMetadata *meta, char *instanceId, char **consoleOutput);
-    int (*doDescribeResource)	(ncMetadata *meta, char *resourceType, ncResource **outRes);
-    int (*doStartNetwork)	(vnetConfig *config, ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan);
-    int (*doAttachVolume)	(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-    int (*doDetachVolume)	(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+    int (*doPowerDown)		(struct nc_state_t *nc,
+		    		ncMetadata *meta);
+    int (*doDescribeInstances)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char **instIds,
+				int instIdsLen,
+				ncInstance ***outInsts,
+				int *outInstsLen);
+    int (*doRunInstance)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId,
+				char *reservationId,
+				ncInstParams *params,
+				char *imageId,
+				char *imageURL,
+				char *kernelId,
+				char *kernelURL,
+				char *ramdiskId,
+				char *ramdiskURL,
+				char *keyName,
+				char *privMac,
+				char *pubMac,
+				int vlan,
+				char *userData,
+				char *launchIndex,
+				char **groupNames,
+				int groupNamesSize,
+				ncInstance **outInst);
+    int (*doTerminateInstance)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId,
+				int *shutdownState,
+				int *previousState);
+    int (*doRebootInstance)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId);
+    int (*doGetConsoleOutput)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId,
+				char **consoleOutput);
+    int (*doDescribeResource)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *resourceType,
+			       	ncResource **outRes);
+    int (*doStartNetwork)	(struct nc_state_t *nc,
+				ncMetadata *ccMeta,
+				char **remoteHosts,
+				int remoteHostsLen,
+				int port,
+				int vlan);
+    int (*doAttachVolume)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId,
+				char *volumeId,
+				char *remoteDev,
+				char *localDev);
+    int (*doDetachVolume)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId,
+				char *volumeId,
+				char *remoteDev,
+				char *localDev,
+				int force);
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers

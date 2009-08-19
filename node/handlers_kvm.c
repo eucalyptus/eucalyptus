@@ -3,16 +3,12 @@
 #define __USE_GNU /* strnlen */
 #include <string.h> /* strlen, strcpy */
 #include <time.h>
-#include <limits.h> /* INT_MAX */
 #include <sys/types.h> /* fork */
 #include <sys/wait.h> /* waitpid */
 #include <unistd.h>
-#include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
-#include <sys/stat.h>
 #include <pthread.h>
-#include <sys/vfs.h> /* statfs */
 #include <signal.h> /* SIGINT */
 
 #include "ipc.h"
@@ -27,19 +23,11 @@ extern sem * xen_sem;
 extern sem * inst_sem;
 extern bunchOfInstances * global_instances;
 
-/* temporary: will be cleaned out*/
-static struct nc_state_t *nc = NULL;
-
 #define HYPERVISOR_URI "qemu:///system"
 
-static int doInitialize (struct nc_state_t *parent_nc) 
+static int doInitialize (struct nc_state_t *nc) 
 {
-	if (!parent_nc) 
-		return ERROR_FATAL;
-
 	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
-
-	nc = parent_nc;
 
 	/* set up paths of Eucalyptus commands NC relies on */
 	snprintf (nc->gen_libvirt_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
@@ -106,14 +94,18 @@ static int doInitialize (struct nc_state_t *parent_nc)
     return OK;
 }
 
-static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, 
-                   char *imageId, char *imageURL, 
-                   char *kernelId, char *kernelURL, 
-                   char *ramdiskId, char *ramdiskURL, 
-                   char *keyName, 
-                   char *privMac, char *pubMac, int vlan, 
-                   char *userData, char *launchIndex, char **groupNames, int groupNamesSize,
-                   ncInstance **outInst)
+static int
+doRunInstance (	struct nc_state_t *nc,
+		ncMetadata *meta,
+		char *instanceId,
+		char *reservationId, ncInstParams *params, 
+		char *imageId, char *imageURL, 
+		char *kernelId, char *kernelURL, 
+		char *ramdiskId, char *ramdiskURL, 
+		char *keyName, 
+		char *privMac, char *pubMac, int vlan, 
+		char *userData, char *launchIndex, char **groupNames,
+		int groupNamesSize, ncInstance **outInst)
 {
     ncInstance * instance = NULL;
     * outInst = NULL;
@@ -121,16 +113,6 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
     pid_t pid;
     ncNetConf ncnet;
 
-    logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d\n", 
-                instanceId, params->numberOfCores, params->diskSize, params->memorySize);
-    logprintfl (EUCAINFO, "                         image=%s at %s\n", imageId, imageURL);
-    logprintfl (EUCAINFO, "                         krnel=%s at %s\n", kernelId, kernelURL);
-    if (ramdiskId) {
-        logprintfl (EUCAINFO, "                         rmdsk=%s at %s\n", ramdiskId, ramdiskURL);
-    }
-    logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s pubMAC=%s\n",
-                vlan, privMac, pubMac);
-    
     strcpy(ncnet.privateMac, privMac);
     strcpy(ncnet.publicMac, pubMac);
     ncnet.vlan = vlan;
@@ -250,8 +232,11 @@ static void * rebooting_thread (void *arg)
     return NULL;
 }
 
-static int doRebootInstance(ncMetadata *meta, char *instanceId) 
-{    
+static int
+doRebootInstance(	struct nc_state_t *nc,
+			ncMetadata *meta,
+			char *instanceId) 
+{
     sem_p (inst_sem); 
     ncInstance *instance = find_instance (&global_instances, instanceId);
     sem_v (inst_sem);
@@ -270,7 +255,11 @@ static int doRebootInstance(ncMetadata *meta, char *instanceId)
     return OK;
 }
 
-static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **consoleOutput) {
+static int
+doGetConsoleOutput(	struct nc_state_t *nc,
+			ncMetadata *meta,
+			char *instanceId,
+			char **consoleOutput) {
   char *console_output;
   char console_file[1024];
   int rc, fd;
@@ -309,14 +298,18 @@ static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **console
   return(0);
 }
 
-static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
+static int
+doAttachVolume (	struct nc_state_t *nc,
+			ncMetadata *meta,
+			char *instanceId,
+			char *volumeId,
+			char *remoteDev,
+			char *localDev)
 {
     int ret = OK;
     ncInstance *instance;
     virConnectPtr *conn;
     char localDevReal[32], localDevTag[256];
-
-    logprintfl (EUCAINFO, "doAttachVolume() invoked (id=%s vol=%s remote=%s local=%s)\n", instanceId, volumeId, remoteDev, localDev);
 
     // fix up format of incoming local dev name, if we need to
     ret = convert_dev_names (localDev, localDevReal, localDevTag);
@@ -377,14 +370,19 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     return ret;
 }
 
-static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+static int
+doDetachVolume (	struct nc_state_t *nc,
+			ncMetadata *meta,
+			char *instanceId,
+			char *volumeId,
+			char *remoteDev,
+			char *localDev,
+			int force)
 {
     int ret = OK;
     ncInstance * instance;
     virConnectPtr *conn;
     char localDevReal[32], localDevTag[256];
-
-    logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
 
     // fix up format of incoming local dev name, if we need to
     ret = convert_dev_names (localDev, localDevReal, localDevTag);
