@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#FAKEREG="yes"
+FAKEREG="yes"
 
 FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
@@ -738,6 +738,7 @@ checkLocalService() {
 	fi
 
 	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null"
+	CMD="echo NOT IMPLEMENTED"
     elif [ "$SERVICE" = "CC" ]; then
 	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC > /dev/null"
     fi
@@ -745,7 +746,6 @@ checkLocalService() {
     if [ -n "${FAKEREG}" ]; then
 	CMD="echo"
     fi
-    return 0
     if ! eval $CMD ; then
 	echo "ERROR: you need to be on the $SERVICE host and the $SERVICE needs to be running."
 	return 1
