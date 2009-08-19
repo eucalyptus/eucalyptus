@@ -47,11 +47,13 @@ server: $(SERVICE_SO)
 $(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
 	$(CC) -shared generated/*.o server-marshal.o handlers.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
 
-client: $(CLIENT)
+client: $(CLIENT)_full $(CLIENTKILLALL)
 
-$(CLIENT): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
-	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CC_LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o $(CLIENT).c cc-client-marshal-adb.c -DMODE=0
+$(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
 	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CC_LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o $(CLIENT).c cc-client-marshal-adb.c -DMODE=1
+
+$(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
+	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CC_LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o $(CLIENT).c cc-client-marshal-adb.c -DMODE=0
 
 deploy:
 	$(INSTALL) -d $(AXIS2C_SERVICES)/$(SERVICE_NAME)/
@@ -74,8 +76,8 @@ deploy:
 clean:
 	rm -f $(SERVICE_SO) *.o $(CLIENTKILLALL) $(CLIENT)_full *~* *#*
 
-distclean:
-	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) *~* *#*
+distclean: clean
+	rm -rf generated
 
 install: deploy
 	@$(INSTALL) -m 0555 $(CLIENTKILLALL) $(sbindir)
