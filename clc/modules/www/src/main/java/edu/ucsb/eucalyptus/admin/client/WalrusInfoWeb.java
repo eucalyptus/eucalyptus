@@ -6,19 +6,19 @@ public class WalrusInfoWeb implements IsSerializable {
 	private String name;
 	private Boolean committed;
     private String bucketsRootDirectory;
-    private Integer maxBucketsPerUser;
-    private Integer maxBucketSizeInMB;
-    private Integer maxCacheSizeInMB;
-    private Integer snapshotsTotalInGB;
+    private Long maxBucketsPerUser;
+    private Long maxBucketSizeInMB;
+    private Long maxCacheSizeInMB;
+    private Long snapshotsTotalInGB;
 
 	public WalrusInfoWeb() {}
 
 	public WalrusInfoWeb( final String name,
             final String bucketsRootDirectory,
-            final Integer maxBucketsPerUser,
-            final Integer maxBucketSizeInMB,
-            final Integer maxCacheSizeInMB,
-            final Integer snapshotsTotalInGB) {
+            final Long maxBucketsPerUser,
+            final Long maxBucketSizeInMB,
+            final Long maxCacheSizeInMB,
+            final Long snapshotsTotalInGB) {
 		this.name = name;
 		this.committed = false;
         this.bucketsRootDirectory = bucketsRootDirectory;
@@ -57,42 +57,42 @@ public class WalrusInfoWeb implements IsSerializable {
         this.bucketsRootDirectory = bucketsRootDirectory;
     }
 
-    public Integer getMaxBucketSizeInMB()
+    public Long getMaxBucketSizeInMB()
     {
         return maxBucketSizeInMB;
     }
 
-    public void setMaxBucketSizeInMB( final Integer maxBucketSizeInMB )
+    public void setMaxBucketSizeInMB( final Long maxBucketSizeInMB )
     {
         this.maxBucketSizeInMB = maxBucketSizeInMB;
     }
 
-    public Integer getMaxBucketsPerUser()
+    public Long getMaxBucketsPerUser()
     {
         return maxBucketsPerUser;
     }
 
-    public void setMaxBucketsPerUser( final Integer maxBucketsPerUser )
+    public void setMaxBucketsPerUser( final Long maxBucketsPerUser )
     {
         this.maxBucketsPerUser = maxBucketsPerUser;
     }
 
-    public Integer getMaxCacheSizeInMB()
+    public Long getMaxCacheSizeInMB()
     {
         return maxCacheSizeInMB;
     }
 
-    public void setMaxCacheSizeInMB( final Integer maxCacheSizeInMB )
+    public void setMaxCacheSizeInMB( final Long maxCacheSizeInMB )
     {
         this.maxCacheSizeInMB = maxCacheSizeInMB;
     }
 
-    public Integer getSnapshotsTotalInGB()
+    public Long getSnapshotsTotalInGB()
     {
         return snapshotsTotalInGB;
     }
 
-    public void setSnapshotsTotalInGB( final Integer snapshotsTotalInGB )
+    public void setSnapshotsTotalInGB( final Long snapshotsTotalInGB )
     {
         this.snapshotsTotalInGB = snapshotsTotalInGB;
     }

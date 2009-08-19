@@ -1,0 +1,2 @@
+name=configuration
+euca.model.configuration=eucalyptus-configuration.xml

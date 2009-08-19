@@ -222,7 +222,7 @@ public class Cluster implements HasName {
     return this.nodeMap.get( serviceTag );
   }
 
-  public ClusterStateType getWeb() {
+  public RegisterClusterType getWeb() {
     String host = this.getClusterInfo().getUri();
     int port = 0;
     try {
@@ -231,7 +231,7 @@ public class Cluster implements HasName {
       port = uri.getPort();
     }
     catch ( URISyntaxException e ) {}
-    return new ClusterStateType( this.getName(), host, port );
+    return new RegisterClusterType( this.getName(), host, port );
   }
 
   public ClusterInfo getClusterInfo() {

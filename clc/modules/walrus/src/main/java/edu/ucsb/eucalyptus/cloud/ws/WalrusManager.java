@@ -35,6 +35,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -130,7 +131,7 @@ public class WalrusManager {
 			buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z"));
 		}
 		try {
-			CanonicalUserType owner = new CanonicalUserType(Credentials.Users.getQueryId(userId), userId);
+			CanonicalUserType owner = new CanonicalUserType(UserCredentialProvider.getQueryId(userId), userId);
 			ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
 			reply.setOwner(owner);
 			bucketList.setBuckets(buckets);

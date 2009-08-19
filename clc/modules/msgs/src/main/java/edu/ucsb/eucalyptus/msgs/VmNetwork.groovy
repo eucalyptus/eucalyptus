@@ -1,11 +1,10 @@
 package edu.ucsb.eucalyptus.msgs
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
-
 public class StartNetworkType extends EucalyptusMessage {
 
   int vlan;
   String netName;
+  ArrayList<String> clusterControllers;
 
   def StartNetworkType(final msg, final vlan, final netName) {
     super(msg);
@@ -57,6 +56,24 @@ public class StopNetworkType extends EucalyptusMessage {
 
 public class StopNetworkResponseType extends EucalyptusMessage {
   boolean _return;
+}
+
+//TODO: new message type
+public class DescribeNetworksType extends EucalyptusMessage {
+  ArrayList<String> clusterControllers;
+}
+//TODO: new message type
+public class DescribeNetworksResponeType extends EucalyptusMessage {
+  Integer mode;
+  Integer addrsPerNetwork;
+  ArrayList<NetworkInfoType> activeNetworks = new ArrayList<NetworkInfoType>();
+}
+//TODO: new message type
+public class NetworkInfoType extends EucalyptusData {
+  Integer vlan;
+  String networkName;
+  String userName;
+  ArrayList<String> allocatedAddresses = new ArrayList<String>();
 }
 
 

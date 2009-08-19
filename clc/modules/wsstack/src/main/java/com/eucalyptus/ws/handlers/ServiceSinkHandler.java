@@ -68,7 +68,7 @@ public class ServiceSinkHandler implements ChannelDownstreamHandler, ChannelUpst
         if( this.msgReceiver == null ) {
           ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
           Messaging.dispatch( "vm://RequestQueue", msg );
-        } else if (user == null){
+        } else if (user == null||user.getIsAdministrator( )){
           MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( this.msgReceiver.getConnector().getMessageAdapter( msg ) ) );
           ctx.getChannel( ).write( reply.getPayload( ) );
         }

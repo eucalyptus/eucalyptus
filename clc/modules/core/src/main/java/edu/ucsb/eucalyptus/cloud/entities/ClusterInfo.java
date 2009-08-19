@@ -9,8 +9,7 @@ import javax.persistence.*;
 @Entity
 @Table( name = "clusters" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class
-    ClusterInfo {
+public class ClusterInfo {
 
   @Id
   @GeneratedValue
@@ -29,7 +28,7 @@ public class
   @Column( name = "cluster_enabled" )
   private Boolean enabled;
 
-  public static String NAMESPACE = BindingUtil.sanitizeNamespace( "http://cc.eucalyptus.ucsb.edu/" );
+
   private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusCC";
   private static String DEFAULT_PROTOCOL = "http";
 
@@ -128,11 +127,6 @@ public class
   public String getInsecureUri()
   {
     return this.getProtocol() + "://" + this.getHost() + ":" + this.getPort() + this.getInsecureServicePath();
-  }
-
-  public String getNamespace()
-  {
-    return NAMESPACE;
   }
 
   @Override

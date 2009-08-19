@@ -34,7 +34,7 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
-import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
@@ -314,7 +314,7 @@ public class EucalyptusManagement {
 		dbWrapper.commit();
 
 		try {//TODO: fix this nicely
-			Credentials.addUser(newUser.getUserName( ),newUser.isAdministrator( ));
+			UserCredentialProvider.addUser(newUser.getUserName( ),newUser.isAdministrator( ));
 		} catch ( UserExistsException e ) {
 			LOG.error(e);
 		}
@@ -522,10 +522,10 @@ public class EucalyptusManagement {
 		}
 		return new WalrusInfoWeb(walrusInfo.getName(), 
 				walrusInfo.getStorageDir(), 
-				walrusInfo.getStorageMaxBucketsPerUser(), 
-				walrusInfo.getStorageMaxBucketSizeInMB(), 
-				walrusInfo.getStorageMaxCacheSizeInMB(), 
-				walrusInfo.getStorageMaxTotalSnapshotSizeInGb());
+				new Long(walrusInfo.getStorageMaxBucketsPerUser()), 
+				new Long(walrusInfo.getStorageMaxBucketSizeInMB()), 
+				new Long(walrusInfo.getStorageMaxCacheSizeInMB()), 
+				new Long(walrusInfo.getStorageMaxTotalSnapshotSizeInGb()));
 	}
 
 	private static SystemConfiguration validateSystemConfiguration(SystemConfiguration sysConf) {

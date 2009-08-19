@@ -109,6 +109,16 @@
         <value name="privateIp" field="ipAddress"/>
         <value name="publicIp" field="ignoredPublicIp"/>
     </mapping>
+    <mapping class="edu.ucsb.eucalyptus.msgs.NetworkInfoType" abstract="true">
+        <value name="vlan" field="vlan"/>
+        <value name="netName" field="networkName"/>
+        <value name="userName" field="userName"/>
+        <structure usage="optional">
+            <collection field="allocatedAddresses" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <value name="activeAddrs" type="java.lang.String"/>
+            </collection>
+        </structure>
+    </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.PacketFilterRule" abstract="true">
         <value name="type" field="policy" usage="required"/>
@@ -127,7 +137,8 @@
                 <value name="sourceNets" type="java.lang.String"/>
             </collection>
         </structure>
-        <value name="destName" field="destName" usage="required"/>
+        <value name="destUserName" field="destUserName" usage="required"/>
+        <value name="destName" field="destNetworkName" usage="required"/>
         <value name="protocol" field="protocol" usage="required"/>
         <value name="portRangeMin" field="portMin" usage="required"/>
         <value name="portRangeMax" field="portMax" usage="required"/>

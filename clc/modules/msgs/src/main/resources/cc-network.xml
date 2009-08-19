@@ -33,12 +33,35 @@
   -->
 
 <binding force-classes="true">
-    <namespace uri="http://eucalyptus.ucsb.edu/" default="elements"/>
-    <mapping name="StartNetwork" class="edu.ucsb.eucalyptus.msgs.StartNetworkType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+<!--
+TODO: change name space to reflect change of API
+    -->
+     <namespace uri="http://eucalyptus.ucsb.edu/" default="elements"/>
+    <mapping name="DescribeNetworks" class="edu.ucsb.eucalyptus.msgs.DescribeNetworksType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="vlan" field="vlan" usage="required"/>
-        <value name="netName" field="netName" usage="required"/>
+        <collection field="clusterControllers" factory="org.jibx.runtime.Utility.arrayListFactory">
+            <value name="clusterControllers" type="java.lang.String"/>
+        </collection>
     </mapping>
+        <mapping name="DescribeNetworksRespone" class="edu.ucsb.eucalyptus.msgs.DescribeNetworksResponeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <value name="mode" field="mode" usage="required"/>
+        <value name="addrsPerNetwork" field="addrsPerNetwork" usage="required"/>
+        <structure usage="optional">
+          <collection field="activeNetworks" factory="org.jibx.runtime.Utility.arrayListFactory">
+              <structure name="activeNetworks" map-as="edu.ucsb.eucalyptus.msgs.NetworkInfoType"/>
+          </collection>        
+        </structure>
+    </mapping>
+    
+     <mapping name="StartNetwork" class="edu.ucsb.eucalyptus.msgs.StartNetworkType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+         <value name="vlan" field="vlan" usage="required"/>
+         <value name="netName" field="netName" usage="required"/>
+        <collection field="clusterControllers" factory="org.jibx.runtime.Utility.arrayListFactory">
+            <value name="clusterControllers" type="java.lang.String"/>
+        </collection>
+     </mapping>
     <mapping name="StartNetworkResponse" class="edu.ucsb.eucalyptus.msgs.StartNetworkResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
     </mapping>

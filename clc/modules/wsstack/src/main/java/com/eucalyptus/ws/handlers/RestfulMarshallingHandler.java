@@ -29,7 +29,12 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-      this.namespace = "http://ec2.amazonaws.com/doc/" + httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) ) + "/";
+      String bindingVersion = httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) );
+      if( bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
+        this.namespace = "http://ec2.amazonaws.com/doc/" + bindingVersion + "/";        
+      } else {
+        this.namespace = "http://msgs.eucalyptus.ucsb.edu";
+      }
       // TODO: get real user data here too
       httpRequest.setMessage( this.bind( "admin", true, httpRequest ) );
     }

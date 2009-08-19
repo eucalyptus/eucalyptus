@@ -82,7 +82,7 @@
             <property name="hibernate.connection.url" value="jdbc:hsqldb:hsql://${euca.db.host}:${euca.db.port}/eucalyptus"/>
             <property name="hibernate.connection.username" value="sa"/>
             <property name="hibernate.connection.password" value="${euca.db.password}"/>
-            <property name="hibernate.connection.autocommit" value="false"/>
+            <property name="hibernate.connection.autocommit" value="true"/>
             <property name="hibernate.c3p0.min_size" value="16"/>
             <property name="hibernate.c3p0.max_size" value="1024"/>
             <property name="hibernate.c3p0.timeout" value="20"/>

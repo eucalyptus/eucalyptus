@@ -13,21 +13,6 @@ public class INTERNAL extends EucalyptusMessage {
   }
 }
 
-public class ClusterStateType extends EucalyptusMessage{
-  String name;
-  String host;
-  int port;
-
-  def ClusterStateType() {
-  }
-
-  def ClusterStateType(final name, final host, final port) {
-    this.name = name;
-    this.host = host;
-    this.port = port;
-  }
-}
-
 public class StorageStateType extends EucalyptusMessage{
   private String name;
   private String volumesPath;
@@ -275,7 +260,6 @@ public class NetworkConfigType extends EucalyptusData {
 }
 
 public class NetworkParameters extends EucalyptusData {
-
   String privateMacAddress;
   String publicMacAddress;
   int macLimit;
@@ -300,7 +284,8 @@ public class PacketFilterRule extends EucalyptusData {
     return pf;
   }
 
-  String destName;
+  String destUserName;
+  String destNetworkName;
   String policy = "firewall-open";
   String protocol;
   int portMin;
@@ -310,8 +295,9 @@ public class PacketFilterRule extends EucalyptusData {
   ArrayList<String> sourceNetworkNames = new ArrayList<String>();
   ArrayList<String> sourceUserNames = new ArrayList<String>();
 
-  def PacketFilterRule(final destName, final protocol, final portMin, final portMax)
+  def PacketFilterRule(final destUserName, final destName, final protocol, final portMin, final portMax)
   {
+    this.destUserName = destUserName;
     this.destName = destName;
     this.protocol = protocol;
     this.portMin = portMin;

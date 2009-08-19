@@ -55,6 +55,9 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
     String auth = "_auth";
     props.setProperty( ServerConstants.SC_KEY_DATABASE+".2", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME + auth );
     props.setProperty( ServerConstants.SC_KEY_DBNAME+".2", EucalyptusProperties.NAME + auth );
+    String config = "_config";
+    props.setProperty( ServerConstants.SC_KEY_DATABASE+".3", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME + config );
+    props.setProperty( ServerConstants.SC_KEY_DBNAME+".3", EucalyptusProperties.NAME + config );
     db.setProperties( props );
     return true;
   }

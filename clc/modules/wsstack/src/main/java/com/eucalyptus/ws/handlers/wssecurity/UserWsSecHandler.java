@@ -9,8 +9,8 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.util.WSSecurity;
@@ -26,8 +26,8 @@ public class UserWsSecHandler extends MessageStackHandler implements ChannelHand
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
       SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
       X509Certificate cert = WSSecurity.getVerifiedCertificate( envelope );
-      String userName = Credentials.Users.getUserName( cert );
-      User user = Credentials.getUser( userName );
+      String userName = UserCredentialProvider.getUserName( cert );
+      User user = UserCredentialProvider.getUser( userName );
       httpRequest.setUser( user );
     }
   }

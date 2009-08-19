@@ -11,7 +11,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
-import edu.ucsb.eucalyptus.msgs.ClusterStateType;
+import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.util.Messaging;
 import org.apache.log4j.Logger;
@@ -26,10 +26,10 @@ public class RemoteInfoHandler {
 
   public static synchronized void setClusterList( List<ClusterInfoWeb> newClusterList )
   {
-    List<ClusterStateType> list = new ArrayList<ClusterStateType>();
+    List<RegisterClusterType> list = new ArrayList<RegisterClusterType>();
     for ( ClusterInfoWeb cw : newClusterList ) {
       LOG.info( "Adding cluster for update: " + cw.getName() + " - " + cw.getHost() + ":" + cw.getPort() );
-      list.add( new ClusterStateType( cw.getName(), cw.getHost(), cw.getPort() ) );
+      list.add( new RegisterClusterType( cw.getName(), cw.getHost(), cw.getPort() ) );
     }
     Messaging.dispatch( EucalyptusProperties.CLUSTERSINK_REF, list );
   }
@@ -37,7 +37,7 @@ public class RemoteInfoHandler {
   public static synchronized List<ClusterInfoWeb> getClusterList()
   {
     List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>();
-    for ( ClusterStateType c : Clusters.getInstance().getClusters() )
+    for ( RegisterClusterType c : Clusters.getInstance().getClusters() )
       clusterList.add( new ClusterInfoWeb( c.getName(), c.getHost(), c.getPort()) ); 
     return clusterList;
   }

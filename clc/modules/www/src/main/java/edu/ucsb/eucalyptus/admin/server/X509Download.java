@@ -30,9 +30,9 @@ package edu.ucsb.eucalyptus.admin.server;
 
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.KeyTool;
@@ -141,7 +141,7 @@ public class X509Download extends HttpServlet {
     X509Certificate cloudCert = null;
     try {
       x509.checkValidity( );
-      Credentials.Users.addCertificate( userName, newKeyName, x509 );
+      UserCredentialProvider.addCertificate( userName, newKeyName, x509 );
       cloudCert = EucaKeyStore.getInstance( ).getCertificate( EucalyptusProperties.NAME );
     } catch ( GeneralSecurityException e ) {
       LOG.fatal( e, e );
@@ -149,8 +149,8 @@ public class X509Download extends HttpServlet {
     
     String certPem = new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) );
 
-    String userAccessKey = Credentials.Users.getQueryId( userName );
-    String userSecretKey = Credentials.Users.getSecretKey( userAccessKey );
+    String userAccessKey = UserCredentialProvider.getQueryId( userName );
+    String userSecretKey = UserCredentialProvider.getSecretKey( userAccessKey );
 
     ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
     ZipOutputStream zipOut = new ZipOutputStream( byteOut );

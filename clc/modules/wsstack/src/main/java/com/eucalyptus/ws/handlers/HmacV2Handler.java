@@ -9,9 +9,9 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
@@ -21,7 +21,6 @@ import com.eucalyptus.ws.util.HmacUtils;
 @ChannelPipelineCoverage( "one" )
 public class HmacV2Handler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( HmacV2Handler.class );
-
   public enum SecurityParameter {
     AWSAccessKeyId,
     Timestamp,
@@ -31,6 +30,13 @@ public class HmacV2Handler extends MessageStackHandler {
     Date,
     Content_MD5,
     Content_Type
+  }
+  private boolean doAdmin = false;
+  
+  public HmacV2Handler( ) {}
+
+  public HmacV2Handler( boolean doAdmin ) {
+    this.doAdmin = doAdmin;
   }
 
   @Override
@@ -42,7 +48,7 @@ public class HmacV2Handler extends MessageStackHandler {
       if ( !parameters.containsKey( SecurityParameter.Signature.toString( ) ) ) throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.Signature );
       // :: note we remove the sig :://
       String sig = parameters.remove( SecurityParameter.Signature.toString( ) );
-      String queryId = parameters.get( SecurityParameter.AWSAccessKeyId.toString( ) );
+      String queryId = doAdmin?UserCredentialProvider.getQueryId( "admin" ):parameters.get( SecurityParameter.AWSAccessKeyId.toString( ) );
       String verb = httpRequest.getMethod( ).getName( );
       String addr = httpRequest.getServicePath( );
       String headerHost = httpRequest.getHeader( "Host" );
@@ -57,7 +63,7 @@ public class HmacV2Handler extends MessageStackHandler {
       // TODO: hook in user key lookup here
       String secretKey;
       try {
-        secretKey = Credentials.Users.getSecretKey( queryId );
+        secretKey = UserCredentialProvider.getSecretKey( queryId );
       } catch ( Exception e ) {
         throw new AuthenticationException( "User authentication failed." );
       }
@@ -82,8 +88,8 @@ public class HmacV2Handler extends MessageStackHandler {
           if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) throw new AuthenticationException( "User authentication failed." );
         }
       }
-      String userName = Credentials.Users.getUserName( queryId );
-      User user = Credentials.getUser( userName );
+      String userName = UserCredentialProvider.getUserName( queryId );
+      User user = UserCredentialProvider.getUser( userName );
       httpRequest.setUser( user );
       parameters.remove( RequiredQueryParams.SignatureVersion.toString( ) );
       parameters.remove( "SignatureMethod" );

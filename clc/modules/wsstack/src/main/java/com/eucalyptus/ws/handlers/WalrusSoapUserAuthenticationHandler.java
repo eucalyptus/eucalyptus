@@ -24,8 +24,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -85,12 +85,12 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 	private void authenticate(MappingHttpRequest httpRequest, String accessKeyID, String signature, String data) throws AuthenticationException {
 		signature = signature.replaceAll("=", "");
 		try {
-			String queryKey = Credentials.Users.getSecretKey(accessKeyID);
+			String queryKey = UserCredentialProvider.getSecretKey(accessKeyID);
 			String authSig = checkSignature( queryKey, data );
 			if (!authSig.equals(signature))
 				throw new AuthenticationException( "User authentication failed. Could not verify signature" );
-			String userName = Credentials.Users.getUserName( accessKeyID );
-			User user = Credentials.getUser( userName );  
+			String userName = UserCredentialProvider.getUserName( accessKeyID );
+			User user = UserCredentialProvider.getUser( userName );  
 			httpRequest.setUser( user );
 		} catch(Exception ex) {
 			throw new AuthenticationException( "User authentication failed. Unable to obtain query key" );

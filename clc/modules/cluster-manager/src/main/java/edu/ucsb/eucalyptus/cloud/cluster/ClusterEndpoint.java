@@ -24,26 +24,26 @@ public class ClusterEndpoint implements Startable {
     Clusters.getInstance();
   }
 
-  public void fire( List<ClusterStateType> clusterChanges ) {
+  public void fire( List<RegisterClusterType> clusterChanges ) {
     LOG.warn( "Processing new list of clusters: ");
-    for( ClusterStateType c : clusterChanges ) {
+    for( RegisterClusterType c : clusterChanges ) {
       LOG.warn( "Cluster: " + c.getName() + " host=" + c.getHost() + ":" + c.getPort() );
     }
     Clusters.getInstance().update( clusterChanges );
   }
 
-  public AddClusterResponseType fire( AddClusterType request ) throws EucalyptusCloudException {
-    if( !request.isAdministrator() ) {
-      throw new EucalyptusCloudException("Only admins can add clusters.");
-    }
-    for ( ClusterStateType c : Clusters.getInstance().getClusters() ) {
-      if( c.getName().equals( request.getName() ) ) {
-        throw new EucalyptusCloudException("Cluster already exists: " + request.getName() );
-      }
-    }
-    Clusters.getInstance().add( new ClusterStateType( request.getName(), request.getHost(), request.getPort() ) );
-    return (AddClusterResponseType) request.getReply();
-  }
+//  public AddClusterResponseType fire( AddClusterType request ) throws EucalyptusCloudException {
+//    if( !request.isAdministrator() ) {
+//      throw new EucalyptusCloudException("Only admins can add clusters.");
+//    }
+//    for ( ClusterStateType c : Clusters.getInstance().getClusters() ) {
+//      if( c.getName().equals( request.getName() ) ) {
+//        throw new EucalyptusCloudException("Cluster already exists: " + request.getName() );
+//      }
+//    }
+//    Clusters.getInstance().add( new ClusterStateType( request.getName(), request.getHost(), request.getPort() ) );
+//    return (AddClusterResponseType) request.getReply();
+//  }
 
   public void enqueue( EucalyptusMessage msg ) {
     LOG.error( "Intentionally dropping generic message: " + msg );

@@ -141,7 +141,7 @@ public class NetworkRulesGroup
     Network vmNetwork = new Network( userName, this.getName() );
     for ( NetworkRule networkRule : this.getNetworkRules() )
     {
-      PacketFilterRule pfrule = new PacketFilterRule( this.getName(), networkRule.getProtocol(), networkRule.getLowPort(), networkRule.getHighPort() );
+      PacketFilterRule pfrule = new PacketFilterRule( userName, this.getName(), networkRule.getProtocol(), networkRule.getLowPort(), networkRule.getHighPort() );
       for ( IpRange cidr : networkRule.getIpRanges() )
         pfrule.getSourceCidrs().add( cidr.getValue() );
       for ( NetworkPeer peer : networkRule.getNetworkPeers() )

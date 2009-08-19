@@ -35,7 +35,7 @@ public class PipelineRegistry {
     for ( FilteredPipeline f : this.pipelines ) {
       if ( f.accepts( request ) ) {
         if ( candidate != null ) {
-          LOG.warn( "More than one candidate pipeline.  Ignoring offer by: " + f.getClass( ).getSimpleName( ) );
+          LOG.warn( "More than one candidate pipeline.  Ignoring offer by: " + f.getPipelineName( ) + " of type " + f.getClass( ).getSimpleName( ) );
         } else {
           candidate = f;
         }

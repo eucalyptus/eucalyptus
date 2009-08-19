@@ -50,6 +50,7 @@ import org.jboss.netty.handler.stream.ChunkedInput;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -129,9 +130,9 @@ public class WalrusImageManager {
 					if(isAdministrator) {
 						try {
 							boolean verified = false;
-							List<String> aliases = Credentials.Users.getAliases();
+							List<String> aliases = UserCredentialProvider.getAliases();
 							for(String alias : aliases) {
-								X509Certificate cert = Credentials.Users.getCertificate(alias);
+								X509Certificate cert = UserCredentialProvider.getCertificate(alias);
 								verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if(verified)
 									break;
@@ -158,7 +159,7 @@ public class WalrusImageManager {
 						for(CertificateInfo certInfo: certInfos) {
 							String alias = certInfo.getCertAlias();
 							try {
-								X509Certificate cert = Credentials.Users.getCertificate(alias);
+								X509Certificate cert = UserCredentialProvider.getCertificate(alias);
 								signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if (signatureVerified)
 									break;
@@ -293,7 +294,7 @@ public class WalrusImageManager {
 					for(CertificateInfo certInfo: certInfos) {
 						String alias = certInfo.getCertAlias();
 						try {
-							X509Certificate cert = Credentials.Users.getCertificate(alias);
+							X509Certificate cert = UserCredentialProvider.getCertificate(alias);
 							PublicKey publicKey = cert.getPublicKey();
 							sigVerifier.initVerify(publicKey);
 							sigVerifier.update((machineConfiguration + image).getBytes());

@@ -117,7 +117,9 @@ public class EntityWrapper<TYPE> {
   }
 
   public void rollback( ) {
-    this.tx.rollback( );
+    if( this.tx.isActive( ) ) {
+      this.tx.rollback( );      
+    }
     this.em.close( );
   }
 

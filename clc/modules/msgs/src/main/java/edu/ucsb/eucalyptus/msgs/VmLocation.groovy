@@ -1,15 +1,7 @@
 package edu.ucsb.eucalyptus.msgs
 
 import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
-
 public class ClusterMessage extends EucalyptusMessage{}
-public class AddClusterType extends ClusterMessage {
-  String name;
-  String host;
-  int port;
-}
-public class AddClusterResponseType extends ClusterMessage {}
-
 /** *******************************************************************************/
 public class DescribeAvailabilityZonesType extends ClusterMessage { //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "ZoneName")

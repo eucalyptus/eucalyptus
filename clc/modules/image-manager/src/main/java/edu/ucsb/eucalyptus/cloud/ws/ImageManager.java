@@ -35,8 +35,8 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -306,7 +306,7 @@ public class ImageManager {
     boolean ret = false;
     try {
       Signature sigVerifier = Signature.getInstance( "SHA1withRSA" );
-      X509Certificate cert = Credentials.Users.getCertificate( alias );
+      X509Certificate cert = UserCredentialProvider.getCertificate( alias );
       PublicKey publicKey = cert.getPublicKey();
       sigVerifier.initVerify( publicKey );
       sigVerifier.update( pad.getBytes() );

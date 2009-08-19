@@ -54,7 +54,7 @@ public class EucalyptusQueryPipeline extends FilteredPipeline {
           }
         }
       }
-      return true;
+      return true && message.getUri( ).startsWith( "/services/Eucalyptus" );
     }
     return false;
   }

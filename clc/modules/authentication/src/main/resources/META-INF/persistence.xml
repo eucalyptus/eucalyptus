@@ -40,6 +40,7 @@
     <persistence-unit name="eucalyptus_auth" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.ejb.HibernatePersistence</provider>
         <class>com.eucalyptus.auth.User</class>
+        <class>com.eucalyptus.auth.ClusterCredentials</class>
         <class>com.eucalyptus.auth.X509Cert</class>
      <properties>
             <property name="hibernate.connection.provider_class" value="org.hibernate.connection.C3P0ConnectionProvider"/>
@@ -52,7 +53,7 @@
             <property name="hibernate.connection.url" value="jdbc:hsqldb:hsql://${euca.db.host}:${euca.db.port}/eucalyptus_auth"/>
             <property name="hibernate.connection.username" value="sa"/>
             <property name="hibernate.connection.password" value="${euca.db.password}"/>
-            <property name="hibernate.connection.autocommit" value="false"/>
+            <property name="hibernate.connection.autocommit" value="true"/>
             <property name="hibernate.c3p0.min_size" value="16"/>
             <property name="hibernate.c3p0.max_size" value="1024"/>
             <property name="hibernate.c3p0.timeout" value="20"/>
