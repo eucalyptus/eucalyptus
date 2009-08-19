@@ -36,7 +36,7 @@ typedef struct publicip_t {
 } publicip;
 
 typedef struct tunnelData_t {
-  uint32_t localIpId;
+  int localIpId;
   uint32_t ccs[NUMBER_OF_CCS];
   time_t ccsTunnelStart[NUMBER_OF_CCS];
   time_t tunpassMtime;

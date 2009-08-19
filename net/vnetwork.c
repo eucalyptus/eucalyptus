@@ -987,13 +987,17 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
     return(0);
   }
   
+  //  logprintfl(EUCADEBUG, "localIP: %s, ccsLen: %d\n", vnetconfig->localIp, ccsLen);
   for (i=0; i<ccsLen; i++) {
+    //    logprintfl(EUCADEBUG, "CCS: %s/%d\n", ccs[i], i);
     if (!strcmp(ccs[i], vnetconfig->localIp)) {
+      //      logprintfl(EUCADEBUG, "setting localIpId to %d\n", i);
       localIpId = i;
     }
     
     found=0;
     for (j=0; j<NUMBER_OF_CCS && !found; j++) {
+      //      logprintfl(EUCADEBUG, "dot2hexing %s, %d == %d\n", ccs[i], dot2hex(ccs[i]), vnetconfig->tunnels.ccs[j]);
       if (dot2hex(ccs[i]) == vnetconfig->tunnels.ccs[j]) {
 	found=1;
       }
@@ -1007,6 +1011,7 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   
   if (localIpId >= 0) {
     vnetconfig->tunnels.localIpId = localIpId;
+    //    logprintfl(EUCADEBUG, "woot, set localIpId to %d\n", vnetconfig->tunnels.localIpId);
   } else {
     logprintfl(EUCAWARN, "VNET_LOCALIP is not in list of CCS, tearing down tunnels\n");
     vnetTeardownTunnels(vnetconfig);
@@ -1016,6 +1021,7 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   }
   
   for (i=0; i<NUMBER_OF_CCS; i++) {
+    //    logprintfl(EUCADEBUG, "DCCS: %s/%d\n", hex2dot(vnetconfig->tunnels.ccs[i]), i);
     if (vnetconfig->tunnels.ccs[i] != 0) {
       found=0;
       for (j=0; j<ccsLen && !found; j++) {
@@ -1025,7 +1031,7 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
       }
       if (!found) {
 	// exists locally, but not in new list, remove it
-	logprintfl(EUCADEBUG, "removing CC %s,%d\n", hex2dot(vnetconfig->tunnels.ccs[i]), i);
+	logprintfl(EUCADEBUG, "removing CC %d,%d\n", vnetconfig->tunnels.ccs[i], i);
 	vnetDelCCS(vnetconfig, vnetconfig->tunnels.ccs[i]);
       }
     }
@@ -1371,7 +1377,7 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   int i, done, rc, dpid;
   char cmd[1024], tundev[32], *remoteIp=NULL, pidfile[1024], rootwrap[1024];
 
-  if (!vnetconfig->tunnels.tunneling || vnetconfig->tunnels.localIpId == -1) {
+  if (!vnetconfig->tunnels.tunneling || (vnetconfig->tunnels.localIpId == -1)) {
     return(0);
   }
   snprintf(rootwrap, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap", vnetconfig->eucahome);  
@@ -1384,27 +1390,6 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
     logprintfl(EUCAERROR, "cannot run tunnel server: '%s'\n", cmd);
   }
 
-  /*
-  snprintf(pidfile, 1024, "%s/var/run/eucalyptus/vtund-server.pid", vnetconfig->eucahome);
-  rc = check_file(pidfile);
-  if (rc) {
-    // pidfile does not exist, start vtund server
-    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -s -n -f %s/var/lib/eucalyptus/keys/vtunall.conf", vnetconfig->eucahome, vnetconfig->eucahome);
-    logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
-    rc = daemonrun(cmd, &dpid);
-    logprintfl(EUCADEBUG, "done: %d\n", rc);
-    if (!rc && dpid >= 0) {
-      char pidstr[32];
-      snprintf(pidstr, 32, "%d", dpid);
-      // write pid
-      rc = write2file(pidfile, pidstr);
-      if (rc) {
-	logprintfl(EUCAERROR, "cannot write pid '%s' to file '%s'\n", pidstr, pidfile);
-      }
-    }
-  }
-  */
-  
   done=0;
   for (i=0; i<NUMBER_OF_CCS && !done; i++) {
     if (vnetconfig->tunnels.ccs[i] != 0) {
@@ -1421,24 +1406,6 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
 	  if (rc) {
 	    logprintfl(EUCAERROR, "cannot run tunnel client: '%s'\n", cmd);
 	  }  
-	  /*
-	  rc = check_file(pidfile);
-	  if (rc) {
-	    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -n -f %s/var/lib/eucalyptus/keys/vtunall.conf -p tun-%d-%d %s", vnetconfig->eucahome, vnetconfig->eucahome, vnetconfig->tunnels.localIpId, i, remoteIp);
-	    logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
-	    rc = daemonrun(cmd, &dpid);
-	    logprintfl(EUCADEBUG, "done: %d\n", rc);
-	    if (!rc && dpid >= 0) {
-	      char pidstr[32];
-	      snprintf(pidstr, 32, "%d", dpid);
-	      // write pid
-	      rc = write2file(pidfile, pidstr);
-	      if (rc) {
-		logprintfl(EUCAERROR, "cannot write pid '%s' to file '%s'\n", pidstr, pidfile);
-	      }
-	    }
-	  }
-	  */
 	}
       }
       if (remoteIp) free(remoteIp);

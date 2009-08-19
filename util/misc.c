@@ -741,19 +741,15 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
     rc = check_file(pidfile);
     if (!rc) {
       char *pidstr=NULL;
-      //      printf("found pidfile\n");
       // pidfile exists
       pidstr = file2str(pidfile);
       if (pidstr) {
-	//	printf("pidfile has pid in it %s\n", pidstr);
 	snprintf(file, 1024, "/proc/%s/cmdline", pidstr);
 	if (!check_file(file)) {
-	  //	  printf("process already running\n");
 	  FH = fopen(file, "r");
 	  if (FH) {
 	    if (fgets(cmdstr, 1024, FH)) {
 	      if (strstr(cmdstr, procname)) {
-		//		printf("process match\n");
 		// process is running, and is indeed procname
 		found=1;
 	      }
@@ -766,19 +762,15 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
     }
     
     if (found) {
-      //      printf("process found running\n");
       // pidfile passed in and process is already running
       if (force) {
-	//	printf("process forced, killing\n");
 	// kill process and remove pidfile
 	rc = safekillfile(pidfile, procname, 9, rootwrap);
       } else {
-	//	printf("process already running, not forced; done\n");
 	// nothing to do
 	return(0);
       }
     } else {
-      //      printf("removing stale pidfile\n");
       // pidfile passed in but process is not running
       if (!check_file(pidfile)) {
 	unlink(pidfile);
@@ -786,16 +778,13 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
     }
   }
   
-  //  printf("running cmd\n");
   rc = daemonrun(cmd, dpid);
   if (!rc) {
     // success
-    //    printf("success: %d\n", *dpid);
     if (pidfile) {
       char pidstr[32];
       snprintf(pidstr, 32, "%d", *dpid);
       rc = write2file(pidfile, pidstr);
-      //      printf("wrote pidfile\n");
     }
     ret = 0;
   } else {
@@ -806,7 +795,7 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
 
 /* daemonize and run 'cmd', returning pid of the daemonized process */
 int daemonrun(char *incmd, int *dpid) {
-  int pid, sid, i;
+  int pid, sid, i, status, rc;
   char **argv=NULL, *cmd;
   
   if (!incmd || !dpid) {
@@ -820,11 +809,12 @@ int daemonrun(char *incmd, int *dpid) {
   }
   if (!pid) {
     char *tok=NULL, *ptr=NULL;
-    int idx;
-
-    // become parent of session                                                 
+    int idx, rc;
+   
+    rc = daemon(0,0);
+    // become parent of session
     sid = setsid();
-
+    
     // construct argv
     cmd = strdup(incmd);
     idx=0;
@@ -839,17 +829,18 @@ int daemonrun(char *incmd, int *dpid) {
     }
     argv[idx] = NULL;
     free(cmd);
-
+    
     // close all fds
-    //    printf("ready to run: %s %s\n", argv[0], argv[1]);
     for (i=0; i<sysconf(_SC_OPEN_MAX); i++) {
       close(i);
     }
     
     // run
     exit(execvp(*argv, argv));
+  } else {
+    rc = waitpid(pid, &status, 0);
   }
-
+  
   *dpid = pid;
   return(0);
 }

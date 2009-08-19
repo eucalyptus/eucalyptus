@@ -38,12 +38,6 @@ sem_t *instanceCacheLock=NULL;
 vnetConfig *vnetconfig=NULL;
 sem_t *vnetConfigLock=NULL;
 
-/*
-enum{IP, POWERWAKE, LASTHELPER};
-char *helpers[LASTHELPER] = {"ip", "powerwake"};
-char *helpers_path[LASTHELPER];
-*/
-
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
   int i, j, rc, start, stop, ret=0;
   ccInstance *myInstance;
@@ -691,7 +685,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout) {
       
       //      config->lastResourceUpdate = time(NULL);
       if (rc != 0) {
-	rc = powerUp(&(config->resourcePool[i]));
+	powerUp(&(config->resourcePool[i]));
 	
 	if (config->resourcePool[i].state == RESWAKING && ((time(NULL) - config->resourcePool[i].stateChange) < config->wakeThresh)) {
 	  logprintfl(EUCAINFO, "resource still waking up (%d more seconds until marked as down)\n", config->wakeThresh - (time(NULL) - config->resourcePool[i].stateChange));
@@ -943,6 +937,8 @@ int powerUp(resource *res) {
   if (rc) {
     ips = malloc(sizeof(uint32_t));
     nms = malloc(sizeof(uint32_t));
+    ips[0] = 0xFFFFFFFF;
+    nms[0] = 0xFFFFFFFF;
     len = 1;
   }
   
@@ -957,7 +953,6 @@ int powerUp(resource *res) {
     ret = 0;
     if (strcmp(res->mac, "00:00:00:00:00:00")) {
       snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake -b %s %s", vnetconfig->eucahome, bc, res->mac);
-      //      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap wakeonlan -i %s %s", vnetconfig->eucahome, bc, res->mac);
     } else if (strcmp(res->ip, "0.0.0.0")) {
       snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake -b %s %s", vnetconfig->eucahome, bc, res->ip);
     } else {
@@ -1292,52 +1287,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     }
     sem_post(vnetConfigLock);
 
-    /*
-    rc = instId2mac(instId, mac);
-    if (rc) {
-      logprintfl(EUCAERROR, "unable to convert instanceId (%s) to mac address\n", instId);
-    }
-    logprintfl(EUCADEBUG, "choose mac %s\n", mac);
-    
-    sem_wait(vnetConfigLock);
-    // define/get next mac and allocate IP
-    foundnet = 0;
-    if (!strcmp(vnetconfig->mode, "STATIC")) {
-      // get the next valid mac/ip pairing for this vlan
-      bzero(mac, 32);
-      rc = vnetGetNextHost(vnetconfig, mac, privip, 0, -1);
-      if (!rc) {
-	snprintf(pubip, 32, "%s", privip);
-	foundnet = 1;
-      }
-    } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
-      foundnet = 1;
-    } else if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-      if (nidx >= maxCount) {
-	foundnet = 0;
-      } else {
-	
-	if (networkIndexList == NULL) {
-	  networkIdx = -1;
-	} else {
-	  networkIdx = nidx;
-	  nidx++;
-	}
-	
-	// add the mac address to the virtual network
-	rc = vnetAddHost(vnetconfig, mac, NULL, vlan, networkIdx);
-	if (!rc) {
-	  // get the next valid mac/ip pairing for this vlan
-	  rc = vnetGetNextHost(vnetconfig, mac, privip, vlan, networkIdx);
-	  if (!rc) {
-	    foundnet = 1;
-	  }
-	}
-      }
-    }
-    sem_post(vnetConfigLock);
-    */
-    
     logprintfl(EUCAINFO,"\tassigning MAC/IP: %s/%s/%s\n", mac, pubip, privip);
     
     if (mac[0] == '\0' || !foundnet) {
@@ -1936,13 +1885,6 @@ int init_localstate(void) {
     // set up logfile
     logfile(logFile, loglevel);
    
-    /*
-      rc = verify_helpers(helpers, helpers_path, LASTHELPER);
-      if (rc) {
-      logprintfl(EUCAERROR, "Cannot verify required external helpers.");
-      ret=1;
-      }
-    */
   }
 
   return(ret);
