@@ -37,6 +37,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.ws.client.Client;
 import com.eucalyptus.ws.client.NioClient;
 import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
@@ -65,7 +66,7 @@ public class ClusterMessageQueue implements Runnable {
   }
 
   public void enqueue( QueuedEvent event ) {
-    LOG.info( "Queued message of type " + event.getCallback().getClass().getSimpleName() + " for cluster " + this.parent.getClusterInfo().getName() );
+    LOG.info( "Queued message of type " + event.getCallback().getClass().getSimpleName() + " for cluster " + this.parent.getClusterInfo( ).getClusterName( ) );
     boolean inserted = false;
     while ( !inserted )
       try {
@@ -93,8 +94,8 @@ public class ClusterMessageQueue implements Runnable {
           LOG.trace( "Dequeued message of type " + event.getCallback().getClass().getSimpleName() );
           long msgStart = System.currentTimeMillis();
           try {
-            ClusterInfo parentCluster = this.parent.getClusterInfo();
-            Client nioClient = new NioClient( parentCluster.getHost(), parentCluster.getPort(), parentCluster.getServicePath(),
+            ClusterConfiguration parentCluster = this.parent.getClusterInfo();
+            Client nioClient = new NioClient( parentCluster.getHostName(), parentCluster.getPort(), parentCluster.getServicePath(),
                                               event instanceof QueuedLogEvent ? new LogClientPipeline( new NioResponseHandler() ) : new ClusterClientPipeline( new NioResponseHandler() ) );
             event.trigger( nioClient );
             this.parent.setReachable( true );
@@ -106,7 +107,7 @@ public class ClusterMessageQueue implements Runnable {
           }
           LOG.warn( String.format( "[q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s",
                                    msgStart - start, System.currentTimeMillis() - msgStart, this.msgQueue.size(),
-                                   event.getCallback().getClass().getSimpleName(), this.parent.getClusterInfo().getName() ) );
+                                   event.getCallback().getClass().getSimpleName(), this.parent.getClusterInfo().getClusterName() ) );
         }
       }
       catch ( Exception e ) {

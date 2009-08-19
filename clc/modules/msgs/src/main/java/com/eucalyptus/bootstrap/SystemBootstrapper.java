@@ -16,9 +16,9 @@ import edu.emory.mathcs.backport.java.util.Arrays;
 public class SystemBootstrapper {
   private static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );
   static {
-    System.setProperty( "euca.db.host", "127.0.0.1" );
-    System.setProperty( "euca.db.port", "9001" );
-    System.setProperty( "euca.db.password", "" );
+    if( !System.getProperties( ).contains( "euca.db.host" ) ) System.setProperty( "euca.db.host", "127.0.0.1" );
+    if( !System.getProperties( ).contains( "euca.db.port" ) )System.setProperty( "euca.db.port", "9001" );
+    if( !System.getProperties( ).contains( "euca.db.password" ) )System.setProperty( "euca.db.password", "" );
   }
   private static SystemBootstrapper singleton;
 
