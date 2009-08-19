@@ -4,6 +4,7 @@ public class StartNetworkType extends EucalyptusMessage {
 
   int vlan;
   String netName;
+  String nameserver;
   ArrayList<String> clusterControllers;
 
   def StartNetworkType(final msg, final vlan, final netName) {
@@ -60,6 +61,7 @@ public class StopNetworkResponseType extends EucalyptusMessage {
 
 //TODO: new message type
 public class DescribeNetworksType extends EucalyptusMessage {
+  String nameserver;
   ArrayList<String> clusterControllers;
 }
 //TODO: new message type

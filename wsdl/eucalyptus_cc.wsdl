@@ -311,8 +311,8 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="clusterControllers" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="nameserver" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="clusterControllers" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

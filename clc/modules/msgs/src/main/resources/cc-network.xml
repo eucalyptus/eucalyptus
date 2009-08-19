@@ -39,6 +39,7 @@ TODO: change name space to reflect change of API
      <namespace uri="http://eucalyptus.ucsb.edu/" default="elements"/>
     <mapping name="DescribeNetworks" class="edu.ucsb.eucalyptus.msgs.DescribeNetworksType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <value name="nameserver" field="nameserver" usage="optional"/>
         <collection field="clusterControllers" factory="org.jibx.runtime.Utility.arrayListFactory">
             <value name="clusterControllers" type="java.lang.String"/>
         </collection>
@@ -58,6 +59,7 @@ TODO: change name space to reflect change of API
          <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
          <value name="vlan" field="vlan" usage="required"/>
          <value name="netName" field="netName" usage="required"/>
+         <value name="nameserver" field="nameserver" usage="optional"/>
         <collection field="clusterControllers" factory="org.jibx.runtime.Utility.arrayListFactory">
             <value name="clusterControllers" type="java.lang.String"/>
         </collection>
