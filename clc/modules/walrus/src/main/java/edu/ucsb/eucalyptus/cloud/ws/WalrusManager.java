@@ -1411,14 +1411,6 @@ public class WalrusManager {
 		}
 	}
 
-	public static class ChunkedDataFile extends ChunkedFile implements IsData {
-
-		public ChunkedDataFile(RandomAccessFile file, long offset, long length,
-				int chunkSize) throws IOException {
-			super(file, offset, length, chunkSize);
-		}		
-	}
-
 	public GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws EucalyptusCloudException {
 		GetObjectExtendedResponseType reply = (GetObjectExtendedResponseType) request.getReply();
 		Long byteRangeStart = request.getByteRangeStart();

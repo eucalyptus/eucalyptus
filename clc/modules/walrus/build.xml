@@ -32,10 +32,7 @@
   ~ Author: Sunil Soman sunils@cs.ucsb.edu
   -->
 
-<project name="eucalyptus-storagemgr" basedir=".">
+<project name="eucalyptus-walrus" basedir=".">
     <import file="../module-inc.xml"/>
-    <target name="clean-jni">
-        <delete dir="h"/>
-    </target>
 </project>
 

@@ -61,6 +61,9 @@
     <ant dir="modules/core" inheritall="false" target="builder"/>
     <ant dir="modules/wsstack" inheritall="false" target="builder"/>
   </target>
+   <target name="build-storage-common" depends="build-core">
+    <ant dir="modules/storage-common" inheritall="false" target="builder"/>
+  </target>
   <target name="build-eucalyptus" depends="build-core">
     <ant dir="modules/interface" inheritall="false" target="builder"/>
     <ant dir="modules/cluster-manager" inheritall="false" target="builder"/>
@@ -68,10 +71,10 @@
     <ant dir="modules/group-manager" inheritall="false" target="builder"/>
     <ant dir="modules/key-manager" inheritall="false" target="builder"/>
   </target>
-  <target name="build-walrus" depends="build-core">
+  <target name="build-walrus" depends="build-storage-common">
     <ant dir="modules/walrus" inheritall="false" target="builder"/>
   </target>
-  <target name="build-ebs" depends="build-walrus">
+  <target name="build-ebs" depends="build-storage-common">
     <ant dir="modules/storage-controller" inheritall="false" target="builder"/>
   </target>
   <target name="build-dns" depends="build-core">
@@ -93,6 +96,9 @@
     <ant dir="modules/core" inheritall="false" target="clean"/>
     <ant dir="modules/wsstack" inheritall="false" target="clean"/>
   </target>
+  <target name="clean-storage-common" depends="clean-core">
+    <ant dir="modules/storage-common" inheritall="false" target="clean"/>
+  </target>
   <target name="clean-eucalyptus" depends="clean-core">
     <ant dir="modules/interface" inheritall="false" target="clean"/>
     <ant dir="modules/cluster-manager" inheritall="false" target="clean"/>
@@ -100,10 +106,10 @@
     <ant dir="modules/group-manager" inheritall="false" target="clean"/>
     <ant dir="modules/key-manager" inheritall="false" target="clean"/>
   </target>
-  <target name="clean-walrus" depends="clean-core">
+  <target name="clean-walrus" depends="clean-storage-common">
     <ant dir="modules/walrus" inheritall="false" target="clean"/>
   </target>
-  <target name="clean-ebs" depends="clean-walrus">
+  <target name="clean-ebs" depends="clean-storage-common">
     <ant dir="modules/storage-controller" inheritall="false" target="clean"/>
   </target>
   <target name="clean-dns" depends="clean-core">
@@ -158,6 +164,7 @@
     <ant dir="modules/configuration" inheritall="false" target="install"/>
     <ant dir="modules/core" inheritall="false" target="install"/>
     <ant dir="modules/wsstack" inheritall="false" target="install"/>
+    <ant dir="modules/storage-common" inheritall="false" target="install"/>
     <ant dir="modules/interface" inheritall="false" target="install"/>
     <ant dir="modules/cluster-manager" inheritall="false" target="install"/>
     <ant dir="modules/image-manager" inheritall="false" target="install"/>
