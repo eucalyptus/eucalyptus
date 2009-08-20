@@ -271,7 +271,7 @@ char * replace_string (char ** stringp, char * source, char * destination )
     char *start=NULL, *substart=NULL, *tok=NULL, * new_string=NULL;
     if (source==NULL || destination==NULL) return NULL;
     char * buf;
-    int maxlen = 32768;
+    int maxlen = 32768*2;
     
     buf = malloc(sizeof(char) * maxlen);
     new_string = malloc(sizeof(char) * maxlen); /* TODO: this has to be dynamic */
@@ -727,7 +727,7 @@ char * get_string_stats (const char * s)
 /* daemonize and store pid in pidfile. if pidfile exists and contained
    pid is daemon already running, do nothing.  force option will first
    kill and then re-daemonize */
-int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap, int *dpid) {
+int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap) {
   int rc, found, ret;
   char cmdstr[1024], file[1024];
   FILE *FH;
@@ -778,14 +778,14 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
     }
   }
   
-  rc = daemonrun(cmd, dpid);
+  rc = daemonrun(cmd, pidfile);
   if (!rc) {
     // success
-    if (pidfile) {
-      char pidstr[32];
-      snprintf(pidstr, 32, "%d", *dpid);
-      rc = write2file(pidfile, pidstr);
-    }
+    //    if (pidfile) {
+    //      char pidstr[32];
+    //      snprintf(pidstr, 32, "%d", *dpid);
+    //      rc = write2file(pidfile, pidstr);
+    //    }
     ret = 0;
   } else {
     ret = 1;
@@ -794,15 +794,14 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
 }
 
 /* daemonize and run 'cmd', returning pid of the daemonized process */
-int daemonrun(char *incmd, int *dpid) {
+int daemonrun(char *incmd, char *pidfile) {
   int pid, sid, i, status, rc;
   char **argv=NULL, *cmd;
   
-  if (!incmd || !dpid) {
+  if (!incmd) {
     return(1);
   }
   
-  *dpid = -1;
   pid = fork();
   if (pid < 0) {
     return(1);
@@ -810,7 +809,7 @@ int daemonrun(char *incmd, int *dpid) {
   if (!pid) {
     char *tok=NULL, *ptr=NULL;
     int idx, rc;
-   
+    
     rc = daemon(0,0);
     // become parent of session
     sid = setsid();
@@ -834,14 +833,18 @@ int daemonrun(char *incmd, int *dpid) {
     for (i=0; i<sysconf(_SC_OPEN_MAX); i++) {
       close(i);
     }
-    
+
+    if (pidfile) {
+      char pidstr[32];
+      snprintf(pidstr, 32, "%d", getpid());
+      rc = write2file(pidfile, pidstr);
+    }
     // run
     exit(execvp(*argv, argv));
   } else {
     rc = waitpid(pid, &status, 0);
   }
   
-  *dpid = pid;
   return(0);
 }
 

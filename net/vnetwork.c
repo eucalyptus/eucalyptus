@@ -1374,7 +1374,7 @@ int vnetSetupTunnels(vnetConfig *vnetconfig) {
 }
 
 int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
-  int i, done, rc, dpid;
+  int i, done, rc;
   char cmd[1024], tundev[32], *remoteIp=NULL, pidfile[1024], rootwrap[1024];
 
   if (!vnetconfig->tunnels.tunneling || (vnetconfig->tunnels.localIpId == -1)) {
@@ -1385,7 +1385,7 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   snprintf(pidfile, 1024, "%s/var/run/eucalyptus/vtund-server.pid", vnetconfig->eucahome);
   snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -s -n -f %s/var/lib/eucalyptus/keys/vtunall.conf", vnetconfig->eucahome, vnetconfig->eucahome);
   //  logprintfl(EUCADEBUG, "Running: %s,%s,%s\n", cmd, pidfile, rootwrap);
-  rc = daemonmaintain(cmd, "vtund", pidfile, 0, rootwrap, &dpid);
+  rc = daemonmaintain(cmd, "vtund", pidfile, 0, rootwrap);
   if (rc) {
     logprintfl(EUCAERROR, "cannot run tunnel server: '%s'\n", cmd);
   }
@@ -1401,8 +1401,7 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
 	  logprintfl(EUCADEBUG, "setting up tunnel for endpoint: %s\n", remoteIp);
 	  snprintf(pidfile, 1024, "%s/var/run/eucalyptus/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->tunnels.localIpId, i);
 	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -n -f %s/var/lib/eucalyptus/keys/vtunall.conf -p tun-%d-%d %s", vnetconfig->eucahome, vnetconfig->eucahome, vnetconfig->tunnels.localIpId, i, remoteIp);
-	  //	  logprintfl(EUCADEBUG, "Running: %s,%s,%s\n", cmd, pidfile, rootwrap);
-	  rc = daemonmaintain(cmd, "vtund", pidfile, 0, rootwrap, &dpid);
+	  rc = daemonmaintain(cmd, "vtund", pidfile, 0, rootwrap);
 	  if (rc) {
 	    logprintfl(EUCAERROR, "cannot run tunnel client: '%s'\n", cmd);
 	  }  

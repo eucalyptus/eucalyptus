@@ -94,8 +94,8 @@ int param_check(char *func, ...);
 
 int hash_code (const char * s);
 char * get_string_stats (const char * s);
-int daemonrun(char *cmd, int *dpid);
-int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap, int *dpid);
+int daemonrun(char *cmd, char *pidfile);
+int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
 int run (const char * arg1, ...);
 int vrun (const char * fmt, ...);
 int cat (const char * file_name);

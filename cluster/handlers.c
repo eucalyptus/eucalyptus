@@ -497,6 +497,8 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver
 
     brname = NULL;
     rc = vnetStartNetwork(vnetconfig, vlan, ccMeta->userId, netName, &brname);
+    if (brname) free(brname);
+
     sem_post(vnetConfigLock);
     
     if (rc) {
@@ -518,7 +520,6 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver
 
 int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, char ***outServiceTags, int *outServiceTagsLen) {
   int i;
-  //  ncResource *ncRes;
   int rc, diskpool, mempool, corepool;
   int j;
   resource *res;
@@ -571,7 +572,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   if (rc) {
     logprintfl(EUCAERROR,"calling refresh_resources\n");
   }
-
+  
   sem_wait(configLock);
   {
     for (i=0; i<config->numResources; i++) {
@@ -1987,7 +1988,6 @@ int init_config(void) {
 	bzero(config->resourcePool, sizeof(resource) * MAXNODES);
 	sem_post(configLock);
 	ret = 1;
-
       } else {
 	sem_wait(configLock);
 	config->numResources = numHosts;
@@ -1996,12 +1996,8 @@ int init_config(void) {
 	sem_post(configLock);
       }
     }
-    
     return(ret);
-
-  } else {
   }
-
   
   if (config->initialized) {
     // some other thread has already initialized the configuration
@@ -2013,7 +2009,6 @@ int init_config(void) {
       // failed to restore network state, continue 
       logprintfl(EUCAWARN, "restoreNetworkState returned false (may be already restored)\n");
     }
-    //init = 1;
     return(0);
   }
   
@@ -2222,7 +2217,9 @@ int init_config(void) {
   config->idleThresh = idleThresh;
   config->wakeThresh = wakeThresh;
   config->numResources = numHosts;
-  memcpy(config->resourcePool, res, sizeof(resource) * numHosts);
+  if (numHosts) {
+    memcpy(config->resourcePool, res, sizeof(resource) * numHosts);
+  }
   if (res) free(res);
   config->lastResourceUpdate = 0;
   config->instanceCacheUpdate = time(NULL);
@@ -2337,6 +2334,9 @@ int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHos
   int ncport;
   char **hosts;
 
+  *numHosts = 0;
+  *res = NULL;
+
   rc = get_conf_var(configFile, CONFIG_NC_SERVICE, &tmpstr);
   if (rc != 1) {
     // error
@@ -2360,14 +2360,14 @@ int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHos
   rc = get_conf_var(configFile, CONFIG_NODES, &tmpstr);
   if (rc != 1) {
     // error
-    logprintfl(EUCAWARN,"parsing config file (%s) for NODES\n", configFile);
-    return(1);
+    logprintfl(EUCAWARN,"NODES parameter is missing from (%s)\n", configFile);
+    return(0);
   } else {
     hosts = from_var_to_char_list(tmpstr);
     if (hosts == NULL) {
-      logprintfl(EUCAFATAL,"parsing config file (%s) for NODES from substring (%s)\n", configFile, tmpstr);
+      logprintfl(EUCAWARN, "NODES list is empty in configfile (%s)\n", configFile);
       if (tmpstr) free(tmpstr);
-      return(1);
+      return(0);
     }
 
     *numHosts = 0;

@@ -736,9 +736,9 @@ checkLocalService() {
 		fi
 	    done
 	fi
-
+	
 	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null"
-	CMD="echo NOT IMPLEMENTED"
+	CMD="echo CLC CHECK NOT IMPLEMENTED"
     elif [ "$SERVICE" = "CC" ]; then
 	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC > /dev/null"
     fi
@@ -768,10 +768,9 @@ if [ -n "$NEWCLUS" ]; then
     fi
 
 #    URL=""
-#    if ! createCloudURL "Action" "DescribeAvailabilityZones"; then
+#    if ! createCloudURL "Action" "DescribeClusters"; then
 #	exit 1
 #    fi
-
 #    CMD="wget -O - \"$URL\" 2>/dev/null | grep UP"
 #    if [ -n "${FAKEREG}" ]; then
 #	CMD="echo"
@@ -786,7 +785,8 @@ if [ -n "$NEWCLUS" ]; then
 	exit 1
     fi
 
-    CMD="wget -O - \"$URL\" 2>/dev/null"
+    CMD="wget -O - \"$URL\" 2>/dev/null | grep -v faultstring"
+    echo "$CMD"
     if [ -n "${FAKEREG}" ]; then
 	CMD="echo"
     fi
