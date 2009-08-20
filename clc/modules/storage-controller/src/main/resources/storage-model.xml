@@ -24,9 +24,9 @@
 
         <service name="StorageRequestQueue">
             <inbound>
-                <vm:inbound-endpoint address="vm://StorageRequestQueue"/>
+                <vm:inbound-endpoint ref="StorageRequestQueueEndpoint"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.ic.StorageRequestQueue"/>
+            <bridge-component/>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="StorageWS"/>

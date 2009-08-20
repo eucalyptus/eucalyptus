@@ -24,9 +24,9 @@
 
         <service name="WalrusRequestQueue">
             <inbound>
-                <vm:inbound-endpoint address="vm://WalrusRequestQueue"/>
+                <inbound-endpoint ref="WalrusRequestQueueEndpoint"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.ic.WalrusRequestQueue"/>
+            <bridge-component/>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="BukkitWS"/>

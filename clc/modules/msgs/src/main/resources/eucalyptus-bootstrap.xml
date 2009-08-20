@@ -1,80 +1,56 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:spring="http://www.springframework.org/schema/beans"
-  xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6" xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0"
-  xsi:schemaLocation="
+<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6" xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0"
+	xsi:schemaLocation="
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
        http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
 
-  <euca:connector name="eucaws" />
-  <!-- TODO: remove all these forward references somehow -->
-  <!--interface services-->
-  <endpoint name="ReplyQueueWS" address="vm://ReplyQueue" synchronous="false" />
+	<euca:connector name="eucaws" />
+	<!-- TODO: remove all these forward references somehow -->
+	<!--interface services-->
+    <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />
+    <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" />
+    <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" />
+    <endpoint name="WalrusRequestQueueEndpoint" address="vm://WalrusRequestQueue" synchronous="false" />
+    <endpoint name="StorageRequestQueueEndpoint" address="vm://StorageRequestQueue" synchronous="false" />
 
-  <model name="eucalyptus-bootstrap">
-    <default-service-exception-strategy>
-      <outbound-endpoint ref="ReplyQueueWS" />
-    </default-service-exception-strategy>
-    <service name="ReplyQueue">
-      <inbound>
-        <inbound-endpoint ref="ReplyQueueWS" />
-      </inbound>
-      <component class="com.eucalyptus.ws.util.ReplyQueue" />
-    </service>
-    <service name="RequestQueue">
-      <inbound>
-        <vm:inbound-endpoint address="vm://RequestQueue" />
-      </inbound>
-      <component class="com.eucalyptus.ws.util.RequestQueue" />
-      <outbound>
-        <filtering-router>
-          <outbound-endpoint ref="StartVerifyWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.RunInstancesType" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="VmControlWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmControlMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ClusterEndpointWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ClusterMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="KeyPairWSTest" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmKeyPairMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ImageWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImageMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="VolumeWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockVolumeMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="SnapshotWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockSnapshotMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="AddressWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmAddressMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="GroupsWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint address="vm://Bukkit" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.WalrusRequestType" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint address="vm://Storage" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.StorageRequestType" />
-        </filtering-router>
-      </outbound>
-    </service>
-  </model>
+	<model name="eucalyptus-bootstrap">
+		<default-service-exception-strategy>
+			<outbound-endpoint ref="ReplyQueueEndpoint" />
+		</default-service-exception-strategy>
+		<service name="ReplyQueue">
+			<inbound>
+				<inbound-endpoint ref="ReplyQueueEndpoint" />
+			</inbound>
+			<component class="com.eucalyptus.ws.util.ReplyQueue" />
+		</service>
+		<service name="RequestQueue">
+			<inbound>
+				<inbound-endpoint ref="RequestQueueEndpoint"/>
+			</inbound>
+			<bridge-component/>
+			<outbound>
+				<filtering-router>
+					<outbound-endpoint address="vm://Bukkit"
+						synchronous="false" />
+					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.WalrusRequestType" />
+				</filtering-router>
+				<filtering-router>
+					<outbound-endpoint address="vm://Storage"
+						synchronous="false" />
+					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.StorageRequestType" />
+				</filtering-router>
+				<filtering-router>
+					<outbound-endpoint address="vm://EucalyptusRequestQueue"
+						synchronous="false" />
+					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+				</filtering-router>
+			</outbound>
+		</service>
+	</model>
 </mule>
 

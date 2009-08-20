@@ -12,7 +12,7 @@
     <model name="eucalyptus-verification">
 
         <default-service-exception-strategy>
-            <outbound-endpoint ref="ReplyQueueWS"/>
+            <outbound-endpoint ref="ReplyQueueEndpoint"/>
         </default-service-exception-strategy>
 
         <service name="StartVerify">

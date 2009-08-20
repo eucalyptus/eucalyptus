@@ -12,7 +12,7 @@
 
     <model name="eucalyptus-userdata">
         <default-service-exception-strategy>
-            <outbound-endpoint ref="ReplyQueueWS"/>
+            <outbound-endpoint ref="ReplyQueueEndpoint"/>
         </default-service-exception-strategy>
 
         <service name="KeyPair">
@@ -23,7 +23,7 @@
             <component class="edu.ucsb.eucalyptus.cloud.ws.KeyPairBroker"/>
             <outbound>
                 <outbound-pass-through-router>
-                    <outbound-endpoint ref="ReplyQueueWS"/>
+                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
                 </outbound-pass-through-router>
             </outbound>
         </service>
@@ -35,7 +35,7 @@
             <component class="edu.ucsb.eucalyptus.cloud.ws.GroupManager"/>
             <outbound>
                 <outbound-pass-through-router>
-                    <outbound-endpoint ref="ReplyQueueWS"/>
+                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
                 </outbound-pass-through-router>
             </outbound>
         </service>
