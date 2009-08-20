@@ -33,8 +33,8 @@ const char *eucalyptus_opts_help[] = {
   "\nEucalyptus Configuration & Environment:",
   "  -u, --user=username           User to drop privs to after starting.  \n                                  (default=`eucalyptus')",
   "  -h, --home=directory          Eucalyptus home directory.  (default=`/')",
+  "  -c, --cloud-host=hostname/address\n                                Hostname/Address for the Cloud Controller.  \n                                  (default=`127.0.0.1')",
   "  -D, --define=STRING           Set system properties.",
-  "  -c, --bootstrap-config=config.xml\n                                Use this file as the configuration for early \n                                  runtime service bootstrapping.  \n                                  (default=`eucalyptus-bootstrap.xml')",
   "  -v, --verbose                 Verbose bootstrapper output. Note: This only \n                                  controls the level of output from the native \n                                  bootstrapper.  (default=off)",
   "  -l, --log-level=filename      Control the log level for console output.  \n                                  (default=`INFO')",
   "  -o, --out=filename            Redirect standard out to file.  (default=`&1')",
@@ -82,8 +82,8 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->version_given = 0 ;
   args_info->user_given = 0 ;
   args_info->home_given = 0 ;
+  args_info->cloud_host_given = 0 ;
   args_info->define_given = 0 ;
-  args_info->bootstrap_config_given = 0 ;
   args_info->verbose_given = 0 ;
   args_info->log_level_given = 0 ;
   args_info->out_given = 0 ;
@@ -107,10 +107,10 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->user_orig = NULL;
   args_info->home_arg = gengetopt_strdup ("/");
   args_info->home_orig = NULL;
+  args_info->cloud_host_arg = gengetopt_strdup ("127.0.0.1");
+  args_info->cloud_host_orig = NULL;
   args_info->define_arg = NULL;
   args_info->define_orig = NULL;
-  args_info->bootstrap_config_arg = gengetopt_strdup ("eucalyptus-bootstrap.xml");
-  args_info->bootstrap_config_orig = NULL;
   args_info->verbose_flag = 0;
   args_info->log_level_arg = gengetopt_strdup ("INFO");
   args_info->log_level_orig = NULL;
@@ -145,10 +145,10 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->version_help = eucalyptus_opts_help[1] ;
   args_info->user_help = eucalyptus_opts_help[3] ;
   args_info->home_help = eucalyptus_opts_help[4] ;
-  args_info->define_help = eucalyptus_opts_help[5] ;
+  args_info->cloud_host_help = eucalyptus_opts_help[5] ;
+  args_info->define_help = eucalyptus_opts_help[6] ;
   args_info->define_min = 0;
   args_info->define_max = 0;
-  args_info->bootstrap_config_help = eucalyptus_opts_help[6] ;
   args_info->verbose_help = eucalyptus_opts_help[7] ;
   args_info->log_level_help = eucalyptus_opts_help[8] ;
   args_info->out_help = eucalyptus_opts_help[9] ;
@@ -291,9 +291,9 @@ arguments_release (struct eucalyptus_opts *args_info)
   free_string_field (&(args_info->user_orig));
   free_string_field (&(args_info->home_arg));
   free_string_field (&(args_info->home_orig));
+  free_string_field (&(args_info->cloud_host_arg));
+  free_string_field (&(args_info->cloud_host_orig));
   free_multiple_string_field (args_info->define_given, &(args_info->define_arg), &(args_info->define_orig));
-  free_string_field (&(args_info->bootstrap_config_arg));
-  free_string_field (&(args_info->bootstrap_config_orig));
   free_string_field (&(args_info->log_level_arg));
   free_string_field (&(args_info->log_level_orig));
   free_string_field (&(args_info->out_arg));
@@ -353,9 +353,9 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "user", args_info->user_orig, 0);
   if (args_info->home_given)
     write_into_file(outfile, "home", args_info->home_orig, 0);
+  if (args_info->cloud_host_given)
+    write_into_file(outfile, "cloud-host", args_info->cloud_host_orig, 0);
   write_multiple_into_file(outfile, args_info->define_given, "define", args_info->define_orig, 0);
-  if (args_info->bootstrap_config_given)
-    write_into_file(outfile, "bootstrap-config", args_info->bootstrap_config_orig, 0);
   if (args_info->verbose_given)
     write_into_file(outfile, "verbose", 0, 0 );
   if (args_info->log_level_given)
@@ -939,8 +939,8 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { "version",	0, NULL, 'V' },
         { "user",	1, NULL, 'u' },
         { "home",	1, NULL, 'h' },
+        { "cloud-host",	1, NULL, 'c' },
         { "define",	1, NULL, 'D' },
-        { "bootstrap-config",	1, NULL, 'c' },
         { "verbose",	0, NULL, 'v' },
         { "log-level",	1, NULL, 'l' },
         { "out",	1, NULL, 'o' },
@@ -958,7 +958,7 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { NULL,	0, NULL, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vu:h:D:c:vl:o:e:CSfj:J:X:d", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:c:D:vl:o:e:CSfj:J:X:d", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -993,23 +993,23 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
             goto failure;
         
           break;
+        case 'c':	/* Hostname/Address for the Cloud Controller..  */
+        
+        
+          if (update_arg( (void *)&(args_info->cloud_host_arg), 
+               &(args_info->cloud_host_orig), &(args_info->cloud_host_given),
+              &(local_args_info.cloud_host_given), optarg, 0, "127.0.0.1", ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "cloud-host", 'c',
+              additional_error))
+            goto failure;
+        
+          break;
         case 'D':	/* Set system properties..  */
         
           if (update_multiple_arg_temp(&define_list, 
               &(local_args_info.define_given), optarg, 0, 0, ARG_STRING,
               "define", 'D',
-              additional_error))
-            goto failure;
-        
-          break;
-        case 'c':	/* Use this file as the configuration for early runtime service bootstrapping..  */
-        
-        
-          if (update_arg( (void *)&(args_info->bootstrap_config_arg), 
-               &(args_info->bootstrap_config_orig), &(args_info->bootstrap_config_given),
-              &(local_args_info.bootstrap_config_given), optarg, 0, "eucalyptus-bootstrap.xml", ARG_STRING,
-              check_ambiguity, override, 0, 0,
-              "bootstrap-config", 'c',
               additional_error))
             goto failure;
         

@@ -40,14 +40,14 @@ struct eucalyptus_opts
   char * home_arg;	/**< @brief Eucalyptus home directory. (default='/').  */
   char * home_orig;	/**< @brief Eucalyptus home directory. original value given at command line.  */
   const char *home_help; /**< @brief Eucalyptus home directory. help description.  */
+  char * cloud_host_arg;	/**< @brief Hostname/Address for the Cloud Controller. (default='127.0.0.1').  */
+  char * cloud_host_orig;	/**< @brief Hostname/Address for the Cloud Controller. original value given at command line.  */
+  const char *cloud_host_help; /**< @brief Hostname/Address for the Cloud Controller. help description.  */
   char ** define_arg;	/**< @brief Set system properties..  */
   char ** define_orig;	/**< @brief Set system properties. original value given at command line.  */
   unsigned int define_min; /**< @brief Set system properties.'s minimum occurreces */
   unsigned int define_max; /**< @brief Set system properties.'s maximum occurreces */
   const char *define_help; /**< @brief Set system properties. help description.  */
-  char * bootstrap_config_arg;	/**< @brief Use this file as the configuration for early runtime service bootstrapping. (default='eucalyptus-bootstrap.xml').  */
-  char * bootstrap_config_orig;	/**< @brief Use this file as the configuration for early runtime service bootstrapping. original value given at command line.  */
-  const char *bootstrap_config_help; /**< @brief Use this file as the configuration for early runtime service bootstrapping. help description.  */
   int verbose_flag;	/**< @brief Verbose bootstrapper output. Note: This only controls the level of output from the native bootstrapper. (default=off).  */
   const char *verbose_help; /**< @brief Verbose bootstrapper output. Note: This only controls the level of output from the native bootstrapper. help description.  */
   char * log_level_arg;	/**< @brief Control the log level for console output. (default='INFO').  */
@@ -91,8 +91,8 @@ struct eucalyptus_opts
   unsigned int version_given ;	/**< @brief Whether version was given.  */
   unsigned int user_given ;	/**< @brief Whether user was given.  */
   unsigned int home_given ;	/**< @brief Whether home was given.  */
+  unsigned int cloud_host_given ;	/**< @brief Whether cloud-host was given.  */
   unsigned int define_given ;	/**< @brief Whether define was given.  */
-  unsigned int bootstrap_config_given ;	/**< @brief Whether bootstrap-config was given.  */
   unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
   unsigned int log_level_given ;	/**< @brief Whether log-level was given.  */
   unsigned int out_given ;	/**< @brief Whether out was given.  */

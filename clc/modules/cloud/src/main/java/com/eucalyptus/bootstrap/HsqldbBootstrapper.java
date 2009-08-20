@@ -45,7 +45,8 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
     db = new Server( );
     HsqlProperties props = new HsqlProperties( );
     props.setProperty( ServerConstants.SC_KEY_NO_SYSTEM_EXIT, true );
-    props.setProperty( ServerConstants.SC_KEY_PORT, Integer.parseInt( System.getProperty( DatabaseConfig.EUCA_DB_PORT ) ) );
+    String dbPort = System.getProperty( DatabaseConfig.EUCA_DB_PORT );
+    props.setProperty( ServerConstants.SC_KEY_PORT, Integer.parseInt( dbPort ) );
     props.setProperty( ServerConstants.SC_KEY_REMOTE_OPEN_DB, true );
     props.setProperty( ServerConstants.SC_KEY_DATABASE+".0", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME );
     props.setProperty( ServerConstants.SC_KEY_DBNAME+".0", EucalyptusProperties.NAME );
