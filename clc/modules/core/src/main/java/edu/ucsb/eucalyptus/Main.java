@@ -68,7 +68,6 @@ public class Main {
     descAz.setCorrelationId( "" );
     try {
       WalrusProperties.update();      
-      Messaging.send( WalrusProperties.WALRUS_REF, new InitializeWalrusType() );
     } catch (Exception e) {}
 
     try {

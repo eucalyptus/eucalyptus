@@ -57,17 +57,12 @@ public class WalrusBlockStorageManager {
     public WalrusBlockStorageManager(StorageManager storageManager, WalrusManager walrusManager) {
         this.storageManager = storageManager;
         this.walrusManager = walrusManager;
-    }
-
-    public void initialize() {
-        WalrusProperties.enableSnapshots = true;
         startupChecks();
-        //inform SC in case it is running on the same host
-        WalrusProperties.sharedMode = true;
     }
 
     public void startupChecks() {
         cleanFailedCachedImages();
+        WalrusProperties.sharedMode = true;
     }
 
     public void cleanFailedCachedImages() {
@@ -97,10 +92,6 @@ public class WalrusBlockStorageManager {
     public StoreSnapshotResponseType storeSnapshot(StoreSnapshotType request) throws EucalyptusCloudException {
         StoreSnapshotResponseType reply = (StoreSnapshotResponseType) request.getReply();
 
-        if(!WalrusProperties.enableSnapshots) {
-            LOG.warn("Snapshots not enabled. Please check pre-conditions and restart Walrus.");
-            return reply;
-        }
         String snapshotId = request.getKey();
         String bucketName = request.getBucket();
         boolean createBucket = true;
@@ -175,10 +166,6 @@ public class WalrusBlockStorageManager {
 
     public GetWalrusSnapshotResponseType getSnapshot(GetWalrusSnapshotType request) throws EucalyptusCloudException {
         GetWalrusSnapshotResponseType reply = (GetWalrusSnapshotResponseType) request.getReply();
-        if(!WalrusProperties.enableSnapshots) {
-            LOG.warn("Snapshots not enabled. Please check pre-conditions and restart Walrus.");
-            return reply;
-        }
         String snapshotId = request.getKey();
         EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
         WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
@@ -211,10 +198,6 @@ public class WalrusBlockStorageManager {
 
     public DeleteWalrusSnapshotResponseType deleteWalrusSnapshot(DeleteWalrusSnapshotType request) throws EucalyptusCloudException {
         DeleteWalrusSnapshotResponseType reply = (DeleteWalrusSnapshotResponseType) request.getReply();
-        if(!WalrusProperties.enableSnapshots) {
-            LOG.warn("Snapshots not enabled. Please check pre-conditions and restart Walrus.");
-            return reply;
-        }
         String snapshotId = request.getKey();
 
         //Load the entire snapshot tree and then remove the snapshot

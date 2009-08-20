@@ -706,7 +706,7 @@ public class BlockStorage {
 		public void run() {
 			try {
 				blockManager.createSnapshot(volumeId, snapshotId);
-				if(false){//WalrusProperties.sharedMode) {
+				if(WalrusProperties.sharedMode) {
 					EntityWrapper<SnapshotInfo> dbSnap = new EntityWrapper<SnapshotInfo>();
 					SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 					SnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);

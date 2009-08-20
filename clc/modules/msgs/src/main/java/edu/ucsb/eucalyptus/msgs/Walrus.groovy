@@ -75,12 +75,6 @@ public class WalrusDeleteType extends WalrusRequestType {
 public class WalrusDeleteResponseType extends WalrusResponseType {
 }
 
-public class InitializeWalrusType extends WalrusRequestType {
-}
-
-public class InitializeWalrusResponseType extends WalrusResponseType {
-}
-
 public class CanonicalUserType extends EucalyptusData {
 	String ID;
 	String DisplayName;

@@ -70,7 +70,6 @@ public class WalrusControl {
 		}
 		walrusManager.initialize();
 		Tracker.initialize();
-		walrusBlockStorageManager.initialize();
 		if(System.getProperty("euca.virtualhosting.disable") != null) {
 			WalrusProperties.enableVirtualHosting = false;
 		}
@@ -107,12 +106,6 @@ public class WalrusControl {
 		return walrusInfo;
 	}
 	
-	public InitializeWalrusResponseType InitializeWalrus(InitializeWalrusType request) {
-		InitializeWalrusResponseType reply = (InitializeWalrusResponseType) request.getReply();
-		walrusBlockStorageManager.initialize();
-		return reply;
-	}
-
 	public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) throws EucalyptusCloudException {
 		UpdateWalrusConfigurationResponseType reply = (UpdateWalrusConfigurationResponseType) request.getReply();
 		if(EucalyptusProperties.NAME.equals(request.getEffectiveUserId()))
