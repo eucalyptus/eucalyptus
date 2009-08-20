@@ -1937,7 +1937,7 @@ int init_thread(void) {
 int init_config(void) {
   resource *res=NULL;
   char *tmpstr=NULL;
-  int rc, numHosts, use_wssec, schedPolicy, idleThresh, wakeThresh, ret;
+  int rc, numHosts, use_wssec, schedPolicy, idleThresh, wakeThresh, ret, i;
   
   char configFile[1024], netPath[1024], eucahome[1024], policyFile[1024], home[1024];
   
@@ -2030,7 +2030,8 @@ int init_config(void) {
       *pubRouter=NULL,
       *pubDNS=NULL,
       *localIp=NULL;
-    int initFail=0;
+    uint32_t *ips, *nms;
+    int initFail=0, len;
     
     // DHCP Daemon Configuration Params
     daemon = NULL;
@@ -2095,7 +2096,7 @@ int init_config(void) {
       pubips = getConfString(configFile, "VNET_PUBLICIPS");
       localIp = getConfString(configFile, "VNET_LOCALIP");
       if (!localIp) {
-	logprintfl(EUCAWARN, "VNET_LOCALIP not defined, tunneling is disabled\n");
+	logprintfl(EUCAWARN, "VNET_LOCALIP not defined, will attempt to autodiscover\n");
       }
       if (!pubSubnet || !pubSubnetMask || !pubDNS || !numaddrs) {
 	logprintfl(EUCAFATAL,"in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");
@@ -2139,6 +2140,24 @@ int init_config(void) {
 	  }
 	}
 	toka = strtok_r(NULL, " ", &ptra);
+      }
+
+      // detect and populate ips
+      if (vnetCountLocalIP(vnetconfig) <= 0) {
+	ips = nms = NULL;
+	rc = getdevinfo("all", &ips, &nms, &len);
+	if (!rc) {
+	  for (i=0; i<len; i++) {
+	    char *theip=NULL;
+	    theip = hex2dot(ips[i]);
+	    if (vnetCheckPublicIP(vnetconfig, theip)) {
+	      vnetAddLocalIP(vnetconfig, ips[i]);
+	    }
+	    if (theip) free(theip);
+	  }
+	}
+	if (ips) free(ips);
+	if (nms) free(nms);
       }
     }
     

@@ -22,10 +22,12 @@
 #include <misc.h>
 
 void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp) {
-  uint32_t nw=0, nm=0, unw=0, unm=0, dns=0, bc=0, rt=0, rc=0, slashnet=0;
-  int vlan=0, numaddrs=1;
+  uint32_t nw=0, nm=0, unw=0, unm=0, dns=0, bc=0, rt=0, rc=0, slashnet=0, *ips=NULL, *nms=NULL;
+  int vlan=0, numaddrs=1, len, i;
   char cmd[256];
 
+
+      
   if (param_check("vnetInit", vnetconfig, mode, eucahome, path, role, pubInterface, numberofaddrs, network, netmask, broadcast, nameserver, router, daemon, bridgedev)) return;
   
   if (!vnetconfig->initialized) {
@@ -38,7 +40,8 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     if (bridgedev) strncpy(vnetconfig->bridgedev, bridgedev, 32);
     if (daemon) strncpy(vnetconfig->dhcpdaemon, daemon, 1024);
     if (dhcpuser) strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
-    if (localIp) strncpy(vnetconfig->localIp, localIp, 32);
+    //    if (localIp) strncpy(vnetconfig->localIp, localIp, 32);
+    if (localIp) vnetAddLocalIP(vnetconfig, dot2hex(localIp));
     vnetconfig->tunnels.localIpId = -1;
     vnetconfig->tunnels.tunneling = 0;
     vnetconfig->role = role;
@@ -53,7 +56,6 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     bzero(vnetconfig->users, sizeof(userEntry) * NUMBER_OF_VLANS);
     bzero(vnetconfig->networks, sizeof(networkEntry) * NUMBER_OF_VLANS);
     bzero(vnetconfig->etherdevs, NUMBER_OF_VLANS * 16);
-
     bzero(vnetconfig->publicips, sizeof(publicip) * NUMBER_OF_PUBLIC_IPS);
     
     if (role != NC) {
@@ -154,9 +156,9 @@ int vnetInitTunnels(vnetConfig *vnetconfig) {
   vnetconfig->tunnels.tunneling = 0;
   ret = 0;
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-    if (vnetconfig->localIp[0] == '\0') {
+    if (vnetCountLocalIP(vnetconfig) <= 0) {
       // localIp not set, no tunneling
-      //      logprintfl(EUCAWARN, "VNET_LOCALIP not set, tunneling is disabled\n");
+      logprintfl(EUCAWARN, "VNET_LOCALIP not set, tunneling is disabled\n");
       return(0);
     } else if (!strcmp(vnetconfig->mode, "MANAGED-NOVLAN") && check_bridge(vnetconfig->privInterface)) {
       logprintfl(EUCAERROR, "in MANAGED-NOVLAN mode, priv interface '%s' must be a bridge, tunneling disabled\n", vnetconfig->privInterface);
@@ -762,6 +764,66 @@ int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int i
   return(0);
 }
 
+int vnetCountLocalIP(vnetConfig *vnetconfig) {
+  int count, i, ret;
+
+  if (!vnetconfig) {
+    return(0);
+  }
+  
+  count=0;
+  for (i=0; i<32; i++) {
+    if (vnetconfig->localIps[i] != 0) {
+      count++;
+    }
+  }
+  return(count);
+}
+
+int vnetCheckLocalIP(vnetConfig *vnetconfig, uint32_t ip) {
+  int i, done, ret;
+  
+  if (!vnetconfig) {
+    return(1);
+  }
+
+  done=0;
+  for (i=0; i<32; i++) {
+    if (vnetconfig->localIps[i] == ip) {
+      return(0);
+    }
+  }
+  return(1);
+}
+
+int vnetAddLocalIP(vnetConfig *vnetconfig, uint32_t ip) {
+  int i, done, foundone, ret;
+  
+  if (!vnetconfig) {
+    return(1);
+  }
+
+  done=0;
+  foundone = -1;
+  for (i=0; i<32 && !done; i++) {
+    if (vnetconfig->localIps[i] == ip) {
+      return(0);
+    }
+    if (vnetconfig->localIps[i] == 0) {
+      foundone = i;
+      done++;
+    }
+  }
+  if (foundone >= 0) {
+    vnetconfig->localIps[foundone] = ip;
+    ret = 0;
+  } else {
+    ret = 1;
+  }
+
+  return(ret);
+}
+
 int vnetAddDev(vnetConfig *vnetconfig, char *dev) {
   int i, done, foundone;
 
@@ -899,7 +961,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
       strncat (dstring, vnetconfig->etherdevs[i], 16);
     }
   }
-  
+
   /* force dhcpd to reload the conf */
   
   snprintf(file, 1024, "%s/euca-dhcp.pid", vnetconfig->path);
@@ -977,7 +1039,7 @@ int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc) {
 }
 
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
-  int i, j, found, lastj, localIpId=-1;
+  int i, j, found, lastj, localIpId=-1, rc;
   uint32_t tmpccs[NUMBER_OF_CCS];
   
   if (ccsLen > NUMBER_OF_CCS) {
@@ -987,11 +1049,11 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
     return(0);
   }
   
-  //  logprintfl(EUCADEBUG, "localIP: %s, ccsLen: %d\n", vnetconfig->localIp, ccsLen);
   for (i=0; i<ccsLen; i++) {
-    //    logprintfl(EUCADEBUG, "CCS: %s/%d\n", ccs[i], i);
-    if (!strcmp(ccs[i], vnetconfig->localIp)) {
-      //      logprintfl(EUCADEBUG, "setting localIpId to %d\n", i);
+
+    //    if (!strcmp(ccs[i], vnetconfig->localIp)) {
+    rc = vnetCheckLocalIP(vnetconfig, dot2hex(ccs[i]));
+    if (!rc) {
       localIpId = i;
     }
     
@@ -1398,13 +1460,15 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
 	snprintf(tundev, 32, "tap-%d-%d", vnetconfig->tunnels.localIpId, i);
 	rc = check_device(tundev);
 	if (rc) {
-	  logprintfl(EUCADEBUG, "setting up tunnel for endpoint: %s\n", remoteIp);
+	  logprintfl(EUCADEBUG, "maintaining tunnel for endpoint: %s\n", remoteIp);
 	  snprintf(pidfile, 1024, "%s/var/run/eucalyptus/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->tunnels.localIpId, i);
 	  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -n -f %s/var/lib/eucalyptus/keys/vtunall.conf -p tun-%d-%d %s", vnetconfig->eucahome, vnetconfig->eucahome, vnetconfig->tunnels.localIpId, i, remoteIp);
 	  rc = daemonmaintain(cmd, "vtund", pidfile, 0, rootwrap);
 	  if (rc) {
 	    logprintfl(EUCAERROR, "cannot run tunnel client: '%s'\n", cmd);
-	  }  
+	  } else {
+	    logprintfl(EUCADEBUG, "ran cmd '%s'\n", cmd);
+	  }
 	}
       }
       if (remoteIp) free(remoteIp);
@@ -1607,6 +1671,23 @@ int vnetGetPublicIP(vnetConfig *vnetconfig, char *ip, char **dstip, int *allocat
   }
   return(0);
 }
+
+int vnetCheckPublicIP(vnetConfig *vnetconfig, char *ip) {
+  int i, rc, done;
+  uint32_t theip;
+  
+  if (!vnetconfig || !ip) return(1);
+  
+  theip = dot2hex(ip);
+  
+  for (i=0; i<NUMBER_OF_PUBLIC_IPS; i++) {
+    if (vnetconfig->publicips[i].ip == theip) {
+      return(0);
+    }
+  }
+  return(1);
+}
+
 int vnetAddPublicIP(vnetConfig *vnetconfig, char *inip) {
   int i, rc, done, slashnet, numips, j, found;
   uint32_t minip, theip;
@@ -1930,7 +2011,7 @@ int getdevinfo(char *dev, uint32_t **outips, uint32_t **outnms, int *len) {
   
   count=0;
   for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-    if (!strcmp(ifa->ifa_name, dev)) {
+    if (!strcmp(dev, "all") || !strcmp(ifa->ifa_name, dev)) {
       if (ifa->ifa_addr->sa_family == AF_INET) {
 	rc = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
 	if (!rc) {

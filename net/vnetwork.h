@@ -53,6 +53,7 @@ typedef struct vnetConfig_t {
   char bridgedev[32];
   char mode[32];
   char localIp[32];
+  uint32_t localIps[32];
   uint32_t nw, nm, euca_ns;
   int role;
   int enabled;
@@ -82,6 +83,9 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
 
 int vnetAddDev(vnetConfig *vnetconfig, char *dev);
 int vnetDelDev(vnetConfig *vnetconfig, char *dev);
+int vnetAddLocalIP(vnetConfig *vnetconfig, uint32_t ip);
+int vnetCheckLocalIP(vnetConfig *vnetconfig, uint32_t ip);
+int vnetCountLocalIP(vnetConfig *vnetconfig);
 
 int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts);
 int vnetKickDHCP(vnetConfig *vnetconfig);
@@ -108,10 +112,12 @@ int vnetRestoreTablesFromMemory(vnetConfig *vnetconfig);
 int vnetSaveTablesToMemory(vnetConfig *vnetconfig);
 
 int vnetAddPublicIP(vnetConfig *vnetconfig, char *ip);
+int vnetCheckPublicIP(vnetConfig *vnetconfig, char *ip);
 int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip);
 int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip);
 int vnetSetPublicIP(vnetConfig *vnetconfig, char *ip, char *dstip, int setval);
 int vnetGetPublicIP(vnetConfig *vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno);
+
 int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst);
 int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst);
 
