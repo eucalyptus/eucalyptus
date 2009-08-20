@@ -46,13 +46,14 @@ public class UDPListener extends Thread {
 	int port;
 	DatagramSocket socket;
 
-	public UDPListener(InetAddress address, int port) {
+	public UDPListener(InetAddress address, int port) throws Exception {
 		this.address = address;
 		this.port = port;
 		try {
 			socket = new DatagramSocket(port, address);
 		} catch(Exception ex) {
 			LOG.error(ex);
+			throw ex;
 		}
 	}
 

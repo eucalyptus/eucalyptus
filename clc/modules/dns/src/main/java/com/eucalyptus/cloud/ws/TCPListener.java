@@ -47,13 +47,14 @@ public class TCPListener extends Thread {
 	int port;
 	ServerSocket socket;
 
-	public TCPListener(InetAddress address, int port) {
+	public TCPListener(InetAddress address, int port) throws Exception {
 		this.address = address;
 		this.port = port;
 		try {
 			socket = new ServerSocket(port, 128, address);
 		} catch(IOException ex) {
 			LOG.error(ex);
+			throw ex;
 		}
 
 	}
