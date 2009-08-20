@@ -15,6 +15,7 @@
 	<classpathentry kind="src" output="modules/cloud/build" path="modules/cloud/src/main/java"/>
 	<classpathentry kind="src" output="modules/configuration/build" path="modules/configuration/src/main/java"/>
 	<classpathentry kind="src" output="modules/walrus/build" path="modules/walrus/src/main/java"/>
+	<classpathentry kind="src" path="modules/storage-common/src/main/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
 	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>
