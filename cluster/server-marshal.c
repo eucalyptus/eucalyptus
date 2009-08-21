@@ -187,7 +187,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   clusterControllersLen = adb_describeNetworksType_sizeof_clusterControllers(snt, env);
   clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
   for (i=0; i<clusterControllersLen; i++) {
-    clusterControllers[i] = adb_describeNetworksType_get_clusterControllers_at(snt, env, i);
+    clusterControllers[i] = host2ip(adb_describeNetworksType_get_clusterControllers_at(snt, env, i));
   }
   
   snrt = adb_describeNetworksResponseType_create(env);
@@ -592,7 +592,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   clusterControllersLen = adb_startNetworkType_sizeof_clusterControllers(snt, env);
   clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
   for (i=0; i<clusterControllersLen; i++) {
-    clusterControllers[i] = adb_startNetworkType_get_clusterControllers_at(snt, env, i);
+    clusterControllers[i] = host2ip(adb_startNetworkType_get_clusterControllers_at(snt, env, i));
   }
   
   

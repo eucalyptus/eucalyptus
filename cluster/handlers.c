@@ -2348,7 +2348,7 @@ int restoreNetworkState() {
 
 int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHosts) {
   int rc, i;
-  char *tmpstr;
+  char *tmpstr, *ipbuf;
   char *ncservice;
   int ncport;
   char **hosts;
@@ -2396,15 +2396,13 @@ int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHos
       *res = realloc(*res, sizeof(resource) * *numHosts);
       bzero(&((*res)[*numHosts-1]), sizeof(resource));
       snprintf((*res)[*numHosts-1].hostname, 128, "%s", hosts[i]);
-      {
-	struct hostent *he=NULL;
-	struct in_addr ia;
-	he = gethostbyname(hosts[i]);
-	if (he != NULL) {
-	  memcpy(&ia, he->h_addr, sizeof(struct in_addr));
-	  snprintf((*res)[*numHosts-1].ip, 24, "%s", inet_ntoa(ia));
-	}
+
+      ipbuf = host2ip(hosts[i]);
+      if (ipbuf) {
+	snprintf((*res)[*numHosts-1].ip, 24, "%s", ipbuf);
       }
+      if (ipbuf) free(ipbuf);
+
       (*res)[*numHosts-1].ncPort = ncport;
       snprintf((*res)[*numHosts-1].ncService, 128, "%s", ncservice);
       snprintf((*res)[*numHosts-1].ncURL, 128, "http://%s:%d/%s", hosts[i], ncport, ncservice);	

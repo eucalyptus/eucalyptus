@@ -133,6 +133,7 @@ int vnetSaveIPTables(vnetConfig *vnetconfig);
 int vnetLoadIPTables(vnetConfig *vnetconfig);
 int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule);
 
+char *host2ip(char *host);
 char *hex2dot(uint32_t in);
 uint32_t dot2hex(char *in);
 int mac2ip(vnetConfig *vnetconfig, char *mac, char **ip);

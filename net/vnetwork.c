@@ -41,7 +41,14 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     if (daemon) strncpy(vnetconfig->dhcpdaemon, daemon, 1024);
     if (dhcpuser) strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
     //    if (localIp) strncpy(vnetconfig->localIp, localIp, 32);
-    if (localIp) vnetAddLocalIP(vnetconfig, dot2hex(localIp));
+    if (localIp) {
+      char *ipbuf=NULL;
+      ipbuf = host2ip(localIp);
+      if (ipbuf) {
+	vnetAddLocalIP(vnetconfig, dot2hex(ipbuf));
+	free(ipbuf);
+      }
+    }
     vnetconfig->tunnels.localIpId = -1;
     vnetconfig->tunnels.tunneling = 0;
     vnetconfig->role = role;
@@ -787,6 +794,9 @@ int vnetCheckLocalIP(vnetConfig *vnetconfig, uint32_t ip) {
     return(1);
   }
 
+  // local address? (127.0.0.0/8)
+  if (ip >= 0x7F000000 && ip <= 0x7FFFFFFF) return(0);
+  
   done=0;
   for (i=0; i<32; i++) {
     if (vnetconfig->localIps[i] == ip) {
@@ -1050,16 +1060,8 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   }
   
   for (i=0; i<ccsLen; i++) {
-
-    //    if (!strcmp(ccs[i], vnetconfig->localIp)) {
-    rc = vnetCheckLocalIP(vnetconfig, dot2hex(ccs[i]));
-    if (!rc) {
-      localIpId = i;
-    }
-    
     found=0;
     for (j=0; j<NUMBER_OF_CCS && !found; j++) {
-      //      logprintfl(EUCADEBUG, "dot2hexing %s, %d == %d\n", ccs[i], dot2hex(ccs[i]), vnetconfig->tunnels.ccs[j]);
       if (dot2hex(ccs[i]) == vnetconfig->tunnels.ccs[j]) {
 	found=1;
       }
@@ -1071,19 +1073,7 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
     }
   }
   
-  if (localIpId >= 0) {
-    vnetconfig->tunnels.localIpId = localIpId;
-    //    logprintfl(EUCADEBUG, "woot, set localIpId to %d\n", vnetconfig->tunnels.localIpId);
-  } else {
-    logprintfl(EUCAWARN, "VNET_LOCALIP is not in list of CCS, tearing down tunnels\n");
-    vnetTeardownTunnels(vnetconfig);
-    bzero(vnetconfig->tunnels.ccs, sizeof(uint32_t) * NUMBER_OF_CCS);
-    vnetconfig->tunnels.localIpId = -1;
-    return(0);
-  }
-  
   for (i=0; i<NUMBER_OF_CCS; i++) {
-    //    logprintfl(EUCADEBUG, "DCCS: %s/%d\n", hex2dot(vnetconfig->tunnels.ccs[i]), i);
     if (vnetconfig->tunnels.ccs[i] != 0) {
       found=0;
       for (j=0; j<ccsLen && !found; j++) {
@@ -1099,6 +1089,27 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
     }
   }
 
+  localIpId = -1;
+  found=0;
+  for (i=0; i<NUMBER_OF_CCS && !found; i++) {
+    if (vnetconfig->tunnels.ccs[i] != 0) {
+      rc = vnetCheckLocalIP(vnetconfig, vnetconfig->tunnels.ccs[i]);
+      if (!rc) {
+	logprintfl(EUCADEBUG, "setting localIpId: %d\n", i);
+	localIpId = i;
+	found=1;
+      }
+    }
+  }
+  if (localIpId >= 0) {
+    vnetconfig->tunnels.localIpId = localIpId;
+  } else {
+    logprintfl(EUCAWARN, "VNET_LOCALIP is not in list of CCS, tearing down tunnels\n");
+    vnetTeardownTunnels(vnetconfig);
+    bzero(vnetconfig->tunnels.ccs, sizeof(uint32_t) * NUMBER_OF_CCS);
+    vnetconfig->tunnels.localIpId = -1;
+    return(0);
+  }
   return(0);
 }
 
@@ -2223,4 +2234,29 @@ int check_tablerule(vnetConfig *vnetconfig, char *table, char *rule) {
     return(1);
   }
   return(0);
+}
+
+char *host2ip(char *host) {
+  struct addrinfo hints, *result;
+  int rc;
+  char hostbuf[256], *ret;
+  
+  if (!host) return(NULL);
+  
+  ret = NULL;
+  
+  bzero(&hints, sizeof(struct addrinfo));
+  rc = getaddrinfo(host, NULL, &hints, &result);
+  if (!rc) {
+    rc = getnameinfo(result->ai_addr, result->ai_addrlen, hostbuf, 256, NULL, 0, NI_NUMERICHOST);
+    if (!rc) {
+      ret = strdup(hostbuf);
+    }
+  }
+  if (ret) {
+    //logprintfl(EUCADEBUG, "converted %s->%s\n", host, ret);
+  } else {
+    ret = strdup(host);
+  }
+  return(ret);
 }
