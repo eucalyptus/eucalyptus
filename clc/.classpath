@@ -52,7 +52,7 @@
 	<classpathentry kind="lib" path="lib/drools-core-4.0.7.jar"/>
 	<classpathentry kind="lib" path="lib/ecj.jar"/>
 	<classpathentry kind="lib" path="lib/el-api-2.1.jar"/>
-	<classpathentry kind="lib" path="lib/eucalyptus-commons-ext-0.4.jar"/>
+	<classpathentry kind="lib" path="lib/eucalyptus-commons-ext-0.4.jar" sourcepath="/bzr/eucalyptus-common-java/src"/>
 	<classpathentry kind="lib" path="lib/excalibur-logkit.jar"/>
 	<classpathentry kind="lib" path="lib/ezmorph-1.0.5.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-activation-1.1-spec-1.0.1.jar"/>

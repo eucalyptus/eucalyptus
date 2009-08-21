@@ -52,7 +52,7 @@ public class SystemBootstrapper {
       BootstrapFactory.initBootstrappers( );
       return true;
     } catch ( Exception e ) {
-      LOG.fatal( e,e );
+      LOG.info( e,e );
       return false;
     }
   }
