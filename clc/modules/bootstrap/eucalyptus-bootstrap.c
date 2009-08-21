@@ -513,6 +513,9 @@ int java_init(euca_opts *args, java_home_t *data) {
     if(args->disable_dns_flag) {
     	JVM_ARG(opt[++x],"-Deuca.disable.dns=true");
     }
+    if(args->disable_ebs_flag) {
+    	JVM_ARG(opt[++x],"-Deuca.disable.ebs=true");
+    }
     if(args->debug_flag) {
     	JVM_ARG(opt[++x],"-Xdebug");
     	JVM_ARG(opt[++x],"-Xrunjdwp:transport=dt_socket,server=y,suspend=%2$s,address=%1$d",GETARG(args,debug_port),(args->debug_suspend_flag?"y":"n"));

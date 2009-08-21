@@ -71,7 +71,7 @@ public class Main {
     } catch (Exception e) {}
 
     try {
-      if( System.getProperty("euca.ebs.disable") == null ) {
+      if( System.getProperty("euca.disable.ebs") == null ) {
         StorageProperties.update();
         Messaging.send( StorageProperties.STORAGE_REF, new InitializeStorageManagerType() );
       }

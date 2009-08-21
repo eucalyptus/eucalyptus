@@ -76,9 +76,13 @@ public class SystemBootstrapper {
         LOG.info( LogUtils.header( "Loading " + r ) );
       }
       for( Bootstrapper b : r.getBootstrappers( ) ) {
+    	//TODO: This should be refactored into a set of bootstrappers to skip
         if( b.getClass( ).getSimpleName( ).equals( "DNSBootstrapper") && System.getProperty("euca.disable.dns") != null ) {
           LOG.info( "-> skip: " + b.getClass( ) );
           continue;//TODO: fix this hack.
+        } else if( b.getClass( ).getSimpleName( ).equals( "BlockStorageBootstrapper") && System.getProperty("euca.disable.ebs") != null ) {
+            LOG.info( "-> skip: " + b.getClass( ) );
+            continue;//TODO: fix this hack.
         }
         try {
           LOG.info( "-> load: " + b.getClass( ) );

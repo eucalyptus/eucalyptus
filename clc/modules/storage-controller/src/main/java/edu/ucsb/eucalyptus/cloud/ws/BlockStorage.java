@@ -85,30 +85,32 @@ public class BlockStorage {
 		volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();
-		blockManager.initialize();
-		configure();
+		if(System.getProperty("euca.disable.ebs") == null) {
+			blockManager.initialize();
+			configure();
+		}
 	}
 
 	public static void initialize() {
-		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
-		String walrusAddr = StorageProperties.WALRUS_URL;
-		if(walrusAddr == null) {
-			LOG.warn("Walrus host addr not set");
-		}
-		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
-		try {
-			blockManager.checkPreconditions();
-			blockManager.configure();
-			startupChecks();
-			if(!WalrusProperties.sharedMode)
-				BlockStorageChecker.checkWalrusConnection();
-		} catch(Exception ex) {
-			StorageProperties.enableStorage = false;
-			LOG.error(ex.getMessage());
-			LOG.warn("Could not initialize block manager. BlockStorage has been disabled.");
-			LOG.error("Could not initialize block manager. BlockStorage has been disabled.");
-			if(System.getProperty("euca.ebs.disable") == null) {
-				SystemUtil.shutdownWithError("EBS is enabled but preconditions failed. Please resolve preconditions or restart with euca.ebs.disable");
+		if(System.getProperty("euca.disable.ebs") == null) {
+			StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
+			String walrusAddr = StorageProperties.WALRUS_URL;
+			if(walrusAddr == null) {
+				LOG.warn("Walrus host addr not set");
+			}
+			checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
+			try {
+				blockManager.checkPreconditions();
+				blockManager.configure();
+				startupChecks();
+				if(!WalrusProperties.sharedMode)
+					BlockStorageChecker.checkWalrusConnection();
+			} catch(Exception ex) {
+				StorageProperties.enableStorage = false;
+				LOG.error(ex.getMessage());
+				LOG.warn("Could not initialize block manager. BlockStorage has been disabled.");
+				LOG.error("Could not initialize block manager. BlockStorage has been disabled.");
+				SystemUtil.shutdownWithError("EBS is enabled but preconditions failed. Please resolve preconditions or restart with euca.disable.ebs");			
 			}
 		}
 	}
@@ -121,7 +123,7 @@ public class BlockStorage {
 		StorageProperties.MAX_VOLUME_SIZE = storageInfo.getMaxVolumeSizeInGB();
 		StorageProperties.storageRootDirectory = storageInfo.getVolumesDir();
 	}
-	
+
 	private static StorageInfo getConfig() {
 		EntityWrapper<StorageInfo> db = new EntityWrapper<StorageInfo>();
 		StorageInfo storageInfo;

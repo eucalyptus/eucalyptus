@@ -42,7 +42,7 @@
     <fail message="EUCALYPTUS environment variable" unless="localenv.EUCALYPTUS"/>
     <property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d"/>
     <property file="${euca.conf.dir}/../eucalyptus.conf"/>
-    <condition property="euca.ebs.disable">
+    <condition property="euca.disable.ebs">
         <isset property="DISABLE_EBS"/>
     </condition>
     <condition property="euca.virtualhosting.disable">

@@ -11,7 +11,7 @@ public class EucalyptusProperties {
   private static Logger LOG = Logger.getLogger( EucalyptusProperties.class );
 
   public static List<String> getDisabledOperations( ) {//TODO: move me
-    if ( System.getProperty( "euca.ebs.disable" ) != null ) {
+    if ( System.getProperty( "euca.disable.ebs" ) != null ) {
       EucalyptusProperties.disableBlockStorage = true;
       return Lists.newArrayList( "CreateVolume", "DeleteVolume", "DescribeVolumes", "AttachVolume", "DetachVolume", "CreateSnapshot", "DeleteSnapshot", "DescribeSnapshots" );
     }
