@@ -33,7 +33,9 @@ const char *eucalyptus_opts_help[] = {
   "\nEucalyptus Configuration & Environment:",
   "  -u, --user=username           User to drop privs to after starting.  \n                                  (default=`eucalyptus')",
   "  -h, --home=directory          Eucalyptus home directory.  (default=`/')",
-  "  -c, --cloud-host=hostname/address\n                                Hostname/Address for the Cloud Controller.  \n                                  (default=`127.0.0.1')",
+  "  -c, --cloud-host=address      Hostname/Address for the Cloud Controller.  \n                                  (default=`127.0.0.1')",
+  "  -w, --walrus-host=address or 'localhost'\n                                Hostname/Address for Walrus.  \n                                  (default=`localhost')",
+  "      --disable-dns             Do not try to bind the DNS server prot.  \n                                  (default=off)",
   "  -D, --define=STRING           Set system properties.",
   "  -v, --verbose                 Verbose bootstrapper output. Note: This only \n                                  controls the level of output from the native \n                                  bootstrapper.  (default=off)",
   "  -l, --log-level=filename      Control the log level for console output.  \n                                  (default=`INFO')",
@@ -83,6 +85,8 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->user_given = 0 ;
   args_info->home_given = 0 ;
   args_info->cloud_host_given = 0 ;
+  args_info->walrus_host_given = 0 ;
+  args_info->disable_dns_given = 0 ;
   args_info->define_given = 0 ;
   args_info->verbose_given = 0 ;
   args_info->log_level_given = 0 ;
@@ -109,6 +113,9 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->home_orig = NULL;
   args_info->cloud_host_arg = gengetopt_strdup ("127.0.0.1");
   args_info->cloud_host_orig = NULL;
+  args_info->walrus_host_arg = gengetopt_strdup ("localhost");
+  args_info->walrus_host_orig = NULL;
+  args_info->disable_dns_flag = 0;
   args_info->define_arg = NULL;
   args_info->define_orig = NULL;
   args_info->verbose_flag = 0;
@@ -146,25 +153,27 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->user_help = eucalyptus_opts_help[3] ;
   args_info->home_help = eucalyptus_opts_help[4] ;
   args_info->cloud_host_help = eucalyptus_opts_help[5] ;
-  args_info->define_help = eucalyptus_opts_help[6] ;
+  args_info->walrus_host_help = eucalyptus_opts_help[6] ;
+  args_info->disable_dns_help = eucalyptus_opts_help[7] ;
+  args_info->define_help = eucalyptus_opts_help[8] ;
   args_info->define_min = 0;
   args_info->define_max = 0;
-  args_info->verbose_help = eucalyptus_opts_help[7] ;
-  args_info->log_level_help = eucalyptus_opts_help[8] ;
-  args_info->out_help = eucalyptus_opts_help[9] ;
-  args_info->err_help = eucalyptus_opts_help[10] ;
-  args_info->check_help = eucalyptus_opts_help[12] ;
-  args_info->stop_help = eucalyptus_opts_help[13] ;
-  args_info->fork_help = eucalyptus_opts_help[14] ;
-  args_info->pidfile_help = eucalyptus_opts_help[15] ;
-  args_info->java_home_help = eucalyptus_opts_help[17] ;
-  args_info->jvm_name_help = eucalyptus_opts_help[18] ;
-  args_info->jvm_args_help = eucalyptus_opts_help[19] ;
+  args_info->verbose_help = eucalyptus_opts_help[9] ;
+  args_info->log_level_help = eucalyptus_opts_help[10] ;
+  args_info->out_help = eucalyptus_opts_help[11] ;
+  args_info->err_help = eucalyptus_opts_help[12] ;
+  args_info->check_help = eucalyptus_opts_help[14] ;
+  args_info->stop_help = eucalyptus_opts_help[15] ;
+  args_info->fork_help = eucalyptus_opts_help[16] ;
+  args_info->pidfile_help = eucalyptus_opts_help[17] ;
+  args_info->java_home_help = eucalyptus_opts_help[19] ;
+  args_info->jvm_name_help = eucalyptus_opts_help[20] ;
+  args_info->jvm_args_help = eucalyptus_opts_help[21] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->debug_help = eucalyptus_opts_help[20] ;
-  args_info->debug_port_help = eucalyptus_opts_help[21] ;
-  args_info->debug_suspend_help = eucalyptus_opts_help[22] ;
+  args_info->debug_help = eucalyptus_opts_help[22] ;
+  args_info->debug_port_help = eucalyptus_opts_help[23] ;
+  args_info->debug_suspend_help = eucalyptus_opts_help[24] ;
   
 }
 
@@ -293,6 +302,8 @@ arguments_release (struct eucalyptus_opts *args_info)
   free_string_field (&(args_info->home_orig));
   free_string_field (&(args_info->cloud_host_arg));
   free_string_field (&(args_info->cloud_host_orig));
+  free_string_field (&(args_info->walrus_host_arg));
+  free_string_field (&(args_info->walrus_host_orig));
   free_multiple_string_field (args_info->define_given, &(args_info->define_arg), &(args_info->define_orig));
   free_string_field (&(args_info->log_level_arg));
   free_string_field (&(args_info->log_level_orig));
@@ -355,6 +366,10 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "home", args_info->home_orig, 0);
   if (args_info->cloud_host_given)
     write_into_file(outfile, "cloud-host", args_info->cloud_host_orig, 0);
+  if (args_info->walrus_host_given)
+    write_into_file(outfile, "walrus-host", args_info->walrus_host_orig, 0);
+  if (args_info->disable_dns_given)
+    write_into_file(outfile, "disable-dns", 0, 0 );
   write_multiple_into_file(outfile, args_info->define_given, "define", args_info->define_orig, 0);
   if (args_info->verbose_given)
     write_into_file(outfile, "verbose", 0, 0 );
@@ -940,6 +955,8 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { "user",	1, NULL, 'u' },
         { "home",	1, NULL, 'h' },
         { "cloud-host",	1, NULL, 'c' },
+        { "walrus-host",	1, NULL, 'w' },
+        { "disable-dns",	0, NULL, 0 },
         { "define",	1, NULL, 'D' },
         { "verbose",	0, NULL, 'v' },
         { "log-level",	1, NULL, 'l' },
@@ -958,7 +975,7 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { NULL,	0, NULL, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vu:h:c:D:vl:o:e:CSfj:J:X:d", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:c:w:D:vl:o:e:CSfj:J:X:d", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -1001,6 +1018,18 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
               &(local_args_info.cloud_host_given), optarg, 0, "127.0.0.1", ARG_STRING,
               check_ambiguity, override, 0, 0,
               "cloud-host", 'c',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'w':	/* Hostname/Address for Walrus..  */
+        
+        
+          if (update_arg( (void *)&(args_info->walrus_host_arg), 
+               &(args_info->walrus_host_orig), &(args_info->walrus_host_given),
+              &(local_args_info.walrus_host_given), optarg, 0, "localhost", ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "walrus-host", 'w',
               additional_error))
             goto failure;
         
@@ -1141,8 +1170,20 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
             exit (EXIT_SUCCESS);
           }
 
+          /* Do not try to bind the DNS server prot..  */
+          if (strcmp (long_options[option_index].name, "disable-dns") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->disable_dns_flag), 0, &(args_info->disable_dns_given),
+                &(local_args_info.disable_dns_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "disable-dns", '-',
+                additional_error))
+              goto failure;
+          
+          }
           /* Location for the pidfile..  */
-          if (strcmp (long_options[option_index].name, "pidfile") == 0)
+          else if (strcmp (long_options[option_index].name, "pidfile") == 0)
           {
           
           

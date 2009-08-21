@@ -509,6 +509,10 @@ int java_init(euca_opts *args, java_home_t *data) {
     JVM_ARG(opt[++x],"-Deuca.log.level=%1$s",GETARG(args,log_level));
     JVM_ARG(opt[++x],"-Deuca.db.port=%1$d",9001);//TODO: add cli parameter
     JVM_ARG(opt[++x],"-Deuca.db.host=%1$s",GETARG(args,cloud_host));
+    JVM_ARG(opt[++x],"-Deuca.walrus.host=%1$s",GETARG(args,walrus_host));
+    if(args->disable_dns_flag) {
+    	JVM_ARG(opt[++x],"-Deuca.disable.dns=true");
+    }
     if(args->debug_flag) {
     	JVM_ARG(opt[++x],"-Xdebug");
     	JVM_ARG(opt[++x],"-Xrunjdwp:transport=dt_socket,server=y,suspend=%2$s,address=%1$d",GETARG(args,debug_port),(args->debug_suspend_flag?"y":"n"));

@@ -4,7 +4,9 @@ version "v1.6"
 section "Eucalyptus Configuration & Environment"
 option "user"       u   "User to drop privs to after starting."   string  typestr="username"  default="eucalyptus" no
 option "home"       h   "Eucalyptus home directory."   string  typestr="directory"  default="/" no
-option "cloud-host"       c   "Hostname/Address for the Cloud Controller."   string  typestr="hostname/address"  default="127.0.0.1" no
+option "cloud-host"       c   "Hostname/Address for the Cloud Controller."   string  typestr="address"  default="127.0.0.1" no
+option "walrus-host"       w   "Hostname/Address for Walrus."   string  typestr="address or 'localhost'"  default="localhost" no
+option "disable-dns"       -   "Do not try to bind the DNS server prot."   flag   off
 option "define"       D   "Set system properties."   string  optional  multiple
 option "verbose"       v   "Verbose bootstrapper output. Note: This only controls the level of output from the native bootstrapper."   flag   off
 option "log-level"       l   "Control the log level for console output."   string  typestr="filename"  default="INFO" no

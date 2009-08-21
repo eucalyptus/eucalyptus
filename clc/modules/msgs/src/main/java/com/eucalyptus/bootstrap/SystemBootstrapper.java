@@ -76,6 +76,10 @@ public class SystemBootstrapper {
         LOG.info( LogUtils.header( "Loading " + r ) );
       }
       for( Bootstrapper b : r.getBootstrappers( ) ) {
+        if( b instanceof DNSBootstrapper && System.getProperty("euca.disable.dns") != null ) {
+          LOG.info( "-> skip: " + b.getClass( ) );
+          continue;//TODO: fix this hack.
+        }
         try {
           LOG.info( "-> load: " + b.getClass( ) );
           Depends deps = b.getClass( ).getAnnotation( Depends.class );

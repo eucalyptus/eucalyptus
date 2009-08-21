@@ -43,6 +43,11 @@ struct eucalyptus_opts
   char * cloud_host_arg;	/**< @brief Hostname/Address for the Cloud Controller. (default='127.0.0.1').  */
   char * cloud_host_orig;	/**< @brief Hostname/Address for the Cloud Controller. original value given at command line.  */
   const char *cloud_host_help; /**< @brief Hostname/Address for the Cloud Controller. help description.  */
+  char * walrus_host_arg;	/**< @brief Hostname/Address for Walrus. (default='localhost').  */
+  char * walrus_host_orig;	/**< @brief Hostname/Address for Walrus. original value given at command line.  */
+  const char *walrus_host_help; /**< @brief Hostname/Address for Walrus. help description.  */
+  int disable_dns_flag;	/**< @brief Do not try to bind the DNS server prot. (default=off).  */
+  const char *disable_dns_help; /**< @brief Do not try to bind the DNS server prot. help description.  */
   char ** define_arg;	/**< @brief Set system properties..  */
   char ** define_orig;	/**< @brief Set system properties. original value given at command line.  */
   unsigned int define_min; /**< @brief Set system properties.'s minimum occurreces */
@@ -92,6 +97,8 @@ struct eucalyptus_opts
   unsigned int user_given ;	/**< @brief Whether user was given.  */
   unsigned int home_given ;	/**< @brief Whether home was given.  */
   unsigned int cloud_host_given ;	/**< @brief Whether cloud-host was given.  */
+  unsigned int walrus_host_given ;	/**< @brief Whether walrus-host was given.  */
+  unsigned int disable_dns_given ;	/**< @brief Whether disable-dns was given.  */
   unsigned int define_given ;	/**< @brief Whether define was given.  */
   unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
   unsigned int log_level_given ;	/**< @brief Whether log-level was given.  */
