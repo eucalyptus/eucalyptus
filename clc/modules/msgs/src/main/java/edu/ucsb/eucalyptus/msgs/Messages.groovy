@@ -493,3 +493,23 @@ public class DescribeBundleTasksType extends VmBundleMessage {
 }
 public class DescribeBundleTasksResponseType extends VmBundleMessage {
 }
+
+public class StatEventRecord extends EucalyptusMessage {
+
+	protected String service = "Eucalyptus";
+	protected String version = "Unknown";
+	
+	def StatEventRecord(final String service, final String version)
+	{
+		this.service = service;
+		this.version = version;
+	}
+
+	def StatEventRecord() {}
+
+	public String toString()
+	{
+		return String.format("%s", this.service);
+	}
+}
+

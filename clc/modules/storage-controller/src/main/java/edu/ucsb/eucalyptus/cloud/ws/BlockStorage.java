@@ -80,7 +80,8 @@ public class BlockStorage {
 	static StorageManager snapshotStorageManager;
 	static LogicalStorageManager blockManager;
 	static BlockStorageChecker checker;
-
+	static BlockStorageStatistics blockStorageStatistics;
+	
 	static {
 		volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
@@ -89,6 +90,8 @@ public class BlockStorage {
 			blockManager.initialize();
 			configure();
 		}
+		if(StorageProperties.trackUsageStatistics) 
+			blockStorageStatistics = new BlockStorageStatistics();
 	}
 
 	public static void initialize() {
@@ -262,6 +265,10 @@ public class BlockStorage {
 					volumeStorageManager.deleteObject("", volumeId);
 					db.delete(foundVolume);
 					db.commit();
+					if(StorageProperties.trackUsageStatistics) { 
+						blockStorageStatistics.decrementVolumeCount();
+						blockStorageStatistics.updateSpaceUsed(-(volumeInfo.getSize() * StorageProperties.GB));
+					}
 				} catch ( IOException ex) {
 					LOG.error(ex);
 				}
@@ -594,6 +601,10 @@ public class BlockStorage {
 					throw new EucalyptusCloudException();
 				}
 				db.commit();
+				if(StorageProperties.trackUsageStatistics) {
+					blockStorageStatistics.incrementVolumeCount();
+					blockStorageStatistics.updateSpaceUsed((size * StorageProperties.GB));
+				}
 			} catch(EucalyptusCloudException ex) {
 				LOG.error(ex);
 			}

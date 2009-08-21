@@ -68,7 +68,8 @@ public class StorageProperties {
     public static final String ETHERD_PREFIX = "/dev/etherd/e";
     public static String iface = "eth0";
     public static boolean zeroFillVolumes = false;
-    
+	public static boolean trackUsageStatistics = true;
+
     static {
         String walrusAt = System.getProperty(WalrusProperties.URL_PROPERTY);
         if(walrusAt != null)

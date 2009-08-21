@@ -1,7 +1,7 @@
 package edu.ucsb.eucalyptus.msgs
-import org.jboss.netty.handler.codec.http.HttpResponseStatusimport org.jboss.netty.channel.Channel;
-import edu.ucsb.eucalyptus.constants.IsData;
-/*
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.channel.Channel;
+/*
  * Software License Agreement (BSD License)
  *
  * Copyright (c) 2008, Regents of the University of California
@@ -633,4 +633,38 @@ public class GetWalrusSnapshotType extends WalrusDataRequestType {
 }
 
 public class GetWalrusSnapshotResponseType extends WalrusDataResponseType {
+}
+
+public class WalrusUsageStatsRecord extends StatEventRecord {
+	Long bytesIn;
+	Long bytesOut;
+	Integer numberOfBuckets;
+	Long totalSpaceUsed;
+	
+	def WalrusUsageStatsRecord() {}
+
+	def WalrusUsageStatsRecord(Long bytesIn, 
+			Long bytesOut,
+			Integer numberOfBuckets,
+			Long totalSpaceUsed) {
+		super("Walrus", "Unknown");
+		this.bytesIn = bytesIn;
+		this.bytesOut = bytesOut;
+		this.numberOfBuckets = numberOfBuckets;
+		this.totalSpaceUsed = totalSpaceUsed;
+	}
+
+	public String toString() {
+		return String.format("Service: %s Version: %s Bytes In: %s Bytes Out: %s Buckets: %d Space Used: %s", 
+				service, 
+				version, 
+				bytesIn, 
+				bytesOut, 
+				numberOfBuckets, 
+				totalSpaceUsed);
+	}
+	
+	public static WalrusUsageStatsRecord create(Long bytesIn, Long bytesOut, Integer numberOfBuckets, Long totalSpaceUsed) {
+		return new WalrusUsageStatsRecord(bytesIn, bytesOut, numberOfBuckets, totalSpaceUsed);
+	}
 }

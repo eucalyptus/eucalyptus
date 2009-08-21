@@ -233,3 +233,29 @@ public class StorageControllerHeartbeatMessage extends HeartbeatMessage {
 		super(heartbeatId);
 	}
 }
+
+public class StorageUsageStatsRecord extends StatEventRecord {
+	Long totalSpaceUsed;
+	Integer numberOfVolumes;
+	
+	def StorageUsageStatsRecord() {}
+
+	def StorageUsageStatsRecord(final Integer numberOfVolumes, 
+			final Long totalSpaceUsed) {			
+		super("StorageController", "Unknown");
+		this.totalSpaceUsed = totalSpaceUsed;
+		this.numberOfVolumes = numberOfVolumes;
+	}
+
+	public String toString() {
+		return String.format("Service: %s Version: %s Volumes: %d Space Used: %s", 
+				service, 
+				version, 
+				numberOfVolumes, 
+				totalSpaceUsed);
+	}
+	
+	public static StorageUsageStatsRecord create(Integer numberOfVolumes, Long totalSpaceUsed) {
+		return new StorageUsageStatsRecord(numberOfVolumes, totalSpaceUsed);
+	}
+}

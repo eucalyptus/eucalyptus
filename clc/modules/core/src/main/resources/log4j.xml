@@ -61,6 +61,24 @@
         </layout>
     </appender>
 
+    <appender name="walrus-stats-log" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="${euca.home}/var/run/eucalyptus/walrus-stats.log"/>
+        <param name="MaxFileSize" value="10MB"/>
+        <param name="MaxBackupIndex" value="10"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="Timestamp: %d{HH:mm:ss} %m%n"/>
+        </layout>
+    </appender>
+
+  <appender name="sc-stats-log" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="${euca.home}/var/run/eucalyptus/sc-stats.log"/>
+        <param name="MaxFileSize" value="10MB"/>
+        <param name="MaxBackupIndex" value="10"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="Timestamp: %d{HH:mm:ss} %m%n"/>
+        </layout>
+    </appender>
+
     <category name="edu.ucsb.eucalyptus" additivity="true">
         <priority value="DEBUG"/>
         <appender-ref ref="logfile"/>
@@ -96,6 +114,14 @@
     <category name="com.mchange" additivity="true">
         <priority value="ERROR"/>
         <appender-ref ref="logfile"/>
+    </category>
+    <category name="edu.ucsb.eucalyptus.cloud.ws.WalrusStatistics" additivity="true">
+        <priority value="INFO"/>
+        <appender-ref ref="walrus-stats-log"/>
+    </category>
+    <category name="edu.ucsb.eucalyptus.cloud.ws.BlockStorageStatistics" additivity="true">
+        <priority value="INFO"/>
+        <appender-ref ref="sc-stats-log"/>
     </category>
 
     <root>

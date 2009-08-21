@@ -44,6 +44,7 @@ import com.eucalyptus.ws.util.Messaging;
 
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.cloud.ws.WalrusStatistics;
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
@@ -217,6 +218,8 @@ public class WalrusManager {
 		//call the storage manager to save the bucket to disk
 		try {
 			storageManager.createBucket(bucketName);
+			if(WalrusProperties.trackUsageStatistics) 
+				walrusStatistics.incrementBucketCount();
 		} catch (IOException ex) {
 			LOG.error(ex);
 			throw new EucalyptusCloudException(bucketName);
@@ -271,6 +274,8 @@ public class WalrusManager {
 					//Actually remove the bucket from the backing store
 					try {
 						storageManager.deleteBucket(bucketName);
+						if(WalrusProperties.trackUsageStatistics) 
+							walrusStatistics.decrementBucketCount();
 					} catch (IOException ex) {
 						//set exception code in reply
 						LOG.error(ex);
@@ -519,7 +524,7 @@ public class WalrusManager {
 							}
 							if(WalrusProperties.trackUsageStatistics) {
 								walrusStatistics.updateBytesIn(size);
-								walrusStatistics.dumpBytesIn();
+								walrusStatistics.updateSpaceUsed(size);
 							}
 							db.commit();
 							fileIO.finish();
@@ -735,7 +740,7 @@ public class WalrusManager {
 					}
 					if(WalrusProperties.trackUsageStatistics) {
 						walrusStatistics.updateBytesIn(size);
-						walrusStatistics.dumpBytesIn();
+						walrusStatistics.updateSpaceUsed(size);
 					}
 					//Add meta data if specified
 					if(request.getMetaData() != null)
@@ -846,6 +851,8 @@ public class WalrusManager {
 					bucketInfo.setBucketSize(bucketInfo.getBucketSize() - size);
 					try {
 						storageManager.deleteObject(bucketName, objectName);
+						if(WalrusProperties.trackUsageStatistics)
+							walrusStatistics.updateSpaceUsed(-size);
 					} catch (IOException ex) {
 						db.rollback();
 						LOG.error(ex);
@@ -1341,7 +1348,6 @@ public class WalrusManager {
 								db.commit();
 								if(WalrusProperties.trackUsageStatistics) {
 									walrusStatistics.updateBytesOut(torrentLength);
-									walrusStatistics.dumpBytesOut();
 								}
 								return reply;
 							} else {
@@ -1374,7 +1380,6 @@ public class WalrusManager {
 							//support for large objects
 							if(WalrusProperties.trackUsageStatistics) {
 								walrusStatistics.updateBytesOut(objectInfo.getSize());
-								walrusStatistics.dumpBytesOut();
 							}
 							storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
 									DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
@@ -1491,7 +1496,6 @@ public class WalrusManager {
 					if(request.getGetData()) {
 						if(WalrusProperties.trackUsageStatistics) {
 							walrusStatistics.updateBytesOut(objectInfo.getSize());
-							walrusStatistics.dumpBytesOut();
 						}
 						storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd, objectInfo.getSize(), objectInfo.getEtag(), 
 								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
@@ -1671,6 +1675,8 @@ public class WalrusManager {
 
 							try {
 								storageManager.copyObject(sourceBucket, sourceObjectName, destinationBucket, destinationObjectName);
+								if(WalrusProperties.trackUsageStatistics)
+									walrusStatistics.updateSpaceUsed(sourceObjectInfo.getSize());
 							} catch(Exception ex) {
 								LOG.error(ex);
 								db.rollback();
