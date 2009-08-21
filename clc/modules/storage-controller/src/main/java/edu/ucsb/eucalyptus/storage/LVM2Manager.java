@@ -66,7 +66,6 @@ public class LVM2Manager implements LogicalStorageManager {
 	private  static final String blockSize = "1M";
 	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
 	public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
-	private static final String CONFIG_FILE_PATH = "/etc/eucalyptus/eucalyptus.conf";
 	private static Logger LOG = Logger.getLogger(LVM2Manager.class);
 	public static String eucaHome = System.getProperty("euca.home");
 	private static final String IFACE_CONFIG_STRING = "VNET_INTERFACE";
@@ -83,9 +82,6 @@ public class LVM2Manager implements LogicalStorageManager {
 		eucaHome = eucaHomeDir;
 		if(!new File(eucaHome + EUCA_ROOT_WRAPPER).exists()) {
 			throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist in " + eucaHome + EUCA_ROOT_WRAPPER);
-		}
-		if(!new File(eucaHome + CONFIG_FILE_PATH).exists()) {
-			throw new EucalyptusCloudException(eucaHome + CONFIG_FILE_PATH + " does not exist");
 		}
 		File varDir = new File(eucaHome + EUCA_VAR_RUN_PATH);
 		if(!varDir.exists()) {
@@ -276,7 +272,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 
-	private String parseConfig() {
+	/*private String parseConfig() {
 		String configFileName = eucaHome + CONFIG_FILE_PATH;
 		String ifaceName = null;
 		try {
@@ -297,7 +293,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			LOG.error("Could not parse config file " + configFileName);
 		}
 		return ifaceName;
-	}
+	}*/
 
 	public void startupChecks() {
 		reload();
