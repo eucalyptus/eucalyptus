@@ -662,7 +662,11 @@ if [ -n "$CHECK" ]; then
 fi
 
 createCloudURL () {
-    getSecretKey
+    if ! getSecretKey; then
+	echo "ERROR: cannot get credentials"
+	return 1
+    fi
+
     ARGS="AWSAccessKeyId=$AKEY"
     KEY=$1
     shift
@@ -677,7 +681,7 @@ createCloudURL () {
 	shift
     done
     if [ -z "$SKEY" ]; then
-	echo "ERROR: need to pass in KEY parameter."
+	echo "ERROR: SKEY parameter is not set."
 	export URL=""
 	return 1
     fi
@@ -737,8 +741,8 @@ checkLocalService() {
 	    done
 	fi
 	
-	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null"
-	CMD="echo CLC CHECK NOT IMPLEMENTED"
+	CMD="$WGET -T 10 -t 1 -O - -o /dev/null --no-check-certificate https://127.0.0.1:8443/register | grep CloudVersion"
+#	CMD="echo CLC CHECK NOT IMPLEMENTED"
     elif [ "$SERVICE" = "CC" ]; then
 	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC > /dev/null"
     fi
@@ -809,14 +813,14 @@ if [ -n "$NEWCLUS" ]; then
     fi
 
     # create tunnel password
-    TUNPASS=`md5sum $DESTDIR/cloud-pk.pem | awk '{print $1}'`
-    if [ ${TUNPASS} != "" ]; then
-	echo ${TUNPASS} > $SOURCEDIR/vtunpass
-	chmod 0600 $SOURCEDIR/vtunpass
-	chown ${EUCA_USER} $SOURCEDIR/vtunpass
-    else
-	echo "WARN: Unable to create tunnel password file, tunneling will not function"
-    fi
+#    TUNPASS=`md5sum $DESTDIR/cloud-pk.pem | awk '{print $1}'`
+#    if [ ${TUNPASS} != "" ]; then
+#	echo ${TUNPASS} > $SOURCEDIR/vtunpass
+#	chmod 0600 $SOURCEDIR/vtunpass
+#	chown ${EUCA_USER} $SOURCEDIR/vtunpass
+#    else
+#	echo "WARN: Unable to create tunnel password file, tunneling will not function"
+#    fi
     
     # sync the keys
     if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass ; then
@@ -842,7 +846,7 @@ if [ -n "$WALRUS" ]; then
 	fi
 	
 	URL=""
-	if ! createCloudURL "Action" "AddWalrus" "Host" "${WALRUS}" ; then
+	if ! createCloudURL "Action" "RegisterWalrus" "Host" "${WALRUS}" ; then
 	    exit 1
 	fi
 	CMD="wget -O - \"$URL\" 2>/dev/null"
@@ -891,7 +895,7 @@ if [ -n "$SCHOST" ]; then
 	fi
 	
 	URL=""
-	if ! createCloudURL "Action" "AddStorageController" "Host" "${SCHOST}" "Name" "${SCNAME}"; then
+	if ! createCloudURL "Action" "RegisterStorageController" "Host" "${SCHOST}" "Name" "${SCNAME}"; then
 	    exit 1
 	fi
 	CMD="wget -O - \"$URL\" 2>/dev/null"

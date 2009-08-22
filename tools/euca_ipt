@@ -17,50 +17,24 @@ if ($rulefile =~ /^([ &:#-\@\w.]+)$/) {
     exit(1);
 }
 
-$postrules = shift @ARGV;
-if ($postrules =~ /^([ &:#-\@\w.]+)$/) {
-    $postrules = $1; #data is now untainted
-} else {
-    $postfules = "UNSET";
-}
-
 if (!$table || !$rulefile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile) {exit 1;}
 
+@workingfiles = ("$rulefile.orig", "$rulefile.new");
 
-if ($postrules ne "UNSET") {
-    open (RFH, "$postrules");
-    while(<RFH>) {
-	chomp;
-	my $line = $_;
-	$line =~ s/\s+$//g;
-	$line =~ s/^\s+//g;
-	if ($line ne "") {
-	    $postruleshash{"$line"} = 1;
-	}
-    }
-    close(RFH);    
-}
-
-open my $fh, '-|' or exec 'iptables-save', ("-t", "$table") or die "iptables-save failed: $!\n";
-open(OFH, ">$rulefile.orig") or die "cannot open $rulefile.orig";
+open my $fh, '-|' or exec 'iptables-save', ("-t", "$table") or dodie ("iptables-save failed: $!\n");
+open(OFH, ">$rulefile.orig") or dodie ("cannot open $rulefile.orig");
 $outbuf = "";
 while(<$fh>) {
     chomp;
     my $line = $_;
     $line =~ s/\s+$//g;
     $line =~ s/^\s+//g;
-    if (!$postruleshash{"$line"}) {
-	print OFH "$line\n";
-    }
+    print OFH "$line\n";
 }
-close($fh) || die "iptables-save failed\n";
+close($fh) || dodie ("iptables-save failed\n");
 close(OFH);
 
-$rc = $rc>>8;
-if ($rc) {
-    exit(1);
-}
-
+$added=0;
 $outbuf = "";
 open(FH, "$rulefile.orig");
 while(<FH>) {
@@ -79,51 +53,57 @@ while(<FH>) {
 	    if ($line ne "" && !$rulehash{$line}) {
 		$buf .= "$line\n";
 		$rulehash{$line} = 1;
+		$added=1;
 	    }
 	}
-	close(RFH);
-	
-	# do we have post rules?
-	if ($postrules ne "UNSET") {
-	    open (RFH, "$postrules");
-	    while(<RFH>) {
-		chomp;
-		my $line = $_;
-		$line =~ s/\s+$//g;
-		$line =~ s/^\s+//g;
-		if ($line ne "" && !$rulehash{$line}) {
-		    $buf .= "$line\n";
-		    $rulehash{$line} = 1;
-		}
-	    }
-	    close(RFH);
-	}
+	close(RFH);	
     }
     if ($line ne "" && !$rulehash{$line}) {
 	$buf .= "$line\n";
 	$rulehash{$line} = 1;
     }
-
 }
 close(FH);
+
+if (!$added) {
+    doexit(0);
+}
 
 open (OFH, ">$rulefile.new");
 print OFH "$buf\n";
 close(OFH);
 if (!-f "$rulefile.new") {
-    unlink("$rulefile.orig");
-    exit(1);
+    dodie("cannot find $rulefile.new");
 }
 
 
-open my $fh, '|-' or exec 'iptables-restore' or die "iptables-restore failed: $!\n";
-open(IFH, "$rulefile.new") or die "cannot open $rulefile.new";
+open my $fh, '|-' or exec 'iptables-restore' or dodie( "iptables-restore failed: $!\n");
+open(IFH, "$rulefile.new") or dodie( "cannot open $rulefile.new");
 while(<IFH>) {
     print $fh "$_";
 }
-close($fh) || die "iptables-restore failed\n";
+close($fh) || dodie( "iptables-restore failed\n");
 close(IFH);
 
-unlink("$rulefile.orig");
-unlink("$rulefile.new");
-exit($rc);
+doexit(0);
+
+sub doexit {
+    $ret = shift @_;
+    $msg = shift @_;
+    if ($msg) {
+	print STDERR "$msg\n";
+    }
+
+    for ($i=0; $i<@workingfiles; $i++) {
+	if ( -f "$workingfiles[$i]" ) {
+	    unlink("$workingfiles[$i]");
+	}
+    }
+
+    exit($ret);
+}    
+
+sub dodie {
+    $msg = shift @_;
+    doexit(1, "$msg");
+}

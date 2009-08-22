@@ -364,6 +364,7 @@ int vnetDeleteChain(vnetConfig *vnetconfig, char *userName, char *netName) {
     }
     runcount=0;
     while(!rc && runcount < 10) {
+      logprintfl(EUCADEBUG, "duplicate rule found, removing others: %d/%d\n", runcount, 10);
       rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
       runcount++;
     }
@@ -381,6 +382,7 @@ int vnetDeleteChain(vnetConfig *vnetconfig, char *userName, char *netName) {
     }
     runcount=0;
     while(!rc && runcount < 10) {
+      logprintfl(EUCADEBUG, "duplicate rule found, removing others: %d/%d\n", runcount, 10);
       rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
       runcount++;
     }
@@ -472,7 +474,6 @@ int vnetSaveTablesToMemory(vnetConfig *vnetconfig) {
   unlink(file);
   free(file);
 
-  //  logprintfl(EUCADEBUG, "in memory iptables: %s\n", vnetconfig->iptables);
   return(ret);
 }
 
@@ -544,10 +545,10 @@ int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
     return(1);
   }
   
-  //  logprintfl(EUCADEBUG, "Table Rule: %s\n", rule);
-  if (!check_tablerule(vnetconfig, table, rule)) {
-    return(0);
-  }
+  logprintfl(EUCADEBUG, "\tapplying single table (%s) rule (%s)\n", table, rule);
+  //  if (!check_tablerule(vnetconfig, table, rule)) {
+  //    return(0);
+  //  }
 
   file = strdup("/tmp/euca-ipt-XXXXXX");
   if (!file) {
@@ -562,8 +563,8 @@ int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
   FH = fdopen(fd, "w");
   if (!FH) {
     close(fd);
-    free(file);
     unlink(file);
+    free(file);
     return(1);
   }
   
@@ -572,19 +573,15 @@ int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
   close(fd);
   
   snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/euca_ipt %s %s", vnetconfig->eucahome, vnetconfig->eucahome, table, file);
-  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+  //  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
   rc = system(cmd);
   if (rc) {
     ret = 1;
   }
-  
   unlink(file);
   free(file);
   
   rc = vnetSaveTablesToMemory(vnetconfig);
-  if (rc) {
-    // error
-  }
     
   return(ret);
 }
@@ -609,8 +606,6 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   snprintf(dstNet, 32, "%s/%d", tmp, slashnet);
   free(tmp);
   
-  //  printf("HMM: %d %d %s %s %d\n", destVlan, slashnet, dstNet, hex2dot(vnetconfig->networks[destVlan].nm), (0xFFFFFFFF - vnetconfig->networks[destVlan].nm));
-  
   if (sourceNetName) {
     srcVlan = vnetGetVlan(vnetconfig, sourceUserName, sourceNetName);
     if (srcVlan < 0) {
@@ -625,7 +620,7 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
     snprintf(srcNet, 32, "%s", sourceNet);
   }
   
-
+  
   if (!strcmp(type, "firewall-open")) {
     snprintf(rule, 1024, "-A %s-%s", destUserName, destName);
     //    snprintf(rule, 1024, "iptables -A %s-%s", destUserName, destName);
@@ -1198,9 +1193,9 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
     network = hex2dot(vnetconfig->networks[vlan].nw);
     snprintf(cmd, 256, "-A FORWARD -s %s/%d -d %s/%d -j ACCEPT", network, slashnet, network, slashnet);
-    if (check_tablerule(vnetconfig, "filter", cmd)) {
-      rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-    }
+    //    if (check_tablerule(vnetconfig, "filter", cmd)) {
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+      //    }
     if (network) free(network);
     
     if (!strcmp(vnetconfig->mode, "MANAGED")) {
@@ -1608,9 +1603,9 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
     network = hex2dot(vnetconfig->networks[vlan].nw);
     snprintf(cmd, 256, "-D FORWARD -s %s/%d -d %s/%d -j ACCEPT", network, slashnet, network, slashnet);
-    if (check_tablerule(vnetconfig, "filter", cmd)) {
-      rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-    }
+    //    if (check_tablerule(vnetconfig, "filter", cmd)) {
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    //    }
     if (network) free(network);
     
     if (!strcmp(vnetconfig->mode, "MANAGED")) {
