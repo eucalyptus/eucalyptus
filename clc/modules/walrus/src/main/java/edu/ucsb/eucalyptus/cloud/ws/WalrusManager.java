@@ -1642,6 +1642,7 @@ public class WalrusManager {
 								//not found. create a new one
 								destinationObjectInfo = new ObjectInfo();
 								List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+								destinationObjectInfo.setBucketName(destinationBucket);
 								destinationObjectInfo.setObjectKey(destinationKey);
 								destinationObjectInfo.addGrants(userId, grantInfos, accessControlList);
 								destinationObjectInfo.setGrants(grantInfos);
@@ -1654,10 +1655,11 @@ public class WalrusManager {
 									destinationObjectInfo.setGrants(grantInfos);
 								}
 							}
-
 							destinationObjectInfo.setSize(sourceObjectInfo.getSize());
 							destinationObjectInfo.setStorageClass(sourceObjectInfo.getStorageClass());
 							destinationObjectInfo.setOwnerId(sourceObjectInfo.getOwnerId());
+							destinationObjectInfo.setContentType(sourceObjectInfo.getContentType());
+							destinationObjectInfo.setContentDisposition(sourceObjectInfo.getContentDisposition());
 							String etag = sourceObjectInfo.getEtag();
 							Date lastModified = sourceObjectInfo.getLastModified();
 							destinationObjectInfo.setEtag(etag);
