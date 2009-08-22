@@ -232,17 +232,31 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 
 		TreeMap amzHeaders = new TreeMap<String, String>();
 		for(String headerName : headerNames) {
-			if(headerName.startsWith("x-amz-"))
-				amzHeaders.put(headerName, httpRequest.getHeader(headerName));
+			String headerNameString = headerName.toLowerCase().trim();
+			if(headerNameString.startsWith("x-amz-")) {
+				String value =  httpRequest.getHeader(headerName).trim();
+				String[] parts = value.split("\n");
+				value = "";
+				for(String part: parts) {
+					part = part.trim();
+					value += part + " ";
+				}
+				value = value.trim();
+				if(amzHeaders.containsKey(headerNameString)) {
+					String oldValue = (String) amzHeaders.remove(headerNameString);
+					oldValue += "," + value;
+					amzHeaders.put(headerNameString, oldValue);
+				} else {
+					amzHeaders.put(headerNameString, value);
+				}
+			}
 		}
 
 		Iterator<String> iterator = amzHeaders.keySet().iterator();
 		while(iterator.hasNext()) {
 			String key = iterator.next();
-			String trimmedKey = key.toString().trim();
 			String value = (String) amzHeaders.get(key);
-			String trimmedValue = value.trim();
-			result += trimmedKey + ":" + trimmedValue + "\n";
+			result += key + ":" + value + "\n";
 		}
 		return result;
 	}
@@ -266,13 +280,13 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 
 	@Override
 	public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
-	    LOG.info("[exception " + exceptionEvent + "]");
+		LOG.info("[exception " + exceptionEvent + "]");
 		final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR );
-        DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel().getCloseFuture(), response, null );
-        ctx.sendDownstream( newEvent );
-        newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+		DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel().getCloseFuture(), response, null );
+		ctx.sendDownstream( newEvent );
+		newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
 	}
-	
+
 	@Override
 	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 	}
