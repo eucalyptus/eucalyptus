@@ -2254,16 +2254,21 @@ int init_config(void) {
 
 int maintainNetworkState() {
   int rc, i, ret=0;
+  time_t startTime, startTimeA;
 
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
     sem_wait(vnetConfigLock);
     
+    //    startTime=time(NULL);
     rc = vnetSetupTunnels(vnetconfig);
+    //    logprintfl(EUCADEBUG, "setupTunnels: %d\n", time(NULL) - startTime);
+
     if (rc) {
       logprintfl(EUCAERROR, "failed to setup tunnels during maintainNetworkState()\n");
       ret = 1;
     }
     
+    //    startTimeA=time(NULL);
     for (i=2; i<NUMBER_OF_VLANS; i++) {
       if (vnetconfig->networks[i].active) {
 	char brname[32];
@@ -2272,19 +2277,22 @@ int maintainNetworkState() {
 	} else {
 	  snprintf(brname, 32, "%s", vnetconfig->privInterface);
 	}
+	startTime=time(NULL);
 	rc = vnetAttachTunnels(vnetconfig, i, brname);
+	//	logprintfl(EUCADEBUG, "Attach %d/%s: %d\n", i, brname, time(NULL) - startTime);
 	if (rc) {
 	  logprintfl(EUCADEBUG, "failed to attach tunnels for vlan %d during maintainNetworkState()\n", i);
 	  ret = 1;
 	}
       }
     }
-    
+    //    logprintfl(EUCADEBUG, "loop time: %d\n", time(NULL) - startTimeA);
     sem_post(vnetConfigLock);
   }
   
   return(ret);
 }
+
 int restoreNetworkState() {
   int rc, ret=0, i;
   char cmd[1024];

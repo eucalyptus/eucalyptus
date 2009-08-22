@@ -214,12 +214,9 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 	  adb_networkType_set_vlan(nt, env, i);
 	  adb_networkType_set_netName(nt, env, outvnetConfig->users[i].netName);
 	  adb_networkType_set_userName(nt, env, outvnetConfig->users[i].userName);
-	  logprintfl(EUCADEBUG, "ACTIVE VLAN: %d\n", i);
-	  logprintfl(EUCADEBUG, "NETNAME: %s USERNAME: %s\n", outvnetConfig->users[i].netName, outvnetConfig->users[i].userName);
 	  for (j=0; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
 	    if (outvnetConfig->networks[i].addrs[j].active) {
 	      adb_networkType_add_activeAddrs(nt, env, j);
-	      logprintfl(EUCADEBUG, "\tACTIVE ADDR: %s\n", hex2dot(outvnetConfig->networks[i].addrs[j].ip));
 	    }
 	  }
 	  adb_describeNetworksResponseType_add_activeNetworks(snrt, env, nt);
@@ -227,7 +224,6 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
       }
       
       status = AXIS2_TRUE;
-      //      snprintf(statusMessage, 255, "SUCCESS");
     }
   }
   if (clusterControllers) free(clusterControllers);

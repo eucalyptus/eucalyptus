@@ -21,6 +21,8 @@
 #include <vnetwork.h>
 #include <misc.h>
 
+char *iptablesCache=NULL;
+
 void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp) {
   uint32_t nw=0, nm=0, unw=0, unm=0, dns=0, bc=0, rt=0, rc=0, slashnet=0, *ips=NULL, *nms=NULL;
   int vlan=0, numaddrs=1, len, i;
@@ -363,16 +365,15 @@ int vnetDeleteChain(vnetConfig *vnetconfig, char *userName, char *netName) {
     runcount=0;
     while(!rc && runcount < 10) {
       rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-      //      rc = system(cmd);
       runcount++;
     }
-  
+    
     snprintf(cmd, 256, "-F %s-%s", userName, netName);
     rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
     if (rc) {
       logprintfl(EUCAERROR, "'%s' failed; cannot flush chain %s-%s\n", cmd, userName, netName);
     }
-
+    
     snprintf(cmd, 256, "-X %s-%s", userName, netName);
     rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
     if (rc) {
@@ -408,7 +409,7 @@ int vnetCreateChain(vnetConfig *vnetconfig, char *userName, char *netName) {
     snprintf(cmd, 256, "-D FORWARD -j %s-%s", userName, netName);
     rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
     count=0;
-    while(!rc && count < 100) {
+    while(!rc && count < 10) {
       rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
       count++;
     }
@@ -543,6 +544,7 @@ int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
     return(1);
   }
   
+  //  logprintfl(EUCADEBUG, "Table Rule: %s\n", rule);
   if (!check_tablerule(vnetconfig, table, rule)) {
     return(0);
   }
@@ -1258,7 +1260,7 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
       if (rc) {
 	logprintfl(EUCAWARN, "failed to attach tunnels for vlan %d on bridge %s\n", vlan, newbrname);
       }
-
+      
       snprintf(newdevname, 32, "%s", newbrname);
     } else {
       // attach tunnel(s)
@@ -1294,12 +1296,14 @@ int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
     return(0);
   }
   
+  /*
   snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s on", vnetconfig->eucahome, newbrname);
   rc = system(cmd);
   if (rc) {
     logprintfl(EUCAWARN, "could enable stp on bridge %s\n", newbrname);
   }
-
+  */
+  
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
     for (i=0; i<NUMBER_OF_CCS; i++) {
       //    logprintfl(EUCADEBUG, "attaching for CC %d vlan %d\n", i, vlan);
@@ -1449,6 +1453,7 @@ int vnetSetupTunnels(vnetConfig *vnetconfig) {
 int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   int i, done, rc;
   char cmd[1024], tundev[32], *remoteIp=NULL, pidfile[1024], rootwrap[1024];
+  time_t startTime;
 
   if (!vnetconfig->tunnels.tunneling || (vnetconfig->tunnels.localIpId == -1)) {
     return(0);
@@ -1485,6 +1490,7 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
       if (remoteIp) free(remoteIp);
     }
   }
+
   return(0);
 }
 
@@ -2154,6 +2160,18 @@ int check_deviceup(char *dev) {
   
 }
 int check_device(char *dev) {
+  char file[1024];
+  
+  if (!dev) {
+    return(1);
+  }
+  
+  snprintf(file, 1024, "/sys/class/net/%s/", dev);
+  if (check_directory(file)) {
+    return(1);
+  }
+  return(0);
+  /*
   char rbuf[256], devbuf[256], *ptr;
   FILE *FH=NULL;
   
@@ -2184,6 +2202,7 @@ int check_device(char *dev) {
   fclose(FH);
   
   return(1);
+  */
 }
 
 int check_bridgedev(char *br, char *dev) {
