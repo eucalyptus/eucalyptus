@@ -647,7 +647,7 @@ public class WalrusUsageStatsRecord extends StatEventRecord {
 			Long bytesOut,
 			Integer numberOfBuckets,
 			Long totalSpaceUsed) {
-		super("Walrus", "Unknown");
+		super("Walrus", System.getProperty("euca.version"));
 		this.bytesIn = bytesIn;
 		this.bytesOut = bytesOut;
 		this.numberOfBuckets = numberOfBuckets;

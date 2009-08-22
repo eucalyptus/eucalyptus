@@ -242,7 +242,7 @@ public class StorageUsageStatsRecord extends StatEventRecord {
 
 	def StorageUsageStatsRecord(final Integer numberOfVolumes, 
 			final Long totalSpaceUsed) {			
-		super("StorageController", "Unknown");
+		super("StorageController", System.getProperty("euca.version"));
 		this.totalSpaceUsed = totalSpaceUsed;
 		this.numberOfVolumes = numberOfVolumes;
 	}
