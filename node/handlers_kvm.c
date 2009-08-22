@@ -19,7 +19,7 @@
 #include <euca_auth.h>
 
 /* coming from handlers.c */
-extern sem * xen_sem;
+extern sem * hyp_sem;
 extern sem * inst_sem;
 extern bunchOfInstances * global_instances;
 
@@ -35,7 +35,7 @@ static int doInitialize (struct nc_state_t *nc)
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
 
-    return OK;
+	return OK;
 }
 
 static int
@@ -172,10 +172,10 @@ static void * rebooting_thread (void *arg)
         return NULL;
     }
 
-    sem_p (xen_sem);
+    sem_p (hyp_sem);
     // for KVM, must stop and restart the instance
     int error = virDomainDestroy (dom); // TODO: change to Shutdown?  TODO: is this synchronous?
-    sem_v (xen_sem);
+    sem_v (hyp_sem);
     virDomainFree(dom);
     if (error) {
         free (xml);
@@ -183,9 +183,9 @@ static void * rebooting_thread (void *arg)
     }
     
     // domain is now shut down, create a new one with the same XML
-    sem_p (xen_sem); 
+    sem_p (hyp_sem); 
     dom = virDomainCreateLinux (*conn, xml, 0);
-    sem_v (xen_sem);
+    sem_v (hyp_sem);
     free (xml);
     
     if (dom==NULL) {
@@ -300,9 +300,9 @@ doAttachVolume (	struct nc_state_t *nc,
             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
 
             /* protect KVM calls, just in case */
-            sem_p (xen_sem);
+            sem_p (hyp_sem);
             err = virDomainAttachDevice (dom, xml);
-            sem_v (xen_sem);
+            sem_v (hyp_sem);
             if (err) {
                 logprintfl (EUCAERROR, "virDomainAttachDevice() failed (err=%d) XML=%s\n", err, xml);
                 ret = ERROR;
@@ -377,9 +377,9 @@ doDetachVolume (	struct nc_state_t *nc,
             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
 
             /* protect KVM calls, just in case */
-            sem_p (xen_sem);
+            sem_p (hyp_sem);
             err = virDomainDetachDevice (dom, xml);
-            sem_v (xen_sem);
+            sem_v (hyp_sem);
             if (err) {
 	      logprintfl (EUCAERROR, "virDomainDetachDevice() failed (err=%d) XML=%s\n", err, xml);
 	      ret = ERROR;

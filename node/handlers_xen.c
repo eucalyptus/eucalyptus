@@ -19,7 +19,7 @@
 #include <euca_auth.h>
 
 /* coming from handlers.c */
-extern sem * xen_sem;
+extern sem * hyp_sem;
 extern sem * inst_sem;
 extern bunchOfInstances * global_instances;
 
@@ -38,7 +38,7 @@ static int doInitialize (struct nc_state_t *nc)
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
 
-    return OK;
+	return OK;
 }
 
 static int
@@ -178,9 +178,9 @@ static int doRebootInstance(	struct nc_state_t *nc,
         virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
         if (dom) {
             /* also protect 'reboot', just in case */
-            sem_p (xen_sem);
+            sem_p (hyp_sem);
             int err=virDomainReboot (dom, 0);
-            sem_v (xen_sem);
+            sem_v (hyp_sem);
             if (err==0) {
                 logprintfl (EUCAINFO, "rebooting Xen domain for instance %s\n", instanceId);
             }
@@ -312,9 +312,9 @@ doAttachVolume (	struct nc_state_t *nc,
             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
 
             /* protect Xen calls, just in case */
-            sem_p (xen_sem);
+            sem_p (hyp_sem);
             err = virDomainAttachDevice (dom, xml);
-            sem_v (xen_sem);
+            sem_v (hyp_sem);
             if (err) {
                 logprintfl (EUCAERROR, "AttachVolume() failed (err=%d) XML=%s\n", err, xml);
                 ret = ERROR;
@@ -385,7 +385,7 @@ doDetachVolume (	struct nc_state_t *nc,
             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
 
             /* protect Xen calls, just in case */
-            sem_p (xen_sem);
+            sem_p (hyp_sem);
 	    pid = fork();
 	    if (!pid) {
 	      char cmd[1024];
@@ -438,7 +438,7 @@ doDetachVolume (	struct nc_state_t *nc,
 	      }
 	    }
 #endif
-            sem_v (xen_sem);
+            sem_v (hyp_sem);
 	    
             if (err) {
                 logprintfl (EUCAERROR, "DetachVolume() failed (err=%d) XML=%s\n", err, xml);

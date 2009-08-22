@@ -27,7 +27,7 @@
 
 
 /* coming from handlers.c */
-extern sem * xen_sem;
+extern sem * hyp_sem;
 extern sem * inst_sem;
 extern bunchOfInstances * global_instances;
 
@@ -100,9 +100,9 @@ doTerminateInstance(	struct nc_state_t *nc,
 		virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
 		if (dom) {
 			/* also protect 'destroy' commands, just in case */
-			sem_p (xen_sem);
+			sem_p (hyp_sem);
 			err = virDomainDestroy (dom);
-			sem_v (xen_sem);
+			sem_v (hyp_sem);
 			if (err==0) {
 				logprintfl (EUCAINFO, "destroyed domain for instance %s\n", instanceId);
 			}

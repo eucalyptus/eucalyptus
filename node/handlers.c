@@ -26,7 +26,7 @@
 #define MONITORING_PERIOD (5)
 
 /* used by lower level handlers */
-sem *xen_sem;	/* semaphore for serializing domain creation */
+sem *hyp_sem;	/* semaphore for serializing domain creation */
 sem *inst_sem;	/* guarding access to global instance structs */
 bunchOfInstances *global_instances = NULL; 
 
@@ -225,9 +225,9 @@ refresh_instance_info(	struct nc_state_t *nc,
             xen==PAUSED) {
             /* cannot go back! */
             logprintfl (EUCAWARN, "warning: detected prodigal domain %s, terminating it\n", instance->instanceId);
-            sem_p (xen_sem);
+            sem_p (hyp_sem);
             virDomainDestroy (dom);
-            sem_v (xen_sem);
+            sem_v (hyp_sem);
         } else {
             change_state (instance, xen);
         }
@@ -421,7 +421,7 @@ void *startup_thread (void * arg)
                                  instance->kernelId, instance->kernelURL, 
                                  instance->ramdiskId, instance->ramdiskURL, 
                                  instance->instanceId, instance->keyName, 
-                                 &disk_path, xen_sem, nc_state.convert_to_disk,
+                                 &disk_path, hyp_sem, nc_state.convert_to_disk,
 				 instance->params.diskSize*1024);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
@@ -455,9 +455,9 @@ void *startup_thread (void * arg)
      * too many simultaneous create requests */
     logprintfl (EUCADEBUG2, "about to start domain %s\n", instance->instanceId);
     print_running_domains ();
-    sem_p (xen_sem); 
+    sem_p (hyp_sem); 
     dom = virDomainCreateLinux (nc_state.conn, xml, 0);
-    sem_v (xen_sem);
+    sem_v (hyp_sem);
     if (dom == NULL) {
         logprintfl (EUCAFATAL, "hypervisor failed to start domain\n");
         change_state (instance, SHUTOFF);
@@ -659,9 +659,9 @@ static int init (void)
 	nc_state.config_network_port = NC_NET_PORT_DEFAULT;
 	strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
 
-	xen_sem = sem_alloc (1, "eucalyptus-nc-semaphore");
+	hyp_sem = sem_alloc (1, "eucalyptus-nc-semaphore");
 	inst_sem = sem_alloc (1, "eucalyptus-nc-inst-semaphore");
-	if (!xen_sem || !inst_sem) {
+	if (!hyp_sem || !inst_sem) {
 		logprintfl (EUCAFATAL, "failed to create and initialize a semaphore\n");
 		return ERROR_FATAL;
 	}
@@ -768,7 +768,7 @@ static int init (void)
 
 	initialized = 1;
 
-	return 1;
+	return OK;
 }
 
 
