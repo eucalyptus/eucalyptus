@@ -38,6 +38,15 @@ doInitialize (struct nc_state_t *nc)
 }
 
 static int
+getResources(	struct nc_state_t *nc,
+		long long *cores,
+		long long *memory) 
+{    
+	logprintfl(EUCAERROR, "no default for getResources!\n");
+	return ERROR_FATAL;
+}
+
+static int
 doRunInstance (	struct nc_state_t *nc, ncMetadata *meta, char *instanceId,
 		char *reservationId, ncInstParams *params, 
 		char *imageId, char *imageURL, 
@@ -127,11 +136,11 @@ doDescribeInstances(	struct nc_state_t *nc,
 	*outInsts = NULL;
 
 	sem_p (inst_sem);
-	if (instIdsLen == 0) { /* describe all instances */
+	if (instIdsLen == 0) /* describe all instances */
 		total = total_instances (&global_instances);
-	} else {
+	else 
 		total = instIdsLen;
-	}
+
 	*outInsts = malloc(sizeof(ncInstance *)*total);
 	if ((*outInsts) == NULL) {
 		sem_v (inst_sem);
@@ -220,7 +229,7 @@ doDescribeResource(	struct nc_state_t *nc,
         logprintfl (EUCAERROR, "Out of memory\n");
         return 1;
     }
-    * outRes = res;
+    *outRes = res;
 
     return OK;
 }
@@ -293,6 +302,7 @@ doDetachVolume(	struct nc_state_t *nc,
 struct handlers default_libvirt_handlers = {
     .name = "default",
     .doInitialize        = doInitialize,
+    .getResources        = getResources,
     .doDescribeInstances = doDescribeInstances,
     .doRunInstance       = doRunInstance,
     .doTerminateInstance = doTerminateInstance,

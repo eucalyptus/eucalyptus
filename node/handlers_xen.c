@@ -38,63 +38,41 @@ static int doInitialize (struct nc_state_t *nc)
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
 
-	/* open the connection to hypervisor */
-	if (! check_hypervisor_conn ()) 
-		return ERROR_FATAL;
-
-	adopt_instances();
-
-    /* discover resource capacity */
-    { 
-        const char * ipath = scGetInstancePath();
-        char buf [CHAR_BUFFER_SIZE];
-        char * s = NULL;
-        int len;
-        
-        /* get memory and cores from Xen */
-        virNodeInfo ni;
-        if (virNodeGetInfo(nc->conn, &ni)) {
-            logprintfl (EUCAFATAL, "error: failed to discover memory and cores\n");
-            return ERROR_FATAL;
-        }
-        
-        /* calculate mem_max */
-        {
-            long long total_memory = ni.memory/1024;
-            long long dom0_min_mem;
-
-            /* dom0-min-mem has to come from xend config file */
-            s = system_output (nc->get_info_cmd_path);
-            if (get_value (s, "dom0-min-mem", &dom0_min_mem)) {
-                logprintfl (EUCAFATAL, "error: did not find dom0-min-mem in output from %s\n", nc->get_info_cmd_path);
-                free (s);
-                return ERROR_FATAL;
-            }
-            free (s);
-
-            nc->mem_max = total_memory - 32 - dom0_min_mem;
-            if (nc->config_max_mem && nc->mem_max > nc->config_max_mem) 
-                nc->mem_max = nc->config_max_mem; /* reduce if the number exceeds config limits */
-            logprintfl (EUCAINFO, "Maximum memory available = %lld\n", nc->mem_max);
-        }
-
-        /* calculate cores_max: unlike with disk or memory limits, use the
-         * limit as the number of cores, regardless of whether the actual
-         * number of cores is bigger or smaller */
-        nc->cores_max = ni.cpus;
-        if (nc->config_max_cores) 
-            nc->cores_max = nc->config_max_cores; 
-        logprintfl (EUCAINFO, "Maximum cores available = %d\n", nc->cores_max);
-    }
-
-    pthread_t tcb;
-    if ( pthread_create (&tcb, NULL, monitoring_thread, nc) ) {
-        logprintfl (EUCAFATAL, "failed to spawn a monitoring thread\n");
-        return ERROR_FATAL;
-    }
-
     return OK;
 }
+
+static int
+getResources(	struct nc_state_t *nc,
+		long long *cores,
+		long long *memory){
+	char *s = NULL;
+	virNodeInfo ni;
+	long long dom0_min_mem;
+
+	if (virNodeGetInfo(nc->conn, &ni)) {
+		logprintfl (EUCAFATAL, "error: failed to discover resources\n");
+		return ERROR_FATAL;
+	}
+
+	/* dom0-min-mem has to come from xend config file */
+	s = system_output (nc->get_info_cmd_path);
+	if (get_value (s, "dom0-min-mem", &dom0_min_mem)) {
+		logprintfl (EUCAFATAL, "error: did not find dom0-min-mem in output from %s\n", nc->get_info_cmd_path);
+		free (s);
+		return ERROR_FATAL;
+	}
+	free (s);
+
+	/* calculate the available memory */
+	*memory = ni.memory/1024 - 32 - dom0_min_mem;
+
+	/* calculate the available cores */
+	*cores = ni.cpus;
+
+	return OK;
+}
+
+
 
 static int
 doRunInstance(		struct nc_state_t *nc,
@@ -497,6 +475,7 @@ doDetachVolume (	struct nc_state_t *nc,
 struct handlers xen_libvirt_handlers = {
     .name = "xen",
     .doInitialize        = doInitialize,
+    .getResources        = getResources,
     .doDescribeInstances = NULL,
     .doRunInstance       = doRunInstance,
     .doTerminateInstance = NULL,

@@ -47,6 +47,9 @@ struct nc_state_t {
 struct handlers {
     char name [CHAR_BUFFER_SIZE];
     int (*doInitialize)		(struct nc_state_t *nc);
+    int (*getResources)		(struct nc_state_t *nc,
+		    		long long *cores,
+				long long *memory);
     int (*doPowerDown)		(struct nc_state_t *nc,
 		    		ncMetadata *meta);
     int (*doDescribeInstances)	(struct nc_state_t *nc,

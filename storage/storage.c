@@ -114,11 +114,17 @@ ncInstance * scRecoverInstanceInfo (const char *instanceId)
     char * userId = NULL;
     int fd;
 
-    if (instance==NULL) return NULL;
+    if (instance==NULL) {
+	    logprintfl(EUCADEBUG, "scRecoverInstanceInfo: NULL instance!\n");
+	    return NULL;
+    }
 
     /* we don't know userId, so we'll look for instanceId in every user's
      * directory (we're assuming that instanceIds are unique in the system) */
-    if ((insts_dir=opendir(sc_instance_path))==NULL) return NULL;
+    if ((insts_dir=opendir(sc_instance_path))==NULL) {
+	    logprintfl(EUCADEBUG, "scRecoverInstanceInfo: failed to open %s!\n", sc_instance_path);
+	    return NULL;
+    }
     while ((dir_entry=readdir(insts_dir))!=NULL) {
         char tmp_path [BUFSIZE];
         struct stat mystat;
@@ -129,7 +135,10 @@ ncInstance * scRecoverInstanceInfo (const char *instanceId)
             break; /* we got it! */
         }
     }
-    if (userId==NULL) return NULL;
+    if (userId==NULL) {
+	    logprintfl(EUCADEBUG, "scRecoverInstanceInfo: didn't find instance %s!\n", instanceId);
+	    return NULL;
+    }
 
     snprintf(file_path, BUFSIZE, "%s/%s/%s/instance-checkpoint", sc_instance_path, userId, instanceId);
 	free(userId);
@@ -137,6 +146,7 @@ ncInstance * scRecoverInstanceInfo (const char *instanceId)
         read(fd, instance, file_size)<file_size) {
         perror(file_path);
         free (instance);
+	logprintfl(EUCADEBUG, "scRecoverInstanceInfo: fail to read recover file for %s!\n", instanceId);
         return NULL;
     }
     close (fd);

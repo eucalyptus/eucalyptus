@@ -547,6 +547,39 @@ void adopt_instances()
 	}
 }
 
+static int 
+getResources() {
+	int ret;
+	long long memory, cores;
+
+	/* we don't call init for now, since we are called from init */
+
+	if (nc_state.H->getResources) 
+		ret = nc_state.H->getResources(&nc_state, &cores, &memory);
+	else
+		ret = nc_state.D->getResources(&nc_state, &cores, &memory);
+
+	if (ret) {
+		logprintfl(EUCAWARN, "Failed to get resources!\n");
+		return ret;
+	}
+
+	if (nc_state.config_max_mem && nc_state.config_max_mem < memory)
+		nc_state.mem_max = nc_state.config_max_mem;
+	else
+		nc_state.mem_max = memory;
+
+	if (nc_state.config_max_cores)
+		nc_state.cores_max = nc_state.config_max_cores;
+	else
+		nc_state.cores_max = (int)cores;
+
+	logprintfl(EUCAINFO, "Using %d cores (found %d)\n", nc_state.cores_max, (int)cores);
+	logprintfl(EUCAINFO, "Using %lld memory (found %lld)\n", nc_state.mem_max, memory);
+
+	return ret;
+}
+
 
 static int init (void)
 {
@@ -564,6 +597,7 @@ static int init (void)
 	long long fs_free_blocks = 0;
 	long long fs_block_size  = 0;
 	long long instances_bytes = 0;
+	pthread_t tcb;
 
 	if (initialized>0) /* 0 => hasn't run, -1 => failed, 1 => ok */
 		return 0;
@@ -591,107 +625,65 @@ static int init (void)
 
 	/* search for the config file */
 	snprintf(config, CHAR_BUFFER_SIZE, EUCALYPTUS_CONF_LOCATION, nc_state.home);
-	if (stat(config, &mystat) == 0) {
-		logprintfl (EUCAINFO, "NC is looking for configuration in %s\n", config);
-
-		/* reset the log to the right value */
-		tmp = getConfString(config, "LOGLEVEL");
-		i = EUCADEBUG;
-		if (tmp) {
-			if (!strcmp(tmp,"INFO")) {i=EUCAINFO;}
-			else if (!strcmp(tmp,"WARN")) {i=EUCAWARN;}
-			else if (!strcmp(tmp,"ERROR")) {i=EUCAERROR;}
-			else if (!strcmp(tmp,"FATAL")) {i=EUCAFATAL;}
-			free(tmp);
-		}
-		logfile(log, i);
-
-#define GET_VAR_INT(var,name) \
-		if (get_conf_var(config, name, &s)>0){\
-			var = atoi(s);\
-			free (s);\
-		}
-
-		GET_VAR_INT(nc_state.config_max_mem,      CONFIG_MAX_MEM);
-		GET_VAR_INT(nc_state.config_max_disk,     CONFIG_MAX_DISK);
-		GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES);
-		nc_state.save_instance_files = 0;
-		GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES);
-
-		nc_state.config_network_port = NC_NET_PORT_DEFAULT;
-		strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
-
-		xen_sem = sem_alloc (1, "eucalyptus-nc-semaphore");
-		inst_sem = sem_alloc (1, "eucalyptus-nc-inst-semaphore");
-		if (!xen_sem || !inst_sem) {
-			logprintfl (EUCAFATAL, "failed to create and initialize a semaphore\n");
-			return ERROR_FATAL;
-		}
-
-		/* prompt the SC to read the configuration too */
-		if (scInitConfig()) {
-			logprintfl (EUCAFATAL, "ERROR: scInitConfig() failed\n");
-			return ERROR_FATAL;
-		}
-
-		/* set default in the paths. the driver will override */
-		nc_state.config_network_path[0] = '\0';
-		nc_state.gen_libvirt_cmd_path[0] = '\0';
-		nc_state.xm_cmd_path[0] = '\0';
-		nc_state.virsh_cmd_path[0] = '\0';
-		nc_state.get_info_cmd_path[0] = '\0';
-		snprintf (nc_state.rootwrap_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_ROOTWRAP, nc_state.home);
-
-		/* setup the network */
-		nc_state.vnetconfig = malloc(sizeof(vnetConfig));
-		if (!nc_state.vnetconfig) {
-			logprintfl (EUCAFATAL, "Cannot allocate vnetconfig!\n");
-			return 1;
-		}
-		snprintf (nc_state.config_network_path, CHAR_BUFFER_SIZE, NC_NET_PATH_DEFAULT, nc_state.home);
-		hypervisor = getConfString(config, "VNET_PUBINTERFACE");
-		if (!hypervisor) 
-			hypervisor = getConfString(config, "VNET_INTERFACE");
-		bridge = getConfString(config, "VNET_BRIDGE");
-		tmp = getConfString(config, "VNET_MODE");
-		
-		vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL);
-		if (hypervisor) free(hypervisor);
-		if (bridge) free(bridge);
-		if (tmp) free(tmp);
-
-		/* cleanup from previous runs and verify integrity of
-		 * instances directory */
-		sem_p (inst_sem);
-		instances_bytes = scFSCK (&global_instances);
-		sem_v (inst_sem);
-		if (instances_bytes < 0) {
-			logprintfl (EUCAFATAL, "instances store failed integrity check (error=%lld)\n", instances_bytes);
-			return ERROR_FATAL;
-		}
-
-		/* get disk max */
-		strncpy(log, scGetInstancePath(), CHAR_BUFFER_SIZE);
-
-		if (statfs(log, &fs) == -1) {
-			logprintfl(EUCAWARN, "Failed to stat %s\n", log);
-		}  else {
-			nc_state.disk_max = fs.f_bsize * fs.f_bavail + instances_bytes; /* max for Euca, not total */
-			nc_state.disk_max /= BYTES_PER_DISK_UNIT;
-			if (nc_state.config_max_disk && nc_state.config_max_disk < nc_state.disk_max)
-				nc_state.disk_max = nc_state.config_max_disk;
-
-			logprintfl (EUCAINFO, "Maximum disk available = %lld (under %s)\n", nc_state.disk_max, log);
-		}
-
-		/* determine the hypervisor to use */
-		if (get_conf_var(config, CONFIG_HYPERVISOR, &hypervisor)<1) {
-			logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
-			return ERROR_FATAL;
-		}
-	} else {
+	if (stat(config, &mystat)) {
 		logprintfl (EUCAFATAL, "could not open configuration file %s\n", config);
 		return 1;
+	}
+
+	logprintfl (EUCAINFO, "NC is looking for configuration in %s\n", config);
+
+	/* reset the log to the right value */
+	tmp = getConfString(config, "LOGLEVEL");
+	i = EUCADEBUG;
+	if (tmp) {
+		if (!strcmp(tmp,"INFO")) {i=EUCAINFO;}
+		else if (!strcmp(tmp,"WARN")) {i=EUCAWARN;}
+		else if (!strcmp(tmp,"ERROR")) {i=EUCAERROR;}
+		else if (!strcmp(tmp,"FATAL")) {i=EUCAFATAL;}
+		free(tmp);
+	}
+	logfile(log, i);
+
+#define GET_VAR_INT(var,name) \
+	if (get_conf_var(config, name, &s)>0){\
+		var = atoi(s);\
+		free (s);\
+	}
+
+	GET_VAR_INT(nc_state.config_max_mem,      CONFIG_MAX_MEM);
+	GET_VAR_INT(nc_state.config_max_disk,     CONFIG_MAX_DISK);
+	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES);
+	nc_state.save_instance_files = 0;
+	GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES);
+
+	nc_state.config_network_port = NC_NET_PORT_DEFAULT;
+	strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
+
+	xen_sem = sem_alloc (1, "eucalyptus-nc-semaphore");
+	inst_sem = sem_alloc (1, "eucalyptus-nc-inst-semaphore");
+	if (!xen_sem || !inst_sem) {
+		logprintfl (EUCAFATAL, "failed to create and initialize a semaphore\n");
+		return ERROR_FATAL;
+	}
+
+	/* set default in the paths. the driver will override */
+	nc_state.config_network_path[0] = '\0';
+	nc_state.gen_libvirt_cmd_path[0] = '\0';
+	nc_state.xm_cmd_path[0] = '\0';
+	nc_state.virsh_cmd_path[0] = '\0';
+	nc_state.get_info_cmd_path[0] = '\0';
+	snprintf (nc_state.rootwrap_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_ROOTWRAP, nc_state.home);
+
+	/* prompt the SC to read the configuration too */
+	if (scInitConfig()) {
+		logprintfl (EUCAFATAL, "ERROR: scInitConfig() failed\n");
+		return ERROR_FATAL;
+	}
+
+	/* determine the hypervisor to use */
+	if (get_conf_var(config, CONFIG_HYPERVISOR, &hypervisor)<1) {
+		logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
+		return ERROR_FATAL;
 	}
 
 	/* let's look for the right hypervisor driver */
@@ -704,19 +696,79 @@ static int init (void)
 	if (nc_state.H == NULL) {
 		logprintfl (EUCAFATAL, "requested hypervisor type (%s) is not available\n", hypervisor);
 		free (hypervisor);
-		return 1;
+		return ERROR_FATAL;
 	}
 	free (hypervisor);
 
 	/* NOTE: this is the only call which needs to be called on both
 	 * the default and the specific handler! All the others will be
 	 * either or */
+	i = nc_state.D->doInitialize(&nc_state);
 	if (nc_state.H->doInitialize)
-		i = nc_state.H->doInitialize(&nc_state);
-	i += nc_state.D->doInitialize(&nc_state);
-	initialized = !i;
+		i += nc_state.H->doInitialize(&nc_state);
+	if (i) {
+		logprintfl(EUCAFATAL, "ERROR: failed to initialized hypervisor driver!\n");
+		return ERROR_FATAL;
+	}
 
-	return i;
+	/* adopt running instances */
+	adopt_instances();
+
+	/* setup the network */
+	nc_state.vnetconfig = malloc(sizeof(vnetConfig));
+	if (!nc_state.vnetconfig) {
+		logprintfl (EUCAFATAL, "Cannot allocate vnetconfig!\n");
+		return 1;
+	}
+	snprintf (nc_state.config_network_path, CHAR_BUFFER_SIZE, NC_NET_PATH_DEFAULT, nc_state.home);
+	hypervisor = getConfString(config, "VNET_PUBINTERFACE");
+	if (!hypervisor) 
+		hypervisor = getConfString(config, "VNET_INTERFACE");
+	bridge = getConfString(config, "VNET_BRIDGE");
+	tmp = getConfString(config, "VNET_MODE");
+	
+	vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL);
+	if (hypervisor) free(hypervisor);
+	if (bridge) free(bridge);
+	if (tmp) free(tmp);
+
+	/* cleanup from previous runs and verify integrity of
+	 * instances directory */
+	sem_p (inst_sem);
+	instances_bytes = scFSCK (&global_instances);
+	sem_v (inst_sem);
+	if (instances_bytes < 0) {
+		logprintfl (EUCAFATAL, "instances store failed integrity check (error=%lld)\n", instances_bytes);
+		return ERROR_FATAL;
+	}
+	
+	/* get memory and cores */
+	if (getResources()) 
+		return ERROR_FATAL;
+
+	/* get disk max */
+	strncpy(log, scGetInstancePath(), CHAR_BUFFER_SIZE);
+
+	if (statfs(log, &fs) == -1) {
+		logprintfl(EUCAWARN, "Failed to stat %s\n", log);
+	}  else {
+		nc_state.disk_max = fs.f_bsize * fs.f_bavail + instances_bytes; /* max for Euca, not total */
+		nc_state.disk_max /= BYTES_PER_DISK_UNIT;
+		if (nc_state.config_max_disk && nc_state.config_max_disk < nc_state.disk_max)
+			nc_state.disk_max = nc_state.config_max_disk;
+
+		logprintfl (EUCAINFO, "Maximum disk available = %lld (under %s)\n", nc_state.disk_max, log);
+	}
+
+	/* start the monitoring thread */
+	if (pthread_create(&tcb, NULL, monitoring_thread, &nc_state)) {
+		logprintfl (EUCAFATAL, "failed to spawn a monitoring thread\n");
+		return ERROR_FATAL;
+	}
+
+	initialized = 1;
+
+	return 1;
 }
 
 
@@ -752,7 +804,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 
 	sprintf(file_name, "%s/%s", nc_state.home, NC_MONIT_FILENAME);
 	if (!strcmp(meta->userId, EUCALYPTUS_ADMIN)) {
-		f = fopen(file_name, "r+");
+		f = fopen(file_name, "w");
 		if (!f) {
 			f = fopen(file_name, "w+");
 			if (!f)

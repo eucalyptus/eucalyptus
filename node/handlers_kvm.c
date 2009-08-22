@@ -35,63 +35,29 @@ static int doInitialize (struct nc_state_t *nc)
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
 
-    /* open the connection to hypervisor */
-    if (! check_hypervisor_conn ()) 
-        return ERROR_FATAL;
-
-    adopt_instances();
-
-    /* discover resource capacity */
-    { 
-        const char * ipath = scGetInstancePath();
-        char buf [CHAR_BUFFER_SIZE];
-        char * s = NULL;
-        int len;
-        
-        /* xm info will be used for memory and cores */
-        s = system_output (nc->get_info_cmd_path);
-#define GET_VALUE(name,var) \
-        if (get_value (s, name, &var)) { \
-            logprintfl (EUCAFATAL, "error: did not find %s in output from %s\n", name, nc->get_info_cmd_path); \
-            free (s); \
-            return ERROR_FATAL; \
-        }
-
-        /* calculate mem_max */
-        {
-            long long total_memory = 0;
-            
-            GET_VALUE("total_memory", total_memory);
-            
-            nc->mem_max = total_memory - 256;
-            if (nc->config_max_mem && nc->mem_max>nc->config_max_mem) 
-	      nc->mem_max = nc->config_max_mem; /* reduce if the number exceeds config limits */
-            logprintfl (EUCAINFO, "Maximum memory available = %lld\n", nc->mem_max);
-        }
-
-        /* calculate cores_max */
-        {
-             long long nr_cores; 
-         
-             GET_VALUE("nr_cores", nr_cores);
-            
-             nc->cores_max = (int)nr_cores; 
-             /* unlike with disk or memory limits, use the limit as the
-              * number of cores, regardless of whether the actual number
-              * of cores is bigger or smaller */
-             if (nc->config_max_cores) 
-	       nc->cores_max = nc->config_max_cores; 
-             logprintfl (EUCAINFO, "Maximum cores available = %d\n", nc->cores_max);
-        }
-    }
-
-    pthread_t tcb;
-    if ( pthread_create (&tcb, NULL, monitoring_thread, nc) ) {
-        logprintfl (EUCAFATAL, "failed to spawn a monitoring thread\n");
-        return ERROR_FATAL;
-    }
-
     return OK;
+}
+
+static int
+getResources(	struct nc_state_t *nc,
+		long long *cores,
+		long long *memory) {
+	char *s = NULL;
+        
+	s = system_output (nc->get_info_cmd_path);
+#define GET_VALUE(name,var) \
+	if (get_value (s, name, &var)) { \
+		logprintfl (EUCAFATAL, "error: did not find %s in output from %s\n", name, nc->get_info_cmd_path); \
+		free (s); \
+		return ERROR_FATAL; \
+	}
+
+	GET_VALUE("nr_cores", *cores);
+	GET_VALUE("total_memory", *memory);
+	/* we leave 256M to the host  */
+	*memory -= 256;
+
+	return OK;
 }
 
 static int
@@ -448,6 +414,7 @@ doDetachVolume (	struct nc_state_t *nc,
 struct handlers kvm_libvirt_handlers = {
     .name = "kvm",
     .doInitialize        = doInitialize,
+    .getResources        = getResources,
     .doDescribeInstances = NULL,
     .doRunInstance       = doRunInstance,
     .doTerminateInstance = NULL,
