@@ -126,7 +126,15 @@ do_start() {
 	fi
 	
 	cd $EUCALYPTUS/etc/eucalyptus
-	$EUCALYPTUS/usr/sbin/eucalyptus-cloud -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
+
+	OPTS=""
+	if [ "$DISABLE_DNS" = "Y" ]; then
+	    OPTS="$OPTS --disable-dns"
+	elif [ "$DISABLE_EBS" = "Y" ]; then
+	    OPTS="$OPTS --disable-ebs"
+	fi
+
+	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
 	return $?
 }
 

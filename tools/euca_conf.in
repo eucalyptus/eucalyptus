@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-FAKEREG="yes"
+#FAKEREG="yes"
 
 FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
@@ -387,7 +387,7 @@ while [ $# -gt 0 ]; do
 	fi
 	if [ "$1" = "--deregister-cluster" ]; then
 		CLUSNAME="$2"
-		CLUSMDDE="DEL"
+		CLUSMODE="DEL"
 		shift; shift
 		continue
 	fi
@@ -666,7 +666,8 @@ createCloudURL () {
 	echo "ERROR: cannot get credentials"
 	return 1
     fi
-
+    echo "AKEY: $AKEY"
+    echo "SKEY: $SKEY"
     ARGS="AWSAccessKeyId=$AKEY"
     KEY=$1
     shift
@@ -688,6 +689,7 @@ createCloudURL () {
     ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=eucalyptus"
     SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Configuration\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
     export URL="http://127.0.0.1:8773/services/Configuration?${ARGS}&Signature=${SIGNATURE}"
+    echo $URL
     return 0
 }
 
@@ -758,75 +760,73 @@ checkLocalService() {
 }
 
 # adding a new cluster
-if [ -n "$NEWCLUS" ]; then
+if [ -n "$CLUSNAME" ]; then
     if ! checkLocalService "CLC" ; then
 	exit 1
     fi
-    
-    if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
-	SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${CLUSNAME}/
-	DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
-    else
-	echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful!"
-	exit 1
-    fi
 
-#    URL=""
-#    if ! createCloudURL "Action" "DescribeClusters"; then
-#	exit 1
-#    fi
-#    CMD="wget -O - \"$URL\" 2>/dev/null | grep UP"
-#    if [ -n "${FAKEREG}" ]; then
-#	CMD="echo"
-#    fi
-#    if eval $CMD ; then 
-#	echo "ERROR: there is already a cluster registered with the system."
-#	exit 1
-#    fi
-
-    URL=""
-    if ! createCloudURL "Action" "RegisterCluster" "Host" "${NEWCLUS}" "Name" "${CLUSNAME}" "Port" "${CC_PORT}"; then
-	exit 1
-    fi
-
-    CMD="wget -O - \"$URL\" 2>/dev/null | grep -v faultstring"
-    echo "$CMD"
-    if [ -n "${FAKEREG}" ]; then
-	CMD="echo"
-    fi
-    if ! eval $CMD ; then
-	echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
-	exit 1
-    fi
-
-    if [ -n "${FAKEREG}" ]; then
-	mkdir -p $SOURCEDIR
+    echo "$CLUSMODE"
+    if [ "$CLUSMODE" = "ADD" ]; then
+	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
+	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${CLUSNAME}/
+	    DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+	else
+	    echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful!"
+	    exit 1
+	fi
+	
+	URL=""
+	if ! createCloudURL "Action" "RegisterCluster" "Host" "${NEWCLUS}" "Name" "${CLUSNAME}" "Port" "${CC_PORT}"; then
+	    exit 1
+	fi
+	
+	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
+	echo "$CMD"
+	if [ -n "${FAKEREG}" ]; then
+	    CMD="echo"
+	fi
+	if ! eval $CMD ; then
+	    echo "ERROR: failed to register new cluster, please log in to the admin interface and check cloud status."
+	    exit 1
+	fi
+	
 	if [ -n "${FAKEREG}" ]; then
 	    mkdir -p $SOURCEDIR
-	    for i in cluster node
-	    do 
-		if [ ! -e "$SOURCEDIR/${i}-cert.pem" -o ! -e "$SOURCEDIR/${i}-pk.pem" ]; then
-		    openssl req -new -nodes -x509 -out $SOURCEDIR/${i}-cert.pem -keyout $SOURCEDIR/${i}-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
-		fi
-	    done
+	    if [ -n "${FAKEREG}" ]; then
+		mkdir -p $SOURCEDIR
+		for i in cluster node
+		do 
+		    if [ ! -e "$SOURCEDIR/${i}-cert.pem" -o ! -e "$SOURCEDIR/${i}-pk.pem" ]; then
+			openssl req -new -nodes -x509 -out $SOURCEDIR/${i}-cert.pem -keyout $SOURCEDIR/${i}-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
+		    fi
+		done
+	    fi
 	fi
-    fi
-
-    # create tunnel password
-#    TUNPASS=`md5sum $DESTDIR/cloud-pk.pem | awk '{print $1}'`
-#    if [ ${TUNPASS} != "" ]; then
-#	echo ${TUNPASS} > $SOURCEDIR/vtunpass
-#	chmod 0600 $SOURCEDIR/vtunpass
-#	chown ${EUCA_USER} $SOURCEDIR/vtunpass
-#    else
-#	echo "WARN: Unable to create tunnel password file, tunneling will not function"
-#    fi
-    
+	
     # sync the keys
-    if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass ; then
-	echo "ERROR: failed to sync keys with ${NEWCLUS}."
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass ; then
+	    echo "ERROR: failed to sync keys with ${NEWCLUS}."
+	fi
+	echo
+	echo "SUCCESS: new cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully registered."
+    elif [ "$CLUSMODE" = "DEL" ]; then
+	URL=""
+	if ! createCloudURL "Action" "DeregisterCluster" "Name" "${CLUSNAME}"; then
+	    exit 1
+	fi
+	
+	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
+	echo "$CMD"
+	if [ -n "${FAKEREG}" ]; then
+	    CMD="echo"
+	fi
+	if ! eval $CMD ; then
+	    echo "ERROR: failed to register new cluster, please log in to the admin interface and check cloud status."
+	    exit 1
+	fi	
+	echo
+	echo "SUCCESS: cluster '${CLUSNAME}' successfully deregistered."
     fi
-    echo "SUCCESS: new cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully registered."
 fi
 
 # walrus
@@ -846,36 +846,41 @@ if [ -n "$WALRUS" ]; then
 	fi
 	
 	URL=""
-	if ! createCloudURL "Action" "RegisterWalrus" "Host" "${WALRUS}" ; then
+	if ! createCloudURL "Action" "RegisterWalrus" "Host" "${WALRUS}" "Name" "${WALRUS}" "Port" "8773"; then
 	    exit 1
 	fi
-	CMD="wget -O - \"$URL\" 2>/dev/null"
+	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null"
 	if [ -n "${FAKEREG}" ]; then
 	    CMD="echo"
 	fi
 	if ! eval $CMD ; then
-	    echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
+	    echo "ERROR: failed to register Walrus, please log in to the admin interface and check cloud status."
 	    exit 1
 	fi
-	if [ -n "${FAKEREG}" ]; then
-	    mkdir -p $SOURCEDIR
-	    for i in walrus
-	    do 
-		if [ ! -e "$SOURCEDIR/${i}-cert.pem" -o ! -e "$SOURCEDIR/${i}-pk.pem" ]; then
-		    openssl req -new -nodes -x509 -out $SOURCEDIR/${i}-cert.pem -keyout $SOURCEDIR/${i}-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
-		fi
-	    done
-	fi
-    
+	
     # sync the keys
-	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${WALRUS} walrus-cert.pem walrus-pk.pem ; then
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${WALRUS} euca.p12 ; then
 	    echo "ERROR: failed to sync keys with ${WALRUS}."
 	fi
+	echo
 	echo "SUCCESS: new walrus on host '${WALRUS}' successfully registered."
 	
     elif [ "$WALRUS_MODE" = "DEL" ]; then
-	echo "not implemented"
+	URL=""
+	if ! createCloudURL "Action" "DeregisterWalrus" "Name" "${WALRUS}"; then
+	    exit 1
+	fi
+	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null"
+	if [ -n "${FAKEREG}" ]; then
+	    CMD="echo"
+	fi
+	if ! eval $CMD ; then
+	    echo "ERROR: failed to deregister Walrus, please log in to the admin interface and check cloud status."
+	    exit 1
+	fi
     fi
+    echo
+    echo "SUCCESS: Walrus '${WALRUS}' successfully deregistered."
 fi
 
 # sc
@@ -895,15 +900,15 @@ if [ -n "$SCHOST" ]; then
 	fi
 	
 	URL=""
-	if ! createCloudURL "Action" "RegisterStorageController" "Host" "${SCHOST}" "Name" "${SCNAME}"; then
+	if ! createCloudURL "Action" "RegisterStorageController" "Host" "${SCHOST}" "Name" "${SCNAME}" "Port" "8773"; then
 	    exit 1
 	fi
-	CMD="wget -O - \"$URL\" 2>/dev/null"
+	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null"
 	if [ -n "${FAKEREG}" ]; then
 	    CMD="echo"
 	fi
 	if ! eval $CMD ; then
-	    echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
+	    echo "ERROR: failed to register storage controller, please log in to the admin interface and check cloud status."
 	    exit 1
 	fi
 	if [ -n "${FAKEREG}" ]; then
@@ -920,17 +925,31 @@ if [ -n "$SCHOST" ]; then
 	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${SCHOST} sc-cert.pem sc-pk.pem; then
 	    echo "ERROR: failed to sync keys with ${SCHOST}."
 	fi
+	echo
 	echo "SUCCESS: new SC for cluster '${SCNAME}' on host '${SCHOST}' successfully registered."
 
     elif [ "$SC_MODE" = "DEL" ]; then
-	echo "not implemented"
+	URL=""
+	if ! createCloudURL "Action" "DeregisterStorageController" "Name" "${SCNAME}"; then
+	    exit 1
+	fi
+	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null"
+	if [ -n "${FAKEREG}" ]; then
+	    CMD="echo"
+	fi
+	if ! eval $CMD ; then
+	    echo "ERROR: failed to deregister StorageController, please log in to the admin interface and check cloud status."
+	    exit 1
+	fi
+	echo
+	echo "SUCCESS: Storage controller for cluster '${SCNAME}' successfully deregistered."
     fi
 fi
 
 # CLC registration
 if [ -n "$REGISTER_CLC" ]; then
 	if [ -n "$WGET" ]; then
-		if ! $WGET -O - -o /dev/null http://$REGISTER_CLC:8773/services/|grep Eucalyptus > /dev/null ; then
+		if ! $WGET -T 10 -t 1 -O - -o /dev/null http://$REGISTER_CLC:8773/services/|grep Eucalyptus > /dev/null ; then
 			echo "Cannot contact CLC on $REGISTER_CLC."
 			exit 1
 		fi
