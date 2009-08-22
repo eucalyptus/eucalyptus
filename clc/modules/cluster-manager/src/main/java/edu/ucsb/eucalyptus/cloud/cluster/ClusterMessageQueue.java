@@ -66,7 +66,7 @@ public class ClusterMessageQueue implements Runnable {
   }
 
   public void enqueue( QueuedEvent event ) {
-    LOG.info( "Queued message of type " + event.getCallback().getClass().getSimpleName() + " for cluster " + this.parent.getClusterInfo( ).getClusterName( ) );
+    LOG.info( "Queued message of type " + event.getCallback().getClass().getSimpleName() + " for cluster " + this.parent.getClusterInfo( ).getName( ) );
     boolean inserted = false;
     while ( !inserted )
       try {
@@ -107,7 +107,7 @@ public class ClusterMessageQueue implements Runnable {
           }
           LOG.warn( String.format( "[q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s",
                                    msgStart - start, System.currentTimeMillis() - msgStart, this.msgQueue.size(),
-                                   event.getCallback().getClass().getSimpleName(), this.parent.getClusterInfo().getClusterName() ) );
+                                   event.getCallback().getClass().getSimpleName(), this.parent.getClusterInfo().getName() ) );
         }
       }
       catch ( Exception e ) {

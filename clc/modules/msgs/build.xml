@@ -2,7 +2,7 @@
   <property name="msgs.binding" value="${rsrc.dir}/msgs-binding.xml" />
   <uptodate property="groovyc.notRequired" targetfile="${jar.file}">
     <srcfiles dir="${src.dir}" includes="**/*" />
-    <srcfiles dir="${rsrc.dir}" includes="**/*-binding.xml"  excludes="${msgs.binding}"/>
+    <srcfiles dir="${rsrc.dir}" includes="**/*-binding.xml" excludes="${msgs.binding}"/>
   </uptodate>
   <property name="builder.suffix" value="jibx" />
   <import file="../module-inc.xml"/>
@@ -10,7 +10,7 @@
   <uptodate property="binding.notRequired" targetfile="${msgs.binding}">
     <srcfiles dir="${src.dir}" includes="**/*" />
   </uptodate>
-  <target name="build-binding" depends="build-groovy" unless="binding.notRequired">
+  <target name="build-binding">
     <delete file="${msgs.binding}" />
     <java classname="com.eucalyptus.util.GenerateJiBXBinding" fork="true">
       <classpath refid="classpath" />
@@ -18,7 +18,9 @@
       <syspropertyset refid="euca-props" />
     </java>
   </target>
-  <target name="build-jibx" depends="build-groovy,build-binding">
+  <target name="build-jibx" unless="groovyc.notRequired">
+    <antcall target="build-groovy"/>
+    <antcall target="build-binding"/>
     <taskdef name="bind" classname="org.jibx.binding.ant.CompileTask" classpathref="classpath" />
     <delete>
       <fileset dir="${build.dir}">

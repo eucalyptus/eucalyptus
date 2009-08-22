@@ -39,7 +39,11 @@
 
     <persistence-unit name="eucalyptus_config" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.ejb.HibernatePersistence</provider>
+        <class>com.eucalyptus.config.AbstractPersistent</class>
+        <class>com.eucalyptus.config.ComponentConfiguration</class>
         <class>com.eucalyptus.config.ClusterConfiguration</class>
+        <class>com.eucalyptus.config.WalrusConfiguration</class>
+        <class>com.eucalyptus.config.StorageControllerConfiguration</class>
      <properties>
             <property name="hibernate.connection.provider_class" value="org.hibernate.connection.C3P0ConnectionProvider"/>
             <property name="hibernate.cache.provider_class" value="org.hibernate.cache.EhCacheProvider"/>

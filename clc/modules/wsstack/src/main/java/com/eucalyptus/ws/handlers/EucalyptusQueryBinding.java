@@ -28,9 +28,10 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
 
   @Override
   public Object bind( final String userId, final boolean admin, final MappingHttpRequest httpRequest ) throws BindingException {
-    final String operationName = httpRequest.getParameters().containsKey( OperationParameter.Action.toString( ) ) ? httpRequest.getParameters().get( OperationParameter.Action.toString( ) ) : httpRequest.getParameters().get( OperationParameter.Operation.toString( ) );
-    
-    for ( OperationParameter op : OperationParameter.values() ) httpRequest.getParameters( ).remove( op.name() );
+    final String operationName = httpRequest.getParameters( ).containsKey( OperationParameter.Action.toString( ) ) ? httpRequest.getParameters( ).get( OperationParameter.Action.toString( ) ) : httpRequest.getParameters( ).get( OperationParameter.Operation.toString( ) );
+
+    for ( OperationParameter op : OperationParameter.values( ) )
+      httpRequest.getParameters( ).remove( op.name( ) );
     final Map<String, String> params = httpRequest.getParameters( );
     int paramSize = params.size( );
 
@@ -69,24 +70,47 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
     return eucaMsg;
   }
 
+  private static Field getRecursiveField( Class clazz, String fieldName ) throws Exception {
+    Field ret = null;
+    Exception e = null;
+    while( !EucalyptusMessage.class.equals( clazz ) || !Object.class.equals( clazz ) ) {
+      try {
+        ret = clazz.getDeclaredField( fieldName );
+        return ret;
+      } catch ( Exception e1 ) {
+        e = e1;
+      }
+      clazz = clazz.getSuperclass( );
+    }
+    if( ret == null ) {
+      throw e;
+    }
+    return ret;
+  }
+  
   private List<String> populateObject( final GroovyObject obj, final Map<String, String> paramFieldMap, final Map<String, String> params ) {
     List<String> failedMappings = new ArrayList<String>( );
     for ( Map.Entry<String, String> e : paramFieldMap.entrySet( ) ) {
       try {
-        if ( obj.getClass( ).getDeclaredField( e.getValue( ) ).getType( ).equals( ArrayList.class ) ) failedMappings.addAll( populateObjectList( obj, e, params, params.size( ) ) );
-      } catch ( NoSuchFieldException e1 ) {
+        if ( getRecursiveField( obj.getClass( ), e.getValue( ) ).getType( ).equals( ArrayList.class ) ) failedMappings.addAll( populateObjectList( obj, e, params, params.size( ) ) );
+      } catch ( Exception e1 ) {
         failedMappings.add( e.getKey( ) );
       }
     }
     for ( Map.Entry<String, String> e : paramFieldMap.entrySet( ) ) {
-      if ( params.containsKey( e.getKey( ) ) && !populateObjectField( obj, e, params ) ) failedMappings.add( e.getKey( ) );
+      if ( params.containsKey( e.getKey( ) ) && !populateObjectField( obj, e, params ) ) {
+        failedMappings.add( e.getKey( ) );
+      } else {
+        failedMappings.remove( e.getKey( ) );
+      }
     }
     return failedMappings;
   }
 
+  @SuppressWarnings( "unchecked" )
   private boolean populateObjectField( final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params ) {
     try {
-      Class declaredType = obj.getClass( ).getDeclaredField( paramFieldPair.getValue( ) ).getType( );
+      Class declaredType = getRecursiveField( obj.getClass( ), paramFieldPair.getValue( ) ).getType( );
       if ( declaredType.equals( String.class ) ) obj.setProperty( paramFieldPair.getValue( ), params.remove( paramFieldPair.getKey( ) ) );
       else if ( declaredType.getName( ).equals( "int" ) ) obj.setProperty( paramFieldPair.getValue( ), Integer.parseInt( params.remove( paramFieldPair.getKey( ) ) ) );
       else if ( declaredType.equals( Integer.class ) ) obj.setProperty( paramFieldPair.getValue( ), new Integer( params.remove( paramFieldPair.getKey( ) ) ) );
@@ -104,7 +128,7 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
   private List<String> populateObjectList( final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params, final int paramSize ) {
     List<String> failedMappings = new ArrayList<String>( );
     try {
-      Field declaredField = obj.getClass( ).getDeclaredField( paramFieldPair.getValue( ) );
+      Field declaredField = getRecursiveField( obj.getClass( ), paramFieldPair.getValue( ) );
       ArrayList theList = ( ArrayList ) obj.getProperty( paramFieldPair.getValue( ) );
       Class genericType = ( Class ) ( ( ParameterizedType ) declaredField.getGenericType( ) ).getActualTypeArguments( )[0];
       // :: simple case: FieldName.# :://
@@ -157,15 +181,19 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
     return embeddedFailures;
   }
 
-  private Map<String, String> buildFieldMap( final Class targetType ) {
+  private Map<String, String> buildFieldMap( Class targetType ) {
     Map<String, String> fieldMap = new HashMap<String, String>( );
-    Field[] fields = targetType.getDeclaredFields( );
-    for ( Field f : fields )
-      if ( Modifier.isStatic( f.getModifiers( ) ) ) continue;
-      else if ( f.isAnnotationPresent( HttpParameterMapping.class ) ) {
-        fieldMap.put( f.getAnnotation( HttpParameterMapping.class ).parameter( ), f.getName( ) );
-        fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
-      } else fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
+    while ( !EucalyptusMessage.class.equals( targetType ) ) {
+      Field[] fields = targetType.getDeclaredFields( );
+      for ( Field f : fields ) {
+        if ( Modifier.isStatic( f.getModifiers( ) ) ) continue;
+        else if ( f.isAnnotationPresent( HttpParameterMapping.class ) ) {
+          fieldMap.put( f.getAnnotation( HttpParameterMapping.class ).parameter( ), f.getName( ) );
+          fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
+        } else fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
+      }
+      targetType = targetType.getSuperclass( );
+    }
     return fieldMap;
   }
 

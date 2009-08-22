@@ -2,19 +2,21 @@ package com.eucalyptus.config;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.security.KeyPair;
-import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
-import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
@@ -22,13 +24,16 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.SubDirectory;
 
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
-import edu.ucsb.eucalyptus.msgs.RegisterClusterResponseType;
-import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
-import edu.ucsb.eucalyptus.msgs.DeregisterClusterResponseType;
+import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
+import edu.ucsb.eucalyptus.msgs.ConfigurationMessage;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
-import edu.ucsb.eucalyptus.msgs.DescribeClustersResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
+import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
+import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
+import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
+import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
+import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
+import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
 
 public class Configuration {
   private static Logger LOG                 = Logger.getLogger( Configuration.class );
@@ -40,108 +45,154 @@ public class Configuration {
     return new EntityWrapper<T>( Configuration.DB_NAME );
   }
 
-  public RegisterClusterResponseType registerCluster( RegisterClusterType request ) throws EucalyptusCloudException {
-    RegisterClusterResponseType  reply = ( RegisterClusterResponseType ) request.getReply( );
-    reply.set_return( true );
-    if( this.checkClusterExists( request ) ) {
-      return reply;
-    }
+  private static Map<String, Class> typeMap = new HashMap<String, Class>( ) {
+                                              {
+                                                put( "Cluste", ClusterConfiguration.class );
+                                                put( "Storag", StorageControllerConfiguration.class );
+                                                put( "Walrus", WalrusConfiguration.class );
+                                              }
+                                            };
 
-    EntityWrapper<ClusterConfiguration> db = Configuration.getEntityWrapper( );
-    ClusterConfiguration newCluster;
+  private static ComponentConfiguration getConfigurationInstance( ConfigurationMessage request, Object... args ) throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+    Class[] classList = new Class[args.length];
+    for ( int i = 0; i < args.length; i++ ) {
+      classList[i] = args[i].getClass( );
+    }
+    String cname = request.getComponentName( );
+    Class cclass = Configuration.typeMap.get( cname );
+    ComponentConfiguration configInstance = ( ComponentConfiguration ) cclass.getConstructor( classList ).newInstance( args );
+    return configInstance;
+  }
+
+  public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
+    RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
+    reply.set_return( true );
+    if ( this.checkComponentExists( request ) ) { return reply; }
+
+    EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );
+    ComponentConfiguration newComponent;
     try {
-      newCluster = new ClusterConfiguration( request.getName( ), request.getHost( ), request.getPort( ) );
-      db.add( newCluster );
+      newComponent = Configuration.getConfigurationInstance( request, request.getName( ), request.getHost( ), request.getPort( ) );
+      db.add( newComponent );
       db.commit( );
     } catch ( Exception e ) {
       db.rollback( );
-      LOG.error( e,e );
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
+    if ( request instanceof RegisterClusterType ) {
+      Configuration.setupClusterCredentials( newComponent );
+    }
+    return reply;
+  }
 
-    /** generate the cluster keys **/
-    String ccAlias = String.format( CLUSTER_KEY_FSTRING, newCluster.getClusterName( ) );
-    String ncAlias = String.format( NODE_KEY_FSTRING, newCluster.getClusterName( ) );
-    String directory = SubDirectory.KEYS.toString( ) + File.separator + newCluster.getClusterName( );
+  private static void setupClusterCredentials( ComponentConfiguration newComponent ) throws EucalyptusCloudException {
+    /** generate the Component keys **/
+    String ccAlias = String.format( CLUSTER_KEY_FSTRING, newComponent.getName( ) );
+    String ncAlias = String.format( NODE_KEY_FSTRING, newComponent.getName( ) );
+    String directory = SubDirectory.KEYS.toString( ) + File.separator + newComponent.getName( );
     File keyDir = new File( directory );
     keyDir.mkdir( );
     LOG.info( "creating keys in " + directory );
     EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
-    try {      
-      // TODO: move this!!!!
+    try {
       KeyTool keyTool = new KeyTool( );
-      KeyPair clusterKp = keyTool.getKeyPair( );
-      X509Certificate clusterX509 = keyTool.getCertificate( clusterKp, EucalyptusProperties.getDName( "cc-" + newCluster.getClusterName( ) ) );
-      keyTool.writePem( directory + File.separator + "cluster-pk.pem", clusterKp.getPrivate( ) );
-      keyTool.writePem( directory + File.separator + "cluster-cert.pem", clusterX509 );
+      KeyPair ComponentKp = keyTool.getKeyPair( );
+      X509Certificate ComponentX509 = keyTool.getCertificate( ComponentKp, EucalyptusProperties.getDName( "cc-" + newComponent.getName( ) ) );
+      keyTool.writePem( directory + File.separator + "Component-pk.pem", ComponentKp.getPrivate( ) );
+      keyTool.writePem( directory + File.separator + "Component-cert.pem", ComponentX509 );
 
       KeyPair nodeKp = keyTool.getKeyPair( );
-      X509Certificate nodeX509 = keyTool.getCertificate( nodeKp, EucalyptusProperties.getDName( "nc-" + newCluster.getClusterName( ) ) );
+      X509Certificate nodeX509 = keyTool.getCertificate( nodeKp, EucalyptusProperties.getDName( "nc-" + newComponent.getName( ) ) );
       keyTool.writePem( directory + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
       keyTool.writePem( directory + File.separator + "node-cert.pem", nodeX509 );
 
-      X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.Name.eucalyptus ).getCertificate( ); 
+      X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.Name.eucalyptus ).getCertificate( );
       keyTool.writePem( directory + File.separator + "cloud-cert.pem", systemX509 );
       Signature signer = Signature.getInstance( "SHA256withRSA" );
       signer.initSign( SystemCredentialProvider.getCredentialProvider( Component.Name.eucalyptus ).getPrivateKey( ) );
       signer.update( "eucalyptus".getBytes( ) );
       byte[] sig = signer.sign( );
       FileWriter out = new FileWriter( directory + File.separator + "vtunpass" );
-      String hexSig = Hashes.bytesToHex(sig);
-      out.write( hexSig );  
+      String hexSig = Hashes.bytesToHex( sig );
+      out.write( hexSig );
       out.flush( );
       out.close( );
-      
-      ClusterCredentials clusterCredentials = new ClusterCredentials( newCluster.getClusterName( ) );
-      clusterCredentials.setClusterCertificate( X509Cert.fromCertificate( ccAlias, clusterX509 ) );
-      clusterCredentials.setNodeCertificate( X509Cert.fromCertificate( ncAlias, nodeX509 ) );
-      credDb.add( clusterCredentials );
+
+      ClusterCredentials ComponentCredentials = new ClusterCredentials( newComponent.getName( ) );
+      ComponentCredentials.setClusterCertificate( X509Cert.fromCertificate( ccAlias, ComponentX509 ) );
+      ComponentCredentials.setNodeCertificate( X509Cert.fromCertificate( ncAlias, nodeX509 ) );
+      credDb.add( ComponentCredentials );
       credDb.commit( );
     } catch ( Exception eee ) {
       credDb.rollback( );
       throw new EucalyptusCloudException( eee );
     }
-    /*
-     * TODO:
-     * 1. try to add to db
-     * 2. generate key pairs
-     * 3. update registry
-     */
-    return reply;
   }
 
-  private boolean checkClusterExists( RegisterClusterType request ) throws EucalyptusCloudException {
-    EntityWrapper<ClusterConfiguration> db = Configuration.getEntityWrapper( );    
-    ClusterConfiguration existingName = null;
-    ClusterConfiguration existingHost = null;
+  private boolean checkComponentExists( RegisterComponentType request ) throws EucalyptusCloudException {
+    EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );
+
+    ComponentConfiguration existingName = null;
+    ComponentConfiguration existingHost = null;
+
     try {
-      existingName = db.getUnique( new ClusterConfiguration( request.getName( ), request.getHost(), request.getPort() ) );
+      ComponentConfiguration searchConfig = Configuration.getConfigurationInstance( request, request.getName( ), request.getHost( ), request.getPort( ) );
+      existingName = db.getUnique( searchConfig );
       return true;
-    } catch ( Exception e1 ) {
+    } catch ( Exception e ) {
       try {
-        existingName = db.getUnique( ClusterConfiguration.byClusterName( request.getName( ) ) );
-        existingHost = db.getUnique( ClusterConfiguration.byHostName( request.getHost( ) ) );
-      } catch ( Exception e ) {
-        if ( existingHost != null ) {
-          throw new EucalyptusCloudException( "Cluster at host=" + existingHost.getHostName( ) + " already exists with name=" + request.getName() );
-        } else if ( existingName != null ) {
-          throw new EucalyptusCloudException( "Cluster with name=" + request.getName( ) + " already exists at host=" + existingName.getHostName( ) );
+        ComponentConfiguration searchConfig = Configuration.getConfigurationInstance( request );
+        searchConfig.setName( request.getName( ) );
+        existingName = db.getUnique( searchConfig );
+      } catch ( Exception e1 ) {
+        try {
+          ComponentConfiguration searchConfig = Configuration.getConfigurationInstance( request );
+          searchConfig.setHostName( request.getHost( ) );
+          existingHost = db.getUnique( searchConfig );
+        } catch ( Exception e2 ) {
         }
       }
     } finally {
       db.rollback( );
     }
+    if ( existingName != null ) { 
+      throw new EucalyptusCloudException( "Component with name=" + request.getName( ) + " already exists at host=" + existingName.getHostName( ) ); 
+    } else if ( existingHost != null ) {
+      throw new EucalyptusCloudException( "Component at host=" + existingHost.getHostName( ) + " already exists with name=" + request.getName( ) );
+    }
     return false;
   }
 
-  public DeregisterClusterResponseType deregisterCluster( DeregisterClusterType request ) throws EucalyptusCloudException {
-    EntityWrapper<ClusterConfiguration> db = Configuration.getEntityWrapper( );
+  public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
+    EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );
+    try {
+      ComponentConfiguration searchConfig = Configuration.getConfigurationInstance( request );
+      searchConfig.setName( request.getName( ) );
+      ComponentConfiguration componentConfig = db.getUnique( searchConfig );
+      db.delete( componentConfig );
+      db.commit( );
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw e instanceof EucalyptusCloudException ? ( EucalyptusCloudException ) e : new EucalyptusCloudException( e );
+    }
+    if ( request instanceof DeregisterClusterType ) {
+      try {
+        Configuration.removeClusterCredentials( request.getName( ) );
+      } catch ( Exception e ) {
+        LOG.error( "BUG: removed cluster but failed to remove the credentials." );
+      }
+    }
+    DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
+    reply.set_return( true );
+    return reply;
+  }
+
+  private static void removeClusterCredentials( String clusterName ) {
     EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
     try {
-      ClusterConfiguration clusterConfig = db.getUnique( ClusterConfiguration.byClusterName( request.getName( ) ) );
-      ClusterCredentials clusterCredentials = new ClusterCredentials( clusterConfig.getClusterName( ) );
-      String directory = SubDirectory.KEYS.toString( ) + File.separator + clusterConfig.getClusterName( );
-      db.delete( clusterConfig );
+      ClusterCredentials clusterCredentials = new ClusterCredentials( clusterName );
+      String directory = SubDirectory.KEYS.toString( ) + File.separator + clusterName;
       credDb.delete( clusterCredentials );
       File keyDir = new File( directory );
       for ( File f : keyDir.listFiles( ) ) {
@@ -152,27 +203,25 @@ public class Configuration {
       if ( !keyDir.delete( ) ) {
         LOG.warn( "Failed to delete key directory: " + keyDir.getAbsolutePath( ) );
       }
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
+    } catch ( Exception e ) {
       credDb.rollback( );
-      throw e;
     }
-    DeregisterClusterResponseType reply = (DeregisterClusterResponseType) request.getReply( );
-    reply.set_return( true );
-    return reply;
+    credDb.commit( );
   }
 
-  public DescribeClustersResponseType listClusters( DescribeClustersType request ) {
-    EntityWrapper<ClusterConfiguration> db = Configuration.getEntityWrapper( );
+  public DescribeComponentsResponseType listComponents( DescribeComponentsType request ) {
+    DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
+    EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );
     try {
-      List<ClusterConfiguration> clusterList = db.query( new ClusterConfiguration( ) );
-      DescribeClustersResponseType reply = ( DescribeClustersResponseType ) request.getReply( );
-      for ( ClusterConfiguration c : clusterList ) {
-        reply.getClusters( ).add( new ClusterInfoType( c.getClusterName( ), c.getHostName( ) ) );
+      List<ComponentConfiguration> componentList = db.query( Configuration.getConfigurationInstance( request ) );
+      for ( ComponentConfiguration c : componentList ) {
+        reply.getRegistered( ).add( new ComponentInfoType( c.getName( ), c.getHostName( ) ) );
       }
-      return reply;
+    } catch ( Exception e ) {
+      LOG.error( e, e );
     } finally {
       db.commit( );
     }
+    return reply;
   }
 }

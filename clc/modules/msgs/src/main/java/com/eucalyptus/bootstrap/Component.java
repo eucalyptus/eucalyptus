@@ -2,7 +2,7 @@ package com.eucalyptus.bootstrap;
 
 public class Component {
   public enum Name {
-    eucalyptus, walrus, dns, storage, database, jetty
+    eucalyptus, walrus, dns, storage, database, jetty, configuration
   }
   private Name name;
   private ResourceProvider resourceProvider;

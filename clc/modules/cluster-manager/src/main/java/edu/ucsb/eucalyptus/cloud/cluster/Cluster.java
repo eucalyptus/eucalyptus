@@ -82,7 +82,7 @@ public class Cluster implements HasName {
     String ncCert = new String( Base64.decode( certs.getNcCert() ) );
     boolean ret = true;
     LOG.info( "===============================================================" );
-    LOG.info( " Trying to verify the certificates for " + this.getClusterInfo().getClusterName() );
+    LOG.info( " Trying to verify the certificates for " + this.getClusterInfo().getName() );
     LOG.info( "---------------------------------------------------------------" );
 //    try {
       //TODO: IMPORTANT fix me
@@ -172,7 +172,7 @@ public class Cluster implements HasName {
 
   public ClusterInfoType getInfo() {
     String state = String.format( "%4s %s", this.isReachable() ? "UP" : "DOWN", this.clusterConfiguration.getHostName() );
-    return new ClusterInfoType( this.clusterConfiguration.getClusterName(), state );
+    return new ClusterInfoType( this.clusterConfiguration.getName(), state );
   }
 
   public ClusterState getState() {
@@ -240,7 +240,7 @@ public class Cluster implements HasName {
   }
 
   public String getName() {
-    return this.clusterConfiguration.getClusterName();
+    return this.clusterConfiguration.getName();
   }
 
   public boolean isReachable() {

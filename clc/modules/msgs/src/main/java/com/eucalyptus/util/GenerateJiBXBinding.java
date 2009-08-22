@@ -18,7 +18,7 @@ public class GenerateJiBXBinding {
     List<String> pathList = Lists.newArrayList( new File( "build/edu/ucsb/eucalyptus/msgs/" ).list( ) );
     List<Class> classList = Lists.newArrayList( );
     for ( String className : pathList ) {
-      if ( className.startsWith( "JiBX_" ) ) continue;
+      if ( className.startsWith( "JiBX_" ) || className.endsWith( "Category" ) ) continue;
       classList.add( Class.forName( "edu.ucsb.eucalyptus.msgs." + className.replaceAll( ".class", "" ) ) );
     }
     GenerateJiBXBinding.binding( "http://msgs.eucalyptus.ucsb.edu", classList );

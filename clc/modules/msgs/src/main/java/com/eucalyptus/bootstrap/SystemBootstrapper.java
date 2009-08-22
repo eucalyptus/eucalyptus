@@ -77,6 +77,7 @@ public class SystemBootstrapper {
       }
       for( Bootstrapper b : r.getBootstrappers( ) ) {
     	//TODO: This should be refactored into a set of bootstrappers to skip
+        //TODO: there should be a correlation between "euca.disable.XXX" and CloudServiceProvider name=XXX which specifies the Bootstrapper class
         if( b.getClass( ).getSimpleName( ).equals( "DNSBootstrapper") && System.getProperty("euca.disable.dns") != null ) {
           LOG.info( "-> skip: " + b.getClass( ) );
           continue;//TODO: fix this hack.
