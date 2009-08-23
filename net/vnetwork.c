@@ -1291,14 +1291,14 @@ int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
     return(0);
   }
   
-  /*
-  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s on", vnetconfig->eucahome, newbrname);
-  rc = system(cmd);
-  if (rc) {
-    logprintfl(EUCAWARN, "could enable stp on bridge %s\n", newbrname);
+  if (check_bridgestp(newbrname)) {
+    snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s on", vnetconfig->eucahome, newbrname);
+    rc = system(cmd);
+    if (rc) {
+      logprintfl(EUCAWARN, "could enable stp on bridge %s\n", newbrname);
+    }
   }
-  */
-  
+
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
     for (i=0; i<NUMBER_OF_CCS; i++) {
       //    logprintfl(EUCADEBUG, "attaching for CC %d vlan %d\n", i, vlan);
@@ -2144,7 +2144,7 @@ int check_deviceup(char *dev) {
     p = strchr(rbuf, '\n');
     if (p) *p='\0';
 
-    if (!strncmp(rbuf, "up", 256)) {
+    if (strncmp(rbuf, "down", 256)) {
       ret = 0;
     }
   }
@@ -2198,6 +2198,26 @@ int check_device(char *dev) {
   
   return(1);
   */
+}
+int check_bridgestp(char *br) {
+  char file[1024];
+  char *buf;
+  int ret;
+
+  if (!br || check_bridge(br)) {
+    return(1);
+  }
+  
+  ret=1;
+  snprintf(file, 1024, "/sys/class/net/%s/bridge/stp_state", br);
+  buf = file2str(file);
+  if (buf) {
+    if (atoi(buf) != 0) {
+      ret=0;
+    }
+    free(buf);
+  }
+  return(ret);
 }
 
 int check_bridgedev(char *br, char *dev) {

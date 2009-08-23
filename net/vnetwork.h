@@ -151,6 +151,7 @@ int check_device(char *dev);
 int check_deviceup(char *dev);
 int check_bridge(char *dev);
 int check_bridgedev(char *br, char *dev);
+int check_bridgestp(char *br);
 int check_tablerule(vnetConfig *vnetconfig, char *table, char *rule);
 
 #endif
