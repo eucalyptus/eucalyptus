@@ -15,6 +15,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.ws.AuthenticationException;
+import com.eucalyptus.ws.InvalidOperationException;
 
 @ChannelPipelineCoverage("one")
 public class WalrusInboundHandler extends SimpleChannelHandler {
@@ -28,6 +29,9 @@ public class WalrusInboundHandler extends SimpleChannelHandler {
 		if(exceptionEvent.getCause() instanceof AuthenticationException) {
 			response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN );
 			responseString = "Authentication Failed: " + response.getStatus() + "\r\n";
+		} else if(exceptionEvent.getCause() instanceof InvalidOperationException) {
+			response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST );
+			responseString = "Invalid Operation: " + response.getStatus() + "\r\n";
 		} else {
 			response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR );
 			responseString = "Failure: " + response.getStatus() + "\r\n";

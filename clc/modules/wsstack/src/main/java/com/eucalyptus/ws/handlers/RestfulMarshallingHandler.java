@@ -40,7 +40,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     }
   }
 
-  public abstract Object bind( String user, boolean admin, MappingHttpRequest httpRequest ) throws BindingException;
+  public abstract Object bind( String user, boolean admin, MappingHttpRequest httpRequest ) throws Exception;
 
   @Override
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {

@@ -33,6 +33,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.BindingException;
+import com.eucalyptus.ws.InvalidOperationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
@@ -155,13 +156,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 
 	@Override
-	public Object bind( final String userId, final boolean admin, final MappingHttpRequest httpRequest ) throws BindingException {
+	public Object bind( final String userId, final boolean admin, final MappingHttpRequest httpRequest ) throws Exception {
 		String servicePath = httpRequest.getServicePath();
 		Map bindingArguments = new HashMap();
 		final String operationName = getOperation(httpRequest, bindingArguments);
 
 		if(operationName == null)
-			throw new BindingException("Could not determine operation name for " + servicePath);
+			throw new InvalidOperationException("Could not determine operation name for " + servicePath);
 
 		Map<String, String> params = httpRequest.getParameters();
 
@@ -365,7 +366,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 									continue;
 								boolean fieldOkay = false;
 								for(WalrusProperties.IgnoredFields field : WalrusProperties.IgnoredFields.values()) {
-									if(formKey.equals(field.toString().toLowerCase())) {
+									if(formKey.equals(field.toString())) {
 										fieldOkay = true;
 										break;
 									}
@@ -949,7 +950,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		while(iterator.hasNext()) {
 			String key = iterator.next();
 			key = key.replaceAll("\\$", "");
-			policyItemNames.add(key.toLowerCase());
+			policyItemNames.add(key);
 			try {
 				if(jsonObject.get(key).equals(formFields.get(key)))
 					returnValue = true;
@@ -971,15 +972,15 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			String condition = (String) jsonArray.get(0);
 			String key = (String) jsonArray.get(1);
 			key = key.replaceAll("\\$", "");
-			policyItemNames.add(key.toLowerCase());
+			policyItemNames.add(key);
 			String value = (String) jsonArray.get(2);
 			if(condition.contains("eq")) {
 				if(value.equals(formFields.get(key)))
 					returnValue = true;
 			} else if(condition.contains("starts-with")) {
-				if(!formFields.containsKey(key.toLowerCase()))
+				if(!formFields.containsKey(key))
 					return false;
-				if(formFields.get(key.toLowerCase()).startsWith(value))
+				if(formFields.get(key).startsWith(value))
 					returnValue = true;
 			}
 		} catch(Exception ex) {
