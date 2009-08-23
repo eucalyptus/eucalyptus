@@ -289,12 +289,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 				if(verb.equals(WalrusProperties.HTTPVerb.POST.toString())) {
 					//TODO: handle POST.
-					Map<String, String> formFields = processPOSTParams(httpRequest);
+					Map<String, String> formFields = httpRequest.getFormFields();
 
 					String objectKey = null;
 					String file = "";
 					String authenticationHeader = "";
-					formFields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
 					if(formFields.containsKey(WalrusProperties.FormField.key.toString())) {
 						objectKey = formFields.get(WalrusProperties.FormField.key.toString());
 						objectKey = objectKey.replaceAll("\\$\\{filename\\}", file);
@@ -316,85 +315,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 							operationParams.put("SuccessActionStatus", 204);
 					} else {
 						operationParams.put("SuccessActionStatus", 204);
-					}
-					if(formFields.containsKey(WalrusProperties.FormField.policy.toString())) {
-						String policy = new String(Base64.decode(formFields.remove(WalrusProperties.FormField.policy.toString())));
-						String policyData;
-						try {
-							policyData = new String(Base64.encode(policy.getBytes()));
-						} catch (Exception ex) {
-							LOG.warn(ex, ex);
-							throw new BindingException("error reading policy data.");
-						}
-						//parse policy
-						try {
-							JsonSlurper jsonSlurper = new JsonSlurper();
-							JSONObject policyObject = (JSONObject)jsonSlurper.parseText(policy);
-							String expiration = (String) policyObject.get(WalrusProperties.PolicyHeaders.expiration.toString());
-							if(expiration != null) {
-								Date expirationDate = DateUtils.parseIso8601DateTimeOrDate(expiration);
-								if((new Date()).getTime() > expirationDate.getTime()) {
-									LOG.warn("Policy has expired.");
-									//TODO: currently this will be reported as an invalid operation
-									//Fix this to report a security exception
-									throw new BindingException("Policy has expired.");
-								}
-							}
-							List<String> policyItemNames = new ArrayList<String>();
-
-							JSONArray conditions = (JSONArray) policyObject.get(WalrusProperties.PolicyHeaders.conditions.toString());
-							for (int i = 0 ; i < conditions.size() ; ++i) {
-								Object policyItem = conditions.get(i);
-								if(policyItem instanceof JSONObject) {
-									JSONObject jsonObject = (JSONObject) policyItem;
-									if(!exactMatch(jsonObject, formFields, policyItemNames)) {
-										LOG.warn("Policy verification failed. ");
-										throw new BindingException("Policy verification failed.");
-									}
-								} else if(policyItem instanceof  JSONArray) {
-									JSONArray jsonArray = (JSONArray) policyItem;
-									if(!partialMatch(jsonArray, formFields, policyItemNames)) {
-										LOG.warn("Policy verification failed. ");
-										throw new BindingException("Policy verification failed.");
-									}
-								}
-							}
-
-							Set<String> formFieldsKeys = formFields.keySet();
-							for(String formKey : formFieldsKeys) {
-								if(formKey.startsWith(WalrusProperties.IGNORE_PREFIX))
-									continue;
-								boolean fieldOkay = false;
-								for(WalrusProperties.IgnoredFields field : WalrusProperties.IgnoredFields.values()) {
-									if(formKey.equals(field.toString())) {
-										fieldOkay = true;
-										break;
-									}
-								}
-								if(fieldOkay)
-									continue;
-								if(policyItemNames.contains(formKey))
-									continue;
-								LOG.warn("All fields except those marked with x-ignore- should be in policy.");
-								throw new BindingException("All fields except those marked with x-ignore- should be in policy.");
-							}
-						} catch(Exception ex) {
-							//rethrow
-							LOG.warn(ex);
-							if(ex instanceof BindingException)
-								throw (BindingException)ex;
-						}
-						//all form uploads without a policy are anonymous
-						if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString().toLowerCase())) {
-							String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString().toLowerCase());
-							authenticationHeader += "AWS" + " " + accessKeyId + ":";
-						}
-						if(formFields.containsKey(WalrusProperties.FormField.signature.toString())) {
-							String signature = formFields.remove(WalrusProperties.FormField.signature.toString());
-							authenticationHeader += signature;
-							httpRequest.addHeader(WalrusAuthenticationHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
-						}
-						httpRequest.addHeader(WalrusProperties.FormField.FormUploadPolicyData.toString(), policyData);
 					}
 					String key = target[0] + "." + objectKey;
 					String randomKey = key + "." + Hashes.getRandom(10);
@@ -579,61 +499,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				operationParams.put("LocationConstraint", locationConstraint);
 		}
 		return operationName;	
-	}
-
-	private Map<String, String> processPOSTParams(MappingHttpRequest httpRequest) throws BindingException {
-		Map<String, String> formFields = new HashMap<String, String>();
-		String contentType = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
-		if(contentType != null) {
-			if(contentType.startsWith(WalrusProperties.MULTIFORM_DATA_TYPE)) {
-				String boundary = getFormFieldKeyName(contentType, "boundary");
-				boundary = "--" + boundary + "\r\n";
-				String message = getMessageString(httpRequest);
-				String[] parts = message.split(boundary);
-				for(String part : parts) {
-					Map<String, String> keyMap = getFormField(part, "name");
-					Set<String> keys = keyMap.keySet();
-					for(String key : keys) {
-						formFields.put(key, keyMap.get(key));
-					}
-				}
-			}
-		} else {
-			throw new BindingException("No Content-Type specified");
-		}
-
-		return formFields;
-	}
-
-	private Map<String, String> getFormField(String message, String key) {
-		Map<String, String> keymap = new HashMap<String, String>();
-		String[] parts = message.split(";");
-		if(parts.length == 2) {
-			if (parts[1].contains(key + "=")) {
-				String keystring = parts[1].substring(parts[1].indexOf('=') + 1);
-				String[] keyparts = keystring.split("\r\n\r\n");
-				String keyName = keyparts[0];
-				keyName = keyName.replaceAll("\"", "");
-				String value = keyparts[1].replaceAll("\r\n", "");
-				keymap.put(keyName, value);
-			}
-		}
-		return keymap;		
-	}
-
-	private String getFormFieldKeyName(String message, String key) {
-		String[] parts = message.split(";");
-		if(parts.length > 1) {
-			if (parts[1].contains(key + "=")) {
-				String keystring = parts[1].substring(parts[1].indexOf('=') + 1);
-				String[] keyparts = keystring.split("\r\n\r\n");
-				String keyName = keyparts[0];
-				keyName = keyName.replaceAll("\r\n", "");
-				keyName = keyName.replaceAll("\"", "");
-				return keyName;
-			}
-		}
-		return null;		
 	}
 
 	private void parseExtendedHeaders(Map operationParams, String headerString, String value) {

@@ -25,6 +25,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   private String     query;
   private final Map<String,String> parameters;
   private String restNamespace;
+  private final Map<String, String> formFields;
   
   public MappingHttpRequest( HttpVersion httpVersion, HttpMethod method, String uri ) {
     super( httpVersion );
@@ -35,6 +36,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
       this.servicePath = url.getPath( );
       this.parameters = new HashMap<String, String>( );
       this.query = this.query == url.toURI( ).getQuery( ) ? this.query : new URLCodec().decode( url.toURI( ).getQuery( ) ).replaceAll( " ", "+" );
+      this.formFields = new HashMap<String, String>( );
       this.populateParameters();
     } catch ( MalformedURLException e ) {
       throw new RuntimeException( e );
@@ -63,6 +65,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.servicePath = servicePath;
     this.query = null;
     this.parameters = null;
+    this.formFields = null;
     super.setMessage( source );
     this.addHeader( HttpHeaders.Names.HOST, host + ":" + port );
   }
@@ -115,6 +118,10 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.restNamespace = restNamespace;
   }
 
+  public Map<String, String> getFormFields() {
+	  return formFields;
+  }
+  
   public String getAndRemoveHeader(String key) {
 	  String value = getHeader(key);
 	  removeHeader(key);

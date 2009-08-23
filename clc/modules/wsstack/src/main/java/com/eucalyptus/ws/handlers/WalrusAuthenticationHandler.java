@@ -5,8 +5,11 @@ import java.net.URLDecoder;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -14,10 +17,16 @@ import java.util.TreeMap;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import net.sf.json.groovy.JsonSlurper;
+
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
+import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.Base64;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -36,7 +45,6 @@ import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.auth.User;
@@ -60,6 +68,11 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
+			if(httpRequest.getMethod().getName().equals(WalrusProperties.HTTPVerb.POST.toString())) {
+				Map<String, String> formFields = httpRequest.getFormFields();
+				processPOSTParams(httpRequest, formFields);
+				checkPolicy(httpRequest, formFields);
+			}
 			handle(httpRequest);
 		}
 	}
@@ -94,7 +107,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 					sig.update(data.getBytes());
 					valid = sig.verify(Base64.decode(signature));
 				} else {
-					LOG.warn ("WalrusQuerySecurityHandler(): certificate not found in keystore");
+					LOG.warn ("Authentication: certificate not found in keystore");
 				}
 			} catch (Exception ex) {
 				LOG.warn ("Authentication exception: " + ex.getMessage());
@@ -109,7 +122,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			/*UserInfo admin = new UserInfo(EucalyptusProperties.NAME);
           admin.setIsAdministrator(Boolean.TRUE);
           return admin;*/
-		} else if(httpRequest.containsHeader(WalrusProperties.FormField.FormUploadPolicyData.toString())) {
+		} else if(httpRequest.getFormFields().size() > 0) {
 			String data = httpRequest.getAndRemoveHeader(WalrusProperties.FormField.FormUploadPolicyData.toString());
 			String auth_part = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
 
@@ -117,8 +130,9 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				String sigString[] = getSigInfo(auth_part);
 				String signature = sigString[1];				
 				authenticate(httpRequest, sigString[0], signature, data);
+			} else {
+				throw new AuthenticationException("User authentication failed.");
 			}
-			throw new AuthenticationException("User authentication failed.");
 		} else {
 			//external user request
 			String content_md5 = httpRequest.getAndRemoveHeader("Content-MD5");
@@ -276,6 +290,205 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			LOG.error( e, e );
 			throw new AuthenticationException( "Failed to compute signature" );
 		}
+	}
+
+	private void processPOSTParams(MappingHttpRequest httpRequest, Map<String, String> formFields) throws AuthenticationException {
+		String contentType = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
+		if(contentType != null) {
+			if(contentType.startsWith(WalrusProperties.MULTIFORM_DATA_TYPE)) {
+				String boundary = getFormFieldKeyName(contentType, "boundary");
+				boundary = "--" + boundary + "\r\n";
+				String message = getMessageString(httpRequest);
+				String[] parts = message.split(boundary);
+				for(String part : parts) {
+					Map<String, String> keyMap = getFormField(part, "name");
+					Set<String> keys = keyMap.keySet();
+					for(String key : keys) {
+						formFields.put(key, keyMap.get(key));
+					}
+				}
+			}
+			String[] target = getTarget(httpRequest);
+			formFields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
+		} else {
+			throw new AuthenticationException("No Content-Type specified");
+		}
+	}
+
+	private void checkPolicy(MappingHttpRequest httpRequest, Map<String, String> formFields) throws AuthenticationException {
+		if(formFields.containsKey(WalrusProperties.FormField.policy.toString())) {
+			String authenticationHeader = "";
+			String policy = new String(Base64.decode(formFields.remove(WalrusProperties.FormField.policy.toString())));
+			String policyData;
+			try {
+				policyData = new String(Base64.encode(policy.getBytes()));
+			} catch (Exception ex) {
+				LOG.warn(ex, ex);
+				throw new AuthenticationException("error reading policy data.");
+			}
+			//parse policy
+			try {
+				JsonSlurper jsonSlurper = new JsonSlurper();
+				JSONObject policyObject = (JSONObject)jsonSlurper.parseText(policy);
+				String expiration = (String) policyObject.get(WalrusProperties.PolicyHeaders.expiration.toString());
+				if(expiration != null) {
+					Date expirationDate = DateUtils.parseIso8601DateTimeOrDate(expiration);
+					if((new Date()).getTime() > expirationDate.getTime()) {
+						LOG.warn("Policy has expired.");
+						//TODO: currently this will be reported as an invalid operation
+						//Fix this to report a security exception
+						throw new AuthenticationException("Policy has expired.");
+					}
+				}
+				List<String> policyItemNames = new ArrayList<String>();
+
+				JSONArray conditions = (JSONArray) policyObject.get(WalrusProperties.PolicyHeaders.conditions.toString());
+				for (int i = 0 ; i < conditions.size() ; ++i) {
+					Object policyItem = conditions.get(i);
+					if(policyItem instanceof JSONObject) {
+						JSONObject jsonObject = (JSONObject) policyItem;
+						if(!exactMatch(jsonObject, formFields, policyItemNames)) {
+							LOG.warn("Policy verification failed. ");
+							throw new AuthenticationException("Policy verification failed.");
+						}
+					} else if(policyItem instanceof  JSONArray) {
+						JSONArray jsonArray = (JSONArray) policyItem;
+						if(!partialMatch(jsonArray, formFields, policyItemNames)) {
+							LOG.warn("Policy verification failed. ");
+							throw new AuthenticationException("Policy verification failed.");
+						}
+					}
+				}
+
+				Set<String> formFieldsKeys = formFields.keySet();
+				for(String formKey : formFieldsKeys) {
+					if(formKey.startsWith(WalrusProperties.IGNORE_PREFIX))
+						continue;
+					boolean fieldOkay = false;
+					for(WalrusProperties.IgnoredFields field : WalrusProperties.IgnoredFields.values()) {
+						if(formKey.equals(field.toString())) {
+							fieldOkay = true;
+							break;
+						}
+					}
+					if(fieldOkay)
+						continue;
+					if(policyItemNames.contains(formKey))
+						continue;
+					LOG.warn("All fields except those marked with x-ignore- should be in policy.");
+					throw new AuthenticationException("All fields except those marked with x-ignore- should be in policy.");
+				}
+			} catch(Exception ex) {
+				//rethrow
+				LOG.warn(ex);
+				if(ex instanceof AuthenticationException)
+					throw (AuthenticationException)ex;
+			}
+			//all form uploads without a policy are anonymous
+			if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString())) {
+				String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString());
+				authenticationHeader += "AWS" + " " + accessKeyId + ":";
+			}
+			if(formFields.containsKey(WalrusProperties.FormField.signature.toString())) {
+				String signature = formFields.remove(WalrusProperties.FormField.signature.toString());
+				authenticationHeader += signature;
+				httpRequest.addHeader(WalrusAuthenticationHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
+			}
+			httpRequest.addHeader(WalrusProperties.FormField.FormUploadPolicyData.toString(), policyData);
+		}
+	}
+
+	private Map<String, String> getFormField(String message, String key) {
+		Map<String, String> keymap = new HashMap<String, String>();
+		String[] parts = message.split(";");
+		if(parts.length == 2) {
+			if (parts[1].contains(key + "=")) {
+				String keystring = parts[1].substring(parts[1].indexOf('=') + 1);
+				String[] keyparts = keystring.split("\r\n\r\n");
+				String keyName = keyparts[0];
+				keyName = keyName.replaceAll("\"", "");
+				String value = keyparts[1].replaceAll("\r\n", "");
+				keymap.put(keyName, value);
+			}
+		}
+		return keymap;		
+	}
+
+	private String getFormFieldKeyName(String message, String key) {
+		String[] parts = message.split(";");
+		if(parts.length > 1) {
+			if (parts[1].contains(key + "=")) {
+				String keystring = parts[1].substring(parts[1].indexOf('=') + 1);
+				String[] keyparts = keystring.split("\r\n\r\n");
+				String keyName = keyparts[0];
+				keyName = keyName.replaceAll("\r\n", "");
+				keyName = keyName.replaceAll("\"", "");
+				return keyName;
+			}
+		}
+		return null;		
+	}
+
+	private String getMessageString(MappingHttpRequest httpRequest) {
+		ChannelBuffer buffer = httpRequest.getContent( );
+		buffer.markReaderIndex( );
+		byte[] read = new byte[buffer.readableBytes( )];
+		buffer.readBytes( read );
+		return new String( read );
+	}
+
+	private boolean exactMatch(JSONObject jsonObject, Map formFields, List<String> policyItemNames) {
+		Iterator<String> iterator = jsonObject.keys();
+		boolean returnValue = false;
+		while(iterator.hasNext()) {
+			String key = iterator.next();
+			key = key.replaceAll("\\$", "");
+			policyItemNames.add(key);
+			try {
+				if(jsonObject.get(key).equals(formFields.get(key)))
+					returnValue = true;
+				else
+					returnValue = false;
+			} catch(Exception ex) {
+				ex.printStackTrace();
+				return false;
+			}
+		}
+		return returnValue;
+	}
+
+	private boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields, List<String> policyItemNames) {
+		boolean returnValue = false;
+		if(jsonArray.size() != 3)
+			return false;
+		try {
+			String condition = (String) jsonArray.get(0);
+			String key = (String) jsonArray.get(1);
+			key = key.replaceAll("\\$", "");
+			policyItemNames.add(key);
+			String value = (String) jsonArray.get(2);
+			if(condition.contains("eq")) {
+				if(value.equals(formFields.get(key)))
+					returnValue = true;
+			} else if(condition.contains("starts-with")) {
+				if(!formFields.containsKey(key))
+					return false;
+				if(formFields.get(key).startsWith(value))
+					returnValue = true;
+			}
+		} catch(Exception ex) {
+			ex.printStackTrace();
+			return false;
+		}
+		return returnValue;
+	}
+
+	private static String[] getTarget(MappingHttpRequest httpRequest) {
+		String operationPath = httpRequest.getServicePath().replaceAll(WalrusProperties.walrusServicePath, "");
+		operationPath = operationPath.replaceAll("/{2,}", "/");
+		if(operationPath.startsWith("/"))
+			operationPath = operationPath.substring(1);
+		return operationPath.split("/");
 	}
 
 	@Override
