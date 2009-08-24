@@ -170,8 +170,8 @@ int vnetInitTunnels(vnetConfig *vnetconfig) {
       logprintfl(EUCAWARN, "VNET_LOCALIP not set, tunneling is disabled\n");
       return(0);
     } else if (!strcmp(vnetconfig->mode, "MANAGED-NOVLAN") && check_bridge(vnetconfig->privInterface)) {
-      logprintfl(EUCAERROR, "in MANAGED-NOVLAN mode, priv interface '%s' must be a bridge, tunneling disabled\n", vnetconfig->privInterface);
-      return(1);
+      logprintfl(EUCAWARN, "in MANAGED-NOVLAN mode, priv interface '%s' must be a bridge, tunneling disabled\n", vnetconfig->privInterface);
+      return(0);
     } else {
       ret = 0;
       snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/vtunpass", vnetconfig->eucahome);
