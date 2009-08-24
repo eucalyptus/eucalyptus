@@ -27,7 +27,7 @@ JAVA="`which java 2> /dev/null`"
 EUCA_USER="eucalyptus"
 
 JAR_NAME="/usr/share/eucalyptus/eucalyptus-JARNAME-@EUCA_VERSION@.jar"
-JAR_ALL_NAMES="/usr/share/eucalyptus/eucalyptus-interface-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-storagecontroller-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-storagemgr-@EUCA_VERSION@.jar"
+JAR_ALL_NAMES="/usr/share/eucalyptus/eucalyptus-interface-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-storagecontroller-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-walrus-@EUCA_VERSION@.jar"
 
 if [ "$EUID" != "0" ]; then
     echo "Eucalyptus init scripts must be run as root."

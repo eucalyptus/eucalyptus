@@ -15,7 +15,7 @@ all:
 	@sed "s/WS/walrus/g" < eucalyptus-java-ws > eucalyptus-walrus
 	@sed -i "s/START/eucalyptus-cloud/g" eucalyptus-walrus
 	@sed -i "s/CONFNAME/Walrus/g" eucalyptus-walrus
-	@sed -i "s/JARNAME/storagemgr/g" eucalyptus-walrus
+	@sed -i "s/JARNAME/walrus/g" eucalyptus-walrus
 	@# create the sc init script
 	@sed "s/WS/sc/g" < eucalyptus-java-ws > eucalyptus-sc
 	@sed -i "s/START/eucalyptus-walrus/g" eucalyptus-sc

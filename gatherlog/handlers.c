@@ -13,6 +13,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
   int fd, rc, bufsize;
   
   *outCCLog = *outNCLog = *outHTTPDLog = *outAxis2Log = NULL;
+  if (!service) return(1);
   
   bufsize = 1000 * 1024;
   buf = malloc(bufsize);
@@ -164,8 +165,10 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
 int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
   char *home, file[1024], *buf;
   int fd, rc, bufsize;
-  
+
   *outCCCert = *outNCCert = NULL;
+  if (!service) return(1);
+ 
   
   bufsize = 1000 * 1024;
   buf = malloc(bufsize);
