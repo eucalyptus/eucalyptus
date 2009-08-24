@@ -681,7 +681,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				if(key.toLowerCase().startsWith(WalrusProperties.AMZ_META_HEADER_PREFIX)) {
 					MetaDataEntry metaDataEntry = new MetaDataEntry();
 					metaDataEntry.setName(key.substring(WalrusProperties.AMZ_META_HEADER_PREFIX.length()));
-					metaDataEntry.setValue(httpRequest.getAndRemoveHeader(key));
+					metaDataEntry.setValue(httpRequest.getHeader(key));
 					metaData.add(metaDataEntry);
 				}
 			}
