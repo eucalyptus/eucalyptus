@@ -71,9 +71,9 @@ public class StorageProperties {
 	public static boolean trackUsageStatistics = true;
 
     static {
-        String walrusAt = System.getProperty(WalrusProperties.URL_PROPERTY);
-        if(walrusAt != null)
-            WALRUS_URL = walrusAt;
+        String walrusHost = System.getProperty(WalrusProperties.WALRUS_HOST_PROPERTY);
+        if(walrusHost != null)
+            WALRUS_URL = "http://" + walrusHost + ":" + WalrusProperties.WALRUS_PORT +  WalrusProperties.walrusServicePath;
     }
 
     public static void update() {

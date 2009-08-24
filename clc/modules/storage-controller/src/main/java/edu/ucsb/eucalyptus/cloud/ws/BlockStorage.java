@@ -38,7 +38,6 @@ import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
-import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.BlockStorageChecker;
 import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
@@ -81,41 +80,27 @@ public class BlockStorage {
 	static LogicalStorageManager blockManager;
 	static BlockStorageChecker checker;
 	static BlockStorageStatistics blockStorageStatistics;
-	
+
 	static {
 		volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();
 		if(System.getProperty("euca.disable.ebs") == null) {
+			blockManager.configure();
 			blockManager.initialize();
 			configure();
+			initialize();
 		}
 		if(StorageProperties.trackUsageStatistics) 
 			blockStorageStatistics = new BlockStorageStatistics();
 	}
 
 	public static void initialize() {
-		if(System.getProperty("euca.disable.ebs") == null) {
-			StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
-			String walrusAddr = StorageProperties.WALRUS_URL;
-			if(walrusAddr == null) {
-				LOG.warn("Walrus host addr not set");
-			}
-			checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
-			try {
-				blockManager.checkPreconditions();
-				blockManager.configure();
-				startupChecks();
-				if(!WalrusProperties.sharedMode)
-					BlockStorageChecker.checkWalrusConnection();
-			} catch(Exception ex) {
-				StorageProperties.enableStorage = false;
-				LOG.error(ex.getMessage());
-				LOG.warn("Could not initialize block manager. BlockStorage has been disabled.");
-				LOG.error("Could not initialize block manager. BlockStorage has been disabled.");
-				SystemUtil.shutdownWithError("EBS is enabled but preconditions failed. Please resolve preconditions or restart with euca.disable.ebs");			
-			}
-		}
+		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
+		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
+		startupChecks();
+		//if(!WalrusProperties.sharedMode)
+		//	BlockStorageChecker.checkWalrusConnection();
 	}
 
 	private static void configure() {

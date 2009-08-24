@@ -75,6 +75,7 @@ public class WalrusProperties {
 	public static final int IMAGE_CACHE_RETRY_LIMIT = 3;
 
 	public static final String walrusServicePath = "/services/Walrus";
+	public static int WALRUS_PORT = 8773;
 	public static final String NAMESPACE_VERSION = "2006-03-01";
 	public static final String CONTENT_LEN = "Content-Length";
 	public static final String CONTENT_TYPE = "Content-Type";
@@ -106,6 +107,7 @@ public class WalrusProperties {
 	}
 
 	public static final String URL_PROPERTY = "euca.walrus.url";
+	public static final String WALRUS_HOST_PROPERTY = "euca.walrus.host";
 	public static final String USAGE_LIMITS_PROPERTY = "euca.walrus.usageLimits";
 	public static final String WALRUS_OPERATION = "WalrusOperation";
 	public static final String AMZ_META_HEADER_PREFIX = "x-amz-meta-";

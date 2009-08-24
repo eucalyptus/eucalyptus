@@ -234,8 +234,12 @@ public class WalrusManager {
 			updateARecord.setName(bucketName + "." + zone);
 			updateARecord.setTtl(604800);
 			updateARecord.setZone(zone);
-			LOG.info("Mapping " + updateARecord.getName() + " to " + address);
-			Messaging.send(DNSProperties.DNS_REF, updateARecord);
+			try {
+				Messaging.send(DNSProperties.DNS_REF, updateARecord);
+				LOG.info("Mapping " + updateARecord.getName() + " to " + address);
+			} catch(Exception ex) {
+				LOG.error("Could not update DNS record", ex);
+			}
 		}
 
 		reply.setBucket(bucketName);
@@ -287,8 +291,12 @@ public class WalrusManager {
 						String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
 						removeARecordType.setName(bucketName + "." + zone);
 						removeARecordType.setZone(zone);
-						LOG.info("Removing mapping for " + removeARecordType.getName());
-						Messaging.send(DNSProperties.DNS_REF, removeARecordType);
+						try {
+							Messaging.send(DNSProperties.DNS_REF, removeARecordType);
+							LOG.info("Removing mapping for " + removeARecordType.getName());
+						} catch(Exception ex) {
+							LOG.error("Could not update DNS record", ex);
+						}
 					}
 
 					Status status = new Status();
