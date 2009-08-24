@@ -126,7 +126,16 @@ if ($ephemeral_size_sectors>=40) { # 40 is the bare minimum for ext2 disks, appa
 
 if ($swap_size_sectors>=8) { # 8 is the bare minimum for swap partitions, apparently
     $first_sector = $last_sector + 1;
-    run ("$PARTED --script $partition mkpartfs primary linux-swap ${first_sector}s 100%", 7);
+    my $rc = tryrun ("$PARTED --script $partition mkpartfs primary linux-swap ${first_sector}s 100%", 7);
+    if ($rc) {
+	print STDERR "trying new cmdline format (linux-swap(new))\n";
+	my $rc = tryrun ("$PARTED --script $partition mkpartfs primary linux-swap\\\(new\\\) ${first_sector}s 100%", 7);
+	if ($rc) {
+	    do_exit(7);
+	}
+    }
+    
+
 }
 
 # delete the ephemeral if it wasn't actually requested, leaving a 1-sector hole
@@ -150,6 +159,24 @@ sub run() {
     } else {
 	print STDERR "$cmd\n" unless $quiet;
     }
+}
+
+sub tryrun() {
+    my $cmd = shift;
+    my $error = shift;
+
+    if ( not defined $error) {
+	$error = 1;
+    }
+    
+    my $rc = system($cmd);
+    if ($rc) {
+	print STDERR "ERROR while executing: $cmd\n";
+	return ($error);
+    } else {
+	print STDERR "$cmd\n" unless $quiet;
+    }
+    return($rc);
 }
 
 sub do_exit() {
