@@ -28,7 +28,6 @@ extern bunchOfInstances * global_instances;
 static int doInitialize (struct nc_state_t *nc) 
 {
 	char *s = NULL;
-	long long cores;
         
 	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
 
@@ -46,11 +45,10 @@ static int doInitialize (struct nc_state_t *nc)
 		return ERROR_FATAL; \
 	}
 
-	GET_VALUE("nr_cores", cores);
+	GET_VALUE("nr_cores", nc->cores_max);
 	GET_VALUE("total_memory", nc->mem_max);
 	/* we leave 256M to the host  */
 	nc->mem_max -= 256;
-	nc->cores_max = cores;
 
 	/* let's adjust the values based on the config values */
 	if (nc->config_max_mem && nc->config_max_mem < nc->mem_max)
@@ -58,7 +56,7 @@ static int doInitialize (struct nc_state_t *nc)
 	if (nc->config_max_cores)
 		nc->cores_max = nc->config_max_cores;
 
-	logprintfl(EUCAINFO, "Using %d cores\n", nc->cores_max);
+	logprintfl(EUCAINFO, "Using %lld cores\n", nc->cores_max);
 	logprintfl(EUCAINFO, "Using %lld memory\n", nc->mem_max);
 
 	return OK;

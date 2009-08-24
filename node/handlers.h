@@ -27,11 +27,11 @@ struct nc_state_t {
 	// defined max
 	long long config_max_disk;
 	long long config_max_mem;
-	int config_max_cores;
+	long long config_max_cores;
 	// current max
 	long long disk_max;
 	long long mem_max;
-	int cores_max;
+	long long cores_max;
 	// paths
 	char home[CHAR_BUFFER_SIZE];
 	char config_network_path [CHAR_BUFFER_SIZE];

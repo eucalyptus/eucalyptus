@@ -69,7 +69,7 @@ static int doInitialize (struct nc_state_t *nc)
 	if (nc->config_max_cores)
 		nc->cores_max = nc->config_max_cores;
 
-	logprintfl(EUCAINFO, "Using %d cores\n", nc->cores_max);
+	logprintfl(EUCAINFO, "Using %lld cores\n", nc->cores_max);
 	logprintfl(EUCAINFO, "Using %lld memory\n", nc->mem_max);
 
 	return OK;
