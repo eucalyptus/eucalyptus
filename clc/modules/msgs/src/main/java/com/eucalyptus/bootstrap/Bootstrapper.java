@@ -1,11 +1,10 @@
 package com.eucalyptus.bootstrap;
 
-import java.util.List;
 
 import org.apache.log4j.Logger;
 
-@Provides(resource=Resource.Nothing)
-@Depends(resources={Resource.Nothing})
+@Provides
+@Depends
 public abstract class Bootstrapper {
  
   private static Logger LOG = Logger.getLogger( Bootstrapper.class );
@@ -16,8 +15,8 @@ public abstract class Bootstrapper {
   public String getVersion() {
     return System.getProperty( VERSION_PROPERTY );
   }
-
-  public abstract boolean load(Resource current, List<Resource> dependencies) throws Exception;
+  //TODO: does this make sense anymore? -------------------------\/
+  public abstract boolean load(Resource current) throws Exception;
   public abstract boolean start() throws Exception;
   public boolean check() throws Exception {
     return true;

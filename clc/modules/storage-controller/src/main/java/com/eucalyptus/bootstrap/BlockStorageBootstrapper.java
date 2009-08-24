@@ -1,12 +1,12 @@
 package com.eucalyptus.bootstrap;
 
-import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
 
-@Provides(resource=Resource.PrivilegedContext)
+@Provides(resource=Resource.PrivilegedContext, component=Component.storage)
+@Depends(local=Component.storage)
 public class BlockStorageBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );
   private static BlockStorageBootstrapper singleton;
@@ -34,7 +34,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
   }
 
   @Override
-  public boolean load(Resource current, List<Resource> dependencies ) throws Exception {
+  public boolean load(Resource current ) throws Exception {
 	  BlockStorageManagerFactory.getBlockStorageManager().checkPreconditions();
 	  return true;
   }

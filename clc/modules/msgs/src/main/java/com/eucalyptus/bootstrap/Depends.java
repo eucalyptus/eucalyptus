@@ -9,4 +9,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Depends {
   Resource[] resources() default {Resource.Nothing};
+  Component[] local() default {};
+  Component[] remote() default {};
 }

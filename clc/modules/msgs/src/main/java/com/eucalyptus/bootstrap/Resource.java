@@ -23,23 +23,20 @@ public enum Resource {
   SystemCredentials( ),
   RemoteConfiguration( ),
   Database( ),
+  PersistenceContext( ),
   ClusterCredentials( ),
   UserCredentials( ),
   CloudService( ),
   SpringService( ),
-  Nothing( ), ;
+  Nothing( );
   private String                 resourceName;
-  private boolean                initialized = false;                             //TODO: state needed for @Depends
-  private boolean                started     = false;
-  private static Logger          LOG         = Logger.getLogger( Resource.class );
+  private static Logger          LOG = Logger.getLogger( Resource.class );
   private List<Bootstrapper>     bootstrappers;
   private List<ResourceProvider> providers;
-  private BitSet                 bootstrapped;
 
   private Resource( ) {
     this.resourceName = String.format( "com.eucalyptus.%sProvider", this.name( ) );
     this.bootstrappers = Lists.newArrayList( );
-    this.bootstrapped = new BitSet( );
   }
 
   public List<ResourceProvider> getProviders( ) {
@@ -78,12 +75,9 @@ public enum Resource {
   }
 
   public boolean satisfiesDependency( Class clazz ) {
-    for ( Annotation a : clazz.getAnnotations( ) ) {
-      if ( a instanceof Depends ) {
-        Depends d = ( ( Depends ) a );
-        ArrayList<Resource> depends = Lists.newArrayList( d.resources( ) );
-        if ( depends.contains( this ) ) { return true; }
-      }
+    Depends d = ( Depends ) clazz.getAnnotation( Depends.class );//TODO: lame AST parser complains about this and requires cast...
+    if( d != null && Lists.newArrayList( d.resources( ) ).contains( this ) ) {
+      return true;
     }
     return false;
   }

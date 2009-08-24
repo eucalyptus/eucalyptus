@@ -1,7 +1,6 @@
 package com.eucalyptus.bootstrap;
 
 import java.io.File;
-import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.hsqldb.Server;
@@ -11,8 +10,9 @@ import org.hsqldb.persist.HsqlProperties;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.SubDirectory;
-@Provides(resource=Resource.Database)
-@Depends(resources={Resource.SystemCredentials})
+
+@Provides( resource = Resource.Database )
+@Depends( resources = Resource.SystemCredentials, local = Component.eucalyptus )
 public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
   private static Logger             LOG = Logger.getLogger( HsqldbBootstrapper.class );
   private static HsqldbBootstrapper singleton;
@@ -28,7 +28,9 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
 
   private Server db;
   private String fileName;
-  private HsqldbBootstrapper( ) {}
+
+  private HsqldbBootstrapper( ) {
+  }
 
   @Override
   public boolean check( ) {
@@ -41,35 +43,35 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
   }
 
   @Override
-  public boolean load(Resource current, List<Resource> dependencies ) throws Exception {
+  public boolean load( Resource current ) throws Exception {
     db = new Server( );
     HsqlProperties props = new HsqlProperties( );
     props.setProperty( ServerConstants.SC_KEY_NO_SYSTEM_EXIT, true );
     String dbPort = System.getProperty( DatabaseConfig.EUCA_DB_PORT );
     props.setProperty( ServerConstants.SC_KEY_PORT, Integer.parseInt( dbPort ) );
     props.setProperty( ServerConstants.SC_KEY_REMOTE_OPEN_DB, true );
-    props.setProperty( ServerConstants.SC_KEY_DATABASE+".0", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME );
-    props.setProperty( ServerConstants.SC_KEY_DBNAME+".0", EucalyptusProperties.NAME );
+    props.setProperty( ServerConstants.SC_KEY_DATABASE + ".0", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME );
+    props.setProperty( ServerConstants.SC_KEY_DBNAME + ".0", EucalyptusProperties.NAME );
     String vol = "_volumes";
-    props.setProperty( ServerConstants.SC_KEY_DATABASE+".1", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME + vol );
-    props.setProperty( ServerConstants.SC_KEY_DBNAME+".1", EucalyptusProperties.NAME + vol );
+    props.setProperty( ServerConstants.SC_KEY_DATABASE + ".1", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME + vol );
+    props.setProperty( ServerConstants.SC_KEY_DBNAME + ".1", EucalyptusProperties.NAME + vol );
     String auth = "_auth";
-    props.setProperty( ServerConstants.SC_KEY_DATABASE+".2", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME + auth );
-    props.setProperty( ServerConstants.SC_KEY_DBNAME+".2", EucalyptusProperties.NAME + auth );
+    props.setProperty( ServerConstants.SC_KEY_DATABASE + ".2", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME + auth );
+    props.setProperty( ServerConstants.SC_KEY_DBNAME + ".2", EucalyptusProperties.NAME + auth );
     String config = "_config";
-    props.setProperty( ServerConstants.SC_KEY_DATABASE+".3", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME + config );
-    props.setProperty( ServerConstants.SC_KEY_DBNAME+".3", EucalyptusProperties.NAME + config );
+    props.setProperty( ServerConstants.SC_KEY_DATABASE + ".3", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME + config );
+    props.setProperty( ServerConstants.SC_KEY_DBNAME + ".3", EucalyptusProperties.NAME + config );
     db.setProperties( props );
     return true;
   }
 
   @Override
   public boolean start( ) throws Exception {
-    (new Thread(this)).start( );
+    ( new Thread( this ) ).start( );
     return true;
   }
-  
-  public void run() {
+
+  public void run( ) {
     this.db.start( );
   }
 
@@ -103,9 +105,11 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
    * hsqldb.cache_version=1.7.0
    * hsqldb.original_version=1.8.0
    * hsqldb.compatible_version=1.8.0
-   * 110 * +-----------------+-------------+----------+------------------------------+
+   * 110 *
+   * +-----------------+-------------+----------+------------------------------+
    * 111 * | OPTION | TYPE | DEFAULT | DESCRIPTION |
-   * 112 * +-----------------+-------------+----------+------------------------------|
+   * 112 *
+   * +-----------------+-------------+----------+------------------------------|
    * 113 * | --help | | | prints this message |
    * 114 * | --address | name|number | any | server inet address |
    * 115 * | --port | number | 9001/544 | port at which server listens |
@@ -116,6 +120,7 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
    * 120 * | --tls | true|false | false | TLS/SSL (secure) sockets |
    * 121 * | --no_system_exit| true|false | false | do not issue System.exit() |
    * 122 * | --remote_open | true|false | false | can open databases remotely |
-   * 123 * +-----------------+-------------+----------+------------------------------+
+   * 123 *
+   * +-----------------+-------------+----------+------------------------------+
    */
 }

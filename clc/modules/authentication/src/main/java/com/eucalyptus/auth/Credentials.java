@@ -1,22 +1,12 @@
 package com.eucalyptus.auth;
 
-import java.security.GeneralSecurityException;
-import java.security.KeyPair;
-import java.security.PrivateKey;
 import java.security.Security;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.log4j.Logger;
 import org.apache.ws.security.WSSConfig;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
-import com.eucalyptus.auth.util.EucaKeyStore;
-import com.eucalyptus.auth.util.KeyTool;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Component.Name;
 import com.eucalyptus.util.EntityWrapper;
-import com.eucalyptus.util.EucalyptusProperties;
 
 public class Credentials {
   static Logger LOG            = Logger.getLogger( Credentials.class );

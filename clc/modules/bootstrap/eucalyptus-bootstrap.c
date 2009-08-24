@@ -515,9 +515,28 @@ int java_init(euca_opts *args, java_home_t *data) {
     if(args->disable_dns_flag) {
     	JVM_ARG(opt[++x],"-Deuca.disable.dns=true");
     }
-    if(args->disable_ebs_flag) {
-    	JVM_ARG(opt[++x],"-Deuca.disable.ebs=true");
+    if(args->disable_storage_flag) {
+    	JVM_ARG(opt[++x],"-Deuca.disable.storage=true");
     }
+    if(args->disable_cloud_flag) {
+     	JVM_ARG(opt[++x],"-Deuca.disable.cloud=true");
+     }
+    if(args->disable_walrus_flag) {
+     	JVM_ARG(opt[++x],"-Deuca.disable.walrus=true");
+     }
+    if(args->remote_dns_flag) {
+    	JVM_ARG(opt[++x],"-Deuca.remote.dns=true");
+    }
+    if(args->remote_storage_flag) {
+    	JVM_ARG(opt[++x],"-Deuca.remote.storage=true");
+    }
+    if(args->remote_cloud_flag) {
+     	JVM_ARG(opt[++x],"-Deuca.remote.cloud=true");
+     }
+    if(args->remote_walrus_flag) {
+     	JVM_ARG(opt[++x],"-Deuca.remote.walrus=true");
+     }
+
     if(args->debug_flag) {
     	JVM_ARG(opt[++x],"-Xdebug");
     	JVM_ARG(opt[++x],"-Xrunjdwp:transport=dt_socket,server=y,suspend=%2$s,address=%1$d",GETARG(args,debug_port),(args->debug_suspend_flag?"y":"n"));

@@ -35,7 +35,7 @@ public class BootstrapFactory {
     for ( Resource r : Resource.values( ) ) {
       for ( ResourceProvider p : r.initProviders( ) ) {
         LOG.info( "Loading resource provider:" + p.getName( ) + " -- " + p.getOrigin( ) );
-        for( ConfigResource cfg : p.getConfigurations( ) ) {
+        for ( ConfigResource cfg : p.getConfigurations( ) ) {
           LOG.info( "-> " + cfg.getUrl( ) );
         }
       }
@@ -58,14 +58,40 @@ public class BootstrapFactory {
         for ( Bootstrapper bootstrap : bsList ) {
           for ( Resource r : Resource.values( ) ) {
             if ( r.providedBy( bootstrap.getClass( ) ) || Resource.Nothing.equals( r ) ) {
-              r.add( bootstrap );
-              LOG.info( "-> Associated bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " with resource " + r.toString( ) );
-              break;
+              Provides provides = bootstrap.getClass( ).getAnnotation( Provides.class );
+              Component component = provides.component( );
+              if ( !component.isEnabled( ) ) {
+                LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Provides.component=" + component.toString( ) + " is disabled." );
+                break;
+              }
+              if ( checkDepends( bootstrap ) ) {
+                r.add( bootstrap );
+                LOG.info( "-> Associated bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " with resource " + r.toString( ) + "." );
+                break;
+              }
             }
           }
         }
       }
     }
+  }
+
+  private static boolean checkDepends( Bootstrapper bootstrap ) {
+    Depends depends = bootstrap.getClass( ).getAnnotation( Depends.class );
+    if( depends == null ) return true;
+    for ( Component c : depends.local( ) ) {
+      if ( !c.isLocal( ) ) {
+        LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Depends.local=" + c.toString( ) + " is remote." );
+        return false;
+      }
+    }
+    for ( Component c : depends.remote( ) ) {
+      if ( c.isLocal( ) ) {
+        LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Depends.remote=" + c.toString( ) + " is local." );
+        return false;
+      }
+    }
+    return true;
   }
 
 }

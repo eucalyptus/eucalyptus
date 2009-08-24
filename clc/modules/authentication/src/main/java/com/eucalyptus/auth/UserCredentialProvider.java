@@ -15,6 +15,7 @@ import org.hibernate.criterion.MatchMode;
 
 import com.eucalyptus.auth.Hashes.Digest;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
@@ -174,7 +175,7 @@ public class UserCredentialProvider extends Bootstrapper {
   }
 
   @Override
-  public boolean load( Resource current, List<Resource> dependencies ) throws Exception {
+  public boolean load( Resource current ) throws Exception {
     return true;//TODO: check the DB connection here.
   }
 

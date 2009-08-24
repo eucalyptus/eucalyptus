@@ -9,4 +9,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Provides {
   Resource resource() default Resource.Nothing;
+  Component component() default Component.any;
 }

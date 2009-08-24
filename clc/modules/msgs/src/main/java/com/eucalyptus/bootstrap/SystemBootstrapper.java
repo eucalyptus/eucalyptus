@@ -29,9 +29,10 @@ public class SystemBootstrapper {
     return singleton;
   }
 
-  private MuleContext          context;
+  private MuleContext context;
 
-  public SystemBootstrapper( ) {}
+  public SystemBootstrapper( ) {
+  }
 
   public boolean destroy( ) {
     return true;
@@ -42,7 +43,7 @@ public class SystemBootstrapper {
     return true;
   }
 
-  public boolean init() throws Exception {
+  public boolean init( ) throws Exception {
     try {
       LOG.info( LogUtils.header( "Initializing resource providers." ) );
       BootstrapFactory.initResourceProviders( );
@@ -52,47 +53,35 @@ public class SystemBootstrapper {
       BootstrapFactory.initBootstrappers( );
       return true;
     } catch ( Exception e ) {
-      LOG.info( e,e );
+      LOG.info( e, e );
       return false;
     }
   }
-  
+
   /*
    * bind privileged ports
    * generate/waitfor credentials
    * start database server
    * configure db/load bootstrap stack & wait for dbconfig
    * TODO: discovery persistence contexts
-   * TODO: determine the role of this component 
+   * TODO: determine the role of this component
    * TODO: depends callbacks
    * TODO: remote config
    * TODO: bootstrap bindings
    */
   public boolean load( ) throws Exception {
-    for( Resource r : Resource.values( ) ) {
-      if( r.getBootstrappers( ).isEmpty( ) ) {
-        LOG.info( "Skipping " + r + "... nothing to do.");
-      } else { 
+    for ( Resource r : Resource.values( ) ) {
+      if ( r.getBootstrappers( ).isEmpty( ) ) {
+        LOG.info( "Skipping " + r + "... nothing to do." );
+      } else {
         LOG.info( LogUtils.header( "Loading " + r ) );
       }
-      for( Bootstrapper b : r.getBootstrappers( ) ) {
-    	//TODO: This should be refactored into a set of bootstrappers to skip
-        //TODO: there should be a correlation between "euca.disable.XXX" and CloudServiceProvider name=XXX which specifies the Bootstrapper class
-        if( b.getClass( ).getSimpleName( ).equals( "DNSBootstrapper") && System.getProperty("euca.disable.dns") != null ) {
-          LOG.info( "-> skip: " + b.getClass( ) );
-          continue;//TODO: fix this hack.
-        } else if( b.getClass( ).getSimpleName( ).equals( "BlockStorageBootstrapper") && System.getProperty("euca.disable.ebs") != null ) {
-            LOG.info( "-> skip: " + b.getClass( ) );
-            continue;//TODO: fix this hack.
-        }
+      for ( Bootstrapper b : r.getBootstrappers( ) ) {
         try {
           LOG.info( "-> load: " + b.getClass( ) );
-          Depends deps = b.getClass( ).getAnnotation( Depends.class );
-          Resource[] depResources = deps!=null?deps.resources( ):new Resource[]{Resource.Nothing};
-          List<Resource> depList =Arrays.asList( depResources );
-          boolean result = b.load( r, depList );          
+          boolean result = b.load( r );
         } catch ( Exception e ) {
-          LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e);
+          LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
           return false;
         }
       }
@@ -101,18 +90,18 @@ public class SystemBootstrapper {
   }
 
   public boolean start( ) throws Exception {
-    for( Resource r : Resource.values( ) ) {
-      if( r.getBootstrappers( ).isEmpty( ) ) {
-        LOG.info( "Skipping " + r + "... nothing to do.");
-      } else { 
+    for ( Resource r : Resource.values( ) ) {
+      if ( r.getBootstrappers( ).isEmpty( ) ) {
+        LOG.info( "Skipping " + r + "... nothing to do." );
+      } else {
         LOG.info( LogUtils.header( "Starting " + r ) );
       }
-      for( Bootstrapper b : r.getBootstrappers( ) ) {
+      for ( Bootstrapper b : r.getBootstrappers( ) ) {
         try {
           LOG.info( "-> start: " + b.getClass( ) );
-          boolean result = b.start( );          
+          boolean result = b.start( );
         } catch ( Exception e ) {
-          LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e);
+          LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
           return false;
         }
       }

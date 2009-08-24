@@ -3,7 +3,6 @@ package com.eucalyptus.auth;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -13,26 +12,27 @@ import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
-import com.eucalyptus.bootstrap.Component.Name;
 import com.eucalyptus.util.EucalyptusProperties;
 
 @Provides( resource = Resource.SystemCredentials )
+@Depends(local = Component.eucalyptus)
 public class SystemCredentialProvider extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( SystemCredentialProvider.class );
-  private static ConcurrentMap<Component.Name, X509Certificate> certs     = new ConcurrentHashMap<Component.Name, X509Certificate>( );
-  private static ConcurrentMap<Component.Name, KeyPair>         keypairs  = new ConcurrentHashMap<Component.Name, KeyPair>( );
-  private Component.Name name;
+  private static ConcurrentMap<Component, X509Certificate> certs     = new ConcurrentHashMap<Component, X509Certificate>( );
+  private static ConcurrentMap<Component, KeyPair>         keypairs  = new ConcurrentHashMap<Component, KeyPair>( );
+  private Component name;
 
   public SystemCredentialProvider( ) {
   }
 
-  private SystemCredentialProvider( Name name ) {
+  private SystemCredentialProvider( Component name ) {
     this.name = name;
   }
   
-  public static SystemCredentialProvider getCredentialProvider( Component.Name name ) {
+  public static SystemCredentialProvider getCredentialProvider( Component name ) {
     return new SystemCredentialProvider( name );
   }
 
@@ -48,7 +48,7 @@ public class SystemCredentialProvider extends Bootstrapper {
     return SystemCredentialProvider.keypairs.get( this.name );
   }
 
-  private static void init( Component.Name name ) throws Exception {
+  private static void init( Component name ) throws Exception {
     new SystemCredentialProvider( name ).init( );
   }
 
@@ -68,12 +68,12 @@ public class SystemCredentialProvider extends Bootstrapper {
     }
   }
 
-  private static boolean check( Component.Name name ) {
+  private static boolean check( Component name ) {
     return ( SystemCredentialProvider.keypairs.containsKey( name.name( ) ) && SystemCredentialProvider.certs.containsKey( name.name( ) ) ) && EucaKeyStore.getInstance( ).containsEntry( name.name( ) );
   }
 
   private void loadSystemCredentialProviderKey( String name ) throws Exception {
-    Component.Name alias = Component.Name.valueOf( name );
+    Component alias = Component.valueOf( name );
     if ( this.certs.containsKey( alias ) ) {
       return;
     } else {
@@ -81,7 +81,7 @@ public class SystemCredentialProvider extends Bootstrapper {
     }
   }
 
-  private void createSystemCredentialProviderKey( Component.Name name ) throws Exception {
+  private void createSystemCredentialProviderKey( Component name ) throws Exception {
     KeyTool keyTool = new KeyTool( );
     try {
       KeyPair sysKp = keyTool.getKeyPair( );
@@ -100,15 +100,19 @@ public class SystemCredentialProvider extends Bootstrapper {
   }
 
   @Override
-  public boolean load( Resource current, List<Resource> dependencies ) throws Exception {
-    Credentials.init( );
-    for ( Component.Name c : Component.Name.values( ) ) {
-      try {
-        if ( !SystemCredentialProvider.check( c ) ) SystemCredentialProvider.init( c );
-      } catch ( Exception e ) {
-        LOG.error( e );
-        return false;
+  public boolean load( Resource current ) throws Exception {
+    try {
+      Credentials.init( );
+      for ( Component c : Component.values( ) ) {
+        try {
+          if ( !SystemCredentialProvider.check( c ) ) SystemCredentialProvider.init( c );
+        } catch ( Exception e ) {
+          LOG.error( e );
+          return false;
+        }
       }
+    } catch ( Exception e ) {
+      LOG.error(e,e);
     }
     return true;
   }

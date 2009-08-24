@@ -46,10 +46,6 @@ struct eucalyptus_opts
   char * walrus_host_arg;	/**< @brief Hostname/Address for Walrus. (default='localhost').  */
   char * walrus_host_orig;	/**< @brief Hostname/Address for Walrus. original value given at command line.  */
   const char *walrus_host_help; /**< @brief Hostname/Address for Walrus. help description.  */
-  int disable_dns_flag;	/**< @brief Do not try to bind the DNS server prot. (default=off).  */
-  const char *disable_dns_help; /**< @brief Do not try to bind the DNS server prot. help description.  */
-  int disable_ebs_flag;	/**< @brief Do not start the dynamic block storage service. (default=off).  */
-  const char *disable_ebs_help; /**< @brief Do not start the dynamic block storage service. help description.  */
   char ** define_arg;	/**< @brief Set system properties..  */
   char ** define_orig;	/**< @brief Set system properties. original value given at command line.  */
   unsigned int define_min; /**< @brief Set system properties.'s minimum occurreces */
@@ -66,6 +62,22 @@ struct eucalyptus_opts
   char * err_arg;	/**< @brief Redirect standard error to file. (default='&2').  */
   char * err_orig;	/**< @brief Redirect standard error to file. original value given at command line.  */
   const char *err_help; /**< @brief Redirect standard error to file. help description.  */
+  int remote_cloud_flag;	/**< @brief Do not try to bootstrap cloud services locally. (default=off).  */
+  const char *remote_cloud_help; /**< @brief Do not try to bootstrap cloud services locally. help description.  */
+  int remote_walrus_flag;	/**< @brief Do not try to bootstrap walrus services locally. (default=off).  */
+  const char *remote_walrus_help; /**< @brief Do not try to bootstrap walrus services locally. help description.  */
+  int remote_dns_flag;	/**< @brief Do not try to bootstrap DNS locally. (default=off).  */
+  const char *remote_dns_help; /**< @brief Do not try to bootstrap DNS locally. help description.  */
+  int remote_storage_flag;	/**< @brief Do not try to bootstrap storage locally. (default=off).  */
+  const char *remote_storage_help; /**< @brief Do not try to bootstrap storage locally. help description.  */
+  int disable_cloud_flag;	/**< @brief Disable loading cloud services altogether. (default=off).  */
+  const char *disable_cloud_help; /**< @brief Disable loading cloud services altogether. help description.  */
+  int disable_walrus_flag;	/**< @brief Disable loading walrus services altogether. (default=off).  */
+  const char *disable_walrus_help; /**< @brief Disable loading walrus services altogether. help description.  */
+  int disable_dns_flag;	/**< @brief Disable loading DNS services altogether. (default=off).  */
+  const char *disable_dns_help; /**< @brief Disable loading DNS services altogether. help description.  */
+  int disable_storage_flag;	/**< @brief Disable loading storage services altogether. (default=off).  */
+  const char *disable_storage_help; /**< @brief Disable loading storage services altogether. help description.  */
   int check_flag;	/**< @brief Check on Eucalyptus. (default=off).  */
   const char *check_help; /**< @brief Check on Eucalyptus. help description.  */
   int stop_flag;	/**< @brief Stop Eucalyptus. (default=off).  */
@@ -100,13 +112,19 @@ struct eucalyptus_opts
   unsigned int home_given ;	/**< @brief Whether home was given.  */
   unsigned int cloud_host_given ;	/**< @brief Whether cloud-host was given.  */
   unsigned int walrus_host_given ;	/**< @brief Whether walrus-host was given.  */
-  unsigned int disable_dns_given ;	/**< @brief Whether disable-dns was given.  */
-  unsigned int disable_ebs_given ;	/**< @brief Whether disable-ebs was given.  */
   unsigned int define_given ;	/**< @brief Whether define was given.  */
   unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
   unsigned int log_level_given ;	/**< @brief Whether log-level was given.  */
   unsigned int out_given ;	/**< @brief Whether out was given.  */
   unsigned int err_given ;	/**< @brief Whether err was given.  */
+  unsigned int remote_cloud_given ;	/**< @brief Whether remote-cloud was given.  */
+  unsigned int remote_walrus_given ;	/**< @brief Whether remote-walrus was given.  */
+  unsigned int remote_dns_given ;	/**< @brief Whether remote-dns was given.  */
+  unsigned int remote_storage_given ;	/**< @brief Whether remote-storage was given.  */
+  unsigned int disable_cloud_given ;	/**< @brief Whether disable-cloud was given.  */
+  unsigned int disable_walrus_given ;	/**< @brief Whether disable-walrus was given.  */
+  unsigned int disable_dns_given ;	/**< @brief Whether disable-dns was given.  */
+  unsigned int disable_storage_given ;	/**< @brief Whether disable-storage was given.  */
   unsigned int check_given ;	/**< @brief Whether check was given.  */
   unsigned int stop_given ;	/**< @brief Whether stop was given.  */
   unsigned int fork_given ;	/**< @brief Whether fork was given.  */

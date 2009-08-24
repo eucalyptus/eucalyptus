@@ -1,21 +1,58 @@
 package com.eucalyptus.bootstrap;
 
-public class Component {
-  public enum Name {
-    eucalyptus, walrus, dns, storage, database, jetty, configuration
+import java.util.List;
+
+public enum Component {
+  eucalyptus,
+  walrus,
+  dns,
+  storage,
+  database,
+  www,
+  any(true);
+  private boolean local   = false;
+  private boolean enabled = false;
+
+  
+  private Component() {}
+  private Component( boolean whatever ) {
+    this.local = true;
+    this.enabled = true;
   }
-  private Name name;
-  private ResourceProvider resourceProvider;
-  private Component( Name name, ResourceProvider resourceProvider ) {
-    super( );
-    this.name = name;
-    this.resourceProvider = resourceProvider;
+
+  public void markEnabled( ) {
+    this.enabled = true;
   }
-  public Name getName( ) {
-    return name;
+
+  public boolean isEnabled( ) {
+    return enabled;
   }
+
+  public boolean isLocal( ) {
+    return local;
+  }
+
+  public void markLocal( ) {
+    this.local = true;
+  }
+
   public ResourceProvider getResourceProvider( ) {
     return resourceProvider;
   }
-  
+
+  public void setResourceProvider( ResourceProvider resourceProvider ) {
+    this.resourceProvider = resourceProvider;
+  }
+
+  public List<Bootstrapper> getBootstrappers( ) {
+    return bootstrappers;
+  }
+
+  private ResourceProvider   resourceProvider;
+  private List<Bootstrapper> bootstrappers;
+
+  public boolean add( Bootstrapper arg0 ) {
+    return bootstrappers.add( arg0 );
+  }
+
 }

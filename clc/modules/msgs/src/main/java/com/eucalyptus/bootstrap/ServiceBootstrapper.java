@@ -24,7 +24,7 @@ public class ServiceBootstrapper extends Bootstrapper {
   }
 
   @Override
-  public boolean load( Resource current, List<Resource> dependencies ) throws Exception {
+  public boolean load( Resource current ) throws Exception {
     List<ConfigResource> configs = Lists.newArrayList( );
     for( ResourceProvider r : current.getProviders( ) ) {
       LOG.info( "Preparing configuration for: " + r );

@@ -35,13 +35,21 @@ const char *eucalyptus_opts_help[] = {
   "  -h, --home=directory          Eucalyptus home directory.  (default=`/')",
   "  -c, --cloud-host=address      Hostname/Address for the Cloud Controller.  \n                                  (default=`127.0.0.1')",
   "  -w, --walrus-host=address or 'localhost'\n                                Hostname/Address for Walrus.  \n                                  (default=`localhost')",
-  "      --disable-dns             Do not try to bind the DNS server port.  \n                                  (default=off)",
-  "      --disable-ebs             Do not start the Dynamic Block Storage service.  \n                                  (default=off)",
   "  -D, --define=STRING           Set system properties.",
   "  -v, --verbose                 Verbose bootstrapper output. Note: This only \n                                  controls the level of output from the native \n                                  bootstrapper.  (default=off)",
   "  -l, --log-level=filename      Control the log level for console output.  \n                                  (default=`INFO')",
   "  -o, --out=filename            Redirect standard out to file.  (default=`&1')",
   "  -e, --err=filename            Redirect standard error to file.  \n                                  (default=`&2')",
+  "\nRemote Services:",
+  "      --remote-cloud            Do not try to bootstrap cloud services locally. \n                                   (default=off)",
+  "      --remote-walrus           Do not try to bootstrap walrus services \n                                  locally.  (default=off)",
+  "      --remote-dns              Do not try to bootstrap DNS locally.  \n                                  (default=off)",
+  "      --remote-storage          Do not try to bootstrap storage locally.  \n                                  (default=off)",
+  "\nDisable Services:",
+  "      --disable-cloud           Disable loading cloud services altogether.  \n                                  (default=off)",
+  "      --disable-walrus          Disable loading walrus services altogether.  \n                                  (default=off)",
+  "      --disable-dns             Disable loading DNS services altogether.  \n                                  (default=off)",
+  "      --disable-storage         Disable loading storage services altogether.  \n                                  (default=off)",
   "\nEucalyptus Runtime Options:",
   "  -C, --check                   Check on Eucalyptus.  (default=off)",
   "  -S, --stop                    Stop Eucalyptus.  (default=off)",
@@ -87,13 +95,19 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->home_given = 0 ;
   args_info->cloud_host_given = 0 ;
   args_info->walrus_host_given = 0 ;
-  args_info->disable_dns_given = 0 ;
-  args_info->disable_ebs_given = 0 ;
   args_info->define_given = 0 ;
   args_info->verbose_given = 0 ;
   args_info->log_level_given = 0 ;
   args_info->out_given = 0 ;
   args_info->err_given = 0 ;
+  args_info->remote_cloud_given = 0 ;
+  args_info->remote_walrus_given = 0 ;
+  args_info->remote_dns_given = 0 ;
+  args_info->remote_storage_given = 0 ;
+  args_info->disable_cloud_given = 0 ;
+  args_info->disable_walrus_given = 0 ;
+  args_info->disable_dns_given = 0 ;
+  args_info->disable_storage_given = 0 ;
   args_info->check_given = 0 ;
   args_info->stop_given = 0 ;
   args_info->fork_given = 0 ;
@@ -117,8 +131,6 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->cloud_host_orig = NULL;
   args_info->walrus_host_arg = gengetopt_strdup ("localhost");
   args_info->walrus_host_orig = NULL;
-  args_info->disable_dns_flag = 0;
-  args_info->disable_ebs_flag = 0;
   args_info->define_arg = NULL;
   args_info->define_orig = NULL;
   args_info->verbose_flag = 0;
@@ -128,6 +140,14 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->out_orig = NULL;
   args_info->err_arg = gengetopt_strdup ("&2");
   args_info->err_orig = NULL;
+  args_info->remote_cloud_flag = 0;
+  args_info->remote_walrus_flag = 0;
+  args_info->remote_dns_flag = 0;
+  args_info->remote_storage_flag = 0;
+  args_info->disable_cloud_flag = 0;
+  args_info->disable_walrus_flag = 0;
+  args_info->disable_dns_flag = 0;
+  args_info->disable_storage_flag = 0;
   args_info->check_flag = 0;
   args_info->stop_flag = 0;
   args_info->fork_flag = 0;
@@ -157,27 +177,33 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->home_help = eucalyptus_opts_help[4] ;
   args_info->cloud_host_help = eucalyptus_opts_help[5] ;
   args_info->walrus_host_help = eucalyptus_opts_help[6] ;
-  args_info->disable_dns_help = eucalyptus_opts_help[7] ;
-  args_info->disable_ebs_help = eucalyptus_opts_help[8] ;
-  args_info->define_help = eucalyptus_opts_help[9] ;
+  args_info->define_help = eucalyptus_opts_help[7] ;
   args_info->define_min = 0;
   args_info->define_max = 0;
-  args_info->verbose_help = eucalyptus_opts_help[10] ;
-  args_info->log_level_help = eucalyptus_opts_help[11] ;
-  args_info->out_help = eucalyptus_opts_help[12] ;
-  args_info->err_help = eucalyptus_opts_help[13] ;
-  args_info->check_help = eucalyptus_opts_help[15] ;
-  args_info->stop_help = eucalyptus_opts_help[16] ;
-  args_info->fork_help = eucalyptus_opts_help[17] ;
-  args_info->pidfile_help = eucalyptus_opts_help[18] ;
-  args_info->java_home_help = eucalyptus_opts_help[20] ;
-  args_info->jvm_name_help = eucalyptus_opts_help[1] ;
-  args_info->jvm_args_help = eucalyptus_opts_help[22] ;
+  args_info->verbose_help = eucalyptus_opts_help[8] ;
+  args_info->log_level_help = eucalyptus_opts_help[9] ;
+  args_info->out_help = eucalyptus_opts_help[10] ;
+  args_info->err_help = eucalyptus_opts_help[11] ;
+  args_info->remote_cloud_help = eucalyptus_opts_help[13] ;
+  args_info->remote_walrus_help = eucalyptus_opts_help[14] ;
+  args_info->remote_dns_help = eucalyptus_opts_help[15] ;
+  args_info->remote_storage_help = eucalyptus_opts_help[16] ;
+  args_info->disable_cloud_help = eucalyptus_opts_help[18] ;
+  args_info->disable_walrus_help = eucalyptus_opts_help[19] ;
+  args_info->disable_dns_help = eucalyptus_opts_help[20] ;
+  args_info->disable_storage_help = eucalyptus_opts_help[21] ;
+  args_info->check_help = eucalyptus_opts_help[23] ;
+  args_info->stop_help = eucalyptus_opts_help[24] ;
+  args_info->fork_help = eucalyptus_opts_help[25] ;
+  args_info->pidfile_help = eucalyptus_opts_help[26] ;
+  args_info->java_home_help = eucalyptus_opts_help[28] ;
+  args_info->jvm_name_help = eucalyptus_opts_help[29] ;
+  args_info->jvm_args_help = eucalyptus_opts_help[30] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->debug_help = eucalyptus_opts_help[23] ;
-  args_info->debug_port_help = eucalyptus_opts_help[24] ;
-  args_info->debug_suspend_help = eucalyptus_opts_help[25] ;
+  args_info->debug_help = eucalyptus_opts_help[31] ;
+  args_info->debug_port_help = eucalyptus_opts_help[32] ;
+  args_info->debug_suspend_help = eucalyptus_opts_help[33] ;
   
 }
 
@@ -372,10 +398,6 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "cloud-host", args_info->cloud_host_orig, 0);
   if (args_info->walrus_host_given)
     write_into_file(outfile, "walrus-host", args_info->walrus_host_orig, 0);
-  if (args_info->disable_dns_given)
-    write_into_file(outfile, "disable-dns", 0, 0 );
-  if (args_info->disable_ebs_given)
-    write_into_file(outfile, "disable-ebs", 0, 0 );
   write_multiple_into_file(outfile, args_info->define_given, "define", args_info->define_orig, 0);
   if (args_info->verbose_given)
     write_into_file(outfile, "verbose", 0, 0 );
@@ -385,6 +407,22 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "out", args_info->out_orig, 0);
   if (args_info->err_given)
     write_into_file(outfile, "err", args_info->err_orig, 0);
+  if (args_info->remote_cloud_given)
+    write_into_file(outfile, "remote-cloud", 0, 0 );
+  if (args_info->remote_walrus_given)
+    write_into_file(outfile, "remote-walrus", 0, 0 );
+  if (args_info->remote_dns_given)
+    write_into_file(outfile, "remote-dns", 0, 0 );
+  if (args_info->remote_storage_given)
+    write_into_file(outfile, "remote-storage", 0, 0 );
+  if (args_info->disable_cloud_given)
+    write_into_file(outfile, "disable-cloud", 0, 0 );
+  if (args_info->disable_walrus_given)
+    write_into_file(outfile, "disable-walrus", 0, 0 );
+  if (args_info->disable_dns_given)
+    write_into_file(outfile, "disable-dns", 0, 0 );
+  if (args_info->disable_storage_given)
+    write_into_file(outfile, "disable-storage", 0, 0 );
   if (args_info->check_given)
     write_into_file(outfile, "check", 0, 0 );
   if (args_info->stop_given)
@@ -962,13 +1000,19 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { "home",	1, NULL, 'h' },
         { "cloud-host",	1, NULL, 'c' },
         { "walrus-host",	1, NULL, 'w' },
-        { "disable-dns",	0, NULL, 0 },
-        { "disable-ebs",	0, NULL, 0 },
         { "define",	1, NULL, 'D' },
         { "verbose",	0, NULL, 'v' },
         { "log-level",	1, NULL, 'l' },
         { "out",	1, NULL, 'o' },
         { "err",	1, NULL, 'e' },
+        { "remote-cloud",	0, NULL, 0 },
+        { "remote-walrus",	0, NULL, 0 },
+        { "remote-dns",	0, NULL, 0 },
+        { "remote-storage",	0, NULL, 0 },
+        { "disable-cloud",	0, NULL, 0 },
+        { "disable-walrus",	0, NULL, 0 },
+        { "disable-dns",	0, NULL, 0 },
+        { "disable-storage",	0, NULL, 0 },
         { "check",	0, NULL, 'C' },
         { "stop",	0, NULL, 'S' },
         { "fork",	0, NULL, 'f' },
@@ -1177,8 +1221,80 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
             exit (EXIT_SUCCESS);
           }
 
-          /* Do not try to bind the DNS server prot..  */
-          if (strcmp (long_options[option_index].name, "disable-dns") == 0)
+          /* Do not try to bootstrap cloud services locally..  */
+          if (strcmp (long_options[option_index].name, "remote-cloud") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->remote_cloud_flag), 0, &(args_info->remote_cloud_given),
+                &(local_args_info.remote_cloud_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "remote-cloud", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Do not try to bootstrap walrus services locally..  */
+          else if (strcmp (long_options[option_index].name, "remote-walrus") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->remote_walrus_flag), 0, &(args_info->remote_walrus_given),
+                &(local_args_info.remote_walrus_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "remote-walrus", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Do not try to bootstrap DNS locally..  */
+          else if (strcmp (long_options[option_index].name, "remote-dns") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->remote_dns_flag), 0, &(args_info->remote_dns_given),
+                &(local_args_info.remote_dns_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "remote-dns", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Do not try to bootstrap storage locally..  */
+          else if (strcmp (long_options[option_index].name, "remote-storage") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->remote_storage_flag), 0, &(args_info->remote_storage_given),
+                &(local_args_info.remote_storage_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "remote-storage", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Disable loading cloud services altogether..  */
+          else if (strcmp (long_options[option_index].name, "disable-cloud") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->disable_cloud_flag), 0, &(args_info->disable_cloud_given),
+                &(local_args_info.disable_cloud_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "disable-cloud", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Disable loading walrus services altogether..  */
+          else if (strcmp (long_options[option_index].name, "disable-walrus") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->disable_walrus_flag), 0, &(args_info->disable_walrus_given),
+                &(local_args_info.disable_walrus_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "disable-walrus", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Disable loading DNS services altogether..  */
+          else if (strcmp (long_options[option_index].name, "disable-dns") == 0)
           {
           
           
@@ -1189,17 +1305,17 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
               goto failure;
           
           }
-          /* Do not start the Dynamic Block Storage Service */
-          else  if (strcmp (long_options[option_index].name, "disable-ebs") == 0)
+          /* Disable loading storage services altogether..  */
+          else if (strcmp (long_options[option_index].name, "disable-storage") == 0)
           {
-
-
-            if (update_arg((void *)&(args_info->disable_ebs_flag), 0, &(args_info->disable_ebs_given),
-                &(local_args_info.disable_ebs_given), optarg, 0, 0, ARG_FLAG,
-                check_ambiguity, override, 1, 0, "disable-ebs", '-',
+          
+          
+            if (update_arg((void *)&(args_info->disable_storage_flag), 0, &(args_info->disable_storage_given),
+                &(local_args_info.disable_storage_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "disable-storage", '-',
                 additional_error))
               goto failure;
-
+          
           }
           /* Location for the pidfile..  */
           else if (strcmp (long_options[option_index].name, "pidfile") == 0)
