@@ -678,7 +678,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			Set<String> headerNames = httpRequest.getHeaderNames();
 			ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 			for(String key : headerNames) {
-				if(key.startsWith(WalrusProperties.AMZ_META_HEADER_PREFIX)) {
+				if(key.toLowerCase().startsWith(WalrusProperties.AMZ_META_HEADER_PREFIX)) {
 					MetaDataEntry metaDataEntry = new MetaDataEntry();
 					metaDataEntry.setName(key.substring(WalrusProperties.AMZ_META_HEADER_PREFIX.length()));
 					metaDataEntry.setValue(httpRequest.getAndRemoveHeader(key));
