@@ -547,40 +547,6 @@ void adopt_instances()
 	}
 }
 
-static int 
-getResources() {
-	int ret;
-	long long memory, cores;
-
-	/* we don't call init for now, since we are called from init */
-
-	if (nc_state.H->getResources) 
-		ret = nc_state.H->getResources(&nc_state, &cores, &memory);
-	else
-		ret = nc_state.D->getResources(&nc_state, &cores, &memory);
-
-	if (ret) {
-		logprintfl(EUCAWARN, "Failed to get resources!\n");
-		return ret;
-	}
-
-	if (nc_state.config_max_mem && nc_state.config_max_mem < memory)
-		nc_state.mem_max = nc_state.config_max_mem;
-	else
-		nc_state.mem_max = memory;
-
-	if (nc_state.config_max_cores)
-		nc_state.cores_max = nc_state.config_max_cores;
-	else
-		nc_state.cores_max = (int)cores;
-
-	logprintfl(EUCAINFO, "Using %d cores (found %d)\n", nc_state.cores_max, (int)cores);
-	logprintfl(EUCAINFO, "Using %lld memory (found %lld)\n", nc_state.mem_max, memory);
-
-	return ret;
-}
-
-
 static int init (void)
 {
 	static int initialized = 0;
@@ -742,10 +708,6 @@ static int init (void)
 		return ERROR_FATAL;
 	}
 	
-	/* get memory and cores */
-	if (getResources()) 
-		return ERROR_FATAL;
-
 	/* get disk max */
 	strncpy(log, scGetInstancePath(), CHAR_BUFFER_SIZE);
 

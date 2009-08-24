@@ -38,15 +38,6 @@ doInitialize (struct nc_state_t *nc)
 }
 
 static int
-getResources(	struct nc_state_t *nc,
-		long long *cores,
-		long long *memory) 
-{    
-	logprintfl(EUCAERROR, "no default for getResources!\n");
-	return ERROR_FATAL;
-}
-
-static int
 doRunInstance (	struct nc_state_t *nc, ncMetadata *meta, char *instanceId,
 		char *reservationId, ncInstParams *params, 
 		char *imageId, char *imageURL, 
@@ -302,7 +293,6 @@ doDetachVolume(	struct nc_state_t *nc,
 struct handlers default_libvirt_handlers = {
     .name = "default",
     .doInitialize        = doInitialize,
-    .getResources        = getResources,
     .doDescribeInstances = doDescribeInstances,
     .doRunInstance       = doRunInstance,
     .doTerminateInstance = doTerminateInstance,

@@ -27,6 +27,10 @@ extern bunchOfInstances * global_instances;
 
 static int doInitialize (struct nc_state_t *nc) 
 {
+	char *s = NULL;
+	virNodeInfo ni;
+	long long dom0_min_mem;
+
 	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
 
 	/* set up paths of Eucalyptus commands NC relies on */
@@ -38,17 +42,7 @@ static int doInitialize (struct nc_state_t *nc)
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
 
-	return OK;
-}
-
-static int
-getResources(	struct nc_state_t *nc,
-		long long *cores,
-		long long *memory){
-	char *s = NULL;
-	virNodeInfo ni;
-	long long dom0_min_mem;
-
+	/* get resources */
 	if (virNodeGetInfo(nc->conn, &ni)) {
 		logprintfl (EUCAFATAL, "error: failed to discover resources\n");
 		return ERROR_FATAL;
@@ -64,15 +58,22 @@ getResources(	struct nc_state_t *nc,
 	free (s);
 
 	/* calculate the available memory */
-	*memory = ni.memory/1024 - 32 - dom0_min_mem;
+	nc->mem_max = ni.memory/1024 - 32 - dom0_min_mem;
 
 	/* calculate the available cores */
-	*cores = ni.cpus;
+	nc->mem_max = ni.cpus;
+
+	/* let's adjust the values based on the config values */
+	if (nc->config_max_mem && nc->config_max_mem < nc->mem_max)
+		nc->mem_max = nc->config_max_mem;
+	if (nc->config_max_cores)
+		nc->cores_max = nc->config_max_cores;
+
+	logprintfl(EUCAINFO, "Using %d cores\n", nc->cores_max);
+	logprintfl(EUCAINFO, "Using %lld memory\n", nc->mem_max);
 
 	return OK;
 }
-
-
 
 static int
 doRunInstance(		struct nc_state_t *nc,
@@ -475,7 +476,6 @@ doDetachVolume (	struct nc_state_t *nc,
 struct handlers xen_libvirt_handlers = {
     .name = "xen",
     .doInitialize        = doInitialize,
-    .getResources        = getResources,
     .doDescribeInstances = NULL,
     .doRunInstance       = doRunInstance,
     .doTerminateInstance = NULL,

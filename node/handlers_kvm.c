@@ -27,6 +27,9 @@ extern bunchOfInstances * global_instances;
 
 static int doInitialize (struct nc_state_t *nc) 
 {
+	char *s = NULL;
+	long long cores;
+        
 	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
 
 	/* set up paths of Eucalyptus commands NC relies on */
@@ -35,15 +38,6 @@ static int doInitialize (struct nc_state_t *nc)
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
 
-	return OK;
-}
-
-static int
-getResources(	struct nc_state_t *nc,
-		long long *cores,
-		long long *memory) {
-	char *s = NULL;
-        
 	s = system_output (nc->get_info_cmd_path);
 #define GET_VALUE(name,var) \
 	if (get_value (s, name, &var)) { \
@@ -52,10 +46,20 @@ getResources(	struct nc_state_t *nc,
 		return ERROR_FATAL; \
 	}
 
-	GET_VALUE("nr_cores", *cores);
-	GET_VALUE("total_memory", *memory);
+	GET_VALUE("nr_cores", cores);
+	GET_VALUE("total_memory", nc->mem_max);
 	/* we leave 256M to the host  */
-	*memory -= 256;
+	nc->mem_max -= 256;
+	nc->cores_max = cores;
+
+	/* let's adjust the values based on the config values */
+	if (nc->config_max_mem && nc->config_max_mem < nc->mem_max)
+		nc->mem_max = nc->config_max_mem;
+	if (nc->config_max_cores)
+		nc->cores_max = nc->config_max_cores;
+
+	logprintfl(EUCAINFO, "Using %d cores\n", nc->cores_max);
+	logprintfl(EUCAINFO, "Using %lld memory\n", nc->mem_max);
 
 	return OK;
 }
@@ -414,7 +418,6 @@ doDetachVolume (	struct nc_state_t *nc,
 struct handlers kvm_libvirt_handlers = {
     .name = "kvm",
     .doInitialize        = doInitialize,
-    .getResources        = getResources,
     .doDescribeInstances = NULL,
     .doRunInstance       = doRunInstance,
     .doTerminateInstance = NULL,
