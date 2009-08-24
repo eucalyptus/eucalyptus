@@ -498,6 +498,7 @@ public class WalrusManager {
 						} else if(WalrusDataMessage.isEOF(dataMessage)) {
 							//commit object
 							try {
+								fileIO.finish();
 								storageManager.renameObject(bucketName, tempObjectName, objectName);
 							} catch (IOException ex) {
 								LOG.error(ex);
@@ -527,7 +528,6 @@ public class WalrusManager {
 								walrusStatistics.updateSpaceUsed(size);
 							}
 							db.commit();
-							fileIO.finish();
 							//restart all interrupted puts
 							WalrusMonitor monitor = messenger.getMonitor(key);
 							synchronized (monitor) {
@@ -603,6 +603,7 @@ public class WalrusManager {
 		putObject.setKey(key);
 		putObject.setRandomKey(request.getRandomKey());
 		putObject.setAccessControlList(request.getAccessControlList());
+		putObject.setContentType(request.getContentType());
 		putObject.setContentLength(request.getContentLength());
 		putObject.setAccessKeyID(request.getAccessKeyID());
 		putObject.setEffectiveUserId(request.getEffectiveUserId());

@@ -362,6 +362,7 @@
 			usage="optional" />
 		<value name="SuccessActionStatus" field="successActionStatus"
 			usage="optional" />
+		<value name="ContentType" field="contentType" usage="optional"/>
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
 			usage="optional" />
 	</mapping>

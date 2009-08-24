@@ -27,6 +27,7 @@ import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -304,6 +305,9 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 					Map<String, String> keyMap = getFormField(part, "name");
 					Set<String> keys = keyMap.keySet();
 					for(String key : keys) {
+						if(WalrusProperties.FormField.file.toString().equals(key)) {
+							getFirstChunk(formFields, part, boundary);
+						}
 						formFields.put(key, keyMap.get(key));
 					}
 				}
@@ -401,14 +405,22 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	private Map<String, String> getFormField(String message, String key) {
 		Map<String, String> keymap = new HashMap<String, String>();
 		String[] parts = message.split(";");
-		if(parts.length == 2) {
+		if(parts.length >= 2) {
 			if (parts[1].contains(key + "=")) {
 				String keystring = parts[1].substring(parts[1].indexOf('=') + 1);
+				if(parts.length == 2) {
 				String[] keyparts = keystring.split("\r\n\r\n");
 				String keyName = keyparts[0];
 				keyName = keyName.replaceAll("\"", "");
 				String value = keyparts[1].replaceAll("\r\n", "");
 				keymap.put(keyName, value);
+				} else {
+					String keyName = keystring.trim();
+					keyName = keyName.replaceAll("\"", "");
+					String valuestring = parts[2].substring(parts[2].indexOf('=') + 1, parts[2].indexOf("\r\n")).trim();
+					String value = valuestring.replaceAll("\"", "");
+					keymap.put(keyName, value);
+				}
 			}
 		}
 		return keymap;		
@@ -437,6 +449,17 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		return new String( read );
 	}
 
+	private void getFirstChunk(Map<String, String>formFields, String part, String boundary) {
+		int endValue = part.indexOf("\r\n\r\n");
+		int startValue = part.indexOf(WalrusProperties.CONTENT_TYPE + ":") + WalrusProperties.CONTENT_TYPE.length() + 1;
+		if(endValue > startValue) {
+			String contentType = part.substring(startValue, endValue);
+			formFields.put(WalrusProperties.CONTENT_TYPE, contentType);			
+			String firstChunk = part.substring(endValue + "\r\n\r\n".length(), part.length() - "\r\n".length());
+			formFields.put(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk", firstChunk);
+		}
+	}
+	
 	private boolean exactMatch(JSONObject jsonObject, Map formFields, List<String> policyItemNames) {
 		Iterator<String> iterator = jsonObject.keys();
 		boolean returnValue = false;

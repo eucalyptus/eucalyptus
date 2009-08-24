@@ -292,7 +292,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					Map<String, String> formFields = httpRequest.getFormFields();
 
 					String objectKey = null;
-					String file = "";
+					String file = formFields.get(WalrusProperties.FormField.file.toString());
 					String authenticationHeader = "";
 					if(formFields.containsKey(WalrusProperties.FormField.key.toString())) {
 						objectKey = formFields.get(WalrusProperties.FormField.key.toString());
@@ -316,12 +316,15 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					} else {
 						operationParams.put("SuccessActionStatus", 204);
 					}
+					if(formFields.containsKey(WalrusProperties.CONTENT_TYPE)) {
+						operationParams.put("ContentType", formFields.get(WalrusProperties.CONTENT_TYPE));
+					}
 					String key = target[0] + "." + objectKey;
 					String randomKey = key + "." + Hashes.getRandom(10);
 					operationParams.put("ContentLength", (new Long(contentLength).toString()));
 					operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
 					putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
-					handleFirstChunk(httpRequest, contentLength);
+					handleFirstChunk(httpRequest, formFields.get(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk"), contentLength);
 				}
 
 			} else {
@@ -881,13 +884,24 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	private void handleFirstChunk(MappingHttpRequest httpRequest, long dataLength) {
 		ChannelBuffer buffer = httpRequest.getContent();
-		byte[] bytes = new byte[DATA_MESSAGE_SIZE];        
 		try {
 			putQueue.put(WalrusDataMessage.StartOfData(dataLength));
 			buffer.markReaderIndex( );
 			byte[] read = new byte[buffer.readableBytes( )];
 			buffer.readBytes( read );
 			putQueue.put(WalrusDataMessage.DataMessage(read));
+			if(!httpRequest.isChunked())
+				putQueue.put(WalrusDataMessage.EOF());
+		} catch (Exception ex) {
+			LOG.error(ex, ex);
+		}
+
+	}
+
+	private void handleFirstChunk(MappingHttpRequest httpRequest, String firstChunk, long dataLength) {
+		try {
+			putQueue.put(WalrusDataMessage.StartOfData(dataLength));
+			putQueue.put(WalrusDataMessage.DataMessage(firstChunk.getBytes()));
 			if(!httpRequest.isChunked())
 				putQueue.put(WalrusDataMessage.EOF());
 		} catch (Exception ex) {

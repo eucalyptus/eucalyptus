@@ -369,6 +369,7 @@ public class PostObjectType extends WalrusDataRequestType {
 	String storageClass;
 	String successActionRedirect;
 	Integer successActionStatus;
+	String contentType;
 }
 
 public class CopyObjectType extends WalrusRequestType {
