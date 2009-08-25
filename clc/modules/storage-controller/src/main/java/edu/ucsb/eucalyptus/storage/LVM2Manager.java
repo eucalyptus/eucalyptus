@@ -343,8 +343,6 @@ public class LVM2Manager implements LogicalStorageManager {
 		List<LVMVolumeInfo> lvmVolumeInfos = db.query(lvmVolumeInfo);
 		if(lvmVolumeInfos.size() > 0) {
 			LVMVolumeInfo lvmVolInfo = lvmVolumeInfos.get(0);
-			String loDevName = lvmVolInfo.getLoDevName();
-			String returnValue = removeLoopback(loDevName);
 			db.delete(lvmVolInfo);
 			db.commit();
 		}
@@ -832,8 +830,6 @@ public class LVM2Manager implements LogicalStorageManager {
 		LVMVolumeInfo foundLVMVolumeInfo = db.getUnique(lvmVolumeInfo);
 
 		if(foundLVMVolumeInfo != null) {
-			String loDevName = foundLVMVolumeInfo.getLoDevName();
-			String returnValue = removeLoopback(loDevName);
 			db.delete(foundLVMVolumeInfo);
 			db.commit();
 		}  else {

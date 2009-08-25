@@ -62,7 +62,7 @@ public class WalrusBlockStorageManager {
 
     public void startupChecks() {
         cleanFailedCachedImages();
-        //WalrusProperties.sharedMode = true;
+        WalrusProperties.sharedMode = true;
     }
 
     public void cleanFailedCachedImages() {
@@ -114,6 +114,7 @@ public class WalrusBlockStorageManager {
             CreateBucketType createBucketRequest = new CreateBucketType();
             createBucketRequest.setUserId(userId);
             createBucketRequest.setBucket(bucketName);
+            createBucketRequest.setEffectiveUserId(request.getEffectiveUserId());
             try {
                 walrusManager.createBucket(createBucketRequest);
             } catch(EucalyptusCloudException ex) {
@@ -129,6 +130,7 @@ public class WalrusBlockStorageManager {
         putObjectRequest.setBucket(bucketName);
         putObjectRequest.setKey(snapshotId);
         putObjectRequest.setRandomKey(request.getRandomKey());
+        putObjectRequest.setEffectiveUserId(request.getEffectiveUserId());
         try {
             PutObjectResponseType putObjectResponseType = walrusManager.putObject(putObjectRequest);
             reply.setEtag(putObjectResponseType.getEtag());

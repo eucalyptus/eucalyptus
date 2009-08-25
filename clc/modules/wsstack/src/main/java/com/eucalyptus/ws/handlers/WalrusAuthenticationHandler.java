@@ -41,6 +41,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
@@ -120,9 +121,13 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			}
 			//TODO: set userinfo in message
 			//run as admin
-			/*UserInfo admin = new UserInfo(EucalyptusProperties.NAME);
-          admin.setIsAdministrator(Boolean.TRUE);
-          return admin;*/
+			try {
+				User user = UserCredentialProvider.getUser( "admin" );
+				user.setIsAdministrator(true);
+				httpRequest.setUser( user );
+			} catch (NoSuchUserException e) {
+				throw new AuthenticationException( "User authentication failed." );
+			}  
 		} else if(httpRequest.getFormFields().size() > 0) {
 			String data = httpRequest.getAndRemoveHeader(WalrusProperties.FormField.FormUploadPolicyData.toString());
 			String auth_part = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
@@ -409,11 +414,11 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			if (parts[1].contains(key + "=")) {
 				String keystring = parts[1].substring(parts[1].indexOf('=') + 1);
 				if(parts.length == 2) {
-				String[] keyparts = keystring.split("\r\n\r\n");
-				String keyName = keyparts[0];
-				keyName = keyName.replaceAll("\"", "");
-				String value = keyparts[1].replaceAll("\r\n", "");
-				keymap.put(keyName, value);
+					String[] keyparts = keystring.split("\r\n\r\n");
+					String keyName = keyparts[0];
+					keyName = keyName.replaceAll("\"", "");
+					String value = keyparts[1].replaceAll("\r\n", "");
+					keymap.put(keyName, value);
 				} else {
 					String keyName = keystring.trim();
 					keyName = keyName.replaceAll("\"", "");
@@ -459,7 +464,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			formFields.put(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk", firstChunk);
 		}
 	}
-	
+
 	private boolean exactMatch(JSONObject jsonObject, Map formFields, List<String> policyItemNames) {
 		Iterator<String> iterator = jsonObject.keys();
 		boolean returnValue = false;
