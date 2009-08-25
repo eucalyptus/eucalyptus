@@ -49,6 +49,9 @@ int run_command_and_get_pid(char *cmd, char **args) {
     int fd[2];
     pipe(fd);
     int pid = -1;
+    char lol[128];
+    int fds_to_close[1024];
+    int curr_fd = 0;
 
     if ((pid = fork()) == -1) {
         perror("Could not run command");
@@ -83,11 +86,16 @@ int run_command_and_get_pid(char *cmd, char **args) {
             return -1;
         }
 
+        curr_fd = 0;
         while ((fd_dir = readdir(proc_fd_dir)) != NULL) {
             if (isdigit(fd_dir->d_name[0])) {
-                fd_to_close =  atoi(fd_dir->d_name);
-                close(fd_to_close);
+                fds_to_close[curr_fd++] =  atoi(fd_dir->d_name);
             }
+        }
+
+        int i = 0;
+        for(i=0 ; i < curr_fd; ++i) {
+        	close(fds_to_close[i]);
         }
 
         freopen( "/dev/null", "r", stdin);
