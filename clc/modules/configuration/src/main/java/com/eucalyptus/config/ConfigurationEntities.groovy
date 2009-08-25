@@ -74,7 +74,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     super( name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public String getInsecureUri() {
-    return this.getProtocol() + "://" + this.getHost() + ":" + this.getPort() + this.getInsecureServicePath();
+    return "http://" + this.getHost() + ":" + this.getPort() + this.getInsecureServicePath();
   }
 
   public static ClusterConfiguration byClusterName( String name ) {
