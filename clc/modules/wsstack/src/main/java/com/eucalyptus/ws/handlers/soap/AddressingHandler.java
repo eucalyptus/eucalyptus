@@ -33,6 +33,16 @@ public class AddressingHandler extends MessageStackHandler {
 
   private final SOAPFactory soapFactory                      = OMAbstractFactory.getSOAP11Factory( );
 
+  private String prefix;
+  
+  public AddressingHandler( ) {
+    this.prefix = "";
+  }
+
+  public AddressingHandler( String prefix ) {
+    this.prefix = prefix;
+  }
+
   @Override
   public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
   }
@@ -43,7 +53,7 @@ public class AddressingHandler extends MessageStackHandler {
       final MappingHttpRequest httpMessage = ( MappingHttpRequest ) event.getMessage( );
 
       // :: set action :://
-      final String action = httpMessage.getOmMessage( ).getLocalName( );
+      final String action = prefix + httpMessage.getOmMessage( ).getLocalName( );
       httpMessage.addHeader( "SOAPAction", action );
       final SOAPHeader header = httpMessage.getSoapEnvelope( ).getHeader( );
 

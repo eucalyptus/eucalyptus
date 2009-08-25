@@ -71,7 +71,7 @@ public class ClusterMessageQueue implements Runnable {
           } finally {
             event.getCallback().notifyHandler();
           }
-          LOG.warn( String.format( "[q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s",
+          LOG.info( String.format( "[q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s",
                                    msgStart - start, System.currentTimeMillis() - msgStart, this.msgQueue.size(),
                                    event.getCallback().getClass().getSimpleName(), this.parent.getName() ) );
         }

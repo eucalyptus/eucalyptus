@@ -7,7 +7,12 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.constants.HasName;
@@ -20,14 +25,31 @@ public class Cluster implements HasName {
   private ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private ClusterState                             state;
   private ClusterNodeState                         nodeState;
-
-  public Cluster( ClusterThreadGroup threadGroup, ClusterConfiguration configuration ) {
+  private ClusterCredentials                       credentials;
+  
+  public Cluster( ClusterThreadGroup threadGroup, ClusterConfiguration configuration, ClusterCredentials credentials ) {
     super( );
     this.threadGroup = threadGroup;
     this.configuration = configuration;
     this.state = new ClusterState( configuration.getName( ) );
     this.nodeState = new ClusterNodeState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
+    this.credentials = credentials;
+  }
+
+  public ClusterCredentials getCredentials( ) {
+    synchronized(this) {
+      if( this.credentials == null ) {
+        EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
+        try {
+          this.credentials = credDb.getUnique( new ClusterCredentials(this.configuration.getName( )) );
+        } catch ( EucalyptusCloudException e ) {
+          LOG.error("Failed to load credentials for cluster: " + this.configuration.getName( ) );
+        }
+        credDb.rollback( );
+      }
+    }
+    return credentials;
   }
 
   @Override

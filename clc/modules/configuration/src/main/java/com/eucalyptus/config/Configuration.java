@@ -96,7 +96,6 @@ public class Configuration {
     if( !keyDir.mkdir( ) ) {
       throw new EucalyptusCloudException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) );
     }
-    EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
     try {
       KeyTool keyTool = new KeyTool( );
       KeyPair clusterKp = keyTool.getKeyPair( );
@@ -121,13 +120,24 @@ public class Configuration {
       out.flush( );
       out.close( );
 
-      ClusterCredentials ComponentCredentials = new ClusterCredentials( newComponent.getName( ) );
-      ComponentCredentials.setClusterCertificate( X509Cert.fromCertificate( ccAlias, clusterX509 ) );
-      ComponentCredentials.setNodeCertificate( X509Cert.fromCertificate( ncAlias, nodeX509 ) );
-      credDb.add( ComponentCredentials );
-      credDb.commit( );
+      EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
+      try {
+        ClusterCredentials componentCredentials = new ClusterCredentials( newComponent.getName( ) );
+        try {
+          ClusterCredentials existingCredentials = credDb.getUnique( componentCredentials );
+          existingCredentials.setClusterCertificate( X509Cert.fromCertificate( ccAlias, clusterX509 ) );
+          existingCredentials.setNodeCertificate( X509Cert.fromCertificate( ncAlias, nodeX509 ) );
+        } catch ( Exception e ) {
+          componentCredentials.setClusterCertificate( X509Cert.fromCertificate( ccAlias, clusterX509 ) );
+          componentCredentials.setNodeCertificate( X509Cert.fromCertificate( ncAlias, nodeX509 ) );
+          credDb.add( componentCredentials );
+        } finally {
+          credDb.commit( );
+        }
+      } catch ( Exception e ) {
+        credDb.rollback( );
+      }
     } catch ( Exception eee ) {
-      credDb.rollback( );
       throw new EucalyptusCloudException( eee );
     }
   }

@@ -5,6 +5,8 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
@@ -12,6 +14,7 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 
@@ -31,9 +34,19 @@ public class ClusterBootstrapper extends Bootstrapper implements Runnable {
     return true;
   }
 
-  public static Cluster getCluster( ClusterConfiguration c ) {
-    ClusterThreadGroup threadGroup = new ClusterThreadGroup( c.getName( ), c );
-    Cluster newCluster = new Cluster( threadGroup, c );
+  public static Cluster getCluster( ClusterConfiguration c ) throws EucalyptusCloudException {
+    ClusterCredentials credentials = null;
+    EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
+    try {
+      credentials = credDb.getUnique( new ClusterCredentials(c.getName( )) );
+    } catch ( EucalyptusCloudException e ) {
+      LOG.error("Failed to load credentials for cluster: " + c.getName( ) );
+      throw e;
+    } finally {
+      credDb.rollback( );
+    }
+    ClusterThreadGroup threadGroup = new ClusterThreadGroup( c, credentials );
+    Cluster newCluster = new Cluster( threadGroup, c, credentials );
     return newCluster;
   }
 
@@ -53,10 +66,21 @@ public class ClusterBootstrapper extends Bootstrapper implements Runnable {
           clusterNames.add( c.getName( ) );
           try {
             Cluster foundCluster = Clusters.getInstance( ).lookup( c.getName( ) );
+            if(initialized) {
+              foundCluster.getThreadGroup().create( );
+            }
           } catch ( NoSuchElementException e ) {
-            Cluster newCluster = ClusterBootstrapper.getCluster( c );
-            Clusters.getInstance( ).register( newCluster );
-            LOG.info( "Registering cluster: " + newCluster.getName( ) );
+            try {
+              Cluster newCluster = ClusterBootstrapper.getCluster( c );
+              Clusters.getInstance( ).register( newCluster );
+              if(initialized) {
+                newCluster.getThreadGroup().create( );
+              }
+              LOG.info( "Registering cluster: " + newCluster.getName( ) );
+            } catch ( Exception e1 ) {
+              LOG.error( "Error loading cluster configuration: " + c.getName( ) );
+              LOG.error( e1, e1 );
+            }
           }
         }
         List<String> registeredClusters = Lists.newArrayList( Clusters.getInstance( ).listKeys( ) );

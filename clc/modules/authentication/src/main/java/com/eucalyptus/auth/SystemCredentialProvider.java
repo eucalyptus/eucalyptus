@@ -48,7 +48,7 @@ public class SystemCredentialProvider extends Bootstrapper {
     return SystemCredentialProvider.keypairs.get( this.name );
   }
 
-  private static void init( Component name ) throws Exception {
+  static void init( Component name ) throws Exception {
     new SystemCredentialProvider( name ).init( );
   }
 
@@ -71,7 +71,7 @@ public class SystemCredentialProvider extends Bootstrapper {
     }
   }
 
-  private static boolean check( Component name ) {
+  static boolean check( Component name ) {
     return ( SystemCredentialProvider.keypairs.containsKey( name.name( ) ) && SystemCredentialProvider.certs.containsKey( name.name( ) ) ) && EucaKeyStore.getInstance( ).containsEntry( name.name( ) );
   }
 

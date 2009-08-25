@@ -45,6 +45,7 @@
         <properties>
             <property name="hibernate.connection.provider_class" value="org.hibernate.connection.C3P0ConnectionProvider"/>
             <property name="hibernate.cache.provider_class" value="org.hibernate.cache.EhCacheProvider"/>
+            <property name="hibernate.cache.provider_configuration_file_resource_path" value="/ehcache-volumes.xml"/>
             <property name="hibernate.cache.use_query_cache" value="true"/>
             <property name="hibernate.archive.autodetection" value="jar, class, hbm"/>
             <property name="hibernate.show_sql" value="false"/>

@@ -56,6 +56,14 @@ public class NioClientPipeline implements ChannelPipelineFactory {
     pipeline.addLast( "handler", handler );
     return pipeline;
   }
+  
+  public BindingHandler getBindingHandler( ) {
+    return bindingHandler;
+  }
+
+  public WsSecHandler getWssecHandler( ) {
+    return wssecHandler;
+  }
 
   public NioResponseHandler getHandler( ) {
     return handler;

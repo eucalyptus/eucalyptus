@@ -59,15 +59,19 @@ public class BootstrapFactory {
           for ( Resource r : Resource.values( ) ) {
             if ( r.providedBy( bootstrap.getClass( ) ) || Resource.Nothing.equals( r ) ) {
               Provides provides = bootstrap.getClass( ).getAnnotation( Provides.class );
-              Component component = provides.component( );
-              if ( !component.isEnabled( ) ) {
-                LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Provides.component=" + component.toString( ) + " is disabled." );
-                break;
-              }
-              if ( checkDepends( bootstrap ) ) {
-                r.add( bootstrap );
-                LOG.info( "-> Associated bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " with resource " + r.toString( ) + "." );
-                break;
+              if( provides == null ) {
+                LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Provides is not specified." );
+              } else {
+                Component component = provides.component( );
+                if ( !component.isEnabled( ) ) {
+                  LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Provides.component=" + component.toString( ) + " is disabled." );
+                  break;
+                }
+                if ( checkDepends( bootstrap ) ) {
+                  r.add( bootstrap );
+                  LOG.info( "-> Associated bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " with resource " + r.toString( ) + "." );
+                  break;
+                }
               }
             }
           }

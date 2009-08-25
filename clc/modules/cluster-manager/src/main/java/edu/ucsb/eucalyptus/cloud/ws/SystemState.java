@@ -18,8 +18,6 @@ import org.apache.log4j.Logger;
 import org.drools.*;
 import org.mule.RequestContext;
 
-import sun.misc.VM;
-
 import com.eucalyptus.ws.util.Messaging;
 
 import java.util.*;

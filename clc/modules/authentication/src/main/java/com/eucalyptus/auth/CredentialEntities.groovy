@@ -72,6 +72,10 @@ public class X509Cert implements Serializable {
     x.setPemCertificate( new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) ) );
     return x;
   }  
+  public static X509Certificate toCertificate(X509Cert x509) {
+    return Hashes.getPemCert( UrlBase64.decode( x509.getPemCertificate( ).getBytes( ) ) );
+  }  
+
 }
 @Entity
 @Table( name = "auth_clusters" )
