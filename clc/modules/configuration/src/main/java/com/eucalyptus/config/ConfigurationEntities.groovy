@@ -47,7 +47,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   @Column( name = "config_component_port" )
   Integer port;  
   @Column( name = "config_component_service_path" )
-  String servicePath;
+  String servicePath;  
 
   public ComponentConfiguration( ) {}
   public ComponentConfiguration( String name, String hostName, Integer port, String servicePath ) {
@@ -58,7 +58,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   }
 
   public String getUri() {
-    return this.getProtocol() + "://" + this.getHost() + ":" + this.getPort() + this.getServicePath();
+    return "http://" + this.getHost() + ":" + this.getPort() + this.getServicePath();
   }
 }
 
