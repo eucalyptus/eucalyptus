@@ -68,13 +68,15 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
 public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusCC";
+  @Transient
+  private static String INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
 
   public ClusterConfiguration( ) {}
   public ClusterConfiguration( String name, String hostName, Integer port ) {
     super( name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public String getInsecureUri() {
-    return "http://" + this.getHost() + ":" + this.getPort() + this.getInsecureServicePath();
+    return "http://" + this.getHost() + ":" + this.getPort() + INSECURE_SERVICE_PATH;
   }
 
   public static ClusterConfiguration byClusterName( String name ) {
