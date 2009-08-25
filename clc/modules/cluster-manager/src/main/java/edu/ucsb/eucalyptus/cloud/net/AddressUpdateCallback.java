@@ -5,6 +5,8 @@ import edu.ucsb.eucalyptus.cloud.cluster.*;
 import edu.ucsb.eucalyptus.cloud.entities.Address;
 import edu.ucsb.eucalyptus.msgs.*;
 
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.ws.client.Client;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
@@ -47,11 +49,11 @@ public class AddressUpdateCallback extends QueuedEventCallback<DescribePublicAdd
 
   public void run( ) {
     do {
+      Cluster cluster = Clusters.getInstance( ).lookup( this.getConfig( ).getName( ) );
       DescribePublicAddressesType drMsg = new DescribePublicAddressesType( );
       drMsg.setUserId( EucalyptusProperties.NAME );
       drMsg.setEffectiveUserId( EucalyptusProperties.NAME );
-
-//TODO:      this.parent.getMessageQueue( ).enqueue( new QueuedEvent( this, drMsg ) );
+      cluster.getMessageQueue( ).enqueue( new QueuedEvent( this, drMsg ) );
       this.waitForEvent( );
     } while ( !this.isStopped( ) && this.sleep( SLEEP_TIMER ) );
   }

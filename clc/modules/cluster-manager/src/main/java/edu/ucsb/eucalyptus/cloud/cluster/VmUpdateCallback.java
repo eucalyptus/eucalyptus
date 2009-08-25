@@ -7,6 +7,9 @@ import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.ws.SystemState;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.ws.client.Client;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
@@ -39,11 +42,11 @@ public class VmUpdateCallback extends QueuedEventCallback<VmDescribeType> implem
 
   public void run() {
     do {
+      Cluster cluster = Clusters.getInstance( ).lookup( this.getConfig( ).getName( ) );
       VmDescribeType msg = new VmDescribeType();
-      msg.setUserId( EucalyptusProperties.NAME );
-      msg.setEffectiveUserId( EucalyptusProperties.NAME );
-
-//TODO:      this.parent.getMessageQueue().enqueue( new QueuedEvent( this, msg ) );
+      msg.setUserId( Component.eucalyptus.name( ) );
+      msg.setEffectiveUserId( Component.eucalyptus.name( ) );
+      cluster.getMessageQueue().enqueue( new QueuedEvent( this, msg ) );
       this.waitForEvent();
     } while ( !this.isStopped() && this.sleep( SLEEP_TIMER ) );
   }

@@ -3,6 +3,8 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.msgs.*;
 
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.ws.client.Client;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
@@ -32,12 +34,13 @@ public class ResourceUpdateCallback extends QueuedEventCallback<DescribeResource
 
   public void run() {
     do {
+      Cluster cluster = Clusters.getInstance( ).lookup( this.getConfig( ).getName( ) );
       DescribeResourcesType drMsg = new DescribeResourcesType();
       drMsg.setUserId( EucalyptusProperties.NAME );
       drMsg.setEffectiveUserId( EucalyptusProperties.NAME );
       for ( VmType v : VmTypes.list() ) drMsg.getInstanceTypes().add( v.getAsVmTypeInfo() );
 
-//TODO:      this.parent.getMessageQueue().enqueue( new QueuedEvent( this, drMsg ) );
+      cluster.getMessageQueue().enqueue( new QueuedEvent( this, drMsg ) );
       this.waitForEvent();
     } while ( !this.isStopped() && this.sleep( SLEEP_TIMER ) );
 
