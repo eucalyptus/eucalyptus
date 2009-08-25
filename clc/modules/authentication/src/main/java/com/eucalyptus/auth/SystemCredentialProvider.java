@@ -62,9 +62,12 @@ public class SystemCredentialProvider extends Bootstrapper {
         SystemCredentialProvider.keypairs.remove( this );
         LOG.fatal( "Failed to read keys from the keystore.  Please repair the keystore by hand." );
         LOG.fatal( e, e );
+        throw e;
       }
     } else {
-      this.createSystemCredentialProviderKey( this.name );
+      if( Component.eucalyptus.isLocal( ) ) {
+        this.createSystemCredentialProviderKey( this.name );
+      }
     }
   }
 

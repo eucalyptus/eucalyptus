@@ -110,7 +110,7 @@ public class Configuration {
       keyTool.writePem( directory + File.separator + "node-cert.pem", nodeX509 );
 
       X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
-      keyTool.writePem( directory + File.separator + "cloud-cert.pem", systemX509 );
+      keyTool.writePem( SubDirectory.KEYS.toString( ) + File.separator + "cloud-cert.pem", systemX509 );
       Signature signer = Signature.getInstance( "SHA256withRSA" );
       signer.initSign( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getPrivateKey( ) );
       signer.update( "eucalyptus".getBytes( ) );
