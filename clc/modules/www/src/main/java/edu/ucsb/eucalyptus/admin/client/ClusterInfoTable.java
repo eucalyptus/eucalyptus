@@ -6,6 +6,8 @@ import com.google.gwt.user.client.ui.*;
 import java.util.ArrayList;
 import java.util.List;
 
+// dmitrii TODO: remove commented out lines once the CSS-based design is confirmed
+
 public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 	private static int maxClusters = 1; // TODO: bump this up once we can do more than 1
@@ -25,7 +27,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		this.sessionId = sessionId;
 		this.setSpacing (2);
 		this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
-		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+//		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
 		Label clustersHeader = new Label( "Clusters:" );
 		clustersHeader.setStyleName ( "euca-section-header" );
 		this.add ( clustersHeader );
@@ -42,7 +44,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		hpanel.add ( add_button );
 		hpanel.add ( new Button( "Save cluster configuration", new SaveCallback( this ) ) );
 		hpanel.add ( this.statusLabel );
-		this.statusLabel.setWidth ("250");
+//		this.statusLabel.setWidth ("250");
 		this.statusLabel.setText ("");
 		this.statusLabel.setStyleName ("euca-greeting-pending");
 		this.add ( hpanel );

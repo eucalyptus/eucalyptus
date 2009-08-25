@@ -7,6 +7,8 @@ import java.util.ArrayList;
 
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
+// dmitrii TODO: remove commented out lines once the CSS-based design is confirmed
+
 public class DownloadsTable extends VerticalPanel {
     private String theUrl;
     private String theHumanUrl;
@@ -34,7 +36,7 @@ public class DownloadsTable extends VerticalPanel {
         HorizontalPanel hpanel = new HorizontalPanel();
         hpanel.setSpacing(5);
         hpanel.add(this.statusLabel);
-        this.statusLabel.setWidth("600");
+//        this.statusLabel.setWidth("600");
         this.statusLabel.setText("Contacting " + this.theName + " server");
         this.statusLabel.setStyleName("euca-greeting-pending");
         this.add(hpanel);

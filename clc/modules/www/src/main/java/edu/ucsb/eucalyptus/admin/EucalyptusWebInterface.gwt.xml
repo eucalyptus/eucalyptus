@@ -44,4 +44,14 @@
     <entry-point class='edu.ucsb.eucalyptus.admin.client.EucalyptusWebInterface'/>
 
     <servlet path="/EucalyptusWebBackend" class="edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl"/>
+
+    <script src="themes/active/code.js">
+      <![CDATA[
+          if ($wnd.draw_header) {
+               return true;
+          } else {
+               return false;
+          }
+      ]]>
+  </script>
 </module>
