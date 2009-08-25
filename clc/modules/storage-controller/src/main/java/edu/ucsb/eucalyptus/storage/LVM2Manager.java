@@ -795,7 +795,9 @@ public class LVM2Manager implements LogicalStorageManager {
 				throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
 			}
 			returnValue = removeLoopback(loDevName);
-
+			if(!(new File(rawFileName)).delete()) {
+				LOG.error("Unable to remove temporary snapshot file: " + rawFileName);
+			}
 			snapshotInfo.setLoFileName(snapRawFileName);
 			snapshotInfo.setStatus(StorageProperties.Status.available.toString());
 			snapshotInfo.setVbladePid(-1);
