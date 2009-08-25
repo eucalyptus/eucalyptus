@@ -26,6 +26,7 @@ public class ClusterMessageQueue implements Runnable {
   private final int messageQueueSize = 100;
   private AtomicBoolean finished;
   private ClusterConfiguration parent;
+  private Thread thread;
   
   public ClusterMessageQueue( ClusterConfiguration parent ) {
     this.parent = parent;

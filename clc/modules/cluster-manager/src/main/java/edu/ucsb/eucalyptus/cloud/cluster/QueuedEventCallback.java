@@ -44,6 +44,7 @@ public abstract class QueuedEventCallback<TYPE> {
   private boolean              e   = false;
   private Condition            jobPending;
   private ClusterConfiguration config;
+  private Thread thread;
 
   protected QueuedEventCallback( ClusterConfiguration config ) {
     this.config = config;
@@ -78,7 +79,7 @@ public abstract class QueuedEventCallback<TYPE> {
   public boolean isStopped( ) {
     return stopped.get( );
   }
-
+  
   public void stop( ) {
     this.stopped.lazySet( true );
   }

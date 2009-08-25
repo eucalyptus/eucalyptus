@@ -71,8 +71,10 @@ public class ClusterThreadGroup extends ThreadGroup {
     return t;
   }
   private void startNamedThread( Thread t ) {
-    LOG.warn( "-> Starting threads for [ " + this.getName( ) + " ] " + t.getName( ) );
-    t.start();    
+    if( !t.isAlive( ) ) {
+      LOG.warn( "-> Starting threads for [ " + this.getName( ) + " ] " + t.getName( ) );
+      t.start();    
+    }
   }
   
   public void startThreads() {
@@ -81,6 +83,19 @@ public class ClusterThreadGroup extends ThreadGroup {
     this.startNamedThread( this.vmThread );
     this.startNamedThread( this.addrThread );
     this.startNamedThread( this.keyThread );
+  }
+  
+  public void stopThreads() {
+    this.messageQueue.stop( );
+    LOG.warn( "-> Stopping threads for [ " + this.getName( ) + " ] " + this.mqThread );
+    this.rscUpdater.stop( );
+    LOG.warn( "-> Stopping threads for [ " + this.getName( ) + " ] " + this.rscThread );
+    this.vmUpdater.stop( );
+    LOG.warn( "-> Stopping threads for [ " + this.getName( ) + " ] " + this.vmThread );
+    this.addrUpdater.stop( );
+    LOG.warn( "-> Stopping threads for [ " + this.getName( ) + " ] " + this.addrThread );
+    this.nodeCertUpdater.stop( );
+    LOG.warn( "-> Stopping threads for [ " + this.getName( ) + " ] " + this.keyThread );
   }
 
   @Override
