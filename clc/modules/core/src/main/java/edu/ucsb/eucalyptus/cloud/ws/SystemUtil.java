@@ -23,7 +23,7 @@ public class SystemUtil {
 			output.join();
 			return output.getReturnValue();
 		} catch (Throwable t) {
-			LOG.error(t);
+			LOG.error(t, t);
 		}
 		return "";
 	}

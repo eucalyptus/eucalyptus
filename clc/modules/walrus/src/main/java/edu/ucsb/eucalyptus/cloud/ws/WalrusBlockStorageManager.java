@@ -62,7 +62,7 @@ public class WalrusBlockStorageManager {
 
     public void startupChecks() {
         cleanFailedCachedImages();
-        WalrusProperties.sharedMode = true;
+        //WalrusProperties.sharedMode = true;
     }
 
     public void cleanFailedCachedImages() {
@@ -118,7 +118,6 @@ public class WalrusBlockStorageManager {
                 walrusManager.createBucket(createBucketRequest);
             } catch(EucalyptusCloudException ex) {
                 if(!(ex instanceof BucketAlreadyExistsException || ex instanceof BucketAlreadyOwnedByYouException)) {
-                    db.rollback();
                     throw ex;
                 }
             }

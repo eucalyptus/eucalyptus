@@ -463,7 +463,7 @@ public class LVM2Manager implements LogicalStorageManager {
 
 		if(status != 0) {
 			throw new EucalyptusCloudException("Could not create loopback device for " + fileName +
-					". Please check the max loop value and permissions");
+			". Please check the max loop value and permissions");
 		}
 		return loDevName;
 	}
@@ -879,11 +879,13 @@ public class LVM2Manager implements LogicalStorageManager {
 		List<LVMVolumeInfo> volumeInfos = db.query(volumeInfo);
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
 			String loDevName = foundVolumeInfo.getLoDevName();
-			String loFileName = foundVolumeInfo.getVolumeId();
-			String absoluteLoFileName = StorageProperties.storageRootDirectory + PATH_SEPARATOR + loFileName;
-			String returnValue = getLoopback(loDevName);
-			if(returnValue.length() <= 0) {
-				createLoopback(absoluteLoFileName, loDevName);
+			if(loDevName != null) {
+				String loFileName = foundVolumeInfo.getVolumeId();
+				String absoluteLoFileName = StorageProperties.storageRootDirectory + PATH_SEPARATOR + loFileName;
+				String returnValue = getLoopback(loDevName);
+				if(returnValue.length() <= 0) {
+					createLoopback(absoluteLoFileName, loDevName);
+				}
 			}
 		}
 		//now enable them
