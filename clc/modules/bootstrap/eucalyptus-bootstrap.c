@@ -475,7 +475,7 @@ char* java_library_path(euca_opts *args) {
 	DIR* lib_dir_p = opendir(lib_dir);
 	struct direct *dir_ent;
 	while ((dir_ent = readdir(lib_dir_p))!=0)  {
-		if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0)  {
+		if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0 && strstr(dir_ent->d_name,"disabled") != NULL)  {
 				char jar[256];
 				snprintf(jar,255,"%s/%s",lib_dir,dir_ent->d_name);
 				if( CHECK_ISREG(jar) ) wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,":%s",jar);
@@ -519,7 +519,7 @@ int java_init(euca_opts *args, java_home_t *data) {
     	JVM_ARG(opt[++x],"-Deuca.disable.storage=true");
     }
     if(args->disable_cloud_flag) {
-     	JVM_ARG(opt[++x],"-Deuca.disable.cloud=true");
+     	JVM_ARG(opt[++x],"-Deuca.disable.eucalyptus=true");
      }
     if(args->disable_walrus_flag) {
      	JVM_ARG(opt[++x],"-Deuca.disable.walrus=true");
