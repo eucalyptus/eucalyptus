@@ -878,9 +878,9 @@ if [ -n "$WALRUS" ]; then
 	    echo "ERROR: failed to deregister Walrus, please log in to the admin interface and check cloud status."
 	    exit 1
 	fi
+        echo
+        echo "SUCCESS: Walrus '${WALRUS}' successfully deregistered."
     fi
-    echo
-    echo "SUCCESS: Walrus '${WALRUS}' successfully deregistered."
 fi
 
 # sc
