@@ -15,32 +15,33 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-import net.sf.json.groovy.JsonSlurper;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.apache.xml.dtm.ref.DTMNodeList;
-import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.User;
+import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.InvalidOperationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
-import com.eucalyptus.auth.Hashes;
-import com.eucalyptus.util.StorageProperties;
-import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.collect.Lists;
 
@@ -51,16 +52,15 @@ import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
+import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import groovy.lang.GroovyObject;
-import com.eucalyptus.auth.User;
 
 public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static Logger LOG = Logger.getLogger( WalrusRESTBinding.class );
@@ -84,6 +84,16 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			if(msg instanceof WalrusDataGetRequestType) {
 				WalrusDataGetRequestType getObject = (WalrusDataGetRequestType) msg;
 				getObject.setChannel(ctx.getChannel());
+			}
+			if(msg instanceof WalrusDataRequestType) {
+				String expect = httpRequest.getHeader(HttpHeaders.Names.EXPECT);
+				if(expect != null) {
+					if(expect.equals("100-continue")) {
+						HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE );
+						DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), event.getFuture(), response, null );
+						ctx.sendDownstream( newEvent );
+					}
+				}
 			}
 		} else if(event.getMessage() instanceof HttpChunk) {
 			HttpChunk httpChunk = (HttpChunk) event.getMessage();
