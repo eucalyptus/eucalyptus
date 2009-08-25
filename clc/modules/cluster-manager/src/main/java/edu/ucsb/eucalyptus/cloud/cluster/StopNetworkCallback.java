@@ -2,6 +2,10 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.msgs.*;
+
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.ws.client.Client;
 import org.apache.log4j.Logger;
 
@@ -14,7 +18,8 @@ public class StopNetworkCallback extends QueuedEventCallback<StopNetworkType> {
 
   private NetworkToken token;
 
-  public StopNetworkCallback( final NetworkToken networkToken ) {
+  public StopNetworkCallback( final ClusterConfiguration clusterConfig, final NetworkToken networkToken ) {
+    super(clusterConfig);
     this.token = networkToken;
   }
 

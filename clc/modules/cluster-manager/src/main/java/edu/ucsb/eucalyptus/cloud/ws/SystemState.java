@@ -1,5 +1,9 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.ClusterMessageQueue;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.*;
@@ -13,6 +17,9 @@ import edu.ucsb.eucalyptus.util.*;
 import org.apache.log4j.Logger;
 import org.drools.*;
 import org.mule.RequestContext;
+
+import sun.misc.VM;
+
 import com.eucalyptus.ws.util.Messaging;
 
 import java.util.*;
@@ -89,7 +96,8 @@ public class SystemState {
     for ( Address address : Addresses.getInstance().listValues() ) {
       if ( vm.getInstanceId().equals( address.getInstanceId() ) ) {
         if( address.getInstanceAddress() != null ) {
-          SystemState.dispatch( vm.getPlacement(), new UnassignAddressCallback( address ), Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() ) );
+          ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
+          SystemState.dispatch( vm.getPlacement(), new UnassignAddressCallback( config, address ), Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() ) );
         }
         if( EucalyptusProperties.NAME.equals( address.getUserId() ) ) {
           try {
@@ -99,7 +107,8 @@ public class SystemState {
         }
       }
     }
-    SystemState.dispatch( vm.getPlacement(), new TerminateCallback(), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId() ) );
+    ClusterConfiguration config = Clusters.getInstance( ).lookup( vm.getPlacement( ) ).getConfiguration( );
+    SystemState.dispatch( vm.getPlacement(), new TerminateCallback(config), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId() ) );
   }
 
   private static void updateVmInstance( final String originCluster, final VmInfo runVm ) {
@@ -196,7 +205,8 @@ public class SystemState {
             Networks.getInstance().register( notwork );
           } catch ( EucalyptusCloudException e ) {
             LOG.error( e );
-            SystemState.dispatch( runVm.getPlacement(), new TerminateCallback(), Admin.makeMsg( TerminateInstancesType.class, runVm.getInstanceId() ) );
+            ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
+            SystemState.dispatch( runVm.getPlacement(), new TerminateCallback(config), Admin.makeMsg( TerminateInstancesType.class, runVm.getInstanceId() ) );
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.error( e );
           }
@@ -209,7 +219,8 @@ public class SystemState {
       vm.setImageInfo( imgInfo );
       VmInstances.getInstance().register( vm );
     } catch ( NoSuchElementException e ) {
-      SystemState.dispatch( runVm.getPlacement(), new TerminateCallback(), Admin.makeMsg( TerminateInstancesType.class, runVm.getInstanceId() ) );
+      ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
+      SystemState.dispatch( runVm.getPlacement(), new TerminateCallback(config), Admin.makeMsg( TerminateInstancesType.class, runVm.getInstanceId() ) );
     }
   }
 
@@ -306,14 +317,15 @@ public class SystemState {
 
   private static void dispatchStopNetwork( NetworkToken token ) {
     LOG.debug( "Dispatching stopNetwork for " + token.getName() + " on cluster " + token.getCluster() );
-    QueuedEvent<StopNetworkType> event = QueuedEvent.make( new StopNetworkCallback( token ),
+    ClusterConfiguration config = Clusters.getInstance( ).lookup( token.getCluster( ) ).getConfiguration( );
+    QueuedEvent<StopNetworkType> event = QueuedEvent.make( new StopNetworkCallback( config, token ),
                                                            Admin.makeMsg( StopNetworkType.class, token.getUserName(), token.getNetworkName(), token.getVlan() ) );
     Clusters.getInstance().lookup( token.getCluster() ).getMessageQueue().enqueue( event );
   }
 
   private static void dispatchReboot( final String clusterName, final String instanceId, final EucalyptusMessage request ) {
     Cluster cluster = Clusters.getInstance().lookup( clusterName );
-    QueuedEvent<RebootInstancesType> event = QueuedEvent.make( new RebootCallback( cluster ),
+    QueuedEvent<RebootInstancesType> event = QueuedEvent.make( new RebootCallback( cluster.getConfiguration( ) ),
                                                                Admin.makeMsg( RebootInstancesType.class, instanceId ) );
     cluster.getMessageQueue().enqueue( event );
   }
@@ -329,7 +341,7 @@ public class SystemState {
       }
       if ( !VmState.RUNNING.equals( v.getState() ) )
         throw new NoSuchElementException( "Instance " + request.getInstanceId() + " is not in a running state." );
-      QueuedEvent<GetConsoleOutputType> event = new QueuedEvent<GetConsoleOutputType>( new ConsoleOutputCallback( cluster ), request );
+      QueuedEvent<GetConsoleOutputType> event = new QueuedEvent<GetConsoleOutputType>( new ConsoleOutputCallback( cluster.getConfiguration( ) ), request );
       cluster.getMessageQueue().enqueue( event );
       return;
     } catch ( NoSuchElementException e ) {

@@ -1,6 +1,8 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.msgs.*;
+
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.ws.client.Client;
 
 import org.apache.log4j.Logger;
@@ -11,7 +13,8 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
 
   private VmInstance parent;
 
-  public AssignAddressCallback( final VmInstance parent ) {
+  public AssignAddressCallback( final ClusterConfiguration clusterConfig,final VmInstance parent ) {
+    super( clusterConfig );
     this.parent = parent;
   }
 

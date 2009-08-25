@@ -1,10 +1,4 @@
-package edu.ucsb.eucalyptus.cloud.cluster;
-
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.entities.VmType;
-import edu.ucsb.eucalyptus.msgs.ResourceType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
-import org.apache.log4j.Logger;
+package com.eucalyptus.cluster;
 
 import java.util.Comparator;
 import java.util.List;
@@ -15,17 +9,28 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+import org.apache.log4j.Logger;
+
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
+import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
+import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
+import edu.ucsb.eucalyptus.cloud.cluster.VmTypeAvailability;
+import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
+import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import edu.ucsb.eucalyptus.msgs.ResourceType;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+
 public class ClusterNodeState {
   private static Logger LOG = Logger.getLogger( ClusterNodeState.class );
-  private Cluster parent;
   private ConcurrentNavigableMap<String, VmTypeAvailability> typeMap;
   private NavigableSet<ResourceToken> pendingTokens;
   private NavigableSet<ResourceToken> submittedTokens;
   private NavigableSet<ResourceToken> redeemedTokens;
   private int virtualTimer;
-
-  public ClusterNodeState( Cluster parent ) {
-    this.parent = parent;
+  private String clusterName;
+  
+  public ClusterNodeState( String clusterName ) {
+    this.clusterName = clusterName;
     this.typeMap = new ConcurrentSkipListMap<String, VmTypeAvailability>();
 
     for ( VmType v : VmTypes.list() )
@@ -58,7 +63,7 @@ public class ClusterNodeState {
     LOG.warn( "AFTER ALLOCATE ============================" );
     LOG.warn( sorted );
 
-    ResourceToken token = new ResourceToken( this.parent.getName(), requestId, userName, quantity, this.virtualTimer++, vmTypeName );
+    ResourceToken token = new ResourceToken( this.clusterName, requestId, userName, quantity, this.virtualTimer++, vmTypeName );
     this.pendingTokens.add( token );
     return token;
   }
@@ -107,7 +112,7 @@ public class ClusterNodeState {
     for ( String typeName : this.typeMap.keySet() )
       available.add( this.typeMap.get( typeName ) );
     available.add( VmTypeAvailability.ZERO );
-    LOG.debug("Resource information for " + this.parent.getName() );
+    LOG.debug("Resource information for " + this.clusterName );
     return available;
   }
 

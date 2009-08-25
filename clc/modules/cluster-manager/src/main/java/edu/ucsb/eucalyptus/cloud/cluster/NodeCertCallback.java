@@ -1,6 +1,8 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.msgs.*;
+
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.ws.client.Client;
 
 import org.apache.log4j.Logger;
@@ -13,13 +15,12 @@ public class NodeCertCallback extends QueuedEventCallback<GetKeysType> implement
 
   private static Logger LOG = Logger.getLogger( NodeCertCallback.class );
 
-  private Cluster parent;
   private static int SLEEP_TIMER = 30 * 1000;
   private NavigableSet<GetKeysType> requests = null;
   private NavigableSet<NodeCertInfo> results = null;
 
-  public NodeCertCallback( final Cluster parent ) {
-    this.parent = parent;
+  public NodeCertCallback( ClusterConfiguration config ) {
+    super( config );
     this.requests = new ConcurrentSkipListSet<GetKeysType>();
     this.results = new ConcurrentSkipListSet<NodeCertInfo>();
   }
@@ -46,27 +47,28 @@ public class NodeCertCallback extends QueuedEventCallback<GetKeysType> implement
   }
 
   @Override
-  protected void notifyHandler() {
+  public void notifyHandler() {
     if ( requests.isEmpty() ) {
       super.notifyHandler();
     }
   }
 
   public void run() {
-    do {
-      if ( !this.parent.getNodeTags().isEmpty() ) {
-        LOG.debug( "Querying all known service tags:" );
-        for ( String serviceTag : this.parent.getNodeTags() ) {
-          LOG.debug( "- " + serviceTag );
-          GetKeysType msg = new GetKeysType( serviceTag.replaceAll( "EucalyptusNC", "EucalyptusGL" ) );
-          this.requests.add( msg );
-          this.parent.getMessageQueue().enqueue( new QueuedLogEvent( this, msg ) );
-        }
-        this.waitForEvent();
-        this.parent.updateNodeCerts( results );
-        this.results.clear();
-      }
-    } while ( !this.isStopped() && this.sleep( SLEEP_TIMER ) );
+//TODO: finish up here.
+//    do {
+//      if ( !this.parent.getNodeTags().isEmpty() ) {
+//        LOG.debug( "Querying all known service tags:" );
+//        for ( String serviceTag : this.parent.getNodeTags() ) {
+//          LOG.debug( "- " + serviceTag );
+//          GetKeysType msg = new GetKeysType( serviceTag.replaceAll( "EucalyptusNC", "EucalyptusGL" ) );
+//          this.requests.add( msg );
+//          this.parent.getMessageQueue().enqueue( new QueuedLogEvent( this, msg ) );
+//        }
+//        this.waitForEvent();
+//        this.parent.updateNodeCerts( results );
+//        this.results.clear();
+//      }
+//    } while ( !this.isStopped() && this.sleep( SLEEP_TIMER ) );
   }
 
 }

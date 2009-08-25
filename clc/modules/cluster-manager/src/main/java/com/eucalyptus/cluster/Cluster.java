@@ -1,0 +1,84 @@
+package com.eucalyptus.cluster;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.NavigableSet;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+
+import org.apache.log4j.Logger;
+import com.eucalyptus.config.ClusterConfiguration;
+
+import edu.ucsb.eucalyptus.cloud.NodeInfo;
+import edu.ucsb.eucalyptus.constants.HasName;
+import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
+
+public class Cluster implements HasName {
+  private static Logger                            LOG = Logger.getLogger( Cluster.class );
+  private ClusterThreadGroup                       threadGroup;
+  private ClusterConfiguration                     configuration;
+  private ConcurrentNavigableMap<String, NodeInfo> nodeMap;
+  private ClusterState                             state;
+  private ClusterNodeState                         nodeState;
+
+  public Cluster( ClusterThreadGroup threadGroup, ClusterConfiguration configuration ) {
+    super( );
+    this.threadGroup = threadGroup;
+    this.configuration = configuration;
+    this.state = new ClusterState( configuration.getName( ) );
+    this.nodeState = new ClusterNodeState( configuration.getName( ) );
+    this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
+  }
+
+  @Override
+  public String getName( ) {
+    return this.configuration.getName( );
+  }
+  
+  public NavigableSet<String> getNodeTags() {
+    return this.nodeMap.navigableKeySet();
+  }
+  
+  public NodeInfo getNode( String serviceTag ) {
+    return this.nodeMap.get( serviceTag );
+  }
+
+  @Override
+  public int compareTo( Object o ) {
+    Cluster that = ( Cluster ) o;
+    return this.getName( ).compareTo( that.getName( ) );
+  }
+
+  public ClusterThreadGroup getThreadGroup( ) {
+    return threadGroup;
+  }
+
+  public ClusterConfiguration getConfiguration( ) {
+    return configuration;
+  }
+
+  public RegisterClusterType getWeb( ) {
+    String host = this.getConfiguration( ).getHostName( );
+    int port = 0;
+    try {
+      URI uri = new URI( this.getConfiguration( ).getUri( ) );
+      host = uri.getHost( );
+      port = uri.getPort( );
+    } catch ( URISyntaxException e ) {
+    }
+    return new RegisterClusterType( this.getName( ), host, port );
+  }
+
+  public ClusterMessageQueue getMessageQueue( ) {
+    return threadGroup.getMessageQueue( );
+  }
+
+  public ClusterState getState( ) {
+    return state;
+  }
+
+  public ClusterNodeState getNodeState( ) {
+    return nodeState;
+  }
+
+}

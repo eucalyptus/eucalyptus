@@ -6,6 +6,10 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import groovy.lang.*;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.ClusterNodeState;
+import com.eucalyptus.cluster.ClusterState;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.BaseDirectory;
 
 import javax.script.ScriptEngineManager;

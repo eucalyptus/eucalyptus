@@ -44,7 +44,7 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
 
   @Override
   public boolean load( Resource current ) throws Exception {
-    db = new Server( );
+    this.db = new Server( );
     HsqlProperties props = new HsqlProperties( );
     props.setProperty( ServerConstants.SC_KEY_NO_SYSTEM_EXIT, true );
     String dbPort = System.getProperty( DatabaseConfig.EUCA_DB_PORT );
@@ -61,13 +61,22 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
     String config = "_config";
     props.setProperty( ServerConstants.SC_KEY_DATABASE + ".3", SubDirectory.DB.toString( ) + File.separator + EucalyptusProperties.NAME + config );
     props.setProperty( ServerConstants.SC_KEY_DBNAME + ".3", EucalyptusProperties.NAME + config );
-    db.setProperties( props );
+    this.db.setProperties( props );
+    this.db.start( );
     return true;
   }
 
   @Override
   public boolean start( ) throws Exception {
-    ( new Thread( this ) ).start( );
+//    ( new Thread( this ) ).start( );
+    while( this.db.getState( ) != 1 ) {
+      Throwable t = this.db.getServerError( );
+      if( t != null ) {
+        LOG.error( t, t );
+        throw new RuntimeException(t);
+      }
+      LOG.info( "Waiting for database to start..." );
+    }
     return true;
   }
 

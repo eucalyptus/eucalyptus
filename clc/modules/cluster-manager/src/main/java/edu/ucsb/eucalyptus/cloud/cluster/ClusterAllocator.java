@@ -2,6 +2,8 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -84,7 +86,7 @@ class ClusterAllocator extends Thread {
   public void setupNetworkMessages( NetworkToken networkToken ) {
     if ( networkToken != null ) {
       StartNetworkType msg = new StartNetworkType( this.vmAllocInfo.getRequest(), networkToken.getVlan(), networkToken.getNetworkName() );
-      StartNetworkCallback callback = new StartNetworkCallback( this, networkToken );
+      StartNetworkCallback callback = new StartNetworkCallback( this.cluster.getConfiguration( ), this, networkToken );
       QueuedEvent<StartNetworkType> event = new QueuedEvent<StartNetworkType>( callback, msg );
       this.msgMap.put( State.CREATE_NETWORK, event );
     }
@@ -93,7 +95,7 @@ class ClusterAllocator extends Thread {
       LOG.warn( "Setting up rules for: " + network.getName() );
       LOG.debug( network );
       if ( !network.getRules().isEmpty() ) {
-        QueuedEvent event = new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), new ConfigureNetworkType( this.vmAllocInfo.getRequest(), network.getRules() ) );
+        QueuedEvent event = new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(this.cluster.getConfiguration( )), new ConfigureNetworkType( this.vmAllocInfo.getRequest(), network.getRules() ) );
         this.msgMap.put( State.CREATE_NETWORK_RULES, event );
       }
       //:: need to refresh the rules on the backend for all active networks which point to this network :://
@@ -104,7 +106,7 @@ class ClusterAllocator extends Thread {
           ConfigureNetworkType msg = new ConfigureNetworkType( otherNetwork.getRules() );
           msg.setUserId( otherNetwork.getUserName() );
           msg.setEffectiveUserId( EucalyptusProperties.NAME );
-          this.msgMap.put( State.CREATE_NETWORK_RULES, new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), msg ) );
+          this.msgMap.put( State.CREATE_NETWORK_RULES, new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(this.cluster.getConfiguration( )), msg ) );
         }
       }
     } catch ( NoSuchElementException e ) {}/* just added this network, shouldn't happen, if so just smile and nod */
@@ -131,7 +133,7 @@ class ClusterAllocator extends Thread {
     VmKeyInfo keyInfo = this.vmAllocInfo.getKeyInfo();
 
     VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames );
-    this.msgMap.put( State.CREATE_VMS, new QueuedEvent<VmRunType>( new VmRunCallback( this, token ), run ) );
+    this.msgMap.put( State.CREATE_VMS, new QueuedEvent<VmRunType>( new VmRunCallback( this.cluster.getConfiguration( ), this, token ), run ) );
   }
 
   public void setState( final State state ) {

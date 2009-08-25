@@ -36,6 +36,8 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
@@ -475,7 +477,8 @@ public class AddressManager implements Startable {
     EntityWrapper<Address> db = new EntityWrapper<Address>();
     try {
       UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
-      ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new UnassignAddressCallback( address ), unassignMsg ) );
+      ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
+      ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new UnassignAddressCallback( config, address ), unassignMsg ) );
       Address addr = db.getUnique( new Address( address.getName() ) );
       addr.unassign();
       address.unassign();
@@ -495,7 +498,8 @@ public class AddressManager implements Startable {
       address.assign( vm.getInstanceId(), vm.getNetworkConfig().getIpAddress() );
       //:: dispatch the request to the cluster that owns the address :://
       AssignAddressType assignMsg = Admin.makeMsg( AssignAddressType.class, address.getName(), address.getInstanceAddress() );
-      ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new AssignAddressCallback( vm ), assignMsg ) );
+      ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
+      ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new AssignAddressCallback( config, vm ), assignMsg ) );
       db.commit();
     } catch ( EucalyptusCloudException e ) {
       db.rollback();

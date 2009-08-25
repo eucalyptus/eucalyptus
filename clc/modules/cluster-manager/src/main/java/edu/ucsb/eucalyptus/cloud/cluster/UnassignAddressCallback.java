@@ -3,6 +3,8 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import edu.ucsb.eucalyptus.cloud.entities.Address;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
+
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.ws.client.Client;
 import org.apache.log4j.Logger;
 
@@ -15,8 +17,9 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   private String pubIp;
   private String vmIp;
   private String vmId;
-
-  public UnassignAddressCallback( final Address parent ) {
+  
+  public UnassignAddressCallback( final ClusterConfiguration clusterConfig, final Address parent ) {
+    super(clusterConfig);
     this.vmId = parent.getInstanceId();
     this.pubIp = parent.getName();
     this.vmIp = parent.getInstanceAddress();

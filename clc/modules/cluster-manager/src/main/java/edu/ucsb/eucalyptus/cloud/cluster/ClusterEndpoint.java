@@ -1,5 +1,7 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.*;
@@ -25,11 +27,12 @@ public class ClusterEndpoint implements Startable {
   }
 
   public void fire( List<RegisterClusterType> clusterChanges ) {
-    LOG.warn( "Processing new list of clusters: ");
-    for( RegisterClusterType c : clusterChanges ) {
-      LOG.warn( "Cluster: " + c.getName() + " host=" + c.getHost() + ":" + c.getPort() );
-    }
-    Clusters.getInstance().update( clusterChanges );
+//TODO: handle configuration changes.
+//    LOG.warn( "Processing new list of clusters: ");
+//    for( RegisterClusterType c : clusterChanges ) {
+//      LOG.warn( "Cluster: " + c.getName() + " host=" + c.getHost() + ":" + c.getPort() );
+//    }
+//    Clusters.getInstance().update( clusterChanges );
   }
 
 //  public AddClusterResponseType fire( AddClusterType request ) throws EucalyptusCloudException {
@@ -68,7 +71,8 @@ public class ClusterEndpoint implements Startable {
       }
       for ( NetworkToken token : existingNet.getNetworkTokens().values() )
         try {
-          Clusters.getInstance().lookup( token.getCluster() ).getMessageQueue().enqueue( new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(), msg ) );
+          Cluster cluster = Clusters.getInstance().lookup( token.getCluster() );
+          cluster.getMessageQueue().enqueue( new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(cluster.getConfiguration( )), msg ) );
         } catch ( NoSuchElementException e ) {}
     } catch ( NoSuchElementException e ) {
       LOG.error( "Changed network rules not applied to inactive network: " + net.getName() );
@@ -94,10 +98,11 @@ public class ClusterEndpoint implements Startable {
     }
     Collection<Cluster> clusterList = Clusters.getInstance().getEntries();
     for ( Cluster c : clusterList ) {
-      reply.getAvailabilityZoneInfo().add( c.getInfo() );
-      if( !c.isReachable() ) {
-        continue;
-      }
+      reply.getAvailabilityZoneInfo().add( new ClusterInfoType( c.getConfiguration( ).getName( ), c.getConfiguration( ).getHostName( ) ) );
+//TODO: handle cluster reachability
+//      if( !c.isReachable() ) {
+//        continue;
+//      }
       List<String> args = request.getAvailabilityZoneSet();
       NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( request.getAvailabilityZoneSet() );
       if ( tagList.size() == 1 ) tagList = c.getNodeTags();

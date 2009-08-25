@@ -36,12 +36,12 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
-import edu.ucsb.eucalyptus.cloud.cluster.Cluster;
-import edu.ucsb.eucalyptus.cloud.cluster.Clusters;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
@@ -249,7 +249,7 @@ public class VolumeManager {
     }
 
     request.setRemoteDevice( volume.getRemoteDevice() );
-    QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback( cluster ), request );
+    QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback( cluster.getConfiguration( ) ), request );
     cluster.getMessageQueue().enqueue( event );
 
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName(), vm.getInstanceId(), request.getDevice(), volume.getRemoteDevice() );
@@ -305,7 +305,7 @@ public class VolumeManager {
     request.setRemoteDevice( volume.getRemoteDevice() );
     request.setDevice( volume.getDevice().replaceAll("unknown,requested:","") );
     request.setInstanceId( vm.getInstanceId() );
-    QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( ), request );
+    QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( cluster.getConfiguration( ) ), request );
     cluster.getMessageQueue().enqueue( event );
 
     reply.setDetachedVolume( volume );
