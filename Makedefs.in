@@ -30,7 +30,7 @@ bindir		= ${prefix}/usr/bin
 sbindir		= ${prefix}/usr/sbin
 datarootdir	= ${usrdir}/share
 
-# where we are going to install eucalyptus, and Co.
+# where we are going to install eucalyptus and where are the sources
 export EUCALYPTUS	= ${prefix}
 TOP			= @TOP@
 
@@ -44,3 +44,7 @@ INSTALL		= @INSTALL@
 ANT		= @ANT@ -e
 WSDL2C		= @WSDL2C@
 JAVA_HOME       = @JAVA_HOME@
+
+# compile time configurations
+euca_theme	= @INTERFACE_THEME@
+store_tab	= @STORE@

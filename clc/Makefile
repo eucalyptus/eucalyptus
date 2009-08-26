@@ -3,12 +3,25 @@
 #
 include ../Makedefs
 
+theme_dir	= ${TOP}/clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes/
+
 all: build
 
 deps:
 	$(ANT) deps
 
-build:
+themes:
+	@if test -n ${euca_theme} ; then \
+		if test -d ${theme_dir}/${euca_theme} ; then \
+			ln -sf ${theme_dir}/${euca_theme} ${theme_dir}/active;\
+		else \
+			echo "Theme ${euca_theme} does not exists!"; exit 1;\
+		fi; fi
+	@if test ${store_tab} = "Y" ; then \
+		 sed -i "s/\(^extensions =\).*/\1 store/" ${TOP}/clc/modules/www/conf/eucalyptus-web.properties ; else \
+		 sed -i "s/\(^extensions =\).*/\1/" ${TOP}/clc/modules/www/conf/eucalyptus-web.properties; fi
+
+build: themes
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
