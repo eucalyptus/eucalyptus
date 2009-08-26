@@ -47,4 +47,4 @@ JAVA_HOME       = @JAVA_HOME@
 
 # compile time configurations
 euca_theme	= @INTERFACE_THEME@
-store_tab	= @STORE@
+extensions	= @EXTENSIONS@

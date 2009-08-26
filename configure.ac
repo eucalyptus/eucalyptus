@@ -33,7 +33,7 @@ AXIS2_HOME="${AXIS2_HOME}"
 AXIS2C_SERVICES=""
 LIBVIRT_HOME="${LIBVIRT_HOME}"
 INTERFACE_THEME="eucalyptus"
-STORE="N"
+EXTENSIONS=""
 ANT=""
 JAVA=""
 WSDL2C=""
@@ -68,7 +68,7 @@ AC_ARG_WITH(interface-theme,
 AC_ARG_ENABLE(appliance-store,
         [  --enable-appliance-store             enable the store tab],
                 [if test "${enableval}" != "no"; then
-                        STORE="Y"
+                        EXTENSIONS="store"
                 fi])
 
 AC_ARG_ENABLE(debug,
@@ -242,7 +242,7 @@ AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 AC_SUBST(LIBS)
 AC_SUBST(INCLUDES)
-AC_SUBST(STORE)
+AC_SUBST(EXTENSIONS)
 AC_SUBST(INTERFACE_THEME)
 
 

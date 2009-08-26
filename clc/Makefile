@@ -10,6 +10,9 @@ all: build
 deps:
 	$(ANT) deps
 
+update_properties:
+	@sed -i "s/\(^extensions =\).*/\1 ${extensions}/" ${TOP}/clc/modules/www/conf/eucalyptus-web.properties
+
 themes:
 	@if test -n ${euca_theme} ; then \
 		if test -d ${theme_dir}/${euca_theme} ; then \
@@ -18,9 +21,8 @@ themes:
 		else \
 			echo "Theme ${euca_theme} does not exists!"; exit 1;\
 		fi; fi
-	@if test ${store_tab} = "Y" ; then \
-		 sed -i "s/\(^extensions =\).*/\1 store/" ${TOP}/clc/modules/www/conf/eucalyptus-web.properties ; else \
-		 sed -i "s/\(^extensions =\).*/\1/" ${TOP}/clc/modules/www/conf/eucalyptus-web.properties; fi
+	@
+	@if test "`grep '^extensions' ${TOP}/clc/modules/www/conf/eucalyptus-web.properties | sed 's/extensions =[[:blank:]]*//'` != '${extensions}'" > /dev/null ; then $(MAKE) update_properties; fi
 
 build: themes
 	@# we need JAVA_HOME
