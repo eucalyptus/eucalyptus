@@ -60,10 +60,6 @@ public class SnapshotInfo {
     Date startTime;
     @Column(name = "progress")
     private String progress;
-    @Column(name = "transferred")
-    private Boolean transferred;
-    @Column(name = "duped_volume_name")
-    private String dupedVolumeId;
 
     public SnapshotInfo() {}
 
@@ -117,23 +113,6 @@ public class SnapshotInfo {
 
     public void setProgress(String progress) {
         this.progress = progress;
-    }
-
-    public Boolean getTransferred() {
-        return transferred;
-    }
-
-    public void setTransferred(Boolean transferred) {
-        this.transferred = transferred;
-    }
-
-
-    public String getDupedVolumeId() {
-        return dupedVolumeId;
-    }
-
-    public void setDupedVolumeId(String dupedVolumeId) {
-        this.dupedVolumeId = dupedVolumeId;
     }
 
     @Override

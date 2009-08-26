@@ -614,9 +614,7 @@ public class FlushCachedImageResponseType extends WalrusDataResponseType {
 }
 
 public class StoreSnapshotType extends WalrusDataRequestType {
-	String contentLength;
-	String snapshotvgname;
-	String snapshotlvname;
+	String snapshotSize;
 }
 
 public class StoreSnapshotResponseType extends WalrusDataResponseType {
@@ -630,10 +628,10 @@ public class DeleteWalrusSnapshotType extends WalrusRequestType {
 public class DeleteWalrusSnapshotResponseType extends WalrusResponseType {
 }
 
-public class GetWalrusSnapshotType extends WalrusDataRequestType {
+public class GetWalrusSnapshotType extends WalrusDataGetRequestType {
 }
 
-public class GetWalrusSnapshotResponseType extends WalrusDataResponseType {
+public class GetWalrusSnapshotResponseType extends WalrusDataGetResponseType {
 }
 
 public class WalrusUsageStatsRecord extends StatEventRecord {

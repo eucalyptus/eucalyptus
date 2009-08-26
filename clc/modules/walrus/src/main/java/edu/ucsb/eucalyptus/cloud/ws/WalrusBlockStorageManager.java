@@ -64,7 +64,7 @@ public class WalrusBlockStorageManager {
 
 	public void startupChecks() {
 		cleanFailedCachedImages();
-		//WalrusProperties.sharedMode = true;
+		WalrusProperties.sharedMode = true;
 	}
 
 	public void cleanFailedCachedImages() {
@@ -102,8 +102,27 @@ public class WalrusBlockStorageManager {
 
 		String snapshotId = request.getKey();
 		String bucketName = request.getBucket();
-		boolean createBucket = true;
+		String snapSizeString = request.getSnapshotSize();
+		Long snapSize = 0L;
+		if (snapSizeString != null) {
+			snapSize = Long.parseLong(snapSizeString);
+		}
+		if (WalrusProperties.shouldEnforceUsageLimits) {
+			int totalSnapshotSize = 0;
+			WalrusSnapshotInfo snapInfo = new WalrusSnapshotInfo();
+			EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
+			List<WalrusSnapshotInfo> sInfos = db.query(snapInfo);
+			for (WalrusSnapshotInfo sInfo : sInfos) {
+				totalSnapshotSize += sInfo.getSize();
+			}
+			if ((totalSnapshotSize + (int) (snapSize / WalrusProperties.G)) > WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE) {
+				db.rollback();
+				throw new EntityTooLargeException(snapshotId);
+			}
+			db.commit();
+		}
 
+		boolean createBucket = true;
 		EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
 		WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
 		List<WalrusSnapshotInfo> snapInfos = db.query(snapshotInfo);
@@ -138,7 +157,7 @@ public class WalrusBlockStorageManager {
 		putObjectRequest.setUserId(userId);
 		putObjectRequest.setBucket(bucketName);
 		putObjectRequest.setKey(snapshotId);
-		putObjectRequest.setRandomKey(request.getRandomKey());		
+		putObjectRequest.setRandomKey(request.getRandomKey());
 		putObjectRequest.setEffectiveUserId(request.getEffectiveUserId());
 		try {
 			PutObjectResponseType putObjectResponseType = walrusManager
@@ -147,20 +166,7 @@ public class WalrusBlockStorageManager {
 			reply.setLastModified(putObjectResponseType.getLastModified());
 			reply.setStatusMessage(putObjectResponseType.getStatusMessage());
 			int snapshotSize = (int) (putObjectResponseType.getSize() / WalrusProperties.G);
-			if (WalrusProperties.shouldEnforceUsageLimits) {
-				int totalSnapshotSize = 0;
-				WalrusSnapshotInfo snapInfo = new WalrusSnapshotInfo();
-				db = new EntityWrapper<WalrusSnapshotInfo>();
-				List<WalrusSnapshotInfo> sInfos = db.query(snapInfo);
-				for (WalrusSnapshotInfo sInfo : sInfos) {
-					totalSnapshotSize += sInfo.getSize();
-				}
-				if ((totalSnapshotSize + snapshotSize) > WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE) {
-					db.rollback();
-					throw new EntityTooLargeException(snapshotId);
-				}
-				db.commit();
-			}
+
 			// change state
 			snapshotInfo = new WalrusSnapshotInfo(snapshotId);
 			db = new EntityWrapper<WalrusSnapshotInfo>();
@@ -186,6 +192,7 @@ public class WalrusBlockStorageManager {
 		if (snapshotInfos.size() > 0) {
 			WalrusSnapshotInfo foundSnapshotInfo = snapshotInfos.get(0);
 			String bucketName = foundSnapshotInfo.getSnapshotBucket();
+			db.commit();
 			GetObjectType getObjectType = new GetObjectType();
 			getObjectType.setBucket(bucketName);
 			getObjectType.setUserId(request.getUserId());
@@ -195,7 +202,7 @@ public class WalrusBlockStorageManager {
 			getObjectType.setGetData(true);
 			getObjectType.setInlineData(false);
 			getObjectType.setGetMetaData(false);
-			getObjectType.setIsCompressed(true);
+			getObjectType.setIsCompressed(false);
 			try {
 				walrusManager.getObject(getObjectType);
 			} catch (EucalyptusCloudException ex) {
@@ -220,10 +227,6 @@ public class WalrusBlockStorageManager {
 		WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
 		List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
 
-		ArrayList<String> vgNames = new ArrayList<String>();
-		ArrayList<String> lvNames = new ArrayList<String>();
-		ArrayList<String> snapIdsToDelete = new ArrayList<String>();
-
 		// Delete is idempotent.
 		reply.set_return(true);
 		if (snapshotInfos.size() > 0) {
@@ -232,7 +235,9 @@ public class WalrusBlockStorageManager {
 			db.delete(foundSnapshotInfo);
 			db.commit();
 			SnapshotDeleter snapshotDeleter = new SnapshotDeleter(request
-					.getUserId(), foundSnapshotInfo.getSnapshotBucket(),
+					.getUserId(), 
+					request.getEffectiveUserId(),
+					foundSnapshotInfo.getSnapshotBucket(),
 					snapshotId);
 			snapshotDeleter.start();
 		} else {
@@ -244,12 +249,16 @@ public class WalrusBlockStorageManager {
 
 	private class SnapshotDeleter extends Thread {
 		private String userId;
+		private String effectiveUserId;
 		private String bucketName;
 		private String snapshotId;
 
-		public SnapshotDeleter(String userId, String bucketName,
+		public SnapshotDeleter(String userId, 
+				String effectiveUserId,
+				String bucketName,
 				String snapshotId) {
 			this.userId = userId;
+			this.effectiveUserId = effectiveUserId;
 			this.bucketName = bucketName;
 			this.snapshotId = snapshotId;
 		}
@@ -258,12 +267,14 @@ public class WalrusBlockStorageManager {
 			DeleteObjectType deleteObjectType = new DeleteObjectType();
 			deleteObjectType.setBucket(bucketName);
 			deleteObjectType.setKey(snapshotId);
+			deleteObjectType.setEffectiveUserId(effectiveUserId);
 			deleteObjectType.setUserId(userId);
 
 			try {
 				walrusManager.deleteObject(deleteObjectType);
 				DeleteBucketType deleteBucketType = new DeleteBucketType();
 				deleteBucketType.setBucket(bucketName);
+				deleteBucketType.setEffectiveUserId(effectiveUserId);
 				deleteBucketType.setUserId(userId);
 				walrusManager.deleteBucket(deleteBucketType);
 			} catch (EucalyptusCloudException ex) {

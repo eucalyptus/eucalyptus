@@ -539,9 +539,7 @@
 
 	<mapping name="StoreSnapshot" class="edu.ucsb.eucalyptus.msgs.StoreSnapshotType">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType" />
-		<value name="ContentLength" field="contentLength" />
-		<value name="SnapshotVgName" field="snapshotvgname" />
-		<value name="SnapshotLvName" field="snapshotlvname" />
+		<value name="SnapshotSize" field="snapshotSize"/>
 	</mapping>
 
 	<mapping name="StoreSnapshotResponse"

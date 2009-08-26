@@ -281,6 +281,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					if(value.toLowerCase().equals(operation.toString().toLowerCase())) {
 						operationName = operation.toString();
 						walrusInternalOperation = true;
+						if(httpRequest.containsHeader(StorageProperties.StorageParameters.EucaSnapSize.toString())) {
+							operationParams.put("SnapshotSize", httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaSnapSize.toString()));
+						}
 						break;
 					}
 				}

@@ -47,8 +47,6 @@ public class LVMVolumeInfo {
     @GeneratedValue
     @Column(name = "lvm_volume_id")
     private Long id = -1l;
-    @Column(name = "volume_owner")
-    private String owner;
     @Column(name = "volume_name")
     private String volumeId;
     @Column(name = "lodev_name")
@@ -79,15 +77,6 @@ public class LVMVolumeInfo {
     public LVMVolumeInfo(String volumeId) {
         this.volumeId = volumeId;
     }
-    
-    public String getOwner() {
-        return owner;
-    }
-
-    public void setOwner(String owner) {
-        this.owner = owner;
-    }
-
     public String getVolumeId() {
         return volumeId;
     }

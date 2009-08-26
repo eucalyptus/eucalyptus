@@ -397,16 +397,7 @@ public class BlockStorage {
 					SnapshotInfo snapInfo = new SnapshotInfo();
 					snapInfo.setVolumeId(foundSnapshotInfo.getVolumeId());
 					List<SnapshotInfo> snapInfos = db.query(snapInfo);
-					String dupedVolumeId = null;
-					if(snapInfos.size() == 1) {
-						//ok to remove the duped vol this snapshot is based on
-						dupedVolumeId = foundSnapshotInfo.getDupedVolumeId();
-					}
 					blockManager.deleteSnapshot(snapshotId);
-					if(dupedVolumeId != null) {
-						blockManager.deleteVolume(dupedVolumeId);
-						volumeStorageManager.deleteObject("", dupedVolumeId);
-					}
 					snapshotStorageManager.deleteObject("", snapshotId);
 					db.delete(foundSnapshotInfo);
 					db.commit();
@@ -484,7 +475,6 @@ public class BlockStorage {
 		volumeInfo.setStatus(StorageProperties.Status.creating.toString());
 		Date creationDate = new Date();
 		volumeInfo.setCreateTime(creationDate);
-		volumeInfo.setTransferred(Boolean.FALSE);
 		if(snapshotId != null) {
 			volumeInfo.setSnapshotId(snapshotId);
 			reply.setSnapshotId(snapshotId);
@@ -524,8 +514,10 @@ public class BlockStorage {
 					SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 					List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
 					if(foundSnapshotInfos.size() == 0) {
-						String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
-						size = blockManager.createVolume(volumeId, volumePath);
+						//String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
+						String snapshotPath = getSnapshot(snapshotId);
+						blockManager.addSnapshot(snapshotId);
+						size = blockManager.createVolume(volumeId, snapshotId);
 						db.commit();
 					} else {
 						SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);
@@ -534,7 +526,7 @@ public class BlockStorage {
 							db.rollback();
 							LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
 						} else {
-							size = blockManager.createVolume(volumeId, snapshotId, size);
+							size = blockManager.createVolume(volumeId, snapshotId);
 							db.commit();
 						}
 					}
@@ -617,11 +609,34 @@ public class BlockStorage {
 		return volumePath;
 	}
 
-	public void GetSnapshots(String volumeId, String snapshotSetName, String snapshotId) throws EucalyptusCloudException {
+	private String getSnapshot(String snapshotId) throws EucalyptusCloudException {
 		BlockStorageChecker.checkWalrusConnection();
-		String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
-		int size = blockManager.createVolume(volumeId, volumePath);
+		if(!StorageProperties.enableSnapshots) {
+			LOG.error("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url");
+			throw new EucalyptusCloudException("could not connect to Walrus.");
+		}
+		String snapshotLocation = "snapshots" + "/" + snapshotId;
+		String absoluteSnapshotPath = StorageProperties.storageRootDirectory + "/" + snapshotId;
+		File file = new File(absoluteSnapshotPath);
+		if(file.exists()) {
+			//something went wrong. remove and retry
+			file.delete();
+		}
+		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true);
+		snapshotGetter.run();
+		int snapshotSize = (int)(file.length() / StorageProperties.GB);
+		if(snapshotSize == 0) {
+			throw new EucalyptusCloudException("could not get snapshot");
+		} 
+		EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
+		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
+		snapshotInfo.setProgress("100");
+		snapshotInfo.setStartTime(new Date());
+		snapshotInfo.setStatus(StorageProperties.Status.available.toString());
+		//add it to the block manager
+		return absoluteSnapshotPath;
 	}
+
 
 
 	public DescribeStorageVolumesResponseType DescribeStorageVolumes(DescribeStorageVolumesType request) throws EucalyptusCloudException {
@@ -692,7 +707,6 @@ public class BlockStorage {
 		private String volumeId;
 		private String snapshotId;
 		private String volumeBucket;
-		private String volumeFileName;
 		private String snapshotFileName;
 
 		public Snapshotter(String volumeBucket, String volumeId, String snapshotId) {
@@ -709,7 +723,6 @@ public class BlockStorage {
 					SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 					SnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
 					foundSnapshotInfo.setProgress("100");
-					foundSnapshotInfo.setTransferred(true);
 					foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
 					dbSnap.commit();
 					return;
@@ -765,7 +778,6 @@ public class BlockStorage {
 		File volumeFile = new File(volumeFileName);
 		File snapshotFile = new File(snapshotFileName);
 
-		String volumeBucket = "";
 
 		EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
 		VolumeInfo volumeInfo = new VolumeInfo(volumeId);
@@ -773,7 +785,6 @@ public class BlockStorage {
 
 		if(volumeInfos.size() > 0) {
 			VolumeInfo foundVolumeInfo = volumeInfos.get(0);
-			volumeBucket = foundVolumeInfo.getVolumeBucket();
 		} else {
 			db.rollback();
 			throw new EucalyptusCloudException();
@@ -795,7 +806,7 @@ public class BlockStorage {
 			} catch(Exception ex) {
 				LOG.error(ex);
 			}
-			httpWriter = new HttpWriter("PUT", volumeFile, callback, volumeBucket, volumeId, "StoreSnapshot", null, httpParamaters);
+			httpWriter = new HttpWriter("PUT", volumeFile, callback, "snapshots", volumeId, "StoreSnapshot", null, httpParamaters);
 			try {
 				httpWriter.run();
 			} catch(Exception ex) {
@@ -812,7 +823,7 @@ public class BlockStorage {
 		} catch(Exception ex) {
 			LOG.error(ex);
 		}
-		httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
+		httpWriter = new HttpWriter("PUT", snapshotFile, callback, "snapshots", snapshotId, "StoreSnapshot", null, httpParamaters);
 		try {
 			httpWriter.run();
 		} catch(Exception ex) {
@@ -862,7 +873,6 @@ public class BlockStorage {
 			try {
 				SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
 				foundSnapshotInfo.setProgress(String.valueOf(100));
-				foundSnapshotInfo.setTransferred(true);
 				foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
 			} catch (Exception ex) {
 				db.rollback();
@@ -877,7 +887,6 @@ public class BlockStorage {
 			try {
 				SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
 				foundSnapshotInfo.setProgress(String.valueOf(0));
-				foundSnapshotInfo.setTransferred(false);
 				foundSnapshotInfo.setStatus(StorageProperties.Status.failed.toString());
 			} catch (Exception ex) {
 				db.rollback();
@@ -975,10 +984,6 @@ public class BlockStorage {
 
 		@Override
 		protected boolean writeRequestBody(HttpState state, HttpConnection conn) throws IOException {
-			/*if(null != getRequestHeader("expect") && getStatusCode() != HttpStatus.SC_CONTINUE) {
-				return false;
-			}*/
-
 			InputStream inputStream;
 			if (outFile != null) {
 				inputStream = new FileInputStream(outFile);
@@ -1052,6 +1057,7 @@ public class BlockStorage {
 				method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
 				//method.setRequestHeader("Content-Length", String.valueOf(file.length()));
 				method.setRequestHeader("Transfer-Encoding", "chunked");
+				method.addRequestHeader(StorageProperties.StorageParameters.EucaSnapSize.toString(), String.valueOf(file.length()));
 				((PutMethodWithProgress)method).setOutFile(file);
 				((PutMethodWithProgress)method).setCallBack(callback);
 			}

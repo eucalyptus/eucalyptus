@@ -50,8 +50,10 @@ import org.jboss.netty.handler.stream.ChunkedInput;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.MappingHttpResponse;
@@ -199,7 +201,8 @@ public class WalrusImageManager {
 					byte[] key;
 					byte[] iv;
 					try {
-						PrivateKey pk = (PrivateKey) EucaKeyStore.getInstance( ).getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
+						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(
+								Component.eucalyptus ).getPrivateKey();
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						String keyString = new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey)));

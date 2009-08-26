@@ -62,25 +62,8 @@ public class VolumeInfo {
     private Date createTime;
     @Column(name = "zone")
     private String zone;
-    @Column(name = "volume_bucket")
-    private String volumeBucket;
-    @Column(name = "volume_key")
-    private String volumeKey;
     @Column(name = "snapshot_id")
     private String snapshotId;
-    @Column(name = "transferred")
-    private Boolean transferred;
-    @Column(name = "duped_volume_name")
-    private String dupedVolumeId;
-
-    @OneToMany( cascade = CascadeType.ALL )
-    @JoinTable(
-            name = "volume_has_attachments",
-            joinColumns = { @JoinColumn( name = "volume_id" ) },
-            inverseJoinColumns = @JoinColumn( name = "attached_volume_id" )
-    )
-    @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-    private List<AttachedVolumeInfo> attachmentSet = new ArrayList<AttachedVolumeInfo>();
 
     public VolumeInfo() {}
 
@@ -128,14 +111,6 @@ public class VolumeInfo {
         this.createTime = createTime;
     }
 
-    public List<AttachedVolumeInfo> getAttachmentSet() {
-        return attachmentSet;
-    }
-
-    public void setAttachmentSet(ArrayList<AttachedVolumeInfo> attachmentSet) {
-        this.attachmentSet = attachmentSet;
-    }
-
     public String getZone() {
         return zone;
     }
@@ -144,44 +119,12 @@ public class VolumeInfo {
         this.zone = zone;
     }
 
-    public String getVolumeBucket() {
-        return volumeBucket;
-    }
-
-    public void setVolumeBucket(String volumeBucket) {
-        this.volumeBucket = volumeBucket;
-    }
-
-    public String getVolumeKey() {
-        return volumeKey;
-    }
-
-    public void setVolumeKey(String volumeKey) {
-        this.volumeKey = volumeKey;
-    }
-
     public String getSnapshotId() {
         return snapshotId;
     }
 
     public void setSnapshotId(String snapshotId) {
         this.snapshotId = snapshotId;
-    }
-
-    public Boolean getTransferred() {
-        return transferred;
-    }
-
-    public void setTransferred(Boolean transferred) {
-        this.transferred = transferred;
-    }
-
-    public String getDupedVolumeId() {
-        return dupedVolumeId;
-    }
-
-    public void setDupedVolumeId(String dupedVolumeId) {
-        this.dupedVolumeId = dupedVolumeId;
     }
 
     @Override

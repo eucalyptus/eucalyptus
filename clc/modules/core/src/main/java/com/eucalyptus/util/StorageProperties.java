@@ -34,13 +34,10 @@
 
 package com.eucalyptus.util;
 
-//import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
+import java.util.UUID;
+
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.util.BaseDirectory;
-
-import java.util.UUID;
 
 public class StorageProperties {
 
@@ -71,54 +68,21 @@ public class StorageProperties {
 	public static boolean trackUsageStatistics = true;
 
     static {
+    	// List<WalrusConfiguration> walrusConfigs = Configuration.getWalrusConfigurations( );
         String walrusHost = System.getProperty(WalrusProperties.WALRUS_HOST_PROPERTY);
         if(walrusHost != null)
             WALRUS_URL = "http://" + walrusHost + ":" + WalrusProperties.WALRUS_PORT +  WalrusProperties.walrusServicePath;
     }
 
     public static void update() {
-    	//TODO    
-        /*try {
-            //TODO: This assumes that the SC shares the database with the front end. This is NOT true in general. Fix this thru message passing.
-            SystemConfiguration systemConfiguration = EucalyptusProperties.getSystemConfiguration();
-            UpdateStorageConfigurationType updateConfig = new UpdateStorageConfigurationType();
-            Integer maxTotalVolumeSize = systemConfiguration.getStorageMaxTotalVolumeSizeInGb();
-            if(maxTotalVolumeSize != null) {
-                if(maxTotalVolumeSize > 0) {
-                    MAX_TOTAL_VOLUME_SIZE = maxTotalVolumeSize;
-                }
-            }
-
-            Integer maxTotalSnapSize = systemConfiguration.getStorageMaxTotalSnapshotSizeInGb();
-            if(maxTotalSnapSize != null) {
-                if(maxTotalSnapSize > 0) {
-                    MAX_TOTAL_SNAPSHOT_SIZE = maxTotalSnapSize;
-                }
-            }
-
-            Integer maxVolumeSize = systemConfiguration.getStorageMaxVolumeSizeInGB();
-            if(maxVolumeSize != null) {
-                if(maxVolumeSize > 0) {
-                    MAX_VOLUME_SIZE = maxVolumeSize;
-                }
-            }
-
-            storageRootDirectory = systemConfiguration.getStorageVolumesDir();
-            updateConfig.setMaxTotalVolumeSize(MAX_TOTAL_VOLUME_SIZE);
-            updateConfig.setMaxTotalSnapshotSize(MAX_TOTAL_SNAPSHOT_SIZE);
-            updateConfig.setMaxVolumeSize(MAX_VOLUME_SIZE);
-            updateConfig.setStorageRootDirectory(storageRootDirectory);
-            Messaging.send(STORAGE_REF, updateConfig);
-        } catch(Exception ex) {
-            LOG.warn(ex.getMessage());
-        }*/
+    	LOG.warn("update is deprecated.");
     }
 
     public enum Status {
         creating, available, pending, completed, failed
     }
     
-    public enum StorageSecurityParameters {
-        EucaCert, EucaSignature
+    public enum StorageParameters {
+        EucaCert, EucaSignature, EucaSnapSize
     }
 }

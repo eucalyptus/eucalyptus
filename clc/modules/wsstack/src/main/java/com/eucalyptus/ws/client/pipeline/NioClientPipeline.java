@@ -17,6 +17,7 @@ import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.WsSecHandler;
+import com.eucalyptus.ws.handlers.MessageStackHandler;
 
 public class NioClientPipeline implements ChannelPipelineFactory {
   private static Logger            LOG = Logger.getLogger( NioClientPipeline.class );

@@ -551,7 +551,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		db.commit();
 	}
 
-	public int createVolume(String volumeId, String volumePath) throws EucalyptusCloudException {
+	/*public int createVolume(String volumeId, String volumePath) throws EucalyptusCloudException {
 		File volumeDir = new File(StorageProperties.storageRootDirectory);
 		volumeDir.mkdirs();
 
@@ -590,12 +590,13 @@ public class LVM2Manager implements LogicalStorageManager {
 		db.add(lvmVolumeInfo);
 		db.commit();
 		return size;
-	}
+	}*/
 
-	public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException {
+	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException {
 		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
 		LVMVolumeInfo foundSnapshotInfo = db.getUnique(lvmVolumeInfo);
+		int size = -1;
 		if(foundSnapshotInfo != null) {
 			String status = foundSnapshotInfo.getStatus();
 			if(status.equals(StorageProperties.Status.available.toString())) {
@@ -645,6 +646,22 @@ public class LVM2Manager implements LogicalStorageManager {
 		return size;
 	}
 
+	public void addSnapshot(String snapshotId) throws EucalyptusCloudException {
+		String snapshotRawFileName = StorageProperties.storageRootDirectory + "/" + snapshotId;
+		File snapshotFile = new File(snapshotRawFileName);
+		if(snapshotFile.exists()) {
+			EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+			LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
+			lvmVolumeInfo.setLoFileName(snapshotRawFileName);
+			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+			lvmVolumeInfo.setSize((int)(snapshotFile.length() / StorageProperties.GB));
+			db.add(lvmVolumeInfo);
+			db.commit();			
+		} else {
+			throw new EucalyptusCloudException("Snapshot backing file does not exist for: " + snapshotId);
+		}
+	}
+	
 	public void dupVolume(String volumeId, String dupVolumeId) throws EucalyptusCloudException {
 		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
