@@ -799,7 +799,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	char *file_name;
 	FILE *f;
 	long long used_mem, used_disk, used_cores;
-#define NC_MONIT_FILENAME "/var/run/eucalyptus/nc-stat"
+#define NC_MONIT_FILENAME "/var/run/eucalyptus/nc-stats"
 
 	if (init())
 		return 1;
