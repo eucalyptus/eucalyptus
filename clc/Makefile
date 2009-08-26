@@ -5,6 +5,9 @@ include ../Makedefs
 
 theme_dir	= ${TOP}/clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes/
 
+
+.PHONY: all build update_properties update_theme deps themes install
+
 all: build
 
 deps:
@@ -13,15 +16,21 @@ deps:
 update_properties:
 	@sed -i "s/\(^extensions =\).*/\1 ${extensions}/" ${TOP}/clc/modules/www/conf/eucalyptus-web.properties
 
+update_theme:
+	@if test -d ${theme_dir}/${euca_theme} ; then \
+		rm -f ${theme_dir}/active; \
+		ln -sf ${euca_theme} ${theme_dir}/active; \
+	else \
+		echo "Theme ${euca_theme} does not exists!"; exit 1; \
+	fi \
+
 themes:
-	@if test -n ${euca_theme} ; then \
-		if test -d ${theme_dir}/${euca_theme} ; then \
-			rm -f ${theme_dir}/active; \
-			ln -sf ${euca_theme} ${theme_dir}/active;\
-		else \
-			echo "Theme ${euca_theme} does not exists!"; exit 1;\
-		fi; fi
-	@
+	@if test -n "${euca_theme}" ; then \
+		$(MAKE) update_theme; \
+	else \
+		rm -f ${theme_dir}/active; \
+		ln -sf eucalyptus ${theme_dir}/active; \
+	fi
 	@if test "`grep '^extensions' ${TOP}/clc/modules/www/conf/eucalyptus-web.properties | sed 's/extensions =[[:blank:]]*//'` != '${extensions}'" > /dev/null ; then $(MAKE) update_properties; fi
 
 build: themes
