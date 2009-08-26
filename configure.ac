@@ -63,7 +63,7 @@ AC_ARG_WITH(libvirt,
         [  --with-libvirt=<dir>                 where libvirt is installed],
         [LIBVIRT_HOME="${withval}"])
 AC_ARG_WITH(interface-theme,
-        [  --with-interface-there=<name>        the theme to be used],
+        [  --with-interface-theme=<name>        the theme to be used],
         [INTERFACE_THEME="${withval}"])
 AC_ARG_ENABLE(appliance-store,
         [  --enable-appliance-store             enable the store tab],
