@@ -13,6 +13,7 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper {
     if( System.getProperty("euca.db.password")  == null ) {
       System.setProperty("euca.db.password", "");
     }
+    LOG.info( "-> database password: " + System.getProperty("euca.db.password") );
     return true;
   }
 

@@ -3,14 +3,10 @@ package com.eucalyptus.ws.server;
 import static org.jboss.netty.channel.Channels.pipeline;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.util.Properties;
-import java.util.Scanner;
 import java.util.Map.Entry;
 import java.util.concurrent.Executors;
-
-import javax.net.ssl.SSLEngine;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -21,6 +17,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
@@ -37,15 +34,15 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
-import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 @Provides( resource = Resource.RemoteConfiguration ) 
 @Depends( remote = Component.eucalyptus )
+@ChannelPipelineCoverage("all")
 public class RemoteBootstrapperServer extends Bootstrapper implements ChannelDownstreamHandler, ChannelUpstreamHandler, ChannelPipelineFactory {
   private static Logger                 LOG            = Logger.getLogger( RemoteBootstrapperServer.class );
   private int                           port;
   private ServerBootstrap               bootstrap;
   private NioServerSocketChannelFactory socketFactory;
-  private int                           BOOTSTRAP_PORT = 8773;
+  private int                           BOOTSTRAP_PORT = 19191;
   private Channel                       channel;
 
   public RemoteBootstrapperServer( ) {
