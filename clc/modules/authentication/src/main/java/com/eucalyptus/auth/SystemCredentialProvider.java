@@ -71,6 +71,10 @@ public class SystemCredentialProvider extends Bootstrapper {
     }
   }
 
+  static boolean checkKeystore( Component name ) throws Exception {
+    return EucaKeyStore.getCleanInstance( ).containsEntry( name.name( ) );
+  }
+  
   static boolean check( Component name ) {
     return ( SystemCredentialProvider.keypairs.containsKey( name.name( ) ) && SystemCredentialProvider.certs.containsKey( name.name( ) ) ) && EucaKeyStore.getInstance( ).containsEntry( name.name( ) );
   }

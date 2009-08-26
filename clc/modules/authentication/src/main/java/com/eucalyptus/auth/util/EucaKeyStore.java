@@ -23,18 +23,22 @@ public class EucaKeyStore extends AbstractKeyStore {
     synchronized ( EucaKeyStore.class ) {
       if ( EucaKeyStore.singleton == null ) {
         try {
-          EucaKeyStore.singleton = new EucaKeyStore( );
+          singleton = new EucaKeyStore( );
         } catch ( final Exception e ) {
-          EucaKeyStore.LOG.error( e, e );
+          LOG.error( e, e );
         }
       }
     }
     return EucaKeyStore.singleton;
   }
 
+  public static AbstractKeyStore getCleanInstance( ) throws Exception {
+    return new EucaKeyStore( );
+  }
+
+  
   private EucaKeyStore( ) throws GeneralSecurityException, IOException {
     super( SubDirectory.KEYS.toString( ) + File.separator + EucaKeyStore.FILENAME, EucaKeyStore.KEY_STORE_PASS, EucaKeyStore.FORMAT );
-    
   }
 
   @Override

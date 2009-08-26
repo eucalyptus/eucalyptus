@@ -63,7 +63,7 @@ public class BootstrapFactory {
                 LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Provides is not specified." );
               } else {
                 Component component = provides.component( );
-                if ( !component.isEnabled( ) ) {
+                if ( component != null && !component.isEnabled( ) ) {
                   LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Provides.component=" + component.toString( ) + " is disabled." );
                   break;
                 }

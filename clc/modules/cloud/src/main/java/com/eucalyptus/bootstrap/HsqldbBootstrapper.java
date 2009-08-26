@@ -45,6 +45,8 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
   @Override
   public boolean load( Resource current ) throws Exception {
     this.db = new Server( );
+    LOG.info( "-> database host: " + System.getProperty("euca.db.host") );
+    LOG.info( "-> database port: " + System.getProperty("euca.db.port") );
     HsqlProperties props = new HsqlProperties( );
     props.setProperty( ServerConstants.SC_KEY_NO_SYSTEM_EXIT, true );
     String dbPort = System.getProperty( DatabaseConfig.EUCA_DB_PORT );

@@ -9,7 +9,7 @@ import org.mortbay.xml.XmlConfiguration;
 import com.eucalyptus.util.BaseDirectory;
 
 @Provides( component = Component.www )
-@Depends( resources = Resource.SystemCredentials, local=Component.eucalyptus )
+@Depends( local=Component.eucalyptus )
 public class HttpServerBootstrapper extends Bootstrapper {
   private static Logger                   LOG = Logger.getLogger( HttpServerBootstrapper.class );
   private static org.mortbay.jetty.Server jettyServer;

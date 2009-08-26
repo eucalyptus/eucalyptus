@@ -12,12 +12,21 @@ public enum Component {
   any(true);
   private boolean local   = false;
   private boolean enabled = false;
+  private boolean hasKeys = false;
 
   
   private Component() {}
   private Component( boolean whatever ) {
     this.local = true;
     this.enabled = true;
+  }
+
+  public void markHasKeys( ) {
+    this.hasKeys = true;
+  }
+
+  public boolean isHasKeys( ) {
+    return hasKeys;
   }
 
   public void markEnabled( ) {

@@ -52,10 +52,10 @@ public class EntityWrapper<TYPE> {
   public static EntityManagerFactory getEntityManagerFactory( final String persistenceContext ) {
     synchronized ( EntityWrapper.class ) {
       if ( !emf.containsKey( persistenceContext ) ) {
-//        Map<String,String> props = new HashMap<String,String>() {{
-//          put("euca.db.name", persistenceContext );
-//        }};
-//      emf.put( persistenceContext,  Persistence.createEntityManagerFactory( persistenceContext, props ) );
+        LOG.info( "-> Setting up persistence context for : " + persistenceContext );
+        LOG.info( "-> database host: " + System.getProperty("euca.db.host") );
+        LOG.info( "-> database port: " + System.getProperty("euca.db.port") );
+        //TODO: fix the way that persistence context is setup.
         emf.put( persistenceContext, Persistence.createEntityManagerFactory( persistenceContext ) );
         EntityManager em = emf.get( persistenceContext ).createEntityManager( );
         EntityTransaction tx = em.getTransaction( );
