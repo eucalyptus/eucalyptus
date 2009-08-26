@@ -252,7 +252,7 @@ public class BlockStorage {
 					db.commit();
 					if(StorageProperties.trackUsageStatistics) { 
 						blockStorageStatistics.decrementVolumeCount();
-						blockStorageStatistics.updateSpaceUsed(-(volumeInfo.getSize() * StorageProperties.GB));
+						blockStorageStatistics.updateSpaceUsed(-(foundVolume.getSize() * StorageProperties.GB));
 					}
 				} catch ( IOException ex) {
 					LOG.error(ex);
