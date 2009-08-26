@@ -5,7 +5,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.binding.Binding;
@@ -17,7 +16,6 @@ import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.WsSecHandler;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
 
 public class NioClientPipeline implements ChannelPipelineFactory {
   private static Logger            LOG = Logger.getLogger( NioClientPipeline.class );

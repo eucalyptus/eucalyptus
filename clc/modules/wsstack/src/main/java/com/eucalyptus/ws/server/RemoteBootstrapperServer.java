@@ -4,9 +4,13 @@ import static org.jboss.netty.channel.Channels.pipeline;
 
 import java.io.ByteArrayInputStream;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Properties;
 import java.util.Map.Entry;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -34,6 +38,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
+import com.eucalyptus.util.NetworkUtil;
 @Provides( resource = Resource.RemoteConfiguration ) 
 @Depends( remote = Component.eucalyptus )
 @ChannelPipelineCoverage("all")
@@ -42,9 +47,9 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelDow
   private int                           port;
   private ServerBootstrap               bootstrap;
   private NioServerSocketChannelFactory socketFactory;
-  private int                           BOOTSTRAP_PORT = 19191;
+  private int                           BOOTSTRAP_PORT = 19191;//TODO: integrate this with 8773
   private Channel                       channel;
-
+  
   public RemoteBootstrapperServer( ) {
     this.port = BOOTSTRAP_PORT;
     this.socketFactory = new NioServerSocketChannelFactory( Executors.newCachedThreadPool( ), Executors.newCachedThreadPool( ) );
@@ -62,7 +67,7 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelDow
     LOG.info( "Waiting for system properties before continuing bootstrap.");
     this.channel.getCloseFuture( ).awaitUninterruptibly( );
     LOG.info( "Channel closed, proceeding with bootstrap.");
-    return false;
+    return true;
   }
 
   @Override
@@ -79,13 +84,36 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelDow
         ByteArrayInputStream bis = new ByteArrayInputStream( request.getContent( ).toByteBuffer( ).array( ) );
         Properties props = new Properties( );
         props.load( bis );
+        boolean foundDb = false;
+        List<String> localAddrs = NetworkUtil.getAllAddresses( );
         for ( Entry<Object, Object> entry : props.entrySet( ) ) {
-          String oldValue = System.setProperty( ( String ) entry.getKey( ), ( String ) entry.getValue( ) );
-          LOG.info( "Setting property: " + entry.getKey( ) + "=" + entry.getValue( ) + " [oldvalue="+oldValue+"]" );
+          String key = (String)entry.getKey();
+          String value = (String)entry.getValue();
+          if( key.startsWith("euca.db.host") ) {
+            try {
+              if( NetworkUtil.testReachability( value ) && !localAddrs.contains( value )) {
+                LOG.info( "Found candidate db host address: " + value );
+                String oldValue = System.setProperty( "euca.db.host", value );
+                LOG.info( "Setting property: euca.db.host=" + value + " [oldvalue="+oldValue+"]" );              
+                //TODO: test we can connect here.
+                foundDb = true;
+              }
+            } catch ( Exception e1 ) {
+              LOG.warn( "Ignoring proposed database address: " + value );
+            }
+          } else {
+            String oldValue = System.setProperty( ( String ) entry.getKey( ), ( String ) entry.getValue( ) );
+            LOG.info( "Setting property: " + entry.getKey( ) + "=" + entry.getValue( ) + " [oldvalue="+oldValue+"]" );
+          }
         }
-        ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK ) );
-        writeFuture.addListener( ChannelFutureListener.CLOSE );
-        this.channel.close( );
+        if( foundDb ) {
+          ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK ) );
+          writeFuture.addListener( ChannelFutureListener.CLOSE );
+          this.channel.close( );          
+        } else {
+          ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_ACCEPTABLE ) );
+          writeFuture.addListener( ChannelFutureListener.CLOSE );          
+        }
       }
     }
   }

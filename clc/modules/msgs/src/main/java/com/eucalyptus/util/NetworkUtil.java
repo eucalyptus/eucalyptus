@@ -29,7 +29,7 @@ public class NetworkUtil {
     }
     return addrs;
   }
-  
+
   public static boolean testReachability( String addr ) throws Exception {
     InetAddress inetAddr = Inet4Address.getByName( addr );
     return inetAddr.isReachable( 1000 );

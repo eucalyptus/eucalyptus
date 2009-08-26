@@ -1,6 +1,7 @@
 package com.eucalyptus.ws.client;
 
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.List;
 import java.util.concurrent.Executors;
 
@@ -35,9 +36,13 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
+import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.ws.RemoteConfigurationException;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
@@ -72,21 +77,17 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
     @Override
     public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
       if( e instanceof ExceptionEvent ) {
-        LOG.info( ((ExceptionEvent)e ).getCause( ) );
         ctx.getChannel( ).close( );
       } else {
-        LOG.info( "Sending downstream: " + e );
-        ctx.sendUpstream( e );
+        ctx.sendDownstream( e );        
       }
     }
 
     @Override
     public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
       if( e instanceof ExceptionEvent ) {
-        LOG.info( ((ExceptionEvent)e ).getCause( ) );
         ctx.getChannel( ).close( );
       } else {
-        LOG.info( "Sending upstream: " + e );
         ctx.sendUpstream( e );
       }
     }
@@ -106,23 +107,35 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
       this.remoteAddr = new InetSocketAddress( hostname, port );
       this.servicePath = servicePath;
     }
+
     public void write( final HttpRequest httpRequest ) throws Exception {
       if ( this.channel == null || !this.channel.isOpen( ) || !this.channel.isConnected( ) ) {
-        this.channelOpenFuture = RemoteBootstrapperClient.this.clientBootstrap.connect( this.remoteAddr );
-        this.channelOpenFuture.addListener( new ChannelFutureListener( ) {          
-          @Override
-          public void operationComplete( ChannelFuture channelFuture ) throws Exception {
-            if ( channelFuture.isSuccess( ) ) {
-              channel = channelFuture.getChannel( );
-              channelWriteFuture = channelFuture.getChannel( ).write( httpRequest );
-            } else {
-              if( channelFuture != null ) {
-                LOG.error( channelFuture.getCause( ), channelFuture.getCause( ) );
-              }
-              channel.close( );
-            }
+        this.channelOpenFuture = clientBootstrap.connect( this.remoteAddr );
+        this.channelOpenFuture.addListener( new DeferedWriter( httpRequest ) ); 
+      } else {
+        channelWriteFuture = this.channel.write( httpRequest );
+        channelWriteFuture.addListener( ChannelFutureListener.CLOSE );
+      }
+    }
+    class DeferedWriter implements ChannelFutureListener {
+      private HttpRequest httpRequest;
+      public DeferedWriter( HttpRequest httpRequest ) {
+        this.httpRequest = httpRequest;
+      }
+      @Override
+      public void operationComplete( ChannelFuture channelFuture ) throws Exception {
+        if ( channelFuture.isSuccess( ) ) {
+          channel = channelFuture.getChannel( );
+          channelWriteFuture = channelFuture.getChannel( ).write( httpRequest );
+          channelWriteFuture.addListener( ChannelFutureListener.CLOSE );
+        } else {
+          if( channelFuture != null ) {
+            LOG.warn( "Failed to connect to heartbeat service at " + remoteAddr + ": " + channelFuture.getCause( ).getMessage( ) );
           }
-        } );
+          if( channel != null ) {
+            channel.close( );            
+          }
+        }
       }
     }
   }
@@ -144,30 +157,54 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
     while(true){
       try {
         List<WalrusConfiguration> walrusConfigs = Configuration.getWalrusConfigurations( );
-        for( WalrusConfiguration w : walrusConfigs ) {
-          LOG.info( "Sending configuration info to walrus at: " + w.getHostName( ) );
-          HeartbeatClient hb = new HeartbeatClient( w.getHostName( ), 19191, "/services/Heartbeat" );
-          String properties = "euca.db.host=192.168.7.7\n" + 
-          "euca.db.password=\n" + 
-          "euca.db.port=9001\n";
-          ChannelBuffer buffer = ChannelBuffers.copiedBuffer( properties.getBytes( ) );
-          HttpRequest httpRequest = new DefaultHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, "/services/Heartbeat" );
-          httpRequest.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
-//          httpRequest.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );
-          httpRequest.setContent( buffer );
-          try {
-            hb.write( httpRequest );
-          } catch ( Exception e ) {
-            LOG.error( e );
-          }
+        for( ComponentConfiguration w : walrusConfigs ) {
+          String configuration = this.getConfigurationBuffer( w );
+          ChannelBuffer buffer = ChannelBuffers.copiedBuffer( configuration.getBytes( ) );
+          this.sendConfiguration( w, buffer );
         }
-      } catch ( EucalyptusCloudException e1 ) {
+      } catch ( Exception e1 ) {
+        LOG.warn( "Error configuring remote walrus." );
+        LOG.error( e1,e1 );
+      }
+      try {
+        List<StorageControllerConfiguration> scConfigs = Configuration.getStorageControllerConfigurations( );
+        for( ComponentConfiguration sc : scConfigs ) {
+          String configuration = this.getConfigurationBuffer( sc );
+          ChannelBuffer buffer = ChannelBuffers.copiedBuffer( configuration.getBytes( ) );
+          this.sendConfiguration( sc, buffer );
+        }
+      } catch ( Exception e1 ) {
+        LOG.warn( "Error configuring remote storage controller." );
         LOG.error( e1,e1 );
       }
       try {
         Thread.sleep(5000);
       } catch ( InterruptedException e ) {}
     }
+  }
+
+  private void sendConfiguration( ComponentConfiguration w, ChannelBuffer buffer  ) throws Exception {
+    HeartbeatClient hb = new HeartbeatClient( w.getHostName( ), 19191, "/services/Heartbeat" );
+    HttpRequest httpRequest = new DefaultHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, "/services/Heartbeat" );
+    httpRequest.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
+    httpRequest.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );
+    httpRequest.setContent( buffer );
+    LOG.info( "Sending configuration info to walrus at: " + w.getHostName( ) );
+    hb.write( httpRequest );
+  }
+  
+  private String getConfigurationBuffer( ComponentConfiguration componentConfig ) throws Exception {
+    List<String> possibleAddresses = NetworkUtil.getAllAddresses( );
+    String configuration =  "euca.db.password=\neuca.db.port=9001\n";
+    configuration += String.format( "euca.%s.name=%s\n", componentConfig.getClass( ).getSimpleName( ).replaceAll( "Configuration", "" ).toLowerCase( ), componentConfig.getName( ) );
+    int i = 0;
+    for( String s : possibleAddresses ) {
+      configuration += String.format("euca.db.host.%d=%s\n",i++,s);
+    }
+    if( i == 0 ) {
+      throw new RemoteConfigurationException("Failed to determine candidate database addresses.");//this should never happen
+    }
+    return configuration;
   }
 
 }
