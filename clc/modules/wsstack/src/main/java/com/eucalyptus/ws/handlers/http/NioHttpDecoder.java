@@ -366,7 +366,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
   
 
   private int getChunkSize( String hex ) {
-    hex = hex.trim( );
+    hex = hex.replaceAll("\\W", "").trim( );    
     for ( int i = 0; i < hex.length( ); i++ ) {
       char c = hex.charAt( i );
       if ( c == ';' || Character.isWhitespace( c ) || Character.isISOControl( c ) ) {
@@ -374,7 +374,6 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
         break;
       }
     }
-
     return Integer.parseInt( hex, 16 );
   }
 

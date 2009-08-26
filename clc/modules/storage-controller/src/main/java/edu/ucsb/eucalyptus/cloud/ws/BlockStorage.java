@@ -732,7 +732,7 @@ public class BlockStorage {
 			SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
 			Map<String, String> httpParamaters = new HashMap<String, String>();
 			HttpWriter httpWriter;
-			httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters, true);
+			httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters, false);
 			try {
 				httpWriter.run();
 			} catch(Exception ex) {
@@ -914,6 +914,7 @@ public class BlockStorage {
 			HttpMethodBase method = null;
 			if(httpVerb.equals("PUT")) {
 				method = new  PutMethodWithProgress(addr);
+				//((PutMethodWithProgress)method).setContentChunked(true);
 			} else if(httpVerb.equals("GET")) {
 				method = new GetMethod(addr);
 			} else if(httpVerb.equals("DELETE")) {
@@ -921,7 +922,7 @@ public class BlockStorage {
 			}
 			method.setRequestHeader("Authorization", "Euca");
 			method.setRequestHeader("Date", date);
-			method.setRequestHeader("Expect", "100-continue");
+			//method.setRequestHeader("Expect", "100-continue");
 			method.setRequestHeader(StorageProperties.EUCALYPTUS_OPERATION, eucaOperation);
 			if(eucaHeader != null) {
 				method.setRequestHeader(StorageProperties.EUCALYPTUS_HEADER, eucaHeader);
@@ -974,21 +975,25 @@ public class BlockStorage {
 
 		@Override
 		protected boolean writeRequestBody(HttpState state, HttpConnection conn) throws IOException {
-			if(null != getRequestHeader("expect") && getStatusCode() != HttpStatus.SC_CONTINUE) {
+			/*if(null != getRequestHeader("expect") && getStatusCode() != HttpStatus.SC_CONTINUE) {
 				return false;
-			}
+			}*/
 
 			InputStream inputStream;
 			if (outFile != null) {
 				inputStream = new FileInputStream(outFile);
 
-				GZIPOutputStream gzipOutStream = new GZIPOutputStream(conn.getRequestOutputStream());
+				ChunkedOutputStream chunkedOut = new ChunkedOutputStream(conn.getRequestOutputStream());
 				byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
 				int bytesRead;
 				int numberProcessed = 0;
 				long totalBytesProcessed = 0;
 				while ((bytesRead = inputStream.read(buffer)) > 0) {
-					gzipOutStream.write(buffer, 0, bytesRead);
+					ByteArrayOutputStream out = new ByteArrayOutputStream();
+					GZIPOutputStream zip = new GZIPOutputStream(out);
+					zip.write(buffer, 0, bytesRead);
+					zip.close();
+					chunkedOut.write(out.toByteArray());
 					totalBytesProcessed += bytesRead;
 					if(++numberProcessed >= callback.getUpdateThreshold()) {
 						callback.run();
@@ -1000,8 +1005,7 @@ public class BlockStorage {
 				} else {
 					callback.failed();
 				}
-				gzipOutStream.flush();
-				gzipOutStream.finish();
+				chunkedOut.finish();				
 				inputStream.close();
 				if(deleteOnXfer) {
 					snapshotStorageManager.deleteAbsoluteObject(outFile.getAbsolutePath());
@@ -1046,7 +1050,8 @@ public class BlockStorage {
 						addr += "=" + value;
 				}
 				method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
-				method.setRequestHeader("Content-Length", String.valueOf(file.length()));
+				//method.setRequestHeader("Content-Length", String.valueOf(file.length()));
+				method.setRequestHeader("Transfer-Encoding", "chunked");
 				((PutMethodWithProgress)method).setOutFile(file);
 				((PutMethodWithProgress)method).setCallBack(callback);
 			}
