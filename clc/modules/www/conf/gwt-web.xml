@@ -84,4 +84,16 @@
   </servlet-mapping>
 
 
+  <!-- store -->
+  <servlet>
+    <servlet-name>imageStoreService</servlet-name>
+    <servlet-class>edu.ucsb.eucalyptus.admin.server.ImageStoreServiceImpl</servlet-class>
+  </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>imageStoreService</servlet-name>
+    <url-pattern>/ImageStoreService</url-pattern>
+  </servlet-mapping>
+
+
 </web-app>

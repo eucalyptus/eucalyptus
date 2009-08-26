@@ -39,11 +39,22 @@
 	<!-- Inherit internationalization support. -->
 	<inherits name='com.google.gwt.i18n.I18N'/>
 	<extend-property name="locale" values="en,ru" />
+
+    <!-- Inherit the default GWT style sheet.  You can change       -->
+    <!-- the theme of your GWT application by uncommenting          -->
+    <!-- any one of the following lines.                            -->
+    <!-- <inherits name="com.google.gwt.user.theme.standard.Standard"/-->
+    <!-- <inherits name="com.google.gwt.user.theme.chrome.Chrome"/-->
+    <!-- <inherits name="com.google.gwt.user.theme.dark.Dark"/>     -->
+
+    <!-- Other module inherits                                      -->
+    <inherits name="com.google.gwt.json.JSON" />
 	
 	<!-- Specify the app entry point class. -->
     <entry-point class='edu.ucsb.eucalyptus.admin.client.EucalyptusWebInterface'/>
 
     <servlet path="/EucalyptusWebBackend" class="edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl"/>
+    <servlet path="/ImageStoreService" class="edu.ucsb.eucalyptus.admin.server.ImageStoreServiceImpl"/>
 
     <script src="themes/active/code.js">
       <![CDATA[

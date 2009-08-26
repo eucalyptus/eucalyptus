@@ -11,7 +11,8 @@ import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
-
+import edu.ucsb.eucalyptus.admin.client.ImageStore.ImageStoreClient;
+import edu.ucsb.eucalyptus.admin.client.ImageStore.ImageStoreWidget;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -103,6 +104,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	private static Image textless_logo = null;
 	private static String rightscale_base_url = null;
 	private static String rightscaleUrl = null;
+    private static String extensions = null;
 
     /* global variables */
     private static HashMap props;
@@ -113,11 +115,12 @@ public class EucalyptusWebInterface implements EntryPoint {
 	private static CloudInfoWeb cloudInfo;
 	private static TabBar allTabs;
     private static int currentTabIndex = 0;
-	private static int credsTabIndex;
-    private static int imgTabIndex;
-	private static int usrTabIndex;
-	private static int confTabIndex;
-    private static int downTabIndex;
+	private static int credsTabIndex = -1;
+    private static int imgTabIndex = -1;
+	private static int usrTabIndex = -1;
+	private static int confTabIndex = -1;
+    private static int downTabIndex = -1;
+    private static int storeTabIndex = -1;
     private static boolean sortUsersLastFirst = true;
 
     /* UI selections remembered for future use */
@@ -237,6 +240,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		if (cloud_registration_text==null || rightscale_base_url==null) {
 			show_cloud_registration = false;
 		}
+        extensions = (String)props.get("extensions");
 
     }
 
@@ -1298,6 +1302,9 @@ public class EucalyptusWebInterface implements EntryPoint {
 			allTabs.addTab ("Users"); usrTabIndex = nTabs++;
 			allTabs.addTab ("Configuration"); confTabIndex = nTabs++;
             allTabs.addTab ("Extras"); downTabIndex = nTabs++;
+            if (extensions!=null && extensions.contains ("store") ) {
+                allTabs.addTab ("Store"); storeTabIndex = nTabs++;
+            }
         }
 		// can happen if admin user re-logs in as regular without reloading
 		if (currentTabIndex > (nTabs-1) ) {
@@ -1314,6 +1321,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 else if (tabIndex==usrTabIndex) { displayUsersTab(wrapper); }
 				else if (tabIndex==confTabIndex) { displayConfTab(wrapper); }
                 else if (tabIndex==downTabIndex) { displayDownloadsTab(wrapper); }
+                else if (tabIndex==storeTabIndex) { displayStoreTab(wrapper); }
                 else { displayErrorPage("Invalid tab!"); }
             }
             public boolean onBeforeTabSelected(SourcesTabEvents sender, int tabIndex) {
@@ -2268,4 +2276,13 @@ public class EucalyptusWebInterface implements EntryPoint {
 		parent.clear();
 		parent.add (vpanel);
 	}
+
+    public void displayStoreTab (final VerticalPanel parent) 
+    {
+        History.newItem ("store");
+        ImageStoreClient imageStoreClient = new ImageStoreClient(sessionId);
+        ImageStoreWidget imageStore = new ImageStoreWidget(imageStoreClient);
+        parent.clear();
+        parent.add(imageStore);
+    }
 }

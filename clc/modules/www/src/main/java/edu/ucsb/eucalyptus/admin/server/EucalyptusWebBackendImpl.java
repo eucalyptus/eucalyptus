@@ -300,7 +300,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     }
 
     /* ensure the sessionId is (still) valid */
-    private SessionInfo verifySession (String sessionId)
+    private static SessionInfo verifySession (String sessionId)
             throws SerializableException
     {
         if (sessionId==null) {
@@ -319,7 +319,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
         return session;
     }
 
-    private boolean isPasswordExpired (UserInfoWeb user) {
+    private static boolean isPasswordExpired (UserInfoWeb user) {
         final long now = System.currentTimeMillis();
         if ((now > 0) && (now >= user.getPasswordExpires().longValue())) {
             return true;
@@ -328,7 +328,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     }
 
     /* ensure the user exists and valid */
-    private UserInfoWeb verifyUser (SessionInfo session, String userName, boolean verifyPasswordAge)
+    private static UserInfoWeb verifyUser (SessionInfo session, String userName, boolean verifyPasswordAge)
             throws SerializableException
     {
         UserInfoWeb user;
@@ -545,6 +545,14 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
             }
         }
         return l;
+    }
+
+    public static UserInfoWeb getUserRecord (String sessionId) // a *static* getUserRecord, for ImageStoreService
+        throws SerializableException
+    {
+        SessionInfo session = verifySession (sessionId);
+        UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+        return user;
     }
 
     public List getImageInfo (String sessionId, String userId)
