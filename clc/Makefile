@@ -13,7 +13,8 @@ deps:
 themes:
 	@if test -n ${euca_theme} ; then \
 		if test -d ${theme_dir}/${euca_theme} ; then \
-			ln -sf ${theme_dir}/${euca_theme} ${theme_dir}/active;\
+			rm -f ${theme_dir}/active; \
+			ln -sf ${euca_theme} ${theme_dir}/active;\
 		else \
 			echo "Theme ${euca_theme} does not exists!"; exit 1;\
 		fi; fi
