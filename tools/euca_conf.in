@@ -663,7 +663,7 @@ if [ -n "$SETUP" ]; then
 	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/CC
 	let $((ret += $?))
 
-	return $ret
+	exit $ret
 fi
 
 # pre-flight checks
