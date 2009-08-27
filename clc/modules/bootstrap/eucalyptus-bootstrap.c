@@ -37,7 +37,7 @@
  *    limitations under the License.
  *
  ******************************************************************************
- * Author: Chris Grzegorczyk grze@eucalyptus.com
+ * Author: chris grzegorczyk grze@eucalyptus.com
  ******************************************************************************/
 #include "eucalyptus-bootstrap.h"
 

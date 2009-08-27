@@ -31,7 +31,7 @@
  ******************************************************************************/
 /*
  *
- * Author: Chris Grzegorczyk grze@cs.ucsb.edu
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
 package com.eucalyptus.ws.util;

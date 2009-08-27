@@ -32,7 +32,7 @@
 package edu.ucsb.eucalyptus.cloud.net;
 /*
  *
- * Author: Chris Grzegorczyk grze@cs.ucsb.edu
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
 

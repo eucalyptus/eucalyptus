@@ -29,6 +29,9 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
  ******************************************************************************/
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import org.hibernate.annotations.*;

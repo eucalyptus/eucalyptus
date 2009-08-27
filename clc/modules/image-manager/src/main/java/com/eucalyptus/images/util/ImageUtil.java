@@ -29,6 +29,9 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
  ******************************************************************************/
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
 package com.eucalyptus.images.util;
 
 import java.security.PublicKey;
@@ -77,7 +80,7 @@ public class ImageUtil {
       sigVerifier.verify( Hashes.hexToBytes( signature ) );
       ret = true;
     } catch ( Exception ex ) {
-      ImageManager.LOG.warn( ex.getMessage() );
+      LOG.warn( ex.getMessage() );
     }
     return ret;
   }

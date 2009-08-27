@@ -20,7 +20,7 @@
  *
  *
  ******************************************************************************
- * Author: Chris Grzegorczyk grze@eucalyptus.com
+ * Author: chris grzegorczyk grze@eucalyptus.com
  ******************************************************************************/
 #ifndef __EUCALYPTUS_BOOTSTRAP_H__
 #define __EUCALYPTUS_BOOTSTRAP_H__

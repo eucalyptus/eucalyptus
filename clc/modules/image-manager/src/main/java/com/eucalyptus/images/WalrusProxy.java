@@ -42,7 +42,11 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.ServiceBootstrapper;
@@ -107,7 +111,7 @@ public class WalrusProxy {
       reply = ( GetObjectResponseType ) ServiceProxy.lookup( Component.walrus, Component.walrus.name( ) ).send( msg );
     }
     catch ( Exception e ) {
-      throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName );
+      throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
     }
   
     Document inputSource = null;
@@ -116,7 +120,7 @@ public class WalrusProxy {
       inputSource = builder.parse( new ByteArrayInputStream( reply.getBase64Data().getBytes() ) );
     }
     catch ( Exception e ) {
-      throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName );
+      throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
     }
     return inputSource;
   }
@@ -124,7 +128,7 @@ public class WalrusProxy {
   public static GetBucketAccessControlPolicyResponseType getBucketAcl( RegisterImageType request, String[] imagePathParts ) throws EucalyptusCloudException {
     GetBucketAccessControlPolicyType getBukkitInfo = Admin.makeMsg( GetBucketAccessControlPolicyType.class, request );
     getBukkitInfo.setBucket( imagePathParts[ 0 ] );
-    GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) Messaging.send( WalrusProperties.WALRUS_REF, getBukkitInfo );
+    GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) ServiceProxy.lookup( Component.walrus, Component.walrus.name( ) ).send( getBukkitInfo );
     return reply;
   }
 
@@ -135,11 +139,11 @@ public class WalrusProxy {
     msg.setUserId( Component.eucalyptus.name() );
     msg.setEffectiveUserId( Component.eucalyptus.name() );
     try {
-      reply = ( GetObjectResponseType ) Messaging.send( WalrusProperties.WALRUS_REF, msg );
+      reply = ( GetObjectResponseType ) ServiceProxy.lookup( Component.walrus, Component.walrus.name( ) ).send( msg );
     } catch ( EucalyptusCloudException e ) {
       ImageManager.LOG.error( e );
       ImageManager.LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Invalid manifest reference: " + imgInfo.getImageLocation() );
+      throw new EucalyptusCloudException( "Invalid manifest reference: " + imgInfo.getImageLocation(), e );
     }
   
     if ( reply == null || reply.getBase64Data() == null ) throw new EucalyptusCloudException( "Invalid manifest reference: " + imgInfo.getImageLocation() );
@@ -150,12 +154,14 @@ public class WalrusProxy {
     String image = parser.getXML( "image" );
     String machineConfiguration = parser.getXML( "machine_configuration" );
   
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
     List<String> aliases = Lists.newArrayList();
-    List<UserInfo> users = db.query( new UserInfo() );
-    for ( UserInfo user : users )
-      for ( CertificateInfo certInfo : user.getCertificates() )
-        aliases.add( certInfo.getCertAlias() );
+    try {
+      for( X509Cert x : UserCredentialProvider.getUser( imgInfo.getImageOwnerId( ) ).getCertificates( ) ) {
+        aliases.add( x.getAlias( ) );
+      }
+    } catch ( NoSuchUserException e ) {
+      throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature because of missing (deleted?) user certificate.", e );
+    }
     boolean found = false;
     for ( String alias : aliases )
       found |= ImageUtil.verifyManifestSignature( signature, alias, machineConfiguration + image );
@@ -168,7 +174,7 @@ public class WalrusProxy {
       cipher.doFinal( Hashes.hexToBytes( encryptedKey ) );
       cipher.doFinal( Hashes.hexToBytes( encryptedIV ) );
     } catch ( Exception ex ) {
-      throw new EucalyptusCloudException( "Invalid Manifest: Failed to recover keys." );
+      throw new EucalyptusCloudException( "Invalid Manifest: Failed to recover keys.", ex );
     }
   }
 

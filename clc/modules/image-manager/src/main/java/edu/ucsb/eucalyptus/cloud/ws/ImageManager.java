@@ -31,7 +31,7 @@
  ******************************************************************************/
 /*
  *
- * Author: Chris Grzegorczyk grze@cs.ucsb.edu
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
 package edu.ucsb.eucalyptus.cloud.ws;
@@ -553,19 +553,20 @@ If you specify a list of executable users, only users that have launch permissio
     imageInfo.setSignature( signature );
 
 
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
-    try {
-      db.add( imageInfo );
-      UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId() ) );
-      UserGroupInfo group = db.recast( UserGroupInfo.class ).getUnique( new UserGroupInfo( "all" ) );
-      imageInfo.getPermissions().add( user );
-      imageInfo.getUserGroups().add( group );
-      db.commit();
-      LOG.info( "Registering image pk=" + imageInfo.getId() + " ownerId=" + user.getUserName() );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback();
-      throw e;
-    }
+//TODO: update this to use the new user.
+//    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
+//    try {
+//      db.add( imageInfo );
+//      UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId() ) );
+//      UserGroupInfo group = db.recast( UserGroupInfo.class ).getUnique( new UserGroupInfo( "all" ) );
+//      imageInfo.getPermissions().add( user );
+//      imageInfo.getUserGroups().add( group );
+//      db.commit();
+//      LOG.info( "Registering image pk=" + imageInfo.getId() + " ownerId=" + user.getUserName() );
+//    } catch ( EucalyptusCloudException e ) {
+//      db.rollback();
+//      throw e;
+//    }
 
     LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getId() );
     WalrusProxy.checkValid(imageInfo);

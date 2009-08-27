@@ -32,6 +32,9 @@
 /*
  */
 
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
 package com.eucalyptus.auth.util;
 
 import org.apache.log4j.Logger;

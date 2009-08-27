@@ -29,6 +29,9 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
  ******************************************************************************/
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.eucalyptus.bootstrap.Component;
@@ -467,7 +470,8 @@ public class SystemState {
     return new StateSnapshot( rules );
   }
 
-  //:: TODO: this is not right, cross package hackery ::/
+  //:: TODO: this is not right, cross 
+  //:: package hackery ::/
   public static Network getUserNetwork( String userId, String networkName ) throws EucalyptusCloudException {
     EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
     try {
