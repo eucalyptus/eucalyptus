@@ -99,8 +99,6 @@ public class BlockStorage {
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
 		startupChecks();
-		//if(!WalrusProperties.sharedMode)
-		//	BlockStorageChecker.checkWalrusConnection();
 	}
 
 	private static void configure() {
@@ -110,6 +108,7 @@ public class BlockStorage {
 		StorageProperties.iface = storageInfo.getStorageInterface();
 		StorageProperties.MAX_VOLUME_SIZE = storageInfo.getMaxVolumeSizeInGB();
 		StorageProperties.storageRootDirectory = storageInfo.getVolumesDir();
+		StorageProperties.zeroFillVolumes = storageInfo.getZeroFillVolumes();
 	}
 
 	private static StorageInfo getConfig() {
@@ -122,12 +121,37 @@ public class BlockStorage {
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
 					StorageProperties.iface, 
 					StorageProperties.MAX_VOLUME_SIZE, 
-					StorageProperties.storageRootDirectory);
+					StorageProperties.storageRootDirectory,
+					StorageProperties.zeroFillVolumes);
 			db.add(storageInfo);
 		} finally {
 			db.commit();
 		}
 		return storageInfo;
+	}
+
+	private static void updateConfig() {
+		EntityWrapper<StorageInfo> db = new EntityWrapper<StorageInfo>();
+		StorageInfo storageInfo;
+		try {
+			storageInfo = db.getUnique(new StorageInfo());
+			storageInfo.setName(StorageProperties.NAME);
+			storageInfo.setMaxTotalVolumeSizeInGb(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
+			storageInfo.setStorageInterface(StorageProperties.iface);
+			storageInfo.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
+			storageInfo.setVolumesDir(StorageProperties.storageRootDirectory);
+			storageInfo.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
+		} catch(EucalyptusCloudException ex) {
+			storageInfo = new StorageInfo(StorageProperties.NAME, 
+					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
+					StorageProperties.iface, 
+					StorageProperties.MAX_VOLUME_SIZE, 
+					StorageProperties.storageRootDirectory,
+					StorageProperties.zeroFillVolumes);
+			db.add(storageInfo);
+		} finally {
+			db.commit();
+		}
 	}
 
 	public BlockStorage() {}
@@ -192,7 +216,7 @@ public class BlockStorage {
 			StorageProperties.enableStorage = false;
 			LOG.error(ex);
 		}
-		getConfig();
+		updateConfig();
 		return reply;
 	}
 

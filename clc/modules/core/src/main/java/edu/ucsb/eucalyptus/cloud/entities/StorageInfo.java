@@ -26,7 +26,9 @@ StorageInfo {
 	private Integer maxVolumeSizeInGB;
 	@Column( name = "system_storage_volumes_dir" )
 	private String volumesDir;
-
+    @Column(name = "zero_fill_volumes")
+    private Boolean zeroFillVolumes;
+    
 	public StorageInfo(){}
 
 	public StorageInfo( final String name )
@@ -38,12 +40,14 @@ StorageInfo {
 			final Integer maxTotalVolumeSizeInGb,
 			final String storageInterface, 
 			final Integer maxVolumeSizeInGB,
-			final String volumesDir) {
+			final String volumesDir,
+			final Boolean zeroFillVolumes) {
 		this.name = name;
 		this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
 		this.storageInterface = storageInterface;
 		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
 		this.volumesDir = volumesDir;
+		this.zeroFillVolumes = zeroFillVolumes;
 	}
 
 	public Long getId()
@@ -89,6 +93,14 @@ StorageInfo {
 
 	public void setVolumesDir(String volumesDir) {
 		this.volumesDir = volumesDir;
+	}
+	
+	public Boolean getZeroFillVolumes() {
+		return zeroFillVolumes;
+	}
+
+	public void setZeroFillVolumes(Boolean zeroFillVolumes) {
+		this.zeroFillVolumes = zeroFillVolumes;
 	}
 
 	@Override

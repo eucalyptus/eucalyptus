@@ -76,7 +76,7 @@ public class WalrusControl {
 	}
 
 	public WalrusControl() {}
-	
+
 	private static void configure() {
 		WalrusInfo walrusInfo = getConfig();
 		WalrusProperties.NAME = walrusInfo.getName();
@@ -86,7 +86,7 @@ public class WalrusControl {
 		WalrusProperties.IMAGE_CACHE_SIZE = walrusInfo.getStorageMaxCacheSizeInMB() * WalrusProperties.M;
 		WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE = walrusInfo.getStorageMaxTotalSnapshotSizeInGb();
 	}
-	
+
 	private static WalrusInfo getConfig() {
 		EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>();
 		WalrusInfo walrusInfo;
@@ -105,7 +105,32 @@ public class WalrusControl {
 		}
 		return walrusInfo;
 	}
-	
+
+	private static void updateConfig() {
+		EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>();
+		WalrusInfo walrusInfo;
+		try {
+			walrusInfo = db.getUnique(new WalrusInfo());
+			walrusInfo.setName(WalrusProperties.NAME);
+			walrusInfo.setStorageDir(WalrusProperties.bucketRootDirectory);
+			walrusInfo.setStorageMaxBucketsPerUser(WalrusProperties.MAX_BUCKETS_PER_USER);
+			walrusInfo.setStorageMaxBucketSizeInMB((int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M));
+			walrusInfo.setStorageMaxCacheSizeInMB((int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M));
+			walrusInfo.setStorageMaxTotalSnapshotSizeInGb(WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
+		} catch(EucalyptusCloudException ex) {
+			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
+					WalrusProperties.bucketRootDirectory, 
+					WalrusProperties.MAX_BUCKETS_PER_USER, 
+					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
+					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
+					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
+			db.add(walrusInfo);
+		} finally {
+			db.commit();
+		}
+	}
+
+
 	public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) throws EucalyptusCloudException {
 		UpdateWalrusConfigurationResponseType reply = (UpdateWalrusConfigurationResponseType) request.getReply();
 		if(EucalyptusProperties.NAME.equals(request.getEffectiveUserId()))
@@ -131,7 +156,7 @@ public class WalrusControl {
 		if(totalSnapshotSize != null)
 			WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE = totalSnapshotSize;
 		walrusManager.check();
-		getConfig();
+		updateConfig();
 		return reply;
 	}
 
