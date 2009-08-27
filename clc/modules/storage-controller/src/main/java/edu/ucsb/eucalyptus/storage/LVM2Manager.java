@@ -615,6 +615,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			lvmVolumeInfo.setLoFileName(snapshotRawFileName);
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 			lvmVolumeInfo.setSize((int)(snapshotFile.length() / StorageProperties.GB));
+			lvmVolumeInfo.setVbladePid(-1);			
 			db.add(lvmVolumeInfo);
 			db.commit();			
 		} else {
@@ -694,7 +695,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
 
-			int pid = foundLVMVolumeInfo.getVbladePid();
+			Integer pid = foundLVMVolumeInfo.getVbladePid();
 			if(pid > 0) {
 				String returnValue = aoeStatus(pid);
 				if(returnValue.length() > 0) {

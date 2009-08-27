@@ -208,7 +208,7 @@ public class BlockStorage {
 		check();
 		//test connection to Walrus
 		if(!WalrusProperties.sharedMode)
-			BlockStorageChecker.checkWalrusConnection();
+			StorageProperties.updateWalrusUrl();
 		try {
 			blockManager.checkPreconditions();
 			StorageProperties.enableStorage = true;
@@ -297,7 +297,7 @@ public class BlockStorage {
 
 		if(!WalrusProperties.sharedMode) {
 			if(!StorageProperties.enableSnapshots || !StorageProperties.enableStorage) {
-				BlockStorageChecker.checkWalrusConnection();
+				StorageProperties.updateWalrusUrl();
 				if(!StorageProperties.enableSnapshots)
 					LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
 				return reply;
@@ -399,7 +399,7 @@ public class BlockStorage {
 
 		if(!WalrusProperties.sharedMode) {
 			if(!StorageProperties.enableSnapshots || !StorageProperties.enableStorage) {
-				BlockStorageChecker.checkWalrusConnection();
+				StorageProperties.updateWalrusUrl();
 				if(!StorageProperties.enableSnapshots)
 					LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
 				return reply;
@@ -612,8 +612,11 @@ public class BlockStorage {
 
 	private String getSnapshot(String snapshotId) throws EucalyptusCloudException {
 		if(!StorageProperties.enableSnapshots) {
-			LOG.error("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url");
-			throw new EucalyptusCloudException("could not connect to Walrus.");
+			StorageProperties.updateWalrusUrl();
+			if(!StorageProperties.enableSnapshots) {
+				LOG.error("Snapshot functionality disabled. Please check the Walrus url");
+				throw new EucalyptusCloudException("could not connect to Walrus.");
+			}
 		}
 		String snapshotLocation = "snapshots" + "/" + snapshotId;
 		String absoluteSnapshotPath = StorageProperties.storageRootDirectory + "/" + snapshotId;
@@ -1137,10 +1140,10 @@ public class BlockStorage {
 				int bytesRead;
 				BufferedOutputStream bufferedOut = new BufferedOutputStream(new FileOutputStream(compressedFile));
 				while((bytesRead = httpIn.read(bytes)) > 0) {
-						bufferedOut.write(bytes, 0, bytesRead);
+					bufferedOut.write(bytes, 0, bytesRead);
 				}
 				bufferedOut.close();
-				
+
 				if(compressed) {
 					SystemUtil.run(new String[]{"/bin/gunzip", compressedFile.getAbsolutePath()});
 				}

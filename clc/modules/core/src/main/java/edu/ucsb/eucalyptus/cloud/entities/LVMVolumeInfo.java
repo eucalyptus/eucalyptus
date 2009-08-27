@@ -142,7 +142,7 @@ public class LVMVolumeInfo {
     }
 
     public Integer getVbladePid() {
-        return vbladePid;
+        return vbladePid != null? vbladePid : -1;
     }
 
     public void setVbladePid(Integer vbladePid) {
