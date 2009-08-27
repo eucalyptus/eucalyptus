@@ -31,7 +31,7 @@ themes:
 		rm -f ${theme_dir}/active; \
 		ln -sf eucalyptus ${theme_dir}/active; \
 	fi
-	@if test ! -e ${prop_web_dir}//eucalyptus-web.properties ; then \
+	@if test ! -e ${prop_web_dir}/eucalyptus-web.properties ; then \
 		$(MAKE) update_properties; fi
 	@if test "`grep '^extensions' ${web_prop_dir}/eucalyptus-web.properties | sed 's/extensions =[[:blank:]]*//'` != '${extensions}'" > /dev/null ; then $(MAKE) update_properties; fi
 
