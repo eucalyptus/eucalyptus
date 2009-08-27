@@ -538,9 +538,7 @@ public class BlockStorage {
 					SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 					List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
 					if(foundSnapshotInfos.size() == 0) {
-						//String volumePath = getVolume(volumeId, snapshotSetName, snapshotId);
 						String snapshotPath = getSnapshot(snapshotId);
-						blockManager.addSnapshot(snapshotId);
 						size = blockManager.createVolume(volumeId, snapshotId);
 						db.commit();
 					} else {
@@ -612,29 +610,7 @@ public class BlockStorage {
 		}
 	}
 
-	private String getVolume(String volumeId, String snapshotBucket, String snapshotId) throws EucalyptusCloudException {
-		BlockStorageChecker.checkWalrusConnection();
-		if(!StorageProperties.enableSnapshots) {
-			LOG.error("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url");
-			throw new EucalyptusCloudException("could not connect to Walrus.");
-		}
-		String walrusSnapshotPath = snapshotBucket + "/" + snapshotId;
-		String volumePath = StorageProperties.storageRootDirectory + "/" + volumeId + Hashes.getRandom(10);
-		File file = new File(volumePath);
-		if(!file.exists()) {
-			HttpReader volumeReader = new HttpReader(walrusSnapshotPath, null, file, "GetWalrusSnapshot", "", true);
-			volumeReader.run();
-		} else {
-			throw new EucalyptusCloudException("volume file already exists");
-		}
-		if(file.length() == 0) {
-			throw new EucalyptusCloudException("could not get volume");
-		}
-		return volumePath;
-	}
-
 	private String getSnapshot(String snapshotId) throws EucalyptusCloudException {
-		BlockStorageChecker.checkWalrusConnection();
 		if(!StorageProperties.enableSnapshots) {
 			LOG.error("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url");
 			throw new EucalyptusCloudException("could not connect to Walrus.");
@@ -650,14 +626,14 @@ public class BlockStorage {
 		snapshotGetter.run();
 		int snapshotSize = (int)(file.length() / StorageProperties.GB);
 		if(snapshotSize == 0) {
-			throw new EucalyptusCloudException("could not get snapshot");
+			throw new EucalyptusCloudException("could not get snapshot: " + snapshotId);
 		} 
 		EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 		snapshotInfo.setProgress("100");
 		snapshotInfo.setStartTime(new Date());
 		snapshotInfo.setStatus(StorageProperties.Status.available.toString());
-		//add it to the block manager
+		blockManager.addSnapshot(snapshotId);
 		return absoluteSnapshotPath;
 	}
 
@@ -1153,21 +1129,21 @@ public class BlockStorage {
 		private void getResponseToFile() {
 			byte[] bytes = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
 			try {
+				File compressedFile = new File(file.getAbsolutePath() + ".gz");				
 				assert(method != null);
 				httpClient.executeMethod(method);
 				InputStream httpIn;
-				if(compressed) {
-					httpIn = new GZIPInputStream(method.getResponseBodyAsStream());
-				} else {
-					httpIn = method.getResponseBodyAsStream();
-				}
+				httpIn = method.getResponseBodyAsStream();
 				int bytesRead;
-				BufferedOutputStream bufferedOut = new BufferedOutputStream(new FileOutputStream(file));
+				BufferedOutputStream bufferedOut = new BufferedOutputStream(new FileOutputStream(compressedFile));
 				while((bytesRead = httpIn.read(bytes)) > 0) {
-					bufferedOut.write(bytes, 0, bytesRead);
+						bufferedOut.write(bytes, 0, bytesRead);
 				}
-
 				bufferedOut.close();
+				
+				if(compressed) {
+					SystemUtil.run(new String[]{"/bin/gunzip", compressedFile.getAbsolutePath()});
+				}
 				method.releaseConnection();
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
@@ -1175,7 +1151,7 @@ public class BlockStorage {
 		}
 
 		private void getResponseToQueue() {
-			byte[] bytes = new byte[102400/*TODO: NEIL WalrusQueryDispatcher.DATA_MESSAGE_SIZE*/];
+			byte[] bytes = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
 			try {
 				httpClient.executeMethod(method);
 				InputStream httpIn = method.getResponseBodyAsStream();

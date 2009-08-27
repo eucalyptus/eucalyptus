@@ -551,47 +551,6 @@ public class LVM2Manager implements LogicalStorageManager {
 		db.commit();
 	}
 
-	/*public int createVolume(String volumeId, String volumePath) throws EucalyptusCloudException {
-		File volumeDir = new File(StorageProperties.storageRootDirectory);
-		volumeDir.mkdirs();
-
-		String vgName = "vg-" + Hashes.getRandom(4);
-		String lvName = "lv-" + Hashes.getRandom(4);
-		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo();
-		File dataFile = new File(volumePath);
-		int size = (int)((dataFile.length() + LVM_HEADER_LENGTH) / StorageProperties.GB);
-		//create file and attach to loopback device
-		String rawFileName = StorageProperties.storageRootDirectory + "/" + volumeId;
-
-		String loDevName = createLoopback(rawFileName, size);
-		//create physical volume, volume group and logical volume
-		createLogicalVolume(loDevName, vgName, lvName);
-		String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-		//copy it
-		duplicateLogicalVolume(volumePath, absoluteLVName);
-		//export logical volume
-		int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
-		if(vbladePid < 0) {
-			throw new EucalyptusCloudException();
-		}
-
-		if(dataFile.exists()) {
-			dataFile.delete();
-		}
-		lvmVolumeInfo.setVolumeId(volumeId);
-		lvmVolumeInfo.setLoDevName(loDevName);
-		lvmVolumeInfo.setPvName(loDevName);
-		lvmVolumeInfo.setVgName(vgName);
-		lvmVolumeInfo.setLvName(lvName);
-		lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-		lvmVolumeInfo.setSize(size);
-
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
-		db.add(lvmVolumeInfo);
-		db.commit();
-		return size;
-	}*/
-
 	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException {
 		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);

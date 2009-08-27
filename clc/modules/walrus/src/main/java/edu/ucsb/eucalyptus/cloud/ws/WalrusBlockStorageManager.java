@@ -198,6 +198,7 @@ public class WalrusBlockStorageManager {
 			getObjectType.setUserId(request.getUserId());
 			getObjectType.setEffectiveUserId(request.getEffectiveUserId());
 			getObjectType.setKey(snapshotId);
+			getObjectType.setChannel(request.getChannel());
 			getObjectType.setDeleteAfterGet(false);
 			getObjectType.setGetData(true);
 			getObjectType.setInlineData(false);
