@@ -6,7 +6,7 @@ include ../Makedefs
 theme_dir	= ${TOP}/clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes
 web_prop_dir	= ${TOP}/clc/modules/www/conf
 
-.PHONY: all build update_properties update_theme deps themes install
+.PHONY: all build update_properties update_theme deps extras install
 
 all: build
 
@@ -15,27 +15,39 @@ deps:
 
 update_properties:
 	@sed "s/\(^extensions =\).*/\1 ${extensions}/" < ${web_prop_dir}/eucalyptus-web-default.properties > ${web_prop_dir}/eucalyptus-web.properties
+	@echo "Copied defaults to ${web_prop_dir}/eucalyptus-web.properties"
 
 update_theme:
 	@if test -d ${theme_dir}/${euca_theme} ; then \
-		rm -f ${theme_dir}/active; \
-		ln -sf ${euca_theme} ${theme_dir}/active; \
+		if [ "`readlink ${theme_dir}/active`" != "${euca_theme}" ] ; then \
+			echo "Making '${euca_theme}' the active theme" ; \
+			rm -f ${theme_dir}/active ; \
+			ln -sf ${euca_theme} ${theme_dir}/active ; \
+		fi \
 	else \
-		echo "Theme ${euca_theme} does not exists!"; exit 1; \
+		echo "Theme ${theme_dir}/${euca_theme} is not found!"; exit 1; \
 	fi \
 
-themes:
+extras:
 	@if test -n "${euca_theme}" ; then \
 		$(MAKE) update_theme; \
 	else \
-		rm -f ${theme_dir}/active; \
-		ln -sf eucalyptus ${theme_dir}/active; \
+		if [ "`readlink ${theme_dir}/active`" != "eucalyptus" ] ; then \
+			echo "Making 'eucalyptus' the active theme" ; \
+			rm -f ${theme_dir}/active ; \
+			ln -sf eucalyptus ${theme_dir}/active ; \
+		fi \
 	fi
-	@if test ! -e ${prop_web_dir}/eucalyptus-web.properties ; then \
-		$(MAKE) update_properties; fi
-	@if test "`grep '^extensions' ${web_prop_dir}/eucalyptus-web.properties | sed 's/extensions =[[:blank:]]*//'` != '${extensions}'" > /dev/null ; then $(MAKE) update_properties; fi
+	@if test ! -e ${web_prop_dir}/eucalyptus-web.properties ; then \
+		$(MAKE) update_properties; \
+	fi
+	@if [ "`grep '^extensions' ${web_prop_dir}/eucalyptus-web.properties | sed 's/extensions =[[:blank:]]*//'`" != "${extensions}" ] ; then \
+		$(MAKE) update_properties; \
+	fi
 
-build: themes
+
+
+build: extras
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
