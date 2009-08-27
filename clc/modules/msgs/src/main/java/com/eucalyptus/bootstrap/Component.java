@@ -57,6 +57,7 @@ public enum Component {
   private boolean enabled = false;
   private boolean hasKeys = false;
   private String hostAddress;
+  private int port = 8773;
   private String localUri;
   private URI uri;
   private String propertyKey;
@@ -68,7 +69,7 @@ public enum Component {
   }
   private Component(String uri) {
     this();
-    this.hostAddress = "localhost";
+    this.hostAddress = "127.0.0.1";
     this.localUri = uri;
     this.setUri(uri);
   }
@@ -143,7 +144,7 @@ public enum Component {
     if( Component.db.equals( this ) ) {
       return address;
     } else {
-      return "euca:http://" + address + "/services/" + this.localUri.replaceAll( "vm://", "" );
+      return "http://" + address + ":" + this.getPort( ) + "/internal/" + this.localUri.replaceAll( "vm://", "" );
     }
   }
   
@@ -162,6 +163,12 @@ public enum Component {
       System.setProperty( this.propertyKey, this.localUri );
       if( LOG != null ) LOG.info( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.localUri ) );
     }
+  }
+  public int getPort( ) {
+    return port;
+  }
+  public void setPort( int port ) {
+    this.port = port;
   }
   
   

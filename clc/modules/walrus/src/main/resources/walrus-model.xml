@@ -121,6 +121,7 @@
         <service name="BukkitInternal">
             <inbound>
                 <inbound-endpoint ref="BukkitInternalWS"/>
+                <inbound-endpoint ref="BukkitInternalVM"/>
             </inbound>
             <component class="edu.ucsb.eucalyptus.cloud.ws.WalrusControl"/>
         </service>

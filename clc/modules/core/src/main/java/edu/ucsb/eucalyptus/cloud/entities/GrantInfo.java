@@ -44,9 +44,13 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import edu.ucsb.eucalyptus.util.UserManagement;
 
 import javax.persistence.*;
+
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.UserCredentialProvider;
 
 @Entity
 @Table( name = "Grants" )
@@ -159,7 +163,11 @@ public class GrantInfo {
                         String id = grantee.getCanonicalUser().getID();
                         if(id == null || id.length() == 0)
                             continue;
-                        displayName = UserManagement.getUserName(id);
+                        try {
+                          displayName = UserCredentialProvider.getUserName( id );
+                        } catch ( GeneralSecurityException e ) {
+                          LOG.warn(e,e);
+                        }
 			if(displayName == null)
 			    continue;
                     }

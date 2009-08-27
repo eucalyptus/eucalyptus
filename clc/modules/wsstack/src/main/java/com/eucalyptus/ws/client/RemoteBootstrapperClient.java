@@ -162,6 +162,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
           channel = channelFuture.getChannel( );
           channelWriteFuture = channelFuture.getChannel( ).write( httpRequest );
           channelWriteFuture.addListener( ChannelFutureListener.CLOSE );
+          LOG.info( "Sending configuration info to: " + channel.getRemoteAddress( ) );
         } else {
           if( channelFuture != null ) {
             LOG.warn( "Failed to connect to heartbeat service at " + remoteAddr + ": " + channelFuture.getCause( ).getMessage( ) );
@@ -223,7 +224,6 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
     httpRequest.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
     httpRequest.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );
     httpRequest.setContent( buffer );
-    LOG.info( "Sending configuration info to walrus at: " + w.getHostName( ) );
     hb.write( httpRequest );
   }
   

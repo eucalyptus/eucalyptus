@@ -41,6 +41,7 @@ import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleMessage;
+import org.mule.api.registry.Registry;
 import org.mule.module.client.MuleClient;
 
 import com.eucalyptus.bootstrap.Component;
@@ -60,7 +61,9 @@ public class ServiceProxy {
   private URI           address;
 
   public static ServiceProxy lookup( Component component, String name) {
-    return (ServiceProxy) ServiceBootstrapper.getRegistry( ).lookupObject( component.name( ) + "/" + name );
+    Registry registry = ServiceBootstrapper.getRegistry( );
+    String key = component.name( ) + "/" + name ;
+    return (ServiceProxy) registry.lookupObject( key );
   }
   
   private static MuleClient getMuleClient( ) throws Exception {

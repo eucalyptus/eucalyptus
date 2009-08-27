@@ -1,33 +1,33 @@
 /*******************************************************************************
-*Copyright (c) 2009  Eucalyptus Systems, Inc.
-* 
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, only version 3 of the License.
-* 
-* 
-*  This file is distributed in the hope that it will be useful, but WITHOUT
-*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-*  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-*  for more details.
-* 
-*  You should have received a copy of the GNU General Public License along
-*  with this program.  If not, see <http://www.gnu.org/licenses/>.
-* 
-*  Please contact Eucalyptus Systems, Inc., 130 Castilian
-*  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
-*  if you need additional information or have any questions.
-* 
-*  This file may incorporate work covered under the following copyright and
-*  permission notice:
-* 
-*    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-*    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-*    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-*    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-*    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-*    ANY SUCH LICENSES OR RIGHTS.
+ *Copyright (c) 2009 Eucalyptus Systems, Inc.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ * This file is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ * for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Please contact Eucalyptus Systems, Inc., 130 Castilian
+ * Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ * if you need additional information or have any questions.
+ * 
+ * This file may incorporate work covered under the following copyright and
+ * permission notice:
+ * 
+ * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ * ANY SUCH LICENSES OR RIGHTS.
  ******************************************************************************/
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
@@ -52,12 +52,12 @@ import com.eucalyptus.bootstrap.Resource;
 import com.eucalyptus.util.EucalyptusProperties;
 
 @Provides( resource = Resource.SystemCredentials )
-@Depends(local = Component.eucalyptus)
+@Depends( local = Component.eucalyptus )
 public class SystemCredentialProvider extends Bootstrapper {
-  private static Logger LOG = Logger.getLogger( SystemCredentialProvider.class );
-  private static ConcurrentMap<Component, X509Certificate> certs     = new ConcurrentHashMap<Component, X509Certificate>( );
-  private static ConcurrentMap<Component, KeyPair>         keypairs  = new ConcurrentHashMap<Component, KeyPair>( );
-  private Component name;
+  private static Logger                                    LOG      = Logger.getLogger( SystemCredentialProvider.class );
+  private static ConcurrentMap<Component, X509Certificate> certs    = new ConcurrentHashMap<Component, X509Certificate>( );
+  private static ConcurrentMap<Component, KeyPair>         keypairs = new ConcurrentHashMap<Component, KeyPair>( );
+  private Component                                        name;
 
   public SystemCredentialProvider( ) {
   }
@@ -65,7 +65,7 @@ public class SystemCredentialProvider extends Bootstrapper {
   private SystemCredentialProvider( Component name ) {
     this.name = name;
   }
-  
+
   public static SystemCredentialProvider getCredentialProvider( Component name ) {
     return new SystemCredentialProvider( name );
   }
@@ -91,6 +91,7 @@ public class SystemCredentialProvider extends Bootstrapper {
       try {
         SystemCredentialProvider.certs.put( this.name, EucaKeyStore.getInstance( ).getCertificate( this.name.name( ) ) );
         SystemCredentialProvider.keypairs.put( this.name, EucaKeyStore.getInstance( ).getKeyPair( this.name.name( ), this.name.name( ) ) );
+        return;
       } catch ( Exception e ) {
         SystemCredentialProvider.certs.remove( this );
         SystemCredentialProvider.keypairs.remove( this );
@@ -98,17 +99,17 @@ public class SystemCredentialProvider extends Bootstrapper {
         LOG.fatal( e, e );
         throw e;
       }
-    } else {
-      if( Component.eucalyptus.isLocal( ) ) {
-        this.createSystemCredentialProviderKey( this.name );
-      }
+    } else if ( Component.eucalyptus.isLocal( ) ) {
+      this.createSystemCredentialProviderKey( this.name );
+      return;
     }
+    throw new RuntimeException( "Failed to load credentials because of an unknown error." );
   }
 
   static boolean checkKeystore( Component name ) throws Exception {
     return EucaKeyStore.getCleanInstance( ).containsEntry( name.name( ) );
   }
-  
+
   static boolean check( Component name ) {
     return ( SystemCredentialProvider.keypairs.containsKey( name.name( ) ) && SystemCredentialProvider.certs.containsKey( name.name( ) ) ) && EucaKeyStore.getInstance( ).containsEntry( name.name( ) );
   }
@@ -129,7 +130,7 @@ public class SystemCredentialProvider extends Bootstrapper {
       X509Certificate sysX509 = keyTool.getCertificate( sysKp, EucalyptusProperties.getDName( name.name( ) ) );
       SystemCredentialProvider.certs.put( name, sysX509 );
       SystemCredentialProvider.keypairs.put( name, sysKp );
-      //TODO: might need separate keystore for euca/hsqldb/ssl/jetty/etc.
+      // TODO: might need separate keystore for euca/hsqldb/ssl/jetty/etc.
       EucaKeyStore.getInstance( ).addKeyPair( name.name( ), sysX509, sysKp.getPrivate( ), name.name( ) );
       EucaKeyStore.getInstance( ).store( );
     } catch ( Exception e ) {
@@ -153,7 +154,7 @@ public class SystemCredentialProvider extends Bootstrapper {
         }
       }
     } catch ( Exception e ) {
-      LOG.error(e,e);
+      LOG.error( e, e );
     }
     return true;
   }
@@ -163,4 +164,3 @@ public class SystemCredentialProvider extends Bootstrapper {
     return true;
   }
 }
-

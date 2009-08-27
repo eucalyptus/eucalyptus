@@ -51,21 +51,17 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   @Override
   public boolean load( Resource current ) throws Exception {
     Credentials.init( );
-    while ( true ) {
-      if ( this.checkAllKeys( ) ) {
-        for ( Component c : Component.values( ) ) {
-          LOG.info( "Initializing system credentials for " + c.name( ) );
-          SystemCredentialProvider.init( c );
-          c.markHasKeys( );
-        }
-        break;
-      } else {
-        LOG.fatal( "Waiting for system credentials before proceeding with startup..." );
-        try {
-          Thread.sleep( 2000 );
-        } catch ( Exception e ) {
-        }
+    while ( !this.checkAllKeys( ) ) {
+      LOG.fatal( "Waiting for system credentials before proceeding with startup..." );
+      try {
+        Thread.sleep( 2000 );
+      } catch ( Exception e ) {
       }
+    }
+    for ( Component c : Component.values( ) ) {
+      LOG.info( "Initializing system credentials for " + c.name( ) );
+      SystemCredentialProvider.init( c );
+      c.markHasKeys( );
     }
     return true;
   }

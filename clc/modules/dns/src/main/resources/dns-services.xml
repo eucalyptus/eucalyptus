@@ -77,9 +77,12 @@
     <euca:endpoint name="DNSWS"
                    connector-ref="eucaws"
                    address="http://127.0.0.1:8773/services/DNS"/>
+    <euca:endpoint name="DNSControlInternalWS"
+                   connector-ref="eucaws"
+                   address="http://127.0.0.1:8773/internal/DNSControlInternal" synchronous="true"/>
 
     <endpoint name="DNSControlWS" address="vm://DNSControl" synchronous="false"/>
-    <endpoint name="DNSControlInternalWS" address="${euca.dns.host}" synchronous="true"/>
+    <endpoint name="DNSControlInternalVM" address="vm://DNSControlInternal" synchronous="true"/>
     <endpoint name="DNSReplyQueueWS" address="vm://DNSReplyQueue" synchronous="false"/>
 
 </mule>

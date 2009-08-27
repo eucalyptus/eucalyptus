@@ -68,7 +68,10 @@ public class EucaKeyStore extends AbstractKeyStore {
   }
 
   public static AbstractKeyStore getCleanInstance( ) throws Exception {
-    return new EucaKeyStore( );
+    synchronized ( EucaKeyStore.class ) {
+      singleton = new EucaKeyStore( );      
+    }
+    return singleton;
   }
 
   

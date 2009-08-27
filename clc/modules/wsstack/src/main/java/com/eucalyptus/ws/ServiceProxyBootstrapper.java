@@ -53,6 +53,7 @@ import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.client.ServiceProxy;
 
 @Provides(resource=Resource.RemoteServices)
@@ -61,18 +62,21 @@ public class ServiceProxyBootstrapper extends Bootstrapper {
   
   @Override
   public boolean load( Resource current ) throws Exception {
+    for( Component v : Component.values( ) ) {
+      LOG.trace("Ensure component is initialized: " + v );
+    }
     if( !Component.walrus.isLocal( ) ) {
       List<WalrusConfiguration> walri = Configuration.getWalrusConfigurations( );
       for( WalrusConfiguration w : walri ) {
         Component.walrus.setHostAddress( w.getHostName( ) );
       }
     }
-    if( !Component.eucalyptus.isLocal( ) ) {
+    if( !Component.db.isLocal( ) ) {
       Component.eucalyptus.setHostAddress( Component.db.getHostAddress( ) );
       Component.jetty.setHostAddress( Component.db.getHostAddress( ) );
       Component.clusters.setHostAddress( Component.db.getHostAddress( ) );
     }
-    return false;
+    return true;
   }
 
 
@@ -84,21 +88,23 @@ public class ServiceProxyBootstrapper extends Bootstrapper {
       List<WalrusConfiguration> walri = Configuration.getWalrusConfigurations( );
       for( WalrusConfiguration w : walri ) {
         try {
+          if( NetworkUtil.testLocal( w.getHostName( ) )) continue;
           registerComponent( Component.walrus, w );
         } catch ( Exception e ) {
           LOG.error( "Failed to create walrus service proxy: " + e );
         }
       }
-      if( Component.walrus.isLocal( ) ) {
-        registerLocalComponent( Component.walrus );
-      }
       List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
       for( StorageControllerConfiguration sc : scs ) {
         try {
+          if( NetworkUtil.testLocal( sc.getHostName( ) )) continue;
           registerComponent( Component.storage, sc );
         } catch ( Exception e ) {
           LOG.error( "Failed to create storage controller "+sc.getName( )+" service proxy: " + e );
         }
+      }
+      if( Component.walrus.isLocal( ) ) {
+        registerLocalComponent( Component.storage );
       }
       if( Component.storage.isLocal( ) ) {
         registerLocalComponent( Component.storage );
@@ -122,7 +128,7 @@ public class ServiceProxyBootstrapper extends Bootstrapper {
     }
     private void registerComponent( Component component, ComponentConfiguration componentConfiguration ) throws Exception {
       Registry registry = ServiceBootstrapper.getRegistry( );
-      URI uri = new URI( "http://"+ componentConfiguration.getHostName( ) + ":" + componentConfiguration.getPort( ) + componentConfiguration.getServicePath( ) );
+      URI uri = new URI(component.makeUri( componentConfiguration.getHostName( ) ));
       String keyPrefix = component.name( ) + "/";
       registry.registerObject( keyPrefix + componentConfiguration.getName( ), new ServiceProxy( component, componentConfiguration.getName( ), uri ) );
       LOG.info( "Registering service proxy for " + componentConfiguration.getName( ) + " at " + uri.toASCIIString( ) );

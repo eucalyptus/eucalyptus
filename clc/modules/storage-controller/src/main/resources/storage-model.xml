@@ -121,6 +121,7 @@
         <service name="StorageInternal">
             <inbound>
                 <inbound-endpoint ref="StorageInternalWS"/>
+                <inbound-endpoint ref="StorageInternalVM"/>
             </inbound>
             <component class="edu.ucsb.eucalyptus.cloud.ws.BlockStorage"/>
         </service>        
