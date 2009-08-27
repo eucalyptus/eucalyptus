@@ -38,7 +38,7 @@ public class ImageStoreServiceImpl extends RemoteServiceServlet
         try {
             user = EucalyptusWebBackendImpl.getUserRecord (sessionId);
         } catch (Exception e) {
-            return errorJSON("Session authentication error:" + e.getMessage());
+            return errorJSON("Session authentication error: " + e.getMessage());
         }
 
         NameValuePair[] finalParams;
@@ -67,9 +67,9 @@ public class ImageStoreServiceImpl extends RemoteServiceServlet
             int statusCode = client.executeMethod(httpMethod);
             return httpMethod.getResponseBodyAsString();
         } catch (HttpException e) {
-            return errorJSON("Protocol error:" + e.getMessage());
+            return errorJSON("Protocol error: " + e.getMessage());
         } catch (IOException e) {
-            return errorJSON("Proxy error:" + e.getMessage());
+            return errorJSON("Proxy error: " + e.getMessage());
         } finally {
             httpMethod.releaseConnection();
         }

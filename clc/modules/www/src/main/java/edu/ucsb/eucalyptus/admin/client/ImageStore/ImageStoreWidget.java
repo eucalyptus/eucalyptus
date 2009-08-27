@@ -103,6 +103,9 @@ public class ImageStoreWidget extends Composite {
         if (!errorOnUserAction || updateRequestedByUser) {
             if (errorMessage != null) {
                 errorOnUserAction = updateRequestedByUser;
+                if (errorMessage.equalsIgnoreCase("Proxy error: Connection refused")) {
+                    errorMessage = "Error: failed to connect to local store proxy.  Is it installed?";
+                }
                 errorLabel.setText(errorMessage);
                 errorLabel.setVisible(true);
             } else {
