@@ -2,6 +2,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -67,7 +68,7 @@ class ClusterAllocator extends Thread {
           vm.getNetParams().setIgnoredPublicIp( addr );
           AssociateAddressType msg = new AssociateAddressType( addr, vm.getInstanceId() );
           msg.setUserId( vm.getOwnerId() );
-          msg.setEffectiveUserId( EucalyptusProperties.NAME );
+          msg.setEffectiveUserId( Component.eucalyptus.name() );
           new AddressManager().AssociateAddress( msg );
         } catch ( Exception e ) {
           LOG.error( e );
@@ -105,7 +106,7 @@ class ClusterAllocator extends Thread {
           LOG.debug( otherNetwork );
           ConfigureNetworkType msg = new ConfigureNetworkType( otherNetwork.getRules() );
           msg.setUserId( otherNetwork.getUserName() );
-          msg.setEffectiveUserId( EucalyptusProperties.NAME );
+          msg.setEffectiveUserId( Component.eucalyptus.name() );
           this.msgMap.put( State.CREATE_NETWORK_RULES, new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(this.cluster.getConfiguration( )), msg ) );
         }
       }

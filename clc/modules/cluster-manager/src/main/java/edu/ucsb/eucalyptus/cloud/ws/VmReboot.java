@@ -7,6 +7,7 @@ import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -61,7 +62,7 @@ public class VmReboot extends RebootInstancesType implements Cloneable {
           if ( rebootMap.get( vm.getPlacement() ) == null )
           {
             RebootInstancesType request = new RebootInstancesType();
-            request.setUserId( this.isAdmin ? EucalyptusProperties.NAME : this.getUserId() );
+            request.setUserId( this.isAdmin ? Component.eucalyptus.name() : this.getUserId() );
             rebootMap.put( vm.getPlacement(), request );
           }
           rebootMap.get( vm.getPlacement() ).getInstancesSet().add( vm.getInstanceId() );

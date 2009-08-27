@@ -40,6 +40,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusProperties;
 
@@ -99,7 +100,7 @@ public class Counters {
     if ( tempId < 0 )
     {
       Counters find = null;
-      EntityManager em = EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME).createEntityManager(  );
+      EntityManager em = EntityWrapper.getEntityManagerFactory( Component.eucalyptus.name( ) ).createEntityManager(  );
       Session session = (Session) em.getDelegate();
       List<Counters> found = ( List<Counters> ) session.createSQLQuery( "select * from counters" ).addEntity( Counters.class ).list();
       if( found.isEmpty() )
@@ -119,7 +120,7 @@ public class Counters {
     }
     else if ( tempId % modulus == 0 )
     {
-      EntityManager em = EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME).createEntityManager(  );
+      EntityManager em = EntityWrapper.getEntityManagerFactory( Component.eucalyptus.name( )).createEntityManager(  );
       Session session = (Session) em.getDelegate();
       Transaction tx = session.beginTransaction();
       tx.begin();

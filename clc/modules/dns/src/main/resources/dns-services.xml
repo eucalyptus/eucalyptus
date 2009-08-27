@@ -49,7 +49,7 @@
                    address="http://127.0.0.1:8773/services/DNS"/>
 
     <endpoint name="DNSControlWS" address="vm://DNSControl" synchronous="false"/>
-    <endpoint name="DNSControlInternalWS" address="vm://DNSControlInternal" synchronous="true"/>
+    <endpoint name="DNSControlInternalWS" address="${euca.dns.host}" synchronous="true"/>
     <endpoint name="DNSReplyQueueWS" address="vm://DNSReplyQueue" synchronous="false"/>
 
 </mule>

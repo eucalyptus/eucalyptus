@@ -20,6 +20,7 @@ import org.mortbay.jetty.security.Credential;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.BaseDirectory;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -40,7 +41,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 public class StartupChecks {
 
   private static String _KS_FORMAT     = "bks";
-  private static String _KS_PASS       = EucalyptusProperties.NAME;
+  private static String _KS_PASS       = Component.eucalyptus.name( );
   private static String _USER_KS       = BaseDirectory.CONF.toString( ) + File.separator + "users." + _KS_FORMAT.toLowerCase( );
   private static Logger LOG            = Logger.getLogger( StartupChecks.class );
   private static String HEADER_FSTRING = "=================================:: %-20s ::=================================";
@@ -49,8 +50,8 @@ public class StartupChecks {
   private static void fail( String... error ) {
     for ( String s : error )
       LOG.fatal( s );
-    if ( EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME ).isOpen( ) ) {
-      EntityWrapper.getEntityManagerFactory( EucalyptusProperties.NAME ).close( );
+    if ( EntityWrapper.getEntityManagerFactory( Component.eucalyptus.name( ) ).isOpen( ) ) {
+      EntityWrapper.getEntityManagerFactory( Component.eucalyptus.name( ) ).close( );
     }
     SystemUtil.shutdownWithError( String.format( HEADER_FSTRING, "STARTUP FAILURE" ) );
   }

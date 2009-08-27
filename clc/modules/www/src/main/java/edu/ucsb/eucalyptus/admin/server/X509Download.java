@@ -31,11 +31,13 @@ package edu.ucsb.eucalyptus.admin.server;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.KeyTool;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
@@ -142,7 +144,7 @@ public class X509Download extends HttpServlet {
     try {
       x509.checkValidity( );
       UserCredentialProvider.addCertificate( userName, newKeyName, x509 );
-      cloudCert = EucaKeyStore.getInstance( ).getCertificate( EucalyptusProperties.NAME );
+      cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
     } catch ( GeneralSecurityException e ) {
       LOG.fatal( e, e );
     }

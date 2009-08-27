@@ -16,6 +16,7 @@ public class Snapshot extends AbstractIsomorph {
   private Long id = -1l;
 
   private String parentVolume;
+  private String cluster;
 
   public Snapshot() {
     super();
@@ -81,5 +82,13 @@ public class Snapshot extends AbstractIsomorph {
 
   public void setParentVolume( final String parentVolume ) {
     this.parentVolume = parentVolume;
+  }
+
+  public String getCluster( ) {
+    return cluster;
+  }
+
+  public void setCluster( String cluster ) {
+    this.cluster = cluster;
   }
 }

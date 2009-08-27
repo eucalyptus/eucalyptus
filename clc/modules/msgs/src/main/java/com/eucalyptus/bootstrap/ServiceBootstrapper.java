@@ -3,8 +3,10 @@ package com.eucalyptus.bootstrap;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.mule.RegistryContext;
 import org.mule.api.MuleContext;
 import org.mule.api.context.MuleContextFactory;
+import org.mule.api.registry.Registry;
 import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
@@ -17,7 +19,12 @@ public class ServiceBootstrapper extends Bootstrapper {
   private MuleContext context;
   private MuleContextFactory contextFactory;
   private SpringXmlConfigurationBuilder builder;
-
+  private static Registry registry;
+  
+  public static Registry getRegistry() {
+      return registry;
+  }
+  
   public ServiceBootstrapper( ) {
     super( );
     this.contextFactory = new DefaultMuleContextFactory( );
@@ -34,6 +41,7 @@ public class ServiceBootstrapper extends Bootstrapper {
       LOG.info( "-> Loaded cfg: " + cfg.getUrl( ) );
     }
     try {
+      registry = RegistryContext.getOrCreateRegistry( );
       this.builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[]{} ) );
     } catch ( Exception e ) {
       LOG.fatal( "Failed to bootstrap services.", e );
@@ -45,6 +53,7 @@ public class ServiceBootstrapper extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     try {
+      LOG.info( "Starting up system bus.");
       this.context = this.contextFactory.createMuleContext( this.builder );
     } catch ( Exception e ) {
       LOG.fatal( "Failed to configure services.", e );

@@ -44,6 +44,8 @@ public class SystemBootstrapper {
   }
 
   public boolean init( ) throws Exception {
+    Component hi = Component.valueOf( "bootstrap" );
+    LOG.info( hi );
     try {
       LOG.info( LogUtils.header( "Initializing resource providers." ) );
       BootstrapFactory.initResourceProviders( );

@@ -7,6 +7,7 @@ import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
 import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
@@ -31,7 +32,7 @@ public class RemoteInfoHandler {
       LOG.info( "Adding cluster for update: " + cw.getName() + " - " + cw.getHost() + ":" + cw.getPort() );
       list.add( new RegisterClusterType( cw.getName(), cw.getHost(), cw.getPort() ) );
     }
-    Messaging.dispatch( EucalyptusProperties.CLUSTERSINK_REF, list );
+    Messaging.dispatch( Component.clusters.getUri( ).toASCIIString( ), list );
   }
 
   public static synchronized List<ClusterInfoWeb> getClusterList()

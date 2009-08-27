@@ -38,6 +38,7 @@ import com.google.common.collect.Lists;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.images.StorageProxy;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -125,7 +126,7 @@ public class VolumeManager {
     CreateStorageVolumeType scRequest = new CreateStorageVolumeType( newId, request.getSize(), request.getSnapshotId() );
     CreateStorageVolumeResponseType scReply = null;
     try {
-      scReply = ( CreateStorageVolumeResponseType ) Messaging.send( StorageProperties.STORAGE_REF, scRequest );
+      scReply =  StorageProxy.send( newVol.getCluster( ), scRequest, CreateStorageVolumeResponseType.class );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback();
@@ -154,7 +155,7 @@ public class VolumeManager {
       }
       if( isAttached ) return reply;
       if( !vol.getState(  ).equals( State.ANNILATED ) ) {
-        Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageVolumeType( vol.getDisplayName() ) );
+        StorageProxy.dispatch( vol.getCluster( ), new DeleteStorageVolumeType( vol.getDisplayName() ) );
       }
       db.delete( vol );
       db.commit();
@@ -171,8 +172,6 @@ public class VolumeManager {
     DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply();
     EntityWrapper<Volume> db = getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
-    LOG.debug( request );
-    Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageVolumesType(  ) );
 
     Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>();
     for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
@@ -183,7 +182,7 @@ public class VolumeManager {
     List<Volume> volumes = db.query( Volume.ownedBy( userName ) );
     for ( Volume v : volumes ) {
       if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
-        DescribeStorageVolumesResponseType volState = ( DescribeStorageVolumesResponseType ) Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageVolumesType( Lists.newArrayList( v.getDisplayName() ) ) );
+        DescribeStorageVolumesResponseType volState = StorageProxy.send( v.getCluster( ), new DescribeStorageVolumesType( Lists.newArrayList( v.getDisplayName() ) ), DescribeStorageVolumesResponseType.class  );
         LOG.debug( volState );
         String volumeState = "unavailable";
         if ( !volState.getVolumeSet().isEmpty() ) {

@@ -1,6 +1,8 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.util.*;
+
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.ws.util.Messaging;
 
 /**
@@ -14,7 +16,7 @@ public class ClusterEnvelope {
   private QueuedEvent event;
 
   public static void dispatch( String name, QueuedEvent event ) {
-    Messaging.dispatch( EucalyptusProperties.CLUSTERSINK_REF, new ClusterEnvelope( name , event ) );
+    Messaging.dispatch( Component.clusters.getUri( ).toASCIIString( ), new ClusterEnvelope( name , event ) );
   }
 
   public ClusterEnvelope( final String clusterName, final QueuedEvent event ) {

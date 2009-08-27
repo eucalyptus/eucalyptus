@@ -25,7 +25,7 @@ public enum Resource {
   Database( ),
   PersistenceContext( ),
   ClusterCredentials( ),
-  Clusters( ),
+  RemoteServices( ),
   UserCredentials( ),
   CloudService( ),
   SpringService( ),

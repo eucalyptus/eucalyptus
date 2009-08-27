@@ -46,7 +46,6 @@ import java.io.File;
 public class HttpServer implements Startable {
   private static Logger LOG = Logger.getLogger( HttpServer.class );
 
-  public static String REF = "vm://HttpServer";
   private static org.mortbay.jetty.Server jettyServer;
 
   public void hello( String hi ){}

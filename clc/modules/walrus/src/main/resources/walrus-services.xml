@@ -49,7 +49,7 @@
                    address="http://127.0.0.1:8773/services/Walrus"/>
 
     <endpoint name="BukkitWS" address="vm://Bukkit" synchronous="false"/>
-    <endpoint name="BukkitInternalWS" address="vm://BukkitInternal" synchronous="true"/>
+    <endpoint name="BukkitInternalWS" address="${euca.walrus.host}" synchronous="true"/>
     <endpoint name="WalrusReplyQueueWS" address="vm://WalrusReplyQueue" synchronous="false"/>
 
 </mule>

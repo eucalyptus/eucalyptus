@@ -34,6 +34,22 @@ public class NetworkUtil {
     InetAddress inetAddr = Inet4Address.getByName( addr );
     return inetAddr.isReachable( 1000 );
   }
+
+  public static boolean testLocal( String address ) throws Exception {
+    List<String> addrs = Lists.newArrayList( );
+    Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
+    while( ifaces.hasMoreElements( ) ) {
+      NetworkInterface iface = ifaces.nextElement( );
+      for( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
+        InetAddress addr = iaddr.getAddress( );
+        if( addr instanceof Inet4Address ) {
+          addrs.add( addr.getHostAddress( ) );
+        }
+      }
+    }
+    return addrs.contains( address );
+  }
+
   
   public static void main( String[] args) throws Exception {
     for( String addr : NetworkUtil.getAllAddresses( ) ) {

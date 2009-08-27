@@ -8,12 +8,13 @@ import java.security.cert.X509Certificate;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.SubDirectory;
 
 public class EucaKeyStore extends AbstractKeyStore {
   public static String            FORMAT         = "pkcs12";
-  private static String           KEY_STORE_PASS = EucalyptusProperties.NAME;
+  private static String           KEY_STORE_PASS = Component.eucalyptus.name();
   private static String           FILENAME       = "euca.p12";
   private static Logger           LOG            = Logger.getLogger( EucaKeyStore.class );
 
@@ -43,6 +44,6 @@ public class EucaKeyStore extends AbstractKeyStore {
 
   @Override
   public boolean check( ) throws GeneralSecurityException {
-    return (this.getCertificate( EucalyptusProperties.WWW_NAME )!= null)&&(this.getCertificate( EucalyptusProperties.NAME )!=null);
+    return (this.getCertificate( Component.jetty.name() )!= null)&&(this.getCertificate( Component.eucalyptus.name() )!=null);
   }
 }

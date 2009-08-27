@@ -1,1 +1,2 @@
-name=www
+name=jetty
+euca.model.www=eucalyptus-www.xml

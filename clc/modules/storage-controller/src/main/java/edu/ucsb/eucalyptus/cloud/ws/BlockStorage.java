@@ -54,7 +54,9 @@ import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
@@ -184,7 +186,7 @@ public class BlockStorage {
 
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
 		UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
-		if(EucalyptusProperties.NAME.equals(request.getEffectiveUserId()))
+		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		String storageRootDirectory = request.getStorageRootDirectory();
 		if(storageRootDirectory != null)  {
@@ -942,8 +944,8 @@ public class BlockStorage {
 			try {
 				//TODO: Get credentials for SC from keystore
 
-				PrivateKey ccPrivateKey = (PrivateKey) EucaKeyStore.getInstance( ).getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
-				X509Certificate cert = EucaKeyStore.getInstance( ).getCertificate(EucalyptusProperties.NAME);
+				PrivateKey ccPrivateKey = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getPrivateKey();
+				X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate( );
 				if(cert == null)
 					return null;
 				byte[] pemCertBytes = Hashes.getPemBytes(cert);

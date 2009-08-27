@@ -1,5 +1,6 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterMessageQueue;
 import com.eucalyptus.cluster.Clusters;
@@ -97,7 +98,7 @@ public class SystemState {
           ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
           SystemState.dispatch( vm.getPlacement(), new UnassignAddressCallback( config, address ), Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() ) );
         }
-        if( EucalyptusProperties.NAME.equals( address.getUserId() ) ) {
+        if( Component.eucalyptus.name().equals( address.getUserId() ) ) {
           try {
             (new AddressManager()).ReleaseAddress( Admin.makeMsg( ReleaseAddressType.class, address.getName() ) );
           } catch ( EucalyptusCloudException e ) {

@@ -10,19 +10,10 @@ public class EucalyptusProperties {
 
   private static Logger LOG = Logger.getLogger( EucalyptusProperties.class );
 
-  public static List<String> getDisabledOperations( ) {//TODO: move me
-    if ( System.getProperty( "euca.disable.ebs" ) != null ) {
-      EucalyptusProperties.disableBlockStorage = true;
-      return Lists.newArrayList( "CreateVolume", "DeleteVolume", "DescribeVolumes", "AttachVolume", "DetachVolume", "CreateSnapshot", "DeleteSnapshot", "DescribeSnapshots" );
-    }
-    return Lists.newArrayList( );
-  }
 
   public static boolean disableNetworking    = false;
   public static boolean disableBlockStorage  = false;
 
-  public static String  NAME                 = "eucalyptus";
-  public static String  WWW_NAME             = "jetty";
   public static String  NETWORK_DEFAULT_NAME = "default";
   public static String  DEBUG_FSTRING        = "[%12s] %s";
   public static String  CLUSTERSINK_REF      = "vm://ClusterSink";

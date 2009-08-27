@@ -15,8 +15,10 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.util.CredentialProxy;
@@ -27,7 +29,7 @@ import com.google.common.collect.Lists;
 public class InternalWsSecHandler extends WsSecHandler {
 
   public InternalWsSecHandler( ) throws GeneralSecurityException {
-    super( new CredentialProxy( EucaKeyStore.getInstance().getCertificate( EucalyptusProperties.NAME ), EucaKeyStore.getInstance().getKeyPair( EucalyptusProperties.NAME, EucalyptusProperties.NAME ).getPrivate( ) ) );
+    super( new CredentialProxy( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( ), SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getPrivateKey( ) ) );
   }
 
   @Override
@@ -47,7 +49,7 @@ public class InternalWsSecHandler extends WsSecHandler {
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
       SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
       X509Certificate cert = WSSecurity.getVerifiedCertificate( envelope );
-      if( !cert.equals( EucaKeyStore.getInstance( ).getCertificate( EucalyptusProperties.NAME ) ) ) {
+      if( !cert.equals( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( ) ) ) {
         throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );
       }
     }

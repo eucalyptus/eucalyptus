@@ -1,5 +1,6 @@
 package edu.ucsb.eucalyptus.util;
 
+import com.eucalyptus.bootstrap.Component;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import org.apache.log4j.Logger;
@@ -13,8 +14,8 @@ public class Admin {
   public static <E extends EucalyptusMessage> E makeMsg( Class<E> clazz, EucalyptusMessage regarding ) {
     try {
       E msg = clazz.newInstance();
-      msg.setUserId( EucalyptusProperties.NAME );
-      msg.setEffectiveUserId( EucalyptusProperties.NAME );
+      msg.setUserId( Component.eucalyptus.name( ) );
+      msg.setEffectiveUserId( Component.eucalyptus.name( ) );
       StackTraceElement elem = new Throwable().fillInStackTrace().getStackTrace()[ 1 ];
       msg.setCorrelationId( String.format( "%s.%s.%s-%s", elem.getClassName(), elem.getMethodName(), elem.getLineNumber(), regarding.getCorrelationId() ) );
       return msg;
@@ -47,8 +48,8 @@ public class Admin {
         msg = clazz.newInstance();
       }
       if ( msg.getUserId() == null )
-        msg.setUserId( EucalyptusProperties.NAME );
-      msg.setEffectiveUserId( EucalyptusProperties.NAME );
+        msg.setUserId( Component.eucalyptus.name( ) );
+      msg.setEffectiveUserId( Component.eucalyptus.name( ) );
       StackTraceElement elem = new Throwable().fillInStackTrace().getStackTrace()[ 1 ];
       EucalyptusMessage reMsg = msg;
       msg.setCorrelationId( String.format( "%s.%s.%s-%s", elem.getClassName(), elem.getMethodName(), elem.getLineNumber(), reMsg.getCorrelationId() ) );

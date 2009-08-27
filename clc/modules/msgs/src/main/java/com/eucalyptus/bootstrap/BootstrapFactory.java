@@ -45,7 +45,7 @@ public class BootstrapFactory {
   public static void initBootstrappers( ) {
     File libDir = new File( BaseDirectory.LIB.toString( ) );
     for ( File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( EucalyptusProperties.NAME ) && f.getName( ).endsWith( ".jar" ) && !f.getName( ).matches( ".*-ext-.*" ) ) {
+      if ( f.getName( ).startsWith( Component.eucalyptus.name() ) && f.getName( ).endsWith( ".jar" ) && !f.getName( ).matches( ".*-ext-.*" ) ) {
         LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
         ServiceJarFile jar;
         try {

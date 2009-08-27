@@ -1,14 +1,11 @@
 package com.eucalyptus.bootstrap;
 
-import java.io.File;
 import java.net.URL;
 
 import org.apache.log4j.Logger;
 import org.mortbay.xml.XmlConfiguration;
 
-import com.eucalyptus.util.BaseDirectory;
-
-@Provides( component = Component.www )
+@Provides( component = Component.jetty )
 @Depends( local=Component.eucalyptus )
 public class HttpServerBootstrapper extends Bootstrapper {
   private static Logger                   LOG = Logger.getLogger( HttpServerBootstrapper.class );

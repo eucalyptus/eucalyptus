@@ -36,6 +36,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.images.StorageProxy;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -90,7 +91,7 @@ public class SnapshotManager {
     CreateStorageSnapshotType scRequest = new CreateStorageSnapshotType( vol.getDisplayName(), newId );
     CreateStorageSnapshotResponseType scReply = null;
     try {
-      scReply = ( CreateStorageSnapshotResponseType ) Messaging.send( StorageProperties.STORAGE_REF, scRequest );
+      scReply = StorageProxy.send( vol.getCluster( ), scRequest, CreateStorageSnapshotResponseType.class );
       snap.setMappedState( scReply.getStatus() );
       LOG.debug(scReply);
     } catch ( EucalyptusCloudException e ) {
@@ -114,9 +115,9 @@ public class SnapshotManager {
     String userName = request.isAdministrator() ? null : request.getUserId();
     try {
       Snapshot snap = db.getUnique( Snapshot.named( userName, request.getSnapshotId() ) );
-      //:: TODO-1.5: state checks and snapshot tree check here :://
-      DeleteStorageSnapshotResponseType scReply = ( DeleteStorageSnapshotResponseType ) Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageSnapshotType( snap.getDisplayName() ) );
-      LOG.debug( scReply );
+//TODO: make this multi-cluster aware.
+      //      DeleteStorageSnapshotResponseType scReply = Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageSnapshotType( snap.getDisplayName() ), DeleteStorageSnapshotResponseType.class );
+//      LOG.debug( scReply );
       db.delete( snap );
       db.commit();
     } catch ( EucalyptusCloudException e ) {
@@ -135,21 +136,22 @@ public class SnapshotManager {
     List<Snapshot> snapshots = db.query( Snapshot.ownedBy( userName ) );
     for ( Snapshot v : snapshots ) {
       if ( request.getSnapshotSet().isEmpty() || request.getSnapshotSet().contains( v.getDisplayName() ) ) {
-        DescribeStorageSnapshotsResponseType snapshotInfo = null;
-        try {
-          snapshotInfo = ( DescribeStorageSnapshotsResponseType ) Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName() ) ) );
-          for( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet() ) {
-            v.setMappedState( storageSnapshot.getStatus() );
-            edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() );
-            if( storageSnapshot.getProgress() != null )
-              snapReply.setProgress( storageSnapshot.getProgress() );
-            snapReply.setVolumeId( storageSnapshot.getVolumeId() );
-            reply.getSnapshotSet().add( snapReply );
-          }
-        } catch ( EucalyptusCloudException e ) {
-          LOG.debug( e, e );
-          throw e;
-        }
+//TODO: make this multi-cluster aware.
+        //        DescribeStorageSnapshotsResponseType snapshotInfo = null;
+//        try {
+//          snapshotInfo = ( DescribeStorageSnapshotsResponseType ) Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName() ) ) );
+//          for( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet() ) {
+//            v.setMappedState( storageSnapshot.getStatus() );
+//            edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() );
+//            if( storageSnapshot.getProgress() != null )
+//              snapReply.setProgress( storageSnapshot.getProgress() );
+//            snapReply.setVolumeId( storageSnapshot.getVolumeId() );
+//            reply.getSnapshotSet().add( snapReply );
+//          }
+//        } catch ( EucalyptusCloudException e ) {
+//          LOG.debug( e, e );
+//          throw e;
+//        }
       }
     }
     db.commit();

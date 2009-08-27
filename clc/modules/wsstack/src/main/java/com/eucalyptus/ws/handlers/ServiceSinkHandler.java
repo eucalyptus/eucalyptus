@@ -24,6 +24,7 @@ import org.mule.DefaultMuleMessage;
 import org.mule.api.MuleMessage;
 
 import com.eucalyptus.auth.User;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpResponse;
@@ -74,7 +75,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         EucalyptusMessage msg = (EucalyptusMessage) request.getMessage( );
         if( user != null && msgReceiver == null) {
           msg.setUserId( user.getUserName( ) );
-          msg.setEffectiveUserId( user.getIsAdministrator( )?EucalyptusProperties.NAME:user.getUserName( ) );
+          msg.setEffectiveUserId( user.getIsAdministrator( )?Component.eucalyptus.name():user.getUserName( ) );
         }
         LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
         ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );

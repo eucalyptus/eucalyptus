@@ -18,7 +18,7 @@ import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 
-@Provides( resource = Resource.Clusters )
+@Provides( resource = Resource.RemoteServices )
 @Depends( local = Component.eucalyptus )
 public class ClusterBootstrapper extends Bootstrapper implements Runnable {
   private static Logger LOG         = Logger.getLogger( ClusterBootstrapper.class );

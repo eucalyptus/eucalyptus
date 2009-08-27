@@ -33,6 +33,7 @@ import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.SubDirectory;
@@ -97,7 +98,7 @@ public class UserManagement {
   }
 
   public static boolean isAdministrator( String userId ) {
-    if ( EucalyptusProperties.NAME.equals( userId ) || WalrusProperties.ADMIN.equals( userId ) ) return true;
+    if ( Component.eucalyptus.name( ).equals( userId ) || WalrusProperties.ADMIN.equals( userId ) ) return true;
     return false;
   }
 

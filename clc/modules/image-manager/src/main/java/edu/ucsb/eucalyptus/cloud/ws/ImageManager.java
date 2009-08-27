@@ -35,9 +35,9 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
-import com.eucalyptus.auth.Hashes;
-import com.eucalyptus.auth.UserCredentialProvider;
-import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.images.WalrusProxy;
+import com.eucalyptus.images.util.ImageUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
@@ -45,7 +45,6 @@ import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ProductCode;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -61,9 +60,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeImagesType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
-import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType;
-import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
-import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
 import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeResponseType;
@@ -73,34 +69,21 @@ import edu.ucsb.eucalyptus.msgs.RegisterImageType;
 import edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import edu.ucsb.eucalyptus.util.Admin;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import com.eucalyptus.ws.util.Messaging;
-import com.eucalyptus.util.WalrusProperties;
-import edu.ucsb.eucalyptus.util.XMLParser;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.DOMException;
 
-import javax.crypto.Cipher;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.ByteArrayInputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.zip.Adler32;
 
 public class ImageManager {
   public static BlockDeviceMappingItemType EMI = new BlockDeviceMappingItemType("emi", "sda1");
@@ -108,7 +91,7 @@ public class ImageManager {
   public static BlockDeviceMappingItemType SWAP = new BlockDeviceMappingItemType("swap", "sda3");
   public static BlockDeviceMappingItemType ROOT = new BlockDeviceMappingItemType("root", "/dev/sda1");
 
-  private static Logger LOG = Logger.getLogger( ImageManager.class );
+  public static Logger LOG = Logger.getLogger( ImageManager.class );
 
   public VmImageInfo verify( VmInfo vmInfo ) throws EucalyptusCloudException {
     SystemConfiguration conf = EucalyptusProperties.getSystemConfiguration();
@@ -139,7 +122,7 @@ public class ImageManager {
     Long size = 0l;
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = ImageManager.getManifestData( EucalyptusProperties.NAME, imagePathParts[ 0 ], imagePathParts[ 1 ] );
+      Document inputSource = WalrusProxy.getManifestData( Component.eucalyptus.name(), imagePathParts[ 0 ], imagePathParts[ 1 ] );
       XPath xpath = XPathFactory.newInstance().newXPath();
       String rootSize = "0";
       try {
@@ -162,7 +145,7 @@ public class ImageManager {
     ArrayList<String> ancestorIds = Lists.newArrayList();
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = ImageManager.getManifestData( EucalyptusProperties.NAME, imagePathParts[ 0 ], imagePathParts[ 1 ] );
+      Document inputSource = WalrusProxy.getManifestData( Component.eucalyptus.name(), imagePathParts[ 0 ], imagePathParts[ 1 ] );
       XPath xpath = XPathFactory.newInstance().newXPath();
       NodeList ancestors = null;
       try {
@@ -258,73 +241,13 @@ public class ImageManager {
     return vmAllocInfo;
   }
 
-  private void verifyManifestIntegrity( final ImageInfo imgInfo ) throws EucalyptusCloudException {
-    String[] imagePathParts = imgInfo.getImageLocation().split( "/" );
-    GetObjectResponseType reply = null;
-    GetObjectType msg = new GetObjectType( imagePathParts[ 0 ], imagePathParts[ 1 ], true, false, true );
-    msg.setUserId( EucalyptusProperties.NAME );
-    msg.setEffectiveUserId( EucalyptusProperties.NAME );
-    try {
-      reply = ( GetObjectResponseType ) Messaging.send( WalrusProperties.WALRUS_REF, msg );
-    } catch ( EucalyptusCloudException e ) {
-      LOG.error( e );
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Invalid manifest reference: " + imgInfo.getImageLocation() );
-    }
-
-    if ( reply == null || reply.getBase64Data() == null ) throw new EucalyptusCloudException( "Invalid manifest reference: " + imgInfo.getImageLocation() );
-    XMLParser parser = new XMLParser( reply.getBase64Data() );
-    String encryptedKey = parser.getValue( "//ec2_encrypted_key" );
-    String encryptedIV = parser.getValue( "//ec2_encrypted_iv" );
-    String signature = parser.getValue( "//signature" );
-    String image = parser.getXML( "image" );
-    String machineConfiguration = parser.getXML( "machine_configuration" );
-
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-    List<String> aliases = Lists.newArrayList();
-    List<UserInfo> users = db.query( new UserInfo() );
-    for ( UserInfo user : users )
-      for ( CertificateInfo certInfo : user.getCertificates() )
-        aliases.add( certInfo.getCertAlias() );
-    boolean found = false;
-    for ( String alias : aliases )
-      found |= this.verifyManifestSignature( signature, alias, machineConfiguration + image );
-    if ( !found ) throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature." );
-
-    try {
-      PrivateKey pk = ( PrivateKey ) EucaKeyStore.getInstance().getKey( EucalyptusProperties.NAME, EucalyptusProperties.NAME );
-      Cipher cipher = Cipher.getInstance( "RSA/ECB/PKCS1Padding" );
-      cipher.init( Cipher.DECRYPT_MODE, pk );
-      cipher.doFinal( Hashes.hexToBytes( encryptedKey ) );
-      cipher.doFinal( Hashes.hexToBytes( encryptedIV ) );
-    } catch ( Exception ex ) {
-      throw new EucalyptusCloudException( "Invalid Manifest: Failed to recover keys." );
-    }
-  }
-
-  private boolean verifyManifestSignature( final String signature, final String alias, String pad ) {
-    boolean ret = false;
-    try {
-      Signature sigVerifier = Signature.getInstance( "SHA1withRSA" );
-      X509Certificate cert = UserCredentialProvider.getCertificate( alias );
-      PublicKey publicKey = cert.getPublicKey();
-      sigVerifier.initVerify( publicKey );
-      sigVerifier.update( pad.getBytes() );
-      sigVerifier.verify( Hashes.hexToBytes( signature ) );
-      ret = true;
-    } catch ( Exception ex ) {
-      LOG.warn( ex.getMessage() );
-    }
-    return ret;
-  }
-
   private void checkStoredImage( final ImageInfo imgInfo ) throws EucalyptusCloudException {
     if ( imgInfo != null )
       try {
         Document inputSource = null;
         try {
           String[] imagePathParts = imgInfo.getImageLocation().split( "/" );
-          inputSource = ImageManager.getManifestData( imgInfo.getImageOwnerId(), imagePathParts[ 0 ], imagePathParts[ 1 ] );
+          inputSource = WalrusProxy.getManifestData( imgInfo.getImageOwnerId(), imagePathParts[ 0 ], imagePathParts[ 1 ] );
         } catch ( EucalyptusCloudException e ) {
           throw e;
         }
@@ -337,10 +260,10 @@ public class ImageManager {
         if ( !imgInfo.getSignature().equals( signature ) )
           throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
         LOG.info( "Checking image: " + imgInfo.getImageLocation() );
-        imgInfo.checkValid();
+        WalrusProxy.checkValid(imgInfo);
         LOG.info( "Triggering caching: " + imgInfo.getImageLocation() );
         try {
-          imgInfo.triggerCaching();
+          WalrusProxy.triggerCaching(imgInfo);
         } catch ( Exception e ) {}
       } catch ( EucalyptusCloudException e ) {
         LOG.error( e );
@@ -410,7 +333,7 @@ public class ImageManager {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
     if ( isSet( searchId ) ) try {
       ImageInfo img = db.getUnique( new ImageInfo( searchId ) );
-      img.invalidate();
+      WalrusProxy.invalidate(img);
       db.commit();
     } catch ( EucalyptusCloudException e ) {
       db.rollback();
@@ -528,9 +451,7 @@ If you specify a list of executable users, only users that have launch permissio
     //:: check the bucket ownership & get the user name :://
     String userName = null;
     if ( !request.isAdministrator() ) {
-      GetBucketAccessControlPolicyType getBukkitInfo = Admin.makeMsg( GetBucketAccessControlPolicyType.class, request );
-      getBukkitInfo.setBucket( imagePathParts[ 0 ] );
-      GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) Messaging.send( WalrusProperties.WALRUS_REF, getBukkitInfo );
+      GetBucketAccessControlPolicyResponseType reply = WalrusProxy.getBucketAcl( request, imagePathParts );
 
       if ( !request.getUserId().equals( reply.getAccessControlPolicy().getOwner().getDisplayName() ) )
         throw new EucalyptusCloudException( "Image registration failed: you must own the bucket containing the image." );
@@ -540,14 +461,14 @@ If you specify a list of executable users, only users that have launch permissio
     ImageInfo imageInfo = new ImageInfo( imageLocation, request.getUserId(), "available", true );
     //:: verify the image manifest :://
     try {
-      this.verifyManifestIntegrity( imageInfo );
+      WalrusProxy.verifyManifestIntegrity( imageInfo );
     } catch ( EucalyptusCloudException e ) {
       throw new EucalyptusCloudException( "Image registration failed because the manifest referenced is invalid or unavailable." );
     }
     //:: this parses the manifest for extra information :://
     Document inputSource = null;
     try {
-      inputSource = ImageManager.getManifestData( request.getUserId(), imagePathParts[ 0 ], imagePathParts[ 1 ] );
+      inputSource = WalrusProxy.getManifestData( request.getUserId(), imagePathParts[ 0 ], imagePathParts[ 1 ] );
     } catch ( EucalyptusCloudException e ) {
       throw e;
     }
@@ -595,11 +516,11 @@ If you specify a list of executable users, only users that have launch permissio
     if ( "yes".equals( kernelId ) || "true".equals( kernelId ) || imagePathParts[ 1 ].startsWith( "vmlinuz" ) ) {
       if ( !request.isAdministrator() ) throw new EucalyptusCloudException( "Only administrators can register kernel images." );
       imageInfo.setImageType( EucalyptusProperties.IMAGE_KERNEL );
-      imageInfo.setImageId( this.newImageId( EucalyptusProperties.IMAGE_KERNEL_PREFIX, imageInfo.getImageLocation() ) );
+      imageInfo.setImageId( ImageUtil.newImageId( EucalyptusProperties.IMAGE_KERNEL_PREFIX, imageInfo.getImageLocation() ) );
     } else if ( "yes".equals( ramdiskId ) || "true".equals( ramdiskId ) || imagePathParts[ 1 ].startsWith( "initrd" ) ) {
       if ( !request.isAdministrator() ) throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
       imageInfo.setImageType( EucalyptusProperties.IMAGE_RAMDISK );
-      imageInfo.setImageId( this.newImageId( EucalyptusProperties.IMAGE_RAMDISK_PREFIX, imageInfo.getImageLocation() ) );
+      imageInfo.setImageId( ImageUtil.newImageId( EucalyptusProperties.IMAGE_RAMDISK_PREFIX, imageInfo.getImageLocation() ) );
     } else {
       if ( kernelId != null ) {
         try {
@@ -618,7 +539,7 @@ If you specify a list of executable users, only users that have launch permissio
       imageInfo.setImageType( EucalyptusProperties.IMAGE_MACHINE );
       imageInfo.setKernelId( kernelId );
       imageInfo.setRamdiskId( ramdiskId );
-      imageInfo.setImageId( this.newImageId( EucalyptusProperties.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation() ) );
+      imageInfo.setImageId( ImageUtil.newImageId( EucalyptusProperties.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation() ) );
     }
 
     String signature = null;
@@ -645,31 +566,12 @@ If you specify a list of executable users, only users that have launch permissio
     }
 
     LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getId() );
-    imageInfo.checkValid();
-    imageInfo.triggerCaching();
+    WalrusProxy.checkValid(imageInfo);
+    WalrusProxy.triggerCaching(imageInfo);
 
     RegisterImageResponseType reply = ( RegisterImageResponseType ) request.getReply();
     reply.setImageId( imageInfo.getImageId() );
     return reply;
-  }
-
-  private String generateImageId( final String imagePrefix, final String imageLocation ) {
-    Adler32 hash = new Adler32();
-    String key = imageLocation + System.currentTimeMillis();
-    hash.update( key.getBytes() );
-    String imageId = String.format( "%s-%08X", imagePrefix, hash.getValue() );
-    return imageId;
-  }
-
-  private String newImageId( final String imagePrefix, final String imageLocation ) {
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
-    ImageInfo query = new ImageInfo();
-    query.setImageId( generateImageId( imagePrefix, imageLocation ) );
-    LOG.info( "Trying to lookup using created AMI id=" + query.getImageId() );
-    for ( ; db.query( query ).size() != 0; query.setImageId( generateImageId( imagePrefix, imageLocation ) ) ) ;
-    db.commit();
-    LOG.info( "Assigning imageId=" + query.getImageId() );
-    return query.getImageId();
   }
 
   public DeregisterImageResponseType DeregisterImage( DeregisterImageType request ) throws EucalyptusCloudException {
@@ -681,7 +583,7 @@ If you specify a list of executable users, only users that have launch permissio
       imgInfo = db.getUnique( new ImageInfo( request.getImageId() ) );
       if ( !imgInfo.getImageOwnerId().equals( request.getUserId() ) && !request.isAdministrator() )
         throw new EucalyptusCloudException( "Only the owner of a registered image or the administrator can deregister it." );
-      imgInfo.invalidate();
+      WalrusProxy.invalidate(imgInfo);
       db.commit();
       reply.set_return( true );
     } catch ( EucalyptusCloudException e ) {
@@ -873,28 +775,6 @@ If you specify a list of executable users, only users that have launch permissio
       reply.set_return( false );
     }
     return reply;
-  }
-
-  private static Document getManifestData( String userId, String bucketName, String objectName ) throws EucalyptusCloudException {
-    GetObjectResponseType reply = null;
-    try {
-      GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
-      msg.setUserId( userId );
-      reply = ( GetObjectResponseType ) Messaging.send( WalrusProperties.WALRUS_REF, msg );
-    }
-    catch ( Exception e ) {
-      throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName );
-    }
-
-    Document inputSource = null;
-    try {
-      DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-      inputSource = builder.parse( new ByteArrayInputStream( reply.getBase64Data().getBytes() ) );
-    }
-    catch ( Exception e ) {
-      throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName );
-    }
-    return inputSource;
   }
 
   public boolean isSet( String id ) {

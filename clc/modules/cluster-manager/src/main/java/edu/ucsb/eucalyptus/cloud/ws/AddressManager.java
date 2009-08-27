@@ -36,6 +36,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.EntityWrapper;
@@ -97,7 +98,7 @@ public class AddressManager implements Startable {
     int allocatedCount = 0;
     List<Address> activeList = Addresses.getInstance().listValues();
     for( Address allocatedAddr : activeList ) {
-      if( EucalyptusProperties.NAME.equals( allocatedAddr.getUserId() ) ) {
+      if( Component.eucalyptus.name().equals( allocatedAddr.getUserId() ) ) {
         allocatedCount++;
         try {
           if( EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses() && !allocatedAddr.isAssigned() && !allocatedAddr.isPending() ) {
@@ -139,11 +140,11 @@ public class AddressManager implements Startable {
           for ( Map.Entry<String, Address> addressEntry : addressList ) {
             LOG.debug("Allocating address for static public addressing: " + addressEntry.getValue().getName() );
             Address address = addressEntry.getValue();
-            address.allocate( EucalyptusProperties.NAME );
+            address.allocate( Component.eucalyptus.name( ) );
             EntityWrapper<Address> db = new EntityWrapper<Address>();
             try {
               Address addr = db.getUnique( new Address( address.getName() ) );
-              addr.allocate( EucalyptusProperties.NAME );
+              addr.allocate( Component.eucalyptus.name( ));
             } catch ( EucalyptusCloudException e ) {
               db.merge( address );
             }
@@ -157,7 +158,7 @@ public class AddressManager implements Startable {
         } else {
           for( String ipAddr : Addresses.getInstance().getActiveMap().descendingKeySet() ) {
             Address addr = Addresses.getInstance().getActiveMap().get( ipAddr );
-            if( EucalyptusProperties.NAME.equals( addr.getUserId() ) && !addr.isAssigned() && !addr.isPending() ) {
+            if( Component.eucalyptus.name( ).equals( addr.getUserId() ) && !addr.isAssigned() && !addr.isPending() ) {
               if( allocCount++ >= 0 ) break;
               EntityWrapper<Address> db = new EntityWrapper<Address>();
               try {
@@ -206,7 +207,7 @@ public class AddressManager implements Startable {
     } else {
       List<Address> allocatedAddresses = Addresses.getInstance().listValues();
       for( Address addr : allocatedAddresses ) {
-        if( !addr.isAssigned() && !addr.isPending() && EucalyptusProperties.NAME.equals( addr.getUserId() ) ) {
+        if( !addr.isAssigned() && !addr.isPending() && Component.eucalyptus.name().equals( addr.getUserId() ) ) {
           Addresses.getInstance().deregister( addr.getName() );
           ipList.add( addr.getName() );
           addressList.add( addr );
@@ -227,12 +228,12 @@ public class AddressManager implements Startable {
   }
 
   private static void assignSystemPublicAddress( final Address address ) {
-    address.allocate( EucalyptusProperties.NAME );
+    address.allocate( Component.eucalyptus.name() );
     address.assign( Address.PENDING_ASSIGNMENT, Address.PENDING_ASSIGNMENT );
     EntityWrapper<Address> db = new EntityWrapper<Address>();
     try {
       Address addr = db.getUnique( new Address( address.getName() ) );
-      addr.allocate( EucalyptusProperties.NAME );
+      addr.allocate( Component.eucalyptus.name() );
     } catch ( EucalyptusCloudException e ) {
       db.merge( address );
     }
@@ -299,7 +300,7 @@ public class AddressManager implements Startable {
         } catch ( NoSuchElementException e ) {}
       }
 
-      if( EucalyptusProperties.NAME.equals( address.getUserId() ) && !EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses() ) {
+      if( Component.eucalyptus.name().equals( address.getUserId() ) && !EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses() ) {
         LOG.debug( "Not de-allocating system owned address in static public addressing mode: " + address.getName() );
         return reply;
       }
@@ -378,7 +379,7 @@ public class AddressManager implements Startable {
       String currentPublicIp = vm.getNetworkConfig().getIgnoredPublicIp();
       try {
         Address currentAddr = Addresses.getInstance().lookup( currentPublicIp );
-        boolean release = EucalyptusProperties.NAME.equals( currentAddr.getUserId() ) && EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses();
+        boolean release = Component.eucalyptus.name().equals( currentAddr.getUserId() ) && EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses();
         LOG.debug( "Dispatching unassign message for: " + address );
         AddressManager.unassignAddressFromVm( currentAddr, vm );
         if( release ) {

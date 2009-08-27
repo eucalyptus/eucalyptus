@@ -59,13 +59,6 @@
 			</outbound>
 		</service>
 
-		<service name="HttpServer">
-			<inbound>
-				<vm:inbound-endpoint address="vm://HttpServer"
-					synchronous="false" />
-			</inbound>
-			<component class="edu.ucsb.eucalyptus.ic.HttpServer" />
-		</service>
 		<service name="Eucalyptus">
 			<inbound>
 				<inbound-endpoint ref="EucalyptusWS" />

@@ -95,6 +95,7 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelDow
                 LOG.info( "Found candidate db host address: " + value );
                 String oldValue = System.setProperty( "euca.db.host", value );
                 LOG.info( "Setting property: euca.db.host=" + value + " [oldvalue="+oldValue+"]" );              
+                Component.db.setHostAddress( value );
                 //TODO: test we can connect here.
                 foundDb = true;
               }

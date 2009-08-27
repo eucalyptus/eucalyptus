@@ -34,6 +34,7 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
@@ -133,7 +134,7 @@ public class WalrusControl {
 
 	public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) throws EucalyptusCloudException {
 		UpdateWalrusConfigurationResponseType reply = (UpdateWalrusConfigurationResponseType) request.getReply();
-		if(EucalyptusProperties.NAME.equals(request.getEffectiveUserId()))
+		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		String name = request.getName();
 		if(name != null)

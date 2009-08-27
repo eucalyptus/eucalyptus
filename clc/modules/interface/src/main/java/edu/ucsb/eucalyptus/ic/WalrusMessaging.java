@@ -34,6 +34,7 @@
 
 package edu.ucsb.eucalyptus.ic;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
@@ -66,8 +67,8 @@ public class WalrusMessaging {
             {
                 first = false;
                 DescribeAvailabilityZonesType descAZMsg = new DescribeAvailabilityZonesType();
-                descAZMsg.setUserId( EucalyptusProperties.NAME );
-                descAZMsg.setEffectiveUserId( EucalyptusProperties.NAME );
+                descAZMsg.setUserId( Component.eucalyptus.name( ) );
+                descAZMsg.setEffectiveUserId( Component.eucalyptus.name( ) );
                 getClient().dispatch( "vm://Request", descAZMsg, null );
             }
             getClient().dispatch( "vm://WalrusRequestQueue", msg, null );

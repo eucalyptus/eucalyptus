@@ -3,6 +3,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.msgs.*;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
@@ -36,8 +37,8 @@ public class ResourceUpdateCallback extends QueuedEventCallback<DescribeResource
     do {
       Cluster cluster = Clusters.getInstance( ).lookup( this.getConfig( ).getName( ) );
       DescribeResourcesType drMsg = new DescribeResourcesType();
-      drMsg.setUserId( EucalyptusProperties.NAME );
-      drMsg.setEffectiveUserId( EucalyptusProperties.NAME );
+      drMsg.setUserId( Component.eucalyptus.name() );
+      drMsg.setEffectiveUserId( Component.eucalyptus.name() );
       for ( VmType v : VmTypes.list() ) drMsg.getInstanceTypes().add( v.getAsVmTypeInfo() );
 
       cluster.getMessageQueue().enqueue( new QueuedEvent( this, drMsg ) );

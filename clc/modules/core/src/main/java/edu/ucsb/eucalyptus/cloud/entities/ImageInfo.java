@@ -264,32 +264,6 @@ public class ImageInfo {
     this.productCodes = productCodes;
   }
 
-  public void checkValid() {
-    String[] parts = this.getImageLocation().split( "/" );
-    CheckImageType check = new CheckImageType();
-    check.setUserId( imageOwnerId );
-    check.setBucket( parts[ 0 ] );
-    check.setKey( parts[ 1 ] );
-    Messaging.dispatch( WalrusProperties.WALRUS_REF, check );
-  }
-
-  public void triggerCaching() {
-    String[] parts = this.getImageLocation().split( "/" );
-    CacheImageType cache = new CacheImageType();
-    cache.setUserId( imageOwnerId );
-    cache.setBucket( parts[ 0 ] );
-    cache.setKey( parts[ 1 ] );
-    Messaging.dispatch( WalrusProperties.WALRUS_REF, cache );
-  }
-
-  public void invalidate() {
-    String[] parts = this.getImageLocation().split( "/" );
-    this.setImageState( "deregistered" );
-    try {
-      Messaging.dispatch( WalrusProperties.WALRUS_REF, new FlushCachedImageType( parts[ 0 ], parts[ 1 ] ) );
-    } catch ( Exception e ) {}
-  }
-
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
