@@ -34,25 +34,26 @@
 
 package edu.ucsb.eucalyptus.storage;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.net.InetAddress;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
-import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
-import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
-import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
-import org.apache.log4j.Logger;
 
-import java.io.*;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
+import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
+import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
 
 public class LVM2Manager implements LogicalStorageManager {
 
@@ -526,7 +527,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		try {
 			int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
 			if(vbladePid < 0) {
-				throw new EucalyptusCloudException();
+				throw new EucalyptusCloudException("Unable to export volume: " + volumeId);
 			}
 		} catch(EucalyptusCloudException ex) {
 			LOG.error(ex);
@@ -579,7 +580,7 @@ public class LVM2Manager implements LogicalStorageManager {
 				try {
 					int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
 					if(vbladePid < 0) {
-						throw new EucalyptusCloudException();
+						throw new EucalyptusCloudException("Unable to export volume: " + volumeId);
 					}
 				} catch(EucalyptusCloudException ex) {
 					String returnValue = removeLogicalVolume(absoluteLVName);
@@ -600,7 +601,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			}
 		} else {
 			db.rollback();
-			throw new EucalyptusCloudException();
+			throw new EucalyptusCloudException("Unable to find snapshot: " + snapshotId);
 		}
 		return size;
 	}
@@ -673,7 +674,7 @@ public class LVM2Manager implements LogicalStorageManager {
 				status.add(foundLvmVolumeInfo.getStatus());
 			} else {
 				db.rollback();
-				throw new EucalyptusCloudException();
+				throw new EucalyptusCloudException("Unable to find entry: " + volumeSetEntry);
 			}
 		}
 		db.commit();
@@ -723,7 +724,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			db.commit();
 		}  else {
 			db.rollback();
-			throw new EucalyptusCloudException();
+			throw new EucalyptusCloudException("Unable to find volume: " + volumeId);
 		}
 	}
 
@@ -795,7 +796,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			db.commit();
 		} else {
 			db.rollback();
-			throw new EucalyptusCloudException();
+			throw new EucalyptusCloudException("Unable to find snapshot: " + snapshotId);
 		}
 		return returnValues;
 	}
@@ -810,7 +811,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			db.commit();
 		}  else {
 			db.rollback();
-			throw new EucalyptusCloudException();
+			throw new EucalyptusCloudException("Unable to find snapshot: " + snapshotId);
 		}
 	}
 
