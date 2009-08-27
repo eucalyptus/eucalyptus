@@ -31,12 +31,10 @@ Setup
 We will use the passive cheks capability of nagios, and to do so you need
 to check that the the named pipe exists. Usually is
 	/var/lib/nagios3/rw/nagios.cmd
-but you can check in nagios.cmd which file that is supposed to be. To
-create it you can 
-	mkfifo /var/lib/nagios3/rw/nagios.cmd
-and be sure the permission and ownership are right
-	chown nagios.www-data /var/lib/nagios3/rw/nagios.cmd
-	chmod 640 /var/lib/nagios3/rw/nagios.cmd
+but you can check in nagios.cmd which file that is supposed to be. Nagios
+should create it at startup when you change
+	check_external_commands=1
+into nagios,cfg.
 
 To create the configuration for the eucalyptus machine, you can use the
 script nagios.sh. For example

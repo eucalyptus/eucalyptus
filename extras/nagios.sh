@@ -12,21 +12,22 @@ CC_HOSTS=""
 SC_HOSTS=""
 PRINT_HOSTS=""
 PRINT_MEMBERS=""
-WGET="`which wget > /dev/null`"
+DEBUG="N"
+WGET="`which wget 2> /dev/null`"
 TOUT=30
 
 usage () {
 
 	echo "$0 [options]"
 	echo
-	echo "   -help                       this message"
-	echo "   -nodes \"<hostA> <hostB>\"    use this node list"
-	echo "   -cc \"<hostA> <hostB>\"       use this cc list"
-	echo "   -sc \"<hostA> <hostB>\"       use this sc list"
-	echo "   -cloud <hostA>              use this cloud server"
-	echo "   -walrus <hostA>             use this walrus"
-	echo "   -setup                      print the nagios rules"
-	echo "   -check <nagios pipe>        check NC status and tell nagios"
+	echo "   --help                       this message"
+	echo "   --nodes \"<hostA> <hostB>\"    use this node list"
+	echo "   --cc \"<hostA> <hostB>\"       use this cc list"
+	echo "   --sc \"<hostA> <hostB>\"       use this sc list"
+	echo "   --cloud <hostA>              use this cloud server"
+	echo "   --walrus <hostA>             use this walrus"
+	echo "   --setup                      print the nagios rules"
+	echo "   --check <nagios pipe>        check NC status and tell nagios"
 	echo
 }
 
@@ -116,12 +117,12 @@ while [ $# -gt 0 ]; do
 		exit 0
 	fi
 
-	if [ "$1" = "-setup" ]; then 
+	if [ "$1" = "-setup" -o "$1" = "--setup" ]; then 
 		NAGIOS="Y"
 		shift
 		continue
 	fi
-	if [ "$1" = "-check" ]; then 
+	if [ "$1" = "-check" -o "$1" = "--check" ]; then 
 		if [ -z "$2" ]; then
 			echo "Need the pipe name!"
 			exit 1
@@ -130,7 +131,7 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "-nodes" ]; then 
+	if [ "$1" = "-nodes" -o "$1" = "--nodes" ]; then 
 		if [ -z "$2" ]; then
 			echo "Need the node list!"
 			exit 1
@@ -139,7 +140,7 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "-cc" ]; then 
+	if [ "$1" = "-cc" -o "$1" = "--cc" ]; then 
 		if [ -z "$2" ]; then
 			echo "Need the cc list!"
 			exit 1
@@ -148,7 +149,7 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "-sc" ]; then 
+	if [ "$1" = "-sc" -o "$1" = "--sc" ]; then 
 		if [ -z "$2" ]; then
 			echo "Need the sc list!"
 			exit 1
@@ -157,7 +158,7 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "-cloud" ]; then 
+	if [ "$1" = "-cloud" -o "$1" = "--cloud" ]; then 
 		if [ -z "$2" ]; then
 			echo "Need the cloud manager!"
 			exit 1
@@ -166,13 +167,18 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "-walrus" ]; then 
+	if [ "$1" = "-walrus" -o "$1" = "--walrus" ]; then 
 		if [ -z "$2" ]; then
 			echo "Need walrus!"
 			exit 1
 		fi
 		WALRUS="${2}"
 		shift; shift
+		continue
+	fi
+	if [ "$1" = "--debug"  ]; then 
+		DEBUG="Y"
+		shift
 		continue
 	fi
 	usage
@@ -184,12 +190,12 @@ if [ -z "$NAGIOS" -a -z "$NAGIOS_PIPE" ]; then
 	echo "I need either -setup or -check!"
 	exit 1
 fi
+if [ -z "${NODES}${CC}${SC}${WARUS}${CLOUD}" ]; then
+	echo "At least one service needs to be specified!"
+	exit 1
+fi
 
 if [ -n "$NAGIOS" ]; then
-	if [ -z "${NODES}${CC}${SC}${WARUS}${CLOUD}" ]; then
-		echo "At least one service needs to be specified!"
-		exit 1
-	fi
 	CHECK="N"
 	for x in $CLOUD ; do
 		if [ "$CHECK" = "Y" ]; then
@@ -312,12 +318,12 @@ if [ -n "$NAGIOS" ]; then
 fi
 
 if [ -n "$NAGIOS_PIPE" ]; then
-	if [ ! -p "$NAGIOS_PIPE" -o ! -w "$NAGIOS_PIPE" ]; then
-		echo "$NAGIOS_PIPE is not a pipe or is not writable!"
-		exit 1
-	fi
 	if [ -z "$WGET" ]; then
 		echo "wget is missing!"
+		exit 1
+	fi
+	if [ ! -p "$NAGIOS_PIPE" -o ! -w "$NAGIOS_PIPE" ]; then
+		echo "$NAGIOS_PIPE is not a pipe or is not writable!"
 		exit 1
 	fi
 
@@ -325,7 +331,7 @@ if [ -n "$NAGIOS_PIPE" ]; then
 	if [ -n "$NODES" ]; then
 		for x in $NODES ; do
 			# get the status of the node
-			if wget -O - -o /dev/null --timeout=$TOUT http://$x:8775/axis2/services |grep Deployed|grep EucalyptusNC > /dev/null; then
+			if $WGET -O - -o /dev/null --timeout=$TOUT http://$x:8775/axis2/services |grep Deployed|grep EucalyptusNC > /dev/null; then
 				STATUS="0"
 			else
 				STATUS="2"
@@ -333,6 +339,7 @@ if [ -n "$NAGIOS_PIPE" ]; then
 			DESCRIPTION="Eucalyptus Node Controller status"
 		
 			# let's tell nagios
+			[ "$DEBUG" = "Y" ] && echo "[`date +%s`] PROCESS_SERVICE_CHECK_RESULT;$x;eucalyptus-nc;$STATUS;$DESCRIPTION"
 			echo "[`date +%s`] PROCESS_SERVICE_CHECK_RESULT;$x;eucalyptus-nc;$STATUS;$DESCRIPTION" > $NAGIOS_PIPE
 		done
 	fi
@@ -341,7 +348,7 @@ if [ -n "$NAGIOS_PIPE" ]; then
 	if [ -n "$CC"  ]; then
 		for x in "$CC" ; do
 			# get the status 
-			if wget -O - -o /dev/null --timeout=$TOUT http://$x:8774/axis2/services |grep EucalyptusCC > /dev/null; then
+			if $WGET -O - -o /dev/null --timeout=$TOUT http://$x:8774/axis2/services |grep EucalyptusCC > /dev/null; then
 				STATUS="0"
 			else
 				STATUS="2"
@@ -349,6 +356,7 @@ if [ -n "$NAGIOS_PIPE" ]; then
 			DESCRIPTION="Eucalyptus Cluster Controller status"
 		
 			# let's tell nagios
+			[ "$DEBUG" = "Y" ] && echo "[`date +%s`] PROCESS_SERVICE_CHECK_RESULT;$x;eucalyptus-cc;$STATUS;$DESCRIPTION"
 			echo "[`date +%s`] PROCESS_SERVICE_CHECK_RESULT;$x;eucalyptus-cc;$STATUS;$DESCRIPTION" > $NAGIOS_PIPE
 		done
 	fi
@@ -365,6 +373,7 @@ if [ -n "$NAGIOS_PIPE" ]; then
 			DESCRIPTION="Eucalyptus Cloud Controller status"
 		
 			# let's tell nagios
+			[ "$DEBUG" = "Y" ] && echo "[`date +%s`] PROCESS_SERVICE_CHECK_RESULT;$x;eucalyptus-cloud;$STATUS;$DESCRIPTION"
 			echo "[`date +%s`] PROCESS_SERVICE_CHECK_RESULT;$x;eucalyptus-cloud;$STATUS;$DESCRIPTION" > $NAGIOS_PIPE
 		done
 	fi
@@ -381,6 +390,7 @@ if [ -n "$NAGIOS_PIPE" ]; then
 			DESCRIPTION="Eucalyptus Walrus status"
 		
 			# let's tell nagios
+			[ "$DEBUG" = "Y" ] && echo "[`date +%s`] PROCESS_SERVICE_CHECK_RESULT;$x;eucalyptus-walrus;$STATUS;$DESCRIPTION"
 			echo "[`date +%s`] PROCESS_SERVICE_CHECK_RESULT;$x;eucalyptus-walrus;$STATUS;$DESCRIPTION" > $NAGIOS_PIPE
 		done
 	fi
@@ -397,6 +407,7 @@ if [ -n "$NAGIOS_PIPE" ]; then
 			DESCRIPTION="Eucalyptus Storage Controller status"
 		
 			# let's tell nagios
+			[ "$DEBUG" = "Y" ] && echo "[`date +%s`] PROCESS_SERVICE_CHECK_RESULT;$x;eucalyptus-sc;$STATUS;$DESCRIPTION"
 			echo "[`date +%s`] PROCESS_SERVICE_CHECK_RESULT;$x;eucalyptus-sc;$STATUS;$DESCRIPTION" > $NAGIOS_PIPE
 		done
 	fi
