@@ -98,6 +98,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     {
         try {
             props.load(new FileInputStream(PROPERTIES_FILE));
+            props.setProperty("version", System.getProperty("euca.version"));
             thanks_for_signup =         props.getProperty("thanks-for-signup");
             signup_email =              props.getProperty("signup-email-address");
             reply_email =               props.getProperty("reply-email-address");

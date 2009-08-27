@@ -88,6 +88,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     /* configuration parameters to be set from the server */
     private static Boolean server_ready = new Boolean(false);
     private static String signup_greeting;
+    private static String version;
     private static String cloud_name;
     private static String certificate_download_text;
     private static String rest_credentials_text;
@@ -186,6 +187,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         if (props == null) {
             throw new Exception("Invalid server configuration");
         }
+        version = (String)props.get("version");
         cloud_name = (String)props.get("cloud-name");
         signup_greeting = (String)props.get("signup-greeting");
         certificate_download_text = (String)props.get("certificate-download-text");
@@ -384,6 +386,11 @@ public class EucalyptusWebInterface implements EntryPoint {
         vpanel.setSpacing(15);
         vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
         if (logo!=null) { vpanel.add (logo); }
+        if (version!=null) { 
+            Label version_label = new Label ("Version " + version);
+            version_label.setStyleName ("euca-small-text");
+            vpanel.add (version_label);
+        }
         vpanel.add (label_box);
         vpanel.add (panel);
         if (server_ready.booleanValue()) {
