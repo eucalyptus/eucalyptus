@@ -6,6 +6,9 @@ and ganglia installations. You will then be able to monitor basic status
 of a running Eucalyptus system. We'll start from Nagios, and you will see
 ganglia instructions following.
 
+You should check http://open.eucalyptus.com for newer version of these
+scripts, up-to-date information and help.
+
 NAGIOS
 ======
 
