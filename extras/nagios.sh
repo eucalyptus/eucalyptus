@@ -12,6 +12,7 @@ CC_HOSTS=""
 SC_HOSTS=""
 PRINT_HOSTS=""
 PRINT_MEMBERS=""
+WGET="`which wget > /dev/null`"
 TOUT=30
 
 usage () {
@@ -92,6 +93,20 @@ define hostgroup {
 }
 
 EOF
+}
+
+get_status() {
+	local address="$1"
+	local name="$2"
+	local ret="false"
+
+	ret="`$WGET -O - -o /dev/null --timeout=$TOUT http://${address}:8773/services/Heartbeat|grep \"${name}\" |sed 's/.*enabled=\([[:alnum:]]*\)[[:blank:]].*/\1/'`"
+	
+	if [ "$ret" = "true" ]; then	
+		return 0
+	fi
+
+	return 1
 }
 
 # let's parse the command line
@@ -301,6 +316,10 @@ if [ -n "$NAGIOS_PIPE" ]; then
 		echo "$NAGIOS_PIPE is not a pipe or is not writable!"
 		exit 1
 	fi
+	if [ -z "$WGET" ]; then
+		echo "wget is missing!"
+		exit 1
+	fi
 
 	# let's check the NCs
 	if [ -n "$NODES" ]; then
@@ -338,7 +357,7 @@ if [ -n "$NAGIOS_PIPE" ]; then
 	if [ -n "$CLOUD" ]; then
 		for x in "$CLOUD" ; do
 			# get the status 
-			if wget -O - -o /dev/null --timeout=$TOUT http://$x:8773/services/ |grep Eucalyptus > /dev/null; then
+			if get_status $x eucalyptus ; then
 				STATUS="0"
 			else
 				STATUS="2"
@@ -354,22 +373,7 @@ if [ -n "$NAGIOS_PIPE" ]; then
 	if [ -n "$WALRUS" ]; then
 		for x in "$WALRUS" ; do
 			# get the status 
-			if wget -O - -o /dev/null --timeout=$TOUT http://$x:8773/services/ |grep Eucalyptus > /dev/null; then
-				STATUS="0"
-			else
-				STATUS="2"
-			fi
-			DESCRIPTION="Eucalyptus Walrus status"
-		
-			# let's tell nagios
-			echo "[`date +%s`] PROCESS_SERVICE_CHECK_RESULT;$x;eucalyptus-walrus;$STATUS;$DESCRIPTION" > $NAGIOS_PIPE
-		done
-	fi
-	# let's check the walrus
-	if [ -n "$WALRUS" ]; then
-		for x in "$WALRUS" ; do
-			# get the status 
-			if wget -O - -o /dev/null --timeout=$TOUT http://$x:8773/services/ |grep Eucalyptus > /dev/null; then
+			if get_status $x walrus ; then
 				STATUS="0"
 			else
 				STATUS="2"
@@ -385,7 +389,7 @@ if [ -n "$NAGIOS_PIPE" ]; then
 	if [ -n "$SC"  ]; then
 		for x in "$SC" ; do
 			# get the status 
-			if wget -O - -o /dev/null --timeout=$TOUT http://$x:8774/axis2/services |grep EucalyptusCC > /dev/null; then
+			if get_status $x storage ; then
 				STATUS="0"
 			else
 				STATUS="2"

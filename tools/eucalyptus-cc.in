@@ -138,7 +138,7 @@ do_start() {
 		exit 1
 	fi
 
-	if ! $EUCALYPTUS/usr/sbin/euca_conf -check cc ; then
+	if ! $EUCALYPTUS/usr/sbin/euca_conf --check cc ; then
 		exit 1
 	fi
 

@@ -614,11 +614,15 @@ if [ -n "$SETUP" ]; then
 		fi
 		EUCA_GROUP="`$ID -ng $EUCA_USER 2>/dev/null`"
 		if [ -z "$EUCA_GROUP" ]; then
-			echo "Cannot detect $EUCA_USER group: using $EUCA_USER"
+			echo "Cannot detect $EUCA_USER group"
 			exit 1
 		fi
-		chown root:$EUCA_GROUP $ROOTWRAP
-		chmod 4750 $ROOTWRAP
+		if ! chown root:$EUCA_GROUP $ROOTWRAP ; then
+			exit 1
+		fi
+		if ! chmod 4750 $ROOTWRAP ; then
+			exit 1
+		fi
 	fi
 	
 	# let's create the instance path
@@ -627,23 +631,39 @@ if [ -n "$SETUP" ]; then
 			echo "Failed to create instance path!"
 			exit 1
 		fi
-		chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH
+		if ! chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH ; then
+			exit 1
+		fi
 	fi
 
 	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus
+	ret=$?
 	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/log/eucalyptus
+	let $((ret += $?))
 	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus
+	let $((ret += $?))
 
 	# let's create more needed directory with the right permissions
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
-	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/db
+	let $((ret += $?))
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/db
+	let $((ret += $?))
 	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/db
+	let $((ret += $?))
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/keys
-	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/keys
+	let $((ret += $?))
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/keys
+	let $((ret += $?))
 	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/keys
+	let $((ret += $?))
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/CC
-	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/CC
+	let $((ret += $?))
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/CC
+	let $((ret += $?))
 	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/CC
+	let $((ret += $?))
+
+	return $ret
 fi
 
 # pre-flight checks
@@ -710,17 +730,19 @@ if [ -n "$CHECK" ]; then
 
 	# let's set up directories which could disappears if /var/run is
 	# in memory
-	mkdir -p $EUCALYPTUS/var/run/eucalyptus
-	mkdir -p $EUCALYPTUS/var/log/eucalyptus
-
-	# set up eucalyptus var locations to be owned by EUCA_USER
-	for y in $EUCALYPTUS/var/lib/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
-		if [ $y != "/" -a -d $y ]; then
-			if ! chown -R $EUCA_USER:$EUCA_GROUP $y ; then
-				echo "Problem setting permissions for $y"
-			fi
+	if [ ! -d $EUCALYPTUS/var/run/eucalyptus ]; then
+		if ! mkdir -p $EUCALYPTUS/var/run/eucalyptus ; then
+			# error should come from mkdir
+			exit 1
 		fi
-	done
+		if ! chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus ; then
+			# error should come from chown
+			exit 1
+		fi
+	fi
+
+	# good to go
+	exit 0
 fi
 
 createCloudURL () {
