@@ -1,4 +1,4 @@
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Copyright (c) 2009  Eucalyptus Systems, Inc.
   ~
   ~ This program is free software: you can redistribute it and/or modify
@@ -58,7 +58,9 @@
   ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ~   ANY SUCH LICENSES OR RIGHTS.
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ~ Author: xmlns="http://www.mulesource.org/schema/mule/core/2.0"
+  ~ Author: chris grzegorczyk grze@eucalyptus.com
+  -->
+  <mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xmlns:spring="http://www.springframework.org/schema/beans"
       xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
