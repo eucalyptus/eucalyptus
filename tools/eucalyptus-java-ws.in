@@ -188,7 +188,7 @@ do_start() {
 
 	OPTS=""
 	if [ "$DISABLE_DNS" = "Y" ]; then
-	    OPTS="$OPTS --disable-dns"
+	    OPTS="$OPTS --remote-dns"
 	elif [ "$DISABLE_EBS" = "Y" ]; then
 	    OPTS="$OPTS --disable-ebs"
 	fi

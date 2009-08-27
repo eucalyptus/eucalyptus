@@ -630,6 +630,10 @@ if [ -n "$SETUP" ]; then
 		chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH
 	fi
 
+	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus
+	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/log/eucalyptus
+	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus
+
 	# let's create more needed directory with the right permissions
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
 	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/db
@@ -724,8 +728,6 @@ createCloudURL () {
 	echo "ERROR: cannot get credentials"
 	return 1
     fi
-    echo "AKEY: $AKEY"
-    echo "SKEY: $SKEY"
     ARGS="AWSAccessKeyId=$AKEY"
     KEY=$1
     shift
@@ -862,7 +864,10 @@ if [ -n "$CLUSNAME" ]; then
 	fi
 	
     # sync the keys
-	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass ; then
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass; then
+	    echo "ERROR: failed to sync keys with ${NEWCLUS}."
+	fi
+	if ! sync_keys ${DESTDIR} ${DESTDIR} ${NEWCLUS} cloud-cert.pem; then
 	    echo "ERROR: failed to sync keys with ${NEWCLUS}."
 	fi
 	echo
@@ -950,7 +955,8 @@ if [ -n "$SCHOST" ]; then
     if [ "$SC_MODE" = "ADD" ]; then
 	echo "Adding SC $SCHOST to cluster $SCNAME"
 	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
-	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${SCNAME}
+#	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${SCNAME}
+	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
 	    DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
 	else
 	    echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful!"
@@ -980,7 +986,7 @@ if [ -n "$SCHOST" ]; then
 	fi
     
     # sync the keys
-	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${SCHOST} sc-cert.pem sc-pk.pem; then
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${SCHOST} euca.p12; then
 	    echo "ERROR: failed to sync keys with ${SCHOST}."
 	fi
 	echo
@@ -1069,7 +1075,7 @@ if [ -n "$NODEMODE" ]; then
 		fi
 	
 		# let's sync keys with the nodes
-		if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWNODE} node-cert.pem cluster-cert.pem node-pk.pem ; then
+		if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWNODE} node-cert.pem cluster-cert.pem node-pk.pem cloud-cert.pem; then
 			echo
 			echo "ERROR: could not synchronize keys with $NEWNODE!"
 			echo "The configuration will not have this node."
