@@ -87,21 +87,6 @@ import javax.persistence.TemporalType;
 import javax.persistence.Version;
 
 @MappedSuperclass
-public abstract class AbstractPersistent implements Serializable {
-  @Id
-  @GeneratedValue(generator = "system-uuid")
-  @GenericGenerator(name="system-uuid", strategy = "uuid")
-  @Column( name = "id" )
-  String id;
-  @Version
-  @Column(name = "version")
-  Integer version = 0;
-  @Temporal(TemporalType.TIMESTAMP)
-  @Column(name = "last_update_timestamp")
-  Date lastUpdate;
-}
-
-@MappedSuperclass
 public abstract class ComponentConfiguration extends AbstractPersistent implements Serializable {
   @Column( name = "config_component_name", unique=true )
   String name;

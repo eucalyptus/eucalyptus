@@ -74,6 +74,7 @@ import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.BaseDirectory;
+import com.google.common.collect.Lists;
 
 import javax.script.ScriptEngineManager;
 import java.io.File;
@@ -109,6 +110,8 @@ public class SLAs {
   }
 
   public void doNetworkAllocation( String userId, List<ResourceToken> rscTokens, List<Network> networks ) throws NotEnoughResourcesAvailable {
+    //TODO: handle network indexing
+    List<Integer> networkIndexes = Lists.newArrayList( );
     for ( ResourceToken token : rscTokens ) /*<--- for each cluster */
       for ( Network network : networks ) {/*<--- for each network to allocate */
         try {

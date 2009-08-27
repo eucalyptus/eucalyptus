@@ -76,7 +76,9 @@ public class ClusterState {
   private static Logger LOG = Logger.getLogger( ClusterState.class );
   private String clusterName;
   private NavigableSet<Integer> availableVlans;
-
+  private Integer mode;
+  private Integer addressCapacity;
+  
   public ClusterState( String clusterName ) {
     this.clusterName = clusterName;
     this.availableVlans = new ConcurrentSkipListSet<Integer>();
@@ -125,6 +127,26 @@ public class ClusterState {
 
   public String getClusterName( ) {
     return clusterName;
+  }
+
+
+  public Integer getMode( ) {
+    return mode;
+  }
+
+
+  public void setMode( Integer mode ) {
+    this.mode = mode;
+  }
+
+
+  public Integer getAddressCapacity( ) {
+    return addressCapacity;
+  }
+
+
+  public void setAddressCapacity( Integer addressCapacity ) {
+    this.addressCapacity = addressCapacity;
   }
 
   

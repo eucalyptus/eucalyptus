@@ -94,7 +94,7 @@
 					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ClusterMessage" />
 				</filtering-router>
 				<filtering-router>
-					<outbound-endpoint ref="KeyPairWSTest" />
+					<outbound-endpoint ref="KeyPairWS" />
 					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmKeyPairMessage" />
 				</filtering-router>
 				<filtering-router>

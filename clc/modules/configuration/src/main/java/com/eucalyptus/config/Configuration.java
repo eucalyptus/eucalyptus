@@ -82,6 +82,7 @@ import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
@@ -184,20 +185,18 @@ public class Configuration {
       out.close( );
 
       EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
+      ClusterCredentials componentCredentials = new ClusterCredentials( newComponent.getName( ) );
       try {
-        ClusterCredentials componentCredentials = new ClusterCredentials( newComponent.getName( ) );
-        try {
-          ClusterCredentials existingCredentials = credDb.getUnique( componentCredentials );
-          existingCredentials.setClusterCertificate( X509Cert.fromCertificate( ccAlias, clusterX509 ) );
-          existingCredentials.setNodeCertificate( X509Cert.fromCertificate( ncAlias, nodeX509 ) );
-        } catch ( Exception e ) {
-          componentCredentials.setClusterCertificate( X509Cert.fromCertificate( ccAlias, clusterX509 ) );
-          componentCredentials.setNodeCertificate( X509Cert.fromCertificate( ncAlias, nodeX509 ) );
-          credDb.add( componentCredentials );
-        } finally {
-          credDb.commit( );
+        List<ClusterCredentials> ccCreds = credDb.query( componentCredentials );
+        for( ClusterCredentials ccert : ccCreds ) {
+          credDb.delete( ccert );
         }
+        componentCredentials.setClusterCertificate( X509Cert.fromCertificate( ccAlias, clusterX509 ) );
+        componentCredentials.setNodeCertificate( X509Cert.fromCertificate( ncAlias, nodeX509 ) );
+        credDb.add( componentCredentials );
+        credDb.commit( );
       } catch ( Exception e ) {
+        LOG.error( e, e );
         credDb.rollback( );
       }
     } catch ( Exception eee ) {
@@ -214,22 +213,24 @@ public class Configuration {
     try {
       ComponentConfiguration searchConfig = Configuration.getConfigurationInstance( request, request.getName( ), request.getHost( ), request.getPort( ) );
       existingName = db.getUnique( searchConfig );
+      db.rollback( );
       return true;
     } catch ( Exception e ) {
       try {
         ComponentConfiguration searchConfig = Configuration.getConfigurationInstance( request );
         searchConfig.setName( request.getName( ) );
         existingName = db.getUnique( searchConfig );
+        db.rollback( );
       } catch ( Exception e1 ) {
         try {
           ComponentConfiguration searchConfig = Configuration.getConfigurationInstance( request );
           searchConfig.setHostName( request.getHost( ) );
           existingHost = db.getUnique( searchConfig );
+          db.rollback( );
         } catch ( Exception e2 ) {
+          db.rollback( );
         }
       }
-    } finally {
-      db.rollback( );
     }
     if ( existingName != null ) {
       throw new EucalyptusCloudException( "Component with name=" + request.getName( ) + " already exists at host=" + existingName.getHostName( ) );
@@ -264,9 +265,17 @@ public class Configuration {
   private static void removeClusterCredentials( String clusterName ) {
     EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
     try {
-      ClusterCredentials clusterCredentials = new ClusterCredentials( clusterName );
-      String directory = SubDirectory.KEYS.toString( ) + File.separator + clusterName;
+      ClusterCredentials clusterCredentials = credDb.getUnique( new ClusterCredentials( clusterName ) );
+      credDb.recast( X509Cert.class ).delete( clusterCredentials.getClusterCertificate( ) );
+      credDb.recast( X509Cert.class ).delete( clusterCredentials.getNodeCertificate( ) );
       credDb.delete( clusterCredentials );
+      credDb.commit( );
+    } catch ( Exception e ) {
+      LOG.error( e,e);
+      credDb.rollback( );
+    }
+    try {
+      String directory = SubDirectory.KEYS.toString( ) + File.separator + clusterName;
       File keyDir = new File( directory );
       for ( File f : keyDir.listFiles( ) ) {
         if ( !f.delete( ) ) {
@@ -277,9 +286,7 @@ public class Configuration {
         LOG.warn( "Failed to delete key directory: " + keyDir.getAbsolutePath( ) );
       }
     } catch ( Exception e ) {
-      credDb.rollback( );
     }
-    credDb.commit( );
   }
 
   public DescribeComponentsResponseType listComponents( DescribeComponentsType request ) throws EucalyptusCloudException {

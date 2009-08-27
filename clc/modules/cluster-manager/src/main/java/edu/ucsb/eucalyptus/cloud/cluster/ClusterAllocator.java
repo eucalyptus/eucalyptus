@@ -63,11 +63,13 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -150,6 +152,7 @@ class ClusterAllocator extends Thread {
   public void setupNetworkMessages( NetworkToken networkToken ) {
     if ( networkToken != null ) {
       StartNetworkType msg = new StartNetworkType( this.vmAllocInfo.getRequest(), networkToken.getVlan(), networkToken.getNetworkName() );
+      msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
       StartNetworkCallback callback = new StartNetworkCallback( this.cluster.getConfiguration( ), this, networkToken );
       QueuedEvent<StartNetworkType> event = new QueuedEvent<StartNetworkType>( callback, msg );
       this.msgMap.put( State.CREATE_NETWORK, event );

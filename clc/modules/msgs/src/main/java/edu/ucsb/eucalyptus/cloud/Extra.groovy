@@ -67,6 +67,7 @@ import edu.ucsb.eucalyptus.constants.HasName
 import edu.ucsb.eucalyptus.msgs.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.ConcurrentSkipListSet
 
 public class Pair {
 
@@ -259,6 +260,7 @@ public class Network implements HasName {
   String userName;
   ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
   ConcurrentMap<String, NetworkToken> networkTokens = new ConcurrentHashMap<String, NetworkToken>();
+  NavigableSet<Integer> addressAssignments;
 
   def Network() {}
 
@@ -266,9 +268,14 @@ public class Network implements HasName {
     this.userName = userName;
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
+    this.addressAssignments = new ConcurrentSkipListSet<Integer>(256);
   }
 
-
+  public Integer getNextIndex(Integer max) {
+//TODO: get network index.
+    return -1;
+  }
+  
   public NetworkToken addTokenIfAbsent(NetworkToken token) {
     this.networkTokens.putIfAbsent(token.getCluster(), token);
   }

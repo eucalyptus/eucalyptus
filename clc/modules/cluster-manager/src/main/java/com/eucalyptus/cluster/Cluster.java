@@ -65,6 +65,7 @@ package com.eucalyptus.cluster;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -127,6 +128,14 @@ public class Cluster implements HasName {
   public NodeInfo getNode( String serviceTag ) {
     return this.nodeMap.get( serviceTag );
   }
+  
+  public void updateNodeInfo( List<String> nodeTags ) {
+    NodeInfo ret = null;
+    for ( String tag : nodeTags )
+      if ( ( ret = this.nodeMap.putIfAbsent( tag, new NodeInfo( tag ) ) ) != null )
+        ret.touch();
+  }
+
 
   @Override
   public int compareTo( Object o ) {

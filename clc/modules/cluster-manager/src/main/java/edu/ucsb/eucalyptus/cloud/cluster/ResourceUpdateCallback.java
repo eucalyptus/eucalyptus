@@ -87,13 +87,15 @@ public class ResourceUpdateCallback extends QueuedEventCallback<DescribeResource
 
   public void process( final Client cluster, final DescribeResourcesType msg ) throws Exception {
     DescribeResourcesResponseType reply = ( DescribeResourcesResponseType ) cluster.send( msg );
-//TODO:    parent.getNodeState().update( reply.getResources() );
+    Cluster parent = Clusters.getInstance( ).lookup( this.getConfig( ).getName( ) );
+    parent.getNodeState().update( reply.getResources() );
     LOG.debug("Adding node service tags: " + reply.getServiceTags() );
-//TODO:    parent.updateNodeInfo( reply.getServiceTags() );
-//    if ( !parent.getNodeTags().isEmpty() && this.firstTime ) {
-//      this.firstTime = false;
-//      this.parent.fireNodeThreads();
-//    }
+    parent.updateNodeInfo( reply.getServiceTags() );
+    if ( !parent.getNodeTags().isEmpty() && this.firstTime ) {
+      this.firstTime = false;
+//TODO: wtf.      this.parent.fireNodeThreads();
+    }
+    this.notifyHandler( );//TODO: this needs fixing...
   }
 
   public void run() {

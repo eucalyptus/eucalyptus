@@ -76,6 +76,7 @@ import com.eucalyptus.ws.client.NioClient;
 import com.eucalyptus.ws.client.pipeline.LogClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 
+import edu.ucsb.eucalyptus.cloud.cluster.NetworkUpdateCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.NodeCertCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.NodeLogCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.ResourceUpdateCallback;
@@ -95,6 +96,7 @@ public class ClusterThreadGroup extends ThreadGroup {
   private Thread                 mqThread;
 //  private Thread                 logThread;
   private Thread                 keyThread;
+  private Thread                 networkThread;
 
   private ClusterMessageQueue    messageQueue;
   private ResourceUpdateCallback rscUpdater;
@@ -102,6 +104,7 @@ public class ClusterThreadGroup extends ThreadGroup {
   private VmUpdateCallback       vmUpdater;
 //  private NodeLogCallback        nodeLogUpdater;
   private NodeCertCallback       nodeCertUpdater;
+  private NetworkUpdateCallback       networkUpdater;
   private ClusterCredentials     credentials;
   private X509Certificate        clusterCert;
   private X509Certificate        nodeCert;
@@ -120,6 +123,7 @@ public class ClusterThreadGroup extends ThreadGroup {
     this.vmUpdater = new VmUpdateCallback( this.configuration );
 //    this.nodeLogUpdater = new NodeLogCallback( this.configuration );
     this.nodeCertUpdater = new NodeCertCallback( this.configuration );
+    this.networkUpdater = new NetworkUpdateCallback( this.configuration );
     this.clusterCert = X509Cert.toCertificate( credentials.getClusterCertificate( ) );
     this.nodeCert = X509Cert.toCertificate( credentials.getNodeCertificate( ) );
     this.init( );
@@ -132,6 +136,7 @@ public class ClusterThreadGroup extends ThreadGroup {
     if ( this.vmThread == null || !this.vmThread.isAlive( ) ) this.vmThread = this.createNamedThread( vmUpdater );
     if ( this.addrThread == null || !this.addrThread.isAlive( ) ) this.addrThread = this.createNamedThread( addrUpdater );
     if ( this.keyThread == null || !this.keyThread.isAlive( ) ) this.keyThread = this.createNamedThread( nodeCertUpdater );
+    if ( this.networkThread == null || !this.networkThread.isAlive( ) ) this.networkThread = this.createNamedThread( networkUpdater );
   }
 
   private Thread createNamedThread( Runnable r ) {
@@ -153,9 +158,10 @@ public class ClusterThreadGroup extends ThreadGroup {
       this.waitForCerts( );
     }
     this.startNamedThread( this.mqThread );
+    this.startNamedThread( this.networkThread );
     this.startNamedThread( this.rscThread );
     this.startNamedThread( this.vmThread );
-    this.startNamedThread( this.addrThread );
+//    this.startNamedThread( this.addrThread );
     this.startNamedThread( this.keyThread );
   }
 

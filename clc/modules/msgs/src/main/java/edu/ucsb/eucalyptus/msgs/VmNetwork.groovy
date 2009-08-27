@@ -122,18 +122,17 @@ public class StopNetworkResponseType extends EucalyptusMessage {
   boolean _return;
 }
 
-//TODO: new message type
 public class DescribeNetworksType extends EucalyptusMessage {
   String nameserver;
   ArrayList<String> clusterControllers;
 }
-//TODO: new message type
-public class DescribeNetworksResponeType extends EucalyptusMessage {
+
+public class DescribeNetworksResponseType extends EucalyptusMessage {
   Integer mode;
   Integer addrsPerNetwork;
   ArrayList<NetworkInfoType> activeNetworks = new ArrayList<NetworkInfoType>();
 }
-//TODO: new message type
+
 public class NetworkInfoType extends EucalyptusData {
   Integer vlan;
   String networkName;
