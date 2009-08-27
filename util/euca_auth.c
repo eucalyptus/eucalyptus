@@ -201,7 +201,7 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
     {
         file_name = rampart_context_get_receiver_certificate_file(rampart_context, env);
         if(!file_name) NO_U_FAIL("Policy for the service is incorrect -- ReceiverCertificate is not set!!");
-	if (check_file(file_name)) NO_U_FAIL("No cert file, failing");
+	if (check_file(file_name)) NO_U_FAIL("No cert file ($EUCALYPTUS/var/lib/eucalyptus/keys/cloud-cert.pem) found, failing");
         recv_cert = oxs_key_mgr_load_x509_cert_from_pem_file(env, file_name);
     }
     

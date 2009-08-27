@@ -138,7 +138,7 @@ int vnetEnableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetDisableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx);
 
-int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, int *nidx, char *outmac, char *outpubip, char *outprivip);
+int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, int nidx, char *outmac, char *outpubip, char *outprivip);
 
 int vnetAddDev(vnetConfig *vnetconfig, char *dev);
 int vnetDelDev(vnetConfig *vnetconfig, char *dev);

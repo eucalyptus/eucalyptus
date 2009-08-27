@@ -743,7 +743,7 @@ int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network) {
   return(-1);
 }
 
-int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, int *nidx, char *outmac, char *outpubip, char *outprivip) {
+int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, int nidx, char *outmac, char *outpubip, char *outprivip) {
   int rc, ret=0, networkIdx;
   
   if (!instId || !outmac || !outpubip || !outprivip) {
@@ -769,11 +769,10 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
   } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
     ret = 0;
   } else if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-    if (*nidx == -1) {
+    if (nidx == -1) {
       networkIdx = -1;
     } else {
-      networkIdx = *nidx;
-      (*nidx)++;
+      networkIdx = nidx;
     }
       
     // add the mac address to the virtual network

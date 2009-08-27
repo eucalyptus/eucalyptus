@@ -1306,21 +1306,33 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     logprintfl(EUCAERROR,"RunInstances(): bad min or max count, or not enough instIds (%d, %d, %d)\n", minCount, maxCount, instIdsLen);
     return(-1);
   }
+
+  // check health of the networkIndexList
+  if (networkIndexList == NULL) {
+    // disabled
+    nidx=-1;
+  } else {
+    if ( (networkIndexListLen < minCount) || (networkIndexListLen > maxCount) ) {
+      logprintfl(EUCAERROR, "network index length (%d) is out of bounds for min/max instances (%d-%d)\n", networkIndexListLen, minCount, maxCount);
+      return(1);
+    }
+    for (i=0; i<networkIndexListLen; i++) {
+      if ( (networkIndexList[i] < 0) || (networkIndexList[i] > (vnetconfig->numaddrs-1)) ) {
+	logprintfl(EUCAERROR, "network index (%d) out of bounds (0-%d)\n", networkIndexList[i], vnetconfig->numaddrs-1);
+	return(1);
+      }
+    }
+
+    // all checked out
+    nidx=0;
+  }
   
   retInsts = malloc(sizeof(ccInstance) * maxCount);  
   runCount=0;
   
   // get updated resource information
   rc = refresh_resources(ccMeta, OP_TIMEOUT - (time(NULL) - op_start));
-  
-    
 
-  if (networkIndexList == NULL) {
-    // disabled
-    nidx=-1;
-  } else {
-    nidx=0;
-  }
 
   done=0;
   for (i=0; i<maxCount && !done; i++) {
@@ -1339,7 +1351,12 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     }      
 
     sem_wait(vnetConfigLock);
-    rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, &nidx, mac, pubip, privip);
+    if (nidx == -1) {
+      rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, -1, mac, pubip, privip);
+    } else {
+      rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, networkIndexList[nidx], mac, pubip, privip);
+      nidx++;
+    }
     if (rc) {
       foundnet = 0;
     } else {
