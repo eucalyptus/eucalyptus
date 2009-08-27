@@ -40,6 +40,7 @@ package com.eucalyptus.auth;
 import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.zip.Adler32;
 
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.hibernate.HibernateException;
@@ -216,6 +217,14 @@ public class UserCredentialProvider extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     return Credentials.checkAdmin( );
+  }
+
+  public static String getUserNumber( final String userName ) {
+    Adler32 hash = new Adler32();
+    hash.reset();
+    hash.update( userName.getBytes(  ) );
+    String userNumber = String.format( "%012d", hash.getValue() );
+    return userNumber;
   }
 
   public static User getUser( String userName ) throws NoSuchUserException {

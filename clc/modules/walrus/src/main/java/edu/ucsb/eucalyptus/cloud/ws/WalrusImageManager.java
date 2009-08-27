@@ -52,8 +52,11 @@ import org.jboss.netty.handler.stream.ChunkedInput;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
@@ -150,25 +153,20 @@ public class WalrusImageManager {
 							throw new DecryptionFailedException("signature verification");
 						}
 					} else {
-						EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-						UserInfo userInfo = new UserInfo(userId);
-						List<UserInfo> foundUserInfos = db2.query(userInfo);
-						if(foundUserInfos.size() == 0) {
-							db2.rollback();
-							db.rollback();
-							throw new AccessDeniedException(userId);
-						}
-						List<CertificateInfo> certInfos = foundUserInfos.get(0).getCertificates();
 						boolean signatureVerified = false;
-						for(CertificateInfo certInfo: certInfos) {
-							String alias = certInfo.getCertAlias();
+	          User user = null;
+	          try {
+	            user = UserCredentialProvider.getUser( userId );
+	          } catch ( NoSuchUserException e ) {
+	            throw new AccessDeniedException(userId,e);            
+	          }         
+	          for(X509Cert certInfo: user.getCertificates( )) {
 							try {
-								X509Certificate cert = UserCredentialProvider.getCertificate(alias);
+								X509Certificate cert = X509Cert.toCertificate( certInfo );
 								signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if (signatureVerified)
 									break;
 							} catch(Exception ex) {
-								db2.rollback();
 								db.rollback();
 								LOG.error(ex, ex);
 								throw new DecryptionFailedException("signature verification");
@@ -177,7 +175,6 @@ public class WalrusImageManager {
 						if(!signatureVerified) {
 							throw new NotAuthorizedException("Invalid signature");
 						}
-						db2.commit();
 					}
 					List<String> parts = parser.getValues("//image/parts/part/filename");
 					ArrayList<String> qualifiedPaths = new ArrayList<String>();
@@ -276,17 +273,13 @@ public class WalrusImageManager {
 					String image = parser.getXML("image");
 					String machineConfiguration = parser.getXML("machine_configuration");
 
-					EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-					UserInfo userInfo = new UserInfo(userId);
-					List<UserInfo> foundUserInfos = db2.query(userInfo);
-					if(foundUserInfos.size() == 0) {
-						db2.rollback();
-						db.rollback();
-						throw new AccessDeniedException(userId);
-					}
-
-					List<CertificateInfo> certInfos = foundUserInfos.get(0).getCertificates();
-					boolean signatureVerified = false;
+					User user = null;
+          try {
+            user = UserCredentialProvider.getUser( userId );
+          } catch ( NoSuchUserException e ) {
+            throw new AccessDeniedException(userId,e);            
+          }         
+          boolean signatureVerified = false;
 
 					Signature sigVerifier;
 					try {
@@ -296,10 +289,9 @@ public class WalrusImageManager {
 						throw new DecryptionFailedException("SHA1withRSA not found");
 					}
 
-					for(CertificateInfo certInfo: certInfos) {
-						String alias = certInfo.getCertAlias();
+					for(X509Cert certInfo: user.getCertificates( )) {
 						try {
-							X509Certificate cert = UserCredentialProvider.getCertificate(alias);
+							X509Certificate cert = X509Cert.toCertificate( certInfo );
 							PublicKey publicKey = cert.getPublicKey();
 							sigVerifier.initVerify(publicKey);
 							sigVerifier.update((machineConfiguration + image).getBytes());
@@ -308,7 +300,6 @@ public class WalrusImageManager {
 								break;
 							}
 						} catch(Exception ex) {
-							db2.rollback();
 							db.rollback();
 							LOG.error(ex, ex);
 							throw new DecryptionFailedException("signature verification");
@@ -329,12 +320,10 @@ public class WalrusImageManager {
 						key = Hashes.hexToBytes(new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey))));
 						iv = Hashes.hexToBytes(new String(cipher.doFinal(Hashes.hexToBytes(encryptedIV))));
 					} catch(Exception ex) {
-						db2.rollback();
 						db.rollback();
 						LOG.error(ex, ex);
 						throw new DecryptionFailedException("AES params");
 					}
-					db2.commit();
 					db.commit();
 				} else {
 					db.rollback();

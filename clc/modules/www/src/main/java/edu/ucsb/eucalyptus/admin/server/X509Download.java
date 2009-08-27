@@ -47,7 +47,6 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
-import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.UrlBase64;
@@ -167,7 +166,7 @@ public class X509Download extends HttpServlet {
     zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
     StringBuffer sb = new StringBuffer( );
 
-    String userNumber = UserInfo.getUserNumber( userName );
+    String userNumber = UserCredentialProvider.getUserNumber( userName );
 
     sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
     sb.append( "\nexport S3_URL=" + EucalyptusProperties.getSystemConfiguration( ).getStorageUrl( ) );

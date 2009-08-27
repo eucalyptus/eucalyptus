@@ -37,6 +37,8 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
@@ -344,16 +346,14 @@ public class WalrusManager {
 				ArrayList<Grant> grants = new ArrayList<Grant>();
 				for (GrantInfo grantInfo: grantInfos) {
 					String uId = grantInfo.getUserId();
-					UserInfo userInfo = new UserInfo(uId);
-					EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-					List<UserInfo> grantUserInfos = db2.query(userInfo);
-					db2.commit();
-
-					if(grantUserInfos.size() > 0) {
-						UserInfo grantUserInfo = grantUserInfos.get(0);
-						bucket.readPermissions(grants);
-						addPermission(grants, grantUserInfo, grantInfo);
-					}
+					try {
+            User grantUserInfo = UserCredentialProvider.getUser( uId );
+            bucket.readPermissions(grants);
+            addPermission(grants, grantUserInfo, grantInfo);
+          } catch ( NoSuchUserException e ) {
+            db.rollback( );
+            throw new AccessDeniedException( bucketName, e );
+          }
 				}
 				accessControlList.setGrants(grants);
 			}
@@ -361,25 +361,24 @@ public class WalrusManager {
 			db.rollback();
 			throw new NoSuchBucketException(bucketName);
 		}
-		UserInfo userInfo = new UserInfo(ownerId);
-		EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-		List<UserInfo> ownerUserInfos = db2.query(userInfo);
-		db2.commit();
 
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
-		if(ownerUserInfos.size() > 0) {
-			UserInfo ownerUserInfo = ownerUserInfos.get(0);
-			accessControlPolicy.setOwner(new CanonicalUserType(ownerUserInfo.getQueryId(), ownerUserInfo.getUserName()));
-			accessControlPolicy.setAccessControlList(accessControlList);
-		}
+    try {
+      User ownerUserInfo = UserCredentialProvider.getUser( ownerId );
+      accessControlPolicy.setOwner(new CanonicalUserType(ownerUserInfo.getQueryId(), ownerUserInfo.getUserName()));
+      accessControlPolicy.setAccessControlList(accessControlList);
+    } catch ( NoSuchUserException e ) {
+      db.rollback( );
+      throw new AccessDeniedException( bucketName, e );
+    }
 		reply.setAccessControlPolicy(accessControlPolicy);
 		db.commit();
 		return reply;
 	}
 
 
-	private static void addPermission(ArrayList<Grant>grants, UserInfo userInfo, GrantInfo grantInfo) {
-		CanonicalUserType user = new CanonicalUserType(userInfo.getQueryId(), userInfo.getUserName());
+	private static void addPermission(ArrayList<Grant>grants, User userInfo, GrantInfo grantInfo) {
+		CanonicalUserType user = new CanonicalUserType(userInfo.getQueryId( ), userInfo.getUserName( ));
 
 		if (grantInfo.isRead() && grantInfo.isWrite() && grantInfo.isReadACP() && grantInfo.isWriteACP()) {
 			grants.add(new Grant(new Grantee(user), "FULL_CONTROL"));
@@ -979,14 +978,13 @@ public class WalrusManager {
 						listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
 						listEntry.setStorageClass(objectInfo.getStorageClass());
 						String displayName = objectInfo.getOwnerId();
-
-						EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-						UserInfo userInfo = new UserInfo(displayName);
-						List<UserInfo> ownerInfos = db2.query(userInfo);
-						db2.commit();
-						if(ownerInfos.size() > 0) {
-							listEntry.setOwner(new CanonicalUserType(ownerInfos.get(0).getQueryId(), displayName));
-						}
+            try {
+              User userInfo = UserCredentialProvider.getUser( displayName );
+              listEntry.setOwner(new CanonicalUserType(userInfo.getQueryId(), displayName));
+            } catch ( NoSuchUserException e ) {
+              db.rollback( );
+              throw new AccessDeniedException( bucketName, e );
+            }
 						ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 						objectInfo.returnMetaData(metaData);
 						reply.setMetaData(metaData);
@@ -1038,14 +1036,13 @@ public class WalrusManager {
 					List<GrantInfo> grantInfos = objectInfo.getGrants();
 					for (GrantInfo grantInfo: grantInfos) {
 						String uId = grantInfo.getUserId();
-						UserInfo userInfo = new UserInfo(uId);
-						EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-						List<UserInfo> grantUserInfos = db2.query(userInfo);
-						db2.commit();
-						if(grantUserInfos.size() > 0) {
-							objectInfo.readPermissions(grants);
-							addPermission(grants, grantUserInfos.get(0), grantInfo);
-						}
+						try {
+              User userInfo = UserCredentialProvider.getUser( uId );
+              objectInfo.readPermissions(grants);
+              addPermission(grants, userInfo, grantInfo);
+            } catch ( NoSuchUserException e ) {
+              throw new AccessDeniedException(objectKey,e);              
+            }
 					}
 					accessControlList.setGrants(grants);
 				} else {
@@ -1060,18 +1057,16 @@ public class WalrusManager {
 			db.rollback();
 			throw new NoSuchBucketException(bucketName);
 		}
-		UserInfo userInfo = new UserInfo(ownerId);
-		EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-		List<UserInfo> ownerUserInfos = db2.query(userInfo);
-		db2.commit();
 
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
-		if(ownerUserInfos.size() > 0) {
-			UserInfo ownerUserInfo = ownerUserInfos.get(0);
-			accessControlPolicy.setOwner(new CanonicalUserType(ownerUserInfo.getQueryId(), ownerUserInfo.getUserName()));
-			accessControlPolicy.setAccessControlList(accessControlList);
-			reply.setAccessControlPolicy(accessControlPolicy);
-		}
+	  try {
+      User ownerUserInfo = UserCredentialProvider.getUser( ownerId );
+      accessControlPolicy.setOwner(new CanonicalUserType(ownerUserInfo.getQueryId(), ownerUserInfo.getUserName()));
+      accessControlPolicy.setAccessControlList(accessControlList);
+    } catch ( NoSuchUserException e ) {
+      throw new AccessDeniedException( objectKey, e );
+    }
+		reply.setAccessControlPolicy(accessControlPolicy);
 		db.commit();
 		return reply;
 	}

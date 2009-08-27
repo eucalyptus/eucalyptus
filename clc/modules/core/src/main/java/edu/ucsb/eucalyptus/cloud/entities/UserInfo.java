@@ -46,7 +46,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.zip.Adler32;
 
 @Entity
 @Table( name = "Users" )
@@ -410,14 +409,6 @@ public class UserInfo {
       db.commit();
     }
     return user;
-  }
-
-  public static String getUserNumber( final String userName ) {
-    Adler32 hash = new Adler32();
-    hash.reset();
-    hash.update( userName.getBytes(  ) );
-    String userNumber = String.format( "%012d", hash.getValue() );
-    return userNumber;
   }
 }
 

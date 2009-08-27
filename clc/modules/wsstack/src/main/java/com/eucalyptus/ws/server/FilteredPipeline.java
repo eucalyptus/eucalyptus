@@ -149,9 +149,9 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
     @Override
     public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
       if ( e instanceof MessageEvent ) {
-        LOG.info( "START OUTBOUND STAGE: " + parent.getStageName( ) );
+        LOG.debug( "START OUTBOUND STAGE: " + parent.getStageName( ) );
       } else {
-        LOG.info( "START OUTBOUND STAGE: " + parent.getStageName( ) + " -- " + e.getClass( ).getSimpleName( ) );
+        LOG.debug( "START OUTBOUND STAGE: " + parent.getStageName( ) + " -- " + e.getClass( ).getSimpleName( ) );
       }
       ctx.sendDownstream( e );
     }
@@ -159,9 +159,9 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
     @Override
     public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
       if ( e instanceof MessageEvent ) {
-        LOG.info( "END INBOUND STAGE: " + parent.getStageName( ) );
+        LOG.debug( "END INBOUND STAGE: " + parent.getStageName( ) );
       } else {
-        LOG.info( "END INBOUND STAGE: " + parent.getStageName( ) + " -- " + e.getClass( ).getSimpleName( ) );
+        LOG.debug( "END INBOUND STAGE: " + parent.getStageName( ) + " -- " + e.getClass( ).getSimpleName( ) );
       }
       ctx.sendUpstream( e );
     }
