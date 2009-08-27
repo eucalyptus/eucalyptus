@@ -6,6 +6,8 @@ import com.google.gwt.user.client.ui.*;
 import java.util.ArrayList;
 import java.util.List;
 
+// dmitrii TODO: remove commented out lines once the CSS-based design is confirmed
+
 public class VmTypeTable extends VerticalPanel {
 
 	private static Label statusLabel = new Label();
@@ -18,7 +20,7 @@ public class VmTypeTable extends VerticalPanel {
 		this.sessionId = sessionId;
 		this.setSpacing (10);
 		this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
-		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+//		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
 		Label VmTypesHeader = new Label( "VM Types:" );
 		VmTypesHeader.setStyleName ( "euca-section-header" );
 		this.add ( VmTypesHeader );
@@ -27,7 +29,7 @@ public class VmTypeTable extends VerticalPanel {
 		hpanel.setSpacing (5);
 		hpanel.add ( new Button( "Save VmTypes", new SaveCallback( this ) ) );
 		hpanel.add ( this.statusLabel );
-		this.statusLabel.setWidth ("250");
+//		this.statusLabel.setWidth ("250");
 		this.statusLabel.setText ("");
 		this.statusLabel.setStyleName ("euca-greeting-pending");
 		this.add ( hpanel );
@@ -77,7 +79,7 @@ public class VmTypeTable extends VerticalPanel {
 		cpu_b.setVisibleLength( 2 );
 		cpu_b.setText( "" + VmType.getCpu() );
 		this.grid.setWidget( row, 2, cpu_b );
-		this.grid.getCellFormatter().setHorizontalAlignment(row, 2, HasHorizontalAlignment.ALIGN_CENTER);
+		this.grid.getCellFormatter().setHorizontalAlignment(row, 2, HasHorizontalAlignment.ALIGN_CENTER); // michael had these three commented out
 
 		final TextBox mem_b = new TextBox();
 		mem_b.addChangeListener (new ChangeCallback (this, row));

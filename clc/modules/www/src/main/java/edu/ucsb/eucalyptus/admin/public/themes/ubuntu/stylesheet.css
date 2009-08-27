@@ -1,12 +1,71 @@
 a:focus {-moz-outline: none /* fx 1.07*/ outline:none /* fx 1.05, Safari, Mac IE*/}
 
 body {
-    background-color: white;
+   background: #FFF url('img/page_background.png') center top no-repeat;
+   
     color: black;
     font-family: Arial, sans-serif;
-    font-size: medium;
+    font-size: 77%;
+
     margin: 0px;
+	padding:0;
 }
+
+h3,.euca-section-header{
+	color:#ff6600; /*orange*/
+	font-size:1.1em;
+	padding-top:10px;
+	margin-top:0;
+	font-weight:bold;
+}
+p{
+	padding-top:20px;
+	padding-bottom:20px;
+	color:#737373;
+	font-size:0.85em;
+}
+td{
+	font-size:1.12em;
+}
+.content{
+	width:480px;
+}
+
+button{
+	margin-bottom:30px;
+}
+
+table.euca-top-bar, .gwt-TabBar, .euca-tab-contents{
+	width:964px;
+	overflow:hidden;
+	margin:0 auto;
+}
+
+.euca-tab-contents{
+	padding-left:100px;
+	padding-bottom:50px;
+	padding-right:200px;
+	background: url(img/powered_by_eucalyptus.png) no-repeat top right;
+}
+.euca-top-bar{
+	padding-left:50px;
+}
+
+
+.euca-top-bar-right {
+	font-size:.6em;
+	margin-top:20px;
+	margin-right:50px;
+}
+.euca-top-bar-right a{
+	font-weight:bold;
+	color:black;
+	text-decoration: none;
+}
+.euca-top-bar-right a:hover{
+	text-decoration: underline;
+}
+
 .euca-greeting-normal {
     color: black;
 }
@@ -46,16 +105,15 @@ body {
     font-size: x-small;
 	color: gray;
 }
-.euca-section-header {
-    padding: 5px 5px 5px 5px;
-    font-weight: bold;
-    font-size: large;
-    text-align: center;
-}
+
+
+
 
 .euca-top-bar {
-    background: #FFCC33;
-    padding: 4px 15px 2px 2px;
+	height:100px;
+	margin:0;
+    background: #FFF url(img/header_background.png) right repeat-y;
+    padding-left:50px;
     font-weight: bold;
     font-size: large;
     text-align: left;
@@ -73,14 +131,15 @@ body {
     color: red;
 }
 
-.gwt-TabBar {
-    background-color: #FFFF66;
-    font-size: smaller;
+.gwt-TabBar {  
+	background:url(img/navbar_background.png) no-repeat;
+	height:56px;
+
 }
 
+
 .gwt-TabBar .gwt-TabBarFirst {
-    height: 100%;
-    padding-left: 3px;
+    padding-left: 70px;
 }
 
 .gwt-TabBar .gwt-TabBarRest {
@@ -88,18 +147,25 @@ body {
 }
 
 .gwt-TabBar .gwt-TabBarItem {
-    padding: 4px 10px 4px 10px;
-    margin: 4px 10px 0px 10px;
+    padding: 14px 10px 24px 20px;
+	color:white;
+  	margin:0;
     cursor: pointer;
     text-align: center;
     -moz-outline: none; /* fx 1.07*/ outline: none; /* fx 1.05, Safari, Mac IE*/
 }
-
+.gwt-TabBar .gwt-TabBarItem-wrapper-selected{
+	background: url(img/tab_background.png) no-repeat top left;
+}
 .gwt-TabBar .gwt-TabBarItem-selected {
-    background-color: white;
     cursor: default;
     text-align: center;
+	background: url(img/tab_background_right.png) right top no-repeat;
+	padding-right:20px;
+	color:black;
+	font-weight:bold;
 }
+
 
 .gwt-TabBarItem:hover {
     text-decoration: underline;
@@ -137,7 +203,7 @@ body {
 
 .euca-table-even-row {
     font-size: smaller;
-    background: #FFFF66;
+    background: #E8E8E8;
 }
 
 .gwt-DialogBox { 

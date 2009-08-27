@@ -3,12 +3,39 @@
 #
 include ../Makedefs
 
+theme_dir	= ${TOP}/clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes
+web_prop_dir	= ${TOP}/clc/modules/www/conf
+
+.PHONY: all build update_properties update_theme deps themes install
+
 all: build
 
 deps:
 	$(ANT) deps
 
-build:
+update_properties:
+	@sed "s/\(^extensions =\).*/\1 ${extensions}/" < ${web_prop_dir}/eucalyptus-web-default.properties > ${web_prop_dir}/eucalyptus-web.properties
+
+update_theme:
+	@if test -d ${theme_dir}/${euca_theme} ; then \
+		rm -f ${theme_dir}/active; \
+		ln -sf ${euca_theme} ${theme_dir}/active; \
+	else \
+		echo "Theme ${euca_theme} does not exists!"; exit 1; \
+	fi \
+
+themes:
+	@if test -n "${euca_theme}" ; then \
+		$(MAKE) update_theme; \
+	else \
+		rm -f ${theme_dir}/active; \
+		ln -sf eucalyptus ${theme_dir}/active; \
+	fi
+	@if test ! -e ${prop_web_dir}/eucalyptus-web.properties ; then \
+		$(MAKE) update_properties; fi
+	@if test "`grep '^extensions' ${web_prop_dir}/eucalyptus-web.properties | sed 's/extensions =[[:blank:]]*//'` != '${extensions}'" > /dev/null ; then $(MAKE) update_properties; fi
+
+build: themes
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi

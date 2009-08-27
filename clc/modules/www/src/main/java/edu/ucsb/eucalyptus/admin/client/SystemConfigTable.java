@@ -68,19 +68,21 @@ public class SystemConfigTable extends VerticalPanel {
 	private static TextBox nameserverAddress_box = new TextBox();
 	private List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>();
 
+// dmitrii TODO: remove commented out lines once the CSS-based design is confirmed
+
 	public SystemConfigTable(String sessionId)
 	{
 		this.sessionId = sessionId;
-		this.setSpacing (10);
+//		this.setSpacing (10);
 		this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
-		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+//		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
 		Label SystemConfigsHeader = new Label( "Cloud configuration:" );
 		SystemConfigsHeader.setStyleName ( "euca-section-header" );
 		this.add ( SystemConfigsHeader );
 		HorizontalPanel c_hpanel = new HorizontalPanel ();
 		c_hpanel.add ( this.c_grid );
 		c_hpanel.add ( this.c_hint );
-		c_hint.setWidth ("180");
+//		c_hint.setWidth ("180");
 		this.add ( c_hpanel );
 		HorizontalPanel c_hpanel2 = new HorizontalPanel ();
 		c_hpanel2.setSpacing (10);
@@ -88,7 +90,7 @@ public class SystemConfigTable extends VerticalPanel {
 		c_hpanel2.add ( this.c_status );
 		this.c_status.setText ("");
 		this.c_status.setStyleName ("euca-greeting-pending");
-		this.c_status.setWidth ("250");
+//		this.c_status.setWidth ("250");
 		this.add ( c_hpanel2 );
 
 		Label WalrusConfigsHeader = new Label( "Walrus configuration:" );
@@ -97,7 +99,7 @@ public class SystemConfigTable extends VerticalPanel {
 		HorizontalPanel w_hpanel = new HorizontalPanel ();
 		w_hpanel.add ( this.w_grid );
 		w_hpanel.add ( this.w_hint );
-		w_hint.setWidth ("180");
+//		w_hint.setWidth ("180");
 		this.add ( w_hpanel );
 		HorizontalPanel w_hpanel2 = new HorizontalPanel ();
 		w_hpanel2.setSpacing (10);
@@ -105,7 +107,7 @@ public class SystemConfigTable extends VerticalPanel {
 		w_hpanel2.add ( this.w_status );
 		this.w_status.setText ("");
 		this.w_status.setStyleName ("euca-greeting-pending");
-		this.w_status.setWidth ("250");
+//		this.w_status.setWidth ("250");
 		this.add ( w_hpanel2 );
 
 		Label DNSConfigHeader = new Label( "DNS configuration:" );
@@ -114,7 +116,7 @@ public class SystemConfigTable extends VerticalPanel {
 		HorizontalPanel dns_hpanel = new HorizontalPanel ();
 		dns_hpanel.add ( this.dns_grid );
 		dns_hpanel.add ( this.dns_hint );
-		dns_hint.setWidth ("180");
+//		dns_hint.setWidth ("180");
 		this.add ( dns_hpanel );
 		HorizontalPanel dns_hpanel2 = new HorizontalPanel ();
 		dns_hpanel2.setSpacing (10);
@@ -122,7 +124,7 @@ public class SystemConfigTable extends VerticalPanel {
 		dns_hpanel2.add ( this.dns_status );
 		this.dns_status.setText ("");
 		this.dns_status.setStyleName ("euca-greeting-pending");
-		this.dns_status.setWidth ("250");
+//		this.dns_status.setWidth ("250");
 		this.add ( dns_hpanel2 );
 
 		this.rebuildTable ();
@@ -136,8 +138,8 @@ public class SystemConfigTable extends VerticalPanel {
 	{
 		this.c_grid.clear ();
 		this.c_grid.resize ( 2, 2 );
-		this.c_grid.getColumnFormatter().setWidth(0, "190");
-		this.c_grid.getColumnFormatter().setWidth(1, "260");
+//		this.c_grid.getColumnFormatter().setWidth(0, "190");
+//		this.c_grid.getColumnFormatter().setWidth(1, "260");
 		int i = 0;
 
 		// cloud parameters
@@ -179,8 +181,8 @@ public class SystemConfigTable extends VerticalPanel {
 
 		this.w_grid.clear ();
 		this.w_grid.resize ( 4, 2 );
-		this.w_grid.getColumnFormatter().setWidth(0, "190");
-		this.w_grid.getColumnFormatter().setWidth(1, "260");
+//		this.w_grid.getColumnFormatter().setWidth(0, "190");
+//		this.w_grid.getColumnFormatter().setWidth(1, "260");
 		i = 0;
 
 		this.w_grid.setWidget( i, 0, new Label( "Buckets path:" ) );
@@ -240,8 +242,8 @@ public class SystemConfigTable extends VerticalPanel {
 		// dns params
 		this.dns_grid.clear ();
 		this.dns_grid.resize ( 2, 2 );
-		this.dns_grid.getColumnFormatter().setWidth(0, "190");
-		this.dns_grid.getColumnFormatter().setWidth(1, "260");
+//		this.dns_grid.getColumnFormatter().setWidth(0, "190");
+//		this.dns_grid.getColumnFormatter().setWidth(1, "260");
 		i = 0;
 
 		this.dns_grid.setWidget( i, 0, new Label( "Domain name:" ) );
@@ -260,11 +262,11 @@ public class SystemConfigTable extends VerticalPanel {
 		this.dns_grid.setWidget( i++, 1, dns_hpanel2 );
 
 		nameserver_box.addChangeListener (new ChangeCallback (this));
-		nameserver_box.setVisibleLength(15);
+		nameserver_box.setVisibleLength(20);
 		nameserver_box.setText (SystemConfig.getNameserver());
 		dns_hpanel2.add (nameserver_box);
 
-		dns_hpanel2.add ( new HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IP:  &nbsp;"));
+		dns_hpanel2.add ( new HTML("&nbsp;&nbsp;&nbsp; IP:  &nbsp;"));
 		nameserverAddress_box.addChangeListener (new ChangeCallback (this));
 		nameserverAddress_box.setVisibleLength(10);
 		nameserverAddress_box.setText (SystemConfig.getNameserverAddress());

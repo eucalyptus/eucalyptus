@@ -595,6 +595,8 @@ ac_includes_default="\
 ac_header_list=
 ac_func_list=
 ac_subst_vars='LTLIBOBJS
+INTERFACE_THEME
+EXTENSIONS
 INCLUDES
 LIBVIRT_HOME
 AXIS2_HOME
@@ -667,6 +669,8 @@ with_axis2c
 with_axis2c_services
 with_axis2
 with_libvirt
+with_interface_theme
+enable_appliance_store
 enable_debug
 '
       ac_precious_vars='build_alias
@@ -1288,6 +1292,7 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-appliance-store             enable the store tab
   --enable-debug                       include debugging info when compiling
 
 Optional Packages:
@@ -1297,6 +1302,7 @@ Optional Packages:
   --with-axis2c-services=<dir>         where axis2c services are installed
   --with-axis2=<dir>                   where axis2 is installed
   --with-libvirt=<dir>                 where libvirt is installed
+  --with-interface-theme=<name>        the theme to be used
 
 Some influential environment variables:
   CC          C compiler command
@@ -3446,6 +3452,8 @@ AXIS2C_HOME="${AXIS2C_HOME}"
 AXIS2_HOME="${AXIS2_HOME}"
 AXIS2C_SERVICES=""
 LIBVIRT_HOME="${LIBVIRT_HOME}"
+INTERFACE_THEME="eucalyptus"
+EXTENSIONS=""
 ANT=""
 JAVA=""
 WSDL2C=""
@@ -3485,6 +3493,20 @@ fi
 if test "${with_libvirt+set}" = set; then :
   withval=$with_libvirt; LIBVIRT_HOME="${withval}"
 fi
+
+
+# Check whether --with-interface-theme was given.
+if test "${with_interface_theme+set}" = set; then :
+  withval=$with_interface_theme; INTERFACE_THEME="${withval}"
+fi
+
+# Check whether --enable-appliance-store was given.
+if test "${enable_appliance_store+set}" = set; then :
+  enableval=$enable_appliance_store; if test "${enableval}" != "no"; then
+                        EXTENSIONS="store"
+                fi
+fi
+
 
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
@@ -6996,6 +7018,8 @@ ac_config_files="$ac_config_files Makedefs tools/eucalyptus-cc:tools/eucalyptus-
 cat >>confdefs.h <<_ACEOF
 #define EUCA_VERSION "$EUCA_VERSION"
 _ACEOF
+
+
 
 
 

@@ -6,6 +6,8 @@
 #   configure   [--with-axis2c=<dir>]
 #		[--with-axis2=<dir>]
 #		[--with-libvirt=<dir>]
+#		[--with-interface-theme=<name>]
+#		[--enable-appliance-store]
 #               [--enable-debug]
 
 AC_PREREQ(2.61)
@@ -30,6 +32,8 @@ AXIS2C_HOME="${AXIS2C_HOME}"
 AXIS2_HOME="${AXIS2_HOME}"
 AXIS2C_SERVICES=""
 LIBVIRT_HOME="${LIBVIRT_HOME}"
+INTERFACE_THEME="eucalyptus"
+EXTENSIONS=""
 ANT=""
 JAVA=""
 WSDL2C=""
@@ -58,6 +62,15 @@ AC_ARG_WITH(axis2,
 AC_ARG_WITH(libvirt,
         [  --with-libvirt=<dir>                 where libvirt is installed],
         [LIBVIRT_HOME="${withval}"])
+AC_ARG_WITH(interface-theme,
+        [  --with-interface-theme=<name>        the theme to be used],
+        [INTERFACE_THEME="${withval}"])
+AC_ARG_ENABLE(appliance-store,
+        [  --enable-appliance-store             enable the store tab],
+                [if test "${enableval}" != "no"; then
+                        EXTENSIONS="store"
+                fi])
+
 AC_ARG_ENABLE(debug,
         [  --enable-debug                       include debugging info when compiling],
                 [if test "${enableval}" != "no"; then
@@ -229,6 +242,8 @@ AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 AC_SUBST(LIBS)
 AC_SUBST(INCLUDES)
+AC_SUBST(EXTENSIONS)
+AC_SUBST(INTERFACE_THEME)
 
 
 
