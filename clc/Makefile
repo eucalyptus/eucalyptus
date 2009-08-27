@@ -3,8 +3,8 @@
 #
 include ../Makedefs
 
-theme_dir	= ${TOP}/clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes/
-
+theme_dir	= ${TOP}/clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes
+web_prop_dir	= ${TOP}/clc/modules/www/conf
 
 .PHONY: all build update_properties update_theme deps themes install
 
@@ -14,7 +14,7 @@ deps:
 	$(ANT) deps
 
 update_properties:
-	@sed -i "s/\(^extensions =\).*/\1 ${extensions}/" ${TOP}/clc/modules/www/conf/eucalyptus-web.properties
+	@sed "s/\(^extensions =\).*/\1 ${extensions}/" < ${web_prop_dir}/eucalyptus-web-default.properties > ${web_prop_dir}/eucalyptus-web.properties
 
 update_theme:
 	@if test -d ${theme_dir}/${euca_theme} ; then \
@@ -31,7 +31,9 @@ themes:
 		rm -f ${theme_dir}/active; \
 		ln -sf eucalyptus ${theme_dir}/active; \
 	fi
-	@if test "`grep '^extensions' ${TOP}/clc/modules/www/conf/eucalyptus-web.properties | sed 's/extensions =[[:blank:]]*//'` != '${extensions}'" > /dev/null ; then $(MAKE) update_properties; fi
+	@if test ! -e ${prop_web_dir}//eucalyptus-web.properties ; then \
+		$(MAKE) update_properties; fi
+	@if test "`grep '^extensions' ${web_prop_dir}/eucalyptus-web.properties | sed 's/extensions =[[:blank:]]*//'` != '${extensions}'" > /dev/null ; then $(MAKE) update_properties; fi
 
 build: themes
 	@# we need JAVA_HOME
