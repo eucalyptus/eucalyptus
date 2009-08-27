@@ -54,7 +54,7 @@
     <entry-point class='edu.ucsb.eucalyptus.admin.client.EucalyptusWebInterface'/>
 
     <servlet path="/EucalyptusWebBackend" class="edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl"/>
-    <servlet path="/ImageStoreService" class="edu.ucsb.eucalyptus.admin.server.ImageStoreServiceImpl"/>
+    <servlet path="/ImageStoreService" class="edu.ucsb.eucalyptus.admin.server.extensions.store.ImageStoreServiceImpl"/>
 
     <script src="themes/active/code.js">
       <![CDATA[
