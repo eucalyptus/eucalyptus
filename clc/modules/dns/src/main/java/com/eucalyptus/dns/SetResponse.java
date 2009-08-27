@@ -57,7 +57,7 @@
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
- ******************************************************************************/
+*******************************************************************************/
 // Copyright (c) 1999-2004 Brian Wellington (bwelling@xbill.org)
 
 package com.eucalyptus.dns;

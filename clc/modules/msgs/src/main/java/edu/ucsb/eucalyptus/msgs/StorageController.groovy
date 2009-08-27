@@ -57,7 +57,7 @@
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
- ******************************************************************************/
+*******************************************************************************/
 package edu.ucsb.eucalyptus.msgs
 /*
  *

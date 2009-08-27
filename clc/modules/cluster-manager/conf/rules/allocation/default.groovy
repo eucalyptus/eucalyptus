@@ -57,7 +57,7 @@
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
- ******************************************************************************/
+*******************************************************************************/
 import edu.ucsb.eucalyptus.cloud.ResourceToken
 import edu.ucsb.eucalyptus.cloud.cluster.ClusterState
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable
