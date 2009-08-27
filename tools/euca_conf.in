@@ -884,7 +884,7 @@ if [ -n "$CLUSNAME" ]; then
 	    CMD="echo"
 	fi
 	if ! eval $CMD ; then
-	    echo "ERROR: failed to register new cluster, please log in to the admin interface and check cloud status."
+	    echo "ERROR: failed to deregister new cluster, please log in to the admin interface and check cloud status."
 	    exit 1
 	fi	
 	echo
