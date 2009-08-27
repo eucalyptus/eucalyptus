@@ -29,6 +29,9 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
  ******************************************************************************/
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
 package com.eucalyptus.ws.server;
 
 import static org.jboss.netty.channel.Channels.pipeline;

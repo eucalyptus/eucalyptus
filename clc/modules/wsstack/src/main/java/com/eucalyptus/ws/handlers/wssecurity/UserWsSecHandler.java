@@ -29,6 +29,9 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
  ******************************************************************************/
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
 package com.eucalyptus.ws.handlers.wssecurity;
 
 import java.security.cert.X509Certificate;

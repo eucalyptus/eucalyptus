@@ -31,7 +31,7 @@
  ******************************************************************************/
 /*
  *
- * Author: Chris Grzegorczyk grze@cs.ucsb.edu
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
  * Author: Dmitrii Zagorodnov dmitrii@cs.ucsb.edu
  */
 package edu.ucsb.eucalyptus.admin.client;

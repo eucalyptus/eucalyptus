@@ -46,6 +46,9 @@
  *  limitations under the License.
  *
  */
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
 package org.apache.tools.ant.util;
 
 import java.text.ChoiceFormat;

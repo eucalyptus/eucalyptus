@@ -32,6 +32,9 @@
 /*
  */
 
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
 package edu.ucsb.eucalyptus.util;
 
 import edu.ucsb.eucalyptus.cloud.entities.NetworkRulesGroup;

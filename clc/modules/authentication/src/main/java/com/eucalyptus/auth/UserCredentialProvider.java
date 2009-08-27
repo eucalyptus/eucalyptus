@@ -32,6 +32,9 @@
 /**
  * 
  */
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
 package com.eucalyptus.auth;
 
 import java.security.GeneralSecurityException;
