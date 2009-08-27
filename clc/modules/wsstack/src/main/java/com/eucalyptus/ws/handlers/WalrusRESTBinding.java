@@ -334,7 +334,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					}
 					String key = target[0] + "." + objectKey;
 					String randomKey = key + "." + Hashes.getRandom(10);
-					operationParams.put("ContentLength", (new Long(contentLength).toString()));
+					if(contentLengthString != null)
+						operationParams.put("ContentLength", (new Long(contentLength).toString()));
 					operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
 					putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
 					handleFirstChunk(httpRequest, formFields.get(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk"), contentLength);
@@ -409,7 +410,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						String contentDisposition = httpRequest.getHeader("Content-Disposition");
 						if(contentDisposition != null)
 							operationParams.put("ContentDisposition", contentDisposition);
-						operationParams.put("ContentLength", (new Long(contentLength).toString()));
+						if(contentLengthString != null)
+							operationParams.put("ContentLength", (new Long(contentLength).toString()));
 						operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
 						putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
 						handleFirstChunk(httpRequest, contentLength);
