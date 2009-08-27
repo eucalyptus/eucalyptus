@@ -65,14 +65,20 @@ Prerequisite
 Have a working ganglia installation. In particular you should one of more
 gmond running on the machines you want monitored (nc, sc and walrus), and
 at least one gmetad to collect all the data. You should be able to see
-ganglia's graphs. You need to have a working Eucalyptus installation (1.6
-or higher).
+ganglia's graphs (usually at http://localhost/ganglia).
+
+You need to have a working Eucalyptus installation (1.6 or higher).
 
 Setup
 =====
 
-You need to have eucalyptus and gmond installed on the machine you want to
-monitor. 
+You may want to customize ganglia (gmetad in particular) to be able to
+group all the nodes under a 'cluster' to be able to see the aggregation of
+the resources. In particular on nodes with multiple NICs you may have to
+specify by hand which interface to bind to.
+
+Eucalyptus (1.6 or higher) should already be setup and working.
+
 
 Running
 =======
