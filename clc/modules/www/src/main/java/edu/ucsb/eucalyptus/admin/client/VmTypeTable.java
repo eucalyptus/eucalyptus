@@ -79,14 +79,14 @@ public class VmTypeTable extends VerticalPanel {
 		cpu_b.setVisibleLength( 2 );
 		cpu_b.setText( "" + VmType.getCpu() );
 		this.grid.setWidget( row, 2, cpu_b );
-//		this.grid.getCellFormatter().setHorizontalAlignment(row, 2, HasHorizontalAlignment.ALIGN_CENTER);
+		this.grid.getCellFormatter().setHorizontalAlignment(row, 2, HasHorizontalAlignment.ALIGN_CENTER); // michael had these three commented out
 
 		final TextBox mem_b = new TextBox();
 		mem_b.addChangeListener (new ChangeCallback (this, row));
 		mem_b.setVisibleLength( 4 );
 		mem_b.setText( "" + VmType.getMemory() );
 		this.grid.setWidget( row, 3, mem_b );
-//		this.grid.getCellFormatter().setHorizontalAlignment(row, 3, HasHorizontalAlignment.ALIGN_CENTER);
+		this.grid.getCellFormatter().setHorizontalAlignment(row, 3, HasHorizontalAlignment.ALIGN_CENTER);
 		
 		
 		final TextBox disk_b = new TextBox();
@@ -94,7 +94,7 @@ public class VmTypeTable extends VerticalPanel {
 		disk_b.setVisibleLength( 4 );
 		disk_b.setText( "" + VmType.getDisk() );
 		this.grid.setWidget( row, 4, disk_b );	
-//		this.grid.getCellFormatter().setHorizontalAlignment(row, 4, HasHorizontalAlignment.ALIGN_CENTER);
+		this.grid.getCellFormatter().setHorizontalAlignment(row, 4, HasHorizontalAlignment.ALIGN_CENTER);
 					
 	}
 

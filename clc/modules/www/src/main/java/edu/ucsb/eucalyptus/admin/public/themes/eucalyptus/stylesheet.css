@@ -7,6 +7,11 @@ body {
     font-size: medium;
     margin: 0px;
 }
+
+body a { 
+    color: green;
+}
+
 .euca-greeting-normal {
     color: black;
 }
@@ -59,6 +64,28 @@ body {
     font-weight: bold;
     font-size: large;
     text-align: left;
+    width: 100%;
+}
+
+.euca-top-bar-left { 
+    margin-left:10px;
+    margin-top:2px; 
+}
+
+.euca-top-bar-right { 
+    margin-right:20px;
+    margin-top:20px;
+}
+
+.euca-tab-contents {
+    vertical-align: middle;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 15px;
+}
+
+.euca-tab-with-text { 
+    width: 480px;
 }
 
 .highlighted {
@@ -122,7 +149,9 @@ body {
     font-size: x-small;
 	text-decoration: underline;
 	cursor: pointer;
-	color: blue;
+}
+
+.gwt-Hyperlink a { 
 }
 
 .euca-table-heading-row {

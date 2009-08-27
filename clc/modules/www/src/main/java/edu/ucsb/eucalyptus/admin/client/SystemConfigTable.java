@@ -262,11 +262,11 @@ public class SystemConfigTable extends VerticalPanel {
 		this.dns_grid.setWidget( i++, 1, dns_hpanel2 );
 
 		nameserver_box.addChangeListener (new ChangeCallback (this));
-		nameserver_box.setVisibleLength(15);
+		nameserver_box.setVisibleLength(20);
 		nameserver_box.setText (SystemConfig.getNameserver());
 		dns_hpanel2.add (nameserver_box);
 
-		dns_hpanel2.add ( new HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IP:  &nbsp;"));
+		dns_hpanel2.add ( new HTML("&nbsp;&nbsp;&nbsp; IP:  &nbsp;"));
 		nameserverAddress_box.addChangeListener (new ChangeCallback (this));
 		nameserverAddress_box.setVisibleLength(10);
 		nameserverAddress_box.setText (SystemConfig.getNameserverAddress());

@@ -35,13 +35,13 @@ button{
 	margin-bottom:30px;
 }
 
-table.euca-top-bar, .gwt-TabBar, .wrapper{
+table.euca-top-bar, .gwt-TabBar, .euca-tab-contents{
 	width:964px;
 	overflow:hidden;
 	margin:0 auto;
 }
 
-.wrapper{
+.euca-tab-contents{
 	padding-left:100px;
 	padding-bottom:50px;
 	padding-right:200px;
@@ -52,17 +52,17 @@ table.euca-top-bar, .gwt-TabBar, .wrapper{
 }
 
 
-.upanel{
+.euca-top-bar-right {
 	font-size:.6em;
 	margin-top:20px;
 	margin-right:50px;
 }
-.upanel a{
+.euca-top-bar-right a{
 	font-weight:bold;
 	color:black;
 	text-decoration: none;
 }
-.upanel a:hover{
+.euca-top-bar-right a:hover{
 	text-decoration: underline;
 }
 
