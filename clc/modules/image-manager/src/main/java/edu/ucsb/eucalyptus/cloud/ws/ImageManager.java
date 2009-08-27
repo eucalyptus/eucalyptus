@@ -554,19 +554,19 @@ If you specify a list of executable users, only users that have launch permissio
 
 
 //TODO: update this to use the new user.
-//    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
-//    try {
-//      db.add( imageInfo );
-//      UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId() ) );
-//      UserGroupInfo group = db.recast( UserGroupInfo.class ).getUnique( new UserGroupInfo( "all" ) );
-//      imageInfo.getPermissions().add( user );
-//      imageInfo.getUserGroups().add( group );
-//      db.commit();
-//      LOG.info( "Registering image pk=" + imageInfo.getId() + " ownerId=" + user.getUserName() );
-//    } catch ( EucalyptusCloudException e ) {
-//      db.rollback();
-//      throw e;
-//    }
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
+    try {
+      db.add( imageInfo );
+      UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId() ) );
+      UserGroupInfo group = db.recast( UserGroupInfo.class ).getUnique( new UserGroupInfo( "all" ) );
+      imageInfo.getPermissions().add( user );
+      imageInfo.getUserGroups().add( group );
+      db.commit();
+      LOG.info( "Registering image pk=" + imageInfo.getId() + " ownerId=" + user.getUserName() );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback();
+      throw e;
+    }
 
     LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getId() );
     WalrusProxy.checkValid(imageInfo);

@@ -63,7 +63,7 @@ public class WalrusRESTPipeline extends FilteredPipeline {
 	@Override
 	protected boolean checkAccepts( HttpRequest message ) {
 		return (message.getUri().startsWith(WalrusProperties.walrusServicePath) ||
-		message.getHeader(HttpHeaders.Names.HOST).contains(".walrus")) && !message.getHeaderNames().contains( "SOAPAction" );		
+		(message.getHeader(HttpHeaders.Names.HOST)!=null && message.getHeader(HttpHeaders.Names.HOST).contains(".walrus"))) && !message.getHeaderNames().contains( "SOAPAction" );		
 	}
 
 	@Override

@@ -49,6 +49,7 @@ import com.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.encoders.UrlBase64;
+import org.hibernate.HibernateException;
 import org.mortbay.jetty.security.Credential;
 
 import com.eucalyptus.auth.Credentials;
@@ -107,14 +108,6 @@ public class StartupChecks {
       StartupChecks.fail( "See errors messages above." );
     }
 
-    EntityWrapper<UserGroupInfo> db3 = new EntityWrapper<UserGroupInfo>( );
-    try {
-      db3.getUnique( new UserGroupInfo( "all" ) );
-    } catch ( EucalyptusCloudException e ) {
-      db3.add( new UserGroupInfo( "all" ) );
-    } finally {
-      db3.commit( );
-    }
 
     EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>( );
     try {
@@ -157,7 +150,7 @@ public class StartupChecks {
     db.commit( );
   }
 
-  private static boolean checkDatabase( ) {
+  public static boolean checkDatabase( ) {
     /** initialize the counters **/
 
     EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( );
@@ -172,38 +165,49 @@ public class StartupChecks {
     }
 
   }
-
-  private static boolean createDb( ) {
+ 
+  public static boolean createDb( ) {
     EntityWrapper<VmType> db2 = new EntityWrapper<VmType>( );
     try {
-      db2.add( new VmType( "m1.small", 1, 2, 128 ) );
-      db2.add( new VmType( "c1.medium", 1, 5, 256 ) );
-      db2.add( new VmType( "m1.large", 2, 10, 512 ) );
-      db2.add( new VmType( "m1.xlarge", 2, 20, 1024 ) );
-      db2.add( new VmType( "c1.xlarge", 4, 20, 2048 ) );
+      if( db2.query( new VmType() ).size( ) == 0 ) { 
+        db2.add( new VmType( "m1.small", 1, 2, 128 ) );
+        db2.add( new VmType( "c1.medium", 1, 5, 256 ) );
+        db2.add( new VmType( "m1.large", 2, 10, 512 ) );
+        db2.add( new VmType( "m1.xlarge", 2, 20, 1024 ) );
+        db2.add( new VmType( "c1.xlarge", 4, 20, 2048 ) );
+      }
       db2.commit( );
     } catch ( Exception e ) {
       db2.rollback( );
       return false;
     }
+    EntityWrapper<UserGroupInfo> db3 = new EntityWrapper<UserGroupInfo>( );
     try {
-      Credentials.init( );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
+      db3.getUnique( new UserGroupInfo( "all" ) );
+    } catch ( EucalyptusCloudException e ) {
+      db3.add( new UserGroupInfo( "all" ) );
+    } finally {
+      db3.commit( );
+    }
+    try {
+      UserGroupInfo allGroup = UserGroupInfo.named( "all" );
+    } catch ( EucalyptusCloudException e1 ) {
     }
     EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( );
     try {
-      UserInfo u = UserManagement.generateAdmin( );
-      db.add( u );
-      UserGroupInfo allGroup = new UserGroupInfo( "all" );
-      db.getSession( ).persist( new Counters( ) );
-      db.commit( );
+      db.getUnique( new UserInfo("admin") );
       return true;
     } catch ( Exception e ) {
-      db.rollback( );
-      return false;
+      try {
+        db.getSession( ).persist( new Counters( ) );
+        UserInfo u = UserManagement.generateAdmin( );
+        db.add( u );
+        db.commit( );
+      } catch ( HibernateException e1 ) {
+        return false;
+      }
+      return true;
     }
-
   }
 
   private static void checkDirectories( ) {

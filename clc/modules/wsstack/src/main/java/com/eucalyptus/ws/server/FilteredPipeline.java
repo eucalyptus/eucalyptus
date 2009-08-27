@@ -95,7 +95,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
         pipeline.addLast( "service-sink", new ServiceSinkHandler( ) );
       }
       for ( Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
-        LOG.info( " - handler: key=" + e.getKey( ) + " class=" + e.getValue( ).getClass( ).getSimpleName( ) );
+        LOG.debug( " - handler: key=" + e.getKey( ) + " class=" + e.getValue( ).getClass( ).getSimpleName( ) );
       }
     } catch ( Exception e ) {
       LOG.error("Error unrolling pipeline: " + this.getPipelineName( ) );

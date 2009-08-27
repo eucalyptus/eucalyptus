@@ -82,6 +82,8 @@ import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 
+import edu.ucsb.eucalyptus.StartupChecks;
+
 @Provides(resource=Resource.RemoteConfiguration)
 @Depends(resources=Resource.Database,local=Component.eucalyptus)
 public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, ChannelPipelineFactory {
@@ -90,7 +92,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
   private NioBootstrap      clientBootstrap;
   private ChannelFactory    channelFactory;
   private NioClientPipeline clientPipeline;
-
+  private static boolean hack = false;
   public RemoteBootstrapperClient( ) {
     this.channelFactory = new NioClientSocketChannelFactory( Executors.newCachedThreadPool( ), Executors.newCachedThreadPool( ) );
     this.clientBootstrap = new NioBootstrap( channelFactory );
@@ -184,6 +186,10 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
   @Override
   public boolean start( ) throws Exception {
     (new Thread( new RemoteBootstrapperClient())).start();
+    if( !hack ) {
+      StartupChecks.createDb( );
+      hack = true;
+    }
     return true;
   }
 
@@ -219,7 +225,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
   }
 
   private void sendConfiguration( ComponentConfiguration w, ChannelBuffer buffer  ) throws Exception {
-    HeartbeatClient hb = new HeartbeatClient( w.getHostName( ), 19191, "/services/Heartbeat" );
+    HeartbeatClient hb = new HeartbeatClient( w.getHostName( ), 8773, "/services/Heartbeat" );
     HttpRequest httpRequest = new DefaultHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, "/services/Heartbeat" );
     httpRequest.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
     httpRequest.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );

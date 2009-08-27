@@ -73,16 +73,24 @@ import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
 import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.ws.handlers.HeartbeatHandler;
+
+import edu.ucsb.eucalyptus.StartupChecks;
 @Provides( resource = Resource.RemoteConfiguration ) 
 @Depends( remote = Component.eucalyptus )
 @ChannelPipelineCoverage("all")
-public class RemoteBootstrapperServer extends Bootstrapper implements ChannelDownstreamHandler, ChannelUpstreamHandler, ChannelPipelineFactory {
+public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPipelineFactory {
   private static Logger                 LOG            = Logger.getLogger( RemoteBootstrapperServer.class );
   private int                           port;
   private ServerBootstrap               bootstrap;
   private NioServerSocketChannelFactory socketFactory;
-  private int                           BOOTSTRAP_PORT = 19191;//TODO: integrate this with 8773
+  private int                           BOOTSTRAP_PORT = 8773;
   private Channel                       channel;
+  private static RemoteBootstrapperServer server;
+  
+  public static RemoteBootstrapperServer getServer() {
+    return server;
+  }
   
   public RemoteBootstrapperServer( ) {
     this.port = BOOTSTRAP_PORT;
@@ -104,54 +112,6 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelDow
     return true;
   }
 
-  @Override
-  public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    ctx.sendDownstream( e );
-  }
-
-  @Override
-  public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    if ( e instanceof MessageEvent ) {
-      Object message = ( ( MessageEvent ) e ).getMessage( );
-      if ( message instanceof HttpRequest ) {
-        HttpRequest request = ( ( HttpRequest ) message );
-        ByteArrayInputStream bis = new ByteArrayInputStream( request.getContent( ).toByteBuffer( ).array( ) );
-        Properties props = new Properties( );
-        props.load( bis );
-        boolean foundDb = false;
-        List<String> localAddrs = NetworkUtil.getAllAddresses( );
-        for ( Entry<Object, Object> entry : props.entrySet( ) ) {
-          String key = (String)entry.getKey();
-          String value = (String)entry.getValue();
-          if( key.startsWith("euca.db.host") ) {
-            try {
-              if( NetworkUtil.testReachability( value ) && !localAddrs.contains( value )) {
-                LOG.info( "Found candidate db host address: " + value );
-                String oldValue = System.setProperty( "euca.db.host", value );
-                LOG.info( "Setting property: euca.db.host=" + value + " [oldvalue="+oldValue+"]" );              
-                Component.db.setHostAddress( value );
-                //TODO: test we can connect here.
-                foundDb = true;
-              }
-            } catch ( Exception e1 ) {
-              LOG.warn( "Ignoring proposed database address: " + value );
-            }
-          } else {
-            String oldValue = System.setProperty( ( String ) entry.getKey( ), ( String ) entry.getValue( ) );
-            LOG.info( "Setting property: " + entry.getKey( ) + "=" + entry.getValue( ) + " [oldvalue="+oldValue+"]" );
-          }
-        }
-        if( foundDb ) {
-          ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK ) );
-          writeFuture.addListener( ChannelFutureListener.CLOSE );
-          this.channel.close( );          
-        } else {
-          ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_ACCEPTABLE ) );
-          writeFuture.addListener( ChannelFutureListener.CLOSE );          
-        }
-      }
-    }
-  }
 
   public ChannelPipeline getPipeline( ) throws Exception {
     ChannelPipeline pipeline = pipeline( );
@@ -159,8 +119,26 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelDow
     pipeline.addLast( "decoder", new HttpRequestDecoder( ) );
     pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
     pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
-    pipeline.addLast( "handler", this );
+    pipeline.addLast( "handler", new HeartbeatHandler( this.channel ) );
     return pipeline;
   }
 
+  public int getPort( ) {
+    return port;
+  }
+
+  public ServerBootstrap getBootstrap( ) {
+    return bootstrap;
+  }
+
+  public NioServerSocketChannelFactory getSocketFactory( ) {
+    return socketFactory;
+  }
+
+  public Channel getChannel( ) {
+    return channel;
+  }
+
+  
+  
 }

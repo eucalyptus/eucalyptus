@@ -41,8 +41,6 @@ import org.hsqldb.Server;
 import org.hsqldb.ServerConstants;
 import org.hsqldb.persist.HsqlProperties;
 
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.SubDirectory;
 
 @Provides( resource = Resource.Database )
@@ -104,7 +102,6 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
 
   @Override
   public boolean start( ) throws Exception {
-//    ( new Thread( this ) ).start( );
     while( this.db.getState( ) != 1 ) {
       Throwable t = this.db.getServerError( );
       if( t != null ) {

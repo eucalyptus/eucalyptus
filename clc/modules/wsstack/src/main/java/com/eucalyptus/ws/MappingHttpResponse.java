@@ -53,6 +53,11 @@ public class MappingHttpResponse extends MappingHttpMessage implements HttpRespo
     this.status = new HttpResponseStatus( Integer.valueOf( initialLine[1] ), initialLine[2] );
   }
 
+  public MappingHttpResponse( HttpVersion protocolVersion, HttpResponseStatus status ) {
+    super( protocolVersion );
+    this.status = status;
+  }
+
   @Override
   public HttpResponseStatus getStatus( ) {
     return status;
