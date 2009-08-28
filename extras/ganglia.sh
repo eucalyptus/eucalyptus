@@ -109,10 +109,10 @@ elif [ "$TYPE" = "sc" ]; then
 	V_USED="`tail -n 1 ${EUCALYPTUS}${SC_STAT}|sed \"s/.*Volumes: \([[:digit:]]*\).*/\1/\"`"
 	S_USED="`tail -n 1 ${EUCALYPTUS}${SC_STAT}|sed \"s/.*Space Used: \([[:digit:]]*\)/\1/\"`"
 
-	[ "$DEBUG" = "Y" ] && echo $GMETRIC -n "Volumes #" -v $V_USED -t int16 
+	[ "$DEBUG" = "Y" ] && echo $GMETRIC -n "Volumes" -v $V_USED -t int16 
 	[ "$DEBUG" = "Y" ] && echo $GMETRIC -n "Volumes disk usage" -v $S_USED -t int16 
 
-	$GMETRIC -n "Volumes #" -v $V_USED -t int16 
+	$GMETRIC -n "Volumes" -v $V_USED -t int16 
 	$GMETRIC -n "Volumes disk usage" -v $S_USED -t int16 
 
 elif [ "$TYPE" = "walrus" ]; then
@@ -125,10 +125,10 @@ elif [ "$TYPE" = "walrus" ]; then
 	B_USED="`tail -n 1 ${EUCALYPTUS}${WALRUS_STAT}|sed \"s/.*Buckets: \([[:digit:]]*\).*/\1/\"`"
 	S_USED="`tail -n 1 ${EUCALYPTUS}${WALRUS_STAT}|sed \"s/.*Space Used: \([[:digit:]]*\)/\1/\"`"
 
-	[ "$DEBUG" = "Y" ] && echo $GMETRIC -n "Buckets #" -v $B_USED -t int16 
+	[ "$DEBUG" = "Y" ] && echo $GMETRIC -n "Buckets" -v $B_USED -t int16 
 	[ "$DEBUG" = "Y" ] && echo $GMETRIC -n "Buckets disk usage" -v $S_USED -t int16 
 
-	$GMETRIC -n "Buckets #" -v $B_USED -t int16 
+	$GMETRIC -n "Buckets" -v $B_USED -t int16 
 	$GMETRIC -n "Buckets disk usage" -v $S_USED -t int16 
 else
 	echo "Unknown type!"
