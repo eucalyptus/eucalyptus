@@ -74,7 +74,7 @@ import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
@@ -111,7 +111,7 @@ public class HmacV2Handler extends MessageStackHandler {
       if ( !parameters.containsKey( SecurityParameter.Signature.toString( ) ) ) throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.Signature );
       // :: note we remove the sig :://
       String sig = parameters.remove( SecurityParameter.Signature.toString( ) );
-      String queryId = doAdmin?UserCredentialProvider.getQueryId( "admin" ):parameters.get( SecurityParameter.AWSAccessKeyId.toString( ) );
+      String queryId = doAdmin?CredentialProvider.getQueryId( "admin" ):parameters.get( SecurityParameter.AWSAccessKeyId.toString( ) );
       String verb = httpRequest.getMethod( ).getName( );
       String addr = httpRequest.getServicePath( );
       String headerHost = httpRequest.getHeader( "Host" );
@@ -126,7 +126,7 @@ public class HmacV2Handler extends MessageStackHandler {
       // TODO: hook in user key lookup here
       String secretKey;
       try {
-        secretKey = UserCredentialProvider.getSecretKey( queryId );
+        secretKey = CredentialProvider.getSecretKey( queryId );
       } catch ( Exception e ) {
         throw new AuthenticationException( "User authentication failed." );
       }
@@ -151,8 +151,8 @@ public class HmacV2Handler extends MessageStackHandler {
           if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) throw new AuthenticationException( "User authentication failed." );
         }
       }
-      String userName = UserCredentialProvider.getUserName( queryId );
-      User user = UserCredentialProvider.getUser( userName );
+      String userName = CredentialProvider.getUserName( queryId );
+      User user = CredentialProvider.getUser( userName );
       httpRequest.setUser( user );
       parameters.remove( RequiredQueryParams.SignatureVersion.toString( ) );
       parameters.remove( "SignatureMethod" );

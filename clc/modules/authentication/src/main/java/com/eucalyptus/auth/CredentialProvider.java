@@ -89,7 +89,7 @@ import com.google.common.collect.Lists;
 
 @Provides( resource = Resource.UserCredentials )
 @Depends( resources = { Resource.Database } )
-public class UserCredentialProvider extends Bootstrapper {
+public class CredentialProvider extends Bootstrapper {
   public static boolean hasCertificate( final String alias ) {
     X509Cert certInfo = null;
     EntityWrapper<X509Cert> db = Credentials.getEntityWrapper( );
@@ -291,6 +291,6 @@ public class UserCredentialProvider extends Bootstrapper {
   }
 
   public static User addUser( String userName ) throws UserExistsException {
-    return UserCredentialProvider.addUser( userName, false );
+    return CredentialProvider.addUser( userName, false );
   }
 }

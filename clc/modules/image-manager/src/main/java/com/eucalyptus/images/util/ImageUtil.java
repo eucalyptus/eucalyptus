@@ -71,7 +71,7 @@ import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Hashes;
-import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.util.EntityWrapper;
 
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
@@ -102,7 +102,7 @@ public class ImageUtil {
     boolean ret = false;
     try {
       Signature sigVerifier = Signature.getInstance( "SHA1withRSA" );
-      X509Certificate cert = UserCredentialProvider.getCertificate( alias );
+      X509Certificate cert = CredentialProvider.getCertificate( alias );
       PublicKey publicKey = cert.getPublicKey();
       sigVerifier.initVerify( publicKey );
       sigVerifier.update( pad.getBytes() );

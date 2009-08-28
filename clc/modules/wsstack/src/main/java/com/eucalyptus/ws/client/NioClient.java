@@ -116,7 +116,6 @@ public class NioClient implements Client {
       this.channelOpenFuture.addListener( new DeferedWriter( httpRequest, this.clientPipeline.getHandler() ) );
     }
   }
-
   class DeferedWriter implements ChannelFutureListener {
     private HttpRequest httpRequest;
     private MessageStackHandler handler;
@@ -125,12 +124,11 @@ public class NioClient implements Client {
       this.httpRequest = httpRequest;
       this.handler = handler;
     }
-
     @Override
-    public void operationComplete( final ChannelFuture channelFuture ) throws Exception {
-      if( channelFuture.isSuccess() ) {
-        channel = channelFuture.getChannel();
-        channelWriteFuture = channelFuture.getChannel().write( this.httpRequest );
+    public void operationComplete( ChannelFuture channelFuture ) throws Exception {
+      if ( channelFuture.isSuccess( ) ) {
+        channel = channelFuture.getChannel( );
+        channelWriteFuture = channelFuture.getChannel( ).write( httpRequest );
       } else {
         this.handler.exceptionCaught( channelFuture.getCause() );
       }

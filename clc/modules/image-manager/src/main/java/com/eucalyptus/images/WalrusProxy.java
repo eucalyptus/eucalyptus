@@ -74,7 +74,7 @@ import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Component;
@@ -185,7 +185,7 @@ public class WalrusProxy {
   
     List<String> aliases = Lists.newArrayList();
     try {
-      for( X509Cert x : UserCredentialProvider.getUser( imgInfo.getImageOwnerId( ) ).getCertificates( ) ) {
+      for( X509Cert x : CredentialProvider.getUser( imgInfo.getImageOwnerId( ) ).getCertificates( ) ) {
         aliases.add( x.getAlias( ) );
       }
     } catch ( NoSuchUserException e ) {

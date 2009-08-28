@@ -204,7 +204,9 @@ public class VmInstance implements HasName {
   }
 
   public void setState( final VmState state ) {
-    LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId(), this.getState(), state ) );
+    if( this.getState() != null && !this.getState( ).equals( state ) ) {
+      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId(), this.getState(), state ) );
+    }
     this.state = state;
   }
 

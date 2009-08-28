@@ -89,7 +89,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   public List<String> getClusterAddresses( ) {
     List<String> list = new ArrayList<String>( );
     for ( Cluster c : this.listValues( ) )
-      list.add( c.getConfiguration( ).getHostName( ) + ":" + c.getConfiguration( ).getPort( ) );
+      list.add( c.getConfiguration( ).getHostName( ) );
     return list;
   }
 

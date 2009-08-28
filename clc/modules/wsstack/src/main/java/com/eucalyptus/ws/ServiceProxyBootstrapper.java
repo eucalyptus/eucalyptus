@@ -132,7 +132,7 @@ public class ServiceProxyBootstrapper extends Bootstrapper {
       for( StorageControllerConfiguration sc : scs ) {
         try {
           if( NetworkUtil.testLocal( sc.getHostName( ) )) registerLocalComponent( Component.storage );
-          registerComponent( Component.storage, sc );
+          else registerComponent( Component.storage, sc );
         } catch ( Exception e ) {
           LOG.error( "Failed to create storage controller "+sc.getName( )+" service proxy: " + e );
         }

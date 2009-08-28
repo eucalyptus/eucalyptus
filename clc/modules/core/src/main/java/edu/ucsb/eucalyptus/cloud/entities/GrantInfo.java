@@ -79,7 +79,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.CredentialProvider;
 
 @Entity
 @Table( name = "Grants" )
@@ -193,7 +193,7 @@ public class GrantInfo {
                         if(id == null || id.length() == 0)
                             continue;
                         try {
-                          displayName = UserCredentialProvider.getUserName( id );
+                          displayName = CredentialProvider.getUserName( id );
                         } catch ( GeneralSecurityException e ) {
                           LOG.warn(e,e);
                         }

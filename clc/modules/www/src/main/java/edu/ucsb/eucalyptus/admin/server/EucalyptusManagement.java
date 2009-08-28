@@ -65,7 +65,7 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
-import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
@@ -345,7 +345,7 @@ public class EucalyptusManagement {
 		dbWrapper.commit();
 
 		try {//TODO: fix this nicely
-			UserCredentialProvider.addUser(newUser.getUserName( ),newUser.isAdministrator( ));
+			CredentialProvider.addUser(newUser.getUserName( ),newUser.isAdministrator( ));
 		} catch ( UserExistsException e ) {
 			LOG.error(e);
 		}

@@ -59,7 +59,7 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 import edu.ucsb.eucalyptus.cloud.ResourceToken
-import edu.ucsb.eucalyptus.cloud.cluster.ClusterState
+import com.eucalyptus.cluster.ClusterState
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable
 import edu.ucsb.eucalyptus.cloud.cluster.Allocator
 

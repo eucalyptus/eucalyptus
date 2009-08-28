@@ -88,10 +88,10 @@ public class Credentials {
 
   public static boolean checkAdmin( ) {
     try {
-      UserCredentialProvider.getUser( "admin" );
+      CredentialProvider.getUser( "admin" );
     } catch ( NoSuchUserException e ) {
       try {
-        UserCredentialProvider.addUser( "admin", Boolean.TRUE );
+        CredentialProvider.addUser( "admin", Boolean.TRUE );
       } catch ( UserExistsException e1 ) {
         LOG.fatal( e1, e1 );
         return false;

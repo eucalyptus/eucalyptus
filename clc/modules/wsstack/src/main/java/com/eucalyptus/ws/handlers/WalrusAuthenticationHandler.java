@@ -101,9 +101,11 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
+import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.ws.AuthenticationException;
@@ -168,8 +170,8 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				String certString = new String(bytes);
 				PEMReader pemReader = new PEMReader(new StringReader(certString));
 				X509Certificate cert = (X509Certificate) pemReader.readObject();
-				AbstractKeyStore keyStore = EucaKeyStore.getInstance();
-				if (keyStore.getCertificateAlias(cert) != null) {
+				try {
+          CredentialProvider.getCertificateAlias( cert );
 					//cert found in keystore
 					PublicKey publicKey = cert.getPublicKey();
 					sig = Signature.getInstance("SHA1withRSA");
@@ -177,9 +179,9 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 					sig.initVerify(publicKey);
 					sig.update(data.getBytes());
 					valid = sig.verify(Base64.decode(signature));
-				} else {
-					LOG.warn ("Authentication: certificate not found in keystore");
-				}
+        } catch ( Exception e ) {
+          LOG.warn ("Authentication: certificate not found in keystore");
+        }
 			} catch (Exception ex) {
 				LOG.warn ("Authentication exception: " + ex.getMessage());
 				ex.printStackTrace();
@@ -189,7 +191,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				throw new AuthenticationException( "User authentication failed." );
 			}
 			try {
-				User user = UserCredentialProvider.getUser( "admin" );
+				User user = CredentialProvider.getUser( "admin" );
 				user.setIsAdministrator(true);
 				httpRequest.setUser( user );
 			} catch (NoSuchUserException e) {
@@ -284,12 +286,12 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	private void authenticate(MappingHttpRequest httpRequest, String accessKeyID, String signature, String data) throws AuthenticationException {
 		signature = signature.replaceAll("=", "");
 		try {
-			String queryKey = UserCredentialProvider.getSecretKey(accessKeyID);
+			String queryKey = CredentialProvider.getSecretKey(accessKeyID);
 			String authSig = checkSignature( queryKey, data );
 			if (!authSig.equals(signature))
 				throw new AuthenticationException( "User authentication failed. Could not verify signature" );
-			String userName = UserCredentialProvider.getUserName( accessKeyID );
-			User user = UserCredentialProvider.getUser( userName );  
+			String userName = CredentialProvider.getUserName( accessKeyID );
+			User user = CredentialProvider.getUser( userName );  
 			httpRequest.setUser( user );
 		} catch(Exception ex) {
 			throw new AuthenticationException( "User authentication failed. Unable to obtain query key" );

@@ -84,7 +84,7 @@ import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Component;
@@ -166,9 +166,9 @@ public class WalrusImageManager {
 					if(isAdministrator) {
 						try {
 							boolean verified = false;
-							List<String> aliases = UserCredentialProvider.getAliases();
+							List<String> aliases = CredentialProvider.getAliases();
 							for(String alias : aliases) {
-								X509Certificate cert = UserCredentialProvider.getCertificate(alias);
+								X509Certificate cert = CredentialProvider.getCertificate(alias);
 								verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if(verified)
 									break;
@@ -185,7 +185,7 @@ public class WalrusImageManager {
 						boolean signatureVerified = false;
 	          User user = null;
 	          try {
-	            user = UserCredentialProvider.getUser( userId );
+	            user = CredentialProvider.getUser( userId );
 	          } catch ( NoSuchUserException e ) {
 	            throw new AccessDeniedException(userId,e);            
 	          }         
@@ -304,7 +304,7 @@ public class WalrusImageManager {
 
 					User user = null;
           try {
-            user = UserCredentialProvider.getUser( userId );
+            user = CredentialProvider.getUser( userId );
           } catch ( NoSuchUserException e ) {
             throw new AccessDeniedException(userId,e);            
           }         

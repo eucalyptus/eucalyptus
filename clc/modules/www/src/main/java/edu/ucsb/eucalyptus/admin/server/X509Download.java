@@ -68,7 +68,7 @@ import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.KeyTool;
@@ -177,7 +177,7 @@ public class X509Download extends HttpServlet {
     X509Certificate cloudCert = null;
     try {
       x509.checkValidity( );
-      UserCredentialProvider.addCertificate( userName, newKeyName, x509 );
+      CredentialProvider.addCertificate( userName, newKeyName, x509 );
       cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
     } catch ( GeneralSecurityException e ) {
       LOG.fatal( e, e );
@@ -185,8 +185,8 @@ public class X509Download extends HttpServlet {
     
     String certPem = new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) );
 
-    String userAccessKey = UserCredentialProvider.getQueryId( userName );
-    String userSecretKey = UserCredentialProvider.getSecretKey( userAccessKey );
+    String userAccessKey = CredentialProvider.getQueryId( userName );
+    String userSecretKey = CredentialProvider.getSecretKey( userAccessKey );
 
     ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
     ZipOutputStream zipOut = new ZipOutputStream( byteOut );
@@ -195,7 +195,7 @@ public class X509Download extends HttpServlet {
     zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
     StringBuffer sb = new StringBuffer( );
 
-    String userNumber = UserCredentialProvider.getUserNumber( userName );
+    String userNumber = CredentialProvider.getUserNumber( userName );
 
     sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
     sb.append( "\nexport S3_URL=" + EucalyptusProperties.getSystemConfiguration( ).getStorageUrl( ) );

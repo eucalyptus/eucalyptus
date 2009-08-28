@@ -226,10 +226,13 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
   public void run( ) {
     while(true){
       try {
-        Thread.sleep(5000);
+        Thread.sleep(10000);
         try {
           List<WalrusConfiguration> walrusConfigs = Configuration.getWalrusConfigurations( );
           for( ComponentConfiguration w : walrusConfigs ) {
+            try {
+              if( NetworkUtil.testLocal( w.getHostName( ) ) ) continue;
+            } catch ( Exception e ) {}
             String configuration = this.getConfigurationBuffer( w );
             ChannelBuffer buffer = ChannelBuffers.copiedBuffer( configuration.getBytes( ) );
             this.sendConfiguration( w, buffer );
@@ -241,6 +244,9 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
         try {
           List<StorageControllerConfiguration> scConfigs = Configuration.getStorageControllerConfigurations( );
           for( ComponentConfiguration sc : scConfigs ) {
+            try {
+              if( NetworkUtil.testLocal( sc.getHostName( ) ) ) continue;
+            } catch ( Exception e ) {}
             String configuration = this.getConfigurationBuffer( sc );
             ChannelBuffer buffer = ChannelBuffers.copiedBuffer( configuration.getBytes( ) );
             this.sendConfiguration( sc, buffer );
