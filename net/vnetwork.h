@@ -212,5 +212,6 @@ int check_bridge(char *dev);
 int check_bridgedev(char *br, char *dev);
 int check_bridgestp(char *br);
 int check_tablerule(vnetConfig *vnetconfig, char *table, char *rule);
+int check_isip(char *ip);
 
 #endif

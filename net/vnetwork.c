@@ -2058,9 +2058,15 @@ int mac2ip(vnetConfig *vnetconfig, char *mac, char **ip) {
 }
 
 uint32_t dot2hex(char *in) {
-  int a, b, c, d;
+  int a, b, c, d, rc;
 
-  sscanf(in, "%d.%d.%d.%d", &a, &b, &c, &d);
+  rc = sscanf(in, "%d.%d.%d.%d", &a, &b, &c, &d);
+  if (rc != 4) {
+    a=127;
+    b=0;
+    c=0;
+    d=1;
+  }
   a = a<<24;
   b = b<<16;
   c = c<<8;
@@ -2329,6 +2335,17 @@ int check_tablerule(vnetConfig *vnetconfig, char *table, char *rule) {
   return(0);
 }
 
+int check_isip(char *ip) {
+  int a, b, c, d;
+  int rc;
+  
+  rc = sscanf(ip, "%d.%d.%d.%d", &a, &b, &c, &d);
+  if (rc != 4) {
+    return(1);
+  }
+  return(0);
+}
+
 char *host2ip(char *host) {
   struct addrinfo hints, *result;
   int rc;
@@ -2342,17 +2359,17 @@ char *host2ip(char *host) {
     ret = strdup("127.0.0.1");
     return(ret);
   }
-
+  
   bzero(&hints, sizeof(struct addrinfo));
   rc = getaddrinfo(host, NULL, &hints, &result);
   if (!rc) {
     rc = getnameinfo(result->ai_addr, result->ai_addrlen, hostbuf, 256, NULL, 0, NI_NUMERICHOST);
-    if (!rc) {
+    if (!rc && !check_isip(hostbuf)) {
       ret = strdup(hostbuf);
     }
   }
   if (ret) {
-    //logprintfl(EUCADEBUG, "converted %s->%s\n", host, ret);
+    //    logprintfl(EUCADEBUG, "converted %s->%s\n", host, ret);
   } else {
     ret = strdup(host);
   }
