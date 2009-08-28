@@ -65,14 +65,21 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import com.google.common.collect.Lists;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.images.StorageProxy;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
@@ -92,20 +99,10 @@ import edu.ucsb.eucalyptus.msgs.CreateVolumeType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteVolumeType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
-import edu.ucsb.eucalyptus.msgs.StorageVolume;
-import com.eucalyptus.ws.util.Messaging;
-import org.apache.log4j.Logger;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
 
 public class VolumeManager {
   static String PERSISTENCE_CONTEXT = "eucalyptus_volumes";
@@ -113,24 +110,30 @@ public class VolumeManager {
   private static String ID_PREFIX = "vol";
   private static Logger LOG = Logger.getLogger( VolumeManager.class );
 
-//  static {
-//    Clusters.getInstance().register( new Cluster( new ClusterInfo( "bogocluster", "lollerskates", 8774 ) ) );
-//  }
-
   public static EntityWrapper<Volume> getEntityWrapper() {
     return new EntityWrapper<Volume>( PERSISTENCE_CONTEXT );
   }
 
   public CreateVolumeResponseType CreateVolume( CreateVolumeType request ) throws EucalyptusCloudException {
-    if ( !Clusters.getInstance().contains( request.getAvailabilityZone() ) ) {
-      throw new EucalyptusCloudException( "Zone does not exist: " + request.getAvailabilityZone() );
+    if( ( request.getSnapshotId() == null && request.getSize() == null ) || ( request.getSnapshotId() != null && request.getSize() == null ) ) {
+      throw new EucalyptusCloudException( "Size is a required parameter." );
     }
-    if( ( request.getSnapshotId() == null && request.getSize() == null ) || ( request.getSnapshotId() != null && request.getSize() != null ) ) {
-      throw new EucalyptusCloudException( "One of 'snapshotId' or 'size' must be set." );
+
+    try {
+      Configuration.getClusterConfiguration( request.getAvailabilityZone( ) );
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( "Zone does not exist: " + request.getAvailabilityZone(), e );
+    }
+
+    StorageControllerConfiguration sc;
+    try {
+      sc = Configuration.getStorageControllerConfiguration( request.getAvailabilityZone( ) );
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException("Storage services are not available for the requested availability zone.", e );
     }
 
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
-    if ( !( request.getSnapshotId() == null ) ) {
+    if ( request.getSnapshotId() != null ) {
       String userName = request.isAdministrator() ? null : request.getUserId();
       try {
         db.recast( Snapshot.class ).getUnique( Snapshot.named( userName, request.getSnapshotId() ) );
@@ -140,6 +143,7 @@ public class VolumeManager {
         throw new EucalyptusCloudException( "Snapshot does not exist: " + request.getSnapshotId() );
       }
     }
+    
     String newId = null;
     Volume newVol = null;
     while ( true ) {
@@ -154,16 +158,19 @@ public class VolumeManager {
       }
     }
     newVol.setState( State.GENERATING );
-    CreateStorageVolumeType scRequest = new CreateStorageVolumeType( newId, request.getSize(), request.getSnapshotId() );
-    CreateStorageVolumeResponseType scReply = null;
+
     try {
-      scReply =  StorageProxy.send( newVol.getCluster( ), scRequest, CreateStorageVolumeResponseType.class );
+      CreateStorageVolumeType req = new CreateStorageVolumeType( newId, request.getSize( ), request.getSnapshotId( ) );
+      req.setUserId( request.getUserId( ) );
+      req.setEffectiveUserId( request.getEffectiveUserId( ) );
+      StorageProxy.send( sc.getHostName( ), req, CreateStorageVolumeResponseType.class );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback();
-      throw new EucalyptusCloudException( "Error calling CreateStorageVolume:" + e.getMessage() );
+      throw new EucalyptusCloudException( "Error communicating with Storage Controller: CreateStorageVolume:" + e.getMessage() );
     }
     db.commit();
+
     CreateVolumeResponseType reply = ( CreateVolumeResponseType ) request.getReply();
     reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume() ) );
     return reply;
@@ -172,23 +179,24 @@ public class VolumeManager {
   public DeleteVolumeResponseType DeleteVolume( DeleteVolumeType request ) throws EucalyptusCloudException {
     DeleteVolumeResponseType reply = ( DeleteVolumeResponseType ) request.getReply();
     reply.set_return( false );
+
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
     try {
       Volume vol = db.getUnique( Volume.named( userName, request.getVolumeId() ) );
-      boolean isAttached = false;
       for( VmInstance vm : VmInstances.getInstance().listValues() ) {
         for( AttachedVolume attachedVol : vm.getVolumes() ) {
           if( request.getVolumeId().equals( attachedVol.getVolumeId() ) ) {
-            isAttached = true;
+            db.rollback( );
+            return reply;
           }
         }
       }
-      if( isAttached ) return reply;
-      if( !vol.getState(  ).equals( State.ANNILATED ) ) {
-        StorageProxy.dispatch( vol.getCluster( ), new DeleteStorageVolumeType( vol.getDisplayName() ) );
-      }
       db.delete( vol );
+      db.getSession( ).flush( );
+      if( !vol.getState(  ).equals( State.ANNILATED ) ) {
+        StorageProxy.dispatchAll( new DeleteStorageVolumeType( vol.getDisplayName() ) );
+      }
       db.commit();
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
@@ -210,28 +218,18 @@ public class VolumeManager {
         attachedVolumes.put( av.getVolumeId(), av );
       }
     }
+    
     List<Volume> volumes = db.query( Volume.ownedBy( userName ) );
+
     for ( Volume v : volumes ) {
       if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
-        DescribeStorageVolumesResponseType volState = StorageProxy.send( v.getCluster( ), new DescribeStorageVolumesType( Lists.newArrayList( v.getDisplayName() ) ), DescribeStorageVolumesResponseType.class  );
-        LOG.debug( volState );
-        String volumeState = "unavailable";
-        if ( !volState.getVolumeSet().isEmpty() ) {
-          StorageVolume vol = volState.getVolumeSet().get( 0 );
-          volumeState = vol.getStatus();
-          v.setSize( new Integer( vol.getSize() ) );
-          v.setRemoteDevice( vol.getActualDeviceName() );
+        try {
+          edu.ucsb.eucalyptus.msgs.Volume aVolume = StorageProxy.getVolumeReply( attachedVolumes, v );
+          reply.getVolumeSet().add( aVolume );
+        } catch ( Exception e ) {
+          LOG.warn( "Error getting volume information from the Storage Controller: " + e );
+          LOG.debug( e, e );
         }
-        if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-          volumeState = "in-use";
-        }
-        v.setMappedState( volumeState );
-        edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
-        if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-          aVolume.setStatus( volumeState );
-          aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
-        }
-        reply.getVolumeSet().add( aVolume );
       }
     }
     db.commit();
@@ -260,6 +258,7 @@ public class VolumeManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPlacement() );
     }
+
     for ( VmInstance v : VmInstances.getInstance().listValues() ) {
       for ( AttachedVolume vol : v.getVolumes() ) {
         if ( vol.getVolumeId().equals( request.getVolumeId() ) ) {
@@ -267,6 +266,7 @@ public class VolumeManager {
         }
       }
     }
+
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
     Volume volume = null;

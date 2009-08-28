@@ -99,18 +99,19 @@ public class NetworkUtil {
   }
 
   public static boolean testLocal( String address ) throws Exception {
+    InetAddress addr = InetAddress.getByName( address );
     List<String> addrs = Lists.newArrayList( );
     Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
     while( ifaces.hasMoreElements( ) ) {
       NetworkInterface iface = ifaces.nextElement( );
       for( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
-        InetAddress addr = iaddr.getAddress( );
-        if( addr instanceof Inet4Address ) {
-          addrs.add( addr.getHostAddress( ) );
+        InetAddress ifaceAddr = iaddr.getAddress( );
+        if( ifaceAddr.equals( addr ) ) {
+          return true;
         }
       }
     }
-    return addrs.contains( address );
+    return false;
   }
 
   

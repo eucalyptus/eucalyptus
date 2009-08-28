@@ -97,18 +97,15 @@
 			<bridge-component/>
 			<outbound>
 				<filtering-router>
-					<outbound-endpoint address="vm://Bukkit"
-						synchronous="false" />
+					<outbound-endpoint ref="WalrusRequestQueueEndpoint" synchronous="false" />
 					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.WalrusRequestType" />
 				</filtering-router>
 				<filtering-router>
-					<outbound-endpoint address="vm://Storage"
-						synchronous="false" />
+					<outbound-endpoint ref="StorageRequestQueueEndpoint" synchronous="false" />
 					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.StorageRequestType" />
 				</filtering-router>
 				<filtering-router>
-					<outbound-endpoint address="vm://EucalyptusRequestQueue"
-						synchronous="false" />
+					<outbound-endpoint ref="EucalyptusRequestQueueEndpoint" synchronous="false" />
 					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
 				</filtering-router>
 			</outbound>

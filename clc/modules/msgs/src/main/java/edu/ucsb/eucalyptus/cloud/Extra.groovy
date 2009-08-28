@@ -260,7 +260,6 @@ public class Network implements HasName {
   String userName;
   ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
   ConcurrentMap<String, NetworkToken> networkTokens = new ConcurrentHashMap<String, NetworkToken>();
-  NavigableSet<Integer> addressAssignments;
 
   def Network() {}
 
@@ -268,7 +267,6 @@ public class Network implements HasName {
     this.userName = userName;
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
-    this.addressAssignments = new ConcurrentSkipListSet<Integer>(256);
   }
 
   public Integer getNextIndex(Integer max) {

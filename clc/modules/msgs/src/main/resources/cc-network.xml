@@ -78,7 +78,7 @@ TODO: change name space to reflect change of API
         <mapping name="DescribeNetworksResponse" class="edu.ucsb.eucalyptus.msgs.DescribeNetworksResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="mode" field="mode" usage="required"/>
-        <value name="addrsPerNetwork" field="addrsPerNetwork" usage="required"/>
+        <value name="addrsPerNet" field="addrsPerNetwork" usage="required"/>
         <structure usage="optional">
           <collection field="activeNetworks" factory="org.jibx.runtime.Utility.arrayListFactory">
               <structure name="activeNetworks" map-as="edu.ucsb.eucalyptus.msgs.NetworkInfoType"/>

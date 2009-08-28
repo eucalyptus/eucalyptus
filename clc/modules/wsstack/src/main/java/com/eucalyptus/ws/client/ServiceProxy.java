@@ -65,6 +65,7 @@ package com.eucalyptus.ws.client;
 
 import java.net.URI;
 import java.security.GeneralSecurityException;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
@@ -76,6 +77,7 @@ import org.mule.module.client.MuleClient;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.ServiceBootstrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 
@@ -88,11 +90,10 @@ public class ServiceProxy {
   private MuleClient    muleClient;
   private NioClient     nioClient;
   private URI           address;
-
-  public static ServiceProxy lookup( Component component, String name) {
+  
+  public static ServiceProxy lookup( String registryKey ) {
     Registry registry = ServiceBootstrapper.getRegistry( );
-    String key = component.name( ) + "/" + name ;
-    return (ServiceProxy) registry.lookupObject( key );
+    return (ServiceProxy) registry.lookupObject( registryKey );
   }
   
   private static MuleClient getMuleClient( ) throws Exception {
@@ -115,8 +116,8 @@ public class ServiceProxy {
   public void dispatch( EucalyptusMessage msg ) {
     MuleEvent context = RequestContext.getEvent( );
     try {
-      if ( component.isLocal( ) ) {
-        this.getMuleClient( ).dispatch( this.address.toASCIIString( ), msg, null );
+      if( NetworkUtil.testLocal( this.address.getHost( ) ) ) {
+        this.getMuleClient( ).dispatch( this.component.getLocalUri( ), msg, null );
       } else {
         this.getNioClient( ).dispatch( msg );
       }
@@ -131,8 +132,8 @@ public class ServiceProxy {
   public EucalyptusMessage send( EucalyptusMessage msg ) throws EucalyptusCloudException {
     MuleEvent context = RequestContext.getEvent( );
     try {
-      if ( component.isLocal( ) ) {
-        MuleMessage reply = this.getMuleClient( ).send( this.address.toASCIIString( ), msg, null );
+      if( NetworkUtil.testLocal( this.address.getHost( ) ) ) {
+        MuleMessage reply = this.getMuleClient( ).send( this.component.getLocalUri( ), msg, null );
 
         if ( reply.getExceptionPayload( ) != null ) {
           throw new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ), reply.getExceptionPayload( ).getRootException( ) );

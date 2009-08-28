@@ -144,9 +144,11 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
         if( this.msgReceiver == null ) {
           Messaging.dispatch( "vm://RequestQueue", msg );
-        } else if (user == null||user.getIsAdministrator( )){
-          MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( this.msgReceiver.getConnector().getMessageAdapter( msg ) ) );
+        } else if (user == null||(user!=null&&user.getIsAdministrator())){
+          MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ) );
           ctx.getChannel( ).write( reply.getPayload( ) );
+        } else {
+          ctx.getChannel( ).write( new MappingHttpResponse(request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN) );
         }
       }
     }

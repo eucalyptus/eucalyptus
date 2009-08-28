@@ -67,6 +67,8 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.images.StorageProxy;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -119,10 +121,17 @@ public class SnapshotManager {
       }
     }
 
+    StorageControllerConfiguration sc;
+    try {
+      sc = Configuration.getStorageControllerConfiguration( vol.getCluster( ) );
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException("Failed to find the storage controller information for volume: " + vol.getDisplayName( ) + " at " + vol.getCluster( ), e );
+    }
+
     CreateStorageSnapshotType scRequest = new CreateStorageSnapshotType( vol.getDisplayName(), newId );
     CreateStorageSnapshotResponseType scReply = null;
     try {
-      scReply = StorageProxy.send( vol.getCluster( ), scRequest, CreateStorageSnapshotResponseType.class );
+      scReply = StorageProxy.send( sc.getHostName( ), scRequest, CreateStorageSnapshotResponseType.class );
       snap.setMappedState( scReply.getStatus() );
       LOG.debug(scReply);
     } catch ( EucalyptusCloudException e ) {
@@ -146,10 +155,9 @@ public class SnapshotManager {
     String userName = request.isAdministrator() ? null : request.getUserId();
     try {
       Snapshot snap = db.getUnique( Snapshot.named( userName, request.getSnapshotId() ) );
-//TODO: make this multi-cluster aware.
-      //      DeleteStorageSnapshotResponseType scReply = Messaging.send( StorageProperties.STORAGE_REF, new DeleteStorageSnapshotType( snap.getDisplayName() ), DeleteStorageSnapshotResponseType.class );
-//      LOG.debug( scReply );
       db.delete( snap );
+      db.getSession( ).flush( );
+      StorageProxy.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName() ) );
       db.commit();
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
@@ -162,31 +170,33 @@ public class SnapshotManager {
 
   public DescribeSnapshotsResponseType DescribeSnapshots( DescribeSnapshotsType request ) throws EucalyptusCloudException {
     DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply();
-    EntityWrapper<Snapshot> db = getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
+
+    EntityWrapper<Snapshot> db = getEntityWrapper();
     List<Snapshot> snapshots = db.query( Snapshot.ownedBy( userName ) );
+
     for ( Snapshot v : snapshots ) {
+      DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName() ) );
       if ( request.getSnapshotSet().isEmpty() || request.getSnapshotSet().contains( v.getDisplayName() ) ) {
-//TODO: make this multi-cluster aware.
-        //        DescribeStorageSnapshotsResponseType snapshotInfo = null;
-//        try {
-//          snapshotInfo = ( DescribeStorageSnapshotsResponseType ) Messaging.send( StorageProperties.STORAGE_REF, new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName() ) ) );
-//          for( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet() ) {
-//            v.setMappedState( storageSnapshot.getStatus() );
-//            edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() );
-//            if( storageSnapshot.getProgress() != null )
-//              snapReply.setProgress( storageSnapshot.getProgress() );
-//            snapReply.setVolumeId( storageSnapshot.getVolumeId() );
-//            reply.getSnapshotSet().add( snapReply );
-//          }
-//        } catch ( EucalyptusCloudException e ) {
-//          LOG.debug( e, e );
-//          throw e;
-//        }
+        try {
+          StorageControllerConfiguration sc = Configuration.getStorageControllerConfiguration( v.getCluster( ) );
+          DescribeStorageSnapshotsResponseType snapshotInfo = StorageProxy.send( sc.getHostName( ), scRequest, DescribeStorageSnapshotsResponseType.class );
+          for( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet() ) {
+            v.setMappedState( storageSnapshot.getStatus() );
+            edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot() );
+            if( storageSnapshot.getProgress() != null )
+              snapReply.setProgress( storageSnapshot.getProgress() );
+            snapReply.setVolumeId( storageSnapshot.getVolumeId() );
+            reply.getSnapshotSet().add( snapReply );
+          }
+        } catch ( EucalyptusCloudException e ) {
+          LOG.warn( "Error getting snapshot information from the Storage Controller: " + e );
+          LOG.debug( e, e );
+        }
       }
     }
     db.commit();
-    LOG.warn( "RESPONSE ============\n" + reply );
+    LOG.trace( "RESPONSE ============\n" + reply );
     return reply;
   }
 }

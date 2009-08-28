@@ -349,4 +349,33 @@ public class Configuration {
       db.commit( );
     }
   }
+  
+  public static StorageControllerConfiguration getStorageControllerConfiguration( String scName ) throws EucalyptusCloudException {
+    List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
+    for( StorageControllerConfiguration sc : scs ) {
+      if( sc.getName( ).equals( scName ) ) {
+        return sc;
+      }
+    }
+    throw new NoSuchComponentException(StorageControllerConfiguration.class.getSimpleName( ) + " named " + scName );
+  }
+  public static WalrusConfiguration getWalrusConfiguration( String walrusName ) throws EucalyptusCloudException {
+    List<WalrusConfiguration> walri = Configuration.getWalrusConfigurations( );
+    for( WalrusConfiguration w : walri ) {
+      if( w.getName( ).equals( walrusName ) ) {
+        return w;
+      }
+    }
+    throw new NoSuchComponentException(WalrusConfiguration.class.getSimpleName( ) + " named " + walrusName );
+  }
+  public static ClusterConfiguration getClusterConfiguration( String clusterName ) throws EucalyptusCloudException {
+    List<ClusterConfiguration> clusters = Configuration.getClusterConfigurations( );
+    for( ClusterConfiguration c : clusters ) {
+      if( c.getName( ).equals( clusterName ) ) {
+        return c;
+      }
+    }
+    throw new NoSuchComponentException(ClusterConfiguration.class.getSimpleName( ) + " named " + clusterName );
+  }
+
 }

@@ -79,7 +79,8 @@
                    address="http://127.0.0.1:8773/services/Storage"/>
     <euca:endpoint name="StorageInternalWS"
                    connector-ref="eucaws"
-                   address="http://127.0.0.1:8773/internal/StorageInternal"/>
+                   address="http://127.0.0.1:8773/internal/StorageInternal"
+                   synchronous="true"/>
 
     <endpoint name="StorageWS" address="vm://Storage" synchronous="false"/>
     <endpoint name="StorageInternalVM" address="vm://StorageInternal" synchronous="true"/>

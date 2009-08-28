@@ -111,7 +111,7 @@ public class WalrusProxy {
     check.setUserId( imgInfo.getImageOwnerId( ) );
     check.setBucket( parts[ 0 ] );
     check.setKey( parts[ 1 ] );
-    ServiceProxy.lookup( Component.walrus, Component.walrus.name( ) ).dispatch( check );
+    ServiceProxy.lookup( Component.walrus.getRegistryKey( Component.walrus.getHostAddress( ) ) ).dispatch( check );
   }
 
   public static void triggerCaching( ImageInfo imgInfo ) {
@@ -120,14 +120,14 @@ public class WalrusProxy {
     cache.setUserId( imgInfo.getImageOwnerId( ) );
     cache.setBucket( parts[ 0 ] );
     cache.setKey( parts[ 1 ] );
-    ServiceProxy.lookup( Component.walrus, Component.walrus.name( ) ).dispatch( cache );
+    ServiceProxy.lookup( Component.walrus.getRegistryKey( Component.walrus.getHostAddress( ) ) ).dispatch( cache );
   }
 
   public static void invalidate( ImageInfo imgInfo ) {
     String[] parts = imgInfo.getImageLocation().split( "/" );
     imgInfo.setImageState( "deregistered" );
     try {
-      ServiceProxy.lookup( Component.walrus, Component.walrus.name( ) ).dispatch( new FlushCachedImageType( parts[ 0 ], parts[ 1 ] ) );
+      ServiceProxy.lookup( Component.walrus.getRegistryKey( Component.walrus.getHostAddress( ) )).dispatch( new FlushCachedImageType( parts[ 0 ], parts[ 1 ] ) );
     } catch ( Exception e ) {}
   }
 
@@ -137,7 +137,7 @@ public class WalrusProxy {
       GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
       msg.setUserId( userId );
       
-      reply = ( GetObjectResponseType ) ServiceProxy.lookup( Component.walrus, Component.walrus.name( ) ).send( msg );
+      reply = ( GetObjectResponseType ) ServiceProxy.lookup( Component.walrus.getRegistryKey( Component.walrus.getHostAddress( ) ) ).send( msg );
     }
     catch ( Exception e ) {
       throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
@@ -157,7 +157,7 @@ public class WalrusProxy {
   public static GetBucketAccessControlPolicyResponseType getBucketAcl( RegisterImageType request, String[] imagePathParts ) throws EucalyptusCloudException {
     GetBucketAccessControlPolicyType getBukkitInfo = Admin.makeMsg( GetBucketAccessControlPolicyType.class, request );
     getBukkitInfo.setBucket( imagePathParts[ 0 ] );
-    GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) ServiceProxy.lookup( Component.walrus, Component.walrus.name( ) ).send( getBukkitInfo );
+    GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) ServiceProxy.lookup( Component.walrus.getRegistryKey( Component.walrus.getHostAddress( ) )).send( getBukkitInfo );
     return reply;
   }
 
@@ -168,7 +168,7 @@ public class WalrusProxy {
     msg.setUserId( Component.eucalyptus.name() );
     msg.setEffectiveUserId( Component.eucalyptus.name() );
     try {
-      reply = ( GetObjectResponseType ) ServiceProxy.lookup( Component.walrus, Component.walrus.name( ) ).send( msg );
+      reply = ( GetObjectResponseType ) ServiceProxy.lookup( Component.walrus.getRegistryKey( Component.walrus.getHostAddress( ) ) ).send( msg );
     } catch ( EucalyptusCloudException e ) {
       ImageManager.LOG.error( e );
       ImageManager.LOG.debug( e, e );
