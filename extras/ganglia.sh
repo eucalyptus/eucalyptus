@@ -2,8 +2,8 @@
 
 TYPE="node"
 NC_STAT="/var/run/eucalyptus/nc-stats"
-SC_STAT="/var/run/eucalyptus/sc-stats"
-WALRUS_STAT="/var/run/eucalyptus/walrus-stats"
+SC_STAT="/var/log/eucalyptus/sc-stats.log"
+WALRUS_STAT="/var/log/eucalyptus/walrus-stats.log"
 GMETRIC="`which gmetric 2> /dev/null`"
 DEBUG="N"
 EUCALYPTUS="/"
@@ -105,16 +105,31 @@ elif [ "$TYPE" = "sc" ]; then
 		echo "Cannot find SC stat file!"
 		exit 1
 	fi
-	echo "SC stats are at the moment disabled"
-	exit 0
+
+	V_USED="`tail -n 1 ${EUCALYPTUS}${SC_STAT}|sed \"s/.*Volumes: \([[:digit:]]*\).*/\1/\"`"
+	S_USED="`tail -n 1 ${EUCALYPTUS}${SC_STAT}|sed \"s/.*Space Used: \([[:digit:]]*\)/\1/\"`"
+
+	[ "$DEBUG" = "Y" ] && echo $GMETRIC -n "Volumes #" -v $V_USED -t int16 
+	[ "$DEBUG" = "Y" ] && echo $GMETRIC -n "Volumes disk usage" -v $S_USED -t int16 
+
+	$GMETRIC -n "Volumes #" -v $V_USED -t int16 
+	$GMETRIC -n "Volumes disk usage" -v $S_USED -t int16 
+
 elif [ "$TYPE" = "walrus" ]; then
 	# let's check we have the stat file
 	if [ ! -e ${EUCALYPTUS}${WALRUS_STAT} ]; then
 		echo "Cannot find wlarus stat file!"
 		exit 1
 	fi
-	echo "Walrus stats are at the moment disabled"
-	exit 0
+
+	B_USED="`tail -n 1 ${EUCALYPTUS}${WALRUS_STAT}|sed \"s/.*Buckets: \([[:digit:]]*\).*/\1/\"`"
+	S_USED="`tail -n 1 ${EUCALYPTUS}${WALRUS_STAT}|sed \"s/.*Space Used: \([[:digit:]]*\)/\1/\"`"
+
+	[ "$DEBUG" = "Y" ] && echo $GMETRIC -n "Buckets #" -v $B_USED -t int16 
+	[ "$DEBUG" = "Y" ] && echo $GMETRIC -n "Buckets disk usage" -v $S_USED -t int16 
+
+	$GMETRIC -n "Buckets #" -v $B_USED -t int16 
+	$GMETRIC -n "Buckets disk usage" -v $S_USED -t int16 
 else
 	echo "Unknown type!"
 	exit 1

@@ -31,14 +31,14 @@ Setup
 We will use the passive cheks capability of nagios, and to do so you need
 to check that the the named pipe exists. Usually is
 	/var/lib/nagios3/rw/nagios.cmd
-but you can check in nagios.cmd which file that is supposed to be. Nagios
+but you can check in nagios.cfg which file that is supposed to be. Nagios
 should create it at startup when you change
 	check_external_commands=1
 into nagios,cfg.
 
 To create the configuration for the eucalyptus machine, you can use the
 script nagios.sh. For example
-	nagios.cmd -setup -nodes "two three four" -cc "one" -cloud one -walrus "one" > eucalyptus.cfg
+	nagios.sh -setup -nodes "two three four" -cc "one" -cloud one -walrus "one" > eucalyptus.cfg
 assumes that hosts 'one' has the cloud manager, walrus and the cc, while
 machines two, three and four are the nc. Inspect the generated file
 (eucalyptus.cfg) and it all looks good, you can move it to the nagios
@@ -50,7 +50,7 @@ Running
 Nagios should now display the Eucalyptus machines and services, but there
 won't be any data reporting yet. To do so you can now run the same
 script, in the example 
-	nagios.cmd -check -nodes "two three four" -cc "one" -cloud one -walrus "one"
+	nagios.sh -nodes "two three four" -cc "one" -cloud one -walrus "one"
 (usually the script runs in a cron job). Give sometime to nagios to
 process the information (more so if you just started it) and you should
 now be able to monitor the status of Eucalyptus hosts and services.
