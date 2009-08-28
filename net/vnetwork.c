@@ -2338,6 +2338,11 @@ char *host2ip(char *host) {
   
   ret = NULL;
   
+  if (!strcmp(host, "localhost")) {
+    ret = strdup("127.0.0.1");
+    return(ret);
+  }
+
   bzero(&hints, sizeof(struct addrinfo));
   rc = getaddrinfo(host, NULL, &hints, &result);
   if (!rc) {

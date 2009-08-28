@@ -505,9 +505,11 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
   int rc, i, j;
   
   rc = initialize();
+
   if (rc) {
     return(1);
   }
+
   logprintfl(EUCADEBUG, "DescribeNetworks(): called\n");
   
   sem_wait(vnetConfigLock);
@@ -519,9 +521,8 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
     rc = vnetSetupTunnels(vnetconfig);
   }
   memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
-  
+
   sem_post(vnetConfigLock);
-  
   logprintfl(EUCADEBUG, "DescribeNetworks(): done\n");
   
   shawn();
@@ -1044,6 +1045,7 @@ int powerDown(ncMetadata *ccMeta, resource *node) {
   time_t op_start, op_timer;
   
   if (config->schedPolicy != SCHEDPOWERSAVE) {
+    node->idleStart = 0;
     return(0);
   }
 

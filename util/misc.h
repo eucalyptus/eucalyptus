@@ -71,6 +71,22 @@ permission notice:
 int InitWSSEC(axutil_env_t *env, axis2_stub_t *stub, char *policyFile);
 #endif
 
+#define TIMERSTART(a) double a;                                 \
+  {                                                             \
+    struct timeval UBERSTART;                                   \
+    gettimeofday(&UBERSTART, NULL);                             \
+    a = UBERSTART.tv_sec + (UBERSTART.tv_usec / 1000000.0);     \
+  }
+
+#define TIMERSTOP(a) {					      \
+    struct timeval UBERSTOP;				      \
+    double b;						      \
+    gettimeofday(&UBERSTOP, NULL);			      \
+    b = UBERSTOP.tv_sec + (UBERSTOP.tv_usec / 1000000.0);     \
+    logprintfl(EUCADEBUG, "OP TIME (%s): %f\n", #a, b - a);   \
+  }
+
+
 enum {EUCADEBUG2, EUCADEBUG, EUCAINFO, EUCAWARN, EUCAERROR, EUCAFATAL};
 
 char * replace_string (char ** stringp, char * source, char * destination );

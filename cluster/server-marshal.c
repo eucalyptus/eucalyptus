@@ -246,7 +246,10 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   clusterControllersLen = adb_describeNetworksType_sizeof_clusterControllers(snt, env);
   clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
   for (i=0; i<clusterControllersLen; i++) {
-    clusterControllers[i] = host2ip(adb_describeNetworksType_get_clusterControllers_at(snt, env, i));
+    char *incc;
+    incc = adb_describeNetworksType_get_clusterControllers_at(snt, env, i);
+    logprintfl(EUCADEBUG, "incoming CC: %s, %s\n", incc, host2ip(incc));
+    clusterControllers[i] = host2ip(incc);
   }
   
   snrt = adb_describeNetworksResponseType_create(env);
@@ -284,6 +287,9 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
       
       status = AXIS2_TRUE;
     }
+  }
+  for (i=0; i<clusterControllersLen; i++) {
+    if (clusterControllers[i]) free(clusterControllers[i]);
   }
   if (clusterControllers) free(clusterControllers);
   

@@ -105,7 +105,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.util.StorageProperties;

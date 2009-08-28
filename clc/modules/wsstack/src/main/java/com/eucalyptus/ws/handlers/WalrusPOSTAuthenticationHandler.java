@@ -100,7 +100,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.UserCredentialProvider;
+import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -175,12 +175,12 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 	private void authenticate(MappingHttpRequest httpRequest, String accessKeyID, String signature, String data) throws AuthenticationException {
 		signature = signature.replaceAll("=", "");
 		try {
-			String queryKey = UserCredentialProvider.getSecretKey(accessKeyID);
+			String queryKey = CredentialProvider.getSecretKey(accessKeyID);
 			String authSig = checkSignature( queryKey, data );
 			if (!authSig.equals(signature))
 				throw new AuthenticationException( "User authentication failed. Could not verify signature" );
-			String userName = UserCredentialProvider.getUserName( accessKeyID );
-			User user = UserCredentialProvider.getUser(userName);  
+			String userName = CredentialProvider.getUserName( accessKeyID );
+			User user = CredentialProvider.getUser(userName);  
 			httpRequest.setUser( user );
 		} catch(Exception ex) {
 			throw new AuthenticationException( "User authentication failed. Unable to obtain query key" );

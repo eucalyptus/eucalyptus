@@ -123,8 +123,8 @@ int main(int argc, char **argv) {
   } else {
     snprintf(endpoint_uri, 256," http://%s/axis2/services/EucalyptusCC", argv[1]);
   }
-  env =  axutil_env_create_all(NULL, 0);
-  //env =  axutil_env_create_all("/tmp/fofo", AXIS2_LOG_LEVEL_TRACE);
+  //env =  axutil_env_create_all(NULL, 0);
+  env =  axutil_env_create_all("/tmp/fofo", AXIS2_LOG_LEVEL_TRACE);
   
   client_home = AXIS2_GETENV("AXIS2C_HOME");
   if (!client_home) {
