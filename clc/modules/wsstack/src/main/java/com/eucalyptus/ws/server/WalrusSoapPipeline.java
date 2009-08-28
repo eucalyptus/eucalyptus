@@ -58,6 +58,10 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
+/*
+ * Author: Neil Soman neil@eucalyptus.com
+ */
+
 package com.eucalyptus.ws.server;
 
 import java.util.List;

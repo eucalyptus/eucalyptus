@@ -58,6 +58,10 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
+/*
+ * Author: Neil Soman neil@eucalyptus.com
+ */
+
 package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayInputStream;
@@ -70,14 +74,11 @@ import javax.xml.stream.XMLStreamReader;
 
 import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMElement;
-import org.apache.axiom.soap.SOAP11Constants;
-import org.apache.axiom.soap.SOAP12Constants;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axiom.soap.SOAPFault;
 import org.apache.axiom.soap.SOAPHeader;
 import org.apache.axiom.soap.SOAPHeaderBlock;
-import org.apache.axiom.soap.SOAPProcessingException;
 import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -90,7 +91,6 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.binding.Binding;
 import com.google.common.collect.Lists;
 

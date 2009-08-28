@@ -58,22 +58,20 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
-package com.eucalyptus.ws.handlers;
+/*
+ * Author: Neil Soman neil@eucalyptus.com
+ */
 
-import java.io.ByteArrayInputStream;
+package com.eucalyptus.ws.handlers;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamReader;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.om.impl.dom.DOOMAbstractFactory;
-import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAPBody;
 import org.apache.axiom.soap.SOAPEnvelope;
-import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -85,12 +83,11 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.UserCredentialProvider;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
-
-import com.eucalyptus.auth.User;
 
 @ChannelPipelineCoverage("one")
 public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {

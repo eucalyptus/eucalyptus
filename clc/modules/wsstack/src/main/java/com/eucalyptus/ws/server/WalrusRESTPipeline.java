@@ -58,6 +58,10 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
+/*
+ * Author: Neil Soman neil@eucalyptus.com
+ */
+
 package com.eucalyptus.ws.server;
 
 import java.util.List;
@@ -91,8 +95,11 @@ public class WalrusRESTPipeline extends FilteredPipeline {
 
 	@Override
 	protected boolean checkAccepts( HttpRequest message ) {
-		return (message.getUri().startsWith(WalrusProperties.walrusServicePath) ||
-		(message.getHeader(HttpHeaders.Names.HOST)!=null && message.getHeader(HttpHeaders.Names.HOST).contains(".walrus"))) && !message.getHeaderNames().contains( "SOAPAction" );		
+		return ((message.getUri().startsWith(WalrusProperties.walrusServicePath) ||
+		(message.getHeader(HttpHeaders.Names.HOST)!=null && 
+				message.getHeader(HttpHeaders.Names.HOST).contains(".walrus"))) && 
+				!message.getHeaderNames().contains( "SOAPAction" )) &&
+		!message.getMethod().getName().equals(WalrusProperties.HTTPVerb.POST.toString());		
 	}
 
 	@Override

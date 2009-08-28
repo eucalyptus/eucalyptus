@@ -88,7 +88,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   private String     query;
   private final Map<String,String> parameters;
   private String restNamespace;
-  private final Map<String, String> formFields;
+  private final Map formFields;
   
   public MappingHttpRequest( HttpVersion httpVersion, HttpMethod method, String uri ) {
     super( httpVersion );
@@ -181,7 +181,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.restNamespace = restNamespace;
   }
 
-  public Map<String, String> getFormFields() {
+  public Map getFormFields() {
 	  return formFields;
   }
   

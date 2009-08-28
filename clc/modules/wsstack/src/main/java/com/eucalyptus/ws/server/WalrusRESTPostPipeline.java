@@ -58,19 +58,53 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
-package com.eucalyptus.ws.handlers;
+/*
+ * Author: Neil Soman neil@eucalyptus.com
+ */
+package com.eucalyptus.ws.server;
 
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import java.util.List;
+import java.util.Map;
 
-public class WalrusFileItemFactory extends DiskFileItemFactory {
-    public WalrusFileItemFactory() {
-        super();
-    }
+import org.apache.log4j.Logger;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 
-    public FileItem createItem(String fieldName, String contentType, boolean isFormField, String fileName) {
-        return new WalrusFileItem(fieldName, contentType,
-                isFormField, fileName, getSizeThreshold(), getRepository());
+import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.ws.stages.HmacV2UserAuthenticationStage;
+import com.eucalyptus.ws.stages.QueryBindingStage;
+import com.eucalyptus.ws.stages.UnrollableStage;
+import com.eucalyptus.ws.stages.WalrusOutboundStage;
+import com.eucalyptus.ws.stages.WalrusPOSTUserAuthenticationStage;
+import com.eucalyptus.ws.stages.WalrusRESTBindingStage;
+import com.eucalyptus.ws.stages.WalrusUserAuthenticationStage;
+import com.eucalyptus.util.WalrusProperties;
 
-    }
+
+public class WalrusRESTPostPipeline extends FilteredPipeline {
+	private static Logger LOG = Logger.getLogger( WalrusRESTPostPipeline.class );
+
+	@Override
+	protected void addStages( List<UnrollableStage> stages ) {
+		stages.add( new WalrusPOSTUserAuthenticationStage());
+		stages.add( new WalrusRESTBindingStage());
+		stages.add( new WalrusOutboundStage());
+	}
+
+	@Override
+	protected boolean checkAccepts( HttpRequest message ) {
+		return ((message.getUri().startsWith(WalrusProperties.walrusServicePath) ||
+		(message.getHeader(HttpHeaders.Names.HOST)!=null && 
+				message.getHeader(HttpHeaders.Names.HOST).contains(".walrus"))) && 
+				!message.getHeaderNames().contains( "SOAPAction" )) &&
+		message.getMethod().getName().equals(WalrusProperties.HTTPVerb.POST.toString());		
+	}
+
+	@Override
+	public String getPipelineName( ) {
+		return "walrus-rest";
+	}
+
 }

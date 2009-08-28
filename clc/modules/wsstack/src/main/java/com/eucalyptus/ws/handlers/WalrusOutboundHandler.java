@@ -58,44 +58,28 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
+/*
+ * Author: Neil Soman neil@eucalyptus.com
+ */
+
 package com.eucalyptus.ws.handlers;
 
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.Collections;
-import java.util.List;
+import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.ws.MappingHttpResponse;
 
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
-import edu.ucsb.eucalyptus.cloud.BucketAlreadyExistsException;
-import edu.ucsb.eucalyptus.cloud.BucketAlreadyOwnedByYouException;
-import edu.ucsb.eucalyptus.cloud.BucketNotEmptyException;
-import edu.ucsb.eucalyptus.cloud.DecryptionFailedException;
-import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
-import edu.ucsb.eucalyptus.cloud.ImageAlreadyExistsException;
-import edu.ucsb.eucalyptus.cloud.InvalidRangeException;
-import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
-import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
-import edu.ucsb.eucalyptus.cloud.NotAuthorizedException;
-import edu.ucsb.eucalyptus.cloud.NotImplementedException;
-import edu.ucsb.eucalyptus.cloud.NotModifiedException;
-import edu.ucsb.eucalyptus.cloud.PreconditionFailedException;
-import edu.ucsb.eucalyptus.cloud.TooManyBucketsException;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusBucketErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.WalrusDeleteResponseType;
 
 @ChannelPipelineCoverage("one")
 public class WalrusOutboundHandler extends MessageStackHandler {

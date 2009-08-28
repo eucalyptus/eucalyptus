@@ -58,17 +58,34 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
-package com.eucalyptus.ws.handlers;
+/*
+ * Author: Neil Soman neil@eucalyptus.com
+ */
 
-import org.apache.commons.fileupload.disk.DiskFileItem;
+package com.eucalyptus.ws.stages;
 
-import java.io.File;
+import org.jboss.netty.channel.ChannelPipeline;
 
-public class WalrusFileItem extends DiskFileItem {
-    public WalrusFileItem(String fieldName, String contentType,
-                          boolean isFormField, String fileName, int sizeThreshold,
-                          File repository) {
-        super(fieldName, contentType, isFormField, fileName, sizeThreshold,
-                repository);
-    }
+import com.eucalyptus.ws.handlers.HmacV2Handler;
+import com.eucalyptus.ws.handlers.QueryTimestampHandler;
+import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
+import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler;
+import com.eucalyptus.ws.handlers.WalrusInboundHandler;
+import com.eucalyptus.ws.handlers.WalrusPOSTAuthenticationHandler;
+import com.eucalyptus.ws.handlers.WalrusPOSTIncomingHandler;
+
+public class WalrusPOSTUserAuthenticationStage implements UnrollableStage {
+
+	@Override
+	public String getStageName( ) {
+		return "walrus-user-authentication";
+	}
+
+	@Override
+	public void unrollStage( ChannelPipeline pipeline ) {
+		pipeline.addLast("walrus-inbound", new WalrusInboundHandler());
+		pipeline.addLast("walrus-post-incoming", new WalrusPOSTIncomingHandler());
+		pipeline.addLast("walrus-post-verify", new WalrusPOSTAuthenticationHandler());
+	}
+
 }
