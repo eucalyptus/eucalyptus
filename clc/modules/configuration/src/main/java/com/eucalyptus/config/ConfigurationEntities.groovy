@@ -126,7 +126,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   }
 
   public String getUri() {
-    return "http://" + this.getHost() + ":" + this.getPort() + this.getServicePath();
+    return "http://" + this.getHostName() + ":" + this.getPort() + this.getServicePath();
   }
 }
 
