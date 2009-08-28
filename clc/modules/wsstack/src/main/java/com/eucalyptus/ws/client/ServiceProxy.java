@@ -90,6 +90,7 @@ public class ServiceProxy {
   private MuleClient    muleClient;
   private NioClient     nioClient;
   private URI           address;
+  private boolean isLocal = false;
   
   public static ServiceProxy lookup( String registryKey ) {
     Registry registry = ServiceBootstrapper.getRegistry( );
@@ -104,6 +105,14 @@ public class ServiceProxy {
     return new NioClient( this.address.getHost( ), this.address.getPort( ), this.address.getPath( ), new InternalClientPipeline( new NioResponseHandler( ) ) );
   }
 
+  public ServiceProxy( Component component, String name, URI uri, boolean isLocal ) {
+    super( );
+    this.address = uri;
+    this.component = component;
+    this.name = name;
+    this.isLocal = isLocal;
+  }
+
   public ServiceProxy( Component component, String name, URI uri ) {
     super( );
     this.address = uri;
@@ -116,7 +125,7 @@ public class ServiceProxy {
   public void dispatch( EucalyptusMessage msg ) {
     MuleEvent context = RequestContext.getEvent( );
     try {
-      if( NetworkUtil.testLocal( this.address.getHost( ) ) ) {
+      if( this.isLocal || NetworkUtil.testLocal( this.address.getHost( ) ) ) {
         this.getMuleClient( ).dispatch( this.component.getLocalUri( ), msg, null );
       } else {
         this.getNioClient( ).dispatch( msg );
@@ -132,9 +141,8 @@ public class ServiceProxy {
   public EucalyptusMessage send( EucalyptusMessage msg ) throws EucalyptusCloudException {
     MuleEvent context = RequestContext.getEvent( );
     try {
-      if( NetworkUtil.testLocal( this.address.getHost( ) ) ) {
+      if( this.isLocal || NetworkUtil.testLocal( this.address.getHost( ) ) ) {
         MuleMessage reply = this.getMuleClient( ).send( this.component.getLocalUri( ), msg, null );
-
         if ( reply.getExceptionPayload( ) != null ) {
           throw new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ), reply.getExceptionPayload( ).getRootException( ) );
         } else {

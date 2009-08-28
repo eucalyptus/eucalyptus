@@ -226,29 +226,29 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
   public void run( ) {
     while(true){
       try {
-        List<WalrusConfiguration> walrusConfigs = Configuration.getWalrusConfigurations( );
-        for( ComponentConfiguration w : walrusConfigs ) {
-          String configuration = this.getConfigurationBuffer( w );
-          ChannelBuffer buffer = ChannelBuffers.copiedBuffer( configuration.getBytes( ) );
-          this.sendConfiguration( w, buffer );
-        }
-      } catch ( Exception e1 ) {
-        LOG.warn( "Error configuring remote walrus." );
-        LOG.error( e1,e1 );
-      }
-      try {
-        List<StorageControllerConfiguration> scConfigs = Configuration.getStorageControllerConfigurations( );
-        for( ComponentConfiguration sc : scConfigs ) {
-          String configuration = this.getConfigurationBuffer( sc );
-          ChannelBuffer buffer = ChannelBuffers.copiedBuffer( configuration.getBytes( ) );
-          this.sendConfiguration( sc, buffer );
-        }
-      } catch ( Exception e1 ) {
-        LOG.warn( "Error configuring remote storage controller." );
-        LOG.error( e1,e1 );
-      }
-      try {
         Thread.sleep(5000);
+        try {
+          List<WalrusConfiguration> walrusConfigs = Configuration.getWalrusConfigurations( );
+          for( ComponentConfiguration w : walrusConfigs ) {
+            String configuration = this.getConfigurationBuffer( w );
+            ChannelBuffer buffer = ChannelBuffers.copiedBuffer( configuration.getBytes( ) );
+            this.sendConfiguration( w, buffer );
+          }
+        } catch ( Exception e1 ) {
+          LOG.warn( "Error configuring remote walrus." );
+          LOG.error( e1,e1 );
+        }
+        try {
+          List<StorageControllerConfiguration> scConfigs = Configuration.getStorageControllerConfigurations( );
+          for( ComponentConfiguration sc : scConfigs ) {
+            String configuration = this.getConfigurationBuffer( sc );
+            ChannelBuffer buffer = ChannelBuffers.copiedBuffer( configuration.getBytes( ) );
+            this.sendConfiguration( sc, buffer );
+          }
+        } catch ( Exception e1 ) {
+          LOG.warn( "Error configuring remote storage controller." );
+          LOG.error( e1,e1 );
+        }
       } catch ( InterruptedException e ) {}
     }
   }

@@ -157,14 +157,11 @@
     <delete dir="target"/>
   </target>
   <!--================================== install target ==================================-->
-  <target name="install" depends="build,install-nogwt">
-    <ant dir="modules/www" inheritall="false" target="install"/>
-  </target>
   <property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d"/>
   <property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus"/>
   <property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus"/>
   <property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus"/>
-  <target name="install-nogwt" depends="build-nogwt">
+  <target name="install">
     <!-- copy libraries over -->
     <mkdir dir="${euca.lib.dir}"/>
     <copy todir="${euca.lib.dir}">
@@ -202,6 +199,7 @@
     <ant dir="modules/walrus" inheritall="false" target="install"/>
     <ant dir="modules/storage-controller" inheritall="false" target="install"/>
     <ant dir="modules/dns" inheritall="false" target="install"/>
+    <ant dir="modules/www" inheritall="false" target="install"/>
   </target>
   <!--================================== unzipping target ==================================-->
   <target name="deps">

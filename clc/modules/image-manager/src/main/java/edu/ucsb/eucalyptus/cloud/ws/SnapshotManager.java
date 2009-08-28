@@ -132,6 +132,7 @@ public class SnapshotManager {
     CreateStorageSnapshotResponseType scReply = null;
     try {
       scReply = StorageProxy.send( sc.getHostName( ), scRequest, CreateStorageSnapshotResponseType.class );
+      snap.setCluster( sc.getName( ) );
       snap.setMappedState( scReply.getStatus() );
       LOG.debug(scReply);
     } catch ( EucalyptusCloudException e ) {

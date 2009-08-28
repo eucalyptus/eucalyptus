@@ -126,7 +126,7 @@ public abstract class QueuedEventCallback<TYPE> {
     long startTime = System.currentTimeMillis( );
     while ( ( System.currentTimeMillis( ) - startTime ) < ms )
       try {
-        Thread.sleep( 500 );
+        Thread.sleep( 1000 );
       } catch ( InterruptedException e ) {
       }
     return true;

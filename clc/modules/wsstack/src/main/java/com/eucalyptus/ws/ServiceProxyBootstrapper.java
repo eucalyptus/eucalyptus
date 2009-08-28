@@ -115,7 +115,7 @@ public class ServiceProxyBootstrapper extends Bootstrapper {
     @Override
     public boolean start( ) throws Exception {
       if( Component.walrus.isLocal( ) ) {
-        registerLocalComponent( Component.storage );
+        registerLocalComponent( Component.walrus );
       } else {
         List<WalrusConfiguration> walri = Configuration.getWalrusConfigurations( );
         for( WalrusConfiguration w : walri ) {
@@ -155,7 +155,7 @@ public class ServiceProxyBootstrapper extends Bootstrapper {
       Registry registry = ServiceBootstrapper.getRegistry( );
       URI uri = component.getUri( );
       String key = component.getRegistryKey( "localhost" );
-      registry.registerObject( key, new ServiceProxy( component, component.name( ), uri ) );
+      registry.registerObject( key, new ServiceProxy( component, component.name( ), uri, true ) );
     }
     
     private void registerComponent( Component component, ComponentConfiguration componentConfiguration ) throws Exception {

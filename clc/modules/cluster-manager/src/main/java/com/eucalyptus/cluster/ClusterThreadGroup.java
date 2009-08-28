@@ -161,7 +161,7 @@ public class ClusterThreadGroup extends ThreadGroup {
     this.startNamedThread( this.networkThread );
     this.startNamedThread( this.rscThread );
     this.startNamedThread( this.vmThread );
-//    this.startNamedThread( this.addrThread );
+    this.startNamedThread( this.addrThread );
     this.startNamedThread( this.keyThread );
   }
 

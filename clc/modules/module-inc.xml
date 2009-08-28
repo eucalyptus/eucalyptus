@@ -153,6 +153,7 @@
   </target>
   <!--================================== jar target ==================================-->
   <target name="jar">
+  	<delete file="${jar.file}"/>
     <jar destfile="${jar.file}">
       <fileset dir="${build.dir}">
         <include name="**/*"/>
