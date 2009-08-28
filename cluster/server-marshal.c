@@ -539,12 +539,12 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     if (userNames) free(userNames);
     if (sourceNames) free(sourceNames);
     if (sourceNets) free(sourceNets);
-
+    
     if (rc) {
       done++;
     }
   }
-
+  
   if (done) {
     logprintf("ERROR: doConfigureNetwork() returned fail %d\n", rc);
     status = AXIS2_FALSE;
@@ -573,7 +573,7 @@ adb_GetConsoleOutputResponse_t* GetConsoleOutputMarshal (adb_GetConsoleOutput_t*
   
   //input vars
   adb_getConsoleOutputType_t *gcot=NULL;
-
+  
   // working vars
   int rc;
   axis2_bool_t status=AXIS2_TRUE;

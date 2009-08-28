@@ -192,7 +192,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	  vnetconfig->networks[vlan].bc = unw + numaddrs;
 	  vnetconfig->networks[vlan].dns = dns;
 	  vnetconfig->networks[vlan].router = unw+1;
-	  unw += numaddrs + 1;	  
+	  unw += numaddrs + 1;
 	}	
       } else if (!strcmp(mode, "STATIC")) {
 	for (vlan=0; vlan<vnetconfig->max_vlan; vlan++) {
@@ -1243,6 +1243,7 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
     vnetconfig->networks[vlan].active = 1;
     vnetconfig->networks[vlan].addrs[0].active = 1;
     vnetconfig->networks[vlan].addrs[1].active = 1;
+    vnetconfig->networks[vlan].addrs[vnetconfig->numaddrs-1].active = 1;
     
     rc = vnetSetVlan(vnetconfig, vlan, userName, netName);
     rc = vnetCreateChain(vnetconfig, userName, netName);

@@ -2128,29 +2128,38 @@ int init_config(void) {
       pubmode = strdup("SYSTEM");
     }
     
-    pubInterface = NULL;
-    pubInterface = getConfString(configFile, "VNET_PUBINTERFACE");
-    if (!pubInterface) {
-      logprintfl(EUCAWARN,"VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n");
-      pubInterface = strdup("eth0");
+    {
+      int usednew=0;
+      
+      pubInterface = NULL;
+      pubInterface = getConfString(configFile, "VNET_PUBINTERFACE");
+      if (!pubInterface) {
+	logprintfl(EUCAWARN,"VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n");
+	pubInterface = strdup("eth0");
+      } else {
+	usednew=1;
+      }
+      
+      privInterface = NULL;
+      privInterface = getConfString(configFile, "VNET_PRIVINTERFACE");
+      if (!privInterface) {
+	logprintfl(EUCAWARN,"VNET_PRIVINTERFACE is not defined, defaulting to 'eth0'\n");
+	privInterface = strdup("eth0");
+	usednew = 0;
+      }
+      
+      if (!usednew) {
+	tmpstr = NULL;
+	tmpstr = getConfString(configFile, "VNET_INTERFACE");
+	if (tmpstr) {
+	  logprintfl(EUCAWARN, "VNET_INTERFACE is deprecated, please use VNET_PUBINTERFACE and VNET_PRIVINTERFACE instead.  Will set both to value of VNET_INTERFACE (%s) for now.\n", tmpstr);
+	  pubInterface = strdup(tmpstr);
+	  privInterface = strdup(tmpstr);
+	}
+	if (tmpstr) free(tmpstr);
+      }
     }
-    
-    privInterface = NULL;
-    privInterface = getConfString(configFile, "VNET_PRIVINTERFACE");
-    if (!privInterface) {
-      logprintfl(EUCAWARN,"VNET_PRIVINTERFACE is not defined, defaulting to 'eth0'\n");
-      privInterface = strdup("eth0");
-    }
-    
-    tmpstr = NULL;
-    tmpstr = getConfString(configFile, "VNET_INTERFACE");
-    if (tmpstr) {
-      logprintfl(EUCAWARN, "VNET_INTERFACE is depricated, please use VNET_PUBINTERFACE and VNET_PRIVINTERFACE instead.  Will set both to value of VNET_INTERFACE for now.\n");
-      pubInterface = strdup(tmpstr);
-      privInterface = strdup(tmpstr);
-    }
-    if (tmpstr) free(tmpstr);
-    
+
     if (!strcmp(pubmode, "STATIC")) {
       pubSubnet = getConfString(configFile, "VNET_SUBNET");
       pubSubnetMask = getConfString(configFile, "VNET_NETMASK");
@@ -2172,7 +2181,7 @@ int init_config(void) {
       pubips = getConfString(configFile, "VNET_PUBLICIPS");
       localIp = getConfString(configFile, "VNET_LOCALIP");
       if (!localIp) {
-	logprintfl(EUCAWARN, "VNET_LOCALIP not defined, will attempt to autodiscover\n");
+	logprintfl(EUCAWARN, "VNET_LOCALIP not defined, will attempt to auto-discover (consider setting this explicitly if tunnelling does not function properly.)\n");
       }
       if (!pubSubnet || !pubSubnetMask || !pubDNS || !numaddrs) {
 	logprintfl(EUCAFATAL,"in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");
