@@ -67,6 +67,8 @@ permission notice:
 #include "rampart_handler_util.h"
 #include "rampart_sec_processed_result.h"
 #include "rampart_error.h"
+#include "axis2_op_ctx.h"
+#include "rampart_context.h"
 
 axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_msg_ctx, axis2_op_ctx_t *op_ctx);
 

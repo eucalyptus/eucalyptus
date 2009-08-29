@@ -248,7 +248,6 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   for (i=0; i<clusterControllersLen; i++) {
     char *incc;
     incc = adb_describeNetworksType_get_clusterControllers_at(snt, env, i);
-    logprintfl(EUCADEBUG, "incoming CC: %s, %s\n", incc, host2ip(incc));
     clusterControllers[i] = host2ip(incc);
   }
   

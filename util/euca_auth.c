@@ -105,6 +105,8 @@ permission notice:
 #include "rampart_handler_util.h"
 #include "rampart_sec_processed_result.h"
 #include "rampart_error.h"
+#include "axis2_op_ctx.h"
+#include "rampart_context.h"
 
 #define NO_U_FAIL(x) do{ \
 AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI, "[rampart][eucalyptus-verify] " #x );\
@@ -194,6 +196,7 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
     //***** FINALLY -- we have the certificate used to sign the message.  authenticate it HERE *****//
     msg_x509_buf = oxs_x509_cert_get_data(_cert,env);
     if(!msg_x509_buf)NO_U_FAIL("OMG WHAT NOW?!");
+    /*
     recv_x509_buf = (axis2_char_t *)rampart_context_get_receiver_certificate(rampart_context, env);
     if(recv_x509_buf)
         recv_cert = oxs_key_mgr_load_x509_cert_from_string(env, recv_x509_buf);
@@ -204,7 +207,13 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
 	if (check_file(file_name)) NO_U_FAIL("No cert file ($EUCALYPTUS/var/lib/eucalyptus/keys/cloud-cert.pem) found, failing");
         recv_cert = oxs_key_mgr_load_x509_cert_from_pem_file(env, file_name);
     }
-    
+    */
+
+    file_name = rampart_context_get_receiver_certificate_file(rampart_context, env);
+    if(!file_name) NO_U_FAIL("Policy for the service is incorrect -- ReceiverCertificate is not set!!");
+    if (check_file(file_name)) NO_U_FAIL("No cert file ($EUCALYPTUS/var/lib/eucalyptus/keys/cloud-cert.pem) found, failing");
+    recv_cert = oxs_key_mgr_load_x509_cert_from_pem_file(env, file_name);
+
     if (recv_cert) {
       recv_x509_buf = oxs_x509_cert_get_data(recv_cert,env);
     } else {
