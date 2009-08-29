@@ -69,6 +69,7 @@ import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -100,6 +101,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+
+import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.eucalyptus.ws.handlers.WalrusRESTBinding;
 import java.io.RandomAccessFile;
 import org.jboss.netty.channel.ChannelFuture;
@@ -276,7 +279,7 @@ public class WalrusManager {
 			updateARecord.setTtl(604800);
 			updateARecord.setZone(zone);
 			try {
-				Messaging.send(DNSProperties.DNS_REF, updateARecord);
+				ServiceDispatcher.lookupSingle(Component.dns).send(updateARecord);
 				LOG.info("Mapping " + updateARecord.getName() + " to " + address);
 			} catch(Exception ex) {
 				LOG.error("Could not update DNS record", ex);
@@ -333,7 +336,7 @@ public class WalrusManager {
 						removeARecordType.setName(bucketName + "." + zone);
 						removeARecordType.setZone(zone);
 						try {
-							Messaging.send(DNSProperties.DNS_REF, removeARecordType);
+							ServiceDispatcher.lookupSingle(Component.dns).send(removeARecordType);
 							LOG.info("Removing mapping for " + removeARecordType.getName());
 						} catch(Exception ex) {
 							LOG.error("Could not update DNS record", ex);
