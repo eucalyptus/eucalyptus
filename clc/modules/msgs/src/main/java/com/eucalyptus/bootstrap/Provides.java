@@ -71,6 +71,6 @@ import java.lang.annotation.Target;
 @Target({ ElementType.TYPE, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Provides {
-  Resource resource() default Resource.Nothing;
+  Resource resource() default Resource.Final;
   Component component() default Component.any;
 }

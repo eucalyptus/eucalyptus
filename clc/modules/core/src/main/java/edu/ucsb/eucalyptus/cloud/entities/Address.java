@@ -63,11 +63,12 @@
  */
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import edu.ucsb.eucalyptus.constants.HasName;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import com.eucalyptus.util.HasName;
 
 import javax.persistence.*;
 import java.util.concurrent.locks.ReadWriteLock;

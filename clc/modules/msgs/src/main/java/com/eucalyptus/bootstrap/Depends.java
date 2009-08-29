@@ -71,7 +71,7 @@ import java.lang.annotation.Target;
 @Target({ ElementType.TYPE, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Depends {
-  Resource[] resources() default {Resource.Nothing};
+  Resource[] resources() default {Resource.Final};
   Component[] local() default {};
   Component[] remote() default {};
 }

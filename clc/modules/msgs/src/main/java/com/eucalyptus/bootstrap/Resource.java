@@ -91,8 +91,8 @@ public enum Resource {
   RemoteServices( ),
   UserCredentials( ),
   CloudService( ),
-  SpringService( ),
-  Nothing( );
+  Verification( ),
+  Final( );
   private String                 resourceName;
   private static Logger          LOG = Logger.getLogger( Resource.class );
   private List<Bootstrapper>     bootstrappers;

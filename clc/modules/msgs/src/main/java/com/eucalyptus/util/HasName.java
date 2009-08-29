@@ -59,103 +59,12 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
+ *
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.client;
 
-import java.net.URI;
-import java.security.GeneralSecurityException;
-import java.util.List;
+package com.eucalyptus.util;
 
-import org.apache.log4j.Logger;
-import org.mule.RequestContext;
-import org.mule.api.MuleEvent;
-import org.mule.api.MuleMessage;
-import org.mule.api.registry.Registry;
-import org.mule.module.client.MuleClient;
-
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.ServiceBootstrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
-import com.eucalyptus.ws.handlers.NioResponseHandler;
-
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-
-public class ServiceProxy {
-  private static Logger LOG = Logger.getLogger( ServiceProxy.class );
-  private Component     component;
-  private String        name;
-  private MuleClient    muleClient;
-  private NioClient     nioClient;
-  private URI           address;
-  private boolean isLocal = false;
-  
-  public static ServiceProxy lookup( String registryKey ) {
-    Registry registry = ServiceBootstrapper.getRegistry( );
-    return (ServiceProxy) registry.lookupObject( registryKey );
-  }
-  
-  private static MuleClient getMuleClient( ) throws Exception {
-    return new MuleClient( );
-  }
-
-  private NioClient getNioClient( ) throws Exception {
-    return new NioClient( this.address.getHost( ), this.address.getPort( ), this.address.getPath( ), new InternalClientPipeline( new NioResponseHandler( ) ) );
-  }
-
-  public ServiceProxy( Component component, String name, URI uri, boolean isLocal ) {
-    super( );
-    this.address = uri;
-    this.component = component;
-    this.name = name;
-    this.isLocal = isLocal;
-  }
-
-  public ServiceProxy( Component component, String name, URI uri ) {
-    super( );
-    this.address = uri;
-    this.component = component;
-    this.name = name;
-  }
-
-  
-  @SuppressWarnings( "static-access" )
-  public void dispatch( EucalyptusMessage msg ) {
-    MuleEvent context = RequestContext.getEvent( );
-    try {
-      if( this.isLocal || NetworkUtil.testLocal( this.address.getHost( ) ) ) {
-        this.getMuleClient( ).dispatch( this.component.getLocalUri( ), msg, null );
-      } else {
-        this.getNioClient( ).dispatch( msg );
-      }
-    } catch ( Exception e ) {
-      LOG.error( e );
-    } finally {
-      RequestContext.setEvent( context );
-    }
-  }
-
-  @SuppressWarnings( "static-access" )
-  public EucalyptusMessage send( EucalyptusMessage msg ) throws EucalyptusCloudException {
-    MuleEvent context = RequestContext.getEvent( );
-    try {
-      if( this.isLocal || NetworkUtil.testLocal( this.address.getHost( ) ) ) {
-        MuleMessage reply = this.getMuleClient( ).send( this.component.getLocalUri( ), msg, null );
-        if ( reply.getExceptionPayload( ) != null ) {
-          throw new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ), reply.getExceptionPayload( ).getRootException( ) );
-        } else {
-          return ( EucalyptusMessage ) reply.getPayload( );
-        }
-      } else {
-        return this.getNioClient( ).send( msg );
-      }
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      throw new EucalyptusCloudException( e );
-    } finally {
-      RequestContext.setEvent( context );
-    }
-  }
+public interface HasName extends Comparable {
+  public String getName();
 }

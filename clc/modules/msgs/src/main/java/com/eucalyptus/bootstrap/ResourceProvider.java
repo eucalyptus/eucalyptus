@@ -76,6 +76,7 @@ import org.mule.config.ConfigResource;
 
 import net.sf.json.JSONObject;
 
+import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -140,6 +141,11 @@ public class ResourceProvider {
 
   public List<ConfigResource> getConfigurations( ) {
     return configurations;
+  }
+
+  @Override
+  public String toString( ) {
+    return LogUtil.dumpObject( this );
   }
 
 }

@@ -69,8 +69,8 @@
        http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
-
-
+       
+<!--
     <model name="eucalyptus-www">
         <default-service-exception-strategy>
             <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -79,8 +79,8 @@
             <inbound>
                 <vm:inbound-endpoint address="vm://HttpServer" synchronous="false" />
             </inbound>
-            <component class="edu.ucsb.eucalyptus.ic.HttpServer" />
+            <component class="com.eucalyptus.admin.HttpServer" />
         </service>
     </model>
+-->
 </mule>
-    

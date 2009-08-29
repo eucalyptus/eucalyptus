@@ -74,6 +74,7 @@ import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 
+import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 
 @Provides(resource=Resource.CloudService)
@@ -97,7 +98,7 @@ public class ServiceBootstrapper extends Bootstrapper {
   public boolean load( Resource current ) throws Exception {
     List<ConfigResource> configs = Lists.newArrayList( );
     for( ResourceProvider r : current.getProviders( ) ) {
-      LOG.info( "Preparing configuration for: " + r );
+      LOG.info( LogUtil.subheader( "Preparing configuration for: " + r ) );
       configs.addAll( r.getConfigurations( ) );
     }
     for( ConfigResource cfg : configs ) {

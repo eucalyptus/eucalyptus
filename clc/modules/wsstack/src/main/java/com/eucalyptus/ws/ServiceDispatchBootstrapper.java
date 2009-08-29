@@ -66,6 +66,7 @@ package com.eucalyptus.ws;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.mule.api.registry.RegistrationException;
@@ -82,96 +83,85 @@ import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.StartComponentEvent;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.ws.client.ServiceProxy;
+import com.eucalyptus.ws.client.LocalDispatcher;
+import com.eucalyptus.ws.client.RemoteDispatcher;
+import com.eucalyptus.ws.client.ServiceDispatcher;
 
 @Provides(resource=Resource.RemoteServices)
-public class ServiceProxyBootstrapper extends Bootstrapper {
-  private static Logger LOG = Logger.getLogger( ServiceProxyBootstrapper.class );
+public class ServiceDispatchBootstrapper extends Bootstrapper {
+  private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
   
   @Override
   public boolean load( Resource current ) throws Exception {
+    LOG.trace( "Touching class: " + ServiceDispatcher.class);
     for( Component v : Component.values( ) ) {
-      LOG.trace("Ensure component is initialized: " + v );
+      LOG.info("Ensure component is initialized: " + LogUtil.dumpObject( v ) );
     }
+    if( !Component.eucalyptus.isLocal( ) ) {
+      Component.eucalyptus.setHostAddress( Component.db.getHostAddress( ) );
+      Component.jetty.setHostAddress( Component.db.getHostAddress( ) );
+      Component.cluster.setHostAddress( Component.db.getHostAddress( ) );
+    } else if( Component.eucalyptus.isLocal( ) ) {
+      try {
+        registerLocalComponent( Component.eucalyptus );
+        registerLocalComponent( Component.dns );
+        registerLocalComponent( Component.cluster );
+        registerLocalComponent( Component.jetty );
+      } catch ( Exception e ) {
+        LOG.fatal( e, e );
+        return false;
+      }      
+    }
+
     if( !Component.walrus.isLocal( ) ) {
       List<WalrusConfiguration> walri = Configuration.getWalrusConfigurations( );
       for( WalrusConfiguration w : walri ) {
-        Component.walrus.setHostAddress( w.getHostName( ) );
+        try {
+          if( NetworkUtil.testLocal( w.getHostName( ) )) {
+            Component.walrus.markLocal( );
+            registerLocalComponent( Component.walrus );
+          } else {
+            Component.walrus.setHostAddress( w.getHostName( ) );
+            registerComponent( Component.walrus, w );
+          }
+        } catch ( Exception e ) {
+          LOG.error( "Failed to create walrus service proxy: " + e );
+        }
+        break;
       }
+    } else {
+      registerLocalComponent( Component.walrus );
     }
-    if( !Component.db.isLocal( ) ) {
-      Component.eucalyptus.setHostAddress( Component.db.getHostAddress( ) );
-      Component.jetty.setHostAddress( Component.db.getHostAddress( ) );
-      Component.clusters.setHostAddress( Component.db.getHostAddress( ) );
+
+    List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
+    for( StorageControllerConfiguration sc : scs ) {
+      try {
+        if( NetworkUtil.testLocal( sc.getHostName( ) )) { 
+          Component.storage.markLocal( );
+          registerLocalComponent( Component.storage );
+        } else {
+          registerComponent( Component.storage, sc );
+        }
+      } catch ( Exception e ) {
+        LOG.error( "Failed to create storage controller "+sc.getName( )+" service proxy: " + e );
+      }
     }
     return true;
   }
 
-
-  @Provides(resource=Resource.SpringService)
-  public static class LateBindingBootstrapper extends Bootstrapper {
-  
-    @Override
-    public boolean start( ) throws Exception {
-      if( Component.walrus.isLocal( ) ) {
-        registerLocalComponent( Component.walrus );
-      } else {
-        List<WalrusConfiguration> walri = Configuration.getWalrusConfigurations( );
-        for( WalrusConfiguration w : walri ) {
-          try {
-            if( NetworkUtil.testLocal( w.getHostName( ) )) continue;
-            registerComponent( Component.walrus, w );
-          } catch ( Exception e ) {
-            LOG.error( "Failed to create walrus service proxy: " + e );
-          }
-        }
-      }
-
-      List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
-      for( StorageControllerConfiguration sc : scs ) {
-        try {
-          if( NetworkUtil.testLocal( sc.getHostName( ) )) registerLocalComponent( Component.storage );
-          else registerComponent( Component.storage, sc );
-        } catch ( Exception e ) {
-          LOG.error( "Failed to create storage controller "+sc.getName( )+" service proxy: " + e );
-        }
-      }
-      
-      if( Component.dns.isLocal( ) ) {
-        registerLocalComponent( Component.dns );
-      }
-      if( Component.clusters.isLocal( ) ) {
-        registerLocalComponent( Component.clusters );
-      }
-      if( Component.jetty.isLocal( ) ) {
-        registerLocalComponent( Component.jetty );
-      }
-
-      return true;
-    }
-
-    private void registerLocalComponent( Component component ) throws RegistrationException {
-      Registry registry = ServiceBootstrapper.getRegistry( );
-      URI uri = component.getUri( );
-      String key = component.getRegistryKey( "localhost" );
-      registry.registerObject( key, new ServiceProxy( component, component.name( ), uri, true ) );
-    }
-    
-    private void registerComponent( Component component, ComponentConfiguration componentConfiguration ) throws Exception {
-      Registry registry = ServiceBootstrapper.getRegistry( );
-      URI uri = new URI(component.makeUri( componentConfiguration.getHostName( ) ));
-      String key = component.getRegistryKey( componentConfiguration.getHostName( ) );
-      registry.registerObject( key, new ServiceProxy( component, componentConfiguration.getName( ), uri ) );
-      LOG.info( "Registering service proxy for " + componentConfiguration.getName( ) + " at " + uri.toASCIIString( ) );
-    }
-
-    @Override
-    public boolean load( Resource current ) throws Exception {
-      return true;
-    }
+  private void registerLocalComponent( Component component ) throws EventVetoedException {
+    ListenerRegistry.getInstance( ).fireEvent( component, StartComponentEvent.getLocal( component ));
   }
-
+  
+  private void registerComponent( Component component, ComponentConfiguration componentConfiguration ) throws Exception {
+    ListenerRegistry.getInstance( ).fireEvent( component, StartComponentEvent.getRemote( componentConfiguration ) );
+  }
 
   @Override
   public boolean start( ) throws Exception {

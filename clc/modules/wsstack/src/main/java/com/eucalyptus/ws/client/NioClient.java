@@ -86,7 +86,6 @@ public class NioClient implements Client {
   private static Logger LOG = Logger.getLogger( NioClient.class );
 
   private NioBootstrap clientBootstrap;
-
   private ChannelFactory channelFactory;
   private ChannelFuture channelOpenFuture;
   private ChannelFuture channelWriteFuture;

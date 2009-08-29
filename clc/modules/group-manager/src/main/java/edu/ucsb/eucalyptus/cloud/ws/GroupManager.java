@@ -274,7 +274,7 @@ public class GroupManager {
     }
     if ( foundAll ) {
       Network changedNetwork = ruleGroup.getVmNetwork( user.getUserName() );
-      Messaging.dispatch( Component.clusters.getUri( ).toASCIIString( ), changedNetwork );
+      Messaging.dispatch( Component.cluster.getUri( ).toASCIIString( ), changedNetwork );
       db.commit();
     } else db.rollback();
     reply.set_return( foundAll );
@@ -304,7 +304,7 @@ public class GroupManager {
         }
       userRulesList.getNetworkRules().addAll( ruleList );
       Network changedNetwork = userRulesList.getVmNetwork( user.getUserName() );
-      Messaging.dispatch( Component.clusters.getUri( ).toASCIIString( ), changedNetwork );
+      Messaging.dispatch( Component.cluster.getUri( ).toASCIIString( ), changedNetwork );
       reply.set_return( true );
       db.commit();
       return reply;

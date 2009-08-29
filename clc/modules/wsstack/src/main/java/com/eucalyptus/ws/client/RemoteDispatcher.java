@@ -59,45 +59,61 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- *
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.ws.client;
 
-package edu.ucsb.eucalyptus.ic;
+import java.net.URI;
+import java.security.GeneralSecurityException;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.log4j.Logger;
-import org.mortbay.xml.XmlConfiguration;
-import org.mule.api.MuleException;
-import org.mule.api.lifecycle.Startable;
+import org.mule.RequestContext;
+import org.mule.api.MuleEvent;
+import org.mule.api.MuleMessage;
+import org.mule.api.registry.Registry;
+import org.mule.module.client.MuleClient;
 
-import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.ServiceBootstrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
+import com.eucalyptus.ws.handlers.NioResponseHandler;
 
-import java.io.File;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
-public class HttpServer implements Startable {
-  private static Logger LOG = Logger.getLogger( HttpServer.class );
+public class RemoteDispatcher extends ServiceDispatcher {
+  private static Logger LOG = Logger.getLogger( RemoteDispatcher.class );
+  
+  public RemoteDispatcher( Component component, String name, URI address ) {
+    super( component, name, address, false );
+  }
 
-  private static org.mortbay.jetty.Server jettyServer;
-
-  public void hello( String hi ){}
-
-  public void start() throws MuleException
-  {
-    synchronized ( HttpServer.class )
-    {
-      if ( jettyServer == null )
-        try
-        {
-          jettyServer = new org.mortbay.jetty.Server();
-          XmlConfiguration jettyConfig = new XmlConfiguration( new File( BaseDirectory.CONF.toString() + File.separator + "eucalyptus-jetty.xml" ).toURL() );
-          jettyConfig.configure( jettyServer );
-          jettyServer.start();
-        }
-        catch ( Exception e )
-        {
-          LOG.error( e, e );
-        }
+  
+  public void dispatch( EucalyptusMessage msg ) {
+    MuleEvent context = RequestContext.getEvent( );
+    try {
+      this.getNioClient( ).dispatch( msg );
+    } catch ( Exception e ) {
+      LOG.error( e );
+    } finally {
+      RequestContext.setEvent( context );
     }
   }
 
+  public EucalyptusMessage send( EucalyptusMessage msg ) throws EucalyptusCloudException {
+    MuleEvent context = RequestContext.getEvent( );
+    try {
+      return this.getNioClient( ).send( msg );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    } finally {
+      RequestContext.setEvent( context );
+    }
+  }
+  
 }

@@ -71,7 +71,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.mule.api.MuleContext;
 
-import com.eucalyptus.util.LogUtils;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 
 import edu.emory.mathcs.backport.java.util.Arrays;
@@ -108,15 +108,15 @@ public class SystemBootstrapper {
 
   public boolean init( ) throws Exception {
     try {
-      LOG.info( LogUtils.header( "Initializing resource providers." ) );
+      LOG.info( LogUtil.header( "Initializing resource providers." ) );
       BootstrapFactory.initResourceProviders( );
-      LOG.info( LogUtils.header( "Initializing configuration resources." ) );
+      LOG.info( LogUtil.header( "Initializing configuration resources." ) );
       BootstrapFactory.initConfigurationResources( );
-      LOG.info( LogUtils.header( "Initializing bootstrappers." ) );
+      LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
       BootstrapFactory.initBootstrappers( );
       return true;
-    } catch ( Exception e ) {
-      LOG.info( e, e );
+    } catch ( Throwable e ) {
+      LOG.fatal( e, e );
       return false;
     }
   }
@@ -133,41 +133,49 @@ public class SystemBootstrapper {
    * TODO: bootstrap bindings
    */
   public boolean load( ) throws Exception {
-    for ( Resource r : Resource.values( ) ) {
-      if ( r.getBootstrappers( ).isEmpty( ) ) {
-        LOG.info( "Skipping " + r + "... nothing to do." );
-      } else {
-        LOG.info( LogUtils.header( "Loading " + r ) );
-      }
-      for ( Bootstrapper b : r.getBootstrappers( ) ) {
-        try {
-          LOG.info( "-> load: " + b.getClass( ) );
-          boolean result = b.load( r );
-        } catch ( Exception e ) {
-          LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
-          return false;
+    try {
+      for ( Resource r : Resource.values( ) ) {
+        if ( r.getBootstrappers( ).isEmpty( ) ) {
+          LOG.info( "Skipping " + r + "... nothing to do." );
+        } else {
+          LOG.info( LogUtil.header( "Loading " + r ) );
+        }
+        for ( Bootstrapper b : r.getBootstrappers( ) ) {
+          try {
+            LOG.info( "-> load: " + b.getClass( ) );
+            boolean result = b.load( r );
+          } catch ( Exception e ) {
+            LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
+            return false;
+          }
         }
       }
+    } catch ( Throwable e ) {
+      LOG.fatal( e, e );
     }
     return true;
   }
 
   public boolean start( ) throws Exception {
-    for ( Resource r : Resource.values( ) ) {
-      if ( r.getBootstrappers( ).isEmpty( ) ) {
-        LOG.info( "Skipping " + r + "... nothing to do." );
-      } else {
-        LOG.info( LogUtils.header( "Starting " + r ) );
-      }
-      for ( Bootstrapper b : r.getBootstrappers( ) ) {
-        try {
-          LOG.info( "-> start: " + b.getClass( ) );
-          boolean result = b.start( );
-        } catch ( Exception e ) {
-          LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
-          return false;
+    try {
+      for ( Resource r : Resource.values( ) ) {
+        if ( r.getBootstrappers( ).isEmpty( ) ) {
+          LOG.info( "Skipping " + r + "... nothing to do." );
+        } else {
+          LOG.info( LogUtil.header( "Starting " + r ) );
+        }
+        for ( Bootstrapper b : r.getBootstrappers( ) ) {
+          try {
+            LOG.info( "-> start: " + b.getClass( ) );
+            boolean result = b.start( );
+          } catch ( Exception e ) {
+            LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
+            return false;
+          }
         }
       }
+    } catch ( Throwable e ) {
+      LOG.fatal( e, e );
     }
     return true;
   }

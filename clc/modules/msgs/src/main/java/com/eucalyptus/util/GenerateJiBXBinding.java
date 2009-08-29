@@ -152,6 +152,8 @@ public class GenerateJiBXBinding {
       String typeArg = getTypeArgument( field );
       if ( "java.lang.String".equals( typeArg ) ) {
         stringCollection( field.getName( ) );
+      } else if ( "java.lang.Integer".equals( typeArg ) ) {
+        integerCollection( field.getName( ) );
       } else if ( typeArg != null ) {
         typedCollection( field.getName( ), typeArg );
       }
@@ -190,6 +192,21 @@ public class GenerateJiBXBinding {
     append( "<structure name=\"" + name + "\" usage=\"optional\">" );
     indent++;
     append( "<collection factory=\"org.jibx.runtime.Utility.arrayListFactory\" field=\"" + name + "\" item-type=\"java.lang.String\" usage=\"required\">" );
+    indent++;
+    append( "<structure name=\"item\">" );
+    indent++;
+    append( "<value name=\"entry\"/>" );
+    indent--;
+    append( "</structure>" );
+    indent--;
+    append( "</collection>" );
+    indent--;
+    append( "</structure>" );
+  }
+  private static void integerCollection( String name ) {
+    append( "<structure name=\"" + name + "\" usage=\"optional\">" );
+    indent++;
+    append( "<collection factory=\"org.jibx.runtime.Utility.arrayListFactory\" field=\"" + name + "\" item-type=\"java.lang.Integer\" usage=\"required\">" );
     indent++;
     append( "<structure name=\"item\">" );
     indent++;

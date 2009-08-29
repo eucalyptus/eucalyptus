@@ -1,0 +1,51 @@
+package com.eucalyptus.ws.client;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.StartComponentEvent;
+import com.eucalyptus.util.LogUtil;
+
+public class ServiceEventListener implements EventListener {
+  private static Logger LOG = Logger.getLogger( ServiceEventListener.class );
+  public static void register() {
+    ServiceEventListener me = new ServiceEventListener( );
+    ListenerRegistry.getInstance( ).register( Component.walrus, me );
+    ListenerRegistry.getInstance( ).register( Component.storage, me );
+    ListenerRegistry.getInstance( ).register( Component.cluster, me );
+  }
+  @Override
+  public void advertiseEvent( Event event ) {}
+  @Override
+  public void fireEvent( Event event ) {
+    try {
+      if( event instanceof StartComponentEvent ) {
+        StartComponentEvent e = (StartComponentEvent) event;
+        ServiceDispatcher sd = null;
+        if( e.isLocal( ) ) {
+          Component c = e.getComponent( );
+          URI uri = new URI(c.getLocalAddress( ));
+          sd = new LocalDispatcher( c, c.name( ), uri );
+          ServiceDispatcher.register( c.getRegistryKey( "localhost" ), sd );
+        } else {
+          ComponentConfiguration config = e.getConfiguration( );
+          Component c = e.getComponent( );
+          URI uri = new URI(c.makeUri( config.getHostName( ) ));
+          sd = new RemoteDispatcher( c, c.name( ), uri );
+          ServiceDispatcher.register( c.getRegistryKey( config.getHostName( ) ), sd );
+        }
+        LOG.info( "Registering service dispatcher: " + LogUtil.dumpObject( sd ) );
+      }
+    } catch ( URISyntaxException e ) {
+      LOG.warn( e, e );
+    }
+  }
+
+}

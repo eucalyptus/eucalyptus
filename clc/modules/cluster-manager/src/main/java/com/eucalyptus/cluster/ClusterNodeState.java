@@ -111,7 +111,7 @@ public class ClusterNodeState {
     LOG.warn( "BEFORE ALLOCATE ============================" );
     LOG.warn( sorted );
     //:: if not enough, then bail out :://
-    if ( vmType.getAvailable() < quantity ) throw new NotEnoughResourcesAvailable();
+    if ( vmType.getAvailable() < quantity ) throw new NotEnoughResourcesAvailable("Not enough resources available: vm resources");
 
     Set<VmTypeAvailability> tailSet = sorted.tailSet( vmType );
     Set<VmTypeAvailability> headSet = sorted.headSet( vmType );

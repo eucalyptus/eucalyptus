@@ -69,13 +69,16 @@ import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.List;
+
+import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
 
 public class NetworkUtil {
-  
+  private static Logger LOG = Logger.getLogger( NetworkUtil.class );
   public static List<String> getAllAddresses() throws SocketException  {
     List<String> addrs = Lists.newArrayList( );
     Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
@@ -98,20 +101,41 @@ public class NetworkUtil {
     return inetAddr.isReachable( 1000 );
   }
 
-  public static boolean testLocal( String address ) throws Exception {
-    InetAddress addr = InetAddress.getByName( address );
-    List<String> addrs = Lists.newArrayList( );
-    Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
-    while( ifaces.hasMoreElements( ) ) {
-      NetworkInterface iface = ifaces.nextElement( );
-      for( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
-        InetAddress ifaceAddr = iaddr.getAddress( );
-        if( ifaceAddr.equals( addr ) ) {
-          return true;
+  public static boolean testLocal( String address ) {
+    InetAddress addr;
+    try {
+      addr = InetAddress.getByName( address );
+      List<String> addrs = Lists.newArrayList( );
+      Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
+      while( ifaces.hasMoreElements( ) ) {
+        NetworkInterface iface = ifaces.nextElement( );
+        for( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
+          InetAddress ifaceAddr = iaddr.getAddress( );
+          if( ifaceAddr.equals( addr ) ) {
+            return true;
+          }
         }
       }
+      return addr.isAnyLocalAddress( );
+    } catch ( Exception e ) {
+      LOG.fatal( "Error getting address or network interface information.", e );
+      return false;
     }
-    return false;
+  }
+  
+  public static String tryToResolve( String address ) {
+    InetAddress addr;
+    try {
+      addr = InetAddress.getByName( address );
+      return addr.getHostAddress( );
+    } catch ( UnknownHostException e ) {
+      return address;
+    }
+  }
+
+  public static boolean testGoodAddress( String address ) throws Exception {
+    InetAddress addr = InetAddress.getByName( address );
+    return !addr.isAnyLocalAddress( ) || !addr.isLoopbackAddress( ) || !addr.isLinkLocalAddress( ) || !addr.isMulticastAddress( );
   }
 
   

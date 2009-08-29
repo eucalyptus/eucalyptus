@@ -89,7 +89,7 @@ public class PipelineRegistry {
   private final NavigableSet<FilteredPipeline> pipelines = new ConcurrentSkipListSet<FilteredPipeline>( );
 
   public void register( final FilteredPipeline pipeline ) {
-    LOG.info( "Registering pipeline: " + pipeline.getPipelineName( ) );
+    LOG.info( "-> Registering pipeline: " + pipeline.getPipelineName( ) );
     this.pipelines.add( pipeline );
   }
 
@@ -98,7 +98,7 @@ public class PipelineRegistry {
     for ( FilteredPipeline f : this.pipelines ) {
       if ( f.accepts( request ) ) {
         if ( candidate != null ) {
-          LOG.warn( "More than one candidate pipeline.  Ignoring offer by: " + f.getPipelineName( ) + " of type " + f.getClass( ).getSimpleName( ) );
+          LOG.warn( "=> More than one candidate pipeline.  Ignoring offer by: " + f.getPipelineName( ) + " of type " + f.getClass( ).getSimpleName( ) );
         } else {
           candidate = f;
         }

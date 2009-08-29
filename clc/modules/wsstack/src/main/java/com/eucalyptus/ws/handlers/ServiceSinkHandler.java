@@ -68,6 +68,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
@@ -120,8 +121,6 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
     super( );
     this.msgReceiver = msgReceiver;
   }
-
-
 
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
@@ -183,8 +182,17 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
         ctx.sendDownstream( newEvent );
       } else {
-        
+        LOG.warn("Closing channel due to unknown message event type!!!" );
+        ctx.getChannel( ).close( );
       }
     }
+  }
+
+  @Override
+  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
+    MappingHttpResponse error = new MappingHttpResponse(requestLocal.get(ctx.getChannel( )).getProtocolVersion( ), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+    error.setContent( ChannelBuffers.copiedBuffer( e.getCause( ).getMessage( ).getBytes( ) ) );
+    ChannelFuture writeFuture = ctx.getChannel( ).write( error );
+    writeFuture.addListener( ChannelFutureListener.CLOSE );
   }
 }

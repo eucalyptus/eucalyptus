@@ -70,4 +70,8 @@ package edu.ucsb.eucalyptus.cloud.cluster;
  */
 public class NotEnoughResourcesAvailable extends Exception {
 
+  public NotEnoughResourcesAvailable( String string ) {
+    super(string);
+  }
+
 }

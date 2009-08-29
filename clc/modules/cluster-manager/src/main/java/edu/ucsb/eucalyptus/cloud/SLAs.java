@@ -110,8 +110,6 @@ public class SLAs {
   }
 
   public void doNetworkAllocation( String userId, List<ResourceToken> rscTokens, List<Network> networks ) throws NotEnoughResourcesAvailable {
-    //TODO: handle network indexing
-    List<Integer> networkIndexes = Lists.newArrayList( );
     for ( ResourceToken token : rscTokens ) /*<--- for each cluster */
       for ( Network network : networks ) {/*<--- for each network to allocate */
         try {
@@ -120,7 +118,18 @@ public class SLAs {
           Networks.getInstance().register( network );
         }
         try {
-          token.getNetworkTokens().add( allocateClusterVlan( userId, token.getCluster(), network.getName() ) );
+          NetworkToken netToken = allocateClusterVlan( userId, token.getCluster(), network.getName() );
+          token.getNetworkTokens().add( netToken );
+          for( int i = 0; i < token.getAmount( ); i++ ) {
+            Integer addrIndex = network.getAvailableAddresses( ).pollFirst();
+            if( addrIndex == null ) {
+              network.getAvailableAddresses( ).addAll( netToken.getIndexes( ) );
+              netToken.getIndexes( ).clear( );
+              throw new NotEnoughResourcesAvailable( "Not enough addresses left in the requested network subnet." );
+            } else {
+              netToken.getIndexes( ).add( addrIndex );
+            }
+          }
         } catch ( NetworkAlreadyExistsException e ) {}
       }
   }
@@ -129,7 +138,7 @@ public class SLAs {
     ClusterState clusterState = Clusters.getInstance().lookup( clusterName ).getState();
     Network existingNet = Networks.getInstance().lookup( networkName );
 
-    NetworkToken networkToken = clusterState.getNetworkAllocation( userId, existingNet.getNetworkName() );
+    NetworkToken networkToken = clusterState.getNetworkAllocation( userId, existingNet.getNetworkName( ) );
     LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, networkToken ) );
 
     if ( existingNet.hasToken( networkToken.getCluster() ) ) {

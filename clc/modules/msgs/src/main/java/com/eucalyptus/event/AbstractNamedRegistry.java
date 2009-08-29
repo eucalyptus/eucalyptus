@@ -63,13 +63,14 @@
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.cloud;
+package com.eucalyptus.event;
 
-import edu.ucsb.eucalyptus.constants.HasName;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+
+import com.eucalyptus.util.HasName;
 
 public abstract class AbstractNamedRegistry<TYPE extends HasName> {
 
@@ -106,8 +107,7 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName> {
     this.activeMap.remove( key );
   }
 
-  public void register( TYPE obj ) // TODO: should throw duplicate element exception
-  {
+  public void register( TYPE obj ) {
     if ( this.disabledMap.containsKey( obj.getName() ) ) {
       TYPE tempObj = this.disabledMap.remove( obj.getName() );
       this.activeMap.putIfAbsent( tempObj.getName(), tempObj );

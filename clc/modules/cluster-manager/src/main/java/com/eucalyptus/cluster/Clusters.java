@@ -66,7 +66,8 @@ package com.eucalyptus.cluster;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.ucsb.eucalyptus.cloud.AbstractNamedRegistry;
+import com.eucalyptus.event.AbstractNamedRegistry;
+
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {

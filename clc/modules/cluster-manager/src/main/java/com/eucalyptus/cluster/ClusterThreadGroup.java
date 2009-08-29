@@ -153,17 +153,14 @@ public class ClusterThreadGroup extends ThreadGroup {
     }
   }
 
-  private void startThreads( ) {
-    if ( !certsConfirmed ) {
-      this.waitForCerts( );
-    }
+  public void startScaryThreads( ) {
     this.startNamedThread( this.mqThread );
-    this.startNamedThread( this.networkThread );
     this.startNamedThread( this.rscThread );
     this.startNamedThread( this.vmThread );
     this.startNamedThread( this.addrThread );
-    this.startNamedThread( this.keyThread );
   }
+
+  public void startThreads( ) {}
 
   public void stopThreads( ) {
     this.stopped = true;

@@ -65,7 +65,8 @@ package edu.ucsb.eucalyptus.cloud.net;
  */
 
 
-import edu.ucsb.eucalyptus.cloud.AbstractNamedRegistry;
+import com.eucalyptus.event.AbstractNamedRegistry;
+
 import edu.ucsb.eucalyptus.cloud.entities.Address;
 
 public class Addresses extends AbstractNamedRegistry<Address> {
