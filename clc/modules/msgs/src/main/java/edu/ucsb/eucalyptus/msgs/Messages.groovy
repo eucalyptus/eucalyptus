@@ -332,7 +332,8 @@ public class PacketFilterRule extends EucalyptusData {
   
   public static PacketFilterRule revoke( PacketFilterRule  existingRule ) {
     PacketFilterRule pf = new PacketFilterRule();
-    pf.destName = existingRule.getDestName();
+    pf.destUserName = existingRule.getDestUserName();
+    pf.destNetworkName = existingRule.getDestNetworkName();
     pf.policy = DENY;
     pf.portMin = existingRule.getPortMin();
     pf.portMax = existingRule.getPortMax();
