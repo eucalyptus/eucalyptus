@@ -1,7 +1,6 @@
 package com.eucalyptus.ws.client;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -13,12 +12,6 @@ import org.apache.log4j.Logger;
 import org.mule.module.client.MuleClient;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.event.ComponentEvent;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;

@@ -91,6 +91,7 @@ import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.MappingHttpMessage;
+import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.Messaging;
@@ -190,7 +191,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
 
   @Override
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
-    MappingHttpResponse error = new MappingHttpResponse(requestLocal.get(ctx.getChannel( )).getProtocolVersion( ), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+    MappingHttpMessage request = requestLocal.get(ctx.getChannel( ));
+    MappingHttpResponse error = new MappingHttpResponse(request!=null?request.getProtocolVersion( ):HttpVersion.HTTP_1_0, HttpResponseStatus.INTERNAL_SERVER_ERROR);
     error.setContent( ChannelBuffers.copiedBuffer( e.getCause( ).getMessage( ).getBytes( ) ) );
     ChannelFuture writeFuture = ctx.getChannel( ).write( error );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
