@@ -64,20 +64,13 @@
 package com.eucalyptus.bootstrap;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
-import org.mule.config.ConfigResource;
 
 import com.google.common.collect.Lists;
 
@@ -92,6 +85,7 @@ public enum Resource {
   UserCredentials( ),
   CloudService( ),
   Verification( ),
+  Anonymous( ),
   Final( );
   private String                 resourceName;
   private static Logger          LOG = Logger.getLogger( Resource.class );

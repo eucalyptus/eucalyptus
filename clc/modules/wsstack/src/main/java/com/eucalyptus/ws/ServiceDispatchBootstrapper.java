@@ -109,8 +109,8 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       Component.cluster.setHostAddress( Component.db.getHostAddress( ) );
     } else if( Component.eucalyptus.isLocal( ) ) {
       try {
-        registerLocalComponent( Component.eucalyptus );
         registerLocalComponent( Component.dns );
+        registerLocalComponent( Component.eucalyptus );
         registerLocalComponent( Component.cluster );
         registerLocalComponent( Component.jetty );
       } catch ( Exception e ) {
@@ -140,16 +140,20 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     }
 
     List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
+    boolean hasLocal = false;
     for( StorageControllerConfiguration sc : scs ) {
       try {
         if( NetworkUtil.testLocal( sc.getHostName( ) )) { 
-          Component.storage.markLocal( );
-          registerLocalComponent( Component.storage );
+          hasLocal = true;
         } else {
           registerComponent( Component.storage, sc );
         }
       } catch ( Exception e ) {
         LOG.error( "Failed to create storage controller "+sc.getName( )+" service proxy: " + e );
+      }
+      if( hasLocal ) {
+        Component.storage.markLocal( );
+        registerLocalComponent( Component.storage );
       }
     }
     return true;
