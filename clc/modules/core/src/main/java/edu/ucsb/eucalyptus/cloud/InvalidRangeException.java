@@ -65,22 +65,19 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class InvalidRangeException extends EucalyptusCloudException {
+@SuppressWarnings("serial")
+public class InvalidRangeException extends WalrusException {
 
-  String message;
   public InvalidRangeException()
   {
     super( "Invalid Range" );
   }
+  
   public InvalidRangeException(String message)
   {
-    super(message);
-    this.message = message;
-  }
-  public String getMessage() {
-      return message;
+    super( "Invalid Range", "The requested range cannot be satisfied.", HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
   }
 
   public InvalidRangeException(Throwable ex)

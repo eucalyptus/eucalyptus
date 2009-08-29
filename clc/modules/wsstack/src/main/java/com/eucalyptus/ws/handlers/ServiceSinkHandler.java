@@ -180,8 +180,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
         DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
         response.setMessage( reply );
-        ctx.sendDownstream( newEvent );
         newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+        ctx.sendDownstream( newEvent );
       } else {
         
       }

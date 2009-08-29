@@ -65,24 +65,21 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class EntityTooLargeException extends EucalyptusCloudException {
 
-  String entityName;
+@SuppressWarnings("serial")
+public class EntityTooLargeException extends WalrusException {
+
   public EntityTooLargeException()
   {
     super( "EntityTooLarge" );
   }
   public EntityTooLargeException(String entity)
   {
-    super("Size too large: " + entity);
-    entityName = entity;
+    super("EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", HttpResponseStatus.BAD_REQUEST);
   }
-  public String getEntityName() {
-      return entityName;
-  }
-
+  
   public EntityTooLargeException(Throwable ex)
   {
     super("EntityTooLarge", ex);

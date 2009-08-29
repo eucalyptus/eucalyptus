@@ -65,20 +65,23 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class PreconditionFailedException extends EucalyptusCloudException {
+
+@SuppressWarnings("serial")
+public class PreconditionFailedException extends WalrusException {
 
   String precondition;
   public PreconditionFailedException()
   {
     super( "PreconditionFailed" );
   }
+  
   public PreconditionFailedException(String precondition)
   {
-    super(precondition);
-    this.precondition = precondition;
+    super("PreconditionFailed", "At least one of the pre-conditions you specified did not hold.", HttpResponseStatus.PRECONDITION_FAILED);
   }
+  
   public String getPrecondition() {
       return precondition;
   }
@@ -87,6 +90,7 @@ public class PreconditionFailedException extends EucalyptusCloudException {
   {
     super("PreconditionFailed", ex);
   }
+  
   public PreconditionFailedException(String message, Throwable ex)
   {
     super(message,ex);

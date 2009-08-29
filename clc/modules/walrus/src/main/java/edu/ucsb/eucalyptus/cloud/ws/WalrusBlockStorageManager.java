@@ -80,6 +80,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.activity.InvalidActivityException;
+
 public class WalrusBlockStorageManager {
 	private static Logger LOG = Logger
 			.getLogger(WalrusBlockStorageManager.class);
@@ -137,7 +139,11 @@ public class WalrusBlockStorageManager {
 		Long snapSize = 0L;
 		if (snapSizeString != null) {
 			snapSize = Long.parseLong(snapSizeString);
+		} else {
+			throw new InvalidArgumentException("Snapshot size");
 		}
+		
+		int snapshotSize = (int)(snapSize / WalrusProperties.G);
 		if (WalrusProperties.shouldEnforceUsageLimits) {
 			int totalSnapshotSize = 0;
 			WalrusSnapshotInfo snapInfo = new WalrusSnapshotInfo();
@@ -146,7 +152,7 @@ public class WalrusBlockStorageManager {
 			for (WalrusSnapshotInfo sInfo : sInfos) {
 				totalSnapshotSize += sInfo.getSize();
 			}
-			if ((totalSnapshotSize + (int) (snapSize / WalrusProperties.G)) > WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE) {
+			if ((totalSnapshotSize + snapshotSize) > WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE) {
 				db.rollback();
 				throw new EntityTooLargeException(snapshotId);
 			}
@@ -196,9 +202,6 @@ public class WalrusBlockStorageManager {
 			reply.setEtag(putObjectResponseType.getEtag());
 			reply.setLastModified(putObjectResponseType.getLastModified());
 			reply.setStatusMessage(putObjectResponseType.getStatusMessage());
-			int snapshotSize = (int) (putObjectResponseType.getSize() / WalrusProperties.G);
-
-			// change state
 			snapshotInfo = new WalrusSnapshotInfo(snapshotId);
 			db = new EntityWrapper<WalrusSnapshotInfo>();
 			snapshotInfo.setSnapshotBucket(bucketName);

@@ -65,30 +65,29 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class NoSuchBucketException extends EucalyptusCloudException {
+@SuppressWarnings("serial")
+public class NoSuchBucketException extends WalrusException {
 
-  String bucketName;
   public NoSuchBucketException()
   {
     super( "Not Found" );
   }
+  
   public NoSuchBucketException(String bucket)
   {
-    super(bucket);
-    bucketName = bucket;
+    super("NoSuchBucket", "The specified bucket was not found", HttpResponseStatus.NOT_FOUND);    
   }
-  public String getBucketName() {
-      return bucketName;
-  }
+  
     
   public NoSuchBucketException(Throwable ex)
   {
     super("Not Found", ex);
   }
+  
   public NoSuchBucketException(String message, Throwable ex)
   {
-    super(message,ex);
+    super(message, ex);
   }
 }

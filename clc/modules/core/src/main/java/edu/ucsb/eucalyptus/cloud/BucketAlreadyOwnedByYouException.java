@@ -65,24 +65,21 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class BucketAlreadyOwnedByYouException extends EucalyptusCloudException {
+@SuppressWarnings("serial")
+public class BucketAlreadyOwnedByYouException extends WalrusException{
 
-  String bucketName;
   public BucketAlreadyOwnedByYouException()
   {
     super( "BucketAlreadyOwnedByYou" );
   }
+  
   public BucketAlreadyOwnedByYouException(String bucket)
   {
-    super(bucket);
-    bucketName = bucket;
+	  super("BucketAlreadyOwnedByYou", "Your previous request to create the named bucket succeeded and you already own it.", HttpResponseStatus.CONFLICT);
   }
-  public String getBucketName() {
-      return bucketName;
-  }
-
+  
   public BucketAlreadyOwnedByYouException(Throwable ex)
   {
     super("BucketAlreadyOwnedByYou", ex);

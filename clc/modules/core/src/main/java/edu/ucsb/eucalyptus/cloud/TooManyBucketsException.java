@@ -65,22 +65,20 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class TooManyBucketsException extends EucalyptusCloudException {
 
-  String bucketName;
+@SuppressWarnings("serial")
+public class TooManyBucketsException extends WalrusException {
+
   public TooManyBucketsException()
   {
     super( "TooManyBuckets" );
   }
+  
   public TooManyBucketsException(String bucket)
   {
-    super(bucket);
-    bucketName = bucket;
-  }
-  public String getBucketName() {
-      return bucketName;
+    super("TooManyBuckets", "You have attempted to create more buckets than allowed.", HttpResponseStatus.BAD_REQUEST);
   }
 
   public TooManyBucketsException(Throwable ex)

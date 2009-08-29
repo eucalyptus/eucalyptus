@@ -65,22 +65,19 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class ImageAlreadyExistsException extends EucalyptusCloudException {
+@SuppressWarnings("serial")
+public class ImageAlreadyExistsException extends WalrusException {
 
-  String value;
   public ImageAlreadyExistsException()
   {
     super( "Image Already Exists" );
   }
+  
   public ImageAlreadyExistsException(String value)
   {
-    super(value);
-    this.value = value;
-  }
-  public String getValue() {
-      return value;
+    super("Image Already Exists", "Fail", HttpResponseStatus.CONFLICT);
   }
 
   public ImageAlreadyExistsException(Throwable ex)

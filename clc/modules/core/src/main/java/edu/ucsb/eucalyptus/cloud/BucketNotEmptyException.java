@@ -65,22 +65,20 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class BucketNotEmptyException extends EucalyptusCloudException {
 
-  String bucketName;
+@SuppressWarnings("serial")
+public class BucketNotEmptyException extends WalrusException {
+
   public BucketNotEmptyException()
   {
     super( "Bucket Not Empty" );
   }
+  
   public BucketNotEmptyException(String bucket)
   {
-    super(bucket);
-    bucketName = bucket;
-  }
-  public String getBucketName() {
-      return bucketName;
+    super("BucketNotEmpty", "The bucket you tried to delete is not empty.", HttpResponseStatus.CONFLICT);
   }
 
   public BucketNotEmptyException(Throwable ex)

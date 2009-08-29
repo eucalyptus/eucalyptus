@@ -78,8 +78,8 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
-import edu.ucsb.eucalyptus.msgs.WalrusBucketErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.WalrusDeleteResponseType;
+import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
 
 @ChannelPipelineCoverage("one")
 public class WalrusOutboundHandler extends MessageStackHandler {
@@ -122,8 +122,8 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 			} else if(msg instanceof EucalyptusErrorMessageType) {
 				EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) msg;
 				EucalyptusMessage errMsg = WalrusUtil.convertErrorMessage(errorMessage);
-				if(errMsg instanceof WalrusBucketErrorMessageType) {
-					WalrusBucketErrorMessageType walrusErrorMsg = (WalrusBucketErrorMessageType) errMsg;
+				if(errMsg instanceof WalrusErrorMessageType) {
+					WalrusErrorMessageType walrusErrorMsg = (WalrusErrorMessageType) errMsg;
 					httpResponse.setStatus(walrusErrorMsg.getStatus());
 				}
 				httpResponse.setMessage(errMsg);

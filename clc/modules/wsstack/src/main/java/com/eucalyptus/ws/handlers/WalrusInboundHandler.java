@@ -100,7 +100,7 @@ public class WalrusInboundHandler extends SimpleChannelHandler {
 		}
 		response.setContent( ChannelBuffers.copiedBuffer(responseString, "UTF-8"));
 		DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel().getCloseFuture(), response, null );
-		ctx.sendDownstream( newEvent );
 		newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+		ctx.sendDownstream( newEvent );
 	}
 }

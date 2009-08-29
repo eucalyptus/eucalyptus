@@ -191,15 +191,24 @@ public class GetObjectAccessControlPolicyType extends WalrusRequestType {
 }
 
 public class WalrusErrorMessageType extends EucalyptusMessage {
-	protected String code;
 	protected String message;
+	protected String code;
+	protected HttpResponseStatus status;
 	protected String requestId;
 	protected String hostId;
-	protected Integer httpCode;
-	protected HttpResponseStatus status;
-	
-	public Integer getHttpCode() {
-		return httpCode;
+
+	def WalrusErrorMessageType() {}
+
+	def WalrusErrorMessageType(String message,
+			String code,
+			HttpResponseStatus status,
+			String requestId,
+			String hostId) {
+		this.message = message;
+		this.code = code;
+		this.status = status;
+		this.requestId = requestId;
+		this.hostId = hostId;
 	}
 	
 	public HttpResponseStatus getStatus() {
@@ -212,34 +221,6 @@ public class WalrusErrorMessageType extends EucalyptusMessage {
 
 	public String getMessage() {
 		return message;
-	}
-}
-
-public class WalrusBucketErrorMessageType extends WalrusErrorMessageType {
-	protected String bucketName;
-	
-	public WalrusBucketErrorMessageType() {
-	}
-	
-	public WalrusBucketErrorMessageType(String bukkit, String code, String message, Integer httpCode, String requestId, String hostId) {
-		bucketName = bukkit;
-		this.code = code;
-		this.message = message;
-		this.requestId = requestId;
-		this.hostId = hostId;
-		this.httpCode = httpCode;
-	}
-	public WalrusBucketErrorMessageType(String bukkit, String code, String message, HttpResponseStatus status, String requestId, String hostId) {
-		bucketName = bukkit;
-		this.code = code;
-		this.message = message;
-		this.requestId = requestId;
-		this.hostId = hostId;
-		this.status = status;
-	}
-	
-	public String toString() {
-		return "BucketErrorMessage:" + message + bucketName;
 	}
 }
 

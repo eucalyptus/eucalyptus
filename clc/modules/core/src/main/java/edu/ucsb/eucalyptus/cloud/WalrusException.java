@@ -63,55 +63,54 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package com.eucalyptus.util;
+package edu.ucsb.eucalyptus.cloud;
 
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.Collections;
-import java.util.List;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import edu.ucsb.eucalyptus.cloud.WalrusException;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
+import com.eucalyptus.util.EucalyptusCloudException;
 
+@SuppressWarnings("serial")
+public class WalrusException extends EucalyptusCloudException {
 
-public class WalrusUtil {
-	private static String ipAddress;
+	String message;
+	String code;
+	HttpResponseStatus errStatus;
 
-	static {
-		ipAddress = "127.0.0.1";
-		List<NetworkInterface> ifaces = null;
-		try {
-			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-		} catch ( SocketException e1 ) {}
-
-		for ( NetworkInterface iface : ifaces ) {
-			try {
-				if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-					for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-						if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address) ) {
-							ipAddress = iaddr.getHostAddress();
-							break;
-						}
-					}
-				}
-			} catch ( SocketException e1 ) {}
-		}
+	public WalrusException()
+	{
+		super();
 	}
 
-	public static EucalyptusMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
-		EucalyptusMessage errMsg;
-		Throwable ex = errorMessage.getException();
-		if(ex instanceof WalrusException) {
-			WalrusException e = (WalrusException) ex;
-			errMsg = new WalrusErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), errorMessage.getCorrelationId(), ipAddress);
-			errMsg.setCorrelationId( errorMessage.getCorrelationId() );
-		} else {
-			errMsg = errorMessage;
-		}
-		return errMsg;
+	public WalrusException(String message)
+	{
+		super(message);
+		this.message = message;
+		this.code = "InternalServerError";
+		this.errStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+	}
+
+	public WalrusException(String code, String message, HttpResponseStatus status)
+	{
+		super(message);
+		this.code = code;
+		this.message = message;
+		this.errStatus = status;
+	}
+
+	public String getMessage() {
+		return message;
+	}
+	
+	public String getCode() {
+		return code;
+	}
+
+	public HttpResponseStatus getStatus() {
+		return errStatus;
+	}
+	
+	public WalrusException(String message, Throwable ex)
+	{
+		super(message,ex);
 	}
 }

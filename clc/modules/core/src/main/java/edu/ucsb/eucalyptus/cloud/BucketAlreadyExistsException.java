@@ -65,22 +65,19 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class BucketAlreadyExistsException extends EucalyptusCloudException {
 
-  String bucketName;
+@SuppressWarnings("serial")
+public class BucketAlreadyExistsException extends WalrusException {
+
   public BucketAlreadyExistsException()
   {
     super( "BucketAlreadyExists" );
   }
   public BucketAlreadyExistsException(String bucket)
   {
-    super(bucket);
-    bucketName = bucket;
-  }
-  public String getBucketName() {
-      return bucketName;
+    super("BucketAlreadyExists", "The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.", HttpResponseStatus.CONFLICT);
   }
 
   public BucketAlreadyExistsException(Throwable ex)

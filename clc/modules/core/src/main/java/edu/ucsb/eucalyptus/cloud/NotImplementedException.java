@@ -65,22 +65,19 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class NotImplementedException extends EucalyptusCloudException {
+@SuppressWarnings("serial")
+public class NotImplementedException extends WalrusException {
 
-  String value;
   public NotImplementedException()
   {
     super( "Not Implemented" );
   }
+  
   public NotImplementedException(String value)
   {
-    super(value);
-    this.value = value;
-  }
-  public String getValue() {
-      return value;
+    super("Not Implemented", "NA", HttpResponseStatus.NOT_IMPLEMENTED);
   }
 
   public NotImplementedException(Throwable ex)

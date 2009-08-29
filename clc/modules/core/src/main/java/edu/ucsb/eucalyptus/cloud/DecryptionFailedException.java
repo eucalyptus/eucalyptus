@@ -65,22 +65,20 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class DecryptionFailedException extends EucalyptusCloudException {
 
-  String value;
+@SuppressWarnings("serial")
+public class DecryptionFailedException extends WalrusException {
+
   public DecryptionFailedException()
   {
     super( "Decryption Failed" );
   }
+  
   public DecryptionFailedException(String value)
   {
-    super(value);
-    this.value = value;
-  }
-  public String getValue() {
-      return value;
+    super("Decryption Failed", "Fail", HttpResponseStatus.EXPECTATION_FAILED);
   }
 
   public DecryptionFailedException(Throwable ex)

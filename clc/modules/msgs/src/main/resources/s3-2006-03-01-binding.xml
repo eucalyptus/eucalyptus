@@ -257,19 +257,11 @@
 		<value name="URI" field="uri" />
 	</mapping>
 
-	<mapping class="edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType"
-		abstract="true">
+	<mapping name="Error" class="edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType">
 		<value name="Code" field="code" />
 		<value name="Message" field="message" />
 		<value name="RequestId" field="requestId" />
 		<value name="HostId" field="hostId" />
-		<value name="HttpCode" field="httpCode" usage="optional" />
-	</mapping>
-
-	<mapping name="Error" extends="edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType"
-		class="edu.ucsb.eucalyptus.msgs.WalrusBucketErrorMessageType">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType" />
-		<value name="BucketName" field="bucketName" />
 	</mapping>
 
 	<mapping name="CreateBucket" class="edu.ucsb.eucalyptus.msgs.CreateBucketType"

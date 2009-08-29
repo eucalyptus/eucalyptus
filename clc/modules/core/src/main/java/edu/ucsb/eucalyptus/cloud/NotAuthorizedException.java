@@ -65,22 +65,19 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class NotAuthorizedException extends EucalyptusCloudException {
+@SuppressWarnings("serial")
+public class NotAuthorizedException extends WalrusException {
 
-  String value;
   public NotAuthorizedException()
   {
     super( "Unauthorized" );
   }
+  
   public NotAuthorizedException(String value)
   {
-    super(value);
-    this.value = value;
-  }
-  public String getValue() {
-      return value;
+	  super("Unauthorized", "You are not authorized to perform this operation", HttpResponseStatus.UNUATHORIZED);
   }
 
   public NotAuthorizedException(Throwable ex)

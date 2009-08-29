@@ -65,22 +65,19 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class NotModifiedException extends EucalyptusCloudException {
 
-  String error;
+@SuppressWarnings("serial")
+public class NotModifiedException extends WalrusException {
+
   public NotModifiedException()
   {
     super( "NotModified" );
   }
   public NotModifiedException(String error)
   {
-    super(error);
-    this.error = error;
-  }
-  public String getPrecondition() {
-      return error;
+    super("NotModified", "Object Not Modified", HttpResponseStatus.NOT_MODIFIED);
   }
 
   public NotModifiedException(Throwable ex)

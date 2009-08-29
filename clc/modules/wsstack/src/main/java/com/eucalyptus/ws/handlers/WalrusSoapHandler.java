@@ -96,7 +96,7 @@ import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.WalrusBucketErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
 
 @ChannelPipelineCoverage("one")
 public class WalrusSoapHandler extends MessageStackHandler {
@@ -152,8 +152,8 @@ public class WalrusSoapHandler extends MessageStackHandler {
 			if( httpMessage.getMessage( ) instanceof EucalyptusErrorMessageType ) {
 				EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) httpMessage.getMessage( );
 				EucalyptusMessage errMsg = WalrusUtil.convertErrorMessage(errorMessage);
-				if(errMsg instanceof WalrusBucketErrorMessageType) {
-					WalrusBucketErrorMessageType walrusErrMsg = (WalrusBucketErrorMessageType) errMsg;
+				if(errMsg instanceof WalrusErrorMessageType) {
+					WalrusErrorMessageType walrusErrMsg = (WalrusErrorMessageType) errMsg;
 					httpMessage.setSoapEnvelope( Binding.createFault( walrusErrMsg.getCode(), walrusErrMsg.getMessage(), walrusErrMsg.getStatus().getReasonPhrase()));
 				} else {
 					httpMessage.setSoapEnvelope( Binding.createFault( errorMessage.getSource( ), errorMessage.getMessage( ), errorMessage.getStatusMessage( ) ) );

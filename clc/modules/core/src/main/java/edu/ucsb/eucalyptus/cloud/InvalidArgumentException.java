@@ -68,22 +68,23 @@ package edu.ucsb.eucalyptus.cloud;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 @SuppressWarnings("serial")
-public class NoSuchEntityException extends WalrusException {
+public class InvalidArgumentException extends WalrusException {
 
-  public NoSuchEntityException()
+  public InvalidArgumentException()
   {
-    super( "No Such Entity" );
+    super( "Invalid Argument" );
   }
-  public NoSuchEntityException(String entityName)
+  
+  public InvalidArgumentException(String value)
   {
-    super("NoSuchEntity", "The specified entity was not found", HttpResponseStatus.NOT_FOUND);
+    super("Argument is invalid: " + value, "Invalid Argument", HttpResponseStatus.BAD_REQUEST);
   }
 
-  public NoSuchEntityException(Throwable ex)
+  public InvalidArgumentException(Throwable ex)
   {
-    super("No Such Entity", ex);
+    super("Invalid Argument", ex);
   }
-  public NoSuchEntityException(String message, Throwable ex)
+  public InvalidArgumentException(String message, Throwable ex)
   {
     super(message,ex);
   }

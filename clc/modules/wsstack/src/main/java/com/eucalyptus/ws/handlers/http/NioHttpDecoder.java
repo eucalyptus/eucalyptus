@@ -80,6 +80,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
+import org.mortbay.log.Log;
 
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.util.HttpUtils;
@@ -429,6 +430,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
   
 
   private int getChunkSize( String hex ) {
+	  Log.info("Chunk Size Hex to parse:" + hex);
     hex = hex.replaceAll("\\W", "").trim( );    
     for ( int i = 0; i < hex.length( ); i++ ) {
       char c = hex.charAt( i );
@@ -437,6 +439,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
         break;
       }
     }
+    Log.info("Chunk Size in Hex:" + hex);
     return Integer.parseInt( hex, 16 );
   }
 

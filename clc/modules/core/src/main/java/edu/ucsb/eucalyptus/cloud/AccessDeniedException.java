@@ -65,22 +65,18 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class AccessDeniedException extends EucalyptusCloudException {
+@SuppressWarnings("serial")
+public class AccessDeniedException extends WalrusException {
 
-  String bucketName;
   public AccessDeniedException()
   {
     super( "Access Denied" );
   }
-  public AccessDeniedException(String bucket)
+  public AccessDeniedException(String entity)
   {
-    super(bucket);
-    bucketName = bucket;
-  }
-  public String getBucketName() {
-      return bucketName;
+	  super("AccessDenied", "Access Denied", HttpResponseStatus.FORBIDDEN);
   }
 
   public AccessDeniedException(Throwable ex)
