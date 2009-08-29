@@ -162,6 +162,14 @@ public class WalrusManager {
 		ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
 		for(BucketInfo bucketInfo: bucketInfoList) {
+			if(request.isAdministrator()) {
+				EntityWrapper<WalrusSnapshotInfo> dbSnap = db.recast(WalrusSnapshotInfo.class);
+				WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
+				walrusSnapInfo.setSnapshotBucket(bucketInfo.getBucketName());
+				List<WalrusSnapshotInfo> walrusSnaps = dbSnap.query(walrusSnapInfo);
+				if(walrusSnaps.size() > 0)
+					continue;
+			}
 			buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z"));
 		}
 		try {
@@ -943,6 +951,16 @@ public class WalrusManager {
 		if(bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
 			if(bucket.canRead(userId)) {
+				if(request.isAdministrator()) {
+					EntityWrapper<WalrusSnapshotInfo> dbSnap = db.recast(WalrusSnapshotInfo.class);
+					WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
+					walrusSnapInfo.setSnapshotBucket(bucketName);
+					List<WalrusSnapshotInfo> walrusSnaps = dbSnap.query(walrusSnapInfo);
+					if(walrusSnaps.size() > 0) {
+						db.rollback();
+						throw new NoSuchBucketException(bucketName);
+					}
+				}
 				reply.setName(bucketName);
 				reply.setIsTruncated(false);
 				if(maxKeys >= 0)

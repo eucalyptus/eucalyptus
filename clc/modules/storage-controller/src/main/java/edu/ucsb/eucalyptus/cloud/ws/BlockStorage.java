@@ -881,7 +881,7 @@ public class BlockStorage {
 
 		public SnapshotProgressCallback(String snapshotId, long size, int chunkSize) {
 			this.snapshotId = snapshotId;
-			progressTick = 5; //minimum percent update
+			progressTick = 3; //minimum percent update
 			updateThreshold = (int)(((size * progressTick) / 100) / chunkSize);
 		}
 
