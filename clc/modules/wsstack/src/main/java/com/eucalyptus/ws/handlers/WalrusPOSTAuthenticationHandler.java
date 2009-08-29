@@ -160,20 +160,20 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 		if(httpRequest.getFormFields().size() > 0) {
 			String data = httpRequest.getAndRemoveHeader(WalrusProperties.FormField.FormUploadPolicyData.toString());
 			String auth_part = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
-			try {
+			/*try {
 				User user = CredentialProvider.getUser( "admin" );
 				user.setIsAdministrator(true);
 				httpRequest.setUser( user );
 			} catch (NoSuchUserException e) {
 				throw new AuthenticationException( "User authentication failed." );
-			}  
-/*	if(auth_part != null) {
+			} */
+			if(auth_part != null) {
 				String sigString[] = getSigInfo(auth_part);
 				String signature = sigString[1];				
 				authenticate(httpRequest, sigString[0], signature, data);
 			} else {
 				throw new AuthenticationException("User authentication failed.");
-			}*/
+			}
 		} else {
 			//anonymous request              			
 		}
@@ -272,7 +272,7 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 					Date expirationDate = DateUtils.parseIso8601DateTimeOrDate(expiration);
 					if((new Date()).getTime() > expirationDate.getTime()) {
 						LOG.warn("Policy has expired.");
-						//throw new AuthenticationException("Policy has expired.");
+						throw new AuthenticationException("Policy has expired.");
 					}
 				}
 				List<String> policyItemNames = new ArrayList<String>();
@@ -284,13 +284,13 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 						JSONObject jsonObject = (JSONObject) policyItem;
 						if(!exactMatch(jsonObject, formFields, policyItemNames)) {
 							LOG.warn("Policy verification failed. ");
-							//throw new AuthenticationException("Policy verification failed.");
+							throw new AuthenticationException("Policy verification failed.");
 						}
 					} else if(policyItem instanceof  JSONArray) {
 						JSONArray jsonArray = (JSONArray) policyItem;
 						if(!partialMatch(jsonArray, formFields, policyItemNames)) {
 							LOG.warn("Policy verification failed. ");
-							//throw new AuthenticationException("Policy verification failed.");
+							throw new AuthenticationException("Policy verification failed.");
 						}
 					}
 				}
@@ -311,7 +311,7 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 					if(policyItemNames.contains(formKey))
 						continue;
 					LOG.warn("All fields except those marked with x-ignore- should be in policy.");
-					//throw new AuthenticationException("All fields except those marked with x-ignore- should be in policy.");
+					throw new AuthenticationException("All fields except those marked with x-ignore- should be in policy.");
 				}
 			} catch(Exception ex) {
 				//rethrow
