@@ -65,11 +65,11 @@
 
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import com.eucalyptus.util.HasName;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
-import edu.ucsb.eucalyptus.constants.HasName;
 import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;

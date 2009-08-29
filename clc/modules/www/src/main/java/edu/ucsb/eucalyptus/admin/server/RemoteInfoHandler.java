@@ -92,7 +92,7 @@ public class RemoteInfoHandler {
       LOG.info( "Adding cluster for update: " + cw.getName() + " - " + cw.getHost() + ":" + cw.getPort() );
       list.add( new RegisterClusterType( cw.getName(), cw.getHost(), cw.getPort() ) );
     }
-    Messaging.dispatch( Component.clusters.getUri( ).toASCIIString( ), list );
+    Messaging.dispatch( Component.cluster.getUri( ).toASCIIString( ), list );
   }
 
   public static synchronized List<ClusterInfoWeb> getClusterList()

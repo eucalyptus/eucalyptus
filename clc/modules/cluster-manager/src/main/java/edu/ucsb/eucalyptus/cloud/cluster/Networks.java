@@ -65,6 +65,8 @@
 
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import com.eucalyptus.event.AbstractNamedRegistry;
+
 import edu.ucsb.eucalyptus.cloud.*;
 
 public class Networks extends AbstractNamedRegistry<Network> {

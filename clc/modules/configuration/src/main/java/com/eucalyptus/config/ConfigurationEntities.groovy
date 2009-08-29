@@ -89,6 +89,9 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Version;
 
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.NetworkUtil;
+
 //TODO: sigh at this. import com.eucalyptus.entities.AbstractPersistent;
 
 @MappedSuperclass
@@ -116,8 +119,15 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   Integer port;  
   @Column( name = "config_component_service_path" )
   String servicePath;  
-
+  
   public ComponentConfiguration( ) {}
+  
+  public ComponentConfiguration( String name, String hostName, String servicePath ) {
+    super( );
+    this.name = name;
+    this.hostName = hostName;
+    this.servicePath = servicePath;
+  }
   public ComponentConfiguration( String name, String hostName, Integer port, String servicePath ) {
     this.name = name;
     this.hostName = hostName;
@@ -127,6 +137,29 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
 
   public String getUri() {
     return "http://" + this.getHostName() + ":" + this.getPort() + this.getServicePath();
+  }
+
+  public abstract Component getComponent();
+
+  public Boolean isLocal() {
+    try {
+      return NetworkUtil.testLocal( w.getHostName( ) );
+    } catch ( Exception e ) {
+      return false;
+    }
+  }
+}
+
+public class LocalConfiguration extends ComponentConfiguration {
+  private Component c;
+  public LocalConfiguration( Component c ) {
+    super( c.name(), "localhost", c.getLocalAddress( ) );
+  }  
+  public Component getComponent() {
+    return c;
+  }
+  public String getUri() {
+    return this.getHostName() + ":[" + this.getServicePath() + "]";
   }
 }
 
@@ -147,7 +180,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     return INSECURE_SERVICE_PATH;
   }
   public String getInsecureUri() {
-    return "http://" + this.getHost() + ":" + this.getPort() + INSECURE_SERVICE_PATH;
+    return "http://" + this.getHostName() + ":" + this.getPort() + INSECURE_SERVICE_PATH;
   }
 
   public static ClusterConfiguration byClusterName( String name ) {
@@ -159,6 +192,9 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     ClusterConfiguration c = new ClusterConfiguration( );
     c.setHostName(hostName);
     return c;
+  }
+  public Component getComponent() {
+    return Component.cluster;
   }
 }
 
@@ -172,6 +208,9 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
   public StorageControllerConfiguration( String name, String hostName, Integer port ) {
     super( name, hostName, port, DEFAULT_SERVICE_PATH );
   }
+  public Component getComponent() {
+    return Component.storage;
+  }
 }
 @Entity
 @Table( name = "config_walrus" )
@@ -183,6 +222,9 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
   }
   public WalrusConfiguration( String name, String hostName, Integer port ) {
     super( name, hostName, port, DEFAULT_SERVICE_PATH );
+  }
+  public Component getComponent() {
+    return Component.walrus;
   }
 }
 

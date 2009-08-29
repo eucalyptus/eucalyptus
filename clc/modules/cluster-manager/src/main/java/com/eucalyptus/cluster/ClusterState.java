@@ -69,6 +69,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
 
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
 
@@ -76,7 +77,7 @@ public class ClusterState {
   private static Logger LOG = Logger.getLogger( ClusterState.class );
   private String clusterName;
   private NavigableSet<Integer> availableVlans;
-  private Integer mode;
+  private Integer mode = 1;
   private Integer addressCapacity;
   
   public ClusterState( String clusterName ) {
@@ -95,9 +96,8 @@ public class ClusterState {
   }
 
   public NetworkToken getNetworkAllocation( String userName, String networkName ) throws NotEnoughResourcesAvailable {
-    if ( this.availableVlans.isEmpty() ) throw new NotEnoughResourcesAvailable();
-    int vlan = this.availableVlans.first();
-    this.availableVlans.remove( vlan );
+    Integer vlan = this.availableVlans.pollFirst();
+    if( vlan == null ) throw new NotEnoughResourcesAvailable( "Not enough resources available: vlan tags" );
     NetworkToken token = new NetworkToken( this.clusterName, userName, networkName, vlan );
     return token;
   }

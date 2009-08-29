@@ -73,9 +73,10 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.mule.config.ConfigResource;
 
+import com.eucalyptus.event.EventListener;
 import com.eucalyptus.util.BaseDirectory;
 import com.eucalyptus.util.EucalyptusProperties;
-import com.eucalyptus.util.LogUtils;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.ServiceJarFile;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -89,7 +90,7 @@ public class BootstrapFactory {
   public static void initResourceProviders( ) {
     for ( Resource r : Resource.values( ) ) {
       for ( ResourceProvider p : r.getProviders( ) ) {
-        LOG.info( "Loaded " + LogUtils.dumpObject( p ) );
+        LOG.info( "Loaded " + LogUtil.dumpObject( p ) );
       }
     }
   }
@@ -120,7 +121,7 @@ public class BootstrapFactory {
         List<Bootstrapper> bsList = jar.getBootstrappers( );
         for ( Bootstrapper bootstrap : bsList ) {
           for ( Resource r : Resource.values( ) ) {
-            if ( r.providedBy( bootstrap.getClass( ) ) || Resource.Nothing.equals( r ) ) {
+            if ( r.providedBy( bootstrap.getClass( ) ) || Resource.Final.equals( r ) ) {
               Provides provides = bootstrap.getClass( ).getAnnotation( Provides.class );
               if( provides == null ) {
                 LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Provides is not specified." );
@@ -143,6 +144,7 @@ public class BootstrapFactory {
     }
   }
 
+  
   private static boolean checkDepends( Bootstrapper bootstrap ) {
     Depends depends = bootstrap.getClass( ).getAnnotation( Depends.class );
     if( depends == null ) return true;

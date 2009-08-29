@@ -64,6 +64,7 @@
 package com.eucalyptus.bootstrap;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -77,13 +78,15 @@ public enum Component {
   dns( "vm://DNSControlInternal" ),
   storage( "vm://StorageInternal" ),
   db( "127.0.0.1" ),
-  clusters( "vm://ClusterSink" ),
+  cluster( "vm://ClusterSink" ),
+  addressing( "vm://ClusterSink" ),
   jetty( "vm://HttpServer" ),
   any( true );
   private static Logger      LOG     = Logger.getLogger( Component.class );
   private boolean            local   = false;
 
   private boolean            enabled = false;
+  private boolean            initialized = true;
   private boolean            hasKeys = false;
   private String             hostAddress;
   private int                port    = 8773;
@@ -133,7 +136,7 @@ public enum Component {
   public void markLocal( ) {
     this.local = true;
   }
-
+  
   public ResourceProvider getResourceProvider( ) {
     return resourceProvider;
   }
@@ -191,10 +194,10 @@ public enum Component {
     try {
       this.uri = new URI( uri );
       System.setProperty( this.propertyKey, this.uri.toASCIIString( ) );
-      if ( LOG != null ) LOG.info( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.uri.toASCIIString( ) ) );
+      if ( LOG != null ) LOG.debug( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.uri.toASCIIString( ) ) );
     } catch ( Exception e ) {
       System.setProperty( this.propertyKey, this.localUri );
-      if ( LOG != null ) LOG.info( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.localUri ) );
+      if ( LOG != null ) LOG.debug( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.localUri ) );
     }
   }
 
@@ -214,8 +217,29 @@ public enum Component {
     return this.name( ) + "@" + hostName;
   }
 
-  public String getLocalUri( ) {
+  public String getLocalAddress( ) {
     return localUri;
+  }
+
+  public URI getLocalUri( ) {
+    if( Component.db.equals( this ) ) {
+      return null;
+    }
+    try {
+      return new URI(this.localUri);
+    } catch ( URISyntaxException e ) {
+      LOG.fatal( "Failed to construct the default local URI object.", e );
+      System.exit(1);
+      return null;
+    }
+  }
+
+  public boolean isInitialized( ) {
+    return initialized;
+  }
+
+  public void setInitialized( boolean initialized ) {
+    this.initialized = initialized;
   }
 
 }

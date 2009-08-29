@@ -221,7 +221,7 @@ public class AddressManager implements Startable {
     if( doDynamic ) {
       ConcurrentNavigableMap<String, Address> unusedAddresses = Addresses.getInstance().getDisabledMap();
       //:: try to fail fast if needed :://
-      if ( unusedAddresses.size() < count ) throw new NotEnoughResourcesAvailable( );
+      if ( unusedAddresses.size() < count ) throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
       for ( int i = 0; i < count; i++ ) {
         Map.Entry<String, Address> addressEntry = unusedAddresses.pollFirstEntry();
         if ( addressEntry != null ) {
@@ -232,7 +232,7 @@ public class AddressManager implements Startable {
           for ( Address a : addressList ) {
             unusedAddresses.putIfAbsent( a.getName(), a );
           }
-          throw new NotEnoughResourcesAvailable( );
+          throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
         }
       }
     } else {
@@ -249,7 +249,7 @@ public class AddressManager implements Startable {
         for( Address putBackAddr : addressList ) {
           Addresses.getInstance().register( putBackAddr );
         }
-        throw new NotEnoughResourcesAvailable( );
+        throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
       }
     }
     for ( Address address : addressList ) {

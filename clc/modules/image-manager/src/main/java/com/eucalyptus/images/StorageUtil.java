@@ -61,20 +61,61 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.util;
+package com.eucalyptus.images;
 
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.spi.LoggingEvent;
+import java.util.Map;
 
-import net.sf.json.JSONObject;
+import org.apache.log4j.Logger;
 
-public class LogUtils {
-  private static String LONG_BAR = "=============================================================================================================================================================================================================";
-  public static String header( String message ) {
-    return String.format( "%80.80s\n%s\n%1$80.80s", LONG_BAR, message );
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.collect.Lists;
+
+import edu.ucsb.eucalyptus.cloud.state.Volume;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.StorageVolume;
+
+public class StorageUtil {
+  private static Logger LOG = Logger.getLogger( StorageUtil.class );
+  
+  public static ServiceDispatcher lookup( String hostName ) {
+    return ServiceDispatcher.lookup( Component.storage, hostName );
+  }
+  
+  public static void dispatchAll( EucalyptusMessage message ) throws EucalyptusCloudException {
+    for( ServiceDispatcher sc : ServiceDispatcher.lookupMany( Component.storage ) ) {
+      sc.dispatch( message );
+    }
   }
 
-  public static String dumpObject( Object o ) {
-    return JSONObject.fromObject( o ).toString( );
+  public static edu.ucsb.eucalyptus.msgs.Volume getVolumeReply( Map<String, AttachedVolume> attachedVolumes, Volume v ) throws EucalyptusCloudException {
+    StorageControllerConfiguration scConfig = Configuration.getStorageControllerConfiguration( v.getCluster( ) );
+    DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( v.getDisplayName() ) );
+    ServiceDispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
+    DescribeStorageVolumesResponseType volState = sc.send( descVols, DescribeStorageVolumesResponseType.class );
+    LOG.trace( volState );
+    String volumeState = "unavailable";
+    if ( !volState.getVolumeSet().isEmpty() ) {
+      StorageVolume vol = volState.getVolumeSet().get( 0 );
+      volumeState = vol.getStatus();
+      v.setSize( new Integer( vol.getSize() ) );
+      v.setRemoteDevice( vol.getActualDeviceName() );
+    }
+    if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
+      volumeState = "in-use";
+    }
+    v.setMappedState( volumeState );
+    edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
+    if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
+      aVolume.setStatus( volumeState );
+      aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
+    }
+    return aVolume;
   }
 }

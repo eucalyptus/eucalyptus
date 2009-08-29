@@ -100,7 +100,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   public boolean accepts( HttpRequest message ) {
     boolean result = this.checkAccepts( message );
     if ( result ) {
-      LOG.info( "Unrolling pipeline: " + this.getClass( ).getSimpleName( ) );
+      LOG.debug( "Unrolling pipeline: " + this.getClass( ).getSimpleName( ) );
     }
     return result;
   }

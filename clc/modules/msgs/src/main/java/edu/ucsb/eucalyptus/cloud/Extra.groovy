@@ -63,11 +63,14 @@
  */
 package edu.ucsb.eucalyptus.cloud
 
-import edu.ucsb.eucalyptus.constants.HasName
 import edu.ucsb.eucalyptus.msgs.*
+
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ConcurrentSkipListSet
+
+import com.eucalyptus.util.HasName;
 
 public class Pair {
 
@@ -150,6 +153,7 @@ public class VmInfo extends EucalyptusData {
   String launchIndex;
   ArrayList<String> groupNames = new ArrayList<String>();
   ArrayList<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
+  ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
 
   String placement;
 
@@ -260,6 +264,7 @@ public class Network implements HasName {
   String userName;
   ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
   ConcurrentMap<String, NetworkToken> networkTokens = new ConcurrentHashMap<String, NetworkToken>();
+  NavigableSet<Integer> availableAddresses;
 
   def Network() {}
 
@@ -267,6 +272,10 @@ public class Network implements HasName {
     this.userName = userName;
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
+    this.availableAddresses = new ConcurrentSkipListSet<Integer>();
+    for( int i = 0; i < 8192; i++ ) {
+      this.availableAddresses.add( i );
+    }
   }
 
   public Integer getNextIndex(Integer max) {
@@ -318,17 +327,18 @@ public class NetworkToken implements Comparable {
   String networkName;
   String cluster;
   int vlan;
+  NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
   String userName;
   String name;
 
-  def NetworkToken(final String cluster, final String userName, final String networkName, final int vlan) {
+  def NetworkToken(final String cluster, final String userName, final String networkName, final int vlan ) {
     this.networkName = networkName;
     this.cluster = cluster;
     this.vlan = vlan;
     this.userName = userName;
     this.name = this.userName + "-" + this.networkName;
   }
-
+  
   @Override
   boolean equals(final Object o) {
     if ( this == o ) return true;

@@ -65,9 +65,10 @@
 
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.constants.HasName;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.util.HasName;
 
 import java.util.*;
 import java.util.zip.Adler32;

@@ -61,74 +61,30 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.images;
+package com.eucalyptus.util;
 
-import java.util.Map;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
 
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.StorageControllerConfiguration;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.StorageProperties;
-import com.eucalyptus.util.WalrusProperties;
-import com.eucalyptus.ws.client.ServiceProxy;
-import com.eucalyptus.ws.util.Messaging;
-import com.google.common.collect.Lists;
-
-import edu.ucsb.eucalyptus.cloud.state.Volume;
-import edu.ucsb.eucalyptus.cloud.ws.VolumeManager;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.StorageVolume;
-
-public class StorageProxy {
-  private static Logger LOG = Logger.getLogger( StorageProxy.class );
-  private static String getAddress( String name ) {
-    return Component.storage.getUri( ).toASCIIString( );
+public class LogUtil {
+  private static String LONG_BAR = "=============================================================================================================================================================================================================";
+  private static String MINI_BAR = "-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------";
+  public static String header( String message ) {
+    return String.format( "%80.80s\n%s\n%1$80.80s", LONG_BAR, message );
   }
-  
-  @SuppressWarnings( "unchecked" )
-  public static <REPLY> REPLY send( String scHostName, EucalyptusMessage message, Class<REPLY> replyType ) throws EucalyptusCloudException {
-    return (REPLY) ServiceProxy.lookup( Component.storage.getRegistryKey( scHostName ) ).send( message );
+  public static String subheader( String message ) {
+    return String.format( "%80.80s\n%s\n%1$80.80s", MINI_BAR, message );
   }
 
-  public static void dispatch( String scHostName, EucalyptusMessage message ) throws EucalyptusCloudException {
-    ServiceProxy.lookup( Component.storage.getRegistryKey( scHostName ) ).dispatch( message );
-  }
-
-  public static void dispatchAll( EucalyptusMessage message ) throws EucalyptusCloudException {
-    for( StorageControllerConfiguration sc : Configuration.getStorageControllerConfigurations( ) ) {
-      StorageProxy.dispatch( sc.getHostName( ), message );
+  public static String dumpObject( Object o ) {
+    if( o instanceof Enum ) {
+      return o.getClass( ).getSimpleName( ) + JSONArray.fromObject( o ).toString( );
+    } else {
+      try {
+        return o.getClass( ).getSimpleName( ) + JSONObject.fromObject( o ).toString( );
+      } catch ( Exception e ) {
+        return o.toString( );
+      }
     }
-  }
-
-
-  public static edu.ucsb.eucalyptus.msgs.Volume getVolumeReply( Map<String, AttachedVolume> attachedVolumes, Volume v ) throws EucalyptusCloudException {
-    StorageControllerConfiguration scConfig = Configuration.getStorageControllerConfiguration( v.getCluster( ) );
-    DescribeStorageVolumesResponseType volState = send( scConfig.getHostName( ), new DescribeStorageVolumesType( Lists.newArrayList( v.getDisplayName() ) ), DescribeStorageVolumesResponseType.class  );
-    LOG.trace( volState );
-    String volumeState = "unavailable";
-    if ( !volState.getVolumeSet().isEmpty() ) {
-      StorageVolume vol = volState.getVolumeSet().get( 0 );
-      volumeState = vol.getStatus();
-      v.setSize( new Integer( vol.getSize() ) );
-      v.setRemoteDevice( vol.getActualDeviceName() );
-    }
-    if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-      volumeState = "in-use";
-    }
-    v.setMappedState( volumeState );
-    edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
-    if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-      aVolume.setStatus( volumeState );
-      aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
-    }
-    return aVolume;
   }
 }

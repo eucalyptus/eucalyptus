@@ -152,6 +152,7 @@ public class RunInstancesType extends VmControlMessage {
   boolean monitoring = false;
 
 
+  ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
   String privateMacBase;
   String publicMacBase;
   int macLimit;
@@ -171,6 +172,7 @@ public class RunInstancesType extends VmControlMessage {
       c.blockDeviceMapping.add((BlockDeviceMappingItemType) b.clone());
     if ( this.vmType != null )
     c.vmType = (VmTypeInfo) this.vmType.clone();
+    c.networkIndexList = this.networkIndexList.clone( );
     return c;
   }
 
