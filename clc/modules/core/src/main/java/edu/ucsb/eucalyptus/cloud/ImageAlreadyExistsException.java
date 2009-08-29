@@ -77,7 +77,7 @@ public class ImageAlreadyExistsException extends WalrusException {
   
   public ImageAlreadyExistsException(String value)
   {
-    super("Image Already Exists", "Fail", HttpResponseStatus.CONFLICT);
+    super("Image Already Exists", "Fail", value, HttpResponseStatus.CONFLICT);
   }
 
   public ImageAlreadyExistsException(Throwable ex)

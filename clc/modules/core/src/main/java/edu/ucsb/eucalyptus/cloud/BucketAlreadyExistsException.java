@@ -77,7 +77,7 @@ public class BucketAlreadyExistsException extends WalrusException {
   }
   public BucketAlreadyExistsException(String bucket)
   {
-    super("BucketAlreadyExists", "The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.", HttpResponseStatus.CONFLICT);
+    super("BucketAlreadyExists", "The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.", bucket, HttpResponseStatus.CONFLICT);
   }
 
   public BucketAlreadyExistsException(Throwable ex)

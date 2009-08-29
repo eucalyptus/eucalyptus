@@ -76,7 +76,7 @@ public class NoSuchEntityException extends WalrusException {
   }
   public NoSuchEntityException(String entityName)
   {
-    super("NoSuchEntity", "The specified entity was not found", HttpResponseStatus.NOT_FOUND);
+    super("NoSuchEntity", "The specified entity was not found", entityName, HttpResponseStatus.NOT_FOUND);
   }
 
   public NoSuchEntityException(Throwable ex)

@@ -77,7 +77,7 @@ public class NotAuthorizedException extends WalrusException {
   
   public NotAuthorizedException(String value)
   {
-	  super("Unauthorized", "You are not authorized to perform this operation", HttpResponseStatus.UNUATHORIZED);
+	  super("Unauthorized", "You are not authorized to perform this operation", value, HttpResponseStatus.UNUATHORIZED);
   }
 
   public NotAuthorizedException(Throwable ex)

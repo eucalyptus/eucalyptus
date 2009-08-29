@@ -77,7 +77,7 @@ public class BucketAlreadyOwnedByYouException extends WalrusException{
   
   public BucketAlreadyOwnedByYouException(String bucket)
   {
-	  super("BucketAlreadyOwnedByYou", "Your previous request to create the named bucket succeeded and you already own it.", HttpResponseStatus.CONFLICT);
+	  super("BucketAlreadyOwnedByYou", "Your previous request to create the named bucket succeeded and you already own it.", bucket, HttpResponseStatus.CONFLICT);
   }
   
   public BucketAlreadyOwnedByYouException(Throwable ex)

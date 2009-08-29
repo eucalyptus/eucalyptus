@@ -78,7 +78,7 @@ public class TooManyBucketsException extends WalrusException {
   
   public TooManyBucketsException(String bucket)
   {
-    super("TooManyBuckets", "You have attempted to create more buckets than allowed.", HttpResponseStatus.BAD_REQUEST);
+    super("TooManyBuckets", "You have attempted to create more buckets than allowed.", bucket, HttpResponseStatus.BAD_REQUEST);
   }
 
   public TooManyBucketsException(Throwable ex)

@@ -77,7 +77,7 @@ public class NotModifiedException extends WalrusException {
   }
   public NotModifiedException(String error)
   {
-    super("NotModified", "Object Not Modified", HttpResponseStatus.NOT_MODIFIED);
+    super("NotModified", "Object Not Modified", error, HttpResponseStatus.NOT_MODIFIED);
   }
 
   public NotModifiedException(Throwable ex)

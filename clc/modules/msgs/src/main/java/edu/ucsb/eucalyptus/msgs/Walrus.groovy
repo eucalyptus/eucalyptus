@@ -194,6 +194,7 @@ public class WalrusErrorMessageType extends EucalyptusMessage {
 	protected String message;
 	protected String code;
 	protected HttpResponseStatus status;
+	protected String resource;
 	protected String requestId;
 	protected String hostId;
 
@@ -202,11 +203,13 @@ public class WalrusErrorMessageType extends EucalyptusMessage {
 	def WalrusErrorMessageType(String message,
 			String code,
 			HttpResponseStatus status,
+			String resource,
 			String requestId,
 			String hostId) {
 		this.message = message;
 		this.code = code;
 		this.status = status;
+		this.resource = resource;
 		this.requestId = requestId;
 		this.hostId = hostId;
 	}

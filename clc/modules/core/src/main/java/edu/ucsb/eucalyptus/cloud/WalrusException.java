@@ -75,7 +75,8 @@ public class WalrusException extends EucalyptusCloudException {
 	String message;
 	String code;
 	HttpResponseStatus errStatus;
-
+    String resource;
+    
 	public WalrusException()
 	{
 		super();
@@ -89,11 +90,12 @@ public class WalrusException extends EucalyptusCloudException {
 		this.errStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
 	}
 
-	public WalrusException(String code, String message, HttpResponseStatus status)
+	public WalrusException(String code, String message, String resource, HttpResponseStatus status)
 	{
 		super(message);
 		this.code = code;
 		this.message = message;
+		this.resource = resource;
 		this.errStatus = status;
 	}
 
@@ -107,6 +109,10 @@ public class WalrusException extends EucalyptusCloudException {
 
 	public HttpResponseStatus getStatus() {
 		return errStatus;
+	}
+	
+	public String getResource() {
+		return resource;		
 	}
 	
 	public WalrusException(String message, Throwable ex)

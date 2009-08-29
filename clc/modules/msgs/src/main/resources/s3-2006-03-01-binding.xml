@@ -260,8 +260,8 @@
 	<mapping name="Error" class="edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType">
 		<value name="Code" field="code" />
 		<value name="Message" field="message" />
+		<value name="Resource" field="resource"/>
 		<value name="RequestId" field="requestId" />
-		<value name="HostId" field="hostId" />
 	</mapping>
 
 	<mapping name="CreateBucket" class="edu.ucsb.eucalyptus.msgs.CreateBucketType"
