@@ -177,7 +177,7 @@ public enum Component {
     if ( Component.db.equals( this ) ) {
       return String.format( "jdbc:hsqldb:hsql://%s:%d/eucalyptus", address, 9001 );
     } else {
-      return String.format( "http://%s:%d/internal/", address, 8773, this.localUri.replaceAll( "vm://", "" ) );
+      return String.format( "http://%s:%d/internal/%s", address, 8773, this.localUri.replaceAll( "vm://", "" ) );
     }
   }
 
