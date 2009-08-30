@@ -159,7 +159,7 @@ public class HmacUtils {
       sb.append( "&" ).append( java.net.URLEncoder.encode( firstKey ) ).append( "=" ).append( java.net.URLEncoder.encode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
     }
     String subject = prefix + sb.toString( );
-    LOG.info( "VERSION2: " + subject );
+    LOG.debug( "VERSION2: " + subject );
     return subject;
   }
 

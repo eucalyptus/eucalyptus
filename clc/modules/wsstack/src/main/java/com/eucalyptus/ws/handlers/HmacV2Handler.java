@@ -135,19 +135,19 @@ public class HmacV2Handler extends MessageStackHandler {
         int sigVersion = Integer.parseInt( sigVersionString );
         if ( sigVersion == 1 ) {
           String canonicalString = HmacUtils.makeSubjectString( parameters );
-          LOG.info( "VERSION1-STRING:        " + canonicalString );
+          LOG.debug( "VERSION1-STRING:        " + canonicalString );
           String computedSig = HmacUtils.getSignature( secretKey, canonicalString, Hashes.Mac.HmacSHA1 );
-          LOG.info( "VERSION1-SHA1:        " + computedSig + " -- " + sig );
+          LOG.debug( "VERSION1-SHA1:        " + computedSig + " -- " + sig );
           if ( !computedSig.equals( sig ) ) throw new AuthenticationException( "User authentication failed." );
         } else if ( sigVersion == 2 ) {
           String canonicalString = HmacUtils.makeV2SubjectString( verb, headerHost, addr, parameters );
           String canonicalStringWithPort = HmacUtils.makeV2SubjectString( verb, headerHost + ":" + headerPort, addr, parameters );
           String computedSig = HmacUtils.getSignature( secretKey, canonicalString, Hashes.Mac.HmacSHA256 );
           String computedSigWithPort = HmacUtils.getSignature( secretKey, canonicalStringWithPort, Hashes.Mac.HmacSHA256 );
-          LOG.info( "VERSION2-STRING:        " + canonicalString );
-          LOG.info( "VERSION2-SHA256:        " + computedSig + " -- " + sig );
-          LOG.info( "VERSION2-STRING-PORT:        " + canonicalString );
-          LOG.info( "VERSION2-SHA256-PORT: " + computedSigWithPort + " -- " + sig );
+          LOG.debug( "VERSION2-STRING:        " + canonicalString );
+          LOG.debug( "VERSION2-SHA256:        " + computedSig + " -- " + sig );
+          LOG.debug( "VERSION2-STRING-PORT:        " + canonicalString );
+          LOG.debug( "VERSION2-SHA256-PORT: " + computedSigWithPort + " -- " + sig );
           if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) throw new AuthenticationException( "User authentication failed." );
         }
       }

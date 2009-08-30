@@ -34,8 +34,6 @@ public class HeartBeatClient {
     this.hostName = hostName;
     this.port = port;
   }
-
-  
   
   public void send( Collection<ComponentConfiguration> componentConfigurations ) {
     try {
@@ -59,6 +57,7 @@ public class HeartBeatClient {
       channelWriteFuture.addListener( ChannelFutureListener.CLOSE );
     }
   }
+  
   class DeferedWriter implements ChannelFutureListener {
     private HttpRequest httpRequest;
     public DeferedWriter( HttpRequest httpRequest ) {
@@ -82,11 +81,13 @@ public class HeartBeatClient {
       }
     }
   }
+  
   public void close( ) {
     if( this.channel != null ) {
       this.channel.close( );      
     }
   }
+
   public final String getHostName( ) {
     return this.hostName;
   }

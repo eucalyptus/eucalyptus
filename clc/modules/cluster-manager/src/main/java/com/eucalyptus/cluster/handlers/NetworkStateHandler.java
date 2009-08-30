@@ -15,10 +15,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.cluster.event.NewClusterEvent;
-import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.event.Event;
-import com.eucalyptus.event.GenericEvent;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
@@ -55,19 +52,7 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
 
   @Override
   public void fireEvent( Event event ) {
-    if ( this.timedTrigger( event ) ) {
-      this.trigger( );
-    } else if ( event instanceof GenericEvent ) {
-      GenericEvent<Cluster> g = ( GenericEvent<Cluster> ) event;
-      if ( !g.matches( this.getCluster( ) ) ) { return; }
-      if ( g instanceof NewClusterEvent ) {
-        this.trigger( );
-      } else if ( event instanceof TeardownClusterEvent ) {
-        this.cleanup( );
-      }
-    } else {
-      LOG.debug( "Ignoring event which doesn't belong to me: " + LogUtil.dumpObject( event ) );
-    }
+    super.fireTimedStatefulTrigger( event );
   }
 
   @Override
@@ -80,6 +65,7 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse resp = ( MappingHttpResponse ) e.getMessage( );
       DescribeNetworksResponseType reply = ( DescribeNetworksResponseType ) resp.getMessage( );
+      ctx.getChannel( ).close( );
       for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
         try {
           Network net = Networks.getInstance( ).lookup( netInfo.getUserName( ) + "-" + netInfo.getNetworkName( ) );
@@ -101,15 +87,15 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
       } else {
         EucalyptusProperties.disableNetworking = false;
       }
+      this.verified = true;
     } else {
-      LOG.info( "Received unknown message type. " + e.getMessage( ) );
+      LOG.warn( "Received unknown message type. " + e.getMessage( ) );
+      ctx.getChannel( ).close( );
     }
-    ctx.getChannel( ).close( );
   }
 
   @Override
-  public void advertiseEvent( Event event ) {
-  }
+  public void advertiseEvent( Event event ) {}
 
   @Override
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {

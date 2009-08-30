@@ -84,23 +84,21 @@ import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Cluster implements HasName {
   private static Logger                            LOG = Logger.getLogger( Cluster.class );
-  private ClusterThreadGroup                       threadGroup;
+  private MQ                                       mq;
   private ClusterConfiguration                     configuration;
   private ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private ClusterState                             state;
   private ClusterNodeState                         nodeState;
   private ClusterCredentials                       credentials;
-  private boolean                                  disabled;
 
-  public Cluster( ClusterThreadGroup threadGroup, ClusterConfiguration configuration, ClusterCredentials credentials ) {
+  public Cluster( ClusterConfiguration configuration, ClusterCredentials credentials ) {
     super( );
-    this.threadGroup = threadGroup;
     this.configuration = configuration;
     this.state = new ClusterState( configuration.getName( ) );
     this.nodeState = new ClusterNodeState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
     this.credentials = credentials;
-    this.disabled = true;
+    this.mq = new MQ();
   }
 
   public ClusterCredentials getCredentials( ) {
@@ -143,8 +141,8 @@ public class Cluster implements HasName {
     return this.getName( ).compareTo( that.getName( ) );
   }
 
-  public ClusterThreadGroup getThreadGroup( ) {
-    return threadGroup;
+  public MQ getThreadGroup( ) {
+    return mq;
   }
 
   public ClusterConfiguration getConfiguration( ) {
@@ -164,7 +162,7 @@ public class Cluster implements HasName {
   }
 
   public ClusterMessageQueue getMessageQueue( ) {
-    return threadGroup.getMessageQueue( );
+    return this.mq.getMessageQueue( );
   }
 
   public ClusterState getState( ) {
@@ -173,6 +171,51 @@ public class Cluster implements HasName {
 
   public ClusterNodeState getNodeState( ) {
     return nodeState;
+  }
+  
+  public void start() {
+    this.mq.startMessageQueue( );
+  }
+
+  public void stop( ) {
+    this.mq.stopMessageQueue( );
+  }
+
+  public class MQ extends ThreadGroup {
+    private Thread              mqThread;
+    private ClusterMessageQueue messageQueue;
+    private boolean             stopped = false;
+
+    public MQ( ) {
+      super( configuration.getName( ) );
+      this.messageQueue = new ClusterMessageQueue( configuration );
+    }
+
+    public void startMessageQueue( ) {
+      if ( ( this.mqThread == null || !this.mqThread.isAlive( ) ) && !this.stopped ) {
+        this.mqThread = new Thread( this.messageQueue );
+        LOG.warn( "-> [ " + this.getName( ) + " ] Starting threads " + this.mqThread.getName( ) );
+        this.mqThread.start( );
+      }
+    }
+
+    public void stopMessageQueue( ) {
+      this.messageQueue.stop( );
+      this.stopped = true;
+      LOG.warn( "-> [ " + this.getName( ) + " ] Stopping threads " + this.mqThread );
+    }
+
+    @Override
+    public void uncaughtException( Thread t, Throwable e ) {
+      LOG.error( "Caught exception from " + t.getName( ) + ": " + e.getClass( ) );
+      LOG.error( t.getName( ) + ": " + e.getMessage( ), e );
+      super.uncaughtException( t, e );
+    }
+
+    public ClusterMessageQueue getMessageQueue( ) {
+      return messageQueue;
+    }
+
   }
 
 }

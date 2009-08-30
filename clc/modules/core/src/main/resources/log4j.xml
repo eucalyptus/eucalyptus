@@ -126,6 +126,10 @@
         <priority value="ERROR"/>
         <appender-ref ref="logfile"/>
     </category>
+    <category name="org.apache" additivity="true">
+        <priority value="WARN"/>
+        <appender-ref ref="logfile"/>
+    </category>
     <category name="org.mule" additivity="true">
         <priority value="WARN"/>
         <appender-ref ref="logfile"/>

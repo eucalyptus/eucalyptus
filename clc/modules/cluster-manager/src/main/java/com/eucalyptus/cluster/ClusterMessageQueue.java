@@ -84,8 +84,8 @@ public class ClusterMessageQueue implements Runnable {
 
   private static Logger LOG = Logger.getLogger( ClusterMessageQueue.class );
   private BlockingQueue<QueuedEvent> msgQueue;
-  private int offerInterval = 100;
-  private int pollInterval = 100;
+  private int offerInterval = 500;
+  private int pollInterval = 500;
   private final int messageQueueSize = 100;
   private AtomicBoolean finished;
   private ClusterConfiguration parent;

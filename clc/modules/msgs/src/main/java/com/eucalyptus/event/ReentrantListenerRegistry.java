@@ -26,7 +26,9 @@ public class ReentrantListenerRegistry<T> {
     LOG.info( String.format( "Registering event listener for %s: %s", type, LogUtil.dumpObject( listener ) ) );
     this.modificationLock.lock( );
     try {
-      this.listenerMap.put( type, listener );
+      if( !this.listenerMap.containsEntry( type, listener ) ) {
+        this.listenerMap.put( type, listener );
+      }
     } finally {
       this.modificationLock.unlock( );
     }
@@ -69,7 +71,7 @@ public class ReentrantListenerRegistry<T> {
       if ( e.isVetoed( ) ) { throw new EventVetoedException( String.format( "Event %s was vetoed by listener %s: %s", LogUtil.dumpObject( e ), LogUtil.dumpObject( ce ), e.getCause( ) != null ? e.getCause( ) : "no cause given" ) ); }
     }
     for ( EventListener ce : listeners ) {
-      LOG.info( String.format( "Firing event %s on listener %s", LogUtil.dumpObject( e ), LogUtil.dumpObject( ce ) ) );
+      LOG.debug( String.format( "Firing event %s on listener %s", LogUtil.dumpObject( e ), LogUtil.dumpObject( ce ) ) );
       ce.fireEvent( e );
       if ( e.getFail( ) != null ) {
         LOG.info( e.getFail( ) );

@@ -391,7 +391,7 @@ public class ResourceToken implements Comparable {
   String userName;
   ArrayList<String> instanceIds = new ArrayList<String>();
   ArrayList<String> addresses = new ArrayList<String>();
-  ArrayList<Integer> networkIndexes = new ArrayList<Integer>();
+  ArrayList<String> networkIndexes = new ArrayList<String>();
   ArrayList<NetworkToken> networkTokens = new ArrayList<NetworkToken>();
   int amount;
   String vmType;

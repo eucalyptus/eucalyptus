@@ -108,7 +108,11 @@ public class Configuration {
       throw new EucalyptusCloudException( e1.getMessage( ), e1 );
     }
     if ( !isGood ) { throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." ); }
-    if ( ConfigurationUtil.checkComponentExists( request ) ) { return reply; }
+    try {
+      if ( ConfigurationUtil.checkComponentExists( request ) ) { return reply; }
+    } catch ( Exception e2 ) {
+      return reply;
+    }
     EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );
     ComponentConfiguration newComponent;
     try {
@@ -150,7 +154,7 @@ public class Configuration {
       db.commit( );
     } catch ( Exception e ) {
       db.rollback( );
-      throw e instanceof EucalyptusCloudException ? ( EucalyptusCloudException ) e : new EucalyptusCloudException( e );
+      throw new EucalyptusCloudException( "Failed to find configuration for " + request.getClass( ).getSimpleName( ) + " named " + request.getName( ) );
     }
     if ( request instanceof DeregisterClusterType ) {
       try {
@@ -184,7 +188,7 @@ public class Configuration {
       searchConfig = ConfigurationUtil.getConfigurationInstance( request );
     } catch ( Exception e1 ) {
       LOG.error( "Failed to find configuration type for request of type: " + request.getClass( ).getSimpleName( ) );
-      throw new EucalyptusCloudException( e1 );
+      throw new EucalyptusCloudException( "Failed to find configuration type for request of type: " + request.getClass( ).getSimpleName( ) );
     }
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
     EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );

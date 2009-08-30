@@ -63,13 +63,25 @@
  */
 package com.eucalyptus.ws.handlers;
 
+import java.io.IOException;
+
 import org.apache.log4j.Logger;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 
 public abstract class MessageStackHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
   private static Logger LOG = Logger.getLogger( MessageStackHandler.class );
@@ -91,18 +103,37 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
 
   }
 
-  public void exceptionCaught( final ChannelHandlerContext channelHandlerContext, final ExceptionEvent exceptionEvent ) throws Exception {
-    MessageStackHandler.LOG.debug( this.getClass( ).getSimpleName( ) + "[exception:" + exceptionEvent.getCause( ).getClass( ).getSimpleName( ) + "]: " + exceptionEvent.getCause( ).getMessage( ) );
+  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
+    Throwable t = exceptionEvent.getCause( );
+    if ( t instanceof IOException ) {
+      LOG.fatal( t );
+      ctx.getChannel( ).close( );
+    } else {
+      this.exceptionCaught( t );
+      Channels.fireExceptionCaught( ctx.getChannel( ), t );
+    }
   }
 
   public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-    MessageStackHandler.LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
+    LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
+    if( channelEvent instanceof ExceptionEvent ) {
+      LOG.info( ( ( ExceptionEvent ) channelEvent ).getCause( ), ( ( ExceptionEvent ) channelEvent ).getCause( ) );
+    }
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
-      this.incomingMessage( channelHandlerContext, msgEvent );
+      try {
+        this.incomingMessage( channelHandlerContext, msgEvent );
+        channelHandlerContext.sendUpstream( channelEvent );
+      } catch ( Exception e ) {
+        Channels.fireExceptionCaught( channelHandlerContext, e );
+      } 
     } else if ( channelEvent instanceof ExceptionEvent ) {
-      this.exceptionCaught( channelHandlerContext, ( ExceptionEvent ) channelEvent );
+      if( ( ( ExceptionEvent ) channelEvent ).getCause( ) instanceof IOException ) {
+        LOG.debug( ( ( ExceptionEvent ) channelEvent ).getCause( ), ( ( ExceptionEvent ) channelEvent ).getCause( ) );
+        channelHandlerContext.getChannel( ).close( );
+      } else {
+        this.exceptionCaught( channelHandlerContext, ( ExceptionEvent ) channelEvent );
+      }
     }
-    channelHandlerContext.sendUpstream( channelEvent );
   }
 }

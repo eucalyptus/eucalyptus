@@ -39,7 +39,7 @@ public class SystemClock extends TimerTask {
     public void advertiseEvent( Event event ) {}
     @Override
     public void fireEvent( Event event ) {
-      LOG.info( "-> Timer tick." );
+      LOG.debug( "-> Timer tick." );
     }
   }
   

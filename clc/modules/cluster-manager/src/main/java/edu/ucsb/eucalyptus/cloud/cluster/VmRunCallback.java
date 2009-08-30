@@ -95,10 +95,7 @@ class VmRunCallback extends QueuedEventCallback<VmRunType> {
     Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
     ClusterConfiguration config = Clusters.getInstance( ).lookup( token.getCluster( ) ).getConfiguration( );
     for ( String vmId : msg.getInstanceIds() )
-      parent.msgMap.put( ClusterAllocator.State.ROLLBACK,
-                         new QueuedEvent<TerminateInstancesType>(
-                             new TerminateCallback( config ),
-                             new TerminateInstancesType( vmId, msg ) ) );
+      parent.msgMap.put( ClusterAllocator.State.ROLLBACK, new QueuedEvent<TerminateInstancesType>( new TerminateCallback( config ), new TerminateInstancesType( vmId, msg ) ) );
     VmRunResponseType reply = null;
     try {
       reply = ( VmRunResponseType ) clusterClient.send( msg );

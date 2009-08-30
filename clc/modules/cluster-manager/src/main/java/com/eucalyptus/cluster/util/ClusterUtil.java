@@ -67,8 +67,7 @@ public class ClusterUtil {
     } finally {
       credDb.rollback( );
     }
-    ClusterThreadGroup threadGroup = new ClusterThreadGroup( c, credentials );
-    Cluster newCluster = new Cluster( threadGroup, c, credentials );
+    Cluster newCluster = new Cluster( c, credentials );
     Clusters.getInstance( ).register( newCluster );
     return newCluster;
   }

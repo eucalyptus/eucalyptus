@@ -1,67 +1,69 @@
 /*******************************************************************************
-*Copyright (c) 2009  Eucalyptus Systems, Inc.
-* 
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, only version 3 of the License.
-* 
-* 
-*  This file is distributed in the hope that it will be useful, but WITHOUT
-*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-*  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-*  for more details.
-* 
-*  You should have received a copy of the GNU General Public License along
-*  with this program.  If not, see <http://www.gnu.org/licenses/>.
-* 
-*  Please contact Eucalyptus Systems, Inc., 130 Castilian
-*  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
-*  if you need additional information or have any questions.
-* 
-*  This file may incorporate work covered under the following copyright and
-*  permission notice:
-* 
-*    Software License Agreement (BSD License)
-* 
-*    Copyright (c) 2008, Regents of the University of California
-*    All rights reserved.
-* 
-*    Redistribution and use of this software in source and binary forms, with
-*    or without modification, are permitted provided that the following
-*    conditions are met:
-* 
-*      Redistributions of source code must retain the above copyright notice,
-*      this list of conditions and the following disclaimer.
-* 
-*      Redistributions in binary form must reproduce the above copyright
-*      notice, this list of conditions and the following disclaimer in the
-*      documentation and/or other materials provided with the distribution.
-* 
-*    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-*    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-*    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-*    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-*    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-*    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-*    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-*    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-*    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-*    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-*    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-*    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-*    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-*    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-*    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-*    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-*    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-*    ANY SUCH LICENSES OR RIGHTS.
-*******************************************************************************/
+ *Copyright (c) 2009 Eucalyptus Systems, Inc.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ * This file is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ * for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Please contact Eucalyptus Systems, Inc., 130 Castilian
+ * Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ * if you need additional information or have any questions.
+ * 
+ * This file may incorporate work covered under the following copyright and
+ * permission notice:
+ * 
+ * Software License Agreement (BSD License)
+ * 
+ * Copyright (c) 2008, Regents of the University of California
+ * All rights reserved.
+ * 
+ * Redistribution and use of this software in source and binary forms, with
+ * or without modification, are permitted provided that the following
+ * conditions are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ * THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ * LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ * ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************/
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.ws.handlers;
+
+import java.io.IOException;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -74,6 +76,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -108,12 +111,14 @@ import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 @ChannelPipelineCoverage( "one" )
 public class ServiceSinkHandler extends SimpleChannelHandler {
   private static Logger                    LOG              = Logger.getLogger( ServiceSinkHandler.class );
-  private long                             QUEUE_TIMEOUT_MS = 2;                                           //TODO: measure me
+  private long                             QUEUE_TIMEOUT_MS = 2;                                           // TODO:
+                                                                                                            // measure
+                                                                                                            // me
   private long                             startTime;
   private ChannelLocal<MappingHttpMessage> requestLocal     = new ChannelLocal<MappingHttpMessage>( );
 
-  private NioMessageReceiver msgReceiver;
-  
+  private NioMessageReceiver               msgReceiver;
+
   public ServiceSinkHandler( ) {
     super( );
   }
@@ -126,8 +131,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + e );
-    if( e instanceof ExceptionEvent) {
-      this.exceptionCaught( ctx, (ExceptionEvent)e );
+    if ( e instanceof ExceptionEvent ) {
+      this.exceptionCaught( ctx, ( ExceptionEvent ) e );
     } else if ( e instanceof MessageEvent ) {
       this.startTime = System.currentTimeMillis( );
       final MessageEvent event = ( MessageEvent ) e;
@@ -135,20 +140,20 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         MappingHttpMessage request = ( MappingHttpMessage ) event.getMessage( );
         User user = request.getUser( );
         requestLocal.set( ctx.getChannel( ), request );
-        EucalyptusMessage msg = (EucalyptusMessage) request.getMessage( );
-        if( user != null && msgReceiver == null) {
+        EucalyptusMessage msg = ( EucalyptusMessage ) request.getMessage( );
+        if ( user != null && msgReceiver == null ) {
           msg.setUserId( user.getUserName( ) );
-          msg.setEffectiveUserId( user.getIsAdministrator( )?Component.eucalyptus.name():user.getUserName( ) );
+          msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getUserName( ) );
         }
         LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
         ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
-        if( this.msgReceiver == null ) {
+        if ( this.msgReceiver == null ) {
           Messaging.dispatch( "vm://RequestQueue", msg );
-        } else if (user == null||(user!=null&&user.getIsAdministrator())){
+        } else if ( user == null || ( user != null && user.getIsAdministrator( ) ) ) {
           MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ) );
           ctx.getChannel( ).write( reply.getPayload( ) );
         } else {
-          ctx.getChannel( ).write( new MappingHttpResponse(request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN) );
+          ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
       }
     }
@@ -159,9 +164,13 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
     if ( e instanceof MessageEvent ) {
       MessageEvent msge = ( MessageEvent ) e;
-      if ( msge.getMessage( ) instanceof IsData ) {//Pass through for chunked messaging
+      if ( msge.getMessage( ) instanceof IsData ) {// Pass through for chunked
+                                                   // messaging
         ctx.sendDownstream( msge );
-      } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {//Handle single request-response MEP
+      } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {// Handle
+                                                                     // single
+                                                                     // request-response
+                                                                     // MEP
         MappingHttpMessage request = requestLocal.get( ctx.getChannel( ) );
         EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
         if ( reply == null ) {// TODO: fix this error reporting
@@ -182,19 +191,29 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         response.setMessage( reply );
         newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
         ctx.sendDownstream( newEvent );
-      } else {
-        LOG.warn("Closing channel due to unknown message event type!!!" );
-        ctx.getChannel( ).close( );
       }
     }
   }
 
   @Override
-  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
-    MappingHttpMessage request = requestLocal.get(ctx.getChannel( ));
-    MappingHttpResponse error = new MappingHttpResponse(request!=null?request.getProtocolVersion( ):HttpVersion.HTTP_1_0, HttpResponseStatus.INTERNAL_SERVER_ERROR);
-    error.setContent( ChannelBuffers.copiedBuffer( e.getCause( ).getMessage( ).getBytes( ) ) );
-    ChannelFuture writeFuture = ctx.getChannel( ).write( error );
-    writeFuture.addListener( ChannelFutureListener.CLOSE );
+  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
+    LOG.fatal( e.getCause( ), e.getCause( ) );
+    if ( e.getCause( ) instanceof IOException ) {
+      ctx.getChannel( ).close( );
+      return;
+    } else {
+      HttpResponse error = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR );
+      Throwable t = e.getCause( );
+      String errMsg = "Error";
+      if ( t != null && t.getMessage( ) != null ) {
+        errMsg = t.getMessage( );
+      } else if ( t != null ) {
+        errMsg = t.toString( );
+      }
+      error.setContent( ChannelBuffers.copiedBuffer( errMsg.getBytes( ) ) );
+      DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel( ).getCloseFuture( ), error, null );
+      ctx.sendDownstream( newEvent );
+      newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+    }
   }
 }

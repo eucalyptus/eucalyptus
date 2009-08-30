@@ -134,11 +134,13 @@ public class VmAdmissionControl {
           for ( int i = 0; i < token.getAmount(); i++ ) {
             Integer addrIndex = network.getAvailableAddresses( ).pollFirst();
             if( addrIndex == null ) {
-              network.getAvailableAddresses( ).addAll( token.getNetworkIndexes( ) );
+              for( String s : token.getNetworkIndexes( ) ) {
+                network.getAvailableAddresses( ).add( new Integer( s ));
+              }
               token.getNetworkIndexes( ).clear( );
               throw new NotEnoughResourcesAvailable( "Not enough addresses left in the requested network subnet." );
             } else {
-              token.getNetworkIndexes( ).add( addrIndex );
+              token.getNetworkIndexes( ).add( addrIndex.toString( ) );
             }
           }
         }

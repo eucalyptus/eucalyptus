@@ -66,6 +66,8 @@ package com.eucalyptus.ws.handlers.wssecurity;
 import java.util.Collection;
 import java.util.Vector;
 
+import javax.xml.stream.XMLStreamException;
+
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.om.impl.dom.DOOMAbstractFactory;
@@ -106,9 +108,9 @@ public abstract class WsSecHandler extends MessageStackHandler {
     final Object o = event.getMessage( );
     if ( o instanceof MappingHttpMessage ) {
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
-      final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), httpRequest.getSoapEnvelope( ).getXMLStreamReader( ) );
+      SOAPEnvelope env = httpRequest.getSoapEnvelope( );
+      final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), env.getXMLStreamReader( ) );
       final OMElement elem = doomBuilder.getDocumentElement( );
-      elem.build( );
       final Document doc = ( ( Element ) elem ).getOwnerDocument( );
 
       final Vector v = new Vector( );

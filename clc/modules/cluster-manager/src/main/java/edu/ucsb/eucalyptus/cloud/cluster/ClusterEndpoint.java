@@ -89,32 +89,6 @@ public class ClusterEndpoint implements Startable {
     Clusters.getInstance();
   }
 
-  public void fire( List<RegisterClusterType> clusterChanges ) {
-//TODO: handle configuration changes.
-//    LOG.warn( "Processing new list of clusters: ");
-//    for( RegisterClusterType c : clusterChanges ) {
-//      LOG.warn( "Cluster: " + c.getName() + " host=" + c.getHost() + ":" + c.getPort() );
-//    }
-//    Clusters.getInstance().update( clusterChanges );
-  }
-
-//  public AddClusterResponseType fire( AddClusterType request ) throws EucalyptusCloudException {
-//    if( !request.isAdministrator() ) {
-//      throw new EucalyptusCloudException("Only admins can add clusters.");
-//    }
-//    for ( ClusterStateType c : Clusters.getInstance().getClusters() ) {
-//      if( c.getName().equals( request.getName() ) ) {
-//        throw new EucalyptusCloudException("Cluster already exists: " + request.getName() );
-//      }
-//    }
-//    Clusters.getInstance().add( new ClusterStateType( request.getName(), request.getHost(), request.getPort() ) );
-//    return (AddClusterResponseType) request.getReply();
-//  }
-
-  public void enqueue( EucalyptusMessage msg ) {
-    LOG.error( "Intentionally dropping generic message: " + msg );
-  }
-
   public void networkChange( Network net ) {
     try {
       Network existingNet = Networks.getInstance().lookup( net.getName() );
@@ -249,20 +223,6 @@ public class ClusterEndpoint implements Startable {
         VmTypeAvailability va = cluster.getNodeState().getAvailability( v.getName() );
         info.add( s( v.getName(), String.format( STATE_FSTRING, va.getAvailable(), va.getMax(), v.getCpu(), v.getMemory(), v.getDisk() ) ) );
       }
-      for ( String s : cluster.getNodeTags() ) {
-        NodeInfo node = cluster.getNode( s );
-        String certs = "certs[cc=%s,nc=%s] @ %s";
-        String ccAlias = "";
-        String ncAlias = "";
-        //TODO: IMPORTANT fix me
-//        try {
-//          ccAlias = ServiceKeyStore.getInstance().getCertificateAlias( node.getCerts().getCcCert() );
-//          if ( ccAlias == null ) ccAlias = "FALSE";
-//          ncAlias = ServiceKeyStore.getInstance().getCertificateAlias( node.getCerts().getNcCert() );
-//          if ( ncAlias == null ) ncAlias = "FALSE";
-//        } catch ( GeneralSecurityException e ) {}
-        info.add( s( node.getName(), String.format( certs, ccAlias.startsWith( "cc-" ), ncAlias.startsWith( "nc-" ), node.getLastSeen() ) ) );
-      }
     }
     catch ( Exception e ) {
       LOG.error( e, e );
@@ -298,4 +258,3 @@ public class ClusterEndpoint implements Startable {
   }
 
 }
-//:: keytool -list -rfc -storetype bks -storepass eucalyptus -provider org.bouncycastle.jce.provider.BouncyCastleProvider -keystore conf/eucalyptus.bks

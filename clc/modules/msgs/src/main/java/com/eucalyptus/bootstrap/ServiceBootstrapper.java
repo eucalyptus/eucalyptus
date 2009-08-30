@@ -84,12 +84,22 @@ public class ServiceBootstrapper extends Bootstrapper {
   private MuleContextFactory contextFactory;
   private SpringXmlConfigurationBuilder builder;
   private static Registry registry;
+  private static ServiceBootstrapper singleton;
   
   public static Registry getRegistry() {
       return registry;
   }
   
-  public ServiceBootstrapper( ) {
+  public static ServiceBootstrapper getInstance() {
+    synchronized ( ServiceBootstrapper.class ) {
+      if( singleton == null ) {
+        singleton = new ServiceBootstrapper( );
+      }
+      return singleton;
+    }
+  }
+  
+  private ServiceBootstrapper( ) {
     super( );
     this.contextFactory = new DefaultMuleContextFactory( );
   }
@@ -132,4 +142,11 @@ public class ServiceBootstrapper extends Bootstrapper {
     return true;
   }
 
+  @Override
+  public boolean stop( ) throws Exception {
+    this.context.stop( );
+    return true;
+  }
+
+  
 }

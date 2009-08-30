@@ -1,65 +1,50 @@
 /*******************************************************************************
-*Copyright (c) 2009  Eucalyptus Systems, Inc.
-* 
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, only version 3 of the License.
-* 
-* 
-*  This file is distributed in the hope that it will be useful, but WITHOUT
-*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-*  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-*  for more details.
-* 
-*  You should have received a copy of the GNU General Public License along
-*  with this program.  If not, see <http://www.gnu.org/licenses/>.
-* 
-*  Please contact Eucalyptus Systems, Inc., 130 Castilian
-*  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
-*  if you need additional information or have any questions.
-* 
-*  This file may incorporate work covered under the following copyright and
-*  permission notice:
-* 
-*    Software License Agreement (BSD License)
-* 
-*    Copyright (c) 2008, Regents of the University of California
-*    All rights reserved.
-* 
-*    Redistribution and use of this software in source and binary forms, with
-*    or without modification, are permitted provided that the following
-*    conditions are met:
-* 
-*      Redistributions of source code must retain the above copyright notice,
-*      this list of conditions and the following disclaimer.
-* 
-*      Redistributions in binary form must reproduce the above copyright
-*      notice, this list of conditions and the following disclaimer in the
-*      documentation and/or other materials provided with the distribution.
-* 
-*    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-*    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-*    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-*    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-*    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-*    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-*    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-*    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-*    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-*    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-*    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-*    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-*    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-*    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-*    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-*    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-*    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-*    ANY SUCH LICENSES OR RIGHTS.
-*******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *Copyright (c) 2009 Eucalyptus Systems, Inc.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ * This file is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ * for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Please contact Eucalyptus Systems, Inc., 130 Castilian
+ * Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ * if you need additional information or have any questions.
+ * 
+ * This file may incorporate work covered under the following copyright and
+ * permission notice:
+ * 
+ * 
+ * JBoss, Home of Professional Open Source
+ * 
+ * Copyright 2009, Red Hat Middleware LLC, and individual contributors
+ * by the @author tags. See the COPYRIGHT.txt in the distribution for a
+ * full listing of individual contributors.
+ * 
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ * 
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ * 
+ ******************************************************************************* 
+ * Modified by: chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.ws.handlers.http;
 
@@ -69,10 +54,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
-import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMessage;
@@ -96,7 +79,18 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
   private int                    headerSize;
 
   protected enum State {
-    SKIP_CONTROL_CHARS, READ_INITIAL, READ_HEADER, READ_VARIABLE_LENGTH_CONTENT, READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS, READ_FIXED_LENGTH_CONTENT, READ_FIXED_LENGTH_CONTENT_AS_CHUNKS, READ_CHUNK_SIZE, READ_CHUNKED_CONTENT, READ_CHUNKED_CONTENT_AS_CHUNKS, READ_CHUNK_DELIMITER, READ_CHUNK_FOOTER;
+    SKIP_CONTROL_CHARS,
+    READ_INITIAL,
+    READ_HEADER,
+    READ_VARIABLE_LENGTH_CONTENT,
+    READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS,
+    READ_FIXED_LENGTH_CONTENT,
+    READ_FIXED_LENGTH_CONTENT_AS_CHUNKS,
+    READ_CHUNK_SIZE,
+    READ_CHUNKED_CONTENT,
+    READ_CHUNKED_CONTENT_AS_CHUNKS,
+    READ_CHUNK_DELIMITER,
+    READ_CHUNK_FOOTER;
   }
 
   public NioHttpDecoder( ) {
@@ -130,7 +124,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
           checkpoint( State.SKIP_CONTROL_CHARS );
           return null;
         }
-        message = new MappingHttpRequest(HttpVersion.valueOf(initialLine[2]), HttpMethod.valueOf(initialLine[0]), initialLine[1]);
+        message = new MappingHttpRequest( HttpVersion.valueOf( initialLine[2] ), HttpMethod.valueOf( initialLine[0] ), initialLine[1] );
         checkpoint( State.READ_HEADER );
       }
       case READ_HEADER: {
@@ -363,7 +357,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
     String line = readHeader( buffer );
     String lastHeader = null;
     if ( line.length( ) != 0 ) {
-//      message.clearHeaders( );
+      // message.clearHeaders( );
       do {
         char firstChar = line.charAt( 0 );
         if ( lastHeader != null && ( firstChar == ' ' || firstChar == '\t' ) ) {
@@ -427,11 +421,9 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
     return sb.toString( );
   }
 
-  
-
   private int getChunkSize( String hex ) {
-	  Log.info("Chunk Size Hex to parse:" + hex);
-    hex = hex.replaceAll("\\W", "").trim( );    
+    Log.info( "Chunk Size Hex to parse:" + hex );
+    hex = hex.replaceAll( "\\W", "" ).trim( );
     for ( int i = 0; i < hex.length( ); i++ ) {
       char c = hex.charAt( i );
       if ( c == ';' || Character.isWhitespace( c ) || Character.isISOControl( c ) ) {
@@ -439,7 +431,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
         break;
       }
     }
-    Log.info("Chunk Size in Hex:" + hex);
+    Log.info( "Chunk Size in Hex:" + hex );
     return Integer.parseInt( hex, 16 );
   }
 
@@ -507,8 +499,8 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
 
     valueStart = findNonWhitespace( sb, colonEnd );
     valueEnd = findEndOfString( sb );
-    valueStart = valueStart > valueEnd ? valueEnd: valueStart;
-    
+    valueStart = valueStart > valueEnd ? valueEnd : valueStart;
+
     return new String[] { sb.substring( nameStart, nameEnd ), sb.substring( valueStart, valueEnd ) };
   }
 

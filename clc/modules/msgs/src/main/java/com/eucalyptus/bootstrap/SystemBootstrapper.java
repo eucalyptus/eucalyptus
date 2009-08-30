@@ -92,8 +92,6 @@ public class SystemBootstrapper {
     return singleton;
   }
 
-  private MuleContext context;
-
   public SystemBootstrapper( ) {
   }
 
@@ -102,7 +100,7 @@ public class SystemBootstrapper {
   }
 
   public boolean stop( ) throws Exception {
-    this.context.stop( );
+    ServiceBootstrapper.getInstance( ).stop( );
     return true;
   }
 
@@ -191,4 +189,11 @@ public class SystemBootstrapper {
   private static native void shutdown( boolean reload );
 
   public static native void hello( );
+  
+  public static void main( String[] args ) throws Exception {
+    SystemBootstrapper b = SystemBootstrapper.getInstance( );
+    b.init( );
+    b.load( );
+    b.start( );
+  }
 }

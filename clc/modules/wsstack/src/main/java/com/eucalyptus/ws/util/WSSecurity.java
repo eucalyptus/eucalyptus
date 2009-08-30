@@ -179,7 +179,6 @@ public class WSSecurity {
     final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), envelope.getXMLStreamReader( ) );
     final OMElement elem = doomBuilder.getDocumentElement( );
     elem.build( );
-//    final Document doc = ( ( Element ) elem ).getOwnerDocument( );
     final Element env = ( ( Element ) elem );
     final Element securityNode = getSecurityElement( env );
     final Element signatureNode = getSignatureElement( securityNode );

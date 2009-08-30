@@ -141,9 +141,9 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
 
   @Override
   public boolean start( ) throws Exception {
-    for( Cluster c : Clusters.getInstance( ).getEntries( ) ) {
-      c.getThreadGroup( ).create();
-    }
+//    for( Cluster c : Clusters.getInstance( ).getEntries( ) ) {
+//      c.getThreadGroup( ).startThreads();
+//    }
     return true;
   }
 
@@ -193,10 +193,10 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
       if ( Component.cluster.equals( e.getComponent( ) ) && e.getConfiguration( ) instanceof ClusterConfiguration ) {
         Cluster c = Clusters.getInstance( ).lookup( e.getConfiguration( ).getName( ) );
         Clusters.getInstance( ).deregister( c.getName( ) );
-        c.getThreadGroup( ).stopThreads( );
+        c.stop();
         try {
-          ListenerRegistry.getInstance( ).fireEvent( new NewClusterEvent( ).setMessage( c ) );
-          this.registerClusterStateHandler( c );
+          ListenerRegistry.getInstance( ).fireEvent( new TeardownClusterEvent( ).setMessage( c ) );
+          this.deregisterClusterStateHandler( c );
           return;
         } catch ( EventVetoedException e1 ) {
           e.setFail( e1 );

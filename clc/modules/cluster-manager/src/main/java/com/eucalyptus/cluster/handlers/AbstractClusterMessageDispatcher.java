@@ -1,7 +1,10 @@
 package com.eucalyptus.cluster.handlers;
 
 import java.net.InetSocketAddress;
+import java.nio.channels.AlreadyConnectedException;
 import java.util.concurrent.Executors;
+
+import javax.xml.stream.XMLStreamException;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -26,10 +29,14 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.event.NewClusterEvent;
+import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.GenericEvent;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.binding.Binding;
@@ -57,8 +64,10 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   private int               port;
   private String            servicePath;
   private boolean           secure;
+  protected boolean           verified = false;
   private String            actionPrefix;
   private static String SECURE_NAME = "EucalyptusCC";
+  private static String SECURE_NC_NAME = "EucalyptusNC";
   private static String INSECURE_NAME = "EucalyptusGL";
   public AbstractClusterMessageDispatcher( Cluster cluster, boolean secure ) throws BindingException {
     this( cluster );
@@ -68,9 +77,10 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
     }
   }
   
-  private static String makeInsecure( String input ) {
-    return input.replaceAll( SECURE_NAME, INSECURE_NAME );
+  protected static String makeInsecure( String input ) {
+    return input.replaceAll( SECURE_NAME, INSECURE_NAME ).replaceAll( SECURE_NC_NAME, INSECURE_NAME );
   }
+
   public AbstractClusterMessageDispatcher( Cluster cluster ) throws BindingException {
     this( );
     this.cluster = cluster;
@@ -134,7 +144,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
     } else if ( e instanceof ExceptionEvent ) {
       this.exceptionCaught( ctx, ( ExceptionEvent ) e );
     } else {
-      ctx.sendDownstream( e );
+      ctx.sendUpstream( e );
     }
   }
 
@@ -144,11 +154,35 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
     if ( this.channel != null ) {
       this.channel.close( );
     }
-    this.exceptionCaught( e.getCause( ) );
-    LOG.debug( e.getCause( ), e.getCause( ) );
+    if( e.getCause( ) instanceof AlreadyConnectedException || e.getCause( ) instanceof XMLStreamException ) {
+      LOG.trace( e.getCause( ), e.getCause( ) );
+      return;
+    } else {
+      this.exceptionCaught( e.getCause( ) );
+      LOG.debug( e.getCause( ), e.getCause( ) );
+    }
   }
 
   public abstract void exceptionCaught( Throwable cause );
+
+  protected void fireTimedStatefulTrigger( Event event ) {
+    if ( this.timedTrigger( event ) ) {
+      this.trigger( );
+    } else if ( event instanceof GenericEvent ) {
+      GenericEvent<Cluster> g = (GenericEvent<Cluster>) event;
+      if( !g.matches( this.getCluster( ) ) ) {
+        return;
+      }
+      if( g instanceof NewClusterEvent && !this.verified ) {
+        this.trigger();
+      } else if ( event instanceof TeardownClusterEvent ) {
+        this.verified = false;
+        this.cleanup( );
+      }
+    } else {
+      LOG.debug( "Ignoring event which doesn't belong to me: " + LogUtil.dumpObject( event ) );
+    }
+  }
 
   class DeferedWriter implements ChannelFutureListener {
     private Object              request;
@@ -237,6 +271,5 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
     } else if ( !servicePath.equals( other.servicePath ) ) return false;
     return true;
   }
-  
   
 }
