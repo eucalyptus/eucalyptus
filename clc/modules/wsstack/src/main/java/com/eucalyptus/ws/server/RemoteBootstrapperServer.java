@@ -157,7 +157,6 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
 
   public ChannelPipeline getPipeline( ) throws Exception {
     ChannelPipeline pipeline = pipeline( );
-    // TODO: handle security in here too.
     pipeline.addLast( "decoder", new HttpRequestDecoder( ) );
     pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
     pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );

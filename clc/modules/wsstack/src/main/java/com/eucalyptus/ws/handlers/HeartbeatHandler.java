@@ -82,8 +82,10 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mortbay.jetty.security.Credential;
@@ -122,8 +124,23 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
       Object message = ( ( MessageEvent ) e ).getMessage( );
       if ( message instanceof HttpRequest ) {
         HttpRequest request = ( ( HttpRequest ) message );
-        if ( !initialized ) {
+        if ( HttpMethod.GET.equals( request.getMethod( ) ) ) {
+          MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
+          String resp = "";
+          for ( Component c : Component.values( ) ) {
+            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s\n", c.name( ), c.isEnabled( ), c.isLocal( ) );
+          }
+          ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
+          response.setContent( buf );
+          response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
+          response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
+          ChannelFuture writeFuture = ctx.getChannel( ).write( response );
+          writeFuture.addListener( ChannelFutureListener.CLOSE );
+        } else if ( !initialized ) {
           initialize( ctx, request );
+        } else {
+          ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_ACCEPTABLE ) );
+          writeFuture.addListener( ChannelFutureListener.CLOSE );          
         }
       }
     }
@@ -133,11 +150,7 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     ByteArrayInputStream bis = new ByteArrayInputStream( request.getContent( ).toByteBuffer( ).array( ) );
     Properties props = new Properties( );
     props.load( bis );
-    InetSocketAddress addr = ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( );// this
-                                                                                         // is
-                                                                                         // the
-                                                                                         // db
-                                                                                         // address
+    InetSocketAddress addr = ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( );
     LOG.info( LogUtil.subheader( "Using " + addr.getHostName( ) + " as the database address." ) );
     Component.db.setHostAddress( addr.getHostName( ) );
     Component.dns.setHostAddress( addr.getHostName( ) );
