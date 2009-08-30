@@ -322,7 +322,7 @@ if [ -n "$LIBVIRT_HOME" ]; then
 fi
 
 # set the library path correctly
-export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
 
 case "$1" in
   start)

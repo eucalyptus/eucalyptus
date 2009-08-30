@@ -741,6 +741,18 @@ if [ -n "$CHECK" ]; then
 		fi
 	fi
 
+	if [ "$CHECK" = "cc" ]; then
+	    if [ ! -d $EUCALYPTUS/var/run/eucalyptus/net ]; then
+		if ! mkdir -p $EUCALYPTUS/var/run/eucalyptus/net ; then
+			# error should come from mkdir
+		    exit 1
+		fi
+		if ! chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus/net ; then
+			# error should come from chown
+		    exit 1
+		fi
+	    fi
+	fi
 	# good to go
 	exit 0
 fi
@@ -931,7 +943,7 @@ if [ -n "$WALRUS" ]; then
 	fi
 	
 	URL=""
-	if ! createCloudURL "Action" "RegisterWalrus" "Host" "${WALRUS}" "Name" "${WALRUS}" "Port" "8773"; then
+	if ! createCloudURL "Action" "RegisterWalrus" "Host" "${WALRUS}" "Name" "walrus" "Port" "8773"; then
 	    exit 1
 	fi
 	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null"

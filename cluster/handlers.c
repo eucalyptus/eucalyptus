@@ -1319,6 +1319,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       return(1);
     }
     for (i=0; i<networkIndexListLen; i++) {
+      logprintfl(EUCADEBUG, "IDX: %d\n", networkIndexList[i]);
       if ( (networkIndexList[i] < 0) || (networkIndexList[i] > (vnetconfig->numaddrs-1)) ) {
 	logprintfl(EUCAERROR, "network index (%d) out of bounds (0-%d)\n", networkIndexList[i], vnetconfig->numaddrs-1);
 	return(1);
