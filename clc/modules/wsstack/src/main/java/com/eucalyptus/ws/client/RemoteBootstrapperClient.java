@@ -63,21 +63,14 @@
  */
 package com.eucalyptus.ws.client;
 
-import java.net.InetSocketAddress;
-import java.net.SocketException;
-import java.util.List;
+import java.security.GeneralSecurityException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -86,14 +79,9 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
-import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
@@ -101,20 +89,18 @@ import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
 import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.StorageControllerConfiguration;
-import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.event.StopComponentEvent;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
-import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
-import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.util.HeartBeatUtil;
+import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.eucalyptus.ws.handlers.soap.AddressingHandler;
+import com.eucalyptus.ws.handlers.soap.SoapHandler;
+import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
@@ -123,7 +109,7 @@ import edu.ucsb.eucalyptus.StartupChecks;
 
 @Provides( resource = Resource.RemoteConfiguration )
 @Depends( resources = Resource.Database, local = Component.eucalyptus )
-public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, ChannelPipelineFactory, EventListener {
+public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPipelineFactory, EventListener {
   private static Logger                            LOG  = Logger.getLogger( RemoteBootstrapperClient.class );
   private ConcurrentMap<String, HeartBeatClient>   heartbeatMap;
   private Multimap<String, ComponentConfiguration> componentMap;
@@ -131,8 +117,13 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
   private ChannelFactory                           channelFactory;
   private NioClientPipeline                        clientPipeline;
   private static boolean                           hack = false;
-
-  public RemoteBootstrapperClient( ) {
+  private static RemoteBootstrapperClient client = new RemoteBootstrapperClient( );
+  
+  public static RemoteBootstrapperClient getInstance() {
+    return client;
+  }
+  
+  private RemoteBootstrapperClient( ) {
     this.channelFactory = new NioClientSocketChannelFactory( Executors.newCachedThreadPool( ), Executors.newCachedThreadPool( ) );
     this.clientBootstrap = new NioBootstrap( channelFactory );
     this.clientBootstrap.setPipelineFactory( this );
@@ -142,9 +133,19 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
 
   public ChannelPipeline getPipeline( ) throws Exception {
     ChannelPipeline pipeline = Channels.pipeline( );
-    pipeline.addLast( "decoder", new HttpResponseDecoder( ) );
-    pipeline.addLast( "encoder", new HttpRequestEncoder( ) );
-    pipeline.addLast( "heartbeat", new HeartbeatHandler( ) );
+    pipeline.addLast( "decoder", new HttpRequestEncoder( ) );
+    pipeline.addLast( "encoder", new HttpResponseDecoder( ) );
+    pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
+    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
+    try {
+      pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
+    } catch ( GeneralSecurityException e ) {
+      LOG.error(e,e);
+    }
+    pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
+    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
+    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ) ) );
+    pipeline.addLast( "handler", new HeartbeatHandler( ) );
     return pipeline;
   }
 
@@ -154,8 +155,10 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
     @Override
     public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
       if ( e instanceof ExceptionEvent ) {
+        LOG.error( ( ( ExceptionEvent ) e ).getCause( ), ( ( ExceptionEvent ) e ).getCause( ) );
         ctx.getChannel( ).close( );
       } else {
+        LOG.info( e );
         ctx.sendDownstream( e );
       }
     }
@@ -163,8 +166,10 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
     @Override
     public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
       if ( e instanceof ExceptionEvent ) {
+        LOG.error( ( ( ExceptionEvent ) e ).getCause( ), ( ( ExceptionEvent ) e ).getCause( ) );
         ctx.getChannel( ).close( );
       } else {
+        LOG.info( e );
         ctx.sendUpstream( e );
       }
     }
@@ -178,30 +183,11 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
 
   @Override
   public boolean start( ) throws Exception {
-    ( new Thread( new RemoteBootstrapperClient( ) ) ).start( );
     if ( !hack ) {
       StartupChecks.createDb( );
       hack = true;
     }
     return true;
-  }
-
-  @Override
-  public void run( ) {
-    while ( true ) {
-      long startTime = System.currentTimeMillis( );
-      try {
-        while ( ( System.currentTimeMillis( ) - startTime < 10000 ) ) {
-          Thread.sleep( 1000 );
-        }
-      } catch ( InterruptedException e ) {
-      }
-      for ( HeartBeatClient hb : this.heartbeatMap.values( ) ) {
-        for ( ComponentConfiguration conf : this.componentMap.get( hb.getHostName( ) ) ) {
-          hb.send( conf );
-        }
-      }
-    }
   }
 
   @Override
@@ -211,12 +197,15 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
   public void fireEvent( Event event ) {
     if ( event instanceof StartComponentEvent ) {
       StartComponentEvent s = ( StartComponentEvent ) event;
-      if ( !Component.walrus.equals( s.getComponent( ) ) || !Component.storage.equals( s.getComponent( ) ) ) return;
+      if ( !Component.walrus.equals( s.getComponent( ) ) && !Component.storage.equals( s.getComponent( ) ) ) return;
       if ( s.isLocal( ) || this.heartbeatMap.containsKey( s.getConfiguration( ).getHostName( ) ) ) return;
       ComponentConfiguration config = s.getConfiguration( );
       this.heartbeatMap.put( config.getHostName( ), new HeartBeatClient( this.clientBootstrap, config.getHostName( ), config.getPort( ) ) );
       this.componentMap.put( config.getHostName( ), config );
       LOG.info( "-> Registering heartbeat client for host: " + s );
+      for ( HeartBeatClient hb : this.heartbeatMap.values( ) ) {
+        hb.send( this.componentMap.get( hb.getHostName( ) ) );
+      }        
     } else if ( event instanceof StopComponentEvent ) {
       StopComponentEvent s = ( StopComponentEvent ) event;
       if ( !Component.walrus.equals( s.getComponent( ) ) || !Component.storage.equals( s.getComponent( ) ) ) return;
@@ -227,6 +216,12 @@ public class RemoteBootstrapperClient extends Bootstrapper implements Runnable, 
       if ( this.componentMap.get( config.getHostName( ) ).isEmpty( ) ) {
         HeartBeatClient hb = this.heartbeatMap.remove( config.getHostName( ) );
         hb.close( );
+      }
+    } else if ( event instanceof ClockTick ) {
+      if( ((ClockTick)event).isBackEdge( ) ) {
+        for ( HeartBeatClient hb : this.heartbeatMap.values( ) ) {
+          hb.send( this.componentMap.get( hb.getHostName( ) ) );
+        }        
       }
     }
   }

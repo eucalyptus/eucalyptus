@@ -81,6 +81,7 @@ import com.eucalyptus.bootstrap.Resource;
 import com.eucalyptus.bootstrap.ServiceBootstrapper;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.event.EventVetoedException;
@@ -99,16 +100,25 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   
   @Override
   public boolean load( Resource current ) throws Exception {
+    
     LOG.trace( "Touching class: " + ServiceDispatcher.class);
     for( Component v : Component.values( ) ) {
       LOG.info("Ensure component is initialized: " + LogUtil.dumpObject( v ) );
     }
     if( !Component.eucalyptus.isLocal( ) ) {
       Component.eucalyptus.setHostAddress( Component.db.getHostAddress( ) );
+      registerComponent( Component.eucalyptus, new RemoteConfiguration( Component.eucalyptus, Component.eucalyptus.getUri( ) ) );
       Component.jetty.setHostAddress( Component.db.getHostAddress( ) );
+      registerComponent( Component.jetty, new RemoteConfiguration( Component.jetty, Component.jetty.getUri( ) ) );
       Component.cluster.setHostAddress( Component.db.getHostAddress( ) );
+      registerComponent( Component.cluster, new RemoteConfiguration( Component.cluster, Component.cluster.getUri( ) ) );
+      Component.cluster.setHostAddress( Component.db.getHostAddress( ) );
+      registerComponent( Component.dns, new RemoteConfiguration( Component.dns, Component.dns.getUri( ) ) );
     } else if( Component.eucalyptus.isLocal( ) ) {
       try {
+        registerLocalComponent( Component.db );
+        Component.db.setHostAddress( "127.0.0.1" ); //reset this afterwards due to brain damages.
+        System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
         registerLocalComponent( Component.dns );
         registerLocalComponent( Component.eucalyptus );
         registerLocalComponent( Component.cluster );

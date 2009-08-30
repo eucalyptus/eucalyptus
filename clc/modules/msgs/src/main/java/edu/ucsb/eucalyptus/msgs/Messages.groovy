@@ -76,6 +76,20 @@ public class INTERNAL extends EucalyptusMessage {
   }
 }
 
+public class HeartbeatType extends EucalyptusMessage {
+  ArrayList<HeartbeatComponentType> components = new ArrayList<HeartbeatComponentType>();
+}
+public class HeartbeatResponseType extends EucalyptusMessage {}
+public class HeartbeatComponentType extends EucalyptusData {
+  String component;
+  String name;
+  public HeartbeatComponentType( String component, String name ) {
+    super( );
+    this.component = component;
+    this.name = name;
+  }
+}
+
 public class StorageStateType extends EucalyptusMessage{
   private String name;
   private String volumesPath;

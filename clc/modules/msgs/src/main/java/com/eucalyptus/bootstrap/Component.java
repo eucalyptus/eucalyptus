@@ -77,19 +77,18 @@ public enum Component {
   walrus( "vm://BukkitInternal" ),
   dns( "vm://DNSControlInternal" ),
   storage( "vm://StorageInternal" ),
-  db( "127.0.0.1" ),
+  db( "jdbc:hsqldb:hsql://127.0.0.1:9001/eucalyptus" ),
   cluster( "vm://ClusterSink" ),
-  addressing( "vm://ClusterSink" ),
   jetty( "vm://HttpServer" ),
   any( true );
-  private static Logger      LOG     = Logger.getLogger( Component.class );
-  private boolean            local   = false;
+  private static Logger      LOG         = Logger.getLogger( Component.class );
+  private boolean            local       = false;
 
-  private boolean            enabled = false;
+  private boolean            enabled     = false;
   private boolean            initialized = true;
-  private boolean            hasKeys = false;
+  private boolean            hasKeys     = false;
   private String             hostAddress;
-  private int                port    = 8773;
+  private int                port        = 8773;
   private String             localUri;
   private URI                uri;
   private String             propertyKey;
@@ -136,7 +135,7 @@ public enum Component {
   public void markLocal( ) {
     this.local = true;
   }
-  
+
   public ResourceProvider getResourceProvider( ) {
     return resourceProvider;
   }
@@ -176,9 +175,9 @@ public enum Component {
 
   public String makeUri( String address ) {
     if ( Component.db.equals( this ) ) {
-      return address;
+      return String.format( "jdbc:hsqldb:hsql://%s:%d/eucalyptus", address, 9001 );
     } else {
-      return "http://" + address + ":" + this.getPort( ) + "/internal/" + this.localUri.replaceAll( "vm://", "" );
+      return String.format( "http://%s:%d/internal/", address, 8773, this.localUri.replaceAll( "vm://", "" ) );
     }
   }
 
@@ -194,10 +193,10 @@ public enum Component {
     try {
       this.uri = new URI( uri );
       System.setProperty( this.propertyKey, this.uri.toASCIIString( ) );
-      if ( LOG != null ) LOG.debug( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.uri.toASCIIString( ) ) );
+      if ( LOG != null ) LOG.info( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.uri.toASCIIString( ) ) );
     } catch ( Exception e ) {
       System.setProperty( this.propertyKey, this.localUri );
-      if ( LOG != null ) LOG.debug( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.localUri ) );
+      if ( LOG != null ) LOG.info( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.localUri ) );
     }
   }
 
@@ -222,14 +221,12 @@ public enum Component {
   }
 
   public URI getLocalUri( ) {
-    if( Component.db.equals( this ) ) {
-      return null;
-    }
+    if ( Component.db.equals( this ) ) { return null; }
     try {
-      return new URI(this.localUri);
+      return new URI( this.localUri );
     } catch ( URISyntaxException e ) {
       LOG.fatal( "Failed to construct the default local URI object.", e );
-      System.exit(1);
+      System.exit( 1 );
       return null;
     }
   }

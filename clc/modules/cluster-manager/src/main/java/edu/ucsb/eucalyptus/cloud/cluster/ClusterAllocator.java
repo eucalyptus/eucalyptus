@@ -199,7 +199,7 @@ class ClusterAllocator extends Thread {
     String rsvId = this.vmAllocInfo.getReservationId();
     VmKeyInfo keyInfo = this.vmAllocInfo.getKeyInfo();
 
-    VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames );
+    VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, token.getNetworkIndexes( ) );
     this.msgMap.put( State.CREATE_VMS, new QueuedEvent<VmRunType>( new VmRunCallback( this.cluster.getConfiguration( ), this, token ), run ) );
   }
 

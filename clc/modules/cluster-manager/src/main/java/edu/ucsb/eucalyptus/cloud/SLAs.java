@@ -120,16 +120,6 @@ public class SLAs {
         try {
           NetworkToken netToken = allocateClusterVlan( userId, token.getCluster(), network.getName() );
           token.getNetworkTokens().add( netToken );
-          for( int i = 0; i < token.getAmount( ); i++ ) {
-            Integer addrIndex = network.getAvailableAddresses( ).pollFirst();
-            if( addrIndex == null ) {
-              network.getAvailableAddresses( ).addAll( netToken.getIndexes( ) );
-              netToken.getIndexes( ).clear( );
-              throw new NotEnoughResourcesAvailable( "Not enough addresses left in the requested network subnet." );
-            } else {
-              netToken.getIndexes( ).add( addrIndex );
-            }
-          }
         } catch ( NetworkAlreadyExistsException e ) {}
       }
   }

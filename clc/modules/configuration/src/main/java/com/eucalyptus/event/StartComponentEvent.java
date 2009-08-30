@@ -16,5 +16,12 @@ public class StartComponentEvent extends ComponentEvent {
   private StartComponentEvent( ComponentConfiguration configuration, Component component, boolean local ) {
     super( configuration, component, local );
   }
+  @Override
+  public String toString( ) {
+    return String.format( "StartComponentEvent [component=%s, configuration=%s, local=%s]", component, configuration, local );
+  }
+  
+  
 
+  
 }

@@ -7,9 +7,12 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.ws.BindingException;
+
+import edu.ucsb.eucalyptus.msgs.DescribePublicAddressesType;
 
 public class AddressStateHandler extends AbstractClusterMessageDispatcher {
   private static Logger LOG = Logger.getLogger( NetworkStateHandler.class );
@@ -18,7 +21,12 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
   }
 
   @Override
-  public void trigger( ) {}
+  public void trigger( ) {
+    DescribePublicAddressesType drMsg = new DescribePublicAddressesType( );
+    drMsg.setUserId( Component.eucalyptus.name() );
+    drMsg.setEffectiveUserId( Component.eucalyptus.name() );
+    this.write( drMsg );
+  }
 
   @Override
   public void fireEvent( Event event ) {}

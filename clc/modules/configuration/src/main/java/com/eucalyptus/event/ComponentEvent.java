@@ -27,5 +27,12 @@ public class ComponentEvent extends Event {
     return local;
   }
 
+  @Override
+  public String toString( ) {
+    return String.format( "ComponentEvent [component=%s, configuration=%s, local=%s, getCause()=%s, getFail()=%s, isVetoed()=%s]", component, configuration, local, getCause( ), getFail( ), isVetoed( ) );
+  }
+
+
+  
   
 }

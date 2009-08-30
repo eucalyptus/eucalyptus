@@ -64,6 +64,7 @@
 package com.eucalyptus.config;
 
 import java.io.Serializable;
+import java.net.URI;
 import java.util.Date;
 
 import javax.persistence.Entity;
@@ -148,6 +149,10 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
       return false;
     }
   }
+
+  public String toString() {
+    return this.dump( );
+  }
 }
 
 public class LocalConfiguration extends ComponentConfiguration {
@@ -159,7 +164,22 @@ public class LocalConfiguration extends ComponentConfiguration {
     return c;
   }
   public String getUri() {
-    return this.getHostName() + ":[" + this.getServicePath() + "]";
+    return c.getLocalAddress( );
+  }
+}
+
+public class RemoteConfiguration extends ComponentConfiguration {
+  private Component c;
+  private URI uri;
+  public RemoteConfiguration( Component c, URI uri ) {
+    super( c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
+    this.c = c;
+  }  
+  public Component getComponent() {
+    return this.c;
+  }
+  public String getUri() {
+    return this.uri.toASCIIString( );
   }
 }
 

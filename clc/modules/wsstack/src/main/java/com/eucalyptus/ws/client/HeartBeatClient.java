@@ -1,21 +1,22 @@
 package com.eucalyptus.ws.client;
 
 import java.net.InetSocketAddress;
+import java.util.Collection;
 
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.util.HeartBeatUtil;
+import com.eucalyptus.ws.MappingHttpRequest;
+
+import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
+import edu.ucsb.eucalyptus.msgs.HeartbeatType;
 
 
 public class HeartBeatClient {
@@ -25,25 +26,27 @@ public class HeartBeatClient {
   private ChannelFuture     channelWriteFuture;
   private Channel           channel;
   private NioBootstrap      clientBootstrap;
-  
+  private String hostName;
+  private int port;
   public HeartBeatClient( NioBootstrap clientBootstrap, String hostName, int port ) {
     this.remoteAddr = new InetSocketAddress( hostName, port );
     this.clientBootstrap = clientBootstrap;
+    this.hostName = hostName;
+    this.port = port;
   }
 
   
   
-  public void send( ComponentConfiguration componentConfiguration ) {
-    ChannelBuffer buffer;
+  public void send( Collection<ComponentConfiguration> componentConfigurations ) {
     try {
-      buffer = HeartBeatUtil.getConfigurationBuffer( componentConfiguration );
-      HttpRequest httpRequest = new DefaultHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, "/services/Heartbeat" );
-      httpRequest.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
-      httpRequest.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );
-      httpRequest.setContent( buffer );
+      HeartbeatType hbmsg = new HeartbeatType( );
+      for( ComponentConfiguration c : componentConfigurations ) {
+        hbmsg.getComponents( ).add( new HeartbeatComponentType( c.getComponent( ).name( ), c.getName( ) ) );
+      }
+      MappingHttpRequest httpRequest = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.getHostName( ), this.getPort(), "/services/Heartbeat", hbmsg );
       this.write( httpRequest );
     } catch ( Exception e ) {
-      LOG.error( "Error sending configuration to " + LogUtil.dumpObject( componentConfiguration ) );
+      LOG.error( "Error sending configuration to " + LogUtil.dumpObject( componentConfigurations ) );
     }
   }
   
@@ -85,6 +88,12 @@ public class HeartBeatClient {
     }
   }
   public final String getHostName( ) {
-    return remoteAddr.getHostName( );
+    return this.hostName;
+  }
+
+
+
+  public int getPort( ) {
+    return port;
   }
 }

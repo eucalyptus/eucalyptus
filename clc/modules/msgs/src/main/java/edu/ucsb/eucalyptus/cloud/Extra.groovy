@@ -107,6 +107,7 @@ public class VmAllocationInfo implements RequestTransactionScript {
 
   List<ResourceToken> allocationTokens = new ArrayList<ResourceToken>();
   List<String> addresses = new ArrayList<String>();
+  ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
 
   def VmAllocationInfo() {}
 
@@ -153,7 +154,6 @@ public class VmInfo extends EucalyptusData {
   String launchIndex;
   ArrayList<String> groupNames = new ArrayList<String>();
   ArrayList<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
-  ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
 
   String placement;
 
@@ -174,6 +174,7 @@ public class VmRunType extends EucalyptusMessage {
   List<String> instanceIds = new ArrayList<String>();
   List<String> macAddresses = new ArrayList<String>();
   List<String> networkNames = new ArrayList<String>();
+  ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
 
 
   def VmRunType() {}
@@ -182,7 +183,7 @@ public class VmRunType extends EucalyptusMessage {
                 final String reservationId, final String userData, final int amount,
                 final VmImageInfo imageInfo, final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo,
                 final List<String> instanceIds, final List<String> macAddresses,
-                final int vlan, final List<String> networkNames) {
+                final int vlan, final List<String> networkNames, final List<Integer> networkIndexList ) {
     this.correlationId = request.correlationId;
     this.userId = request.userId;
     this.effectiveUserId = request.effectiveUserId;
@@ -197,6 +198,7 @@ public class VmRunType extends EucalyptusMessage {
     this.instanceIds = instanceIds;
     this.macAddresses = macAddresses;
     this.networkNames = networkNames;
+    this.networkIndexList = networkIndexList;
   }
 
   def VmRunType(RunInstancesType request) {
@@ -204,9 +206,6 @@ public class VmRunType extends EucalyptusMessage {
     this.correlationId = request.correlationId;
     this.userId = request.userId;
   }
-
-
-
 
   public String toString() {
     /** TODO-1.4: do something reasonable here    **/
@@ -273,7 +272,7 @@ public class Network implements HasName {
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
     this.availableAddresses = new ConcurrentSkipListSet<Integer>();
-    for( int i = 0; i < 8192; i++ ) {
+    for( int i = 2; i < 8192; i++ ) {
       this.availableAddresses.add( i );
     }
   }
@@ -392,6 +391,7 @@ public class ResourceToken implements Comparable {
   String userName;
   ArrayList<String> instanceIds = new ArrayList<String>();
   ArrayList<String> addresses = new ArrayList<String>();
+  ArrayList<Integer> networkIndexes = new ArrayList<Integer>();
   ArrayList<NetworkToken> networkTokens = new ArrayList<NetworkToken>();
   int amount;
   String vmType;

@@ -21,6 +21,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpResponse;
 
+import edu.ucsb.eucalyptus.cloud.net.AddressUpdateCallback;
 import edu.ucsb.eucalyptus.msgs.GetKeysResponseType;
 import edu.ucsb.eucalyptus.msgs.GetKeysType;
 
@@ -89,6 +90,7 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
       if( certs && !this.verified ) {
         try {
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
+          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
         } catch ( Exception e1 ) {
           LOG.error( e1, e1 );
         }

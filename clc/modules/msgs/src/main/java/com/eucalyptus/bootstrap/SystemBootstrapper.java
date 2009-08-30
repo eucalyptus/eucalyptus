@@ -151,7 +151,7 @@ public class SystemBootstrapper {
         }
       }
     } catch ( Throwable e ) {
-      LOG.fatal( e, e );
+      LOG.info( e, e );
     }
     return true;
   }
@@ -175,7 +175,7 @@ public class SystemBootstrapper {
         }
       }
     } catch ( Throwable e ) {
-      LOG.fatal( e, e );
+      LOG.info( e, e );
     }
     return true;
   }

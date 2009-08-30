@@ -69,6 +69,8 @@ import edu.ucsb.eucalyptus.cloud.FailScriptFailException;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.SLAs;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.cluster.Networks;
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -78,6 +80,7 @@ import org.bouncycastle.util.encoders.Base64;
 
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 
 public class VmAdmissionControl {
 
@@ -118,12 +121,31 @@ public class VmAdmissionControl {
         NavigableSet<String> addresses = AddressManager.allocateAddresses( addrCount );
         for ( ResourceToken token : allocTokeList ) {
           for ( int i = 0; i < token.getAmount(); i++ ) {
-            token.getAddresses().add( addresses.pollFirst() );
+            token.getAddresses().add( addresses.pollFirst() );            
           }
         }
       }
       vmAllocInfo.getAllocationTokens().addAll( allocTokeList );
       sla.doNetworkAllocation( vmAllocInfo.getRequest().getUserId(), vmAllocInfo.getAllocationTokens(), vmAllocInfo.getNetworks() );
+      
+      try {
+        Network network = Networks.getInstance( ).lookup( vmAllocInfo.getNetworks( ).get( 0 ).getName( ) );
+        for ( ResourceToken token : allocTokeList ) {
+          for ( int i = 0; i < token.getAmount(); i++ ) {
+            Integer addrIndex = network.getAvailableAddresses( ).pollFirst();
+            if( addrIndex == null ) {
+              network.getAvailableAddresses( ).addAll( token.getNetworkIndexes( ) );
+              token.getNetworkIndexes( ).clear( );
+              throw new NotEnoughResourcesAvailable( "Not enough addresses left in the requested network subnet." );
+            } else {
+              token.getNetworkIndexes( ).add( addrIndex );
+            }
+          }
+        }
+      } catch ( NoSuchElementException e ) {
+        throw new NotEnoughResourcesAvailable( "Error obtaining a reference to the network state.  This is a BUG." );
+      }
+
     } catch ( FailScriptFailException e ) {
       failed = e;
       LOG.debug( e, e );

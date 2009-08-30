@@ -1,5 +1,7 @@
 package com.eucalyptus.event;
 
+import com.eucalyptus.util.LogUtil;
+
 public abstract class Event {
   private boolean veto;
   private String cause;
@@ -34,5 +36,5 @@ public abstract class Event {
   public void setFail( Exception fail ) {
     this.fail = fail;
   }
-
+  
 }

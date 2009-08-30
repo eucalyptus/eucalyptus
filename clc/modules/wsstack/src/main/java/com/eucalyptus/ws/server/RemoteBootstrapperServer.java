@@ -67,6 +67,7 @@ import static org.jboss.netty.channel.Channels.pipeline;
 
 import java.io.ByteArrayInputStream;
 import java.net.InetSocketAddress;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Properties;
 import java.util.Map.Entry;
@@ -77,6 +78,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
@@ -88,8 +91,11 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
@@ -102,7 +108,14 @@ import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
 import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.ws.MappingHttpResponse;
+import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.HeartbeatHandler;
+import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.eucalyptus.ws.handlers.soap.AddressingHandler;
+import com.eucalyptus.ws.handlers.soap.SoapHandler;
+import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 
 import edu.ucsb.eucalyptus.StartupChecks;
 @Provides( resource = Resource.RemoteConfiguration ) 
@@ -148,8 +161,40 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
     pipeline.addLast( "decoder", new HttpRequestDecoder( ) );
     pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
     pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
+    pipeline.addLast( "hb-get-handler", new SimpleChannelHandler( ) );
+    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
+    try {
+      pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
+    } catch ( GeneralSecurityException e ) {
+      LOG.error(e,e);
+    }
+    pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
+    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
+    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ) ) );
     pipeline.addLast( "handler", new HeartbeatHandler( this.channel ) );
     return pipeline;
+  }
+  
+  public static class SimpleHeartbeatHandler extends SimpleChannelHandler {
+
+    @Override
+    public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
+      if( e.getMessage( ) instanceof HttpRequest && HttpMethod.GET.equals( ((HttpRequest)e.getMessage( )).getMethod( ) ) ) {
+        HttpRequest request = (HttpRequest) e.getMessage( );
+        MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
+        String resp = "";
+        for( Component c : Component.values( ) ) {
+          resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s\n", c.name( ), c.isEnabled( ), c.isLocal( ) );
+        }
+        ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
+        response.setContent( buf );
+        response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
+        response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
+        ChannelFuture writeFuture = ctx.getChannel( ).write( response );
+        writeFuture.addListener( ChannelFutureListener.CLOSE );
+      }
+    }
+    
   }
 
   public int getPort( ) {

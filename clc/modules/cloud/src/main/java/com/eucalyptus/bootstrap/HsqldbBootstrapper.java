@@ -106,12 +106,14 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
   @Override
   public boolean load( Resource current ) throws Exception {
     this.db = new Server( );
-    LOG.info( "-> database host: " + System.getProperty("euca.db.host") );
-    LOG.info( "-> database port: " + System.getProperty("euca.db.port") );
+    Component.db.markLocal( );
+    Component.db.setHostAddress( "127.0.0.1" );
+    System.setProperty( "euca.db.password", "" );
+    System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
     HsqlProperties props = new HsqlProperties( );
     props.setProperty( ServerConstants.SC_KEY_NO_SYSTEM_EXIT, true );
-    String dbPort = System.getProperty( DatabaseConfig.EUCA_DB_PORT );
-    props.setProperty( ServerConstants.SC_KEY_PORT, Integer.parseInt( dbPort ) );
+    int dbPort = 9001;
+    props.setProperty( ServerConstants.SC_KEY_PORT, 9001 );
     props.setProperty( ServerConstants.SC_KEY_REMOTE_OPEN_DB, true );
     props.setProperty( ServerConstants.SC_KEY_DATABASE + ".0", SubDirectory.DB.toString( ) + File.separator + Component.eucalyptus.name() );
     props.setProperty( ServerConstants.SC_KEY_DBNAME + ".0", Component.eucalyptus.name() );
@@ -126,6 +128,9 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
     props.setProperty( ServerConstants.SC_KEY_DBNAME + ".3", Component.eucalyptus.name() + config );
     this.db.setProperties( props );
     this.db.start( );
+    if( !Component.walrus.isLocal( ) || !Component.storage.isLocal( ) ) {
+      
+    }
     return true;
   }
 

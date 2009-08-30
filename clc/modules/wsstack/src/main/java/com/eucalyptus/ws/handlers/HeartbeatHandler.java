@@ -62,6 +62,8 @@ package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.SocketException;
 import java.util.List;
 import java.util.Properties;
@@ -86,6 +88,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.stages.UnrollableStage;
@@ -120,19 +123,7 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
         HttpRequest request = ( ( HttpRequest ) message );
         if( !initialized ) {
           initialize( ctx, request );
-        } else {
-          MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
-          String resp = "";
-          for( Component c : Component.values( ) ) {
-            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s\n", c.name( ), c.isEnabled( ), c.isLocal( ) );
-          }
-          ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
-          response.setContent( buf );
-          response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
-          response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-          ChannelFuture writeFuture = ctx.getChannel( ).write( response );
-          writeFuture.addListener( ChannelFutureListener.CLOSE );          
-        }
+        } 
       }
     }
   }
@@ -141,6 +132,13 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     ByteArrayInputStream bis = new ByteArrayInputStream( request.getContent( ).toByteBuffer( ).array( ) );
     Properties props = new Properties( );
     props.load( bis );
+    InetSocketAddress addr = (InetSocketAddress) ctx.getChannel( ).getRemoteAddress( );//this is the db address
+    LOG.info( LogUtil.subheader( "Using "+addr.getHostName( )+" as the database address." ));
+    Component.db.setHostAddress( addr.getHostName( ) );
+    System.setProperty( "euca.db.password", "" );
+    System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
+    this.channel.close( );
+
     boolean foundDb = false;
     List<String> localAddrs = NetworkUtil.getAllAddresses( );
     for ( Entry<Object, Object> entry : props.entrySet( ) ) {
