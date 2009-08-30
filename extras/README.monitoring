@@ -55,6 +55,11 @@ script, in the example
 process the information (more so if you just started it) and you should
 now be able to monitor the status of Eucalyptus hosts and services.
 
+NOTE: some of the eucalyptus hosts may show a status of PENDING in some
+nagios screens (Host detail in particular). This is no really true since
+the tests are taken, but nagios report them as such becasue some tests
+aren't under nagios control. You will see the correct values in the others
+screens.
 
 GANGLIA
 =======
@@ -64,8 +69,9 @@ Prerequisite
 
 Have a working ganglia installation. In particular you should one of more
 gmond running on the machines you want monitored (nc, sc and walrus), and
-at least one gmetad to collect all the data. You should be able to see
-ganglia's graphs (usually at http://localhost/ganglia).
+at least one gmetad and one webfrontend to collect and to show all the
+data. You should be able to see ganglia's graphs (usually at
+http://localhost/ganglia).
 
 You need to have a working Eucalyptus installation (1.6 or higher).
 

@@ -19,7 +19,7 @@
 
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       1.5.2
+Version:       1.6.0
 Release:       1
 License:       BSD
 Group:         Applications/System
@@ -32,7 +32,7 @@ BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euc
 Requires:      vlan, aoetools, vblade
 %endif
 
-Conflicts:     eucalyptus-cloud < 1.5, eucalyptus-cc < 1.5, eucalyptus-nc < 1.5
+Conflicts:     eucalyptus-cloud < 1.6, eucalyptus-cc < 1.6, eucalyptus-nc < 1.6
 Vendor:        Eucalyptus Systems
 #Icon:          someicon.xpm
 Source:        http://open.eucalyptus.com/downloads/eucalyptus-%{version}.tgz
@@ -47,10 +47,52 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the common parts: you will need to install either
 eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
+%package common-java
+Summary:      Elastic Utility Computing Architecture - ws java stack 
+Requires:     eucalyptus >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Conflicts:    eucalyptus < 1.6
+Group:        Applications/System
+
+%description common-java
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains the java WS stack.
+
+%package wlarus
+Summary:      Elastic Utility Computing Architecture - cloud controller
+Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Conflicts:    eucalyptus-cc < 1.6
+Group:        Applications/System
+
+%description walrus
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains walrus.
+
+%package sc
+Summary:      Elastic Utility Computing Architecture - walrus
+Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Conflicts:    eucalyptus-cloud < 1.6
+Group:        Applications/System
+
+%description sc
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains the storage controller part of eucalyptus.
+
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= 1.5.2, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
-Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
+Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Conflicts:    eucalyptus-cc < 1.6
 Group:        Applications/System
 
 %description cloud
@@ -63,8 +105,8 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, iptables, bridge-utils, eucalyptus-gl >= 1.5, %{__dhcp}
-Conflicts:    eucalyptus < 1.5, eucalyptus-nc < 1.5
+Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, iptables, bridge-utils, eucalyptus-gl >= 1.5, %{__dhcp}
+Conflicts:    eucalyptus < 1.6, eucalyptus-nc < 1.6
 Group:        Applications/System
 
 %description cc
@@ -77,8 +119,8 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
-Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
+Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
+Conflicts:    eucalyptus < 1.6, eucalyptus-cc < 1.6
 Group:        Applications/System
 
 %description nc
@@ -91,8 +133,8 @@ This package contains the node controller part of eucalyptus.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus >= 1.5, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
-Conflicts:    eucalyptus < 1.5
+Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
+Conflicts:    eucalyptus < 1.6
 Group:        Applications/System
 
 %description gl
@@ -113,10 +155,10 @@ then
 	cp -f tools/eucalyptus.conf.rpmbased tools/eucalyptus.conf
 fi
 %if %is_suse
-./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
+./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
 %endif
 %if %is_centos
-./configure --with-libvirt=/opt/euca-libvirt --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
+./configure --with-libvirt=/opt/euca-libvirt --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
 %endif
 cd clc
 make deps
@@ -125,56 +167,70 @@ make
 
 %install
 make install
+ls /usr/share/eucalyptus/*jar|grep -v eucalyptus-walrus|grep -v eucalyptus-storagecontroller|grep -v eucalyptus-interface > jar_list
 
 %clean
-rm -rf /opt/eucalyptus/etc /opt/eucalyptus/usr /opt/eucalyptus/var
-rm -rf /opt/eucalyptus/lib
-rm -rf $RPM_BUILD_DIR/eucalyptus
-rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-cc
+rm -rf /etc/eucalyptus /usr/lib/eucalyptus /usr/share/eucalyptus
+rm -rf /var/lib/eucalyptus /var/run/eucalyptus /var/log/eucalyptus
+rm -rf /usr/sbin/euca_* /usr/sbin/eucalytpus-cloud $RPM_BUILD_DIR/eucalyptus
+rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc
+rm -rf /etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-sc
+rm -rf /etc/init.d/eucalyptus-walrus
 
 %files
 %doc LICENSE INSTALL README CHANGELOG
-/opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
-/opt/eucalyptus/var/lib/eucalyptus/keys
-/opt/eucalyptus/var/log
-/opt/eucalyptus/var/run
-/opt/eucalyptus/usr/share/eucalyptus/add_key.pl
-/opt/eucalyptus/usr/share/eucalyptus/euca_ipt
-/opt/eucalyptus/usr/share/eucalyptus/populate_arp.pl
-/opt/eucalyptus/usr/lib/eucalyptus/euca_rootwrap
-/opt/eucalyptus/usr/sbin/euca_conf
-/opt/eucalyptus/usr/sbin/euca_sync_key
-/opt/eucalyptus/usr/sbin/euca_killall
-/opt/eucalyptus/etc/eucalyptus/httpd.conf
-/opt/eucalyptus/etc/eucalyptus/eucalyptus-version
+/etc/eucalyptus/eucalyptus.conf
+/var/lib/eucalyptus/keys
+/var/log/eucalyptus
+/var/run/eucalyptus
+/usr/share/eucalyptus/add_key.pl
+/usr/share/eucalyptus/euca_ipt
+/usr/share/eucalyptus/populate_arp.pl
+/usr/lib/eucalyptus/euca_rootwrap
+/usr/sbin/euca_conf
+/usr/sbin/euca_sync_key
+/usr/sbin/euca_killall
+/etc/eucalyptus/httpd.conf
+/etc/eucalyptus/eucalyptus-version
+
+%files common-java -f jar_list
+/etc/eucalyptus/cloud.d
+/etc/eucalyptus/cloud.xml
+/var/lib/eucalyptus/db
+/var/lib/eucalyptus/modules
+/var/lib/eucalyptus/webapps
+/usr/lib/eucalyptus/libfsstorage.so
+/usr/lib/eucalyptus/liblvm2control.so
+/usr/sbin/eucalyptus-cloud
 
 %files cloud
-/opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
-/opt/eucalyptus/etc/eucalyptus/cloud.d
-/opt/eucalyptus/etc/eucalyptus/cloud.xml
-/opt/eucalyptus/usr/share/eucalyptus/*jar
-/opt/eucalyptus/var/lib/eucalyptus/db
-/opt/eucalyptus/var/lib/eucalyptus/modules
-/opt/eucalyptus/var/lib/eucalyptus/webapps
-/opt/eucalyptus/usr/lib/eucalyptus/libfsstorage.so
-/opt/eucalyptus/usr/lib/eucalyptus/liblvm2control.so
-/opt/eucalyptus/etc/init.d/eucalyptus-cloud
+/etc/init.d/eucalyptus-cloud
+/usr/share/eucalyptus/eucalyptus-interface-%{version}.jar
+
+%files walrus
+/etc/init.d/eucalyptus-walrus
+/usr/share/eucalyptus/eucalyptus-walrus-%{version}.jar
+
+%files sc
+/etc/init.d/eucalyptus-sc
+/usr/share/eucalyptus/eucalyptus-sc-%{version}.jar
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
-/opt/eucalyptus/etc/init.d/eucalyptus-cc
+/etc/init.d/eucalyptus-cc
+/etc/eucalyptus/vtunall.conf.template
 
 %files nc
-/opt/eucalyptus/usr/lib/eucalyptus/euca_mountwrap
-/opt/eucalyptus/usr/share/eucalyptus/gen_libvirt_xml
-/opt/eucalyptus/usr/share/eucalyptus/gen_kvm_libvirt_xml
-/opt/eucalyptus/usr/share/eucalyptus/partition2disk
-/opt/eucalyptus/usr/share/eucalyptus/get_xen_info
-/opt/eucalyptus/usr/share/eucalyptus/get_sys_info
-/opt/eucalyptus/usr/share/eucalyptus/detach.pl
-/opt/eucalyptus/usr/sbin/euca_test_nc
+/usr/lib/eucalyptus/euca_mountwrap
+/usr/share/eucalyptus/gen_libvirt_xml
+/usr/share/eucalyptus/gen_kvm_libvirt_xml
+/usr/share/eucalyptus/partition2disk
+/usr/share/eucalyptus/get_xen_info
+/usr/share/eucalyptus/get_sys_info
+/usr/share/eucalyptus/detach.pl
+/usr/sbin/euca_test_nc
 /opt/euca-axis2c/services/EucalyptusNC
-/opt/eucalyptus/etc/init.d/eucalyptus-nc
+/etc/init.d/eucalyptus-nc
 
 %files gl
 /opt/euca-axis2c/services/EucalyptusGL
@@ -229,7 +285,7 @@ if ! getent passwd eucalyptus > /dev/null ; then
 %endif
 fi
 # let's get the default bridge 
-/opt/eucalyptus/usr/sbin/euca_conf -bridge %{__bridge} 
+/usr/sbin/euca_conf -bridge %{__bridge} 
 
 # upgrade?
 if [ "$1" = "2" ];
@@ -256,9 +312,9 @@ then
 	fi
 fi
 # final setup and set the new user
-/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus -setup -user eucalyptus
+/usr/sbin/euca_conf -d / -setup -user eucalyptus
 
-%post cloud
+%post common-java
 if [ "$1" = "2" ]; 
 then
 	cd /opt/eucalyptus
@@ -273,31 +329,42 @@ then
 		fi
 	fi
 fi
-ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-cloud
 chkconfig --add eucalyptus-cloud
 
+%post cloud
+chkconfig --add eucalyptus-cloud
+/etc/init.d/eucalyptus-cloud stop > /dev/null 2> /dev/null
+
+%post walrus
+chkconfig --add eucalyptus-walrus
+/etc/init.d/eucalyptus-walrus stop > /dev/null 2> /dev/null
+
+%post sc
+chkconfig --add eucalyptus-sc
+/etc/init.d/eucalyptus-sc stop > /dev/null 2> /dev/null
+
 %post cc
-ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-cc
 chkconfig --add eucalyptus-cc
 
 %post nc
-ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-nc
-. /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 chkconfig --add eucalyptus-nc
 
 %postun
 # in case of removal let's try to clean up the best we can
 if [ "$1" = "0" ];
 then
-	rm -rf /opt/eucalyptus/var/log
-	rm -rf /opt/eucalyptus/usr
-	rm -rf /opt/eucalyptus/etc/eucalyptus/http*
-	rm -rf /opt/eucalyptus/etc/init.d
-	# for now we leave the keys, the database and the config file
+	rm -rf /var/log/eucalyptus
+	rm -rf /etc/eucalyptus/http*
+fi
+
+%postun common-java
+if [ "$1" = "0" ];
+then
+	rm -f /usr/share/eucalyptus/*.jar.disabled
 fi
 
 %preun cloud
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
+if [ -x /usr/sbin/euca_conf ];
 then
 	if [ -x /etc/init.d/eucalyptus-cloud ]; 
 	then
@@ -309,8 +376,34 @@ then
 	chkconfig --del eucalyptus-cloud || true
 fi
 
+%preun walrus
+if [ -x /usr/sbin/euca_conf ];
+then
+	if [ -x /etc/init.d/eucalyptus-walrus ]; 
+	then
+		/etc/init.d/eucalyptus-walrus stop || /bin/true
+	fi
+fi
+if [ "$1" = "0" ];
+then
+	chkconfig --del eucalyptus-walrus || true
+fi
+
+%preun sc
+if [ -x /usr/sbin/euca_conf ];
+then
+	if [ -x /etc/init.d/eucalyptus-sc ]; 
+	then
+		/etc/init.d/eucalyptus-sc stop || /bin/true
+	fi
+fi
+if [ "$1" = "0" ];
+then
+	chkconfig --del eucalyptus-sc || true
+fi
+
 %preun cc
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
+if [ -x /usr/sbin/euca_conf ];
 then
 	if [ -x /etc/init.d/eucalyptus-cc ]; 
 	then
@@ -323,7 +416,7 @@ then
 fi
 
 %preun nc
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
+if [ -x /usr/sbin/euca_conf ];
 then
 	if [ -x /etc/init.d/eucalyptus-nc ]; 
 	then
