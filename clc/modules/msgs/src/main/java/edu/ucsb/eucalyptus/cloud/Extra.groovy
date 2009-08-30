@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.cloud
 import edu.ucsb.eucalyptus.msgs.*
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ConcurrentSkipListSet
@@ -179,35 +180,34 @@ public class VmRunType extends EucalyptusMessage {
 
   def VmRunType() {}
 
-  def VmRunType(final RunInstancesType request,
-                final String reservationId, final String userData, final int amount,
-                final VmImageInfo imageInfo, final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo,
-                final List<String> instanceIds, final List<String> macAddresses,
-                final int vlan, final List<String> networkNames, final List<Integer> networkIndexList ) {
-    this.correlationId = request.correlationId;
-    this.userId = request.userId;
-    this.effectiveUserId = request.effectiveUserId;
-    this.reservationId = reservationId;
-    this.userData = userData;
-    this.min = amount;
-    this.max = amount;
-    this.vlan = vlan;
-    this.imageInfo = imageInfo;
-    this.vmTypeInfo = vmTypeInfo;
-    this.keyInfo = keyInfo;
-    this.instanceIds = instanceIds;
-    this.macAddresses = macAddresses;
-    this.networkNames = networkNames;
-    this.networkIndexList = networkIndexList;
-  }
-
   def VmRunType(RunInstancesType request) {
     this.effectiveUserId = request.effectiveUserId;
     this.correlationId = request.correlationId;
     this.userId = request.userId;
   }
 
-  public String toString() {
+  public VmRunType(RunInstancesType request, String reservationId, String userData,
+		int amount, VmImageInfo imageInfo, VmTypeInfo vmTypeInfo, VmKeyInfo keyInfo,
+		ArrayList<String> instanceIds, List<String> macAddresses, int vlan,
+		List<String> networkNames, ArrayList<String> networkIndexList) {
+	    this.correlationId = request.correlationId;
+	    this.userId = request.userId;
+	    this.effectiveUserId = request.effectiveUserId;
+	    this.reservationId = reservationId;
+	    this.userData = userData;
+	    this.min = amount;
+	    this.max = amount;
+	    this.vlan = vlan;
+	    this.imageInfo = imageInfo;
+	    this.vmTypeInfo = vmTypeInfo;
+	    this.keyInfo = keyInfo;
+	    this.instanceIds = instanceIds;
+	    this.macAddresses = macAddresses;
+	    this.networkNames = networkNames;
+	    this.networkIndexList = networkIndexList;
+}
+  
+public String toString() {
     /** TODO-1.4: do something reasonable here    **/
     return this.correlationId;
   }

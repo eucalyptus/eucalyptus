@@ -85,9 +85,7 @@ public class StorageProperties {
     public static String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
     public static String WALRUS_URL = "http://localhost:8773/services/Walrus";
     public static int MAX_TOTAL_VOLUME_SIZE = 50;
-    public static int MAX_TOTAL_SNAPSHOT_SIZE = 50;
     public static int MAX_VOLUME_SIZE = 10;
-    public static int MAX_SNAPSHOT_SIZE = 10;
     public static final long GB = 1024*1024*1024;
     public static final long MB = 1024*1024;
     public static final long KB = 1024;

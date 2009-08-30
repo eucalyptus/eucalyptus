@@ -630,7 +630,7 @@ public class EucalyptusManagement {
 			walrusInfo.setStorageMaxCacheSizeInMB((int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M));
 
 		if(walrusInfo.getStorageMaxTotalSnapshotSizeInGb() == null) 
-			walrusInfo.setStorageMaxTotalSnapshotSizeInGb(StorageProperties.MAX_TOTAL_SNAPSHOT_SIZE);   
+			walrusInfo.setStorageMaxTotalSnapshotSizeInGb(WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);   
 		
 		return walrusInfo;
 	}
