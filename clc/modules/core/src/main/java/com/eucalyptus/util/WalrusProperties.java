@@ -152,7 +152,7 @@ public class WalrusProperties {
 	public static final String COPY_SOURCE = "x-amz-copy-source";
 	public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
 	public static final String ADMIN = "admin";
-	public static String WALRUS_REF = "vm://BukkitInternal";
+	//public static String WALRUS_REF = "vm://BukkitInternal";
 
 	public static String TRACKER_BINARY_DIR = "/usr/bin";
 	public static String TRACKER_BINARY = TRACKER_BINARY_DIR + "/bttrack";

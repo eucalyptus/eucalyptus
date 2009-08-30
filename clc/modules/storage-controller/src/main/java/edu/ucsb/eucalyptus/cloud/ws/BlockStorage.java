@@ -1,63 +1,63 @@
 /*******************************************************************************
-*Copyright (c) 2009  Eucalyptus Systems, Inc.
-* 
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, only version 3 of the License.
-* 
-* 
-*  This file is distributed in the hope that it will be useful, but WITHOUT
-*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-*  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-*  for more details.
-* 
-*  You should have received a copy of the GNU General Public License along
-*  with this program.  If not, see <http://www.gnu.org/licenses/>.
-* 
-*  Please contact Eucalyptus Systems, Inc., 130 Castilian
-*  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
-*  if you need additional information or have any questions.
-* 
-*  This file may incorporate work covered under the following copyright and
-*  permission notice:
-* 
-*    Software License Agreement (BSD License)
-* 
-*    Copyright (c) 2008, Regents of the University of California
-*    All rights reserved.
-* 
-*    Redistribution and use of this software in source and binary forms, with
-*    or without modification, are permitted provided that the following
-*    conditions are met:
-* 
-*      Redistributions of source code must retain the above copyright notice,
-*      this list of conditions and the following disclaimer.
-* 
-*      Redistributions in binary form must reproduce the above copyright
-*      notice, this list of conditions and the following disclaimer in the
-*      documentation and/or other materials provided with the distribution.
-* 
-*    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-*    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-*    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-*    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-*    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-*    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-*    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-*    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-*    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-*    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-*    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-*    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-*    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-*    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-*    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-*    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-*    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-*    ANY SUCH LICENSES OR RIGHTS.
-*******************************************************************************/
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ * 
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ * 
+ *    Software License Agreement (BSD License)
+ * 
+ *    Copyright (c) 2008, Regents of the University of California
+ *    All rights reserved.
+ * 
+ *    Redistribution and use of this software in source and binary forms, with
+ *    or without modification, are permitted provided that the following
+ *    conditions are met:
+ * 
+ *      Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ * 
+ *      Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ * 
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *    ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************/
 /*
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
@@ -65,18 +65,33 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
-import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
-import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.storage.BlockStorageChecker;
-import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
-import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
-import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
-import edu.ucsb.eucalyptus.util.*;
-import org.apache.commons.httpclient.*;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+
+import org.apache.commons.httpclient.ChunkedOutputStream;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpConnection;
+import org.apache.commons.httpclient.HttpMethodBase;
+import org.apache.commons.httpclient.HttpState;
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
@@ -86,23 +101,48 @@ import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.EucalyptusProperties;
-
-import java.io.*;
-import java.net.URL;
-import java.security.PrivateKey;
-import java.security.Signature;
-import java.security.cert.X509Certificate;
-import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
+
+import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
+import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
+import edu.ucsb.eucalyptus.cloud.NoSuchVolumeException;
+import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
+import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
+import edu.ucsb.eucalyptus.cloud.VolumeInUseException;
+import edu.ucsb.eucalyptus.cloud.VolumeNotReadyException;
+import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
+import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
+import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
+import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.GetStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.GetStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.InitializeStorageManagerResponseType;
+import edu.ucsb.eucalyptus.msgs.InitializeStorageManagerType;
+import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
+import edu.ucsb.eucalyptus.msgs.StorageVolume;
+import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationResponseType;
+import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
+import edu.ucsb.eucalyptus.storage.BlockStorageChecker;
+import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
+import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
+import edu.ucsb.eucalyptus.storage.StorageManager;
+import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
+import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 
 public class BlockStorage {
 
@@ -357,7 +397,7 @@ public class BlockStorage {
 					for (SnapshotInfo sInfo : snapInfos) {
 						totalSnapshotSize += blockManager.getSnapshotSize(sInfo.getSnapshotId());
 					}
-					if((totalSnapshotSize + volSize) > StorageProperties.MAX_TOTAL_SNAPSHOT_SIZE) {
+					if((totalSnapshotSize + volSize) > WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE) {
 						db.rollback();
 						throw new EntityTooLargeException(snapshotId);
 					}
@@ -502,21 +542,13 @@ public class BlockStorage {
 		//in GB
 		String size = request.getSize();
 		int sizeAsInt = 0;
-		if(StorageProperties.shouldEnforceUsageLimits) {
+		if(StorageProperties.shouldEnforceUsageLimits && StorageProperties.trackUsageStatistics) {
 			if(size != null) {
 				sizeAsInt = Integer.parseInt(size);
-				EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
-
-				VolumeInfo volInfo = new VolumeInfo();
-				List<VolumeInfo> volInfos = db.query(volInfo);
-				int totalVolumeSize = 0;
-				for(VolumeInfo vinfo : volInfos) {
-					totalVolumeSize += vinfo.getSize();
-				}
-				if(((totalVolumeSize + sizeAsInt) > StorageProperties.MAX_TOTAL_VOLUME_SIZE) ||
+				int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
+;				if(((totalVolumeSize + sizeAsInt) > StorageProperties.MAX_TOTAL_VOLUME_SIZE) ||
 						(sizeAsInt > StorageProperties.MAX_VOLUME_SIZE))
 					throw new EntityTooLargeException(volumeId);
-				db.commit();
 			}
 		}
 		EntityWrapper<VolumeInfo> db = new EntityWrapper<VolumeInfo>();
@@ -571,9 +603,9 @@ public class BlockStorage {
 					SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 					List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
 					if(foundSnapshotInfos.size() == 0) {
-						String snapshotPath = getSnapshot(snapshotId);
-						size = blockManager.createVolume(volumeId, snapshotId);
 						db.commit();
+						getSnapshot(snapshotId);
+						size = blockManager.createVolume(volumeId, snapshotId);
 					} else {
 						SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);
 						if(!foundSnapshotInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
@@ -581,8 +613,8 @@ public class BlockStorage {
 							db.rollback();
 							LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
 						} else {
-							size = blockManager.createVolume(volumeId, snapshotId);
 							db.commit();
+							size = blockManager.createVolume(volumeId, snapshotId);
 						}
 					}
 				} catch(Exception ex) {
@@ -605,19 +637,14 @@ public class BlockStorage {
 				VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
 				if(foundVolumeInfo != null) {
 					if(success) {
-						if(StorageProperties.shouldEnforceUsageLimits) {
-							EntityWrapper<VolumeInfo> dbVol = new EntityWrapper<VolumeInfo>();
-							VolumeInfo volInfo = new VolumeInfo();
-							List<VolumeInfo> volInfos = db.query(volInfo);
-							int totalVolumeSize = 0;
-							for(VolumeInfo vinfo : volInfos) {
-								totalVolumeSize += vinfo.getSize();
-							}
-							if((totalVolumeSize + size) > StorageProperties.MAX_TOTAL_VOLUME_SIZE ||
+						if(StorageProperties.shouldEnforceUsageLimits && 
+								StorageProperties.trackUsageStatistics) {
+							int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
+;							if((totalVolumeSize + size) > StorageProperties.MAX_TOTAL_VOLUME_SIZE ||
 									(size > StorageProperties.MAX_VOLUME_SIZE)) {
 								LOG.error("Volume size limit exceeeded");
-								foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
 								db.commit();
+								checker.cleanFailedVolume(volumeId);
 								return;
 							}
 						}
@@ -643,7 +670,7 @@ public class BlockStorage {
 		}
 	}
 
-	private String getSnapshot(String snapshotId) throws EucalyptusCloudException {
+	private void getSnapshot(String snapshotId) throws EucalyptusCloudException {
 		if(!StorageProperties.enableSnapshots) {
 			StorageProperties.updateWalrusUrl();
 			if(!StorageProperties.enableSnapshots) {
@@ -655,14 +682,14 @@ public class BlockStorage {
 		String absoluteSnapshotPath = StorageProperties.storageRootDirectory + "/" + snapshotId;
 		File file = new File(absoluteSnapshotPath);
 		if(file.exists()) {
-			//something went wrong. remove and retry
+			//something went wrong in the past. remove and retry
 			file.delete();
 		}
 		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true);
 		snapshotGetter.run();
 		int snapshotSize = (int)(file.length() / StorageProperties.GB);
 		if(snapshotSize == 0) {
-			throw new EucalyptusCloudException("could not get snapshot: " + snapshotId);
+			throw new EucalyptusCloudException("could not download snapshot: " + snapshotId + " from Walrus.");
 		} 
 		EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
@@ -670,7 +697,6 @@ public class BlockStorage {
 		snapshotInfo.setStartTime(new Date());
 		snapshotInfo.setStatus(StorageProperties.Status.available.toString());
 		blockManager.addSnapshot(snapshotId);
-		return absoluteSnapshotPath;
 	}
 
 
