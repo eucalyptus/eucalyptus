@@ -117,7 +117,7 @@
             <property name="hibernate.connection.password" value="${euca.db.password}"/>
             <property name="hibernate.connection.autocommit" value="true"/>
             <property name="hibernate.c3p0.min_size" value="16"/>
-            <property name="hibernate.c3p0.max_size" value="16000"/>
+            <property name="hibernate.c3p0.max_size" value="64"/>
             <property name="hibernate.c3p0.timeout" value="120"/>
             <property name="hibernate.c3p0.max_statements" value="0"/>
             <property name="hibernate.c3p0.idle_test_period" value="120"/>
