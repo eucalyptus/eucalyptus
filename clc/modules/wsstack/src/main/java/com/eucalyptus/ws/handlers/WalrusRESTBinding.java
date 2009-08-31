@@ -177,7 +177,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			if(msg != null) {
 				OMElement omMsg = binding.toOM( msg );
 				ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+				synchronized(binding) {
 				omMsg.serialize( byteOut );
+				}
 				byte[] req = byteOut.toByteArray();
 				ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes() ) );
