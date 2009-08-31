@@ -903,6 +903,7 @@ if [ -n "$CLUSNAME" ]; then
 	fi
 	if ! sync_keys ${DESTDIR} ${DESTDIR} ${NEWCLUS} cloud-cert.pem; then
 	    echo "ERROR: failed to sync keys with ${NEWCLUS}."
+            exit 1
 	fi
 	echo
 	echo "SUCCESS: new cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully registered."
@@ -958,6 +959,7 @@ if [ -n "$WALRUS" ]; then
     # sync the keys
 	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${WALRUS} euca.p12 ; then
 	    echo "ERROR: failed to sync keys with ${WALRUS}."
+            exit 1
 	fi
 	echo
 	echo "SUCCESS: new walrus on host '${WALRUS}' successfully registered."
@@ -1022,6 +1024,7 @@ if [ -n "$SCHOST" ]; then
     # sync the keys
 	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${SCHOST} euca.p12; then
 	    echo "ERROR: failed to sync keys with ${SCHOST}."
+	    exit 1
 	fi
 	echo
 	echo "SUCCESS: new SC for cluster '${SCNAME}' on host '${SCHOST}' successfully registered."
