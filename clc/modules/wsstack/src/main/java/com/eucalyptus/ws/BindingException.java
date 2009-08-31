@@ -63,7 +63,7 @@
  */
 package com.eucalyptus.ws;
 
-public class BindingException extends Exception {
+public class BindingException extends WebServicesException {
 
   public BindingException( ) {
     super( );

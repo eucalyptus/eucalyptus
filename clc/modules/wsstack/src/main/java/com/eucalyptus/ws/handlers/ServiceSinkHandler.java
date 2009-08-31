@@ -165,8 +165,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
     if ( e instanceof MessageEvent ) {
       MessageEvent msge = ( MessageEvent ) e;
-      if ( msge.getMessage( ) instanceof IsData ) {// Pass through for chunked
-                                                   // messaging
+      if ( msge.getMessage( ) instanceof IsData ) {// Pass through for chunked messaging
         ctx.sendDownstream( msge );
       } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {// Handle
                                                                      // single
@@ -192,30 +191,36 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         response.setMessage( reply );
         newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
         ctx.sendDownstream( newEvent );
+      } else {
+        ctx.sendDownstream( e );
       }
+    } else {
+      ctx.sendDownstream( e );
     }
   }
 
   @Override
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
-    LOG.fatal( e.getCause( ), e.getCause( ) );
-    if ( e.getCause( ) instanceof IOException ) {
-      ctx.getChannel( ).close( );
-      return;
-    } else {
-      HttpResponse error = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR );
-      Throwable t = e.getCause( );
-      String errMsg = "Error";
-      if ( t != null && t.getMessage( ) != null ) {
-        errMsg = t.getMessage( );
-      } else if ( t != null ) {
-        errMsg = t.toString( );
-      }
-      Channels.fireExceptionCaught( ctx.getChannel( ), new EucalyptusCloudException( errMsg, e.getCause( ) ) );
+    Channels.fireExceptionCaught( ctx.getChannel( ), e.getCause( ) );
+  }
+//    LOG.fatal( e.getCause( ), e.getCause( ) );
+//    if ( e.getCause( ) instanceof IOException ) {
+//      ctx.getChannel( ).close( );
+//      return;
+//    } else {
+//      HttpResponse error = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR );
+//      Throwable t = e.getCause( );
+//      String errMsg = "Error";
+//      if ( t != null && t.getMessage( ) != null ) {
+//        errMsg = t.getMessage( );
+//      } else if ( t != null ) {
+//        errMsg = t.toString( );
+//      }
+//      Channels.fireExceptionCaught( ctx.getChannel( ), new EucalyptusCloudException( errMsg, e.getCause( ) ) );
 //      error.setContent( ChannelBuffers.copiedBuffer( errMsg.getBytes( ) ) );
 //      DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel( ).getCloseFuture( ), error, null );
 //      ctx.sendDownstream( newEvent );
 //      newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-    }
-  }
+//    }
+//  }
 }

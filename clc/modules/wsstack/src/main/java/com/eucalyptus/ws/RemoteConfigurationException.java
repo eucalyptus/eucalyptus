@@ -63,7 +63,7 @@
  */
 package com.eucalyptus.ws;
 
-public class RemoteConfigurationException extends Exception {
+public class RemoteConfigurationException extends WebServicesException {
 
   public RemoteConfigurationException( ) {
     super( );

@@ -98,6 +98,7 @@ import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 
 import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.PipelineRegistry;
 
 @ChannelPipelineCoverage( "one" )
@@ -131,7 +132,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     }
   }
 
-  /*@Override
+  @Override
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) throws Exception {
     final Channel ch = e.getChannel( );
     final Throwable cause = e.getCause( );
@@ -141,17 +142,18 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     }
     cause.printStackTrace( );
     if ( ch.isConnected( ) ) {
-      this.sendError( ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR );
+      if( e.getCause( ) instanceof WebServicesException ) {
+        this.sendError( ctx, ((WebServicesException) e.getCause( )).getStatus() );
+      } else {
+        this.sendError( ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR );
+      }
     }
-    ch.close();
-  }*/
+  }
 
   private void sendError( final ChannelHandlerContext ctx, final HttpResponseStatus status ) {
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
     response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n", "UTF-8" ) );
-    DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel().getCloseFuture(), response, null );
-    ctx.sendDownstream( newEvent );
-    newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+    ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
   }
 }

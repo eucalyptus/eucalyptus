@@ -131,7 +131,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
         LOG.debug( ( ( ExceptionEvent ) channelEvent ).getCause( ), ( ( ExceptionEvent ) channelEvent ).getCause( ) );
         channelHandlerContext.getChannel( ).close( );
       } else {
-        this.exceptionCaught( channelHandlerContext, ( ExceptionEvent ) channelEvent );
+        channelHandlerContext.sendUpstream( channelEvent );
       }
     }
   }

@@ -63,7 +63,7 @@
  */
 package com.eucalyptus.ws;
 
-public class HttpException extends Exception {
+public class HttpException extends WebServicesException {
 
   public HttpException( ) {
     super( );

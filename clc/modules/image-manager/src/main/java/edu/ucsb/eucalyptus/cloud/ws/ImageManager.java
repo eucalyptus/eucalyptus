@@ -322,7 +322,7 @@ public class ImageManager {
   private String getImageUrl( final String walrusUrl, final ImageInfo diskInfo ) throws EucalyptusCloudException {
     String diskUrl;
     try {//TODO: clean up getting the walrus URL
-      diskUrl = ( new URL( "http://" + Component.walrus.getUri( ).getHost( ) + ":8773/services/Walrus" + diskInfo.getImageLocation() ) ).toString();
+      diskUrl = ( new URL( "http://" + Component.walrus.getUri( ).getHost( ) + ":8773/services/Walrus/" + diskInfo.getImageLocation() ) ).toString();
     }
     catch ( MalformedURLException e ) {
       throw new EucalyptusCloudException( "Failed to parse image location as URL.", e );

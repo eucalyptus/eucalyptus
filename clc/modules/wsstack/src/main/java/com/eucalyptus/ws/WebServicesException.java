@@ -63,12 +63,30 @@
  */
 package com.eucalyptus.ws;
 
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
 public class WebServicesException extends Exception {
 
-  // TODO: fix it...
   private static final long serialVersionUID = 1L;
+  private HttpResponseStatus status = HttpResponseStatus.INTERNAL_SERVER_ERROR;;
+  
+  public WebServicesException( HttpResponseStatus status ) {
+    this.status = status;
+  }
 
   public WebServicesException( ) {
+  }
+
+  public WebServicesException( String message, HttpResponseStatus status  ) {
+    super( message );
+  }
+
+  public WebServicesException( Throwable cause, HttpResponseStatus status  ) {
+    super( cause );
+  }
+
+  public WebServicesException( String message, Throwable cause, HttpResponseStatus status  ) {
+    super( message, cause );
   }
 
   public WebServicesException( String message ) {
@@ -83,4 +101,14 @@ public class WebServicesException extends Exception {
     super( message, cause );
   }
 
+  public HttpResponseStatus getStatus( ) {
+    return status;
+  }
+
+  public void setStatus( HttpResponseStatus status ) {
+    this.status = status;
+  }
+
+  
+  
 }
