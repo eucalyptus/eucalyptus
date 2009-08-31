@@ -1002,18 +1002,12 @@ public class BlockStorage {
 			try {
 				//TODO: Get credentials for SC from keystore
 
-				PrivateKey ccPrivateKey = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getPrivateKey();
-				X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate( );
-				if(cert == null)
-					return null;
-				byte[] pemCertBytes = Hashes.getPemBytes(cert);
-
+				PrivateKey ccPrivateKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getPrivateKey();
 				Signature sign = Signature.getInstance("SHA1withRSA");
 				sign.initSign(ccPrivateKey);
 				sign.update(data.getBytes());
 				byte[] sig = sign.sign();
 
-				method.setRequestHeader("EucaCert", new String(Base64.encode(pemCertBytes))); // or maybe cert instead of ccPublicKey?
 				method.setRequestHeader("EucaSignature", new String(Base64.encode(sig)));
 			} catch(Exception ex) {
 				LOG.error(ex, ex);

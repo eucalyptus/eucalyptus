@@ -132,6 +132,6 @@ public class StorageProperties {
 	}
 
 	public enum StorageParameters {
-		EucaCert, EucaSignature, EucaSnapSize
+		EucaSignature, EucaSnapSize
 	}
 }

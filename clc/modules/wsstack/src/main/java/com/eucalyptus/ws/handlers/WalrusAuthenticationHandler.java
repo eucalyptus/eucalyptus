@@ -106,6 +106,7 @@ import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.ws.AuthenticationException;
@@ -113,6 +114,7 @@ import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.bootstrap.Component;
 
 @ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {
@@ -159,29 +161,22 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		if(httpRequest.containsHeader(StorageProperties.StorageParameters.EucaSignature.toString())) {
 			//possible internal request -- perform authentication using internal credentials
 			String date = httpRequest.getAndRemoveHeader(SecurityParameter.Date.toString());
-			String eucaCert = httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaCert.toString());
 			String signature = httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaSignature.toString());
 			String data = verb + "\n" + date + "\n" + addr + "\n";
 
 			Signature sig;
 			boolean valid = false;
 			try {
-				byte[] bytes = Base64.decode(eucaCert);
-				String certString = new String(bytes);
-				PEMReader pemReader = new PEMReader(new StringReader(certString));
-				X509Certificate cert = (X509Certificate) pemReader.readObject();
 				try {
-          CredentialProvider.getCertificateAlias( cert );
-					//cert found in keystore
-					PublicKey publicKey = cert.getPublicKey();
+					PublicKey publicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).
+					getCertificate().getPublicKey();
 					sig = Signature.getInstance("SHA1withRSA");
-
 					sig.initVerify(publicKey);
 					sig.update(data.getBytes());
 					valid = sig.verify(Base64.decode(signature));
-        } catch ( Exception e ) {
-          LOG.warn ("Authentication: certificate not found in keystore");
-        }
+				} catch ( Exception e ) {
+					LOG.warn ("Authentication: certificate not found in keystore");
+				}
 			} catch (Exception ex) {
 				LOG.warn ("Authentication exception: " + ex.getMessage());
 				ex.printStackTrace();
