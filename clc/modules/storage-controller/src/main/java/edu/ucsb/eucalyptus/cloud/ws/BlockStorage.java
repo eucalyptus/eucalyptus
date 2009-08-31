@@ -810,12 +810,6 @@ public class BlockStorage {
 			httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters, false);
 			try {
 				httpWriter.run();
-				EntityWrapper<SnapshotInfo> dbSnap = new EntityWrapper<SnapshotInfo>();
-				SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-				SnapshotInfo foundSnapshotInfo = dbSnap.getUnique(snapshotInfo);
-				foundSnapshotInfo.setProgress("100");
-				foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
-				dbSnap.commit();
 			} catch(Exception ex) {
 				LOG.error(ex, ex);
 				checker.cleanFailedSnapshot(snapshotId);
