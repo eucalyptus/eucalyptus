@@ -63,6 +63,7 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.*;
 
 import com.eucalyptus.config.ClusterConfiguration;
@@ -84,10 +85,18 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   public void process( final Client clusterClient, final AssignAddressType msg ) throws Exception {
     AssignAddressResponseType reply = null;
     try {
-      reply = ( AssignAddressResponseType ) clusterClient.send( msg );
-      LOG.debug( "Assign [" + msg.getSource() + "]  => [" + msg.getDestination() + "]" );
-      this.parent.getNetworkConfig().setIgnoredPublicIp( msg.getSource() );
-    } catch ( Exception e ) {}
+      VmInstance vm = VmInstances.getInstance( ).lookup( msg.getInstanceId( ) );
+      VmState vmState = vm.getState( );
+      if( VmState.RUNNING.equals( vmState ) || VmState.PENDING.equals( vmState ) ) {
+        reply = ( AssignAddressResponseType ) clusterClient.send( msg );
+        LOG.debug( "Assign [" + msg.getSource() + "]  => [" + msg.getDestination() + "]" );
+        this.parent.getNetworkConfig().setIgnoredPublicIp( msg.getSource() );
+      } else {
+        LOG.warn( "Ignoring assignment to a vm which is not running: " + msg );
+      }
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+    }
   }
 
 }

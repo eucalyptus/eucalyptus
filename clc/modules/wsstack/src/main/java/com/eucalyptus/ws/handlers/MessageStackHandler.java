@@ -87,7 +87,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
   private static Logger LOG = Logger.getLogger( MessageStackHandler.class );
 
   public void handleDownstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-    MessageStackHandler.LOG.debug( this.getClass( ).getSimpleName( ) + "[outgoing]: " + channelEvent );
+    LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + channelEvent );
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
       this.outgoingMessage( channelHandlerContext, msgEvent );
@@ -110,14 +110,13 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
       ctx.getChannel( ).close( );
     } else {
       this.exceptionCaught( t );
-      Channels.fireExceptionCaught( ctx.getChannel( ), t );
     }
   }
 
   public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-    LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
+    LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
     if( channelEvent instanceof ExceptionEvent ) {
-      LOG.info( ( ( ExceptionEvent ) channelEvent ).getCause( ), ( ( ExceptionEvent ) channelEvent ).getCause( ) );
+      LOG.debug( ( ( ExceptionEvent ) channelEvent ).getCause( ), ( ( ExceptionEvent ) channelEvent ).getCause( ) );
     }
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;

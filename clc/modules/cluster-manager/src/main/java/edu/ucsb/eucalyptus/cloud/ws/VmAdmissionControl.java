@@ -162,7 +162,11 @@ public class VmAdmissionControl {
         }
         throw new EucalyptusCloudException( failed.getMessage( ) );
       }
-      throw new EucalyptusCloudException( failed.getMessage( ) );
+      if( failed != null ) {
+        throw new EucalyptusCloudException( failed.getMessage( ) );
+      } else {
+        throw new EucalyptusCloudException( failed.getMessage( ) );
+      }
     }
     return vmAllocInfo;
   }

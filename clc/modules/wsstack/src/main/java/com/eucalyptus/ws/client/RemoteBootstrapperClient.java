@@ -115,7 +115,6 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   private Multimap<String, ComponentConfiguration> componentMap;
   private NioBootstrap                             clientBootstrap;
   private ChannelFactory                           channelFactory;
-  private NioClientPipeline                        clientPipeline;
   private static boolean                           hack = false;
   private static RemoteBootstrapperClient client = new RemoteBootstrapperClient( );
   
@@ -153,23 +152,21 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   class HeartbeatHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
 
     @Override
-    public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+    public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) {
       if ( e instanceof ExceptionEvent ) {
         LOG.error( ( ( ExceptionEvent ) e ).getCause( ), ( ( ExceptionEvent ) e ).getCause( ) );
         ctx.getChannel( ).close( );
       } else {
-        LOG.info( e );
         ctx.sendDownstream( e );
       }
     }
 
     @Override
-    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) {
       if ( e instanceof ExceptionEvent ) {
         LOG.error( ( ( ExceptionEvent ) e ).getCause( ), ( ( ExceptionEvent ) e ).getCause( ) );
         ctx.getChannel( ).close( );
       } else {
-        LOG.info( e );
         ctx.sendUpstream( e );
       }
     }

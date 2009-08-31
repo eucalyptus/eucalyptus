@@ -88,7 +88,13 @@ public class UserWsSecHandler extends MessageStackHandler implements ChannelHand
     if ( o instanceof MappingHttpMessage ) {
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
       SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
-      X509Certificate cert = WSSecurity.getVerifiedCertificate( envelope );
+      X509Certificate cert = null;
+      WsSecHandler.canHas.lock( );
+      try {
+        cert = WSSecurity.getVerifiedCertificate( envelope );
+      } finally {
+        WsSecHandler.canHas.unlock( );
+      }
       String userName = CredentialProvider.getUserName( cert );
       User user = CredentialProvider.getUser( userName );
       httpRequest.setUser( user );

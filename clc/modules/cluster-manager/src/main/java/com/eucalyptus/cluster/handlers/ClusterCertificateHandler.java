@@ -67,12 +67,6 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
   }
 
   @Override
-  public void exceptionCaught( Throwable cause ) {
-    LOG.debug( cause, cause );
-    LOG.warn( cause );
-  }
-
-  @Override
   public void downstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
     LOG.info( e.getMessage( ) );
     ctx.sendDownstream( e );

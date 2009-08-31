@@ -142,20 +142,22 @@ public class NetworkInfoType extends EucalyptusData {
 
 
 public class AssignAddressType extends EucalyptusMessage {
-
+  String instanceId;
   String source;
   String destination;
-  def AssignAddressType(final source, final destination)
+  def AssignAddressType(final source, final destination, final instanceId )
   {
     this.source = source;
     this.destination = destination;
+    this.instanceId = instanceId;
   }
 
-  def AssignAddressType(final msg, final source, final destination)
+  def AssignAddressType(final msg, final source, final destination, final instanceId)
   {
     super(msg);
     this.source = source;
     this.destination = destination;
+    this.instanceId = instanceId;
   }
 
   def AssignAddressType()

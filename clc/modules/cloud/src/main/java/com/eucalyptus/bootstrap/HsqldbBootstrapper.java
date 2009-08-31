@@ -115,9 +115,10 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
     int dbPort = 9001;
     props.setProperty( ServerConstants.SC_KEY_PORT, 9001 );
     props.setProperty( ServerConstants.SC_KEY_REMOTE_OPEN_DB, true );
-    props.setProperty( ServerConstants.SC_KEY_DATABASE + ".0", SubDirectory.DB.toString( ) + File.separator + Component.eucalyptus.name() );
-    props.setProperty( ServerConstants.SC_KEY_DBNAME + ".0", Component.eucalyptus.name() );
-    String vol = "_volumes";
+    String general= "_general";
+    props.setProperty( ServerConstants.SC_KEY_DATABASE + ".0", SubDirectory.DB.toString( ) + File.separator + Component.eucalyptus.name() + general );
+    props.setProperty( ServerConstants.SC_KEY_DBNAME + ".0", Component.eucalyptus.name() + general );
+    String vol = "_images";
     props.setProperty( ServerConstants.SC_KEY_DATABASE + ".1", SubDirectory.DB.toString( ) + File.separator + Component.eucalyptus.name() + vol );
     props.setProperty( ServerConstants.SC_KEY_DBNAME + ".1", Component.eucalyptus.name() + vol );
     String auth = "_auth";

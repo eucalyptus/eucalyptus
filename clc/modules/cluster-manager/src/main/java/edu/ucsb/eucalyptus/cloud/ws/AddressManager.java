@@ -529,7 +529,7 @@ public class AddressManager implements Startable {
       addr.assign( vm.getInstanceId(), vm.getNetworkConfig().getIpAddress() );
       address.assign( vm.getInstanceId(), vm.getNetworkConfig().getIpAddress() );
       //:: dispatch the request to the cluster that owns the address :://
-      AssignAddressType assignMsg = Admin.makeMsg( AssignAddressType.class, address.getName(), address.getInstanceAddress() );
+      AssignAddressType assignMsg = Admin.makeMsg( AssignAddressType.class, address.getName(), address.getInstanceAddress(), address.getInstanceId( ) );
       ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
       ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new AssignAddressCallback( config, vm ), assignMsg ) );
       db.commit();

@@ -71,6 +71,8 @@ import com.eucalyptus.images.WalrusUtil;
 import com.eucalyptus.images.util.ImageUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.ws.client.ServiceDispatcher;
+
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -319,8 +321,8 @@ public class ImageManager {
 
   private String getImageUrl( final String walrusUrl, final ImageInfo diskInfo ) throws EucalyptusCloudException {
     String diskUrl;
-    try {
-      diskUrl = ( new URL( walrusUrl + diskInfo.getImageLocation() ) ).toString();
+    try {//TODO: clean up getting the walrus URL
+      diskUrl = ( new URL( "http://" + Component.walrus.getUri( ).getHost( ) + ":8773/services/Walrus" + diskInfo.getImageLocation() ) ).toString();
     }
     catch ( MalformedURLException e ) {
       throw new EucalyptusCloudException( "Failed to parse image location as URL.", e );

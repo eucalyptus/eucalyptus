@@ -64,17 +64,5 @@ public class ResourceStateHandler extends AbstractClusterMessageDispatcher {
   @Override
   public void advertiseEvent( Event event ) {}
 
-  @Override
-  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
-    if( e.getCause( ) instanceof AlreadyConnectedException ) {
-    } else {
-      this.exceptionCaught( e.getCause( ) );
-    }
-  }
 
-  @Override
-  public void exceptionCaught( Throwable cause ) {
-    LOG.warn( cause, cause );
-    
-  }
 }

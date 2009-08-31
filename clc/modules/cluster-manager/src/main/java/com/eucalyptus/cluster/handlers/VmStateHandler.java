@@ -17,6 +17,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpResponse;
 
+import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
@@ -34,7 +35,7 @@ public class VmStateHandler extends AbstractClusterMessageDispatcher {
 
   @Override
   public void trigger( ) {
-
+    this.write( new VmDescribeType( ) );
   }
 
   @Override
@@ -72,18 +73,5 @@ public class VmStateHandler extends AbstractClusterMessageDispatcher {
 
   @Override
   public void advertiseEvent( Event event ) {
-  }
-
-  @Override
-  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
-    if ( e.getCause( ) instanceof AlreadyConnectedException ) {
-    } else {
-      this.exceptionCaught( e.getCause( ) );
-    }
-  }
-
-  @Override
-  public void exceptionCaught( Throwable cause ) {
-    LOG.info( cause, cause );
   }
 }

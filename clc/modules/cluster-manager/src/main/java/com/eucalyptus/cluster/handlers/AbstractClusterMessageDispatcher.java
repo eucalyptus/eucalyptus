@@ -151,19 +151,17 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   public abstract void upstreamMessage( ChannelHandlerContext ctx, MessageEvent e );
 
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
-    if ( this.channel != null ) {
-      this.channel.close( );
-    }
-    if( e.getCause( ) instanceof AlreadyConnectedException || e.getCause( ) instanceof XMLStreamException ) {
+    if( e.getCause( ) instanceof AlreadyConnectedException ) {
       LOG.trace( e.getCause( ), e.getCause( ) );
-      return;
     } else {
-      this.exceptionCaught( e.getCause( ) );
+      if ( this.channel != null ) {
+        this.channel.close( );
+      }
       LOG.debug( e.getCause( ), e.getCause( ) );
+      Channels.fireExceptionCaught( ctx, e.getCause( ) );
     }
   }
 
-  public abstract void exceptionCaught( Throwable cause );
 
   protected void fireTimedStatefulTrigger( Event event ) {
     if ( this.timedTrigger( event ) ) {
@@ -197,11 +195,8 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
       if ( channelFuture.isSuccess( ) ) {
         channel = channelFuture.getChannel( );
         channelWriteFuture = channelFuture.getChannel( ).write( request );
-      } else {
-        exceptionCaught( channelFuture.getCause( ) );
-      }
+      } 
     }
-
   }
 
   public void close( ) {

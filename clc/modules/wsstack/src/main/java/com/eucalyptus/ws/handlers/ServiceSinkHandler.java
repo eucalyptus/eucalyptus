@@ -92,6 +92,7 @@ import org.mule.api.MuleMessage;
 
 import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -210,10 +211,11 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       } else if ( t != null ) {
         errMsg = t.toString( );
       }
-      error.setContent( ChannelBuffers.copiedBuffer( errMsg.getBytes( ) ) );
-      DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel( ).getCloseFuture( ), error, null );
-      ctx.sendDownstream( newEvent );
-      newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+      Channels.fireExceptionCaught( ctx.getChannel( ), new EucalyptusCloudException( errMsg, e.getCause( ) ) );
+//      error.setContent( ChannelBuffers.copiedBuffer( errMsg.getBytes( ) ) );
+//      DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel( ).getCloseFuture( ), error, null );
+//      ctx.sendDownstream( newEvent );
+//      newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
     }
   }
 }

@@ -89,8 +89,8 @@ import java.util.*;
 public class SystemState {
 
   private static Logger LOG = Logger.getLogger( SystemState.class );
-  public static final int BURY_TIME = 2 * 60 * 1000;
-  private static final int SHUT_DOWN_TIME = 60 * 60 * 1000;
+  public static final int BURY_TIME = 60 * 60 * 1000;
+  private static final int SHUT_DOWN_TIME = 2 * 60 * 1000;
   private static final String RULE_FILE = "/rules/describe/instances.drl";
   private static final String INSTANCE_EXPIRED = "Instance no longer reported as existing.";
   private static final String INSTANCE_TERMINATED = "User requested shutdown.";

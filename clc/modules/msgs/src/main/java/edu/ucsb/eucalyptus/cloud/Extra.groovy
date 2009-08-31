@@ -175,10 +175,32 @@ public class VmRunType extends EucalyptusMessage {
   List<String> instanceIds = new ArrayList<String>();
   List<String> macAddresses = new ArrayList<String>();
   List<String> networkNames = new ArrayList<String>();
-  ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
+  ArrayList<String> networkIndexList = new ArrayList<String>();
 
 
   def VmRunType() {}
+
+  def VmRunType(final RunInstancesType request,
+                final String reservationId, final String userData, final int amount,
+                final VmImageInfo imageInfo, final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo,
+                final List<String> instanceIds, final List<String> macAddresses,
+                final int vlan, final List<String> networkNames, final List<String> networkIndexList ) {
+    this.correlationId = request.correlationId;
+    this.userId = request.userId;
+    this.effectiveUserId = request.effectiveUserId;
+    this.reservationId = reservationId;
+    this.userData = userData;
+    this.min = amount;
+    this.max = amount;
+    this.vlan = vlan;
+    this.imageInfo = imageInfo;
+    this.vmTypeInfo = vmTypeInfo;
+    this.keyInfo = keyInfo;
+    this.instanceIds = instanceIds;
+    this.macAddresses = macAddresses;
+    this.networkNames = networkNames;
+    this.networkIndexList = networkIndexList;
+  }
 
   def VmRunType(RunInstancesType request) {
     this.effectiveUserId = request.effectiveUserId;
@@ -207,9 +229,8 @@ public class VmRunType extends EucalyptusMessage {
 	    this.networkIndexList = networkIndexList;
 }
   
-public String toString() {
-    /** TODO-1.4: do something reasonable here    **/
-    return this.correlationId;
+  public String toString() {
+    return this.dump( );
   }
 
 }
