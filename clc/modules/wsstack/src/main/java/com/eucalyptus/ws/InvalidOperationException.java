@@ -63,26 +63,25 @@
  */
 package com.eucalyptus.ws;
 
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
+@SuppressWarnings("serial")
 public class InvalidOperationException extends WebServicesException {
 
   public InvalidOperationException( ) {
-    super( );
-    // TODO Auto-generated constructor stub
+    super(HttpResponseStatus.BAD_REQUEST);
   }
 
   public InvalidOperationException( String message, Throwable cause ) {
-    super( message, cause );
-    // TODO Auto-generated constructor stub
+    super( message, cause, HttpResponseStatus.BAD_REQUEST );
   }
 
   public InvalidOperationException( String message ) {
-    super( message );
-    // TODO Auto-generated constructor stub
+    super( message, HttpResponseStatus.BAD_REQUEST );
   }
 
   public InvalidOperationException( Throwable cause ) {
-    super( cause );
-    // TODO Auto-generated constructor stub
+    super( cause, HttpResponseStatus.BAD_REQUEST );
   }
 
 }

@@ -63,26 +63,25 @@
  */
 package com.eucalyptus.ws;
 
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
+@SuppressWarnings("serial")
 public class AuthenticationException extends WebServicesException {
 
   public AuthenticationException( ) {
-    super( );
-    // TODO Auto-generated constructor stub
+    super(HttpResponseStatus.FORBIDDEN);
   }
 
   public AuthenticationException( String message, Throwable cause ) {
-    super( message, cause );
-    // TODO Auto-generated constructor stub
+    super( message, cause, HttpResponseStatus.FORBIDDEN );    
   }
 
   public AuthenticationException( String message ) {
-    super( message );
-    // TODO Auto-generated constructor stub
+    super( message, HttpResponseStatus.FORBIDDEN);    
   }
 
   public AuthenticationException( Throwable cause ) {
-    super( cause );
-    // TODO Auto-generated constructor stub
+    super( cause, HttpResponseStatus.FORBIDDEN );    
   }
 
 }

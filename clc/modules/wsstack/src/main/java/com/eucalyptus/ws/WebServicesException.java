@@ -79,26 +79,32 @@ public class WebServicesException extends Exception {
 
   public WebServicesException( String message, HttpResponseStatus status  ) {
     super( message );
+    this.status = status;
   }
 
   public WebServicesException( Throwable cause, HttpResponseStatus status  ) {
     super( cause );
+    this.status = status;
   }
 
   public WebServicesException( String message, Throwable cause, HttpResponseStatus status  ) {
     super( message, cause );
+    this.status = status;
   }
 
   public WebServicesException( String message ) {
     super( message );
+    this.status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
   }
 
   public WebServicesException( Throwable cause ) {
     super( cause );
+    this.status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
   }
 
   public WebServicesException( String message, Throwable cause ) {
     super( message, cause );
+    this.status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
   }
 
   public HttpResponseStatus getStatus( ) {
@@ -108,7 +114,4 @@ public class WebServicesException extends Exception {
   public void setStatus( HttpResponseStatus status ) {
     this.status = status;
   }
-
-  
-  
 }

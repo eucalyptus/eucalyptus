@@ -133,18 +133,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	}
 
 	@Override
-	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-		LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
-		if ( channelEvent instanceof MessageEvent ) {
-			final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
-			this.incomingMessage( channelHandlerContext, msgEvent );
-		} else if ( channelEvent instanceof ExceptionEvent ) {
-			this.exceptionCaught( channelHandlerContext, ( ExceptionEvent ) channelEvent );
-		}
-		channelHandlerContext.sendUpstream( channelEvent );
-	}
-
-	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );

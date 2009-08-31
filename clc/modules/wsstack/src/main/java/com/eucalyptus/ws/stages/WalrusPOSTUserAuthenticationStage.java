@@ -70,7 +70,6 @@ import com.eucalyptus.ws.handlers.HmacV2Handler;
 import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler;
-import com.eucalyptus.ws.handlers.WalrusInboundHandler;
 import com.eucalyptus.ws.handlers.WalrusPOSTAuthenticationHandler;
 import com.eucalyptus.ws.handlers.WalrusPOSTIncomingHandler;
 
@@ -83,7 +82,6 @@ public class WalrusPOSTUserAuthenticationStage implements UnrollableStage {
 
 	@Override
 	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast("walrus-inbound", new WalrusInboundHandler());
 		pipeline.addLast("walrus-post-incoming", new WalrusPOSTIncomingHandler());
 		pipeline.addLast("walrus-post-verify", new WalrusPOSTAuthenticationHandler());
 	}
