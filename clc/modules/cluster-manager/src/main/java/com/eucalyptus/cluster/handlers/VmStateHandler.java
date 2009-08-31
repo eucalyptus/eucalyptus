@@ -8,6 +8,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
@@ -35,7 +36,10 @@ public class VmStateHandler extends AbstractClusterMessageDispatcher {
 
   @Override
   public void trigger( ) {
-    this.write( new VmDescribeType( ) );
+    VmDescribeType msg = new VmDescribeType( );
+    msg.setUserId( Component.eucalyptus.name() );
+    msg.setEffectiveUserId( Component.eucalyptus.name() );
+    this.write( msg );
   }
 
   @Override
