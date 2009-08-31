@@ -72,7 +72,7 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.Configuration;

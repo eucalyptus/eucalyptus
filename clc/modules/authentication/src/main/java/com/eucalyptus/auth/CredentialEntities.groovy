@@ -63,7 +63,9 @@
  */
 package com.eucalyptus.auth
 
+import java.io.Serializable;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 
 import org.bouncycastle.util.encoders.UrlBase64;
 import javax.persistence.Entity;
@@ -71,6 +73,8 @@ import javax.persistence.Id;
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.GenericGenerator
+
+import javax.persistence.MappedSuperclass;
 import javax.persistence.Table
 import javax.persistence.GeneratedValue
 import javax.persistence.Column
@@ -81,17 +85,20 @@ import javax.persistence.FetchType
 import javax.persistence.CascadeType
 import javax.persistence.JoinTable
 import javax.persistence.JoinColumn
+import javax.persistence.Version;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import javax.persistence.Version;
+
 import org.hibernate.sql.Alias
+
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
 @Table( name = "auth_users" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class User implements Serializable {//TODO: srsly should be named UserCredentials to avoid heaps of later confusion
-  @Id
-  @GeneratedValue(generator = "system-uuid")
-  @GenericGenerator(name="system-uuid", strategy = "uuid")
-  @Column( name = "auth_user_id" )
-  String id
+public class User extends AbstractPersistent implements Serializable {
   @Column( name = "auth_user_name", unique=true )
   String userName
   @Column( name = "auth_user_query_id" )
@@ -114,12 +121,7 @@ public class User implements Serializable {//TODO: srsly should be named UserCre
 @Entity
 @Table(name="auth_x509")
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class X509Cert implements Serializable {
-  @Id
-  @GeneratedValue(generator = "system-uuid")
-  @GenericGenerator(name="system-uuid", strategy = "uuid")
-  @Column( name = "auth_x509_id" )
-  String id
+public class X509Cert extends AbstractPersistent implements Serializable {
   @Column( name = "auth_x509_alias", unique=true )
   String alias
   @Lob
@@ -143,12 +145,7 @@ public class X509Cert implements Serializable {
 @Entity
 @Table( name = "auth_clusters" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class ClusterCredentials implements Serializable {
-  @Id
-  @GeneratedValue(generator = "system-uuid")
-  @GenericGenerator(name="system-uuid", strategy = "uuid")
-  @Column( name = "auth_cluster_id" )
-  String id
+public class ClusterCredentials extends AbstractPersistent implements Serializable {
   @Column( name = "auth_cluster_name", unique=true )
   String clusterName
   @OneToOne(cascade = CascadeType.ALL)

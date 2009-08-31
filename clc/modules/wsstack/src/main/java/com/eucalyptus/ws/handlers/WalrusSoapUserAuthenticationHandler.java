@@ -82,9 +82,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;

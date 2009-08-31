@@ -7,8 +7,8 @@ import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterThreadGroup;
 import com.eucalyptus.cluster.Clusters;

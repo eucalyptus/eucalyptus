@@ -71,10 +71,10 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 
 import com.eucalyptus.auth.CredentialProvider;
-import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.images.util.ImageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;

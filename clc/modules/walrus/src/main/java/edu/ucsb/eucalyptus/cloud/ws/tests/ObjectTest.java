@@ -71,7 +71,7 @@ import junit.framework.TestCase;
 
 import java.util.ArrayList;
 
-import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.Hashes;
 
 public class ObjectTest extends TestCase {
 

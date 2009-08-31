@@ -72,9 +72,9 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
-import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;

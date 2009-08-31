@@ -69,7 +69,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import java.security.MessageDigest;
 import java.util.zip.Adler32;
 
-import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.event.AbstractNamedRegistry;
 
 public class VmInstances extends AbstractNamedRegistry<VmInstance> {

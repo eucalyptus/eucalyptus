@@ -69,7 +69,7 @@
 
     <persistence-unit name="eucalyptus_config" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.ejb.HibernatePersistence</provider>
-        <class>com.eucalyptus.config.AbstractPersistent</class>
+        <class>com.eucalyptus.entities.AbstractPersistent</class>
         <class>com.eucalyptus.config.ComponentConfiguration</class>
         <class>com.eucalyptus.config.ClusterConfiguration</class>
         <class>com.eucalyptus.config.WalrusConfiguration</class>

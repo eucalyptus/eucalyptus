@@ -102,12 +102,12 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.AuthenticationException;

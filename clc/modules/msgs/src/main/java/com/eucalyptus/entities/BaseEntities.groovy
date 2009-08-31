@@ -26,7 +26,7 @@ import javax.persistence.Version;
 
 
 @MappedSuperclass
-public abstract class AbstractPersistent implements Serializable {
+public class AbstractPersistent implements Serializable {
   @Id
   @GeneratedValue(generator = "system-uuid")
   @GenericGenerator(name="system-uuid", strategy = "uuid")

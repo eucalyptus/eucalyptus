@@ -65,7 +65,7 @@
 
 package edu.ucsb.eucalyptus.storage.fs;
 
-import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.MappingHttpResponse;
 

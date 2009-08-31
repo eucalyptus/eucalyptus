@@ -70,6 +70,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.log4j.Logger;
+import org.mortbay.jetty.security.Credential;
+
+import sun.security.krb5.internal.CredentialsUtil;
 
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.KeyTool;

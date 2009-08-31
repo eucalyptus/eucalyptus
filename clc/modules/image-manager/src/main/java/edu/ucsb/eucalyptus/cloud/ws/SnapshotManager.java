@@ -65,7 +65,7 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
-import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.images.StorageUtil;

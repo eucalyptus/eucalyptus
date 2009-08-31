@@ -81,7 +81,7 @@ import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPublicKey;
 
-import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;

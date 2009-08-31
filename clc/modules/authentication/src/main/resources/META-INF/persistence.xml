@@ -69,6 +69,7 @@
 
     <persistence-unit name="eucalyptus_auth" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.ejb.HibernatePersistence</provider>
+        <class>com.eucalyptus.entities.AbstractPersistent</class>
         <class>com.eucalyptus.auth.User</class>
         <class>com.eucalyptus.auth.ClusterCredentials</class>
         <class>com.eucalyptus.auth.X509Cert</class>

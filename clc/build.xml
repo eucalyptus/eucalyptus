@@ -82,8 +82,8 @@
   <!--================================== build targets ==================================-->
   <target name="build-msgs">
     <ant dir="modules/msgs" inheritall="false" target="builder"/>
-    <ant dir="modules/cloud" inheritall="false" target="builder"/>
     <ant dir="modules/authentication" inheritall="false" target="builder"/>
+    <ant dir="modules/cloud" inheritall="false" target="builder"/>
     <ant dir="modules/configuration" inheritall="false" target="builder"/>
   </target>
   <target name="build-core" depends="build-msgs">

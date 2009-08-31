@@ -61,13 +61,16 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.util;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.UrlBase64;
+
+import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.bootstrap.Component;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -245,5 +248,20 @@ public class Hashes {
   public static char toHex( int value ) {
     if ( ( 0 <= value ) && ( value <= 9 ) ) return ( char ) ( '0' + value );
     else return ( char ) ( 'a' + ( value - 10 ) );
+  }
+
+  public static String getHexSignature( ) {
+    try {
+      Signature signer = Signature.getInstance( "SHA256withRSA" );
+      signer.initSign( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getPrivateKey( ) );
+      signer.update( "eucalyptus".getBytes( ) );
+      byte[] sig = signer.sign( );
+      String hexSig = bytesToHex( sig );
+      return hexSig;
+    } catch ( Exception e ) {
+      LOG.fatal( e, e );
+      System.exit( 1 );
+      return null;
+    }
   }
 }

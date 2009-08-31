@@ -65,7 +65,7 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.Hashes;
 
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.msgs.*;

@@ -60,8 +60,9 @@
 *******************************************************************************/
 package edu.ucsb.eucalyptus.admin.server;
 
-import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.EucalyptusCloudException;
+
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;
 

@@ -92,22 +92,7 @@ public class EntityWrapper<TYPE> {
         LOG.info( "-> Setting up persistence context for : " + persistenceContext );
         LOG.info( "-> database host: " + System.getProperty( "euca.db.host" ) );
         LOG.info( "-> database port: " + System.getProperty( "euca.db.port" ) );
-        // TODO: fix the way that persistence context is setup.
         emf.put( persistenceContext, Persistence.createEntityManagerFactory( persistenceContext ) );
-        EntityManager em = emf.get( persistenceContext ).createEntityManager( );
-        EntityTransaction tx = em.getTransaction( );
-        tx.begin( );
-        Session s = ( Session ) em.getDelegate( );
-        try {
-          Connection conn = s.connection( );
-          Statement stmt = conn.createStatement( );
-          stmt.execute( "SET WRITE_DELAY 100 MILLIS" );
-          conn.commit( );
-        } catch ( SQLException e ) {
-          LOG.error( e, e );
-        }
-        tx.commit( );
-        em.close( );
       }
       return emf.get( persistenceContext );
     }

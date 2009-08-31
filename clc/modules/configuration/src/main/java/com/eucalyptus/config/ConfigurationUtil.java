@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.security.KeyPair;
-import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.List;
@@ -12,9 +11,9 @@ import java.util.Map;
 
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
@@ -66,13 +65,9 @@ public class ConfigurationUtil {
       keyTool.writePem( directory + File.separator + "node-cert.pem", nodeX509 );
   
       X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
+      String hexSig = Hashes.getHexSignature( );
       keyTool.writePem( SubDirectory.KEYS.toString( ) + File.separator + "cloud-cert.pem", systemX509 );
-      Signature signer = Signature.getInstance( "SHA256withRSA" );
-      signer.initSign( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getPrivateKey( ) );
-      signer.update( "eucalyptus".getBytes( ) );
-      byte[] sig = signer.sign( );
       FileWriter out = new FileWriter( directory + File.separator + "vtunpass" );
-      String hexSig = Hashes.bytesToHex( sig );
       out.write( hexSig );
       out.flush( );
       out.close( );

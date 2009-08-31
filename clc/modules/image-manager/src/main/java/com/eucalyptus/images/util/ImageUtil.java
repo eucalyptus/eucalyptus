@@ -70,8 +70,8 @@ import java.util.zip.Adler32;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.Hashes;
 import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.EntityWrapper;
 
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;

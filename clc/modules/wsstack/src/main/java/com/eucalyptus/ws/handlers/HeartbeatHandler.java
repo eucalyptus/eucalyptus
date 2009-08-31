@@ -91,6 +91,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mortbay.jetty.security.Credential;
 
 import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
@@ -157,7 +158,7 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     Component.eucalyptus.setHostAddress( addr.getHostName( ) );
     Component.cluster.setHostAddress( addr.getHostName( ) );
     Component.jetty.setHostAddress( addr.getHostName( ) );
-    System.setProperty( "euca.db.password", "" );
+    System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
     System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
     boolean foundDb = false;
     try {
