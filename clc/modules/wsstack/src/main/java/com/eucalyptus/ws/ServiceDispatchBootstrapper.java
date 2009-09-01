@@ -163,14 +163,18 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       }
       if( hasLocal ) {
         Component.storage.markLocal( );
-        registerLocalComponent( Component.storage );
+        registerLocalComponent( Component.storage, sc.getName( ) );
       }
     }
     return true;
   }
 
+  private void registerLocalComponent( Component storage, String name ) throws EventVetoedException {
+    ListenerRegistry.getInstance( ).fireEvent( storage, StartComponentEvent.getLocal( storage, name ));    
+  }
+
   private void registerLocalComponent( Component component ) throws EventVetoedException {
-    ListenerRegistry.getInstance( ).fireEvent( component, StartComponentEvent.getLocal( component ));
+    ListenerRegistry.getInstance( ).fireEvent( component, StartComponentEvent.getLocal( component, component.name( ) ));
   }
   
   private void registerComponent( Component component, ComponentConfiguration componentConfiguration ) throws Exception {

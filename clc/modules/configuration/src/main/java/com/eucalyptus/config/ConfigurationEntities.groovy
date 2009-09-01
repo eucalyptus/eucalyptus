@@ -163,8 +163,8 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
 
 public class LocalConfiguration extends ComponentConfiguration {
   private Component c;
-  public LocalConfiguration( Component c ) {
-    super( c.name(), "localhost", c.getLocalAddress( ) );
+  public LocalConfiguration( Component c, String name ) {
+    super( name, "localhost", c.getLocalAddress( ) );//TODO: i have a feeling this will need to change, bad ref to lcoalhost
   }  
   public Component getComponent() {
     return c;
