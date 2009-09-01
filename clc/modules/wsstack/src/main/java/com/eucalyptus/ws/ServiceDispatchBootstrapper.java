@@ -163,18 +163,16 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       }
       if( hasLocal ) {
         Component.storage.markLocal( );
-        registerLocalComponent( Component.storage, sc.getName( ) );
+        System.setProperty( "euca.storage.name", sc.getName( ) );
+        LOG.info(LogUtil.subheader( "Setting euca.storage.name="+sc.getName( ) + " for: " + LogUtil.dumpObject( sc ) ));
+        registerLocalComponent( Component.storage );
       }
     }
     return true;
   }
 
-  private void registerLocalComponent( Component storage, String name ) throws EventVetoedException {
-    ListenerRegistry.getInstance( ).fireEvent( storage, StartComponentEvent.getLocal( storage, name ));    
-  }
-
   private void registerLocalComponent( Component component ) throws EventVetoedException {
-    ListenerRegistry.getInstance( ).fireEvent( component, StartComponentEvent.getLocal( component, component.name( ) ));
+    ListenerRegistry.getInstance( ).fireEvent( component, StartComponentEvent.getLocal( component ));
   }
   
   private void registerComponent( Component component, ComponentConfiguration componentConfiguration ) throws Exception {

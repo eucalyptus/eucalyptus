@@ -139,9 +139,9 @@ public class Configuration {
     }
     StartComponentEvent e = null;
     if ( Component.walrus.equals( newComponent.getComponent( ) ) && NetworkUtil.testLocal( newComponent.getHostName( ) ) ) {
-      e = StartComponentEvent.getLocal( newComponent.getComponent( ), newComponent.getName( ) );
+      e = StartComponentEvent.getLocal( newComponent.getComponent( ) );
     } else if ( Component.storage.equals( newComponent.getComponent( ) ) && ( NetworkUtil.testLocal( newComponent.getHostName( ) ) ) ) {
-      e = StartComponentEvent.getLocal( newComponent.getComponent( ), newComponent.getName( ) );
+      e = StartComponentEvent.getLocal( newComponent.getComponent( )  );
     } else {
       e = StartComponentEvent.getRemote( newComponent );
     }
@@ -185,9 +185,9 @@ public class Configuration {
     }
     StopComponentEvent e = null;
     if ( Component.walrus.equals( componentConfig.getComponent( ) ) && ( Component.walrus.isLocal( ) || NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) ) {
-      e = StopComponentEvent.getLocal( componentConfig.getComponent( ), componentConfig.getName( ) );
+      e = StopComponentEvent.getLocal( componentConfig.getComponent( ) );
     } else if ( Component.storage.equals( componentConfig.getComponent( ) ) && ( Component.storage.isLocal( ) || NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) ) {
-      e = StopComponentEvent.getLocal( componentConfig.getComponent( ), componentConfig.getName( ) );
+      e = StopComponentEvent.getLocal( componentConfig.getComponent( ) );
     } else {
       e = StopComponentEvent.getRemote( componentConfig );
     }
