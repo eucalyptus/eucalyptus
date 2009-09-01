@@ -478,7 +478,7 @@ char* java_library_path(euca_opts *args) {
 		if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0 && strstr(dir_ent->d_name,"disabled") == NULL)  {
 				char jar[256];
 				snprintf(jar,255,"%s/%s",lib_dir,dir_ent->d_name);
-				if( CHECK_ISREG(jar) ) wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,":%s",jar);
+				if( (CHECK_ISREG(jar) || CHECK_ISLNK(jar)) ) wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,":%s",jar);
 		}
 	}
 	return jar_list;

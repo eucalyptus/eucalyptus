@@ -140,6 +140,7 @@ static JNIEnv *env=NULL;
 static bootstrapper_t bootstrap;
 #define CHECK_ISDIR(path) (( path == NULL || ( stat( path, &home ) != 0 ) ) ? 0 : S_ISDIR(home.st_mode) )
 #define CHECK_ISREG(path) (( path == NULL || ( stat( path, &home ) != 0 ) ) ? 0 : S_ISREG(home.st_mode) )
+#define CHECK_ISLNK(path) (( path == NULL || ( stat( path, &home ) != 0 ) ) ? 0 : S_ISLNK(home.st_mode) )
 int main( int argc, char *argv[ ] );
 void main_reload( void );
 void main_shutdown( void );
