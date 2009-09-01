@@ -67,6 +67,8 @@ package edu.ucsb.eucalyptus.cloud.entities;
 
 import org.hibernate.annotations.*;
 
+import com.eucalyptus.util.StorageProperties;
+
 import javax.persistence.CascadeType;
 import javax.persistence.*;
 import javax.persistence.Entity;
@@ -85,6 +87,8 @@ public class VolumeInfo {
     private String userName;
     @Column(name = "volume_name", unique=true)
     private String volumeId;
+    @Column(name = "sc_name")
+    private String scName;
     @Column(name = "size")
     private Integer size; //in GB
     @Column(name = "status")
@@ -96,9 +100,12 @@ public class VolumeInfo {
     @Column(name = "snapshot_id")
     private String snapshotId;
 
-    public VolumeInfo() {}
+    public VolumeInfo() {
+    	this.scName = StorageProperties.NAME;
+    }
 
     public VolumeInfo(String volumeId) {
+    	this();
         this.volumeId = volumeId;
     }
 
@@ -118,7 +125,15 @@ public class VolumeInfo {
         this.volumeId = volumeId;
     }
 
-    public Integer getSize() {
+    public String getScName() {
+		return scName;
+	}
+
+	public void setScName(String scName) {
+		this.scName = scName;
+	}
+
+	public Integer getSize() {
         return size;
     }
 

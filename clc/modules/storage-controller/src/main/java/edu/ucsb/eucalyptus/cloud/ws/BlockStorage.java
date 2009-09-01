@@ -344,22 +344,17 @@ public class BlockStorage {
 					blockManager.deleteVolume(volumeId);
 					volumeStorageManager.deleteObject("", volumeId);
 					db.delete(foundVolume);
-					db.commit();
 					if(StorageProperties.trackUsageStatistics) { 
 						blockStorageStatistics.decrementVolumeCount();
 						blockStorageStatistics.updateSpaceUsed(-(foundVolume.getSize() * StorageProperties.GB));
 					}
+					reply.set_return(Boolean.TRUE);
 				} catch ( IOException ex) {
-					LOG.error(ex);
+					LOG.error(ex, ex);
 				}
-			} else {
-				db.rollback();
-				throw new VolumeInUseException(volumeId);
 			}
-		} else {
-			db.rollback();
-			throw new NoSuchVolumeException(volumeId);
-		}
+		} 
+		db.commit();
 		return reply;
 	}
 
