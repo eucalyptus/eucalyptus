@@ -257,7 +257,7 @@ public class Binding {
 	public static SOAPEnvelope createFault(  String faultCode, String faultReason, String faultDetails )  {
 		SOAPFactory soapFactory = OMAbstractFactory.getSOAP11Factory();
 
-		SOAPFaultCode soapFaultCode = soapFactory.createSOAPFaultCode();
+		SOAPFaultCode soapFaultCode = soapFactory.createSOAPFaultCode();		
 		soapFaultCode.setText( faultCode );
 
 		SOAPFaultReason soapFaultReason = soapFactory.createSOAPFaultReason();

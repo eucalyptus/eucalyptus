@@ -95,19 +95,19 @@ public class GrantInfo {
     private String grantGroup;
     @Column(name="entity_name")
     private String entityName;
-	@Column(name="read")
-	private Boolean read;
-	@Column(name="write")
-	private Boolean write;
-	@Column(name="read_acp")
-	private Boolean readACP;
-	@Column(name="write_acp")
-	private Boolean writeACP;
+	@Column(name="allow_read")
+	private Boolean canRead;
+	@Column(name="allow_write")
+	private Boolean canWrite;
+	@Column(name="allow_read_acp")
+	private Boolean canReadACP;
+	@Column(name="allow_write_acp")
+	private Boolean canWriteACP;
 
     private static Logger LOG = Logger.getLogger( ObjectInfo.class );
 
     public GrantInfo(){
-        read = write = readACP = writeACP = false;
+        canRead = canWrite = canReadACP = canWriteACP = false;
     }
 
 	public Long getId()
@@ -115,12 +115,12 @@ public class GrantInfo {
 		return this.id;
 	}
 
-	public boolean isRead() {
-		return read;
+	public boolean canRead() {
+		return canRead;
 	}
 
-	public void setRead(Boolean read) {
-		this.read = read;
+	public void setCanRead(Boolean canRead) {
+		this.canRead = canRead;
 	}
 
 	public String getUserId() {
@@ -147,32 +147,32 @@ public class GrantInfo {
         this.entityName = entityName;
     }
 
-    public boolean isWrite() {
-		return write;
+    public boolean canWrite() {
+		return canWrite;
 	}
 
-	public void setWrite(Boolean write) {
-		this.write = write;
+	public void setCanWrite(Boolean canWrite) {
+		this.canWrite = canWrite;
 	}
 
-	public boolean isReadACP() {
-		return readACP;
+	public boolean canReadACP() {
+		return canReadACP;
 	}
 
-	public void setReadACP(Boolean readACP) {
-		this.readACP = readACP;
+	public void setCanReadACP(Boolean canReadACP) {
+		this.canReadACP = canReadACP;
 	}
 
 	public boolean isWriteACP() {
-		return writeACP;
+		return canWriteACP;
 	}
 
 	public void setWriteACP(Boolean writeACP) {
-		this.writeACP = writeACP;
+		this.canWriteACP = writeACP;
 	}
 
 	public void setFullControl() {
-		read = write = readACP = writeACP = true;
+		canRead = canWrite = canReadACP = canWriteACP = true;
 	}
 
 	public static void addGrants(String ownerId, List<GrantInfo>grantInfos, AccessControlListType accessControlList) {
@@ -207,11 +207,11 @@ public class GrantInfo {
 				if (permission.equals("FULL_CONTROL")) {
 					grantInfo.setFullControl();
 				}   else if (permission.equals("READ")) {
-					grantInfo.setRead(true);
+					grantInfo.setCanRead(true);
 				}   else if (permission.equals("WRITE")) {
-					grantInfo.setWrite(true);
+					grantInfo.setCanWrite(true);
 				}   else if (permission.equals("READ_ACP")) {
-					grantInfo.setReadACP(true);
+					grantInfo.setCanReadACP(true);
 				}   else if (permission.equals("WRITE_ACP")) {
 					grantInfo.setWriteACP(true);
 				}

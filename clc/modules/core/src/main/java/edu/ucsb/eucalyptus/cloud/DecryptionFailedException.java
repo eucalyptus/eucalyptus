@@ -78,7 +78,7 @@ public class DecryptionFailedException extends WalrusException {
   
   public DecryptionFailedException(String value)
   {
-    super("Decryption Failed", "Fail", value, HttpResponseStatus.EXPECTATION_FAILED);
+    super("Decryption Failed", "Fail", "Entity", value, HttpResponseStatus.EXPECTATION_FAILED);
   }
 
   public DecryptionFailedException(Throwable ex)

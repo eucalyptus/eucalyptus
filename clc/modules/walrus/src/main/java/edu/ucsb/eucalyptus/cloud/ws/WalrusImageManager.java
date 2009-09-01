@@ -356,7 +356,7 @@ public class WalrusImageManager {
 					db.commit();
 				} else {
 					db.rollback();
-					throw new AccessDeniedException(objectKey);
+					throw new AccessDeniedException("Key", objectKey);
 				}
 			} else {
 				db.rollback();
@@ -901,7 +901,7 @@ public class WalrusImageManager {
 					return reply;
 				} else {
 					db.rollback();
-					throw new AccessDeniedException(objectKey);
+					throw new AccessDeniedException("Key", objectKey);
 				}
 
 			} else {
@@ -939,7 +939,7 @@ public class WalrusImageManager {
 					return reply;
 				} else {
 					db.rollback();
-					throw new AccessDeniedException(objectKey);
+					throw new AccessDeniedException("Key", objectKey);
 				}
 			} else {
 				db.rollback();
@@ -982,7 +982,7 @@ public class WalrusImageManager {
 					return reply;
 				} else {
 					db.rollback();
-					throw new AccessDeniedException(manifestKey);
+					throw new AccessDeniedException("Key", manifestKey);
 				}
 
 			} else {

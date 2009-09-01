@@ -107,7 +107,7 @@ public class WalrusUtil {
 		Throwable ex = errorMessage.getException();
 		if(ex instanceof WalrusException) {
 			WalrusException e = (WalrusException) ex;
-			errMsg = new WalrusErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResource(), errorMessage.getCorrelationId(), ipAddress);
+			errMsg = new WalrusErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), errorMessage.getCorrelationId(), ipAddress);
 			errMsg.setCorrelationId( errorMessage.getCorrelationId() );
 		} else {
 			errMsg = errorMessage;

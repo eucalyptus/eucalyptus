@@ -79,7 +79,7 @@ public class PreconditionFailedException extends WalrusException {
   
   public PreconditionFailedException(String precondition)
   {
-    super("PreconditionFailed", "At least one of the pre-conditions you specified did not hold.", precondition, HttpResponseStatus.PRECONDITION_FAILED);
+    super("PreconditionFailed", "At least one of the pre-conditions you specified did not hold.", "Key", precondition, HttpResponseStatus.PRECONDITION_FAILED);
   }
   
   public String getPrecondition() {

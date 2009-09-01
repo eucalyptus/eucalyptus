@@ -77,7 +77,7 @@ public class InvalidArgumentException extends WalrusException {
   
   public InvalidArgumentException(String value)
   {
-    super("Argument is invalid: " + value, "Invalid Argument", value, HttpResponseStatus.BAD_REQUEST);
+    super("Argument is invalid: " + value, "Invalid Argument", "Argument",  value, HttpResponseStatus.BAD_REQUEST);
   }
 
   public InvalidArgumentException(Throwable ex)

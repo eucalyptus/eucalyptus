@@ -77,7 +77,7 @@ public class InvalidRangeException extends WalrusException {
   
   public InvalidRangeException(String message)
   {
-    super( "Invalid Range", "The requested range cannot be satisfied.", message, HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
+    super( "Invalid Range", "The requested range cannot be satisfied.", "Range", message, HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
   }
 
   public InvalidRangeException(Throwable ex)

@@ -77,9 +77,14 @@ public class EntityTooLargeException extends WalrusException {
   }
   public EntityTooLargeException(String entity)
   {
-    super("EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", entity, HttpResponseStatus.BAD_REQUEST);
+    super("EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", "Entity", entity, HttpResponseStatus.BAD_REQUEST);
   }
-  
+
+  public EntityTooLargeException(String entityType, String entity)
+  {
+    super("EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", entityType, entity, HttpResponseStatus.BAD_REQUEST);
+  }
+
   public EntityTooLargeException(Throwable ex)
   {
     super("EntityTooLarge", ex);

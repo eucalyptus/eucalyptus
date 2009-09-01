@@ -77,7 +77,7 @@ public class NoSuchBucketException extends WalrusException {
   
   public NoSuchBucketException(String bucket)
   {
-    super("NoSuchBucket", "The specified bucket was not found", bucket, HttpResponseStatus.NOT_FOUND);    
+    super("NoSuchBucket", "The specified bucket was not found", "Bucket", bucket, HttpResponseStatus.NOT_FOUND);    
   }
   
     

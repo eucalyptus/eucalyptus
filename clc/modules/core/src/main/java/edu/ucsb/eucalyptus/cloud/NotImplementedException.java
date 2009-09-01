@@ -77,7 +77,7 @@ public class NotImplementedException extends WalrusException {
   
   public NotImplementedException(String value)
   {
-    super("Not Implemented", "NA", value, HttpResponseStatus.NOT_IMPLEMENTED);
+    super("Not Implemented", "NA", "NA", value, HttpResponseStatus.NOT_IMPLEMENTED);
   }
 
   public NotImplementedException(Throwable ex)

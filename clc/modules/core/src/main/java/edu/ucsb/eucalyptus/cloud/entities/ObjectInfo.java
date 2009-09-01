@@ -270,7 +270,7 @@ public class ObjectInfo implements Comparable {
 
         for (GrantInfo grantInfo: grants) {
             if (grantInfo.getUserId().equals(userId)) {
-                if (grantInfo.isWrite()) {
+                if (grantInfo.canWrite()) {
                     return true;
                 }
             }
@@ -299,7 +299,7 @@ public class ObjectInfo implements Comparable {
 
         for (GrantInfo grantInfo: grants) {
             if (grantInfo.getUserId().equals(userId)) {
-                if (grantInfo.isRead()) {
+                if (grantInfo.canRead()) {
                     return true;
                 }
             }
@@ -320,7 +320,7 @@ public class ObjectInfo implements Comparable {
             return true;
         } else {
             for (GrantInfo grantInfo: grants) {
-                if(grantInfo.getUserId().equals(userId) && grantInfo.isReadACP()) {
+                if(grantInfo.getUserId().equals(userId) && grantInfo.canReadACP()) {
                     return true;
                 }
             }
