@@ -117,6 +117,13 @@ public interface ImageState {
      */
     boolean isUpgrade();
 
+    /**
+     * Return the image's EMI, if available.
+     *
+     * @return EMI for the referenced image, or null.
+     */
+    String getEMI();
+
     enum Status {
         UNINSTALLED(false),
         DOWNLOADING(true),

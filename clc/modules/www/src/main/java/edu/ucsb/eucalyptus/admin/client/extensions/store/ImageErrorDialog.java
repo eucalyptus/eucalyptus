@@ -109,6 +109,7 @@ class ImageErrorDialog extends DialogBox {
 
         // We use add here to avoid losing the default GWT theme rendering.
         addStyleName("istore-image-error-dialog");
+        addStyleName("istore-dialog");
         buttonPanel.setStyleName("istore-button-panel");
     }
 

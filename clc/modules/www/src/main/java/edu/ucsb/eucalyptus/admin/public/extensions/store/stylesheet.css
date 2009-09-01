@@ -56,14 +56,25 @@ h1 {
   color: #ff0000;
 }
 
+.istore-image-widget {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.istore-image-widget .istore-left-panels {
+  width: 600px;
+}
+
+.istore-image-widget .istore-image-icon-panel,
+.istore-image-widget .istore-title-panel,
+.istore-image-widget .istore-command-panel {
+  margin-left: 10px;
+}
+
 .istore-image-widget .istore-known-provider-title {
   font-weight: bold;
   text-decoration: none;
   color: #c90016;
-}
-
-.istore-image-widget .istore-image-icon-panel {
-  width: 10px; /* Small value so that the image size is used instead. */
 }
 
 .istore-image-widget .istore-provider-title,
@@ -76,16 +87,10 @@ h1 {
   font-weight: bold;
   color: #c90016;
   padding-bottom: 7px;
-  max-width: 480px;
 }
 
 .istore-image-widget .istore-image-summary {
-  width: 480px;
   padding-bottom: 7px;
-}
-
-.istore-image-widget .istore-image-description {
-  width: 480px;
 }
 
 .istore-image-widget .istore-read-more-label,
@@ -95,13 +100,20 @@ h1 {
 }
 
 .istore-image-widget .istore-cancel-panel,
-.istore-image-widget .istore-show-error-panel {
+.istore-image-widget .istore-show-error-panel,
+.istore-image-widget .istore-how-to-run-panel {
   text-align: right;
 }
 
 .istore-image-widget .istore-show-error-anchor {
   text-decoration: underline;
   color: #ff0000;
+}
+
+.istore-image-widget .istore-how-to-run-anchor {
+  font-weight: bold;
+  text-decoration: underline;
+  color: #517e1d;
 }
 
 .istore-image-widget .istore-spinner {
@@ -202,7 +214,18 @@ h1 {
   height: 10em;
 }
 
-.istore-image-error-dialog .istore-button-panel {
+.istore-how-to-run-dialog .istore-summary-label,
+.istore-how-to-run-dialog .istore-footer-label {
+  width: 40em;
+  margin: 1em 0.5em 1em 0.5em;
+}
+
+.istore-how-to-run-dialog .istore-command-label {
+  margin-left: 2em;
+  font-style: italic;
+}
+
+.istore-dialog .istore-button-panel {
   text-align: right;
 }
 
@@ -232,7 +255,7 @@ h1 {
   /* XXX How to make this URL generic? */
   background-image: url("img/spinner.gif");
   background-repeat: no-repeat;
-  background-position: 325px center;
+  background-position: 325px center; /* Should be updated with the text box width. */
   padding-right: 28px; /* Hide the text under the spinner. */
 }
 

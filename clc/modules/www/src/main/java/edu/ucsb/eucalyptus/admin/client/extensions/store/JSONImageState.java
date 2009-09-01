@@ -131,4 +131,7 @@ public class JSONImageState implements ImageState {
         return JSONUtil.asBoolean(object.get("is-upgrade"), false);
     }
 
+    public String getEMI() {
+        return JSONUtil.asString(object.get("emi"));
+    }
 }
