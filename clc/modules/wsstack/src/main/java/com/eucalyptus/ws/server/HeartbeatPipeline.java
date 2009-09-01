@@ -60,12 +60,23 @@
 *******************************************************************************/
 package com.eucalyptus.ws.server;
 
+import java.security.GeneralSecurityException;
 import java.util.List;
 
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
+import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
+import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 
+import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.HeartbeatHandler;
+import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.eucalyptus.ws.handlers.soap.AddressingHandler;
+import com.eucalyptus.ws.handlers.soap.SoapHandler;
+import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 public class HeartbeatPipeline extends FilteredPipeline {

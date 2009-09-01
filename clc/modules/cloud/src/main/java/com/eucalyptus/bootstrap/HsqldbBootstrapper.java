@@ -73,6 +73,7 @@ import org.hsqldb.ServerConstants;
 import org.hsqldb.persist.HsqlProperties;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.util.SubDirectory;
 
 @Provides( resource = Resource.Database )
@@ -108,7 +109,7 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
 
   @Override
   public boolean load( Resource current ) throws Exception {
-
+    LOG.trace( "Touching class: " + SslSetup.class );
     this.db = new Server( );
     Component.db.markLocal( );
     Component.db.setHostAddress( "127.0.0.1" );
@@ -127,6 +128,7 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
     props.setProperty( ServerConstants.SC_KEY_NO_SYSTEM_EXIT, true );
     props.setProperty( ServerConstants.SC_KEY_PORT, 9001 );
     props.setProperty( ServerConstants.SC_KEY_REMOTE_OPEN_DB, true );
+//    props.setProperty( ServerConstants.SC_KEY_TLS, true );
 
     props.setProperty( ServerConstants.SC_KEY_DATABASE + ".0", SubDirectory.DB.toString( ) + File.separator + general );
     props.setProperty( ServerConstants.SC_KEY_DBNAME + ".0", general );

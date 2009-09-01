@@ -113,6 +113,7 @@ import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.HeartbeatHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
@@ -157,10 +158,9 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
 
   public ChannelPipeline getPipeline( ) throws Exception {
     ChannelPipeline pipeline = pipeline( );
-    pipeline.addLast( "decoder", new HttpRequestDecoder( ) );
+    pipeline.addLast( "decoder", new NioHttpDecoder( ) );
     pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
     pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
-    pipeline.addLast( "hb-get-handler", new SimpleChannelHandler( ) );
     pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
     try {
       pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
@@ -174,28 +174,6 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
     return pipeline;
   }
   
-  public static class SimpleHeartbeatHandler extends SimpleChannelHandler {
-
-    @Override
-    public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
-      if( e.getMessage( ) instanceof HttpRequest && HttpMethod.GET.equals( ((HttpRequest)e.getMessage( )).getMethod( ) ) ) {
-        HttpRequest request = (HttpRequest) e.getMessage( );
-        MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
-        String resp = "";
-        for( Component c : Component.values( ) ) {
-          resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s\n", c.name( ), c.isEnabled( ), c.isLocal( ) );
-        }
-        ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
-        response.setContent( buf );
-        response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
-        response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-        ChannelFuture writeFuture = ctx.getChannel( ).write( response );
-        writeFuture.addListener( ChannelFutureListener.CLOSE );
-      }
-    }
-    
-  }
-
   public int getPort( ) {
     return port;
   }
