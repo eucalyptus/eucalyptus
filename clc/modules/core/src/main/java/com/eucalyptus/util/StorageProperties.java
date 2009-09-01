@@ -70,8 +70,11 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.WalrusConfiguration;
+
+import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
 
 public class StorageProperties {
 
@@ -102,6 +105,19 @@ public class StorageProperties {
 		updateWalrusUrl();
 	}
 
+	public static void updateName() {
+		if(!Component.eucalyptus.isLocal()) {
+			String scName = System.getProperty("euca.storage.name");
+			if(scName != null) {
+				StorageProperties.NAME = scName;
+			} else {
+				SystemUtil.shutdownWithError("Storage controller name cannot be determined. Shutting down.");
+			}
+		} else {
+			StorageProperties.NAME = "StorageController-local";
+		}
+
+	}
 	public static void updateWalrusUrl() {
 		if(!WalrusProperties.sharedMode) {
 			List<WalrusConfiguration> walrusConfigs;

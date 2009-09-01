@@ -176,7 +176,6 @@ public class BlockStorage {
 
 	private static void configure() {
 		StorageInfo storageInfo = getConfig();
-		StorageProperties.NAME = storageInfo.getName();
 		StorageProperties.MAX_TOTAL_VOLUME_SIZE = storageInfo.getMaxTotalVolumeSizeInGb();
 		StorageProperties.iface = storageInfo.getStorageInterface();
 		StorageProperties.MAX_VOLUME_SIZE = storageInfo.getMaxVolumeSizeInGB();
@@ -185,10 +184,11 @@ public class BlockStorage {
 	}
 
 	private static StorageInfo getConfig() {
+		StorageProperties.updateName();
 		EntityWrapper<StorageInfo> db = new EntityWrapper<StorageInfo>();
 		StorageInfo storageInfo;
 		try {
-			storageInfo = db.getUnique(new StorageInfo());
+			storageInfo = db.getUnique(new StorageInfo(StorageProperties.NAME));
 		} catch(EucalyptusCloudException ex) {
 			storageInfo = new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
@@ -207,8 +207,7 @@ public class BlockStorage {
 		EntityWrapper<StorageInfo> db = new EntityWrapper<StorageInfo>();
 		StorageInfo storageInfo;
 		try {
-			storageInfo = db.getUnique(new StorageInfo());
-			storageInfo.setName(StorageProperties.NAME);
+			storageInfo = db.getUnique(new StorageInfo(StorageProperties.NAME));
 			storageInfo.setMaxTotalVolumeSizeInGb(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
 			storageInfo.setStorageInterface(StorageProperties.iface);
 			storageInfo.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
