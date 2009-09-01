@@ -166,6 +166,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
         System.setProperty( "euca.storage.name", sc.getName( ) );
         LOG.info(LogUtil.subheader( "Setting euca.storage.name="+sc.getName( ) + " for: " + LogUtil.dumpObject( sc ) ));
         registerLocalComponent( Component.storage );
+        hasLocal = false;
       }
     }
     return true;

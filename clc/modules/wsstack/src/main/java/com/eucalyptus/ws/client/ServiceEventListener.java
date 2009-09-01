@@ -50,9 +50,6 @@ public class ServiceEventListener implements EventListener {
           Component c = e.getComponent( );
           URI uri = new URI( c.getLocalAddress( ) );
           sd = new LocalDispatcher( c, c.name( ), uri );
-          if( Component.storage.equals( c ) ) {
-            System.setProperty( "euca.storage.name", e.getConfiguration( ).getName( ) );
-          }
           ServiceDispatcher.register( c.getRegistryKey( "localhost" ), sd );
         } else {
           ComponentConfiguration config = e.getConfiguration( );
