@@ -122,6 +122,7 @@ public class ImageWidget extends Composite {
     private final VerticalPanel progressPanel = new VerticalPanel();
     private ProgressBarWidget progressBar;
 
+    private int howToRunRowIndex;
     private int showErrorRowIndex;
     private int cancelRowIndex;
     private int upgradeIconRowIndex;
@@ -132,19 +133,38 @@ public class ImageWidget extends Composite {
     public ImageWidget(ImageInfo imageInfo, ImageState imageState) {
         this.imageInfo = imageInfo;
 
-        HorizontalPanel horizontalPanel = new HorizontalPanel();
+        /* Rather than doing this, with a single horizontal panel
+         *
+         *           [   |   |   ]
+         *
+         * We do this, with two horizontal panels:
+         *
+         *           [[  |  ]|   ]
+         *
+         * This makes it easier to keep the right-hand side cell
+         * aligned across different lines, even if the left panels
+         * shift a little bit. */
+        HorizontalPanel internalPanel = new HorizontalPanel();
+        HorizontalPanel externalPanel = new HorizontalPanel();
+
+        Widget iconPanel = buildIconPanel();
+        Widget titlePanel = buildTitlePanel();
+        Widget commandPanel = buildCommandPanel();
 
         /* Three vertical panels inside a horizontal panel. */
-        horizontalPanel.add(buildIconPanel());
-        horizontalPanel.add(buildTitlePanel());
-        horizontalPanel.add(buildCommandPanel());
+        internalPanel.add(iconPanel);
+        internalPanel.add(titlePanel);
+        externalPanel.add(internalPanel);
+        externalPanel.add(commandPanel);
 
-        /* This should really be in the CSS somehow, but I haven't yet
-         * found a trivial way to set the padding attribute on the TDs
-         * of the top table only, and not on contained tables. */
-        horizontalPanel.setSpacing(15);
+        /* For these, the image sizes (icon and button) will dictate
+         * their real widths. */
+        internalPanel.setCellWidth(iconPanel, "1px");
+        externalPanel.setCellWidth(commandPanel, "1px");
 
-        initWidget(horizontalPanel);
+        internalPanel.setStyleName("istore-left-panels");
+
+        initWidget(externalPanel);
 
         setStyleName("istore-image-widget");
 
@@ -187,6 +207,7 @@ public class ImageWidget extends Composite {
                 progressPanel.setVisible(true);
             }
 
+            setHowToRunVisible(imageState.getEMI() != null);
             setShowErrorVisible(imageState.getErrorMessage() != null);
             setCancelVisible(imageState.hasAction(ImageState.Action.CANCEL));
             setUpgradeIconVisible(imageState.isUpgrade());
@@ -291,24 +312,9 @@ public class ImageWidget extends Composite {
                                             PROGRESS_DONE_URI,
                                             120, 12);
 
-        final Anchor cancelAnchor = new Anchor("cancel");
+        final Anchor howToRunAnchor = new Anchor("how to run");
         final Anchor showErrorAnchor = new Anchor("show error");
-        
-        showErrorAnchor.addClickHandler(new ClickHandler() {
-            public void onClick(ClickEvent event) {
-                event.preventDefault();
-                ImageInfo imageInfo = ImageWidget.this.imageInfo;
-                ImageState imageState = ImageWidget.this.imageState;
-                ImageErrorDialog dialog = new ImageErrorDialog(imageInfo,
-                                                               imageState);
-                dialog.showRelativeTo(showErrorAnchor);
-                dialog.addClearErrorHandler(new ClearErrorHandler<ImageState>() {
-                    public void onClearError(ClearErrorEvent<ImageState> event) {
-                        ImageWidget.this.fireEvent(event);
-                    }
-                });
-            }
-        });
+        final Anchor cancelAnchor = new Anchor("cancel");
 
         Image upgradeIconImage = new Image(UPGRADE_ICON_URI);
 
@@ -320,9 +326,11 @@ public class ImageWidget extends Composite {
         commandPanel.setWidget(0, 0, buttonPanel);
         commandPanel.setWidget(0, 1, spinnerImage);
         commandPanel.setWidget(1, 0, progressPanel);
-        showErrorRowIndex = 2;
-        cancelRowIndex = 3;
-        upgradeIconRowIndex = 4;
+        howToRunRowIndex = 2;
+        showErrorRowIndex = 3;
+        cancelRowIndex = 4;
+        upgradeIconRowIndex = 5;
+        commandPanel.setWidget(howToRunRowIndex, 0, howToRunAnchor);
         commandPanel.setWidget(showErrorRowIndex, 0, showErrorAnchor);
         commandPanel.setWidget(cancelRowIndex, 0, cancelAnchor);
         commandPanel.setWidget(upgradeIconRowIndex, 0, upgradeIconImage);
@@ -333,16 +341,48 @@ public class ImageWidget extends Composite {
         buttonPanel.setStyleName("istore-button-panel");
         spinnerImage.setStyleName("istore-spinner");
         progressPanel.setStyleName("istore-progress-panel");
-        cancelAnchor.setStyleName("istore-cancel-anchor");
+        howToRunAnchor.setStyleName("istore-how-to-run-anchor");
         showErrorAnchor.setStyleName("istore-show-error-anchor");
+        cancelAnchor.setStyleName("istore-cancel-anchor");
         upgradeIconImage.setStyleName("istore-upgrade-icon");
 
+        commandPanel.getRowFormatter().setStyleName(howToRunRowIndex,
+                                                    "istore-how-to-run-panel");
         commandPanel.getRowFormatter().setStyleName(showErrorRowIndex,
                                                     "istore-show-error-panel");
         commandPanel.getRowFormatter().setStyleName(cancelRowIndex,
                                                     "istore-cancel-panel");
         commandPanel.getRowFormatter().setStyleName(upgradeIconRowIndex,
                                                     "istore-upgrade-icon-panel");
+
+        howToRunAnchor.addClickHandler(new ClickHandler() {
+            public void onClick(ClickEvent event) {
+                event.preventDefault();
+                ImageInfo imageInfo = ImageWidget.this.imageInfo;
+                ImageState imageState = ImageWidget.this.imageState;
+                HowToRunDialog dialog = new HowToRunDialog(imageInfo,
+                                                           imageState);
+                dialog.center();
+            }
+        });
+
+        // Show the error dialog when the anchor is clicked, and hook its
+        // clear error event into the firing of the same event on this widget.
+        showErrorAnchor.addClickHandler(new ClickHandler() {
+            public void onClick(ClickEvent event) {
+                event.preventDefault();
+                ImageInfo imageInfo = ImageWidget.this.imageInfo;
+                ImageState imageState = ImageWidget.this.imageState;
+                ImageErrorDialog dialog = new ImageErrorDialog(imageInfo,
+                                                               imageState);
+                dialog.center();
+                dialog.addClearErrorHandler(new ClearErrorHandler<ImageState>() {
+                    public void onClearError(ClearErrorEvent<ImageState> event) {
+                        ImageWidget.this.fireEvent(event);
+                    }
+                });
+            }
+        });
 
         // Translate the click event into a cancel event.
         cancelAnchor.addClickHandler(new ClickHandler() {
@@ -354,6 +394,10 @@ public class ImageWidget extends Composite {
         });
 
         return commandPanel;
+    }
+
+    private void setHowToRunVisible(boolean isVisible) {
+        commandPanel.getRowFormatter().setVisible(howToRunRowIndex, isVisible);
     }
 
     private void setShowErrorVisible(boolean isVisible) {

@@ -62,67 +62,56 @@ package edu.ucsb.eucalyptus.admin.client.extensions.store;
 
 import com.google.gwt.user.client.ui.DialogBox;
 import com.google.gwt.user.client.ui.Button;
-import com.google.gwt.user.client.ui.TextArea;
+import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.Widget;
 
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
-import com.google.gwt.event.dom.client.HasClickHandlers;
 
 
-class ImageErrorDialog extends DialogBox {
+class HowToRunDialog extends DialogBox {
 
-    public ImageErrorDialog(ImageInfo imageInfo, final ImageState imageState) {
+    public HowToRunDialog(ImageInfo imageInfo, final ImageState imageState) {
         Button closeButton = new Button("Close");
-        Button clearErrorButton = new Button("Clear Error");
 
         closeButton.addClickHandler(new ClickHandler() {
             public void onClick(ClickEvent event) {
-                ImageErrorDialog.this.hide();
+                HowToRunDialog.this.hide();
             }
         });
 
-        clearErrorButton.addClickHandler(new ClickHandler() {
-            public void onClick(ClickEvent event) {
-                ImageErrorDialog.this.hide();
-                ImageErrorDialog.this.fireEvent(new ClearErrorEvent<ImageState>(imageState));
-            }
-        });
+        Label summaryLabel = new Label(
+            "To run an instance with this image, execute the following " +
+            "command:");
 
-        TextArea textArea = new TextArea();
-        textArea.setValue(imageState.getErrorMessage());
+        Label commandLabel = new Label(
+            "euca-run-instances -k <your key pair> " + imageState.getEMI());
+
+        Label footerLabel = new Label(
+            "For more information, please consult the documentation.");
 
         FlowPanel buttonPanel = new FlowPanel();
         buttonPanel.add(closeButton);
-        buttonPanel.add(clearErrorButton);
-
-        clearErrorButton.setVisible(imageState.hasAction(ImageState.Action.CLEAR_ERROR));
 
         VerticalPanel verticalPanel = new VerticalPanel();
-        verticalPanel.add(textArea);
+        verticalPanel.add(summaryLabel);
+        verticalPanel.add(commandLabel);
+        verticalPanel.add(footerLabel);
         verticalPanel.add(buttonPanel);
 
-        setText("Error from " + imageInfo.getTitle());
+        setText("How to run " + imageInfo.getTitle());
         setWidget(verticalPanel);
 
         // We use add here to avoid losing the default GWT theme rendering.
-        addStyleName("istore-image-error-dialog");
+        addStyleName("istore-how-to-run-dialog");
         addStyleName("istore-dialog");
+        summaryLabel.setStyleName("istore-summary-label");
+        commandLabel.setStyleName("istore-command-label");
+        footerLabel.setStyleName("istore-footer-label");
         buttonPanel.setStyleName("istore-button-panel");
     }
 
-    public <T extends Widget & HasClickHandlers> void connectClickHandler(final T widget) {
-        widget.addClickHandler(new ClickHandler() {
-            public void onClick(ClickEvent event) {
-                event.preventDefault();
-                ImageErrorDialog.this.showRelativeTo(widget);
-            }
-        });
-    }
-
-    public void addClearErrorHandler(ClearErrorHandler<ImageState> handler) {
-        addHandler(handler, ClearErrorEvent.getType());
-    }
 }
+
