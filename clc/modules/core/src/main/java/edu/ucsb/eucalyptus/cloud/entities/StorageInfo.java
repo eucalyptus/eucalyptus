@@ -79,7 +79,7 @@ StorageInfo {
 	@GeneratedValue
 	@Column( name = "storage_id" )
 	private Long id = -1l;
-	@Column( name = "storage_name" )
+	@Column( name = "storage_name", unique=true)
 	private String name;
 	@Column( name = "system_storage_volume_size_gb" )
 	private Integer maxTotalVolumeSizeInGb;

@@ -78,7 +78,7 @@ public class LVMVolumeInfo {
     @GeneratedValue
     @Column(name = "lvm_volume_id")
     private Long id = -1l;
-    @Column(name = "volume_name")
+    @Column(name = "volume_name", unique=true)
     private String volumeId;
     @Column(name = "lodev_name")
     private String loDevName;

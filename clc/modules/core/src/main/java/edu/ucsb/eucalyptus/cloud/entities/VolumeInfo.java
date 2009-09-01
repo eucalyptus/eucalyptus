@@ -83,7 +83,7 @@ public class VolumeInfo {
     private Long id = -1l;
     @Column(name = "volume_user_name")
     private String userName;
-    @Column(name = "volume_name")
+    @Column(name = "volume_name", unique=true)
     private String volumeId;
     @Column(name = "size")
     private Integer size; //in GB

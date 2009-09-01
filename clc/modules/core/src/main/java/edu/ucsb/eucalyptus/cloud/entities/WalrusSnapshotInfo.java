@@ -79,7 +79,7 @@ public class WalrusSnapshotInfo {
     @GeneratedValue
     @Column(name = "walrus_snapshot_id")
     private Long id = -1l;
-    @Column(name ="snapshot_name")
+    @Column(name ="snapshot_name", unique=true)
     private String snapshotId;
     @Column(name = "snapshot_bucket")
     private String snapshotBucket;

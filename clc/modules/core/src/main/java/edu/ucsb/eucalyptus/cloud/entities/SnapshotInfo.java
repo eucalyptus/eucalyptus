@@ -81,7 +81,7 @@ public class SnapshotInfo {
     private Long id = -1l;
     @Column(name = "snapshot_user_name")
     private String userName;
-    @Column(name = "snapshot_name")
+    @Column(name = "snapshot_name", unique=true)
     String snapshotId;
     @Column(name = "volume_name")
     String volumeId;

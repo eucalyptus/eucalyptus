@@ -92,7 +92,7 @@ public class BucketInfo {
     @Column( name = "owner_id" )
     private String ownerId;
 
-    @Column( name = "bucket_name" )
+    @Column( name = "bucket_name", unique=true )
     private String bucketName;
 
     @Column( name = "bucket_creation_date" )
