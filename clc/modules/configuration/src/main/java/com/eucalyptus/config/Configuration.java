@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.config;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +78,7 @@ import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NetworkUtil;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
@@ -87,6 +89,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
+import edu.ucsb.eucalyptus.msgs.RegisterStorageControllerType;
 
 public class Configuration {
   static Logger         LOG                 = Logger.getLogger( Configuration.class );
@@ -100,7 +103,7 @@ public class Configuration {
 
   public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
-    reply.set_return( true );
+    reply.set_return( false );
     boolean isGood;
     try {
       isGood = NetworkUtil.testGoodAddress( request.getHost( ) );
@@ -112,6 +115,13 @@ public class Configuration {
       if ( ConfigurationUtil.checkComponentExists( request ) ) { return reply; }
     } catch ( Exception e2 ) {
       return reply;
+    }
+    if( request instanceof RegisterStorageControllerType ) {
+      try {
+        Configuration.getClusterConfiguration( request.getName( ) );
+      } catch ( Exception e1 ) {
+        throw new EucalyptusCloudException("Storage controllers may only be registered with a corresponding Cluster of the same name.  No cluster found with the name: " + request.getName( ) );
+      }
     }
     EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );
     ComponentConfiguration newComponent;
@@ -128,9 +138,9 @@ public class Configuration {
       ConfigurationUtil.setupClusterCredentials( newComponent );
     }
     StartComponentEvent e = null;
-    if ( Component.walrus.equals( newComponent.getComponent( ) ) && ( Component.walrus.isLocal( ) || NetworkUtil.testLocal( newComponent.getHostName( ) ) ) ) {
+    if ( Component.walrus.equals( newComponent.getComponent( ) ) && NetworkUtil.testLocal( newComponent.getHostName( ) ) ) {
       e = StartComponentEvent.getLocal( newComponent.getComponent( ) );
-    } else if ( Component.storage.equals( newComponent.getComponent( ) ) && ( Component.storage.isLocal( ) || NetworkUtil.testLocal( newComponent.getHostName( ) ) ) ) {
+    } else if ( Component.storage.equals( newComponent.getComponent( ) ) && ( NetworkUtil.testLocal( newComponent.getHostName( ) ) ) ) {
       e = StartComponentEvent.getLocal( newComponent.getComponent( ) );
     } else {
       e = StartComponentEvent.getRemote( newComponent );
@@ -140,6 +150,7 @@ public class Configuration {
     } catch ( EventVetoedException e1 ) {
       throw new EucalyptusCloudException( e1.getMessage( ), e1 );
     }
+    reply.set_return( true );
     return reply;
   }
 
@@ -161,6 +172,15 @@ public class Configuration {
         ConfigurationUtil.removeClusterCredentials( request.getName( ) );
       } catch ( Exception e ) {
         LOG.error( "BUG: removed cluster but failed to remove the credentials." );
+      }
+      try {
+        StorageControllerConfiguration searchConfig = new StorageControllerConfiguration( );
+        searchConfig.setName( request.getName( ) );
+        componentConfig = db.getUnique( searchConfig );
+        db.delete( componentConfig );
+        db.commit( );
+      } catch ( Exception e ) {
+        db.rollback( );
       }
     }
     StopComponentEvent e = null;
@@ -268,5 +288,34 @@ public class Configuration {
     }
     throw new NoSuchComponentException( ClusterConfiguration.class.getSimpleName( ) + " named " + clusterName );
   }
+
+  public static void updateClusterConfigurations( List<ClusterConfiguration> clusterConfigs ) throws EucalyptusCloudException {
+    updateComponentConfigurations( Configuration.getClusterConfigurations( ), clusterConfigs );
+  }
+
+  public static void updateStorageControllerConfigurations( List<StorageControllerConfiguration> storageControllerConfigs ) throws EucalyptusCloudException {
+    updateComponentConfigurations( Configuration.getStorageControllerConfigurations( ), storageControllerConfigs );
+  }
+
+  public static void updateWalrusConfigurations( List<WalrusConfiguration> walrusConfigs ) throws EucalyptusCloudException {
+    updateComponentConfigurations( Configuration.getWalrusConfigurations( ), walrusConfigs );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  private static void updateComponentConfigurations( List componentConfigs, List newComponentConfigs ) throws EucalyptusCloudException {    
+    try {
+      ArrayList<ComponentConfiguration> addComponents = Lists.newArrayList( newComponentConfigs );
+      List<ComponentConfiguration> removeComponents = new ArrayList<ComponentConfiguration>( componentConfigs );
+      addComponents.removeAll( componentConfigs );
+      removeComponents.removeAll( newComponentConfigs );
+      LOG.info( "Planning to updating configs with: " );
+      LOG.info( "-> add: " + addComponents );
+      LOG.info( "-> remove: " + removeComponents );
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( "Changing component configurations failed: " + e.getMessage( ), e );
+    }
+    
+  }
+
 
 }

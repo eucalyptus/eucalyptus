@@ -66,6 +66,7 @@
 package edu.ucsb.eucalyptus.admin.server;
 
 import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.gwt.user.client.rpc.SerializableException;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 import com.google.gwt.user.server.rpc.UnexpectedException;
@@ -689,23 +690,28 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   {
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
-    //:: TODO-1.4: anything more to do here? :://
-    return RemoteInfoHandler.getClusterList();
+    try {
+      return RemoteInfoHandler.getClusterList();
+    } catch ( EucalyptusCloudException e ) {
+      throw new SerializableException( e.getMessage( ) );
+    }
   }
 
   public void setClusterList(String sessionId, List<ClusterInfoWeb> clusterList ) throws SerializableException
   {
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
-    //:: TODO-1.4: anything more to do here? :://
-    RemoteInfoHandler.setClusterList( clusterList );
+    try {
+      RemoteInfoHandler.setClusterList( clusterList );
+    } catch ( EucalyptusCloudException e ) {
+      throw new SerializableException( e.getMessage( ) );
+    }
   }
 
   public List<StorageInfoWeb> getStorageList(String sessionId) throws SerializableException
   {
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
-    //:: TODO-1.4: anything more to do here? :://
     return RemoteInfoHandler.getStorageList();
   }
 
@@ -713,7 +719,6 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   {
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
-    //:: TODO-1.4: anything more to do here? :://
     RemoteInfoHandler.setStorageList(storageList);
   }
 
@@ -732,7 +737,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   {
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
-    //:: TODO-1.4: anything more to do here? :://
+    
     RemoteInfoHandler.setWalrusList(walrusList);
   }
 
@@ -740,7 +745,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   {
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
-    //:: TODO-1.4: anything more to do here? :://
+    
     return EucalyptusManagement.getSystemConfig();
   }
 
@@ -748,7 +753,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   {
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
-    //:: TODO-1.4: anything more to do here? :://
+    
     EucalyptusManagement.setSystemConfig(systemConfig);
   }
 
@@ -756,7 +761,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   {
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
-    //:: TODO-1.4: anything more to do here? :://
+    
     return RemoteInfoHandler.getVmTypes();
   }
 
@@ -764,7 +769,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   {
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
-    //:: TODO-1.4: anything more to do here? :://
+    
     RemoteInfoHandler.setVmTypes(vmTypes);
   }
 
@@ -772,7 +777,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   {
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb user = verifyUser (session, session.getUserId(), true);
-    //:: TODO-1.4: anything more to do here? :://
+    
     return EucalyptusManagement.getCloudInfo(setExternalHostPort);
   }
 

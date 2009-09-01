@@ -115,8 +115,8 @@ public class VolumeManager {
   }
 
   public CreateVolumeResponseType CreateVolume( CreateVolumeType request ) throws EucalyptusCloudException {
-    if( ( request.getSnapshotId() == null && request.getSize() == null ) || ( request.getSnapshotId() != null && request.getSize() == null ) ) {
-      throw new EucalyptusCloudException( "Size is a required parameter." );
+    if( ( request.getSnapshotId() == null && request.getSize() == null ) ) {
+      throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }
 
     try {

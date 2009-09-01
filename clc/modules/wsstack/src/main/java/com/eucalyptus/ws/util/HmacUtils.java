@@ -103,7 +103,7 @@ public class HmacUtils {
         ts.setTime( tsFormat.parse( timestamp ) );
         return ts;
       } catch ( ParseException e ) {
-        LOG.info( e, e );
+        LOG.debug( e, e );
       }
     }
     throw new AuthenticationException( "Invalid timestamp format." );

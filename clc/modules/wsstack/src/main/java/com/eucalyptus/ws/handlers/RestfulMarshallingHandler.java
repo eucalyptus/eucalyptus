@@ -79,6 +79,7 @@ import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.ws.handlers.wssecurity.WsSecHandler;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -111,12 +112,23 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
       Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
       ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-      if( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType ) {
-        EucalyptusErrorMessageType errMsg = (EucalyptusErrorMessageType) httpResponse.getMessage( );
-        Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ).serialize( byteOut );
-      } else {
-        OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );
-        omMsg.serialize( byteOut );        
+      WsSecHandler.canHas.lock( );
+      try {
+        if( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType ) {
+          EucalyptusErrorMessageType errMsg = (EucalyptusErrorMessageType) httpResponse.getMessage( );
+          Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ).serialize( byteOut );
+        } else {
+          try {
+            OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );
+            omMsg.serialize( byteOut );
+          } catch ( Exception e ) {
+            binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://ec2.amazonaws.com/doc/2009-04-04/" ) );
+            OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );
+            omMsg.serialize( byteOut );
+          }        
+        }
+      } finally {
+        WsSecHandler.canHas.unlock( );
       }
       byte[] req = byteOut.toByteArray();
       ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );

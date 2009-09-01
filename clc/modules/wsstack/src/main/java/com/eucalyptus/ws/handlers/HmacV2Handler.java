@@ -63,10 +63,12 @@
  */
 package com.eucalyptus.ws.handlers;
 
+import java.net.URLDecoder;
 import java.util.Calendar;
 import java.util.Map;
 
 import org.apache.commons.codec.net.URLCodec;
+import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -102,11 +104,15 @@ public class HmacV2Handler extends MessageStackHandler {
     this.doAdmin = doAdmin;
   }
 
+  @SuppressWarnings( "deprecation" )
   @Override
   public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       Map<String, String> parameters = httpRequest.getParameters( );
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      httpRequest.getContent( ).readBytes( bos, httpRequest.getContent( ).readableBytes( ) );
+      String blah = bos.toString( );
       if ( !parameters.containsKey( SecurityParameter.AWSAccessKeyId.toString( ) ) ) throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.AWSAccessKeyId );
       if ( !parameters.containsKey( SecurityParameter.Signature.toString( ) ) ) throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.Signature );
       // :: note we remove the sig :://
@@ -138,7 +144,10 @@ public class HmacV2Handler extends MessageStackHandler {
           LOG.debug( "VERSION1-STRING:        " + canonicalString );
           String computedSig = HmacUtils.getSignature( secretKey, canonicalString, Hashes.Mac.HmacSHA1 );
           LOG.debug( "VERSION1-SHA1:        " + computedSig + " -- " + sig );
-          if ( !computedSig.equals( sig ) ) throw new AuthenticationException( "User authentication failed." );
+          String decodedSig = URLDecoder.decode( sig ).replaceAll( "=", "" );
+          if ( !computedSig.equals( sig ) && !computedSig.equals( decodedSig ) ) {
+            throw new AuthenticationException( "User authentication failed." );
+          }
         } else if ( sigVersion == 2 ) {
           String canonicalString = HmacUtils.makeV2SubjectString( verb, headerHost, addr, parameters );
           String canonicalStringWithPort = HmacUtils.makeV2SubjectString( verb, headerHost + ":" + headerPort, addr, parameters );

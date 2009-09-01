@@ -110,6 +110,7 @@ public class EucalyptusQueryPipeline extends FilteredPipeline {
             return false;
           }
         }
+        httpRequest.getParameters( ).putAll( parameters );
       } else {
         for ( RequiredQueryParams p : RequiredQueryParams.values( ) ) {
           if ( !httpRequest.getParameters( ).containsKey( p.toString( ) ) ) {

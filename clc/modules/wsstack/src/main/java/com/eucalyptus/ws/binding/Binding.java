@@ -171,21 +171,21 @@ public class Binding {
 		this.bindingNamespacePrefixes = prefixes;
 	}
 
-	public OMElement toOM( final Object param ) {
-		return this.toOM( param, null );
+	public OMElement toOM( final Object param ) throws BindingException {
+    return this.toOM( param, null );
 	}
 
-	public OMElement toOM( final Object param, final String altNs ) {
+	public OMElement toOM( final Object param, final String altNs ) throws BindingException {
 		final OMFactory factory = OMAbstractFactory.getOMFactory( );
 		if ( param == null ) {
-			throw new RuntimeException( "Cannot bind null value" );
-		} else if ( !( param instanceof IMarshallable ) ) { throw new RuntimeException( "No JiBX <mapping> defined for class " + param.getClass( ) ); }
+			throw new BindingException( "Cannot bind null value" );
+		} else if ( !( param instanceof IMarshallable ) ) { throw new BindingException( "No JiBX <mapping> defined for class " + param.getClass( ) ); }
 		if ( this.bindingFactory == null ) {
 			try {
 				this.bindingFactory = BindingDirectory.getFactory( this.name, param.getClass( ) );
 			} catch ( final JiBXException e ) {
-				Binding.LOG.error( e, e );
-				throw new RuntimeException( this.bindingErrorMsg );
+				LOG.debug( e, e );
+				throw new BindingException( this.bindingErrorMsg );
 			}
 		}
 
@@ -198,10 +198,7 @@ public class Binding {
 		if ( ( altNs != null ) && !altNs.equals( origNs ) ) {
 			try {
 				final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
-				final XMLStreamWriter xmlStream = XMLOutputFactory.newInstance( ).createXMLStreamWriter( bos );
-				retVal.serialize( xmlStream );
-				xmlStream.flush( );
-				xmlStream.close( );
+				retVal.serialize( bos );
 				String retString = bos.toString( );
 				retString = retString.replaceAll( origNs, altNs );
 				final ByteArrayInputStream bis = new ByteArrayInputStream( retString.getBytes( ) );

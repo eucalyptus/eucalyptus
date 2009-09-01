@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws.handlers;
 
+import java.net.URLDecoder;
 import java.util.Calendar;
 import java.util.Map;
 
@@ -90,11 +91,19 @@ public class QueryTimestampHandler extends MessageStackHandler {
       Calendar expires = null;
       if ( parameters.containsKey( SecurityParameter.Timestamp.toString( ) ) ) {
         String timestamp = parameters.remove( SecurityParameter.Timestamp.toString( ) );
-        expires = HmacUtils.parseTimestamp( timestamp );
+        try {
+          expires = HmacUtils.parseTimestamp( timestamp );
+        } catch ( Exception e ) {
+          expires = HmacUtils.parseTimestamp( URLDecoder.decode( timestamp ) );
+        }
         expires.add( Calendar.MINUTE, 5 );
       } else {
         String exp = parameters.remove( SecurityParameter.Expires.toString( ) );
-        expires = HmacUtils.parseTimestamp( exp );
+        try {
+          expires = HmacUtils.parseTimestamp( exp );
+        } catch ( Exception e ) {
+          expires = HmacUtils.parseTimestamp( URLDecoder.decode( exp ) );
+        }
       }
       if ( now.after( expires ) ) throw new AuthenticationException( "Message has expired." );
 

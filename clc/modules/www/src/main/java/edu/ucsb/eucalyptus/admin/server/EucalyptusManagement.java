@@ -641,12 +641,8 @@ public class EucalyptusManagement {
 		try
 		{
 			SystemConfiguration sysConf = db.getUnique( new SystemConfiguration() );
-			//:: TODO: verify the URL :://
 			sysConf.setStorageUrl( systemConfig.getWalrusUrl() );
-			//:: TODO: check the path exists && is writeable, create directory if needed :://
-			//:: TODO: verify the EKI :://
 			sysConf.setDefaultKernel( systemConfig.getDefaultKernelId() );
-			//:: TODO: verify the ERI :://
 			sysConf.setDefaultRamdisk( systemConfig.getDefaultRamdiskId() );
 
 			sysConf.setDnsDomain(systemConfig.getDnsDomain());

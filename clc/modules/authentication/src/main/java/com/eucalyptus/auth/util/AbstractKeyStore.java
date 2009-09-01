@@ -194,4 +194,13 @@ public abstract class AbstractKeyStore {
       throw new RuntimeException( "A GenericKeyStore does not have the notion of being checked for correctness." );
     }
   }
+
+  public InputStream getAsInputStream() throws FileNotFoundException {
+    return new FileInputStream( this.fileName );
+  }
+
+  public KeyStore getKeyStore( ) {
+    return keyStore;
+  }
+
 }
