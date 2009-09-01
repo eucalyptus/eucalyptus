@@ -149,39 +149,39 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		if(httpRequest.containsHeader(StorageProperties.StorageParameters.EucaSignature.toString())) {
 			//possible internal request -- perform authentication using internal credentials
 			String date = httpRequest.getAndRemoveHeader(SecurityParameter.Date.toString());
-      String signature = httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaSignature.toString());
-      String certString = null;
-      if( httpRequest.containsHeader( StorageProperties.StorageParameters.EucaCert.toString( ) ) ) {
-        certString= httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaCert.toString());
-      }
+			String signature = httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaSignature.toString());
+			String certString = null;
+			if( httpRequest.containsHeader( StorageProperties.StorageParameters.EucaCert.toString( ) ) ) {
+				certString= httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaCert.toString());
+			}
 			String data = verb + "\n" + date + "\n" + addr + "\n";
 
 			Signature sig;
 			boolean valid = false;
 			try {
-        try {
-          PublicKey publicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getCertificate().getPublicKey();
-          sig = Signature.getInstance("SHA1withRSA");
-          sig.initVerify(publicKey);
-          sig.update(data.getBytes());
-          valid = sig.verify(Base64.decode(signature));
-        } catch ( Exception e ) {
-          LOG.warn ("Authentication: certificate not found in keystore");
-        } finally {
-          if( !valid && certString != null ) {
-            try {
-              X509Certificate nodeCert = Hashes.getPemCert( Base64.decode( certString ) );
-              String alias = CredentialProvider.getCertificateAlias( nodeCert );
-              PublicKey publicKey = nodeCert.getPublicKey( );
-              sig = Signature.getInstance( "SHA1withRSA" );
-              sig.initVerify( publicKey );
-              sig.update( data.getBytes( ) );
-              valid = sig.verify( Base64.decode( signature ) );
-            } catch ( Exception e2 ) {
-              LOG.warn ("Authentication exception: " + e2.getMessage());
-            }            
-          }
-        }
+				try {
+					PublicKey publicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getCertificate().getPublicKey();
+					sig = Signature.getInstance("SHA1withRSA");
+					sig.initVerify(publicKey);
+					sig.update(data.getBytes());
+					valid = sig.verify(Base64.decode(signature));
+				} catch ( Exception e ) {
+					LOG.warn ("Authentication: certificate not found in keystore");
+				} finally {
+					if( !valid && certString != null ) {
+						try {
+							X509Certificate nodeCert = Hashes.getPemCert( Base64.decode( certString ) );
+							String alias = CredentialProvider.getCertificateAlias( nodeCert );
+							PublicKey publicKey = nodeCert.getPublicKey( );
+							sig = Signature.getInstance( "SHA1withRSA" );
+							sig.initVerify( publicKey );
+							sig.update( data.getBytes( ) );
+							valid = sig.verify( Base64.decode( signature ) );
+						} catch ( Exception e2 ) {
+							LOG.warn ("Authentication exception: " + e2.getMessage());
+						}            
+					}
+				}
 			} catch (Exception ex) {
 				LOG.warn ("Authentication exception: " + ex.getMessage());
 				ex.printStackTrace();
