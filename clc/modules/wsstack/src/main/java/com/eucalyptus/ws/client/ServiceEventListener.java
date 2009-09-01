@@ -26,9 +26,11 @@ public class ServiceEventListener implements EventListener {
     ListenerRegistry.getInstance( ).register( Component.jetty, me );
     ListenerRegistry.getInstance( ).register( Component.eucalyptus, me );
     ListenerRegistry.getInstance( ).register( Component.cluster, me );
-    ListenerRegistry.getInstance( ).register( ClockTick.class, RemoteBootstrapperClient.getInstance( ) ); 
-    ListenerRegistry.getInstance( ).register( Component.walrus, RemoteBootstrapperClient.getInstance( ) );
-    ListenerRegistry.getInstance( ).register( Component.storage, RemoteBootstrapperClient.getInstance( ) );
+    if( Component.eucalyptus.isLocal( ) ) {
+      ListenerRegistry.getInstance( ).register( ClockTick.class, RemoteBootstrapperClient.getInstance( ) ); 
+      ListenerRegistry.getInstance( ).register( Component.walrus, RemoteBootstrapperClient.getInstance( ) );
+      ListenerRegistry.getInstance( ).register( Component.storage, RemoteBootstrapperClient.getInstance( ) );
+    }
   }
 
   @Override
