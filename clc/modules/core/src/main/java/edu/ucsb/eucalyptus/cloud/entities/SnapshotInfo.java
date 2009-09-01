@@ -68,6 +68,8 @@ package edu.ucsb.eucalyptus.cloud.entities;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.util.StorageProperties;
+
 import javax.persistence.*;
 import java.util.Date;
 
@@ -81,7 +83,9 @@ public class SnapshotInfo {
     private Long id = -1l;
     @Column(name = "snapshot_user_name")
     private String userName;
-    @Column(name = "snapshot_name", unique=true)
+    @Column(name = "sc_name")
+    private String scName;
+    @Column(name = "snapshot_name")
     String snapshotId;
     @Column(name = "volume_name")
     String volumeId;
@@ -92,9 +96,12 @@ public class SnapshotInfo {
     @Column(name = "progress")
     private String progress;
 
-    public SnapshotInfo() {}
+    public SnapshotInfo() {
+    	this.scName = StorageProperties.NAME;
+    }
 
     public SnapshotInfo(String snapshotId) {
+    	this();
         this.snapshotId = snapshotId;
     }
 
@@ -106,7 +113,15 @@ public class SnapshotInfo {
         this.userName = userName;
     }
 
-    public String getSnapshotId() {
+    public String getScName() {
+		return scName;
+	}
+
+	public void setScName(String scName) {
+		this.scName = scName;
+	}
+
+	public String getSnapshotId() {
         return snapshotId;
     }
 

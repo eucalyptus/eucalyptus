@@ -73,7 +73,7 @@ public class WalrusInfo {
 	@GeneratedValue
 	@Column( name = "walrus_info_id" )
 	private Long id = -1l;
-	@Column(name = "walrus_name")
+	@Column(name = "walrus_name", unique=true)
 	private String name;
 	@Column( name = "storage_dir" )
 	private String storageDir;

@@ -68,6 +68,8 @@ package edu.ucsb.eucalyptus.cloud.entities;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.util.StorageProperties;
+
 import javax.persistence.*;
 
 @Entity
@@ -78,8 +80,10 @@ public class LVMVolumeInfo {
     @GeneratedValue
     @Column(name = "lvm_volume_id")
     private Long id = -1l;
-    @Column(name = "volume_name", unique=true)
+    @Column(name = "volume_name")
     private String volumeId;
+    @Column(name = "sc_name")
+    private String scName;
     @Column(name = "lodev_name")
     private String loDevName;
     @Column(name = "lofile_name")
@@ -103,9 +107,12 @@ public class LVMVolumeInfo {
     @Column(name = "minor_number")
     private Integer minorNumber;
 
-    public LVMVolumeInfo() {}
+    public LVMVolumeInfo() {
+    	this.scName = StorageProperties.NAME;
+    }
 
     public LVMVolumeInfo(String volumeId) {
+    	this();
         this.volumeId = volumeId;
     }
     public String getVolumeId() {
@@ -116,7 +123,15 @@ public class LVMVolumeInfo {
         this.volumeId = volumeId;
     }
 
-    public String getLoDevName() {
+    public String getScName() {
+		return scName;
+	}
+
+	public void setScName(String scName) {
+		this.scName = scName;
+	}
+
+	public String getLoDevName() {
         return loDevName;
     }
 

@@ -613,7 +613,6 @@ public class BlockStorage {
 					}
 				} catch(Exception ex) {
 					success = false;
-					db.rollback();
 					LOG.error(ex);
 				}
 			} else {
