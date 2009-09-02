@@ -107,6 +107,7 @@ public class EntityWrapper<TYPE> {
   }
 
   public EntityWrapper( String persistenceContext ) {
+    LOG.info( "CREATE CONNECTION", new Exception( ) );
     this.em = EntityWrapper.getEntityManagerFactory( persistenceContext ).createEntityManager( );
     this.session = ( Session ) em.getDelegate( );
     this.tx = em.getTransaction( );
@@ -115,12 +116,14 @@ public class EntityWrapper<TYPE> {
 
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
+    LOG.info( "QUERY " + example.getClass( ) );
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     List<TYPE> resultList = ( List<TYPE> ) session.createCriteria( example.getClass( ) ).add( qbe ).list( );
     return resultList;
   }
 
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
+    LOG.info( "GET-UNIQUE " + example.getClass( ) );
     List<TYPE> res = this.query( example );
     if ( res.size( ) != 1 ) {
       String msg = null;
@@ -146,6 +149,7 @@ public class EntityWrapper<TYPE> {
   }
 
   public void rollback( ) {
+    LOG.info( "CLOSE CONNECTION", new Exception( ) );
     if ( this.tx.isActive( ) ) {
       this.tx.rollback( );
     }
@@ -153,6 +157,7 @@ public class EntityWrapper<TYPE> {
   }
 
   public void commit( ) {
+    LOG.info( "CLOSE CONNECTION", new Exception( ) );
     this.em.flush( );
     this.tx.commit( );
     this.em.close( );
