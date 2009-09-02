@@ -386,7 +386,8 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
             throw new SerializableException("Unconfirmed account (click on the link in confirmation email)");
         }
         if (verifyPasswordAge) {
-            if (isPasswordExpired(user)) {
+            if (isPasswordExpired(user) && 
+            		!(user.isAdministrator() && user.getEmail().equalsIgnoreCase(""))) { // first-time config will catch that
                 throw new SerializableException("Password expired");
             }
         }
@@ -665,7 +666,13 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 				throw new SerializableException ("Operation restricted to owner and administrator");
 		}
 
-        /* TODO: Any checks? Reset password expiration? */
+        // set expiration for admin setting password for the first time
+        if (oldRecord.isAdministrator() && oldRecord.getEmail().equalsIgnoreCase("")) {
+            long now = System.currentTimeMillis();
+        	oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
+        }
+        
+        /* TODO: Any checks? */
 		oldRecord.setRealName (newRecord.getRealName());
 		oldRecord.setEmail (newRecord.getEmail());
 		oldRecord.setBCryptedPassword (newRecord.getBCryptedPassword());
@@ -674,6 +681,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
         oldRecord.setIsAdministrator(newRecord.isAdministrator());
+        
 		// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
         if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) {
             oldRecord.setIsConfirmed(true);

@@ -174,13 +174,13 @@ public class SystemConfigTable extends VerticalPanel {
 		int i = 0;
 
 		// cloud parameters
-		this.c_grid.setWidget( i, 0, new Label( "Walrus URL:" ) );
+		this.c_grid.setWidget( i, 0, new Label( "Cloud URL:" ) );
 		this.c_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		walrusURL_box.addChangeListener (new ChangeCallback (this));
 		walrusURL_box.setVisibleLength(55);
-		walrusURL_box.setText (SystemConfig.getWalrusUrl());
+		walrusURL_box.setText (SystemConfig.getWalrusUrl()); // TODO: rename WalrusUrl to something else?
 		walrusURL_box.addFocusListener (new FocusHandler (c_hint,
-		"Warning! Changing the Walrus URL will invalidate any certificates created so far as well as any images uploaded into the system."));
+				"Warning: Changing the Cloud URL will invalidate any existing credentials, and will prevent existing users from accessing the system."));
 		this.c_grid.setWidget( i++, 1, walrusURL_box );
 
 		// 2nd row
