@@ -13,7 +13,9 @@ all: build
 deps:
 	$(ANT) deps
 
-update_properties:
+update_properties: ${web_prop_dir}/eucalyptus-web.properties
+
+${web_prop_dir}/eucalyptus-web.properties: ${web_prop_dir}/eucalyptus-web-default.properties ${TOP}/Makedefs
 	@sed "s/\(^extensions =\).*/\1 ${extensions}/" < ${web_prop_dir}/eucalyptus-web-default.properties > ${web_prop_dir}/eucalyptus-web.properties
 	@echo "Copied defaults to ${web_prop_dir}/eucalyptus-web.properties"
 
@@ -28,7 +30,7 @@ update_theme:
 		echo "Theme ${theme_dir}/${euca_theme} is not found!"; exit 1; \
 	fi \
 
-extras:
+extras: update_properties
 	@if test -n "${euca_theme}" ; then \
 		$(MAKE) update_theme; \
 	else \
@@ -38,12 +40,12 @@ extras:
 			ln -sf eucalyptus ${theme_dir}/active ; \
 		fi \
 	fi
-	@if test ! -e ${web_prop_dir}/eucalyptus-web.properties ; then \
-		$(MAKE) update_properties; \
-	fi
-	@if [ "`grep '^extensions' ${web_prop_dir}/eucalyptus-web.properties | sed 's/extensions =[[:blank:]]*//'`" != "${extensions}" ] ; then \
-		$(MAKE) update_properties; \
-	fi
+#	@if test ! -e ${web_prop_dir}/eucalyptus-web.properties ; then \
+#		$(MAKE) update_properties; \
+#	fi
+#	@if [ "`grep '^extensions' ${web_prop_dir}/eucalyptus-web.properties | sed 's/extensions =[[:blank:]]*//'`" != "${extensions}" ] ; then \
+#		$(MAKE) update_properties; \
+#	fi
 
 
 
