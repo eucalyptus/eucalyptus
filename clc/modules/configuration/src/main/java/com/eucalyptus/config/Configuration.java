@@ -230,39 +230,39 @@ public class Configuration {
     EntityWrapper<ClusterConfiguration> db = Configuration.getEntityWrapper( );
     try {
       List<ClusterConfiguration> componentList = db.query( new ClusterConfiguration( ) );
+      db.commit( );
       return componentList;
     } catch ( Exception e ) {
+      db.rollback( );
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
-    } finally {
-      db.commit( );
-    }
+    } 
   }
 
   public static List<StorageControllerConfiguration> getStorageControllerConfigurations( ) throws EucalyptusCloudException {
     EntityWrapper<StorageControllerConfiguration> db = Configuration.getEntityWrapper( );
     try {
       List<StorageControllerConfiguration> componentList = db.query( new StorageControllerConfiguration( ) );
+      db.commit( );
       return componentList;
     } catch ( Exception e ) {
+      db.rollback( );
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
-    } finally {
-      db.commit( );
-    }
+    } 
   }
 
   public static List<WalrusConfiguration> getWalrusConfigurations( ) throws EucalyptusCloudException {
     EntityWrapper<WalrusConfiguration> db = Configuration.getEntityWrapper( );
     try {
       List<WalrusConfiguration> componentList = db.query( new WalrusConfiguration( ) );
+      db.commit( );
       return componentList;
     } catch ( Exception e ) {
+      db.rollback( );
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
-    } finally {
-      db.commit( );
-    }
+    } 
   }
 
   public static StorageControllerConfiguration getStorageControllerConfiguration( String scName ) throws EucalyptusCloudException {
