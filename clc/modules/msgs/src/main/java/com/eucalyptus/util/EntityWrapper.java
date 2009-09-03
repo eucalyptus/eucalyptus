@@ -125,7 +125,7 @@ public class EntityWrapper<TYPE> {
 
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
-    LOG.info( "QUERY " + example.getClass( ) );
+    LOG.debug( "QUERY " + example.getClass( ) );
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     List<TYPE> resultList = ( List<TYPE> ) session.createCriteria( example.getClass( ) ).add( qbe ).list( );
     return resultList;
@@ -175,7 +175,16 @@ public class EntityWrapper<TYPE> {
   }
 
   public void commit( ) {
-    LOG.info( "CLOSE CONNECTION", new Exception( ) );
+    Exception e = new Exception( );
+    e.fillInStackTrace( );
+    for( StackTraceElement ste : e.getStackTrace( ) ){
+      if( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
+        continue;
+      } else {
+        LOG.debug( "CLOSE CONNECTION" + ste.toString( ) );
+        break;
+      }
+    }
     this.em.flush( );
     this.tx.commit( );
     this.em.close( );
