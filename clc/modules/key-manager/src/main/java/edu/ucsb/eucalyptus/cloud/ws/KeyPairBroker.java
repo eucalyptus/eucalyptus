@@ -120,13 +120,16 @@ public class KeyPairBroker {
     //:: no keypair :://
     if ( SSHKeyPair.NO_KEY_NAME.equals( vmAllocInfo.getRequest().getKeyName() ) || vmAllocInfo.getRequest().getKeyName() == null ) {
       vmAllocInfo.setKeyInfo( new VmKeyInfo() );
+      db.commit( );
       return vmAllocInfo;
     }
     //:: find keypair :://
     SSHKeyPair keypair = null;
-    for ( SSHKeyPair k : user.getKeyPairs() )
-      if ( k.getName().equals( vmAllocInfo.getRequest().getKeyName() ) )
+    for ( SSHKeyPair k : user.getKeyPairs() ) {
+      if ( k.getName().equals( vmAllocInfo.getRequest().getKeyName() ) ) {
         keypair = k;
+      }
+    }
     //:: failed to find keypair :://
     if ( keypair == null ) {
       db.rollback();

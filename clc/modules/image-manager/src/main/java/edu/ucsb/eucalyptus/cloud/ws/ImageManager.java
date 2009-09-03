@@ -220,7 +220,13 @@ public class ImageManager {
       db.rollback( );
       throw new EucalyptusCloudException( "Failed to find kernel image: " + msg.getImageId() );
     }
-    UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( msg.getUserId() ) );
+    UserInfo user = null;
+    try {
+      user = db.recast( UserInfo.class ).getUnique( new UserInfo( msg.getUserId() ) );
+    } catch ( Exception e1 ) {
+      db.rollback( );
+      throw new EucalyptusCloudException( "You do not have permissions to run this image." );
+    }
     if ( !diskInfo.isAllowed( user ) ) {
       db.rollback();
       throw new EucalyptusCloudException( "You do not have permissions to run this image." );
