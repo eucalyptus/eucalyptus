@@ -1,3 +1,47 @@
+*Fri Jul 17 2009 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 1.5.2
+    * A lot of bug fixes and improvements
+    * Eucalytpus now runs as user 'eucalyptus' by default
+    * added new UI tab 'Extras' that includes links to pre-packaged images
+    * and client tools
+    * Fixed support for client tools (including fixes to the REST
+    * interface).
+    * Closes bugs:
+
+      #368975 #375809 #375805 #376575 #354787 #382522 #357350 #375105 
+      #359855 #384069 #359855 #357499 #384117 #384119 #375093 #384119
+      #356580 #384123 #359855 #356389 #384069 #384119 #357849 #359855
+      #384124 #384126 #384126 #384652 #385660 #386430 #357440
+
+*Fri May  1 2009 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 1.5.1
+    * Elastic Block Store (EBS) support (volumes & snapshots)
+    * Walrus improvements:
+          o Support for groups in ACLS
+          o Fixed issues with meta data support
+          o Web browser form-based uploads via HTTP POST
+          o Object copying
+          o Query string authentication
+          o Support for arbitrary key names
+          o Compressed image downloads and fixes to image caching
+          o Reduced memory requirement 
+    * Network improvement: new MANAGED-NOVLAN mode
+    * Node-side improvements:
+          o Support for the KVM hypervisor
+          o Compression & retries on Walrus downloads
+          o Reworked caching (now with configurable limit) 
+    * Web UI improvements:
+          o Cloud registration with Rightscale (from admin's 'Credentials'
+tab)
+          o New configuration options for Walrus
+          o Better screening of usernames
+          o Fixed account confirmation glitches 
+    * Building and installation improvements
+          o Better Java installation checking
+          o New command-line administration: euca_conf -addcluster ...  -addnode ...
+          o Non-root user deployment of Eucalyptus
+          o Binary packages for more distributions (Ubuntu et al) 
+
 *Thu Apr 30 2009 mayhem group (support@open.eucalyptus.com)
     * Elastic Block Store (EBS) support (volumes & snapshots)
     * Walrus improvements:
