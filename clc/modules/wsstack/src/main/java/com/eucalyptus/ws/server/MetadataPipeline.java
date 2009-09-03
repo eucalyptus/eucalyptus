@@ -1,0 +1,81 @@
+package com.eucalyptus.ws.server;
+
+import java.net.InetSocketAddress;
+import java.util.List;
+
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.mule.transport.NullPayload;
+
+import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.ws.stages.UnrollableStage;
+import com.eucalyptus.ws.util.Messaging;
+
+public class MetadataPipeline extends FilteredPipeline implements UnrollableStage, ChannelUpstreamHandler {
+
+  @Override
+  protected void addStages( List<UnrollableStage> stages ) {
+    stages.add( this );
+  }
+
+  @Override
+  protected boolean checkAccepts( HttpRequest message ) {
+    return message.getUri( ).matches("/latest/") || message.getUri( ).matches("/\\d\\d\\d\\d-\\d\\d-\\d\\d/.*");
+  }
+
+  @Override
+  public String getPipelineName( ) {
+    return "instance-metadata";
+  }
+
+  @Override
+  public String getStageName( ) {
+    return "instance-metadata";
+  }
+
+  @Override
+  public void unrollStage( ChannelPipeline pipeline ) {
+    pipeline.addLast( "instance-metadata", this );
+  }
+
+  @Override
+  public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+    if( e instanceof MessageEvent && ( (MessageEvent ) e).getMessage( ) instanceof MappingHttpRequest ) {
+      MappingHttpRequest request = ( MappingHttpRequest ) ((MessageEvent) e).getMessage( );
+      String newUri = null;
+      String uri = request.getUri( );
+      InetSocketAddress remoteAddr = ((InetSocketAddress) ctx.getChannel( ).getRemoteAddress( ) );
+      if( uri.startsWith( "/latest/" ) )
+        newUri = uri.replaceAll( "/latest/", remoteAddr.getAddress( ).getHostAddress( ) + ":" );
+      else
+        newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d/", remoteAddr.getAddress( ).getHostAddress( ) + ":" );
+
+      HttpResponse response = null;
+      Object reply = Messaging.send( "vm://VmMetadata", newUri );
+      if ( !( reply instanceof NullPayload ) ) {
+        response = new DefaultHttpResponse(request.getProtocolVersion( ),HttpResponseStatus.OK);
+        response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/html" );
+        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ((String)reply).getBytes( ) );
+        response.setContent( buffer );
+        response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
+      }
+      else
+        response = new DefaultHttpResponse(request.getProtocolVersion( ),HttpResponseStatus.NOT_FOUND);
+      ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
+    } else {
+      ctx.sendUpstream( e );
+    }
+  }
+
+}

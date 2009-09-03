@@ -82,6 +82,7 @@ public class NioServer {
 
   public NioServer( int port ) {
     super( );
+    PipelineRegistry.getInstance( ).register( new MetadataPipeline( ) );
     PipelineRegistry.getInstance( ).register( new EucalyptusSoapPipeline( ) );
     PipelineRegistry.getInstance( ).register( new ElasticFoxPipeline( ) );
     PipelineRegistry.getInstance( ).register( new WalrusRESTPipeline( ) );
