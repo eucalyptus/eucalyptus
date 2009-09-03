@@ -217,6 +217,7 @@ public class ImageManager {
         productCodes.add( p.getValue());
       }
     } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
       throw new EucalyptusCloudException( "Failed to find kernel image: " + msg.getImageId() );
     }
     UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( msg.getUserId() ) );
@@ -228,7 +229,7 @@ public class ImageManager {
     //:: now its time to determine the ramdisk and kernel info based on: 1) user input, 2) emi specific info, 3) system defaults ::/
     String kernelId = this.getImageInfobyId( msg.getKernelId(), diskInfo.getKernelId(), conf.getDefaultKernel() );
     if ( kernelId == null ) {
-      db.commit();
+      db.rollback( );
       throw new EucalyptusCloudException( "Unable to determine required kernel image." );
     }
 
@@ -238,15 +239,15 @@ public class ImageManager {
     try {
       kernelInfo = db.getUnique( new ImageInfo( kernelId ) );
     } catch ( EucalyptusCloudException e ) {
-      db.commit();
+      db.rollback( );
       throw new EucalyptusCloudException( "Failed to find kernel image: " + kernelId );
     }
     if ( !diskInfo.isAllowed( user ) ) {
-      db.commit();
+      db.rollback( );
       throw new EucalyptusCloudException( "You do not have permission to launch: " + diskInfo.getImageId() );
     }
     if ( !kernelInfo.isAllowed( user ) ) {
-      db.commit();
+      db.rollback( );
       throw new EucalyptusCloudException( "You do not have permission to launch: " + kernelInfo.getImageId() );
     }
     ImageInfo ramdiskInfo = null;
@@ -254,14 +255,15 @@ public class ImageManager {
       try {
         ramdiskInfo = db.getUnique( new ImageInfo( ramdiskId ) );
       } catch ( EucalyptusCloudException e ) {
+        db.rollback( );
         throw new EucalyptusCloudException( "Failed to find ramdisk image: " + ramdiskId );
       }
       if ( !ramdiskInfo.isAllowed( user ) ) {
-        db.commit();
+        db.rollback( );
         throw new EucalyptusCloudException( "You do not have permission to launch: " + ramdiskInfo.getImageId() );
       }
     }
-
+    db.commit( );
     //:: quietly add the ancestor and size information to the vm info object... this should never fail noisily :://
     ArrayList<String> ancestorIds = this.getAncestors( msg.getUserId(), diskInfo.getImageLocation() );
     Long imgSize = this.getSize( msg.getUserId(), diskInfo.getImageLocation() );

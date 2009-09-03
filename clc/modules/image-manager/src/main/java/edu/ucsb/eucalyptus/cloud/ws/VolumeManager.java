@@ -210,29 +210,32 @@ public class VolumeManager {
   public DescribeVolumesResponseType DescribeVolumes( DescribeVolumesType request ) throws EucalyptusCloudException {
     DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply();
     EntityWrapper<Volume> db = getEntityWrapper();
-    String userName = request.isAdministrator() ? null : request.getUserId();
+    try {
+      String userName = request.isAdministrator() ? null : request.getUserId();
 
-    Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>();
-    for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
-      for ( AttachedVolume av : vm.getVolumes() ) {
-        attachedVolumes.put( av.getVolumeId(), av );
-      }
-    }
-    
-    List<Volume> volumes = db.query( Volume.ownedBy( userName ) );
-
-    for ( Volume v : volumes ) {
-      if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
-        try {
-          edu.ucsb.eucalyptus.msgs.Volume aVolume = StorageUtil.getVolumeReply( attachedVolumes, v );
-          reply.getVolumeSet().add( aVolume );
-        } catch ( Exception e ) {
-          LOG.warn( "Error getting volume information from the Storage Controller: " + e );
-          LOG.debug( e, e );
+      Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>();
+      for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
+        for ( AttachedVolume av : vm.getVolumes() ) {
+          attachedVolumes.put( av.getVolumeId(), av );
         }
       }
+      
+      List<Volume> volumes = db.query( Volume.ownedBy( userName ) );
+
+      for ( Volume v : volumes ) {
+        if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
+          try {
+            edu.ucsb.eucalyptus.msgs.Volume aVolume = StorageUtil.getVolumeReply( attachedVolumes, v );
+            reply.getVolumeSet().add( aVolume );
+          } catch ( Exception e ) {
+            LOG.warn( "Error getting volume information from the Storage Controller: " + e );
+            LOG.debug( e, e );
+          }
+        }
+      }
+    } finally {
+      db.commit();
     }
-    db.commit();
     return reply;
   }
 
