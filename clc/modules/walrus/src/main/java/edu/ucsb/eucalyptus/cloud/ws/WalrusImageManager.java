@@ -979,6 +979,7 @@ public class WalrusImageManager {
 						cacheImage(bucketName, manifestKey, userId, request.isAdministrator());
 						reply.setSuccess(true);
 					}
+			    db.commit( );
 					return reply;
 				} else {
 					db.rollback();
@@ -986,10 +987,12 @@ public class WalrusImageManager {
 				}
 
 			} else {
+			  db.rollback( );
 				throw new NoSuchEntityException(manifestKey);
 
 			}
 		} else {
+      db.rollback( );
 			throw new NoSuchBucketException(bucketName);
 		}
 	}

@@ -140,7 +140,10 @@ public class ImageManager {
         productCodes.add( p.getValue());
       }
       diskUrl = this.getImageUrl( walrusUrl, diskInfo );
-    } catch ( EucalyptusCloudException e ) {}
+      db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+    }
 
     ArrayList<String> ancestorIds = this.getAncestors( vmInfo.getOwnerId(), diskInfo.getImageLocation() );
 

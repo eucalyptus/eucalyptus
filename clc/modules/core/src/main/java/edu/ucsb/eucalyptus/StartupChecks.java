@@ -225,6 +225,7 @@ public class StartupChecks {
     EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( );
     try {
       db.getUnique( new UserInfo("admin") );
+      db.commit( );
       return true;
     } catch ( Exception e ) {
       try {
@@ -233,6 +234,7 @@ public class StartupChecks {
         db.add( u );
         db.commit( );
       } catch ( HibernateException e1 ) {
+        db.rollback( );
         return false;
       }
       return true;
