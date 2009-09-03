@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.admin.client;
 
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.Cookies;
 import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Window;
@@ -802,7 +803,6 @@ public class EucalyptusWebInterface implements EntryPoint {
                                 } else { // admin updating a user
                                     displayBarAndTabs("");
                                     statusMessage.setText( ( String ) result );
-                                    statusMessage.setStyleName("euca-small-text");
                                 }
                             }
 
@@ -1124,7 +1124,6 @@ public class EucalyptusWebInterface implements EntryPoint {
                     {
                         displayBarAndTabs("");
                         statusMessage.setText( ( String ) result );
-                        statusMessage.setStyleName("euca-small-text");
                     }
 
                     public void onFailure( Throwable caught )
@@ -1321,6 +1320,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         messageBox.setSpacing(3);
         messageBox.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_RIGHT);
         messageBox.add (statusMessage);
+        statusMessage.setStyleName("euca-small-text");
 
         final VerticalPanel wrapper = new VerticalPanel();
         wrapper.setStyleName("euca-tab-contents");
@@ -1686,7 +1686,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
         final PasswordTextBox oldPassword_box = new PasswordTextBox();
         oldPassword_box.setWidth("180");
-        if (!mustChange) { /* don't ask for old password if the change is involuntary */
+        if (!mustChange) { // don't ask for old password if the change is involuntary
             g1.setWidget( i++, 1, oldPassword_box );
         }
 
@@ -1711,10 +1711,10 @@ public class EucalyptusWebInterface implements EntryPoint {
 
                 for ( int j = 0; j < 3; j++ )
                 {
-                    g1.clearCell( j, 2 ); /* clear previous right-hand-side annotations */
+                    g1.clearCell( j, 2 ); // clear previous right-hand-side annotations
                 }
 
-                /* perform checks */
+                // perform checks 
                 if ( newCleartextPassword1_box.getText().length() < minPasswordLength )
                 {
                     Label l = new Label( "Password is too short!" );
@@ -1739,18 +1739,18 @@ public class EucalyptusWebInterface implements EntryPoint {
                             sessionId,
                             GWTUtils.md5(oldPassword_box.getText()),
                             GWTUtils.md5(newCleartextPassword1_box.getText()),
-                            new AsyncCallback() {
-                                public void onSuccess( final Object result )
+                            new AsyncCallback<String>() {
+                                public void onSuccess( final String result )
                                 {
-                                    /* password change succeded - pull in the new user record */
+                                    // password change succeded - pull in the new user record 
                                     label_box.setText( "Refreshing user data..." );
                                     EucalyptusWebBackend.App.getInstance().getUserRecord(
                                             sessionId,
                                             null,
-                                            new AsyncCallback() {
-                                                public void onSuccess( Object result2 )
+                                            new AsyncCallback<List<UserInfoWeb>>() {
+                                                public void onSuccess( List<UserInfoWeb> users )
                                                 {
-                                                    loggedInUser = ( UserInfoWeb ) ( (List) result2).get(0);
+                                                    loggedInUser = users.get(0);
 													displayMessagePage ( ( String ) result );
                                                 }
                                                 public void onFailure( Throwable caught )
@@ -2174,7 +2174,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 }
                 g.setWidget(row, 4, new Label(status) );
 
-                /* actions */
+                // actions
                 HorizontalPanel ops = new HorizontalPanel();
                 ops.setSpacing (3);
 
@@ -2205,7 +2205,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 
 				g.setWidget(row, 5, ops );
 
-                /* view */
+                // view
                 HorizontalPanel views = new HorizontalPanel();
                 views.setSpacing (3);
                 HTML inst_button = userActionButton ("Instances", u);
@@ -2306,12 +2306,12 @@ public class EucalyptusWebInterface implements EntryPoint {
         vpanel.setSpacing(15);
         vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
 		vpanel.add (new DownloadsTable(sessionId,
-                "http://www.eucalyptussoftware.com/downloads/eucalyptus-images/list.php",
-                "http://open.eucalyptus.com/wiki/EucalyptusUserImageCreatorGuide_v1.5",
+                "http://www.eucalyptussoftware.com/downloads/eucalyptus-images/list.php?version=" + URL.encode(version),
+                "http://open.eucalyptus.com/wiki/EucalyptusUserImageCreatorGuide_v1.6",
                 "Eucalyptus-certified Images",
                 50));
         vpanel.add (new DownloadsTable(sessionId,
-                "http://www.eucalyptussoftware.com/downloads/eucalyptus-tools/list.php",
+                "http://www.eucalyptussoftware.com/downloads/eucalyptus-tools/list.php?version=" + URL.encode(version),
                 "http://open.eucalyptus.com/wiki/ToolsEcosystem",
                 "Eucalyptus-compatible Tools",
                 50));
@@ -2328,252 +2328,241 @@ public class EucalyptusWebInterface implements EntryPoint {
         parent.clear();
         parent.add(imageStore);
     }
-    
-    /****/
-    
+        
     public void displayFirstTimeConfiguration()
     {
-		displayStatusPage("Loading first-time configuration page...");
-    	
-		VerticalPanel gpanel = new VerticalPanel();
-        gpanel.setSpacing(25);
-        gpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
-    	
-        // password grid 
-        
-        final Grid g1 = new Grid ( 2, 3 );
-        g1.getColumnFormatter().setWidth(0, "240");
-        g1.getColumnFormatter().setWidth(1, "180");
-        g1.getColumnFormatter().setWidth(2, "180");
-        int i = 0;
+    	displayStatusPage("Loading first-time configuration page...");
 
-        final int newPassword1_row = i;
-        g1.setWidget( i, 0, new Label( "Administrator's new password:" ) );
-        g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        final PasswordTextBox newCleartextPassword1_box = new PasswordTextBox();
-        newCleartextPassword1_box.setFocus(true); // this box gets focus first
-        newCleartextPassword1_box.setWidth("180");
-        g1.setWidget( i++, 1, newCleartextPassword1_box );
+    	VerticalPanel gpanel = new VerticalPanel();
+    	gpanel.setSpacing(25);
+    	gpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
 
-        final int newPassword2_row = i;
-        g1.setWidget( i, 0, new Label( "The password, again:" ) );
-        g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        final PasswordTextBox newCleartextPassword2_box = new PasswordTextBox();
-        newCleartextPassword2_box.setWidth("180");
-        g1.setWidget( i++, 1, newCleartextPassword2_box );
-        
-        gpanel.add(g1);
-        
-        // email address grid
-        
-        final Grid g2 = new Grid ( 1, 3 );
-        g2.getColumnFormatter().setWidth(0, "240");
-        g2.getColumnFormatter().setWidth(1, "180");
-        g2.getColumnFormatter().setWidth(2, "180");
-        i = 0;
-        
-        final int emailAddress_row = i;
-        g2.setWidget( i, 0, new Label( "Administrator's email address:" ) );
-        g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);       
-        final TextBox emailAddress_box = new TextBox();
-        emailAddress_box.setWidth("180");
-        g2.setWidget( i++, 1, emailAddress_box );
-        
-        VerticalPanel epanel = new VerticalPanel();
-        epanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
-        epanel.setSpacing(5);
-        epanel.add(g2);
-        HTML emailChangeMsg = new HTML( admin_email_change_text );
-        emailChangeMsg.setWidth ("300");
-        emailChangeMsg.setStyleName("euca-small-text");
-        epanel.add(emailChangeMsg);
-        gpanel.add(epanel);
-        
-        // cloud URL grid
-        
-        final Grid g3 = new Grid ( 1, 3 );
-        g3.getColumnFormatter().setWidth(0, "240");
-        g3.getColumnFormatter().setWidth(1, "180");
-        g3.getColumnFormatter().setWidth(2, "180");
-        i = 0;
-        
-        final int cloudUrl_row = i;
-        g3.setWidget( i, 0, new Label( "Cloud URL:" ) );
-        g3.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);       
-        final TextBox cloudUrl_box = new TextBox();
-        cloudUrl_box.setWidth("180");
-        g3.setWidget( i++, 1, cloudUrl_box );
-        		
-        VerticalPanel cpanel = new VerticalPanel();
-        cpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
-        cpanel.setSpacing(5);
-        cpanel.add(g3);
-        HTML cloudUrlMsg = new HTML ( admin_cloud_ip_setup_text );
-        cloudUrlMsg.setWidth ("300");
-        cloudUrlMsg.setStyleName("euca-small-text");
-        cpanel.add (cloudUrlMsg);
-        gpanel.add(cpanel);
-        
-        // pull in guessed cloud URL
-        
-		EucalyptusWebBackend.App.getInstance().getSystemConfig(sessionId,
-				new AsyncCallback( ) {
-					public void onSuccess ( final Object result ) {
-						conf = (SystemConfigWeb) result;
-						cloudUrl_box.setText (conf.getWalrusUrl());
-					}
-					public void onFailure ( Throwable caught ) { }
-				}
-			);
-        
-		// user clicked submit
-		
-        Button change_button = new Button( "Submit",
- 			new ClickListener() {
-	            public void onClick( Widget sender )
-	            {
-	                boolean formOk = true;
-	               
+    	// password grid 
 
-	                g1.clearCell( 0, 2 ); // clear previous right-hand-side annotations
-	                g1.clearCell( 1, 2 ); // clear previous right-hand-side annotations
-	                g2.clearCell( 0, 2 ); // clear previous right-hand-side annotations
-	                g3.clearCell( 0, 2 ); // clear previous right-hand-side annotations
+    	final Grid g1 = new Grid ( 2, 3 );
+    	g1.getColumnFormatter().setWidth(0, "240");
+    	g1.getColumnFormatter().setWidth(1, "180");
+    	g1.getColumnFormatter().setWidth(2, "180");
+    	int i = 0;
+
+    	final int newPassword1_row = i;
+    	g1.setWidget( i, 0, new Label( "Administrator's new password:" ) );
+    	g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+    	final PasswordTextBox newCleartextPassword1_box = new PasswordTextBox();
+    	newCleartextPassword1_box.setFocus(true); // this box gets focus first
+    	newCleartextPassword1_box.setWidth("180");
+    	g1.setWidget( i++, 1, newCleartextPassword1_box );
+
+    	final int newPassword2_row = i;
+    	g1.setWidget( i, 0, new Label( "The password, again:" ) );
+    	g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+    	final PasswordTextBox newCleartextPassword2_box = new PasswordTextBox();
+    	newCleartextPassword2_box.setWidth("180");
+    	g1.setWidget( i++, 1, newCleartextPassword2_box );
+
+    	gpanel.add(g1);
+
+    	// email address grid
+
+    	final Grid g2 = new Grid ( 1, 3 );
+    	g2.getColumnFormatter().setWidth(0, "240");
+    	g2.getColumnFormatter().setWidth(1, "180");
+    	g2.getColumnFormatter().setWidth(2, "180");
+    	i = 0;
+
+    	final int emailAddress_row = i;
+    	g2.setWidget( i, 0, new Label( "Administrator's email address:" ) );
+    	g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);       
+    	final TextBox emailAddress_box = new TextBox();
+    	emailAddress_box.setWidth("180");
+    	g2.setWidget( i++, 1, emailAddress_box );
+
+    	VerticalPanel epanel = new VerticalPanel();
+    	epanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+    	epanel.setSpacing(5);
+    	epanel.add(g2);
+    	HTML emailChangeMsg = new HTML( admin_email_change_text );
+    	emailChangeMsg.setWidth ("300");
+    	emailChangeMsg.setStyleName("euca-small-text");
+    	epanel.add(emailChangeMsg);
+    	gpanel.add(epanel);
+
+    	// cloud URL grid
+
+    	final Grid g3 = new Grid ( 1, 3 );
+    	g3.getColumnFormatter().setWidth(0, "240");
+    	g3.getColumnFormatter().setWidth(1, "180");
+    	g3.getColumnFormatter().setWidth(2, "180");
+    	i = 0;
+
+    	final int cloudUrl_row = i;
+    	g3.setWidget( i, 0, new Label( "Cloud Host:" ) );
+    	g3.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);       
+    	final TextBox cloudUrl_box = new TextBox();
+    	cloudUrl_box.setWidth("180");
+    	g3.setWidget( i++, 1, cloudUrl_box );
+
+    	VerticalPanel cpanel = new VerticalPanel();
+    	cpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+    	cpanel.setSpacing(5);
+    	cpanel.add(g3);
+    	HTML cloudUrlMsg = new HTML ( admin_cloud_ip_setup_text );
+    	cloudUrlMsg.setWidth ("300");
+    	cloudUrlMsg.setStyleName("euca-small-text");
+    	cpanel.add (cloudUrlMsg);
+    	gpanel.add(cpanel);
+
+    	// pull in guessed cloud URL
+
+    	EucalyptusWebBackend.App.getInstance().getSystemConfig(sessionId,
+    			new AsyncCallback( ) {
+    		public void onSuccess ( final Object result ) {
+    			conf = (SystemConfigWeb) result;
+    			cloudUrl_box.setText (conf.getWalrusUrl());
+    		}
+    		public void onFailure ( Throwable caught ) { }
+    	}
+    	);
+
+    	// user clicked submit
+
+    	Button change_button = new Button( "Submit",
+    			new ClickListener() {
+    		public void onClick( Widget sender )
+    		{
+    			boolean formOk = true;
 
 
-	                // perform checks
-	                
-	                if ( newCleartextPassword1_box.getText().length() < minPasswordLength )
-	                {
-	                    Label l = new Label( "Password is too short!" );
-	                    l.setStyleName("euca-error-hint");
-	                    g1.setWidget( newPassword1_row, 2, l );
-	                    formOk = false;
-	                }
-	                if ( !newCleartextPassword1_box.getText().equals( newCleartextPassword2_box.getText() ) )
-	                {
-	                    Label l = new Label( "Passwords do not match!" );
-	                    l.setStyleName("euca-error-hint");
-	                    g1.setWidget( newPassword2_row, 2, l );
-	                    formOk = false;
-	                }
+    			g1.clearCell( 0, 2 ); // clear previous right-hand-side annotations
+    			g1.clearCell( 1, 2 ); // clear previous right-hand-side annotations
+    			g2.clearCell( 0, 2 ); // clear previous right-hand-side annotations
+    			g3.clearCell( 0, 2 ); // clear previous right-hand-side annotations
 
-	                if ( emailAddress_box.getText().length() < 1 )
-	                {
-	                    Label l = new Label( "Email address is empty!" );
-	                    l.setStyleName("euca-error-hint");
-	                    g2.setWidget( emailAddress_row, 2, l );
-	                    formOk = false;
-	                }
-	                
-	                if ( cloudUrl_box.getText().length() < 1 )
-	                {
-	                    Label l = new Label( "Cloud URL is empty!" );
-	                    l.setStyleName("euca-error-hint");
-	                    g3.setWidget( cloudUrl_row, 2, l );
-	                    formOk = false;
-	                }
-	                
-	               
-	                if ( !formOk )
-	                {
-		                    label_box.setText( "Please, fix the errors and try again:" );
-		                    label_box.setStyleName("euca-greeting-warning");
-		                    return;
-	                }
-	                
-	                
-	                    label_box.setText( "Checking with the server..." );
-	                    label_box.setStyleName("euca-greeting-pending");
 
-	                    loggedInUser.setEmail( emailAddress_box.getText() );
-	                    loggedInUser.setBCryptedPassword(GWTUtils.md5(newCleartextPassword1_box.getText()));
+    			// perform checks
 
-	                    EucalyptusWebBackend.App.getInstance().updateUserRecord(
-	                            sessionId,
-	                            loggedInUser,
-	                            new AsyncCallback() {
-	                                public void onSuccess( final Object result )
-	                                {
-	                                	
-	                                    // password change succeded - pull in the new user record
-	                                    label_box.setText( "Refreshing user data..." );
-	                                    EucalyptusWebBackend.App.getInstance().getUserRecord(
-	                                            sessionId,
-	                                            null,
-	                                            new AsyncCallback() {
-	                                                public void onSuccess( Object result2 )
-	                                                {
-	                                                    loggedInUser = ( UserInfoWeb ) ( (List) result2).get(0);
+    			if ( newCleartextPassword1_box.getText().length() < minPasswordLength )
+    			{
+    				Label l = new Label( "Password is too short!" );
+    				l.setStyleName("euca-error-hint");
+    				g1.setWidget( newPassword1_row, 2, l );
+    				formOk = false;
+    			}
+    			if ( !newCleartextPassword1_box.getText().equals( newCleartextPassword2_box.getText() ) )
+    			{
+    				Label l = new Label( "Passwords do not match!" );
+    				l.setStyleName("euca-error-hint");
+    				g1.setWidget( newPassword2_row, 2, l );
+    				formOk = false;
+    			}
 
-	                                                    // update cloud URL
-	            	            						conf.setWalrusUrl(cloudUrl_box.getText());
-	            	            								EucalyptusWebBackend.App.getInstance().setSystemConfig(sessionId,
-	            	            									conf,
-	            	            									new AsyncCallback() {
-	            	            										public void onSuccess ( final Object result ) {
-	            	            											currentTabIndex = 3; // TODO: change this to confTabIndex when it's available
-	            	            											displayDefaultPage ("");
-	            	            										}
-	            	            										public void onFailure ( Throwable caught ) {
-	            	            											displayErrorPage ("Failed to save the cloud URL (check 'Configuration' tab).");
-	            	            										}
-	            	            									}
-	            	            								);
-	                                                    
-	                                                }
-	                                                public void onFailure( Throwable caught )
-	                                                {
-	                                                    displayLoginErrorPage( caught.getMessage() );
-	                                                }
-	                                            });
-	                                    
-	                                    
-	                                    
+    			if ( emailAddress_box.getText().length() < 1 )
+    			{
+    				Label l = new Label( "Email address is empty!" );
+    				l.setStyleName("euca-error-hint");
+    				g2.setWidget( emailAddress_row, 2, l );
+    				formOk = false;
+    			}
 
-	                                }
-	                                public void onFailure( Throwable caught )
-	                                {
-	                                    loggedInUser.setEmail( "" );
-	                                    String m = caught.getMessage();
-	                                    label_box.setText( m );
-	                                    label_box.setStyleName("euca-greeting-warning");
-	                                }
-	                            });
-	                       
-	                
-				}
-			}
-		);
-        
-        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(change_button);
-        change_button.addKeyboardListener(sl);
-        newCleartextPassword1_box.addKeyboardListener(sl);
-        newCleartextPassword2_box.addKeyboardListener(sl);
-        emailAddress_box.addKeyboardListener(sl);
-        cloudUrl_box.addKeyboardListener(sl);
-    	
-        HTML message = new HTML (admin_first_time_config_text);
-        message.setWidth( "600" );
+    			if ( cloudUrl_box.getText().length() < 1 )
+    			{
+    				Label l = new Label( "Cloud URL is empty!" );
+    				l.setStyleName("euca-error-hint");
+    				g3.setWidget( cloudUrl_row, 2, l );
+    				formOk = false;
+    			}
 
-        VerticalPanel vpanel = new VerticalPanel();
-        vpanel.setSpacing(15);
-        vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
-        
-        if (logo!=null) { vpanel.add (logo); }
-        label_box.setText( "First-time Configuration" );
-        vpanel.add (label_box);
-        vpanel.add (message);
-        vpanel.add (gpanel);
-        vpanel.add (change_button);
+    			if ( !formOk )
+    			{
+    				label_box.setText( "Please, fix the errors and try again:" );
+    				label_box.setStyleName("euca-greeting-warning");
+    				return;
+    			}
 
-        VerticalPanel wrapper = new VerticalPanel();
-        wrapper.add (vpanel);
-        wrapper.setSize("100%", "100%");
-        wrapper.setCellHorizontalAlignment(vpanel, VerticalPanel.ALIGN_CENTER);
-        wrapper.setCellVerticalAlignment(vpanel, VerticalPanel.ALIGN_MIDDLE);  // michael commented out
+    			label_box.setText( "Checking with the server..." );
+    			label_box.setStyleName("euca-greeting-pending");
 
-		RootPanel.get().clear();
-		RootPanel.get().add (wrapper);
-	}
+    			loggedInUser.setEmail( emailAddress_box.getText() );
+    			loggedInUser.setBCryptedPassword(GWTUtils.md5(newCleartextPassword1_box.getText()));
+
+    			EucalyptusWebBackend.App.getInstance().updateUserRecord(
+    					sessionId,
+    					loggedInUser,
+    					new AsyncCallback() {
+    						public void onSuccess( final Object result )
+    						{
+    							// password change succeded - pull in the new user record
+    							label_box.setText( "Refreshing user data..." );
+    							EucalyptusWebBackend.App.getInstance().getUserRecord(
+    									sessionId,
+    									null,
+    									new AsyncCallback() {
+    										public void onSuccess( Object result2 )
+    										{
+    											loggedInUser = ( UserInfoWeb ) ( (List) result2).get(0);
+
+    											// update cloud URL
+    											conf.setWalrusUrl(cloudUrl_box.getText());
+    											EucalyptusWebBackend.App.getInstance().setSystemConfig(sessionId,
+    													conf,
+    													new AsyncCallback() {
+    												public void onSuccess ( final Object result ) {
+    													currentTabIndex = 3; // TODO: change this to confTabIndex when it's available
+    													displayDefaultPage ("");
+    												}
+    												public void onFailure ( Throwable caught ) {
+    													displayErrorPage ("Failed to save the cloud URL (check 'Configuration' tab).");
+    												}
+    											}
+    											);
+
+    										}
+    										public void onFailure( Throwable caught )
+    										{
+    											displayLoginErrorPage( caught.getMessage() );
+    										}
+    									});
+    						}
+    						public void onFailure( Throwable caught )
+    						{
+    							loggedInUser.setEmail( "" );
+    							String m = caught.getMessage();
+    							label_box.setText( m );
+    							label_box.setStyleName("euca-greeting-warning");
+    						}
+    					});
+    		}
+    	}
+    	);
+
+    	EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(change_button);
+    	change_button.addKeyboardListener(sl);
+    	newCleartextPassword1_box.addKeyboardListener(sl);
+    	newCleartextPassword2_box.addKeyboardListener(sl);
+    	emailAddress_box.addKeyboardListener(sl);
+    	cloudUrl_box.addKeyboardListener(sl);
+
+    	HTML message = new HTML (admin_first_time_config_text);
+    	message.setWidth( "600" );
+
+    	VerticalPanel vpanel = new VerticalPanel();
+    	vpanel.setSpacing(15);
+    	vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+
+    	if (logo!=null) { vpanel.add (logo); }
+    	label_box.setText( "First-time Configuration" );
+    	vpanel.add (label_box);
+    	vpanel.add (message);
+    	vpanel.add (gpanel);
+    	vpanel.add (change_button);
+
+    	VerticalPanel wrapper = new VerticalPanel();
+    	wrapper.add (vpanel);
+    	wrapper.setSize("100%", "100%");
+    	wrapper.setCellHorizontalAlignment(vpanel, VerticalPanel.ALIGN_CENTER);
+    	wrapper.setCellVerticalAlignment(vpanel, VerticalPanel.ALIGN_MIDDLE);  // michael commented out
+
+    	RootPanel.get().clear();
+    	RootPanel.get().add (wrapper);
+    }
 }

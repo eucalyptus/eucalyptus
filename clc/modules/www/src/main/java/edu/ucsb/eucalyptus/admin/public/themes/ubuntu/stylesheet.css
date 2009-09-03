@@ -52,10 +52,9 @@ table.euca-top-bar, .gwt-TabBar, .euca-tab-contents{
 	padding-top:25px; /* + 25 by dmitrii */
 }
 
-
 .euca-top-bar-right {
 	font-size:.6em;
-	margin-top: 40px; /* +20 by dmitrii */
+	margin-top: 20px;
 	margin-right:50px;
 }
 .euca-top-bar-right a{
