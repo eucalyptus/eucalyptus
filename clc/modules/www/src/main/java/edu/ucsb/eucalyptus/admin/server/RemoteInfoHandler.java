@@ -73,11 +73,19 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.StorageProperties;
+
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
+import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
+import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+
+import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.eucalyptus.ws.util.Messaging;
 import org.apache.log4j.Logger;
 
@@ -87,62 +95,91 @@ import java.util.Set;
 
 public class RemoteInfoHandler {
 
-  private static Logger LOG = Logger.getLogger( RemoteInfoHandler.class );
+	private static Logger LOG = Logger.getLogger( RemoteInfoHandler.class );
 
-  public static synchronized void setClusterList( List<ClusterInfoWeb> newClusterList ) throws EucalyptusCloudException {
-    List<ClusterConfiguration> clusterConfig = Lists.newArrayList( );
-    for ( ClusterInfoWeb clusterWeb : newClusterList ) {
-      clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ) ) );
-    }
-    Configuration.updateClusterConfigurations( clusterConfig );
-  }
+	public static synchronized void setClusterList( List<ClusterInfoWeb> newClusterList ) throws EucalyptusCloudException {
+		List<ClusterConfiguration> clusterConfig = Lists.newArrayList( );
+		for ( ClusterInfoWeb clusterWeb : newClusterList ) {
+			clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ) ) );
+		}
+		Configuration.updateClusterConfigurations( clusterConfig );
+	}
 
-  public static synchronized List<ClusterInfoWeb> getClusterList( ) throws EucalyptusCloudException {
-    List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>( );
-    for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) )
-      clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ) ) );
-    return clusterList;
-  }
+	public static synchronized List<ClusterInfoWeb> getClusterList( ) throws EucalyptusCloudException {
+		List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>( );
+		for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) )
+			clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ) ) );
+		return clusterList;
+	}
 
-  public static synchronized void setStorageList( List<StorageInfoWeb> newStorageList ) {
-    List<StorageControllerConfiguration> storageControllerConfig = Lists.newArrayList( );
-//HACK: this needs to be fixed.
-    //    for ( StorageInfoWeb storageControllerWeb : newStorageList ) {
-//      storageControllerConfig.add( new StorageControllerConfiguration( storageControllerWeb.getName( ), storageControllerWeb.getHost( ), storageControllerWeb.getPort( ) ) );
-//    }
-//    Configuration.updateStorageControllerConfigurations( storageControllerConfig );
-  }
+	public static synchronized void setStorageList( List<StorageInfoWeb> newStorageList ) throws EucalyptusCloudException {
+		List<StorageControllerConfiguration> storageControllerConfig = Lists.newArrayList( );
+		for ( StorageInfoWeb storageControllerWeb : newStorageList ) {
+			storageControllerConfig.add( new StorageControllerConfiguration( storageControllerWeb.getName( ), storageControllerWeb.getHost( ), storageControllerWeb.getPort( ) ) );
+		}
+		Configuration.updateStorageControllerConfigurations( storageControllerConfig );
 
-  public static synchronized List<StorageInfoWeb> getStorageList( ) {
-    List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
-  //HACK: this needs to be fixed.
-    // for ( ClusterConfiguration c : Configuration.getClusterConfigurations() )
-    // clusterList.add( new ClusterInfoWeb( c.getName(), c.getHostName(),
-    // c.getPort()) );
-    return storageList;
-  }
+		for(StorageInfoWeb storageControllerWeb : newStorageList) {
+			UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType();
+			updateStorageConfiguration.setName(storageControllerWeb.getName());
+			updateStorageConfiguration.setMaxTotalVolumeSize(storageControllerWeb.getTotalVolumesSizeInGB());
+			updateStorageConfiguration.setMaxVolumeSize(storageControllerWeb.getMaxVolumeSizeInGB());
+			updateStorageConfiguration.setStorageInterface(storageControllerWeb.getStorageInterface());
+			updateStorageConfiguration.setStorageRootDirectory(storageControllerWeb.getVolumesPath());
+			updateStorageConfiguration.setZeroFillVolumes(storageControllerWeb.getZeroFillVolumes());
+			ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, 
+					storageControllerWeb.getHost());
+			if(Component.eucalyptus.isLocal()) {
+				updateStorageConfiguration.setName(StorageProperties.SC_LOCAL_NAME);
+			}
+			scDispatch.send(updateStorageConfiguration);
+		}
+	}
 
-  public static synchronized void setWalrusList( List<WalrusInfoWeb> walrusInfo ) {
-    // TODO: Chris do messaging stuff. new
-    // UpdateWalrusConfigurationType(walrusStateType) and send that.
-  }
+	public static synchronized List<StorageInfoWeb> getStorageList( ) throws EucalyptusCloudException {
+		List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
+		for (StorageControllerConfiguration c : Configuration.getStorageControllerConfigurations()) {
+			GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType(c.getName());
+			if(Component.eucalyptus.isLocal()) {
+				getStorageConfiguration.setName(StorageProperties.SC_LOCAL_NAME);
+			}
+			ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, 
+					c.getHostName());
+			GetStorageConfigurationResponseType getStorageConfigResponse = 
+				scDispatch.send(getStorageConfiguration, GetStorageConfigurationResponseType.class);
+			storageList.add(new StorageInfoWeb(c.getName(), 
+					c.getHostName(), 
+					c.getPort(), 
+					getStorageConfigResponse.getStorageRootDirectory(), 
+					getStorageConfigResponse.getMaxVolumeSize(), 
+					getStorageConfigResponse.getMaxTotalVolumeSize(), 
+					getStorageConfigResponse.getStorageInterface(), 
+					getStorageConfigResponse.getZeroFillVolumes()));
+		}
+		return storageList;
+	}
 
-  public static List<VmTypeWeb> getVmTypes( ) {
-    List<VmTypeWeb> ret = new ArrayList<VmTypeWeb>( );
-    for ( VmType v : VmTypes.list( ) )
-      ret.add( new VmTypeWeb( v.getName( ), v.getCpu( ), v.getMemory( ), v.getDisk( ) ) );
-    return ret;
-  }
+	public static synchronized void setWalrusList( List<WalrusInfoWeb> walrusInfo ) {
+		// TODO: Chris do messaging stuff. new
+		// UpdateWalrusConfigurationType(walrusStateType) and send that.
+	}
 
-  public static void setVmTypes( final List<VmTypeWeb> vmTypes ) throws SerializableException {
-    Set<VmType> newVms = Sets.newTreeSet( );
-    for ( VmTypeWeb vmw : vmTypes ) {
-      newVms.add( new VmType( vmw.getName( ), vmw.getCpu( ), vmw.getDisk( ), vmw.getMemory( ) ) );
-    }
-    try {
-      VmTypes.update( newVms );
-    } catch ( EucalyptusCloudException e ) {
-      throw new SerializableException( e.getMessage( ) );
-    }
-  }
+	public static List<VmTypeWeb> getVmTypes( ) {
+		List<VmTypeWeb> ret = new ArrayList<VmTypeWeb>( );
+		for ( VmType v : VmTypes.list( ) )
+			ret.add( new VmTypeWeb( v.getName( ), v.getCpu( ), v.getMemory( ), v.getDisk( ) ) );
+		return ret;
+	}
+
+	public static void setVmTypes( final List<VmTypeWeb> vmTypes ) throws SerializableException {
+		Set<VmType> newVms = Sets.newTreeSet( );
+		for ( VmTypeWeb vmw : vmTypes ) {
+			newVms.add( new VmType( vmw.getName( ), vmw.getCpu( ), vmw.getDisk( ), vmw.getMemory( ) ) );
+		}
+		try {
+			VmTypes.update( newVms );
+		} catch ( EucalyptusCloudException e ) {
+			throw new SerializableException( e.getMessage( ) );
+		}
+	}
 }

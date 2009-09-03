@@ -64,6 +64,8 @@ import com.google.gwt.user.client.rpc.IsSerializable;
 
 public class StorageInfoWeb implements IsSerializable {
 	private String name;
+	private String host;
+	private Integer port;
 	private String volumesPath;
 	private Integer maxVolumeSizeInGB;
 	private Integer totalVolumesSizeInGB;
@@ -73,13 +75,17 @@ public class StorageInfoWeb implements IsSerializable {
 
 	public StorageInfoWeb() {}
 
-	public StorageInfoWeb( final String name, 
+	public StorageInfoWeb( final String name,
+			String host,
+			Integer port,
 			String volumesPath,
 			Integer maxVolumeSizeInGB,
 			Integer totalVolumesSizeInGB,
 			String storageInterface,
 			Boolean zeroFillVolumes) {
 		this.name = name;
+		this.host = host;
+		this.port = port;
 		this.volumesPath = volumesPath;
 		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
 		this.totalVolumesSizeInGB = totalVolumesSizeInGB;
@@ -105,6 +111,23 @@ public class StorageInfoWeb implements IsSerializable {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	
+	public String getHost() {
+		return host;
+	}
+
+	public void setHost(String host) {
+		this.host = host;
+	}
+
+	public Integer getPort() {
+		return port;
+	}
+
+	public void setPort(Integer port) {
+		this.port = port;
 	}
 
 	public String getVolumesPath() {

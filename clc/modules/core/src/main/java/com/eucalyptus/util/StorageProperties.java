@@ -81,6 +81,7 @@ public class StorageProperties {
 	private static Logger LOG = Logger.getLogger( StorageProperties.class );
 
 	public static final String SERVICE_NAME = "StorageController";
+	public static final String SC_LOCAL_NAME = "StorageController-local";
 	public static String NAME = "StorageController" + UUID.randomUUID();
 	public static String SC_ID = SERVICE_NAME + UUID.randomUUID();
 	public static final String EUCALYPTUS_OPERATION = "EucaOperation";
@@ -114,7 +115,7 @@ public class StorageProperties {
 				SystemUtil.shutdownWithError("Storage controller name cannot be determined. Shutting down.");
 			}
 		} else {
-			StorageProperties.NAME = "StorageController-local";
+			StorageProperties.NAME = SC_LOCAL_NAME;
 		}
 
 	}

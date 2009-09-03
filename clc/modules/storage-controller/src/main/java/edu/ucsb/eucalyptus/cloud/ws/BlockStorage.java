@@ -129,6 +129,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
+import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.InitializeStorageManagerResponseType;
@@ -288,6 +290,21 @@ public class BlockStorage {
 			LOG.error(ex);
 		}
 		updateConfig();
+		return reply;
+	}
+
+	public GetStorageConfigurationResponseType GetStorageConfiguration(GetStorageConfigurationType request) throws EucalyptusCloudException {
+		GetStorageConfigurationResponseType reply = (GetStorageConfigurationResponseType) request.getReply();
+		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
+			throw new AccessDeniedException("Only admin can change walrus properties.");
+		if(StorageProperties.NAME.equals(request.getName())) {
+			reply.setStorageRootDirectory(StorageProperties.storageRootDirectory);
+			reply.setMaxTotalVolumeSize(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
+			reply.setMaxVolumeSize(StorageProperties.MAX_VOLUME_SIZE);
+			reply.setStorageInterface(StorageProperties.iface);
+			reply.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
+			reply.setName(StorageProperties.NAME);
+		}
 		return reply;
 	}
 
