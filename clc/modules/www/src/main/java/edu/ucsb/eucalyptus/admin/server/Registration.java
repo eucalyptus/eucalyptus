@@ -61,6 +61,7 @@
 package edu.ucsb.eucalyptus.admin.server;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
@@ -181,11 +182,11 @@ public class Registration extends HttpServlet {
   }
 
   private static String getStorageUrl() {
-    try {
-      return EucalyptusProperties.getSystemConfiguration().getStorageUrl();
-    } catch ( EucalyptusCloudException e ) {
-      return "configuration error";
+    String walrusUrl = EucalyptusProperties.getWalrusUrl( );
+    if( !Component.walrus.isLocal( ) ) {
+      walrusUrl = "http://" + Component.walrus.getUri( ).getHost( ) + ":8773/services/Walrus/";
     }
+    return walrusUrl;
   }
 
   private static String getRegistrationId() {
@@ -198,11 +199,7 @@ public class Registration extends HttpServlet {
 
 
   private static String getEucaUrl() {
-    try {
-      return EucalyptusProperties.getSystemConfiguration().getStorageUrl().replaceAll( "/services/Walrus", "/services/Eucalyptus" );
-    } catch ( EucalyptusCloudException e ) {
-      return "configuration error";
-    }
+    return EucalyptusProperties.getCloudUrl( );
   }
 
   @Override

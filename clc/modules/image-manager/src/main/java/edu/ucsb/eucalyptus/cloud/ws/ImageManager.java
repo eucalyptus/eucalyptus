@@ -345,14 +345,7 @@ public class ImageManager {
   }
 
   private String getStorageUrl( final SystemConfiguration conf ) throws EucalyptusCloudException {
-    String walrusUrl;
-    try {
-      walrusUrl = ( new URL( conf.getStorageUrl() + "/" ) ).toString();
-    }
-    catch ( MalformedURLException e ) {
-      throw new EucalyptusCloudException( "System is misconfigured: cannot parse Walrus URL.", e );
-    }
-    return walrusUrl;
+    return EucalyptusProperties.getWalrusUrl( );
   }
 
   private String getImageInfobyId( String userSuppliedId, String imageDefaultId, String systemDefaultId ) {

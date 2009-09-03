@@ -63,11 +63,7 @@
  */
 package com.eucalyptus.util;
 
-import java.util.List;
-
 import org.apache.log4j.Logger;
-
-import com.google.common.collect.Lists;
 
 public class EucalyptusProperties {
 
@@ -97,45 +93,6 @@ public class EucalyptusProperties {
   public static String getDName( final String name ) {
     return String.format( "CN=localhost, OU=Eucalyptus, O=%s, L=Santa Barbara, ST=CA, C=US", name );
   }
-
-  // TODO: bootstrap system configuration
-  // public static SystemConfiguration getSystemConfiguration() throws
-  // EucalyptusCloudException {
-  // EntityWrapper<SystemConfiguration> confDb = new
-  // EntityWrapper<SystemConfiguration>();
-  // SystemConfiguration conf = null;
-  // try {
-  // conf = confDb.getUnique( new SystemConfiguration() );
-  // }
-  // catch ( EucalyptusCloudException e ) {
-  // confDb.rollback();
-  // throw new EucalyptusCloudException( "Failed to load system configuration",
-  // e );
-  // }
-  // if( conf.getRegistrationId() == null ) {
-  // conf.setRegistrationId( UUID.randomUUID().toString() );
-  // }
-  // if( conf.getSystemReservedPublicAddresses() == null ) {
-  // conf.setSystemReservedPublicAddresses( 10 );
-  // }
-  // if( conf.getMaxUserPublicAddresses() == null ) {
-  // conf.setMaxUserPublicAddresses( 5 );
-  // }
-  // if( conf.isDoDynamicPublicAddresses() == null ) {
-  // conf.setDoDynamicPublicAddresses( true );
-  // }
-  // confDb.commit();
-  // String walrusUrl = null;
-  // try {
-  // walrusUrl = ( new URL( conf.getStorageUrl() + "/" ) ).toString();
-  // }
-  // catch ( MalformedURLException e ) {
-  // throw new EucalyptusCloudException(
-  // "System is misconfigured: cannot parse Walrus URL.", e );
-  // }
-  //
-  // return conf;
-  // }
 
   public enum TokenState {
     preallocate, returned, accepted, submitted, allocated, redeemed;

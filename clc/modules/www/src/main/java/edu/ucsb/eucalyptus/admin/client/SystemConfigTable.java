@@ -174,11 +174,11 @@ public class SystemConfigTable extends VerticalPanel {
 		int i = 0;
 
 		// cloud parameters
-		this.c_grid.setWidget( i, 0, new Label( "Cloud URL:" ) );
+		this.c_grid.setWidget( i, 0, new Label( "Cloud Host:" ) );
 		this.c_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		walrusURL_box.addChangeListener (new ChangeCallback (this));
 		walrusURL_box.setVisibleLength(55);
-		walrusURL_box.setText (SystemConfig.getWalrusUrl()); // TODO: rename WalrusUrl to something else?
+		walrusURL_box.setText (SystemConfig.getCloudHost()); 
 		walrusURL_box.addFocusListener (new FocusHandler (c_hint,
 				"Warning: Changing the Cloud URL will invalidate any existing credentials, and will prevent existing users from accessing the system."));
 		this.c_grid.setWidget( i++, 1, walrusURL_box );
@@ -317,7 +317,7 @@ public class SystemConfigTable extends VerticalPanel {
 	public void updateStruct ()
 	{
 		WalrusInfoWeb walrusInfo = walrusList.get(0);
-		this.SystemConfig.setWalrusUrl                (this.walrusURL_box.getText());
+		this.SystemConfig.setCloudHost( this.walrusURL_box.getText());
 		walrusInfo.setBucketsRootDirectory               (this.walrusPath_box.getText());
 		walrusInfo.setMaxBucketsPerUser  (Long.parseLong(this.maxBuckets_box.getText()));
 		walrusInfo.setMaxBucketSizeInMB  (Long.parseLong(this.maxBucketSize_box.getText()));

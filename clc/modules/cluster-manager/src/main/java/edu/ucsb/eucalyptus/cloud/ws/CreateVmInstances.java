@@ -87,7 +87,7 @@ public class CreateVmInstances {
                                             vmAllocInfo.getKeyInfo(),
                                             vmAllocInfo.getVmTypeInfo(),
                                             vmAllocInfo.getNetworks(),
-                                            token.getNetworkIndexes( ).get( j ) );
+                                            token.getNetworkIndexes( ).get( j-1 ) );
         VmInstances.getInstance().register( vmInst );
         token.getInstanceIds().add( vmInst.getInstanceId() );
       }

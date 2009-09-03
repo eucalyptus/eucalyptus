@@ -71,7 +71,6 @@ import java.util.List;
 import com.google.gwt.user.client.rpc.IsSerializable;
 
 public class SystemConfigWeb implements IsSerializable {
-    private String walrusUrl;
     private String defaultKernelId;
     private String defaultRamdiskId;
     private Integer maxUserPublicAddresses;
@@ -81,11 +80,10 @@ public class SystemConfigWeb implements IsSerializable {
     private String dnsDomain;
     private String nameserver;
     private String nameserverAddress;
-
+    private String cloudHost;
     public SystemConfigWeb() {}
 
-    public SystemConfigWeb( final String walrusUrl,
-                            final String defaultKernelId,
+    public SystemConfigWeb( final String defaultKernelId,
                             final String defaultRamdiskId,
                             final Integer maxUserPublicAddresses,
                             final Boolean doDynamicPublicAddresses,
@@ -93,9 +91,9 @@ public class SystemConfigWeb implements IsSerializable {
                             final Boolean zeroFillVolumes,
                             final String dnsDomain,
                             final String nameserver,
-                            final String nameserverAddress)
+                            final String nameserverAddress,
+                            final String cloudHost)
     {
-        this.walrusUrl = walrusUrl;
         this.defaultKernelId = defaultKernelId;
         this.defaultRamdiskId = defaultRamdiskId;
         this.dnsDomain = dnsDomain;
@@ -105,18 +103,9 @@ public class SystemConfigWeb implements IsSerializable {
         this.systemReservedPublicAddresses = systemReservedPublicAddresses;
         this.doDynamicPublicAddresses = doDynamicPublicAddresses;
         this.zeroFillVolumes = zeroFillVolumes;
+        this.cloudHost = cloudHost;
     }
-
-  public String getWalrusUrl()
-    {
-        return walrusUrl;
-    }
-
-    public void setWalrusUrl( final String walrusUrl )
-    {
-        this.walrusUrl = walrusUrl;
-    }
-
+    
     public String getDefaultKernelId()
     {
         return defaultKernelId;
@@ -191,5 +180,13 @@ public class SystemConfigWeb implements IsSerializable {
 
 	public void setZeroFillVolumes(Boolean zeroFillVolumes) {
 		this.zeroFillVolumes = zeroFillVolumes;
-	}    
+	}
+
+  public String getCloudHost( ) {
+    return cloudHost;
+  }
+
+  public void setCloudHost( String cloudHost ) {
+    this.cloudHost = cloudHost;
+  }    
 }

@@ -1921,7 +1921,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 			new AsyncCallback( ) {
 				public void onSuccess ( final Object result ) {
 					conf = (SystemConfigWeb) result;
-					box.setText (conf.getWalrusUrl());
+					box.setText (conf.getCloudHost());
 				}
 				public void onFailure ( Throwable caught ) { }
 			}
@@ -1931,7 +1931,7 @@ public class EucalyptusWebInterface implements EntryPoint {
  			new ClickListener() {
 	            public void onClick( Widget sender )
 	            {
-					conf.setWalrusUrl(box.getText());
+					conf.setCloudHost(box.getText());
 					EucalyptusWebBackend.App.getInstance().setSystemConfig(sessionId,
 						conf,
 						new AsyncCallback() {
@@ -2418,7 +2418,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     			new AsyncCallback( ) {
     		public void onSuccess ( final Object result ) {
     			conf = (SystemConfigWeb) result;
-    			cloudUrl_box.setText (conf.getWalrusUrl());
+    			cloudUrl_box.setText (conf.getCloudHost());
     		}
     		public void onFailure ( Throwable caught ) { }
     	}
@@ -2502,7 +2502,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     											loggedInUser = ( UserInfoWeb ) ( (List) result2).get(0);
 
     											// update cloud URL
-    											conf.setWalrusUrl(cloudUrl_box.getText());
+    											conf.setCloudHost(cloudUrl_box.getText());
     											EucalyptusWebBackend.App.getInstance().setSystemConfig(sessionId,
     													conf,
     													new AsyncCallback() {

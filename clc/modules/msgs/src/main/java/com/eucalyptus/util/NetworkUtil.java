@@ -87,7 +87,12 @@ public class NetworkUtil {
       for( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
         InetAddress addr = iaddr.getAddress( );
         if( addr instanceof Inet4Address ) {
-          if( !addr.isMulticastAddress( ) && !addr.isLoopbackAddress( ) && !addr.isLinkLocalAddress( ) ) {
+          if( !addr.isMulticastAddress( ) && !addr.isLoopbackAddress( ) && !addr.isLinkLocalAddress( ) && !addr.isSiteLocalAddress( ) && !"192.168.122.1".equals( addr.getHostAddress( ) ) ) {
+            addrs.add( addr.getHostAddress( ) );
+          }
+        }
+        if( addr instanceof Inet4Address ) {
+          if( !addr.isMulticastAddress( ) && !addr.isLoopbackAddress( ) && !addr.isLinkLocalAddress( ) && !addrs.contains( addr.getHostAddress( ) ) && !"192.168.122.1".equals( addr.getHostAddress( ) ) ) {
             addrs.add( addr.getHostAddress( ) );
           }
         }

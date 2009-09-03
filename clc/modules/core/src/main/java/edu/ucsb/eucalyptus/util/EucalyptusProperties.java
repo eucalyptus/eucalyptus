@@ -128,15 +128,25 @@ public class EucalyptusProperties {
       conf.setDoDynamicPublicAddresses( true );
     }
     confDb.commit();
-    String walrusUrl = null;
-    try {
-      walrusUrl = ( new URL( conf.getStorageUrl() + "/" ) ).toString();
-    }
-    catch ( MalformedURLException e ) {
-      throw new EucalyptusCloudException( "System is misconfigured: cannot parse Walrus URL.", e );
-    }
-
     return conf;
+  }
+  
+  public static String getCloudUrl() {
+    try {
+      String cloudHost = EucalyptusProperties.getSystemConfiguration( ).getCloudHost( );
+      return String.format( "http://%s:8773/services/Eucalyptus", cloudHost );
+    } catch ( EucalyptusCloudException e ) {
+      return "http://127.0.0.1:8773/services/Eucalyptus";
+    }
+  }
+
+  public static String getWalrusUrl() {
+    try {
+      String cloudHost = EucalyptusProperties.getSystemConfiguration( ).getCloudHost( );
+      return String.format( "http://%s:8773/services/Walrus", cloudHost );
+    } catch ( EucalyptusCloudException e ) {
+      return "http://127.0.0.1:8773/services/Walrus";
+    }
   }
 
   public enum TokenState {

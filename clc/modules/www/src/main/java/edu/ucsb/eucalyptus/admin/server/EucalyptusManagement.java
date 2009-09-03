@@ -69,6 +69,7 @@ import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.util.NetworkUtil;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.ImageInfoWeb;
@@ -486,29 +487,13 @@ public class EucalyptusManagement {
 	public static String getInternalIpAddress ()
 	{
 		String ipAddr = null;
-		String localAddr = "127.0.0.1";
-
-		List<NetworkInterface> ifaces = null;
 		try {
-			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-		}
-		catch ( SocketException e1 ) {}
-
-		for ( NetworkInterface iface : ifaces )
-			try {
-				if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-					for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-						if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
-							ipAddr = iaddr.getHostAddress();
-						} else if ( iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
-							localAddr = iaddr.getHostAddress();
-						}
-					}
-				}
-			}
-		catch ( SocketException e1 ) {}
-
-		return ipAddr == null ? localAddr : ipAddr;
+      for( String addr : NetworkUtil.getAllAddresses( ) ) {
+        ipAddr = addr;
+        break;
+      }
+    } catch ( SocketException e ) {}
+		return ipAddr == null ? "127.0.0.1" : ipAddr;
 	}
 
 	public static SystemConfigWeb getSystemConfig() throws SerializableException
@@ -525,7 +510,7 @@ public class EucalyptusManagement {
 		finally {
 			db.commit();
 		}
-		return new SystemConfigWeb( sysConf.getStorageUrl(),
+		return new SystemConfigWeb( 
 				sysConf.getDefaultKernel(),
 				sysConf.getDefaultRamdisk(),
 				sysConf.getMaxUserPublicAddresses(),
@@ -534,7 +519,8 @@ public class EucalyptusManagement {
 				sysConf.getZeroFillVolumes(),
 				sysConf.getDnsDomain(),
 				sysConf.getNameserver(),
-				sysConf.getNameserverAddress());
+				sysConf.getNameserverAddress(),
+				sysConf.getCloudHost( ));
 	}
 
 	public static WalrusInfoWeb getWalrusConfig() throws SerializableException
@@ -563,15 +549,13 @@ public class EucalyptusManagement {
 		if(sysConf == null) {
 			sysConf = new SystemConfiguration();
 		}
-		if(sysConf.getStorageUrl() == null) {
+		if(sysConf.getCloudHost() == null) {
 			String ipAddr = getInternalIpAddress ();
-			String wUrl = String.format( "http://%s:8773/services/" + WalrusProperties.SERVICE_NAME, ipAddr );
-			sysConf.setStorageUrl(wUrl);
+			sysConf.setCloudHost(ipAddr);
 		}
 		if(sysConf.getDefaultKernel() == null) {
 			ImageInfo q = new ImageInfo();
 			EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
-
 			q.setImageType( EucalyptusProperties.IMAGE_KERNEL );
 			List<ImageInfo> res = db2.query(q);
 			if( res.size() > 0 )
@@ -580,7 +564,6 @@ public class EucalyptusManagement {
 		if(sysConf.getDefaultRamdisk() == null) {
 			ImageInfo q = new ImageInfo();
 			EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
-
 			q.setImageType( EucalyptusProperties.IMAGE_RAMDISK );
 			List<ImageInfo> res = db2.query(q);
 			if( res.size() > 0 )
@@ -641,7 +624,7 @@ public class EucalyptusManagement {
 		try
 		{
 			SystemConfiguration sysConf = db.getUnique( new SystemConfiguration() );
-			sysConf.setStorageUrl( systemConfig.getWalrusUrl() );
+			sysConf.setCloudHost( systemConfig.getCloudHost() );
 			sysConf.setDefaultKernel( systemConfig.getDefaultKernelId() );
 			sysConf.setDefaultRamdisk( systemConfig.getDefaultRamdiskId() );
 
@@ -655,10 +638,11 @@ public class EucalyptusManagement {
 			db.commit();
 			WalrusProperties.update();
 			StorageProperties.update();
+      DNSProperties.update();
 		}
 		catch ( EucalyptusCloudException e )
 		{
-			db.add( new SystemConfiguration(systemConfig.getWalrusUrl(),
+			db.add( new SystemConfiguration(
 					systemConfig.getDefaultKernelId(),
 					systemConfig.getDefaultRamdiskId(),
 					systemConfig.getMaxUserPublicAddresses(),
@@ -667,7 +651,8 @@ public class EucalyptusManagement {
 					systemConfig.getZeroFillVolumes(),
 					systemConfig.getDnsDomain(),
 					systemConfig.getNameserver(),
-					systemConfig.getNameserverAddress()));
+					systemConfig.getNameserverAddress(),
+					systemConfig.getCloudHost( )));
 			db.commit();
 			WalrusProperties.update();
 			StorageProperties.update();
