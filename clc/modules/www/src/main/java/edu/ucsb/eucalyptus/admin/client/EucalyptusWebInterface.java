@@ -1317,7 +1317,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         top_bar.setCellVerticalAlignment(upanel, HorizontalPanel.ALIGN_TOP);
 
         final HorizontalPanel messageBox = new HorizontalPanel();
-        messageBox.setSize("100%", "0"); // let the font determine the height
+        messageBox.setStyleName("euca-message-bar");
         messageBox.setSpacing(3);
         messageBox.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_RIGHT);
         messageBox.add (statusMessage);

@@ -84,6 +84,11 @@ body a {
     margin-top: 15px;
 }
 
+.euca-message-bar {
+	width: 100%;
+	height: 2em;
+}
+
 .euca-tab-with-text { 
     width: 480px;
 }
