@@ -208,7 +208,7 @@ public class SystemConfigTable extends VerticalPanel {
 		if(walrusList.size() > 0)
 			walrusInfo = walrusList.get(0);
 		else 
-			walrusInfo = new WalrusInfoWeb("walrus-name", "hi", 5l, 5120l, 50000l, 50000l);
+			walrusInfo = new WalrusInfoWeb("Walrus", "bucketsPath", 5, 5120l, 30720L, 50);
 
 		this.w_grid.clear ();
 		this.w_grid.resize ( 4, 2 );
@@ -319,10 +319,10 @@ public class SystemConfigTable extends VerticalPanel {
 		WalrusInfoWeb walrusInfo = walrusList.get(0);
 		this.SystemConfig.setCloudHost( this.walrusURL_box.getText());
 		walrusInfo.setBucketsRootDirectory               (this.walrusPath_box.getText());
-		walrusInfo.setMaxBucketsPerUser  (Long.parseLong(this.maxBuckets_box.getText()));
+		walrusInfo.setMaxBucketsPerUser  (Integer.parseInt(this.maxBuckets_box.getText()));
 		walrusInfo.setMaxBucketSizeInMB  (Long.parseLong(this.maxBucketSize_box.getText()));
 		walrusInfo.setMaxCacheSizeInMB   (Long.parseLong(this.maxCacheSize_box.getText()));
-		walrusInfo.setSnapshotsTotalInGB (Long.parseLong(this.totalSnapshots_box.getText()));
+		walrusInfo.setSnapshotsTotalInGB (Integer.parseInt(this.totalSnapshots_box.getText()));
 		this.SystemConfig.setDefaultKernelId           (this.defaultKernel_box.getText());
 		this.SystemConfig.setDefaultRamdiskId          (this.defaultRamdisk_box.getText());
 	}

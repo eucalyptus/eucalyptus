@@ -66,19 +66,19 @@ public class WalrusInfoWeb implements IsSerializable {
 	private String name;
 	private Boolean committed;
     private String bucketsRootDirectory;
-    private Long maxBucketsPerUser;
+    private Integer maxBucketsPerUser;
     private Long maxBucketSizeInMB;
     private Long maxCacheSizeInMB;
-    private Long snapshotsTotalInGB;
+    private Integer snapshotsTotalInGB;
 
 	public WalrusInfoWeb() {}
 
 	public WalrusInfoWeb( final String name,
             final String bucketsRootDirectory,
-            final Long maxBucketsPerUser,
+            final Integer maxBucketsPerUser,
             final Long maxBucketSizeInMB,
             final Long maxCacheSizeInMB,
-            final Long snapshotsTotalInGB) {
+            final Integer snapshotsTotalInGB) {
 		this.name = name;
 		this.committed = false;
         this.bucketsRootDirectory = bucketsRootDirectory;
@@ -127,12 +127,12 @@ public class WalrusInfoWeb implements IsSerializable {
         this.maxBucketSizeInMB = maxBucketSizeInMB;
     }
 
-    public Long getMaxBucketsPerUser()
+    public Integer getMaxBucketsPerUser()
     {
         return maxBucketsPerUser;
     }
 
-    public void setMaxBucketsPerUser( final Long maxBucketsPerUser )
+    public void setMaxBucketsPerUser( final Integer maxBucketsPerUser )
     {
         this.maxBucketsPerUser = maxBucketsPerUser;
     }
@@ -147,12 +147,12 @@ public class WalrusInfoWeb implements IsSerializable {
         this.maxCacheSizeInMB = maxCacheSizeInMB;
     }
 
-    public Long getSnapshotsTotalInGB()
+    public Integer getSnapshotsTotalInGB()
     {
         return snapshotsTotalInGB;
     }
 
-    public void setSnapshotsTotalInGB( final Long snapshotsTotalInGB )
+    public void setSnapshotsTotalInGB( final Integer snapshotsTotalInGB )
     {
         this.snapshotsTotalInGB = snapshotsTotalInGB;
     }

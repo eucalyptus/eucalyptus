@@ -76,6 +76,7 @@ import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
@@ -83,6 +84,7 @@ import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
+import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 import com.eucalyptus.ws.client.ServiceDispatcher;
@@ -159,9 +161,19 @@ public class RemoteInfoHandler {
 		return storageList;
 	}
 
-	public static synchronized void setWalrusList( List<WalrusInfoWeb> walrusInfo ) {
-		// TODO: Chris do messaging stuff. new
-		// UpdateWalrusConfigurationType(walrusStateType) and send that.
+	public static synchronized void setWalrusList( List<WalrusInfoWeb> newWalrusList ) throws EucalyptusCloudException {
+		//this should also allow you to set walrus host, port
+		for(WalrusInfoWeb walrusInfoWeb : newWalrusList) {
+			UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType();
+			updateWalrusConfiguration.setName(WalrusProperties.NAME);
+			updateWalrusConfiguration.setBucketRootDirectory(walrusInfoWeb.getBucketsRootDirectory());
+			updateWalrusConfiguration.setMaxBucketsPerUser(walrusInfoWeb.getMaxBucketsPerUser());
+			updateWalrusConfiguration.setMaxBucketSize(walrusInfoWeb.getMaxBucketSizeInMB());
+			updateWalrusConfiguration.setImageCacheSize(walrusInfoWeb.getMaxCacheSizeInMB());
+			updateWalrusConfiguration.setTotalSnapshotSize(walrusInfoWeb.getSnapshotsTotalInGB());
+			ServiceDispatcher scDispatch = ServiceDispatcher.lookupSingle(Component.walrus); 
+			scDispatch.send(updateWalrusConfiguration);
+		}
 	}
 
 	public static List<VmTypeWeb> getVmTypes( ) {

@@ -539,10 +539,10 @@ public class EucalyptusManagement {
 		}
 		return new WalrusInfoWeb(walrusInfo.getName(), 
 				walrusInfo.getStorageDir(), 
-				new Long(walrusInfo.getStorageMaxBucketsPerUser()), 
+				walrusInfo.getStorageMaxBucketsPerUser(), 
 				new Long(walrusInfo.getStorageMaxBucketSizeInMB()), 
 				new Long(walrusInfo.getStorageMaxCacheSizeInMB()), 
-				new Long(walrusInfo.getStorageMaxTotalSnapshotSizeInGb()));
+				walrusInfo.getStorageMaxTotalSnapshotSizeInGb());
 	}
 
 	private static SystemConfiguration validateSystemConfiguration(SystemConfiguration sysConf) {

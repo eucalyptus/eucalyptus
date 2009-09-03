@@ -180,10 +180,10 @@ public class WalrusControl {
 			WalrusProperties.MAX_BUCKETS_PER_USER = maxBucketsPerUser;
 		Long maxBucketSize = request.getMaxBucketSize();
 		if(maxBucketSize != null)
-			WalrusProperties.MAX_BUCKET_SIZE = maxBucketSize;    	
+			WalrusProperties.MAX_BUCKET_SIZE = maxBucketSize * WalrusProperties.M;    	
 		Long imageCacheSize = request.getImageCacheSize();
 		if(imageCacheSize != null)
-			WalrusProperties.IMAGE_CACHE_SIZE = imageCacheSize;
+			WalrusProperties.IMAGE_CACHE_SIZE = imageCacheSize * WalrusProperties.M;
 		Integer totalSnapshotSize = request.getTotalSnapshotSize();
 		if(totalSnapshotSize != null)
 			WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE = totalSnapshotSize;
