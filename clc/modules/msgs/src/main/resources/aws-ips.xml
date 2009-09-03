@@ -121,7 +121,7 @@
     <!--2008-02-01-->
     <mapping class="edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType" abstract="true">
       <value name="publicIp" field="publicIp"/>
-      <value name="instanceId" field="instanceId"/>
+      <value name="instanceId" field="instanceId" usage="optional"/>
     </mapping>
 
 </binding>

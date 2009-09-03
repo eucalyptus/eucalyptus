@@ -219,7 +219,7 @@ public class Address implements HasName {
   }
 
   public DescribeAddressesResponseItemType getDescription( boolean isAdmin ) {
-    return new DescribeAddressesResponseItemType( this.getName(), isAdmin ? String.format( "%s (%s)", this.getInstanceId(),this.getUserId() ) : this.getInstanceId() );
+    return new DescribeAddressesResponseItemType( this.getName(), isAdmin ? String.format( "%s (%s)", this.getInstanceId(),this.getUserId() ) : UNASSIGNED_INSTANCEID.equals( this.getInstanceId() )? null : this.getInstanceId( ));
   }
 
   public int compareTo( final Object o ) {
