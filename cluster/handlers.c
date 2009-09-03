@@ -1310,7 +1310,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   }
 
   // check health of the networkIndexList
-  if (networkIndexList == NULL) {
+  if ( (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) || networkIndexList == NULL) {
     // disabled
     nidx=-1;
   } else {
