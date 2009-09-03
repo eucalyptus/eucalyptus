@@ -91,8 +91,8 @@ JAR_WALRUS="/usr/share/eucalyptus/eucalyptus-walrus-@EUCA_VERSION@.jar"
 JAR_SC="/usr/share/eucalyptus/eucalyptus-storagecontroller-@EUCA_VERSION@.jar"
 
 if [ "$EUID" != "0" ]; then
-    echo "Eucalyptus init scripts must be run as root."
-    exit 1
+	echo "Eucalyptus init scripts must be run as root."
+	exit 1
 fi
 
 # if we have lsb functions let's source them
@@ -182,7 +182,7 @@ do_start() {
 
 	# basic checks
 	check_java
-	if ! $EUCALYPTUS/usr/sbin/euca_conf -check cloud ; then
+	if ! $EUCALYPTUS/usr/sbin/euca_conf -check $NAME ; then
 		exit 1
 	fi
 	
