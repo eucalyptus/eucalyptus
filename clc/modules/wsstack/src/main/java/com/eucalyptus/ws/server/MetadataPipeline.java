@@ -3,6 +3,7 @@ package com.eucalyptus.ws.server;
 import java.net.InetSocketAddress;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelEvent;
@@ -23,7 +24,7 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.util.Messaging;
 
 public class MetadataPipeline extends FilteredPipeline implements UnrollableStage, ChannelUpstreamHandler {
-
+  private static Logger LOG = Logger.getLogger( MetadataPipeline.class );
   @Override
   protected void addStages( List<UnrollableStage> stages ) {
     stages.add( this );
@@ -31,7 +32,7 @@ public class MetadataPipeline extends FilteredPipeline implements UnrollableStag
 
   @Override
   protected boolean checkAccepts( HttpRequest message ) {
-    return message.getUri( ).matches("/latest/") || message.getUri( ).matches("/\\d\\d\\d\\d-\\d\\d-\\d\\d/.*");
+    return message.getUri( ).matches("/latest/.*") || message.getUri( ).matches("/\\d\\d\\d\\d-\\d\\d-\\d\\d/.*");
   }
 
   @Override
@@ -56,12 +57,14 @@ public class MetadataPipeline extends FilteredPipeline implements UnrollableStag
       String newUri = null;
       String uri = request.getUri( );
       InetSocketAddress remoteAddr = ((InetSocketAddress) ctx.getChannel( ).getRemoteAddress( ) );
+      String remoteHost = remoteAddr.getAddress( ).getHostAddress( );//"10.1.1.2";//
       if( uri.startsWith( "/latest/" ) )
-        newUri = uri.replaceAll( "/latest/", remoteAddr.getAddress( ).getHostAddress( ) + ":" );
+        newUri = uri.replaceAll( "/latest/", remoteHost + ":" );
       else
-        newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d/", remoteAddr.getAddress( ).getHostAddress( ) + ":" );
+        newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d/", remoteHost + ":" );
 
       HttpResponse response = null;
+      LOG.info( "Trying to get metadata: " + newUri );
       Object reply = Messaging.send( "vm://VmMetadata", newUri );
       if ( !( reply instanceof NullPayload ) ) {
         response = new DefaultHttpResponse(request.getProtocolVersion( ),HttpResponseStatus.OK);

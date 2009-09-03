@@ -75,7 +75,7 @@ public class VmMetadata {
     for ( VmInstance vm : VmInstances.getInstance().listValues() )
       if ( vmIp.equals( vm.getNetworkConfig().getIpAddress() ) || vmIp.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) ) {
 
-        if ( url.equals( "user-data" ) )
+        if ( url.equals( "user-data" ) || url.equals( "user-data/" ) )
           return vm.getUserData();
         else if ( !url.startsWith( "meta-data" ) )
           return null;
