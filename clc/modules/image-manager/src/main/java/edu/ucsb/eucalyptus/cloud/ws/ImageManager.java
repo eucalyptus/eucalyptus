@@ -345,7 +345,7 @@ public class ImageManager {
   }
 
   private String getStorageUrl( final SystemConfiguration conf ) throws EucalyptusCloudException {
-    return EucalyptusProperties.getWalrusUrl( );
+    return EucalyptusProperties.getWalrusUrl( ) + "/";
   }
 
   private String getImageInfobyId( String userSuppliedId, String imageDefaultId, String systemDefaultId ) {

@@ -65,8 +65,11 @@
 
 package edu.ucsb.eucalyptus.util;
 
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.NetworkUtil;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import org.apache.log4j.Logger;
@@ -134,6 +137,14 @@ public class EucalyptusProperties {
   public static String getCloudUrl() {
     try {
       String cloudHost = EucalyptusProperties.getSystemConfiguration( ).getCloudHost( );
+      if( cloudHost == null ) {
+        for( WalrusConfiguration w : Configuration.getWalrusConfigurations( ) ) {
+          if( NetworkUtil.testLocal( w.getHostName( ) ) ) {
+            cloudHost = w.getHostName( );
+            break;
+          }
+        }
+      }
       return String.format( "http://%s:8773/services/Eucalyptus", cloudHost );
     } catch ( EucalyptusCloudException e ) {
       return "http://127.0.0.1:8773/services/Eucalyptus";
@@ -143,6 +154,14 @@ public class EucalyptusProperties {
   public static String getWalrusUrl() {
     try {
       String cloudHost = EucalyptusProperties.getSystemConfiguration( ).getCloudHost( );
+      if( cloudHost == null ) {
+        for( WalrusConfiguration w : Configuration.getWalrusConfigurations( ) ) {
+          if( NetworkUtil.testLocal( w.getHostName( ) ) ) {
+            cloudHost = w.getHostName( );
+            break;
+          }
+        }
+      }
       return String.format( "http://%s:8773/services/Walrus", cloudHost );
     } catch ( EucalyptusCloudException e ) {
       return "http://127.0.0.1:8773/services/Walrus";
