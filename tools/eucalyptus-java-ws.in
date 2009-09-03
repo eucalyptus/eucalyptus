@@ -115,7 +115,7 @@ fi
 
 # Read configuration variable file if it is present
 if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
-	EUCA_TMP="$EUCALYPTUS"
+	EUCA_TMP="`readlink -f ${EUCALYPTUS}`"
 	. $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
 
 	# has eucalyptus been configured?
@@ -125,7 +125,7 @@ if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
 	fi
 
 	# there may be inconsistencied between conf file and env variable
-	if [ "$EUCA_TMP" != "$EUCALYPTUS" ]; then
+	if [ "$EUCA_TMP" != "`readlink -f ${EUCALYPTUS}`" ]; then
 		echo "Warning: you should check EUCALYPTUS in conf file"
 	fi
 else
