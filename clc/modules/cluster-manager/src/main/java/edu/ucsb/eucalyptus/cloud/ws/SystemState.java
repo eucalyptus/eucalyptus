@@ -171,6 +171,11 @@ public class SystemState {
     }
     ClusterConfiguration config = Clusters.getInstance( ).lookup( vm.getPlacement( ) ).getConfiguration( );
     SystemState.dispatch( vm.getPlacement(), new TerminateCallback(config), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId() ) );
+    int index = vm.getNetworkIndex( );
+    for( Network net : vm.getNetworks( ) ) {
+      net.getAvailableAddresses( ).add( index );
+      break;
+    }
   }
 
   private static void updateVmInstance( final String originCluster, final VmInfo runVm ) {
