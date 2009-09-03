@@ -297,11 +297,6 @@ public class Network implements HasName {
       this.availableAddresses.add( i );
     }
   }
-
-  public Integer getNextIndex(Integer max) {
-//TODO: get network index.
-    return -1;
-  }
   
   public NetworkToken addTokenIfAbsent(NetworkToken token) {
     this.networkTokens.putIfAbsent(token.getCluster(), token);

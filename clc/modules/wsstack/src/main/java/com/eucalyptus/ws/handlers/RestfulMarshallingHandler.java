@@ -74,12 +74,16 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
+import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.config.Configuration;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.ws.handlers.HmacV2Handler.SecurityParameter;
 import com.eucalyptus.ws.handlers.wssecurity.WsSecHandler;
+import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -99,8 +103,8 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       } else {
         this.namespace = "http://msgs.eucalyptus.ucsb.edu";
       }
-      // TODO: get real user data here too
-      httpRequest.setMessage( this.bind( "admin", true, httpRequest ) );
+      String userName = CredentialProvider.getUserName( httpRequest.getParameters( ).get( SecurityParameter.AWSAccessKeyId ) );
+      httpRequest.setMessage( this.bind( userName, true, httpRequest ) );
     }
   }
 
