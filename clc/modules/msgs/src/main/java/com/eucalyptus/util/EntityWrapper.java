@@ -107,7 +107,16 @@ public class EntityWrapper<TYPE> {
   }
 
   public EntityWrapper( String persistenceContext ) {
-    LOG.info( "CREATE CONNECTION", new Exception( ) );
+    Exception e = new Exception( );
+    e.fillInStackTrace( );
+    for( StackTraceElement ste : e.getStackTrace( ) ){
+      if( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
+        continue;
+      } else {
+        LOG.debug( "CREATE CONNECTION" + ste.toString( ) );
+        break;
+      }
+    }
     this.em = EntityWrapper.getEntityManagerFactory( persistenceContext ).createEntityManager( );
     this.session = ( Session ) em.getDelegate( );
     this.tx = em.getTransaction( );
@@ -123,7 +132,7 @@ public class EntityWrapper<TYPE> {
   }
 
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
-    LOG.info( "GET-UNIQUE " + example.getClass( ) );
+    LOG.debug( "GET-UNIQUE " + example.getClass( ) );
     List<TYPE> res = this.query( example );
     if ( res.size( ) != 1 ) {
       String msg = null;
@@ -149,7 +158,16 @@ public class EntityWrapper<TYPE> {
   }
 
   public void rollback( ) {
-    LOG.info( "CLOSE CONNECTION", new Exception( ) );
+    Exception e = new Exception( );
+    e.fillInStackTrace( );
+    for( StackTraceElement ste : e.getStackTrace( ) ){
+      if( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
+        continue;
+      } else {
+        LOG.debug( "CLOSE CONNECTION" + ste.toString( ) );
+        break;
+      }
+    }
     if ( this.tx.isActive( ) ) {
       this.tx.rollback( );
     }

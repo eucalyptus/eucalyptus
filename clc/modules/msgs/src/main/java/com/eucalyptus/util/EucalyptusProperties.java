@@ -95,7 +95,7 @@ public class EucalyptusProperties {
   public static String IMAGE_RAMDISK_PREFIX = "eri";
 
   public static String getDName( final String name ) {
-    return String.format( "CN=www.eucalyptus.com, OU=Eucalyptus, O=%s, L=Santa Barbara, ST=CA, C=US", name );
+    return String.format( "CN=localhost, OU=Eucalyptus, O=%s, L=Santa Barbara, ST=CA, C=US", name );
   }
 
   // TODO: bootstrap system configuration
