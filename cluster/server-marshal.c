@@ -879,6 +879,8 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
     adb_ccInstanceType_add_volumes(dst, env, vol);
   }
 
+  adb_ccInstanceType_set_networkIndex(dst, env, src->networkIndex);
+
   netconf = adb_netConfigType_create(env);
   adb_netConfigType_set_privateMacAddress(netconf, env, src->ccnet.privateMac);
   adb_netConfigType_set_publicMacAddress(netconf, env, src->ccnet.publicMac);

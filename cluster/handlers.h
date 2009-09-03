@@ -102,6 +102,7 @@ typedef struct instance_t {
   char keyName[1024];
   
   netConfig ccnet;
+  int networkIndex;
   virtualMachine ccvm;
 
   int ncHostIdx;
