@@ -280,7 +280,7 @@ public class SystemState {
           }
         }
       VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData,
-                                      imgInfo, keyInfo, vmType, networks, "-1" );
+                                      imgInfo, keyInfo, vmType, networks, Integer.toString( runVm.getNetworkIndex( ) ) );
       vm.setLaunchTime( runVm.getLaunchTime() );
       vm.getNetworkConfig().setIgnoredPublicIp( VmInstance.DEFAULT_IP );
       vm.setKeyInfo( keyInfo );
