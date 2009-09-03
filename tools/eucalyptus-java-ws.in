@@ -80,13 +80,15 @@
 # we need to source the current path in case of manual intallation
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus CONFNAME"
-NAME=eucalyptus-WS
+NAME=WS
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
 EUCA_USER="eucalyptus"
 
 JAR_NAME="/usr/share/eucalyptus/eucalyptus-JARNAME-@EUCA_VERSION@.jar"
-JAR_ALL_NAMES="/usr/share/eucalyptus/eucalyptus-interface-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-storagecontroller-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-walrus-@EUCA_VERSION@.jar"
+JAR_CLOUD="/usr/share/eucalyptus/eucalyptus-interface-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-cloud-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-www-@EUCA_VERSION@.jar"
+JAR_WALRUS="/usr/share/eucalyptus/eucalyptus-walrus-@EUCA_VERSION@.jar"
+JAR_SC="/usr/share/eucalyptus/eucalyptus-storagecontroller-@EUCA_VERSION@.jar"
 
 if [ "$EUID" != "0" ]; then
     echo "Eucalyptus init scripts must be run as root."
@@ -197,6 +199,49 @@ do_start() {
 	return $?
 }
 
+enable_disable_service() {
+	local from_sfx=""
+	local to_sfx=""
+	local jar_list=""
+	
+	if [ "$1" = "enable" ]; then
+		from_sfx=".disabled"
+		to_sfx=""
+	elif [ "$1" = "disable" ]; then
+		from_sfx=""
+		to_sfx=".disabled"
+	else
+		echo "Unknown action ($action)!"
+		exit 1
+	fi
+
+	case "$NAME" in
+	cloud)
+		jar_list="$JAR_CLOUD"
+		;;
+	walrus)
+		jar_list="$JAR_WALRUS"
+		;;
+	sc)
+		jar_list="$JAR_SC"
+		;;
+	*)
+		echo "Unknown service ($NAME)!"
+		exit 1
+		;;
+	esac
+
+	for x in $jar_list ; do
+		if [ -e ${EUCALYPTUS}${x}${from_sfx} ]; then
+			if ! cp ${EUCALYPTUS}${x}${from_sfx} ${EUCALYPTUS}${x}${to_sfx} ; then
+				echo "Failed to copy jar in place!"
+				exit 1
+			fi
+			rm -f ${EUCALYPTUS}${x}${from_sfx}
+		fi
+	done
+}
+
 do_status() {
 	if [ ! -e ${EUCALYPTUS}${JAR_NAME} ]; then
 		# service is not running
@@ -249,7 +294,7 @@ case "$1" in
   start)
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_daemon_msg "Starting $DESC" "$NAME"
+			log_daemon_msg "Starting $DESC" "eucalyptus-$NAME"
 		else
 			echo -n "Starting $DESC: "
 		fi
@@ -268,13 +313,7 @@ case "$1" in
 	fi
 
 	# move the jar in the right place
-	if [ -e ${EUCALYPTUS}${JAR_NAME}.disabled ]; then
-		if ! cp ${EUCALYPTUS}${JAR_NAME}.disabled ${EUCALYPTUS}${JAR_NAME} ; then
-			echo "Failed to copy jar file into place!"
-			exit 1
-		fi
-		rm -f ${EUCALYPTUS}${JAR_NAME}.disabled
-	fi
+	enable_disable_service enable
 
 	# since other services could be running, we stop the container
 	# before starting
@@ -319,16 +358,11 @@ case "$1" in
 	# let's stop the service before moving the jar
 	do_stop
 
-	# move the jar in the right place
-	if ! cp ${EUCALYPTUS}${JAR_NAME} ${EUCALYPTUS}${JAR_NAME}.disabled ; then
-		echo "Failed to copy jar file into place!"
-		exit 1
-	fi
-	rm -f ${EUCALYPTUS}${JAR_NAME}
+	enable_disable_service disable
 
 	# if we have more services running, we'll need to restart
 	__restart="N"
-	for x in $JAR_ALL_NAMES ; do
+	for x in $JAR_CLOUD $JAR_WALRUS $JAR_SC ; do
 		if [ -e ${EUCALYPTUS}/${x} ]; then
 			__restart="Y"
 			break
@@ -357,7 +391,7 @@ case "$1" in
 	fi
 	;;
   *)
-	echo "Usage: $NAME {start|stop|restart}" >&2
+	echo "Usage: eucalyptus-$NAME {start|stop|restart}" >&2
 	exit 3
 	;;
 esac
