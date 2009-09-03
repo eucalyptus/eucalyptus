@@ -290,6 +290,10 @@ while [ $# -gt 0 ]; do
 		# we dont have options with no argument, so it has to be
 		# the file
 		FILE="$1"
+		if [ "${FILE:0:1}" = '-' ]; then
+			usage
+			exit 1
+		fi
 		break
 	fi
 
