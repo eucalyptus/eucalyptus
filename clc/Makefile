@@ -40,14 +40,6 @@ extras: update_properties
 			ln -sf eucalyptus ${theme_dir}/active ; \
 		fi \
 	fi
-#	@if test ! -e ${web_prop_dir}/eucalyptus-web.properties ; then \
-#		$(MAKE) update_properties; \
-#	fi
-#	@if [ "`grep '^extensions' ${web_prop_dir}/eucalyptus-web.properties | sed 's/extensions =[[:blank:]]*//'`" != "${extensions}" ] ; then \
-#		$(MAKE) update_properties; \
-#	fi
-
-
 
 build: extras
 	@# we need JAVA_HOME
