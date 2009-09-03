@@ -75,6 +75,7 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import org.apache.log4j.Logger;
 
 import java.net.MalformedURLException;
+import java.net.SocketException;
 import java.net.URL;
 import java.util.List;
 import java.util.UUID;
@@ -145,6 +146,11 @@ public class EucalyptusProperties {
           }
         }
       }
+      if( cloudHost == null ) {
+        try {
+          cloudHost = NetworkUtil.getAllAddresses( ).get( 0 );
+        } catch ( SocketException e ) {}
+      }
       return String.format( "http://%s:8773/services/Eucalyptus", cloudHost );
     } catch ( EucalyptusCloudException e ) {
       return "http://127.0.0.1:8773/services/Eucalyptus";
@@ -161,6 +167,11 @@ public class EucalyptusProperties {
             break;
           }
         }
+      }
+      if( cloudHost == null ) {
+        try {
+          cloudHost = NetworkUtil.getAllAddresses( ).get( 0 );
+        } catch ( SocketException e ) {}
       }
       return String.format( "http://%s:8773/services/Walrus", cloudHost );
     } catch ( EucalyptusCloudException e ) {
