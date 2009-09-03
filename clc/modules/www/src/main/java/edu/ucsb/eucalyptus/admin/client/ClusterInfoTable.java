@@ -121,7 +121,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	{
 		this.clusterList.add (new ClusterInfoWeb ("name", "host", 8774));
 		//these values are just defaults
-		this.storageList.add (new StorageInfoWeb("sc-name", "host", 8773, "volumesPath", 10, 50, "eth0", false));
+		this.storageList.add (new StorageInfoWeb("sc-name", "host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false));
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");
