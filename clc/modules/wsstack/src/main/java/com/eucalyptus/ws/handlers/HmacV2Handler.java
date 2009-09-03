@@ -104,8 +104,8 @@ public class HmacV2Handler extends MessageStackHandler {
     this.doAdmin = doAdmin;
   }
 
-  @SuppressWarnings( "deprecation" )
   @Override
+  @SuppressWarnings( "deprecation" )
   public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
@@ -157,7 +157,14 @@ public class HmacV2Handler extends MessageStackHandler {
           LOG.debug( "VERSION2-SHA256:        " + computedSig + " -- " + sig );
           LOG.debug( "VERSION2-STRING-PORT:        " + canonicalString );
           LOG.debug( "VERSION2-SHA256-PORT: " + computedSigWithPort + " -- " + sig );
-          if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) throw new AuthenticationException( "User authentication failed." );
+          if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
+            sig = URLDecoder.decode( sig ).replaceAll("=","");
+            computedSig = HmacUtils.getSignature( secretKey, URLDecoder.decode( canonicalString ), Hashes.Mac.HmacSHA256 );
+            computedSigWithPort = HmacUtils.getSignature( secretKey, URLDecoder.decode( canonicalStringWithPort ), Hashes.Mac.HmacSHA256 );
+            if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
+              throw new AuthenticationException( "User authentication failed." );              
+            }
+          }
         }
       }
       String userName = CredentialProvider.getUserName( queryId );
