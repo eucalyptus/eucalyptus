@@ -110,16 +110,22 @@ public class GroupManager {
 
     UserInfo user = null;
     try { user = db.getUnique( new UserInfo( vmAllocInfo.getRequest().getUserId() ) ); }
-    catch ( EucalyptusCloudException e ) { throw new EucalyptusCloudException( "Failed to find user: " + vmAllocInfo.getRequest().getUserId() ); }
+    catch ( EucalyptusCloudException e ) { 
+      db.commit( ); 
+      throw new EucalyptusCloudException( "Failed to find user: " + vmAllocInfo.getRequest().getUserId() ); 
+    }
 
     this.makeDefault( user.getUserName() );
     ArrayList<String> networkNames = new ArrayList<String>( vmAllocInfo.getRequest().getGroupSet() );
     Map<String, NetworkRulesGroup> networkRuleGroups = new HashMap<String, NetworkRulesGroup>();
 
-    for ( NetworkRulesGroup networkName : user.getNetworkRulesGroup() ) networkRuleGroups.put( networkName.getName(), networkName );
+    for ( NetworkRulesGroup networkName : user.getNetworkRulesGroup() ) {
+      networkRuleGroups.put( networkName.getName(), networkName );
+    }
 
-    if ( networkNames.isEmpty() )
+    if ( networkNames.isEmpty() ) {
       networkNames.add( EucalyptusProperties.NETWORK_DEFAULT_NAME );
+    }
 
     ArrayList<String> userNetworks = new ArrayList<String>( networkRuleGroups.keySet() );
 
@@ -129,12 +135,15 @@ public class GroupManager {
       throw new EucalyptusCloudException( "Failed to find " + networkNames );
     }
 
-    for ( String networkName : networkNames )
+    for ( String networkName : networkNames ){
       vmAllocInfo.getNetworks().add( networkRuleGroups.get( networkName ).getVmNetwork( vmAllocInfo.getRequest().getUserId() ) );
+    }
 
-    if ( vmAllocInfo.getNetworks().size() < 1 )
+    if ( vmAllocInfo.getNetworks().size() < 1 ){
+      db.rollback( );
       throw new EucalyptusCloudException( "Failed to find any specified networks? You sent: " + networkNames );
-
+    }
+    db.commit( );
     return vmAllocInfo;
   }
 
