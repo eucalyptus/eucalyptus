@@ -126,7 +126,7 @@ public class VmInstance implements HasName {
     this.volumes = new ArrayList<AttachedVolume>( );
   }
 
-  public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement, final String userData, final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks ) {
+  public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement, final String userData, final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks, String networkIndex ) {
     this( );
 
     this.reservationId = reservationId;
@@ -139,7 +139,7 @@ public class VmInstance implements HasName {
     this.keyInfo = keyInfo;
     this.vmTypeInfo = vmTypeInfo;
     this.networks = networks;
-
+    this.networkIndex = Integer.parseInt( networkIndex );
     String mac = String.format( "%s:%s:%s:%s", this.instanceId.substring( 2, 4 ), this.instanceId.substring( 4, 6 ), this.instanceId.substring( 6, 8 ), this.instanceId.substring( 8, 10 ) );
     this.networkConfig.setMacAddress( "d0:0d:" + mac );
     this.networkConfig.setIgnoredMacAddress( "d0:0f:" + mac );

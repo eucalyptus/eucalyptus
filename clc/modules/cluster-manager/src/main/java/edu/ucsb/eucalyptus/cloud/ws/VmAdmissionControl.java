@@ -140,6 +140,7 @@ public class VmAdmissionControl {
               token.getNetworkIndexes( ).clear( );
               throw new NotEnoughResourcesAvailable( "Not enough addresses left in the requested network subnet." );
             } else {
+              LOG.info( "Taking address index: " + addrIndex );
               token.getNetworkIndexes( ).add( addrIndex.toString( ) );
             }
           }

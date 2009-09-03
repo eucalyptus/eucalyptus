@@ -125,7 +125,6 @@ public class AddressManager implements Startable {
   }
 
   public static void updateAddressingMode() {
-    //:: TODO-1.5.2: call this whenever addresses are described, allocated (run), or the system configuration changes :://
     int allocatedCount = 0;
     List<Address> activeList = Addresses.getInstance().listValues();
     for( Address allocatedAddr : activeList ) {

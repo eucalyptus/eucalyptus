@@ -173,6 +173,7 @@ public class SystemState {
     SystemState.dispatch( vm.getPlacement(), new TerminateCallback(config), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId() ) );
     int index = vm.getNetworkIndex( );
     for( Network net : vm.getNetworks( ) ) {
+      LOG.info( "Returning address index: " + index );
       net.getAvailableAddresses( ).add( index );
       break;
     }
