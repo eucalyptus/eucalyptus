@@ -182,9 +182,6 @@ do_start() {
 
 	# basic checks
 	check_java
-	if ! $EUCALYPTUS/usr/sbin/euca_conf -check $NAME ; then
-		exit 1
-	fi
 	
 	cd $EUCALYPTUS/etc/eucalyptus
 
@@ -207,6 +204,11 @@ enable_disable_service() {
 	if [ "$1" = "enable" ]; then
 		from_sfx=".disabled"
 		to_sfx=""
+		# we check before enabling the service otherwise we'd
+		# prevent other services to start
+		if ! $EUCALYPTUS/usr/sbin/euca_conf --check $NAME ; then
+			exit 1
+		fi
 	elif [ "$1" = "disable" ]; then
 		from_sfx=""
 		to_sfx=".disabled"
