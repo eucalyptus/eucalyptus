@@ -299,7 +299,7 @@ public class SystemConfigTable extends VerticalPanel {
 
 		dns_hpanel2.add ( new HTML("&nbsp;&nbsp;&nbsp; IP:  &nbsp;"));
 		nameserverAddress_box.addChangeListener (new ChangeCallback (this));
-		nameserverAddress_box.setVisibleLength(10);
+		nameserverAddress_box.setVisibleLength(20);
 		nameserverAddress_box.setText (SystemConfig.getNameserverAddress());
 		dns_hpanel2.add (nameserverAddress_box);
 	}

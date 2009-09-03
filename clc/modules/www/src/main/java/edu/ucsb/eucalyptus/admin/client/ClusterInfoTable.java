@@ -164,7 +164,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 	private Grid addClusterEntry ( int row, ClusterInfoWeb clusterInfo, final StorageInfoWeb storageInfo)
 	{
-		Grid g = new Grid (12, 2);
+		Grid g = new Grid (13, 2);
 		g.setStyleName( "euca-table" );
 		g.setCellPadding( 4 );
 
@@ -313,7 +313,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 		i++; // next row
 		g.setWidget( i, 0, new Label( "Total of" ) );
-		g.getCellFormatter().setHorizontalAlignment(9, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		reservedAddressesBox.addChangeListener (new ChangeCallback (this, row));
 		reservedAddressesBox.setVisibleLength( 10 );
 		reservedAddressesBox.setText( "" + systemConfig.getSystemReservedPublicAddresses());
@@ -334,6 +334,23 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		publicAddressesPanel.add (publicAddressesBox);
 		publicAddressesPanel.add (new HTML ("&nbsp; public IP addresses per user"));
 		g.setWidget( i, 1, publicAddressesPanel );
+		
+		i++;
+		g.setWidget( i, 0, new Label( "Eucalyptus can use VLAN tags" ) );
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		final TextBox minVlanBox = new TextBox();
+		minVlanBox.addChangeListener (new ChangeCallback (this, row));
+		minVlanBox.setVisibleLength( 4 );
+		minVlanBox.setText( "" + 10); // TODO change to systemConfig.getMinVlan()
+		final TextBox maxVlanBox = new TextBox();
+		maxVlanBox.addChangeListener (new ChangeCallback (this, row));
+		maxVlanBox.setVisibleLength( 4 );
+		maxVlanBox.setText( "" + 4096); // TODO change to systemConfig.getMinVlan()
+		final HorizontalPanel vlanPanel = new HorizontalPanel ();
+		vlanPanel.add (minVlanBox);
+		vlanPanel.add (new HTML ("&nbsp; through &nbsp;"));
+		vlanPanel.add (maxVlanBox);
+		g.setWidget( i, 1, vlanPanel );
 
 		return g;
 	}
