@@ -432,7 +432,6 @@ public class BlockStorage {
 		List<String> snapshotSet = request.getSnapshotSet();
 		ArrayList<SnapshotInfo> snapshotInfos = new ArrayList<SnapshotInfo>();
 		EntityWrapper<SnapshotInfo> db = new EntityWrapper<SnapshotInfo>();
-
 		if((snapshotSet != null) && !snapshotSet.isEmpty()) {
 			for(String snapshotSetEntry: snapshotSet) {
 				SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotSetEntry);
@@ -455,6 +454,7 @@ public class BlockStorage {
 			if(snapshotInfo.getStatus().equals(StorageProperties.Status.failed.toString()))
 				checker.cleanFailedSnapshot(snapshotInfo.getSnapshotId());
 		}
+		db.commit();
 		return reply;
 	}
 
@@ -819,18 +819,6 @@ public class BlockStorage {
 		File snapshotFile = new File(snapshotFileName);
 
 
-		EntityWrapper<VolumeInfo>db = new EntityWrapper<VolumeInfo>();
-		VolumeInfo volumeInfo = new VolumeInfo(volumeId);
-		List <VolumeInfo> volumeInfos = db.query(volumeInfo);
-
-		if(volumeInfos.size() > 0) {
-			VolumeInfo foundVolumeInfo = volumeInfos.get(0);
-		} else {
-			db.rollback();
-			throw new EucalyptusCloudException();
-		}
-		db.commit();
-
 		assert(snapshotFile.exists() && volumeFile.exists());
 		size += shouldTransferVolume ? snapshotFile.length() + volumeFile.length() : snapshotFile.length();
 		SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
@@ -853,15 +841,6 @@ public class BlockStorage {
 				LOG.error(ex);
 				return;
 			}
-		}
-		try {
-			List<String> returnValues = blockManager.getSnapshotValues(snapshotId);
-			if(returnValues.size() > 0) {
-				httpParamaters.put("SnapshotVgName", returnValues.get(0));
-				httpParamaters.put("SnapshotLvName", returnValues.get(1));
-			}
-		} catch(Exception ex) {
-			LOG.error(ex);
 		}
 		httpWriter = new HttpWriter("PUT", snapshotFile, callback, "snapshots", snapshotId, "StoreSnapshot", null, httpParamaters);
 		try {
@@ -977,8 +956,6 @@ public class BlockStorage {
 				method.setRequestHeader(StorageProperties.EUCALYPTUS_HEADER, eucaHeader);
 			}
 			try {
-				//TODO: Get credentials for SC from keystore
-
 				PrivateKey ccPrivateKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getPrivateKey();
 				Signature sign = Signature.getInstance("SHA1withRSA");
 				sign.initSign(ccPrivateKey);
