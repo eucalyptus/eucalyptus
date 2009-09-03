@@ -265,8 +265,7 @@ public class FileSystemStorageManager implements StorageManager {
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 			}
 			channel.write(httpResponse);
-			ChannelFuture writeFuture = channel.write(file);
-			writeFuture.addListener(ChannelFutureListener.CLOSE);
+			channel.write(file);
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
 		}	
@@ -291,8 +290,7 @@ public class FileSystemStorageManager implements StorageManager {
 			}
 			httpResponse.addHeader("Content-Range", start + "-" + end + "/" + size);
 			channel.write(httpResponse);
-			ChannelFuture writeFuture = channel.write(file);
-			writeFuture.addListener(ChannelFutureListener.CLOSE);
+			channel.write(file);
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
 		}	
@@ -307,8 +305,7 @@ public class FileSystemStorageManager implements StorageManager {
 		httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
 		if(contentDisposition != null)
 			httpResponse.addHeader("Content-Disposition", contentDisposition);
-		ChannelFuture writeFuture = channel.write(httpResponse);
-		writeFuture.addListener(ChannelFutureListener.CLOSE);
+		channel.write(httpResponse);
 	}
 
     private String removeLoopback(String loDevName) {
