@@ -2551,6 +2551,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 
     	if (logo!=null) { vpanel.add (logo); }
     	label_box.setText( "First-time Configuration" );
+		label_box.setStyleName("euca-greeting-normal");
     	vpanel.add (label_box);
     	vpanel.add (message);
     	vpanel.add (gpanel);
