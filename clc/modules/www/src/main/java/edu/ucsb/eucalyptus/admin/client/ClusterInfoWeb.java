@@ -66,6 +66,8 @@ public class ClusterInfoWeb implements IsSerializable {
 	private String name;
 	private String host;
 	private Integer port;
+	private Integer minVlans;
+	private Integer maxVlans;
 	private Boolean committed;
 
 	public ClusterInfoWeb()
@@ -74,11 +76,15 @@ public class ClusterInfoWeb implements IsSerializable {
 
 	public ClusterInfoWeb( final String name, 
 		final String host, 
-		final Integer port)
+		final Integer port,
+		final Integer minVlans,
+		final Integer maxVlans)
 	{
 		this.name = name;
 		this.host = host;
 		this.port = port;
+		this.minVlans = minVlans;
+		this.maxVlans = maxVlans;
 		this.committed = false;
 	}
 
@@ -110,6 +116,22 @@ public class ClusterInfoWeb implements IsSerializable {
 	public void setName( final String name )
 	{
 		this.name = name;
+	}
+
+	public Integer getMinVlans() {
+		return minVlans;
+	}
+
+	public void setMinVlans(Integer minVlans) {
+		this.minVlans = minVlans;
+	}
+
+	public Integer getMaxVlans() {
+		return maxVlans;
+	}
+
+	public void setMaxVlans(Integer maxVlans) {
+		this.maxVlans = maxVlans;
 	}
 
 	public void setCommitted ()

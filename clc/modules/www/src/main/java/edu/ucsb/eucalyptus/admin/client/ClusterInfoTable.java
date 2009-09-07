@@ -70,7 +70,7 @@ import java.util.List;
 
 public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
-	private static int maxClusters = 1; // TODO: bump this up once we can do more than 1
+	private static int maxClusters = 4096; //arbitrary
 	private static Label noClusterLabel = new Label();
 	private static Label statusLabel = new Label();
 	private Grid grid = new Grid ();
@@ -118,7 +118,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 	public void onClick( final Widget widget ) // Add cluster button
 	{
-		this.clusterList.add (new ClusterInfoWeb ("name", "host", 8774));
+		this.clusterList.add (new ClusterInfoWeb ("name", "host", 8774, 10, 4096));
 		//these values are just defaults
 		this.storageList.add (new StorageInfoWeb("sc-name", "host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false));
 		this.rebuildTable();
@@ -340,11 +340,11 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		final TextBox minVlanBox = new TextBox();
 		minVlanBox.addChangeListener (new ChangeCallback (this, row));
 		minVlanBox.setVisibleLength( 4 );
-		minVlanBox.setText( "" + 10); // TODO change to systemConfig.getMinVlan()
+		minVlanBox.setText(String.valueOf(clusterInfo.getMinVlans()));
 		final TextBox maxVlanBox = new TextBox();
 		maxVlanBox.addChangeListener (new ChangeCallback (this, row));
 		maxVlanBox.setVisibleLength( 4 );
-		maxVlanBox.setText( "" + 4096); // TODO change to systemConfig.getMinVlan()
+		maxVlanBox.setText(String.valueOf(clusterInfo.getMaxVlans()));
 		final HorizontalPanel vlanPanel = new HorizontalPanel ();
 		vlanPanel.add (minVlanBox);
 		vlanPanel.add (new HTML ("&nbsp; through &nbsp;"));
@@ -396,10 +396,13 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		storage.setMaxVolumeSizeInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
 		p = (HorizontalPanel)g.getWidget(7, 1);
 		storage.setTotalVolumesSizeInGB((Integer.parseInt(((TextBox)p.getWidget(0)).getText())));
-		p = (HorizontalPanel)g.getWidget(11, 1);
-		systemConfig.setMaxUserPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
 		p = (HorizontalPanel)g.getWidget(10, 1);
 		systemConfig.setSystemReservedPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
+		p = (HorizontalPanel)g.getWidget(11, 1);
+		systemConfig.setMaxUserPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
+		p = (HorizontalPanel)g.getWidget(12, 1);
+		cluster.setMinVlans(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
+		cluster.setMaxVlans(Integer.parseInt(((TextBox)p.getWidget(1)).getText()));
 		//    systemConfig.setDoDynamicPublicAddresses( !((TextBox)p.getWidget(0)).isEnabled() ? true : false );
 	}
 

@@ -102,7 +102,8 @@ public class RemoteInfoHandler {
 
 	private static Logger LOG = Logger.getLogger( RemoteInfoHandler.class );
 
-	public static synchronized void setClusterList( List<ClusterInfoWeb> newClusterList ) throws EucalyptusCloudException {
+	public static synchronized void setClusterList( List<ClusterInfoWeb> newClusterList ) throws EucalyptusCloudException {		
+		//TODO: Min/max vlans values should be updated
 		List<ClusterConfiguration> clusterConfig = Lists.newArrayList( );
 		for ( ClusterInfoWeb clusterWeb : newClusterList ) {
 			clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ) ) );
@@ -112,8 +113,9 @@ public class RemoteInfoHandler {
 
 	public static synchronized List<ClusterInfoWeb> getClusterList( ) throws EucalyptusCloudException {
 		List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>( );
+		//TODO: Min/max vlans values should be obtained
 		for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) )
-			clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ) ) );
+			clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), 10, 4096 ) );
 		return clusterList;
 	}
 
