@@ -73,6 +73,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -82,6 +83,8 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
+import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType;
+import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
@@ -162,7 +165,12 @@ public class RemoteInfoHandler {
 	}
 
 	public static synchronized void setWalrusList( List<WalrusInfoWeb> newWalrusList ) throws EucalyptusCloudException {
-		//this should also allow you to set walrus host, port
+		List<WalrusConfiguration> walrusConfig = Lists.newArrayList( );
+		for ( WalrusInfoWeb walrusControllerWeb : newWalrusList ) {
+			walrusConfig.add( new WalrusConfiguration( walrusControllerWeb.getName( ), walrusControllerWeb.getHost( ), walrusControllerWeb.getPort( ) ) );
+		}
+		Configuration.updateWalrusConfigurations(walrusConfig );
+
 		for(WalrusInfoWeb walrusInfoWeb : newWalrusList) {
 			UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType();
 			updateWalrusConfiguration.setName(WalrusProperties.NAME);
@@ -174,6 +182,25 @@ public class RemoteInfoHandler {
 			ServiceDispatcher scDispatch = ServiceDispatcher.lookupSingle(Component.walrus); 
 			scDispatch.send(updateWalrusConfiguration);
 		}
+	}
+
+	public static synchronized List<WalrusInfoWeb> getWalrusList( ) throws EucalyptusCloudException {
+		List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>( );
+		for (WalrusConfiguration c : Configuration.getWalrusConfigurations()) {
+			GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType(WalrusProperties.NAME);
+			ServiceDispatcher scDispatch = ServiceDispatcher.lookupSingle(Component.walrus);
+			GetWalrusConfigurationResponseType getWalrusConfigResponse = 
+				scDispatch.send(getWalrusConfiguration, GetWalrusConfigurationResponseType.class);
+			walrusList.add(new WalrusInfoWeb(c.getName(),
+					c.getHostName(),
+					c.getPort(),
+					getWalrusConfigResponse.getBucketRootDirectory(),
+					getWalrusConfigResponse.getMaxBucketsPerUser(),
+					getWalrusConfigResponse.getMaxBucketSize(),
+					getWalrusConfigResponse.getImageCacheSize(),
+					getWalrusConfigResponse.getTotalSnapshotSize()));
+		}
+		return walrusList;
 	}
 
 	public static List<VmTypeWeb> getVmTypes( ) {

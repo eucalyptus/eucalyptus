@@ -1,63 +1,63 @@
 /*******************************************************************************
-*Copyright (c) 2009  Eucalyptus Systems, Inc.
-* 
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, only version 3 of the License.
-* 
-* 
-*  This file is distributed in the hope that it will be useful, but WITHOUT
-*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-*  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-*  for more details.
-* 
-*  You should have received a copy of the GNU General Public License along
-*  with this program.  If not, see <http://www.gnu.org/licenses/>.
-* 
-*  Please contact Eucalyptus Systems, Inc., 130 Castilian
-*  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
-*  if you need additional information or have any questions.
-* 
-*  This file may incorporate work covered under the following copyright and
-*  permission notice:
-* 
-*    Software License Agreement (BSD License)
-* 
-*    Copyright (c) 2008, Regents of the University of California
-*    All rights reserved.
-* 
-*    Redistribution and use of this software in source and binary forms, with
-*    or without modification, are permitted provided that the followingdn
-*    conditions are met:
-* 
-*      Redistributions of source code must retain the above copyright notice,
-*      this list of conditions and the following disclaimer.
-* 
-*      Redistributions in binary form must reproduce the above copyright
-*      notice, this list of conditions and the following disclaimer in the
-*      documentation and/or other materials provided with the distribution.
-* 
-*    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-*    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-*    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-*    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-*    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-*    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-*    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-*    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-*    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-*    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-*    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-*    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-*    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-*    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-*    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-*    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-*    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-*    ANY SUCH LICENSES OR RIGHTS.
-*******************************************************************************/
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ * 
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ * 
+ *    Software License Agreement (BSD License)
+ * 
+ *    Copyright (c) 2008, Regents of the University of California
+ *    All rights reserved.
+ * 
+ *    Redistribution and use of this software in source and binary forms, with
+ *    or without modification, are permitted provided that the followingdn
+ *    conditions are met:
+ * 
+ *      Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ * 
+ *      Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ * 
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *    ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************/
 /*
  *
  * Author: Dmitrii Zagorodnov dmitrii@cs.ucsb.edu
@@ -99,21 +99,21 @@ public class SystemConfigTable extends VerticalPanel {
 	private static TextBox nameserverAddress_box = new TextBox();
 	private List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>();
 
-// dmitrii TODO: remove commented out lines once the CSS-based design is confirmed
+	// dmitrii TODO: remove commented out lines once the CSS-based design is confirmed
 
 	public SystemConfigTable(String sessionId)
 	{
 		this.sessionId = sessionId;
-//		this.setSpacing (10);
+		//		this.setSpacing (10);
 		this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
-//		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+		//		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
 		Label SystemConfigsHeader = new Label( "Cloud configuration:" );
 		SystemConfigsHeader.setStyleName ( "euca-section-header" );
 		this.add ( SystemConfigsHeader );
 		HorizontalPanel c_hpanel = new HorizontalPanel ();
 		c_hpanel.add ( this.c_grid );
 		c_hpanel.add ( this.c_hint );
-//		c_hint.setWidth ("180");
+		//		c_hint.setWidth ("180");
 		this.add ( c_hpanel );
 		HorizontalPanel c_hpanel2 = new HorizontalPanel ();
 		c_hpanel2.setSpacing (10);
@@ -121,7 +121,7 @@ public class SystemConfigTable extends VerticalPanel {
 		c_hpanel2.add ( this.c_status );
 		this.c_status.setText ("");
 		this.c_status.setStyleName ("euca-greeting-pending");
-//		this.c_status.setWidth ("250");
+		//		this.c_status.setWidth ("250");
 		this.add ( c_hpanel2 );
 
 		Label WalrusConfigsHeader = new Label( "Walrus configuration:" );
@@ -130,7 +130,7 @@ public class SystemConfigTable extends VerticalPanel {
 		HorizontalPanel w_hpanel = new HorizontalPanel ();
 		w_hpanel.add ( this.w_grid );
 		w_hpanel.add ( this.w_hint );
-//		w_hint.setWidth ("180");
+		//		w_hint.setWidth ("180");
 		this.add ( w_hpanel );
 		HorizontalPanel w_hpanel2 = new HorizontalPanel ();
 		w_hpanel2.setSpacing (10);
@@ -138,7 +138,7 @@ public class SystemConfigTable extends VerticalPanel {
 		w_hpanel2.add ( this.w_status );
 		this.w_status.setText ("");
 		this.w_status.setStyleName ("euca-greeting-pending");
-//		this.w_status.setWidth ("250");
+		//		this.w_status.setWidth ("250");
 		this.add ( w_hpanel2 );
 
 		Label DNSConfigHeader = new Label( "DNS configuration:" );
@@ -147,7 +147,7 @@ public class SystemConfigTable extends VerticalPanel {
 		HorizontalPanel dns_hpanel = new HorizontalPanel ();
 		dns_hpanel.add ( this.dns_grid );
 		dns_hpanel.add ( this.dns_hint );
-//		dns_hint.setWidth ("180");
+		//		dns_hint.setWidth ("180");
 		this.add ( dns_hpanel );
 		HorizontalPanel dns_hpanel2 = new HorizontalPanel ();
 		dns_hpanel2.setSpacing (10);
@@ -155,7 +155,7 @@ public class SystemConfigTable extends VerticalPanel {
 		dns_hpanel2.add ( this.dns_status );
 		this.dns_status.setText ("");
 		this.dns_status.setStyleName ("euca-greeting-pending");
-//		this.dns_status.setWidth ("250");
+		//		this.dns_status.setWidth ("250");
 		this.add ( dns_hpanel2 );
 
 		this.rebuildTable ();
@@ -169,8 +169,8 @@ public class SystemConfigTable extends VerticalPanel {
 	{
 		this.c_grid.clear ();
 		this.c_grid.resize ( 2, 2 );
-//		this.c_grid.getColumnFormatter().setWidth(0, "190");
-//		this.c_grid.getColumnFormatter().setWidth(1, "260");
+		//		this.c_grid.getColumnFormatter().setWidth(0, "190");
+		//		this.c_grid.getColumnFormatter().setWidth(1, "260");
 		int i = 0;
 
 		// cloud parameters
@@ -180,7 +180,7 @@ public class SystemConfigTable extends VerticalPanel {
 		walrusURL_box.setVisibleLength(55);
 		walrusURL_box.setText (SystemConfig.getCloudHost()); 
 		walrusURL_box.addFocusListener (new FocusHandler (c_hint,
-				"Warning: Changing the Cloud URL will invalidate any existing credentials, and will prevent existing users from accessing the system."));
+		"Warning: Changing the Cloud URL will invalidate any existing credentials, and will prevent existing users from accessing the system."));
 		this.c_grid.setWidget( i++, 1, walrusURL_box );
 
 		// 2nd row
@@ -205,15 +205,16 @@ public class SystemConfigTable extends VerticalPanel {
 		//TODO: for now only 1
 
 		WalrusInfoWeb walrusInfo;
-		if(walrusList.size() > 0)
-			walrusInfo = walrusList.get(0);
-		else 
-			walrusInfo = new WalrusInfoWeb("Walrus", "bucketsPath", 5, 5120l, 30720L, 50);
+		if(walrusList.size() == 0) {
+			walrusList.add(new WalrusInfoWeb("Walrus", "host", 8773, "/var/lib/eucalyptus/bukkits", 5, 5120l, 30720L, 50));
+		}
+		walrusInfo = walrusList.get(0);
+
 
 		this.w_grid.clear ();
 		this.w_grid.resize ( 4, 2 );
-//		this.w_grid.getColumnFormatter().setWidth(0, "190");
-//		this.w_grid.getColumnFormatter().setWidth(1, "260");
+		//		this.w_grid.getColumnFormatter().setWidth(0, "190");
+		//		this.w_grid.getColumnFormatter().setWidth(1, "260");
 		i = 0;
 
 		this.w_grid.setWidget( i, 0, new Label( "Buckets path:" ) );
@@ -273,8 +274,8 @@ public class SystemConfigTable extends VerticalPanel {
 		// dns params
 		this.dns_grid.clear ();
 		this.dns_grid.resize ( 2, 2 );
-//		this.dns_grid.getColumnFormatter().setWidth(0, "190");
-//		this.dns_grid.getColumnFormatter().setWidth(1, "260");
+		//		this.dns_grid.getColumnFormatter().setWidth(0, "190");
+		//		this.dns_grid.getColumnFormatter().setWidth(1, "260");
 		i = 0;
 
 		this.dns_grid.setWidget( i, 0, new Label( "Domain name:" ) );

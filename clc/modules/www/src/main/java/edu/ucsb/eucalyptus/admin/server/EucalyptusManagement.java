@@ -523,28 +523,6 @@ public class EucalyptusManagement {
 				sysConf.getCloudHost( ));
 	}
 
-	public static WalrusInfoWeb getWalrusConfig() throws SerializableException
-	{
-		EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>();
-		WalrusInfo walrusInfo;
-		try
-		{
-			walrusInfo = db.getUnique( new WalrusInfo() );
-			validateWalrusConfiguration(walrusInfo);
-		} catch(EucalyptusCloudException e) {
-			walrusInfo = validateWalrusConfiguration(null);
-		}
-		finally {
-			db.commit();
-		}
-		return new WalrusInfoWeb(walrusInfo.getName(), 
-				walrusInfo.getStorageDir(), 
-				walrusInfo.getStorageMaxBucketsPerUser(), 
-				new Long(walrusInfo.getStorageMaxBucketSizeInMB()), 
-				new Long(walrusInfo.getStorageMaxCacheSizeInMB()), 
-				walrusInfo.getStorageMaxTotalSnapshotSizeInGb());
-	}
-
 	private static SystemConfiguration validateSystemConfiguration(SystemConfiguration sysConf) {
 		if(sysConf == null) {
 			sysConf = new SystemConfiguration();

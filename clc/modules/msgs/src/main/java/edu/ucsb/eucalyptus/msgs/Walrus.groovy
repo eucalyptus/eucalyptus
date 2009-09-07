@@ -609,6 +609,41 @@ public class UpdateWalrusConfigurationType extends WalrusRequestType {
 public class UpdateWalrusConfigurationResponseType extends WalrusResponseType {
 }
 
+public class GetWalrusConfigurationType extends WalrusRequestType {
+	String name;
+
+	def GetWalrusConfigurationType() {}
+
+	def GetWalrusConfigurationType(String name) {
+		this.name = name;
+	}
+}
+
+public class GetWalrusConfigurationResponseType extends WalrusRequestType {
+	String name;
+	String bucketRootDirectory;
+	Integer maxBucketsPerUser;
+	Long maxBucketSize;
+	Long imageCacheSize;
+	Integer totalSnapshotSize;
+
+	def GetWalrusConfigurationResponseType() {}
+
+	def GetWalrusConfigurationResponseType(String name,
+			String bucketRootDirectory,
+			Integer maxBucketsPerUser,
+			Long maxBucketSize,
+			Long imageCacheSize,
+			Integer totalSnapshotSize) {
+		this.name = name;
+		this.bucketRootDirectory = bucketRootDirectory;
+		this.maxBucketsPerUser = maxBucketsPerUser;
+		this.maxBucketSize = maxBucketSize;
+		this.imageCacheSize = imageCacheSize;
+		this.totalSnapshotSize = totalSnapshotSize;
+	}
+}
+
 public class GetDecryptedImageType extends WalrusDataGetRequestType {
 }
 

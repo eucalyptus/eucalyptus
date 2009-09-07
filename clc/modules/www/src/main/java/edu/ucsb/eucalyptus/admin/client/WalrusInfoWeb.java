@@ -64,6 +64,8 @@ import com.google.gwt.user.client.rpc.IsSerializable;
 
 public class WalrusInfoWeb implements IsSerializable {
 	private String name;
+	private String host;
+	private Integer port;
 	private Boolean committed;
     private String bucketsRootDirectory;
     private Integer maxBucketsPerUser;
@@ -74,12 +76,16 @@ public class WalrusInfoWeb implements IsSerializable {
 	public WalrusInfoWeb() {}
 
 	public WalrusInfoWeb( final String name,
+			final String host,
+			final Integer port,
             final String bucketsRootDirectory,
             final Integer maxBucketsPerUser,
             final Long maxBucketSizeInMB,
             final Long maxCacheSizeInMB,
             final Integer snapshotsTotalInGB) {
 		this.name = name;
+		this.host = host;
+		this.port = port;
 		this.committed = false;
         this.bucketsRootDirectory = bucketsRootDirectory;
         this.maxBucketsPerUser = maxBucketsPerUser;
@@ -107,7 +113,23 @@ public class WalrusInfoWeb implements IsSerializable {
 		this.name = name;
 	}
 
-    public String getBucketsRootDirectory()
+    public String getHost() {
+		return host;
+	}
+
+	public void setHost(String host) {
+		this.host = host;
+	}
+
+	public Integer getPort() {
+		return port;
+	}
+
+	public void setPort(Integer port) {
+		this.port = port;
+	}
+
+	public String getBucketsRootDirectory()
     {
         return bucketsRootDirectory;
     }

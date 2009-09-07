@@ -742,11 +742,11 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	{
 		SessionInfo session = verifySession (sessionId);
 		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
-		//TODO: for now
-		WalrusInfoWeb walrusInfo = EucalyptusManagement.getWalrusConfig();
-		List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>();
-		walrusList.add(walrusInfo);
-		return walrusList;
+		try {
+			return RemoteInfoHandler.getWalrusList();
+		} catch(EucalyptusCloudException e) {
+			throw new SerializableException(e.getMessage());
+		}
 	}
 
 	public void setWalrusList(String sessionId, List<WalrusInfoWeb> walrusList ) throws SerializableException

@@ -91,7 +91,6 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		Label clustersHeader = new Label( "Clusters:" );
 		clustersHeader.setStyleName ( "euca-section-header" );
 		this.add ( clustersHeader );
-		this.add ( noClusterLabel );
 		this.noClusterLabel.setText ("No clusters specified");
 		this.noClusterLabel.setStyleName ("euca-greeting-disabled");
 		HorizontalPanel grid_and_hint = new HorizontalPanel ();
