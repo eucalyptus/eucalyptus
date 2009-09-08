@@ -2292,6 +2292,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         vpanel.setSpacing(15);
         vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER); // michael had this commented out
 		vpanel.add (new SystemConfigTable (sessionId));
+		vpanel.add (new WalrusInfoTable (sessionId));
 		vpanel.add (new ClusterInfoTable (sessionId));
 		vpanel.add (new VmTypeTable (sessionId));
 

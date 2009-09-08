@@ -76,28 +76,19 @@ import edu.ucsb.eucalyptus.admin.client.ClusterInfoTable.GetClusterListCallback;
 public class SystemConfigTable extends VerticalPanel {
 
 	private static Label c_status = new Label ();
-	private static Label w_status = new Label ();
 	private static Label dns_status = new Label ();
 	private Grid c_grid = new Grid ();
-	private Grid w_grid = new Grid ();
 	private Grid dns_grid = new Grid();
 	private static HTML c_hint = new HTML ();
-	private static HTML w_hint = new HTML ();
 	private static HTML dns_hint = new HTML();
 	private SystemConfigWeb SystemConfig = new SystemConfigWeb ();
 	private static String sessionId;
-	private static TextBox walrusURL_box = new TextBox();
-	private static TextBox walrusPath_box = new TextBox();
-	private static TextBox maxBuckets_box = new TextBox();
-	private static TextBox maxBucketSize_box = new TextBox();
-	private static TextBox maxCacheSize_box = new TextBox();
-	private static TextBox totalSnapshots_box = new TextBox();
+	private static TextBox cloudHost_box = new TextBox();
 	private static TextBox defaultKernel_box = new TextBox();
 	private static TextBox defaultRamdisk_box = new TextBox();
 	private static TextBox dnsDomain_box = new TextBox();
 	private static TextBox nameserver_box = new TextBox();
 	private static TextBox nameserverAddress_box = new TextBox();
-	private List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>();
 
 	// dmitrii TODO: remove commented out lines once the CSS-based design is confirmed
 
@@ -124,23 +115,6 @@ public class SystemConfigTable extends VerticalPanel {
 		//		this.c_status.setWidth ("250");
 		this.add ( c_hpanel2 );
 
-		Label WalrusConfigsHeader = new Label( "Walrus configuration:" );
-		WalrusConfigsHeader.setStyleName ( "euca-section-header" );
-		this.add ( WalrusConfigsHeader );
-		HorizontalPanel w_hpanel = new HorizontalPanel ();
-		w_hpanel.add ( this.w_grid );
-		w_hpanel.add ( this.w_hint );
-		//		w_hint.setWidth ("180");
-		this.add ( w_hpanel );
-		HorizontalPanel w_hpanel2 = new HorizontalPanel ();
-		w_hpanel2.setSpacing (10);
-		w_hpanel2.add ( new Button( "Save Configuration", new SaveCallback( this ) ) );
-		w_hpanel2.add ( this.w_status );
-		this.w_status.setText ("");
-		this.w_status.setStyleName ("euca-greeting-pending");
-		//		this.w_status.setWidth ("250");
-		this.add ( w_hpanel2 );
-
 		Label DNSConfigHeader = new Label( "DNS configuration:" );
 		DNSConfigHeader.setStyleName ( "euca-section-header" );
 		this.add ( DNSConfigHeader );
@@ -161,8 +135,6 @@ public class SystemConfigTable extends VerticalPanel {
 		this.rebuildTable ();
 		EucalyptusWebBackend.App.getInstance().getSystemConfig(
 				this.sessionId, new GetCallback( this ) );
-		EucalyptusWebBackend.App.getInstance().getWalrusList(
-				this.sessionId, new GetWalrusListCallback( this ) );
 	}
 
 	private void rebuildTable()
@@ -176,12 +148,11 @@ public class SystemConfigTable extends VerticalPanel {
 		// cloud parameters
 		this.c_grid.setWidget( i, 0, new Label( "Cloud Host:" ) );
 		this.c_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		walrusURL_box.addChangeListener (new ChangeCallback (this));
-		walrusURL_box.setVisibleLength(55);
-		walrusURL_box.setText (SystemConfig.getCloudHost()); 
-		walrusURL_box.addFocusListener (new FocusHandler (c_hint,
-		"Warning: Changing the Cloud URL will invalidate any existing credentials, and will prevent existing users from accessing the system."));
-		this.c_grid.setWidget( i++, 1, walrusURL_box );
+		cloudHost_box.addChangeListener (new ChangeCallback (this));
+		cloudHost_box.setVisibleLength(55);
+		cloudHost_box.setText (SystemConfig.getCloudHost()); 
+		cloudHost_box.addFocusListener (new FocusHandler (c_hint, "Warning: Changing the Cloud URL will invalidate any existing credentials, and will prevent existing users from accessing the system."));
+		this.c_grid.setWidget( i++, 1, cloudHost_box );
 
 		// 2nd row
 		this.c_grid.setWidget( i, 0, new Label( "Default kernel:" ) );
@@ -200,76 +171,6 @@ public class SystemConfigTable extends VerticalPanel {
 		defaultRamdisk_box.setVisibleLength(10);
 		defaultRamdisk_box.setText (SystemConfig.getDefaultRamdiskId());
 		hpanel2.add (defaultRamdisk_box);
-
-		// walrus params
-		//TODO: for now only 1
-
-		WalrusInfoWeb walrusInfo;
-		if(walrusList.size() == 0) {
-			walrusList.add(new WalrusInfoWeb("Walrus", "host", 8773, "/var/lib/eucalyptus/bukkits", 5, 5120l, 30720L, 50));
-		}
-		walrusInfo = walrusList.get(0);
-
-
-		this.w_grid.clear ();
-		this.w_grid.resize ( 4, 2 );
-		//		this.w_grid.getColumnFormatter().setWidth(0, "190");
-		//		this.w_grid.getColumnFormatter().setWidth(1, "260");
-		i = 0;
-
-		this.w_grid.setWidget( i, 0, new Label( "Buckets path:" ) );
-		this.w_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		walrusPath_box.addChangeListener (new ChangeCallback (this));
-		walrusPath_box.setVisibleLength(55);
-		walrusPath_box.setText (walrusInfo.getBucketsRootDirectory());
-		walrusPath_box.addFocusListener (new FocusHandler (w_hint,
-		"Warning! Changing the path may make inaccessible any content uploaded to the old path, including images, kernels, and ramdisks."));
-		this.w_grid.setWidget( i++, 1, walrusPath_box );
-
-		// 2nd row
-		this.w_grid.setWidget( i, 0, new Label( "Max buckets per user:" ) );
-		this.w_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		HorizontalPanel hpanel = new HorizontalPanel ();
-		hpanel.setSpacing (0);
-		this.w_grid.setWidget( i++, 1, hpanel );
-
-		maxBuckets_box.addChangeListener (new ChangeCallback (this));
-		maxBuckets_box.setVisibleLength(10);
-		maxBuckets_box.setText (""+walrusInfo.getMaxBucketsPerUser());
-		hpanel.add (maxBuckets_box);
-
-		hpanel.add ( new HTML ("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Max bucket size: &nbsp;"));
-		maxBucketSize_box.addChangeListener (new ChangeCallback (this));
-		maxBucketSize_box.setVisibleLength(10);
-		maxBucketSize_box.setText (""+walrusInfo.getMaxBucketSizeInMB());
-		maxBucketSize_box.addFocusListener (new FocusHandler (w_hint,
-		"You are urged to consult the documentation before changing the default value!"));
-		hpanel.add (maxBucketSize_box);
-		hpanel.add ( new HTML ("&nbsp; MB"));
-
-		// 3rd row
-		HorizontalPanel hpanel3 = new HorizontalPanel ();
-		hpanel3.setSpacing (0);
-		this.w_grid.setWidget( i++, 1, hpanel3 );
-		maxCacheSize_box.addChangeListener (new ChangeCallback (this));
-		maxCacheSize_box.setVisibleLength(10);
-		maxCacheSize_box.setText ("" + walrusInfo.getMaxCacheSizeInMB());
-		maxCacheSize_box.addFocusListener (new FocusHandler (w_hint,
-		"You are urged to consult the documentation before changing the default value!"));
-		hpanel3.add ( maxCacheSize_box );
-		hpanel3.add ( new HTML ("&nbsp; MB of disk are reserved for the image cache"));
-
-		// 4th row
-		HorizontalPanel hpanel4 = new HorizontalPanel ();
-		hpanel4.setSpacing (0);
-		this.w_grid.setWidget( i++, 1, hpanel4 );
-		totalSnapshots_box.addChangeListener (new ChangeCallback (this));
-		totalSnapshots_box.setVisibleLength(10);
-		totalSnapshots_box.setText ("" + walrusInfo.getSnapshotsTotalInGB());
-		totalSnapshots_box.addFocusListener (new FocusHandler (w_hint,
-		"You are urged to consult the documentation before changing the default value!"));
-		hpanel4.add ( totalSnapshots_box );
-		hpanel4.add ( new HTML ("&nbsp; GB of disk are reserved for snapshots"));
 
 		// dns params
 		this.dns_grid.clear ();
@@ -317,15 +218,9 @@ public class SystemConfigTable extends VerticalPanel {
 
 	public void updateStruct ()
 	{
-		WalrusInfoWeb walrusInfo = walrusList.get(0);
-		this.SystemConfig.setCloudHost( this.walrusURL_box.getText());
-		walrusInfo.setBucketsRootDirectory               (this.walrusPath_box.getText());
-		walrusInfo.setMaxBucketsPerUser  (Integer.parseInt(this.maxBuckets_box.getText()));
-		walrusInfo.setMaxBucketSizeInMB  (Long.parseLong(this.maxBucketSize_box.getText()));
-		walrusInfo.setMaxCacheSizeInMB   (Long.parseLong(this.maxCacheSize_box.getText()));
-		walrusInfo.setSnapshotsTotalInGB (Integer.parseInt(this.totalSnapshots_box.getText()));
-		this.SystemConfig.setDefaultKernelId           (this.defaultKernel_box.getText());
-		this.SystemConfig.setDefaultRamdiskId          (this.defaultRamdisk_box.getText());
+		this.SystemConfig.setCloudHost( this.cloudHost_box.getText());
+		this.SystemConfig.setDefaultKernelId(this.defaultKernel_box.getText());
+		this.SystemConfig.setDefaultRamdiskId(this.defaultRamdisk_box.getText());
 		this.SystemConfig.setDnsDomain(this.dnsDomain_box.getText());
 		this.SystemConfig.setNameserver(this.nameserver_box.getText());
 		this.SystemConfig.setNameserverAddress(this.nameserverAddress_box.getText());
@@ -344,8 +239,6 @@ public class SystemConfigTable extends VerticalPanel {
 			this.parent.updateStruct ();
 			this.parent.c_status.setText ("Unsaved changes");
 			this.parent.c_status.setStyleName ("euca-greeting-warning");
-			this.parent.w_status.setText ("Unsaved changes");
-			this.parent.w_status.setStyleName ("euca-greeting-warning");
 			this.parent.dns_status.setText ("Unsaved changes");
 			this.parent.dns_status.setStyleName ("euca-greeting-warning");            
 		}
@@ -355,8 +248,6 @@ public class SystemConfigTable extends VerticalPanel {
 			this.parent.updateStruct ();
 			this.parent.c_status.setText ("Unsaved changes");
 			this.parent.c_status.setStyleName ("euca-greeting-warning");
-			this.parent.w_status.setText ("Unsaved changes");
-			this.parent.w_status.setStyleName ("euca-greeting-warning");
 			this.parent.dns_status.setText ("Unsaved changes");
 			this.parent.dns_status.setStyleName ("euca-greeting-warning");
 		}
@@ -375,8 +266,6 @@ public class SystemConfigTable extends VerticalPanel {
 		{
 			this.parent.c_status.setText ("Failed to contact server!");
 			this.parent.c_status.setStyleName ("euca-greeting-error");
-			this.parent.w_status.setText ("Failed to contact server!");
-			this.parent.w_status.setStyleName ("euca-greeting-error");
 			this.parent.dns_status.setText ("Failed to contact server!");
 			this.parent.dns_status.setStyleName ("euca-greeting-error");
 		}
@@ -385,8 +274,6 @@ public class SystemConfigTable extends VerticalPanel {
 		{
 			this.parent.c_status.setText ("Loaded configuration from server");
 			this.parent.c_status.setStyleName ("euca-greeting-disabled");
-			this.parent.w_status.setText ("Loaded configuration from server");
-			this.parent.w_status.setStyleName ("euca-greeting-disabled");
 			this.parent.dns_status.setText ("Loaded configuration from server");
 			this.parent.dns_status.setStyleName ("euca-greeting-disabled");            
 			this.parent.SystemConfig = (SystemConfigWeb) o;
@@ -407,30 +294,22 @@ public class SystemConfigTable extends VerticalPanel {
 		{
 			this.parent.c_status.setText ("Saving...");
 			this.parent.c_status.setStyleName ("euca-greeting-pending");
-			this.parent.w_status.setText ("Saving...");
-			this.parent.w_status.setStyleName ("euca-greeting-pending");
 			this.parent.dns_status.setText ("Saving...");
 			this.parent.dns_status.setStyleName ("euca-greeting-pending");            
 			EucalyptusWebBackend.App.getInstance().setSystemConfig(
 					this.parent.sessionId, this.parent.SystemConfig, this );
-			EucalyptusWebBackend.App.getInstance().setWalrusList(this.parent.sessionId, 
-					this.parent.walrusList, this);
 		}
 
 		public void onFailure( final Throwable throwable )
 		{
 			this.parent.c_status.setText ("Failed to save!");
 			this.parent.c_status.setStyleName ("euca-greeting-error");
-			this.parent.w_status.setText ("Failed to save!");
-			this.parent.w_status.setStyleName ("euca-greeting-error");
 		}
 
 		public void onSuccess( final Object o )
 		{
 			this.parent.c_status.setText ("Saved configuration to server");
 			this.parent.c_status.setStyleName ("euca-greeting-disabled");
-			this.parent.w_status.setText ("Saved configuration to server");
-			this.parent.w_status.setStyleName ("euca-greeting-disabled");
 			this.parent.dns_status.setText ("Saved configuration to server");
 			this.parent.dns_status.setStyleName ("euca-greeting-disabled");            
 		}
@@ -454,31 +333,6 @@ public class SystemConfigTable extends VerticalPanel {
 		{
 			this.parent.setHTML (message);
 			this.parent.setStyleName ("euca-error-hint");
-		}
-	}
-
-	class GetWalrusListCallback implements AsyncCallback {
-
-		private SystemConfigTable parent;
-
-		GetWalrusListCallback( final SystemConfigTable parent )
-		{
-			this.parent = parent;
-		}
-
-		public void onFailure( final Throwable throwable )
-		{
-			this.parent.w_status.setText ("Failed to contact server!");
-			this.parent.w_status.setStyleName ("euca-greeting-error");
-		}
-
-		public void onSuccess( final Object o )
-		{
-			List<WalrusInfoWeb> newWalrusList = (List<WalrusInfoWeb>) o;
-			this.parent.walrusList = newWalrusList;
-			this.parent.w_status.setText ("Saved configuration to server");
-			this.parent.w_status.setStyleName ("euca-greeting-disabled");
-			this.parent.rebuildTable();
 		}
 	}
 }

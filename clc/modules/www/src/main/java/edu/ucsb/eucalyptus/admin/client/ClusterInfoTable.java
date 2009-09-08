@@ -74,7 +74,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	private static Label noClusterLabel = new Label();
 	private static Label statusLabel = new Label();
 	private Grid grid = new Grid ();
-	private Button add_button = new Button ( "Add cluster", this );
+	private Button add_button = new Button ( "Register cluster", this );
 	private static HTML hint = new HTML ();
 	private List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>();
 	private List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>();
@@ -91,7 +91,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		Label clustersHeader = new Label( "Clusters:" );
 		clustersHeader.setStyleName ( "euca-section-header" );
 		this.add ( clustersHeader );
-		this.noClusterLabel.setText ("No clusters specified");
+		this.noClusterLabel.setText ("No clusters registered");
 		this.noClusterLabel.setStyleName ("euca-greeting-disabled");
 		HorizontalPanel grid_and_hint = new HorizontalPanel ();
 		grid_and_hint.add ( this.grid );
