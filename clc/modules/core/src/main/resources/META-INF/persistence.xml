@@ -69,6 +69,8 @@
 
     <persistence-unit name="eucalyptus" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.ejb.HibernatePersistence</provider>
+        <class>com.eucalyptus.entities.AbstractPersistent</class>
+        <class>com.eucalyptus.entities.SshKeyPair</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.UserInfo</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.CertificateInfo</class>
         <class>edu.ucsb.eucalyptus.cloud.entities.SSHKeyPair</class>
