@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
@@ -91,6 +92,18 @@ import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
+import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
+import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
+import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
+import edu.ucsb.eucalyptus.msgs.DeregisterStorageControllerType;
+import edu.ucsb.eucalyptus.msgs.DeregisterWalrusType;
+import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
+import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
+import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
+import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
+import edu.ucsb.eucalyptus.msgs.RegisterStorageControllerType;
+import edu.ucsb.eucalyptus.msgs.RegisterWalrusType;
 
 public class RemoteInfoHandler {
 
@@ -102,7 +115,7 @@ public class RemoteInfoHandler {
 		for ( ClusterInfoWeb clusterWeb : newClusterList ) {
 			clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ) ) );
 		}
-		Configuration.updateClusterConfigurations( clusterConfig );
+		updateClusterConfigurations( clusterConfig );
 	}
 
 	public static synchronized List<ClusterInfoWeb> getClusterList( ) throws EucalyptusCloudException {
@@ -118,7 +131,7 @@ public class RemoteInfoHandler {
 		for ( StorageInfoWeb storageControllerWeb : newStorageList ) {
 			storageControllerConfig.add( new StorageControllerConfiguration( storageControllerWeb.getName( ), storageControllerWeb.getHost( ), storageControllerWeb.getPort( ) ) );
 		}
-		Configuration.updateStorageControllerConfigurations( storageControllerConfig );
+		updateStorageControllerConfigurations( storageControllerConfig );
 
 		for(StorageInfoWeb storageControllerWeb : newStorageList) {
 			UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType();
@@ -165,7 +178,7 @@ public class RemoteInfoHandler {
 		for ( WalrusInfoWeb walrusControllerWeb : newWalrusList ) {
 			walrusConfig.add( new WalrusConfiguration( walrusControllerWeb.getName( ), walrusControllerWeb.getHost( ), walrusControllerWeb.getPort( ) ) );
 		}
-		Configuration.updateWalrusConfigurations(walrusConfig );
+		updateWalrusConfigurations(walrusConfig );
 
 		for(WalrusInfoWeb walrusInfoWeb : newWalrusList) {
 			UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType();
@@ -216,5 +229,70 @@ public class RemoteInfoHandler {
 		} catch ( EucalyptusCloudException e ) {
 			throw new SerializableException( e.getMessage( ) );
 		}
+	}
+	
+	public static void updateClusterConfigurations( List<ClusterConfiguration> clusterConfigs ) throws EucalyptusCloudException {
+		updateComponentConfigurations( Configuration.getClusterConfigurations( ), clusterConfigs );
+	}
+
+	public static void updateStorageControllerConfigurations( List<StorageControllerConfiguration> storageControllerConfigs ) throws EucalyptusCloudException {
+		updateComponentConfigurations( Configuration.getStorageControllerConfigurations( ), storageControllerConfigs );
+	}
+
+	public static void updateWalrusConfigurations( List<WalrusConfiguration> walrusConfigs ) throws EucalyptusCloudException {
+		updateComponentConfigurations( Configuration.getWalrusConfigurations( ), walrusConfigs );
+	}
+
+	private static void updateComponentConfigurations( List componentConfigs, List newComponentConfigs ) throws EucalyptusCloudException {    
+		try {
+			ArrayList<ComponentConfiguration> addComponents = new ArrayList<ComponentConfiguration>();
+			List<ComponentConfiguration> removeComponents = new ArrayList<ComponentConfiguration>();
+			for(Object o : newComponentConfigs) {
+				ComponentConfiguration config = (ComponentConfiguration) o;
+				if(!componentConfigs.contains(config)) 
+					addComponents.add(config);
+			}
+			for(Object o : componentConfigs) {
+				ComponentConfiguration config = (ComponentConfiguration) o;
+				if(!newComponentConfigs.contains(config)) 
+					removeComponents.add(config);
+			}
+			LOG.info( "Planning to updating configs with: " );
+			LOG.info( "-> add: " + addComponents );
+			LOG.info( "-> remove: " + removeComponents );
+			for(ComponentConfiguration config : removeComponents) {
+				DeregisterComponentType regComponent = null;
+				if(config instanceof StorageControllerConfiguration) {
+					regComponent = new DeregisterStorageControllerType();    		  
+				} else if(config instanceof WalrusConfiguration) {
+					regComponent = new DeregisterWalrusType();
+				} else if(config instanceof ClusterConfiguration) {
+					regComponent = new DeregisterClusterType();
+				} else {
+					regComponent = new DeregisterComponentType();
+				}
+				regComponent.setName(config.getName());
+				new Configuration().deregisterComponent(regComponent);
+			}			
+			for(ComponentConfiguration config : addComponents) {
+				RegisterComponentType regComponent = null;
+				if(config instanceof StorageControllerConfiguration) {
+					regComponent = new RegisterStorageControllerType();    		  
+				} else if(config instanceof WalrusConfiguration) {
+					regComponent = new RegisterWalrusType();
+				} else if(config instanceof ClusterConfiguration) {
+					regComponent = new RegisterClusterType();
+				} else {
+					regComponent = new RegisterComponentType();
+				}
+				regComponent.setName(config.getName());
+				regComponent.setHost(config.getHostName());
+				regComponent.setPort(config.getPort());
+				new Configuration().registerComponent(regComponent);
+			}			
+		} catch ( Exception e ) {
+			throw new EucalyptusCloudException( "Changing component configurations failed: " + e.getMessage( ), e );
+		}
+
 	}
 }

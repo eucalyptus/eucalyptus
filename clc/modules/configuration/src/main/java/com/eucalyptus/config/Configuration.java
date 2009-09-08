@@ -120,11 +120,19 @@ public class Configuration {
 			return reply;
 		}
 		if( request instanceof RegisterStorageControllerType ) {
+			if("localhost".equals(request.getHost()) && !Component.storage.isLocal()) {
+				throw new EucalyptusCloudException("You do not have a local storage controller installed.");
+			}
 			try {
 				Configuration.getClusterConfiguration( request.getName( ) );
 			} catch ( Exception e1 ) {
 				throw new EucalyptusCloudException("Storage controllers may only be registered with a corresponding Cluster of the same name.  No cluster found with the name: " + request.getName( ) );
 			}
+		}
+		if(request instanceof RegisterWalrusType) {
+			if("localhost".equals(request.getHost()) && !Component.walrus.isLocal()) {
+				throw new EucalyptusCloudException("You do not have a local walrus installed.");
+			}			
 		}
 		EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );
 		ComponentConfiguration newComponent;
@@ -291,71 +299,4 @@ public class Configuration {
 		}
 		throw new NoSuchComponentException( ClusterConfiguration.class.getSimpleName( ) + " named " + clusterName );
 	}
-
-	public static void updateClusterConfigurations( List<ClusterConfiguration> clusterConfigs ) throws EucalyptusCloudException {
-		updateComponentConfigurations( Configuration.getClusterConfigurations( ), clusterConfigs );
-	}
-
-	public static void updateStorageControllerConfigurations( List<StorageControllerConfiguration> storageControllerConfigs ) throws EucalyptusCloudException {
-		updateComponentConfigurations( Configuration.getStorageControllerConfigurations( ), storageControllerConfigs );
-	}
-
-	public static void updateWalrusConfigurations( List<WalrusConfiguration> walrusConfigs ) throws EucalyptusCloudException {
-		updateComponentConfigurations( Configuration.getWalrusConfigurations( ), walrusConfigs );
-	}
-
-	private static void updateComponentConfigurations( List componentConfigs, List newComponentConfigs ) throws EucalyptusCloudException {    
-		try {
-			ArrayList<ComponentConfiguration> addComponents = new ArrayList<ComponentConfiguration>();
-			List<ComponentConfiguration> removeComponents = new ArrayList<ComponentConfiguration>();
-			for(Object o : newComponentConfigs) {
-				ComponentConfiguration config = (ComponentConfiguration) o;
-				if(!componentConfigs.contains(config)) 
-					addComponents.add(config);
-			}
-			for(Object o : componentConfigs) {
-				ComponentConfiguration config = (ComponentConfiguration) o;
-				if(!newComponentConfigs.contains(config)) 
-					removeComponents.add(config);
-			}
-			LOG.info( "Planning to updating configs with: " );
-			LOG.info( "-> add: " + addComponents );
-			LOG.info( "-> remove: " + removeComponents );
-			for(ComponentConfiguration config : removeComponents) {
-				DeregisterComponentType regComponent = null;
-				if(config instanceof StorageControllerConfiguration) {
-					regComponent = new DeregisterStorageControllerType();    		  
-				} else if(config instanceof WalrusConfiguration) {
-					regComponent = new DeregisterWalrusType();
-				} else if(config instanceof ClusterConfiguration) {
-					regComponent = new DeregisterClusterType();
-				} else {
-					regComponent = new DeregisterComponentType();
-				}
-				regComponent.setName(config.getName());
-				new Configuration().deregisterComponent(regComponent);
-			}			
-			for(ComponentConfiguration config : addComponents) {
-				RegisterComponentType regComponent = null;
-				if(config instanceof StorageControllerConfiguration) {
-					regComponent = new RegisterStorageControllerType();    		  
-				} else if(config instanceof WalrusConfiguration) {
-					regComponent = new RegisterWalrusType();
-				} else if(config instanceof ClusterConfiguration) {
-					regComponent = new RegisterClusterType();
-				} else {
-					regComponent = new RegisterComponentType();
-				}
-				regComponent.setName(config.getName());
-				regComponent.setHost(config.getHostName());
-				regComponent.setPort(config.getPort());
-				new Configuration().registerComponent(regComponent);
-			}			
-		} catch ( Exception e ) {
-			throw new EucalyptusCloudException( "Changing component configurations failed: " + e.getMessage( ), e );
-		}
-
-	}
-
-
 }
