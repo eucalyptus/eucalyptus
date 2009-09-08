@@ -95,6 +95,7 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
@@ -649,7 +650,13 @@ public class EucalyptusManagement {
 
 		try {
 			httpClient.executeMethod(method);
-			String str = method.getResponseBodyAsString();
+			String str = "";
+			InputStream in = method.getResponseBodyAsStream();
+			byte[] readBytes = new byte[1024];
+			int bytesRead = -1;
+			while((bytesRead = in.read(readBytes)) > 0) {
+				str += new String(readBytes, 0, bytesRead);
+			}
 			Matcher matcher = Pattern.compile(".*your ip is (.*)").matcher(str);
 			if (matcher.find()) {
 				ipAddr = matcher.group(1);

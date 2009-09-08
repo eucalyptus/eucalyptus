@@ -85,6 +85,7 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 
 import java.io.File;
+import java.io.InputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -811,7 +812,13 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 
 		try {
 			httpClient.executeMethod(method);
-			String str = method.getResponseBodyAsString();
+			String str = "";
+			InputStream in = method.getResponseBodyAsStream();
+			byte[] readBytes = new byte[1024];
+			int bytesRead = -1;
+			while((bytesRead = in.read(readBytes)) > 0) {
+				str += new String(readBytes, 0, bytesRead);
+			}
 			String entries[] = str.split("[\\r\\n]+");
 			for (int i=0; i<entries.length; i++) {
 				String entry[] = entries[i].split("\\t");

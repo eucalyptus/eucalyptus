@@ -64,6 +64,7 @@ import java.util.Map;
 import java.util.List;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 import java.net.URL;
 import java.net.MalformedURLException;
@@ -125,7 +126,14 @@ public class ImageStoreServiceImpl extends RemoteServiceServlet
 
         try {
             int statusCode = client.executeMethod(httpMethod);
-            return httpMethod.getResponseBodyAsString();
+			String str = "";
+			InputStream in = httpMethod.getResponseBodyAsStream();
+			byte[] readBytes = new byte[1024];
+			int bytesRead = -1;
+			while((bytesRead = in.read(readBytes)) > 0) {
+				str += new String(readBytes, 0, bytesRead);
+			}
+			return str;
         } catch (HttpException e) {
             return errorJSON("Protocol error: " + e.getMessage());
         } catch (IOException e) {

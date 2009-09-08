@@ -304,13 +304,20 @@ public class Configuration {
 		updateComponentConfigurations( Configuration.getWalrusConfigurations( ), walrusConfigs );
 	}
 
-	@SuppressWarnings( "unchecked" )
 	private static void updateComponentConfigurations( List componentConfigs, List newComponentConfigs ) throws EucalyptusCloudException {    
 		try {
-			ArrayList<ComponentConfiguration> addComponents = Lists.newArrayList( newComponentConfigs );
-			List<ComponentConfiguration> removeComponents = new ArrayList<ComponentConfiguration>( componentConfigs );
-			addComponents.removeAll( componentConfigs );
-			removeComponents.removeAll( newComponentConfigs );
+			ArrayList<ComponentConfiguration> addComponents = new ArrayList<ComponentConfiguration>();
+			List<ComponentConfiguration> removeComponents = new ArrayList<ComponentConfiguration>();
+			for(Object o : newComponentConfigs) {
+				ComponentConfiguration config = (ComponentConfiguration) o;
+				if(!componentConfigs.contains(config)) 
+					addComponents.add(config);
+			}
+			for(Object o : componentConfigs) {
+				ComponentConfiguration config = (ComponentConfiguration) o;
+				if(!newComponentConfigs.contains(config)) 
+					removeComponents.add(config);
+			}
 			LOG.info( "Planning to updating configs with: " );
 			LOG.info( "-> add: " + addComponents );
 			LOG.info( "-> remove: " + removeComponents );

@@ -69,6 +69,7 @@ import java.util.Date;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
@@ -95,7 +96,7 @@ import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @MappedSuperclass
-public abstract class ComponentConfiguration extends AbstractPersistent implements Serializable {
+public abstract class ComponentConfiguration extends AbstractPersistent implements Serializable, Comparable {
   @Column( name = "config_component_name", unique=true )
   String name;
   @Column( name = "config_component_hostname" )
@@ -124,6 +125,10 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     return "http://" + this.getHostName() + ":" + this.getPort() + this.getServicePath();
   }
 
+  public String getName() {
+	  return name;
+  }
+  
   public abstract Component getComponent();
 
   public Boolean isLocal() {
@@ -159,7 +164,12 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
       if ( other.name != null ) return false;
     } else if ( !name.equals( other.name ) ) return false;
     return true;
-  }}
+  }
+
+  public int compareTo(Object o) {
+	  return name.compareTo(((ComponentConfiguration) o).getName());
+  }
+}
 
 public class LocalConfiguration extends ComponentConfiguration {
   private Component c;
