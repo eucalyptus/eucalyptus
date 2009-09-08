@@ -83,6 +83,7 @@ public class KeyPairUtil {
     SshKeyPair newKey = new SshKeyPair( userName, keyName );
     try {
       db.add( newKey );
+      db.commit( );
     } catch ( Exception e1 ) {
       db.rollback( );
       throw new EucalyptusCloudException( "KeyPair generation error. Key pair: " + keyName + " already exists." );
@@ -94,6 +95,8 @@ public class KeyPairUtil {
     String authKeyString = getAuthKeyString( userName, newKeys );
     newKey.setPublicKey( authKeyString );
     newKey.setFingerPrint( Hashes.getFingerPrint( newKeys.getPrivate( ) ) );
+    db = KeyPairUtil.getEntityWrapper( );
+    db.merge( newKey );
     db.commit( );
 
     return newKeys.getPrivate( );

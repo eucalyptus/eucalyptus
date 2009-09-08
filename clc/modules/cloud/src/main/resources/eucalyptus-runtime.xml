@@ -93,7 +93,7 @@
         <inbound>
           <inbound-endpoint ref="KeyPairResolveWS"/>
         </inbound>
-        <component class="edu.ucsb.eucalyptus.cloud.ws.KeyPairBroker"/>
+        <component class="com.eucalyptus.keys.KeyPairManager"/>
       </service>
       <service name="ImageResolve">
         <inbound>

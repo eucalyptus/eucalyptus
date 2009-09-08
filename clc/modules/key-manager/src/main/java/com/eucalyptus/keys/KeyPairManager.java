@@ -10,7 +10,6 @@ import org.bouncycastle.openssl.PEMWriter;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.SshKeyPair;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
@@ -86,6 +85,7 @@ public class KeyPairManager {
       LOG.error( e );
       throw new EucalyptusCloudException( e );
     }
+    reply.setKeyName( request.getKeyName( ) );
     reply.setKeyMaterial( byteOut.toString( ) );
     return reply;
   }

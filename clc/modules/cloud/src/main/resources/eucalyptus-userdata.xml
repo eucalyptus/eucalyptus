@@ -81,7 +81,7 @@
             <inbound>
                 <inbound-endpoint ref="KeyPairWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.KeyPairBroker"/>
+            <component class="com.eucalyptus.keys.KeyPairManager"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint"/>
