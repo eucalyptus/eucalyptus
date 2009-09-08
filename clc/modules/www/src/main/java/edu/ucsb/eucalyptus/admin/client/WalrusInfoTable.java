@@ -114,7 +114,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 				this.sessionId, new GetWalrusListCallback( this ) );
 	}
 
-	public void onClick( final Widget widget ) // Add cluster button
+	public void onClick( final Widget widget ) // Register walrus button
 	{
 		this.walrusList.add (new WalrusInfoWeb("Walrus", "host", 8773, "/var/lib/eucalyptus/bukkits", 5, 5120l, 30720L, 50)); //these values are just defaults
 		this.rebuildTable();
@@ -246,11 +246,9 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 	{
 		WalrusInfoWeb walrus = this.walrusList.get (row);
 		Grid g = (Grid)this.grid.getWidget(row, 0);
-		HorizontalPanel p;
-
-		walrus.setHost (((TextBox)g.getWidget(0, 1)).getText());
-		walrus.setBucketsRootDirectory(((TextBox)g.getWidget(1, 1)).getText());
-		
+		HorizontalPanel p = (HorizontalPanel)g.getWidget(0, 1);
+		walrus.setHost (((TextBox)p.getWidget(0)).getText());
+		walrus.setBucketsRootDirectory(((TextBox)g.getWidget(1, 1)).getText());		
 		p = (HorizontalPanel)g.getWidget(2, 1);
 		walrus.setMaxBucketsPerUser(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
 		walrus.setMaxBucketSizeInMB(Long.parseLong(((TextBox)p.getWidget(2)).getText()));

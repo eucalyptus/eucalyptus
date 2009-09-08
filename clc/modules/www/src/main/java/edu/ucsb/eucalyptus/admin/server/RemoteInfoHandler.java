@@ -60,43 +60,37 @@
  *******************************************************************************/
 package edu.ucsb.eucalyptus.admin.server;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import com.google.gwt.user.client.rpc.SerializableException;
-import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
-import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
-import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
-import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.google.gwt.user.client.rpc.SerializableException;
 
+import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
+import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType;
-import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-
-import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.eucalyptus.ws.util.Messaging;
-import org.apache.log4j.Logger;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 
 public class RemoteInfoHandler {
 
