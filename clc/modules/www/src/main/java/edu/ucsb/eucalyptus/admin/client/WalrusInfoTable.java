@@ -348,7 +348,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 
 		public void onFailure( final Throwable throwable )
 		{
-			this.parent.statusLabel.setText ("Failed to save!");
+			this.parent.statusLabel.setText ("Failed to save! (Check hostname.)");
 			this.parent.statusLabel.setStyleName ("euca-greeting-error");
 		}
 

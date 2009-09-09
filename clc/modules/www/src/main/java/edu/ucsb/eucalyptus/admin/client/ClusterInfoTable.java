@@ -70,17 +70,17 @@ import java.util.List;
 
 public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
+	private static String warningMessage = "Note: adding a cluster requires synchronization of keys among all nodes, which cannot be done through this interface.  See documentation for details.";
 	private static int maxClusters = 4096; //arbitrary
-	private static Label noClusterLabel = new Label();
-	private static Label statusLabel = new Label();
+	private Label noClusterLabel = new Label();
+	private Label statusLabel = new Label();
 	private Grid grid = new Grid ();
 	private Button add_button = new Button ( "Register cluster", this );
-	private static HTML hint = new HTML ();
+	private HTML hint = new HTML ();
 	private List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>();
 	private List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>();
 	private SystemConfigWeb systemConfig = new SystemConfigWeb ();
-	private static String sessionId;
-	private static String warningMessage = "Note: adding a cluster requires synchronization of keys among all nodes, which cannot be done through this interface.  See documentation for details.";
+	private String sessionId;
 
 	public ClusterInfoTable(String sessionId)
 	{
@@ -166,6 +166,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	{
 		Grid g = new Grid (15, 2);
 		g.setStyleName( "euca-table" );
+		if (row > 0) {
+			g.setStyleName( "euca-nonfirst-cluster-entry" );
+		}
 		g.setCellPadding( 4 );
 
 		int i = 0; // row 1

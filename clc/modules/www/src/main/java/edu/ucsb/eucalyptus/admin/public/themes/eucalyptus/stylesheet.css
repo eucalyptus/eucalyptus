@@ -204,3 +204,8 @@ button{
 .euca-inline-image {
 	padding: 3px 3px 3px 3px;
 }
+
+.euca-nonfirst-cluster-entry {
+	border-top:1px dashed grey;
+	padding:10px;
+}

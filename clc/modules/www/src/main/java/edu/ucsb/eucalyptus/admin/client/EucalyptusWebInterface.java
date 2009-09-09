@@ -1532,7 +1532,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		cpanel.add ( new HTML (certificate_download_text) );
         cpanel.setStyleName( "euca-text" );
         cpanel.addStyleName("content");
-		Button certButton = new Button ("Download Certificate",new ClickListener() {
+		Button certButton = new Button ("Download Credentials", new ClickListener() {
 				public void onClick (Widget sender) {
 					Window.open(GWT.getModuleBaseURL() +
 						"getX509?user=" + loggedInUser.getUserName() +
