@@ -115,6 +115,29 @@ public class SshKeyPair extends UserMetadata implements Serializable {
   public SshKeyPair( String userName ) {
     super( userName );
   }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( fingerPrint == null ) ? 0 : fingerPrint.hashCode( ) );
+    result = prime * result + ( ( publicKey == null ) ? 0 : publicKey.hashCode( ) );
+    return result;
+  }
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this.is( obj ) ) return true;
+    if ( !super.equals( obj ) ) return false;
+    if ( !getClass( ).is( obj.getClass( ) ) ) return false;
+    SshKeyPair other = ( SshKeyPair ) obj;
+    if ( fingerPrint == null ) {
+      if ( other.fingerPrint != null ) return false;
+    } else if ( !fingerPrint.equals( other.fingerPrint ) ) return false;
+    if ( publicKey == null ) {
+      if ( other.publicKey != null ) return false;
+    } else if ( !publicKey.equals( other.publicKey ) ) return false;
+    return true;
+  }  
 }
 
 
