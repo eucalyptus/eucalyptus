@@ -70,6 +70,9 @@ import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.criterion.*;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
 import javax.persistence.*;
 import java.sql.*;
 import java.util.*;
@@ -128,7 +131,7 @@ public class EntityWrapper<TYPE> {
     LOG.debug( "QUERY " + example.getClass( ) );
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     List<TYPE> resultList = ( List<TYPE> ) session.createCriteria( example.getClass( ) ).add( qbe ).list( );
-    return resultList;
+    return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
 
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {

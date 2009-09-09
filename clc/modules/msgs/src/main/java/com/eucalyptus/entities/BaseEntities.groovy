@@ -43,8 +43,7 @@ public class AbstractPersistent implements Serializable {
   public AbstractPersistent( ) {
     super( );
   }
-  
-  
+    
   @Override
   public int hashCode( ) {
     final int prime = 31;
