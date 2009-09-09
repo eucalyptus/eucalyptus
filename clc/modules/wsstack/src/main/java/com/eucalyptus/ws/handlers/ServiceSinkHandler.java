@@ -202,24 +202,4 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
     Channels.fireExceptionCaught( ctx.getChannel( ), e.getCause( ) );
   }
-//    LOG.fatal( e.getCause( ), e.getCause( ) );
-//    if ( e.getCause( ) instanceof IOException ) {
-//      ctx.getChannel( ).close( );
-//      return;
-//    } else {
-//      HttpResponse error = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR );
-//      Throwable t = e.getCause( );
-//      String errMsg = "Error";
-//      if ( t != null && t.getMessage( ) != null ) {
-//        errMsg = t.getMessage( );
-//      } else if ( t != null ) {
-//        errMsg = t.toString( );
-//      }
-//      Channels.fireExceptionCaught( ctx.getChannel( ), new EucalyptusCloudException( errMsg, e.getCause( ) ) );
-//      error.setContent( ChannelBuffers.copiedBuffer( errMsg.getBytes( ) ) );
-//      DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel( ).getCloseFuture( ), error, null );
-//      ctx.sendDownstream( newEvent );
-//      newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-//    }
-//  }
 }

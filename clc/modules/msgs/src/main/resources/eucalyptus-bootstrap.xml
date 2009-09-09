@@ -94,7 +94,7 @@
 			<inbound>
 				<inbound-endpoint ref="RequestQueueEndpoint"/>
 			</inbound>
-			<bridge-component/>
+			<component class="com.eucalyptus.ws.util.RequestQueue" />
 			<outbound>
 				<filtering-router>
 					<outbound-endpoint ref="WalrusRequestQueueEndpoint" synchronous="false" />
