@@ -31,7 +31,7 @@ public class NetworkGroupManager {
   private static Logger LOG = Logger.getLogger( NetworkGroupManager.class );
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     ArrayList<String> networkNames = new ArrayList<String>( vmAllocInfo.getRequest().getGroupSet() );
-    if ( vmAllocInfo.getNetworks().size() < 1 ){
+    if ( networkNames.size() < 1 ){
       throw new EucalyptusCloudException( "Failed to find any specified networks? You sent: " + networkNames );
     }
     Map<String, NetworkRulesGroup> networkRuleGroups = new HashMap<String, NetworkRulesGroup>();
