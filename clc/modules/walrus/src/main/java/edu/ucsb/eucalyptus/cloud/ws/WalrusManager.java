@@ -160,6 +160,7 @@ import edu.ucsb.eucalyptus.msgs.Status;
 import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileIO;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
@@ -176,18 +177,20 @@ public class WalrusManager {
 		this.walrusImageManager = walrusImageManager;
 	}
 
-	public void initialize() {
+	public void initialize() throws EucalyptusCloudException {
 		check();
 	}
 
-	public void check() {
+	public void check() throws EucalyptusCloudException {
 		File bukkitDir = new File(WalrusProperties.bucketRootDirectory);
 		if(!bukkitDir.exists()) {
 			if(!bukkitDir.mkdirs()) {
 				LOG.fatal("Unable to make bucket root directory: " + WalrusProperties.bucketRootDirectory);
+				throw new EucalyptusCloudException("Invalid bucket root directory");
 			}
 		} else if(!bukkitDir.canWrite()) {
 			LOG.fatal("Cannot write to bucket root directory: " + WalrusProperties.bucketRootDirectory);
+			throw new EucalyptusCloudException("Invalid bucket root directory");
 		}
 		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
 		BucketInfo bucketInfo = new BucketInfo();
@@ -741,7 +744,8 @@ public class WalrusManager {
 					} else {
 						reply.setBucket(bucketName);
 						reply.setKey(key);
-						reply.setLocation(WalrusProperties.WALRUS_URL + "/" + bucketName + "/" + key);
+						reply.setLocation(EucalyptusProperties.getWalrusUrl() + 
+								"/" + bucketName + "/" + key);
 					}
 				} else {
 					reply.setSuccessCode(204);

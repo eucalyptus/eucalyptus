@@ -387,7 +387,6 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 			String contentType = part.substring(startValue, endValue);
 			formFields.put(WalrusProperties.CONTENT_TYPE, contentType);
 			return contentType;
-			//formFields.put(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk", firstChunk);
 		}
 		return null;
 	}
@@ -466,49 +465,55 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 		return lastIndex;
 	}
 
-	private boolean exactMatch(JSONObject jsonObject, Map formFields, List<String> policyItemNames) {
+	private boolean exactMatch(JSONObject jsonObject, Map<String, String> formFields, List<String> policyItemNames) {
 		Iterator<String> iterator = jsonObject.keys();
+		String key = null;
 		boolean returnValue = false;
 		while(iterator.hasNext()) {
-			String key = iterator.next();
+			key = iterator.next();
 			key = key.replaceAll("\\$", "");
 			policyItemNames.add(key);
 			try {
-				if(jsonObject.get(key).equals(formFields.get(key)))
+				if(jsonObject.get(key).equals(formFields.get(key).trim()))
 					returnValue = true;
 				else
 					returnValue = false;
 			} catch(Exception ex) {
-				ex.printStackTrace();
+				LOG.error(ex);
 				return false;
 			}
 		}
+		if(!returnValue)
+			LOG.error("exact match on " + key + " failed");
 		return returnValue;
 	}
 
 	private boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields, List<String> policyItemNames) {
 		boolean returnValue = false;
+		String key;
 		if(jsonArray.size() != 3)
 			return false;
 		try {
 			String condition = (String) jsonArray.get(0);
-			String key = (String) jsonArray.get(1);
+			key = (String) jsonArray.get(1);
 			key = key.replaceAll("\\$", "");
 			policyItemNames.add(key);
 			String value = (String) jsonArray.get(2);
 			if(condition.contains("eq")) {
-				if(value.equals(formFields.get(key)))
+				if(value.equals(formFields.get(key).trim()))
 					returnValue = true;
 			} else if(condition.contains("starts-with")) {
 				if(!formFields.containsKey(key))
 					return false;
-				if(formFields.get(key).startsWith(value))
+				if(formFields.get(key).trim().startsWith(value))
 					returnValue = true;
 			}
 		} catch(Exception ex) {
-			ex.printStackTrace();
+			LOG.error(ex);
 			return false;
 		}
+		if(!returnValue)
+			LOG.error("partial match on " + key + " failed");
 		return returnValue;
 	}
 

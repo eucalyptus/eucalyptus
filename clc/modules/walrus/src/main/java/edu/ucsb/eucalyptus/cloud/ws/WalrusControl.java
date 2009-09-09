@@ -65,20 +65,77 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.NotImplementedException;
-import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
+import edu.ucsb.eucalyptus.msgs.CacheImageResponseType;
+import edu.ucsb.eucalyptus.msgs.CacheImageType;
+import edu.ucsb.eucalyptus.msgs.CheckImageResponseType;
+import edu.ucsb.eucalyptus.msgs.CheckImageType;
+import edu.ucsb.eucalyptus.msgs.CopyObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.CopyObjectType;
+import edu.ucsb.eucalyptus.msgs.CreateBucketResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateBucketType;
+import edu.ucsb.eucalyptus.msgs.DeleteBucketResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteBucketType;
+import edu.ucsb.eucalyptus.msgs.DeleteObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteObjectType;
+import edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotType;
+import edu.ucsb.eucalyptus.msgs.FlushCachedImageResponseType;
+import edu.ucsb.eucalyptus.msgs.FlushCachedImageType;
+import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
+import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType;
+import edu.ucsb.eucalyptus.msgs.GetBucketLocationResponseType;
+import edu.ucsb.eucalyptus.msgs.GetBucketLocationType;
+import edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusResponseType;
+import edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusType;
+import edu.ucsb.eucalyptus.msgs.GetDecryptedImageResponseType;
+import edu.ucsb.eucalyptus.msgs.GetDecryptedImageType;
+import edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType;
+import edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyType;
+import edu.ucsb.eucalyptus.msgs.GetObjectExtendedResponseType;
+import edu.ucsb.eucalyptus.msgs.GetObjectExtendedType;
+import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.GetObjectType;
+import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType;
+import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType;
+import edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotType;
+import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType;
+import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
+import edu.ucsb.eucalyptus.msgs.ListBucketResponseType;
+import edu.ucsb.eucalyptus.msgs.ListBucketType;
+import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.PostObjectType;
+import edu.ucsb.eucalyptus.msgs.PutObjectInlineResponseType;
+import edu.ucsb.eucalyptus.msgs.PutObjectInlineType;
+import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.PutObjectType;
+import edu.ucsb.eucalyptus.msgs.SetBucketAccessControlPolicyResponseType;
+import edu.ucsb.eucalyptus.msgs.SetBucketAccessControlPolicyType;
+import edu.ucsb.eucalyptus.msgs.SetBucketLoggingStatusResponseType;
+import edu.ucsb.eucalyptus.msgs.SetBucketLoggingStatusType;
+import edu.ucsb.eucalyptus.msgs.SetObjectAccessControlPolicyResponseType;
+import edu.ucsb.eucalyptus.msgs.SetObjectAccessControlPolicyType;
+import edu.ucsb.eucalyptus.msgs.SetRESTBucketAccessControlPolicyResponseType;
+import edu.ucsb.eucalyptus.msgs.SetRESTBucketAccessControlPolicyType;
+import edu.ucsb.eucalyptus.msgs.SetRESTObjectAccessControlPolicyResponseType;
+import edu.ucsb.eucalyptus.msgs.SetRESTObjectAccessControlPolicyType;
+import edu.ucsb.eucalyptus.msgs.StoreSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.StoreSnapshotType;
+import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationResponseType;
+import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
-import com.eucalyptus.util.WalrusProperties;
-import org.apache.log4j.Logger;
-import  edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 
 public class WalrusControl {
 
@@ -100,7 +157,11 @@ public class WalrusControl {
 		if(limits != null) {
 			WalrusProperties.shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
 		}
-		walrusManager.initialize();
+		try {
+			walrusManager.initialize();
+		} catch(EucalyptusCloudException ex) {
+			LOG.error("Error initializing walrus", ex);
+		}
 		Tracker.initialize();
 		if(System.getProperty("euca.virtualhosting.disable") != null) {
 			WalrusProperties.enableVirtualHosting = false;
