@@ -132,7 +132,7 @@ public class Registration extends HttpServlet {
         "  </Services>\n" +
         "  <id>" + uuid + "</id>" +
         "  <CloudType>eucalyptus</CloudType>\n" +
-        "  <CloudVersion>1.5.2</CloudVersion>\n" +
+        "  <CloudVersion>"+System.getProperty( "euca.version" )+"</CloudVersion>\n" +
         "  <SchemaVersion>1.0</SchemaVersion>\n" +
         "  <Description>Public cloud in the new cluster</Description>\n" +
         "  <Credentials type=\"array\">\n" +
