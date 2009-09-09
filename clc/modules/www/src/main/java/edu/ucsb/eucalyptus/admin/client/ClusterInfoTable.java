@@ -85,6 +85,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	public ClusterInfoTable(String sessionId)
 	{
 		this.sessionId = sessionId;
+		this.setStyleName("euca-config-component");
 		this.setSpacing (2);
 		this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
 //		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
@@ -96,7 +97,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		HorizontalPanel grid_and_hint = new HorizontalPanel ();
 		grid_and_hint.add ( this.grid );
 		grid_and_hint.add ( this.hint );
-		this.hint.setWidth ("180");
+		this.hint.setWidth ("100");
 		this.add ( grid_and_hint );
 		HorizontalPanel hpanel = new HorizontalPanel ();
 		hpanel.setSpacing (2);
@@ -118,9 +119,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 	public void onClick( final Widget widget ) // Add cluster button
 	{
-		this.clusterList.add (new ClusterInfoWeb ("name", "host", 8774, 10, 4096));
+		this.clusterList.add (new ClusterInfoWeb ("cluster-name", "cc-host", 8774, 10, 4096));
 		//these values are just defaults
-		this.storageList.add (new StorageInfoWeb("sc-name", "host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false));
+		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false));
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");
@@ -163,15 +164,15 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 	private Grid addClusterEntry ( int row, ClusterInfoWeb clusterInfo, final StorageInfoWeb storageInfo)
 	{
-		Grid g = new Grid (13, 2);
+		Grid g = new Grid (15, 2);
 		g.setStyleName( "euca-table" );
 		g.setCellPadding( 4 );
 
 		int i = 0; // row 1
-		g.setWidget( i, 0, new Label( "Name: " ) );
+		g.setWidget( i, 0, new HTML( "<b>Name:</b>" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final HorizontalPanel namePanel = new HorizontalPanel ();
-		namePanel.setSpacing (6);
+		namePanel.setSpacing (0);
 
 		if (clusterInfo.isCommitted()) {
 			namePanel.add (new Label ( clusterInfo.getName() ));
@@ -183,11 +184,14 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			nb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 			namePanel.add ( nb );
 		}
-		namePanel.add (new Button ("Delete Cluster", new DeleteCallback( this, row )));
+		namePanel.add (new Button ("Deregister Cluster", new DeleteCallback( this, row )));
 		g.setWidget ( i, 1, namePanel);
 
 		i++; // next row
-		g.setWidget( i, 0, new Label( "Cluster Controller Host: " ) );
+		g.setWidget( i, 1, new Label( "Cluster Controller" ));
+		
+		i++; // next row
+		g.setWidget( i, 0, new Label( "Host:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox hb = new TextBox();
 		hb.addChangeListener (new ChangeCallback (this, row));
@@ -197,7 +201,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		g.setWidget ( i, 1, hb );
 
 		i++; // next row
-		g.setWidget( i, 0, new Label( "Port: " ) );
+		g.setWidget( i, 0, new Label( "Port:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox pb = new TextBox();
 		pb.addChangeListener (new ChangeCallback (this, row));
@@ -207,7 +211,10 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		g.setWidget( i, 1, pb );
 
 		i++; // next row
-		g.setWidget( i, 0, new Label( "Storage Controller Host: " ) );
+		g.setWidget( i, 1, new Label( "Storage Controller" ));
+		
+		i++; // next row
+		g.setWidget( i, 0, new Label( "Host:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox sb = new TextBox();
 		sb.addChangeListener (new ChangeCallback (this, row));
@@ -217,21 +224,21 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		g.setWidget ( i, 1, sb );
 		
 		i++; // next row
-		g.setWidget( i, 0, new Label( "Storage Interface: " ) );
+		g.setWidget( i, 0, new Label( "Interface:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox sib = new TextBox();
 		sib.addChangeListener (new ChangeCallback (this, row));
-		sib.setVisibleLength( 10 );
+		sib.setVisibleLength( 5 );
 		sib.setText( "" + storageInfo.getStorageInterface());
 		sib.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 		g.setWidget( i, 1, sib );
 
 		i++; // next row
-		g.setWidget( i, 0, new Label( "Volumes Path:" ) );
+		g.setWidget( i, 0, new Label( "Volumes path:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox volumesPathBox = new TextBox();
 		volumesPathBox.addChangeListener (new ChangeCallback (this, row));
-		volumesPathBox.setVisibleLength( 40 );
+		volumesPathBox.setVisibleLength( 30 );
 		volumesPathBox.setText( storageInfo.getVolumesPath() );
 		volumesPathBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 		g.setWidget( i, 1, volumesPathBox );
@@ -241,12 +248,13 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox volumeMaxBox = new TextBox();
 		volumeMaxBox.addChangeListener (new ChangeCallback (this, row));
-		volumeMaxBox.setVisibleLength( 10 );
+		volumeMaxBox.setVisibleLength( 5 );
 		volumeMaxBox.setText( "" + storageInfo.getMaxVolumeSizeInGB());
 		volumeMaxBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 		final HorizontalPanel volumesMaxPanel = new HorizontalPanel ();
+		volumesMaxPanel.setSpacing(4);
 		volumesMaxPanel.add (volumeMaxBox);
-		volumesMaxPanel.add (new HTML ("&nbsp; GB"));
+		volumesMaxPanel.add (new Label ("GB"));
 		g.setWidget( i, 1, volumesMaxPanel );
 
 		i++; // next row
@@ -254,18 +262,19 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox volumesTotalBox = new TextBox();
 		volumesTotalBox.addChangeListener (new ChangeCallback (this, row));
-		volumesTotalBox.setVisibleLength( 10 );
+		volumesTotalBox.setVisibleLength( 5 );
 		volumesTotalBox.setText( "" + storageInfo.getTotalVolumesSizeInGB());
 		volumesTotalBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 		final HorizontalPanel volumesTotalPanel = new HorizontalPanel ();
+		volumesTotalPanel.setSpacing(4);
 		volumesTotalPanel.add (volumesTotalBox);
-		volumesTotalPanel.add (new HTML ("&nbsp; GB"));
+		volumesTotalPanel.add (new Label ("GB"));
 		g.setWidget( i, 1, volumesTotalPanel );
 
 		i++; // next row
-		final HorizontalPanel zeroFillVolumesPanel = new HorizontalPanel ();
-		final CheckBox zeroFillVolumesCheckbox = new CheckBox ("Zero fill volumes");
-		zeroFillVolumesPanel.add( zeroFillVolumesCheckbox );
+		final CheckBox zeroFillVolumesCheckbox = new CheckBox ();
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		g.setWidget( i, 0, zeroFillVolumesCheckbox );
 		if (storageInfo.getZeroFillVolumes()) {
 			zeroFillVolumesCheckbox.setChecked(true);
 		} else {
@@ -281,14 +290,14 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 				}
 			}
 		});
-		g.setWidget( i, 1, zeroFillVolumesPanel );
+		g.setWidget( i, 1, new Label ("Zero-fill volumes") );
 
 		final TextBox reservedAddressesBox = new TextBox(); // declare here, set up after the checkbox later
 
 		i++; // next row
-		final HorizontalPanel dynamicAddressesingPanel = new HorizontalPanel ();
-		final CheckBox dynamicAddressesCheckbox = new CheckBox ("Enable dynamic public IP address assignment");
-		dynamicAddressesingPanel.add( dynamicAddressesCheckbox );
+		final CheckBox dynamicAddressesCheckbox = new CheckBox ();
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		g.setWidget (i, 0, dynamicAddressesCheckbox );
 		if (systemConfig.isDoDynamicPublicAddresses()) {
 			dynamicAddressesCheckbox.setChecked(true);
 			reservedAddressesBox.setEnabled(false);
@@ -308,17 +317,18 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 				}
 			}
 		});
-		g.setWidget( i, 1, dynamicAddressesingPanel );
+		g.setWidget( i, 1, new Label ("Dynamic public IP address assignment") );
 
 		i++; // next row
-		g.setWidget( i, 0, new Label( "Total of" ) );
+		g.setWidget( i, 0, new Label( "Reserve for assignment" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		reservedAddressesBox.addChangeListener (new ChangeCallback (this, row));
-		reservedAddressesBox.setVisibleLength( 10 );
+		reservedAddressesBox.setVisibleLength( 5 );
 		reservedAddressesBox.setText( "" + systemConfig.getSystemReservedPublicAddresses());
 		final HorizontalPanel reservedAddressesPanel = new HorizontalPanel ();
+		reservedAddressesPanel.setSpacing(4);
 		reservedAddressesPanel.add (reservedAddressesBox);
-		reservedAddressesPanel.add (new HTML ("&nbsp; public IP addresses reserved for instances"));
+		reservedAddressesPanel.add (new HTML ("public IP addresses"));
 		reservedAddressesBox.setText(""+systemConfig.getSystemReservedPublicAddresses());
 		g.setWidget( i, 1, reservedAddressesPanel );
 		
@@ -327,15 +337,16 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox publicAddressesBox = new TextBox();
 		publicAddressesBox.addChangeListener (new ChangeCallback (this, row));
-		publicAddressesBox.setVisibleLength( 10 );
+		publicAddressesBox.setVisibleLength( 5 );
 		publicAddressesBox.setText( "" + systemConfig.getMaxUserPublicAddresses());
 		final HorizontalPanel publicAddressesPanel = new HorizontalPanel ();
+		publicAddressesPanel.setSpacing(4);
 		publicAddressesPanel.add (publicAddressesBox);
-		publicAddressesPanel.add (new HTML ("&nbsp; public IP addresses per user"));
+		publicAddressesPanel.add (new HTML ("public IP addresses per user"));
 		g.setWidget( i, 1, publicAddressesPanel );
 		
 		i++;
-		g.setWidget( i, 0, new Label( "Eucalyptus can use VLAN tags" ) );
+		g.setWidget( i, 0, new Label( "Use VLAN tags" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox minVlanBox = new TextBox();
 		minVlanBox.addChangeListener (new ChangeCallback (this, row));
@@ -346,8 +357,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		maxVlanBox.setVisibleLength( 4 );
 		maxVlanBox.setText(String.valueOf(clusterInfo.getMaxVlans()));
 		final HorizontalPanel vlanPanel = new HorizontalPanel ();
+		vlanPanel.setSpacing(4);
 		vlanPanel.add (minVlanBox);
-		vlanPanel.add (new HTML ("&nbsp; through &nbsp;"));
+		vlanPanel.add (new HTML ("through"));
 		vlanPanel.add (maxVlanBox);
 		g.setWidget( i, 1, vlanPanel );
 
@@ -387,20 +399,20 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			cluster.setName (((Label)p.getWidget(0)).getText());
 			storage.setName (((Label)p.getWidget(0)).getText());
 		}
-		cluster.setHost (((TextBox)g.getWidget(1, 1)).getText());
-		cluster.setPort (Integer.parseInt(((TextBox)g.getWidget(2, 1)).getText()));
-		storage.setHost (((TextBox)g.getWidget(3, 1)).getText());	
-		storage.setStorageInterface(((TextBox)g.getWidget(4, 1)).getText());
-		storage.setVolumesPath (((TextBox)g.getWidget(5, 1)).getText());
-		p = (HorizontalPanel)g.getWidget(6, 1);
+		cluster.setHost (((TextBox)g.getWidget(2, 1)).getText());
+		cluster.setPort (Integer.parseInt(((TextBox)g.getWidget(3, 1)).getText()));
+		storage.setHost (((TextBox)g.getWidget(5, 1)).getText());	
+		storage.setStorageInterface(((TextBox)g.getWidget(6, 1)).getText());
+		storage.setVolumesPath (((TextBox)g.getWidget(7, 1)).getText());
+		p = (HorizontalPanel)g.getWidget(8, 1);
 		storage.setMaxVolumeSizeInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
-		p = (HorizontalPanel)g.getWidget(7, 1);
+		p = (HorizontalPanel)g.getWidget(9, 1);
 		storage.setTotalVolumesSizeInGB((Integer.parseInt(((TextBox)p.getWidget(0)).getText())));
-		p = (HorizontalPanel)g.getWidget(10, 1);
-		systemConfig.setSystemReservedPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
-		p = (HorizontalPanel)g.getWidget(11, 1);
-		systemConfig.setMaxUserPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
 		p = (HorizontalPanel)g.getWidget(12, 1);
+		systemConfig.setSystemReservedPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
+		p = (HorizontalPanel)g.getWidget(13, 1);
+		systemConfig.setMaxUserPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
+		p = (HorizontalPanel)g.getWidget(14, 1);
 		cluster.setMinVlans(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
 		cluster.setMaxVlans(Integer.parseInt(((TextBox)p.getWidget(1)).getText()));
 		//    systemConfig.setDoDynamicPublicAddresses( !((TextBox)p.getWidget(0)).isEnabled() ? true : false );

@@ -216,7 +216,7 @@ h1 {
 
 .istore-how-to-run-dialog .istore-summary-label,
 .istore-how-to-run-dialog .istore-footer-label {
-  width: 40em;
+  /* width: 40em; removed by dmitrii */
   margin: 1em 0.5em 1em 0.5em;
 }
 

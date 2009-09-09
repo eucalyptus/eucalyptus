@@ -1,3 +1,7 @@
+/*
+ * CSS stylesheet for the standard Eucalyptus theme
+ */
+
 a:focus {-moz-outline: none /* fx 1.07*/ outline:none /* fx 1.05, Safari, Mac IE*/}
 
 body {
@@ -10,6 +14,10 @@ body {
 
 body a { 
     color: green;
+}
+
+button{
+	margin: 3px 3px 3px 3px;
 }
 
 .euca-greeting-normal {
@@ -87,6 +95,10 @@ body a {
 .euca-message-bar {
 	width: 100%;
 	height: 2em;
+}
+
+.euca-config-component {
+	margin: 0 auto; /* center components */	
 }
 
 .euca-tab-with-text { 
@@ -183,8 +195,12 @@ body a {
     width: 400px;
 }
 .gwt-DialogBox .Caption {
-    font-size: smaller;
+    font-size: bold;	
 }
 .gwt-DialogBox .dialogContent { 
     padding: 10px 0px 0px 0px;
+}
+
+.euca-inline-image {
+	padding: 3px 3px 3px 3px;
 }

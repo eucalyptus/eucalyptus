@@ -95,6 +95,7 @@ public class SystemConfigTable extends VerticalPanel {
 	public SystemConfigTable(String sessionId)
 	{
 		this.sessionId = sessionId;
+		this.setStyleName("euca-config-component");
 		//		this.setSpacing (10);
 		this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
 		//		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
@@ -149,7 +150,7 @@ public class SystemConfigTable extends VerticalPanel {
 		this.c_grid.setWidget( i, 0, new Label( "Cloud Host:" ) );
 		this.c_grid.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		cloudHost_box.addChangeListener (new ChangeCallback (this));
-		cloudHost_box.setVisibleLength(55);
+		cloudHost_box.setVisibleLength(20);
 		cloudHost_box.setText (SystemConfig.getCloudHost()); 
 		cloudHost_box.addFocusListener (new FocusHandler (c_hint, "Warning: Changing the Cloud URL will invalidate any existing credentials, and will prevent existing users from accessing the system."));
 		this.c_grid.setWidget( i++, 1, cloudHost_box );

@@ -312,9 +312,9 @@ public class ImageWidget extends Composite {
                                             PROGRESS_DONE_URI,
                                             120, 12);
 
-        final Anchor howToRunAnchor = new Anchor("how to run");
-        final Anchor showErrorAnchor = new Anchor("show error");
-        final Anchor cancelAnchor = new Anchor("cancel");
+        final Anchor howToRunAnchor = new Anchor("How to run?");
+        final Anchor showErrorAnchor = new Anchor("Show error");
+        final Anchor cancelAnchor = new Anchor("Cancel");
 
         Image upgradeIconImage = new Image(UPGRADE_ICON_URI);
 

@@ -1493,6 +1493,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         History.newItem("credentials");
 
         VerticalPanel credspanel = new VerticalPanel ();
+        credspanel.setSpacing(5);
         parent.add (credspanel);
         credspanel.getElement().setClassName ("euca-tab-with-text");
 
@@ -1507,11 +1508,10 @@ public class EucalyptusWebInterface implements EntryPoint {
 		userGrid.setText(2, 0, "Email:");
 		userGrid.setHTML(2, 1, "<b>" + loggedInUser.getEmail() +"</b>");
 		ppanel.add(userGrid);
-		
 		ppanel.add (new HTML ("<p>" + user_account_text + "</p>"));
-		
-		ppanel.setStyleName( "euca-text" );
+		ppanel.setStyleName("euca-text");
 		ppanel.addStyleName("content");
+		
         Button passwordButton = new Button ( "Change Password",
                 new ClickListener() {
                     public void onClick(Widget sender) {
@@ -1524,7 +1524,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 						displayUserRecordPage (RootPanel.get(), loggedInUser);
 					}
 			});
-        ppanel.setSpacing( 5 );
+        ppanel.setSpacing( 0 );
 		ppanel.add(editButton);
         ppanel.add(passwordButton);
 
@@ -1543,7 +1543,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		});
 
         VerticalPanel rpanel = new VerticalPanel();
-		rpanel.setSpacing (5);
+		rpanel.setSpacing (0);
         HTML credentials_html = new HTML (rest_credentials_text);
         credentials_html.setStyleName("content");
 		rpanel.add( credentials_html );
@@ -1600,7 +1600,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 
 		if (loggedInUser.isAdministrator() && show_cloud_registration) {
 	        VerticalPanel cloud_panel = new VerticalPanel();
-			cloud_panel.setSpacing (5);
+			cloud_panel.setSpacing (0);
 	        cloud_panel.add( new HTML (cloud_registration_text) );
 			Grid g1 = new Grid (2, 2);
 			g1.setWidget (0, 0, new HTML ("<b><font size=\"2\">Cloud URL:</font></b>"));
@@ -1626,12 +1626,14 @@ public class EucalyptusWebInterface implements EntryPoint {
 //			g.getCellFormatter().setVerticalAlignment(3, 0, HasVerticalAlignment.ALIGN_TOP);
 			credspanel.add(cloud_panel);
 			VerticalPanel vp = new VerticalPanel();
-			vp.setSpacing (3);
+			vp.setSpacing (0);
 			HorizontalPanel hp = new HorizontalPanel();
-			hp.setSpacing (3);
+			hp.setSpacing (0);
 			hp.add (cloudButton);
 			hp.add (new HTML ("with"));
-			hp.add (new Image ("themes/share/rightscale-logo-blue.gif"));
+			Image logo = new Image ("themes/share/rightscale-logo-blue.gif");
+			logo.setStyleName("euca-inline-image");
+			hp.add (logo);
 			vp.add (hp);
 //			g.setWidget( 3, 1, vp );
 //			g.getCellFormatter().setVerticalAlignment(3, 1, HasVerticalAlignment.ALIGN_TOP);
@@ -2290,7 +2292,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		History.newItem("conf");
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
-        vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER); // michael had this commented out
+        //vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER); // michael had this commented out
 		vpanel.add (new SystemConfigTable (sessionId));
 		vpanel.add (new WalrusInfoTable (sessionId));
 		vpanel.add (new ClusterInfoTable (sessionId));
@@ -2305,7 +2307,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		History.newItem("extras");
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
-        vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+        //vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
 		vpanel.add (new DownloadsTable(sessionId,
                 "http://www.eucalyptussoftware.com/downloads/eucalyptus-images/list.php?version=" + URL.encode(version),
                 "http://open.eucalyptus.com/wiki/EucalyptusUserImageCreatorGuide_v1.6",

@@ -1,3 +1,7 @@
+/*
+ * CSS stylesheet for the Ubuntu Enterprise Cloud theme
+ */
+
 a:focus {-moz-outline: none /* fx 1.07*/ outline:none /* fx 1.05, Safari, Mac IE*/}
 
 body {
@@ -11,16 +15,20 @@ body {
 	padding:0;
 }
 
+body a { 
+    color: green;
+}
+
 h3,.euca-section-header{
 	color:#ff6600; /*orange*/
 	font-size:1.1em;
-	padding-top:10px;
+	padding-top:20px;
 	margin-top:0;
 	font-weight:bold;
 }
 p{
-	padding-top:20px;
-	padding-bottom:20px;
+	/* padding-top:20px;
+	padding-bottom:20px; */
 	color:#737373;
 	font-size:0.85em;
 }
@@ -32,7 +40,7 @@ td{
 }
 
 button{
-	margin-bottom:30px;
+	margin: 3px 3px 3px 3px;
 }
 
 table.euca-top-bar, .gwt-TabBar, .euca-tab-contents{
@@ -111,9 +119,6 @@ table.euca-top-bar, .gwt-TabBar, .euca-tab-contents{
     font-size: x-small;
 	color: gray;
 }
-
-
-
 
 .euca-top-bar {
 	height:100px;
@@ -194,7 +199,7 @@ table.euca-top-bar, .gwt-TabBar, .euca-tab-contents{
     font-size: x-small;
 	text-decoration: underline;
 	cursor: pointer;
-	color: blue;
+	color: green;
 }
 
 .euca-table-heading-row {
@@ -221,8 +226,12 @@ table.euca-top-bar, .gwt-TabBar, .euca-tab-contents{
     width: 400px;
 }
 .gwt-DialogBox .Caption {
-    font-size: smaller;
+    font-size: bold;	
 }
 .gwt-DialogBox .dialogContent { 
     padding: 10px 0px 0px 0px;
+}
+
+.euca-inline-image {
+	padding: 3px 3px 3px 3px;
 }

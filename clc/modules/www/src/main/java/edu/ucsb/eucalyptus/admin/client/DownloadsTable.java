@@ -82,13 +82,14 @@ public class DownloadsTable extends VerticalPanel {
 
     public DownloadsTable(String sessionId, String theUrl, String theHumanUrl, String theName, int maxEntries) {
         this.sessionId = sessionId;
+		this.setStyleName("euca-config-component");
         this.theUrl = theUrl;
         this.theHumanUrl = theHumanUrl;
         this.theName = theName;
         this.maxEntries = maxEntries;
         this.setSpacing(10);
-        this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
-        this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+        //this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
+        //this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
         this.DownloadsHeader.setText(this.theName);
         this.DownloadsHeader.setStyleName("euca-section-header");
         this.add(DownloadsHeader);

@@ -78,6 +78,7 @@ public class VmTypeTable extends VerticalPanel {
 	public VmTypeTable(String sessionId)
 	{
 		this.sessionId = sessionId;
+		this.setStyleName("euca-config-component");
 		this.setSpacing (10);
 		this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
 //		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);

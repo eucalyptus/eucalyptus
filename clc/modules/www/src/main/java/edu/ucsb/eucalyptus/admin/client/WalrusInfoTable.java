@@ -87,6 +87,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 	public WalrusInfoTable(String sessionId)
 	{
 		this.sessionId = sessionId;
+		this.setStyleName("euca-config-component");
 		this.setSpacing (2);
 		this.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
 //		this.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
@@ -98,7 +99,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 		HorizontalPanel grid_and_hint = new HorizontalPanel ();
 		grid_and_hint.add ( this.grid );
 		grid_and_hint.add ( this.hint );
-		this.hint.setWidth ("180");
+		this.hint.setWidth ("100");
 		this.add ( grid_and_hint );
 		HorizontalPanel hpanel = new HorizontalPanel ();
 		hpanel.setSpacing (2);
@@ -158,76 +159,71 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 
 	private Grid addWalrusEntry ( int row, WalrusInfoWeb walrusInfo)
 	{
-		Grid g = new Grid (5, 2);
+		Grid g = new Grid (6, 2);
 		g.setStyleName( "euca-table" );
 		g.setCellPadding( 4 );
 
 		int i = 0; // row 1
-		g.setWidget( i, 0, new Label( "Walrus Host:" ) );
+		g.setWidget( i, 0, new Label( "Walrus host:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		HorizontalPanel wpanel = new HorizontalPanel ();
-		wpanel.setSpacing(0);
-		g.setWidget( i, 1, wpanel );
+		HorizontalPanel p = new HorizontalPanel ();
+		p.setSpacing(0);
+		g.setWidget( i, 1, p );
 		final TextBox walrusHost_box = new TextBox();
 		walrusHost_box.addChangeListener (new ChangeCallback (this, row));
-		walrusHost_box.setVisibleLength(55);
+		walrusHost_box.setVisibleLength(35);
 		walrusHost_box.setText (walrusInfo.getHost());
-		wpanel.add (walrusHost_box);
-		wpanel.add (new Button ("Delete Walrus", new DeleteCallback( this, row )));
+		p.add (walrusHost_box);
+		p.add (new Button ("Deregister", new DeleteCallback( this, row )));
 		
 		i++; // next row
 		g.setWidget( i, 0, new Label( "Buckets path:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox walrusPath_box = new TextBox();
 		walrusPath_box.addChangeListener (new ChangeCallback (this, row));
-		walrusPath_box.setVisibleLength(55);
+		walrusPath_box.setVisibleLength(35);
 		walrusPath_box.setText (walrusInfo.getBucketsRootDirectory());
 		walrusPath_box.addFocusListener (new FocusHandler (hint, "Warning! Changing the path may make inaccessible any content uploaded to the old path, including images, kernels, and ramdisks."));
 		g.setWidget( i, 1, walrusPath_box );
 
 		i++; // next row
-		g.setWidget( i, 0, new Label( "Max buckets per user:" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		HorizontalPanel hpanel = new HorizontalPanel ();
-		hpanel.setSpacing (0);
-		g.setWidget( i, 1, hpanel );
 		final TextBox maxBuckets_box = new TextBox();
 		maxBuckets_box.addChangeListener (new ChangeCallback (this, row));
 		maxBuckets_box.setVisibleLength(10);
 		maxBuckets_box.setText (""+walrusInfo.getMaxBucketsPerUser());
-		hpanel.add (maxBuckets_box);
-		hpanel.add ( new HTML ("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Max bucket size: &nbsp;"));
+		g.setWidget( i, 0, maxBuckets_box);
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		g.setWidget( i, 1, new Label( "Maximum buckets per user" ));
+
+		i++; // next row
 		final TextBox maxBucketSize_box = new TextBox();
 		maxBucketSize_box.addChangeListener (new ChangeCallback (this, row));
 		maxBucketSize_box.setVisibleLength(10);
 		maxBucketSize_box.setText (""+walrusInfo.getMaxBucketSizeInMB());
 		maxBucketSize_box.addFocusListener (new FocusHandler (hint, "You are urged to consult the documentation before changing the default value!"));
-		hpanel.add (maxBucketSize_box);
-		hpanel.add ( new HTML ("&nbsp; MB"));
+		g.setWidget( i, 0, maxBucketSize_box);
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		g.setWidget( i, 1, new Label ("MB maximum bucket size"));
 
 		i++; // next row
-		HorizontalPanel hpanel3 = new HorizontalPanel ();
-		hpanel3.setSpacing (0);
-		g.setWidget( i, 1, hpanel3 );
 		final TextBox maxCacheSize_box = new TextBox();
 		maxCacheSize_box.addChangeListener (new ChangeCallback (this, row));
 		maxCacheSize_box.setVisibleLength(10);
 		maxCacheSize_box.setText ("" + walrusInfo.getMaxCacheSizeInMB());
 		maxCacheSize_box.addFocusListener (new FocusHandler (hint, "You are urged to consult the documentation before changing the default value!"));
-		hpanel3.add ( maxCacheSize_box );
-		hpanel3.add ( new HTML ("&nbsp; MB of disk are reserved for the image cache"));
+		g.setWidget( i, 0, maxCacheSize_box );
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		g.setWidget( i, 1, new Label ("MB of disk are reserved for the image cache"));		
 
 		i++; // next row
-		HorizontalPanel hpanel4 = new HorizontalPanel ();
-		hpanel4.setSpacing (0);
-		g.setWidget( i, 1, hpanel4 );
 		final TextBox totalSnapshots_box = new TextBox();
 		totalSnapshots_box.addChangeListener (new ChangeCallback (this, row));
 		totalSnapshots_box.setVisibleLength(10);
 		totalSnapshots_box.setText ("" + walrusInfo.getSnapshotsTotalInGB());
 		totalSnapshots_box.addFocusListener (new FocusHandler (hint, "You are urged to consult the documentation before changing the default value!"));
-		hpanel4.add ( totalSnapshots_box );
-		hpanel4.add ( new HTML ("&nbsp; GB of disk are reserved for snapshots"));
+		g.setWidget( i, 0, totalSnapshots_box );
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		g.setWidget( i, 1, new Label ("GB of disk are reserved for snapshots"));
 
 		return g;
 	}
@@ -247,15 +243,12 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 		WalrusInfoWeb walrus = this.walrusList.get (row);
 		Grid g = (Grid)this.grid.getWidget(row, 0);
 		HorizontalPanel p = (HorizontalPanel)g.getWidget(0, 1);
-		walrus.setHost (((TextBox)p.getWidget(0)).getText());
-		walrus.setBucketsRootDirectory(((TextBox)g.getWidget(1, 1)).getText());		
-		p = (HorizontalPanel)g.getWidget(2, 1);
-		walrus.setMaxBucketsPerUser(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
-		walrus.setMaxBucketSizeInMB(Long.parseLong(((TextBox)p.getWidget(2)).getText()));
-		p = (HorizontalPanel)g.getWidget(3, 1);
-		walrus.setMaxCacheSizeInMB (Long.parseLong(((TextBox)p.getWidget(0)).getText()));
-		p = (HorizontalPanel)g.getWidget(4, 1);
-		walrus.setSnapshotsTotalInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
+		walrus.setHost                 (((TextBox)p.getWidget(0)).getText());
+		walrus.setBucketsRootDirectory (((TextBox)g.getWidget(1, 1)).getText());		
+		walrus.setMaxBucketsPerUser    (Integer.parseInt (((TextBox)g.getWidget(2, 0)).getText()));
+		walrus.setMaxBucketSizeInMB    (Long.parseLong   (((TextBox)g.getWidget(3, 0)).getText()));
+		walrus.setMaxCacheSizeInMB     (Long.parseLong   (((TextBox)g.getWidget(4, 0)).getText()));
+		walrus.setSnapshotsTotalInGB   (Integer.parseInt (((TextBox)g.getWidget(5, 0)).getText()));
 	}
 
 	public void MarkCommitted ()
