@@ -653,12 +653,9 @@ public class WalrusManager {
 								md5 = monitor.getMd5();
 							}
 							//ok we are done here
-							try {
-								fileIO.finish();
-								storageManager.deleteObject(bucketName, tempObjectName);
-							} catch (IOException ex) {
-								LOG.error(ex);
-							}
+							fileIO.finish();
+							ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, tempObjectName, -1L);
+							objectDeleter.start();
 							db.rollback();
 							LOG.info("Transfer interrupted: "+ key);
 							break;
@@ -952,15 +949,8 @@ public class WalrusManager {
 					}
 					Long size = foundObject.getSize();
 					bucketInfo.setBucketSize(bucketInfo.getBucketSize() - size);
-					try {
-						storageManager.deleteObject(bucketName, objectName);
-						if(WalrusProperties.trackUsageStatistics)
-							walrusStatistics.updateSpaceUsed(-size);
-					} catch (IOException ex) {
-						db.rollback();
-						LOG.error(ex);
-						throw new EucalyptusCloudException(objectKey);
-					}
+					ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, objectName, size);
+					objectDeleter.start();
 					reply.setCode("200");
 					reply.setDescription("OK");
 				} else {
@@ -977,6 +967,27 @@ public class WalrusManager {
 		}
 		db.commit();
 		return reply;
+	}
+
+	private class ObjectDeleter extends Thread {
+		String bucketName;
+		String objectName;
+		Long size;
+		public ObjectDeleter(String bucketName, String objectName, Long size) {
+			this.bucketName = bucketName;
+			this.objectName = objectName;
+			this.size = size;
+		}
+
+		public void run() {
+			try {
+				storageManager.deleteObject(bucketName, objectName);
+				if(WalrusProperties.trackUsageStatistics && (size > 0))
+					walrusStatistics.updateSpaceUsed(-size);
+			} catch(IOException ex) {
+				LOG.error(ex, ex);
+			}
+		}
 	}
 
 	public ListBucketResponseType listBucket(ListBucketType request) throws EucalyptusCloudException {
