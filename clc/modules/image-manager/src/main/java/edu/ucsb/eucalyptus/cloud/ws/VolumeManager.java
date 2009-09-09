@@ -77,7 +77,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
-import com.eucalyptus.images.StorageUtil;
+import com.eucalyptus.images.util.StorageUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -118,20 +118,17 @@ public class VolumeManager {
     if( ( request.getSnapshotId() == null && request.getSize() == null ) ) {
       throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }
-
     try {
       Configuration.getClusterConfiguration( request.getAvailabilityZone( ) );
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Zone does not exist: " + request.getAvailabilityZone(), e );
     }
-
     StorageControllerConfiguration sc;
     try {
       sc = Configuration.getStorageControllerConfiguration( request.getAvailabilityZone( ) );
     } catch ( Exception e ) {
       throw new EucalyptusCloudException("Storage services are not available for the requested availability zone.", e );
     }
-
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     if ( request.getSnapshotId() != null ) {
       String userName = request.isAdministrator() ? null : request.getUserId();
@@ -142,8 +139,7 @@ public class VolumeManager {
         db.rollback();
         throw new EucalyptusCloudException( "Snapshot does not exist: " + request.getSnapshotId() );
       }
-    }
-    
+    }    
     String newId = null;
     Volume newVol = null;
     while ( true ) {
@@ -158,7 +154,6 @@ public class VolumeManager {
       }
     }
     newVol.setState( State.GENERATING );
-
     try {
       CreateStorageVolumeType req = new CreateStorageVolumeType( newId, request.getSize( ), request.getSnapshotId( ) );
       req.setUserId( request.getUserId( ) );
@@ -170,7 +165,6 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Error communicating with Storage Controller: CreateStorageVolume:" + e.getMessage() );
     }
     db.commit();
-
     CreateVolumeResponseType reply = ( CreateVolumeResponseType ) request.getReply();
     reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume() ) );
     return reply;

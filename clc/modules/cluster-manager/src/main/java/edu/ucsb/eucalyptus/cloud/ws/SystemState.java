@@ -68,6 +68,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterMessageQueue;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.*;
@@ -505,16 +506,14 @@ public class SystemState {
     return new StateSnapshot( rules );
   }
 
-  //:: TODO: this is not right, cross 
-  //:: package hackery ::/
   public static Network getUserNetwork( String userId, String networkName ) throws EucalyptusCloudException {
     EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
     try {
       UserInfo user = db.getUnique( new UserInfo( userId ) );
-      for ( NetworkRulesGroup group : user.getNetworkRulesGroup() ) {
-        if ( networkName.equals( group.getName() ) )
-          return group.getVmNetwork( userId );
-      }
+//FIXME:      for ( NetworkRulesGroup group : user.getNetworkRulesGroup() ) {
+//        if ( networkName.equals( group.getDisplayName() ) )
+//          return group.getVmNetwork( userId );
+//      }
     }
     catch ( EucalyptusCloudException e ) {
       db.rollback();

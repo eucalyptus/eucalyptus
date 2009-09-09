@@ -66,18 +66,19 @@
  */
 package edu.ucsb.eucalyptus.util;
 
-import edu.ucsb.eucalyptus.cloud.entities.NetworkRulesGroup;
-import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import java.security.NoSuchAlgorithmException;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.SubDirectory;
-
-import java.security.NoSuchAlgorithmException;
 import com.eucalyptus.util.WalrusProperties;
+
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 
 public class UserManagement {
 
@@ -104,8 +105,8 @@ public class UserManagement {
     admin.setConfirmationCode( UserManagement.generateConfirmationCode( admin.getUserName( ) ) );
     admin.setCertificateCode( UserManagement.generateCertificateCode( admin.getUserName( ) ) );
 
-    admin.setSecretKey( UserManagement.generateSecretKey( admin.getUserName( ) ) );
-    admin.setQueryId( UserManagement.generateQueryId( admin.getUserName( ) ) );
+//FIXME:    admin.setSecretKey( UserManagement.generateSecretKey( admin.getUserName( ) ) );
+//FIXME:    admin.setQueryId( UserManagement.generateQueryId( admin.getUserName( ) ) );
 
     admin.setReservationId( 0l );
 
@@ -114,7 +115,7 @@ public class UserManagement {
     admin.setIsEnabled( true );
     admin.setIsAdministrator( true );
 
-    admin.getNetworkRulesGroup( ).add( NetworkRulesGroup.getDefaultGroup( ) );
+//FIXME:        admin.getNetworkRulesGroup( ).add( NetworkRulesGroup.getDefaultGroup( ) );
 
     return admin;
   }

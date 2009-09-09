@@ -75,9 +75,6 @@ import javax.persistence.Id;
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class Volume extends AbstractIsomorph {
 
-  @Id
-  @GeneratedValue
-  private Long id = -1l;
   private Integer size;
   private String cluster;
   private String parentSnapshot;

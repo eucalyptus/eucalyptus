@@ -64,10 +64,13 @@
 package edu.ucsb.eucalyptus.cloud.state;
 
 import javax.persistence.*;
+
+import com.eucalyptus.entities.AbstractPersistent;
+
 import java.util.*;
 
 @MappedSuperclass
-public abstract class AbstractIsomorph {
+public abstract class AbstractIsomorph extends AbstractPersistent {
   private String userName;
   private String uuid;
   private String displayName;

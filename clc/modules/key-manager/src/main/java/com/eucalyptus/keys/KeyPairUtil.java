@@ -1,8 +1,5 @@
 package com.eucalyptus.keys;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -10,7 +7,6 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.util.Hashes;
@@ -18,9 +14,6 @@ import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-
-import edu.ucsb.eucalyptus.cloud.entities.SSHKeyPair;
-import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 
 public class KeyPairUtil {
   private static Logger LOG = Logger.getLogger( KeyPairUtil.class );

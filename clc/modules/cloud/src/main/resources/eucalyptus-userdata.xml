@@ -93,7 +93,7 @@
             <inbound>
                 <inbound-endpoint ref="GroupsWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.GroupManager"/>
+            <component class="com.eucalyptus.network.NetworkGroupManager"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint"/>

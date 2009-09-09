@@ -67,6 +67,8 @@ package edu.ucsb.eucalyptus.admin.server;
 
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.UserExistsException;
+import com.eucalyptus.entities.NetworkRulesGroup;
+import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.NetworkUtil;
@@ -81,7 +83,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
-import edu.ucsb.eucalyptus.cloud.entities.NetworkRulesGroup;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
@@ -101,6 +102,7 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -142,8 +144,6 @@ public class EucalyptusManagement {
 		target.setIsEnabled( user.isEnabled() );
 		target.setIsAdministrator( user.isAdministrator() );
 		target.setPasswordExpires( user.getPasswordExpires() );
-		target.setQueryId( user.getQueryId() );
-		target.setSecretKey( user.getSecretKey() );
 		target.setTemporaryPassword( user.getTemporaryPassword() );
 	}
 
@@ -164,9 +164,17 @@ public class EucalyptusManagement {
 		target.setIsEnabled( user.isEnabled() );
 		target.setIsAdministrator( user.isAdministrator() );
 		target.setPasswordExpires( user.getPasswordExpires() );
-		target.setQueryId( user.getQueryId() );
-		target.setSecretKey( user.getSecretKey() );
 		target.setTemporaryPassword( user.getTemporaryPassword() );
+		String queryId = "uninitialized";
+    String secretKey = "uninitialized";
+    try {
+      queryId = CredentialProvider.getQueryId( user.getUserName( ) );
+      secretKey = CredentialProvider.getSecretKey( queryId );
+    } catch ( GeneralSecurityException e ) {
+      LOG.debug( e, e );
+    }
+		target.setQueryId( queryId );
+		target.setSecretKey( secretKey );
 	}
 
 	public static void update( UserInfo target, UserInfoWeb user )
@@ -186,8 +194,6 @@ public class EucalyptusManagement {
 		target.setIsEnabled( user.isEnabled() );
 		target.setIsAdministrator( user.isAdministrator() );
 		target.setPasswordExpires( user.getPasswordExpires() );
-		target.setQueryId( user.getQueryId() );
-		target.setSecretKey( user.getSecretKey() );
 		target.setTemporaryPassword( user.getTemporaryPassword() );
 	}
 
@@ -212,24 +218,6 @@ public class EucalyptusManagement {
 	public static String getError( String message )
 	{
 		return "<html><title>HTTP/1.0 403 Forbidden</title><body><div align=\"center\"><p><h1>403: Forbidden</h1></p><p><img src=\"themes/active/logo.png\" /></p><p><h3 style=\"font-color: red;\">" + message + "</h3></p></div></body></html>";
-	}
-
-	public static String[] getUserCertificateAliases( String userName ) throws SerializableException
-	{
-		EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>();
-		List<UserInfo> userList = dbWrapper.query( new UserInfo( userName ) );
-		if ( userList.size() != 1 )
-		{
-			dbWrapper.rollback();
-			throw EucalyptusManagement.makeFault("User does not exist" );
-		}
-		UserInfo user = ( UserInfo ) userList.get( 0 );
-		String[] certInfo = new String[user.getCertificates().size()];
-		int i = 0;
-		for ( CertificateInfo c : user.getCertificates() )
-			certInfo[ i++ ] = c.getCertAlias();
-		dbWrapper.commit();
-		return certInfo;
 	}
 
 	/* TODO: for now 'pattern' is ignored and all users are returned */
@@ -341,12 +329,16 @@ public class EucalyptusManagement {
 
 		UserInfo newUser = EucalyptusManagement.fromClient( webUser );
 		newUser.setReservationId( 0l );
-		newUser.getNetworkRulesGroup().add( NetworkRulesGroup.getDefaultGroup() );
+		try {
+      NetworkGroupUtil.createUserNetworkRulesGroup( newUser.getUserName( ), NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
+    } catch ( EucalyptusCloudException e1 ) {
+      LOG.debug( e1, e1 );
+    }
 
 		dbWrapper.add( newUser );
 		dbWrapper.commit();
 
-		try {//TODO: fix this nicely
+		try {//FIXME: fix this nicely
 			CredentialProvider.addUser(newUser.getUserName( ),newUser.isAdministrator( ));
 		} catch ( UserExistsException e ) {
 			LOG.error(e);

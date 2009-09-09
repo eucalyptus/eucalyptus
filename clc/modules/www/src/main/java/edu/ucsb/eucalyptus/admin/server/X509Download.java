@@ -124,12 +124,6 @@ public class X509Download extends HttpServlet {
     UserInfoWeb user = null;
     try {
       user = EucalyptusManagement.getWebUser( userName );
-      String[] certs = EucalyptusManagement.getUserCertificateAliases( userName );
-      for ( String s : certs )
-        if ( s.equals( keyName ) ) {
-          hasError( "Certificate name already exists", response );
-          return;
-        }
     } catch ( Exception e ) {
       hasError( "User does not exist", response );
       return;

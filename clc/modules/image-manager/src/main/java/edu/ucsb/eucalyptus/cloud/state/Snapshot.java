@@ -74,10 +74,6 @@ import javax.persistence.Id;
 @Entity
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class Snapshot extends AbstractIsomorph {
-  @Id
-  @GeneratedValue
-  private Long id = -1l;
-
   private String parentVolume;
   private String cluster;
 

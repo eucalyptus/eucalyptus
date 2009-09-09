@@ -88,7 +88,6 @@ public class EucalyptusProperties {
   public static boolean disableNetworking = false;
   public static boolean disableBlockStorage = false;
 
-  public static String NETWORK_DEFAULT_NAME = "default";
   public static String DEBUG_FSTRING = "[%12s] %s";
 
   public enum NETWORK_PROTOCOLS {

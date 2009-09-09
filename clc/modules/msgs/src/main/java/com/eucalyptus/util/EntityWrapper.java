@@ -113,7 +113,7 @@ public class EntityWrapper<TYPE> {
       if( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
         continue;
       } else {
-        LOG.debug( "CREATE CONNECTION" + ste.toString( ) );
+        LOG.debug( "CREATE CONNECTION " + ste.toString( ) );
         break;
       }
     }
@@ -153,6 +153,11 @@ public class EntityWrapper<TYPE> {
     em.merge( newObject );
   }
 
+  public void mergeAndCommit( TYPE newObject ) {
+    em.merge( newObject );
+    this.commit( );
+  }
+
   public void delete( TYPE deleteObject ) {
     em.remove( deleteObject );
   }
@@ -164,7 +169,7 @@ public class EntityWrapper<TYPE> {
       if( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
         continue;
       } else {
-        LOG.debug( "CLOSE CONNECTION" + ste.toString( ) );
+        LOG.debug( "CLOSE CONNECTION " + ste.toString( ) );
         break;
       }
     }
@@ -181,13 +186,17 @@ public class EntityWrapper<TYPE> {
       if( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
         continue;
       } else {
-        LOG.debug( "CLOSE CONNECTION" + ste.toString( ) );
+        LOG.debug( "CLOSE CONNECTION " + ste.toString( ) );
         break;
       }
     }
-    this.em.flush( );
-    this.tx.commit( );
-    this.em.close( );
+    try {
+      this.em.flush( );
+      this.tx.commit( );
+      this.em.close( );
+    } catch ( Throwable e1 ) {
+      LOG.trace(e1,e1);
+    }
   }
 
   @SuppressWarnings( "unchecked" )
