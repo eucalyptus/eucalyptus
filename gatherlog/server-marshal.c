@@ -89,10 +89,10 @@ adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t *getLogs, const axutil_env_t
     snprintf(statusMessage, 255, "ERROR");
   } else {
     
-    if (outCCLog) adb_getLogsResponseType_set_CCLog(response, env, outCCLog);
-    if (outNCLog) adb_getLogsResponseType_set_NCLog(response, env, outNCLog);
-    if (outHTTPDLog) adb_getLogsResponseType_set_httpdLog(response, env, outHTTPDLog);
-    if (outAxis2Log) adb_getLogsResponseType_set_axis2Log(response, env, outAxis2Log);
+    if (outCCLog) {adb_getLogsResponseType_set_CCLog(response, env, outCCLog);free(outCCLog);}
+    if (outNCLog) {adb_getLogsResponseType_set_NCLog(response, env, outNCLog);free(outNCLog);}
+    if (outHTTPDLog) {adb_getLogsResponseType_set_httpdLog(response, env, outHTTPDLog);free(outHTTPDLog);}
+    if (outAxis2Log) {adb_getLogsResponseType_set_axis2Log(response, env, outAxis2Log);free(outAxis2Log);}
   }
   adb_getLogsResponseType_set_serviceTag(response, env, service);
 
@@ -134,8 +134,8 @@ adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t *getKeys, const axutil_env_t
     status = AXIS2_FALSE;
     snprintf(statusMessage, 255, "ERROR");
   } else {
-    if (outCCCert) adb_getKeysResponseType_set_CCcert(response, env, outCCCert);
-    if (outNCCert) adb_getKeysResponseType_set_NCcert(response, env, outNCCert);
+    if (outCCCert) {adb_getKeysResponseType_set_CCcert(response, env, outCCCert);free(outCCCert);}
+    if (outNCCert) {adb_getKeysResponseType_set_NCcert(response, env, outNCCert);free(outNCCert);}
   }
   
   adb_getKeysResponseType_set_userId(response, env, userId);
