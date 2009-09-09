@@ -165,8 +165,10 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
 
   protected void fireTimedStatefulTrigger( Event event ) {
     if ( this.timedTrigger( event ) ) {
+      LOG.debug( "Fire " + LogUtil.dumpObject( event ) + " on " + LogUtil.dumpObject( this ) );
       this.trigger( );
     } else if ( event instanceof GenericEvent ) {
+      LOG.debug( "Fire " + LogUtil.dumpObject( event ) + " on " + LogUtil.dumpObject( this ) );
       GenericEvent<Cluster> g = (GenericEvent<Cluster>) event;
       if( !g.matches( this.getCluster( ) ) ) {
         return;

@@ -21,7 +21,7 @@ public class SystemClock extends TimerTask {
         timer = new Timer("SystemClockTimer");
         clock = new SystemClock();
         ListenerRegistry.getInstance( ).register( ClockTick.class, new Dummy() );
-        timer.scheduleAtFixedRate( clock, 10000, 5000 );
+        timer.scheduleAtFixedRate( clock, 10000, 3000 );
       }
     }
   }
