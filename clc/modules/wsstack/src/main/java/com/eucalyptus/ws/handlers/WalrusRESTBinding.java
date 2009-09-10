@@ -380,6 +380,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						String acl = (String) formFields.get(WalrusProperties.FormField.acl.toString());
 						httpRequest.addHeader(WalrusProperties.AMZ_ACL, acl);
 					}
+					if(formFields.containsKey(WalrusProperties.FormField.redirect.toString())) {
+						String successActionRedirect = (String) formFields.get(WalrusProperties.FormField.redirect.toString());
+						operationParams.put("SuccessActionRedirect", successActionRedirect);
+					}
 					if(formFields.containsKey(WalrusProperties.FormField.success_action_redirect.toString())) {
 						String successActionRedirect = (String) formFields.get(WalrusProperties.FormField.success_action_redirect.toString());
 						operationParams.put("SuccessActionRedirect", successActionRedirect);

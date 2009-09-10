@@ -208,7 +208,7 @@ public class WalrusProperties {
 	}
 
 	public enum FormField {
-		FormUploadPolicyData, AWSAccessKeyId, key, bucket, acl, policy, success_action_redirect, success_action_status, signature, file
+		FormUploadPolicyData, AWSAccessKeyId, key, bucket, acl, policy, redirect, success_action_redirect, success_action_status, signature, file
 	}
 
 	public enum IgnoredFields {
