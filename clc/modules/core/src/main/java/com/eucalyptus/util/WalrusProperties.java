@@ -69,6 +69,7 @@ package com.eucalyptus.util;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.config.Configuration;
 import com.eucalyptus.util.BaseDirectory;
 
 import java.net.*;
@@ -80,6 +81,7 @@ public class WalrusProperties {
 
 	public static final String SERVICE_NAME = "Walrus";
 	public static String NAME = "Walrus";
+	public static String DB_NAME             = "eucalyptus_walrus";
 	public static final String VIRTUAL_SUBDOMAIN = "I_R_Bukkit";
 	public static String WALRUS_SUBDOMAIN = "walrus";
 	public static String WALRUS_IP = "127.0.0.1";

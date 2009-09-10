@@ -83,6 +83,7 @@ import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
 import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
 
@@ -263,33 +264,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	public void configure() {
 		try {
 			hostName = InetAddress.getLocalHost().getHostName();
-			/*StorageProperties.iface = parseConfig();
-            LOG.info("Will export volumes on interface: " + StorageProperties.iface);
-            if(StorageProperties.iface == null || (StorageProperties.iface.length() == 0)) {
-                NetworkInterface inface = NetworkInterface.getByName(StorageProperties.iface);
-                if(inface == null) {
-                    LOG.error("Network interface " + StorageProperties.iface + " is not valid. BlockStorage may not function.");
-                    if(ifaceDiscovery) {
-                        List<NetworkInterface> ifaces = null;
-                        try {
-                            ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-                        } catch ( SocketException e1 ) {}
-                        for ( NetworkInterface ifc : ifaces )
-                            try {
-                                if ( !ifc.isLoopback() && !ifc.isVirtual() && ifc.isUp() ) {
-                                    StorageProperties.iface = ifc.getName();
-                                    break;
-                                }
-                            } catch ( SocketException e1 ) {}
-                    }
-                } else {
-                    if(!inface.isUp()) {
-                        LOG.error("Network interface " + StorageProperties.iface + " is not available (up). BlockStorage may not function.");
-                    }
-                }
-            }
-			 */
-			EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
+			EntityWrapper<LVMMetaInfo> db = BlockStorage.getEntityWrapper();
 			LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
 			List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
 			if(metaInfoList.size() <= 0) {
@@ -303,30 +278,6 @@ public class LVM2Manager implements LogicalStorageManager {
 		}
 	}
 
-
-	/*private String parseConfig() {
-		String configFileName = eucaHome + CONFIG_FILE_PATH;
-		String ifaceName = null;
-		try {
-			FileInputStream fileInputStream = new FileInputStream(new File(configFileName));
-			BufferedReader reader = new BufferedReader(new InputStreamReader(fileInputStream));
-			String line;
-			while((line = reader.readLine()) !=null) {
-				if(line.contains(IFACE_CONFIG_STRING) && !line.startsWith("#")) {
-					String[] parts = line.split("=");
-					if(parts.length > 1) {
-						ifaceName = parts[1];
-						ifaceName = ifaceName.replaceAll('\"' + "", "");
-					}
-					break;
-				}
-			}
-		} catch (Exception ex) {
-			LOG.error("Could not parse config file " + configFileName);
-		}
-		return ifaceName;
-	}*/
-
 	public void startupChecks() {
 		reload();
 	}
@@ -336,7 +287,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public void cleanVolume(String volumeId) {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
 		List<LVMVolumeInfo> lvmVolumeInfos = db.query(lvmVolumeInfo);
 		if(lvmVolumeInfos.size() > 0) {
@@ -370,7 +321,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public void cleanSnapshot(String snapshotId) {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
 		List<LVMVolumeInfo> lvmVolumeInfos = db.query(lvmVolumeInfo);
 		if(lvmVolumeInfos.size() > 0) {
@@ -387,7 +338,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		int minorNumber = -1;
 		List<Integer> deviceNumbers = new ArrayList<Integer>();
 		LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
-		EntityWrapper<LVMMetaInfo> db = new EntityWrapper<LVMMetaInfo>();
+		EntityWrapper<LVMMetaInfo> db = BlockStorage.getEntityWrapper();
 		List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
 		if(metaInfoList.size() > 0) {
 			LVMMetaInfo foundMetaInfo = metaInfoList.get(0);
@@ -578,13 +529,13 @@ public class LVM2Manager implements LogicalStorageManager {
 		lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 		lvmVolumeInfo.setSize(size);
 
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		db.add(lvmVolumeInfo);
 		db.commit();
 	}
 
 	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
 		LVMVolumeInfo foundSnapshotInfo = db.getUnique(lvmVolumeInfo);
 		int size = -1;
@@ -641,7 +592,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		String snapshotRawFileName = StorageProperties.storageRootDirectory + "/" + snapshotId;
 		File snapshotFile = new File(snapshotRawFileName);
 		if(snapshotFile.exists()) {
-			EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+			EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 			LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
 			lvmVolumeInfo.setLoFileName(snapshotRawFileName);
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
@@ -655,7 +606,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 	
 	public void dupVolume(String volumeId, String dupVolumeId) throws EucalyptusCloudException {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
 		LVMVolumeInfo foundVolumeInfo = db.getUnique(lvmVolumeInfo);
 		if(foundVolumeInfo != null) {
@@ -696,7 +647,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public List<String> getStatus(List<String> volumeSet) throws EucalyptusCloudException {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		ArrayList<String> status = new ArrayList<String>();
 		for(String volumeSetEntry: volumeSet) {
 			LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo();
@@ -714,7 +665,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public void deleteVolume(String volumeId) throws EucalyptusCloudException {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
 		LVMVolumeInfo foundLVMVolumeInfo = db.getUnique(lvmVolumeInfo);
 
@@ -762,7 +713,7 @@ public class LVM2Manager implements LogicalStorageManager {
 
 
 	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
 		LVMVolumeInfo foundLVMVolumeInfo = db.getUnique(lvmVolumeInfo);
 		ArrayList<String> returnValues = new ArrayList<String>();
@@ -818,7 +769,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public List<String> prepareForTransfer(String volumeId, String snapshotId) throws EucalyptusCloudException {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
 		LVMVolumeInfo foundLVMVolumeInfo = db.getUnique(lvmVolumeInfo);
 		ArrayList<String> returnValues = new ArrayList<String>();
@@ -834,7 +785,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
 		LVMVolumeInfo foundLVMVolumeInfo = db.getUnique(lvmVolumeInfo);
 
@@ -850,7 +801,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	public List<String> getVolume(String volumeId) throws EucalyptusCloudException {
 		ArrayList<String> returnValues = new ArrayList<String>();
 
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
 		List<LVMVolumeInfo> foundLvmVolumeInfos = db.query(lvmVolumeInfo);
 		if(foundLvmVolumeInfos.size() > 0) {
@@ -863,7 +814,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		assert(snapshotSet.size() == snapshotFileNames.size());
 		int i = 0;
 		for(String snapshotFileName: snapshotFileNames) {
@@ -879,7 +830,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public void reload() {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo volumeInfo = new LVMVolumeInfo();
 		List<LVMVolumeInfo> volumeInfos = db.query(volumeInfo);
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
@@ -924,7 +875,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	public List<String> getSnapshotValues(String snapshotId) throws EucalyptusCloudException {
 		ArrayList<String> returnValues = new ArrayList<String>();
 
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
 		List<LVMVolumeInfo> lvmVolumeInfos = db.query(lvmVolumeInfo);
 		if(lvmVolumeInfos.size() > 0) {
@@ -937,7 +888,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException {
-		EntityWrapper<LVMVolumeInfo> db = new EntityWrapper<LVMVolumeInfo>();
+		EntityWrapper<LVMVolumeInfo> db = BlockStorage.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
 		List<LVMVolumeInfo> lvmVolumeInfos = db.query(lvmVolumeInfo);
 		if(lvmVolumeInfos.size() > 0) {

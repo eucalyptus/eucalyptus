@@ -108,7 +108,7 @@ public class BlockStorageStatistics {
 	}
 
 	private void getStateInfo() {
-		EntityWrapper<StorageStatsInfo> db = new EntityWrapper<StorageStatsInfo>();
+		EntityWrapper<StorageStatsInfo> db = BlockStorage.getEntityWrapper();
 		try {
 			StorageStatsInfo storageStats = db.getUnique(new StorageStatsInfo(StorageProperties.NAME));
 			numberOfVolumes = storageStats.getNumberOfVolumes();
@@ -123,7 +123,7 @@ public class BlockStorageStatistics {
 	}
 
 	private void updateStateInfo() {
-		EntityWrapper<StorageStatsInfo> db = new EntityWrapper<StorageStatsInfo>();
+		EntityWrapper<StorageStatsInfo> db = BlockStorage.getEntityWrapper();
 		try {
 			StorageStatsInfo storageStats = db.getUnique(new StorageStatsInfo(StorageProperties.NAME));
 			storageStats.setNumberOfVolumes(numberOfVolumes);

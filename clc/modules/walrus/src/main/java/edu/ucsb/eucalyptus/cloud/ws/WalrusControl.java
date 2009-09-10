@@ -170,6 +170,10 @@ public class WalrusControl {
 
 	public WalrusControl() {}
 
+	public static <T> EntityWrapper<T> getEntityWrapper( ) {
+		return new EntityWrapper<T>( WalrusProperties.DB_NAME );
+	}
+	
 	private static void configure() {
 		WalrusInfo walrusInfo = getConfig();
 		WalrusProperties.NAME = walrusInfo.getName();
@@ -181,7 +185,7 @@ public class WalrusControl {
 	}
 
 	private static WalrusInfo getConfig() {
-		EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>();
+		EntityWrapper<WalrusInfo> db = WalrusControl.getEntityWrapper();
 		WalrusInfo walrusInfo;
 		try {
 			walrusInfo = db.getUnique(new WalrusInfo());
@@ -200,7 +204,7 @@ public class WalrusControl {
 	}
 
 	private static void updateConfig() {
-		EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>();
+		EntityWrapper<WalrusInfo> db = WalrusControl.getEntityWrapper();
 		WalrusInfo walrusInfo;
 		try {
 			walrusInfo = db.getUnique(new WalrusInfo());

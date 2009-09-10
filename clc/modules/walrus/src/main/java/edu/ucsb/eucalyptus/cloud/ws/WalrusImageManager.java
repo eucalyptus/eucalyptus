@@ -128,7 +128,7 @@ public class WalrusImageManager {
 	}
 
 	private String decryptImage(String bucketName, String objectKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
-		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -278,7 +278,7 @@ public class WalrusImageManager {
 
 
 	private void checkManifest(String bucketName, String objectKey, String userId) throws EucalyptusCloudException {
-		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -369,7 +369,7 @@ public class WalrusImageManager {
 	}
 
 	private boolean isCached(String bucketName, String manifestKey) {
-		EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		try {
 			ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
@@ -385,7 +385,7 @@ public class WalrusImageManager {
 	}
 
 	private long checkCachingProgress(String bucketName, String manifestKey, long oldBytesRead) {
-		EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		try {
 			ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
@@ -404,7 +404,7 @@ public class WalrusImageManager {
 
 	private synchronized void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
 
-		EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
 		String decryptedImageKey = null;
@@ -451,7 +451,7 @@ public class WalrusImageManager {
 			}
 		}
 		imageMessenger.removeSemaphore(bucketName + "/" + objectKey);
-		EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
 		List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
 
@@ -534,7 +534,7 @@ public class WalrusImageManager {
 
 				}
 				Long oldCacheSize = 0L;
-				EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+				EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 				List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
 				for(ImageCacheInfo imageCacheInfo: imageCacheInfos) {
 					if(imageCacheInfo.getInCache()) {
@@ -598,7 +598,7 @@ public class WalrusImageManager {
 					notifyWaiters();
 					return;
 				}
-				EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+				EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 				ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
 				searchImageCacheInfo.setInCache(true);
 				List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
@@ -644,7 +644,7 @@ public class WalrusImageManager {
 				storageManager.deleteAbsoluteObject(decryptedImageName);
 				storageManager.deleteAbsoluteObject(tarredImageName);
 
-				EntityWrapper<ImageCacheInfo>db = new EntityWrapper<ImageCacheInfo>();
+				EntityWrapper<ImageCacheInfo>db = WalrusControl.getEntityWrapper();
 				ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 				List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
 				if(foundImageCacheInfos.size() > 0) {
@@ -803,7 +803,7 @@ public class WalrusImageManager {
 		String objectKey = request.getKey();
 		String userId = request.getUserId();
 
-		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 		if (bucketList.size() > 0) {
@@ -820,7 +820,7 @@ public class WalrusImageManager {
 					} catch(InterruptedException ex) {
 						throw new EucalyptusCloudException("semaphore could not be acquired");
 					}
-					EntityWrapper<ImageCacheInfo> db2 = new EntityWrapper<ImageCacheInfo>();
+					EntityWrapper<ImageCacheInfo> db2 = WalrusControl.getEntityWrapper();
 					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
 					List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
 
@@ -829,7 +829,7 @@ public class WalrusImageManager {
 						//issue a cache request
 						cacheImage(bucketName, objectKey, userId, request.isAdministrator());
 						//query db again
-						db2 = new EntityWrapper<ImageCacheInfo>();
+						db2 = WalrusControl.getEntityWrapper();
 						foundImageCacheInfos = db2.query(searchImageCacheInfo);
 					}
 					ImageCacheInfo foundImageCacheInfo = null;
@@ -874,7 +874,7 @@ public class WalrusImageManager {
 						}
 						//caching may have modified the db. repeat the query
 						db2.commit();
-						db2 = new EntityWrapper<ImageCacheInfo>();
+						db2 = WalrusControl.getEntityWrapper();
 						foundImageCacheInfos = db2.query(searchImageCacheInfo);
 						if(foundImageCacheInfos.size() > 0) {
 							foundImageCacheInfo = foundImageCacheInfos.get(0);
@@ -921,7 +921,7 @@ public class WalrusImageManager {
 		String objectKey = request.getKey();
 		String userId = request.getUserId();
 
-		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -959,7 +959,7 @@ public class WalrusImageManager {
 		String userId = request.getUserId();
 
 
-		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -971,7 +971,7 @@ public class WalrusImageManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
 				if(objectInfo.canRead(userId)) {
-					EntityWrapper<ImageCacheInfo> db2 = new EntityWrapper<ImageCacheInfo>();
+					EntityWrapper<ImageCacheInfo> db2 = WalrusControl.getEntityWrapper();
 					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 					List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
 					db2.commit();
@@ -1003,7 +1003,7 @@ public class WalrusImageManager {
 		String bucketName = request.getBucket();
 		String manifestKey = request.getKey();
 
-		EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
 

@@ -101,7 +101,7 @@ public class WalrusBlockStorageManager {
 	}
 
 	public void cleanFailedCachedImages() {
-		EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
 		searchImageCacheInfo.setInCache(false);
 		List<ImageCacheInfo> icInfos = db.query(searchImageCacheInfo);
@@ -147,7 +147,7 @@ public class WalrusBlockStorageManager {
 		if (WalrusProperties.shouldEnforceUsageLimits) {
 			int totalSnapshotSize = 0;
 			WalrusSnapshotInfo snapInfo = new WalrusSnapshotInfo();
-			EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
+			EntityWrapper<WalrusSnapshotInfo> db = WalrusControl.getEntityWrapper();
 			List<WalrusSnapshotInfo> sInfos = db.query(snapInfo);
 			for (WalrusSnapshotInfo sInfo : sInfos) {
 				totalSnapshotSize += sInfo.getSize();
@@ -160,7 +160,7 @@ public class WalrusBlockStorageManager {
 		}
 
 		boolean createBucket = true;
-		EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
+		EntityWrapper<WalrusSnapshotInfo> db = WalrusControl.getEntityWrapper();
 		WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
 		List<WalrusSnapshotInfo> snapInfos = db.query(snapshotInfo);
 		if (snapInfos.size() > 0) {
@@ -203,7 +203,7 @@ public class WalrusBlockStorageManager {
 			reply.setLastModified(putObjectResponseType.getLastModified());
 			reply.setStatusMessage(putObjectResponseType.getStatusMessage());
 			snapshotInfo = new WalrusSnapshotInfo(snapshotId);
-			db = new EntityWrapper<WalrusSnapshotInfo>();
+			db = WalrusControl.getEntityWrapper();
 			snapshotInfo.setSnapshotBucket(bucketName);
 			snapshotInfo.setSize(snapshotSize);
 			db.add(snapshotInfo);
@@ -220,7 +220,7 @@ public class WalrusBlockStorageManager {
 		GetWalrusSnapshotResponseType reply = (GetWalrusSnapshotResponseType) request
 				.getReply();
 		String snapshotId = request.getKey();
-		EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
+		EntityWrapper<WalrusSnapshotInfo> db = WalrusControl.getEntityWrapper();
 		WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
 		List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
 		if (snapshotInfos.size() > 0) {
@@ -258,7 +258,7 @@ public class WalrusBlockStorageManager {
 		String snapshotId = request.getKey();
 
 		// Load the entire snapshot tree and then remove the snapshot
-		EntityWrapper<WalrusSnapshotInfo> db = new EntityWrapper<WalrusSnapshotInfo>();
+		EntityWrapper<WalrusSnapshotInfo> db = WalrusControl.getEntityWrapper();
 		WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
 		List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
 

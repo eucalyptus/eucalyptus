@@ -98,7 +98,7 @@ public class StorageEventListener implements EventListener {
 			if(!stopComponentEvent.isLocal())
 				name = config.getName();
 			storageInfo.setName(name);
-			EntityWrapper<StorageInfo> db = new EntityWrapper<StorageInfo>();
+			EntityWrapper<StorageInfo> db = BlockStorage.getEntityWrapper();
 			try {
 				StorageInfo foundStorageInfo = db.getUnique(storageInfo);
 				db.delete(foundStorageInfo);

@@ -84,6 +84,7 @@ public class StorageProperties {
 	public static final String SC_LOCAL_NAME = "StorageController-local";
 	public static String NAME = "StorageController" + UUID.randomUUID();
 	public static String SC_ID = SERVICE_NAME + UUID.randomUUID();
+	public static String DB_NAME             = "eucalyptus_storage";
 	public static final String EUCALYPTUS_OPERATION = "EucaOperation";
 	public static final String EUCALYPTUS_HEADER = "EucaHeader";
 	public static String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
