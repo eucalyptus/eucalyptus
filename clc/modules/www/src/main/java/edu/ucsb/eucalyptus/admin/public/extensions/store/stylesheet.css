@@ -239,7 +239,7 @@ h1 {
   padding: 2px;
   padding-left: 0.3em;
   height: 26px;
-  font-size: 130%;
+  font-size: 100%;
   margin-right: 10px;
   width: 350px; /* Update the spinner position when changing this. */
 }
