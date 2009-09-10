@@ -75,6 +75,7 @@ import org.mule.api.MessagingException;
 import org.mule.api.MuleMessage;
 import org.mule.message.ExceptionMessage;
 
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.binding.BindingManager;
 
 import edu.ucsb.eucalyptus.cloud.RequestTransactionScript;
@@ -155,6 +156,8 @@ public class ReplyQueue {
       return ( EucalyptusMessage ) payload;
     } else if ( payload instanceof VmAllocationInfo ) {
       return ( ( VmAllocationInfo ) payload ).getRequest( );
+    } else if ( !( payload instanceof String ) ) {
+      return new EucalyptusErrorMessageType( "ReplyQueue", LogUtil.dumpObject( payload ) );
     } else {
       return ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( ( String ) payload );
     }
