@@ -163,4 +163,37 @@ public class ImageCacheInfo implements Comparable {
             return -1;
     }
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((bucketName == null) ? 0 : bucketName.hashCode());
+		result = prime * result
+				+ ((manifestName == null) ? 0 : manifestName.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ImageCacheInfo other = (ImageCacheInfo) obj;
+		if (bucketName == null) {
+			if (other.bucketName != null)
+				return false;
+		} else if (!bucketName.equals(other.bucketName))
+			return false;
+		if (manifestName == null) {
+			if (other.manifestName != null)
+				return false;
+		} else if (!manifestName.equals(other.manifestName))
+			return false;
+		return true;
+	}
+
 }

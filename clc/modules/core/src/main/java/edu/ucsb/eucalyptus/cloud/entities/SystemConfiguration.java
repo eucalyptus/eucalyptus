@@ -211,4 +211,29 @@ public class SystemConfiguration {
     this.cloudHost = cloudHost;
   }
 
+@Override
+public int hashCode() {
+	final int prime = 31;
+	int result = 1;
+	result = prime * result + ((cloudHost == null) ? 0 : cloudHost.hashCode());
+	return result;
+}
+
+@Override
+public boolean equals(Object obj) {
+	if (this == obj)
+		return true;
+	if (obj == null)
+		return false;
+	if (getClass() != obj.getClass())
+		return false;
+	SystemConfiguration other = (SystemConfiguration) obj;
+	if (cloudHost == null) {
+		if (other.cloudHost != null)
+			return false;
+	} else if (!cloudHost.equals(other.cloudHost))
+		return false;
+	return true;
+}
+
 }

@@ -161,20 +161,36 @@ public class SnapshotInfo {
         this.progress = progress;
     }
 
-    @Override
-    public boolean equals( final Object o ) {
-        if ( this == o ) return true;
-        if ( o == null || getClass() != o.getClass() ) return false;
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((scName == null) ? 0 : scName.hashCode());
+		result = prime * result
+				+ ((snapshotId == null) ? 0 : snapshotId.hashCode());
+		return result;
+	}
 
-        SnapshotInfo that = ( SnapshotInfo ) o;
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		SnapshotInfo other = (SnapshotInfo) obj;
+		if (scName == null) {
+			if (other.scName != null)
+				return false;
+		} else if (!scName.equals(other.scName))
+			return false;
+		if (snapshotId == null) {
+			if (other.snapshotId != null)
+				return false;
+		} else if (!snapshotId.equals(other.snapshotId))
+			return false;
+		return true;
+	}
 
-        if ( !snapshotId.equals( that.snapshotId ) ) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        return snapshotId.hashCode();
-    }
 }

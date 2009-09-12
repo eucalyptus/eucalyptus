@@ -218,4 +218,38 @@ public class LVMVolumeInfo {
     public void setMinorNumber(Integer minorNumber) {
         this.minorNumber = minorNumber;
     }
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((scName == null) ? 0 : scName.hashCode());
+		result = prime * result
+				+ ((volumeId == null) ? 0 : volumeId.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		LVMVolumeInfo other = (LVMVolumeInfo) obj;
+		if (scName == null) {
+			if (other.scName != null)
+				return false;
+		} else if (!scName.equals(other.scName))
+			return false;
+		if (volumeId == null) {
+			if (other.volumeId != null)
+				return false;
+		} else if (!volumeId.equals(other.volumeId))
+			return false;
+		return true;
+	}
+    
+    
 }

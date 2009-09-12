@@ -478,5 +478,38 @@ public class ObjectInfo implements Comparable {
     
     public int compareTo(Object o) {
         return this.objectKey.compareTo(((ObjectInfo)o).getObjectKey());
-    }    
+    }
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((bucketName == null) ? 0 : bucketName.hashCode());
+		result = prime * result
+				+ ((objectKey == null) ? 0 : objectKey.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ObjectInfo other = (ObjectInfo) obj;
+		if (bucketName == null) {
+			if (other.bucketName != null)
+				return false;
+		} else if (!bucketName.equals(other.bucketName))
+			return false;
+		if (objectKey == null) {
+			if (other.objectKey != null)
+				return false;
+		} else if (!objectKey.equals(other.objectKey))
+			return false;
+		return true;
+	}    
 }
