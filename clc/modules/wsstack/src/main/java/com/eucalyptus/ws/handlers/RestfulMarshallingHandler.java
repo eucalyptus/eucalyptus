@@ -103,7 +103,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       } else {
         this.namespace = "http://msgs.eucalyptus.ucsb.edu";
       }
-      String userName = CredentialProvider.getUserName( httpRequest.getParameters( ).get( SecurityParameter.AWSAccessKeyId ) );
+      String userName = CredentialProvider.getUserName( httpRequest.getParameters( ).remove( SecurityParameter.AWSAccessKeyId.toString()));
       httpRequest.setMessage( this.bind( userName, true, httpRequest ) );
     }
   }

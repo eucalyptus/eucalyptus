@@ -172,8 +172,6 @@ public class HmacV2Handler extends MessageStackHandler {
       httpRequest.setUser( user );
       parameters.remove( RequiredQueryParams.SignatureVersion.toString( ) );
       parameters.remove( "SignatureMethod" );
-      // :: find user, remove query key to prepare for marshalling :://
-      parameters.remove( SecurityParameter.AWSAccessKeyId.toString( ) );
     }
   }
 
