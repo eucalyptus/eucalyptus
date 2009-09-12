@@ -93,8 +93,6 @@ public class GrantInfo {
 	private String userId;
     @Column(name="grantGroup")
     private String grantGroup;
-    @Column(name="entity_name")
-    private String entityName;
 	@Column(name="allow_read")
 	private Boolean canRead;
 	@Column(name="allow_write")
@@ -137,14 +135,6 @@ public class GrantInfo {
 
     public void setGrantGroup(String grantGroup) {
         this.grantGroup = grantGroup;
-    }
-
-    public String getEntityName() {
-        return entityName;
-    }
-
-    public void setEntityName(String entityName) {
-        this.entityName = entityName;
     }
 
     public boolean canWrite() {
@@ -229,31 +219,4 @@ public class GrantInfo {
 		grantInfos.add(grantInfo);
 	}
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((entityName == null) ? 0 : entityName.hashCode());
-		return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		GrantInfo other = (GrantInfo) obj;
-		if (entityName == null) {
-			if (other.entityName != null)
-				return false;
-		} else if (!entityName.equals(other.entityName))
-			return false;
-		return true;
-	}
-	
-	
 }
