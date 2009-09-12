@@ -115,7 +115,6 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   private Multimap<String, ComponentConfiguration> componentMap;
   private NioBootstrap                             clientBootstrap;
   private ChannelFactory                           channelFactory;
-  private static boolean                           hack = false;
   private static RemoteBootstrapperClient client = new RemoteBootstrapperClient( );
   
   public static RemoteBootstrapperClient getInstance() {
@@ -180,10 +179,6 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
 
   @Override
   public boolean start( ) throws Exception {
-    if ( !hack ) {
-      StartupChecks.createDb( );
-      hack = true;
-    }
     return true;
   }
 

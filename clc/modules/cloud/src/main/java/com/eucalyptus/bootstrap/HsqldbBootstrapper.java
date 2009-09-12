@@ -76,6 +76,8 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.util.SubDirectory;
 
+import edu.ucsb.eucalyptus.StartupChecks;
+
 @Provides( resource = Resource.Database )
 @Depends( resources = Resource.SystemCredentials, local = Component.eucalyptus )
 public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
@@ -165,6 +167,7 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
       dbOut.close( );
     }
   }
+  private static boolean                           hack = false;
 
   @Override
   public boolean start( ) throws Exception {
@@ -175,6 +178,10 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
         throw new RuntimeException( t );
       }
       LOG.info( "Waiting for database to start..." );
+    }
+    if ( !hack ) {
+      StartupChecks.createDb( );
+      hack = true;
     }
     return true;
   }
