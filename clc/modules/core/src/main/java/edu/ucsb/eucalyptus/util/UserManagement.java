@@ -105,17 +105,12 @@ public class UserManagement {
     admin.setConfirmationCode( UserManagement.generateConfirmationCode( admin.getUserName( ) ) );
     admin.setCertificateCode( UserManagement.generateCertificateCode( admin.getUserName( ) ) );
 
-//FIXME:    admin.setSecretKey( UserManagement.generateSecretKey( admin.getUserName( ) ) );
-//FIXME:    admin.setQueryId( UserManagement.generateQueryId( admin.getUserName( ) ) );
-
     admin.setReservationId( 0l );
 
     admin.setIsApproved( true );
     admin.setIsConfirmed( true );
     admin.setIsEnabled( true );
     admin.setIsAdministrator( true );
-
-//FIXME:        admin.getNetworkRulesGroup( ).add( NetworkRulesGroup.getDefaultGroup( ) );
 
     return admin;
   }

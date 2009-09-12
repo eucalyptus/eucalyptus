@@ -115,7 +115,25 @@ public class User extends AbstractPersistent implements Serializable {
   public User( String userName ){
     this.userName = userName
   }
-  
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( userName == null ) ? 0 : userName.hashCode( ) );
+    return result;
+  }
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this.is( obj ) ) return true;
+    if ( !super.equals( obj ) ) return false;
+    if ( getClass( ).is( obj.getClass( ) ) ) return false;
+    User other = ( User ) obj;
+    if ( userName == null ) {
+      if ( other.userName != null ) return false;
+    } else if ( !userName.equals( other.userName ) ) return false;
+    return true;
+  }  
 }
 
 @Entity
@@ -141,7 +159,26 @@ public class X509Cert extends AbstractPersistent implements Serializable {
     return Hashes.getPemCert( UrlBase64.decode( x509.getPemCertificate( ).getBytes( ) ) );
   }  
 
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( alias == null ) ? 0 : alias.hashCode( ) );
+    return result;
+  }
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this.is( obj ) ) return true;
+    if ( !super.equals( obj ) ) return false;
+    if ( getClass( ).is( obj.getClass( ) ) ) return false;
+    X509Cert other = ( X509Cert ) obj;
+    if ( alias == null ) {
+      if ( other.alias != null ) return false;
+    } else if ( !alias.equals( other.alias ) ) return false;
+    return true;
+  }
 }
+
 @Entity
 @Table( name = "auth_clusters" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
@@ -160,4 +197,23 @@ public class ClusterCredentials extends AbstractPersistent implements Serializab
   public ClusterCredentials( String clusterName ) {
     this.clusterName = clusterName;
   }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( clusterName == null ) ? 0 : clusterName.hashCode( ) );
+    return result;
+  }
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this.is( obj ) ) return true;
+    if ( !super.equals( obj ) ) return false;
+    if ( getClass( ).is( obj.getClass( ) ) ) return false;
+    ClusterCredentials other = ( ClusterCredentials ) obj;
+    if ( clusterName == null ) {
+      if ( other.clusterName != null ) return false;
+    } else if ( !clusterName.equals( other.clusterName ) ) return false;
+    return true;
+  }  
 }
