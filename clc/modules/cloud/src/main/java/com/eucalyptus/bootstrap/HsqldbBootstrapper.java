@@ -74,9 +74,8 @@ import org.hsqldb.persist.HsqlProperties;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.SslSetup;
+import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.SubDirectory;
-
-import edu.ucsb.eucalyptus.StartupChecks;
 
 @Provides( resource = Resource.Database )
 @Depends( resources = Resource.SystemCredentials, local = Component.eucalyptus )
@@ -179,9 +178,11 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
       }
       LOG.info( "Waiting for database to start..." );
     }
-    if ( !hack ) {
-      StartupChecks.createDb( );
-      hack = true;
+    try {
+      GroovyUtil.evaluateScript( "startup.groovy" );
+    } catch ( Exception e ) {
+      LOG.fatal( e, e );
+      System.exit(1);
     }
     return true;
   }

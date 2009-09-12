@@ -65,7 +65,8 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.FailScriptFailException;
+import com.eucalyptus.util.FailScriptFailException;
+
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.SLAs;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;

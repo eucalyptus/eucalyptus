@@ -72,7 +72,8 @@ public enum SubDirectory {
   SERVICES( BaseDirectory.VAR, "services" ),
   WWW( BaseDirectory.CONF, "www" ),
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
-  KEYS( BaseDirectory.VAR, "keys" );
+  KEYS( BaseDirectory.VAR, "keys" ),
+  SCRIPTS( BaseDirectory.CONF, "scripts" );
   BaseDirectory parent;
   String        dir;
 

@@ -74,6 +74,8 @@ import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.util.FailScriptFailException;
+import com.eucalyptus.util.GroovyUtil;
 import com.google.common.collect.Lists;
 
 import javax.script.ScriptEngineManager;
@@ -145,28 +147,13 @@ public class SLAs {
   private Allocator getAllocator() throws FailScriptFailException {
     Object blah = null;
     try {
-      blah = this.getGroovyObject( ALLOC_RULES_DIR_NAME + File.separator + "default.groovy" );
+      blah = GroovyUtil.newInstance( ALLOC_RULES_DIR_NAME + File.separator + "default.groovy" );
     }
     catch ( FailScriptFailException e ) {
       LOG.error( e, e );
     }
     if ( !( blah instanceof Allocator ) ) throw new FailScriptFailException( blah.getClass() + " does not implement " + Allocator.class );
     return ( Allocator ) blah;
-  }
-
-  public Object getGroovyObject( String fileName ) throws FailScriptFailException {
-    GroovyObject groovyObject = null;
-    try {
-      ClassLoader parent = getClass().getClassLoader();
-      GroovyClassLoader loader = new GroovyClassLoader( parent );
-      Class groovyClass = loader.parseClass( new File( fileName ) );
-
-      groovyObject = ( GroovyObject ) groovyClass.newInstance();
-    }
-    catch ( Exception e ) {
-      throw new FailScriptFailException( e );
-    }
-    return groovyObject;
   }
 
 }
