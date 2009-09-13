@@ -152,7 +152,7 @@ public class ZoneManager {
 				zone =  zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec, nsARecord, record}));
 				if(zone == null) {
 					zone = zones.get(name);
-					EntityWrapper<ZoneInfo> db = new EntityWrapper<ZoneInfo>();
+					EntityWrapper<ZoneInfo> db = DNSControl.getEntityWrapper();
 					ZoneInfo zoneInfo = new ZoneInfo(nameString);
 					db.add(zoneInfo);
 					EntityWrapper<SOARecordInfo> dbSOA = db.recast(SOARecordInfo.class);
@@ -217,7 +217,7 @@ public class ZoneManager {
 					zone.removeRecord(recordToRemove);
 				zone.addRecord(record);
 				//now change the persistent store
-				EntityWrapper<ARecordInfo> db = new EntityWrapper<ARecordInfo>();
+				EntityWrapper<ARecordInfo> db = DNSControl.getEntityWrapper();
 				ARecordInfo arecInfo = new ARecordInfo();
 				arecInfo.setZone(zoneName);
 				arecInfo.setName(record.getName().toString());
@@ -253,7 +253,7 @@ public class ZoneManager {
 				zone.removeRecord(recordToRemove);
 			zone.addRecord(record);
 			//now change the persistent store
-			EntityWrapper<CNAMERecordInfo> db = new EntityWrapper<CNAMERecordInfo>();
+			EntityWrapper<CNAMERecordInfo> db = DNSControl.getEntityWrapper();
 			CNAMERecordInfo cnameRecordInfo = new CNAMERecordInfo();
 			cnameRecordInfo.setZone(zoneName);
 			cnameRecordInfo.setName(record.getName().toString());

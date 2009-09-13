@@ -80,6 +80,7 @@ import java.net.Inet6Address;
 public class DNSProperties {
 
     private static Logger LOG = Logger.getLogger( DNSProperties.class );
+	public static String DB_NAME             = "eucalyptus_dns";
     public static String ADDRESS = "0.0.0.0";
     public static int PORT = 53;
     public static int MAX_MESSAGE_SIZE = 1024;

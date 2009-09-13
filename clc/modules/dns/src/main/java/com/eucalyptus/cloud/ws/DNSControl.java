@@ -65,6 +65,7 @@
 
 package com.eucalyptus.cloud.ws;
 
+import com.eucalyptus.config.Configuration;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
 
@@ -82,6 +83,10 @@ import java.util.List;
 public class DNSControl {
 
 	private static Logger LOG = Logger.getLogger( DNSControl.class );
+
+	public static <T> EntityWrapper<T> getEntityWrapper( ) {
+		return new EntityWrapper<T>( DNSProperties.DB_NAME );
+	}
 
 	private static void initializeUDP() throws Exception {
 		try {
@@ -105,7 +110,7 @@ public class DNSControl {
 
 	public static void populateRecords() {
 		try {
-			EntityWrapper<ZoneInfo> db = new EntityWrapper<ZoneInfo>();
+			EntityWrapper<ZoneInfo> db = DNSControl.getEntityWrapper();
 			ZoneInfo zInfo = new ZoneInfo();
 			List<ZoneInfo> zoneInfos = db.query(zInfo);
 			for(ZoneInfo zoneInfo : zoneInfos) {
@@ -152,10 +157,7 @@ public class DNSControl {
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
 		String address = request.getAddress();
 		long ttl = request.getTtl();
-		/*if(!request.isAdministrator()) {
-            throw new AccessDeniedException(name);
-        } */
-		EntityWrapper<ARecordInfo> db = new EntityWrapper<ARecordInfo>();
+		EntityWrapper<ARecordInfo> db = DNSControl.getEntityWrapper();
 		ARecordInfo aRecordInfo = new ARecordInfo();
 		aRecordInfo.setName(name);
 		List<ARecordInfo> arecords = db.query(aRecordInfo);
@@ -199,10 +201,7 @@ public class DNSControl {
 		RemoveARecordResponseType reply = (RemoveARecordResponseType) request.getReply();
 		String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
-		/*if(!request.isAdministrator()) {
-            throw new AccessDeniedException(name);
-        } */
-		EntityWrapper<ARecordInfo> db = new EntityWrapper<ARecordInfo>();
+		EntityWrapper<ARecordInfo> db = DNSControl.getEntityWrapper();
 		ARecordInfo aRecordInfo = new ARecordInfo();
 		aRecordInfo.setName(name);
 		aRecordInfo.setZone(zone);
@@ -235,10 +234,7 @@ public class DNSControl {
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
 		String alias = request.getAlias();
 		long ttl = request.getTtl();
-		/*if(!request.isAdministrator()) {
-            throw new AccessDeniedException(name);
-        } */
-		EntityWrapper<CNAMERecordInfo> db = new EntityWrapper<CNAMERecordInfo>();
+		EntityWrapper<CNAMERecordInfo> db = DNSControl.getEntityWrapper();
 		CNAMERecordInfo cnameRecordInfo = new CNAMERecordInfo();
 		cnameRecordInfo.setName(name);
 		List<CNAMERecordInfo> cnamerecords = db.query(cnameRecordInfo);
@@ -283,10 +279,7 @@ public class DNSControl {
 		RemoveCNAMERecordResponseType reply = (RemoveCNAMERecordResponseType) request.getReply();
 		String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
-		/*if(!request.isAdministrator()) {
-            throw new AccessDeniedException(name);
-        } */
-		EntityWrapper<CNAMERecordInfo> db = new EntityWrapper<CNAMERecordInfo>();
+		EntityWrapper<CNAMERecordInfo> db = DNSControl.getEntityWrapper();
 		CNAMERecordInfo cnameRecordInfo = new CNAMERecordInfo();
 		cnameRecordInfo.setName(name);
 		cnameRecordInfo.setZone(zone);
@@ -306,10 +299,9 @@ public class DNSControl {
 		DeleteZoneResponseType reply = (DeleteZoneResponseType) request.getReply();
 		String name = request.getName();
 		if(!request.isAdministrator()) {
-
 			throw new AccessDeniedException(name);
 		}
-		EntityWrapper<ZoneInfo> db = new EntityWrapper<ZoneInfo>();
+		EntityWrapper<ZoneInfo> db = DNSControl.getEntityWrapper();
 		ZoneInfo zoneInfo = new ZoneInfo(name);
 		try {
 			ZoneInfo foundZoneInfo = db.getUnique(zoneInfo);

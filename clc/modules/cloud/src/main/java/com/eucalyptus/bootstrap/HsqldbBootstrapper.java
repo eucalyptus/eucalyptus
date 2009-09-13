@@ -128,6 +128,8 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
     this.prepareDatabase( walrus );
     String storage = Component.eucalyptus.name( ) + "_storage";
     this.prepareDatabase( storage );
+    String dns = Component.eucalyptus.name( ) + "_dns";
+    this.prepareDatabase( dns );
     HsqlProperties props = new HsqlProperties( );
 
     props.setProperty( ServerConstants.SC_KEY_NO_SYSTEM_EXIT, true );
@@ -147,6 +149,8 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
     props.setProperty( ServerConstants.SC_KEY_DBNAME + ".4", walrus );
     props.setProperty( ServerConstants.SC_KEY_DATABASE + ".5", SubDirectory.DB.toString( ) + File.separator + storage );
     props.setProperty( ServerConstants.SC_KEY_DBNAME + ".5", storage );
+    props.setProperty( ServerConstants.SC_KEY_DATABASE + ".6", SubDirectory.DB.toString( ) + File.separator + dns );
+    props.setProperty( ServerConstants.SC_KEY_DBNAME + ".6", dns );
     this.db.setProperties( props );
     this.db.start( );
 
