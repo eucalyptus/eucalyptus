@@ -314,7 +314,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
 		if(targetHost.contains(".walrus")) {
 			String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
-			path += bucket + "/";
+			path = "/" + bucket + path;
 		}
 
 		if(path.length() > 0) {
