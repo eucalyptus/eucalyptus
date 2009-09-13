@@ -94,9 +94,9 @@ public class CredentialProvider extends Bootstrapper {
     EntityWrapper<X509Cert> db = Credentials.getEntityWrapper( );
     try {
       certInfo = db.getUnique( new X509Cert( alias ) );
-    } catch ( EucalyptusCloudException e ) {
-    } finally {
       db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
     }
     return certInfo != null;
   }
@@ -107,11 +107,11 @@ public class CredentialProvider extends Bootstrapper {
       X509Cert certInfo = db.getUnique( new X509Cert( alias ) );
       byte[] certBytes = UrlBase64.decode( certInfo.getPemCertificate( ).getBytes( ) );
       X509Certificate x509 = Hashes.getPemCert( certBytes );
+      db.commit( );
       return x509;
     } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
       throw new GeneralSecurityException( e );
-    } finally {
-      db.commit( );
     }
   }
 
@@ -122,10 +122,10 @@ public class CredentialProvider extends Bootstrapper {
     certInfo.setPemCertificate( new String( UrlBase64.encode( certPem.getBytes( ) ) ) );
     try {
       certAlias = db.getUnique( certInfo ).getAlias( );
-    } catch ( EucalyptusCloudException e ) {
-      throw new GeneralSecurityException( e );
-    } finally {
       db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+      throw new GeneralSecurityException( e );
     }
     return certAlias;
   }
@@ -137,10 +137,10 @@ public class CredentialProvider extends Bootstrapper {
     try {
       User user = db.getUnique( searchUser );
       queryId = user.getQueryId( );
-    } catch ( EucalyptusCloudException e ) {
-      throw new GeneralSecurityException( e );
-    } finally {
       db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+      throw new GeneralSecurityException( e );
     }
     return queryId;
   }
@@ -153,10 +153,10 @@ public class CredentialProvider extends Bootstrapper {
     try {
       User user = db.getUnique( searchUser );
       secretKey = user.getSecretKey( );
-    } catch ( EucalyptusCloudException e ) {
-      throw new GeneralSecurityException( e );
-    } finally {
       db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+      throw new GeneralSecurityException( e );
     }
     return secretKey;
   }
@@ -169,10 +169,10 @@ public class CredentialProvider extends Bootstrapper {
     try {
       User user = db.getUnique( searchUser );
       userName = user.getUserName( );
-    } catch ( EucalyptusCloudException e ) {
-      throw new GeneralSecurityException( e );
-    } finally {
       db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+      throw new GeneralSecurityException( e );
     }
     return userName;
   }
@@ -191,14 +191,15 @@ public class CredentialProvider extends Bootstrapper {
       Example qbeCert = Example.create( searchCert ).enableLike( MatchMode.EXACT );
       List<User> users = ( List<User> ) session.createCriteria( User.class ).add( qbeUser ).createCriteria( "certificates" ).add( qbeCert ).list( );
       if ( users.size( ) > 1 ) {
+        db.rollback( );
         throw new GeneralSecurityException( "Multiple users with the same certificate." );
       } else if ( users.size( ) < 1 ) { throw new GeneralSecurityException( "No user with the specified certificate." ); }
+      db.commit( );
       return users.get( 0 ).getUserName( );
     } catch ( HibernateException e ) {
+      db.rollback( );
       throw new GeneralSecurityException( e );
-    } finally {
-      db.commit( );
-    }
+    } 
   }
 
   public static String getCertificateAlias( final X509Certificate cert ) throws GeneralSecurityException {
@@ -231,15 +232,16 @@ public class CredentialProvider extends Bootstrapper {
       for ( X509Cert cert : certList ) {
         certAliases.add( cert.getAlias( ) );
       }
-    } finally {
       db.commit( );
+    } catch( Throwable e ) { 
+      db.rollback( );
     }
     return certAliases;
   }
 
   @Override
   public boolean load( Resource current ) throws Exception {
-    return true;//TODO: check the DB connection here.
+    return true;
   }
 
   @Override
@@ -261,10 +263,10 @@ public class CredentialProvider extends Bootstrapper {
     User searchUser = new User( userName );
     try {
       user = db.getUnique( searchUser );
-    } catch ( EucalyptusCloudException e ) {
-      throw new NoSuchUserException( e );
-    } finally {
       db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+      throw new NoSuchUserException( e );
     }
     return user;
   }
@@ -280,11 +282,10 @@ public class CredentialProvider extends Bootstrapper {
     EntityWrapper<User> db = Credentials.getEntityWrapper( );
     try {
       db.add( newUser );
+      db.commit( );
     } catch ( Exception e ) {
       db.rollback( );
       throw new UserExistsException( e );
-    } finally {
-      db.commit( );
     }
     return newUser;
   }
