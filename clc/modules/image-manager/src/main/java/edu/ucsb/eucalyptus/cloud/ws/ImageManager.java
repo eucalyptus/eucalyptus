@@ -115,8 +115,7 @@ public class ImageManager {
   public static Logger LOG = Logger.getLogger( ImageManager.class );
 
   public VmImageInfo resolve( VmInfo vmInfo ) throws EucalyptusCloudException {
-    SystemConfiguration conf = EucalyptusProperties.getSystemConfiguration( );
-    String walrusUrl = ImageUtil.getStorageUrl( conf );
+    String walrusUrl = ImageUtil.getStorageUrl( );
     ArrayList<String> productCodes = Lists.newArrayList( );
     ImageInfo diskInfo = null, kernelInfo = null, ramdiskInfo = null;
     String diskUrl = null, kernelUrl = null, ramdiskUrl = null;
@@ -139,8 +138,7 @@ public class ImageManager {
   }
 
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    SystemConfiguration conf = EucalyptusProperties.getSystemConfiguration( );
-    String walrusUrl = ImageUtil.getStorageUrl( conf );
+    String walrusUrl = ImageUtil.getStorageUrl( );
 
     RunInstancesType msg = vmAllocInfo.getRequest( );
     ImageInfo searchDiskInfo = new ImageInfo( msg.getImageId( ) );

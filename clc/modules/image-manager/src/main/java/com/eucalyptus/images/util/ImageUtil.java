@@ -233,7 +233,7 @@ public class ImageUtil {
     return diskUrl;
   }
 
-  public static String getStorageUrl( final SystemConfiguration conf ) throws EucalyptusCloudException {
+  public static String getStorageUrl( ) throws EucalyptusCloudException {
     return EucalyptusProperties.getWalrusUrl( ) + "/";
   }
 
