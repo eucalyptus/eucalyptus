@@ -152,6 +152,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
 
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
     if( e.getCause( ) instanceof AlreadyConnectedException ) {
+      LOG.debug( e );
       LOG.trace( e.getCause( ), e.getCause( ) );
     } else {
       if ( this.channel != null ) {
@@ -194,9 +195,13 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
 
     @Override
     public void operationComplete( ChannelFuture channelFuture ) throws Exception {
-      if ( channelFuture.isSuccess( ) ) {
-        channel = channelFuture.getChannel( );
-        channelWriteFuture = channelFuture.getChannel( ).write( request );
+      try {
+        if ( channelFuture.isSuccess( ) ) {
+          channel = channelFuture.getChannel( );
+          channelWriteFuture = channelFuture.getChannel( ).write( request );
+        }
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
       } 
     }
   }
