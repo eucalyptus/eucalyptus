@@ -201,7 +201,7 @@ sync_keys() {
 			echo "ERROR: cannot find cluster credentials."
 			exit 1
 		    else
-			if ! rsync $i $DESTDIR ; then
+			if ! rsync -a $i $DESTDIR ; then
 			    echo "ERROR: cannot copy file (${i}) to destination (${DESTDIR})"
 			    return 1
 			fi
