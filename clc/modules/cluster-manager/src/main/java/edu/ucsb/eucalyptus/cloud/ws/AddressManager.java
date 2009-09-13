@@ -114,14 +114,19 @@ public class AddressManager implements Startable {
 
   public void start() throws MuleException {
     EntityWrapper<Address> db = new EntityWrapper<Address>();
-    List<Address> addrList = db.query( new Address() );
-    for ( Address addr : addrList )
-      try {
-        Addresses.getInstance().replace( addr.getName(), addr );
-      } catch ( NoSuchElementException e ) {
-        Addresses.getInstance().register( addr );
+    try {
+      List<Address> addrList = db.query( new Address() );
+      for ( Address addr : addrList ) {
+        try {
+          Addresses.getInstance().replace( addr.getName(), addr );
+        } catch ( NoSuchElementException e ) {
+          Addresses.getInstance().register( addr );
+        }
       }
-    db.commit();
+      db.commit();
+    } catch ( Exception e ) {
+      db.rollback( );
+    }
   }
 
   public static void updateAddressingMode() {

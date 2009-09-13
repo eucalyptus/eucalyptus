@@ -56,6 +56,9 @@ public class NetworkGroupUtil {
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw e;
+    } catch ( Throwable e ) {
+      db.rollback( );
+      throw new EucalyptusCloudException( e );
     }
     return group;
   }
