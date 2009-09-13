@@ -23,7 +23,7 @@ try {
 }
 EntityWrapper<UserGroupInfo> db3 = new EntityWrapper<UserGroupInfo>( );
 try {
-  db3.getUnique( new UserGroupInfo( "all" ) );\
+  db3.getUnique( new UserGroupInfo( "all" ) );
   db3.rollback();
 } catch ( EucalyptusCloudException e ) {
   db3.add( new UserGroupInfo( "all" ) );

@@ -78,9 +78,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.auth.util.Hashes.Digest;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;

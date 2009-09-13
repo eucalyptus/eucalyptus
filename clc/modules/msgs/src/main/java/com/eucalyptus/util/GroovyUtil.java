@@ -11,11 +11,19 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
+import org.apache.log4j.Logger;
+
 public class GroovyUtil {
-  public static ScriptEngine groovyEngine;
-  static {
-    ScriptEngineManager manager = new ScriptEngineManager();
-    groovyEngine = manager.getEngineByName( "groovy" );
+  private static Logger LOG = Logger.getLogger( GroovyUtil.class );
+  public static ScriptEngine groovyEngine = getGroovyEngine();
+  public static ScriptEngine getGroovyEngine() {
+    synchronized( GroovyUtil.class ) {
+      if( groovyEngine == null ) {
+        ScriptEngineManager manager = new ScriptEngineManager();
+        groovyEngine = manager.getEngineByName( "groovy" );        
+      }
+      return groovyEngine;      
+    }
   }
   
   public static Object newInstance( String fileName ) throws FailScriptFailException {
@@ -34,16 +42,18 @@ public class GroovyUtil {
 
   public static void evaluateScript( String fileName ) throws FailScriptFailException {
     try {
-      groovyEngine.eval( new FileReader( SubDirectory.SCRIPTS + File.separator + fileName ) );
+      getGroovyEngine().eval( new FileReader( SubDirectory.SCRIPTS + File.separator + fileName ) );
     } catch ( Throwable e ) {
+      LOG.debug( e, e );
       throw new FailScriptFailException( "Executing the requested script failed: " + fileName, e );
     }
   }
 
   public static Object eval( String code ) throws FailScriptFailException {
     try {
-      return groovyEngine.eval( code );
+      return getGroovyEngine().eval( code );
     } catch ( Throwable e ) {
+      LOG.debug( e, e );
       throw new FailScriptFailException( "Executing the requested script failed: " + code, e );
     }
   }
