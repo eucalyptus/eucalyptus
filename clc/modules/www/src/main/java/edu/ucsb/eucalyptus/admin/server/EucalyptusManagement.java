@@ -615,9 +615,7 @@ public class EucalyptusManagement {
 			sysConf.setSystemReservedPublicAddresses( systemConfig.getSystemReservedPublicAddresses() );
 			sysConf.setZeroFillVolumes(systemConfig.getZeroFillVolumes());
 			db.commit();
-			WalrusProperties.update();
-			StorageProperties.update();
-      DNSProperties.update();
+            DNSProperties.update();
 		}
 		catch ( EucalyptusCloudException e )
 		{
@@ -633,8 +631,6 @@ public class EucalyptusManagement {
 					systemConfig.getNameserverAddress(),
 					systemConfig.getCloudHost( )));
 			db.commit();
-			WalrusProperties.update();
-			StorageProperties.update();
 			DNSProperties.update();
 		}
 	}

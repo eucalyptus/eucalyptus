@@ -114,30 +114,6 @@ public class WalrusProperties {
 	public static final String CONTENT_TYPE = "Content-Type";
 	public static final String CONTENT_DISPOSITION = "Content-Disposition";
 	public static final String MULTIFORM_DATA_TYPE = "multipart/form-data";
-	public static void update() {
-		//TODO
-		/*try {
-            SystemConfiguration systemConfiguration = EucalyptusProperties.getSystemConfiguration();
-            bucketRootDirectory = systemConfiguration.getStorageDir();
-            MAX_BUCKETS_PER_USER = systemConfiguration.getStorageMaxBucketsPerUser();
-            MAX_BUCKET_SIZE = systemConfiguration.getStorageMaxBucketSizeInMB() * M;
-            IMAGE_CACHE_SIZE = systemConfiguration.getStorageMaxCacheSizeInMB() * M;
-            WALRUS_URL = systemConfiguration.getStorageUrl();
-            java.net.URI walrusAddrUri = new URL(WALRUS_URL).toURI();
-            TRACKER_URL = "http://" + walrusAddrUri.getHost() + ":" + TRACKER_PORT + "/announce";
-            Integer maxTotalSnapSize = systemConfiguration.getStorageMaxTotalSnapshotSizeInGb();
-            if(maxTotalSnapSize != null) {
-                if(maxTotalSnapSize > 0) {
-                    MAX_TOTAL_SNAPSHOT_SIZE = maxTotalSnapSize;
-                }
-            }
-            UpdateWalrusConfigurationType updateConfig = new UpdateWalrusConfigurationType();
-            updateConfig.setBucketRootDirectory(bucketRootDirectory);
-            Messaging.send( WALRUS_REF, updateConfig );
-        } catch(Exception ex) {
-            LOG.warn(ex.getMessage());
-        }*/
-	}
 
 	public static final String URL_PROPERTY = "euca.walrus.url";
 	public static final String WALRUS_HOST_PROPERTY = "euca.walrus.host";

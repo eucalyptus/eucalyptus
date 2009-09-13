@@ -141,10 +141,6 @@ public class StorageProperties {
 		}
 	}
 
-	public static void update() {
-		LOG.warn("update is deprecated.");
-	}
-
 	public enum Status {
 		creating, available, pending, completed, failed
 	}
