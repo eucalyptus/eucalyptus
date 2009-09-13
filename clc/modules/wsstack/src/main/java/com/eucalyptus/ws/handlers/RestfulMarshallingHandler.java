@@ -76,13 +76,13 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.handlers.HmacV2Handler.SecurityParameter;
-import com.eucalyptus.ws.handlers.wssecurity.WsSecHandler;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
 
@@ -116,7 +116,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
       Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
       ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-      WsSecHandler.canHas.lock( );
+      HoldMe.canHas.lock( );
       try {
         if( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType ) {
           EucalyptusErrorMessageType errMsg = (EucalyptusErrorMessageType) httpResponse.getMessage( );
@@ -132,7 +132,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           }        
         }
       } finally {
-        WsSecHandler.canHas.unlock( );
+        HoldMe.canHas.unlock( );
       }
       byte[] req = byteOut.toByteArray();
       ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );

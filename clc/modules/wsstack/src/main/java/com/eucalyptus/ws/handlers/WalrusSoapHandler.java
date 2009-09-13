@@ -94,6 +94,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
+import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.MappingHttpMessage;
@@ -174,7 +175,14 @@ public class WalrusSoapHandler extends MessageStackHandler {
 				httpMessage.getSoapEnvelope( ).getBody( ).addChild( httpMessage.getOmMessage( ) );
 			}
 			ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
-			httpMessage.getSoapEnvelope( ).serialize( byteOut );
+			
+			HoldMe.canHas.lock( );
+			try {
+		     httpMessage.getSoapEnvelope( ).serialize( byteOut );
+	    } finally {
+	      HoldMe.canHas.unlock();
+	    }
+
 			ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) );
 			httpMessage.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
 			httpMessage.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );
@@ -184,31 +192,36 @@ public class WalrusSoapHandler extends MessageStackHandler {
 
 	private static SOAPEnvelope createFault(  String faultCode, String faultReason, String faultDetails, 
 			String resourceType, String resource )  {
-		SOAPFactory soapFactory = OMAbstractFactory.getSOAP11Factory();
+    HoldMe.canHas.lock( );
+    try {
+      SOAPFactory soapFactory = OMAbstractFactory.getSOAP11Factory();
 
-		SOAPFaultCode soapFaultCode = soapFactory.createSOAPFaultCode();
-		soapFaultCode.setText( SOAP11Constants.FAULT_CODE_SENDER + "." + faultCode );
+      SOAPFaultCode soapFaultCode = soapFactory.createSOAPFaultCode();
+      soapFaultCode.setText( SOAP11Constants.FAULT_CODE_SENDER + "." + faultCode );
 
-		SOAPFaultReason soapFaultReason = soapFactory.createSOAPFaultReason();
-		soapFaultReason.setText( faultReason );
+      SOAPFaultReason soapFaultReason = soapFactory.createSOAPFaultReason();
+      soapFaultReason.setText( faultReason );
 
-		SOAPFaultDetail soapFaultDetail = soapFactory.createSOAPFaultDetail();
+      SOAPFaultDetail soapFaultDetail = soapFactory.createSOAPFaultDetail();
 
-		if(resource != null) {
-			OMElement detail = soapFactory.createOMElement(new QName(resourceType));
-			detail.setText(resource);
-			soapFaultDetail.addDetailEntry(detail);
-		} else {
-			soapFaultDetail.setText(faultDetails);
-		}
+      if(resource != null) {
+        OMElement detail = soapFactory.createOMElement(new QName(resourceType));
+        detail.setText(resource);
+        soapFaultDetail.addDetailEntry(detail);
+      } else {
+        soapFaultDetail.setText(faultDetails);
+      }
 
-		SOAPEnvelope soapEnv = soapFactory.getDefaultEnvelope( );
-		SOAPFault soapFault = soapFactory.createSOAPFault( );
-		soapFault.setCode( soapFaultCode );
-		soapFault.setDetail( soapFaultDetail );
-		soapFault.setReason( soapFaultReason );
-		soapEnv.getBody( ).addFault( soapFault );
-		return soapEnv;
+      SOAPEnvelope soapEnv = soapFactory.getDefaultEnvelope( );
+      SOAPFault soapFault = soapFactory.createSOAPFault( );
+      soapFault.setCode( soapFaultCode );
+      soapFault.setDetail( soapFaultDetail );
+      soapFault.setReason( soapFaultReason );
+      soapEnv.getBody( ).addFault( soapFault );
+      return soapEnv;
+    } finally {
+      HoldMe.canHas.unlock();
+    }
 	}
 
 }

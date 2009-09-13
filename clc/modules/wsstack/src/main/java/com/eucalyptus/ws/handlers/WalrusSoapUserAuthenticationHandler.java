@@ -85,6 +85,7 @@ import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -99,11 +100,16 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
 			SOAPEnvelope envelope = httpRequest.getSoapEnvelope();
 			SOAPBody body = envelope.getBody();
-			final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), body.getXMLStreamReader( ) );
-			final OMElement elem = doomBuilder.getDocumentElement( );
-			elem.build( );
-			final Document doc = ( ( Element ) elem ).getOwnerDocument();
-			handle(httpRequest, doc);
+			HoldMe.canHas.lock();
+			try {
+  			final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), body.getXMLStreamReader( ) );
+  			final OMElement elem = doomBuilder.getDocumentElement( );
+  			elem.build( );
+  			final Document doc = ( ( Element ) elem ).getOwnerDocument();
+  			handle(httpRequest, doc);
+			} finally {
+			  HoldMe.canHas.unlock( );
+			}
 		}
 	}
 

@@ -97,6 +97,7 @@ import org.jibx.runtime.JiBXException;
 import org.jibx.runtime.impl.StAXReaderWrapper;
 import org.jibx.runtime.impl.UnmarshallingContext;
 
+import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.WebServicesException;
 
@@ -112,11 +113,6 @@ public class Binding {
 	protected Binding( final String name ) throws BindingException {
 		this.name = name;
 		this.buildRest( );
-		/* try {
-      this.bindingFactory = BindingDirectory.getFactory( name, edu.ucsb.eucalyptus.msgs.RunInstancesType.class );
-    } catch ( JiBXException e ) {
-      throw new BindingException( e );
-    }*/
 	}
 
 	public void seed( final Class seedClass ) throws BindingException {
@@ -202,8 +198,13 @@ public class Binding {
 				String retString = bos.toString( );
 				retString = retString.replaceAll( origNs, altNs );
 				final ByteArrayInputStream bis = new ByteArrayInputStream( retString.getBytes( ) );
-				final StAXOMBuilder stAXOMBuilder = new StAXOMBuilder( bis );
-				retVal = stAXOMBuilder.getDocumentElement( );
+		    HoldMe.canHas.lock();
+		    try {
+	        final StAXOMBuilder stAXOMBuilder = new StAXOMBuilder( bis );
+	        retVal = stAXOMBuilder.getDocumentElement( );
+		    } finally {
+		      HoldMe.canHas.unlock( );
+		    }
 			} catch ( final XMLStreamException e ) {
 				Binding.LOG.error( e, e );
 			}
@@ -229,9 +230,14 @@ public class Binding {
 	}
 
 	public Object fromOM( final String text ) throws Exception {
-		final XMLStreamReader parser = XMLInputFactory.newInstance( ).createXMLStreamReader( new ByteArrayInputStream( text.getBytes( ) ) );
-		final StAXOMBuilder builder = new StAXOMBuilder( parser );
-		return this.fromOM( builder.getDocumentElement( ) );
+    HoldMe.canHas.lock();
+    try {
+      final XMLStreamReader parser = XMLInputFactory.newInstance( ).createXMLStreamReader( new ByteArrayInputStream( text.getBytes( ) ) );
+      final StAXOMBuilder builder = new StAXOMBuilder( parser );
+      return this.fromOM( builder.getDocumentElement( ) );
+    } finally {
+      HoldMe.canHas.unlock( );
+    }
 	}
 
 	public Object fromOM( final OMElement param, final Class type ) throws WebServicesException {

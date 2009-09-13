@@ -68,6 +68,8 @@ import org.apache.xml.dtm.ref.DTMNodeList;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+import com.eucalyptus.util.HoldMe;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -92,37 +94,52 @@ public class XMLParser {
     private File file;
     private String rawData;
 
-    public XMLParser() {
-        xpath = XPathFactory.newInstance().newXPath();
-        docFactory = DocumentBuilderFactory.newInstance();
-        try {
-            docBuilder = docFactory.newDocumentBuilder();
-        } catch (ParserConfigurationException ex) {
-            ex.printStackTrace();
-        }
+  public XMLParser( ) {
+    HoldMe.canHas.lock( );
+    try {
+      xpath = XPathFactory.newInstance( ).newXPath( );
+      docFactory = DocumentBuilderFactory.newInstance( );
+      try {
+        docBuilder = docFactory.newDocumentBuilder( );
+      } catch ( ParserConfigurationException ex ) {
+        ex.printStackTrace( );
+      }
+    } finally {
+      HoldMe.canHas.unlock( );
     }
+  }
 
-    public XMLParser(File file) {
-        this();
-        this.file = file;
-        try {
-            FileInputStream fileInputStream = new FileInputStream(file);
-            docRoot = docBuilder.parse(fileInputStream);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+  public XMLParser( File file ) {
+    this( );
+    HoldMe.canHas.lock( );
+    try {
+      this.file = file;
+      try {
+        FileInputStream fileInputStream = new FileInputStream( file );
+        docRoot = docBuilder.parse( fileInputStream );
+      } catch ( Exception ex ) {
+        ex.printStackTrace( );
+      }
+    } finally {
+      HoldMe.canHas.unlock( );
     }
+  }
 
-    public XMLParser(String xmlData) {
-        this();
-        this.rawData = xmlData;
-        InputStream in = new ByteArrayInputStream(xmlData.getBytes());
-        try {
-            docRoot = docBuilder.parse(in);
-        } catch(Exception ex) {
-            ex.printStackTrace();
-        }
+  public XMLParser( String xmlData ) {
+    this( );
+    HoldMe.canHas.lock( );
+    try {
+      this.rawData = xmlData;
+      InputStream in = new ByteArrayInputStream( xmlData.getBytes( ) );
+      try {
+        docRoot = docBuilder.parse( in );
+      } catch ( Exception ex ) {
+        ex.printStackTrace( );
+      }
+    } finally {
+      HoldMe.canHas.unlock( );
     }
+  }
 
     public String getValue(String name) {
         try {

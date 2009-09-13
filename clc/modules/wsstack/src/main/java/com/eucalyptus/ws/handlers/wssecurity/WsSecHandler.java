@@ -65,8 +65,6 @@ package com.eucalyptus.ws.handlers.wssecurity;
 
 import java.util.Collection;
 import java.util.Vector;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import javax.xml.stream.XMLStreamException;
 
@@ -91,6 +89,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
@@ -99,7 +98,6 @@ import com.eucalyptus.ws.util.CredentialProxy;
 @ChannelPipelineCoverage( "all" )
 public abstract class WsSecHandler extends MessageStackHandler {
   private static Logger         LOG    = Logger.getLogger( WsSecHandler.class );
-  public static Lock           canHas = new ReentrantLock( );
   private final CredentialProxy credentials;
   static {
     Credentials.init( );
@@ -118,14 +116,14 @@ public abstract class WsSecHandler extends MessageStackHandler {
         OMElement elem = null;
         Document doc = null;
         SOAPEnvelope env = httpRequest.getSoapEnvelope( );
-        WsSecHandler.canHas.lock( );
+        HoldMe.canHas.lock( );
         try {
           final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), env.getXMLStreamReader( ) );
           elem = doomBuilder.getDocumentElement( );
           elem.build( );
           doc = ( ( Element ) elem ).getOwnerDocument( );
         } finally {
-          WsSecHandler.canHas.unlock( );
+          HoldMe.canHas.unlock( );
         }
 
         final Vector v = new Vector( );
@@ -165,13 +163,13 @@ public abstract class WsSecHandler extends MessageStackHandler {
           Channels.fireExceptionCaught( ctx, e );
         }
         SOAPEnvelope envelope = null;
-        WsSecHandler.canHas.lock( );
+        HoldMe.canHas.lock( );
         try {
           final StAXSOAPModelBuilder stAXSOAPModelBuilder = new StAXSOAPModelBuilder( elem.getXMLStreamReader( ), null );
           envelope = stAXSOAPModelBuilder.getSOAPEnvelope( );
           envelope.build( );
         } finally {
-          WsSecHandler.canHas.unlock( );
+          HoldMe.canHas.unlock( );
         }
 
         httpRequest.setSoapEnvelope( envelope );

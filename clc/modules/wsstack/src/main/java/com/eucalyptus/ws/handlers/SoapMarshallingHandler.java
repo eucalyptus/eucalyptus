@@ -81,9 +81,9 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
+import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.handlers.wssecurity.WsSecHandler;
 
 @ChannelPipelineCoverage( "all" )
 public class SoapMarshallingHandler extends MessageStackHandler {
@@ -96,14 +96,14 @@ public class SoapMarshallingHandler extends MessageStackHandler {
       String content = httpMessage.getContent( ).toString( "UTF-8" );
       httpMessage.setMessageString( content );
       ByteArrayInputStream byteIn = new ByteArrayInputStream( content.getBytes( ) );
-      WsSecHandler.canHas.lock( );
+      HoldMe.canHas.lock( );
       SOAPEnvelope env = null;
       try {
         XMLStreamReader xmlStreamReader = XMLInputFactory.newInstance( ).createXMLStreamReader( byteIn );
         StAXSOAPModelBuilder soapBuilder = new StAXSOAPModelBuilder( xmlStreamReader, SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI );
         env = ( SOAPEnvelope ) soapBuilder.getDocumentElement( );
       } finally {
-        WsSecHandler.canHas.unlock( );
+        HoldMe.canHas.unlock( );
       }
       httpMessage.setSoapEnvelope( env );
     }
@@ -114,7 +114,12 @@ public class SoapMarshallingHandler extends MessageStackHandler {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
       ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
-      httpMessage.getSoapEnvelope( ).serialize( byteOut );
+      HoldMe.canHas.lock( );
+      try {
+        httpMessage.getSoapEnvelope( ).serialize( byteOut );
+      } finally {
+        HoldMe.canHas.unlock( );
+      }
       ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) );
       httpMessage.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
       httpMessage.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );
