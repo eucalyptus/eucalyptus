@@ -186,13 +186,12 @@ public class StartupChecks {
     EntityWrapper<Volume> db2 = new EntityWrapper<Volume>( "eucalyptus_volumes" );
     try {
       UserInfo adminUser = db.getUnique( new UserInfo( "admin" ) );
+      db.rollback( );
       return true;
     } catch ( EucalyptusCloudException e ) {
-      return false;
-    } finally {
       db.rollback( );
-    }
-
+      return false;
+    } 
   }
  
   public static boolean createDb( ) {
@@ -213,9 +212,9 @@ public class StartupChecks {
     EntityWrapper<UserGroupInfo> db3 = new EntityWrapper<UserGroupInfo>( );
     try {
       db3.getUnique( new UserGroupInfo( "all" ) );
+      db3.commit( );
     } catch ( EucalyptusCloudException e ) {
       db3.add( new UserGroupInfo( "all" ) );
-    } finally {
       db3.commit( );
     }
     try {

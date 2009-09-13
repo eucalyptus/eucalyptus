@@ -278,10 +278,13 @@ public class ImageUtil {
   public static ImageInfo getImageInfobyId( String searchId ) throws EucalyptusCloudException {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
     if ( isSet( searchId ) ) try {
-      return db.getUnique( new ImageInfo( searchId ) );
+      ImageInfo imgInfo = db.getUnique( new ImageInfo( searchId ) );
+      db.commit( );
+      return imgInfo;
     } catch ( EucalyptusCloudException e ) {
+      db.commit( );
       throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
-    } finally { db.commit(); }
+    } catch (Throwable t){ db.commit(); }
     throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
   }
 

@@ -440,8 +440,8 @@ public class ImageManager {
           reply.set_return( true );
           reply.setOwnerId( found.getImageOwnerId( ) );
         }
+        db.commit( );
       } catch ( EucalyptusCloudException e ) {
-      } finally {
         db.commit( );
       }
     } catch ( NoSuchElementException e ) {

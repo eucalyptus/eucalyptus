@@ -69,6 +69,7 @@ import com.eucalyptus.cluster.ClusterMessageQueue;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.entities.NetworkRulesGroup;
+import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.*;
@@ -507,20 +508,11 @@ public class SystemState {
   }
 
   public static Network getUserNetwork( String userId, String networkName ) throws EucalyptusCloudException {
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
     try {
-      UserInfo user = db.getUnique( new UserInfo( userId ) );
-//FIXME:      for ( NetworkRulesGroup group : user.getNetworkRulesGroup() ) {
-//        if ( networkName.equals( group.getDisplayName() ) )
-//          return group.getVmNetwork( userId );
-//      }
+      return NetworkGroupUtil.getUserNetworkRulesGroup( userId, networkName ).getVmNetwork( );
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( "Failed to find network: " + userId + "-" + networkName );
     }
-    catch ( EucalyptusCloudException e ) {
-      db.rollback();
-    } finally {
-      db.commit();
-    }
-    throw new EucalyptusCloudException( "Failed to find network: " + userId + "-" + networkName );
   }
 
 }

@@ -296,7 +296,8 @@ public class UserInfo {
     UserInfo user = null;
     try {
       user = db.getUnique( new UserInfo( userId ) );
-    } finally {
+      db.commit( );
+    } catch (Throwable  t) {
       db.commit( );
     }
     return user;

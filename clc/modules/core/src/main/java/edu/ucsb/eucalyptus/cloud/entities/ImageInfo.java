@@ -326,7 +326,8 @@ public class ImageInfo {
     ImageInfo image = null;
     try {
       image = db.getUnique( new ImageInfo( imageId ) );
-    } finally {
+      db.commit( );
+    } catch (Throwable t) {
       db.commit();
     }
     return image;

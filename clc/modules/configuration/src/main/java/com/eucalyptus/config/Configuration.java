@@ -228,10 +228,12 @@ public class Configuration {
 			for ( ComponentConfiguration c : componentList ) {
 				listConfigs.add( new ComponentInfoType( c.getName( ), c.getHostName( ) ) );
 			}
+      db.commit( );
 		} catch ( Exception e ) {
 			LOG.error( e, e );
+      db.commit( );
 			throw new EucalyptusCloudException( e );
-		} finally {
+		} catch (Throwable t ) {
 			db.commit( );
 		}
 		return reply;

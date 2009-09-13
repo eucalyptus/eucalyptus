@@ -504,11 +504,10 @@ public class EucalyptusManagement {
 		{
 			sysConf = db.getUnique( new SystemConfiguration() );
 			validateSystemConfiguration(sysConf);
+      db.commit();
 		} catch(EucalyptusCloudException e) {
+      db.commit();
 			sysConf = validateSystemConfiguration(null);
-		}
-		finally {
-			db.commit();
 		}
 		return new SystemConfigWeb( 
 				sysConf.getDefaultKernel(),

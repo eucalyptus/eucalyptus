@@ -227,7 +227,8 @@ public class VolumeManager {
           }
         }
       }
-    } finally {
+      db.commit( );
+    } catch (Throwable t ) {
       db.commit();
     }
     return reply;

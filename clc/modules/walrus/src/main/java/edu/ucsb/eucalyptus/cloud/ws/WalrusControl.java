@@ -189,6 +189,7 @@ public class WalrusControl {
 		WalrusInfo walrusInfo;
 		try {
 			walrusInfo = db.getUnique(new WalrusInfo());
+      db.commit();
 		} catch(EucalyptusCloudException ex) {
 			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
 					WalrusProperties.bucketRootDirectory, 
@@ -197,8 +198,7 @@ public class WalrusControl {
 					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
 					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
 			db.add(walrusInfo);
-		} finally {
-			db.commit();
+      db.commit();
 		}
 		return walrusInfo;
 	}
@@ -214,6 +214,7 @@ public class WalrusControl {
 			walrusInfo.setStorageMaxBucketSizeInMB((int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M));
 			walrusInfo.setStorageMaxCacheSizeInMB((int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M));
 			walrusInfo.setStorageMaxTotalSnapshotSizeInGb(WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
+      db.commit();
 		} catch(EucalyptusCloudException ex) {
 			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
 					WalrusProperties.bucketRootDirectory, 
@@ -222,9 +223,8 @@ public class WalrusControl {
 					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
 					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
 			db.add(walrusInfo);
-		} finally {
-			db.commit();
-		}
+      db.commit();
+		} 
 	}
 
 

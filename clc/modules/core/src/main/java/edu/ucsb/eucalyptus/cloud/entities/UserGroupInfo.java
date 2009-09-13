@@ -97,10 +97,10 @@ public class UserGroupInfo {
     UserGroupInfo userGroup = null;
     try {
       userGroup = db.getUnique( new UserGroupInfo( name ) );
+      db.commit( );
     } catch( Exception e ) {
       db.add( new UserGroupInfo( "all" ) );
-    }finally {
-      db.commit();
+      db.commit( );
     }
     return userGroup;
   }

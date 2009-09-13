@@ -195,6 +195,7 @@ public class BlockStorage {
 		StorageInfo storageInfo;
 		try {
 			storageInfo = db.getUnique(new StorageInfo(StorageProperties.NAME));
+      db.commit();
 		} catch(EucalyptusCloudException ex) {
 			storageInfo = new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
@@ -203,9 +204,8 @@ public class BlockStorage {
 					StorageProperties.storageRootDirectory,
 					StorageProperties.zeroFillVolumes);
 			db.add(storageInfo);
-		} finally {
-			db.commit();
-		}
+      db.commit();
+		} 
 		return storageInfo;
 	}
 
@@ -219,6 +219,7 @@ public class BlockStorage {
 			storageInfo.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
 			storageInfo.setVolumesDir(StorageProperties.storageRootDirectory);
 			storageInfo.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
+      db.commit();
 		} catch(EucalyptusCloudException ex) {
 			storageInfo = new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
@@ -227,9 +228,8 @@ public class BlockStorage {
 					StorageProperties.storageRootDirectory,
 					StorageProperties.zeroFillVolumes);
 			db.add(storageInfo);
-		} finally {
-			db.commit();
-		}
+      db.commit();
+		} 
 	}
 
 	public BlockStorage() {}

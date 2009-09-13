@@ -61,11 +61,11 @@ public class ClusterUtil {
     EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
     try {
       credentials = credDb.getUnique( new ClusterCredentials( c.getName( ) ) );
+      credDb.rollback( );
     } catch ( EucalyptusCloudException e ) {
       LOG.error( "Failed to load credentials for cluster: " + c.getName( ) );
-      throw e;
-    } finally {
       credDb.rollback( );
+      throw e;
     }
     Cluster newCluster = new Cluster( c, credentials );
     Clusters.getInstance( ).register( newCluster );

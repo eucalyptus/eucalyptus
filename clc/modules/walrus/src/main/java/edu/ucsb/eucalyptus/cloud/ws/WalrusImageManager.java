@@ -373,15 +373,15 @@ public class WalrusImageManager {
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		try {
 			ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
+      db.commit();
 			if(foundImageCacheInfo.getInCache())
 				return true;
 			else
 				return false;
 		} catch(Exception ex) {
+      db.commit();
 			return false;
-		} finally {
-			db.commit();
-		}
+		} 
 	}
 
 	private long checkCachingProgress(String bucketName, String manifestKey, long oldBytesRead) {
@@ -391,14 +391,14 @@ public class WalrusImageManager {
 			ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
 			String cacheImageKey = foundImageCacheInfo.getImageName().replaceAll(".tgz", "");
 			long objectSize = storageManager.getObjectSize(bucketName, cacheImageKey);
+      db.commit();
 			if(objectSize > 0) {
 				return objectSize - oldBytesRead;
 			}
 			return oldBytesRead;
 		} catch (Exception ex) {
+      db.commit();
 			return oldBytesRead;
-		} finally {
-			db.commit();
 		}
 	}
 
