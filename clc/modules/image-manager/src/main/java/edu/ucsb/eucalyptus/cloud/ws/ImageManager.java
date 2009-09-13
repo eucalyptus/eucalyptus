@@ -168,13 +168,19 @@ public class ImageManager {
 
     // :: now its time to determine the ramdisk and kernel info based on: 1)
     // user input, 2) emi specific info, 3) system defaults ::/
-    String kernelId = ImageUtil.getImageInfobyId( msg.getKernelId( ), diskInfo.getKernelId( ), conf.getDefaultKernel( ) );
+    String defaultKernelId = null;
+    String defaultRamdiskId = null;
+    try {
+      defaultKernelId = EucalyptusProperties.getSystemConfiguration( ).getDefaultKernel( );
+      defaultRamdiskId = EucalyptusProperties.getSystemConfiguration( ).getDefaultRamdisk( );
+    } catch ( Exception e1 ) {}
+    String kernelId = ImageUtil.getImageInfobyId( msg.getKernelId( ), diskInfo.getKernelId( ), defaultKernelId );
     if ( kernelId == null ) {
       db.rollback( );
       throw new EucalyptusCloudException( "Unable to determine required kernel image." );
     }
 
-    String ramdiskId = ImageUtil.getImageInfobyId( msg.getRamdiskId( ), diskInfo.getRamdiskId( ), conf.getDefaultRamdisk( ) );
+    String ramdiskId = ImageUtil.getImageInfobyId( msg.getRamdiskId( ), diskInfo.getRamdiskId( ), defaultRamdiskId );
 
     ImageInfo kernelInfo = null;
     try {
