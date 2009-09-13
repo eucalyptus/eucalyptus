@@ -66,6 +66,7 @@
 package edu.ucsb.eucalyptus.admin.server;
 
 import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.network.NetworkGroupUtil;
@@ -369,6 +370,12 @@ public class EucalyptusManagement {
 		}
 		db.delete( userList.get(0) );
 		db.commit();
+		try {
+			CredentialProvider.deleteUser(userName);
+		} catch ( NoSuchUserException e ) {
+			LOG.error(e);
+			throw EucalyptusManagement.makeFault( "Unable to delete user" );
+		}
 	}
 
 	public static void commitWebUser( UserInfoWeb webUser ) throws SerializableException
