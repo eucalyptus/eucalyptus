@@ -157,8 +157,14 @@ public class EucalyptusProperties {
   }
 
   public static String getWalrusUrl() {
+    String cloudHost = getCloudHost( );
+    return String.format( "http://%s:8773/services/Walrus", cloudHost == null ? "127.0.0.1" : cloudHost );
+  }
+
+  private static String getCloudHost( ) {
+    String cloudHost = null;
     try {
-      String cloudHost = EucalyptusProperties.getSystemConfiguration( ).getCloudHost( );
+      cloudHost = EucalyptusProperties.getSystemConfiguration( ).getCloudHost( );
       if( cloudHost == null ) {
         for( WalrusConfiguration w : Configuration.getWalrusConfigurations( ) ) {
           if( NetworkUtil.testLocal( w.getHostName( ) ) ) {
@@ -167,15 +173,14 @@ public class EucalyptusProperties {
           }
         }
       }
-      if( cloudHost == null ) {
-        try {
-          cloudHost = NetworkUtil.getAllAddresses( ).get( 0 );
-        } catch ( SocketException e ) {}
-      }
-      return String.format( "http://%s:8773/services/Walrus", cloudHost );
     } catch ( EucalyptusCloudException e ) {
-      return "http://127.0.0.1:8773/services/Walrus";
     }
+    if( cloudHost == null ) {
+      try {
+        cloudHost = NetworkUtil.getAllAddresses( ).get( 0 );
+      } catch ( SocketException e ) {}
+    }
+    return cloudHost;
   }
 
   public enum TokenState {

@@ -538,6 +538,7 @@ public class EucalyptusManagement {
 			List<ImageInfo> res = db2.query(q);
 			if( res.size() > 0 )
 				sysConf.setDefaultKernel(res.get(0).getImageId());
+			db2.commit( );
 		}
 		if(sysConf.getDefaultRamdisk() == null) {
 			ImageInfo q = new ImageInfo();
@@ -546,6 +547,7 @@ public class EucalyptusManagement {
 			List<ImageInfo> res = db2.query(q);
 			if( res.size() > 0 )
 				sysConf.setDefaultRamdisk(res.get(0).getImageId());
+      db2.commit( );
 		}
 		if(sysConf.getDnsDomain() == null) {
 			sysConf.setDnsDomain(DNSProperties.DOMAIN);
