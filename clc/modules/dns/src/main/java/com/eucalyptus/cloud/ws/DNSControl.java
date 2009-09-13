@@ -82,10 +82,6 @@ import java.util.List;
 public class DNSControl {
 
 	private static Logger LOG = Logger.getLogger( DNSControl.class );
-	/*static {
-        initialize();
-        populateRecords();
-    }*/
 
 	private static void initializeUDP() throws Exception {
 		try {
@@ -107,7 +103,7 @@ public class DNSControl {
 		}
 	}
 
-	private static void populateRecords() {
+	public static void populateRecords() {
 		try {
 			EntityWrapper<ZoneInfo> db = new EntityWrapper<ZoneInfo>();
 			ZoneInfo zInfo = new ZoneInfo();
