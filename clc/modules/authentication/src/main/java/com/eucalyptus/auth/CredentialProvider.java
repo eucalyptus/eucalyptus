@@ -193,7 +193,7 @@ public class CredentialProvider extends Bootstrapper {
 			if ( users.size( ) > 1 ) {
 				db.rollback( );
 				throw new GeneralSecurityException( "Multiple users with the same certificate." );
-			} else if ( users.size( ) < 1 ) { throw new GeneralSecurityException( "No user with the specified certificate." ); }
+			} else if ( users.size( ) < 1 ) { db.rollback( ); new GeneralSecurityException( "No user with the specified certificate." ); }
 			db.commit( );
 			return users.get( 0 ).getUserName( );
 		} catch ( HibernateException e ) {

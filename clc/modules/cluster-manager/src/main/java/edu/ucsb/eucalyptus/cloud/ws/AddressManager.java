@@ -124,7 +124,7 @@ public class AddressManager implements Startable {
         }
       }
       db.commit();
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       db.rollback( );
     }
   }
