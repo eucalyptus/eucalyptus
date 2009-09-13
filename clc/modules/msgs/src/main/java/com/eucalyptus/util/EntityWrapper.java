@@ -113,7 +113,7 @@ public class EntityWrapper<TYPE> {
     Exception e = new Exception( );
     e.fillInStackTrace( );
     for( StackTraceElement ste : e.getStackTrace( ) ){
-      if( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) || "getEntityWrapper".equals( ste.getMethodName( ) ) ) {
+      if( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) || ste.getMethodName( ).matches( "getEntityWrapper" ) ) {
         continue;
       } else {
         LOG.debug( "CREATE CONNECTION " + ste.toString( ) );

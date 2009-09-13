@@ -192,7 +192,7 @@ public class Binding {
 		OMElement retVal = factory.createOMElement( src, this.bindingFactory.getElementNames( )[index], appns );
 		final String origNs = retVal.getNamespace( ).getNamespaceURI( );
 		if ( ( altNs != null ) && !altNs.equals( origNs ) ) {
-			try {
+			try { 
 				final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
 				retVal.serialize( bos );
 				String retString = bos.toString( );

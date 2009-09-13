@@ -123,7 +123,7 @@ public class CredentialProvider extends Bootstrapper {
 		try {
 			certAlias = db.getUnique( certInfo ).getAlias( );
 			db.commit( );
-		} catch ( EucalyptusCloudException e ) {
+		} catch ( Throwable e ) {
 			db.rollback( );
 			throw new GeneralSecurityException( e );
 		}
@@ -138,7 +138,7 @@ public class CredentialProvider extends Bootstrapper {
 			User user = db.getUnique( searchUser );
 			queryId = user.getQueryId( );
 			db.commit( );
-		} catch ( EucalyptusCloudException e ) {
+		} catch ( Throwable e ) {
 			db.rollback( );
 			throw new GeneralSecurityException( e );
 		}
@@ -154,7 +154,7 @@ public class CredentialProvider extends Bootstrapper {
 			User user = db.getUnique( searchUser );
 			secretKey = user.getSecretKey( );
 			db.commit( );
-		} catch ( EucalyptusCloudException e ) {
+		} catch ( Throwable e ) {
 			db.rollback( );
 			throw new GeneralSecurityException( e );
 		}
