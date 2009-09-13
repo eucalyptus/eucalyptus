@@ -77,7 +77,7 @@ public class KeyPairUtil {
     try {
       db.add( newKey );
       db.commit( );
-    } catch ( Exception e1 ) {
+    } catch ( Throwable e1 ) {
       db.rollback( );
       throw new EucalyptusCloudException( "KeyPair generation error. Key pair: " + keyName + " already exists." );
     }
