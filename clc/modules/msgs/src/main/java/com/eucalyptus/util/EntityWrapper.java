@@ -69,6 +69,7 @@ package com.eucalyptus.util;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.criterion.*;
+import org.hibernate.ejb.EntityManagerFactoryImpl;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -104,23 +105,31 @@ public class EntityWrapper<TYPE> {
   private EntityManager     em;
   private Session           session;
   private EntityTransaction tx;
+  private boolean           doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) );
 
   public EntityWrapper( ) {
     this( "eucalyptus" );
   }
 
   public EntityWrapper( String persistenceContext ) {
-    Exception e = new Exception( );
-    e.fillInStackTrace( );
-    for( StackTraceElement ste : e.getStackTrace( ) ){
-      if( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) || ste.getMethodName( ).matches( "getEntityWrapper" ) ) {
-        continue;
-      } else {
-        LOG.debug( "CREATE CONNECTION " + ste.toString( ) );
-        break;
+    if ( doDebug ) {
+      Exception e = new Exception( );
+      e.fillInStackTrace( );
+      for ( StackTraceElement ste : e.getStackTrace( ) ) {
+        if ( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) || ste.getMethodName( ).matches( "getEntityWrapper" ) ) {
+          continue;
+        } else {
+          LOG.debug( "CREATE CONNECTION " + ste.toString( ) );
+          break;
+        }
       }
     }
-    this.em = EntityWrapper.getEntityManagerFactory( persistenceContext ).createEntityManager( );
+    EntityManagerFactoryImpl anemf = ( EntityManagerFactoryImpl ) EntityWrapper.getEntityManagerFactory( persistenceContext );
+    if ( doDebug ) {
+      anemf.getSessionFactory( ).getStatistics( ).setStatisticsEnabled( true );
+      LOG.debug( "Hibernate statistics: " + anemf.getSessionFactory( ).getStatistics( ) );
+    }
+    this.em = anemf.createEntityManager( );
     this.session = ( Session ) em.getDelegate( );
     this.tx = em.getTransaction( );
     tx.begin( );
@@ -140,7 +149,7 @@ public class EntityWrapper<TYPE> {
     if ( res.size( ) != 1 ) {
       String msg = null;
       msg = example.toString( );
-      if ( msg!= null && msg.startsWith( example.getClass( ).getCanonicalName( ) ) ) {
+      if ( msg != null && msg.startsWith( example.getClass( ).getCanonicalName( ) ) ) {
         msg = LogUtil.dumpObject( example );
       }
       throw new EucalyptusCloudException( "Error locating information for " + msg );
@@ -166,14 +175,16 @@ public class EntityWrapper<TYPE> {
   }
 
   public void rollback( ) {
-    Exception e = new Exception( );
-    e.fillInStackTrace( );
-    for( StackTraceElement ste : e.getStackTrace( ) ){
-      if( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
-        continue;
-      } else {
-        LOG.debug( "CLOSE CONNECTION " + ste.toString( ) );
-        break;
+    if( doDebug ) {
+      Exception e = new Exception( );
+      e.fillInStackTrace( );
+      for ( StackTraceElement ste : e.getStackTrace( ) ) {
+        if ( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
+          continue;
+        } else {
+          LOG.debug( "CLOSE CONNECTION " + ste.toString( ) );
+          break;
+        }
       }
     }
     if ( this.tx.isActive( ) ) {
@@ -183,14 +194,16 @@ public class EntityWrapper<TYPE> {
   }
 
   public void commit( ) {
-    Exception e = new Exception( );
-    e.fillInStackTrace( );
-    for( StackTraceElement ste : e.getStackTrace( ) ){
-      if( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
-        continue;
-      } else {
-        LOG.debug( "CLOSE CONNECTION " + ste.toString( ) );
-        break;
+    if( doDebug ) {
+      Exception e = new Exception( );
+      e.fillInStackTrace( );
+      for ( StackTraceElement ste : e.getStackTrace( ) ) {
+        if ( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
+          continue;
+        } else {
+          LOG.debug( "CLOSE CONNECTION " + ste.toString( ) );
+          break;
+        }
       }
     }
     try {
@@ -198,7 +211,7 @@ public class EntityWrapper<TYPE> {
       this.tx.commit( );
       this.em.close( );
     } catch ( Throwable e1 ) {
-      LOG.trace(e1,e1);
+      LOG.trace( e1, e1 );
     }
   }
 
