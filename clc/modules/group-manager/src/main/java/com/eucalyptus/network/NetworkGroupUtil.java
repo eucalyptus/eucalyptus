@@ -28,8 +28,13 @@ public class NetworkGroupUtil {
   
   public static List<NetworkRulesGroup> getUserNetworkRulesGroup( String userName ) {
     EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
-    List<NetworkRulesGroup> networkGroups = Lists.newArrayList( Sets.newHashSet( db.query( new NetworkRulesGroup( userName ) ) ));
-    db.commit( );
+    List<NetworkRulesGroup> networkGroups = Lists.newArrayList( );
+    try {
+      networkGroups = Lists.newArrayList( Sets.newHashSet( db.query( new NetworkRulesGroup( userName ) ) ));
+      db.commit( );
+    } catch ( Throwable e ) {
+      db.rollback( );
+    }
     return networkGroups;
   }
 
