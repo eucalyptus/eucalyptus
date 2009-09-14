@@ -41,17 +41,10 @@ import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.ic.StorageController;
 
-<<<<<<< TREE
 //baseDir = "/disk1/import"
 //targetDir = "/disk1/import"
 baseDir = new java.io.File(".").getAbsolutePath();
 targetDir = baseDir;
-=======
-baseDir = "/disk1/import"
-targetDir = "/disk1/import"
-//baseDir = "/home/decker/epc.db"
-//targetDir = "/home/decker/epc.db"
->>>>>>> MERGE-SOURCE
 targetDbPrefix= "test"
 
 def getSql() {
