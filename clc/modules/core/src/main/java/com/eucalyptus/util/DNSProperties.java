@@ -101,8 +101,6 @@ public class DNSProperties {
 
 	private static void updateHost () {
 		InetAddress ipAddr = null;
-		String localAddr = "127.0.0.1";
-
 		List<NetworkInterface> ifaces = null;
 		try {
 			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );

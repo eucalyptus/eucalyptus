@@ -129,7 +129,6 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 					httpResponse.setStatus(walrusErrorMsg.getStatus());
 				}
 				httpResponse.setMessage(errMsg);
-				event.getFuture().addListener(ChannelFutureListener.CLOSE);
 			} else if(msg instanceof WalrusDeleteResponseType) {
 				httpResponse.setStatus(HttpResponseStatus.NO_CONTENT);
 				httpResponse.setMessage(null);
