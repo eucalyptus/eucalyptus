@@ -69,6 +69,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   private static String SECURE_NAME = "EucalyptusCC";
   private static String SECURE_NC_NAME = "EucalyptusNC";
   private static String INSECURE_NAME = "EucalyptusGL";
+
   public AbstractClusterMessageDispatcher( Cluster cluster, boolean secure ) throws BindingException {
     this( cluster );
     if( !secure ) {

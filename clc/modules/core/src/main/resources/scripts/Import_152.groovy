@@ -1,11 +1,14 @@
 
 import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.keys.KeyPairUtil;
+import com.eucalyptus.network.NetworkGroupUtil;
 
 import org.bouncycastle.util.encoders.UrlBase64;
 import groovy.sql.Sql;
@@ -21,10 +24,13 @@ import edu.ucsb.eucalyptus.cloud.ws.VolumeManager;
 
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 
+import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
+
 baseDir = "/home/decker/epc.db"
 targetDir = "/home/decker/epc.db"
 targetDbPrefix= "test"
-  
+
 def getSql() {
   source = new org.hsqldb.jdbc.jdbcDataSource();
   source.database = "jdbc:hsqldb:file:${baseDir}/eucalyptus";
@@ -47,6 +53,16 @@ dbVolumes = getSqlVolumes( );
 System.setProperty("euca.log.dir", "${System.getProperty('euca.home')}/var/log/eucalyptus/")
 System.setProperty("euca.db.host", "jdbc:hsqldb:file:${targetDir}/${targetDbPrefix}")
 System.setProperty("euca.log.level", 'INFO')
+
+UserGroupInfo userGroupInfo = new UserGroupInfo( "all" );
+EntityWrapper<UserGroupInfo> db3 = new EntityWrapper<UserGroupInfo>( );
+try {
+  userGroupInfo = db3.getUnique( userGroupInfo );
+  userGroupInfo.getUsers().add( u );
+  db3.commit();
+} catch ( Throwable t ) {
+  db3.rollback();
+}
 
 db.rows('SELECT * FROM SYSTEM_INFO').each{ 
   SystemConfiguration config = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration();
@@ -95,9 +111,15 @@ db.rows('SELECT * FROM USERS').each{
       it.USER_IS_ADMIN, 
       it.PASSWORD_EXPIRES );
   EntityWrapper<UserInfo> dbUser = new EntityWrapper<UserInfo>();
-  try { dbUser.add( user ); dbUser.commit();
-  } catch( Throwable t ) { dbUser.rollback();
+  try { 
+    dbUser.add( user ); 
+    userGroupInfo = dbUser.getUnique( userGroupInfo );
+    userGroupInfo.getUsers().add( u );
+    dbUser.commit();
+  } catch( Throwable t ) { 
+    dbUser.rollback();
   }
+
   CredentialProvider.addUser(it.USER_NAME,it.USER_IS_ADMIN,it.USER_QUERY_ID,it.USER_SECRETKEY);
   db.rows("SELECT cert.* FROM user_has_certificates has_certs LEFT OUTER JOIN cert_info cert on cert.cert_info_id=has_certs.cert_info_id WHERE has_certs.user_id=${ it.USER_ID }").each{  cert_info ->
     println "-> certificate: ${cert_info.CERT_INFO_ALIAS}";
@@ -113,6 +135,10 @@ db.rows('SELECT * FROM USERS').each{
       dbKp.rollback( );
     }
   }
+  db.rows("SELECT net.* FROM user_has_network_groups has_net LEFT OUTER JOIN network_group net on net.network_group_id=has_net.network_group_id WHERE has_net.user_id=${ it.USER_ID }").each{  net ->
+    println "-> network: ${net.NETWORK_GROUP_NAME}"
+    NetworkGroupUtil.createUserNetworkRulesGroup( it.USER_NAME, net.NETWORK_GROUP_NAME, net.NETWORK_GROUP_DESCRIPTION );
+  }
 };
 
 db.rows("SELECT image.* FROM images image").each{  image ->
@@ -124,6 +150,12 @@ db.rows("SELECT image.* FROM images image").each{  image ->
     db.rows("SELECT pc.* FROM image_has_product_codes has_pc LEFT OUTER JOIN image_product_code pc on pc.image_product_code_id=has_pc.image_product_code_id WHERE has_pc.image_id=${ image.IMAGE_ID }").each{  
       imgInfo.getProductCodes( ).add( new ProductCode( it.IMAGE_PRODUCT_CODE_VALUE ) );
     }
+    db.rows("SELECT p.* FROM image_has_perms has_p LEFT OUTER JOIN users p on p.user_id=has_p.user_id WHERE has_p.image_id=${ image.IMAGE_ID }").each{  
+      UserInfo u = dbImg.getUnique( it.USER_ID );
+      imgInfo.getPermissions( ).add( u );
+    }
+    userGroupInfo = dbImg.getUnique( userGroupInfo );
+    imgInfo.getUserGroups().add(userGroupInfo);
     dbImg.commit();
   } catch( Throwable t ) {
     dbImg.rollback();
@@ -166,6 +198,3 @@ db.rows('SELECT * FROM CLUSTERS').each{
   println "CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
 }
 
-db.rows("SELECT * FROM USER_GROUPS WHERE USER_GROUP_NAME='all'").each{   
-  println it.dump()
-}
