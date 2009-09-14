@@ -159,8 +159,8 @@ public class HmacV2Handler extends MessageStackHandler {
           LOG.debug( "VERSION2-SHA256-PORT: " + computedSigWithPort + " -- " + sig );
           if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
             sig = URLDecoder.decode( sig ).replaceAll("=","");
-            computedSig = HmacUtils.getSignature( secretKey, URLDecoder.decode( canonicalString ), Hashes.Mac.HmacSHA256 );
-            computedSigWithPort = HmacUtils.getSignature( secretKey, URLDecoder.decode( canonicalStringWithPort ), Hashes.Mac.HmacSHA256 );
+            computedSig = HmacUtils.getSignature( secretKey, canonicalString.replaceAll("\\+","%20"), Hashes.Mac.HmacSHA256 ).replaceAll("\\+"," ");
+            computedSigWithPort = HmacUtils.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%20"), Hashes.Mac.HmacSHA256 ).replaceAll("\\+"," ");
             if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
               throw new AuthenticationException( "User authentication failed." );              
             }

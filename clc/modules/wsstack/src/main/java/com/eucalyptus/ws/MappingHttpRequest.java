@@ -98,16 +98,12 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
       URL url = new URL( "http://eucalyptus" + uri );
       this.servicePath = url.getPath( );
       this.parameters = new HashMap<String, String>( );
-      this.query = this.query == url.toURI( ).getQuery( ) ? this.query : new URLCodec().decode( url.toURI( ).getQuery( ) ).replaceAll( " ", "+" );
+      this.query = this.query == url.getQuery( ) ? this.query : url.getQuery( );// new URLCodec().decode(url.toURI( ).getQuery( ) ).replaceAll( " ", "+" );
       this.formFields = new HashMap<String, String>( );
       this.populateParameters();
     } catch ( MalformedURLException e ) {
       throw new RuntimeException( e );
-    } catch ( URISyntaxException e ) {
-      throw new RuntimeException( e );
-    } catch ( DecoderException e ) {
-      throw new RuntimeException( e );
-    }
+    } 
   }
 
   private void populateParameters( ) {
@@ -116,6 +112,12 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
         String[] splitParam = p.split( "=" );
         String lhs = splitParam[0];
         String rhs = splitParam.length == 2 ? splitParam[1] : null;
+        try {
+          if( lhs != null ) lhs = new URLCodec().decode(lhs);
+        } catch ( DecoderException e ) {}
+        try {
+          if( rhs != null ) rhs = new URLCodec().decode(rhs);
+        } catch ( DecoderException e ) {}
         this.parameters.put( lhs, rhs );
       }
     }

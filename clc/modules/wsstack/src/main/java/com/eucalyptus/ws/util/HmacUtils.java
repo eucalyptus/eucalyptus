@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws.util;
 
+import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -133,12 +134,6 @@ public class HmacUtils {
     } catch ( DecoderException e ) {
       return paramString;
     }
-//    String paramString = "";
-//    Set<String> sortedKeys = new TreeSet<String>( String.CASE_INSENSITIVE_ORDER );
-//    sortedKeys.addAll( parameters.keySet( ) );
-//    for ( String key : sortedKeys )
-//      paramString = paramString.concat( key ).concat( parameters.get( key ) );
-//    return paramString;
   }
 
   public static String makeV2SubjectString( String httpMethod, String host, String path, final Map<String, String> parameters ) {
@@ -154,13 +149,20 @@ public class HmacUtils {
     NavigableSet<String> sortedKeys = new TreeSet<String>( );
     sortedKeys.addAll( parameters.keySet( ) );
     String firstKey = sortedKeys.pollFirst( );
-    sb.append( java.net.URLEncoder.encode( firstKey ) ).append( "=" ).append( java.net.URLEncoder.encode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
+    sb.append( urlEncode( firstKey ) ).append( "=" ).append( urlEncode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
     while ( ( firstKey = sortedKeys.pollFirst( ) ) != null ) {
-      sb.append( "&" ).append( java.net.URLEncoder.encode( firstKey ) ).append( "=" ).append( java.net.URLEncoder.encode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
+      sb.append( "&" ).append( urlEncode( firstKey ) ).append( "=" ).append( urlEncode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
     }
     String subject = prefix + sb.toString( );
     LOG.debug( "VERSION2: " + subject );
     return subject;
   }
 
+  public static String urlEncode( String s ) {
+    try {
+      return new URLCodec().encode( s ,"UTF-8" );
+    } catch ( UnsupportedEncodingException e ) {
+      return s;
+    }
+  }
 }
