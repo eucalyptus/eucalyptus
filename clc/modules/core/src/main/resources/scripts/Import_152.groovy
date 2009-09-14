@@ -34,6 +34,7 @@ import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
+import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 
@@ -291,8 +292,27 @@ db.rows('SELECT * FROM BUCKETS').each{
     	objectInfo.setGlobalWriteACP(obj.GLOBAL_WRITE_ACP);
     	objectInfo.setEtag(obj.ETAG);
     	objectInfo.setLastModified(new Date());
-    	objectInfo.setStorageClass(obj.STORAGE_CLASS);    	
-    	dbObject.add(objectInfo);
+    	objectInfo.setStorageClass(obj.STORAGE_CLASS);
+        db.rows("SELECT g.* FROM object_has_grants has_thing LEFT OUTER JOIN grants g on g.grant_id=has_thing.grant_id WHERE has_thing.object_id=${ obj.OBJECT_ID }").each{  grant ->
+        println "--> grant: ${obj.OBJECT_NAME}/${grant.USER_ID}"
+          GrantInfo grantInfo = new GrantInfo();
+          grantInfo.setUserId(grant.USER_ID);
+          grantInfo.setGrantGroup(grant.GRANT_GROUP);
+          grantInfo.setCanWrite(grant.WRITE);
+          grantInfo.setCanRead(grant.READ);
+          grantInfo.setCanReadACP(grant.READ_ACP);
+          grantInfo.setCanWriteACP(grant.WRITE_ACP);
+          objectInfo.getGrants().add(grantInfo);
+        }
+        db.rows("SELECT m.* FROM object_has_metadata has_thing LEFT OUTER JOIN metadata m on m.metadata_id=has_thing.metadata_id WHERE has_thing.object_id=${ obj.OBJECT_ID }").each{  metadata ->
+        println "--> metadata: ${obj.OBJECT_NAME}/${metadata.NAME}"
+          MetaDataInfo mInfo = new MetaDataInfo();
+          mInfo.setObjectName(obj.OBJECT_NAME);
+          mInfo.setName(metadata.NAME);
+          mInfo.setValue(metadata.VALUE);
+          objectInfo.getMetaData().add(mInfo);
+        }
+        dbObject.add(objectInfo);
     	dbObject.commit();
       } catch (Throwable t) {
     	t.printStackTrace();
