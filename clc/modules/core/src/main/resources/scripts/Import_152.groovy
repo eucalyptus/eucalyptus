@@ -1,4 +1,5 @@
 
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -7,15 +8,18 @@ import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.keys.KeyPairUtil;
 
 import org.bouncycastle.util.encoders.UrlBase64;
+import groovy.sql.Sql;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.entities.ProductCode;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.cloud.ws.SnapshotManager;
 import edu.ucsb.eucalyptus.cloud.ws.VolumeManager;
-import groovy.sql.Sql;
+
+import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 
 baseDir = "/home/decker/epc.db"
 targetDir = "/home/decker/epc.db"
@@ -96,7 +100,7 @@ db.rows('SELECT * FROM USERS').each{
   }
   CredentialProvider.addUser(it.USER_NAME,it.USER_IS_ADMIN,it.USER_QUERY_ID,it.USER_SECRETKEY);
   db.rows("SELECT cert.* FROM user_has_certificates has_certs LEFT OUTER JOIN cert_info cert on cert.cert_info_id=has_certs.cert_info_id WHERE has_certs.user_id=${ it.USER_ID }").each{  cert_info ->
-    println "-> certificates: ${cert_info.CERT_INFO_ALIAS}";
+    println "-> certificate: ${cert_info.CERT_INFO_ALIAS}";
     CredentialProvider.addCertificate( it.USER_NAME, cert_info.CERT_INFO_ALIAS, Hashes.getPemCert( UrlBase64.decode( cert_info.CERT_INFO_VALUE.getBytes( ) ) ) );
   }
   db.rows("SELECT kp.* FROM user_has_sshkeys has_keys LEFT OUTER JOIN ssh_keypair kp on kp.ssh_keypair_id=has_keys.ssh_keypair_id WHERE has_keys.user_id=${ it.USER_ID }").each{  keypair ->
@@ -110,6 +114,21 @@ db.rows('SELECT * FROM USERS').each{
     }
   }
 };
+
+db.rows("SELECT image.* FROM images image").each{  image ->
+  println "Adding images: ${image.IMAGE_NAME}";
+  ImageInfo imgInfo = new ImageInfo( image.IMAGE_ARCH, image.IMAGE_NAME, image.IMAGE_PATH, image.IMAGE_OWNER_ID, image.IMAGE_AVAILABILITY, image.IMAGE_TYPE, image.IMAGE_IS_PUBLIC, image.IMAGE_KERNEL_ID, image.IMAGE_RAMDISK_ID );
+  EntityWrapper<ImageInfo> dbImg = new EntityWrapper<ImageInfo>( );
+  try {
+    dbImg.add( imgInfo );
+    db.rows("SELECT pc.* FROM image_has_product_codes has_pc LEFT OUTER JOIN image_product_code pc on pc.image_product_code_id=has_pc.image_product_code_id WHERE has_pc.image_id=${ image.IMAGE_ID }").each{  
+      imgInfo.getProductCodes( ).add( new ProductCode( it.IMAGE_PRODUCT_CODE_VALUE ) );
+    }
+    dbImg.commit();
+  } catch( Throwable t ) {
+    dbImg.rollback();
+  }
+}
 
 dbVolumes.rows("SELECT * FROM VOLUME").each{
   println "Adding volume: ${it.DISPLAYNAME}"
@@ -141,4 +160,12 @@ dbVolumes.rows("SELECT * FROM SNAPSHOT").each{
   } catch (Throwable t) {
     dbSnap.rollback();
   }
+}
+
+db.rows('SELECT * FROM CLUSTERS').each{ 
+  println "CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
+}
+
+db.rows("SELECT * FROM USER_GROUPS WHERE USER_GROUP_NAME='all'").each{   
+  println it.dump()
 }

@@ -170,7 +170,7 @@ public class CredentialProvider extends Bootstrapper {
 			User user = db.getUnique( searchUser );
 			userName = user.getUserName( );
 			db.commit( );
-		} catch ( EucalyptusCloudException e ) {
+		} catch ( Throwable e ) {
 			db.rollback( );
 			throw new GeneralSecurityException( e );
 		}
