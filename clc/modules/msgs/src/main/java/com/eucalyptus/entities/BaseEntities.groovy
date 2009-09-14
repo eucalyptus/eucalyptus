@@ -108,6 +108,12 @@ public class SshKeyPair extends UserMetadata implements Serializable {
     this.publicKey = publicKey;
     this.fingerPrint = fingerPrint;
   }  
+  public SshKeyPair( String userName, String keyName, String asdfsdffsdf, String publicKey, String fingerPrint ) {
+    super( userName, keyName );
+    this.uniqueName = userName + keyName;
+    this.publicKey = publicKey;
+    this.fingerPrint = fingerPrint;
+  }  
   public SshKeyPair( String userName, String displayName ) {
     super( userName, displayName );
     this.uniqueName = userName+displayName;
