@@ -27,8 +27,6 @@ import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 
-baseDir = "/home/decker/epc.db"
-targetDir = "/home/decker/epc.db"
 targetDbPrefix= "test"
 
 def getSql() {

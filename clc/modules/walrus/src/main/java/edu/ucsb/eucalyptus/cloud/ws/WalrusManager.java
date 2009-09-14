@@ -515,6 +515,10 @@ public class WalrusManager {
 			accessControlList = new AccessControlListType();
 		}
 
+		String key = bucketName + "." + objectKey;
+		String randomKey = request.getRandomKey();
+		WalrusDataMessenger messenger = WalrusRESTBinding.getWriteMessenger();
+
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
@@ -533,6 +537,7 @@ public class WalrusManager {
 						//key (object) exists. check perms
 						if (!objectInfo.canWrite(userId)) {
 							db.rollback();
+							messenger.removeQueue(key, randomKey);
 							throw new AccessDeniedException("Key", objectKey);
 						}
 						foundObject = objectInfo;
@@ -579,10 +584,6 @@ public class WalrusManager {
 				foundObject.setObjectKey(objectKey);
 				foundObject.replaceMetaData(request.getMetaData());
 				//writes are unconditional
-				String randomKey = request.getRandomKey();
-
-				WalrusDataMessenger messenger = WalrusRESTBinding.getWriteMessenger();
-				String key = bucketName + "." + objectKey;
 				LinkedBlockingQueue<WalrusDataMessage> putQueue = messenger.getQueue(key, randomKey);
 
 				try {
@@ -598,6 +599,7 @@ public class WalrusManager {
 							try {
 								fileIO = storageManager.prepareForWrite(bucketName, tempObjectName);
 							} catch(Exception ex) {
+								messenger.removeQueue(key, randomKey);
 								throw new EucalyptusCloudException(ex);
 							}
 						} else if(WalrusDataMessage.isEOF(dataMessage)) {
@@ -608,6 +610,7 @@ public class WalrusManager {
 							} catch (IOException ex) {
 								LOG.error(ex);
 								db.rollback();
+								messenger.removeQueue(key, randomKey);
 								throw new EucalyptusCloudException(objectKey);
 							}
 							md5 = Hashes.bytesToHex(digest.digest());
@@ -624,6 +627,7 @@ public class WalrusManager {
 								long newSize = bucketSize + oldBucketSize + size;
 								if(newSize > WalrusProperties.MAX_BUCKET_SIZE) {
 									db.rollback();
+									messenger.removeQueue(key, randomKey);
 									throw new EntityTooLargeException("Key", objectKey);
 								}
 								bucket.setBucketSize(newSize);
@@ -678,14 +682,17 @@ public class WalrusManager {
 					}
 				} catch (InterruptedException ex) {
 					LOG.error(ex, ex);
+					messenger.removeQueue(key, randomKey);
 					throw new EucalyptusCloudException();
 				}
 			} else {
 				db.rollback();
+				messenger.removeQueue(key, randomKey);
 				throw new AccessDeniedException("Bucket", bucketName);
 			}
 		}   else {
 			db.rollback();
+			messenger.removeQueue(key, randomKey);
 			throw new NoSuchBucketException(bucketName);
 		}
 		reply.setEtag(md5);

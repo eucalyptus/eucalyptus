@@ -173,6 +173,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
 			} else {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.ucsb.edu" ) );
+				if(putQueue != null) {
+					putQueue = null;
+				}
 			}
 			if(msg != null) {
 				OMElement omMsg = binding.toOM( msg );
@@ -406,7 +409,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						operationParams.put("ContentLength", (new Long(contentLength).toString()));
 					operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
 					putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
-					//handleFirstChunk(httpRequest, formFields.get(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk"), contentLength);
 					handleFirstChunk(httpRequest, (ChannelBuffer)formFields.get(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk"), contentLength);
 				}
 
