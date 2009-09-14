@@ -23,6 +23,7 @@ import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
+import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.cloud.ws.SnapshotManager;
 import edu.ucsb.eucalyptus.cloud.ws.VolumeManager;
 
@@ -40,10 +41,17 @@ import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.ic.StorageController;
 
+<<<<<<< TREE
+//baseDir = "/disk1/import"
+//targetDir = "/disk1/import"
+baseDir = new java.io.File(".").getAbsolutePath();
+targetDir = baseDir;
+=======
 baseDir = "/disk1/import"
 targetDir = "/disk1/import"
 //baseDir = "/home/decker/epc.db"
 //targetDir = "/home/decker/epc.db"
+>>>>>>> MERGE-SOURCE
 targetDbPrefix= "test"
 
 def getSql() {
@@ -79,13 +87,14 @@ try {
   db3.rollback();
 }
 
+
 db.rows('SELECT * FROM SYSTEM_INFO').each{ 
   SystemConfiguration config = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration();
   EntityWrapper<SystemConfiguration> confDb = new EntityWrapper<SystemConfiguration>();
   try {
     config.setDefaultKernel(it.SYSTEM_INFO_DEFAULT_KERNEL);
     config.setDefaultRamdisk(it.SYSTEM_INFO_DEFAULT_RAMDISK);
-    config.setSystemReservedPublicAddresses(it.SYSTEM_SYSTEM_RESERVED_PUBLIC_ADDRESSES);
+    config.setSystemReservedPublicAddresses(it.SYSTEM_RESERVED_PUBLIC_ADDRESSES);
     config.setMaxUserPublicAddresses(it.SYSTEM_MAX_USER_PUBLIC_ADDRESSES);
     config.setDoDynamicPublicAddresses(it.SYSTEM_DO_DYNAMIC_PUBLIC_ADDRESSES);
     config.setRegistrationId(it.SYSTEM_REGISTRATION_ID);
@@ -190,10 +199,12 @@ db.rows("SELECT image.* FROM images image").each{  image ->
     db.rows("SELECT pc.* FROM image_has_product_codes has_pc LEFT OUTER JOIN image_product_code pc on pc.image_product_code_id=has_pc.image_product_code_id WHERE has_pc.image_id=${ image.IMAGE_ID }").each{  
       imgInfo.getProductCodes( ).add( new ProductCode( it.IMAGE_PRODUCT_CODE_VALUE ) );
     }
+    /*
     db.rows("SELECT p.* FROM image_has_perms has_p LEFT OUTER JOIN users p on p.user_id=has_p.user_id WHERE has_p.image_id=${ image.IMAGE_ID }").each{  
-      UserInfo u = dbImg.getUnique( it.USER_ID );
+      UserInfo u = dbImg.getUnique( new UserInfo( db.rows("SELECT u.user_name FROM users u WHERE u.user_name=${it.USER_NAME}")[0] ) );
       imgInfo.getPermissions( ).add( u );
     }
+    */
     userGroupInfo = dbImg.getUnique( userGroupInfo );
     imgInfo.getUserGroups().add(userGroupInfo);
     dbImg.commit();
@@ -207,11 +218,9 @@ dbVolumes.rows("SELECT * FROM VOLUME").each{
   println "Adding volume: ${it.DISPLAYNAME}"
   EntityWrapper<Volume> dbVol = VolumeManager.getEntityWrapper();
   try {
-    Volume v = new Volume(it.USERNAME, it.DISPLAYNAME, it.SIZE, it.CLUSTER );
-    v.setCluster(it.CLUSTER);
-    v.setParentSnapshot(it.PARENTSNAPSHOT);
-    v.setLocalDevice(it.LOCALDEVICE);
-    v.setRemoteDevice(it.REMOTEDEVICE);
+    Volume v = new Volume(it.USERNAME, it.DISPLAYNAME, it.SIZE, it.CLUSTER, it.PARENTSNAPSHOT );
+//    v.setLocalDevice(it.LOCALDEVICE);
+//    v.setRemoteDevice(it.REMOTEDEVICE);
     dbVol.add( v );
     dbVol.commit();
   } catch (Throwable t) {
@@ -227,7 +236,7 @@ dbVolumes.rows("SELECT * FROM SNAPSHOT").each{
   try {
     Snapshot s = new Snapshot(it.USERNAME,it.DISPLAYNAME);
     s.setBirthday(it.BIRTHDAY);
-    s.setState(it.STATE);
+    s.setState(State.valueOf(it.STATE));
     s.setParentVolume(it.PARENTVOLUME);
     dbSnap.add(s);
     dbSnap.commit();
