@@ -1328,7 +1328,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       return(1);
     }
     for (i=0; i<networkIndexListLen; i++) {
-      logprintfl(EUCADEBUG, "IDX: %d\n", networkIndexList[i]);
       if ( (networkIndexList[i] < 0) || (networkIndexList[i] > (vnetconfig->numaddrs-1)) ) {
 	logprintfl(EUCAERROR, "network index (%d) out of bounds (0-%d)\n", networkIndexList[i], vnetconfig->numaddrs-1);
 	return(1);
@@ -1377,8 +1376,12 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       foundnet = 1;
     }
     sem_post(vnetConfigLock);
-
-    logprintfl(EUCAINFO,"\tassigning MAC/IP: %s/%s/%s\n", mac, pubip, privip);
+    
+    if (thenidx != -1) {
+      logprintfl(EUCAINFO,"\tassigning MAC/IP: %s/%s/%s/%d\n", mac, pubip, privip, networkIndexList[thenidx]);
+    } else {
+      logprintfl(EUCAINFO,"\tassigning MAC/IP: %s/%s/%s/%d\n", mac, pubip, privip, thenidx);
+    }
     
     if (mac[0] == '\0' || !foundnet) {
       logprintfl(EUCAERROR,"could not find/initialize any free network address, failing doRunInstances()\n");

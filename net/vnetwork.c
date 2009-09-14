@@ -651,7 +651,7 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   char rule[1024], newrule[1024], srcNet[32], dstNet[32];
   char *tmp;
 
-  logprintfl(EUCADEBUG, "vnetTableRule(): input: %s,%s,%s,%s,%s,%s,%d,%d\n",destUserName, destName, sourceUserName, sourceNet,sourceNetName,protocol,minPort,maxPort);
+  //  logprintfl(EUCADEBUG, "vnetTableRule(): input: %s,%s,%s,%s,%s,%s,%d,%d\n",destUserName, destName, sourceUserName, sourceNet,sourceNetName,protocol,minPort,maxPort);
   if (param_check("vnetTableRule", vnetconfig, type, destUserName, destName, sourceNet, sourceUserName, sourceNetName)) return(1);
   
   destVlan = vnetGetVlan(vnetconfig, destUserName, destName);
@@ -747,9 +747,10 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
   int rc, ret=0, networkIdx;
   
   if (!instId || !outmac || !outpubip || !outprivip) {
+    logprintfl(EUCAERROR, "bad input params to vnetGenerateNetworkParams\n");
     return(1);
   }
-
+  
   rc = instId2mac(instId, outmac);
   if (rc) {
     logprintfl(EUCAERROR, "unable to convert instanceId (%s) to mac address\n", instId);

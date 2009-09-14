@@ -970,16 +970,13 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
 
   networkIndexList = NULL;
   networkIndexListLen = adb_runInstancesType_sizeof_networkIndexList(rit, env);
-  logprintfl(EUCADEBUG, "SIDXLEN: %d\n", networkIndexListLen);
   if (networkIndexListLen) {
     networkIndexList = malloc(sizeof(int) * networkIndexListLen);
     for (i=0; i<networkIndexListLen; i++) {
       networkIndexList[i] = adb_runInstancesType_get_networkIndexList_at(rit, env, i);
-      logprintfl(EUCADEBUG, "SIDX: %d\n", networkIndexList[i]);
     }
   }
   
-  // logic
   rirt = adb_runInstancesResponseType_create(env);
 
   rc=1;
