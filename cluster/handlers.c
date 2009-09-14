@@ -153,7 +153,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 	}
 	exit(ret);
       } else {
-	rc = timewait(pid, &status, op_timer / ((stop-start) - (j - start)));
+	rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
 	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
 	rc = WEXITSTATUS(status);
 	logprintfl(EUCADEBUG,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
@@ -233,7 +233,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 	exit(ret);
       } else {
 	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	rc = timewait(pid, &status, op_timer / ((stop-start) - (j - start)));
+	rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
 	rc = WEXITSTATUS(status);
 	logprintfl(EUCADEBUG,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
       }
@@ -731,7 +731,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout) {
 	bzero(ncRes, sizeof(ncResource));
 	op_timer = timeout - (time(NULL) - op_start);
 	logprintfl(EUCADEBUG, "\ttime left for next op: %d\n", op_timer);
-	rc = timeread(filedes[0], ncRes, sizeof(ncResource), op_timer / (config->numResources - i));
+	rc = timeread(filedes[0], ncRes, sizeof(ncResource), minint(op_timer / (config->numResources - i), OP_TIMEOUT_PERNODE));
 	close(filedes[0]);
 	if (rc <= 0) {
 	  // timeout or read went badly
@@ -837,11 +837,16 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	if (config->use_wssec) {
 	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
 	}
+	ncOutInstsLen=0;
+	//	logprintfl(EUCADEBUG, "CALLING DESCRIBE INSTANCES STUB: %d\n", instIdsLen);
 	rc = ncDescribeInstancesStub(ncs, ccMeta, instIds, instIdsLen, &ncOutInsts, &ncOutInstsLen);
-	
+	//	logprintfl(EUCADEBUG, "CALLING DESCRIBE INSTANCES STUB DONE: %d\n", rc);
+
 	if (!rc) {
 	  len = ncOutInstsLen;
+	  //	  logprintfl(EUCADEBUG, "WRITE2PIPE: %d\n", len);
 	  rc = write(filedes[1], &len, sizeof(int));
+	  //	  logprintfl(EUCADEBUG, "WRITE2PIPE DONE: %d\n", rc);
 	  for (j=0; j<len; j++) {
 	    ncInstance *inst;
 	    inst = ncOutInsts[j];
@@ -863,7 +868,8 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	close(filedes[1]);
 	
 	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	rbytes = timeread(filedes[0], &len, sizeof(int), op_timer / (config->numResources - i));
+	logprintfl(EUCADEBUG, "\ttimeout(%d/%d)\n", minint(op_timer / (config->numResources - i), OP_TIMEOUT_PERNODE), OP_TIMEOUT_PERNODE);
+	rbytes = timeread(filedes[0], &len, sizeof(int), minint(op_timer / (config->numResources - i), OP_TIMEOUT_PERNODE));
 	if (rbytes <= 0) {
 	  // read went badly
 	  kill(pid, SIGKILL);
@@ -880,7 +886,8 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	    for (j=0; j<len; j++) {
 	      inst = malloc(sizeof(ncInstance));
 	      op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	      rbytes = timeread(filedes[0], inst, sizeof(ncInstance), op_timer / (config->numResources - i));
+	      //	      logprintfl(EUCADEBUG, "LOOPTIMER: %d\n", minint(op_timer / (config->numResources - i), OP_TIMEOUT_PERNODE));
+	      rbytes = timeread(filedes[0], inst, sizeof(ncInstance), minint(op_timer / (config->numResources - i), OP_TIMEOUT_PERNODE));
 	      ncOutInsts[j] = inst;
 	    }
 	  }
@@ -919,7 +926,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	  }
 	  if (found || instIdsLen == 0) {
 	    // add it
-	    logprintfl(EUCAINFO,"DescribeInstances(): describing instance %s, %d\n", ncOutInsts[j]->instanceId, j);
+	    logprintfl(EUCAINFO,"DescribeInstances(): describing instance %s, %s, %d\n", ncOutInsts[j]->instanceId, ncOutInsts[j]->stateName, j);
 	    numInsts++;
 	    
 	    *outInsts = realloc(*outInsts, sizeof(ccInstance) * numInsts);
@@ -1066,7 +1073,7 @@ int powerDown(ncMetadata *ccMeta, resource *node) {
     exit(rc);
   }
   op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-  rc = timewait(pid, &status, op_timer);
+  rc = timewait(pid, &status, minint(op_timer, OP_TIMEOUT_PERNODE));
   rc = WEXITSTATUS(status);
   if (rc == 0) {
     changeState(node, RESASLEEP);
@@ -1587,7 +1594,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
       } else {
 	close(filedes[1]);
 	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	rbytes = timeread(filedes[0], &len, sizeof(int), op_timer / ((stop-start) - (j - start)));
+	rbytes = timeread(filedes[0], &len, sizeof(int), minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
 	if (rbytes <= 0) {
 	  // read went badly
 	  kill(pid, SIGKILL);
@@ -1596,7 +1603,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
 	} else {
 	  consoleOutput = malloc(sizeof(char) * len);
 	  op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	  rbytes = timeread(filedes[0], consoleOutput, len, op_timer / ((stop-start) - (j-start)));
+	  rbytes = timeread(filedes[0], consoleOutput, len, minint(op_timer / ((stop-start) - (j-start)), OP_TIMEOUT_PERNODE));
 	  if (rbytes <= 0) {
 	    // read went badly
 	    kill(pid, SIGKILL);
@@ -1696,7 +1703,7 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
 	  exit(ret);
 	} else {
 	  op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	  rc = timewait(pid, &status, op_timer / ((stop-start) - (j-start)));
+	  rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j-start)), OP_TIMEOUT_PERNODE));
 	  rc = WEXITSTATUS(status);
 	  logprintfl(EUCAINFO,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
 	}
@@ -1789,7 +1796,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	  close(filedes[0]);
 	  
 	  op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	  rc = timewait(pid, &status, op_timer / ((stop-start) - (j - start)));
+	  rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
 	  rc = WEXITSTATUS(status);
 	  logprintfl(EUCADEBUG,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
 	}

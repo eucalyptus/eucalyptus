@@ -146,6 +146,17 @@ static int set_caps(int caps)
 	}
 	return 0;
 }
+
+static int set_keys_ownership(char *home, int uid, int gid){
+  char filename[2048];
+  int rc;
+  
+  snprintf(filename, 2047, "%s/var/lib/eucalyptus/keys/euca.p12", home);
+  rc = chown(filename, uid, gid);
+  
+  return(0);
+}
+
 static int linuxset_user_group(char *user, int uid, int gid){
 	if (set_caps(CAPS)!=0) __abort(-1,getuid()!= uid,"set_caps(CAPS) failed");
 	__abort(-1,(prctl(PR_SET_KEEPCAPS,1,0,0,0) < 0),"prctl failed in linuxset_user_group");
@@ -242,6 +253,7 @@ static int child( euca_opts *args, java_home_t *data, uid_t uid, gid_t gid ) {
 	__die(java_init( args, data ) != 1, "Failed to initialize Eucalyptus.");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.init))==0,"Failed to init Eucalyptus.");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.load))==0,"Failed to load Eucalyptus.");
+	__abort(4, set_keys_ownership( GETARG( args, home ), uid, gid ) != 0,"Setting ownership of keyfile failed." );
 	__abort(4, linuxset_user_group( GETARG( args, user ), uid, gid ) != 0,"Setting the user failed." );
 	__abort(4, (set_caps(0)!=0), "set_caps (0) failed");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.start))==0,"Failed to start Eucalyptus.");

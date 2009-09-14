@@ -1230,3 +1230,11 @@ int safekill(pid_t pid, char *procname, int sig, char *rootwrap) {
   
   return(ret);
 }
+
+int maxint(int a, int b) {
+  return(a>b?a:b);
+}
+
+int minint(int a, int b) {
+  return(a<b?a:b);
+}
