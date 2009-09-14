@@ -59,9 +59,9 @@
 		<property name="unreturnedConnectionTimeout">20</property>
 		<property name="idleConnectionTestPeriod">5</property>
 		<property name="initialPoolSize">8</property>
-		<property name="maxIdleTime">20</property>
 		<property name="maxPoolSize">448</property>
 		<property name="minPoolSize">64</property>
+        <property name="maxIdleTime">20</property>
 		<property name="maxIdleTime">600</property>
 		<property name="maxStatements">0</property>
 		<property name="numHelperThreads">64</property>
