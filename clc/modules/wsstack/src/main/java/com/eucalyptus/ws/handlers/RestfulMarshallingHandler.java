@@ -71,6 +71,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
@@ -104,7 +105,12 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
         this.namespace = "http://msgs.eucalyptus.ucsb.edu";
       }
       String userName = CredentialProvider.getUserName( httpRequest.getParameters( ).remove( SecurityParameter.AWSAccessKeyId.toString()));
-      httpRequest.setMessage( this.bind( userName, true, httpRequest ) );
+      try {
+        httpRequest.setMessage( this.bind( userName, true, httpRequest ) );
+      } catch ( Exception e ) {
+        Channels.fireExceptionCaught( ctx.getChannel( ), e );
+        throw e;
+      }
     }
   }
 
