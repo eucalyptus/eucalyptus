@@ -76,6 +76,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
+import edu.ucsb.eucalyptus.ic.StorageController;
 
 public class StorageEventListener implements EventListener {
 	private static Logger LOG  = Logger.getLogger( StorageEventListener.class );
@@ -98,7 +99,7 @@ public class StorageEventListener implements EventListener {
 			if(!stopComponentEvent.isLocal())
 				name = config.getName();
 			storageInfo.setName(name);
-			EntityWrapper<StorageInfo> db = BlockStorage.getEntityWrapper();
+			EntityWrapper<StorageInfo> db = StorageController.getEntityWrapper();
 			try {
 				StorageInfo foundStorageInfo = db.getUnique(storageInfo);
 				db.delete(foundStorageInfo);

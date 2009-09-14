@@ -65,7 +65,10 @@
 
 package edu.ucsb.eucalyptus.ic;
 
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.StorageProperties;
+
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
@@ -93,6 +96,10 @@ public class StorageController {
 		if ( reply == null )
 			return null;//new EucalyptusErrorMessageType( msg, "Received a NULL reply", this.getClass().getSimpleName() );
 		return reply;
+	}
+
+	public static <T> EntityWrapper<T> getEntityWrapper( ) {
+		return new EntityWrapper<T>( StorageProperties.DB_NAME );
 	}
 
 }

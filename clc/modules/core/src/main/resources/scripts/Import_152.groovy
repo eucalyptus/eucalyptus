@@ -35,8 +35,10 @@ import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
 import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
+import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
+import edu.ucsb.eucalyptus.ic.StorageController;
 
 baseDir = "/disk1/import"
 targetDir = "/disk1/import"
@@ -321,19 +323,37 @@ db.rows('SELECT * FROM BUCKETS').each{
     }
 }
 
-/*db.rows('SELECT * FROM VOLUMES').each{ 
+db.rows('SELECT * FROM VOLUMES').each{ 
   println "Adding volume: ${it.VOLUME_NAME}"
 
-  EntityWrapper<VolumeInfo> dbVol = BlockStorage.getEntityWrapper(); 
+  EntityWrapper<VolumeInfo> dbVol = StorageController.getEntityWrapper(); 
   try {
 	VolumeInfo v = new VolumeInfo(it.VOLUME_NAME);
+	v.setUserName(it.VOLUME_USER_NAME);
+	v.setSize(it.SIZE);
+	v.setStatus(it.STATUS);
+	v.setCreateTime(new Date());
+	v.setZone(it.ZONE);
+	v.setSnapshotId(it.SNAPSHOT_ID);
     dbVol.add(v);
     dbVol.commit();
   } catch (Throwable t) {
+	t.printStackTrace();
 	dbVol.rollback();
   }
-}*/
+}
 
+db.row('SELECT * FROM LVMVOLUMES').each{
+  EntityWrapper<LVMVolumeInfo> dbVol = StorageController.getEntityWrapper();
+  try {
+	LVMVolumeInfo l = new LVMVolumeInfo();
+	dbVol.add(l);
+	dbVol.commit();
+  } catch (Throwable t) {
+	t.printStackTrace();
+	dbVol.rollback();
+  }
+}
 
 db.rows('SELECT * FROM CLUSTERS').each{ 
   println "CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
