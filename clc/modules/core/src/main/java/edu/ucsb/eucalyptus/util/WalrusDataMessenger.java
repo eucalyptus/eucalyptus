@@ -97,7 +97,7 @@ public class WalrusDataMessenger {
         return queue;
     }
 
-    public synchronized LinkedBlockingQueue<WalrusDataMessage> interruptAllAndGetQueue(String key1, String key2) {
+    public LinkedBlockingQueue<WalrusDataMessage> interruptAllAndGetQueue(String key1, String key2) {
         ConcurrentHashMap<String,LinkedBlockingQueue<WalrusDataMessage>> queues = queueMap.get(key1);
         if(queues != null) {
             for (LinkedBlockingQueue<WalrusDataMessage> queue: queues.values()) {
