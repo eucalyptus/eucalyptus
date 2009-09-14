@@ -324,7 +324,7 @@ db.rows('SELECT * FROM BUCKETS').each{
 }
 
 db.rows('SELECT * FROM VOLUMES').each{ 
-  println "Adding volume: ${it.VOLUME_NAME}"
+  println "Adding VOLUME: ${it.VOLUME_NAME}"
 
   EntityWrapper<VolumeInfo> dbVol = StorageController.getEntityWrapper(); 
   try {
@@ -343,7 +343,7 @@ db.rows('SELECT * FROM VOLUMES').each{
   }
 }
 
-db.row('SELECT * FROM LVMVOLUMES').each{
+db.rows('SELECT * FROM LVMVOLUMES').each{
   EntityWrapper<LVMVolumeInfo> dbVol = StorageController.getEntityWrapper();
   try {
 	LVMVolumeInfo l = new LVMVolumeInfo();
