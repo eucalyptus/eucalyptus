@@ -117,19 +117,20 @@ public class EucalyptusProperties {
 		SystemConfiguration conf = null;
 		try {
 			conf = confDb.getUnique( new SystemConfiguration());
-			validateSystemConfiguration(conf);			
+			validateSystemConfiguration(conf);
+			confDb.commit();
 		}
 		catch ( EucalyptusCloudException e ) {
 			LOG.warn("Failed to get system configuration. Loading defaults.");
 			conf = validateSystemConfiguration(null);
 			confDb.add(conf);
+			confDb.commit();
 		}
 		catch (Throwable t) {
 			LOG.error("Unable to get system configuration.");
 			confDb.rollback();
 			return validateSystemConfiguration(null);
 		}
-		confDb.commit();
 		return conf;
 	}
 
