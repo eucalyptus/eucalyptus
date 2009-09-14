@@ -1467,7 +1467,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 						} else {
 							ip = ex;
 						}
-						String callbackUrl = "http://"
+						String callbackUrl = "https://"
 							+ ip
 							+ cloudInfo.getServicePath();
 						rightscaleUrl = rightscale_base_url
