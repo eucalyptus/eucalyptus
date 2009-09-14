@@ -8,6 +8,10 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.keys.KeyPairUtil;
+import com.eucalyptus.entities.NetworkRule;
+import com.eucalyptus.entities.NetworkRulesGroup;
+import com.eucalyptus.entities.IpRange;
+import com.eucalyptus.entities.NetworkPeer;
 import com.eucalyptus.network.NetworkGroupUtil;
 
 import org.bouncycastle.util.encoders.UrlBase64;
@@ -135,7 +139,27 @@ db.rows('SELECT * FROM USERS').each{
   }
   db.rows("SELECT net.* FROM user_has_network_groups has_net LEFT OUTER JOIN network_group net on net.network_group_id=has_net.network_group_id WHERE has_net.user_id=${ it.USER_ID }").each{  net ->
     println "-> network: ${net.NETWORK_GROUP_NAME}"
-    NetworkGroupUtil.createUserNetworkRulesGroup( it.USER_NAME, net.NETWORK_GROUP_NAME, net.NETWORK_GROUP_DESCRIPTION );
+    EntityWrapper<NetworkRulesGroup> dbNet = NetworkGroupUtil.getEntityWrapper();
+    try {
+      NetworkRulesGroup group = new NetworkRulesGroup( it.USER_NAME,net.NETWORK_GROUP_NAME, net.NETWORK_GROUP_DESCRIPTION );
+      dbNet.add( group );
+      db.rows("SELECT rule.* FROM network_group_has_rules has_thing LEFT OUTER JOIN network_rule rule on rule.network_rule_id=has_thing.network_rule_id WHERE has_thing.network_group_id=${ net.NETWORK_GROUP_ID }").each{  rule ->
+      println "--> rule: ${rule.NETWORK_RULE_PROTOCOL}, ${rule.NETWORK_RULE_LOW_PORT}, ${rule.NETWORK_RULE_HIGH_PORT}"
+        NetworkRule netRule = new NetworkRule(rule.NETWORK_RULE_PROTOCOL,rule.NETWORK_RULE_LOW_PORT, rule.NETWORK_RULE_HIGH_PORT);
+        group.getNetworkRules().add( netRule );
+        db.rows("SELECT o.* FROM network_rule_has_peer_network has_thing LEFT OUTER JOIN network_rule_peer_network o on o.network_rule_peer_network_id=has_thing.network_rule_peer_network_id WHERE has_thing.network_rule_id=${ rule.NETWORK_RULE_ID }").each{  peer ->
+          println "---> peer: ${peer.NETWORK_RULE_PEER_NETWORK_USER_QUERY_KEY}, ${peer.NETWORK_RULE_PEER_NETWORK_USER_GROUP}" 
+          netRule.getNetworkPeers().add( new NetworkPeer( peer.NETWORK_RULE_PEER_NETWORK_USER_QUERY_KEY, peer.NETWORK_RULE_PEER_NETWORK_USER_GROUP ) );
+        }
+        db.rows("SELECT o.* FROM network_rule_has_ip_range has_thing LEFT OUTER JOIN network_rule_ip_range o on o.network_rule_ip_range_id=has_thing.network_rule_ip_range_id WHERE has_thing.network_rule_id=${ rule.NETWORK_RULE_ID }").each{  ip ->
+          println "---> ip-range: ${ip.NETWORK_RULE_IP_RANGE_VALUE}" 
+          netRule.getIpRanges().add( new IpRange( ip.NETWORK_RULE_IP_RANGE_VALUE ) )
+        }
+      }      
+      dbNet.commit();
+    } catch (Throwable t) {
+      dbNet.rollback();
+    }
   }
 };
 
