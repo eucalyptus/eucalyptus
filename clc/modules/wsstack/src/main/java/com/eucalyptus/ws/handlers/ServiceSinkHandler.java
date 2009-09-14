@@ -143,7 +143,10 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         User user = request.getUser( );
         requestLocal.set( ctx.getChannel( ), request );
         EucalyptusMessage msg = ( EucalyptusMessage ) request.getMessage( );
-        if ( user != null && msgReceiver == null ) {
+        String userAgent = request.getHeader( HttpHeaders.Names.USER_AGENT );
+        if( userAgent != null && userAgent.matches(".*EucalyptusAdminAccess") && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
+          msg.setEffectiveUserId( msg.getUserId( ) );
+        } else if ( user != null && msgReceiver == null ) {
           msg.setUserId( user.getUserName( ) );
           msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getUserName( ) );
         }
