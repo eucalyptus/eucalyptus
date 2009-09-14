@@ -30,6 +30,13 @@ import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
+import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
+import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
+
+//baseDir = "/home/decker/epc.db"
+//targetDir = "/home/decker/epc.db"
+baseDir = "/disk1/import"
+targetDir = "/disk1/import"
 
 targetDbPrefix= "test"
 
@@ -220,3 +227,24 @@ db.rows('SELECT * FROM CLUSTERS').each{
   println "CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
 }
 
+db.rows('SELECT * FROM BUCKETS').each{
+  println "Adding bucket: ${it.BUCKET_NAME}"
+
+  EntityWrapper<BucketInfo> dbBucket = WalrusControl.getEntityWrapper();
+  try {
+	BucketInfo b = new BucketInfo(it.BUCKET_NAME);
+	b.setOwnerId(it.OWNER_ID);
+	b.setCreationTime(it.BUCKET_CREATION_DATE);
+	b.setLocation(it.STORAGE_CLASS);
+	b.setGlobalRead(it.GLOBAL_READ);
+	b.setGlobalWrite(it.GLOBAL_WRITE);
+	b.setGlobalReadACP(it.GLOBAL_READ_ACP);
+	b.setGlobalWriteACP(it.GLOBAL_WRITE_ACP);
+	b.setBucketSize(BUCKET_SIZE);
+	b.setHidden(false);
+	dbBucket.add(b);
+	dbBucket.commit();
+  } catch (Throwable t) {
+	  dbBucket.rollback();
+  }
+}
