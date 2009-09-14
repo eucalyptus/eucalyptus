@@ -22,7 +22,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
         timer = new Timer("SystemClockTimer");
         clock = new SystemClock();
         ListenerRegistry.getInstance( ).register( ClockTick.class, new Dummy() );
-        timer.scheduleAtFixedRate( clock, 10000, 3000 );
+        timer.scheduleAtFixedRate( clock, 0, 3000 );
       }
     }
   }
