@@ -34,12 +34,15 @@ import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
 import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.ic.StorageController;
+import com.eucalyptus.util.StorageProperties;
 
 //baseDir = "/disk1/import"
 //targetDir = "/disk1/import"
@@ -325,12 +328,32 @@ db.rows('SELECT * FROM BUCKETS').each{
     }
 }
 
+db.rows('SELECT * FROM IMAGECACHE').each{ 
+	  println "Adding IMAGECACHE: ${it.MANIFEST_NAME}"
+
+	  EntityWrapper<ImageCacheInfo> dbImg = WalrusControl.getEntityWrapper(); 
+	  try {
+		ImageCacheInfo img = new ImageCacheInfo(it.BUCKET_NAME, it.MANIFEST_NAME);
+		img.setImageName(it.IMAGE_NAME);
+		img.setInCache(it.IN_CACHE);
+		img.setSize(it.SIZE);
+		img.setUseCount(it.USE_COUNT);
+		dbImg.add(img);
+	    dbImg.commit();
+	  } catch (Throwable t) {
+		t.printStackTrace();
+		dbImg.rollback();
+	  }
+	}
+
+
 db.rows('SELECT * FROM VOLUMES').each{ 
   println "Adding VOLUME: ${it.VOLUME_NAME}"
 
   EntityWrapper<VolumeInfo> dbVol = StorageController.getEntityWrapper(); 
   try {
 	VolumeInfo v = new VolumeInfo(it.VOLUME_NAME);
+	v.setScName(StorageProperties.SC_LOCAL_NAME);
 	v.setUserName(it.VOLUME_USER_NAME);
 	v.setSize(it.SIZE);
 	v.setStatus(it.STATUS);
@@ -345,12 +368,62 @@ db.rows('SELECT * FROM VOLUMES').each{
   }
 }
 
+db.rows('SELECT * FROM SNAPSHOTS').each{ 
+	  println "Adding snapshit: ${it.SNAPSHOT_NAME}"
+
+	  EntityWrapper<VolumeInfo> dbSnap = StorageController.getEntityWrapper(); 
+	  try {
+		SnapshotInfo s = new SnapshotInfo(it.SNAPSHOT_NAME);
+		s.setScName(StorageProperties.SC_LOCAL_NAME);
+		s.setUserName(it.SNAPSHOT_USER_NAME);
+		s.setVolumeId(it.VOLUME_NAME);
+		s.setStatus(it.STATUS);
+		s.setStartTime(new Date());
+		s.setProgress(it.PROGRESS);
+		dbSnap.add(s);
+		dbSnap.commit();
+	  } catch (Throwable t) {
+		t.printStackTrace();
+		dbSnap.rollback();
+	  }
+	}
+
+
 db.rows('SELECT * FROM LVMVOLUMES').each{
+
+  println "Adding LVMVOLUME: ${it.VOLUME_NAME}"
   EntityWrapper<LVMVolumeInfo> dbVol = StorageController.getEntityWrapper();
   try {
-	LVMVolumeInfo l = new LVMVolumeInfo();
+	LVMVolumeInfo l = new LVMVolumeInfo(it.VOLUME_NAME);
+	l.setScName(StorageProperties.SC_LOCAL_NAME);
+	l.setLoDevName(it.LODEV_NAME);
+	l.setLoFileName(it.LOFILE_NAME);
+	l.setPvName(it.PV_NAME);
+	l.setVgName(it.VG_NAME);
+	l.setLvName(it.LV_NAME);
+	l.setSize(it.SIZE);
+	l.setStatus(it.STATUS);
+	l.setVbladePid(it.VBLADE_PID);
+	l.setSnapshotOf(it.SNAPSHOT_OF);
+	l.setMajorNumber(it.MAJOR_NUMBER);
+	l.setMinorNumber(it.MINOR_NUMBER);
 	dbVol.add(l);
 	dbVol.commit();
+  } catch (Throwable t) {
+	t.printStackTrace();
+	dbVol.rollback();
+  }
+}
+
+db.rows('SELECT * FROM LVMMETADATA').each{
+  println "Adding LVMMETADATA: ${it.HOSTNAME}"
+  EntityWrapper<LVMMetaInfo> dbVol = StorageController.getEntityWrapper(); 
+  try {
+	  LVMMetaInfo lvmmeta = new LVMMetaInfo(it.HOSTNAME);
+	  lvmmeta.setMajorNumber(it.MAJOR_NUMBER);
+	  lvmmeta.setMinorNumber(it.MINOR_NUMBER);
+	  dbVol.add(lvmmeta);
+	  dbVol.commit();
   } catch (Throwable t) {
 	t.printStackTrace();
 	dbVol.rollback();
