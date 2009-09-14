@@ -271,23 +271,28 @@ public class CredentialProvider extends Bootstrapper {
 		return user;
 	}
 
+	 public static User addUser( String userName, Boolean isAdmin, String queryId, String secretKey ) throws UserExistsException {
+	    User newUser = new User( );
+	    newUser.setUserName( userName );
+	    newUser.setQueryId( queryId );
+	    newUser.setSecretKey( secretKey );
+	    newUser.setIsAdministrator( isAdmin );
+	    EntityWrapper<User> db = Credentials.getEntityWrapper( );
+	    try {
+	      db.add( newUser );
+	      db.commit( );
+	    } catch ( Exception e ) {
+	      db.rollback( );
+	      throw new UserExistsException( e );
+	    }
+	    return newUser;
+	  }
+
+	
 	public static User addUser( String userName, Boolean isAdmin ) throws UserExistsException {
-		User newUser = new User( );
-		newUser.setUserName( userName );
-		String queryId = Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" );
-		String secretKey = Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll( "\\p{Punct}", "" );
-		newUser.setQueryId( queryId );
-		newUser.setSecretKey( secretKey );
-		newUser.setIsAdministrator( isAdmin );
-		EntityWrapper<User> db = Credentials.getEntityWrapper( );
-		try {
-			db.add( newUser );
-			db.commit( );
-		} catch ( Exception e ) {
-			db.rollback( );
-			throw new UserExistsException( e );
-		}
-		return newUser;
+    String queryId = Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" );
+    String secretKey = Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll( "\\p{Punct}", "" );
+    return CredentialProvider.addUser( userName, isAdmin, queryId, secretKey );
 	}
 
 	public static User addUser( String userName ) throws UserExistsException {

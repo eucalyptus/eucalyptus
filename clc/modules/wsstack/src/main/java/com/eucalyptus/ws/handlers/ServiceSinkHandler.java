@@ -89,6 +89,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.mule.DefaultMuleMessage;
 import org.mule.api.MuleMessage;
+import org.mule.transport.NullPayload;
 
 import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
@@ -165,6 +166,9 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
     if ( e instanceof MessageEvent ) {
       MessageEvent msge = ( MessageEvent ) e;
+      if( msge.getMessage( ) instanceof NullPayload ) {
+        return;
+      }
       if ( msge.getMessage( ) instanceof IsData ) {// Pass through for chunked messaging
         ctx.sendDownstream( msge );
       } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {// Handle

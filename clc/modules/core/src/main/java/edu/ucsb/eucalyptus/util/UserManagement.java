@@ -139,7 +139,6 @@ public class UserManagement {
   public static String getUserName( String queryId ) {
     EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( );
     UserInfo userInfo = new UserInfo( );
-    userInfo.setQueryId( queryId );
     try {
       UserInfo foundUserInfo = db.getUnique( userInfo );
       return foundUserInfo.getUserName( );

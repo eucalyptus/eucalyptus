@@ -86,8 +86,6 @@ public class UserInfo {
   private Long    id = -1l;
   @Column( name = "user_name" )
   private String  userName;
-  @Column( name = "user_query_id" )
-  private String  queryId;
   @Column( name = "user_email" )
   private String  email;
   @Column( name = "user_real_name" )
@@ -123,17 +121,44 @@ public class UserInfo {
 
   public UserInfo( ) {
   }
+  
+  public UserInfo( String userName, 
+      String email, 
+      String realName, 
+      Long reservationId, 
+      String bCryptedPassword, 
+      String telephoneNumber, 
+      String affiliation, 
+      String projectDescription, 
+      String projectPIName, 
+      String confirmationCode, 
+      String certificateCode, 
+      Boolean isApproved, 
+      Boolean isConfirmed,
+      Boolean isEnabled, 
+      Boolean isAdministrator, 
+      Long passwordExpires ) {
+    super( );
+    this.userName = userName;
+    this.email = email;
+    this.realName = realName;
+    this.reservationId = reservationId;
+    this.bCryptedPassword = bCryptedPassword;
+    this.telephoneNumber = telephoneNumber;
+    this.affiliation = affiliation;
+    this.projectDescription = projectDescription;
+    this.projectPIName = projectPIName;
+    this.confirmationCode = confirmationCode;
+    this.certificateCode = certificateCode;
+    this.isApproved = isApproved;
+    this.isConfirmed = isConfirmed;
+    this.isEnabled = isEnabled;
+    this.isAdministrator = isAdministrator;
+    this.passwordExpires = passwordExpires;
+  }
 
   public UserInfo( String userName ) {
     this.userName = userName;
-  }
-
-  public String getQueryId( ) {
-    return queryId;
-  }
-
-  public void setQueryId( final String queryId ) {
-    this.queryId = queryId;
   }
 
   public Long getId( ) {
@@ -297,7 +322,7 @@ public class UserInfo {
     try {
       user = db.getUnique( new UserInfo( userId ) );
       db.commit( );
-    } catch (Throwable  t) {
+    } catch ( Throwable t ) {
       db.commit( );
     }
     return user;

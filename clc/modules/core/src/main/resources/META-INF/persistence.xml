@@ -58,7 +58,6 @@
 		<provider>org.hibernate.ejb.HibernatePersistence</provider>
 		<class>com.eucalyptus.entities.AbstractPersistent</class>
 		<class>com.eucalyptus.entities.SshKeyPair</class>
-		<class>com.eucalyptus.entities.SshKeyPair</class>
 		<class>com.eucalyptus.entities.NetworkRulesGroup</class>
 		<class>com.eucalyptus.entities.NetworkRule</class>
 		<class>com.eucalyptus.entities.IpRange</class>
