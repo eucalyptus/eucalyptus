@@ -95,9 +95,12 @@ public class KeyPairUtil {
     newKey.setPublicKey( authKeyString );
     newKey.setFingerPrint( Hashes.getFingerPrint( newKeys.getPrivate( ) ) );
     db = KeyPairUtil.getEntityWrapper( );
-    db.merge( newKey );
-    db.commit( );
-
+    try {
+      db.merge( newKey );
+      db.commit( );
+    } catch ( Throwable t ) {
+      db.rollback( );
+    }
     return newKeys.getPrivate( );
   }
 
