@@ -160,6 +160,7 @@ public class NioBootstrap extends Bootstrap {
         // Apply options.
         event.getChannel().getConfig().setOptions( bootstrap.getOptions() );
         event.getChannel().getConfig().setConnectTimeoutMillis( 3000 );
+        event.getChannel().getConfig().setWriteTimeoutMillis( 60000 );
       } finally {
         context.sendUpstream( event );
       }
