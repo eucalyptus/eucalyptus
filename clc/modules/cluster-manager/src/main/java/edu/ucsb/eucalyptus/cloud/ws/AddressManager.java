@@ -135,7 +135,6 @@ public class AddressManager implements Startable {
     for( Address allocatedAddr : activeList ) {
       if( Component.eucalyptus.name().equals( allocatedAddr.getUserId() ) ) {
         allocatedCount++;
-        try {
           if( EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses() && !allocatedAddr.isAssigned() && !allocatedAddr.isPending() ) {
             //:: deallocate unassigned addresses owned by eucalyptus when switching to dynamic public addressing :://
             LOG.debug("Deallocating unassigned public address in dynamic public addressing mode: " + allocatedAddr.getName() );
@@ -150,12 +149,9 @@ public class AddressManager implements Startable {
             allocatedAddr.release();
             Addresses.getInstance().disable( allocatedAddr.getName() );
           }
-        } catch ( EucalyptusCloudException e ) {
-        }
       }
     }
     LOG.debug("Found " + allocatedCount + " addresses allocated to eucalyptus" );
-    try {
       if( !EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses() ) {
         int allocCount = EucalyptusProperties.getSystemConfiguration().getSystemReservedPublicAddresses() - allocatedCount;
         LOG.debug("Allocating additional " + allocCount + " addresses in static public addresing mode" );
@@ -209,17 +205,12 @@ public class AddressManager implements Startable {
           }
         }
       }
-    } catch ( EucalyptusCloudException e ) {
-    }
   }
 
   public synchronized static NavigableSet<String> allocateAddresses( int count ) throws NotEnoughResourcesAvailable {
     boolean doDynamic = true;
     updateAddressingMode();  //:: make sure everything is up-to-date :://
-    try {
-      doDynamic = EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses();
-    } catch ( EucalyptusCloudException e ) {
-    }
+    doDynamic = EucalyptusProperties.getSystemConfiguration().isDoDynamicPublicAddresses();
     NavigableSet<String> ipList = Sets.newTreeSet();
     List<Address> addressList = Lists.newArrayList();
     if( doDynamic ) {

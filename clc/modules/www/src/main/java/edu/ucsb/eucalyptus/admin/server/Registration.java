@@ -190,11 +190,7 @@ public class Registration extends HttpServlet {
   }
 
   private static String getRegistrationId() {
-    try {
-      return EucalyptusProperties.getSystemConfiguration().getRegistrationId();
-    } catch ( EucalyptusCloudException e ) {
-      return "configuration error";
-    }
+    return EucalyptusProperties.getSystemConfiguration().getRegistrationId();
   }
 
 
