@@ -101,7 +101,7 @@ public class VolumeInfo {
     private String snapshotId;
 
     public VolumeInfo() {
-    	this.scName = StorageProperties.SC_LOCAL_NAME;
+    	this.scName = StorageProperties.NAME;
     }
 
     public VolumeInfo(String volumeId) {
