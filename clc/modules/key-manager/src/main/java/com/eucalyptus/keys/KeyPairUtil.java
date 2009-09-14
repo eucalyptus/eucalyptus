@@ -14,6 +14,7 @@ import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.collect.Lists;
 
 public class KeyPairUtil {
   private static Logger LOG = Logger.getLogger( KeyPairUtil.class );
@@ -25,8 +26,13 @@ public class KeyPairUtil {
 
   public static List<SshKeyPair> getUserKeyPairs( String userName ) {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
-    List<SshKeyPair> keys = db.query( new SshKeyPair( userName ) );
-    db.commit( );
+    List<SshKeyPair> keys = Lists.newArrayList( );
+    try {
+      keys = db.query( new SshKeyPair( userName ) );
+      db.commit( );
+    } catch ( Throwable e ) {
+      db.rollback( );
+    }
     return keys;
   }
 
@@ -72,8 +78,8 @@ public class KeyPairUtil {
     return key;
   }
   public static PrivateKey createUserKeyPair( String userName, String keyName ) throws EucalyptusCloudException {
-    EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     SshKeyPair newKey = new SshKeyPair( userName, keyName );
+    EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     try {
       db.add( newKey );
       db.commit( );

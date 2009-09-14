@@ -214,7 +214,8 @@ public class ImageUtil {
       } catch ( EucalyptusCloudException e ) {
         ImageManager.LOG.error( e );
         ImageManager.LOG.error( "Failed bukkit check! Invalidating registration: " + imgInfo.getImageLocation() );
-        invalidateImageById( imgInfo.getImageId() );
+        //TODO: we need to consider if this is a good semantic or not, it can have ugly side effects
+        //        invalidateImageById( imgInfo.getImageId() );
         throw new EucalyptusCloudException( "Failed check! Invalidating registration: " + imgInfo.getImageLocation() );
       }
   }

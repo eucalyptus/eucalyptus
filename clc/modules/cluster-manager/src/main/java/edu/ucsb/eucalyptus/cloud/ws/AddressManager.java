@@ -113,19 +113,21 @@ public class AddressManager implements Startable {
   private static Logger LOG = Logger.getLogger( AddressManager.class );
 
   public void start() throws MuleException {
-    EntityWrapper<Address> db = new EntityWrapper<Address>();
-    try {
-      List<Address> addrList = db.query( new Address() );
-      for ( Address addr : addrList ) {
-        try {
-          Addresses.getInstance().replace( addr.getName(), addr );
-        } catch ( NoSuchElementException e ) {
-          Addresses.getInstance().register( addr );
+    synchronized( AddressManager.class ) {
+      EntityWrapper<Address> db = new EntityWrapper<Address>();
+      try {
+        List<Address> addrList = db.query( new Address() );
+        db.commit();
+        for ( Address addr : addrList ) {
+          try {
+            Addresses.getInstance().replace( addr.getName(), addr );
+          } catch ( NoSuchElementException e ) {
+            Addresses.getInstance().register( addr );
+          }
         }
+      } catch ( Throwable e ) {
+        db.rollback( );
       }
-      db.commit();
-    } catch ( Throwable e ) {
-      db.rollback( );
     }
   }
 

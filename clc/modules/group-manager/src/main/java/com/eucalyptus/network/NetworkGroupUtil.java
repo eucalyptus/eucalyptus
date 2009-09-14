@@ -69,7 +69,7 @@ public class NetworkGroupUtil {
     try {
       db.add( group );
       db.commit( );
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       db.rollback( );
       throw new EucalyptusCloudException( "Error adding network group: group named " +groupName+ " already exists", e );
     }
