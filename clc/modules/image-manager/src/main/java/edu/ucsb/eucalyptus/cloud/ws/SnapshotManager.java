@@ -172,7 +172,7 @@ public class SnapshotManager {
     DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
     String userName = request.isAdministrator( ) ? null : request.getUserId( );
 
-    EntityWrapper<Snapshot> db = getEntityWrapper( );
+    EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
     List<Snapshot> snapshots = db.query( Snapshot.ownedBy( userName ) );
 
     for ( Snapshot v : snapshots ) {

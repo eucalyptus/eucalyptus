@@ -102,7 +102,7 @@ public class SshKeyPair extends UserMetadata implements Serializable {
   public static SshKeyPair NO_KEY = new SshKeyPair( "", "", "", "", "" );
   public SshKeyPair( ) {
   }
-  public SshKeyPair( String userName, String keyName, String description, String publicKey, String fingerPrint ) {
+  public SshKeyPair( String userName, String keyName, String publicKey, String fingerPrint ) {
     super( userName, keyName );
     this.uniqueName = userName + keyName;
     this.publicKey = publicKey;
