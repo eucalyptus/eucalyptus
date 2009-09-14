@@ -31,12 +31,16 @@ import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
+import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 
-//baseDir = "/disk1/import"
-//targetDir = "/disk1/import"
-baseDir = "/home/decker/epc.db"
-targetDir = "/home/decker/epc.db"
+baseDir = "/disk1/import"
+targetDir = "/disk1/import"
+//baseDir = "/home/decker/epc.db"
+//targetDir = "/home/decker/epc.db"
 targetDbPrefix= "test"
 
 def getSql() {
@@ -102,7 +106,7 @@ db.rows('SELECT * FROM VM_TYPES').each{
   }
 }
 
-db.rows('SELECT * FROM USERS').each{   
+/*db.rows('SELECT * FROM USERS').each{   
   println "Adding user: ${it.USER_NAME}";
   UserInfo user = new UserInfo( it.USER_NAME, 
       it.USER_EMAIL, 
@@ -173,7 +177,7 @@ db.rows('SELECT * FROM USERS').each{
     }
   }
 };
-
+*/
 db.rows("SELECT image.* FROM images image").each{  image ->
   println "Adding images: ${image.IMAGE_NAME}";
   ImageInfo imgInfo = new ImageInfo( image.IMAGE_ARCH, image.IMAGE_NAME, image.IMAGE_PATH, image.IMAGE_OWNER_ID, image.IMAGE_AVAILABILITY, image.IMAGE_TYPE, image.IMAGE_IS_PUBLIC, image.IMAGE_KERNEL_ID, image.IMAGE_RAMDISK_ID );
@@ -256,17 +260,60 @@ db.rows('SELECT * FROM BUCKETS').each{
   	 * ,LAST_MODIFIED TIMESTAMP,SIZE BIGINT,STORAGE_CLASS VARCHAR(255)
   	 * ,OBJECT_KEY VARCHAR(255))
   	 */
+    db.rows("SELECT g.* FROM bucket_has_grants has_thing LEFT OUTER JOIN grants g on g.grant_id=has_thing.grant_id WHERE has_thing.bucket_id=${ it.BUCKET_ID }").each{  grant ->
+    println "--> grant: ${it.BUCKET_NAME}/${grant.USER_ID}"
+      GrantInfo grantInfo = new GrantInfo();
+      grantInfo.setUserId(grant.USER_ID);
+      grantInfo.setGrantGroup(grant.GRANT_GROUP);
+      grantInfo.setCanWrite(grant.WRITE);
+      grantInfo.setCanRead(grant.READ);
+      grantInfo.setCanReadACP(grant.READ_ACP);
+      grantInfo.setCanWriteACP(grant.WRITE_ACP);
+      b.getGrants().add(grantInfo);
+    }
+ 	dbBucket.add(b);
+  	dbBucket.commit();
+  } catch (Throwable t) {
+	    t.printStackTrace();
+		  dbBucket.rollback();
+  }
     db.rows("SELECT o.* FROM bucket_has_objects has_thing LEFT OUTER JOIN objects o on o.object_id=has_thing.object_id WHERE has_thing.bucket_id=${ it.BUCKET_ID }").each{  obj ->
       println "--> object: ${it.BUCKET_NAME}/${obj.OBJECT_NAME}"
       //Do bucket object stuff here.
+      EntityWrapper<ObjectInfo> dbObject = WalrusControl.getEntityWrapper();
+      try {
+    	ObjectInfo objectInfo = new ObjectInfo(it.BUCKET_NAME, obj.OBJECT_NAME);
+    	objectInfo.setObjectName(obj.OBJECT_NAME);
+    	objectInfo.setOwnerId(obj.OWNER_ID);
+    	objectInfo.setGlobalRead(obj.GLOBAL_READ);
+    	objectInfo.setGlobalWrite(obj.GLOBAL_WRITE);
+    	objectInfo.setGlobalReadACP(obj.GLOBAL_READ_ACP);
+    	objectInfo.setGlobalWriteACP(obj.GLOBAL_WRITE_ACP);
+    	objectInfo.setEtag(obj.ETAG);
+    	objectInfo.setLastModified(new Date());
+    	objectInfo.setStorageClass(obj.STORAGE_CLASS);    	
+    	dbObject.add(objectInfo);
+    	dbObject.commit();
+      } catch (Throwable t) {
+    	t.printStackTrace();
+    	dbObject.rollback();
+      }
     }
-  	dbBucket.add(b);
-  	dbBucket.commit();
-  } catch (Throwable t) {
-    t.printStackTrace();
-	  dbBucket.rollback();
-  }
 }
+
+/*db.rows('SELECT * FROM VOLUMES').each{ 
+  println "Adding volume: ${it.VOLUME_NAME}"
+
+  EntityWrapper<VolumeInfo> dbVol = BlockStorage.getEntityWrapper(); 
+  try {
+	VolumeInfo v = new VolumeInfo(it.VOLUME_NAME);
+    dbVol.add(v);
+    dbVol.commit();
+  } catch (Throwable t) {
+	dbVol.rollback();
+  }
+}*/
+
 
 db.rows('SELECT * FROM CLUSTERS').each{ 
   println "CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"

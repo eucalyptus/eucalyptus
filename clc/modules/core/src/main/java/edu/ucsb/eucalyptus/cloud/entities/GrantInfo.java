@@ -157,7 +157,7 @@ public class GrantInfo {
 		return canWriteACP;
 	}
 
-	public void setWriteACP(Boolean writeACP) {
+	public void setCanWriteACP(Boolean writeACP) {
 		this.canWriteACP = writeACP;
 	}
 
@@ -203,7 +203,7 @@ public class GrantInfo {
 				}   else if (permission.equals("READ_ACP")) {
 					grantInfo.setCanReadACP(true);
 				}   else if (permission.equals("WRITE_ACP")) {
-					grantInfo.setWriteACP(true);
+					grantInfo.setCanWriteACP(true);
 				}
 				grantInfos.add(grantInfo);
 			}
