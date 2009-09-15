@@ -130,8 +130,7 @@ public class ImageUtil {
       PublicKey publicKey = cert.getPublicKey();
       sigVerifier.initVerify( publicKey );
       sigVerifier.update( pad.getBytes() );
-      sigVerifier.verify( Hashes.hexToBytes( signature ) );
-      ret = true;
+      ret = sigVerifier.verify( Hashes.hexToBytes( signature ) );
     } catch ( Exception ex ) {
       LOG.warn( ex.getMessage() );
     }
