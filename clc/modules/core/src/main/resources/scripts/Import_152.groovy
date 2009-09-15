@@ -1,4 +1,7 @@
 
+import java.security.*;
+import javax.crypto.spec.*;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EntityWrapper;
@@ -72,12 +75,13 @@ def getSqlVolumes() {
 db = getSql();
 dbVolumes = getSqlVolumes( );
 
+
 System.setProperty("euca.home",System.getenv("EUCALYPTUS"))
 System.setProperty("euca.var.dir","${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/")
 System.setProperty("euca.log.dir", "${System.getenv('EUCALYPTUS')}/var/log/eucalyptus/")
 System.setProperty("euca.db.host", "jdbc:hsqldb:file:${targetDir}/${targetDbPrefix}")
-System.setProperty("euca.db.password", "5990ae4a5ebe05008be9fa6079bf5e1b2293024850daabf080e0f3898baac7f790d4a5d7fdde621dc03a63a232b6c7fd1fd7d8edaa1e83a6289a8c755ce47952730d6aec13447156f5a7bf52d8df1a43b19bcea977a4115e502ad85f4254e61b0cb1997a15b137e7eb995cac1866328ed3604f5042b34a05accb059881601583e56a12882cd612f72d0f76c080e5dcfb945b9a4b480c1b7275b02798ce789ec4aa65286489eb108660c59dac08cfe22d797949daf05cd32e559b5530fc49df45ab5eee9079b466481de9c591057e783ac4949e349370002341bfeb1300c8417f15dced53bebee38f11062364a28695dfd617386398c9924fa5186e5613c97459")
-System.setProperty("euca.log.level", 'INFO')
+System.setProperty("euca.db.password", "${System.getenv('EUCALYPTUS_DB')}");
+System.setProperty("euca.log.level", 'INFO');
 
 ["${baseDir}/eucalyptus_general.script","${baseDir}/eucalyptus_images.script","${baseDir}/eucalyptus_auth.script","${baseDir}/eucalyptus_config.script","${baseDir}/eucalyptus_walrus.script","${baseDir}/eucalyptus_storage.script","${baseDir}/eucalyptus_dns.script"].each{
 new File(it).write("CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" + 
