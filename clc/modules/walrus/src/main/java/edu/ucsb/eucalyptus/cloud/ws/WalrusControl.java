@@ -161,6 +161,7 @@ public class WalrusControl {
 			walrusManager.initialize();
 		} catch(EucalyptusCloudException ex) {
 			LOG.error("Error initializing walrus", ex);
+			SystemUtil.shutdownWithError(ex.getMessage());
 		}
 		Tracker.initialize();
 		if(System.getProperty("euca.virtualhosting.disable") != null) {
