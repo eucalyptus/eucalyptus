@@ -76,7 +76,6 @@ BRIDGE=""
 NEWNODES=""
 NODEMODE=""
 WALRUS_MODE=""
-REGISTER_CLC=""
 SYNC=""
 WALRUS=""
 WALRUS_MODE=""
@@ -87,6 +86,7 @@ UPGRADE_CONF=""
 SETUP=""
 VERSION=""
 CHECK=""
+TOSYNC=""
 TO_BACKUP="Y"
 CREDENTIALZIPFILE=""
 SCP="`which scp 2> /dev/null`"
@@ -99,7 +99,8 @@ usage () {
 	echo "where <file> is the configuration file ($FILE by default)"
 	echo "   --help                           this message"
 	echo "   -d <dir>                         point EUCALYPTUS to <dir>"
-	echo "   --no-rsync                       don't use rsync (ie remote node have no root)"
+	echo "   --no-rsync                       don't use rsync"
+	echo "   --no-scp                         don't use scp"
 	echo "   --get-credentials <zipfile>      download credentials to <zipfile>"
 	echo "   --register-nodes \"host host ...\" add new nodes to EUCALYPTUS"
 	echo "   --delete-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
@@ -109,8 +110,7 @@ usage () {
 	echo "   --deregister-walrus <host>       remove walrus to EUCALYPTUS"
 	echo "   --register-sc <name> <host>      add storage controller"
 	echo "   --deregister-sc <host>           remove storage controller to EUCALYPTUS"
-	echo "   --register-clc <host>            point local walrus to CLC location"
-	echo "   --sync                           used only with --register-* to sync keys"
+	echo "   --no-sync                        used only with --register-* to skip syncing keys"
 	echo "   --cc-port <port>                 set CC port"
 	echo "   --nc-port <port>                 set NC port"
 	echo "   --instances <path>               set the INSTANCE path"
@@ -122,6 +122,7 @@ usage () {
 	echo "   --name <var>                     returns the value or <name>"
 	echo "   --setup                          perform initial setup"
 	echo "   --check [nc|cc|cloud|sc|walrus]  pre-flight checks"
+	echo "   --sync [nc|cc|cloud|sc|walrus]   pre-flight checks"
 	echo "   --version                        eucalyptus version"
 	echo
 }
@@ -163,14 +164,46 @@ uncomment () {
 	rm -f /tmp/euca-tmp.$$
 }
 
+component_sync_keys() {
+    local COMPONENT=""
+    local NAME=""
+    
+    if [ "$SYNC" = "N" ]; then
+	return 0
+    fi
+    
+    if [ $# -lt 1 ]; then
+	return 1
+    fi
+    
+    COMPONENT="$1"
+    shift
+    NAME="$2"
+    shift
+
+    if [ "$COMPONENT" = "walrus" ]; then
+	echo "syncing walrus"
+    elif [ "$COMPONENT" = "cc" ]; then
+	echo "syncing cc($NAME)"
+    elif [ "$COMPONENT" = "sc" ]; then
+	echo "syncing sc($NAME)"
+    elif [ "$COMPONENT" = "nc" ]; then
+	echo "syncing nc"
+    fi
+
+
+}
+
 # copy files over.
-# $1 is the remote host
-# everything else are the files to copy
 sync_keys() {
         local SOURCEDIR=""
 	local DESTDIR=""
 	local REMOTE=""
 	local FILES=""
+
+	if [ "$SYNC" = "N" ]; then
+	    return 0
+	fi
 
 	if [ $# -lt 4 ]; then
 		return 1
@@ -273,6 +306,11 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
+	if [ "$1" = "-noscp" -o "$1" = "--no-scp" ]; then 
+	    SCP=""
+	    shift
+	    continue
+	fi
 	if [ "$1" = "-version" -o "$1" = "--version" ]; then 
 	    VERSION="Y"
 	    shift
@@ -283,8 +321,8 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
-	if [ "$1" = "--sync" ]; then 
-	    SYNC="Y"
+	if [ "$1" = "--no-sync" ]; then 
+	    SYNC="N"
 	    shift
 	    continue
 	fi
@@ -424,11 +462,6 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "--register-clc" ]; then
-		REGISTER_CLC="$2"
-		shift; shift
-		continue
-	fi
 	if [ "$1" = "--deregister-sc" ]; then
 		SC_MODE="DEL"
 		SCNAME="$2"
@@ -465,6 +498,15 @@ while [ $# -gt 0 ]; do
 			exit 1
 		fi
 		CHECK="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "-sync" -o "$1" = "--sync" ]; then 
+		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+			echo "-sync requires cc, nc, sc, walrus or cloud"
+			exit 1
+		fi
+		TOSYNC="$2"
 		shift; shift
 		continue
 	fi
@@ -674,6 +716,10 @@ if [ -n "$SETUP" ]; then
 	let $((ret += $?))
 
 	exit $ret
+fi
+
+if [ -n "$TOSYNC" ]; then
+    echo "not implemented"
 fi
 
 # pre-flight checks
@@ -1034,7 +1080,6 @@ if [ -n "$SCNAME" ]; then
     if [ "$SC_MODE" = "ADD" ]; then
 	echo "Adding SC $SCHOST to cluster $SCNAME"
 	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
-#	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${SCNAME}
 	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
 	    DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
 	else
@@ -1088,19 +1133,6 @@ if [ -n "$SCNAME" ]; then
 	echo
 	echo "SUCCESS: Storage controller for cluster '${SCNAME}' successfully deregistered."
     fi
-fi
-
-# CLC registration
-if [ -n "$REGISTER_CLC" ]; then
-	if [ -n "$WGET" ]; then
-		if ! $WGET -T 10 -t 1 -O - -o /dev/null http://$REGISTER_CLC:8773/services/|grep Eucalyptus > /dev/null ; then
-			echo "Cannot contact CLC on $REGISTER_CLC."
-			exit 1
-		fi
-	else
-		echo "wget is missing: cannot check if service is running."
-	fi
-	echo "not implemented"
 fi
 
 # operations on the nodes
