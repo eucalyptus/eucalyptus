@@ -153,9 +153,9 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   }
   @Override
   public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
+    if ( this.is( obj ) ) return true;
     if ( obj == null ) return false;
-    if ( getClass( ) != obj.getClass( ) ) return false;
+    if ( getClass( ).is( obj.getClass( ) ) ) return false;
     ComponentConfiguration other = ( ComponentConfiguration ) obj;
     if ( hostName == null ) {
       if ( other.hostName != null ) return false;
