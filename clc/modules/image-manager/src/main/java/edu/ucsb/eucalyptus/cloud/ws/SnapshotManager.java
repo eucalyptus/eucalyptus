@@ -102,7 +102,7 @@ public class SnapshotManager {
     return new EntityWrapper<Snapshot>( VolumeManager.PERSISTENCE_CONTEXT );
   }
 
-  public CreateSnapshotResponseType CreateSnapshot( CreateSnapshotType request ) throws EucalyptusCloudException {
+  public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException {
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
     String userName = request.isAdministrator( ) ? null : request.getUserId( );
     Volume vol = db.recast( Volume.class ).getUnique( Volume.named( userName, request.getVolumeId( ) ) );
@@ -133,7 +133,6 @@ public class SnapshotManager {
       scReply = StorageUtil.lookup( sc.getHostName( ) ).send( scRequest, CreateStorageSnapshotResponseType.class );
       snap.setCluster( sc.getName( ) );
       snap.setMappedState( scReply.getStatus( ) );
-      LOG.debug( scReply );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback( );
@@ -148,7 +147,7 @@ public class SnapshotManager {
     return reply;
   }
 
-  public DeleteSnapshotResponseType DeleteSnapshot( DeleteSnapshotType request ) throws EucalyptusCloudException {
+  public DeleteSnapshotResponseType delete( DeleteSnapshotType request ) throws EucalyptusCloudException {
     DeleteSnapshotResponseType reply = ( DeleteSnapshotResponseType ) request.getReply( );
     reply.set_return( false );
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
@@ -168,7 +167,7 @@ public class SnapshotManager {
     return reply;
   }
 
-  public DescribeSnapshotsResponseType DescribeSnapshots( DescribeSnapshotsType request ) throws EucalyptusCloudException {
+  public DescribeSnapshotsResponseType describe( DescribeSnapshotsType request ) throws EucalyptusCloudException {
     DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
     String userName = request.isAdministrator( ) ? null : request.getUserId( );
 
@@ -195,7 +194,6 @@ public class SnapshotManager {
       }
     }
     db.commit( );
-    LOG.trace( "RESPONSE ============\n" + reply );
     return reply;
   }
 }
