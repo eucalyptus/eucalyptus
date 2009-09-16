@@ -60,7 +60,7 @@
 #
 #FAKEREG="yes"
 
-FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
+FILE="/opt/eucalyptus/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
 CC_PORT=""
 NC_PORT=""
@@ -288,6 +288,11 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
+	if [ "$1" = "--deregister-walrus" ]; then
+	    WALRUS_MODE="DEL"
+	    shift
+	    continue
+	fi
 	if [ $# -eq 1 ]; then
 		# we dont have options with no argument, so it has to be
 		# the file
@@ -413,12 +418,6 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "--deregister-walrus" ]; then
-		WALRUS_MODE="DEL"
-		WALRUS="$2"
-		shift; shift
-		continue
-	fi
 	if [ "$1" = "--register-walrus" ]; then
 		WALRUS_MODE="ADD"
 		WALRUS="$2"
@@ -484,8 +483,8 @@ if [ "$VERSION" = "Y" ]; then
 
 	if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus-version ]; then
 		VERSION="$EUCALYPTUS/etc/eucalyptus/eucalyptus-version"
-	elif [ -e @prefix@/etc/eucalyptus/eucalyptus-version ]; then
-		VERSION="@prefix@/etc/eucalyptus/eucalyptus-version"
+	elif [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ]; then
+		VERSION="/opt/eucalyptus/etc/eucalyptus/eucalyptus-version"
 	fi
 	if [ -n "$VERSION" ]; then
 		echo -n "Eucalyptus version: "
@@ -972,7 +971,7 @@ if [ -n "$CLUSNAME" ]; then
 fi
 
 # walrus
-if [ -n "$WALRUS" ]; then
+if [ -n "$WALRUS" -o -n "$WALRUS_MODE" ]; then
     if ! checkLocalService "CLC" ; then
 	exit 1
     fi
@@ -1010,7 +1009,7 @@ if [ -n "$WALRUS" ]; then
 	
     elif [ "$WALRUS_MODE" = "DEL" ]; then
 	URL=""
-	if ! createCloudURL "Action" "DeregisterWalrus" "Name" "${WALRUS}"; then
+	if ! createCloudURL "Action" "DeregisterWalrus" "Name" "walrus"; then
 	    exit 1
 	fi
 	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null"
@@ -1022,7 +1021,7 @@ if [ -n "$WALRUS" ]; then
 	    exit 1
 	fi
         echo
-        echo "SUCCESS: Walrus '${WALRUS}' successfully deregistered."
+        echo "SUCCESS: Walrus successfully deregistered."
     fi
 fi
 
