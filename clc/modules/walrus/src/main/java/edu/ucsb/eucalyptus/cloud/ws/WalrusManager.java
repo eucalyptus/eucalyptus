@@ -75,8 +75,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import javax.persistence.EntityNotFoundException;
-
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -645,7 +643,7 @@ public class WalrusManager {
 								dbObject.commit();
 							} else {
 								dbObject.rollback();
-								throw new EntityNotFoundException("Could not find object: " + bucketName + "/" + objectKey);
+								throw new NoSuchEntityException("Could not find object: " + bucketName + "/" + objectKey);
 							}
 							//restart all interrupted puts
 							WalrusMonitor monitor = messenger.getMonitor(key);
