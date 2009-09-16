@@ -176,6 +176,7 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
       StartComponentEvent e = ( StartComponentEvent ) event;
       if ( Component.cluster.equals( e.getComponent( ) ) && e.getConfiguration( ) instanceof ClusterConfiguration ) {
         try {
+          LOG.info( "Starting up cluster: " + LogUtil.dumpObject( e ) );
           Cluster newCluster = ClusterUtil.createCluster( ( ClusterConfiguration ) e.getConfiguration( ) );
           this.registerClusterStateHandler( newCluster );
           ListenerRegistry.getInstance( ).fireEvent( new NewClusterEvent( ).setMessage( newCluster ) );
@@ -191,6 +192,7 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
     } else if ( event instanceof StopComponentEvent ) {
       StopComponentEvent e = ( StopComponentEvent ) event;
       if ( Component.cluster.equals( e.getComponent( ) ) && e.getConfiguration( ) instanceof ClusterConfiguration ) {
+        LOG.info( "Tearing down cluster: " + LogUtil.dumpObject( e ) );
         Cluster c = Clusters.getInstance( ).lookup( e.getConfiguration( ).getName( ) );
         Clusters.getInstance( ).deregister( c.getName( ) );
         c.stop();

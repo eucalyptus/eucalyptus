@@ -12,6 +12,7 @@ import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.cluster.util.ClusterUtil;
 import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.GenericEvent;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.BindingException;
@@ -59,6 +60,15 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
         this.trigger();
       } else if ( event instanceof TeardownClusterEvent ) {
         this.verified = false;
+        try {
+          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
+          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
+          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
+          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new ResourceStateHandler( this.getCluster( ) ) );
+          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new VmStateHandler( this.getCluster( ) ) );
+        } catch ( Exception e ) {
+          LOG.error( e, e );
+        }
         this.cleanup( );
       }
     } else {
@@ -98,4 +108,6 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
     ctx.getChannel( ).close( );
   }
 
+  
+  
 }

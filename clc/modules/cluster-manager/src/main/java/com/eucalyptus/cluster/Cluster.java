@@ -218,4 +218,29 @@ public class Cluster implements HasName {
 
   }
 
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( configuration == null ) ? 0 : configuration.hashCode( ) );
+    result = prime * result + ( ( state == null ) ? 0 : state.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) return true;
+    if ( obj == null ) return false;
+    if ( getClass( ) != obj.getClass( ) ) return false;
+    Cluster other = ( Cluster ) obj;
+    if ( configuration == null ) {
+      if ( other.configuration != null ) return false;
+    } else if ( !configuration.equals( other.configuration ) ) return false;
+    if ( state == null ) {
+      if ( other.state != null ) return false;
+    } else if ( !state.equals( other.state ) ) return false;
+    return true;
+  }
+
+  
 }
