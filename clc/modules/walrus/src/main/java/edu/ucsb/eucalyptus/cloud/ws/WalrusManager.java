@@ -1472,25 +1472,27 @@ public class WalrusManager {
 
 							File torrent = new File(torrentFilePath);
 							if(torrent.exists()) {
+								Date lastModified = objectInfo.getLastModified();
+								db.commit();
 								long torrentLength = torrent.length();
 								storageManager.sendObject(request.getChannel(), httpResponse, bucketName, torrentFile, torrentLength, null, 
-										DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
+										DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
 										"application/x-bittorrent", "attachment; filename=" + objectKey + ".torrent;", request.getIsCompressed());
 								//TODO: this should reflect params for the torrent?
 								reply.setEtag("");
-								reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
+								reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
 								reply.setSize(torrentLength);
 								Status status = new Status();
 								status.setCode(200);
 								status.setDescription("OK");
 								reply.setStatus(status);
 								reply.setContentType("binary/octet-stream");
-								db.commit();
 								if(WalrusProperties.trackUsageStatistics) {
 									walrusStatistics.updateBytesOut(torrentLength);
 								}
 								return reply;
 							} else {
+								db.rollback();
 								String errorString = "Could not get torrent file " + torrentFilePath;
 								LOG.error(errorString);
 								throw new EucalyptusCloudException(errorString);
@@ -1500,6 +1502,12 @@ public class WalrusManager {
 							throw new AccessDeniedException("Key", objectKey);
 						}
 					}
+					Date lastModified = objectInfo.getLastModified();
+					Long size = objectInfo.getSize();
+					String etag = objectInfo.getEtag();
+					String contentType = objectInfo.getContentType();
+					String contentDisposition = objectInfo.getContentDisposition();
+					db.commit();
 					if(request.getGetData()) {
 						if(request.getInlineData()) {
 							try {
@@ -1521,26 +1529,25 @@ public class WalrusManager {
 							if(WalrusProperties.trackUsageStatistics) {
 								walrusStatistics.updateBytesOut(objectInfo.getSize());
 							}
-							storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, objectInfo.getSize(), objectInfo.getEtag(), 
-									DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-									objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
+							storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, size, etag, 
+									DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
+									contentType, contentDisposition, request.getIsCompressed());                            
 						}
 					} else {
-						storageManager.sendHeaders(request.getChannel(), httpResponse, objectInfo.getSize(), objectInfo.getEtag(), 
-								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-								objectInfo.getContentType(), objectInfo.getContentDisposition());                            
+						storageManager.sendHeaders(request.getChannel(), httpResponse, size, etag, 
+								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
+								contentType, contentDisposition);                            
 
 					}
-					reply.setEtag(objectInfo.getEtag());
-					reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
-					reply.setSize(objectInfo.getSize());
-					reply.setContentType(objectInfo.getContentType());
-					reply.setContentDisposition(objectInfo.getContentDisposition());
+					reply.setEtag(etag);
+					reply.setLastModified(DateUtils.format(lastModified, DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+					reply.setSize(size);
+					reply.setContentType(contentType);
+					reply.setContentDisposition(contentDisposition);
 					Status status = new Status();
 					status.setCode(200);
 					status.setDescription("OK");
 					reply.setStatus(status);
-					db.commit();
 					return reply;
 				} else {
 					db.rollback();
@@ -1633,27 +1640,31 @@ public class WalrusManager {
 							httpResponse.addHeader(WalrusProperties.AMZ_META_HEADER_PREFIX + metaDataInfo.getName(), metaDataInfo.getValue());
 						}
 					}
+					Long size = objectInfo.getSize();
+					String contentType = objectInfo.getContentType();
+					String contentDisposition = objectInfo.getContentDisposition();
+					db.commit();
 					if(request.getGetData()) {
 						if(WalrusProperties.trackUsageStatistics) {
-							walrusStatistics.updateBytesOut(objectInfo.getSize());
+							walrusStatistics.updateBytesOut(size);
 						}
-						storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd, objectInfo.getSize(), objectInfo.getEtag(), 
-								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-								objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
+						storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd, size, etag, 
+								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
+								contentType, contentDisposition, request.getIsCompressed());                            
 					} else {
-						storageManager.sendHeaders(request.getChannel(), httpResponse, objectInfo.getSize(), objectInfo.getEtag(), 
-								DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-								objectInfo.getContentType(), objectInfo.getContentDisposition());                            
+						storageManager.sendHeaders(request.getChannel(), httpResponse, size, etag, 
+								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
+								contentType, contentDisposition);                            
 					}
-					reply.setEtag(objectInfo.getEtag());
-					reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+					reply.setEtag(etag);
+					reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
 					if(byteRangeEnd > -1) {
-						if(byteRangeEnd <= objectInfo.getSize() && ((byteRangeEnd - byteRangeStart) > 0))
+						if(byteRangeEnd <= size && ((byteRangeEnd - byteRangeStart) > 0))
 							reply.setSize(byteRangeEnd - byteRangeStart);
 						else
 							reply.setSize(0L);
 					} else {
-						reply.setSize(objectInfo.getSize());
+						reply.setSize(size);
 					}
 					status.setCode(200);
 					status.setDescription("OK");
