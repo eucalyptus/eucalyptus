@@ -121,24 +121,22 @@ public class StorageProperties {
 
 	}
 	public static void updateWalrusUrl() {
-		if(!WalrusProperties.sharedMode) {
-			List<WalrusConfiguration> walrusConfigs;
-			try {
-				walrusConfigs = Configuration.getWalrusConfigurations();
-				if(walrusConfigs.size() > 0) {
-					WalrusConfiguration walrusConfig = walrusConfigs.get(0);
-					WALRUS_URL = walrusConfig.getUri();
-					StorageProperties.enableSnapshots = true;
-					LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
-				} else {
-					LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered Walrus?");
-					StorageProperties.enableSnapshots = false;
-				}
-			} catch (EucalyptusCloudException e) {
+		List<WalrusConfiguration> walrusConfigs;
+		try {
+			walrusConfigs = Configuration.getWalrusConfigurations();
+			if(walrusConfigs.size() > 0) {
+				WalrusConfiguration walrusConfig = walrusConfigs.get(0);
+				WALRUS_URL = walrusConfig.getUri();
+				StorageProperties.enableSnapshots = true;
+				LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
+			} else {
 				LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered Walrus?");
 				StorageProperties.enableSnapshots = false;
 			}
-		}
+		} catch (EucalyptusCloudException e) {
+			LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered Walrus?");
+			StorageProperties.enableSnapshots = false;
+		}		
 	}
 
 	public enum Status {

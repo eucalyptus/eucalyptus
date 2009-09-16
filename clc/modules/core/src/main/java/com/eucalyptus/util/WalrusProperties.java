@@ -101,7 +101,6 @@ public class WalrusProperties {
 	public static boolean shouldEnforceUsageLimits = true;
 	public static boolean trackUsageStatistics = true;
 	public static boolean enableTorrents = false;
-	public static boolean sharedMode = false;
 	public static boolean enableVirtualHosting = true;
 	public static final long CACHE_PROGRESS_TIMEOUT = 600000L; //ten minutes
 	public static long IMAGE_CACHE_RETRY_TIMEOUT = 1000L;

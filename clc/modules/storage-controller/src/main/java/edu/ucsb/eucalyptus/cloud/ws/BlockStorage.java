@@ -356,10 +356,9 @@ public class BlockStorage {
 	public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
 		CreateStorageSnapshotResponseType reply = ( CreateStorageSnapshotResponseType ) request.getReply();
 
-		if(!StorageProperties.enableSnapshots || !StorageProperties.enableStorage) {
-			StorageProperties.updateWalrusUrl();
-			if(!StorageProperties.enableSnapshots)
-				LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
+		StorageProperties.updateWalrusUrl();
+		if(!StorageProperties.enableSnapshots) {
+			LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
 			return reply;
 		}
 
@@ -374,7 +373,7 @@ public class BlockStorage {
 			//check status
 			if(foundVolumeInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
 				//create snapshot
-				if(StorageProperties.shouldEnforceUsageLimits && WalrusProperties.sharedMode) {
+				if(StorageProperties.shouldEnforceUsageLimits) {
 					int volSize = foundVolumeInfo.getSize();
 					int totalSnapshotSize = 0;
 					SnapshotInfo snapInfo = new SnapshotInfo();
@@ -457,12 +456,11 @@ public class BlockStorage {
 	public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
 		DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
-		if(!StorageProperties.enableSnapshots || !StorageProperties.enableStorage) {
-			StorageProperties.updateWalrusUrl();
-			if(!StorageProperties.enableSnapshots)
-				LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
+		StorageProperties.updateWalrusUrl();
+		if(!StorageProperties.enableSnapshots) {
+			LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
 			return reply;
-		}		
+		}
 
 		String snapshotId = request.getSnapshotId();
 
@@ -651,12 +649,10 @@ public class BlockStorage {
 	}
 
 	private void getSnapshot(String snapshotId) throws EucalyptusCloudException {
+		StorageProperties.updateWalrusUrl();
 		if(!StorageProperties.enableSnapshots) {
-			StorageProperties.updateWalrusUrl();
-			if(!StorageProperties.enableSnapshots) {
-				LOG.error("Snapshot functionality disabled. Please check the Walrus url");
-				throw new EucalyptusCloudException("could not connect to Walrus.");
-			}
+			LOG.error("Snapshot functionality disabled. Please check connection to Walrus");
+			throw new EucalyptusCloudException("could not connect to Walrus.");
 		}
 		String snapshotLocation = "snapshots" + "/" + snapshotId;
 		String absoluteSnapshotPath = StorageProperties.storageRootDirectory + "/" + snapshotId;

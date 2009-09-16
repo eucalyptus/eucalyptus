@@ -97,7 +97,6 @@ public class WalrusBlockStorageManager {
 
 	public void startupChecks() {
 		cleanFailedCachedImages();
-		WalrusProperties.sharedMode = true;
 	}
 
 	public void cleanFailedCachedImages() {
