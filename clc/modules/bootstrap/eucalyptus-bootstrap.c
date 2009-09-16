@@ -555,7 +555,7 @@ int java_init(euca_opts *args, java_home_t *data) {
     }
     if(args->profile_flag) {
     	JVM_ARG(opt[++x],"-agentlib:jprofilerti=port=8849");
-    	JVM_ARG(opt[++x],"-Xbootclasspath/a:/home/decker/jprofiler5/bin/agent.jar");
+    	JVM_ARG(opt[++x],"-Xbootclasspath/a:/opt/jprofiler5/bin/agent.jar");
     }
     for (i=0; i<args->jvm_args_given; i++,x++) JVM_ARG(opt[x],"-X%s",args->jvm_args_arg[i]);
     for (i=0; i<args->define_given; i++,x++) JVM_ARG(opt[x],"-D%s",args->define_arg[i]);
