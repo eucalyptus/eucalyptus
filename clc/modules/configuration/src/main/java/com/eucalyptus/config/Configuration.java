@@ -166,6 +166,8 @@ public class Configuration {
   }
 
   public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
+    DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
+    reply.set_return( true );
     EntityWrapper<ComponentConfiguration> db = null;
     ComponentConfiguration componentConfig = null;
     try {
@@ -177,7 +179,8 @@ public class Configuration {
       db.commit( );
     } catch ( Exception e ) {
       db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find configuration for " + request.getClass( ).getSimpleName( ) + " named " + request.getName( ) );
+      return reply;
+//      throw new EucalyptusCloudException( "Failed to find configuration for " + request.getClass( ).getSimpleName( ) + " named " + request.getName( ) );
     }
     if ( request instanceof DeregisterClusterType ) {
       try {
@@ -209,8 +212,6 @@ public class Configuration {
     } catch ( EventVetoedException e1 ) {
       throw new EucalyptusCloudException( e1.getMessage( ), e1 );
     }
-    DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
-    reply.set_return( true );
     return reply;
   }
 
