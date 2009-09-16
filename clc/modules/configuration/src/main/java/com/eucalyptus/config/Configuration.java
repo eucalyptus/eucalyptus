@@ -192,8 +192,8 @@ public class Configuration {
         db = Configuration.getEntityWrapper( );
         StorageControllerConfiguration searchConfig = new StorageControllerConfiguration( );
         searchConfig.setName( request.getName( ) );
-        componentConfig = db.getUnique( searchConfig );
-        db.delete( componentConfig );
+        ComponentConfiguration scComponentConfig = db.getUnique( searchConfig );
+        db.delete( scComponentConfig );
         db.commit( );
       } catch ( Exception e ) {
         db.rollback( );
