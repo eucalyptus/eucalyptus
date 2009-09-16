@@ -243,6 +243,7 @@ public class BlockStorageChecker {
 			HttpWriter httpWriter;
 			SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, snapshotFile.length(), StorageProperties.TRANSFER_CHUNK_SIZE);
 			httpWriter = new HttpWriter("PUT", snapshotFile, callback, "snapset", snapshotId, "StoreSnapshot", null, httpParamaters);
+			snapInfo.setShouldTransfer(false);
 			try {
 				httpWriter.run();
 			} catch(Exception ex) {
