@@ -1,4 +1,7 @@
 import org.hibernate.HibernateException;
+
+import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
@@ -39,6 +42,11 @@ try {
   db.commit( );
   return true;
 } catch ( Exception e ) {
+  try {//FIXME: fix this nicely
+    CredentialProvider.addUser("admin",true);
+  } catch ( UserExistsException e1 ) {
+    LOG.error(e1);
+  }
   try {
     db.getSession( ).persist( new Counters( ) );
     UserInfo u = UserManagement.generateAdmin( );
