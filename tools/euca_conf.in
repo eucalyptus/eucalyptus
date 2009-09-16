@@ -60,7 +60,7 @@
 #
 #FAKEREG="yes"
 
-FILE="/opt/eucalyptus/etc/eucalyptus/eucalyptus.conf"
+FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
 EUCALYPTUS=""
 CC_PORT=""
 NC_PORT=""
@@ -483,8 +483,8 @@ if [ "$VERSION" = "Y" ]; then
 
 	if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus-version ]; then
 		VERSION="$EUCALYPTUS/etc/eucalyptus/eucalyptus-version"
-	elif [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ]; then
-		VERSION="/opt/eucalyptus/etc/eucalyptus/eucalyptus-version"
+	elif [ -e @prefix@/etc/eucalyptus/eucalyptus-version ]; then
+		VERSION="@prefix@/etc/eucalyptus/eucalyptus-version"
 	fi
 	if [ -n "$VERSION" ]; then
 		echo -n "Eucalyptus version: "
