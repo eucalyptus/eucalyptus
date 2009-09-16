@@ -392,6 +392,7 @@ db.rows('SELECT * FROM SNAPSHOTS').each{
 	  EntityWrapper<VolumeInfo> dbSnap = StorageController.getEntityWrapper(); 
 	  try {
 		SnapshotInfo s = new SnapshotInfo(it.SNAPSHOT_NAME);
+		s.setShouldTransfer(true);
 		s.setScName(StorageProperties.SC_LOCAL_NAME);
 		s.setUserName(it.SNAPSHOT_USER_NAME);
 		s.setVolumeId(it.VOLUME_NAME);

@@ -65,40 +65,18 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.security.PrivateKey;
-import java.security.Signature;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
-import org.apache.commons.httpclient.ChunkedOutputStream;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpConnection;
-import org.apache.commons.httpclient.HttpMethodBase;
-import org.apache.commons.httpclient.HttpState;
-import org.apache.commons.httpclient.methods.DeleteMethod;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
-import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -142,7 +120,6 @@ import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
 import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
-import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 
 public class BlockStorage {
 
@@ -171,7 +148,11 @@ public class BlockStorage {
 	public static void initialize() {
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
+		try {
 		startupChecks();
+		} catch(EucalyptusCloudException ex) {
+			LOG.error("Startup checks failed ", ex);
+		}
 	}
 
 	private static void configure() {
@@ -189,7 +170,7 @@ public class BlockStorage {
 		StorageInfo storageInfo;
 		try {
 			storageInfo = db.getUnique(new StorageInfo(StorageProperties.NAME));
-      db.commit();
+			db.commit();
 		} catch(EucalyptusCloudException ex) {
 			storageInfo = new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
@@ -198,7 +179,7 @@ public class BlockStorage {
 					StorageProperties.storageRootDirectory,
 					StorageProperties.zeroFillVolumes);
 			db.add(storageInfo);
-      db.commit();
+			db.commit();
 		} 
 		return storageInfo;
 	}
@@ -213,7 +194,7 @@ public class BlockStorage {
 			storageInfo.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
 			storageInfo.setVolumesDir(StorageProperties.storageRootDirectory);
 			storageInfo.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
-      db.commit();
+			db.commit();
 		} catch(EucalyptusCloudException ex) {
 			storageInfo = new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
@@ -222,13 +203,13 @@ public class BlockStorage {
 					StorageProperties.storageRootDirectory,
 					StorageProperties.zeroFillVolumes);
 			db.add(storageInfo);
-      db.commit();
+			db.commit();
 		} 
 	}
 
 	public BlockStorage() {}
 
-	private static void startupChecks() {
+	private static void startupChecks() throws EucalyptusCloudException {
 		check();
 		if(checker != null) {
 			checker.cleanup();
@@ -587,13 +568,11 @@ public class BlockStorage {
 
 	public class VolumeCreator extends Thread {
 		private String volumeId;
-		private String snapshotSetName;
 		private String snapshotId;
 		private int size;
 
 		public VolumeCreator(String volumeId, String snapshotSetName, String snapshotId, int size) {
 			this.volumeId = volumeId;
-			this.snapshotSetName = snapshotSetName;
 			this.snapshotId = snapshotId;
 			this.size = size;
 		}
@@ -767,7 +746,7 @@ public class BlockStorage {
 		return snapshot;
 	}
 
-	private class Snapshotter extends Thread {
+	public class Snapshotter extends Thread {
 		private String volumeId;
 		private String snapshotId;
 		private String volumeBucket;
@@ -781,8 +760,8 @@ public class BlockStorage {
 
 		public void run() {
 			try {
-				blockManager.createSnapshot(volumeId, snapshotId);				
-				List<String> returnValues = blockManager.prepareForTransfer(volumeId, snapshotId);
+				blockManager.createSnapshot(volumeId, snapshotId);
+				List<String> returnValues = blockManager.prepareForTransfer(snapshotId);
 				snapshotFileName = returnValues.get(0);
 				transferSnapshot();				
 			} catch(EucalyptusCloudException ex) {
@@ -799,7 +778,7 @@ public class BlockStorage {
 			SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
 			Map<String, String> httpParamaters = new HashMap<String, String>();
 			HttpWriter httpWriter;
-			httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters, false);
+			httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
 			try {
 				httpWriter.run();
 			} catch(Exception ex) {
@@ -822,383 +801,6 @@ public class BlockStorage {
 				httpWriter.run();
 			} catch(EucalyptusCloudException ex) {
 				LOG.error(ex);
-			}
-		}
-	}
-
-	public void transferSnapshot(String volumeId, String snapshotId, String dupSnapshotId, boolean shouldTransferVolume) throws EucalyptusCloudException {
-		long size = 0;
-		String volumeFileName = StorageProperties.storageRootDirectory + "/" + volumeId;
-		String snapshotFileName = StorageProperties.storageRootDirectory + "/" + snapshotId;
-		File volumeFile = new File(volumeFileName);
-		File snapshotFile = new File(snapshotFileName);
-
-
-		assert(snapshotFile.exists() && volumeFile.exists());
-		size += shouldTransferVolume ? snapshotFile.length() + volumeFile.length() : snapshotFile.length();
-		SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
-		Map<String, String> httpParamaters = new HashMap<String, String>();
-		HttpWriter httpWriter;
-		if(shouldTransferVolume) {
-			try {
-				List<String> returnValues = blockManager.getSnapshotValues(volumeId);
-				if(returnValues.size() > 0) {
-					httpParamaters.put("SnapshotVgName", returnValues.get(0));
-					httpParamaters.put("SnapshotLvName", returnValues.get(1));
-				}
-			} catch(Exception ex) {
-				LOG.error(ex);
-			}
-			httpWriter = new HttpWriter("PUT", volumeFile, callback, "snapshots", volumeId, "StoreSnapshot", null, httpParamaters);
-			try {
-				httpWriter.run();
-			} catch(Exception ex) {
-				LOG.error(ex);
-				return;
-			}
-		}
-		httpWriter = new HttpWriter("PUT", snapshotFile, callback, "snapshots", snapshotId, "StoreSnapshot", null, httpParamaters);
-		try {
-			httpWriter.run();
-		} catch(Exception ex) {
-			LOG.error(ex);
-		}
-	}
-
-	public interface CallBack {
-		void run();
-		int getUpdateThreshold();
-		void finish();
-		void failed();
-	}
-
-	public class SnapshotProgressCallback implements CallBack {
-		private String snapshotId;
-		private int progressTick;
-		private int updateThreshold;
-
-		public SnapshotProgressCallback(String snapshotId, long size, int chunkSize) {
-			this.snapshotId = snapshotId;
-			progressTick = 3; //minimum percent update
-			updateThreshold = (int)(((size * progressTick) / 100) / chunkSize);
-		}
-
-		public void run() {
-			EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
-			SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-			try {
-				SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
-				if(foundSnapshotInfo.getProgress() == null)
-					foundSnapshotInfo.setProgress("0");
-				Integer progress = Integer.parseInt(foundSnapshotInfo.getProgress());
-				progress += progressTick;
-				foundSnapshotInfo.setProgress(String.valueOf(progress));
-			} catch (Exception ex) {
-				db.rollback();
-				failed();
-				LOG.error(ex);
-			}
-			db.commit();
-		}
-
-		public void finish() {
-			EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
-			SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-			try {
-				SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
-				foundSnapshotInfo.setProgress(String.valueOf(100));
-				foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
-			} catch (Exception ex) {
-				db.rollback();
-				LOG.warn(ex);
-			}
-			db.commit();
-		}
-
-		public void failed() {
-			EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
-			SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-			try {
-				SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
-				foundSnapshotInfo.setProgress(String.valueOf(0));
-				foundSnapshotInfo.setStatus(StorageProperties.Status.failed.toString());
-			} catch (Exception ex) {
-				db.rollback();
-				LOG.warn(ex);
-			}
-			db.commit();
-
-		}
-
-		public int getUpdateThreshold() {
-			return updateThreshold;
-		}
-	}
-
-	//All HttpTransfer operations should be called asynchronously. The operations themselves are synchronous.
-	class HttpTransfer {
-		public HttpMethodBase constructHttpMethod(String verb, String addr, String eucaOperation, String eucaHeader) {
-			String date = new Date().toString();
-			String httpVerb = verb;
-			String addrPath;
-			try {
-				java.net.URI addrUri = new URL(addr).toURI();
-				addrPath = addrUri.getPath().toString();
-				String query = addrUri.getQuery();
-				if(query != null) {
-					addrPath += "?" + query;
-				}
-			} catch(Exception ex) {
-				LOG.error(ex, ex);
-				return null;
-			}
-			String data = httpVerb + "\n" + date + "\n" + addrPath + "\n";
-
-			HttpMethodBase method = null;
-			if(httpVerb.equals("PUT")) {
-				method = new  PutMethodWithProgress(addr);
-				//((PutMethodWithProgress)method).setContentChunked(true);
-			} else if(httpVerb.equals("GET")) {
-				method = new GetMethod(addr);
-			} else if(httpVerb.equals("DELETE")) {
-				method = new DeleteMethod(addr);
-			}
-			method.setRequestHeader("Authorization", "Euca");
-			method.setRequestHeader("Date", date);
-			//method.setRequestHeader("Expect", "100-continue");
-			method.setRequestHeader(StorageProperties.EUCALYPTUS_OPERATION, eucaOperation);
-			if(eucaHeader != null) {
-				method.setRequestHeader(StorageProperties.EUCALYPTUS_HEADER, eucaHeader);
-			}
-			try {
-				PrivateKey ccPrivateKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getPrivateKey();
-				Signature sign = Signature.getInstance("SHA1withRSA");
-				sign.initSign(ccPrivateKey);
-				sign.update(data.getBytes());
-				byte[] sig = sign.sign();
-
-				method.setRequestHeader("EucaSignature", new String(Base64.encode(sig)));
-			} catch(Exception ex) {
-				LOG.error(ex, ex);
-			}
-			return method;
-		}
-
-		public HttpTransfer() {}
-	}
-
-	public class PutMethodWithProgress extends PutMethod {
-		private File outFile;
-		private CallBack callback;
-		private boolean deleteOnXfer;
-
-		public PutMethodWithProgress(String path) {
-			super(path);
-		}
-
-		public void setOutFile(File outFile) {
-			this.outFile = outFile;
-		}
-
-		public void setCallBack(CallBack callback) {
-			this.callback = callback;
-		}
-
-		public void setDeleteOnXfer(boolean deleteOnXfer) {
-			this.deleteOnXfer = deleteOnXfer;
-		}
-
-		@Override
-		protected boolean writeRequestBody(HttpState state, HttpConnection conn) throws IOException {
-			InputStream inputStream;
-			if (outFile != null) {
-				inputStream = new FileInputStream(outFile);
-
-				ChunkedOutputStream chunkedOut = new ChunkedOutputStream(conn.getRequestOutputStream());
-				byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
-				int bytesRead;
-				int numberProcessed = 0;
-				long totalBytesProcessed = 0;
-				while ((bytesRead = inputStream.read(buffer)) > 0) {
-					ByteArrayOutputStream out = new ByteArrayOutputStream();
-					GZIPOutputStream zip = new GZIPOutputStream(out);
-					zip.write(buffer, 0, bytesRead);
-					zip.close();
-					chunkedOut.write(out.toByteArray());
-					totalBytesProcessed += bytesRead;
-					if(++numberProcessed >= callback.getUpdateThreshold()) {
-						callback.run();
-						numberProcessed = 0;
-					}
-				}
-				if(totalBytesProcessed == outFile.length()) {
-					callback.finish();
-				} else {
-					callback.failed();
-				}
-				chunkedOut.finish();				
-				inputStream.close();
-				if(deleteOnXfer) {
-					snapshotStorageManager.deleteAbsoluteObject(outFile.getAbsolutePath());
-				}
-			} else{
-				return false;
-			}
-			return true;
-		}
-	}
-
-	class HttpWriter extends HttpTransfer {
-
-		private HttpClient httpClient;
-		private HttpMethodBase method;
-		public HttpWriter(String httpVerb, String bucket, String key, String eucaOperation, String eucaHeader) {
-			httpClient = new HttpClient();
-			String walrusAddr = StorageProperties.WALRUS_URL;
-			if(walrusAddr != null) {
-				String addr = walrusAddr + "/" + bucket + "/" + key;
-				method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
-			}
-		}
-
-		public HttpWriter(String httpVerb, File file, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters) {
-			httpClient = new HttpClient();
-			String walrusAddr = StorageProperties.WALRUS_URL;
-			if(walrusAddr != null) {
-				String addr = walrusAddr + "/" + bucket + "/" + key;
-				Set<String> paramKeySet = httpParameters.keySet();
-				boolean first = true;
-				for(String paramKey : paramKeySet) {
-					if(!first) {
-						addr += "&";
-					} else {
-						addr += "?";
-					}
-					first = false;
-					addr += paramKey;
-					String value = httpParameters.get(paramKey);
-					if(value != null)
-						addr += "=" + value;
-				}
-				method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
-				//method.setRequestHeader("Content-Length", String.valueOf(file.length()));
-				method.setRequestHeader("Transfer-Encoding", "chunked");
-				method.addRequestHeader(StorageProperties.StorageParameters.EucaSnapSize.toString(), String.valueOf(file.length()));
-				((PutMethodWithProgress)method).setOutFile(file);
-				((PutMethodWithProgress)method).setCallBack(callback);
-			}
-		}
-
-		public HttpWriter(String httpVerb, File file, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters, boolean deleteOnXfer) {
-			this(httpVerb, file, callback, bucket, key, eucaOperation, eucaHeader, httpParameters);
-			((PutMethodWithProgress)method).setDeleteOnXfer(deleteOnXfer);
-		}
-
-		public void run() throws EucalyptusCloudException {
-			try {
-				httpClient.executeMethod(method);
-				method.releaseConnection();
-			} catch (Exception ex) {
-				throw new EucalyptusCloudException("error transferring");
-			}
-		}
-	}
-
-	class HttpReader extends HttpTransfer {
-
-		private LinkedBlockingQueue<WalrusDataMessage> getQueue;
-		private HttpClient httpClient;
-		private HttpMethodBase method;
-		private File file;
-		private boolean compressed;
-
-		public HttpReader(String path, LinkedBlockingQueue<WalrusDataMessage> getQueue, File file, String eucaOperation, String eucaHeader) {
-			this.getQueue = getQueue;
-			this.file = file;
-			httpClient = new HttpClient();
-
-			String httpVerb = "GET";
-			String addr = StorageProperties.WALRUS_URL + "/" + path;
-
-			method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
-		}
-
-		public HttpReader(String path, LinkedBlockingQueue<WalrusDataMessage> getQueue, File file, String eucaOperation, String eucaHeader, boolean compressed) {
-			this(path, getQueue, file, eucaOperation, eucaHeader);
-			this.compressed = compressed;
-		}
-
-		public String getResponseAsString() {
-			try {
-				httpClient.executeMethod(method);
-				InputStream inputStream;
-				if(compressed) {
-					inputStream = new GZIPInputStream(method.getResponseBodyAsStream());
-				} else {
-					inputStream = method.getResponseBodyAsStream();
-				}
-
-				String responseString = "";
-				byte[] bytes = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
-				int bytesRead;
-				while((bytesRead = inputStream.read(bytes)) > 0) {
-					responseString += new String(bytes, 0 , bytesRead);
-				}
-				method.releaseConnection();
-				return responseString;
-			} catch(Exception ex) {
-				LOG.error(ex, ex);
-			}
-			return null;
-		}
-
-		private void getResponseToFile() {
-			byte[] bytes = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
-			try {
-				File compressedFile = new File(file.getAbsolutePath() + ".gz");				
-				assert(method != null);
-				httpClient.executeMethod(method);
-				InputStream httpIn;
-				httpIn = method.getResponseBodyAsStream();
-				int bytesRead;
-				BufferedOutputStream bufferedOut = new BufferedOutputStream(new FileOutputStream(compressedFile));
-				while((bytesRead = httpIn.read(bytes)) > 0) {
-					bufferedOut.write(bytes, 0, bytesRead);
-				}
-				bufferedOut.close();
-
-				if(compressed) {
-					SystemUtil.run(new String[]{"/bin/gunzip", compressedFile.getAbsolutePath()});
-				}
-				method.releaseConnection();
-			} catch (Exception ex) {
-				LOG.error(ex, ex);
-			}
-		}
-
-		private void getResponseToQueue() {
-			byte[] bytes = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
-			try {
-				httpClient.executeMethod(method);
-				InputStream httpIn = method.getResponseBodyAsStream();
-				int bytesRead;
-				getQueue.add(WalrusDataMessage.StartOfData(0));
-				while((bytesRead = httpIn.read(bytes)) > 0) {
-					getQueue.add(WalrusDataMessage.DataMessage(bytes, bytesRead));
-				}
-				getQueue.add(WalrusDataMessage.EOF());
-			} catch (Exception ex) {
-				LOG.error(ex, ex);
-			} finally {
-				method.releaseConnection();
-			}
-		}
-
-		public void run() {
-			if(getQueue != null) {
-				getResponseToQueue();
-			} else if(file != null) {
-				getResponseToFile();
 			}
 		}
 	}

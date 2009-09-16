@@ -88,7 +88,7 @@ public interface LogicalStorageManager {
 
     public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
 
-    public List<String> prepareForTransfer(String volumeId, String snapshotId) throws EucalyptusCloudException;
+    public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
 
     public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
 

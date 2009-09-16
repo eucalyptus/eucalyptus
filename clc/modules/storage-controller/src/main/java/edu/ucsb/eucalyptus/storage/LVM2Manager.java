@@ -768,7 +768,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		return returnValues;
 	}
 
-	public List<String> prepareForTransfer(String volumeId, String snapshotId) throws EucalyptusCloudException {
+	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException {
 		EntityWrapper<LVMVolumeInfo> db = StorageController.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
 		LVMVolumeInfo foundLVMVolumeInfo = db.getUnique(lvmVolumeInfo);

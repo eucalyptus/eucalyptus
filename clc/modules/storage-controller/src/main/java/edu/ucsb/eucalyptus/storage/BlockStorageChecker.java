@@ -67,8 +67,12 @@ package edu.ucsb.eucalyptus.storage;
 
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
+import edu.ucsb.eucalyptus.cloud.ws.HttpWriter;
+import edu.ucsb.eucalyptus.cloud.ws.SnapshotProgressCallback;
 import edu.ucsb.eucalyptus.ic.StorageController;
 
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
@@ -76,8 +80,11 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.EntityWrapper;
 
+import java.io.File;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class BlockStorageChecker {
     private static Logger LOG = Logger.getLogger(BlockStorageChecker.class);
@@ -85,15 +92,18 @@ public class BlockStorageChecker {
     private StorageManager snapshotStorageManager;
     private LogicalStorageManager blockManager;
 
-    public BlockStorageChecker(StorageManager volumeStorageManager, StorageManager snapshotStorageManager, LogicalStorageManager blockManager) {
+    public BlockStorageChecker(StorageManager volumeStorageManager, 
+    		StorageManager snapshotStorageManager, 
+    		LogicalStorageManager blockManager) {
         this.volumeStorageManager = volumeStorageManager;
         this.snapshotStorageManager = snapshotStorageManager;
         this.blockManager = blockManager;
     }
 
-    public void cleanup() {
+    public void cleanup() throws EucalyptusCloudException {
         cleanVolumes();
         cleanSnapshots();
+        transferPendingSnapshots();
     }
 
     public void cleanVolumes() {
@@ -218,6 +228,31 @@ public class BlockStorageChecker {
         db.commit();
     }
 
+    private void transferPendingSnapshots() throws EucalyptusCloudException {
+        EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+        SnapshotInfo snapshotInfo = new SnapshotInfo();
+        snapshotInfo.setShouldTransfer(true);
+        List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+        if(snapshotInfos.size() > 0) {
+            SnapshotInfo snapInfo = snapshotInfos.get(0);
+            String snapshotId = snapInfo.getSnapshotId();
+			List<String> returnValues = blockManager.prepareForTransfer(snapshotId);
+			String snapshotFileName = returnValues.get(0);
+			File snapshotFile = new File(snapshotFileName);
+			Map<String, String> httpParamaters = new HashMap<String, String>();
+			HttpWriter httpWriter;
+			SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, snapshotFile.length(), StorageProperties.TRANSFER_CHUNK_SIZE);
+			httpWriter = new HttpWriter("PUT", snapshotFile, callback, "snapset", snapshotId, "StoreSnapshot", null, httpParamaters);
+			try {
+				httpWriter.run();
+			} catch(Exception ex) {
+				LOG.error(ex, ex);
+				this.cleanFailedSnapshot(snapshotId);
+			}
+        }
+        db.commit();
+    }
+    
     public static void checkWalrusConnection() {
         HttpClient httpClient = new HttpClient();
         GetMethod getMethod = null;

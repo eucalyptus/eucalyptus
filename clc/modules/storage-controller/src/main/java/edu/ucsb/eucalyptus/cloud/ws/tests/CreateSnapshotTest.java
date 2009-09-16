@@ -102,15 +102,6 @@ public class CreateSnapshotTest extends TestCase {
         while(true);
     }
 
-    public void testTransferSnapshot() throws Throwable {
-        String volumeId = "vol-yCqCbrweuVviYQxx";
-        String snapshotId = "snap-zVl2kZJmjhxnEg..";
-        String dupSnapshotId = "snap-zVl2kZJmjhxnEg...SrZ5iA..";
-
-        blockStorage.transferSnapshot(volumeId, snapshotId, dupSnapshotId, true);
-        while(true);
-    }
-
     public void testSendDummy() throws Throwable {
         HttpClient httpClient = new HttpClient();
         String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/meh/ttt.wsl?gg=vol&hh=snap";

@@ -95,8 +95,11 @@ public class SnapshotInfo {
     Date startTime;
     @Column(name = "progress")
     private String progress;
-
+    @Column(name = "should_transfer")
+    private Boolean shouldTransfer;
+    
     public SnapshotInfo() {
+    	this.shouldTransfer = false;
     	this.scName = StorageProperties.NAME;
     }
 
@@ -160,6 +163,14 @@ public class SnapshotInfo {
     public void setProgress(String progress) {
         this.progress = progress;
     }
+
+	public Boolean getShouldTransfer() {
+		return shouldTransfer;
+	}
+
+	public void setShouldTransfer(Boolean shouldTransfer) {
+		this.shouldTransfer = shouldTransfer;
+	}
 
 	@Override
 	public int hashCode() {
