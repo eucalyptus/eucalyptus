@@ -149,7 +149,7 @@ public class BlockStorage {
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
 		try {
-		startupChecks();
+			startupChecks();
 		} catch(EucalyptusCloudException ex) {
 			LOG.error("Startup checks failed ", ex);
 		}
@@ -212,8 +212,7 @@ public class BlockStorage {
 	private static void startupChecks() throws EucalyptusCloudException {
 		check();
 		if(checker != null) {
-			checker.cleanup();
-			blockManager.startupChecks();
+			checker.startupChecks();
 		}
 	}
 

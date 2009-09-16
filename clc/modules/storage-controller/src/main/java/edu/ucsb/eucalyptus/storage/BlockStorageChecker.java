@@ -100,6 +100,23 @@ public class BlockStorageChecker {
         this.blockManager = blockManager;
     }
 
+	public void startupChecks() {
+		new StartupChecker().start();
+	}
+
+	private class StartupChecker extends Thread {
+		public StartupChecker() {}
+		
+		public void run() {
+			try {
+				cleanup();
+			} catch (EucalyptusCloudException e) {
+				LOG.error("Startup cleanup failed", e);
+			}
+			blockManager.startupChecks();
+		}
+	}
+	
     public void cleanup() throws EucalyptusCloudException {
         cleanVolumes();
         cleanSnapshots();
