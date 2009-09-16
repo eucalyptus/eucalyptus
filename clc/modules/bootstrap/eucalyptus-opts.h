@@ -33,6 +33,7 @@ extern "C" {
 struct eucalyptus_opts
 {
   const char *help_help; /**< @brief Print help and exit help description.  */
+  const char *full_help_help; /**< @brief Print help, including hidden options, and exit help description.  */
   const char *version_help; /**< @brief Print version and exit help description.  */
   char * user_arg;	/**< @brief User to drop privs to after starting. (default='eucalyptus').  */
   char * user_orig;	/**< @brief User to drop privs to after starting. original value given at command line.  */
@@ -100,6 +101,8 @@ struct eucalyptus_opts
   const char *jvm_args_help; /**< @brief Arguments to pass to the JVM. help description.  */
   int debug_flag;	/**< @brief Launch with debugger enabled. (default=off).  */
   const char *debug_help; /**< @brief Launch with debugger enabled. help description.  */
+  int profile_flag;	/**< @brief Launch with profiler enabled. (default=off).  */
+  const char *profile_help; /**< @brief Launch with profiler enabled. help description.  */
   int debug_port_arg;	/**< @brief Set the port to use for the debugger. (default='5005').  */
   char * debug_port_orig;	/**< @brief Set the port to use for the debugger. original value given at command line.  */
   const char *debug_port_help; /**< @brief Set the port to use for the debugger. help description.  */
@@ -107,6 +110,7 @@ struct eucalyptus_opts
   const char *debug_suspend_help; /**< @brief Set the port to use for the debugger. help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
+  unsigned int full_help_given ;	/**< @brief Whether full-help was given.  */
   unsigned int version_given ;	/**< @brief Whether version was given.  */
   unsigned int user_given ;	/**< @brief Whether user was given.  */
   unsigned int home_given ;	/**< @brief Whether home was given.  */
@@ -133,6 +137,7 @@ struct eucalyptus_opts
   unsigned int jvm_name_given ;	/**< @brief Whether jvm-name was given.  */
   unsigned int jvm_args_given ;	/**< @brief Whether jvm-args was given.  */
   unsigned int debug_given ;	/**< @brief Whether debug was given.  */
+  unsigned int profile_given ;	/**< @brief Whether profile was given.  */
   unsigned int debug_port_given ;	/**< @brief Whether debug-port was given.  */
   unsigned int debug_suspend_given ;	/**< @brief Whether debug-suspend was given.  */
 
@@ -154,6 +159,8 @@ extern const char *eucalyptus_opts_purpose;
 extern const char *eucalyptus_opts_usage;
 /** @brief all the lines making the help output */
 extern const char *eucalyptus_opts_help[];
+/** @brief all the lines making the full help output (including hidden options) */
+extern const char *eucalyptus_opts_full_help[];
 
 /**
  * The command line parser
@@ -215,6 +222,10 @@ int arguments_file_save(const char *filename,
  * Print the help
  */
 void arguments_print_help(void);
+/**
+ * Print the full help (including hidden options)
+ */
+void arguments_print_full_help(void);
 /**
  * Print the version
  */
