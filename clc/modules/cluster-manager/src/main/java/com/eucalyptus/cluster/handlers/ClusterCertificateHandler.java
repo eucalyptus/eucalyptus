@@ -61,11 +61,11 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
       } else if ( event instanceof TeardownClusterEvent ) {
         this.verified = false;
         try {
-          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
-          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
-          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
-          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new ResourceStateHandler( this.getCluster( ) ) );
-          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new VmStateHandler( this.getCluster( ) ) );
+          ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
+          ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
+          ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
+          ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new ResourceStateHandler( this.getCluster( ) ) );
+          ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new VmStateHandler( this.getCluster( ) ) );
         } catch ( Exception e ) {
           LOG.error( e, e );
         }
