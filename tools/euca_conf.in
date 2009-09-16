@@ -1026,7 +1026,7 @@ if [ -n "$WALRUS" -o -n "$WALRUS_MODE" ]; then
 fi
 
 # sc
-if [ -n "$SCHOST" ]; then
+if [ -n "$SCNAME" ]; then
     if ! checkLocalService "CLC" ; then
 	exit 1
     fi
