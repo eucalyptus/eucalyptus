@@ -172,28 +172,32 @@ public class SnapshotManager {
     String userName = request.isAdministrator( ) ? null : request.getUserId( );
 
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
-    List<Snapshot> snapshots = db.query( Snapshot.ownedBy( userName ) );
+    try {
+      List<Snapshot> snapshots = db.query( Snapshot.ownedBy( userName ) );
 
-    for ( Snapshot v : snapshots ) {
-      DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );
-      if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( v.getDisplayName( ) ) ) {
-        try {
-          StorageControllerConfiguration sc = Configuration.getStorageControllerConfiguration( v.getCluster( ) );
-          DescribeStorageSnapshotsResponseType snapshotInfo = StorageUtil.lookup( sc.getHostName( ) ).send( scRequest, DescribeStorageSnapshotsResponseType.class );
-          for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
-            v.setMappedState( storageSnapshot.getStatus( ) );
-            edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
-            if ( storageSnapshot.getProgress( ) != null ) snapReply.setProgress( storageSnapshot.getProgress( ) );
-            snapReply.setVolumeId( storageSnapshot.getVolumeId( ) );
-            reply.getSnapshotSet( ).add( snapReply );
+      for ( Snapshot v : snapshots ) {
+        DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );
+        if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( v.getDisplayName( ) ) ) {
+          try {
+            StorageControllerConfiguration sc = Configuration.getStorageControllerConfiguration( v.getCluster( ) );
+            DescribeStorageSnapshotsResponseType snapshotInfo = StorageUtil.lookup( sc.getHostName( ) ).send( scRequest, DescribeStorageSnapshotsResponseType.class );
+            for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
+              v.setMappedState( storageSnapshot.getStatus( ) );
+              edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
+              if ( storageSnapshot.getProgress( ) != null ) snapReply.setProgress( storageSnapshot.getProgress( ) );
+              snapReply.setVolumeId( storageSnapshot.getVolumeId( ) );
+              reply.getSnapshotSet( ).add( snapReply );
+            }
+          } catch ( EucalyptusCloudException e ) {
+            LOG.warn( "Error getting snapshot information from the Storage Controller: " + e );
+            LOG.debug( e, e );
           }
-        } catch ( EucalyptusCloudException e ) {
-          LOG.warn( "Error getting snapshot information from the Storage Controller: " + e );
-          LOG.debug( e, e );
         }
       }
+      db.commit( );
+    } catch ( Throwable e ) {
+      db.rollback( );
     }
-    db.commit( );
     return reply;
   }
 }
