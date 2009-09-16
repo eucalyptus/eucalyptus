@@ -166,9 +166,10 @@ public class Configuration {
   }
 
   public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
-    EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );
+    EntityWrapper<ComponentConfiguration> db = null;
     ComponentConfiguration componentConfig = null;
     try {
+      db = Configuration.getEntityWrapper( );
       ComponentConfiguration searchConfig = ConfigurationUtil.getConfigurationInstance( request );
       searchConfig.setName( request.getName( ) );
       componentConfig = db.getUnique( searchConfig );
@@ -185,6 +186,7 @@ public class Configuration {
         LOG.error( "BUG: removed cluster but failed to remove the credentials." );
       }
       try {
+        db = Configuration.getEntityWrapper( );
         StorageControllerConfiguration searchConfig = new StorageControllerConfiguration( );
         searchConfig.setName( request.getName( ) );
         componentConfig = db.getUnique( searchConfig );

@@ -232,10 +232,15 @@ public class ImageManager {
 
     ArrayList<String> remList = Lists.newArrayList( );
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
-    List<ImageInfo> imgList = db.query( ImageInfo.deregistered( ) );
-    for ( ImageInfo deregImg : imgList )
-      db.delete( deregImg );
-    db.commit( );
+    List<ImageInfo> imgList = Lists.newArrayList( );
+    try {
+      imgList = db.query( ImageInfo.deregistered( ) );
+      for ( ImageInfo deregImg : imgList )
+        db.delete( deregImg );
+      db.commit( );
+    } catch ( Throwable e1 ) {
+      db.rollback( );
+    }
     db = new EntityWrapper<ImageInfo>( );
     String userId = request.getUserId( );
     Boolean isAdmin = request.isAdministrator( );
