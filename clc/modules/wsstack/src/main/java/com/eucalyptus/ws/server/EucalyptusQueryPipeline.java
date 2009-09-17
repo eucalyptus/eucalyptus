@@ -67,6 +67,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -99,10 +101,16 @@ public class EucalyptusQueryPipeline extends FilteredPipeline {
         buffer.readBytes( read );
         String query = new String( read );
         buffer.resetReaderIndex( );
-        for ( String p : query.split( "&" ) ) {
+        for ( String p : query.split( "&" ) ) {          
           String[] splitParam = p.split( "=" );
           String lhs = splitParam[0];
           String rhs = splitParam.length == 2 ? splitParam[1] : null;
+          try {
+            if( lhs != null ) lhs = new URLCodec().decode(lhs);
+          } catch ( DecoderException e ) {}
+          try {
+            if( rhs != null ) rhs = new URLCodec().decode(rhs);
+          } catch ( DecoderException e ) {}
           parameters.put( lhs, rhs );
         }
         for ( RequiredQueryParams p : RequiredQueryParams.values( ) ) {

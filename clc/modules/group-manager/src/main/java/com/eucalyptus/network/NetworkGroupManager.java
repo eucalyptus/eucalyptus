@@ -30,6 +30,7 @@ import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
 public class NetworkGroupManager {
   private static Logger LOG = Logger.getLogger( NetworkGroupManager.class );
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
+    NetworkGroupUtil.makeDefault( vmAllocInfo.getRequest( ).getUserId( ) );//ensure the default group exists to cover some old broken installs
     ArrayList<String> networkNames = new ArrayList<String>( vmAllocInfo.getRequest().getGroupSet() );
     if ( networkNames.size() < 1 ){
       networkNames.add("default");
