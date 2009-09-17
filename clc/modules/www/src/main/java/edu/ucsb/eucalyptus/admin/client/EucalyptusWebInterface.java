@@ -1604,7 +1604,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	        cloud_panel.add( new HTML (cloud_registration_text) );
 			Grid g1 = new Grid (2, 2);
 			g1.setWidget (0, 0, new HTML ("<b><font size=\"2\">Cloud URL:</font></b>"));
-			final HTML cloudUrl = new HTML ("<font color=#666666 size=\"2\">http://"
+			final HTML cloudUrl = new HTML ("<font color=#666666 size=\"2\">https://"
 				+ cloudInfo.getInternalHostPort()
 				+ cloudInfo.getServicePath()
 				+ "</font>");
