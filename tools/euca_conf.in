@@ -792,11 +792,12 @@ if [ -n "$CHECK" ]; then
 			# error should come from mkdir
 			exit 1
 		fi
-		if ! chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus ; then
-			# error should come from chown
-			exit 1
-		fi
 	fi
+	if ! chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus ; then
+	    # error should come from chown
+	    exit 1
+	fi
+
 
 	if [ "$CHECK" = "cc" ]; then
 	    if [ ! -d $EUCALYPTUS/var/run/eucalyptus/net ]; then
@@ -804,10 +805,10 @@ if [ -n "$CHECK" ]; then
 			# error should come from mkdir
 		    exit 1
 		fi
-		if ! chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus/net ; then
+	    fi
+	    if ! chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus/net ; then
 			# error should come from chown
-		    exit 1
-		fi
+		exit 1
 	    fi
 	fi
 	# good to go

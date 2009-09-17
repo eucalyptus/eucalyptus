@@ -86,7 +86,6 @@ JAVA="`which java 2> /dev/null`"
 EUCA_USER="eucalyptus"
 
 JAR_NAME="/usr/share/eucalyptus/eucalyptus-JARNAME-@EUCA_VERSION@.jar"
-#JAR_CLOUD="/usr/share/eucalyptus/eucalyptus-interface-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-cloud-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-www-@EUCA_VERSION@.jar"
 JAR_CLOUD="/usr/share/eucalyptus/eucalyptus-cloud-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-www-@EUCA_VERSION@.jar"
 JAR_WALRUS="/usr/share/eucalyptus/eucalyptus-walrus-@EUCA_VERSION@.jar"
 JAR_SC="/usr/share/eucalyptus/eucalyptus-storagecontroller-@EUCA_VERSION@.jar"

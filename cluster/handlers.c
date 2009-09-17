@@ -975,6 +975,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	    }
 	    if (cacheInstance) free(cacheInstance);
 	    refresh_instanceCache(myInstance->instanceId, myInstance);
+	    logprintfl(EUCADEBUG, "returning instance state: %s/%s\n", myInstance->instanceId, myInstance->state);
 	  }
 	}
 	for (j=0; j<ncOutInstsLen; j++) {
