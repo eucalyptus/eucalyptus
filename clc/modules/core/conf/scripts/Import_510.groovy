@@ -108,9 +108,6 @@ db.rows('SELECT * FROM SYSTEM_INFO').each{
   try {
     config.setDefaultKernel(it.SYSTEM_INFO_DEFAULT_KERNEL);
     config.setDefaultRamdisk(it.SYSTEM_INFO_DEFAULT_RAMDISK);
-    config.setSystemReservedPublicAddresses(it.SYSTEM_RESERVED_PUBLIC_ADDRESSES);
-    config.setMaxUserPublicAddresses(it.SYSTEM_MAX_USER_PUBLIC_ADDRESSES);
-    config.setDoDynamicPublicAddresses(it.SYSTEM_DO_DYNAMIC_PUBLIC_ADDRESSES);
     config.setRegistrationId(it.SYSTEM_REGISTRATION_ID);
     confDb.merge( config );
     confDb.commit( );
@@ -387,7 +384,7 @@ db.rows('SELECT * FROM VOLUMES').each{
 }
 
 db.rows('SELECT * FROM SNAPSHOTS').each{ 
-	  println "Adding snapshot: ${it.SNAPSHOT_NAME}"
+	  println "Adding snapshit: ${it.SNAPSHOT_NAME}"
 
 	  EntityWrapper<VolumeInfo> dbSnap = StorageController.getEntityWrapper(); 
 	  try {
@@ -398,7 +395,6 @@ db.rows('SELECT * FROM SNAPSHOTS').each{
 		s.setVolumeId(it.VOLUME_NAME);
 		s.setStatus(it.STATUS);
 		s.setStartTime(new Date());
-		s.setProgress(it.PROGRESS);
 		dbSnap.add(s);
 		dbSnap.commit();
 	  } catch (Throwable t) {

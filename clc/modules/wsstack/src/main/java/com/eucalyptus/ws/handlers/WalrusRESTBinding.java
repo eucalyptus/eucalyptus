@@ -94,6 +94,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.BindingException;
@@ -180,8 +181,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			if(msg != null) {
 				OMElement omMsg = binding.toOM( msg );
 				ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-				synchronized(binding) {
-				omMsg.serialize( byteOut );
+				HoldMe.canHas.lock(); 
+				try {
+					omMsg.serialize( byteOut );
+				} finally {
+					HoldMe.canHas.unlock();
 				}
 				byte[] req = byteOut.toByteArray();
 				ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
@@ -997,7 +1001,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		}
 
 	}
-	
+
 
 	public static synchronized WalrusDataMessenger getReadMessenger() {
 		if (getMessenger == null) {
