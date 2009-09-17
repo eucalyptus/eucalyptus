@@ -108,13 +108,14 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		this.statusLabel.setText ("");
 		this.statusLabel.setStyleName ("euca-greeting-pending");
 		this.add ( hpanel );
-		rebuildTable();
-		EucalyptusWebBackend.App.getInstance().getClusterList(
+    rebuildTable();
+    EucalyptusWebBackend.App.getInstance().getClusterList(
 				this.sessionId, new GetClusterListCallback( this ) );
 		EucalyptusWebBackend.App.getInstance().getSystemConfig(
 				this.sessionId, new GetSystemConfigCallback( this ) );
 		EucalyptusWebBackend.App.getInstance().getStorageList(
 				this.sessionId, new GetStorageListCallback(this));
+    rebuildTable();
 	}
 
 	public void onClick( final Widget widget ) // Add cluster button
@@ -213,6 +214,78 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		pb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 		g.setWidget( i, 1, pb );
 
+    final TextBox reservedAddressesBox = new TextBox(); // declare here, set up after the checkbox later
+
+    i++; // next row
+    final CheckBox dynamicAddressesCheckbox = new CheckBox ();
+    g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+    g.setWidget (i, 0, dynamicAddressesCheckbox );
+    if (systemConfig.isDoDynamicPublicAddresses()) {
+      dynamicAddressesCheckbox.setChecked(true);
+      reservedAddressesBox.setEnabled(false);
+    } else {
+      dynamicAddressesCheckbox.setChecked(false);
+      reservedAddressesBox.setEnabled(true);
+    }
+    dynamicAddressesCheckbox.addClickListener (new ClickListener() {
+      public void onClick( Widget sender )
+      {
+        if (((CheckBox)sender).isChecked()) {
+          reservedAddressesBox.setEnabled(false);
+          systemConfig.setDoDynamicPublicAddresses( true );
+        } else {
+          reservedAddressesBox.setEnabled(true);
+          systemConfig.setDoDynamicPublicAddresses( false );
+        }
+      }
+    });
+    g.setWidget( i, 1, new Label ("Dynamic public IP address assignment") );
+
+    i++; // next row
+    g.setWidget( i, 0, new Label( "Reserve for assignment" ) );
+    g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+    reservedAddressesBox.addChangeListener (new ChangeCallback (this, row));
+    reservedAddressesBox.setVisibleLength( 5 );
+    reservedAddressesBox.setText( "" + systemConfig.getSystemReservedPublicAddresses());
+    final HorizontalPanel reservedAddressesPanel = new HorizontalPanel ();
+    reservedAddressesPanel.setSpacing(4);
+    reservedAddressesPanel.add (reservedAddressesBox);
+    reservedAddressesPanel.add (new HTML ("public IP addresses"));
+    reservedAddressesBox.setText(""+systemConfig.getSystemReservedPublicAddresses());
+    g.setWidget( i, 1, reservedAddressesPanel );
+    
+    i++; // next row
+    g.setWidget( i, 0, new Label( "Maximum of" ) );
+    g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+    final TextBox publicAddressesBox = new TextBox();
+    publicAddressesBox.addChangeListener (new ChangeCallback (this, row));
+    publicAddressesBox.setVisibleLength( 5 );
+    publicAddressesBox.setText( "" + systemConfig.getMaxUserPublicAddresses());
+    final HorizontalPanel publicAddressesPanel = new HorizontalPanel ();
+    publicAddressesPanel.setSpacing(4);
+    publicAddressesPanel.add (publicAddressesBox);
+    publicAddressesPanel.add (new HTML ("public IP addresses per user"));
+    g.setWidget( i, 1, publicAddressesPanel );
+    
+    i++;
+    g.setWidget( i, 0, new Label( "Use VLAN tags" ) );
+    g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+    final TextBox minVlanBox = new TextBox();
+    minVlanBox.addChangeListener (new ChangeCallback (this, row));
+    minVlanBox.setVisibleLength( 4 );
+    minVlanBox.setText(String.valueOf(clusterInfo.getMinVlans()));
+    final TextBox maxVlanBox = new TextBox();
+    maxVlanBox.addChangeListener (new ChangeCallback (this, row));
+    maxVlanBox.setVisibleLength( 4 );
+    maxVlanBox.setText(String.valueOf(clusterInfo.getMaxVlans()));
+    final HorizontalPanel vlanPanel = new HorizontalPanel ();
+    vlanPanel.setSpacing(4);
+    vlanPanel.add (minVlanBox);
+    vlanPanel.add (new HTML ("through"));
+    vlanPanel.add (maxVlanBox);
+    g.setWidget( i, 1, vlanPanel );
+
+		
 		i++; // next row
 		g.setWidget( i, 1, new Label( "Storage Controller" ));
 		
@@ -295,76 +368,6 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		});
 		g.setWidget( i, 1, new Label ("Zero-fill volumes") );
 
-		final TextBox reservedAddressesBox = new TextBox(); // declare here, set up after the checkbox later
-
-		i++; // next row
-		final CheckBox dynamicAddressesCheckbox = new CheckBox ();
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		g.setWidget (i, 0, dynamicAddressesCheckbox );
-		if (systemConfig.isDoDynamicPublicAddresses()) {
-			dynamicAddressesCheckbox.setChecked(true);
-			reservedAddressesBox.setEnabled(false);
-		} else {
-			dynamicAddressesCheckbox.setChecked(false);
-			reservedAddressesBox.setEnabled(true);
-		}
-		dynamicAddressesCheckbox.addClickListener (new ClickListener() {
-			public void onClick( Widget sender )
-			{
-				if (((CheckBox)sender).isChecked()) {
-					reservedAddressesBox.setEnabled(false);
-					systemConfig.setDoDynamicPublicAddresses( true );
-				} else {
-					reservedAddressesBox.setEnabled(true);
-					systemConfig.setDoDynamicPublicAddresses( false );
-				}
-			}
-		});
-		g.setWidget( i, 1, new Label ("Dynamic public IP address assignment") );
-
-		i++; // next row
-		g.setWidget( i, 0, new Label( "Reserve for assignment" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		reservedAddressesBox.addChangeListener (new ChangeCallback (this, row));
-		reservedAddressesBox.setVisibleLength( 5 );
-		reservedAddressesBox.setText( "" + systemConfig.getSystemReservedPublicAddresses());
-		final HorizontalPanel reservedAddressesPanel = new HorizontalPanel ();
-		reservedAddressesPanel.setSpacing(4);
-		reservedAddressesPanel.add (reservedAddressesBox);
-		reservedAddressesPanel.add (new HTML ("public IP addresses"));
-		reservedAddressesBox.setText(""+systemConfig.getSystemReservedPublicAddresses());
-		g.setWidget( i, 1, reservedAddressesPanel );
-		
-		i++; // next row
-		g.setWidget( i, 0, new Label( "Maximum of" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox publicAddressesBox = new TextBox();
-		publicAddressesBox.addChangeListener (new ChangeCallback (this, row));
-		publicAddressesBox.setVisibleLength( 5 );
-		publicAddressesBox.setText( "" + systemConfig.getMaxUserPublicAddresses());
-		final HorizontalPanel publicAddressesPanel = new HorizontalPanel ();
-		publicAddressesPanel.setSpacing(4);
-		publicAddressesPanel.add (publicAddressesBox);
-		publicAddressesPanel.add (new HTML ("public IP addresses per user"));
-		g.setWidget( i, 1, publicAddressesPanel );
-		
-		i++;
-		g.setWidget( i, 0, new Label( "Use VLAN tags" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox minVlanBox = new TextBox();
-		minVlanBox.addChangeListener (new ChangeCallback (this, row));
-		minVlanBox.setVisibleLength( 4 );
-		minVlanBox.setText(String.valueOf(clusterInfo.getMinVlans()));
-		final TextBox maxVlanBox = new TextBox();
-		maxVlanBox.addChangeListener (new ChangeCallback (this, row));
-		maxVlanBox.setVisibleLength( 4 );
-		maxVlanBox.setText(String.valueOf(clusterInfo.getMaxVlans()));
-		final HorizontalPanel vlanPanel = new HorizontalPanel ();
-		vlanPanel.setSpacing(4);
-		vlanPanel.add (minVlanBox);
-		vlanPanel.add (new HTML ("through"));
-		vlanPanel.add (maxVlanBox);
-		g.setWidget( i, 1, vlanPanel );
 
 		return g;
 	}

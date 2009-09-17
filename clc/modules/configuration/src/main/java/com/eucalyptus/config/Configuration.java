@@ -63,10 +63,7 @@
  */
 package com.eucalyptus.config;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.log4j.Logger;
 
@@ -78,14 +75,11 @@ import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NetworkUtil;
-import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
-import edu.ucsb.eucalyptus.msgs.DeregisterStorageControllerType;
-import edu.ucsb.eucalyptus.msgs.DeregisterWalrusType;
 import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
@@ -109,7 +103,7 @@ public class Configuration {
     reply.set_return( true );
     boolean isGood;
     try {
-      if( !NetworkUtil.testGoodAddress( request.getHost( ) ) ) {
+      if( !NetworkUtil.testGoodAddress( request.getHost( ) ) || ( request instanceof RegisterClusterType && !ConfigurationUtil.testClusterCredentialsDirectory( request.getName( ) ) ) ) {
         throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );        
       }
     } catch ( EucalyptusCloudException e ) {

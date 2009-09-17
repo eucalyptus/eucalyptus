@@ -140,7 +140,7 @@ public class NetworkUtil {
 
   public static boolean testGoodAddress( String address ) throws Exception {
     InetAddress addr = InetAddress.getByName( address );
-    return !addr.isAnyLocalAddress( ) || !addr.isLoopbackAddress( ) || !addr.isLinkLocalAddress( ) || !addr.isMulticastAddress( );
+    return !addr.isAnyLocalAddress( ) && !addr.isLoopbackAddress( ) && !addr.isLinkLocalAddress( ) && !addr.isMulticastAddress( );
   }
 
   

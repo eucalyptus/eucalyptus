@@ -146,12 +146,8 @@ public class X509Download extends HttpServlet {
       op.write( x509zip );
       op.flush( );
 
-    } catch ( GeneralSecurityException e ) {
-      e.printStackTrace( );
-    } catch ( IOException e ) {
-      e.printStackTrace( );
-    } catch ( EucalyptusCloudException e ) {
-      e.printStackTrace( );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
     }
   }
 
@@ -164,18 +160,20 @@ public class X509Download extends HttpServlet {
     }
   }
 
-  public static byte[] getX509Zip( String userName, String newKeyName ) throws GeneralSecurityException, IOException, EucalyptusCloudException {
-
-    KeyTool keyTool = new KeyTool( );
-    KeyPair keyPair = keyTool.getKeyPair( );
-    X509Certificate x509 = keyTool.getCertificate( keyPair, EucalyptusProperties.getDName( userName ) );
+  public static byte[] getX509Zip( String userName, String newKeyName ) throws Exception {
     X509Certificate cloudCert = null;
+    X509Certificate x509 = null;
+    KeyPair keyPair = null;
     try {
+      KeyTool keyTool = new KeyTool( );
+      keyPair = keyTool.getKeyPair( );
+      x509 = keyTool.getCertificate( keyPair, EucalyptusProperties.getDName( userName ) );
       x509.checkValidity( );
       CredentialProvider.addCertificate( userName, newKeyName, x509 );
       cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
-    } catch ( GeneralSecurityException e ) {
+    } catch ( Exception e ) {
       LOG.fatal( e, e );
+      throw e;
     }
     
     String certPem = new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) );
@@ -201,6 +199,7 @@ public class X509Download extends HttpServlet {
     sb.append( "\nexport EUCALYPTUS_CERT=${EUCA_KEY_DIR}/cloud-cert.pem" );
     sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
     sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
+    sb.append( "\n# This is a bogus value; Eucalyptus does not need this but client tools do.\nexport EC2_USER_ID='" + userNumber + "'" );
     sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user " + userNumber + " --ec2cert ${EUCALYPTUS_CERT}\"" );
     sb.append( "\nalias ec2-upload-bundle=\"ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${EUCALYPTUS_CERT}\"" );
     sb.append( "\n" );

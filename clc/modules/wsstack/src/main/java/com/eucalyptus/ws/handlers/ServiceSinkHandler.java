@@ -188,6 +188,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         if ( reply instanceof WalrusDataGetResponseType ) {
           if ( reply instanceof GetObjectResponseType ) {
             GetObjectResponseType getObjectResponse = ( GetObjectResponseType ) reply;
+            LOG.debug( getObjectResponse );
             if ( getObjectResponse.getBase64Data( ) == null ) return;
           } else {
             return;
@@ -198,7 +199,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         response.setMessage( reply );
         ctx.sendDownstream( newEvent );
       } else {
-        ctx.sendDownstream( e );
+        LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage." );
+//        ctx.sendDownstream( e );
       }
     } else {
       ctx.sendDownstream( e );

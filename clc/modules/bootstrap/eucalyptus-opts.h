@@ -101,13 +101,16 @@ struct eucalyptus_opts
   const char *jvm_args_help; /**< @brief Arguments to pass to the JVM. help description.  */
   int debug_flag;	/**< @brief Launch with debugger enabled. (default=off).  */
   const char *debug_help; /**< @brief Launch with debugger enabled. help description.  */
-  int profile_flag;	/**< @brief Launch with profiler enabled. (default=off).  */
-  const char *profile_help; /**< @brief Launch with profiler enabled. help description.  */
   int debug_port_arg;	/**< @brief Set the port to use for the debugger. (default='5005').  */
   char * debug_port_orig;	/**< @brief Set the port to use for the debugger. original value given at command line.  */
   const char *debug_port_help; /**< @brief Set the port to use for the debugger. help description.  */
   int debug_suspend_flag;	/**< @brief Set the port to use for the debugger. (default=off).  */
   const char *debug_suspend_help; /**< @brief Set the port to use for the debugger. help description.  */
+  int profile_flag;	/**< @brief Launch with jprofiler enabled. (default=off).  */
+  const char *profile_help; /**< @brief Launch with jprofiler enabled. help description.  */
+  char * profiler_home_arg;	/**< @brief Set the home for jprofiler. (default='/opt/jprofiler5').  */
+  char * profiler_home_orig;	/**< @brief Set the home for jprofiler. original value given at command line.  */
+  const char *profiler_home_help; /**< @brief Set the home for jprofiler. help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int full_help_given ;	/**< @brief Whether full-help was given.  */
@@ -137,9 +140,10 @@ struct eucalyptus_opts
   unsigned int jvm_name_given ;	/**< @brief Whether jvm-name was given.  */
   unsigned int jvm_args_given ;	/**< @brief Whether jvm-args was given.  */
   unsigned int debug_given ;	/**< @brief Whether debug was given.  */
-  unsigned int profile_given ;	/**< @brief Whether profile was given.  */
   unsigned int debug_port_given ;	/**< @brief Whether debug-port was given.  */
   unsigned int debug_suspend_given ;	/**< @brief Whether debug-suspend was given.  */
+  unsigned int profile_given ;	/**< @brief Whether profile was given.  */
+  unsigned int profiler_home_given ;	/**< @brief Whether profiler-home was given.  */
 
 } ;
 

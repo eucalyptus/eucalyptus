@@ -102,18 +102,19 @@ public class KeyTool {
     this.keySize = keySize;
   }
 
-  public KeyPair getKeyPair( ) {
+  public KeyPair getKeyPair( ) throws Exception {
     KeyPairGenerator keyGen = null;
     try {
-      keyGen = KeyPairGenerator.getInstance( this.keyAlgorithm );
+      LOG.debug( "Generating new keypair for thread=" + Thread.currentThread( ).getThreadGroup( ) + "." + Thread.currentThread( ).getName( )  );
+      keyGen = KeyPairGenerator.getInstance( this.keyAlgorithm, "BC" );
       SecureRandom random = new SecureRandom( );
       random.setSeed( System.currentTimeMillis( ) );
       keyGen.initialize( this.keySize, random );
       KeyPair keyPair = keyGen.generateKeyPair( );
       return keyPair;
     } catch ( Exception e ) {
-      System.exit( 1 );
-      return null;
+      LOG.debug( e, e );
+      throw e;
     }
   }
 

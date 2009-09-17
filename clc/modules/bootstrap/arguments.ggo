@@ -37,7 +37,8 @@ option "java-home"       j   "Alternative way to specify JAVA_HOME."   string  t
 option "jvm-name"       J   "Which JVM type to run (see jvm.cfg)."   string  typestr="jvm-name"  default="-server" no
 option "jvm-args"       X   "Arguments to pass to the JVM."   string  optional  multiple
 option "debug"       d   "Launch with debugger enabled."   flag   off
-option "profile"       p   "Launch with profiler enabled."   flag   off hidden
 option "debug-port"       -   "Set the port to use for the debugger." int dependon="debug" default="5005" no
 option "debug-suspend"       -   "Set the port to use for the debugger." flag dependon="debug" off
+option "profile"       p   "Launch with jprofiler enabled."   flag   off hidden
+option "profiler-home"       P   "Set the home for jprofiler." string  typestr="jprofiler directory" dependon="profile" default="/opt/jprofiler5" no hidden
 

@@ -44,6 +44,22 @@ public class ConfigurationUtil {
     return configInstance;
   }
 
+  static boolean testClusterCredentialsDirectory( String name ) {
+    String directory = SubDirectory.KEYS.toString( ) + File.separator + name;
+    File keyDir = new File( directory );
+    if( !keyDir.exists( ) ) {
+      try {
+        keyDir.mkdir( );
+        keyDir.delete( );
+        return true;
+      } catch ( Exception e ) {
+        return false;
+      }
+    } else {
+      return keyDir.canWrite( );
+    }
+  }
+  
   static void setupClusterCredentials( ComponentConfiguration newComponent ) throws EucalyptusCloudException {
     /** generate the Component keys **/
     String ccAlias = String.format( Configuration.CLUSTER_KEY_FSTRING, newComponent.getName( ) );

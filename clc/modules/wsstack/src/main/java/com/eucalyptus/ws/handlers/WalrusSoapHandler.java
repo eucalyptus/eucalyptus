@@ -64,18 +64,13 @@
 
 package com.eucalyptus.ws.handlers;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Iterator;
 import java.util.List;
 
 import javax.xml.namespace.QName;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamReader;
 
-import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMElement;
-import org.apache.axiom.om.OMFactory;
 import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPFactory;
@@ -108,17 +103,13 @@ import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
 @ChannelPipelineCoverage("one")
 public class WalrusSoapHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusSoapHandler.class );
-	private final SOAPFactory soapFactory                      = OMAbstractFactory.getSOAP11Factory( );
 
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpMessage ) {
 			final MappingHttpMessage message = ( MappingHttpMessage ) event.getMessage( );
 			String content = message.getContent( ).toString( "UTF-8" );
-			ByteArrayInputStream byteIn = new ByteArrayInputStream( content.getBytes( ) );
-			XMLStreamReader xmlStreamReader = XMLInputFactory.newInstance( ).createXMLStreamReader( byteIn );
-			StAXSOAPModelBuilder soapBuilder = null;
-			soapBuilder = new StAXSOAPModelBuilder( xmlStreamReader);
+			StAXSOAPModelBuilder soapBuilder = new StAXSOAPModelBuilder( HoldMe.getXMLStreamReader( content ), HoldMe.getOMSOAP11Factory( ), null );
 			SOAPEnvelope env = ( SOAPEnvelope ) soapBuilder.getDocumentElement( );
 			message.setSoapEnvelope( env );
 			message.setMessageString( content );
@@ -171,14 +162,14 @@ public class WalrusSoapHandler extends MessageStackHandler {
 				}
 			} else {
 				// :: assert sourceElem != null :://
-				httpMessage.setSoapEnvelope( this.soapFactory.getDefaultEnvelope( ) );
+				httpMessage.setSoapEnvelope( HoldMe.getOMSOAP11Factory( ).getDefaultEnvelope( ) );
 				httpMessage.getSoapEnvelope( ).getBody( ).addChild( httpMessage.getOmMessage( ) );
 			}
 			ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
 			
 			HoldMe.canHas.lock( );
 			try {
-		     httpMessage.getSoapEnvelope( ).serialize( byteOut );
+		     httpMessage.getSoapEnvelope( ).serialize( byteOut );//HACK: xml breakage?
 	    } finally {
 	      HoldMe.canHas.unlock();
 	    }
@@ -194,7 +185,7 @@ public class WalrusSoapHandler extends MessageStackHandler {
 			String resourceType, String resource )  {
     HoldMe.canHas.lock( );
     try {
-      SOAPFactory soapFactory = OMAbstractFactory.getSOAP11Factory();
+      SOAPFactory soapFactory = HoldMe.getOMSOAP11Factory();
 
       SOAPFaultCode soapFaultCode = soapFactory.createSOAPFaultCode();
       soapFaultCode.setText( SOAP11Constants.FAULT_CODE_SENDER + "." + faultCode );

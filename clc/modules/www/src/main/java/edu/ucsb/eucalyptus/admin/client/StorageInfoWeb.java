@@ -188,4 +188,6 @@ public class StorageInfoWeb implements IsSerializable {
 	{
 		return name.hashCode();
 	}
+
+	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false);
 }

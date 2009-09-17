@@ -66,12 +66,9 @@ package com.eucalyptus.ws.handlers.wssecurity;
 import java.util.Collection;
 import java.util.Vector;
 
-import javax.xml.stream.XMLStreamException;
-
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMException;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
-import org.apache.axiom.om.impl.dom.DOOMAbstractFactory;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
 import org.apache.log4j.Logger;
@@ -91,7 +88,6 @@ import org.w3c.dom.Element;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.util.CredentialProxy;
 
@@ -118,7 +114,7 @@ public abstract class WsSecHandler extends MessageStackHandler {
         SOAPEnvelope env = httpRequest.getSoapEnvelope( );
         HoldMe.canHas.lock( );
         try {
-          final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), env.getXMLStreamReader( ) );
+          final StAXOMBuilder doomBuilder = HoldMe.getStAXOMBuilder( HoldMe.getDOOMFactory( ), env.getXMLStreamReader( ) );
           elem = doomBuilder.getDocumentElement( );
           elem.build( );
           doc = ( ( Element ) elem ).getOwnerDocument( );
@@ -165,7 +161,7 @@ public abstract class WsSecHandler extends MessageStackHandler {
         SOAPEnvelope envelope = null;
         HoldMe.canHas.lock( );
         try {
-          final StAXSOAPModelBuilder stAXSOAPModelBuilder = new StAXSOAPModelBuilder( elem.getXMLStreamReader( ), null );
+          final StAXSOAPModelBuilder stAXSOAPModelBuilder = new StAXSOAPModelBuilder( elem.getXMLStreamReader( ), HoldMe.getOMSOAP11Factory( ), null );
           envelope = stAXSOAPModelBuilder.getSOAPEnvelope( );
           envelope.build( );
         } finally {

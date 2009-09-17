@@ -145,7 +145,7 @@ public class ClusterEndpoint implements Startable {
       if ( tagList.size() == 1 ) tagList = c.getNodeTags();
       else
         tagList.retainAll( c.getNodeTags() );
-      if ( tagList.isEmpty() ) return reply;
+      if ( tagList.isEmpty() ) continue;
 
 
       if ( request.isAdministrator() && args.lastIndexOf( "verbose" ) == 0 )

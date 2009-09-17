@@ -95,12 +95,10 @@ public class SoapMarshallingHandler extends MessageStackHandler {
       MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
       String content = httpMessage.getContent( ).toString( "UTF-8" );
       httpMessage.setMessageString( content );
-      ByteArrayInputStream byteIn = new ByteArrayInputStream( content.getBytes( ) );
       HoldMe.canHas.lock( );
       SOAPEnvelope env = null;
       try {
-        XMLStreamReader xmlStreamReader = XMLInputFactory.newInstance( ).createXMLStreamReader( byteIn );
-        StAXSOAPModelBuilder soapBuilder = new StAXSOAPModelBuilder( xmlStreamReader, SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI );
+        StAXSOAPModelBuilder soapBuilder = new StAXSOAPModelBuilder( HoldMe.getXMLStreamReader( content ), HoldMe.getOMSOAP11Factory( ), SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI );
         env = ( SOAPEnvelope ) soapBuilder.getDocumentElement( );
       } finally {
         HoldMe.canHas.unlock( );
@@ -116,7 +114,7 @@ public class SoapMarshallingHandler extends MessageStackHandler {
       ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
       HoldMe.canHas.lock( );
       try {
-        httpMessage.getSoapEnvelope( ).serialize( byteOut );
+        httpMessage.getSoapEnvelope( ).serialize( byteOut );//HACK: does this need fixing for xml brokeness?
       } finally {
         HoldMe.canHas.unlock( );
       }

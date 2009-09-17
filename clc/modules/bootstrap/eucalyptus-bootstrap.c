@@ -337,16 +337,17 @@ int main( int argc, char *argv[ ] ) {
 	}
 	if( strcmp( argv[ 0 ], "eucalyptus-cloud" ) != 0 ) {
 		char *oldpath = getenv( "LD_LIBRARY_PATH" ),*libf = java_library( args, data );
-		char *old = argv[ 0 ],buf[ 2048 ],*tmp = NULL,*p1 = NULL,*p2 = NULL;
+		char *old = argv[ 0 ],buf[ 4096 ],*tmp = NULL,*p1 = NULL,*p2 = NULL;
 		p1 = strdup( libf );
 		tmp = strrchr( p1, '/' );
 		if( tmp != NULL ) tmp[ 0 ] = '\0';
 		p2 = strdup( p1 );
 		tmp = strrchr( p2, '/' );
 		if( tmp != NULL ) tmp[ 0 ] = '\0';
-		if( oldpath == NULL ) snprintf( buf, 2048, "%s:%s", p1, p2 );
-		else snprintf( buf, 2048, "%s:%s:%s", oldpath, p1, p2 );
+		if( oldpath == NULL ) snprintf( buf, 4096, "%s:%s:%s/bin/linux-x64", p1, p2, GETARG(args,profiler_home) );
+		else snprintf( buf, 4096, "%s:%s:%s:%s/bin/linux-x64", oldpath, p1, p2, GETARG(args,profiler_home) );
 		tmp = strdup( buf );
+
 		setenv( "LD_LIBRARY_PATH", tmp, 1 );
 		__debug( "Invoking w/ LD_LIBRARY_PATH=%s", getenv( "LD_LIBRARY_PATH" ) );
 		argv[ 0 ] = "eucalyptus-cloud";
@@ -555,7 +556,7 @@ int java_init(euca_opts *args, java_home_t *data) {
     }
     if(args->profile_flag) {
     	JVM_ARG(opt[++x],"-agentlib:jprofilerti=port=8849");
-    	JVM_ARG(opt[++x],"-Xbootclasspath/a:/opt/jprofiler5/bin/agent.jar");
+    	JVM_ARG(opt[++x],"-Xbootclasspath/a:%1$s/bin/agent.jar",GETARG(args,profiler_home));
     }
     for (i=0; i<args->jvm_args_given; i++,x++) JVM_ARG(opt[x],"-X%s",args->jvm_args_arg[i]);
     for (i=0; i<args->define_given; i++,x++) JVM_ARG(opt[x],"-D%s",args->define_arg[i]);

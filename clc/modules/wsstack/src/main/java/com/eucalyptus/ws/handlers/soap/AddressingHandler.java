@@ -65,9 +65,7 @@ package com.eucalyptus.ws.handlers.soap;
 
 import java.util.UUID;
 
-import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMNamespace;
-import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axiom.soap.SOAPHeader;
 import org.apache.axiom.soap.SOAPHeaderBlock;
 import org.apache.log4j.Logger;
@@ -75,6 +73,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
+import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
@@ -93,8 +92,6 @@ public class AddressingHandler extends MessageStackHandler {
   static final String       WSA_FROM                         = "From";
   static final String       WSA_FAULT_TO                     = "FaultTo";
   static final String       WSA_ACTION                       = "Action";
-
-  private final SOAPFactory soapFactory                      = OMAbstractFactory.getSOAP11Factory( );
 
   private String prefix;
   
@@ -121,7 +118,7 @@ public class AddressingHandler extends MessageStackHandler {
       final SOAPHeader header = httpMessage.getSoapEnvelope( ).getHeader( );
 
       // :: set soap addressing info :://
-      final OMNamespace wsaNs = OMAbstractFactory.getOMFactory( ).createOMNamespace( WSA_NAMESPACE, WSA_NAMESPACE_PREFIX );
+      final OMNamespace wsaNs = HoldMe.getOMFactory( ).createOMNamespace( WSA_NAMESPACE, WSA_NAMESPACE_PREFIX );
       final SOAPHeaderBlock wsaToHeader = header.addHeaderBlock( WSA_TO, wsaNs );
       wsaToHeader.setText( httpMessage.getUri( ) );
       final SOAPHeaderBlock wsaActionHeader = header.addHeaderBlock( WSA_ACTION, wsaNs );

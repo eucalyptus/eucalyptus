@@ -287,7 +287,7 @@ public class VolumeManager {
     return reply;
   }
 
-  public DetachVolumeResponseType DetachVolume( DetachVolumeType request ) throws EucalyptusCloudException {
+  public DetachVolumeResponseType detach( DetachVolumeType request ) throws EucalyptusCloudException {
     DetachVolumeResponseType reply = ( DetachVolumeResponseType ) request.getReply();
 
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();

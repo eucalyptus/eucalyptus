@@ -69,7 +69,6 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
-import org.apache.axiom.om.impl.dom.DOOMAbstractFactory;
 import org.apache.axiom.soap.SOAPBody;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.log4j.Logger;
@@ -102,7 +101,7 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 			SOAPBody body = envelope.getBody();
 			HoldMe.canHas.lock();
 			try {
-  			final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), body.getXMLStreamReader( ) );
+  			final StAXOMBuilder doomBuilder = HoldMe.getStAXOMBuilder( HoldMe.getDOOMFactory( ), body.getXMLStreamReader( ) );
   			final OMElement elem = doomBuilder.getDocumentElement( );
   			elem.build( );
   			final Document doc = ( ( Element ) elem ).getOwnerDocument();

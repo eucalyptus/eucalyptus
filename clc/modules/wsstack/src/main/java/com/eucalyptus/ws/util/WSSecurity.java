@@ -71,7 +71,6 @@ import java.security.cert.X509Certificate;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
-import org.apache.axiom.om.impl.dom.DOOMAbstractFactory;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.log4j.Logger;
 import org.apache.ws.security.SOAPConstants;
@@ -91,6 +90,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.util.HoldMe;
 
 public class WSSecurity {
   private static Logger             LOG = Logger.getLogger( WSSecurity.class );
@@ -176,7 +176,7 @@ public class WSSecurity {
   }
 
   public static X509Certificate getVerifiedCertificate( SOAPEnvelope envelope ) throws WSSecurityException, XMLSignatureException {
-    final StAXOMBuilder doomBuilder = new StAXOMBuilder( DOOMAbstractFactory.getOMFactory( ), envelope.getXMLStreamReader( ) );
+    final StAXOMBuilder doomBuilder = HoldMe.getStAXOMBuilder( HoldMe.getDOOMFactory(), envelope.getXMLStreamReader( ) );
     final OMElement elem = doomBuilder.getDocumentElement( );
     elem.build( );
     final Element env = ( ( Element ) elem );

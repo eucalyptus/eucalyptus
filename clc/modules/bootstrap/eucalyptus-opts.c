@@ -61,9 +61,10 @@ const char *eucalyptus_opts_full_help[] = {
   "  -J, --jvm-name=jvm-name       Which JVM type to run (see jvm.cfg).  \n                                  (default=`-server')",
   "  -X, --jvm-args=STRING         Arguments to pass to the JVM.",
   "  -d, --debug                   Launch with debugger enabled.  (default=off)",
-  "  -p, --profile                 Launch with profiler enabled.  (default=off)",
   "      --debug-port=INT          Set the port to use for the debugger.  \n                                  (default=`5005')",
   "      --debug-suspend           Set the port to use for the debugger.  \n                                  (default=off)",
+  "  -p, --profile                 Launch with jprofiler enabled.  (default=off)",
+  "  -P, --profiler-home=jprofiler directory\n                                Set the home for jprofiler.  \n                                  (default=`/opt/jprofiler5')",
     0
 };
 
@@ -103,8 +104,8 @@ init_help_array(void)
   eucalyptus_opts_help[30] = eucalyptus_opts_full_help[30];
   eucalyptus_opts_help[31] = eucalyptus_opts_full_help[31];
   eucalyptus_opts_help[32] = eucalyptus_opts_full_help[32];
-  eucalyptus_opts_help[33] = eucalyptus_opts_full_help[34];
-  eucalyptus_opts_help[34] = eucalyptus_opts_full_help[35];
+  eucalyptus_opts_help[33] = eucalyptus_opts_full_help[33];
+  eucalyptus_opts_help[34] = eucalyptus_opts_full_help[34];
   eucalyptus_opts_help[35] = 0; 
   
 }
@@ -163,9 +164,10 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->jvm_name_given = 0 ;
   args_info->jvm_args_given = 0 ;
   args_info->debug_given = 0 ;
-  args_info->profile_given = 0 ;
   args_info->debug_port_given = 0 ;
   args_info->debug_suspend_given = 0 ;
+  args_info->profile_given = 0 ;
+  args_info->profiler_home_given = 0 ;
 }
 
 static
@@ -208,10 +210,12 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->jvm_args_arg = NULL;
   args_info->jvm_args_orig = NULL;
   args_info->debug_flag = 0;
-  args_info->profile_flag = 0;
   args_info->debug_port_arg = 5005;
   args_info->debug_port_orig = NULL;
   args_info->debug_suspend_flag = 0;
+  args_info->profile_flag = 0;
+  args_info->profiler_home_arg = gengetopt_strdup ("/opt/jprofiler5");
+  args_info->profiler_home_orig = NULL;
   
 }
 
@@ -252,9 +256,10 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
   args_info->debug_help = eucalyptus_opts_full_help[32] ;
-  args_info->profile_help = eucalyptus_opts_full_help[33] ;
-  args_info->debug_port_help = eucalyptus_opts_full_help[34] ;
-  args_info->debug_suspend_help = eucalyptus_opts_full_help[35] ;
+  args_info->debug_port_help = eucalyptus_opts_full_help[33] ;
+  args_info->debug_suspend_help = eucalyptus_opts_full_help[34] ;
+  args_info->profile_help = eucalyptus_opts_full_help[35] ;
+  args_info->profiler_home_help = eucalyptus_opts_full_help[36] ;
   
 }
 
@@ -409,6 +414,8 @@ arguments_release (struct eucalyptus_opts *args_info)
   free_string_field (&(args_info->jvm_name_orig));
   free_multiple_string_field (args_info->jvm_args_given, &(args_info->jvm_args_arg), &(args_info->jvm_args_orig));
   free_string_field (&(args_info->debug_port_orig));
+  free_string_field (&(args_info->profiler_home_arg));
+  free_string_field (&(args_info->profiler_home_orig));
   
   
 
@@ -500,12 +507,14 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
   write_multiple_into_file(outfile, args_info->jvm_args_given, "jvm-args", args_info->jvm_args_orig, 0);
   if (args_info->debug_given)
     write_into_file(outfile, "debug", 0, 0 );
-  if (args_info->profile_given)
-    write_into_file(outfile, "profile", 0, 0 );
   if (args_info->debug_port_given)
     write_into_file(outfile, "debug-port", args_info->debug_port_orig, 0);
   if (args_info->debug_suspend_given)
     write_into_file(outfile, "debug-suspend", 0, 0 );
+  if (args_info->profile_given)
+    write_into_file(outfile, "profile", 0, 0 );
+  if (args_info->profiler_home_given)
+    write_into_file(outfile, "profiler-home", args_info->profiler_home_orig, 0);
   
 
   i = EXIT_SUCCESS;
@@ -771,6 +780,11 @@ arguments_required2 (struct eucalyptus_opts *args_info, const char *prog_name, c
   if (args_info->debug_suspend_given && ! args_info->debug_given)
     {
       fprintf (stderr, "%s: '--debug-suspend' option depends on option 'debug'%s\n", prog_name, (additional_error ? additional_error : ""));
+      error = 1;
+    }
+  if (args_info->profiler_home_given && ! args_info->profile_given)
+    {
+      fprintf (stderr, "%s: '--profiler-home' ('-P') option depends on option 'profile'%s\n", prog_name, (additional_error ? additional_error : ""));
       error = 1;
     }
 
@@ -1086,13 +1100,14 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { "jvm-name",	1, NULL, 'J' },
         { "jvm-args",	1, NULL, 'X' },
         { "debug",	0, NULL, 'd' },
-        { "profile",	0, NULL, 'p' },
         { "debug-port",	1, NULL, 0 },
         { "debug-suspend",	0, NULL, 0 },
+        { "profile",	0, NULL, 'p' },
+        { "profiler-home",	1, NULL, 'P' },
         { NULL,	0, NULL, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vu:h:c:w:D:vl:o:e:CSfj:J:X:dp", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:c:w:D:vl:o:e:CSfj:J:X:dpP:", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -1279,12 +1294,24 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
             goto failure;
         
           break;
-        case 'p':	/* Launch with profiler enabled..  */
+        case 'p':	/* Launch with jprofiler enabled..  */
         
         
           if (update_arg((void *)&(args_info->profile_flag), 0, &(args_info->profile_given),
               &(local_args_info.profile_given), optarg, 0, 0, ARG_FLAG,
               check_ambiguity, override, 1, 0, "profile", 'p',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'P':	/* Set the home for jprofiler..  */
+        
+        
+          if (update_arg( (void *)&(args_info->profiler_home_arg), 
+               &(args_info->profiler_home_orig), &(args_info->profiler_home_given),
+              &(local_args_info.profiler_home_given), optarg, 0, "/opt/jprofiler5", ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "profiler-home", 'P',
               additional_error))
             goto failure;
         

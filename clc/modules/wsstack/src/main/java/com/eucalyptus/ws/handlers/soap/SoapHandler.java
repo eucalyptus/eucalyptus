@@ -65,13 +65,9 @@ package com.eucalyptus.ws.handlers.soap;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.UUID;
 
-import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMElement;
-import org.apache.axiom.om.OMNamespace;
 import org.apache.axiom.soap.SOAPEnvelope;
-import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axiom.soap.SOAPFault;
 import org.apache.axiom.soap.SOAPHeader;
 import org.apache.axiom.soap.SOAPHeaderBlock;
@@ -79,12 +75,10 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
+import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.google.common.collect.Lists;
@@ -94,7 +88,6 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 @ChannelPipelineCoverage( "all" )
 public class SoapHandler extends MessageStackHandler {
   private static Logger     LOG                              = Logger.getLogger( SoapHandler.class );
-  private final SOAPFactory soapFactory                      = OMAbstractFactory.getSOAP11Factory( );
 
   @Override
   public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
@@ -140,7 +133,7 @@ public class SoapHandler extends MessageStackHandler {
         httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ) );
       } else {
         // :: assert sourceElem != null :://
-        httpMessage.setSoapEnvelope( this.soapFactory.getDefaultEnvelope( ) );
+        httpMessage.setSoapEnvelope( HoldMe.getOMSOAP11Factory( ).getDefaultEnvelope( ) );
         httpMessage.getSoapEnvelope( ).getBody( ).addChild( httpMessage.getOmMessage( ) );
       }
     }

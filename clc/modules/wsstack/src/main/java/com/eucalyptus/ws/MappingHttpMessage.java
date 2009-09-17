@@ -78,6 +78,7 @@ public abstract class MappingHttpMessage extends DefaultHttpMessage implements H
   private OMElement    omMessage;
   private Object       message;
   private User         user;
+  private Boolean      keepAlive = Boolean.TRUE;
 
   protected MappingHttpMessage( HttpVersion version ) {
     super( version );
@@ -123,5 +124,12 @@ public abstract class MappingHttpMessage extends DefaultHttpMessage implements H
     this.user = user;
   }
 
+  public Boolean getKeepAlive( ) {
+    return keepAlive;
+  }
+
+  public void setKeepAlive( Boolean keepAlive ) {
+    this.keepAlive = keepAlive;
+  }
   
 }
