@@ -37,13 +37,11 @@ public class HoldMe implements Lock {
   public void lock( ) {}
 
   private static Lock maybeGetLock( ) {
-    if( !reuse ) {
+    if( reuse ) {
       return new ReentrantLock();
     } else {
-      XMLInputFactory.newInstance( ).setProperty( "reuse-instance", Boolean.TRUE );
-      XMLOutputFactory.newInstance( ).setProperty( "reuse-instance", Boolean.TRUE );
       return new HoldMe();
-    }
+    }    
   }
 
   @Override
@@ -68,17 +66,17 @@ public class HoldMe implements Lock {
   public void unlock( ) {}
 
   public static OMFactory getDOOMFactory( ) {
-    if( reuse ) return new org.apache.axiom.om.impl.dom.factory.OMDOMFactory( );
+    if( !reuse ) return new org.apache.axiom.om.impl.dom.factory.OMDOMFactory( );
     else return DOOMAbstractFactory.getOMFactory( );
   }
 
   public static SOAPFactory getDOOMSOAP11Factory( ) {
-    if( reuse ) return new org.apache.axiom.soap.impl.dom.soap11.SOAP11Factory( );
+    if( !reuse ) return new org.apache.axiom.soap.impl.dom.soap11.SOAP11Factory( );
     else return DOOMAbstractFactory.getSOAP11Factory( );
   }
 
   public static SOAPFactory getDOOMSOAP12Factory( ) {
-    if( reuse ) return new org.apache.axiom.soap.impl.dom.soap12.SOAP12Factory( );
+    if( !reuse ) return new org.apache.axiom.soap.impl.dom.soap12.SOAP12Factory( );
     else return DOOMAbstractFactory.getSOAP12Factory( );
   }
 

@@ -70,6 +70,7 @@ import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -83,6 +84,7 @@ public class StorageEventListener implements EventListener {
 
 	public static void register() {
 		ListenerRegistry.getInstance( ).register( Component.storage, new StorageEventListener() );
+		ListenerRegistry.getInstance( ).register( Component.walrus, new StorageEventListener() );
 	}
 
 	@Override
@@ -91,7 +93,12 @@ public class StorageEventListener implements EventListener {
 
 	@Override
 	public void fireEvent(Event event) {
-		if(event instanceof StopComponentEvent) {
+		if(event instanceof StartComponentEvent) {
+			StartComponentEvent startComponentEvent = (StartComponentEvent) event;
+			if(Component.walrus.equals(startComponentEvent.getComponent())) {
+				//unblock storage controller
+			}
+		} else if(event instanceof StopComponentEvent) {
 			StopComponentEvent stopComponentEvent = (StopComponentEvent) event;
 			ComponentConfiguration config = stopComponentEvent.getConfiguration();
 			StorageInfo storageInfo = new StorageInfo();
