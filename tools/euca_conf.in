@@ -1031,7 +1031,7 @@ if [ -n "$WALRUS" -o -n "$WALRUS_MODE" ]; then
 	if ! createCloudURL "Action" "RegisterWalrus" "Host" "${WALRUS}" "Name" "walrus" "Port" "8773"; then
 	    exit 1
 	fi
-	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null"
+	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
 	if [ -n "${FAKEREG}" ]; then
 	    CMD="echo"
 	fi
@@ -1053,7 +1053,7 @@ if [ -n "$WALRUS" -o -n "$WALRUS_MODE" ]; then
 	if ! createCloudURL "Action" "DeregisterWalrus" "Name" "walrus"; then
 	    exit 1
 	fi
-	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null"
+	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
 	if [ -n "${FAKEREG}" ]; then
 	    CMD="echo"
 	fi
@@ -1086,7 +1086,7 @@ if [ -n "$SCNAME" ]; then
 	if ! createCloudURL "Action" "RegisterStorageController" "Host" "${SCHOST}" "Name" "${SCNAME}" "Port" "8773"; then
 	    exit 1
 	fi
-	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null"
+	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
 	if [ -n "${FAKEREG}" ]; then
 	    CMD="echo"
 	fi
@@ -1117,7 +1117,7 @@ if [ -n "$SCNAME" ]; then
 	if ! createCloudURL "Action" "DeregisterStorageController" "Name" "${SCNAME}"; then
 	    exit 1
 	fi
-	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null"
+	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
 	if [ -n "${FAKEREG}" ]; then
 	    CMD="echo"
 	fi
