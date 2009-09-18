@@ -53,17 +53,28 @@
   -->
 
 <c3p0-config>
-	<default-config>
-		<property name="checkoutTimeout">5000</property>
-		<property name="debugUnreturnedConnectionStackTraces">true</property>
-		<property name="unreturnedConnectionTimeout">20</property>
-		<property name="idleConnectionTestPeriod">5</property>
-		<property name="initialPoolSize">8</property>
-		<property name="maxPoolSize">448</property>
-		<property name="minPoolSize">64</property>
-		<property name="maxIdleTime">600</property>
-		<property name="maxStatements">0</property>
-		<property name="numHelperThreads">64</property>
-		<property name="maxIdleTimeExcessConnections">360</property>
-	</default-config>
+  <default-config>
+    <!--  pool size -->
+    <property name="initialPoolSize">64</property>
+    <property name="minPoolSize">64</property>
+    <property name="maxPoolSize">448</property>
+    <property name="acquireIncrement">5</property>
+    <!--  connection aging  -->
+    <property name="maxConnectionAge">600</property>
+    <property name="maxIdleTime">300</property>
+    <property name="maxIdleTimeExcessConnections">150</property>
+    <!--  connection testing -->
+    <property name="automaticTestTable">eucalyptus_yay</property>
+    <property name="idleConnectionTestPeriod">5</property>
+    <property name="testConnectionOnCheckin">true</property>
+    <!--  disable statement caching to avoid thrashing -->
+    <property name="maxStatements">0</property>
+    <property name="maxStatementsPerConnection">0</property>
+    <!--  retry lease: 12 seconds leaving 8 seconds -->
+    <property name="acquireRetryAttempts">6</property>
+    <property name="acquireRetryDelay">2</property>
+    <property name="unreturnedConnectionTimeout">30</property>
+    <property name="checkoutTimeout">2000</property>
+    <property name="numHelperThreads">32</property>
+  </default-config>
 </c3p0-config>

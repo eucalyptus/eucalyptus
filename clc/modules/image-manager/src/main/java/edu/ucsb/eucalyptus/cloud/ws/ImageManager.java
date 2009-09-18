@@ -65,6 +65,7 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.eucalyptus.images.util.ImageUtil;
 import com.eucalyptus.images.util.WalrusUtil;
 import com.eucalyptus.util.EntityWrapper;
@@ -110,6 +111,7 @@ import javax.xml.xpath.XPathFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 public class ImageManager {
   public static Logger LOG = Logger.getLogger( ImageManager.class );
@@ -242,60 +244,32 @@ public class ImageManager {
       db.rollback( );
     }
     db = new EntityWrapper<ImageInfo>( );
-    String userId = request.getUserId( );
-    Boolean isAdmin = request.isAdministrator( );
     UserInfo user = null;
     try {
-      user = db.recast( UserInfo.class ).getUnique( new UserInfo( userId ) );
-    } catch ( EucalyptusCloudException e ) {
+      user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId( ) ) );
       db.commit( );
-      throw new EucalyptusCloudException( "Failed to find user information for: " + userId );
+    } catch ( Throwable e ) {
+      db.commit( );
+      throw new EucalyptusCloudException( "Failed to find user information for: " + request.getUserId( ), e );
     }
 
     ArrayList<String> imageList = request.getImagesSet( );
-    if ( imageList == null ) imageList = Lists.newArrayList( );
     ArrayList<String> owners = request.getOwnersSet( );
-    if ( owners == null ) owners = Lists.newArrayList( );
     ArrayList<String> executable = request.getExecutableBySet( );
-    if ( executable == null ) executable = Lists.newArrayList( );
-
-    List<ImageDetails> repList = reply.getImagesSet( );
-    // :: handle easy case first ::/
     if ( owners.isEmpty( ) && executable.isEmpty( ) ) {
       executable.add( "self" );
     }
-
+    
+    Set<ImageDetails> repList = Sets.newHashSet( );
     if ( !owners.isEmpty( ) ) {
-      if ( owners.remove( "self" ) ) owners.add( user.getUserName( ) );
-      for ( String userName : owners ) {
-        List<ImageInfo> results = db.query( ImageInfo.byOwnerId( userName ) );
-        for ( ImageInfo img : results ) {
-          ImageDetails imgDetails = img.getAsImageDetails( );
-          if ( img.isAllowed( user ) && !repList.contains( imgDetails ) && ( imgList.isEmpty( ) || imgList.contains( imgDetails.getImageId( ) ) ) ) repList.add( imgDetails );
-        }
-      }
+      repList.addAll( ImageUtil.getImagesByOwner( imgList, user, owners ) );
     }
     if ( !executable.isEmpty( ) ) {
       if ( executable.remove( "self" ) ) {
-        List<ImageInfo> results = db.query( new ImageInfo( ) );
-        for ( ImageInfo img : results ) {
-          ImageDetails imgDetails = img.getAsImageDetails( );
-          if ( img.isAllowed( user ) && !repList.contains( imgDetails ) && ( imgList.isEmpty( ) || imgList.contains( imgDetails.getImageId( ) ) ) ) repList.add( imgDetails );
-        }
+        repList.addAll( ImageUtil.getImageOwnedByUser( imgList, user ) );
       }
-      for ( String execUserId : executable ) {
-        try {
-          UserInfo execUser = db.recast( UserInfo.class ).getUnique( new UserInfo( execUserId ) );
-          List<ImageInfo> results = db.query( new ImageInfo( ) );
-          for ( ImageInfo img : results ) {
-            ImageDetails imgDetails = img.getAsImageDetails( );
-            if ( img.isAllowed( execUser ) && img.getImageOwnerId( ).equals( user.getUserName( ) ) && !repList.contains( imgDetails ) ) repList.add( imgDetails );
-          }
-        } catch ( Exception e ) {
-        }
-      }
+      repList.addAll( ImageUtil.getImagesByExec( user, executable) );
     }
-    db.commit( );
 
     if ( !imageList.isEmpty( ) ) {
       ArrayList<ImageDetails> newList = Lists.newArrayList( );

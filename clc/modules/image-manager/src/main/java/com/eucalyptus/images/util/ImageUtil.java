@@ -97,6 +97,7 @@ import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.ws.ImageManager;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
+import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
@@ -419,6 +420,64 @@ public class ImageUtil {
       throw e;
     }
     return inputSource;
+  }
+
+  public static List<ImageDetails> getImageOwnedByUser( List<ImageInfo> imgList, UserInfo user ) {
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    List<ImageDetails> repList = Lists.newArrayList( );
+    try {
+      List<ImageInfo> results = db.query( new ImageInfo( ) );
+      for ( ImageInfo img : results ) {
+        ImageDetails imgDetails = img.getAsImageDetails( );
+        if ( img.isAllowed( user ) && ( imgList.isEmpty( ) || imgList.contains( imgDetails.getImageId( ) ) ) ) {
+          repList.add( imgDetails );
+        }
+      }
+    } catch ( Throwable e ) {
+      ImageManager.LOG.debug( e, e );
+    }
+    return repList;
+  }
+
+  public static List<ImageDetails> getImagesByOwner( List<ImageInfo> imgList, UserInfo user, ArrayList<String> owners ) {
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    List<ImageDetails> repList = Lists.newArrayList( );
+    if ( owners.remove( "self" ) ) owners.add( user.getUserName( ) );
+    try {
+      for ( String userName : owners ) {
+        List<ImageInfo> results = db.query( ImageInfo.byOwnerId( userName ) );
+        for ( ImageInfo img : results ) {
+          ImageDetails imgDetails = img.getAsImageDetails( );
+          if ( img.isAllowed( user ) && ( imgList.isEmpty( ) || imgList.contains( imgDetails.getImageId( ) ) ) ) {
+            repList.add( imgDetails );            
+          }
+        }
+      }
+    } catch ( Throwable e ) {
+      ImageManager.LOG.debug( e, e );
+    }
+    return repList;
+  }
+
+  public static List<ImageDetails> getImagesByExec( UserInfo user, ArrayList<String> executable ) {
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    List<ImageDetails> repList = Lists.newArrayList( );
+    for ( String execUserId : executable ) {
+      try {
+        UserInfo execUser = db.recast( UserInfo.class ).getUnique( new UserInfo( execUserId ) );
+        List<ImageInfo> results = db.query( new ImageInfo( ) );
+        for ( ImageInfo img : results ) {
+          ImageDetails imgDetails = img.getAsImageDetails( );
+          if ( img.isAllowed( execUser ) 
+              && img.getImageOwnerId( ).equals( user.getUserName( ) ) ) {
+            repList.add( imgDetails );
+          }
+        }
+      } catch ( Throwable e ) {
+        ImageManager.LOG.debug( e, e );
+      }
+    }
+    return repList;
   }
 
 }

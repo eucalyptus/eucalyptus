@@ -29,19 +29,18 @@ public class HoldMe implements Lock {
   private static final String DEFAULT_SOAP11_FACTORY_CLASS_NAME = "org.apache.axiom.soap.impl.llom.soap11.SOAP11Factory";
   private static final String DEFAULT_SOAP12_FACTORY_CLASS_NAME = "org.apache.axiom.soap.impl.llom.soap12.SOAP12Factory";
 
-  // public static Lock canHas = new ReentrantLock( );
-  public static Lock          canHas                            = maybeGetLock(); 
+  public static Lock          canHas                            = maybeGetLock( );
   public static boolean       reuse                             = false;
 
   @Override
   public void lock( ) {}
 
   private static Lock maybeGetLock( ) {
-    if( reuse ) {
-      return new ReentrantLock();
+    if ( reuse ) {
+      return new ReentrantLock( );
     } else {
-      return new HoldMe();
-    }    
+      return new HoldMe( );
+    }
   }
 
   @Override
@@ -66,22 +65,25 @@ public class HoldMe implements Lock {
   public void unlock( ) {}
 
   public static OMFactory getDOOMFactory( ) {
-    if( !reuse ) return new org.apache.axiom.om.impl.dom.factory.OMDOMFactory( );
+    if ( !reuse )
+      return new org.apache.axiom.om.impl.dom.factory.OMDOMFactory( );
     else return DOOMAbstractFactory.getOMFactory( );
   }
 
   public static SOAPFactory getDOOMSOAP11Factory( ) {
-    if( !reuse ) return new org.apache.axiom.soap.impl.dom.soap11.SOAP11Factory( );
+    if ( !reuse )
+      return new org.apache.axiom.soap.impl.dom.soap11.SOAP11Factory( );
     else return DOOMAbstractFactory.getSOAP11Factory( );
   }
 
   public static SOAPFactory getDOOMSOAP12Factory( ) {
-    if( !reuse ) return new org.apache.axiom.soap.impl.dom.soap12.SOAP12Factory( );
+    if ( !reuse )
+      return new org.apache.axiom.soap.impl.dom.soap12.SOAP12Factory( );
     else return DOOMAbstractFactory.getSOAP12Factory( );
   }
 
   public static SOAPFactory getOMSOAP11Factory( ) {
-    if( !reuse ) return OMAbstractFactory.getSOAP11Factory( );
+    if ( !reuse ) return OMAbstractFactory.getSOAP11Factory( );
     String omFactory;
     try {
       omFactory = System.getProperty( SOAP11_FACTORY_NAME_PROPERTY );
@@ -105,7 +107,7 @@ public class HoldMe implements Lock {
   }
 
   public static SOAPFactory getOMSOAP12Factory( ) {
-    if( !reuse ) return OMAbstractFactory.getSOAP12Factory( );
+    if ( !reuse ) return OMAbstractFactory.getSOAP12Factory( );
     String omFactory;
     try {
       omFactory = System.getProperty( SOAP12_FACTORY_NAME_PROPERTY );
@@ -130,7 +132,7 @@ public class HoldMe implements Lock {
   }
 
   public static OMFactory getOMFactory( ) {
-    if( !reuse ) return OMAbstractFactory.getOMFactory( );
+    if ( !reuse ) return OMAbstractFactory.getOMFactory( );
     String omFactory;
     try {
       omFactory = System.getProperty( OM_FACTORY_NAME_PROPERTY );
@@ -166,12 +168,12 @@ public class HoldMe implements Lock {
   }
 
   public static StAXOMBuilder getStAXOMBuilder( XMLStreamReader parser ) {
-    if( !reuse ) return new StAXOMBuilder( parser );
+    if ( !reuse ) return new StAXOMBuilder( parser );
     return new ThrowAwayStAXOMBuilder( parser );
   }
 
   public static StAXOMBuilder getStAXOMBuilder( OMFactory doomFactory, XMLStreamReader xmlStreamReader ) {
-    if( !reuse ) return new StAXOMBuilder( doomFactory, xmlStreamReader );
+    if ( !reuse ) return new StAXOMBuilder( doomFactory, xmlStreamReader );
     return new ThrowAwayStAXOMBuilder( doomFactory, xmlStreamReader );
   }
 

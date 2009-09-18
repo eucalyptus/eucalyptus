@@ -208,15 +208,19 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   }
 
   public void close( ) {
-    this.channel.close( );
-    LOG.debug( "Forcing the channel to close." );
+    try {
+      this.channel.close( );
+      LOG.debug( "Forcing the channel to close." );
+    } catch ( Throwable e ) {}
   }
 
   public void cleanup( ) {
-    if ( this.channel != null ) {
-      this.close( );
-    }
-    this.channelFactory.releaseExternalResources( );
+    try {
+      if ( this.channel != null ) {
+        this.close( );
+      }
+      this.channelFactory.releaseExternalResources( );
+    } catch ( Throwable e ) {}
   }
 
   public abstract void trigger( );
