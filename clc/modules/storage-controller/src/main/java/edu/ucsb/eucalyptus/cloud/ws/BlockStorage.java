@@ -216,6 +216,17 @@ public class BlockStorage {
 		}
 	}
 
+	public static void checkPending() {
+		if(checker != null) {
+			StorageProperties.updateWalrusUrl();
+			try {
+				checker.transferPendingSnapshots();
+			} catch (Exception ex) {
+				LOG.error("unable to transfer pending snapshots", ex);
+			}
+		}
+	}
+
 	public static void check() {
 		File volumeDir = new File(StorageProperties.storageRootDirectory);
 		if(!volumeDir.exists()) {

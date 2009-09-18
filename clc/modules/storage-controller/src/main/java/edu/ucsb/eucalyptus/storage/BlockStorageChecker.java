@@ -245,7 +245,7 @@ public class BlockStorageChecker {
         db.commit();
     }
 
-    private void transferPendingSnapshots() throws EucalyptusCloudException {
+    public void transferPendingSnapshots() throws EucalyptusCloudException {
         EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
         SnapshotInfo snapshotInfo = new SnapshotInfo();
         snapshotInfo.setShouldTransfer(true);
