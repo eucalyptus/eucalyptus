@@ -198,9 +198,10 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
         response.setMessage( reply );
         ctx.sendDownstream( newEvent );
+      } else if( msge.getMessage() instanceof String ) {
+        ctx.sendDownstream( e );        
       } else {
         LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage." );
-//        ctx.sendDownstream( e );
       }
     } else {
       ctx.sendDownstream( e );

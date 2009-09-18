@@ -136,10 +136,6 @@ public class ClusterEndpoint implements Startable {
     Collection<Cluster> clusterList = Clusters.getInstance().getEntries();
     for ( Cluster c : clusterList ) {
       reply.getAvailabilityZoneInfo().add( new ClusterInfoType( c.getConfiguration( ).getName( ), c.getConfiguration( ).getHostName( ) ) );
-//TODO: handle cluster reachability
-//      if( !c.isReachable() ) {
-//        continue;
-//      }
       List<String> args = request.getAvailabilityZoneSet();
       NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( request.getAvailabilityZoneSet() );
       if ( tagList.size() == 1 ) tagList = c.getNodeTags();

@@ -64,6 +64,12 @@
 package com.eucalyptus.ws.client;
 
 import java.security.GeneralSecurityException;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 
@@ -90,10 +96,12 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.ComponentEvent;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.event.StopComponentEvent;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.BindingHandler;
@@ -105,22 +113,25 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
+import edu.emory.mathcs.backport.java.util.NavigableMap;
+import edu.emory.mathcs.backport.java.util.NavigableSet;
+import edu.emory.mathcs.backport.java.util.concurrent.ConcurrentSkipListMap;
 import edu.ucsb.eucalyptus.StartupChecks;
 
 @Provides( resource = Resource.RemoteConfiguration )
 @Depends( resources = Resource.Database, local = Component.eucalyptus )
 public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPipelineFactory, EventListener {
-  private static Logger                            LOG  = Logger.getLogger( RemoteBootstrapperClient.class );
-  private ConcurrentMap<String, HeartBeatClient>   heartbeatMap;
+  private static Logger                            LOG    = Logger.getLogger( RemoteBootstrapperClient.class );
+  private ConcurrentMap<String, HeartbeatClient>   heartbeatMap;
   private Multimap<String, ComponentConfiguration> componentMap;
   private NioBootstrap                             clientBootstrap;
   private ChannelFactory                           channelFactory;
-  private static RemoteBootstrapperClient client = new RemoteBootstrapperClient( );
-  
-  public static RemoteBootstrapperClient getInstance() {
+  private static RemoteBootstrapperClient          client = new RemoteBootstrapperClient( );
+
+  public static RemoteBootstrapperClient getInstance( ) {
     return client;
   }
-  
+
   private RemoteBootstrapperClient( ) {
     this.channelFactory = new NioClientSocketChannelFactory( Executors.newCachedThreadPool( ), Executors.newCachedThreadPool( ) );
     this.clientBootstrap = new NioBootstrap( channelFactory );
@@ -138,7 +149,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
     try {
       pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
     } catch ( GeneralSecurityException e ) {
-      LOG.error(e,e);
+      LOG.error( e, e );
     }
     pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
     pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
@@ -187,33 +198,78 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
 
   @Override
   public void fireEvent( Event event ) {
-    if ( event instanceof StartComponentEvent ) {
-      StartComponentEvent s = ( StartComponentEvent ) event;
-      if ( !Component.walrus.equals( s.getComponent( ) ) && !Component.storage.equals( s.getComponent( ) ) ) return;
-      if ( s.isLocal( ) || this.heartbeatMap.containsKey( s.getConfiguration( ).getHostName( ) ) ) return;
-      ComponentConfiguration config = s.getConfiguration( );
-      this.heartbeatMap.put( config.getHostName( ), new HeartBeatClient( this.clientBootstrap, config.getHostName( ), config.getPort( ) ) );
-      this.componentMap.put( config.getHostName( ), config );
-      LOG.info( "-> Registering heartbeat client for host: " + s );
-      for ( HeartBeatClient hb : this.heartbeatMap.values( ) ) {
-        hb.send( this.componentMap.get( hb.getHostName( ) ) );
-      }        
-    } else if ( event instanceof StopComponentEvent ) {
-      StopComponentEvent s = ( StopComponentEvent ) event;
-      if ( !Component.walrus.equals( s.getComponent( ) ) || !Component.storage.equals( s.getComponent( ) ) ) return;
-      if ( s.isLocal( ) || this.heartbeatMap.containsKey( s.getConfiguration( ).getHostName( ) ) ) return;
-      ComponentConfiguration config = s.getConfiguration( );
-      this.componentMap.remove( config.getHostName( ), s.getConfiguration( ) );
-      LOG.info( "-> Removing heartbeat client for host: " + s );
-      if ( this.componentMap.get( config.getHostName( ) ).isEmpty( ) ) {
-        HeartBeatClient hb = this.heartbeatMap.remove( config.getHostName( ) );
-        hb.close( );
+    if ( event instanceof ComponentEvent ) {
+      ComponentEvent e = ( ComponentEvent ) event;
+      if ( !Component.walrus.equals( e.getComponent( ) ) && !Component.storage.equals( e.getComponent( ) ) ) {
+        return;
+      } else {
+        ComponentConfiguration config = e.getConfiguration( );
+        if ( event instanceof StartComponentEvent ) {
+          if ( !e.isLocal( ) ) {
+            this.addRemoteComponent( config );
+          }
+          this.fireRemoteStartEvent( config );
+        } else if ( event instanceof StopComponentEvent ) {
+          if ( event instanceof StartComponentEvent ) {
+            this.fireRemoteStopEvent( config );
+            if ( !e.isLocal( ) ) {
+              this.removeRemoteComponent( config );
+            }
+          }
+        }
       }
     } else if ( event instanceof ClockTick ) {
-      if( ((ClockTick)event).isBackEdge( ) ) {
-        for ( HeartBeatClient hb : this.heartbeatMap.values( ) ) {
+      if ( ( ( ClockTick ) event ).isBackEdge( ) ) {
+        for ( HeartbeatClient hb : this.heartbeatMap.values( ) ) {
           hb.send( this.componentMap.get( hb.getHostName( ) ) );
-        }        
+        }
+      }
+    }
+  }
+
+  private void fireRemoteStartEvent( ComponentConfiguration config ) {
+    for ( HeartbeatClient hb : this.heartbeatMap.values( ) ) {
+      if ( hb.getHostName( ).equals( config.getHostName( ) ) ) {
+        LOG.info( "--> Firing start event on target remote component: " + LogUtil.dumpObject( hb ) );
+        hb.send( this.componentMap.get( hb.getHostName( ) ) );
+      } else {
+        LOG.info( "--> Queueing start event on all other remote components: " + LogUtil.dumpObject( hb ) );
+        hb.addStarted( config );
+      }
+    }
+  }
+
+  private void fireRemoteStopEvent( ComponentConfiguration config ) {
+    for ( HeartbeatClient hb : this.heartbeatMap.values( ) ) {
+      if ( hb.getHostName( ).equals( config.getHostName( ) ) ) {
+        LOG.info( "--> Firing stop event on target remote component: " + LogUtil.dumpObject( hb ) );
+        hb.send( this.componentMap.get( hb.getHostName( ) ) );
+      } else {
+        LOG.info( "--> Queueing start event for next clock tick on all other remote components: " + LogUtil.dumpObject( hb ) );
+        hb.addStarted( config );
+      }
+    }
+  }
+
+  public void addRemoteComponent( ComponentConfiguration config ) {
+    if ( !this.heartbeatMap.containsKey( config.getHostName( ) ) ) {
+      LOG.debug( LogUtil.subheader( "-> Adding remote bootstrapper for host: " + config.getHostName( ) ) );
+      this.heartbeatMap.put( config.getHostName( ), new HeartbeatClient( this.clientBootstrap, config.getHostName( ), config.getPort( ) ) );
+    }
+    if ( !this.componentMap.containsValue( config ) ) {
+      LOG.debug( "-> Adding remote component to the bootstrapper map: " + LogUtil.dumpObject( config ) );
+      this.componentMap.put( config.getHostName( ), config );
+    }
+  }
+
+  public void removeRemoteComponent( ComponentConfiguration config ) {
+    if ( this.componentMap.containsEntry( config.getHostName( ), config ) ) {
+      LOG.debug( "-> Removing remote component bootstrapper: " + LogUtil.dumpObject( config ) );
+      this.componentMap.remove( config.getHostName( ), config );
+      if ( this.componentMap.get( config.getHostName( ) ).isEmpty( ) ) {
+        HeartbeatClient hb = this.heartbeatMap.remove( config.getHostName( ) );
+        hb.close( );
+        LOG.debug( LogUtil.subheader( "-> Removing remote bootstrapper for host: " + config.getHostName( ) ) );
       }
     }
   }

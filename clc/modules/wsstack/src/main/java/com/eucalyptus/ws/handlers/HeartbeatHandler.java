@@ -60,10 +60,10 @@
  *******************************************************************************/
 package com.eucalyptus.ws.handlers;
 
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
+import java.net.URI;
 import java.security.GeneralSecurityException;
 
 import org.apache.log4j.Logger;
@@ -78,17 +78,22 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.BindingException;
@@ -100,6 +105,7 @@ import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
+import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatType;
 
@@ -144,9 +150,42 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
           writeFuture.addListener( ChannelFutureListener.CLOSE );
         } else if ( !initialized ) {
           initialize( ctx, request );
+        } else if ( request.getMessage( ) instanceof HeartbeatType ) {
+          HeartbeatType hb = ( HeartbeatType ) request.getMessage( );
+          for ( ComponentType startedComponent : hb.getStarted( ) ) {
+            Component c = Component.valueOf( startedComponent.getComponent( ) );
+            try {
+              if ( Component.walrus.equals( c ) ) {
+                ComponentConfiguration config = Configuration.getWalrusConfiguration( startedComponent.getName( ) );
+                Configuration.fireStartComponent( config );
+              }
+              if ( Component.storage.equals( c ) ) {
+                ComponentConfiguration config = Configuration.getStorageControllerConfiguration( startedComponent.getName( ) );
+                Configuration.fireStartComponent( config );
+              }
+            } catch ( Exception e1 ) {
+              // potential remote race here, just ignore it
+              // if register/deregister is too fast.
+            }
+          }
+          for ( ComponentType stoppedComponent : hb.getStopped( ) ) {
+            URI uri = new URI( stoppedComponent.getUri( ) );
+            Component c = Component.valueOf( stoppedComponent.getComponent( ) );
+            try {
+              if ( Component.walrus.equals( c ) ) {                
+                Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
+              }
+              if ( Component.storage.equals( c ) ) {
+                Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
+              }
+            } catch ( Exception e1 ) {
+              // potential remote race here, just ignore it
+              // if register/deregister is too fast.
+            }
+          }
         } else {
           ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_ACCEPTABLE ) );
-          writeFuture.addListener( ChannelFutureListener.CLOSE );          
+          writeFuture.addListener( ChannelFutureListener.CLOSE );
         }
       }
     }
@@ -160,10 +199,11 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     Component.eucalyptus.setHostAddress( addr.getHostName( ) );
     Component.cluster.setHostAddress( addr.getHostName( ) );
     Component.jetty.setHostAddress( addr.getHostName( ) );
-    HeartbeatType msg = (HeartbeatType) request.getMessage( );
-    for( HeartbeatComponentType component : msg.getComponents( ) ) {
-      LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ));
-      System.setProperty("euca."+component.getComponent( )+".name", component.getName( ));
+    HeartbeatType msg = ( HeartbeatType ) request.getMessage( );
+    LOG.info( LogUtil.header( "Got heartbeat event: " + LogUtil.dumpObject( msg ) ) );
+    for ( HeartbeatComponentType component : msg.getComponents( ) ) {
+      LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
+      System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
       Component.valueOf( component.getComponent( ) ).markLocal( );
     }
     System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
@@ -204,7 +244,7 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     try {
       pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
     } catch ( GeneralSecurityException e ) {
-      LOG.error(e,e);
+      LOG.error( e, e );
     }
     pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
     pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
@@ -213,7 +253,7 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     } catch ( BindingException e ) {
       LOG.error( e, e );
     }
-    pipeline.addLast( "heartbeat", new HeartbeatHandler( ) );      
+    pipeline.addLast( "heartbeat", new HeartbeatHandler( ) );
   }
 
   @ChannelPipelineCoverage( "one" )
@@ -221,22 +261,24 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
 
     @Override
     public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
-      if( e.getMessage( ) instanceof HttpRequest && HttpMethod.GET.equals( ((HttpRequest)e.getMessage( )).getMethod( ) ) ) {
-        HttpRequest request = (HttpRequest) e.getMessage( );
-        MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
+      if ( e.getMessage( ) instanceof HttpRequest && HttpMethod.GET.equals( ( ( HttpRequest ) e.getMessage( ) ).getMethod( ) ) ) {
+        HttpRequest request = ( HttpRequest ) e.getMessage( );
+        HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
         String resp = "";
-        for( Component c : Component.values( ) ) {
+        for ( Component c : Component.values( ) ) {
           resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s\n", c.name( ), c.isEnabled( ), c.isLocal( ) );
         }
         ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
         response.setContent( buf );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
         response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-        ChannelFuture writeFuture = ctx.getChannel( ).write( response );
+        ChannelFuture writeFuture = Channels.write( ctx.getChannel( ), response );
         writeFuture.addListener( ChannelFutureListener.CLOSE );
+      } else {
+        ctx.sendUpstream( e );
       }
     }
-    
+
   }
 
 }

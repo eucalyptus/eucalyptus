@@ -81,7 +81,9 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
     LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + channelEvent );
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
-      this.outgoingMessage( channelHandlerContext, msgEvent );
+      if( msgEvent.getMessage() != null ) {
+        this.outgoingMessage( channelHandlerContext, msgEvent );
+      }
     }
     channelHandlerContext.sendDownstream( channelEvent );
   }

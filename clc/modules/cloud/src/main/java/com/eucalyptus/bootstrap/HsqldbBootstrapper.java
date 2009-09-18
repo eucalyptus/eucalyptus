@@ -113,6 +113,7 @@ public class HsqldbBootstrapper extends Bootstrapper implements Runnable {
     LOG.trace( "Touching class: " + SslSetup.class );
     this.db = new Server( );
     Component.db.markLocal( );
+    Component.db.markEnabled( );
     Component.db.setHostAddress( "127.0.0.1" );
     System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
     System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );

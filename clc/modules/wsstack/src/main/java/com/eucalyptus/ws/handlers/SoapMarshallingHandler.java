@@ -70,12 +70,15 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamReader;
 
 import org.apache.axiom.soap.SOAP11Constants;
+import org.apache.axiom.soap.SOAP12Constants;
 import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -98,7 +101,14 @@ public class SoapMarshallingHandler extends MessageStackHandler {
       HoldMe.canHas.lock( );
       SOAPEnvelope env = null;
       try {
-        StAXSOAPModelBuilder soapBuilder = new StAXSOAPModelBuilder( HoldMe.getXMLStreamReader( content ), HoldMe.getOMSOAP11Factory( ), SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI );
+        StAXSOAPModelBuilder soapBuilder = null;
+        try {
+          SOAPFactory factory = HoldMe.getOMSOAP11Factory( );
+          soapBuilder = new StAXSOAPModelBuilder( HoldMe.getXMLStreamReader( content ), factory , SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI );
+        } catch ( Exception e ) {
+          SOAPFactory factory = HoldMe.getOMSOAP12Factory( );
+          soapBuilder = new StAXSOAPModelBuilder( HoldMe.getXMLStreamReader( content ), factory , SOAP12Constants.SOAP_ENVELOPE_NAMESPACE_URI );
+        }
         env = ( SOAPEnvelope ) soapBuilder.getDocumentElement( );
       } finally {
         HoldMe.canHas.unlock( );

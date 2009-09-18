@@ -140,7 +140,12 @@ public class NetworkUtil {
 
   public static boolean testGoodAddress( String address ) throws Exception {
     InetAddress addr = InetAddress.getByName( address );
-    return !addr.isAnyLocalAddress( ) && !addr.isLoopbackAddress( ) && !addr.isLinkLocalAddress( ) && !addr.isMulticastAddress( );
+    LOG.debug( addr + " site=" + addr.isSiteLocalAddress( ) );
+    LOG.debug( addr + " any=" + addr.isAnyLocalAddress( ) );
+    LOG.debug( addr + " loop=" + addr.isLoopbackAddress( ) );
+    LOG.debug( addr + " link=" + addr.isLinkLocalAddress( ) );
+    LOG.debug( addr + " multi=" + addr.isMulticastAddress( ) );
+    return addr.isSiteLocalAddress( ) || ( !addr.isAnyLocalAddress( ) && !addr.isLoopbackAddress( ) && !addr.isLinkLocalAddress( ) && !addr.isMulticastAddress( ) );
   }
 
   

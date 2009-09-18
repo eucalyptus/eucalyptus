@@ -11,6 +11,6 @@ public class LogUtil {
   }
 
   public static String dumpObject( Object o ) {
-    return o.dump();
+    return "\n"+o.dump();
   }
 }

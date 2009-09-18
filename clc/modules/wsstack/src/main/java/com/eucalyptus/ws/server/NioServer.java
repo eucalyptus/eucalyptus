@@ -82,6 +82,7 @@ public class NioServer {
 
   public NioServer( int port ) {
     super( );
+    PipelineRegistry.getInstance( ).register( new HeartbeatPipeline( ) );
     PipelineRegistry.getInstance( ).register( new MetadataPipeline( ) );
     PipelineRegistry.getInstance( ).register( new EucalyptusSoapPipeline( ) );
     PipelineRegistry.getInstance( ).register( new ElasticFoxPipeline( ) );
@@ -89,7 +90,6 @@ public class NioServer {
     PipelineRegistry.getInstance( ).register( new WalrusRESTPostPipeline( ) );
     PipelineRegistry.getInstance( ).register( new EucalyptusQueryPipeline( ) );
     PipelineRegistry.getInstance( ).register( new WalrusSoapPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new HeartbeatPipeline( ) );
     RemoteBootstrapperServer server = RemoteBootstrapperServer.getServer( );
     if ( server != null && port == server.getPort( ) ) {
       LOG.info( "Swapping over to full webservices stack." );

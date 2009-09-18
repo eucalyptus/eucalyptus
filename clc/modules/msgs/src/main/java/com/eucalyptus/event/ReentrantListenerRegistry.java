@@ -71,7 +71,12 @@ public class ReentrantListenerRegistry<T> {
       if ( e.isVetoed( ) ) { throw new EventVetoedException( String.format( "Event %s was vetoed by listener %s: %s", LogUtil.dumpObject( e ), LogUtil.dumpObject( ce ), e.getCause( ) != null ? e.getCause( ) : "no cause given" ) ); }
     }
     for ( EventListener ce : listeners ) {
-      LOG.debug( String.format( "Firing event %s on listener %s", LogUtil.dumpObject( e ), LogUtil.dumpObject( ce ) ) );
+      String logString = String.format( "Firing event %s on listener %s", LogUtil.dumpObject( e ), LogUtil.dumpObject( ce ) );
+      if( e instanceof ClockTick ) {
+        LOG.trace( logString );
+      } else {
+        LOG.debug( logString );        
+      }
       ce.fireEvent( e );
       if ( e.getFail( ) != null ) {
         LOG.info( e.getFail( ) );

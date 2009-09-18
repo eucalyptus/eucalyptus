@@ -131,6 +131,8 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
   @Override
   public boolean load( Resource current ) throws Exception {
     LOG.info( "Loading clusters." );
+    Component.cluster.markLocal( );
+    Component.cluster.markEnabled( );
     for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) ) {
       Cluster newCluster = ClusterUtil.createCluster( c );
       this.registerClusterStateHandler( newCluster );

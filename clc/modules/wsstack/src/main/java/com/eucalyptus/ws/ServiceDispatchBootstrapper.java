@@ -136,9 +136,11 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
           if( NetworkUtil.testLocal( w.getHostName( ) )) {
             Component.walrus.markLocal( );
             registerLocalComponent( Component.walrus );
+            break;
           } else {
             Component.walrus.setHostAddress( w.getHostName( ) );
             registerComponent( Component.walrus, w );
+            break;
           }
         } catch ( Exception e ) {
           LOG.error( "Failed to create walrus service proxy: " + e );
@@ -173,11 +175,15 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   }
 
   private void registerLocalComponent( Component component ) throws EventVetoedException {
-    ListenerRegistry.getInstance( ).fireEvent( component, StartComponentEvent.getLocal( component ));
+    ListenerRegistry.getInstance( ).fireEvent( component, StartComponentEvent.getLocal( component ) );
+  }
+
+  private void registerLocalComponent( ComponentConfiguration componentConfiguration ) throws EventVetoedException {
+    ListenerRegistry.getInstance( ).fireEvent( componentConfiguration.getComponent( ), StartComponentEvent.getLocal( componentConfiguration ));
   }
   
   private void registerComponent( Component component, ComponentConfiguration componentConfiguration ) throws Exception {
-    ListenerRegistry.getInstance( ).fireEvent( component, StartComponentEvent.getRemote( componentConfiguration ) );
+    ListenerRegistry.getInstance( ).fireEvent( componentConfiguration.getComponent( ), StartComponentEvent.getRemote( componentConfiguration ) );
   }
 
   @Override

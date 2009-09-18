@@ -129,10 +129,10 @@ public class BindingHandler extends MessageStackHandler {
   public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       MappingHttpMessage httpRequest = ( MappingHttpMessage ) event.getMessage( );
-      if( httpRequest.getMessage( ) instanceof EucalyptusErrorMessageType ) {
+      if( httpRequest.getMessage( ) instanceof EucalyptusErrorMessageType || httpRequest.getMessage( ) == null ) {
         return;
       }
-      Class targetClass = httpRequest.getMessage( ).getClass( );
+       Class targetClass = httpRequest.getMessage( ).getClass( );
       while ( !targetClass.getSimpleName( ).endsWith( "Type" ) )
         targetClass = targetClass.getSuperclass( );
       Class responseClass = Class.forName( targetClass.getName( ) );

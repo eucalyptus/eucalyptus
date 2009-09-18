@@ -171,31 +171,30 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   }
 }
 
-public class LocalConfiguration extends ComponentConfiguration {
-  private Component c;
-  public LocalConfiguration( Component c, String name ) {
-    super( name, "localhost", c.getLocalAddress( ) );//TODO: i have a feeling this will need to change, bad ref to lcoalhost
-  }  
-  public Component getComponent() {
-    return c;
-  }
-  public String getUri() {
-    return c.getLocalAddress( );
-  }
-}
-
-public class RemoteConfiguration extends ComponentConfiguration {
-  private Component c;
-  private URI uri;
-  public RemoteConfiguration( Component c, URI uri ) {
+public class EphemeralConfiguration extends ComponentConfiguration {
+  Component c;
+  URI uri;
+  
+  public EphemeralConfiguration( Component c, URI uri ) {
     super( c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.c = c;
+    this.uri = uri;
   }  
   public Component getComponent() {
     return this.c;
   }
   public String getUri() {
     return this.uri.toASCIIString( );
+  }  
+}
+public class LocalConfiguration extends EphemeralConfiguration {
+  public LocalConfiguration( Component c, URI uri ) {
+    super( c, uri );
+  }  
+}
+public class RemoteConfiguration extends EphemeralConfiguration {
+  public RemoteConfiguration( Component c, URI uri ) {
+    super( c, uri );
   }
 }
 

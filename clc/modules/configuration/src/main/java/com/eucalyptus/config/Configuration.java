@@ -103,8 +103,11 @@ public class Configuration {
     reply.set_return( true );
     boolean isGood;
     try {
-      if( !NetworkUtil.testGoodAddress( request.getHost( ) ) || ( request instanceof RegisterClusterType && !ConfigurationUtil.testClusterCredentialsDirectory( request.getName( ) ) ) ) {
+      if( !NetworkUtil.testGoodAddress( request.getHost( ) ) ) {
         throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );        
+      }
+      if( request instanceof RegisterClusterType && !ConfigurationUtil.testClusterCredentialsDirectory( request.getName( ) ) ) {
+        throw new EucalyptusCloudException( "Cluster registration failed because the key directory cannot be created." );
       }
     } catch ( EucalyptusCloudException e ) {
       throw e;
@@ -143,11 +146,16 @@ public class Configuration {
     if ( request instanceof RegisterClusterType ) {
       ConfigurationUtil.setupClusterCredentials( newComponent );
     }
+    fireStartComponent( newComponent );
+    return reply;
+  }
+
+  public static void fireStartComponent( ComponentConfiguration newComponent ) throws EucalyptusCloudException {
     StartComponentEvent e = null;
     if ( Component.walrus.equals( newComponent.getComponent( ) ) && NetworkUtil.testLocal( newComponent.getHostName( ) ) ) {
-      e = StartComponentEvent.getLocal( newComponent.getComponent( ) );
+      e = StartComponentEvent.getLocal( newComponent );
     } else if ( Component.storage.equals( newComponent.getComponent( ) ) && ( NetworkUtil.testLocal( newComponent.getHostName( ) ) ) ) {
-      e = StartComponentEvent.getLocal( newComponent.getComponent( ) );
+      e = StartComponentEvent.getLocal( newComponent );
     } else {
       e = StartComponentEvent.getRemote( newComponent );
     }
@@ -156,7 +164,6 @@ public class Configuration {
     } catch ( EventVetoedException e1 ) {
       throw new EucalyptusCloudException( e1.getMessage( ), e1 );
     }
-    return reply;
   }
 
   public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
@@ -193,11 +200,16 @@ public class Configuration {
         db.rollback( );
       }
     }
+    fireStopComponent( componentConfig );
+    return reply;
+  }
+
+  public static void fireStopComponent( ComponentConfiguration componentConfig ) throws EucalyptusCloudException {
     StopComponentEvent e = null;
     if ( Component.walrus.equals( componentConfig.getComponent( ) ) && ( Component.walrus.isLocal( ) || NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) ) {
-      e = StopComponentEvent.getLocal( componentConfig.getComponent( ) );
+      e = StopComponentEvent.getLocal( componentConfig );
     } else if ( Component.storage.equals( componentConfig.getComponent( ) ) && ( Component.storage.isLocal( ) || NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) ) {
-      e = StopComponentEvent.getLocal( componentConfig.getComponent( ) );
+      e = StopComponentEvent.getLocal( componentConfig );
     } else {
       e = StopComponentEvent.getRemote( componentConfig );
     }
@@ -206,7 +218,6 @@ public class Configuration {
     } catch ( EventVetoedException e1 ) {
       throw new EucalyptusCloudException( e1.getMessage( ), e1 );
     }
-    return reply;
   }
 
   public DescribeComponentsResponseType listComponents( DescribeComponentsType request ) throws EucalyptusCloudException {
