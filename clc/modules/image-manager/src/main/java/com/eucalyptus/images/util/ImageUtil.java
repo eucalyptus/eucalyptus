@@ -480,4 +480,16 @@ public class ImageUtil {
     return repList;
   }
 
+  public static void cleanDeregistered( ) {
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    try {
+      List<ImageInfo> imgList = db.query( ImageInfo.deregistered( ) );
+      for ( ImageInfo deregImg : imgList ) {
+        try {
+          db.delete( deregImg );
+        } catch ( Throwable e1 ) {}
+      }
+    } catch ( Throwable e1 ) {}
+  }
+
 }

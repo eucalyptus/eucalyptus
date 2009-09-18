@@ -167,6 +167,11 @@ public class ImageManager {
       db.rollback( );
       throw new EucalyptusCloudException( "You do not have permissions to run this image." );
     }
+    if ( "deregistered".equals( diskInfo.getImageState() ) ) {
+      db.delete( diskInfo );
+      db.rollback( );
+      throw new EucalyptusCloudException( "The requested image is deregistered." );
+    }
 
     // :: now its time to determine the ramdisk and kernel info based on: 1)
     // user input, 2) emi specific info, 3) system defaults ::/
@@ -231,19 +236,14 @@ public class ImageManager {
 
   public DescribeImagesResponseType describe( DescribeImagesType request ) throws EucalyptusCloudException {
     DescribeImagesResponseType reply = ( DescribeImagesResponseType ) request.getReply( );
-
-    ArrayList<String> remList = Lists.newArrayList( );
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    ImageUtil.cleanDeregistered( );
     List<ImageInfo> imgList = Lists.newArrayList( );
-    try {
-      imgList = db.query( ImageInfo.deregistered( ) );
-      for ( ImageInfo deregImg : imgList )
-        db.delete( deregImg );
-      db.commit( );
-    } catch ( Throwable e1 ) {
-      db.rollback( );
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    for( String imageId : request.getImagesSet( ) ) {
+      try {
+        imgList.add( db.getUnique( ImageInfo.named( imageId ) ) );
+      } catch ( Throwable e ) {}
     }
-    db = new EntityWrapper<ImageInfo>( );
     UserInfo user = null;
     try {
       user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId( ) ) );
@@ -252,14 +252,12 @@ public class ImageManager {
       db.commit( );
       throw new EucalyptusCloudException( "Failed to find user information for: " + request.getUserId( ), e );
     }
-
     ArrayList<String> imageList = request.getImagesSet( );
     ArrayList<String> owners = request.getOwnersSet( );
     ArrayList<String> executable = request.getExecutableBySet( );
     if ( owners.isEmpty( ) && executable.isEmpty( ) ) {
       executable.add( "self" );
     }
-    
     Set<ImageDetails> repList = Sets.newHashSet( );
     if ( !owners.isEmpty( ) ) {
       repList.addAll( ImageUtil.getImagesByOwner( imgList, user, owners ) );
@@ -268,19 +266,9 @@ public class ImageManager {
       if ( executable.remove( "self" ) ) {
         repList.addAll( ImageUtil.getImageOwnedByUser( imgList, user ) );
       }
-      repList.addAll( ImageUtil.getImagesByExec( user, executable) );
+      repList.addAll( ImageUtil.getImagesByExec( user, executable ) );
     }
-
-    if ( !imageList.isEmpty( ) ) {
-      ArrayList<ImageDetails> newList = Lists.newArrayList( );
-      for ( ImageDetails img : repList ) {
-        if ( imageList.contains( img.getImageId( ) ) ) {
-          newList.add( img );
-        }
-      }
-      reply.setImagesSet( newList );
-    }
-
+    reply.getImagesSet( ).addAll( repList );
     return reply;
   }
 
@@ -301,7 +289,7 @@ public class ImageManager {
       throw new EucalyptusCloudException( "Image registration failed because the manifest referenced is invalid or unavailable." );
     }
     String userName = request.getUserId( );
-    //FIXME: wrap this manifest junk in a helper class.
+    // FIXME: wrap this manifest junk in a helper class.
     Document inputSource = ImageUtil.getManifestDocument( imagePathParts, userName );
     XPath xpath = XPathFactory.newInstance( ).newXPath( );
     String arch = ImageUtil.extractArchitecture( inputSource, xpath );
@@ -348,7 +336,7 @@ public class ImageManager {
     }
     imageInfo.setSignature( signature );
 
-    //FIXME: this is sorely in need of an update and clean up.
+    // FIXME: this is sorely in need of an update and clean up.
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
       db.add( imageInfo );
@@ -423,8 +411,7 @@ public class ImageManager {
       } catch ( EucalyptusCloudException e ) {
         db.commit( );
       }
-    } catch ( NoSuchElementException e ) {
-    }
+    } catch ( NoSuchElementException e ) {}
     return reply;
   }
 

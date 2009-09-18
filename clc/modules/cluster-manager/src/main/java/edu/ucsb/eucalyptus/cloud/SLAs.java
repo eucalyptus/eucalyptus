@@ -97,7 +97,7 @@ public class SLAs {
   public List<ResourceToken> doVmAllocation( VmAllocationInfo vmAllocInfo ) throws FailScriptFailException, NotEnoughResourcesAvailable {
     RunInstancesType request = vmAllocInfo.getRequest( );
     String clusterName = request.getAvailabilityZone( );
-    if ( clusterName != null ) {
+    if ( clusterName != null && !"default".equals( clusterName ) ) {
       try {
         Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
         ClusterNodeState clusterState = cluster.getNodeState( );
