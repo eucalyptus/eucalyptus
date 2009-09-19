@@ -63,25 +63,22 @@ public class HoldMe implements Lock {
   public void unlock( ) {}
 
   public static OMFactory getDOOMFactory( ) {
-    if ( !reuse )
-      return new org.apache.axiom.om.impl.dom.factory.OMDOMFactory( );
-    else return DOOMAbstractFactory.getOMFactory( );
+    if ( reuse ) return DOOMAbstractFactory.getOMFactory( );
+    else return new org.apache.axiom.om.impl.dom.factory.OMDOMFactory( );
   }
 
   public static SOAPFactory getDOOMSOAP11Factory( ) {
-    if ( !reuse )
-      return new org.apache.axiom.soap.impl.dom.soap11.SOAP11Factory( );
-    else return DOOMAbstractFactory.getSOAP11Factory( );
+    if ( reuse ) return DOOMAbstractFactory.getSOAP11Factory( );
+    else return new org.apache.axiom.soap.impl.dom.soap11.SOAP11Factory( );
   }
 
   public static SOAPFactory getDOOMSOAP12Factory( ) {
-    if ( !reuse )
-      return new org.apache.axiom.soap.impl.dom.soap12.SOAP12Factory( );
-    else return DOOMAbstractFactory.getSOAP12Factory( );
+    if ( reuse ) return DOOMAbstractFactory.getSOAP12Factory( );
+    else return new org.apache.axiom.soap.impl.dom.soap12.SOAP12Factory( );
   }
 
   public static SOAPFactory getOMSOAP11Factory( ) {
-    if ( !reuse ) return OMAbstractFactory.getSOAP11Factory( );
+    if ( reuse ) return OMAbstractFactory.getSOAP11Factory( );
     String omFactory;
     try {
       omFactory = System.getProperty( SOAP11_FACTORY_NAME_PROPERTY );
@@ -105,7 +102,7 @@ public class HoldMe implements Lock {
   }
 
   public static SOAPFactory getOMSOAP12Factory( ) {
-    if ( !reuse ) return OMAbstractFactory.getSOAP12Factory( );
+    if ( reuse ) return OMAbstractFactory.getSOAP12Factory( );
     String omFactory;
     try {
       omFactory = System.getProperty( SOAP12_FACTORY_NAME_PROPERTY );
@@ -130,7 +127,7 @@ public class HoldMe implements Lock {
   }
 
   public static OMFactory getOMFactory( ) {
-    if ( !reuse ) return OMAbstractFactory.getOMFactory( );
+    if ( reuse ) return OMAbstractFactory.getOMFactory( );
     String omFactory;
     try {
       omFactory = System.getProperty( OM_FACTORY_NAME_PROPERTY );
@@ -166,13 +163,13 @@ public class HoldMe implements Lock {
   }
 
   public static StAXOMBuilder getStAXOMBuilder( XMLStreamReader parser ) {
-    if ( !reuse ) return new StAXOMBuilder( parser );
-    return new ThrowAwayStAXOMBuilder( parser );
+    if ( reuse ) return new StAXOMBuilder( parser );
+    else return new ThrowAwayStAXOMBuilder( parser );
   }
 
   public static StAXOMBuilder getStAXOMBuilder( OMFactory doomFactory, XMLStreamReader xmlStreamReader ) {
-    if ( !reuse ) return new StAXOMBuilder( doomFactory, xmlStreamReader );
-    return new ThrowAwayStAXOMBuilder( doomFactory, xmlStreamReader );
+    if ( reuse ) return new StAXOMBuilder( doomFactory, xmlStreamReader );
+    else return new ThrowAwayStAXOMBuilder( doomFactory, xmlStreamReader );
   }
 
   public static XMLStreamReader getXMLStreamReader( InputStream in ) throws XMLStreamException {

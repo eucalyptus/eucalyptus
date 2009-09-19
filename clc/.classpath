@@ -104,7 +104,7 @@
 	<classpathentry kind="lib" path="lib/slf4j-api-1.5.2.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.2.jar"/>
 	<classpathentry kind="lib" path="lib/wsdl4j-1.6.2.jar"/>
-	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar"/>
+	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar" sourcepath="/home/decker/temp-eucalyptusjavadeps/eucalyptus-javadeps-0.3.4/src/wss4j-1.5.5"/>
 	<classpathentry kind="lib" path="lib/xalan2.jar"/>
 	<classpathentry kind="lib" path="lib/xercesImpl.jar"/>
 	<classpathentry kind="lib" path="lib/xml-security-1.4.2.jar"/>

@@ -125,7 +125,7 @@ public class EntityWrapper<TYPE> {
 
   @SuppressWarnings( "unchecked" )
   private void exceptionCaught( Throwable e ) {
-    Throwable cause = DebugUtil.checkForCauseOfInterest( e, JDBCConnectionException.class, CannotAcquireResourceException.class, TimeoutException.class );
+    Throwable cause = DebugUtil.checkForCauseOfInterest( e, JDBCConnectionException.class, CannotAcquireResourceException.class, TimeoutException.class, IllegalStateException.class );
     if ( !( cause instanceof ExceptionNotRelatedException ) ) {
       LOG.error( cause, cause );
       DatabaseUtil.handleConnectionError( cause );

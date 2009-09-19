@@ -18,16 +18,6 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   private static Logger                     LOG         = Logger.getLogger( TxHandle.class );
   private static Multimap<String, TxHandle> outstanding = Multimaps.newTreeMultimap( );
 
-  static void printTxStatus( ) {
-    for ( String ctx : outstanding.keySet( ) ) {
-      for ( TxHandle tx : outstanding.get( ctx ) ) {
-        if( tx.isExpired() ) {
-          LOG.error( LogUtil.subheader( "Long outstanding transaction handles for: " + ctx + "\n" + LogUtil.dumpObject( tx ) ) );
-        }
-      }
-    }
-  }
-
   private EntityManager     em;
   private Session           session;
   private EntityTransaction delegate;
@@ -63,15 +53,19 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
     return (splitTime-DatabaseUtil.MAX_OPEN_TIME)>this.startTime.getTimeInMillis( );
   }
   public void rollback( ) {
-    try {
-      if ( this.delegate.isActive( ) ) {
-        this.delegate.rollback( );
+    if( this.em.isOpen( ) ) {
+      try {
+        if ( this.delegate.isActive( ) ) {
+          this.delegate.rollback( );
+        }
+        this.em.close( );
+      } catch ( Throwable e ) {
+        this.em.close( );
+        LOG.error( e, e );
+        throw new RuntimeException( e );
       }
-      this.em.close( );
-    } catch ( Throwable e ) {
-      this.em.close( );
-      LOG.error( e, e );
-      throw new RuntimeException( e );
+    } else {
+      //TODO: trace the stack here.  rollback might be OK for most use cases.
     }
   }
 
@@ -100,13 +94,18 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   }
 
   public void commit( ) {
-    try {
-      this.em.flush( );
-      this.delegate.commit( );
-      this.em.close( );
-    } catch ( Throwable e1 ) {
-      this.em.close( );
-      throw new RuntimeException( e1 );
+    if( this.em.isOpen( ) ) {
+      try {
+        this.em.flush( );
+        this.delegate.commit( );
+        this.em.close( );
+      } catch ( Throwable e1 ) {
+        this.em.close( );
+        throw new RuntimeException( e1 );
+      } 
+    } else {
+      DatabaseUtil.debug( );
+      throw new RuntimeException( "Database is closed already." );
     }
   }
 
@@ -150,4 +149,15 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   public int compareTo( TxHandle o ) {
     return this.startTime.compareTo( o.getStartTime( ) );
   }
+
+  public static void printTxStatus( ) {
+    for ( String ctx : outstanding.keySet( ) ) {
+      for ( TxHandle tx : outstanding.get( ctx ) ) {
+        if( tx.isExpired() ) {
+          LOG.error( LogUtil.subheader( "Long outstanding transaction handle for: " + ctx + "\n" + LogUtil.dumpObject( tx ) ) );
+        }
+      }
+    }
+  }
+
 }
