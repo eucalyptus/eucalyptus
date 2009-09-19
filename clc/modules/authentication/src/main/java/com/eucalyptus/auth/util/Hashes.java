@@ -136,7 +136,7 @@ public class Hashes {
         return MessageDigest.getInstance( this.name( ) );
       } catch ( Exception e ) {
         LOG.error( e, e );
-        System.exit( 3778 );
+        System.exit( -4 );
         return null;
       }
     }
@@ -260,7 +260,7 @@ public class Hashes {
       return hexSig;
     } catch ( Exception e ) {
       LOG.fatal( e, e );
-      System.exit( 1 );
+      System.exit( -5 );
       return null;
     }
   }

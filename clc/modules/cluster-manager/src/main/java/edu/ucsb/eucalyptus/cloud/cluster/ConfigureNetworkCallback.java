@@ -63,21 +63,24 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.msgs.*;
-
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.ws.client.Client;
 import org.apache.log4j.Logger;
 
-class ConfigureNetworkCallback extends QueuedEventCallback<ConfigureNetworkType> {
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.ws.client.Client;
 
+import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
+
+public class ConfigureNetworkCallback extends QueuedEventCallback<ConfigureNetworkType> {
+  public static ConfigureNetworkCallback CALLBACK = new ConfigureNetworkCallback( ); 
   private static Logger LOG = Logger.getLogger( ConfigureNetworkCallback.class );
 
-  public ConfigureNetworkCallback( final ClusterConfiguration clusterConfig ) {
-    super( clusterConfig );
+  public ConfigureNetworkCallback( ) {}
+  public void process( final ConfigureNetworkType msg ) throws Exception {
+    for ( Client c : Clusters.getInstance( ).getClusterClients( ) ) {
+      this.process( c, msg );
+    }
   }
   public void process( final Client clusterClient, final ConfigureNetworkType msg ) throws Exception {
-    LOG.info( "Sending networking rules for: " + msg.getUserId() + ":" + msg.getRules() );
     clusterClient.send( msg );
   }
 

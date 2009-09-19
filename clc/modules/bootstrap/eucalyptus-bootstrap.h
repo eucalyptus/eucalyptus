@@ -69,6 +69,7 @@ static int debug = 0;
 #define EUCA_ETC_DIR "/etc/eucalyptus/cloud.d"
 
 #define EUCA_MAIN "com/eucalyptus/bootstrap/SystemBootstrapper"
+#define EUCA_RET_RELOAD 123
 
 typedef struct {
 	char* method_name;

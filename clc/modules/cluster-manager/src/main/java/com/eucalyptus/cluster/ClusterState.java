@@ -64,6 +64,7 @@
 package com.eucalyptus.cluster;
 
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.log4j.Logger;
@@ -71,12 +72,13 @@ import org.apache.log4j.Logger;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
+import edu.ucsb.eucalyptus.cloud.cluster.Networks;
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
 
 public class ClusterState {
   private static Logger LOG = Logger.getLogger( ClusterState.class );
   private String clusterName;
-  private NavigableSet<Integer> availableVlans;
+  private static NavigableSet<Integer> availableVlans;
   private Integer mode = 1;
   private Integer addressCapacity;
   
@@ -89,21 +91,41 @@ public class ClusterState {
 
   public NetworkToken extantAllocation( String userName, String networkName, int vlan ) throws NetworkAlreadyExistsException {
     NetworkToken netToken = new NetworkToken( this.clusterName, userName, networkName, vlan );
-    if ( !this.availableVlans.remove( vlan ) ) {
+    if ( !ClusterState.availableVlans.remove( vlan ) ) {
       throw new NetworkAlreadyExistsException();
     }
     return netToken;
   }
 
   public NetworkToken getNetworkAllocation( String userName, String networkName ) throws NotEnoughResourcesAvailable {
-    Integer vlan = this.availableVlans.pollFirst();
+    //FIXME: hack hack.  
+    try {
+      Network existingNet = Networks.getInstance( ).lookup( networkName );
+      if( existingNet.getNetworkTokens( ).size( ) > 0 ) {
+        NetworkToken token = new NetworkToken( clusterName, userName, networkName, existingNet.getNetworkTokens( ).get( 0 ).getVlan( ) );
+        return token;        
+      }
+    } catch ( NoSuchElementException e ) {
+    }
+    return ClusterState.getNetworkAllocation( userName, clusterName, networkName );
+  }
+  
+  public static NetworkToken getNetworkAllocation( String userName, String clusterName, String networkName ) throws NotEnoughResourcesAvailable {
+    Integer vlan = ClusterState.availableVlans.pollFirst();
     if( vlan == null ) throw new NotEnoughResourcesAvailable( "Not enough resources available: vlan tags" );
-    NetworkToken token = new NetworkToken( this.clusterName, userName, networkName, vlan );
+    NetworkToken token = new NetworkToken( clusterName, userName, networkName, vlan );
     return token;
   }
 
   public void releaseNetworkAllocation( NetworkToken token ) {
-    this.availableVlans.add( token.getVlan() );
+    try {
+      Network existingNet = Networks.getInstance( ).lookup( token.getName( ) );
+      if( existingNet.getNetworkTokens( ).size( ) > 1 ) {
+        return;
+      }
+    } catch ( NoSuchElementException e ) {
+    }
+    ClusterState.availableVlans.add( token.getVlan() );
   }
 
 

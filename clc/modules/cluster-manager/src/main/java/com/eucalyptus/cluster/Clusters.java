@@ -63,16 +63,24 @@
  */
 package com.eucalyptus.cluster;
 
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.ws.client.Client;
+import com.eucalyptus.ws.client.NioClient;
+import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
+import com.eucalyptus.ws.handlers.NioResponseHandler;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {
   private static Clusters singleton = getInstance( );
-
+  private static Logger LOG = Logger.getLogger( Clusters.class );
   public static Clusters getInstance( ) {
     synchronized ( Clusters.class ) {
       if ( singleton == null ) singleton = new Clusters( );
@@ -94,4 +102,16 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return list;
   }
 
+  public List<Client> getClusterClients() {
+    List<Client> clients = Lists.newArrayList( );
+    for( Cluster c : this.listValues( ) ) {
+      try {
+        clients.add( new NioClient( c.getConfiguration( ).getHostName(), c.getConfiguration( ).getPort(), c.getConfiguration( ).getServicePath(), new ClusterClientPipeline( new NioResponseHandler() ) ) );
+      } catch ( Throwable t ) {
+        LOG.error( "Failed to create a client for cluster: " + c , t );
+      }
+    }
+    return clients;
+  }
+  
 }

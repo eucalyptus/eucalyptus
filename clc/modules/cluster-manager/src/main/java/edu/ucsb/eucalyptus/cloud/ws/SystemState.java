@@ -388,7 +388,7 @@ public class SystemState {
   private static void dispatchStopNetwork( NetworkToken token ) {
     LOG.debug( "Dispatching stopNetwork for " + token.getName() + " on cluster " + token.getCluster() );
     ClusterConfiguration config = Clusters.getInstance( ).lookup( token.getCluster( ) ).getConfiguration( );
-    QueuedEvent<StopNetworkType> event = QueuedEvent.make( new StopNetworkCallback( config, token ),
+    QueuedEvent<StopNetworkType> event = QueuedEvent.make( new StopNetworkCallback( token ),
                                                            Admin.makeMsg( StopNetworkType.class, token.getUserName(), token.getNetworkName(), token.getVlan() ) );
     Clusters.getInstance().lookup( token.getCluster() ).getMessageQueue().enqueue( event );
   }

@@ -79,7 +79,14 @@ import edu.emory.mathcs.backport.java.util.Arrays;
 public class SystemBootstrapper {
   private static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );
   private static SystemBootstrapper singleton;
-
+  private static ThreadGroup singletonGroup;
+  private static DatabaseBootstrapper singletonDb;
+  public static DatabaseBootstrapper getDatabaseBootstrapper() {
+    return singletonDb;
+  }
+  public static void setDatabaseBootstrapper( DatabaseBootstrapper dbBootstrapper ) {
+    singletonDb = dbBootstrapper;
+  } 
   public static SystemBootstrapper getInstance( ) {
     synchronized ( SystemBootstrapper.class ) {
       if ( singleton == null ) {
@@ -91,7 +98,26 @@ public class SystemBootstrapper {
     }
     return singleton;
   }
-
+  public static ThreadGroup getThreadGroup() {
+    synchronized ( SystemBootstrapper.class ) {
+      if ( singletonGroup == null ) {
+        singletonGroup = new EucalyptusThreadGroup( );
+        LOG.info( "Creating Bootstrapper instance." );
+      } else {
+        LOG.info( "Returning Bootstrapper instance." );
+      }
+    }
+    return singletonGroup;
+  }
+  public static Thread makeSystemThread( Runnable r ) {
+    return new Thread( getThreadGroup( ), r );
+  }
+  static class EucalyptusThreadGroup extends ThreadGroup {
+    EucalyptusThreadGroup( ) {
+      super( "Eucalyptus" );
+    }    
+  }
+  
   public SystemBootstrapper( ) {
   }
 
@@ -168,12 +194,13 @@ public class SystemBootstrapper {
             boolean result = b.start( );
           } catch ( Exception e ) {
             LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
-            return false;
+            System.exit( 123 );
           }
         }
       }
     } catch ( Throwable e ) {
       LOG.info( e, e );
+      System.exit( 123 );
     }
     return true;
   }

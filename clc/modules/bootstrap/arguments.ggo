@@ -9,6 +9,7 @@ option "walrus-host"       w   "Hostname/Address for Walrus."   string  typestr=
 option "define"       D   "Set system properties."   string  optional  multiple
 option "verbose"       v   "Verbose bootstrapper output. Note: This only controls the level of output from the native bootstrapper."   flag   off
 option "log-level"       l   "Control the log level for console output."   string  typestr="filename"  default="INFO" no
+option "log-appender"       L   "Control the destination for console output."   string  typestr="log4j-appender-name"  default="console-log" no
 option "out"       o   "Redirect standard out to file."   string  typestr="filename"  default="&1" no
 option "err"       e   "Redirect standard error to file."   string  typestr="filename"  default="&2" no
 

@@ -63,14 +63,22 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -85,25 +93,18 @@ import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
+import edu.ucsb.eucalyptus.msgs.StopNetworkType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 import edu.ucsb.eucalyptus.util.Admin;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
-import org.apache.log4j.Logger;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-class ClusterAllocator extends Thread {
+public class ClusterAllocator extends Thread {
 
   private static Logger LOG = Logger.getLogger( ClusterAllocator.class );
 
   private State state;
   private AtomicBoolean rollback;
-  protected Multimap<State, QueuedEvent> msgMap;
+  Multimap<State, QueuedEvent> msgMap;
   private Cluster cluster;
   private ConcurrentLinkedQueue<QueuedEvent> pendingEvents;
   private VmAllocationInfo vmAllocInfo;
@@ -115,6 +116,7 @@ class ClusterAllocator extends Thread {
     this.cluster = Clusters.getInstance().lookup( vmToken.getCluster() );
     this.state = State.START;
     this.rollback = new AtomicBoolean( false );
+    Lists.newArrayList( );
     for ( NetworkToken networkToken : vmToken.getNetworkTokens() )
       this.setupNetworkMessages( networkToken );
     this.setupVmMessages( vmToken );
@@ -149,31 +151,34 @@ class ClusterAllocator extends Thread {
 
   }
 
+  @SuppressWarnings( "unchecked" )
   public void setupNetworkMessages( NetworkToken networkToken ) {
     if ( networkToken != null ) {
       StartNetworkType msg = new StartNetworkType( this.vmAllocInfo.getRequest(), networkToken.getVlan(), networkToken.getNetworkName() );
-      msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
-      StartNetworkCallback callback = new StartNetworkCallback( this.cluster.getConfiguration( ), this, networkToken );
-      QueuedEvent<StartNetworkType> event = new QueuedEvent<StartNetworkType>( callback, msg );
-      this.msgMap.put( State.CREATE_NETWORK, event );
+      //FIXME: this needs to get sent to every cluster.
+      this.msgMap.put( State.CREATE_NETWORK, new QueuedEvent<StartNetworkType>( new StartNetworkCallback( this, networkToken ), msg ) );
+      this.msgMap.put( State.ROLLBACK, new QueuedEvent<StopNetworkType>( new StopNetworkCallback( networkToken ), new StopNetworkType( msg ) ) );
     }
     try {
+      RunInstancesType request = this.vmAllocInfo.getRequest();
       Network network = Networks.getInstance().lookup( networkToken.getName() );
-      LOG.warn( "Setting up rules for: " + network.getName() );
+      LOG.info( "Setting up rules for: " + network.getName() );
       LOG.debug( network );
+      ConfigureNetworkType msg = new ConfigureNetworkType( network.getRules() );
+      msg.setUserId( networkToken.getUserName( ) );
+      msg.setEffectiveUserId( networkToken.getUserName( ) );
       if ( !network.getRules().isEmpty() ) {
-        QueuedEvent event = new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(this.cluster.getConfiguration( )), new ConfigureNetworkType( this.vmAllocInfo.getRequest(), network.getRules() ) );
-        this.msgMap.put( State.CREATE_NETWORK_RULES, event );
+        this.msgMap.put( State.CREATE_NETWORK_RULES, new QueuedEvent( ConfigureNetworkCallback.CALLBACK, msg ) );
       }
       //:: need to refresh the rules on the backend for all active networks which point to this network :://
       for( Network otherNetwork : Networks.getInstance().listValues() ) {
         if( otherNetwork.isPeer( network.getUserName(), network.getNetworkName() ) ) {
           LOG.warn( "Need to refresh rules for incoming named network ingress on: " + otherNetwork.getName() );
           LOG.debug( otherNetwork );
-          ConfigureNetworkType msg = new ConfigureNetworkType( otherNetwork.getRules() );
-          msg.setUserId( otherNetwork.getUserName() );
-          msg.setEffectiveUserId( Component.eucalyptus.name() );
-          this.msgMap.put( State.CREATE_NETWORK_RULES, new QueuedEvent<ConfigureNetworkType>( new ConfigureNetworkCallback(this.cluster.getConfiguration( )), msg ) );
+          ConfigureNetworkType omsg = new ConfigureNetworkType( otherNetwork.getRules() );
+          omsg.setUserId( otherNetwork.getUserName() );
+          omsg.setEffectiveUserId( Component.eucalyptus.name() );
+          this.msgMap.put( State.CREATE_NETWORK_RULES, new QueuedEvent<ConfigureNetworkType>( ConfigureNetworkCallback.CALLBACK, omsg ) );
         }
       }
     } catch ( NoSuchElementException e ) {}/* just added this network, shouldn't happen, if so just smile and nod */
@@ -266,14 +271,13 @@ class ClusterAllocator extends Thread {
   }
 
   enum State {
-
     START,
     CREATE_NETWORK,
     CREATE_NETWORK_RULES,
     CREATE_VMS,
     ASSIGN_ADDRESSES,
     FINISHED,
-    ROLLBACK
+    ROLLBACK;
   }
 
 }

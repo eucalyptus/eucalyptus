@@ -39,6 +39,7 @@ const char *eucalyptus_opts_full_help[] = {
   "  -D, --define=STRING           Set system properties.",
   "  -v, --verbose                 Verbose bootstrapper output. Note: This only \n                                  controls the level of output from the native \n                                  bootstrapper.  (default=off)",
   "  -l, --log-level=filename      Control the log level for console output.  \n                                  (default=`INFO')",
+  "  -L, --log-appender=log4j-appender-name\n                                Control the destination for console output.  \n                                  (default=`console-log')",
   "  -o, --out=filename            Redirect standard out to file.  (default=`&1')",
   "  -e, --err=filename            Redirect standard error to file.  \n                                  (default=`&2')",
   "\nRemote Services:",
@@ -106,11 +107,12 @@ init_help_array(void)
   eucalyptus_opts_help[32] = eucalyptus_opts_full_help[32];
   eucalyptus_opts_help[33] = eucalyptus_opts_full_help[33];
   eucalyptus_opts_help[34] = eucalyptus_opts_full_help[34];
-  eucalyptus_opts_help[35] = 0; 
+  eucalyptus_opts_help[35] = eucalyptus_opts_full_help[35];
+  eucalyptus_opts_help[36] = 0; 
   
 }
 
-const char *eucalyptus_opts_help[36];
+const char *eucalyptus_opts_help[37];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -146,6 +148,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->define_given = 0 ;
   args_info->verbose_given = 0 ;
   args_info->log_level_given = 0 ;
+  args_info->log_appender_given = 0 ;
   args_info->out_given = 0 ;
   args_info->err_given = 0 ;
   args_info->remote_cloud_given = 0 ;
@@ -186,6 +189,8 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->verbose_flag = 0;
   args_info->log_level_arg = gengetopt_strdup ("INFO");
   args_info->log_level_orig = NULL;
+  args_info->log_appender_arg = gengetopt_strdup ("console-log");
+  args_info->log_appender_orig = NULL;
   args_info->out_arg = gengetopt_strdup ("&1");
   args_info->out_orig = NULL;
   args_info->err_arg = gengetopt_strdup ("&2");
@@ -236,30 +241,31 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->define_max = 0;
   args_info->verbose_help = eucalyptus_opts_full_help[9] ;
   args_info->log_level_help = eucalyptus_opts_full_help[10] ;
-  args_info->out_help = eucalyptus_opts_full_help[11] ;
-  args_info->err_help = eucalyptus_opts_full_help[12] ;
-  args_info->remote_cloud_help = eucalyptus_opts_full_help[14] ;
-  args_info->remote_walrus_help = eucalyptus_opts_full_help[15] ;
-  args_info->remote_dns_help = eucalyptus_opts_full_help[16] ;
-  args_info->remote_storage_help = eucalyptus_opts_full_help[17] ;
-  args_info->disable_cloud_help = eucalyptus_opts_full_help[19] ;
-  args_info->disable_walrus_help = eucalyptus_opts_full_help[20] ;
-  args_info->disable_dns_help = eucalyptus_opts_full_help[21] ;
-  args_info->disable_storage_help = eucalyptus_opts_full_help[22] ;
-  args_info->check_help = eucalyptus_opts_full_help[24] ;
-  args_info->stop_help = eucalyptus_opts_full_help[25] ;
-  args_info->fork_help = eucalyptus_opts_full_help[26] ;
-  args_info->pidfile_help = eucalyptus_opts_full_help[27] ;
-  args_info->java_home_help = eucalyptus_opts_full_help[29] ;
-  args_info->jvm_name_help = eucalyptus_opts_full_help[30] ;
-  args_info->jvm_args_help = eucalyptus_opts_full_help[31] ;
+  args_info->log_appender_help = eucalyptus_opts_full_help[11] ;
+  args_info->out_help = eucalyptus_opts_full_help[12] ;
+  args_info->err_help = eucalyptus_opts_full_help[13] ;
+  args_info->remote_cloud_help = eucalyptus_opts_full_help[15] ;
+  args_info->remote_walrus_help = eucalyptus_opts_full_help[16] ;
+  args_info->remote_dns_help = eucalyptus_opts_full_help[17] ;
+  args_info->remote_storage_help = eucalyptus_opts_full_help[18] ;
+  args_info->disable_cloud_help = eucalyptus_opts_full_help[20] ;
+  args_info->disable_walrus_help = eucalyptus_opts_full_help[21] ;
+  args_info->disable_dns_help = eucalyptus_opts_full_help[22] ;
+  args_info->disable_storage_help = eucalyptus_opts_full_help[23] ;
+  args_info->check_help = eucalyptus_opts_full_help[25] ;
+  args_info->stop_help = eucalyptus_opts_full_help[26] ;
+  args_info->fork_help = eucalyptus_opts_full_help[27] ;
+  args_info->pidfile_help = eucalyptus_opts_full_help[28] ;
+  args_info->java_home_help = eucalyptus_opts_full_help[30] ;
+  args_info->jvm_name_help = eucalyptus_opts_full_help[31] ;
+  args_info->jvm_args_help = eucalyptus_opts_full_help[32] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->debug_help = eucalyptus_opts_full_help[32] ;
-  args_info->debug_port_help = eucalyptus_opts_full_help[33] ;
-  args_info->debug_suspend_help = eucalyptus_opts_full_help[34] ;
-  args_info->profile_help = eucalyptus_opts_full_help[35] ;
-  args_info->profiler_home_help = eucalyptus_opts_full_help[36] ;
+  args_info->debug_help = eucalyptus_opts_full_help[33] ;
+  args_info->debug_port_help = eucalyptus_opts_full_help[34] ;
+  args_info->debug_suspend_help = eucalyptus_opts_full_help[35] ;
+  args_info->profile_help = eucalyptus_opts_full_help[36] ;
+  args_info->profiler_home_help = eucalyptus_opts_full_help[37] ;
   
 }
 
@@ -402,6 +408,8 @@ arguments_release (struct eucalyptus_opts *args_info)
   free_multiple_string_field (args_info->define_given, &(args_info->define_arg), &(args_info->define_orig));
   free_string_field (&(args_info->log_level_arg));
   free_string_field (&(args_info->log_level_orig));
+  free_string_field (&(args_info->log_appender_arg));
+  free_string_field (&(args_info->log_appender_orig));
   free_string_field (&(args_info->out_arg));
   free_string_field (&(args_info->out_orig));
   free_string_field (&(args_info->err_arg));
@@ -472,6 +480,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "verbose", 0, 0 );
   if (args_info->log_level_given)
     write_into_file(outfile, "log-level", args_info->log_level_orig, 0);
+  if (args_info->log_appender_given)
+    write_into_file(outfile, "log-appender", args_info->log_appender_orig, 0);
   if (args_info->out_given)
     write_into_file(outfile, "out", args_info->out_orig, 0);
   if (args_info->err_given)
@@ -1082,6 +1092,7 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { "define",	1, NULL, 'D' },
         { "verbose",	0, NULL, 'v' },
         { "log-level",	1, NULL, 'l' },
+        { "log-appender",	1, NULL, 'L' },
         { "out",	1, NULL, 'o' },
         { "err",	1, NULL, 'e' },
         { "remote-cloud",	0, NULL, 0 },
@@ -1107,7 +1118,7 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { NULL,	0, NULL, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vu:h:c:w:D:vl:o:e:CSfj:J:X:dpP:", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:c:w:D:vl:L:o:e:CSfj:J:X:dpP:", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -1193,6 +1204,18 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
               &(local_args_info.log_level_given), optarg, 0, "INFO", ARG_STRING,
               check_ambiguity, override, 0, 0,
               "log-level", 'l',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'L':	/* Control the destination for console output..  */
+        
+        
+          if (update_arg( (void *)&(args_info->log_appender_arg), 
+               &(args_info->log_appender_orig), &(args_info->log_appender_given),
+              &(local_args_info.log_appender_given), optarg, 0, "console-log", ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "log-appender", 'L',
               additional_error))
             goto failure;
         

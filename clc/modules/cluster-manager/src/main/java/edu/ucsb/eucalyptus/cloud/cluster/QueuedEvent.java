@@ -84,7 +84,7 @@ public class QueuedEvent<TYPE> {
   public QueuedEventCallback getCallback( ) {
     return callback;
   }
-
+  
   public TYPE getEvent( ) {
     return event;
   }

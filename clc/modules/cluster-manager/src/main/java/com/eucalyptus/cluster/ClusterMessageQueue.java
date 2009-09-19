@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.cluster;
 
+import java.security.GeneralSecurityException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -78,7 +79,12 @@ import com.eucalyptus.ws.client.pipeline.LogClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedLogEvent;
+import edu.ucsb.eucalyptus.cloud.cluster.StartNetworkCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.StopNetworkCallback;
+
+import edu.ucsb.eucalyptus.cloud.cluster.ConfigureNetworkCallback;
 
 public class ClusterMessageQueue implements Runnable {
 
@@ -96,6 +102,7 @@ public class ClusterMessageQueue implements Runnable {
     this.finished = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedEvent>( messageQueueSize );
   }
+  
 
   public void enqueue( QueuedEvent event ) {
     LOG.debug( "Queued message of type " + event.getCallback().getClass().getSimpleName() + " for cluster " + this.parent.getName( ) );
@@ -126,11 +133,19 @@ public class ClusterMessageQueue implements Runnable {
           LOG.trace( "Dequeued message of type " + event.getCallback().getClass().getSimpleName() );
           long msgStart = System.currentTimeMillis();
           try {
-            Client nioClient = new NioClient( parent.getHostName(), parent.getPort(), parent.getServicePath(),
-                                              event instanceof QueuedLogEvent ? new LogClientPipeline( new NioResponseHandler() ) : new ClusterClientPipeline( new NioResponseHandler() ) );
-            event.trigger( nioClient );
+            QueuedEventCallback q = event.getCallback( );
+            if( q instanceof StartNetworkCallback 
+                || q instanceof StopNetworkCallback 
+                || q instanceof ConfigureNetworkCallback ) {
+              event.getCallback( ).process( event.getEvent( ) );
+            } else {
+              Client nioClient = new NioClient( parent.getHostName(), parent.getPort(), parent.getServicePath(),
+                                                event instanceof QueuedLogEvent ? new LogClientPipeline( new NioResponseHandler() ) : new ClusterClientPipeline( new NioResponseHandler() ) );
+              event.trigger( nioClient );
+            }
           } catch ( Exception e ) {
             LOG.error( e );
+            LOG.debug( e, e );
           } finally {
             event.getCallback().notifyHandler();
           }

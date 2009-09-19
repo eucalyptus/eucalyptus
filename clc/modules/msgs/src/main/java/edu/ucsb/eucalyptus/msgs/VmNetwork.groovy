@@ -68,14 +68,7 @@ public class StartNetworkType extends EucalyptusMessage {
   int vlan;
   String netName;
   String nameserver;
-  ArrayList<String> clusterControllers;
-
-  def StartNetworkType(final msg, final vlan, final netName) {
-    super(msg);
-    this.vlan = vlan;
-    this.netName = netName;
-  }
-
+  ArrayList<String> clusterControllers = new ArrayList<String>();
 
 
   def StartNetworkType(final EucalyptusMessage msg, final Integer vlan, final String netName)
@@ -85,7 +78,8 @@ public class StartNetworkType extends EucalyptusMessage {
     this.netName = netName;
   }
 
-  def StartNetworkType(){}
+  def StartNetworkType(){
+    }
 
   def StartNetworkType(final Integer vlan, final String netName)
   {
@@ -124,7 +118,7 @@ public class StopNetworkResponseType extends EucalyptusMessage {
 
 public class DescribeNetworksType extends EucalyptusMessage {
   String nameserver;
-  ArrayList<String> clusterControllers;
+  ArrayList<String> clusterControllers = new ArrayList<String>();
 }
 
 public class DescribeNetworksResponseType extends EucalyptusMessage {
@@ -198,8 +192,8 @@ public class UnassignAddressResponseType extends EucalyptusMessage {
 public class DescribePublicAddressesType extends EucalyptusMessage {
 }
 public class DescribePublicAddressesResponseType extends EucalyptusMessage {
-  ArrayList<String> addresses;
-  ArrayList<String> mapping;
+  ArrayList<String> addresses = new ArrayList<String>();
+  ArrayList<String> mapping = new ArrayList<String>();
 }
 
 public class ConfigureNetworkType extends EucalyptusMessage {

@@ -138,7 +138,7 @@ public class KeyTool {
       return cert;
     } catch ( Exception e ) {
       LOG.fatal( e, e );
-      System.exit( 1 );
+      System.exit( -3 );
       return null;
     }
   }

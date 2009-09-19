@@ -70,7 +70,7 @@ public class SslSetup {
         }
       } catch ( KeyStoreException e ) {
         LOG.error( e, e );
-        System.exit( 1 );
+        System.exit( 123 );
         return null;
       }
     }

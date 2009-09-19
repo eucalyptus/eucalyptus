@@ -63,21 +63,116 @@
  */
 package com.eucalyptus.bootstrap;
 
-public class DatabaseConfig {
-  public static final String EUCA_DB_PORT = "euca.db.port";
-  public static final String EUCA_DB_PASSWORD = "euca.db.password";
-  public static final String EUCA_DB_HOST = "euca.db.host";
-  static {
-    if( !System.getProperties( ).contains( EUCA_DB_HOST ) ) System.setProperty( EUCA_DB_HOST, "127.0.0.1" );
-    if( !System.getProperties( ).contains( EUCA_DB_PORT ) ) System.setProperty( EUCA_DB_PORT, "9001" );
-    if( !System.getProperties( ).contains( EUCA_DB_PASSWORD ) )System.setProperty( EUCA_DB_PASSWORD, "" );
-  }
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Properties;
 
-  private static String DEFAULT = "CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" + 
-  		"CREATE USER SA PASSWORD \"eucalyptus\"\n" + 
-  		"GRANT DBA TO SA\n" + 
-  		"SET WRITE_DELAY 10 MILLIS";
-  private String name;
-  private String fileName;
+import org.apache.log4j.Logger;
+import org.hsqldb.ServerConstants;
+
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.SubDirectory;
+
+public class DatabaseConfig {
+  private static String DEFAULT = 
+    "CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" + 
+    "CREATE USER SA PASSWORD \"" + System.getProperty( "euca.db.password" ) + "\"\n" + 
+    "GRANT DBA TO SA\n" + 
+    "SET WRITE_DELAY 100 MILLIS\n" + 
+    "SET SCHEMA PUBLIC\n";
+  static {
+    if( !System.getProperties( ).contains( PropertyKey.HOST ) ) System.setProperty( PropertyKey.HOST.toString( ), "127.0.0.1" );
+    if( !System.getProperties( ).contains( PropertyKey.PORT ) ) System.setProperty( PropertyKey.PORT.toString( ), "9001" );
+    if( !System.getProperties( ).contains( PropertyKey.PASSWORD ) )System.setProperty( PropertyKey.PASSWORD.toString( ), "" );
+  }
+  private static DatabaseConfig singleton = new DatabaseConfig();
+  private static Logger LOG = Logger.getLogger( DatabaseConfig.Internal.class );
+  public static DatabaseConfig getInstance() {
+    return singleton;
+  }
+  public static void setInstance( DatabaseConfig dbConfig ) {
+    singleton = dbConfig;
+  }
+  
+  enum Internal {
+    general,images,auth,config,walrus,storage,dns;
+    public void prepareDatabase( ) throws IOException {
+      File dbFile = new File( SubDirectory.DB.toString( ) + File.separator + this.getDatabaseName( ) );
+      if ( !dbFile.exists( ) ) {
+        FileWriter dbOut = new FileWriter( dbFile );
+        dbOut.write( DEFAULT );
+        dbOut.flush( );
+        dbOut.close( );
+      }
+    }
+    public String getDatabaseName() {
+      return Component.eucalyptus.name( ) + "_" + this.name();
+    }
+    public Properties getProperties() {
+      Properties props = new Properties( );
+      props.setProperty( ServerConstants.SC_KEY_DATABASE + "." + this.ordinal( ), SubDirectory.DB.toString( ) + File.separator + this.getDatabaseName( ) );
+      props.setProperty( ServerConstants.SC_KEY_DBNAME + "."+ this.ordinal( ), this.getDatabaseName( ) );
+      return props;
+    }
+  }
+  
+  public static void initialize() throws IOException {
+    Component.db.markLocal( );
+    Component.db.markEnabled( );
+    Component.db.setHostAddress( "127.0.0.1" );
+    System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
+    LOG.info( LogUtil.header( "Setting up database: " ) );
+    System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
+    for( Internal dbName : Internal.values( ) ) {
+      LOG.info( dbName.getProperties( ) );
+      dbName.prepareDatabase( );
+    }
+  }
+  
+  public static Properties getProperties() {
+    Properties props = new Properties( );
+    props.setProperty( ServerConstants.SC_KEY_NO_SYSTEM_EXIT, Boolean.TRUE.toString( ) );
+    props.setProperty( ServerConstants.SC_KEY_PORT, "9001" );
+    props.setProperty( ServerConstants.SC_KEY_REMOTE_OPEN_DB, Boolean.TRUE.toString( ) );
+    // props.setProperty( ServerConstants.SC_KEY_TLS, Boolean.TRUE );
+    for ( DatabaseConfig.Internal i : DatabaseConfig.Internal.values( ) ) {
+      props.putAll( i.getProperties( ) );
+    }
+    return props;
+  }
+  
+  enum PropertyKey {
+    HOST("euca.db.host"),URL("euca.db.url"),PORT("euca.db.port"),PASSWORD("euca.db.password");
+    private String property;
+
+    private PropertyKey( String property ) {
+      this.property = property;
+    }
+    @Override
+    public String toString() {
+      return this.property;
+    }    
+  }
+  
+
   //TODO: handle persistence.xml issues here
+  /*
+   * hsqldb.script_format=0
+   * runtime.gc_interval=0
+   * sql.enforce_strict_size=false
+   * hsqldb.cache_size_scale=8
+   * readonly=false
+   * hsqldb.nio_data_file=true
+   * hsqldb.cache_scale=14
+   * version=1.8.0
+   * hsqldb.default_table_type=memory
+   * hsqldb.cache_file_scale=1
+   * hsqldb.log_size=200
+   * modified=yes
+   * hsqldb.cache_version=1.7.0
+   * hsqldb.original_version=1.8.0
+   * hsqldb.compatible_version=1.8.0
+   */
 }

@@ -22,7 +22,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
         timer = new Timer("SystemClockTimer");
         clock = new SystemClock();
         ListenerRegistry.getInstance( ).register( ClockTick.class, new Dummy() );
-        timer.scheduleAtFixedRate( clock, 0, 3000 );
+        timer.scheduleAtFixedRate( clock, 3000, 3000 );
       }
     }
   }
@@ -43,14 +43,13 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     @Override
     public void advertiseEvent( Event event ) {}
     @Override
-    public void fireEvent( Event event ) {
-      LOG.debug( "-> Timer tick." );
-    }
+    public void fireEvent( Event event ) {}
   }
 
   @Override
   public void uncaughtException( Thread t, Throwable e ) {
-    LOG.error( e, e );
+    LOG.fatal( e, e );
+    System.exit( -2 );
   }
   
 }

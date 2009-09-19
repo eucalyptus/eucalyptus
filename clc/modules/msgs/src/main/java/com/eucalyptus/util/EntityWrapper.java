@@ -66,49 +66,25 @@
  */
 package com.eucalyptus.util;
 
+import java.util.List;
+
+import javax.persistence.EntityManager;
+
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
-import org.hibernate.criterion.*;
-import org.hibernate.ejb.EntityManagerFactoryImpl;
-import org.hibernate.exception.GenericJDBCException;
+import org.hibernate.criterion.Example;
+import org.hibernate.criterion.MatchMode;
+import org.hibernate.exception.JDBCConnectionException;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.mchange.v2.c3p0.C3P0Registry;
-import com.mchange.v2.c3p0.PooledDataSource;
-
-import javax.persistence.*;
-import java.sql.*;
-import java.util.*;
-import java.util.concurrent.ConcurrentSkipListMap;
+import com.mchange.v2.resourcepool.CannotAcquireResourceException;
+import com.mchange.v2.resourcepool.TimeoutException;
 
 public class EntityWrapper<TYPE> {
 
-  private static Logger                            LOG = Logger.getLogger( EntityWrapper.class );
-
-  private static Map<String, EntityManagerFactory> emf = new ConcurrentSkipListMap<String, EntityManagerFactory>( );
-
-  public static EntityManagerFactory getEntityManagerFactory( ) {
-    return EntityWrapper.getEntityManagerFactory( "eucalyptus" );
-  }
-
-  @SuppressWarnings( "deprecation" )
-  public static EntityManagerFactory getEntityManagerFactory( final String persistenceContext ) {
-    synchronized ( EntityWrapper.class ) {
-      if ( !emf.containsKey( persistenceContext ) ) {
-        LOG.info( "-> Setting up persistence context for : " + persistenceContext );
-        LOG.info( "-> database host: " + System.getProperty( "euca.db.host" ) );
-        LOG.info( "-> database port: " + System.getProperty( "euca.db.port" ) );
-        emf.put( persistenceContext, Persistence.createEntityManagerFactory( persistenceContext ) );
-      }
-      return emf.get( persistenceContext );
-    }
-  }
-
-  private EntityManager     em;
-  private Session           session;
-  private EntityTransaction tx;
-  private boolean           doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) );
+  static Logger    LOG     = Logger.getLogger( EntityWrapper.class );
+  private TxHandle tx;
 
   public EntityWrapper( ) {
     this( "eucalyptus" );
@@ -116,64 +92,25 @@ public class EntityWrapper<TYPE> {
 
   @SuppressWarnings( "unchecked" )
   public EntityWrapper( String persistenceContext ) {
-    EntityManagerFactoryImpl anemf = ( EntityManagerFactoryImpl ) EntityWrapper.getEntityManagerFactory( persistenceContext );
-    if ( doDebug ) {
-      anemf.getSessionFactory( ).getStatistics( ).setStatisticsEnabled( true );
-      LOG.debug( "Hibernate statistics: " + anemf.getSessionFactory( ).getStatistics( ) );
-    }
     try {
-      this.em = anemf.createEntityManager( );
-      if ( doDebug ) {
-        Exception e = new Exception( );
-        e.fillInStackTrace( );
-        for ( StackTraceElement ste : e.getStackTrace( ) ) {
-          if ( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) || ste.getMethodName( ).matches( "getEntityWrapper" ) ) {
-            continue;
-          } else {
-            LOG.debug( "CREATE CONNECTION " + ste.toString( ) );
-            break;
-          }
-        }
-        EntityWrapper.printStatus( );
-      }
-      this.session = ( Session ) em.getDelegate( );
-      this.tx = em.getTransaction( );
-      tx.begin( );
+      DbEvent.CREATE.log( );
+      this.tx = new TxHandle( persistenceContext );
     } catch ( Throwable e ) {
-      EntityWrapper.exceptionCaught( e );
-      throw new RuntimeException( e );
-    }
-  }
-
-  private static void printStatus( ) {
-    for( PooledDataSource ds : (Set<PooledDataSource>)C3P0Registry.getPooledDataSources( ) ) {
-      try {
-        LOG.debug( "Datasource: " + ds.getDataSourceName( ) );
-        LOG.debug( String.format( "-> Threads: size=%d active=%d idle=%d pending=%d helpers=%d waiting=%d", 
-            ds.getThreadPoolSize( ), ds.getThreadPoolNumActiveThreads( ), ds.getThreadPoolNumIdleThreads( ), 
-            ds.getThreadPoolNumTasksPending( ), ds.getNumHelperThreads( ), ds.getNumThreadsAwaitingCheckoutDefaultUser( ) ) );
-        LOG.debug( String.format( "-> Statement Cache: size=%d conn-w/-stmts=%d checked-out=%d", 
-            ds.getStatementCacheNumStatementsAllUsers( ), ds.getStatementCacheNumConnectionsWithCachedStatementsAllUsers( ), 
-            ds.getStatementCacheNumCheckedOutStatementsAllUsers( ) ) );
-        LOG.debug( String.format( "-> Connections: size=%d busy=%d idle=%d orphan=%d failed-checkin=%d failed-checkout=%d failed-idle=%d", 
-            ds.getNumConnectionsAllUsers( ), ds.getNumBusyConnectionsAllUsers( ), ds.getNumIdleConnectionsAllUsers( ), ds.getNumUnclosedOrphanedConnectionsAllUsers( ),  
-            ds.getNumFailedCheckinsDefaultUser( ), ds.getNumFailedCheckoutsDefaultUser( ), ds.getNumFailedIdleTestsDefaultUser( ) ) );
-      } catch ( SQLException e1 ) {
-        LOG.debug( e1, e1 );
-      }
+      this.exceptionCaught( e );
+      throw (RuntimeException) e ;
     }
   }
 
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
-    LOG.debug( "QUERY " + example.getClass( ) );
+    DbEvent.QUERY.log( );
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-    List<TYPE> resultList = ( List<TYPE> ) session.createCriteria( example.getClass( ) ).add( qbe ).list( );
+    List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).add( qbe ).list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
 
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
-    LOG.debug( "GET-UNIQUE " + example.getClass( ) );
+    DbEvent.UNIQUE.log( );
     List<TYPE> res = this.query( example );
     if ( res.size( ) != 1 ) {
       String msg = null;
@@ -186,81 +123,59 @@ public class EntityWrapper<TYPE> {
     return res.get( 0 );
   }
 
-  private static void exceptionCaught( Throwable e ) {
-    EntityWrapper.printStatus( );
-    LOG.error( e, e );
-    if( !( e instanceof GenericJDBCException ) ) {
-      LOG.warn( "Caught exception in database path: resetting connection pools.", e );
-      for( PooledDataSource ds : (Set<PooledDataSource>)C3P0Registry.getPooledDataSources( ) ) {
-        try {
-          LOG.warn( "-> Resetting: " + ds.getDataSourceName( ) );
-          ds.softResetAllUsers( );
-        } catch ( Throwable e1 ) {}
-      }
+  @SuppressWarnings( "unchecked" )
+  private void exceptionCaught( Throwable e ) {
+    Throwable cause = DebugUtil.checkForCauseOfInterest( e, JDBCConnectionException.class, CannotAcquireResourceException.class, TimeoutException.class );
+    if ( !( cause instanceof ExceptionNotRelatedException ) ) {
+      LOG.error( cause, cause );
+      DatabaseUtil.handleConnectionError( cause );
     }
   }
 
   public void add( TYPE newObject ) {
-    em.persist( newObject );
+    this.getEntityManager( ).persist( newObject );
   }
 
   public void merge( TYPE newObject ) {
-    em.merge( newObject );
+    this.getEntityManager( ).merge( newObject );
   }
 
   public void mergeAndCommit( TYPE newObject ) {
-    em.merge( newObject );
+    this.getEntityManager( ).merge( newObject );
     this.commit( );
   }
 
   public void delete( TYPE deleteObject ) {
-    em.remove( deleteObject );
+    this.getEntityManager( ).remove( deleteObject );
   }
 
   public void rollback( ) {
-    if( doDebug ) {
-      Exception e = new Exception( );
-      e.fillInStackTrace( );
-      for ( StackTraceElement ste : e.getStackTrace( ) ) {
-        if ( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
-          continue;
-        } else {
-          LOG.debug( "CLOSE CONNECTION " + ste.toString( ) );
-          break;
-        }
-      }
-    }
     try {
-      if ( this.tx.isActive( ) ) {
-        this.tx.rollback( );
-      }
+      this.tx.rollback( );
+      DbEvent.ROLLBACK.log( );
     } catch ( Exception e ) {
-      EntityWrapper.exceptionCaught( e );
-    } finally {
-      this.em.close( );
+      DbEvent.ROLLBACK.logError( );
+      this.exceptionCaught( e );
     }
   }
 
   public void commit( ) {
-    if( doDebug ) {
-      Exception e = new Exception( );
-      e.fillInStackTrace( );
-      for ( StackTraceElement ste : e.getStackTrace( ) ) {
-        if ( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) ) {
-          continue;
-        } else {
-          LOG.debug( "CLOSE CONNECTION " + ste.toString( ) );
-          break;
-        }
-      }
-    }
     try {
-      this.em.flush( );
       this.tx.commit( );
-      this.em.close( );
+      DbEvent.COMMIT.log( );
     } catch ( Throwable e ) {
-      EntityWrapper.exceptionCaught( e );
+      DbEvent.COMMIT.logError( );
+      this.exceptionCaught( e );
+      throw (RuntimeException) e ;
     }
+  }
+
+  public Session getSession( ) {
+    return tx.getSession( );
+  }
+
+  public EntityManager getEntityManager( ) {
+    return tx.getEntityManager( );
   }
 
   @SuppressWarnings( "unchecked" )
@@ -268,12 +183,31 @@ public class EntityWrapper<TYPE> {
     return ( EntityWrapper<NEWTYPE> ) this;
   }
 
-  public EntityManager getEntityManager( ) {
-    return em;
-  }
+  enum DbEvent {
+    CREATE,
+    COMMIT {
+      public String toString( ) {
+        return "CLOSE " + this.name( );
+      }
+    },
+    ROLLBACK {
+      public String toString( ) {
+        return "CLOSE " + this.name( );
+      }
+    },
+    UNIQUE,
+    QUERY;
+    String getMessage( ) {
+      return this.toString( ) + " " + DebugUtil.getMyStackTraceElement( );
+    }
 
-  public Session getSession( ) {
-    return session;
+    public void logError( ) {
+      LOG.error( LogUtil.header( "ERROR during: " + this.getMessage( ) ) );
+    }
+
+    public void log( ) {
+      LOG.debug( this.getMessage( ) );
+    }
   }
 
 }

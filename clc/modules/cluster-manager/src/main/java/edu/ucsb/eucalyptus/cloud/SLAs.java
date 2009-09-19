@@ -121,19 +121,18 @@ public class SLAs {
   }
 
   public void doNetworkAllocation( String userId, List<ResourceToken> rscTokens, List<Network> networks ) throws NotEnoughResourcesAvailable {
-    for ( ResourceToken token : rscTokens )
-      /* <--- for each cluster */
-      for ( Network network : networks ) {/* <--- for each network to allocate */
-        try {
-          Networks.getInstance( ).lookup( network.getName( ) );
-        } catch ( NoSuchElementException e ) {
-          Networks.getInstance( ).register( network );
-        }
-        try {
-          NetworkToken netToken = allocateClusterVlan( userId, token.getCluster( ), network.getName( ) );
-          token.getNetworkTokens( ).add( netToken );
-        } catch ( NetworkAlreadyExistsException e ) {}
-      }
+    ResourceToken firstRscToken = rscTokens.get( 0 );
+    Network firstNet = networks.get( 0 );
+    try {
+      Networks.getInstance( ).lookup( firstNet.getName( ) );
+    } catch ( NoSuchElementException e ) {
+      Networks.getInstance( ).register( firstNet );
+    } finally {
+      try {
+        NetworkToken netToken = allocateClusterVlan( userId, firstRscToken.getCluster( ), firstNet.getName( ) );
+        firstRscToken.getNetworkTokens( ).add( netToken );
+      } catch ( NetworkAlreadyExistsException e ) {}      
+    }
   }
 
   private NetworkToken allocateClusterVlan( final String userId, final String clusterName, final String networkName ) throws NotEnoughResourcesAvailable, NetworkAlreadyExistsException {

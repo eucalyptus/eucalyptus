@@ -86,6 +86,7 @@ import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.util.DatabaseUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
@@ -114,8 +115,8 @@ public class StartupChecks {
   private static void fail( String... error ) {
     for ( String s : error )
       LOG.fatal( s );
-    if ( EntityWrapper.getEntityManagerFactory( Component.eucalyptus.name( ) ).isOpen( ) ) {
-      EntityWrapper.getEntityManagerFactory( Component.eucalyptus.name( ) ).close( );
+    if ( DatabaseUtil.getEntityManagerFactory( Component.eucalyptus.name( ) ).isOpen( ) ) {
+      DatabaseUtil.getEntityManagerFactory( Component.eucalyptus.name( ) ).close( );
     }
     SystemUtil.shutdownWithError( String.format( HEADER_FSTRING, "STARTUP FAILURE" ) );
   }

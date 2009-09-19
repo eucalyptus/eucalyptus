@@ -68,6 +68,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.ws.client.Client;
+
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -84,6 +85,12 @@ public abstract class QueuedEventCallback<TYPE> {
   private ClusterConfiguration config;
   private Thread thread;
 
+  //FIXME: cluster config dependency is junk.
+  protected QueuedEventCallback( ) {
+    this.stopped = new AtomicBoolean( false );
+    this.canHas = new ReentrantLock( );
+    this.jobPending = canHas.newCondition( );
+  }
   protected QueuedEventCallback( ClusterConfiguration config ) {
     this.config = config;
     this.stopped = new AtomicBoolean( false );
@@ -132,6 +139,9 @@ public abstract class QueuedEventCallback<TYPE> {
     return true;
   }
 
+  public void process( TYPE msg ) throws Exception {
+    
+  }
   public abstract void process( Client cluster, TYPE msg ) throws Exception;
 
 }

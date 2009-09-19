@@ -69,7 +69,7 @@
 	<classpathentry kind="lib" path="lib/gwt-dev-linux-1.6.4.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-servlet-1.6.4.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-user-1.6.4.jar"/>
-	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
+	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar" sourcepath="deps/hsqldb-1.8.0.10-src.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldbutil-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/janino-2.5.15-1.jar"/>
 	<classpathentry kind="lib" path="lib/javassist-3.8.1.jar"/>

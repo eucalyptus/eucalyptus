@@ -69,10 +69,11 @@ import com.eucalyptus.auth.util.Hashes;
 
 @Provides( resource = Resource.Database )
 @Depends( resources = Resource.SystemCredentials, remote = Component.eucalyptus )
-public class RemoteDatabaseBootstrapper extends Bootstrapper {
+public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
   @Override
   public boolean load( Resource current ) throws Exception {
+    SystemBootstrapper.setDatabaseBootstrapper( this );
     LOG.info( "-> database host: " + System.getProperty("euca.db.host") );
     LOG.info( "-> database port: " + System.getProperty("euca.db.port") );
     System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
@@ -82,6 +83,11 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     return true;
+  }
+
+  @Override
+  public boolean isRunning( ) {
+    return true;//TODO: track remote connectionf failures.
   }
 
 }

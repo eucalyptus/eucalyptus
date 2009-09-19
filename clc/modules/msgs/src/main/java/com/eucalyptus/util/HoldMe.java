@@ -19,8 +19,6 @@ import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.om.impl.dom.DOOMAbstractFactory;
 import org.apache.axiom.soap.SOAPFactory;
 
-import com.sun.org.apache.xerces.internal.impl.Constants;
-
 public class HoldMe implements Lock {
   public static final String  OM_FACTORY_NAME_PROPERTY          = "om.factory";
   public static final String  SOAP11_FACTORY_NAME_PROPERTY      = "soap11.factory";

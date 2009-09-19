@@ -252,8 +252,8 @@ static int child( euca_opts *args, java_home_t *data, uid_t uid, gid_t gid ) {
 	setpgrp( );
 	__die(java_init( args, data ) != 1, "Failed to initialize Eucalyptus.");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.init))==0,"Failed to init Eucalyptus.");
-    __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.load))==0,"Failed to load Eucalyptus.");
 	__abort(4, set_keys_ownership( GETARG( args, home ), uid, gid ) != 0,"Setting ownership of keyfile failed." );
+    __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.load))==0,"Failed to load Eucalyptus.");
 	__abort(4, linuxset_user_group( GETARG( args, user ), uid, gid ) != 0,"Setting the user failed." );
 	__abort(4, (set_caps(0)!=0), "set_caps (0) failed");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.start))==0,"Failed to start Eucalyptus.");
@@ -265,7 +265,7 @@ static int child( euca_opts *args, java_home_t *data, uid_t uid, gid_t gid ) {
 	while( !stopping ) sleep( 60 );
 	__debug( "Shutdown or reload requested: exiting" );
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.stop))==0,"Failed to stop Eucalyptus.");
-	if( doreload == 1 ) ret = 123;
+	if( doreload == 1 ) ret = EUCA_RET_RELOAD;
 	else ret = 0;
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.destroy))==0,"Failed to destroy Eucalyptus.");
 	__die((JVM_destroy( ret ) != 1), "Failed trying to destroy JVM... bailing out seems like the right thing to do" );
@@ -357,14 +357,15 @@ int main( int argc, char *argv[ ] ) {
 	}
 	__debug( "Running w/ LD_LIBRARY_PATH=%s", getenv( "LD_LIBRARY_PATH" ) );
 	if(args->fork_flag) {
-		if(args->debug_flag) {
-			__debug("Ignoring --fork because of --debug.");
-		} else {
+//TODO: commented out for the time being to make dan happi.
+//		if(args->debug_flag) {
+//			__debug("Ignoring --fork because of --debug.");
+//		} else {
 			pid = fork( );
 			__die(( pid == -1 ),"Cannot detach from parent process" );
 			if( pid != 0 ) return wait_child( args, pid );
 			setsid( );
-		}
+//		}
 	}
 	set_output(GETARG(args,out), GETARG(args,err));
 	while( ( pid = fork( ) ) != -1 ) {
@@ -375,6 +376,7 @@ int main( int argc, char *argv[ ] ) {
 		signal( SIGINT, controller );
 		while( waitpid( pid, &status, 0 ) != pid );
 		if( WIFEXITED( status ) ) {
+			__debug( "Eucalyptus exited with status: %d", status );
 			status = WEXITSTATUS( status );
 			if( status != 122 ) unlink( GETARG( args, pidfile ) );
 			if( status == 123 ) {
@@ -522,6 +524,7 @@ int java_init(euca_opts *args, java_home_t *data) {
     i = -1;
     while(jvm_default_opts[++i]!= NULL) JVM_ARG(opt[++x],jvm_default_opts[i],GETARG(args,home));
     JVM_ARG(opt[++x],"-Deuca.log.level=%1$s",GETARG(args,log_level));
+    JVM_ARG(opt[++x],"-Deuca.log.appender=%1$s",GETARG(args,log_appender));
     JVM_ARG(opt[++x],"-Deuca.db.port=%1$d",9001);//TODO: add cli parameter
     JVM_ARG(opt[++x],"-Deuca.db.host=%1$s",GETARG(args,cloud_host));
     JVM_ARG(opt[++x],"-Deuca.walrus.host=%1$s",GETARG(args,walrus_host));
@@ -577,7 +580,8 @@ int java_init(euca_opts *args, java_home_t *data) {
         __debug("+-------------------------------------------------------");
     }
     __debug("Starting JVM.");
-    jint ret=(*hotspot_main)(&jvm, &env, &arg);
+    jint ret = 0;
+    while((ret=(*hotspot_main)(&jvm, &env, &arg)==123));
     __die(ret<0,"Failed to create JVM");
     java_load_bootstrapper();
     return 1;

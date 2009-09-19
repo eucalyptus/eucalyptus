@@ -67,6 +67,8 @@ import org.jibx.runtime.BindingDirectory
 import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
 
+import com.eucalyptus.util.EntityWrapper;
+
 public class INTERNAL extends EucalyptusMessage {
   
   def INTERNAL() {
@@ -233,8 +235,7 @@ public class EucalyptusMessage implements Cloneable, Serializable {
     Class responseClass = Class.forName(msgClass.getName().replaceAll("Type", "") + "ResponseType");
     return responseClass;
   }
-  
-  
+
 }
 public class EucalyptusErrorMessageType extends EucalyptusMessage {
   

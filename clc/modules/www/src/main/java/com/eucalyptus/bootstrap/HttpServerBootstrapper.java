@@ -63,13 +63,14 @@ package com.eucalyptus.bootstrap;
 import java.net.URL;
 
 import org.apache.log4j.Logger;
+import org.mortbay.jetty.Server;
 import org.mortbay.xml.XmlConfiguration;
 
 @Provides( component = Component.jetty )
 @Depends( local=Component.eucalyptus )
 public class HttpServerBootstrapper extends Bootstrapper {
   private static Logger                   LOG = Logger.getLogger( HttpServerBootstrapper.class );
-  private static org.mortbay.jetty.Server jettyServer;
+  private static Server jettyServer;
 
   @Override
   public boolean load( Resource current ) throws Exception {

@@ -57,6 +57,9 @@ struct eucalyptus_opts
   char * log_level_arg;	/**< @brief Control the log level for console output. (default='INFO').  */
   char * log_level_orig;	/**< @brief Control the log level for console output. original value given at command line.  */
   const char *log_level_help; /**< @brief Control the log level for console output. help description.  */
+  char * log_appender_arg;	/**< @brief Control the destination for console output. (default='console-log').  */
+  char * log_appender_orig;	/**< @brief Control the destination for console output. original value given at command line.  */
+  const char *log_appender_help; /**< @brief Control the destination for console output. help description.  */
   char * out_arg;	/**< @brief Redirect standard out to file. (default='&1').  */
   char * out_orig;	/**< @brief Redirect standard out to file. original value given at command line.  */
   const char *out_help; /**< @brief Redirect standard out to file. help description.  */
@@ -122,6 +125,7 @@ struct eucalyptus_opts
   unsigned int define_given ;	/**< @brief Whether define was given.  */
   unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
   unsigned int log_level_given ;	/**< @brief Whether log-level was given.  */
+  unsigned int log_appender_given ;	/**< @brief Whether log-appender was given.  */
   unsigned int out_given ;	/**< @brief Whether out was given.  */
   unsigned int err_given ;	/**< @brief Whether err was given.  */
   unsigned int remote_cloud_given ;	/**< @brief Whether remote-cloud was given.  */

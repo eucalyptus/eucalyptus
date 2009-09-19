@@ -301,7 +301,8 @@ do_start() {
 		OPTS="$OPTS --disable-ebs"
 	fi
 
-	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
+    # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
+	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -L console-log >/dev/null 2>&1
 
 	return $?
 }

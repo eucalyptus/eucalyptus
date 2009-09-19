@@ -85,7 +85,7 @@ public enum Component {
   private boolean            local       = false;
 
   private boolean            enabled     = false;
-  private boolean            initialized = true;
+  private boolean            initialized = true;//FIXME: set this in some useful way
   private boolean            hasKeys     = false;
   private String             hostAddress;
   private int                port        = 8773;

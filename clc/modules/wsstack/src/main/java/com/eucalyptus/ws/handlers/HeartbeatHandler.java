@@ -140,7 +140,7 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
           MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
           String resp = "";
           for ( Component c : Component.values( ) ) {
-            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s\n", c.name( ), c.isEnabled( ), c.isLocal( ) );
+            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.name( ), c.isEnabled( ), c.isLocal( ), c.isInitialized( ) );
           }
           ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
           response.setContent( buf );
@@ -266,13 +266,13 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
         HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
         String resp = "";
         for ( Component c : Component.values( ) ) {
-          resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s\n", c.name( ), c.isEnabled( ), c.isLocal( ) );
+          resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.name( ), c.isEnabled( ), c.isLocal( ), c.isInitialized( ) );
         }
         ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
         response.setContent( buf );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
         response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-        ChannelFuture writeFuture = Channels.write( ctx.getChannel( ), response );
+        ChannelFuture writeFuture = ctx.getChannel( ).write( response );
         writeFuture.addListener( ChannelFutureListener.CLOSE );
       } else {
         ctx.sendUpstream( e );
