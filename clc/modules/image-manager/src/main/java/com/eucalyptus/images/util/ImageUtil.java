@@ -433,7 +433,9 @@ public class ImageUtil {
           repList.add( imgDetails );
         }
       }
+      db.commit( );
     } catch ( Throwable e ) {
+      db.commit( );
       ImageManager.LOG.debug( e, e );
     }
     return repList;
@@ -453,8 +455,10 @@ public class ImageUtil {
           }
         }
       }
+      db.commit( );
     } catch ( Throwable e ) {
-      ImageManager.LOG.debug( e, e );
+      LOG.debug( e, e );
+      db.rollback( );
     }
     return repList;
   }
@@ -462,20 +466,27 @@ public class ImageUtil {
   public static List<ImageDetails> getImagesByExec( UserInfo user, ArrayList<String> executable ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     List<ImageDetails> repList = Lists.newArrayList( );
-    for ( String execUserId : executable ) {
-      try {
-        UserInfo execUser = db.recast( UserInfo.class ).getUnique( new UserInfo( execUserId ) );
-        List<ImageInfo> results = db.query( new ImageInfo( ) );
-        for ( ImageInfo img : results ) {
-          ImageDetails imgDetails = img.getAsImageDetails( );
-          if ( img.isAllowed( execUser ) 
-              && img.getImageOwnerId( ).equals( user.getUserName( ) ) ) {
-            repList.add( imgDetails );
+    try {
+      for ( String execUserId : executable ) {
+        try {
+          if( "all".equals( execUserId ) ) continue;
+          UserInfo execUser = db.recast( UserInfo.class ).getUnique( new UserInfo( execUserId ) );
+          List<ImageInfo> results = db.query( new ImageInfo( ) );
+          for ( ImageInfo img : results ) {
+            ImageDetails imgDetails = img.getAsImageDetails( );
+            if ( img.isAllowed( execUser ) 
+                && img.getImageOwnerId( ).equals( user.getUserName( ) ) ) {
+              repList.add( imgDetails );
+            }
           }
+        } catch ( Throwable e ) {
+          LOG.debug( e, e );
         }
-      } catch ( Throwable e ) {
-        ImageManager.LOG.debug( e, e );
       }
+      db.commit( );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      db.commit( );
     }
     return repList;
   }
@@ -489,7 +500,10 @@ public class ImageUtil {
           db.delete( deregImg );
         } catch ( Throwable e1 ) {}
       }
-    } catch ( Throwable e1 ) {}
+      db.commit( );
+    } catch ( Throwable e1 ) {
+      db.rollback( );
+    }
   }
 
 }

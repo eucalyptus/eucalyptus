@@ -70,9 +70,12 @@ import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.criterion.*;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
+import org.hibernate.exception.GenericJDBCException;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.mchange.v2.c3p0.C3P0Registry;
+import com.mchange.v2.c3p0.PooledDataSource;
 
 import javax.persistence.*;
 import java.sql.*;
@@ -111,28 +114,54 @@ public class EntityWrapper<TYPE> {
     this( "eucalyptus" );
   }
 
+  @SuppressWarnings( "unchecked" )
   public EntityWrapper( String persistenceContext ) {
-    if ( doDebug ) {
-      Exception e = new Exception( );
-      e.fillInStackTrace( );
-      for ( StackTraceElement ste : e.getStackTrace( ) ) {
-        if ( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) || ste.getMethodName( ).matches( "getEntityWrapper" ) ) {
-          continue;
-        } else {
-          LOG.debug( "CREATE CONNECTION " + ste.toString( ) );
-          break;
-        }
-      }
-    }
     EntityManagerFactoryImpl anemf = ( EntityManagerFactoryImpl ) EntityWrapper.getEntityManagerFactory( persistenceContext );
     if ( doDebug ) {
       anemf.getSessionFactory( ).getStatistics( ).setStatisticsEnabled( true );
       LOG.debug( "Hibernate statistics: " + anemf.getSessionFactory( ).getStatistics( ) );
     }
-    this.em = anemf.createEntityManager( );
-    this.session = ( Session ) em.getDelegate( );
-    this.tx = em.getTransaction( );
-    tx.begin( );
+    try {
+      this.em = anemf.createEntityManager( );
+      if ( doDebug ) {
+        Exception e = new Exception( );
+        e.fillInStackTrace( );
+        for ( StackTraceElement ste : e.getStackTrace( ) ) {
+          if ( ste.getClassName( ).equals( EntityWrapper.class.getCanonicalName( ) ) || ste.getMethodName( ).matches( "getEntityWrapper" ) ) {
+            continue;
+          } else {
+            LOG.debug( "CREATE CONNECTION " + ste.toString( ) );
+            break;
+          }
+        }
+        EntityWrapper.printStatus( );
+      }
+      this.session = ( Session ) em.getDelegate( );
+      this.tx = em.getTransaction( );
+      tx.begin( );
+    } catch ( Throwable e ) {
+      EntityWrapper.exceptionCaught( e );
+      throw new RuntimeException( e );
+    }
+  }
+
+  private static void printStatus( ) {
+    for( PooledDataSource ds : (Set<PooledDataSource>)C3P0Registry.getPooledDataSources( ) ) {
+      try {
+        LOG.debug( "Datasource: " + ds.getDataSourceName( ) );
+        LOG.debug( String.format( "-> Threads: size=%d active=%d idle=%d pending=%d helpers=%d waiting=%d", 
+            ds.getThreadPoolSize( ), ds.getThreadPoolNumActiveThreads( ), ds.getThreadPoolNumIdleThreads( ), 
+            ds.getThreadPoolNumTasksPending( ), ds.getNumHelperThreads( ), ds.getNumThreadsAwaitingCheckoutDefaultUser( ) ) );
+        LOG.debug( String.format( "-> Statement Cache: size=%d conn-w/-stmts=%d checked-out=%d", 
+            ds.getStatementCacheNumStatementsAllUsers( ), ds.getStatementCacheNumConnectionsWithCachedStatementsAllUsers( ), 
+            ds.getStatementCacheNumCheckedOutStatementsAllUsers( ) ) );
+        LOG.debug( String.format( "-> Connections: size=%d busy=%d idle=%d orphan=%d failed-checkin=%d failed-checkout=%d failed-idle=%d", 
+            ds.getNumConnectionsAllUsers( ), ds.getNumBusyConnectionsAllUsers( ), ds.getNumIdleConnectionsAllUsers( ), ds.getNumUnclosedOrphanedConnectionsAllUsers( ),  
+            ds.getNumFailedCheckinsDefaultUser( ), ds.getNumFailedCheckoutsDefaultUser( ), ds.getNumFailedIdleTestsDefaultUser( ) ) );
+      } catch ( SQLException e1 ) {
+        LOG.debug( e1, e1 );
+      }
+    }
   }
 
   @SuppressWarnings( "unchecked" )
@@ -155,6 +184,20 @@ public class EntityWrapper<TYPE> {
       throw new EucalyptusCloudException( "Error locating information for " + msg );
     }
     return res.get( 0 );
+  }
+
+  private static void exceptionCaught( Throwable e ) {
+    EntityWrapper.printStatus( );
+    LOG.error( e, e );
+    if( !( e instanceof GenericJDBCException ) ) {
+      LOG.warn( "Caught exception in database path: resetting connection pools.", e );
+      for( PooledDataSource ds : (Set<PooledDataSource>)C3P0Registry.getPooledDataSources( ) ) {
+        try {
+          LOG.warn( "-> Resetting: " + ds.getDataSourceName( ) );
+          ds.softResetAllUsers( );
+        } catch ( Throwable e1 ) {}
+      }
+    }
   }
 
   public void add( TYPE newObject ) {
@@ -187,10 +230,15 @@ public class EntityWrapper<TYPE> {
         }
       }
     }
-    if ( this.tx.isActive( ) ) {
-      this.tx.rollback( );
+    try {
+      if ( this.tx.isActive( ) ) {
+        this.tx.rollback( );
+      }
+    } catch ( Exception e ) {
+      EntityWrapper.exceptionCaught( e );
+    } finally {
+      this.em.close( );
     }
-    this.em.close( );
   }
 
   public void commit( ) {
@@ -210,8 +258,8 @@ public class EntityWrapper<TYPE> {
       this.em.flush( );
       this.tx.commit( );
       this.em.close( );
-    } catch ( Throwable e1 ) {
-      LOG.trace( e1, e1 );
+    } catch ( Throwable e ) {
+      EntityWrapper.exceptionCaught( e );
     }
   }
 
