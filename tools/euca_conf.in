@@ -162,7 +162,6 @@ uncomment () {
 
 check_ws() {
 	local URL="$1"
-	local MODE="$2"
 	local ret=""
 
 	if [ -z "$URL" ]; then
@@ -172,15 +171,12 @@ check_ws() {
 	
 	if [ -n "${FAKEREG}" ]; then
 		ret=""
-	elif [ "$MODE" = "list" ]; then
+	elif [ "$2" != "" ]; then
 		if [ "$VERBOSE" = "Y" ]; then
 			echo "$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name>.*;\1;'"
 		fi
-		MODE="`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name>.*;\1;'`"
+		eval "$2=\"`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name>.*;\1;'`\""
 		ret="$?"
-		for x in $MODE ; do
-			echo $x
-		done
 		return $ret
 	else
 		if [ "$VERBOSE" = "Y" ]; then
@@ -337,7 +333,7 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
-	if [ "$1" = "--list-storages" ]; then 
+	if [ "$1" = "--list-scs" ]; then 
 	    LIST="$LIST storages"
 	    shift
 	    continue
@@ -1046,6 +1042,29 @@ if [ -n "$CLUSNAME" ]; then
 	echo "SUCCESS: new cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully registered."
     elif [ "$CLUSMODE" = "DEL" ]; then
 	URL=""
+	# let's see if we have such a cluster
+	LIST_RES=""
+	if ! createCloudURL "Action" "DescribeClusters" ; then
+		exit 1
+	fi
+	if ! check_ws "$URL" LIST_RES ; then
+		echo "ERROR: cannot talk with CLC"
+		exit 1
+	fi
+	FOUND="N"
+	for x in $LIST_RES ; do
+		if [ "$x" = "${CLUSNAME}" ]; then
+			FOUND="Y"
+			break
+		fi
+	done
+	if [ "$FOUND" = "N" ]; then
+		echo "No registered cluster $CLUSNAME was found"
+		exit 1
+	fi
+
+	# now let's deregister
+	URL=""
 	if ! createCloudURL "Action" "DeregisterCluster" "Name" "${CLUSNAME}"; then
 	    exit 1
 	fi
@@ -1150,6 +1169,28 @@ if [ -n "$SCNAME" ]; then
 	echo "SUCCESS: new SC for cluster '${SCNAME}' on host '${SCHOST}' successfully registered."
 
     elif [ "$SC_MODE" = "DEL" ]; then
+	# let's see if we have such a storage controller
+	LIST_RES=""
+	if ! createCloudURL "Action" "DescribeStorageControllers" ; then
+		exit 1
+	fi
+	if ! check_ws "$URL" LIST_RES ; then
+		echo "ERROR: cannot talk with CLC"
+		exit 1
+	fi
+	FOUND="N"
+	for x in $LIST_RES ; do
+		if [ "$x" = "${SCNAME}" ]; then
+			FOUND="Y"
+			break
+		fi
+	done
+	if [ "$FOUND" = "N" ]; then
+		echo "No registered storage controller $SCNAME was found"
+		exit 1
+	fi
+
+	# now let's deregister
 	URL=""
 	if ! createCloudURL "Action" "DeregisterStorageController" "Name" "${SCNAME}"; then
 	    exit 1
@@ -1244,16 +1285,48 @@ if [ -n "$NODEMODE" ]; then
 fi
 
 for x in $LIST ; do
+	LIST_RES=""
+
 	if [ "$x" = "walruses" ]; then
-		createCloudURL "Action" "DescribeWalruses"
-		check_ws "$URL" "list"
+		if ! createCloudURL "Action" "DescribeWalruses" ; then
+			exit 1
+		fi
+		if ! check_ws "$URL" LIST_RES ; then
+			exit 1
+		fi
+		if [ -n "$LIST_RES" ]; then
+			echo "registered walruses:"
+		fi
+		for x in $LIST_RES ; do
+			echo "   $x"
+		done
 	fi
 	if [ "$x" = "storages" ]; then
-		createCloudURL "Action" "DescribeStorageControllers"
-		check_ws "$URL" "list"
+		if ! createCloudURL "Action" "DescribeStorageControllers" ; then
+			exit 1
+		fi
+		if ! check_ws "$URL" LIST_RES ; then
+			exit 1
+		fi
+		if [ -n "$LIST_RES" ]; then
+			echo "registered storage controllers:"
+		fi
+		for x in $LIST_RES ; do
+			echo "   $x"
+		done
 	fi
 	if [ "$x" = "clusters" ]; then
-		createCloudURL "Action" "DescribeClusters"
-		check_ws "$URL" "list"
+		if ! createCloudURL "Action" "DescribeClusters" ; then
+			exit 1
+		fi
+		if ! check_ws "$URL" LIST_RES ; then
+			exit 1
+		fi
+		if [ -n "$LIST_RES" ]; then
+			echo "registered clusters:"
+		fi
+		for x in $LIST_RES ; do
+			echo "   $x"
+		done
 	fi
 done
