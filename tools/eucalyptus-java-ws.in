@@ -143,18 +143,6 @@ if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
 	exit 1
 fi
 
-is_ws_enabled() {
-    local RET=1
-    if [ "$NAME" = "cloud" -a "$CLOUD_WS" = "Y" ]; then
-	RET=0
-    elif [ "$NAME" = "walrus" -a "$WALRUS_WS" = "Y" ]; then
-	RET=0
-    elif [ "$NAME" = "sc" -a "$STORAGE_WS" = "Y" ]; then
-	RET=0
-    fi
-    return $RET
-}
-
 # read in the services which should be running
 read_ws_list() {
 	STORAGE_WS="N"
@@ -282,7 +270,6 @@ check_java() {
 }
 
 do_start() {
-	local started="N"
 	local OPTS=""
 
 	# basic checks
@@ -293,28 +280,25 @@ do_start() {
 	# enabled services
 	if [ "$STORAGE_WS" != "Y" ]; then
 		OPTS="$OPTS --disable-storage"
-		started="Y"
 	fi
 	if [ "$WALRUS_WS" != "Y" ]; then
 		OPTS="$OPTS --disable-walrus"
-		started="Y"
 	fi
 	if [ "$CLOUD_WS" != "Y" ]; then
 		OPTS="$OPTS --disable-cloud"
-		started="Y"
 	fi
-	if [ "$CLOUD_WS" != "Y" -a "$WALRUS_WS" != "Y" -a "$STORAGE_WS" != "Y" ]; then
-	    # nothing to start
-	    return 0
-	fi
-
 	# these are the services we started
 	write_ws_list
 
+	if [ "${STORAGE_WS}${CLOUD_WS}${WALRUS_WS}" = "NNN" ]; then
+		# nothing to start
+		return 0
+	fi
+
 	if [ "$DISABLE_DNS" = "Y" ]; then
-	    OPTS="$OPTS --remote-dns"
+		OPTS="$OPTS --remote-dns"
 	elif [ "$DISABLE_EBS" = "Y" ]; then
-	    OPTS="$OPTS --disable-ebs"
+		OPTS="$OPTS --disable-ebs"
 	fi
 
 	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
@@ -337,7 +321,7 @@ do_status() {
 		return 1
 	fi
 
-	is_ws_enabled
+	handle_ws
 	return $?
 }
 
