@@ -143,6 +143,18 @@ if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
 	exit 1
 fi
 
+is_ws_enabled() {
+    local RET=1
+    if [ "$NAME" = "cloud" -a "$CLOUD_WS" = "Y" ]; then
+	RET=0
+    elif [ "$NAME" = "walrus" -a "$WALRUS_WS" = "Y" ]; then
+	RET=0
+    elif [ "$NAME" = "storage" -a "$STORAGE_WS" = "Y" ]; then
+	RET=0
+    fi
+    return $RET
+}
+
 # read in the services which should be running
 read_ws_list() {
 	STORAGE_WS="N"
@@ -294,6 +306,9 @@ do_start() {
 	if [ "$started" != "Y" ]; then
 		# nothing to start
 		return 0
+	elif [ "$CLOUD_WS" != "Y" -a "$WALRUS_WS" != "Y" -a "$STORAGE_WS" != "Y" ]; then
+	    # nothing to start
+	    return 0
 	fi
 
 	# these are the services we started
@@ -311,9 +326,6 @@ do_start() {
 }
 
 do_status() {
-	# read started services
-	read_ws_list
-
 	if [ -s ${pidfile} ]; then
 		pid=`cat ${pidfile} 2> /dev/null`
 		if ! ps ax|grep $pid|grep eucalyptus-cloud.pid > /dev/null; then
@@ -327,14 +339,16 @@ do_status() {
 		rm -f $EUCALYPTUS/var/run/eucalyptus/ws
 		return 1
 	fi
-	
-	return is_ws_enabled 
+
+	is_ws_enabled
+	return $?
 }
 
 do_stop() {
 	# now stop the service
 	if [ -s "${pidfile}" ]; then
 		pid=`cat $pidfile 2> /dev/null`
+		kill $pid > /dev/null 2>&1
 	else
 		return
 	fi
@@ -353,6 +367,7 @@ do_stop() {
 		kill -9 $pid > /dev/null 2>&1 
 	fi
 	rm -f $pidfile
+
 }
 
 # let's get the user to use
@@ -362,6 +377,10 @@ fi
 
 # set the library path correctly
 export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
+#VERBOSE="yes"
+
+# read started services
+read_ws_list
 
 case "$1" in
   start)
@@ -382,13 +401,13 @@ case "$1" in
 				log_end_msg 1
 			fi
 		fi
-		exit 1
+		exit 0
 	fi
 
 	# since other services could be running, we stop the container
 	# before starting
-	do_stop
 	handle_ws enable
+	do_stop
 	do_start
 
 	case "$?" in
@@ -430,7 +449,7 @@ case "$1" in
 				log_end_msg 1
 			fi
 		fi
-		exit 1
+		exit 0
 	fi
 
 	do_stop
@@ -460,5 +479,8 @@ case "$1" in
 	exit 3
 	;;
 esac
+
+# these are the services we started
+write_ws_list
 
 :
