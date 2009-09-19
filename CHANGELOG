@@ -3,9 +3,8 @@
     * A lot of bug fixes and improvements
     * Eucalytpus now runs as user 'eucalyptus' by default
     * added new UI tab 'Extras' that includes links to pre-packaged images
-    * and client tools
-    * Fixed support for client tools (including fixes to the REST
-    * interface).
+      and client tools
+    * Fixed support for client tools (including fixes to the REST interface).
     * Closes bugs:
 
       #368975 #375809 #375805 #376575 #354787 #382522 #357350 #375105 

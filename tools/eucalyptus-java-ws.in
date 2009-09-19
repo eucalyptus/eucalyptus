@@ -80,15 +80,15 @@
 # we need to source the current path in case of manual intallation
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus CONFNAME"
-NAME=WS
+NAME="WS"
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
 EUCA_USER="eucalyptus"
 
-JAR_NAME="/usr/share/eucalyptus/eucalyptus-JARNAME-@EUCA_VERSION@.jar"
-JAR_CLOUD="/usr/share/eucalyptus/eucalyptus-cloud-@EUCA_VERSION@.jar /usr/share/eucalyptus/eucalyptus-www-@EUCA_VERSION@.jar"
-JAR_WALRUS="/usr/share/eucalyptus/eucalyptus-walrus-@EUCA_VERSION@.jar"
-JAR_SC="/usr/share/eucalyptus/eucalyptus-storagecontroller-@EUCA_VERSION@.jar"
+# available services
+WALRUS_WS="N"
+CLOUD_WS="N"
+STORAGE_WS="N"
 
 if [ "$EUID" != "0" ]; then
 	echo "Eucalyptus init scripts must be run as root."
@@ -143,6 +143,98 @@ if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
 	exit 1
 fi
 
+# read in the services which should be running
+read_ws_list() {
+	STORAGE_WS="N"
+	WALRUS_WS="N"
+	CLOUD_WS="N"
+
+	for x in `cat $EUCALYPTUS/var/run/eucalyptus/ws 2> /dev/null` ; do
+		case $x in
+		storage) 
+			STORAGE_WS="Y"
+			;;
+		walrus)
+			WALRUS_WS="Y"
+			;;
+		cloud)
+			CLOUD_WS="Y"
+			;;
+		*)
+			echo "Unknown service! ($x)"
+			;;
+		esac
+	done
+}
+# write the running services
+write_ws_list() {
+	echo "" > $EUCALYPTUS/var/run/eucalyptus/ws
+	if [ "$STORAGE_WS" = "Y" ]; then
+		echo "storage" >> $EUCALYPTUS/var/run/eucalyptus/ws 
+	fi
+	if [ "$WALRUS_WS" = "Y" ]; then
+		echo "walrus" >> $EUCALYPTUS/var/run/eucalyptus/ws 
+	fi
+	if [ "$CLOUD_WS" = "Y" ]; then
+		echo "cloud" >> $EUCALYPTUS/var/run/eucalyptus/ws 
+	fi
+}
+# without parameter returns if the service is running or not
+# the parameter can be 'enable' or 'disable', and it sets the
+# corresponding variable
+handle_ws() {
+	if [ "$NAME" = "cloud" ]; then
+		case "$1" in
+		enable)
+			CLOUD_WS="Y"
+			return 0
+			;;
+		disable)
+			CLOUD_WS="N"
+			return 0
+			;;
+		*)
+			if [ "$CLOUD_WS" = "Y" ]; then
+				return 0
+			fi
+			;;
+		esac
+	elif [ "$NAME" = "walrus" ]; then
+		case "$1" in
+		enable)
+			WALRUS_WS="Y"
+			return 0
+			;;
+		disable)
+			WALRUS_WS="N"
+			return 0
+			;;
+		*)
+			if [ "$WALRUS_WS" = "Y" ]; then
+				return 0
+			fi
+			;;
+		esac
+	elif [ "$NAME" = "sc" ]; then
+		case "$1" in
+		enable)
+			STORAGE_WS="Y"
+			return 0
+			;;
+		disable)
+			STORAGE_WS="N"
+			return 0
+			;;
+		*)
+			if [ "$STORAGE_WS" = "Y" ]; then
+				return 0
+			fi
+			;;
+		esac
+	fi
+	return 1
+}
+	
 check_java() {
 	java_min_version="1.6.0"
 
@@ -178,14 +270,35 @@ check_java() {
 }
 
 do_start() {
-	local ret
+	local started="N"
+	local OPTS=""
 
 	# basic checks
 	check_java
 	
 	cd $EUCALYPTUS/etc/eucalyptus
 
-	OPTS=""
+	# enabled services
+	if [ "$STORAGE_WS" != "Y" ]; then
+		OPTS="$OPTS --disable-storage"
+		started="Y"
+	fi
+	if [ "$WALRUS_WS" != "Y" ]; then
+		OPTS="$OPTS --disable-walrus"
+		started="Y"
+	fi
+	if [ "$CLOUD_WS" != "Y" ]; then
+		OPTS="$OPTS --disable-cloud"
+		started="Y"
+	fi
+	if [ "$started" != "Y" ]; then
+		# nothing to start
+		return 0
+	fi
+
+	# these are the services we started
+	write_ws_list
+
 	if [ "$DISABLE_DNS" = "Y" ]; then
 	    OPTS="$OPTS --remote-dns"
 	elif [ "$DISABLE_EBS" = "Y" ]; then
@@ -193,71 +306,29 @@ do_start() {
 	fi
 
 	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
+
 	return $?
 }
 
-enable_disable_service() {
-	local from_sfx=""
-	local to_sfx=""
-	local jar_list=""
-	
-	if [ "$1" = "enable" ]; then
-		from_sfx=".disabled"
-		to_sfx=""
-		# we check before enabling the service otherwise we'd
-		# prevent other services to start
-		if ! $EUCALYPTUS/usr/sbin/euca_conf --check $NAME ; then
-			exit 1
-		fi
-	elif [ "$1" = "disable" ]; then
-		from_sfx=""
-		to_sfx=".disabled"
-	else
-		echo "Unknown action ($action)!"
-		exit 1
-	fi
-
-	case "$NAME" in
-	cloud)
-		jar_list="$JAR_CLOUD"
-		;;
-	walrus)
-		jar_list="$JAR_WALRUS"
-		;;
-	sc)
-		jar_list="$JAR_SC"
-		;;
-	*)
-		echo "Unknown service ($NAME)!"
-		exit 1
-		;;
-	esac
-
-	for x in $jar_list ; do
-		if [ -e ${EUCALYPTUS}${x}${from_sfx} ]; then
-			if ! cp ${EUCALYPTUS}${x}${from_sfx} ${EUCALYPTUS}${x}${to_sfx} ; then
-				echo "Failed to copy jar in place!"
-				exit 1
-			fi
-			rm -f ${EUCALYPTUS}${x}${from_sfx}
-		fi
-	done
-}
-
 do_status() {
-	if [ ! -e ${EUCALYPTUS}${JAR_NAME} ]; then
-		# service is not running
-		return 1
-	fi
+	# read started services
+	read_ws_list
 
 	if [ -s ${pidfile} ]; then
 		pid=`cat ${pidfile} 2> /dev/null`
-		if ps ax|grep $pid|grep eucalyptus-cloud.pid > /dev/null ; then
-			# we are good
-			return 0
+		if ! ps ax|grep $pid|grep eucalyptus-cloud.pid > /dev/null; then
+			# pid file is not matching
+			rm -f $EUCALYPTUS/var/run/eucalyptus/ws
+			rm -f ${pidfile}
+			return 1
 		fi
+	else
+		# no pidfile, no running services
+		rm -f $EUCALYPTUS/var/run/eucalyptus/ws
+		return 1
 	fi
-	return 1
+	
+	return is_ws_enabled 
 }
 
 do_stop() {
@@ -314,13 +385,12 @@ case "$1" in
 		exit 1
 	fi
 
-	# move the jar in the right place
-	enable_disable_service enable
-
 	# since other services could be running, we stop the container
 	# before starting
 	do_stop
+	handle_ws enable
 	do_start
+
 	case "$?" in
 	0|1) 
 		if [ "$VERBOSE" != no ]; then
@@ -351,28 +421,21 @@ case "$1" in
 		fi
 	fi
 	
-	# if we don't have the JAR file we are not running
-	if [ ! -e ${EUCALYPTUS}${JAR_NAME} ]; then
-		# service is not running
-		exit 0
-	fi
-
-	# let's stop the service before moving the jar
-	do_stop
-
-	enable_disable_service disable
-
-	# if we have more services running, we'll need to restart
-	__restart="N"
-	for x in $JAR_CLOUD $JAR_WALRUS $JAR_SC ; do
-		if [ -e ${EUCALYPTUS}/${x} ]; then
-			__restart="Y"
-			break
+	# let's check there is a previous cloud running
+	if ! do_status ; then
+		echo
+		echo "no $DESC is running!"
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			fi
 		fi
-	done
-	if [ ${__restart} = "Y" ]; then
-		do_start
+		exit 1
 	fi
+
+	do_stop
+	handle_ws disable
+	do_start
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_end_msg 0

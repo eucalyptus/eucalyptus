@@ -92,6 +92,7 @@ CREDENTIALZIPFILE=""
 SCP="`which scp 2> /dev/null`"
 RSYNC="`which rsync 2> /dev/null`"
 WGET="`which wget 2> /dev/null`"
+VERBOSE="N"
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -156,6 +157,30 @@ comment () {
 uncomment () {
 	check_and_backup $1
 	sed -i "s<^[#[:blank:]]*\(${2}.*\)<\1<" $1
+}
+
+check_ws() {
+	local URL="$1"
+	local ret=""
+
+	if [ -z "$URL" ]; then
+		echo "check_ws: need a URL!"
+		return 1
+	fi
+	
+	if [ -n "${FAKEREG}" ]; then
+		ret=""
+	else
+		if [ "$VERBOSE" = "Y" ]; then
+			echo "$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'"
+		fi
+		ret="`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'`"
+	fi
+	if test -n "$ret" ; then
+		echo $ret
+		return 1
+	fi
+	return 0
 }
 
 component_sync_keys() {
@@ -297,6 +322,11 @@ while [ $# -gt 0 ]; do
 	fi
 	if [ "$1" = "-norsync" -o "$1" = "--no-rsync" ]; then 
 	    RSYNC=""
+	    shift
+	    continue
+	fi
+	if [ "$1" = "--verbose" -o "$1" = "-verbose" ]; then 
+	    VERBOSE="Y"
 	    shift
 	    continue
 	fi
@@ -835,7 +865,9 @@ createCloudURL () {
     ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=eucalyptus"
     SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Configuration\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
     export URL="http://127.0.0.1:8773/services/Configuration?${ARGS}&Signature=${SIGNATURE}"
-    echo $URL
+	if [ "$VERBOSE" = "Y" ]; then
+		echo $URL
+	fi
     return 0
 }
 
@@ -889,7 +921,7 @@ checkLocalService() {
 	    done
 	fi
 	
-	CMD="$WGET -T 10 -t 1 -O - -o /dev/null --no-check-certificate https://127.0.0.1:8443/register | grep CloudVersion"
+	CMD="$WGET -T 10 -t 1 -O - -o /dev/null --no-check-certificate https://127.0.0.1:8443/register | grep CloudVersion > /dev/null 2> /dev/null"
 #	CMD="echo CLC CHECK NOT IMPLEMENTED"
     elif [ "$SERVICE" = "CC" ]; then
 	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC > /dev/null"
@@ -932,7 +964,7 @@ if [ -n "$CREDENTIALZIPFILE" ]; then
     fi
     CMD="$WGET --no-check-certificate \"https://localhost:8443/getX509?user=admin&code=$KEY\" -O $CREDENTIALZIPFILE"
     if ! eval $CMD ; then
-	echo "failed to obtain credentals, please try again or go to the Eucalytpus web UI."
+	echo "failed to obtain credentals, please try again or go to the Eucalyptus web UI."
 	exit 1
     fi
 fi
@@ -943,7 +975,6 @@ if [ -n "$CLUSNAME" ]; then
 	exit 1
     fi
 
-    echo "$CLUSMODE"
     if [ "$CLUSMODE" = "ADD" ]; then
 	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
 	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${CLUSNAME}/
@@ -958,14 +989,9 @@ if [ -n "$CLUSNAME" ]; then
 	    exit 1
 	fi
 	
-	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
-	echo "$CMD"
-	if [ -n "${FAKEREG}" ]; then
-	    CMD="echo"
-	fi
-	if ! eval $CMD ; then
-	    echo "ERROR: failed to register new cluster, please log in to the admin interface and check cloud status."
-	    exit 1
+	if ! check_ws "$URL" ; then
+		echo "ERROR: failed to register new cluster, please log in to the admin interface and check cloud status."
+		exit 1
 	fi
 	
 	if [ -n "${FAKEREG}" ]; then
@@ -997,14 +1023,9 @@ if [ -n "$CLUSNAME" ]; then
 	    exit 1
 	fi
 	
-	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
-	echo "$CMD"
-	if [ -n "${FAKEREG}" ]; then
-	    CMD="echo"
-	fi
-	if ! eval $CMD ; then
-	    echo "ERROR: failed to deregister new cluster, please log in to the admin interface and check cloud status."
-	    exit 1
+	if ! check_ws "$URL" ; then
+		echo "ERROR: failed to deregister new cluster, please log in to the admin interface and check cloud status."
+		exit 1
 	fi	
 	echo
 	echo "SUCCESS: cluster '${CLUSNAME}' successfully deregistered."
@@ -1031,11 +1052,8 @@ if [ -n "$WALRUS" -o -n "$WALRUS_MODE" ]; then
 	if ! createCloudURL "Action" "RegisterWalrus" "Host" "${WALRUS}" "Name" "walrus" "Port" "8773"; then
 	    exit 1
 	fi
-	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
-	if [ -n "${FAKEREG}" ]; then
-	    CMD="echo"
-	fi
-	if ! eval $CMD ; then
+
+	if ! check_ws "$URL" ; then
 	    echo "ERROR: failed to register Walrus, please log in to the admin interface and check cloud status."
 	    exit 1
 	fi
@@ -1053,11 +1071,7 @@ if [ -n "$WALRUS" -o -n "$WALRUS_MODE" ]; then
 	if ! createCloudURL "Action" "DeregisterWalrus" "Name" "walrus"; then
 	    exit 1
 	fi
-	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
-	if [ -n "${FAKEREG}" ]; then
-	    CMD="echo"
-	fi
-	if ! eval $CMD ; then
+	if ! check_ws "$URL" ; then
 	    echo "ERROR: failed to deregister Walrus, please log in to the admin interface and check cloud status."
 	    exit 1
 	fi
@@ -1086,11 +1100,7 @@ if [ -n "$SCNAME" ]; then
 	if ! createCloudURL "Action" "RegisterStorageController" "Host" "${SCHOST}" "Name" "${SCNAME}" "Port" "8773"; then
 	    exit 1
 	fi
-	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
-	if [ -n "${FAKEREG}" ]; then
-	    CMD="echo"
-	fi
-	if ! eval $CMD ; then
+	if ! check_ws "$URL"; then
 	    echo "ERROR: failed to register storage controller, please log in to the admin interface and check cloud status."
 	    exit 1
 	fi
@@ -1117,11 +1127,7 @@ if [ -n "$SCNAME" ]; then
 	if ! createCloudURL "Action" "DeregisterStorageController" "Name" "${SCNAME}"; then
 	    exit 1
 	fi
-	CMD="$WGET -T 10 -t 1 -O - \"$URL\" 2>/dev/null | grep -v faultstring"
-	if [ -n "${FAKEREG}" ]; then
-	    CMD="echo"
-	fi
-	if ! eval $CMD ; then
+	if ! check_ws "$URL" ; then
 	    echo "ERROR: failed to deregister StorageController, please log in to the admin interface and check cloud status."
 	    exit 1
 	fi

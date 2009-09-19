@@ -10,17 +10,14 @@ all:
 	@sed "s/WS/cloud/g" < eucalyptus-java-ws > eucalyptus-cloud
 	@sed -i "s/START/sendmail/g" eucalyptus-cloud
 	@sed -i "s/CONFNAME/Cloud Controller/g" eucalyptus-cloud
-	@sed -i "s/JARNAME/cloud/g" eucalyptus-cloud
 	@# create the walrus init script
 	@sed "s/WS/walrus/g" < eucalyptus-java-ws > eucalyptus-walrus
 	@sed -i "s/START/eucalyptus-cloud/g" eucalyptus-walrus
 	@sed -i "s/CONFNAME/Walrus/g" eucalyptus-walrus
-	@sed -i "s/JARNAME/walrus/g" eucalyptus-walrus
 	@# create the sc init script
 	@sed "s/WS/sc/g" < eucalyptus-java-ws > eucalyptus-sc
 	@sed -i "s/START/eucalyptus-walrus/g" eucalyptus-sc
 	@sed -i "s/CONFNAME/Storage Controller/g" eucalyptus-sc
-	@sed -i "s/JARNAME/storagecontroller/g" eucalyptus-sc
 
 build: all
 
