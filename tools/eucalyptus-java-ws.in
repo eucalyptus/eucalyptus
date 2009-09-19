@@ -149,7 +149,7 @@ is_ws_enabled() {
 	RET=0
     elif [ "$NAME" = "walrus" -a "$WALRUS_WS" = "Y" ]; then
 	RET=0
-    elif [ "$NAME" = "storage" -a "$STORAGE_WS" = "Y" ]; then
+    elif [ "$NAME" = "sc" -a "$STORAGE_WS" = "Y" ]; then
 	RET=0
     fi
     return $RET
@@ -303,10 +303,7 @@ do_start() {
 		OPTS="$OPTS --disable-cloud"
 		started="Y"
 	fi
-	if [ "$started" != "Y" ]; then
-		# nothing to start
-		return 0
-	elif [ "$CLOUD_WS" != "Y" -a "$WALRUS_WS" != "Y" -a "$STORAGE_WS" != "Y" ]; then
+	if [ "$CLOUD_WS" != "Y" -a "$WALRUS_WS" != "Y" -a "$STORAGE_WS" != "Y" ]; then
 	    # nothing to start
 	    return 0
 	fi
