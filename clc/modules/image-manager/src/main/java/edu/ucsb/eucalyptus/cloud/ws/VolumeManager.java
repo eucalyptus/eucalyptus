@@ -270,12 +270,16 @@ public class VolumeManager {
     Volume volume = null;
     try {
       volume = db.getUnique( Volume.named( userName, request.getVolumeId() ) );
+      db.commit();
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback();
       throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId() );
     }
 
+    if(!volume.getCluster().equals(cluster.getName())) {
+    	throw new EucalyptusCloudException("Can only attach volumes in the same cluster: " + request.getVolumeId());
+    }
     request.setRemoteDevice( volume.getRemoteDevice() );
     QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback( cluster.getConfiguration( ) ), request );
     cluster.getMessageQueue().enqueue( event );
@@ -283,7 +287,6 @@ public class VolumeManager {
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName(), vm.getInstanceId(), request.getDevice(), volume.getRemoteDevice() );
     vm.getVolumes().add( attachVol );
     reply.setAttachedVolume( attachVol );
-
     return reply;
   }
 
