@@ -93,6 +93,7 @@ SCP="`which scp 2> /dev/null`"
 RSYNC="`which rsync 2> /dev/null`"
 WGET="`which wget 2> /dev/null`"
 VERBOSE="N"
+LIST=""
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -161,6 +162,7 @@ uncomment () {
 
 check_ws() {
 	local URL="$1"
+	local MODE="$2"
 	local ret=""
 
 	if [ -z "$URL" ]; then
@@ -170,6 +172,16 @@ check_ws() {
 	
 	if [ -n "${FAKEREG}" ]; then
 		ret=""
+	elif [ "$MODE" = "list" ]; then
+		if [ "$VERBOSE" = "Y" ]; then
+			echo "$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name>.*;\1;'"
+		fi
+		MODE="`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name>.*;\1;'`"
+		ret="$?"
+		for x in $MODE ; do
+			echo $x
+		done
+		return $ret
 	else
 		if [ "$VERBOSE" = "Y" ]; then
 			echo "$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'"
@@ -325,7 +337,22 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
-	if [ "$1" = "--verbose" -o "$1" = "-verbose" ]; then 
+	if [ "$1" = "--list-storages" ]; then 
+	    LIST="$LIST storages"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "--list-walruses" ]; then 
+	    LIST="$LIST walruses"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "--list-clusters" ]; then 
+	    LIST="$LIST clusters"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "--verbose" ]; then 
 	    VERBOSE="Y"
 	    shift
 	    continue
@@ -1215,3 +1242,18 @@ if [ -n "$NODEMODE" ]; then
 		fi
 	done
 fi
+
+for x in $LIST ; do
+	if [ "$x" = "walruses" ]; then
+		createCloudURL "Action" "DescribeWalruses"
+		check_ws "$URL" "list"
+	fi
+	if [ "$x" = "storages" ]; then
+		createCloudURL "Action" "DescribeStorageControllers"
+		check_ws "$URL" "list"
+	fi
+	if [ "$x" = "clusters" ]; then
+		createCloudURL "Action" "DescribeClusters"
+		check_ws "$URL" "list"
+	fi
+done
