@@ -77,23 +77,26 @@ public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputT
 
   private static Logger LOG = Logger.getLogger( ConsoleOutputCallback.class );
 
-  public ConsoleOutputCallback( final ClusterConfiguration clusterConfig ) {
-    super( clusterConfig );
-  }
+  public ConsoleOutputCallback( ) {}
 
   public void process( final Client cluster, final GetConsoleOutputType msg ) throws Exception {
-    GetConsoleOutputResponseType reply = ( GetConsoleOutputResponseType ) cluster.send( msg );
-    VmInstance vm = VmInstances.getInstance().lookup( msg.getInstanceId() );
-    String output = null;
+    GetConsoleOutputResponseType reply;
     try {
-      output = new String( Base64.decode( reply.getOutput().getBytes() ) );
-      if ( !"EMPTY".equals( output ) )
-        vm.getConsoleOutput().append( output );
-    } catch ( ArrayIndexOutOfBoundsException e1 ) {}
-    reply.setInstanceId( msg.getInstanceId() );
-    reply.setTimestamp( new Date() );
-    reply.setOutput( new String( Base64.encode( vm.getConsoleOutput().toString().getBytes() ) ) );
-    Messaging.dispatch( "vm://ReplyQueue", reply );
+      reply = ( GetConsoleOutputResponseType ) cluster.send( msg );
+      VmInstance vm = VmInstances.getInstance().lookup( msg.getInstanceId() );
+      String output = null;
+      try {
+        output = new String( Base64.decode( reply.getOutput().getBytes() ) );
+        if ( !"EMPTY".equals( output ) )
+          vm.getConsoleOutput().append( output );
+      } catch ( ArrayIndexOutOfBoundsException e1 ) {}
+      reply.setInstanceId( msg.getInstanceId() );
+      reply.setTimestamp( new Date() );
+      reply.setOutput( new String( Base64.encode( vm.getConsoleOutput().toString().getBytes() ) ) );
+      Messaging.dispatch( "vm://ReplyQueue", reply );
+    } catch ( Throwable t ) {
+      LOG.debug( "Failed to send message for request: " + GetConsoleOutputType.class + " " + msg.getCorrelationId( ) );//FIXME: finish up here.
+    }
   }
 
 }

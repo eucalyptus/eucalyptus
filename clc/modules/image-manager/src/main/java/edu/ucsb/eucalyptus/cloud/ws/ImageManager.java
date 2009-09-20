@@ -173,8 +173,6 @@ public class ImageManager {
       throw new EucalyptusCloudException( "The requested image is deregistered." );
     }
 
-    // :: now its time to determine the ramdisk and kernel info based on: 1)
-    // user input, 2) emi specific info, 3) system defaults ::/
     String defaultKernelId = null;
     String defaultRamdiskId = null;
     try {

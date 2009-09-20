@@ -73,9 +73,7 @@ public class TerminateCallback extends QueuedEventCallback<TerminateInstancesTyp
 
   private static Logger LOG = Logger.getLogger( TerminateCallback.class );
 
-  public TerminateCallback( final ClusterConfiguration clusterConfig ) {
-    super( clusterConfig );
-  }
+  public TerminateCallback( ) {}
 
 
   public void process( final Client cluster, final TerminateInstancesType msg ) throws Exception {

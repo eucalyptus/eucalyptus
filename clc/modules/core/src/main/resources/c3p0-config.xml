@@ -57,24 +57,25 @@
     <!--  pool size -->
     <property name="initialPoolSize">8</property>
     <property name="minPoolSize">8</property>
-    <property name="maxPoolSize">32</property>
-    <property name="acquireIncrement">2</property>
+    <property name="maxPoolSize">128</property>
+    <property name="acquireIncrement">6</property>
     <!--  connection aging  -->
     <property name="maxConnectionAge">600</property>
-    <property name="maxIdleTime">45</property>
-    <property name="maxIdleTimeExcessConnections">30</property>
+    <property name="maxIdleTime">300</property>
+    <property name="maxIdleTimeExcessConnections">60</property>
     <!--  connection testing -->
     <property name="automaticTestTable">eucalyptus_yay</property>
     <property name="idleConnectionTestPeriod">30</property>
-    <property name="testConnectionOnCheckin">true</property>
-    <!--  statement caching careful to avoid thrashing -->
+    <property name="testConnectionOnCheckin">false</property>
+    <property name="testConnectionOnCheckout">false</property>
+    <!--  statement caching: careful to avoid thrashing -->
     <property name="maxStatements">0</property>
-    <property name="maxStatementsPerConnection">20</property>
+    <property name="maxStatementsPerConnection">0</property>
     <!--  retry lease: 12 seconds leaving 8 seconds -->
     <property name="acquireRetryAttempts">6</property>
     <property name="acquireRetryDelay">2</property>
     <property name="unreturnedConnectionTimeout">60</property>
     <property name="checkoutTimeout">10000</property>
-    <property name="numHelperThreads">5</property>
+    <property name="numHelperThreads">10</property>
   </default-config>
 </c3p0-config>

@@ -66,51 +66,42 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.ws.client.Client;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
-import edu.ucsb.eucalyptus.msgs.StopNetworkType;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
-public class StartNetworkCallback extends QueuedEventCallback<StartNetworkType> {
+public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType> {
 
   private static Logger    LOG = Logger.getLogger( StartNetworkCallback.class );
 
-  private ClusterAllocator parent;
   private NetworkToken     networkToken;
 
-  public StartNetworkCallback( final ClusterAllocator parent, final NetworkToken networkToken ) {
-    this.parent = parent;
+  public StartNetworkCallback( final NetworkToken networkToken ) {
     this.networkToken = networkToken;
-  }
-
-  public void process( final StartNetworkType msg ) {
-    this.parent.msgMap.put( ClusterAllocator.State.ROLLBACK, new QueuedEvent<StopNetworkType>( new StopNetworkCallback( networkToken ), new StopNetworkType() ) );
-    msg.setNameserver( EucalyptusProperties.getSystemConfiguration( ).getNameserver( ) );
-    msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
-    for ( Client c : Clusters.getInstance( ).getClusterClients( ) ) {
-      LOG.info( "-> Sending start network to: " + c.getUri( ) + " " + LogUtil.dumpObject( msg ) );
-      if ( !this.parent.getRollback( ).get( ) ) {
-        try {
-          this.process( c, msg );
-        } catch ( Throwable e ) {
-          LOG.error( "Error while starting network: " + c.getUri( ) + " " + LogUtil.dumpObject( msg ) );
-        }
-      }
-    }
   }
 
   public void process( final Client clusterClient, final StartNetworkType msg ) throws Exception {
     try {
       clusterClient.send( msg );
     } catch ( Throwable e ) {
-      LOG.warn( "Error occured while sending message to cluster: " + clusterClient.getUri( ), e );
-      this.parent.getRollback( ).lazySet( true );
-      this.parent.returnAllocationTokens( );
+      String err = "Error occured while sending message to cluster: " + clusterClient.getUri( );
+      LOG.warn( err, e );
+      throw new EucalyptusClusterException( err, e );
     }
+  }
+
+  @Override
+  public void prepare( StartNetworkType msg ) throws Exception {
+    //FIXME: re-enable direct rather than lazy recovery of live networks
+    //this.parent.msgMap.put( ClusterAllocator.State.ROLLBACK, new QueuedEvent<StopNetworkType>( new StopNetworkCallback( networkToken ), new StopNetworkType( ) ) );
+    msg.setNameserver( EucalyptusProperties.getSystemConfiguration( ).getNameserver( ) );
+    msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
+    this.fireEventAsyncToAllClusters( msg );
   }
 
 }

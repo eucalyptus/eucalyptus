@@ -81,8 +81,7 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   private String vmIp;
   private String vmId;
   
-  public UnassignAddressCallback( final ClusterConfiguration clusterConfig, final Address parent ) {
-    super(clusterConfig);
+  public UnassignAddressCallback( final Address parent ) {
     this.vmId = parent.getInstanceId();
     this.pubIp = parent.getName();
     this.vmIp = parent.getInstanceAddress();

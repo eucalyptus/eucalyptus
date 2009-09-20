@@ -281,7 +281,7 @@ public class VolumeManager {
     	throw new EucalyptusCloudException("Can only attach volumes in the same cluster: " + request.getVolumeId());
     }
     request.setRemoteDevice( volume.getRemoteDevice() );
-    QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback( cluster.getConfiguration( ) ), request );
+    QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback(  ), request );
     cluster.getMessageQueue().enqueue( event );
 
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName(), vm.getInstanceId(), request.getDevice(), volume.getRemoteDevice() );
@@ -336,7 +336,7 @@ public class VolumeManager {
     request.setRemoteDevice( volume.getRemoteDevice() );
     request.setDevice( volume.getDevice().replaceAll("unknown,requested:","") );
     request.setInstanceId( vm.getInstanceId() );
-    QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( cluster.getConfiguration( ) ), request );
+    QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( ), request );
     cluster.getMessageQueue().enqueue( event );
 
     reply.setDetachedVolume( volume );

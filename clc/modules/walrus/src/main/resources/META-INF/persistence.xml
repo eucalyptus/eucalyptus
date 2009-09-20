@@ -82,14 +82,14 @@
 			<property name="hibernate.connection.password" value="${euca.db.password}" />
 			<property name="hibernate.connection.autocommit" value="true" />
 			<property name="hibernate.dialect" value="org.hibernate.dialect.HSQLDialect" />
-			<property name="hibernate.hbm2ddl.auto" value="update" />
+			<property name="hibernate.hbm2ddl.auto" value="update" /><!--
             <property name="hibernate.c3p0.min_size" value="8"/>
             <property name="hibernate.c3p0.max_size" value="32"/>
             <property name="hibernate.c3p0.timeout" value="5000"/>
             <property name="hibernate.c3p0.max_statements" value="100"/>
             <property name="hibernate.c3p0.idle_test_period" value="20"/>
             <property name="hibernate.c3p0.acquire_increment" value="3"/>
-		</properties>
-	</persistence-unit>
+        --></properties>
+    </persistence-unit>
 
 </persistence>

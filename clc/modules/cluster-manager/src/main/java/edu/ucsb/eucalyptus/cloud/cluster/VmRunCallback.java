@@ -84,8 +84,7 @@ class VmRunCallback extends QueuedEventCallback<VmRunType> {
   private ClusterAllocator parent;
   private ResourceToken token;
 
-  public VmRunCallback( final ClusterConfiguration clusterConfig,final ClusterAllocator parent, final ResourceToken token ) {
-    super(clusterConfig);
+  public VmRunCallback( final ClusterAllocator parent, final ResourceToken token ) {
     this.parent = parent;
     this.token = token;
   }
@@ -95,7 +94,7 @@ class VmRunCallback extends QueuedEventCallback<VmRunType> {
     Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
     ClusterConfiguration config = Clusters.getInstance( ).lookup( token.getCluster( ) ).getConfiguration( );
     for ( String vmId : msg.getInstanceIds() )
-      parent.msgMap.put( ClusterAllocator.State.ROLLBACK, new QueuedEvent<TerminateInstancesType>( new TerminateCallback( config ), new TerminateInstancesType( vmId, msg ) ) );
+      parent.msgMap.put( ClusterAllocator.State.ROLLBACK, QueuedEvent.make( new TerminateCallback(  ), new TerminateInstancesType( vmId, msg ) ) );
     VmRunResponseType reply = null;
     try {
       reply = ( VmRunResponseType ) clusterClient.send( msg );

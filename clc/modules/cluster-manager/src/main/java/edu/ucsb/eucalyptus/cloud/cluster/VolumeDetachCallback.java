@@ -75,9 +75,7 @@ public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType> 
 
   private static Logger LOG = Logger.getLogger( VolumeDetachCallback.class );
 
-  public VolumeDetachCallback( final ClusterConfiguration clusterConfig ){
-    super(clusterConfig);
-  }
+  public VolumeDetachCallback( ){}
 
   public void process( final Client cluster, final DetachVolumeType msg ) throws Exception
   {

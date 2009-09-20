@@ -80,6 +80,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasName;
 
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Cluster implements HasName {
@@ -161,6 +162,10 @@ public class Cluster implements HasName {
     return new RegisterClusterType( this.getName( ), host, port );
   }
 
+  public void fireEventAsync( QueuedEvent e ) {
+    this.mq.getMessageQueue( ).enqueue( e );
+  }
+  
   public ClusterMessageQueue getMessageQueue( ) {
     return this.mq.getMessageQueue( );
   }
@@ -240,6 +245,10 @@ public class Cluster implements HasName {
       if ( other.state != null ) return false;
     } else if ( !state.equals( other.state ) ) return false;
     return true;
+  }
+
+  public String getUri( ) {
+    return configuration.getUri( );
   }
 
   

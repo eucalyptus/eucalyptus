@@ -161,7 +161,7 @@ public class SystemState {
       if ( vm.getInstanceId().equals( address.getInstanceId() ) ) {
         if( address.getInstanceAddress() != null ) {
           ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
-          SystemState.dispatch( vm.getPlacement(), new UnassignAddressCallback( config, address ), Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() ) );
+          SystemState.dispatch( vm.getPlacement(), new UnassignAddressCallback( address ), Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() ) );
         }
         if( Component.eucalyptus.name().equals( address.getUserId() ) ) {
           try {
@@ -172,7 +172,7 @@ public class SystemState {
       }
     }
     ClusterConfiguration config = Clusters.getInstance( ).lookup( vm.getPlacement( ) ).getConfiguration( );
-    SystemState.dispatch( vm.getPlacement(), new TerminateCallback(config), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId() ) );
+    SystemState.dispatch( vm.getPlacement(), new TerminateCallback(), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId() ) );
     int index = vm.getNetworkIndex( );
     for( Network net : vm.getNetworks( ) ) {
       LOG.info( "Returning address index: " + index );
@@ -276,7 +276,7 @@ public class SystemState {
           } catch ( EucalyptusCloudException e ) {
             LOG.error( e );
             ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-            SystemState.dispatch( runVm.getPlacement(), new TerminateCallback(config), Admin.makeMsg( TerminateInstancesType.class, runVm.getInstanceId() ) );
+            SystemState.dispatch( runVm.getPlacement(), new TerminateCallback(), Admin.makeMsg( TerminateInstancesType.class, runVm.getInstanceId() ) );
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.error( e );
           }
@@ -290,7 +290,7 @@ public class SystemState {
       VmInstances.getInstance().register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-      SystemState.dispatch( runVm.getPlacement(), new TerminateCallback(config), Admin.makeMsg( TerminateInstancesType.class, runVm.getInstanceId() ) );
+      SystemState.dispatch( runVm.getPlacement(), new TerminateCallback(), Admin.makeMsg( TerminateInstancesType.class, runVm.getInstanceId() ) );
     }
   }
 
@@ -395,7 +395,7 @@ public class SystemState {
 
   private static void dispatchReboot( final String clusterName, final String instanceId, final EucalyptusMessage request ) {
     Cluster cluster = Clusters.getInstance().lookup( clusterName );
-    QueuedEvent<RebootInstancesType> event = QueuedEvent.make( new RebootCallback( cluster.getConfiguration( ) ),
+    QueuedEvent<RebootInstancesType> event = QueuedEvent.make( new RebootCallback( ),
                                                                Admin.makeMsg( RebootInstancesType.class, instanceId ) );
     cluster.getMessageQueue().enqueue( event );
   }
@@ -411,7 +411,7 @@ public class SystemState {
       }
       if ( !VmState.RUNNING.equals( v.getState() ) )
         throw new NoSuchElementException( "Instance " + request.getInstanceId() + " is not in a running state." );
-      QueuedEvent<GetConsoleOutputType> event = new QueuedEvent<GetConsoleOutputType>( new ConsoleOutputCallback( cluster.getConfiguration( ) ), request );
+      QueuedEvent<GetConsoleOutputType> event = QueuedEvent.make( new ConsoleOutputCallback( ), request );
       cluster.getMessageQueue().enqueue( event );
       return;
     } catch ( NoSuchElementException e ) {

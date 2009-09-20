@@ -68,17 +68,16 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.ws.client.Client;
 
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 
-public class ConfigureNetworkCallback extends QueuedEventCallback<ConfigureNetworkType> {
+public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetworkType> {
   public static ConfigureNetworkCallback CALLBACK = new ConfigureNetworkCallback( ); 
   private static Logger LOG = Logger.getLogger( ConfigureNetworkCallback.class );
 
   public ConfigureNetworkCallback( ) {}
-  public void process( final ConfigureNetworkType msg ) throws Exception {
-    for ( Client c : Clusters.getInstance( ).getClusterClients( ) ) {
-      this.process( c, msg );
-    }
+  public void prepare( final ConfigureNetworkType msg ) throws Exception {
+    this.fireEventAsyncToAllClusters( msg );
   }
   public void process( final Client clusterClient, final ConfigureNetworkType msg ) throws Exception {
     clusterClient.send( msg );

@@ -74,9 +74,7 @@ public class RebootCallback extends QueuedEventCallback<RebootInstancesType> {
 
   private static Logger LOG = Logger.getLogger( RebootCallback.class );
 
-  public RebootCallback( final ClusterConfiguration clusterConfig ) {
-    super( clusterConfig );
-  }
+  public RebootCallback( ) {}
 
   public void process( final Client cluster, final RebootInstancesType msg ) throws Exception {
     cluster.send( msg );

@@ -72,13 +72,10 @@ import com.eucalyptus.ws.client.Client;
 import org.apache.log4j.Logger;
 
 public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType> {
-
   private static Logger LOG = Logger.getLogger( AssignAddressCallback.class );
 
   private VmInstance parent;
-
-  public AssignAddressCallback( final ClusterConfiguration clusterConfig,final VmInstance parent ) {
-    super( clusterConfig );
+  public AssignAddressCallback( final VmInstance parent ) {
     this.parent = parent;
   }
 

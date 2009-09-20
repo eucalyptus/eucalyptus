@@ -76,7 +76,7 @@ public class QueuedEvent<TYPE> {
     return new QueuedEvent<T>( callback, event );
   }
 
-  public QueuedEvent( final QueuedEventCallback callback, final TYPE event ) {
+  protected QueuedEvent( final QueuedEventCallback callback, final TYPE event ) {
     this.callback = callback;
     this.event = event;
   }
@@ -92,9 +92,10 @@ public class QueuedEvent<TYPE> {
   public void trigger( Client cluster ) {
     try {
       this.callback.process( cluster, this.event );
-    } catch ( Exception e ) {
-      LOG.error( e );
-      LOG.debug( e, e );
+    } catch ( Throwable t ) {
+      LOG.error( t );
+      LOG.debug( t, t );
+    } finally {
       this.callback.notifyHandler( );
     }
   }

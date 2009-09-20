@@ -64,6 +64,7 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
@@ -99,7 +100,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
 
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
     Throwable t = exceptionEvent.getCause( );
-    if ( t instanceof IOException ) {
+    if ( t != null && IOException.class.isAssignableFrom( t.getClass( ) ) ) {
       LOG.debug( t, t );
       ctx.getChannel( ).close( );
     } else {

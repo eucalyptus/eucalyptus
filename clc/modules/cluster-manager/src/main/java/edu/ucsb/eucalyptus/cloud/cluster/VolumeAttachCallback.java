@@ -77,9 +77,7 @@ public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType> 
 
   private static Logger LOG = Logger.getLogger( VolumeAttachCallback.class );
 
-  public VolumeAttachCallback( final ClusterConfiguration clusterConfig ) {
-    super(clusterConfig);
-  }
+  public VolumeAttachCallback( ) {}
 
   public void process( final Client cluster, final AttachVolumeType msg ) throws Exception {
     AttachVolumeResponseType reply = ( AttachVolumeResponseType ) cluster.send( msg );

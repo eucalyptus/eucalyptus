@@ -92,11 +92,10 @@ public class NioClient implements Client {
   private Channel channel;
   private NioClientPipeline clientPipeline;
 
-
-  String hostname;
-  int port;
-  String servicePath;
-  InetSocketAddress remoteAddr;
+  private String hostname;
+  private int port;
+  private String servicePath;
+  private InetSocketAddress remoteAddr;
 
   public NioClient( String hostname, int port, String servicePath, NioClientPipeline clientPipeline ) {
     this.channelFactory = new NioClientSocketChannelFactory( Executors.newCachedThreadPool(), Executors.newCachedThreadPool() );
@@ -167,5 +166,17 @@ public class NioClient implements Client {
   @Override
   public String getUri() {
     return "http://"+this.hostname+":"+this.port+(servicePath.startsWith( "/" )?"":"?")+servicePath;
+  }
+
+  public String getHostname( ) {
+    return hostname;
+  }
+
+  public int getPort( ) {
+    return port;
+  }
+
+  public String getServicePath( ) {
+    return servicePath;
   }
 }

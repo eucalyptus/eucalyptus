@@ -171,10 +171,6 @@
         <priority value="WARN"/>
         <appender-ref ref="logfile"/>
     </category>
-    <category name="com.mchange" additivity="true">
-        <priority value="ERROR"/>
-        <appender-ref ref="logfile"/>
-    </category>
     <category name="edu.ucsb.eucalyptus.cloud.ws.WalrusStatistics" additivity="true">
         <priority value="INFO"/>
         <appender-ref ref="walrus-stats-log"/>

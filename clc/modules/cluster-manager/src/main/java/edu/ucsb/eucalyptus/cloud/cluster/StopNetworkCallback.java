@@ -64,6 +64,7 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.cloud.*;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.msgs.*;
 
 import com.eucalyptus.cluster.Cluster;
@@ -75,10 +76,8 @@ import org.apache.log4j.Logger;
 
 import java.util.NoSuchElementException;
 
-public class StopNetworkCallback extends QueuedEventCallback<StopNetworkType> {
-
+public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
   private static Logger LOG = Logger.getLogger( StopNetworkCallback.class );
-
   private NetworkToken  token;
 
   public StopNetworkCallback( final NetworkToken networkToken ) {
@@ -87,17 +86,19 @@ public class StopNetworkCallback extends QueuedEventCallback<StopNetworkType> {
 
   public void process( final StopNetworkType msg ) {
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( v.getNetworkNames( ).contains( token.getName( ) ) && v.getPlacement( ).equals( token.getCluster( ) ) ) return;
+      if ( v.getNetworkNames( ).contains( token.getName( ) ) && v.getPlacement( ).equals( token.getCluster( ) ) ) {
+        LOG.debug( "Returning stop network event since it still exists." );
+        return;        
+      }
     }
-    for ( Client c : Clusters.getInstance( ).getClusterClients( ) ) {
-
-    }
+    //TODO: likely need a transient uncommitted state for the token to avoid a race.
     Network net = Networks.getInstance( ).lookup( token.getName( ) );
     Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
     LOG.debug( "Releasing network token back to cluster: " + token );
     cluster.getState( ).releaseNetworkAllocation( token );
     LOG.debug( "Removing network token: " + token );
     net.removeToken( token.getCluster( ) );
+    this.fireEventAsyncToAllClusters( msg );
   }
 
   public void process( final Client c, final StopNetworkType msg ) throws Exception {
@@ -108,5 +109,11 @@ public class StopNetworkCallback extends QueuedEventCallback<StopNetworkType> {
       LOG.warn( "Error occured while sending message to cluster: " + c.getUri( ), t );
       LOG.debug( t, t );
     }
+  }
+
+  @Override
+  public void prepare( StopNetworkType msg ) throws Exception {
+    // TODO Auto-generated method stub
+    
   }
 }

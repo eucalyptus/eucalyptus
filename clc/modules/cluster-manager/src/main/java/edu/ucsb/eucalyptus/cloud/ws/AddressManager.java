@@ -70,8 +70,11 @@ import com.google.common.collect.Sets;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LogUtil;
+
 import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.ClusterEnvelope;
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
@@ -285,7 +288,10 @@ public class AddressManager implements Startable {
     Map.Entry<String, Address> addressEntry = unusedAddresses.pollFirstEntry();
 
     //:: address is null -- disabled map is empty :://
-    if ( addressEntry == null ) throw new EucalyptusCloudException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
+    if ( addressEntry == null ) {
+      LOG.debug( LogUtil.header( LogUtil.dumpObject( Addresses.getInstance( ) ) ) );
+      throw new EucalyptusCloudException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
+    }
 
     Address address = addressEntry.getValue();
     address.allocate( request.getUserId() );
@@ -507,7 +513,7 @@ public class AddressManager implements Startable {
     try {
       UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
       ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
-      ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new UnassignAddressCallback( config, address ), unassignMsg ) );
+      ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new UnassignAddressCallback( address ), unassignMsg ) );
       Address addr = db.getUnique( new Address( address.getName() ) );
       addr.unassign();
       address.unassign();
@@ -528,7 +534,7 @@ public class AddressManager implements Startable {
       //:: dispatch the request to the cluster that owns the address :://
       AssignAddressType assignMsg = Admin.makeMsg( AssignAddressType.class, address.getName(), address.getInstanceAddress(), address.getInstanceId( ) );
       ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
-      ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new AssignAddressCallback( config, vm ), assignMsg ) );
+      ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new AssignAddressCallback( vm ), assignMsg ) );
       db.commit();
     } catch ( EucalyptusCloudException e ) {
       db.rollback();
