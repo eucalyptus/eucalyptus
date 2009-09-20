@@ -123,6 +123,10 @@
       ~ NOTE: The following suppress very verbose but potentially useful output.
       ~ Consider removing or changing these if you are having unexplained failures. 
       -->
+    <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
+        <priority value="INFO"/>
+        <appender-ref ref="logfile"/>
+    </category>
     <category name="com.eucalyptus.ws.util.HmacUtils" additivity="false">
         <priority value="INFO"/>
         <appender-ref ref="logfile"/>
@@ -131,11 +135,7 @@
         <priority value="INFO"/>
         <appender-ref ref="logfile"/>
     </category> 
-    <category name="com.eucalyptus.util.EntityWrapper" additivity="false">
-        <priority value="${euca.log.level}"/>
-        <appender-ref ref="logfile"/>
-    </category> 
-    <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
+    <category name="com.eucalyptus.util.EntityWrapper" additivity="true">
         <priority value="${euca.log.level}"/>
         <appender-ref ref="logfile"/>
     </category> 
@@ -171,6 +171,12 @@
         <priority value="WARN"/>
         <appender-ref ref="logfile"/>
     </category>
+    <!-- 
+    <category name="com.mchange" additivity="true">
+        <priority value="ERROR"/>
+        <appender-ref ref="logfile"/>
+    </category>
+     -->
     <category name="edu.ucsb.eucalyptus.cloud.ws.WalrusStatistics" additivity="true">
         <priority value="INFO"/>
         <appender-ref ref="walrus-stats-log"/>

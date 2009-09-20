@@ -66,6 +66,7 @@ package com.eucalyptus.cluster;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
@@ -73,9 +74,13 @@ import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.ws.client.Client;
 import com.eucalyptus.ws.client.NioClient;
 import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
+import com.eucalyptus.ws.client.pipeline.LogClientPipeline;
+import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedLogEvent;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {
@@ -112,6 +117,20 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       }
     }
     return clients;
+  }
+
+  public static Client getClusterClient( String clusterName, QueuedEvent event ) throws Exception {
+    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+    NioClient nioClient = null;
+    NioClientPipeline cp = null;
+    if ( !( event instanceof QueuedLogEvent ) ) {
+      cp = new ClusterClientPipeline( new NioResponseHandler( ) );
+      nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
+    } else {
+      cp = new LogClientPipeline( new NioResponseHandler( ) );
+      nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
+    }
+    return nioClient;
   }
   
 }

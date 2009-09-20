@@ -79,6 +79,6 @@ public interface Client {
 
   public String getUri( );
 
-  public void cleanup( );
+  public void close( );
 
 }

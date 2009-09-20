@@ -78,7 +78,7 @@ import com.google.common.collect.Lists;
 public class ClusterWsSecHandler extends WsSecHandler {
   private static final String WSA_NAMESPACE = "http://www.w3.org/2005/08/addressing";
 
-  public ClusterWsSecHandler( ) throws GeneralSecurityException {
+  public ClusterWsSecHandler( ) {
     super( new CredentialProxy( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( ), SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getPrivateKey( ) ) );
   }
 

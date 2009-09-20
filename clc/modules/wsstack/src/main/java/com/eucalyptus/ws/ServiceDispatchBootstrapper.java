@@ -112,7 +112,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       registerComponent( Component.jetty, new RemoteConfiguration( Component.jetty, Component.jetty.getUri( ) ) );
       Component.cluster.setHostAddress( Component.db.getHostAddress( ) );
       registerComponent( Component.cluster, new RemoteConfiguration( Component.cluster, Component.cluster.getUri( ) ) );
-      Component.cluster.setHostAddress( Component.db.getHostAddress( ) );
+      Component.dns.setHostAddress( Component.db.getHostAddress( ) );
       registerComponent( Component.dns, new RemoteConfiguration( Component.dns, Component.dns.getUri( ) ) );
     } else if( Component.eucalyptus.isLocal( ) ) {
       try {
@@ -129,7 +129,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       }      
     }
 
-    if( !Component.walrus.isLocal( ) ) {
+    if( !Component.walrus.isEnabled( ) || !Component.walrus.isLocal( ) ) {
       List<WalrusConfiguration> walri = Configuration.getWalrusConfigurations( );
       for( WalrusConfiguration w : walri ) {
         try {
