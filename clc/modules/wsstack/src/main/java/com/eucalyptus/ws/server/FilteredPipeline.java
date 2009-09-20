@@ -113,7 +113,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   }
   
   public void unroll( final ChannelPipeline pipeline ) {// FIXME: HACK: TODO: just a quick test.
-    ChannelUtil.addPipelineTimeout( pipeline, ChannelUtil.CLIENT_IDLE_TIMEOUT_SECS, TimeUnit.SECONDS );
+    ChannelUtil.addPipelineTimeout( pipeline );
     try {
       for ( final UnrollableStage s : this.stages ) {
         pipeline.addLast( "pre-" + s.getStageName( ), new UnrollableStage.StageBottomHandler( s ) );

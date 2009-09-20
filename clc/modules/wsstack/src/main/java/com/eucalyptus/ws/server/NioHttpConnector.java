@@ -82,7 +82,7 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
   }
 
   public void doConnect( ) throws MuleException {
-    this.server = new NioServer( 8773 );
+    this.server = new NioServer( );
   }
 
   public String getProtocol( ) {
