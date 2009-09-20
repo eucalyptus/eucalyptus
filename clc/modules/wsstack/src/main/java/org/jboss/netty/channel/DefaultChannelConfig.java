@@ -33,9 +33,7 @@ import org.jboss.netty.util.internal.ConversionUtil;
 public class DefaultChannelConfig implements ChannelConfig {
 
   private volatile ChannelBufferFactory bufferFactory        = HeapChannelBufferFactory.getInstance( );
-  private volatile int                  connectTimeoutMillis = 10000;                                  // 10
-                                                                                                        // seconds
-
+  private volatile int                  connectTimeoutMillis = 5000;                                  
   /**
    * Creates a new instance.
    */

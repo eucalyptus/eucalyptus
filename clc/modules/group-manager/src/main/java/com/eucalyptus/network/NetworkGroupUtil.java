@@ -30,7 +30,7 @@ public class NetworkGroupUtil {
     EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
     List<NetworkRulesGroup> networkGroups = Lists.newArrayList( );
     try {
-      networkGroups = Lists.newArrayList( Sets.newHashSet( db.query( new NetworkRulesGroup( userName ) ) ));
+      networkGroups = db.query( new NetworkRulesGroup( userName ) );
       db.commit( );
     } catch ( Throwable e ) {
       db.rollback( );
@@ -89,24 +89,37 @@ public class NetworkGroupUtil {
 
   public static List<SecurityGroupItemType> getUserNetworks( String userId, List<String> groupNames ) throws EucalyptusCloudException {
     List<SecurityGroupItemType> groupInfoList = Lists.newArrayList();
-    for ( NetworkRulesGroup group : NetworkGroupUtil.getUserNetworkRulesGroup( userId ) )
-      if ( groupNames.isEmpty() || groupNames.contains( group.getDisplayName() ) ) {
-        SecurityGroupItemType groupInfo = new SecurityGroupItemType();
-        groupInfo.setGroupName( group.getDisplayName() );
-        groupInfo.setGroupDescription( group.getDescription() );
-        groupInfo.setOwnerId( userId );
-        groupInfoList.add( groupInfo );
-        for ( NetworkRule rule : group.getNetworkRules() ) {
-          IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol(), rule.getLowPort(), rule.getHighPort() );
-          for ( IpRange ipRange : rule.getIpRanges() )
-            ipPerm.getIpRanges().add( ipRange.getValue() );
-          if ( !rule.getNetworkPeers().isEmpty() )
-            for ( NetworkPeer peer : rule.getNetworkPeers() )
-              ipPerm.getGroups().add( new UserIdGroupPairType( peer.getUserQueryKey(), peer.getGroupName() ) );
-          groupInfo.getIpPermissions().add( ipPerm );
-        }
+    List<NetworkRulesGroup> userGroups = Lists.newArrayList( );
+    if( groupNames.isEmpty( ) ) {
+      userGroups.addAll( NetworkGroupUtil.getUserNetworkRulesGroup( userId ) );
+    } else {
+      for( String groupName : groupNames ) {
+        try {
+          userGroups.add( NetworkGroupUtil.getUserNetworkRulesGroup( userId, groupName ) );
+        } catch ( Exception e ) {}
       }
+    }
+    for ( NetworkRulesGroup group : NetworkGroupUtil.getUserNetworkRulesGroup( userId ) ) {
+      groupInfoList.add( getAsSecurityGroupItemType( userId, group ) );
+    }
     return groupInfoList;
+  }
+
+  public static SecurityGroupItemType getAsSecurityGroupItemType( String userId, NetworkRulesGroup group ) {
+    SecurityGroupItemType groupInfo = new SecurityGroupItemType();
+    groupInfo.setGroupName( group.getDisplayName() );
+    groupInfo.setGroupDescription( group.getDescription() );
+    groupInfo.setOwnerId( userId );
+    for ( NetworkRule rule : group.getNetworkRules() ) {
+      IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol(), rule.getLowPort(), rule.getHighPort() );
+      for ( IpRange ipRange : rule.getIpRanges() )
+        ipPerm.getIpRanges().add( ipRange.getValue() );
+      if ( !rule.getNetworkPeers().isEmpty() )
+        for ( NetworkPeer peer : rule.getNetworkPeers() )
+          ipPerm.getGroups().add( new UserIdGroupPairType( peer.getUserQueryKey(), peer.getGroupName() ) );
+      groupInfo.getIpPermissions().add( ipPerm );
+    }
+    return groupInfo;
   }
 
   static List<NetworkRule> getNetworkRules( final IpPermissionType ipPerm ) {

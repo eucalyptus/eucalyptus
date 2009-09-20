@@ -168,7 +168,7 @@ public class DebugUtil {
   public static void printDebugDetails( ) {
     for( String persistenceContext : DatabaseUtil.getPersistenceContexts( ) ) {
       EntityManagerFactoryImpl anemf = ( EntityManagerFactoryImpl ) DatabaseUtil.getEntityManagerFactory( persistenceContext );
-      DatabaseUtil.LOG.debug( LogUtil.subheader( persistenceContext + " hibernate statistics: " + anemf.getSessionFactory( ).getStatistics( ) ) );
+      LOG.debug( LogUtil.subheader( persistenceContext + " hibernate statistics: " + anemf.getSessionFactory( ).getStatistics( ) ) );
     }
     Times.print( );
     TxHandle.printTxStatus( );
