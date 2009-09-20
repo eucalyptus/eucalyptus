@@ -133,12 +133,17 @@ public class ClusterMessageQueue implements Runnable {
           long msgStart = System.currentTimeMillis( );
           try {
             QueuedEventCallback q = event.getCallback( );
-            if ( !( event instanceof QueuedLogEvent ) && q instanceof MultiClusterCallback ) {
-              MultiClusterCallback multi = ( MultiClusterCallback ) q;
-              multi.prepare( event.getEvent( ) );
-            } else {
+            if( event instanceof QueuedLogEvent ) {
               Client nioClient = getClusterClient( event );
-              event.trigger( nioClient );
+              event.trigger( nioClient );              
+            } else {
+              if ( q instanceof MultiClusterCallback && !((MultiClusterCallback)q).isSplit( ) ) {
+                MultiClusterCallback multi = ( MultiClusterCallback ) q;
+                multi.prepare( event.getEvent( ) );
+              } else {
+                Client nioClient = getClusterClient( event );
+                event.trigger( nioClient );
+              }
             }
           } catch ( Exception e ) {
             LOG.error( e );

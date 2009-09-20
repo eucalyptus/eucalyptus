@@ -139,10 +139,10 @@ public abstract class QueuedEventCallback<TYPE> {
       this.split = split;
     }
     protected void fireEventAsyncToAllClusters( TYPE msg ) {
+      this.markSplit( );
       for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
         LOG.info( "-> Sending " + msg.getClass( ).getSimpleName( ) + " network to: " + c.getUri( ) );
         LOG.debug( LogUtil.lineObject( msg ) );
-        this.markSplit( );
         try {
           c.fireEventAsync( QueuedEvent.make( this, msg ) );
         } catch ( Throwable e ) {
