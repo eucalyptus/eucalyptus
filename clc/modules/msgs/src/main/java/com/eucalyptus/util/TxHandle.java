@@ -40,11 +40,11 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
       this.dbUrl = this.session.connection( ).getMetaData( ).getURL( );
       this.delegate = em.getTransaction( );
       this.delegate.begin( );
+      outstanding.put( ctx, this );
     } catch ( Throwable e ) {
       LOG.error( e, e );
       throw new RuntimeException( e );
     }
-    outstanding.put( ctx, this );
   }
   public boolean isExpired() {
     this.stopWatch.split( );
@@ -104,7 +104,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
         throw new RuntimeException( e1 );
       } 
     } else {
-      DatabaseUtil.debug( );
+      DebugUtil.debug( );
       throw new RuntimeException( "Database is closed already." );
     }
   }

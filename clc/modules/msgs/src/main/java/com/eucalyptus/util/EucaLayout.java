@@ -96,8 +96,10 @@ public class EucaLayout extends PatternLayout {
     if( event.getThrowableInformation( ) != null ) {
       Throwable t = event.getThrowableInformation( ).getThrowable( );
       if( t != null && t instanceof GenericJDBCException ) {
-        return " -- MARK -- ";
+        return "";
       }
+    } else if ( event.getFQNOfLoggerClass( ).matches(".*JDBCExceptionReporter.*") ) {
+      return "";
     }
     String[] messages = event.getRenderedMessage( ).split( "\n" );
     StringBuffer sb = new StringBuffer( );

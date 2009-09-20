@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.*;
@@ -143,7 +144,7 @@ public class ClusterEndpoint implements Startable {
         tagList.retainAll( c.getNodeTags() );
       if ( tagList.isEmpty() ) continue;
 
-
+      DebugUtil.printDebugDetails( );
       if ( request.isAdministrator() && args.lastIndexOf( "verbose" ) == 0 )
         reply.getAvailabilityZoneInfo().addAll( this.addSystemInfo( c ) );
       else if ( request.isAdministrator() && args.lastIndexOf( "certs" ) == 0 )

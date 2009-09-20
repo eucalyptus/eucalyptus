@@ -71,6 +71,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.mule.api.MuleContext;
 
+import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 
@@ -131,6 +132,9 @@ public class SystemBootstrapper {
   }
 
   public boolean init( ) throws Exception {
+    boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) );
+    LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
+    DebugUtil.DEBUG = doDebug;
     try {
       LOG.info( LogUtil.header( "Initializing resource providers." ) );
       BootstrapFactory.initResourceProviders( );

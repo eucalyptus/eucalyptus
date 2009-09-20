@@ -20,8 +20,8 @@ import com.mchange.v2.c3p0.C3P0Registry;
 import com.mchange.v2.c3p0.PooledDataSource;
 
 public class DatabaseUtil implements EventListener {
-  private static Logger LOG = Logger.getLogger( DatabaseUtil.class );
-  public static int MAX_FAIL = 5;
+  static Logger LOG = Logger.getLogger( DatabaseUtil.class );
+  public static int MAX_FAIL = 1;
   public static long MAX_OPEN_TIME = 30*1000l;
   private static int failCount = 0;
   private static Map<String, EntityManagerFactoryImpl> emf   = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
@@ -70,7 +70,7 @@ public class DatabaseUtil implements EventListener {
     return emf.keySet( );
   }
   public static void handleConnectionError( Throwable cause ) {
-    debug( );
+    DebugUtil.debug( );
     LOG.warn( "Caught exception in database path: resetting connection pools.", cause );
     for ( PooledDataSource ds : ( Set<PooledDataSource> ) C3P0Registry.getPooledDataSources( ) ) {
       try {
@@ -92,23 +92,19 @@ public class DatabaseUtil implements EventListener {
       }
     }
   }
-  public static void debug( ) {
-    if( DebugUtil.DEBUG ) {
-      for( String persistenceContext : getPersistenceContexts( ) ) {
-        EntityManagerFactoryImpl anemf = ( EntityManagerFactoryImpl ) getEntityManagerFactory( persistenceContext );
-        LOG.debug( LogUtil.subheader( persistenceContext + " hibernate statistics: " + anemf.getSessionFactory( ).getStatistics( ) ) );
-      }
-      TxHandle.printTxStatus( );
-      DatabaseUtil.printConnectionPoolStatus( );
-    }
-  }
   @Override
   public void advertiseEvent( Event event ) {}
 
   @Override
   public void fireEvent( Event event ) {
-    if( event instanceof ClockTick && !((ClockTick)event).isBackEdge( ) ) {
-      debug( );
+    if( event instanceof ClockTick ) {
+      ClockTick e = (ClockTick)event;
+      if( e.isBackEdge( ) ) {
+        DebugUtil.Times.print( );
+      } else {
+        DebugUtil.Times.update( );
+        DebugUtil.debug( );        
+      }
     }
   }
 

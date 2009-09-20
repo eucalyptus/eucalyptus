@@ -154,7 +154,7 @@ public class EntityWrapper<TYPE> {
       this.tx.rollback( );
       DbEvent.ROLLBACK.log( );
     } catch ( Exception e ) {
-      DbEvent.ROLLBACK.logError( );
+      DbEvent.ROLLBACK.log( );
       this.exceptionCaught( e );
     }
   }
@@ -164,7 +164,7 @@ public class EntityWrapper<TYPE> {
       this.tx.commit( );
       DbEvent.COMMIT.log( );
     } catch ( Throwable e ) {
-      DbEvent.COMMIT.logError( );
+      DbEvent.ROLLBACK.log( );
       this.exceptionCaught( e );
       throw (RuntimeException) e ;
     }
@@ -200,11 +200,6 @@ public class EntityWrapper<TYPE> {
     String getMessage( ) {
       return this.toString( ) + " " + DebugUtil.getMyStackTraceElement( );
     }
-
-    public void logError( ) {
-      LOG.error( LogUtil.header( "ERROR during: " + this.getMessage( ) ) );
-    }
-
     public void log( ) {
       LOG.debug( this.getMessage( ) );
     }

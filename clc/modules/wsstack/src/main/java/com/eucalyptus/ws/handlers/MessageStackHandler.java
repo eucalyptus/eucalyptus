@@ -93,13 +93,14 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
   public abstract void incomingMessage( final ChannelHandlerContext ctx, MessageEvent event ) throws Exception;
 
   public void exceptionCaught( final Throwable t ) throws Exception {
-
+    LOG.fatal( "MessageStackHandler: " + t );
+    LOG.debug( t, t );
   }
 
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
     Throwable t = exceptionEvent.getCause( );
     if ( t instanceof IOException ) {
-      LOG.fatal( t );
+      LOG.debug( t, t );
       ctx.getChannel( ).close( );
     } else {
       this.exceptionCaught( t );
@@ -116,7 +117,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
       try {
         this.incomingMessage( channelHandlerContext, msgEvent );
         channelHandlerContext.sendUpstream( channelEvent );
-      } catch ( Exception e ) {
+      } catch ( Throwable e ) {
         Channels.fireExceptionCaught( channelHandlerContext, e );
       } 
     } else if ( channelEvent instanceof ExceptionEvent ) {
