@@ -382,7 +382,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         NioWorker.close( channel, succeededFuture( channel ) );
       }
 
-      int connectTimeout = channel.getConfig( ).getConnectTimeoutMillis( );
+      int connectTimeout = 5000;
       if ( connectTimeout > 0 ) {
         channel.connectDeadlineNanos = System.nanoTime( ) + connectTimeout * 1000000L;
       }
