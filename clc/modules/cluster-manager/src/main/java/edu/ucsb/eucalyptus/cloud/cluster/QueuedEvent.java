@@ -94,7 +94,6 @@ public class QueuedEvent<TYPE> {
       this.callback.process( cluster, this.event );
     } catch ( Throwable t ) {
       LOG.error( t, t );
-      LOG.debug( t, t );
     } finally {
       this.callback.notifyHandler( );
     }
