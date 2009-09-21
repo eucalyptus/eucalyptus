@@ -50,6 +50,7 @@ import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
+import com.eucalyptus.ws.util.ChannelUtil;
 
 public abstract class AbstractClusterMessageDispatcher implements ChannelPipelineFactory, ChannelUpstreamHandler, ChannelDownstreamHandler, EventListener {
   private static Logger     LOG = Logger.getLogger( AbstractClusterMessageDispatcher.class );
@@ -94,9 +95,8 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   }
 
   private AbstractClusterMessageDispatcher( ) throws BindingException {
-    this.channelFactory = new NioClientSocketChannelFactory( Executors.newCachedThreadPool( ), Executors.newCachedThreadPool( ) );
-    this.clientBootstrap = new NioBootstrap( channelFactory );
-    this.clientBootstrap.setPipelineFactory( this );
+    this.channelFactory = new NioClientSocketChannelFactory( ChannelUtil.getSharedBossThreadPool( ), ChannelUtil.getClientWorkerThreadPool( ) );
+    this.clientBootstrap = ChannelUtil.getClientBootstrap( this );
     this.binding = BindingManager.getBinding( "eucalyptus_ucsb_edu" );
     this.secure = true;
   }
@@ -209,9 +209,11 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
 
   public void close( ) {
     try {
-      this.channel.close( );
       LOG.debug( "Forcing the channel to close." );
-    } catch ( Throwable e ) {}
+      this.channel.close( );
+    } catch ( Throwable e ) {
+      LOG.debug( e, e );
+    }
   }
 
   public void cleanup( ) {
@@ -219,8 +221,9 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
       if ( this.channel != null ) {
         this.close( );
       }
-      this.channelFactory.releaseExternalResources( );
-    } catch ( Throwable e ) {}
+    } catch ( Throwable e ) {
+      LOG.debug( e, e );
+    }
   }
 
   public abstract void trigger( );
