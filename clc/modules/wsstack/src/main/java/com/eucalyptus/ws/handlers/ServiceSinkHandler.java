@@ -63,40 +63,26 @@
  */
 package com.eucalyptus.ws.handlers;
 
-import java.io.IOException;
-
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.mule.DefaultMuleMessage;
 import org.mule.api.MuleMessage;
 import org.mule.transport.NullPayload;
 
 import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.Messaging;
@@ -112,104 +98,103 @@ import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )
 public class ServiceSinkHandler extends SimpleChannelHandler {
-  private static Logger                    LOG              = Logger.getLogger( ServiceSinkHandler.class );
-  private long                             QUEUE_TIMEOUT_MS = 2;                                           // TODO:
-                                                                                                            // measure
-                                                                                                            // me
-  private long                             startTime;
-  private ChannelLocal<MappingHttpMessage> requestLocal     = new ChannelLocal<MappingHttpMessage>( );
-
-  private NioMessageReceiver               msgReceiver;
-
+  private static Logger                          LOG          = Logger.getLogger( ServiceSinkHandler.class );
+  private long                                   startTime;
+  private final ChannelLocal<MappingHttpMessage> requestLocal = new ChannelLocal<MappingHttpMessage>( );
+  
+  private NioMessageReceiver                     msgReceiver;
+  
   public ServiceSinkHandler( ) {
     super( );
   }
-
-  public ServiceSinkHandler( NioMessageReceiver msgReceiver ) {
+  
+  public ServiceSinkHandler( final NioMessageReceiver msgReceiver ) {
     super( );
     this.msgReceiver = msgReceiver;
   }
-
+  
   @Override
-  public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + e );
+  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {
+    LOG.trace( ctx.getChannel( ), e.getCause( ) );
+    Channels.fireExceptionCaught( ctx.getChannel( ), e.getCause( ) );
+  }
+  
+  @SuppressWarnings( "unchecked" )
+  @Override
+  public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+    if ( e instanceof MessageEvent ) {
+      final MessageEvent msge = ( MessageEvent ) e;
+      if ( msge.getMessage( ) instanceof NullPayload ) {
+        return;
+      }
+      if ( msge.getMessage( ) instanceof IsData ) {// Pass through for chunked messaging
+        ctx.sendDownstream( msge );
+      } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {// Handle single request-response MEP
+        final MappingHttpMessage request = this.requestLocal.get( ctx.getChannel( ) );
+        EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
+        if ( reply == null ) {// TODO: fix this error reporting
+          ServiceSinkHandler.LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
+          reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
+        }
+        ServiceSinkHandler.LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED,
+                                                         ( System.currentTimeMillis( ) - this.startTime ) ) );
+        if ( reply instanceof WalrusDataGetResponseType ) {
+          if ( reply instanceof GetObjectResponseType ) {
+            final GetObjectResponseType getObjectResponse = ( GetObjectResponseType ) reply;
+            ServiceSinkHandler.LOG.debug( getObjectResponse );
+            if ( getObjectResponse.getBase64Data( ) == null ) {
+              return;
+            }
+          } else {
+            return;
+          }
+        }
+        final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
+        final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
+        response.setMessage( reply );
+        ctx.sendDownstream( newEvent );
+      } else if ( msge.getMessage( ) instanceof HttpResponse ) {
+        ctx.sendDownstream( e );
+      } else {
+        ServiceSinkHandler.LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage." );
+      }
+    } else {
+      ctx.sendDownstream( e );
+    }
+  }
+  
+  @Override
+  public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+    ServiceSinkHandler.LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + e );
     if ( e instanceof ExceptionEvent ) {
       this.exceptionCaught( ctx, ( ExceptionEvent ) e );
     } else if ( e instanceof MessageEvent ) {
       this.startTime = System.currentTimeMillis( );
       final MessageEvent event = ( MessageEvent ) e;
       if ( event.getMessage( ) instanceof MappingHttpMessage ) {
-        MappingHttpMessage request = ( MappingHttpMessage ) event.getMessage( );
-        User user = request.getUser( );
-        requestLocal.set( ctx.getChannel( ), request );
-        EucalyptusMessage msg = ( EucalyptusMessage ) request.getMessage( );
-        String userAgent = request.getHeader( HttpHeaders.Names.USER_AGENT );
-        if( userAgent != null && userAgent.matches(".*EucalyptusAdminAccess") && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
+        final MappingHttpMessage request = ( MappingHttpMessage ) event.getMessage( );
+        final User user = request.getUser( );
+        this.requestLocal.set( ctx.getChannel( ), request );
+        final EucalyptusMessage msg = ( EucalyptusMessage ) request.getMessage( );
+        final String userAgent = request.getHeader( HttpHeaders.Names.USER_AGENT );
+        if ( ( userAgent != null ) && userAgent.matches( ".*EucalyptusAdminAccess" ) && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
           msg.setEffectiveUserId( msg.getUserId( ) );
-        } else if ( user != null && msgReceiver == null ) {
+        } else if ( ( user != null ) && ( this.msgReceiver == null ) ) {
           msg.setUserId( user.getUserName( ) );
           msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getUserName( ) );
         }
-        LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
+        ServiceSinkHandler.LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), EventType.MSG_RECEIVED,
+                                                         msg.getClass( ).getSimpleName( ) ) );
         ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
         if ( this.msgReceiver == null ) {
           Messaging.dispatch( "vm://RequestQueue", msg );
-        } else if ( user == null || ( user != null && user.getIsAdministrator( ) ) ) {
-          MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ) );
+        } else if ( ( user == null ) || ( ( user != null ) && user.getIsAdministrator( ) ) ) {
+          final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ) );
           ctx.getChannel( ).write( reply.getPayload( ) );
         } else {
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
       }
     }
-  }
-
-  @SuppressWarnings( "unchecked" )
-  @Override
-  public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-    if ( e instanceof MessageEvent ) {
-      MessageEvent msge = ( MessageEvent ) e;
-      if( msge.getMessage( ) instanceof NullPayload ) {
-        return;
-      }
-      if ( msge.getMessage( ) instanceof IsData ) {// Pass through for chunked messaging
-        ctx.sendDownstream( msge );
-      } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {// Handle
-                                                                     // single
-                                                                     // request-response
-                                                                     // MEP
-        MappingHttpMessage request = requestLocal.get( ctx.getChannel( ) );
-        EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
-        if ( reply == null ) {// TODO: fix this error reporting
-          LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
-          reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
-        }
-        LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, ( System.currentTimeMillis( ) - startTime ) ) );
-        if ( reply instanceof WalrusDataGetResponseType ) {
-          if ( reply instanceof GetObjectResponseType ) {
-            GetObjectResponseType getObjectResponse = ( GetObjectResponseType ) reply;
-            LOG.debug( getObjectResponse );
-            if ( getObjectResponse.getBase64Data( ) == null ) return;
-          } else {
-            return;
-          }
-        }
-        MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
-        DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
-        response.setMessage( reply );
-        ctx.sendDownstream( newEvent );
-      } else if( msge.getMessage() instanceof HttpResponse ) {
-        ctx.sendDownstream( e );        
-      } else {
-        LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage." );
-      }
-    } else {
-      ctx.sendDownstream( e );
-    }
-  }
-
-  @Override
-  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
-    Channels.fireExceptionCaught( ctx.getChannel( ), e.getCause( ) );
   }
 }

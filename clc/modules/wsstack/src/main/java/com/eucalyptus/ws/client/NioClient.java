@@ -76,6 +76,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
+import com.eucalyptus.ws.util.ChannelUtil;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
@@ -99,9 +100,7 @@ public class NioClient implements Client {
 
   public NioClient( String hostname, int port, String servicePath, NioClientPipeline clientPipeline ) {
     this.channelFactory = new NioClientSocketChannelFactory( Executors.newCachedThreadPool(), Executors.newCachedThreadPool() );
-    this.clientBootstrap = new NioBootstrap( channelFactory );
-    this.clientBootstrap.setPipelineFactory( clientPipeline );
-    this.clientPipeline = clientPipeline;
+    this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
     this.remoteAddr = new InetSocketAddress( hostname, port );
     this.hostname = hostname;
     this.port = port;
@@ -109,15 +108,13 @@ public class NioClient implements Client {
   }
 
   public void write( HttpRequest httpRequest ) throws Exception {
-    if ( this.channel == null || !this.channel.isOpen() || !this.channel.isConnected() ) {
-      this.channelOpenFuture = this.clientBootstrap.connect( this.remoteAddr );
-      this.channelOpenFuture.addListener( new DeferedWriter( httpRequest, this.clientPipeline.getHandler() ) );
-    }
+    this.channelOpenFuture = this.clientBootstrap.connect( this.remoteAddr );
+    this.channelOpenFuture.addListener( new DeferedWriter( httpRequest, this.clientPipeline.getHandler() ) );
   }
+  
   class DeferedWriter implements ChannelFutureListener {
     private HttpRequest httpRequest;
     private MessageStackHandler handler;
-
     DeferedWriter( final HttpRequest httpRequest, final MessageStackHandler handler ) {
       this.httpRequest = httpRequest;
       this.handler = handler;
@@ -126,7 +123,7 @@ public class NioClient implements Client {
     public void operationComplete( ChannelFuture channelFuture ) throws Exception {
       if ( channelFuture.isSuccess( ) ) {
         channel = channelFuture.getChannel( );
-        channelWriteFuture = channelFuture.getChannel( ).write( httpRequest );
+        channelFuture.getChannel( ).write( httpRequest ).addListener( ChannelFutureListener.CLOSE );
       } else {
         this.handler.exceptionCaught( channelFuture.getCause() );
       }
@@ -134,16 +131,9 @@ public class NioClient implements Client {
   }
 
   public void close() {
-    if ( this.channelWriteFuture != null && !this.channelWriteFuture.isDone() ) {
-      this.channelWriteFuture.awaitUninterruptibly();
+    if( this.channel != null && this.channel.isOpen( ) ) {
+      this.channel.close();
     }
-    this.channel.close();
-    LOG.debug( "Forcing the channel to close." );
-  }
-
-  public void cleanup() {
-    if ( this.channel != null ) { this.close(); }
-    this.channelFactory.releaseExternalResources();
   }
 
   @Override
@@ -151,7 +141,7 @@ public class NioClient implements Client {
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostname, this.port, this.servicePath, msg );
     this.write( request );
     EucalyptusMessage response = this.clientPipeline.getHandler().getResponse();
-    this.cleanup();
+    this.close();
     return response;
   }
 
@@ -160,7 +150,7 @@ public class NioClient implements Client {
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostname, this.port, this.servicePath, msg );
     this.write( request );
     EucalyptusMessage response = this.clientPipeline.getHandler().getResponse();
-    this.cleanup();
+    this.close();
   }
 
   @Override

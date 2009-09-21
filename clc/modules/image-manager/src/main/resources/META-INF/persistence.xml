@@ -86,14 +86,17 @@
             <property name="hibernate.connection.password" value="${euca.db.password}"/>
             <property name="hibernate.connection.autocommit" value="true"/>
             <property name="hibernate.dialect" value="org.hibernate.dialect.HSQLDialect"/>
-            <property name="hibernate.hbm2ddl.auto" value="update"/><!--
-            <property name="hibernate.c3p0.min_size" value="8"/>
-            <property name="hibernate.c3p0.max_size" value="32"/>
-            <property name="hibernate.c3p0.timeout" value="5000"/>
-            <property name="hibernate.c3p0.max_statements" value="100"/>
-            <property name="hibernate.c3p0.idle_test_period" value="20"/>
-            <property name="hibernate.c3p0.acquire_increment" value="3"/>
-        --></properties>
+            <property name="hibernate.hbm2ddl.auto" value="update"/>
+            <!--
+             ~ required c3p0 parameters.  set them from the env for sanity's sake.
+            -->
+            <property name="hibernate.c3p0.acquire_increment" value="${euca.db.pool.acquire_increment}"/>
+            <property name="hibernate.c3p0.idle_test_period" value="${euca.db.pool.idle_test_period}"/>
+            <property name="hibernate.c3p0.timeout" value="${euca.db.pool.timeout}"/>
+            <property name="hibernate.c3p0.max_size" value="${euca.db.pool.max_size}"/>
+            <property name="hibernate.c3p0.max_statements" value="${euca.db.pool.max_statements}"/>
+            <property name="hibernate.c3p0.min_size" value="${euca.db.pool.min_size}"/>
+            </properties>
     </persistence-unit>
 
 </persistence>

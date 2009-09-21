@@ -70,15 +70,13 @@ import com.eucalyptus.config.ClusterConfiguration;
 
 public class ClusterThreadGroup extends ThreadGroup {
   private static Logger        LOG     = Logger.getLogger( ClusterThreadGroup.class );
-  private ClusterConfiguration configuration;
   private Thread               mqThread;
   private ClusterMessageQueue  messageQueue;
   private boolean              stopped = false;
 
-  public ClusterThreadGroup( ClusterConfiguration clusterConfig, ClusterCredentials credentials ) {
-    super( clusterConfig.getName( ) );
-    this.configuration = clusterConfig;
-    this.messageQueue = new ClusterMessageQueue( this.configuration );
+  public ClusterThreadGroup( String clusterName ) {
+    super( clusterName );
+    this.messageQueue = new ClusterMessageQueue( clusterName );
   }
 
   public void startMessageQueue( ) {

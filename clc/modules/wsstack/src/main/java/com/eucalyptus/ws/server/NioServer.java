@@ -63,25 +63,18 @@
  */
 package com.eucalyptus.ws.server;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import org.apache.log4j.Logger;
-import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
+import com.eucalyptus.ws.util.ChannelUtil;
 import com.eucalyptus.ws.util.PipelineRegistry;
 
 public class NioServer {
   private static Logger                 LOG = Logger.getLogger( NioServer.class );
-  private int                           port;
-  private ServerBootstrap               bootstrap;
-  private NioServerSocketChannelFactory socketFactory;
   private Channel                       serverChannel;
 
-  public NioServer( int port ) {
-    super( );
+  public NioServer( ) {
+    //TODO: make this bootstrappable.
     PipelineRegistry.getInstance( ).register( new HeartbeatPipeline( ) );
     PipelineRegistry.getInstance( ).register( new MetadataPipeline( ) );
     PipelineRegistry.getInstance( ).register( new EucalyptusSoapPipeline( ) );
@@ -90,23 +83,10 @@ public class NioServer {
     PipelineRegistry.getInstance( ).register( new WalrusRESTPostPipeline( ) );
     PipelineRegistry.getInstance( ).register( new EucalyptusQueryPipeline( ) );
     PipelineRegistry.getInstance( ).register( new WalrusSoapPipeline( ) );
-    RemoteBootstrapperServer server = RemoteBootstrapperServer.getServer( );
-    if ( server != null && port == server.getPort( ) ) {
-      LOG.info( "Swapping over to full webservices stack." );
-      this.port = server.getPort( );
-      this.socketFactory = server.getSocketFactory( );
-      this.bootstrap = server.getBootstrap( );
-      this.bootstrap.setPipelineFactory( new NioServerPipelineFactory( ) );
-    } else {
-      this.port = port;
-      this.socketFactory = new NioServerSocketChannelFactory( Executors.newCachedThreadPool( ), Executors.newCachedThreadPool( ) );
-      this.bootstrap = new ServerBootstrap( this.socketFactory );
-      this.bootstrap.setPipelineFactory( new NioServerPipelineFactory( ) );
-    }
   }
 
   public void start( ) {
-    this.serverChannel = this.bootstrap.bind( new InetSocketAddress( this.port ) );
+    this.serverChannel = ChannelUtil.getServerChannel();
   }
 
 }

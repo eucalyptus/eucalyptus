@@ -91,7 +91,7 @@ public class NioMessageDispatcher extends AbstractMessageDispatcher {
   
   public void doActivate( OutboundEndpoint outboundEndpoint ) {
     if( this.client != null ) {
-      this.client.cleanup();
+      this.client.close( );
       this.client = null;
     }
     String host = outboundEndpoint.getEndpointURI( ).getHost( );

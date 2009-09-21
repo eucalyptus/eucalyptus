@@ -80,11 +80,15 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
 
   public void handleDownstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
     LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + channelEvent );
-    if ( channelEvent instanceof MessageEvent ) {
-      final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
-      if( msgEvent.getMessage() != null ) {
-        this.outgoingMessage( channelHandlerContext, msgEvent );
+    try {
+      if ( channelEvent instanceof MessageEvent ) {
+        final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
+        if( msgEvent.getMessage() != null ) {
+          this.outgoingMessage( channelHandlerContext, msgEvent );
+        }
       }
+    } catch ( Exception e ) {
+      LOG.debug( e, e )
     }
     channelHandlerContext.sendDownstream( channelEvent );
   }

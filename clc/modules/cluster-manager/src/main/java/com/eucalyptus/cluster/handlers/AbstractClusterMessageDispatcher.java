@@ -51,7 +51,7 @@ import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
 
-public abstract class AbstractClusterMessageDispatcher implements ChannelPipelineFactory, ChannelHandler, ChannelUpstreamHandler, ChannelDownstreamHandler, EventListener {
+public abstract class AbstractClusterMessageDispatcher implements ChannelPipelineFactory, ChannelUpstreamHandler, ChannelDownstreamHandler, EventListener {
   private static Logger     LOG = Logger.getLogger( AbstractClusterMessageDispatcher.class );
   private ChannelFactory    channelFactory;
   private ChannelFuture     channelWriteFuture;

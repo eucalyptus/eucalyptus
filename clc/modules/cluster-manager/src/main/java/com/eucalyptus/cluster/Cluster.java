@@ -58,7 +58,7 @@
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-/*
+/**
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.cluster;
@@ -193,7 +193,7 @@ public class Cluster implements HasName {
 
     public MQ( ) {
       super( configuration.getName( ) );
-      this.messageQueue = new ClusterMessageQueue( configuration );
+      this.messageQueue = new ClusterMessageQueue( configuration.getName( ) );
     }
 
     public void startMessageQueue( ) {
@@ -249,6 +249,22 @@ public class Cluster implements HasName {
 
   public String getUri( ) {
     return configuration.getUri( );
+  }
+
+  public String getHostName( ) {
+    return this.configuration.getHostName( );
+  }
+
+  public String getInsecureServicePath( ) {
+    return this.configuration.getInsecureServicePath( );
+  }
+
+  public Integer getPort( ) {
+    return this.configuration.getPort( );
+  }
+
+  public String getServicePath( ) {
+    return this.configuration.getServicePath( );
   }
 
   

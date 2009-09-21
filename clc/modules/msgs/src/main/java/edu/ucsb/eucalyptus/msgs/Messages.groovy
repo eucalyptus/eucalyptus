@@ -168,15 +168,12 @@ public class EucalyptusMessage implements Cloneable, Serializable {
     this.correlationId = msg.correlationId;
   }
   
-  def EucalyptusMessage(final String userId) {
+  public  EucalyptusMessage(final String userId) {
     this();
     this.userId = userId;
     this.effectiveUserId = userId;
   }
-  
-  
-  
-  
+
   public MetaClass getMetaClass() {
     return metaClass;
   }

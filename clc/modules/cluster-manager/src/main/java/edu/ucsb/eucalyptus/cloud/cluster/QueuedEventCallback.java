@@ -58,29 +58,25 @@
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-/*
+/**
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-/*
- */
-
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.Client;
+import java.util.concurrent.Callable;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.*;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.ws.client.Client;
 
 public abstract class QueuedEventCallback<TYPE> {
-
   private static Logger    LOG = Logger.getLogger( QueuedEventCallback.class );
-
   private Lock             canHas;
   private Condition        jobPending;
   private volatile boolean e   = false;
