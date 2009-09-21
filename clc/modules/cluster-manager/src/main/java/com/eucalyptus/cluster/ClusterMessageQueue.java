@@ -115,8 +115,8 @@ public class ClusterMessageQueue implements Runnable {
         {
           LOG.trace( "Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
           final long msgStart = System.currentTimeMillis( );
+          final QueuedEventCallback q = event.getCallback( );
           try {
-            final QueuedEventCallback q = event.getCallback( );
             if ( ( q instanceof MultiClusterCallback ) && !( ( MultiClusterCallback ) q ).isSplit( ) ) {
               final MultiClusterCallback multi = ( MultiClusterCallback ) q;
               multi.markSplit( );
@@ -124,11 +124,12 @@ public class ClusterMessageQueue implements Runnable {
             } else {
               Clusters.sendClusterEvent( this.clusterName, event );
             }
-            q.notifyHandler( );
           } catch ( final Exception e ) {
             LOG.error( e );
             LOG.debug( e, e );
             //TODO: valid existence of the cluster and its state aqui.
+          } finally {
+            q.notifyHandler( );
           }
           LOG.debug( String.format( "[q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s", msgStart - start, System.currentTimeMillis( ) - msgStart,
                                                         this.msgQueue.size( ), event.getCallback( ).getClass( ).getSimpleName( ), this.clusterName ) );
