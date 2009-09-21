@@ -123,7 +123,7 @@ public class ChannelUtil {
     bootstrap.setPipelineFactory( factory );
     bootstrap.setOption( "tcpNoDelay", true );
     bootstrap.setOption( "reuseAddress", true );
-    bootstrap.setOption( "readWriteFair", true );
+//    bootstrap.setOption( "readWriteFair", true );//deprecated.
     bootstrap.setOption( "connectTimeoutMillis", 3000 );
     return bootstrap;
   }
