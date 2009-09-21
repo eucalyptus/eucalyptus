@@ -13,10 +13,11 @@ import org.hibernate.ejb.EntityManagerFactoryImpl;
 
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+import com.google.common.collect.SortedSetMultimap;
 
 public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   private static Logger                     LOG         = Logger.getLogger( TxHandle.class );
-  private static Multimap<String, TxHandle> outstanding = Multimaps.newTreeMultimap( );
+  private static Multimap<String, TxHandle> outstanding = getMap();
 
   private EntityManager     em;
   private Session           session;
@@ -45,6 +46,10 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
       LOG.error( e, e );
       throw new RuntimeException( e );
     }
+  }
+  @SuppressWarnings( "unchecked" )
+  private static Multimap<String, TxHandle> getMap( ) {
+    return (Multimap)Multimaps.synchronizedMultimap( Multimaps.newTreeMultimap( ) )
   }
   public boolean isExpired() {
     this.stopWatch.split( );
