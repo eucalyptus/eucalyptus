@@ -111,7 +111,8 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
   public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
     LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
     if( channelEvent instanceof ExceptionEvent ) {
-      LOG.debug( ( ( ExceptionEvent ) channelEvent ).getCause( ), ( ( ExceptionEvent ) channelEvent ).getCause( ) );
+      LOG.debug( ( ( ExceptionEvent ) channelEvent ).getCause( ), 
+                 ( ( ExceptionEvent ) channelEvent ).getCause( ) );
     }
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
@@ -124,7 +125,8 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
     } else if ( channelEvent instanceof ExceptionEvent ) {
       if( ( ( ExceptionEvent ) channelEvent ).getCause( ) instanceof IOException 
           || ( ( ExceptionEvent ) channelEvent ).getCause( ) instanceof RuntimeException ) {
-        LOG.debug( ( ( ExceptionEvent ) channelEvent ).getCause( ), ( ( ExceptionEvent ) channelEvent ).getCause( ) );
+        LOG.debug( ( ( ExceptionEvent ) channelEvent ).getCause( ), 
+                   ( ( ExceptionEvent ) channelEvent ).getCause( ) );
         channelHandlerContext.getChannel( ).close( );
       } else {
         channelHandlerContext.sendUpstream( channelEvent );

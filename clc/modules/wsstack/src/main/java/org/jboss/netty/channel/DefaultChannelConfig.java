@@ -48,7 +48,9 @@ public class DefaultChannelConfig implements ChannelConfig {
   }
 
   public boolean setOption( String key, Object value ) {
-    if ( key.equals( "pipelineFactory" ) ) {
+    if( key == null ){
+      return false;
+    } else if ( key.equals( "pipelineFactory" ) ) {
       setPipelineFactory( ( ChannelPipelineFactory ) value );
     } else if ( key.equals( "connectTimeoutMillis" ) ) {
       setConnectTimeoutMillis( ConversionUtil.toInt( value ) );
