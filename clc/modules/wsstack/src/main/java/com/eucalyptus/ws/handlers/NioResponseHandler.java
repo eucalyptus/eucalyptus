@@ -104,7 +104,14 @@ public class NioResponseHandler extends MessageStackHandler {
 
   @Override
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
-    this.exceptionCaught( e.getCause( ) );
+    LOG.debug( e, e );
+    this.canHas.lock( );
+    try {
+      this.exceptionCaught( e.getCause( ) );
+      this.finished.signal( );
+    } finally {
+      this.canHas.unlock( );
+    }
   }
 
   @Override
