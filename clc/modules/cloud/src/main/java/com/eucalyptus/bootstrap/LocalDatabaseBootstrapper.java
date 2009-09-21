@@ -193,7 +193,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   public void fireEvent( Event event ) {
     if( event instanceof ClockTick && Component.eucalyptus.isLocal( ) ) {
       try {
-        LOG.debug( "-> Ping database." );
+        LOG.trace( "-> Ping database." );
         this.isRunning( );
       } catch ( RuntimeException e ) {
         LOG.info( "-> Ping database." );
