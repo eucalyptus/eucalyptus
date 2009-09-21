@@ -86,8 +86,8 @@ public class ChannelUtil {
   public static ChannelPipeline addPipelineTimeout( final ChannelPipeline pipeline ) {
     // TODO: decide on some parameters here.
     pipeline.addLast( "idlehandler", new IdleStateHandler( ChannelUtil.timer, 60, 20, 0 ) );
-    pipeline.addLast( "readTimeout", new ReadTimeoutHandler( ChannelUtil.timer, 10, TimeUnit.SECONDS ) );
-    pipeline.addLast( "writeTimeout", new WriteTimeoutHandler( ChannelUtil.timer, 10, TimeUnit.SECONDS ) );
+    pipeline.addLast( "readTimeout", new ReadTimeoutHandler( ChannelUtil.timer, 30, TimeUnit.SECONDS ) );
+    pipeline.addLast( "writeTimeout", new WriteTimeoutHandler( ChannelUtil.timer, 30, TimeUnit.SECONDS ) );
     return pipeline;
   }
   
