@@ -135,7 +135,7 @@ public class NioClient implements Client {
   public EucalyptusMessage send( final EucalyptusMessage msg ) throws Exception {
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostname, this.port, this.servicePath, msg );
     this.write( request );
-    EucalyptusMessage response = this.clientPipeline.getHandler().getResponse();
+    EucalyptusMessage response = this.responseHandler.getResponse();
     return response;
   }
 
@@ -143,7 +143,7 @@ public class NioClient implements Client {
   public void dispatch( final EucalyptusMessage msg ) throws Exception {
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostname, this.port, this.servicePath, msg );
     this.write( request );
-    EucalyptusMessage response = this.clientPipeline.getHandler().getResponse();
+    EucalyptusMessage response = this.responseHandler.getResponse();
   }
 
   @Override
