@@ -78,6 +78,7 @@ import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.LogUtil;
 
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
@@ -163,6 +164,7 @@ public class Cluster implements HasName {
   }
 
   public void fireEventAsync( QueuedEvent e ) {
+    LOG.debug( "Queueing message for " + this.getUri( ) + LogUtil.dumpObject( e ) );
     this.mq.getMessageQueue( ).enqueue( e );
   }
   

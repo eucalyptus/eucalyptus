@@ -125,8 +125,8 @@ public class ClusterMessageQueue implements Runnable {
             } else {
               if ( ( q instanceof MultiClusterCallback ) && !( ( MultiClusterCallback ) q ).isSplit( ) ) {
                 final MultiClusterCallback multi = ( MultiClusterCallback ) q;
-                multi.prepare( event.getEvent( ) );
                 multi.markSplit( );
+                multi.prepare( event.getEvent( ) );
               } else {
                 event.trigger( nioClient );
               }
