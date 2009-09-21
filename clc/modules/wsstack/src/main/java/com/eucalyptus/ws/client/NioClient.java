@@ -63,33 +63,27 @@
  */
 package com.eucalyptus.ws.client;
 
+import java.net.InetSocketAddress;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
+import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 
 public class NioClient implements Client {
   private static Logger LOG = Logger.getLogger( NioClient.class );
 
   private NioBootstrap clientBootstrap;
-  private ChannelFactory channelFactory;
-  private ChannelFuture channelOpenFuture;
-  private ChannelFuture channelWriteFuture;
   private Channel channel;
   private NioClientPipeline clientPipeline;
 
@@ -97,36 +91,36 @@ public class NioClient implements Client {
   private int port;
   private String servicePath;
   private InetSocketAddress remoteAddr;
+  private NioResponseHandler responseHandler;
 
   public NioClient( String hostname, int port, String servicePath, NioClientPipeline clientPipeline ) {
-    this.channelFactory = ChannelUtil.getClientChannelFactory( );
     this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
     this.remoteAddr = new InetSocketAddress( hostname, port );
     this.hostname = hostname;
     this.port = port;
     this.servicePath = servicePath;
+    this.responseHandler = clientPipeline.getHandler( );
   }
 
   public void write( HttpRequest httpRequest ) throws Exception {
-    this.channelOpenFuture = this.clientBootstrap.connect( this.remoteAddr );
-    this.channelOpenFuture.addListener( new DeferedWriter( httpRequest, this.clientPipeline.getHandler() ) );
+    this.clientBootstrap.connect( this.remoteAddr ).addListener( new DeferedWriter( httpRequest, responseHandler ) );
   }
   
   class DeferedWriter implements ChannelFutureListener {
     private HttpRequest httpRequest;
-    private MessageStackHandler handler;
-    DeferedWriter( final HttpRequest httpRequest, final MessageStackHandler handler ) {
+    private NioResponseHandler handler;
+    DeferedWriter( final HttpRequest httpRequest, final NioResponseHandler handler ) {
       this.httpRequest = httpRequest;
       this.handler = handler;
     }
     @Override
     public void operationComplete( ChannelFuture channelFuture ) throws Exception {
       if ( channelFuture.isSuccess( ) ) {
-        channel = channelFuture.getChannel( );
         channelFuture.getChannel( ).write( httpRequest ).addListener( ChannelFutureListener.CLOSE );
       } else {
         LOG.debug( channelFuture.getCause( ), channelFuture.getCause( ) );
         this.handler.exceptionCaught( channelFuture.getCause() );
+        NioClient.this.close( );
       }
     }
   }

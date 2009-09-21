@@ -112,32 +112,15 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   @Override
   public boolean load( Resource current ) throws Exception {
     LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
+    try {
+      DatabaseConfig.initialize( );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+    }
     this.db = new Server( );
-    DatabaseConfig.initialize( );
     this.db.setProperties( new HsqlProperties( DatabaseConfig.getProperties( ) ) );
     SystemBootstrapper.makeSystemThread( this ).start( );
     return true;
-    // props.setProperty( ServerConstants.SC_KEY_DATABASE + ".0",
-    // SubDirectory.DB.toString( ) + File.separator + general );
-    // props.setProperty( ServerConstants.SC_KEY_DBNAME + ".0", general );
-    // props.setProperty( ServerConstants.SC_KEY_DATABASE + ".1",
-    // SubDirectory.DB.toString( ) + File.separator + vol );
-    // props.setProperty( ServerConstants.SC_KEY_DBNAME + ".1", vol );
-    // props.setProperty( ServerConstants.SC_KEY_DATABASE + ".2",
-    // SubDirectory.DB.toString( ) + File.separator + auth );
-    // props.setProperty( ServerConstants.SC_KEY_DBNAME + ".2", auth );
-    // props.setProperty( ServerConstants.SC_KEY_DATABASE + ".3",
-    // SubDirectory.DB.toString( ) + File.separator + config );
-    // props.setProperty( ServerConstants.SC_KEY_DBNAME + ".3", config );
-    // props.setProperty( ServerConstants.SC_KEY_DATABASE + ".4",
-    // SubDirectory.DB.toString( ) + File.separator + walrus );
-    // props.setProperty( ServerConstants.SC_KEY_DBNAME + ".4", walrus );
-    // props.setProperty( ServerConstants.SC_KEY_DATABASE + ".5",
-    // SubDirectory.DB.toString( ) + File.separator + storage );
-    // props.setProperty( ServerConstants.SC_KEY_DBNAME + ".5", storage );
-    // props.setProperty( ServerConstants.SC_KEY_DATABASE + ".6",
-    // SubDirectory.DB.toString( ) + File.separator + dns );
-    // props.setProperty( ServerConstants.SC_KEY_DBNAME + ".6", dns );
   }
 
   public boolean isRunning( ) {

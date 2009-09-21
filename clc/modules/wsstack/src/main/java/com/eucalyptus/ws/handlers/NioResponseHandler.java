@@ -115,9 +115,12 @@ public class NioResponseHandler extends MessageStackHandler {
   public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
     MappingHttpMessage httpResponse = ( MappingHttpMessage ) event.getMessage( );
     this.canHas.lock( );
-    this.response = ( EucalyptusMessage ) httpResponse.getMessage( );
-    this.finished.signal( );
-    this.canHas.unlock( );
+    try {
+      this.response = ( EucalyptusMessage ) httpResponse.getMessage( );
+      this.finished.signal( );
+    } finally {
+      this.canHas.unlock( );
+    }
   }
 
   public EucalyptusMessage getResponse( ) throws Exception {

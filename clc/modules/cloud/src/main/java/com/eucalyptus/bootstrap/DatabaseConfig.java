@@ -78,7 +78,7 @@ import com.eucalyptus.util.SubDirectory;
 public class DatabaseConfig {
   private static String DEFAULT = 
     "CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" + 
-    "CREATE USER SA PASSWORD \"" + System.getProperty( "euca.db.password" ) + "\"\n" + 
+    "CREATE USER SA PASSWORD \"%s\"\n" + 
     "GRANT DBA TO SA\n" + 
     "SET WRITE_DELAY 100 MILLIS\n" + 
     "SET SCHEMA PUBLIC\n";
@@ -99,10 +99,10 @@ public class DatabaseConfig {
   enum Internal {
     general,images,auth,config,walrus,storage,dns;
     public void prepareDatabase( ) throws IOException {
-      File dbFile = new File( SubDirectory.DB.toString( ) + File.separator + this.getDatabaseName( ) );
+      File dbFile = new File( SubDirectory.DB.toString( ) + File.separator + this.getDatabaseName( ) + ".script" );
       if ( !dbFile.exists( ) ) {
         FileWriter dbOut = new FileWriter( dbFile );
-        dbOut.write( DEFAULT );
+        dbOut.write( String.format( DEFAULT, System.getProperty( "euca.db.password" ) ) );
         dbOut.flush( );
         dbOut.close( );
       }
