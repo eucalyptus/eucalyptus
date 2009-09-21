@@ -163,7 +163,7 @@ public class ClusterNodeState {
     for( ResourceToken t : this.redeemedTokens )
       redeemed += t.getAmount();
     outstandingCount = pending + submitted + redeemed;
-    LOG.debug( LogUtil.subheader( String.format( "Resource update for cluster=%s, outstanding=%d pending=%d submitted=%d redeemed=%d", outstandingCount, pending, submitted, redeemed ) ) );
+    LOG.debug( LogUtil.subheader( String.format( "Resource update for cluster=%s, outstanding=%d pending=%d submitted=%d redeemed=%d", this.clusterName, outstandingCount, pending, submitted, redeemed ) ) );
     this.redeemedTokens.clear();
 
     StringBuffer before = new StringBuffer();
