@@ -137,7 +137,7 @@ public class ChannelUtil {
     bootstrap.setOption( "child.connectTimeoutMillis", 100 );
     bootstrap.setOption( "tcpNoDelay", true );
     bootstrap.setOption( "reuseAddress", true );
-    bootstrap.setOption( "readWriteFair", true );
+//    bootstrap.setOption( "readWriteFair", true ); //deprecated.
     return bootstrap;
     // BlockingQueue<Integer> answer = new LinkedBlockingQueue<Integer>();
     // ThroughputMonitor monitor = new ThroughputMonitor();
