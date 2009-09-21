@@ -90,8 +90,13 @@ public abstract class QueuedEventCallback<TYPE> {
   }
 
   public void notifyHandler( ) {
-    e = true;
-    this.jobPending.signalAll( );
+    this.canHas.lock( );
+    try {
+      e = true;
+      this.jobPending.signalAll( );
+    } finally {
+      this.canHas.unlock( );
+    }
   }
 
   public void waitForEvent( ) {
