@@ -172,12 +172,12 @@ public class ClusterNodeState {
     before.append( "-> AFTER: " );
     for ( ResourceType rsc : rscUpdate ) {
       VmTypeAvailability vmAvailable = this.typeMap.get( rsc.getInstanceType().getName() );
-      before.append( String.format( " %s available=%d/%d", vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
+      before.append( String.format( " %s available=%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
       if ( vmAvailable == null ) continue;
       vmAvailable.setAvailable( rsc.getAvailableInstances() );
       vmAvailable.decrement( outstandingCount );
       vmAvailable.setMax( rsc.getMaxInstances() );
-      after.append( String.format( " %s available=%d/%d", vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
+      after.append( String.format( "%s available=%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
     }
     LOG.debug( before.toString( ) );
     LOG.debug( after.toString( ) );
