@@ -94,10 +94,9 @@ public class QueuedEvent<TYPE> {
       this.callback.process( cluster, this.event );
     } catch ( Throwable t ) {
       LOG.error( t, t );
-    } 
-//    finally {
-//      this.callback.notifyHandler( );
-//    }
+    }     finally {
+      this.callback.notifyHandler( );
+    }
   }
 
   @Override

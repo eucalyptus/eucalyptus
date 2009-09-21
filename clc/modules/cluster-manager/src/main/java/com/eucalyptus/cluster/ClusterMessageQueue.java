@@ -124,13 +124,10 @@ public class ClusterMessageQueue implements Runnable {
             } else {
               Clusters.sendClusterEvent( this.clusterName, event );
             }
-          } catch ( final Exception e ) {
+          } catch ( final Throwable e ) {
             LOG.error( e );
             LOG.debug( e, e );
-            //TODO: valid existence of the cluster and its state aqui.
-          } finally {
-            q.notifyHandler( );
-          }
+          } 
           LOG.debug( String.format( "[q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s", msgStart - start, System.currentTimeMillis( ) - msgStart,
                                                         this.msgQueue.size( ), event.getCallback( ).getClass( ).getSimpleName( ), this.clusterName ) );
         }

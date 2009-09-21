@@ -131,6 +131,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
     }
     event.trigger( nioClient );
+    event.getCallback( ).notifyHandler( );
   }
   
 }
