@@ -166,13 +166,13 @@ public class DebugUtil {
   }
 
   public static void printDebugDetails( ) {
+    Times.print( );
+    TxHandle.printTxStatus( );
+    DatabaseUtil.printConnectionPoolStatus( );
     for( String persistenceContext : DatabaseUtil.getPersistenceContexts( ) ) {
       EntityManagerFactoryImpl anemf = ( EntityManagerFactoryImpl ) DatabaseUtil.getEntityManagerFactory( persistenceContext );
       LOG.debug( LogUtil.subheader( persistenceContext + " hibernate statistics: " + anemf.getSessionFactory( ).getStatistics( ) ) );
     }
-    Times.print( );
-    TxHandle.printTxStatus( );
-    DatabaseUtil.printConnectionPoolStatus( );
   }
 
 }

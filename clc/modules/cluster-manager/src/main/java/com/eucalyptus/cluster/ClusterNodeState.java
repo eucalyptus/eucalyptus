@@ -74,6 +74,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.util.LogUtil;
+
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
@@ -162,11 +164,14 @@ public class ClusterNodeState {
     this.redeemedTokens.clear();
 
     for ( ResourceType rsc : rscUpdate ) {
+      LOG.debug( LogUtil.subheader( String.format( "Resource update for cluster=%s, pending tokens=%d", this.clusterName, outstandingCount ) ) );
       VmTypeAvailability vmAvailable = this.typeMap.get( rsc.getInstanceType().getName() );
+      LOG.debug( LogUtil.subheader( String.format( "-> BEFORE: type=%s available=%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) ) );
       if ( vmAvailable == null ) continue;
       vmAvailable.setAvailable( rsc.getAvailableInstances() );
       vmAvailable.decrement( outstandingCount );
       vmAvailable.setMax( rsc.getMaxInstances() );
+      LOG.debug( LogUtil.subheader( String.format( "-> AFTER: type=%s available=%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) ) );
     }
   }
 

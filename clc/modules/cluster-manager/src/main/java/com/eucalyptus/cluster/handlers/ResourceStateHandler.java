@@ -1,11 +1,8 @@
 package com.eucalyptus.cluster.handlers;
 
-import java.nio.channels.AlreadyConnectedException;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.bootstrap.Component;
@@ -31,7 +28,9 @@ public class ResourceStateHandler extends AbstractClusterMessageDispatcher {
     DescribeResourcesType drMsg = new DescribeResourcesType();
     drMsg.setUserId( Component.eucalyptus.name() );
     drMsg.setEffectiveUserId( Component.eucalyptus.name() );
-    for ( VmType v : VmTypes.list() ) drMsg.getInstanceTypes().add( v.getAsVmTypeInfo() );
+    for ( VmType v : VmTypes.list() ) {
+      drMsg.getInstanceTypes().add( v.getAsVmTypeInfo() );
+    }
     this.write( drMsg );
   }
 

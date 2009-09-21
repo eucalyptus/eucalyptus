@@ -106,11 +106,13 @@ public class SystemState {
       SystemState.updateVmInstance( originCluster, runVm );
 
     List<String> runningVmIds = new ArrayList<String>();
-    for ( VmInfo runVm : request.getVms() )
+    for ( VmInfo runVm : request.getVms() ) {
       runningVmIds.add( runVm.getInstanceId() );
-
+    }
     for( String vmId : VmInstances.getInstance().getKeys() ) {
-      if( runningVmIds.contains( vmId ) ) continue;
+      if( runningVmIds.contains( vmId ) ) {
+        continue;
+      }
       VmInstance vm = null;
       try {
         vm = VmInstances.getInstance().lookup( vmId );
