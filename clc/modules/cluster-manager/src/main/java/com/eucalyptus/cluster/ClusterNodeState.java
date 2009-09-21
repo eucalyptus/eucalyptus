@@ -163,8 +163,8 @@ public class ClusterNodeState {
       outstandingCount += t.getAmount();
     this.redeemedTokens.clear();
 
+    LOG.debug( LogUtil.subheader( String.format( "Resource update for cluster=%s, pending tokens=%d", this.clusterName, outstandingCount ) ) );
     for ( ResourceType rsc : rscUpdate ) {
-      LOG.debug( LogUtil.subheader( String.format( "Resource update for cluster=%s, pending tokens=%d", this.clusterName, outstandingCount ) ) );
       VmTypeAvailability vmAvailable = this.typeMap.get( rsc.getInstanceType().getName() );
       LOG.debug( String.format( "-> BEFORE: type=%s available=%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
       if ( vmAvailable == null ) continue;
