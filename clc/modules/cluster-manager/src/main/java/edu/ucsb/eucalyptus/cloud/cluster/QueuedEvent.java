@@ -93,7 +93,7 @@ public class QueuedEvent<TYPE> {
     try {
       this.callback.process( cluster, this.event );
     } catch ( Throwable t ) {
-      LOG.error( t );
+      LOG.error( t, t );
       LOG.debug( t, t );
     } finally {
       this.callback.notifyHandler( );

@@ -119,7 +119,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return clients;
   }
 
-  public static Client getClusterClient( String clusterName, QueuedEvent event ) throws Exception {
+  public static void sendClusterEvent( String clusterName, QueuedEvent event ) throws Exception {
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
     NioClient nioClient = null;
     NioClientPipeline cp = null;
@@ -130,7 +130,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       cp = new LogClientPipeline( new NioResponseHandler( ) );
       nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
     }
-    return nioClient;
+    event.trigger( nioClient );
   }
   
 }

@@ -116,20 +116,15 @@ public class ClusterMessageQueue implements Runnable {
         if ( event != null ) // msg == null if the queue was empty
         {
           LOG.trace( "Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
-          final Client nioClient = Clusters.getClusterClient( this.clusterName, event );
           final long msgStart = System.currentTimeMillis( );
           try {
             final QueuedEventCallback q = event.getCallback( );
-            if ( event instanceof QueuedLogEvent ) {
-              event.trigger( nioClient );
+            if ( ( q instanceof MultiClusterCallback ) && !( ( MultiClusterCallback ) q ).isSplit( ) ) {
+              final MultiClusterCallback multi = ( MultiClusterCallback ) q;
+              multi.markSplit( );
+              multi.prepare( event.getEvent( ) );              
             } else {
-              if ( ( q instanceof MultiClusterCallback ) && !( ( MultiClusterCallback ) q ).isSplit( ) ) {
-                final MultiClusterCallback multi = ( MultiClusterCallback ) q;
-                multi.markSplit( );
-                multi.prepare( event.getEvent( ) );
-              } else {
-                event.trigger( nioClient );
-              }
+              Clusters.sendClusterEvent( this.clusterName, event );              
             }
           } catch ( final Exception e ) {
             LOG.error( e );
