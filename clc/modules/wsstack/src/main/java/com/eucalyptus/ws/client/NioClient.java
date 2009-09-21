@@ -125,6 +125,7 @@ public class NioClient implements Client {
         channel = channelFuture.getChannel( );
         channelFuture.getChannel( ).write( httpRequest ).addListener( ChannelFutureListener.CLOSE );
       } else {
+        LOG.debug( channelFuture.getCause( ), channelFuture.getCause( ) );
         this.handler.exceptionCaught( channelFuture.getCause() );
       }
     }
@@ -141,7 +142,6 @@ public class NioClient implements Client {
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostname, this.port, this.servicePath, msg );
     this.write( request );
     EucalyptusMessage response = this.clientPipeline.getHandler().getResponse();
-    this.close();
     return response;
   }
 
@@ -150,7 +150,6 @@ public class NioClient implements Client {
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostname, this.port, this.servicePath, msg );
     this.write( request );
     EucalyptusMessage response = this.clientPipeline.getHandler().getResponse();
-    this.close();
   }
 
   @Override
