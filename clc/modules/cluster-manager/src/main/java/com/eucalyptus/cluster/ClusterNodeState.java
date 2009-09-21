@@ -169,7 +169,7 @@ public class ClusterNodeState {
     StringBuffer before = new StringBuffer();
     before.append( "-> BEFORE: " );
     StringBuffer after = new StringBuffer();
-    before.append( "-> AFTER: " );
+    after.append( "-> AFTER: " );
     for ( ResourceType rsc : rscUpdate ) {
       VmTypeAvailability vmAvailable = this.typeMap.get( rsc.getInstanceType().getName() );
       before.append( String.format( " %s available=%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );

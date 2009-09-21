@@ -89,6 +89,7 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
       GetKeysResponseType msg = (GetKeysResponseType) resp.getMessage( );
       boolean certs = ClusterUtil.checkCerts( msg, this.getCluster( ) );
       if( certs && !this.verified ) {
+        this.getCluster( ).start( );
         try {
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
@@ -99,7 +100,6 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
           LOG.error( e1, e1 );
         }
         LOG.info( LogUtil.header( "Starting threads for cluster: " + this.getCluster( ) ) );
-        this.getCluster( ).start( );
         this.verified = true;
       } 
     } else {

@@ -64,6 +64,7 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -89,17 +90,15 @@ public abstract class QueuedEventCallback<TYPE> {
   }
 
   public void notifyHandler( ) {
-    canHas.lock( );
     e = true;
     this.jobPending.signalAll( );
-    canHas.unlock( );
   }
 
   public void waitForEvent( ) {
     canHas.lock( );
     try {
-      while ( !e )
-        this.jobPending.await( );
+      while ( !e ) 
+        this.jobPending.await( 50, TimeUnit.MILLISECONDS );
     } catch ( InterruptedException e ) {} finally {
       e = false;
       canHas.unlock( );
