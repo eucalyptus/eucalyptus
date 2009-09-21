@@ -95,7 +95,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   }
 
   private AbstractClusterMessageDispatcher( ) throws BindingException {
-    this.channelFactory = new NioClientSocketChannelFactory( ChannelUtil.getSharedBossThreadPool( ), ChannelUtil.getClientWorkerThreadPool( ) );
+    this.channelFactory = ChannelUtil.getClientChannelFactory( );
     this.clientBootstrap = ChannelUtil.getClientBootstrap( this );
     this.binding = BindingManager.getBinding( "eucalyptus_ucsb_edu" );
     this.secure = true;
@@ -200,6 +200,8 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
         if ( channelFuture.isSuccess( ) ) {
           channel = channelFuture.getChannel( );
           channelWriteFuture = channelFuture.getChannel( ).write( request );
+        } else {
+          LOG.debug( channelFuture.getCause( ), channelFuture.getCause( ) );
         }
       } catch ( Exception e ) {
         LOG.debug( e, e );

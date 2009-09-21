@@ -99,7 +99,7 @@ public class NioClient implements Client {
   private InetSocketAddress remoteAddr;
 
   public NioClient( String hostname, int port, String servicePath, NioClientPipeline clientPipeline ) {
-    this.channelFactory = new NioClientSocketChannelFactory( ChannelUtil.getSharedBossThreadPool( ), ChannelUtil.getClientWorkerThreadPool( ) );
+    this.channelFactory = ChannelUtil.getClientChannelFactory( );
     this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
     this.remoteAddr = new InetSocketAddress( hostname, port );
     this.hostname = hostname;

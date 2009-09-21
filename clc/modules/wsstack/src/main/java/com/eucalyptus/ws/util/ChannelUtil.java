@@ -119,7 +119,7 @@ public class ChannelUtil {
   }
   
   public static NioBootstrap getClientBootstrap( ChannelPipelineFactory factory ) {
-    final NioBootstrap bootstrap = new NioBootstrap( ChannelUtil.getServerSocketChannelFactory( ) );
+    final NioBootstrap bootstrap = new NioBootstrap( ChannelUtil.getClientChannelFactory( ) );
     bootstrap.setPipelineFactory( factory );
     bootstrap.setOption( "tcpNoDelay", true );
     bootstrap.setOption( "reuseAddress", true );
@@ -180,7 +180,7 @@ public class ChannelUtil {
     } finally {
       canHas.unlock( );
     }
-    return serverSocketFactory;
+    return clientSocketFactory;
   }
   
   public static ChannelFactory getServerSocketChannelFactory( ) {
