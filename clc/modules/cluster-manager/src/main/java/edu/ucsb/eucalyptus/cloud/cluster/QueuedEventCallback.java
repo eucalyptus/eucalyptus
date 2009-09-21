@@ -132,7 +132,7 @@ public abstract class QueuedEventCallback<TYPE> {
       return split;
     }
     public void markSplit( ) {
-      this.split = split;
+      this.split = true;
     }
     protected void fireEventAsyncToAllClusters( TYPE msg ) {
       this.markSplit( );
