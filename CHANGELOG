@@ -41,7 +41,7 @@ tab)
           o Non-root user deployment of Eucalyptus
           o Binary packages for more distributions (Ubuntu et al) 
 
-*Thu Apr 30 2009 mayhem group (support@open.eucalyptus.com)
+*Thu Apr 30 2009 mayhem group (support@eucalyptus.com)
     * Elastic Block Store (EBS) support (volumes & snapshots)
     * Walrus improvements:
           o Support for groups in ACLS

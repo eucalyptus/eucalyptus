@@ -80,6 +80,8 @@ public interface StorageManager {
     public void checkPreconditions() throws EucalyptusCloudException;
 
     public boolean bucketExists(String bucket);
+
+    public boolean objectExists(String bucket, String object);
     
     public void createBucket(String bucket) throws IOException;
 

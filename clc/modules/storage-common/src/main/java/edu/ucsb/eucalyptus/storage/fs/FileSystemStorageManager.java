@@ -126,6 +126,9 @@ public class FileSystemStorageManager implements StorageManager {
         return new File (rootDirectory + FILE_SEPARATOR + bucket).exists();        
     }
     
+    public boolean objectExists(String bucket, String object) {
+    	return new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object).exists();
+    }
 
     public void createBucket(String bucket) throws IOException {
         File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);
