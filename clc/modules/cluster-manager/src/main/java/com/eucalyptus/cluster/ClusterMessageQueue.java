@@ -124,6 +124,7 @@ public class ClusterMessageQueue implements Runnable {
             } else {
               Clusters.sendClusterEvent( this.clusterName, event );
             }
+            q.notifyHandler( );
           } catch ( final Exception e ) {
             LOG.error( e );
             LOG.debug( e, e );
