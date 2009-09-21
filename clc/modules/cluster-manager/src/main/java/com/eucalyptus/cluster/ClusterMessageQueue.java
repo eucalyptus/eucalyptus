@@ -70,11 +70,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.ws.client.Client;
-
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedLogEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 
 public class ClusterMessageQueue implements Runnable {
@@ -108,7 +105,8 @@ public class ClusterMessageQueue implements Runnable {
     return this.clusterName;
   }
   
-  @SuppressWarnings( "unchecked" ) public void run( ) {
+  @SuppressWarnings( "unchecked" )
+  public void run( ) {
     while ( !this.finished.get( ) ) {
       try {
         final long start = System.currentTimeMillis( );
@@ -122,9 +120,9 @@ public class ClusterMessageQueue implements Runnable {
             if ( ( q instanceof MultiClusterCallback ) && !( ( MultiClusterCallback ) q ).isSplit( ) ) {
               final MultiClusterCallback multi = ( MultiClusterCallback ) q;
               multi.markSplit( );
-              multi.prepare( event.getEvent( ) );              
+              multi.prepare( event.getEvent( ) );
             } else {
-              Clusters.sendClusterEvent( this.clusterName, event );              
+              Clusters.sendClusterEvent( this.clusterName, event );
             }
           } catch ( final Exception e ) {
             LOG.error( e );
@@ -132,7 +130,7 @@ public class ClusterMessageQueue implements Runnable {
             //TODO: valid existence of the cluster and its state aqui.
           }
           LOG.debug( String.format( "[q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s", msgStart - start, System.currentTimeMillis( ) - msgStart,
-                                    this.msgQueue.size( ), event.getCallback( ).getClass( ).getSimpleName( ), this.clusterName ) );
+                                                        this.msgQueue.size( ), event.getCallback( ).getClass( ).getSimpleName( ), this.clusterName ) );
         }
       } catch ( final Exception e ) {
         LOG.error( e, e );
@@ -144,7 +142,8 @@ public class ClusterMessageQueue implements Runnable {
     this.finished.lazySet( true );
   }
   
-  @Override public String toString( ) {
+  @Override
+  public String toString( ) {
     return "ClusterMessageQueue{" + "msgQueue=" + this.msgQueue.size( ) + '}';
   }
 }
