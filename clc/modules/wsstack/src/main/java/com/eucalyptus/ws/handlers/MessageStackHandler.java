@@ -122,7 +122,8 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
         Channels.fireExceptionCaught( channelHandlerContext, e );
       } 
     } else if ( channelEvent instanceof ExceptionEvent ) {
-      if( ( ( ExceptionEvent ) channelEvent ).getCause( ) instanceof IOException ) {
+      if( ( ( ExceptionEvent ) channelEvent ).getCause( ) instanceof IOException 
+          || ( ( ExceptionEvent ) channelEvent ).getCause( ) instanceof RuntimeException ) {
         LOG.debug( ( ( ExceptionEvent ) channelEvent ).getCause( ), ( ( ExceptionEvent ) channelEvent ).getCause( ) );
         channelHandlerContext.getChannel( ).close( );
       } else {

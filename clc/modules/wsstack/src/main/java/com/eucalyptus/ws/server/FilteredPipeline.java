@@ -96,7 +96,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   public boolean accepts( final HttpRequest message ) {
     final boolean result = this.checkAccepts( message );
     if ( result ) {
-      FilteredPipeline.LOG.debug( "Unrolling pipeline: " + this.getClass( ).getSimpleName( ) );
+      LOG.debug( "Unrolling pipeline: " + this.getClass( ).getSimpleName( ) );
     }
     return result;
   }
@@ -125,13 +125,13 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
         pipeline.addLast( "service-sink", new ServiceSinkHandler( ) );
       }
       for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
-        FilteredPipeline.LOG.trace( " - handler: key=" + e.getKey( ) + " class=" + e.getValue( ).getClass( ).getSimpleName( ) );
+        LOG.trace( " - handler: key=" + e.getKey( ) + " class=" + e.getValue( ).getClass( ).getSimpleName( ) );
       }
     } catch ( final Exception e ) {
-      FilteredPipeline.LOG.error( "Error unrolling pipeline: " + this.getPipelineName( ) );
+      LOG.error( "Error unrolling pipeline: " + this.getPipelineName( ) );
       final ChannelFuture close = pipeline.getChannel( ).close( );
       close.awaitUninterruptibly( );
-      FilteredPipeline.LOG.error( "Forced pipeline to close due to exception: ", e );
+      LOG.error( "Forced pipeline to close due to exception: ", e );
     }
   }
   

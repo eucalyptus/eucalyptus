@@ -49,7 +49,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   }
   @SuppressWarnings( "unchecked" )
   private static Multimap<String, TxHandle> getMap( ) {
-    return (Multimap)Multimaps.synchronizedMultimap( Multimaps.newTreeMultimap( ) )
+    return (Multimap)Multimaps.synchronizedMultimap( Multimaps.newTreeMultimap( ) );
   }
   public boolean isExpired() {
     this.stopWatch.split( );
