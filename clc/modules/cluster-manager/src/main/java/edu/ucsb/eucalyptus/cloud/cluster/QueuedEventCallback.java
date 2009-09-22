@@ -93,17 +93,6 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   private ChannelFuture channelOpen;
   private TYPE          request;
   
-  public void waitForEvent( ) {
-    Object event = null;
-    do {
-      LOG.debug( "Waiting for event of type: " + this.getClass( ).getCanonicalName( ) );
-      try {
-        event = super.getRequestQueue( ).poll( 1, TimeUnit.SECONDS );
-      } catch ( final InterruptedException e ) {}
-    } while ( event == null );
-    LOG.debug( "Found event of type: " + this.getClass( ).getCanonicalName( ) );
-  }
-  
   public void process( TYPE msg ) throws Exception {
     super.getRequestQueue( ).add( ( EucalyptusMessage ) msg );
     if ( this.channelOpen != null && this.channelOpen.isDone( ) ) {
@@ -183,23 +172,14 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
         try {
           QueuedEvent q = QueuedEvent.make( this, msg );
           callbackList.add( q );
-          c.fireEventAsync( q );
+          Clusters.sendClusterEvent( c, q );
         } catch ( final Throwable e ) {
           LOG.error( "Error while sending to: " + c.getUri( ) + " " + msg.getClass( ).getSimpleName( ) );
         }
       }
       return callbackList;
     }
-    
-    @Override
-    public void waitForEvent( ) {
-      for ( QueuedEvent e : callbackList ) {
-        if ( !e.getCallback( ).isReady( ) ) {
-          e.getCallback( ).waitForEvent( );
-        }
-      }
-    }
-    
+        
   }
   
   public TYPE getRequest( ) {

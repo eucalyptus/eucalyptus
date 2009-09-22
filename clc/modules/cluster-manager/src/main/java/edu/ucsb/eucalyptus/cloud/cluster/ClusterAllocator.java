@@ -252,9 +252,7 @@ public class ClusterAllocator extends Thread {
     QueuedEvent event = null;
     while ( ( event = this.pendingEvents.poll() ) != null ) {
       Object o = null;
-      QueuedEventCallback queuedCallback = null;
       try {
-        LOG.debug( "-> Waiting for: " + LogUtil.lineObject( event.getCallback( ) ) );
         o = event.getCallback().getResponse( );
       } catch( Throwable t ) {
         LOG.debug( t, t );
