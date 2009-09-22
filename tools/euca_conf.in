@@ -61,6 +61,7 @@
 #FAKEREG="yes"
 
 FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
+IMPORTFILE=""
 EUCALYPTUS=""
 CC_PORT=""
 NC_PORT=""
@@ -122,6 +123,7 @@ usage () {
 	echo "   --dhcpd <dhcpd>                  set the dhcpd binary to <name>"
 	echo "   --dhcp_user <user>               set the username to run dhcpd as"
 	echo "   --name <var>                     returns the value or <name>"
+	echo "   --import-conf <file>                  import variables from <file> into eucalyptus.conf"
 	echo "   --setup                          perform initial setup"
 	echo "   --check [nc|cc|cloud|sc|walrus]  pre-flight checks"
 	echo "   --sync [nc|cc|cloud|sc|walrus]   pre-flight checks"
@@ -431,6 +433,15 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi		
+	if [ "$1" = "-import-conf" -o "$1" = "--import-conf" ]; then
+	        IMPORTFILE="$2"
+		if [ ! -e "$IMPORTFILE" ]; then
+			echo "Cannot read $IMPORTFILE"
+			exit 1
+		fi
+		shift; shift
+		continue
+	fi
 	if [ "$1" = "-dhcpd" -o "$1" = "--dhcpd" ]; then
 		DHCPD="$2"
 		shift; shift
@@ -636,45 +647,60 @@ for x in $NAME ; do
 	echo "$x=$VALUE"
 done
 
-# modify the current conf file based on an older configuration
-if [ -n "$UPGRADE_CONF" ]; then
+# modify the current conf file based on an older configuration, or from import file
+if [ -n "$UPGRADE_CONF" -o -n "$IMPORTFILE" ]; then
 	VARS="EUCA_USER ENABLE_WS_SECURITY DISABLE_EBS HYPERVISOR LOGLEVEL CLOUD_PORT CLOUD_SSL_PORT SWAP_SIZE CC_PORT SCHEDPOLICY NODES NC_SERVICE NC_PORT MAX_MEM MAX_CORES INSTANCE_PATH VNET_INTERFACE VNET_BRIDGE VNET_DHCPDAEMON"
 	VNET_VARS="VNET_MODE VNET_SUBNET VNET_NETMASK VNET_DNS VNET_ADDRSPERNET VNET_PUBLICIPS VNET_BROADCAST VNET_ROUTER VNET_MACMAP"
 	
+	if [ -n "$UPGRADE_CONF" ]; then
 	# source the old config
-	. $UPGRADE_CONF
+	    VARS_TO_DO=$VARS
+	    VNET_VARS_TO_DO=$VNET_VARS
+	    . $UPGRADE_CONF
+	elif [ -n "$IMPORTFILE" ]; then
+	    VARS_TO_DO=""
+	    VNET_VARS_TO_DO=""
+	    . $IMPORTFILE
+	    for i in $VNET_VARS
+	    do
+		VAL="$(echo \$${i})"
+		eval VAL=$VAL
+		if [ -n "$VAL" ]; then
+		    VNET_VARS_TO_DO="$VNET_VARS_TO_DO $i"
+		fi
+	    done
+	fi
 
 	# let's start from no network
-	for x in $VNET_VARS ; do
-		comment $FILE $x
+	for x in $VNET_VARS_TO_DO ; do
+	    comment $FILE $x
 	done
-		
+	
 	# modified the defined variables
-	for x in $VARS ; do
-		y="$(echo \$${x})"
-		eval y="$y"
-		if [ -z "$y" ]; then
+	for x in $VARS_TO_DO ; do
+	    y="$(echo \$${x})"
+	    eval y="$y"
+	    if [ -z "$y" ]; then
 			# we just leave NODES uncommented even if it's empty
-			if [ "$x" != "NODES" ]; then
-				comment $FILE $x
-			fi
-		else
-			uncomment $FILE $x
-			change_var_value $FILE $x "${y}"
-		fi
+		    if [ "$x" != "NODES" ]; then
+			comment $FILE $x
+		    fi
+	    else
+		uncomment $FILE $x
+		change_var_value $FILE $x "${y}"
+	    fi
 	done
 	# and add the network variables
 	echo >> $FILE
-	echo "# network configuration from the old configuration file" >> $FILE
-	for x in $VNET_VARS ; do
-		y="$(echo \$${x})"
-		eval y="$y"
-		if [ -n "$y" ]; then
-			echo "$x=\"${y}\"" >> $FILE
-		fi
+	echo "# network configuration from the input configuration file" >> $FILE
+	for x in $VNET_VARS_TO_DO ; do
+	    y="$(echo \$${x})"
+	    eval y="$y"
+	    if [ -n "$y" ]; then
+		echo "$x=\"${y}\"" >> $FILE
+	    fi
 	done
 fi
-
 # we may need the location of the ssh key for eucalyptus
 EUCA_HOME="`getent passwd eucalyptus|cut -f 6 -d ':'`"
 if [ -f "${EUCA_HOME}/.ssh/id_rsa.pub" ]; then
