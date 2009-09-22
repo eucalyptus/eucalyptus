@@ -63,21 +63,17 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import java.util.NoSuchElementException;
+
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.util.EucalyptusClusterException;
+
 import edu.ucsb.eucalyptus.cloud.entities.Address;
 import edu.ucsb.eucalyptus.cloud.net.Addresses;
 import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
-
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.EucalyptusClusterException;
-import com.eucalyptus.ws.client.Client;
-
-import org.apache.log4j.Logger;
-
-import java.util.NoSuchElementException;
 
 public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddressType> {
 

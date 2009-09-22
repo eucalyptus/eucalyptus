@@ -75,11 +75,10 @@
     <property name="acquireRetryAttempts">12</property>
     <property name="acquireRetryDelay">1000</property>
     <property name="checkoutTimeout">1000</property>
-    <property name="numHelperThreads">10</property> 
-    <!--  where? oh where? can my fishy be? -->
-<!--    <property name="unreturnedConnectionTimeout">60</property>
-    <property name="debugUnreturnedConnectionStackTraces">true</property>-->
-    <!--      oh fishy fishy fishy feeesh! -->
-    
+    <property name="numHelperThreads">10</property>
+    <!--  where? oh where? can my fishy be? 
+    <property name="unreturnedConnectionTimeout">60</property>
+    <property name="debugUnreturnedConnectionStackTraces">true</property>
+          oh fishy fishy fishy feeesh! -->    
   </default-config>
 </c3p0-config>

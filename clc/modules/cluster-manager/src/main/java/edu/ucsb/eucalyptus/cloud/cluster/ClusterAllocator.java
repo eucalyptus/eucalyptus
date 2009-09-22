@@ -266,7 +266,9 @@ public class ClusterAllocator extends Thread {
   private void queueEvents() {
     for ( QueuedEvent event : this.msgMap.get( this.state ) ) {
       if( event.getCallback( ) instanceof MultiClusterCallback ) {
-        ( ( MultiClusterCallback ) event.getCallback( ) ).fireEventAsyncToAllClusters( ( EucalyptusMessage ) event.getEvent( ) );
+        MultiClusterCallback callback = ( MultiClusterCallback ) event.getCallback( );
+        callback.fireEventAsyncToAllClusters( ( EucalyptusMessage ) event.getEvent( ) );
+        callback.waitForEvent( );
       } else {
         this.pendingEvents.add( event );
         this.cluster.getMessageQueue().enqueue( event );        
