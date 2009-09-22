@@ -108,11 +108,6 @@ public class ClusterEndpoint implements Startable {
         msg.setRules( existingNet.getRules() );
       }
       ConfigureNetworkCallback.CALLBACK.fireEventAsyncToAllClusters( msg );
-//      for ( NetworkToken token : existingNet.getNetworkTokens().values() )
-//        try {
-//          Cluster cluster = Clusters.getInstance().lookup( token.getCluster() );
-//          cluster.getMessageQueue().enqueue( QueuedEvent.make( ConfigureNetworkCallback.CALLBACK, msg ) );
-//        } catch ( NoSuchElementException e ) {}
     } catch ( NoSuchElementException e ) {
       LOG.error( "Changed network rules not applied to inactive network: " + net.getName() );
     }

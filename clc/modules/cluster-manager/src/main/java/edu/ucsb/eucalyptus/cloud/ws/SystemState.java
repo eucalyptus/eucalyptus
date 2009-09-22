@@ -162,10 +162,8 @@ public class SystemState {
     for ( Address address : Addresses.getInstance().listValues() ) {
       if ( vm.getInstanceId().equals( address.getInstanceId() ) ) {
         if( Component.eucalyptus.name().equals( address.getUserId() ) ) {
-          try {
-            (new AddressManager()).ReleaseAddress( Admin.makeMsg( ReleaseAddressType.class, address.getName() ) );
-          } catch ( EucalyptusCloudException e ) {
-          }
+            AddressManager.unassignAddressFromVm( address, vm );
+            AddressManager.releaseAddress( address );
         }
 //        if( address.getInstanceAddress() != null ) {
 //          ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );

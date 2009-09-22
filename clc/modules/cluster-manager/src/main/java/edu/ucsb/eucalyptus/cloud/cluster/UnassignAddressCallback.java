@@ -90,41 +90,9 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   }
 
   @Override
-  public void prepare( UnassignAddressType msg ) throws Exception {
-    Address addr = null;
-    try {
-      addr = Addresses.getInstance( ).lookup( pubIp );
-    } catch ( Exception e ) {
-      new EucalyptusClusterException( "No such address to unassign: " + pubIp, e );
-    }
-    if( this.vmId.equals( addr.getInstanceId( ) ) ) {
-      new EucalyptusClusterException( "Address has been reassigned to the same vm: " + pubIp );      
-    }
-  }
+  public void prepare( UnassignAddressType msg ) throws Exception {}
 
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {
-    VmInstance vm = null;
-    try {
-      vm = VmInstances.getInstance().lookup( vmId );
-      LOG.debug( "Unassign [" + pubIp + "] clearing VM " + vmId + ":" + vmIp );
-      if( this.pubIp.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
-        AddressManager.releaseAddress( pubIp );
-      }
-      vm.getNetworkConfig().setIgnoredPublicIp( VmInstance.DEFAULT_IP );
-    } catch ( NoSuchElementException e1 ) {}
-//    String addr = msg.getSource();
-//    try {
-//      Address a = Addresses.getInstance().lookup( addr );
-//      a.unassign();
-//      if( EucalyptusProperties.NAME.equals( a.getUserId() ) ) {
-//        new AddressManager().ReleaseAddress( Admin.makeMsg( ReleaseAddressType.class, addr ) );
-//      }
-//    } catch ( NoSuchElementException e1 ) {
-//      LOG.error( e1 );
-//    } catch ( EucalyptusCloudException e1 ) {
-//      LOG.error( e1 );
-//    }
-  }
+  public void verify( EucalyptusMessage msg ) throws Exception {}
 
 }

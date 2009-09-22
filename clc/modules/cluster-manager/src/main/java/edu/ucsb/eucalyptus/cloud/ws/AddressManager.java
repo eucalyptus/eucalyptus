@@ -491,7 +491,6 @@ public class AddressManager implements Startable {
         return reply;
 
     reply.set_return( true );
-
     AddressManager.unassignAddressFromVm( address, vm );
     AddressManager.tryAssignSystemAddress( vm );
     return reply;
@@ -514,8 +513,14 @@ public class AddressManager implements Startable {
   public static void unassignAddressFromVm( Address address, VmInstance vm ) {
     EntityWrapper<Address> db = new EntityWrapper<Address>();
     try {
-      UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
-      ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new UnassignAddressCallback( address ), unassignMsg ) );
+      try {
+        UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
+        QueuedEvent q = QueuedEvent.make( new UnassignAddressCallback( address ), unassignMsg );
+        Clusters.sendClusterEvent( address.getCluster( ), q );
+        q.getCallback( ).getResponse( );
+      } catch ( Throwable e ) {
+        LOG.debug( e, e );
+      }
       vm.getNetworkConfig( ).setIgnoredPublicIp( vm.getNetworkConfig( ).getIpAddress( ) );
       Address addr = db.getUnique( new Address( address.getName() ) );
       addr.unassign();
@@ -535,9 +540,14 @@ public class AddressManager implements Startable {
       addr.assign( vm.getInstanceId(), vm.getNetworkConfig().getIpAddress() );
       address.assign( vm.getInstanceId(), vm.getNetworkConfig().getIpAddress() );
       //:: dispatch the request to the cluster that owns the address :://
-      AssignAddressType assignMsg = Admin.makeMsg( AssignAddressType.class, address.getName(), address.getInstanceAddress(), address.getInstanceId( ) );
-      ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
-      ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new AssignAddressCallback( vm ), assignMsg ) );
+      try {
+        AssignAddressType assignMsg = Admin.makeMsg( AssignAddressType.class, address.getName(), address.getInstanceAddress(), address.getInstanceId( ) );
+        QueuedEvent q = QueuedEvent.make( new AssignAddressCallback( vm ), assignMsg );
+        Clusters.sendClusterEvent( address.getCluster( ), q );
+        q.getCallback( ).getResponse( );
+      } catch ( Throwable e ) {
+        LOG.debug( e, e );
+      }
       db.commit();
     } catch ( EucalyptusCloudException e ) {
       db.rollback();
