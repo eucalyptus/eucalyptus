@@ -280,10 +280,14 @@ public class WalrusImageManager {
 	private void checkManifest(String bucketName, String objectKey, String userId) throws EucalyptusCloudException {
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		BucketInfo bucket = null;
+		try {
+			bucket = db.getUnique(bucketInfo);
+		} catch(Throwable t) {
+			throw new EucalyptusCloudException("Unable to get bucket: " + bucketName, t);
+		}
 
-
-		if (bucketList.size() > 0) {
+		if (bucket != null) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -833,7 +837,7 @@ public class WalrusImageManager {
 							foundImageCacheInfos = db2.query(searchImageCacheInfo);
 						}						
 					}
-					
+
 					if((foundImageCacheInfos.size() == 0) || 
 							(!imageCachers.containsKey(bucketName + objectKey))) {
 						db2.commit();
@@ -935,19 +939,23 @@ public class WalrusImageManager {
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		BucketInfo bucket = null;
+		try {
+			bucket = db.getUnique(bucketInfo);
+		} catch(Throwable t) {
+			throw new EucalyptusCloudException("Unable to get bucket", t);
+		}
 
-
-		if (bucketList.size() > 0) {
+		if (bucket != null) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(objectInfo.canRead(userId)) {
+					db.commit();
 					checkManifest(bucketName, objectKey, userId);
 					reply.setSuccess(true);
-					db.commit();
 					return reply;
 				} else {
 					db.rollback();
