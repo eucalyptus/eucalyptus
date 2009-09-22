@@ -2,7 +2,7 @@ package com.eucalyptus.util;
 
 public class EucalyptusClusterException extends EucalyptusCloudException {
 
-  private EucalyptusClusterException( ) {
+  public EucalyptusClusterException( ) {
     super( );
   }
 
@@ -10,11 +10,11 @@ public class EucalyptusClusterException extends EucalyptusCloudException {
     super( message, ex );
   }
 
-  private EucalyptusClusterException( String message ) {
+  public EucalyptusClusterException( String message ) {
     super( message );
   }
 
-  private EucalyptusClusterException( Throwable ex ) {
+  public EucalyptusClusterException( Throwable ex ) {
     super( ex );
   }
 

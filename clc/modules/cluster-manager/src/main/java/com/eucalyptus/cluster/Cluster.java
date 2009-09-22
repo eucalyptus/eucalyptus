@@ -65,6 +65,7 @@ package com.eucalyptus.cluster;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -225,6 +226,10 @@ public class Cluster implements HasName {
 
   }
 
+  public void sendEvent( QueuedEvent event ) throws Exception {
+    Clusters.sendClusterEvent( this, event );
+  }
+
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -269,5 +274,4 @@ public class Cluster implements HasName {
     return this.configuration.getServicePath( );
   }
 
-  
 }

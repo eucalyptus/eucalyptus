@@ -75,6 +75,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
@@ -87,6 +88,7 @@ import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
@@ -116,7 +118,6 @@ public class ClusterAllocator extends Thread {
     this.cluster = Clusters.getInstance().lookup( vmToken.getCluster() );
     this.state = State.START;
     this.rollback = new AtomicBoolean( false );
-    List<NetworkToken> tokens = Lists.newArrayList( );
     for ( NetworkToken networkToken : vmToken.getNetworkTokens() )
       this.setupNetworkMessages( networkToken );
     this.setupVmMessages( vmToken );
@@ -155,7 +156,6 @@ public class ClusterAllocator extends Thread {
   public void setupNetworkMessages( NetworkToken networkToken ) {
     if ( networkToken != null ) {
       StartNetworkType msg = new StartNetworkType( this.vmAllocInfo.getRequest(), networkToken.getVlan(), networkToken.getNetworkName() );
-      //FIXME: this needs to get sent to every cluster.
       this.msgMap.put( State.CREATE_NETWORK, QueuedEvent.make( new StartNetworkCallback( networkToken ), msg ) );
       this.msgMap.put( State.ROLLBACK, QueuedEvent.make( new StopNetworkCallback( networkToken ), new StopNetworkType( msg ) ) );
     }
@@ -245,8 +245,15 @@ public class ClusterAllocator extends Thread {
 
   public void clearQueue() {
     QueuedEvent event = null;
-    while ( ( event = this.pendingEvents.poll() ) != null )
-      event.getCallback().waitForEvent();
+    while ( ( event = this.pendingEvents.poll() ) != null ) {
+      LOG.debug( "-> Waiting for: " + LogUtil.lineObject( event.getCallback( ) ) );
+      QueuedEventCallback queuedCallback = event.getCallback();
+      try {
+        LOG.debug( LogUtil.lineObject( queuedCallback.getResponse( ) ) );
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+      }
+    }
   }
 
   private void queueEvents() {
@@ -264,7 +271,6 @@ public class ClusterAllocator extends Thread {
       }
     }
   }
-
 
   public AtomicBoolean getRollback() {
     return rollback;

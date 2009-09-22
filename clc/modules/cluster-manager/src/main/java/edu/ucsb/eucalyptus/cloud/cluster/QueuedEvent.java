@@ -64,7 +64,15 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import com.eucalyptus.ws.client.Client;
+import com.eucalyptus.ws.handlers.NioResponseHandler;
+
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
 
 public class QueuedEvent<TYPE> {
   private static Logger             LOG = Logger.getLogger( QueuedEvent.class );
@@ -91,12 +99,10 @@ public class QueuedEvent<TYPE> {
 
   public void trigger( Client cluster ) {
     try {
-      this.callback.process( cluster, this.event );
+      this.callback.process( this.event );
     } catch ( Throwable t ) {
-      LOG.error( t, t );
-    }     finally {
-      this.callback.notifyHandler( );
-    }
+      LOG.debug( t, t );
+    } 
   }
 
   @Override
@@ -118,4 +124,7 @@ public class QueuedEvent<TYPE> {
     result = 31 * result + event.hashCode( );
     return result;
   }
+  
+  
+  
 }

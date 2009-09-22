@@ -114,7 +114,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   }
   
   @Override
-  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {
+  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {//FIXME: handle exceptions cleanly.
     LOG.trace( ctx.getChannel( ), e.getCause( ) );
     Channels.fireExceptionCaught( ctx.getChannel( ), e.getCause( ) );
   }
@@ -122,6 +122,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   @SuppressWarnings( "unchecked" )
   @Override
   public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+    LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e );
     if ( e instanceof MessageEvent ) {
       final MessageEvent msge = ( MessageEvent ) e;
       if ( msge.getMessage( ) instanceof NullPayload ) {
@@ -133,15 +134,15 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         final MappingHttpMessage request = this.requestLocal.get( ctx.getChannel( ) );
         EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
         if ( reply == null ) {// TODO: fix this error reporting
-          ServiceSinkHandler.LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
+          LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
           reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
         }
-        ServiceSinkHandler.LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED,
+        LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED,
                                                          ( System.currentTimeMillis( ) - this.startTime ) ) );
         if ( reply instanceof WalrusDataGetResponseType ) {
           if ( reply instanceof GetObjectResponseType ) {
             final GetObjectResponseType getObjectResponse = ( GetObjectResponseType ) reply;
-            ServiceSinkHandler.LOG.debug( getObjectResponse );
+            LOG.debug( getObjectResponse );
             if ( getObjectResponse.getBase64Data( ) == null ) {
               return;
             }
@@ -156,7 +157,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       } else if ( msge.getMessage( ) instanceof HttpResponse ) {
         ctx.sendDownstream( e );
       } else {
-        ServiceSinkHandler.LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage." );
+        LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage." );
       }
     } else {
       ctx.sendDownstream( e );
@@ -165,7 +166,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   
   @Override
   public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-    ServiceSinkHandler.LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + e );
+    LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]: " + e );
     if ( e instanceof ExceptionEvent ) {
       this.exceptionCaught( ctx, ( ExceptionEvent ) e );
     } else if ( e instanceof MessageEvent ) {
@@ -183,8 +184,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           msg.setUserId( user.getUserName( ) );
           msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getUserName( ) );
         }
-        ServiceSinkHandler.LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), EventType.MSG_RECEIVED,
-                                                         msg.getClass( ).getSimpleName( ) ) );
+        LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
         ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
         if ( this.msgReceiver == null ) {
           Messaging.dispatch( "vm://RequestQueue", msg );

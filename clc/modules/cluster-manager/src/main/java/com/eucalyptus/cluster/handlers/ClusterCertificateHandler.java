@@ -4,7 +4,6 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.cluster.Cluster;
@@ -12,7 +11,6 @@ import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.cluster.util.ClusterUtil;
 import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.GenericEvent;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.BindingException;
@@ -25,7 +23,6 @@ import edu.ucsb.eucalyptus.msgs.GetKeysType;
 public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher {
   private static Logger LOG = Logger.getLogger( ClusterCertificateHandler.class );
   private boolean verified = false;
-  private ChannelFuture closeFuture = null;
   public ClusterCertificateHandler( Cluster cluster ) throws BindingException {
     super( cluster, false );
   }
@@ -69,17 +66,10 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
         } catch ( Exception e ) {
           LOG.error( e, e );
         }
-        this.cleanup( );
       }
     } else {
       LOG.debug( "Ignoring event which doesn't belong to me: " + LogUtil.dumpObject( event ) );
     }
-  }
-
-  @Override
-  public void downstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
-    LOG.info( e.getMessage( ) );
-    ctx.sendDownstream( e );
   }
 
   @Override
@@ -105,7 +95,6 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
     } else {
       LOG.info( "Received unknown message type. " + e.getMessage( ) );
     }    
-    ctx.getChannel( ).close( );
   }
 
   

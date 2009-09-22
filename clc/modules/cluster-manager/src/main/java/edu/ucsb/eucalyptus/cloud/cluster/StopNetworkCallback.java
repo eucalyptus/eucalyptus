@@ -72,8 +72,11 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
+import com.google.common.collect.Lists;
+
 import org.apache.log4j.Logger;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 
 public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
@@ -84,11 +87,11 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
     this.token = networkToken;
   }
 
-  public void process( final StopNetworkType msg ) {
+  public void prepare( final StopNetworkType msg ) {
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
       if ( v.getNetworkNames( ).contains( token.getName( ) ) && v.getPlacement( ).equals( token.getCluster( ) ) ) {
         LOG.debug( "Returning stop network event since it still exists." );
-        return;        
+        return;
       }
     }
     //TODO: likely need a transient uncommitted state for the token to avoid a race.
@@ -98,7 +101,6 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
     cluster.getState( ).releaseNetworkAllocation( token );
     LOG.debug( "Removing network token: " + token );
     net.removeToken( token.getCluster( ) );
-    this.fireEventAsyncToAllClusters( msg );
   }
 
   public void process( final Client c, final StopNetworkType msg ) throws Exception {
@@ -111,9 +113,4 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
     }
   }
 
-  @Override
-  public void prepare( StopNetworkType msg ) throws Exception {
-    // TODO Auto-generated method stub
-    
-  }
 }

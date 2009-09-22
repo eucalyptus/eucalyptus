@@ -107,31 +107,25 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return list;
   }
 
-  public List<Client> getClusterClients() {
-    List<Client> clients = Lists.newArrayList( );
-    for( Cluster c : this.listValues( ) ) {
-      try {
-        clients.add( new NioClient( c.getConfiguration( ).getHostName(), c.getConfiguration( ).getPort(), c.getConfiguration( ).getServicePath(), new ClusterClientPipeline( new NioResponseHandler() ) ) );
-      } catch ( Throwable t ) {
-        LOG.error( "Failed to create a client for cluster: " + c , t );
-      }
-    }
-    return clients;
-  }
-
   public static void sendClusterEvent( String clusterName, QueuedEvent event ) throws Exception {
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-    NioClient nioClient = null;
+    Clusters.sendClusterEvent( cluster, event );
+  }
+
+  public static void sendClusterEvent( Cluster cluster, QueuedEvent event ) throws GeneralSecurityException {
+    NioClientPipeline cp = Clusters.getPipelineByType( event );
+    NioClient nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
+    event.trigger( nioClient );
+  }
+
+  private static NioClientPipeline getPipelineByType( QueuedEvent event ) throws GeneralSecurityException {
     NioClientPipeline cp = null;
     if ( !( event instanceof QueuedLogEvent ) ) {
-      cp = new ClusterClientPipeline( new NioResponseHandler( ) );
-      nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
+      cp = new ClusterClientPipeline( event.getCallback( ) );
     } else {
-      cp = new LogClientPipeline( new NioResponseHandler( ) );
-      nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
+      cp = new LogClientPipeline( event.getCallback( ) );
     }
-    event.trigger( nioClient );
-    event.getCallback( ).notifyHandler( );
+    return cp;
   }
   
 }

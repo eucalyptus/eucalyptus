@@ -1,10 +1,7 @@
 package com.eucalyptus.cluster.handlers;
 
-import java.nio.channels.AlreadyConnectedException;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.cluster.Cluster;
@@ -23,15 +20,9 @@ public class LogStateHandler extends AbstractClusterMessageDispatcher {
   @Override
   public void fireEvent( Event event ) {}
 
-  @Override
-  public void downstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
-    ctx.sendDownstream( e );
-  }
 
   @Override
   public void upstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
-    ctx.sendUpstream( e );
-    ctx.getChannel( ).close( );
   }
 
   @Override

@@ -39,12 +39,6 @@ public class ResourceStateHandler extends AbstractClusterMessageDispatcher {
     super.fireTimedStatefulTrigger( event );
   }
 
-
-  @Override
-  public void downstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
-    ctx.sendDownstream( e );
-  }
-
   @Override
   public void upstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
     if( e.getMessage( ) instanceof MappingHttpResponse ) {
@@ -56,7 +50,6 @@ public class ResourceStateHandler extends AbstractClusterMessageDispatcher {
         this.getCluster( ).updateNodeInfo( reply.getServiceTags() );
       }
       this.verified = true;
-      ctx.getChannel( ).close( );
     }
   }
 

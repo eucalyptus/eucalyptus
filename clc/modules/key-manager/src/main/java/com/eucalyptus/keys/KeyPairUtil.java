@@ -79,7 +79,6 @@ public class KeyPairUtil {
   }
   public static PrivateKey createUserKeyPair( String userName, String keyName ) throws EucalyptusCloudException {
     SshKeyPair newKey = new SshKeyPair( userName, keyName );
-    EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     KeyPair newKeys = null;
     try {
       KeyTool keyTool = new KeyTool( );
@@ -87,6 +86,11 @@ public class KeyPairUtil {
       String authKeyString = getAuthKeyString( userName, newKeys );
       newKey.setPublicKey( authKeyString );
       newKey.setFingerPrint( Hashes.getFingerPrint( newKeys.getPrivate( ) ) );
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( "KeyPair generation error: Key pair creation failed.", e );
+    }
+    EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
+    try {
       db.add( newKey );
       db.commit( );
     } catch ( Throwable e1 ) {

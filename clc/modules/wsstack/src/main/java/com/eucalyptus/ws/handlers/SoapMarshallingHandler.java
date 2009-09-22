@@ -132,6 +132,7 @@ public class SoapMarshallingHandler extends MessageStackHandler {
       httpMessage.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
       httpMessage.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );
       httpMessage.setContent( buffer );
+
     }
   }
 

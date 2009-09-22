@@ -75,67 +75,56 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
+import com.eucalyptus.util.LogUtil;
+
 public abstract class MessageStackHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
   private static Logger LOG = Logger.getLogger( MessageStackHandler.class );
 
+  @Override
   public void handleDownstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
+    LOG.trace( LogUtil.dumpObject( channelEvent ) );
     try {
-      LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + channelEvent );
       if ( channelEvent instanceof MessageEvent ) {
         final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
         if( msgEvent.getMessage() != null ) {
           this.outgoingMessage( channelHandlerContext, msgEvent );
+        } else {
+          LOG.warn( "==> Outbound message is null!: " + LogUtil.dumpObject( channelEvent ) );
         }
       }
-      channelHandlerContext.sendDownstream( channelEvent );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }
+    channelHandlerContext.sendDownstream( channelEvent );
   }
 
   public abstract void outgoingMessage( final ChannelHandlerContext ctx, MessageEvent event ) throws Exception;
 
   public abstract void incomingMessage( final ChannelHandlerContext ctx, MessageEvent event ) throws Exception;
 
-  public void exceptionCaught( final Throwable t ) throws Exception {
-    try {
-      LOG.fatal( "MessageStackHandler: " + t, t );
-      LOG.error( t, t );
-    } catch ( Throwable e ) {
-      LOG.error( e, e );
-    }
-  }
-
-  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
+  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {//FIXME: handle exceptions cleanly.
     Throwable t = exceptionEvent.getCause( );
     if ( t != null && IOException.class.isAssignableFrom( t.getClass( ) ) ) {
       LOG.error( t, t );
-      ctx.getChannel( ).close( );
     } else {
-      this.exceptionCaught( t );
+      LOG.debug( t, t );
     }
+    ctx.sendUpstream( exceptionEvent );
   }
 
+  @Override
   public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-    LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
+    LOG.trace( LogUtil.dumpObject( channelEvent ) );
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
       try {
         this.incomingMessage( channelHandlerContext, msgEvent );
-        channelHandlerContext.sendUpstream( channelEvent );
       } catch ( Throwable e ) {
         LOG.error( e, e );
         Channels.fireExceptionCaught( channelHandlerContext, e );
+        return;
       } 
-    } else if ( channelEvent instanceof ExceptionEvent ) {
-      if( ( ( ExceptionEvent ) channelEvent ).getCause( ) instanceof IOException 
-          || ( ( ExceptionEvent ) channelEvent ).getCause( ) instanceof RuntimeException ) {
-        LOG.error( ( ( ExceptionEvent ) channelEvent ).getCause( ), 
-                   ( ( ExceptionEvent ) channelEvent ).getCause( ) );
-        channelHandlerContext.getChannel( ).close( );
-      } else {
-        channelHandlerContext.sendUpstream( channelEvent );
-      }
     }
+    channelHandlerContext.sendUpstream( channelEvent );
   }
 }

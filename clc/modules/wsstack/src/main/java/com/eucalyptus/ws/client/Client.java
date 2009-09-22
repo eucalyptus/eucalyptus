@@ -79,6 +79,4 @@ public interface Client {
 
   public String getUri( );
 
-  public void close( );
-
 }

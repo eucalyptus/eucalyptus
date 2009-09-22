@@ -1,26 +1,19 @@
 package com.eucalyptus.cluster.handlers;
 
-import java.nio.channels.AlreadyConnectedException;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.event.NewClusterEvent;
-import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.event.Event;
-import com.eucalyptus.event.GenericEvent;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpResponse;
 
+import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.ws.SystemState;
@@ -48,11 +41,6 @@ public class VmStateHandler extends AbstractClusterMessageDispatcher {
   }
 
   @Override
-  public void downstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
-    ctx.sendDownstream( e );
-  }
-
-  @Override
   public void upstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse resp = ( MappingHttpResponse ) e.getMessage( );
@@ -72,7 +60,6 @@ public class VmStateHandler extends AbstractClusterMessageDispatcher {
       SystemState.handle( reply );
       this.verified = true;
     }
-    ctx.getChannel( ).close( );
   }
 
   @Override

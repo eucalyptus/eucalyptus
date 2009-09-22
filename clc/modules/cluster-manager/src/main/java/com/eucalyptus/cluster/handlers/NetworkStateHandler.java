@@ -56,16 +56,10 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
   }
 
   @Override
-  public void downstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
-    ctx.sendDownstream( e );
-  }
-
-  @Override
   public void upstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse resp = ( MappingHttpResponse ) e.getMessage( );
       DescribeNetworksResponseType reply = ( DescribeNetworksResponseType ) resp.getMessage( );
-      ctx.getChannel( ).close( );
       for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
         try {
           Network net = Networks.getInstance( ).lookup( netInfo.getUserName( ) + "-" + netInfo.getNetworkName( ) );
@@ -90,7 +84,6 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
       this.verified = true;
     } else {
       LOG.warn( "Received unknown message type. " + e.getMessage( ) );
-      ctx.getChannel( ).close( );
     }
   }
 

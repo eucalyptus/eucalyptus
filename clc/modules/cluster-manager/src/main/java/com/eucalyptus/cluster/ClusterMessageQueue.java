@@ -71,8 +71,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 
 public class ClusterMessageQueue implements Runnable {
   
@@ -111,26 +109,16 @@ public class ClusterMessageQueue implements Runnable {
       try {
         final long start = System.currentTimeMillis( );
         final QueuedEvent event = this.msgQueue.poll( this.pollInterval, TimeUnit.MILLISECONDS );
-        if ( event != null ) // msg == null if the queue was empty
-        {
-          LOG.trace( "Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
+        if ( event != null ) {// msg == null if the queue was empty
+          LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
           final long msgStart = System.currentTimeMillis( );
-          final QueuedEventCallback q = event.getCallback( );
           try {
-            if ( ( q instanceof MultiClusterCallback ) && !( ( MultiClusterCallback ) q ).isSplit( ) ) {
-              final MultiClusterCallback multi = ( MultiClusterCallback ) q;
-              multi.markSplit( );
-              multi.prepare( event.getEvent( ) );
-            } else {
-              Clusters.sendClusterEvent( this.clusterName, event );
-            }
+            Clusters.sendClusterEvent( this.clusterName, event );
           } catch ( final Throwable e ) {
-            LOG.error( e );
             LOG.debug( e, e );
-          } 
-          q.notifyHandler( );
-          LOG.debug( String.format( "[q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s", msgStart - start, System.currentTimeMillis( ) - msgStart,
-                                                        this.msgQueue.size( ), event.getCallback( ).getClass( ).getSimpleName( ), this.clusterName ) );
+          }
+          LOG.debug( String.format( "--> [q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s", msgStart - start, System.currentTimeMillis( ) - msgStart,
+                                    this.msgQueue.size( ), event.getCallback( ).getClass( ).getSimpleName( ), this.clusterName ) );
         }
       } catch ( final Throwable e ) {
         LOG.error( e, e );

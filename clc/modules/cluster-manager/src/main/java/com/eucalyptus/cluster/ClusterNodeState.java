@@ -136,6 +136,7 @@ public class ClusterNodeState {
   public synchronized void releaseToken( ResourceToken token ) {
     this.pendingTokens.remove( token );
     this.submittedTokens.remove( token );
+    this.redeemedTokens.remove( token );
   }
 
   public synchronized void submitToken( ResourceToken token ) throws NoSuchTokenException {

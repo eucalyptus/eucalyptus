@@ -51,17 +51,10 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
       if ( !g.matches( this.getCluster( ) ) ) { return; }
       if ( g instanceof NewClusterEvent ) {
         this.trigger( );
-      } else if ( event instanceof TeardownClusterEvent ) {
-        this.cleanup( );
       }
     } else {
       LOG.trace( "Ignoring unknown event: " + LogUtil.dumpObject( event ) );
     }
-  }
-
-  @Override
-  public void downstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
-    ctx.sendDownstream( e );
   }
 
   @Override
@@ -85,7 +78,6 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
         EucalyptusProperties.disableNetworking = true;
       }
       this.verified = true;
-      ctx.getChannel( ).close( );
     }
   }
 

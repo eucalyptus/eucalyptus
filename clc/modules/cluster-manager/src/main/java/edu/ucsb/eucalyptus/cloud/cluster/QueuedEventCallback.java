@@ -63,101 +63,145 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import java.util.concurrent.Callable;
+import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.client.Client;
+import com.eucalyptus.ws.handlers.NioResponseHandler;
+import com.eucalyptus.ws.util.ChannelUtil;
+import com.google.common.collect.Lists;
 
-public abstract class QueuedEventCallback<TYPE> {
-  private static Logger    LOG = Logger.getLogger( QueuedEventCallback.class );
-  private Lock             canHas;
-  private Condition        jobPending;
-  private volatile boolean e   = false;
-  private volatile boolean failed   = false;
-  private volatile boolean stopped = false;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.GetKeysType;
 
-  protected QueuedEventCallback( ) {
-    this.canHas = new ReentrantLock( );
-    this.jobPending = canHas.newCondition( );
-  }
-
-  public void notifyHandler( ) {
-    this.canHas.lock( );
-    try {
-      e = true;
-      this.jobPending.signalAll( );
-    } finally {
-      this.canHas.unlock( );
-    }
-  }
-
+public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
+  private static Logger    LOG     = Logger.getLogger( QueuedEventCallback.class );
+  private ChannelFuture channelOpen;
+  
   public void waitForEvent( ) {
-    canHas.lock( );
-    try {
-      while ( !e ) 
-        this.jobPending.await( 50, TimeUnit.MILLISECONDS );
-    } catch ( InterruptedException e ) {} finally {
-      e = false;
-      canHas.unlock( );
-    }
-  }
-
-  public boolean isStopped( ) {
-    return stopped;
-  }
-
-  public void stop( ) {
-    this.stopped = true;
-  }
-
-  protected boolean sleep( int ms ) {
-    long startTime = System.currentTimeMillis( );
-    while ( ( System.currentTimeMillis( ) - startTime ) < ms )
+    Object event = null;
+    do {
+      LOG.debug( "Waiting for event of type: " + this.getClass( ).getCanonicalName( ) );
       try {
-        Thread.sleep( 1000 );
-      } catch ( InterruptedException e ) {}
-    return true;
+        event = super.getRequestQueue( ).poll( 1, TimeUnit.SECONDS );
+      } catch ( final InterruptedException e ) {}
+    } while ( event == null );
+    LOG.debug( "Found event of type: " + this.getClass( ).getCanonicalName( ) );
+  }
+    
+  public void process( TYPE msg ) throws Exception {
+    super.getRequestQueue( ).add( (EucalyptusMessage) msg );
+    if( this.channelOpen != null && this.channelOpen.isDone( ) ) {
+      this.fireMessage( msg );
+    } else {
+      LOG.debug( "Found channel pending: defering message " + msg.getClass( ).getCanonicalName( ) );      
+    }
   }
 
+  private void fireMessage( TYPE msg ) {
+    LOG.debug( "Found channel open: writing message " + msg.getClass( ).getCanonicalName( ) );
+    String servicePath = "/axis2/services/EucalyptusCC";//FIXME: handle this in a clean way.
+    Channel channel = this.channelOpen.getChannel( );
+    InetSocketAddress addr = ( InetSocketAddress ) channel.getRemoteAddress( );
+    HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, addr.getHostName( ), addr.getPort( ), servicePath, msg );
+    channel.write( request );
+  }
+  
   public abstract void process( Client cluster, TYPE msg ) throws Exception;
+ 
+  @Override
+  public void connectRequested( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+    this.channelOpen = e.getFuture( );
+    super.connectRequested( ctx, e );
+  }
 
-  public abstract static class MultiClusterCallback<TYPE> extends QueuedEventCallback<TYPE> {
-    private boolean split = false;    
+  @Override
+  public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+    if( super.getRequestQueue( ).isEmpty( ) ) {
+      LOG.debug( "Request queue is empty, waiting for write request." );
+    } else {
+      Object msg = this.getRequestQueue( ).poll( );      
+      LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
+      this.fireMessage( (TYPE) msg );
+    }
+    super.channelConnected( ctx, e );
+  }
+
+  @Override
+  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
+    LOG.debug( e.getCause( ), e.getCause( ) );
+    super.exceptionCaught( ctx, e );
+  }
+
+  @Override
+  public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
+    LOG.debug( "Channel message: " + LogUtil.lineObject( e ) );
+    if( e.getMessage( ) instanceof MappingHttpResponse ) {
+      super.getResponseQueue( ).add( e );
+    }
+    super.messageReceived( ctx, e );
+  }
+
+  @Override
+  public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+    this.channelOpen = e.getFuture( );
+    if( !super.getRequestQueue( ).isEmpty( ) ) {
+      Object msg = super.getRequestQueue( ).poll( ); 
+      LOG.debug( "Channel opened: found pending request to send." + LogUtil.lineObject( msg ) );
+      this.fireMessage( ( TYPE ) msg );      
+    }
+    super.channelOpen( ctx, e );
+  }
+
+  public abstract static class MultiClusterCallback<TYPE extends EucalyptusMessage> extends QueuedEventCallback<TYPE> {
+    private List<QueuedEvent> callbackList = Lists.newArrayList( );
+    
     public abstract void prepare( TYPE msg ) throws Exception;
-    public boolean isSplit( ) {
-      return split;
-    }
-    public void markSplit( ) {
-      this.split = true;
-    }
-    protected void fireEventAsyncToAllClusters( TYPE msg ) {
-      for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+    
+    protected List<QueuedEvent> fireEventAsyncToAllClusters( final TYPE msg ) {
+      this.callbackList = Lists.newArrayList( );
+      for ( final Cluster c : Clusters.getInstance( ).listValues( ) ) {
         LOG.info( "-> Sending " + msg.getClass( ).getSimpleName( ) + " network to: " + c.getUri( ) );
         LOG.debug( LogUtil.lineObject( msg ) );
         try {
-          c.fireEventAsync( QueuedEvent.make( this, msg ) );
-        } catch ( Throwable e ) {
+          QueuedEvent q = QueuedEvent.make( this, msg );
+          callbackList.add( q );
+          c.fireEventAsync( q );
+        } catch ( final Throwable e ) {
           LOG.error( "Error while sending to: " + c.getUri( ) + " " + msg.getClass( ).getSimpleName( ) );
           LOG.debug( LogUtil.dumpObject( msg ) );
         }
-      }      
+      }
+      return callbackList;
     }
+    
+    @Override
+    public void waitForEvent( ) {
+      for ( QueuedEvent e : callbackList ) {
+        if ( !e.getCallback( ).isReady( ) ) {
+          e.getCallback( ).waitForEvent( );
+        }
+      }
+    }
+    
   }
-  
-  public boolean isFailed( ) {
-    return failed;
-  }
-
-  public void setFailed( boolean failed ) {
-    this.failed = failed;
-  }
-
 }

@@ -38,7 +38,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
     try {
       this.em = anemf.createEntityManager( );
       this.session = ( Session ) em.getDelegate( );
-      this.dbUrl = this.session.connection( ).getMetaData( ).getURL( );
+      this.dbUrl = this.session.connection( ).getMetaData( ).getURL( );//FIXME: check to see if failing
       this.delegate = em.getTransaction( );
       this.delegate.begin( );
       outstanding.put( ctx, this );
@@ -59,22 +59,22 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   }
 
   public void rollback( ) {
-   if ( this.delegate != null && this.delegate.isActive( ) ) {
-     this.delegate.rollback( );
-   }
-   if( this.em != null && this.em.isOpen( ) ) {
-     try {
-       this.em.close( );
-     } catch ( Throwable e ) {
-       LOG.error( e, e );
-       throw new RuntimeException( e );
-     }
-   } else {
-     Exception e = new Exception();
-     e.fillInStackTrace( );
-     LOG.debug( e, e );
-     //TODO: trace the stack here.  rollback might be OK for most use cases.
-   }
+    if ( this.delegate != null && this.delegate.isActive( ) ) {
+      this.delegate.rollback( );
+    }
+    if( this.em != null && this.em.isOpen( ) ) {
+      try {
+        this.em.close( );
+      } catch ( Throwable e ) {
+        LOG.error( e, e );
+        throw new RuntimeException( e );
+      }
+    } else {
+      Exception e = new Exception();
+      e.fillInStackTrace( );
+      LOG.debug( e, e );
+      //TODO: trace the stack here.  rollback might be OK for most use cases.
+    }
   }
 
   public Session getSession( ) {

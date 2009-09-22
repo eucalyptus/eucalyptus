@@ -17,6 +17,8 @@ import java.util.Map.Entry;
 
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.HeapChannelBufferFactory;
+import org.jboss.netty.channel.ChannelConfig;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.internal.ConversionUtil;

@@ -76,6 +76,7 @@ import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
+import com.eucalyptus.ws.util.ChannelUtil;
 
 public class ClusterClientPipeline extends NioClientPipeline {
   public ClusterClientPipeline( final NioResponseHandler handler ) throws GeneralSecurityException {

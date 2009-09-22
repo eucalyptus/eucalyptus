@@ -115,6 +115,10 @@
             <param name="ConversionPattern" value="Timestamp: %d{ISO8601} %m%n"/>
         </layout>
     </appender>
+    <category name="com.eucalyptus" additivity="true">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
     <category name="edu.ucsb.eucalyptus" additivity="true">
         <priority value="DEBUG"/>
         <appender-ref ref="logfile"/>
@@ -123,6 +127,18 @@
       ~ NOTE: The following suppress very verbose but potentially useful output.
       ~ Consider removing or changing these if you are having unexplained failures. 
       -->
+    <category name="edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback" additivity="true">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <category name="com.eucalyptus.cluster.AbstractClusterMessageDispatcher" additivity="true">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="true">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
     <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
         <priority value="INFO"/>
         <appender-ref ref="logfile"/>
@@ -171,12 +187,10 @@
         <priority value="WARN"/>
         <appender-ref ref="logfile"/>
     </category>
-    <!-- 
     <category name="com.mchange" additivity="true">
-        <priority value="ERROR"/>
-        <appender-ref ref="logfile"/>
+        <priority value="DEBUG"/>
+        <appender-ref ref="console-log"/>
     </category>
-     -->
     <category name="edu.ucsb.eucalyptus.cloud.ws.WalrusStatistics" additivity="true">
         <priority value="INFO"/>
         <appender-ref ref="walrus-stats-log"/>

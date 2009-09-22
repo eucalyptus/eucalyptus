@@ -1,20 +1,19 @@
 package com.eucalyptus.ws.util;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.jboss.netty.bootstrap.Bootstrap;
-import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
@@ -64,13 +63,13 @@ public class ChannelUtil {
   public static long                    CLUSTER_CONNECT_TIMEOUT_MILLIS = 2000;
   public static long                    PIPELINE_READ_TIMEOUT_SECONDS  = 20;
   public static long                    PIPELINE_WRITE_TIMEOUT_SECONDS = 20;
-  public static int                     SERVER_POOL_MAX_THREADS        = 200;
+  public static int                     SERVER_POOL_MAX_THREADS        = 100;
   public static long                    SERVER_POOL_MAX_MEM_PER_CONN   = 1048576;
-  public static long                    SERVER_POOL_TOTAL_MEM          = 107374182;
+  public static long                    SERVER_POOL_TOTAL_MEM          = 100*1024*1024;
   public static long                    SERVER_POOL_TIMEOUT_MILLIS     = 100;
   public static int                     CLIENT_POOL_MAX_THREADS        = 20;
   public static long                    CLIENT_POOL_MAX_MEM_PER_CONN   = 1048576;
-  public static long                    CLIENT_POOL_TOTAL_MEM          = 10737418;
+  public static long                    CLIENT_POOL_TOTAL_MEM          = 20*1024*1024;
   public static long                    CLIENT_POOL_TIMEOUT_MILLIS     = 100;
   private static ThreadFactory          systemThreadFactory            = ChannelUtil.getSystemThreadFactory( );
   private static ChannelPipelineFactory serverPipelineFactory          = ChannelUtil.getServerPipeline( );
@@ -85,9 +84,9 @@ public class ChannelUtil {
   
   public static ChannelPipeline addPipelineTimeout( final ChannelPipeline pipeline ) {
     // TODO: decide on some parameters here.
-    pipeline.addLast( "idlehandler", new IdleStateHandler( ChannelUtil.timer, 60, 20, 0 ) );
-    pipeline.addLast( "readTimeout", new ReadTimeoutHandler( ChannelUtil.timer, 30, TimeUnit.SECONDS ) );
-    pipeline.addLast( "writeTimeout", new WriteTimeoutHandler( ChannelUtil.timer, 30, TimeUnit.SECONDS ) );
+    pipeline.addAfter("encoder", "idlehandler", new IdleStateHandler( ChannelUtil.timer, 60, 20, 0 ) );
+    pipeline.addAfter("idlehandler", "readTimeout", new ReadTimeoutHandler( ChannelUtil.timer, 30, TimeUnit.SECONDS ) );//FIXME: this should be bigger but is this for testing.
+    pipeline.addAfter("readTimeout", "writeTimeout", new WriteTimeoutHandler( ChannelUtil.timer, 30, TimeUnit.SECONDS ) );
     return pipeline;
   }
   
@@ -117,13 +116,12 @@ public class ChannelUtil {
     }
     return sharedBossPool;
   }
-  
+    
   public static NioBootstrap getClientBootstrap( ChannelPipelineFactory factory ) {
-    final NioBootstrap bootstrap = new NioBootstrap( ChannelUtil.getClientChannelFactory( ) );
+    final NioBootstrap bootstrap = new NioBootstrap( ChannelUtil.getClientChannelFactory( ) );//TODO: pass port host, etc here.
     bootstrap.setPipelineFactory( factory );
     bootstrap.setOption( "tcpNoDelay", true );
     bootstrap.setOption( "reuseAddress", true );
-//    bootstrap.setOption( "readWriteFair", true );//deprecated.
     bootstrap.setOption( "connectTimeoutMillis", 3000 );
     return bootstrap;
   }
@@ -226,5 +224,41 @@ public class ChannelUtil {
    * recipients and call write(Object): ChannelGroup recipients = new DefaultChannelGroup(); recipients.add(channelA); recipients.add(channelB); ..
    * recipients.write(ChannelBuffers.copiedBuffer( "Service will shut down for maintenance in 5 minutes.", "UTF-8"));
    */
+
+  private static Logger LOG = Logger.getLogger( ChannelUtil.class );
+  public static ChannelFutureListener DISPATCH( Object o ) {
+    return new DeferedWriter( o, ChannelFutureListener.CLOSE );
+  }
+  public static ChannelFutureListener WRITE_AND_CALLBACK( Object o, ChannelFutureListener callback ) {
+    return new DeferedWriter( o, callback );
+  }
+  public static ChannelFutureListener WRITE( Object o ) {
+    return new DeferedWriter( o, new ChannelFutureListener( ) {public void operationComplete( ChannelFuture future ) throws Exception {}});
+  }
+  private static class DeferedWriter implements ChannelFutureListener {
+    private Object              request;
+    private ChannelFutureListener callback;
+    
+    DeferedWriter( final Object request, final ChannelFutureListener callback ) {
+      this.callback = callback;
+      this.request = request;
+    }
+
+    @Override
+    public void operationComplete( ChannelFuture channelFuture ) {
+      if ( channelFuture.isSuccess( ) ) {
+        channelFuture.getChannel( ).write( request ).addListener( callback );
+      } else {
+        LOG.debug( channelFuture.getCause( ), channelFuture.getCause( ) );
+        try {
+          callback.operationComplete( channelFuture );
+        } catch ( Throwable e ) {
+          LOG.debug( e, e );
+        }
+      }
+    }
+
+  }
   
 }
+

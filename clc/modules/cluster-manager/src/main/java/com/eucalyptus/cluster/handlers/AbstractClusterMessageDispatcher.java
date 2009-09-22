@@ -1,30 +1,30 @@
 package com.eucalyptus.cluster.handlers;
 
 import java.net.InetSocketAddress;
-import java.nio.channels.AlreadyConnectedException;
-import java.util.concurrent.Executors;
-
-import javax.xml.stream.XMLStreamException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.ChannelState;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.ClusterCredentials;
@@ -36,14 +36,15 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.GenericEvent;
+import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.client.NioBootstrap;
 import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
@@ -53,10 +54,7 @@ import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
 public abstract class AbstractClusterMessageDispatcher implements ChannelPipelineFactory, ChannelUpstreamHandler, ChannelDownstreamHandler, EventListener {
-  private static Logger     LOG = Logger.getLogger( AbstractClusterMessageDispatcher.class );
-  private ChannelFactory    channelFactory;
-  private ChannelFuture     channelWriteFuture;
-  private Channel           channel;
+  private static Logger     LOG            = Logger.getLogger( AbstractClusterMessageDispatcher.class );
   private NioBootstrap      clientBootstrap;
   private Cluster           cluster;
   private Binding           binding;
@@ -64,17 +62,16 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   private String            hostName;
   private int               port;
   private String            servicePath;
-  private boolean           secure;
-  protected boolean           verified = false;
+  protected boolean         verified       = false;
   private String            actionPrefix;
-  private static String SECURE_NAME = "EucalyptusCC";
-  private static String SECURE_NC_NAME = "EucalyptusNC";
-  private static String INSECURE_NAME = "EucalyptusGL";
-
+  private static String     SECURE_NAME    = "EucalyptusCC";
+  private static String     SECURE_NC_NAME = "EucalyptusNC";
+  private static String     INSECURE_NAME  = "EucalyptusGL";
+  
   public AbstractClusterMessageDispatcher( Cluster cluster, boolean secure ) throws BindingException {
     this( cluster );
-    if( !secure ) {
-      this.servicePath = makeInsecure( this.servicePath );      
+    if ( !secure ) {
+      this.servicePath = makeInsecure( this.servicePath );
       this.actionPrefix = makeInsecure( this.actionPrefix );
     }
   }
@@ -82,7 +79,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   protected static String makeInsecure( String input ) {
     return input.replaceAll( SECURE_NAME, INSECURE_NAME ).replaceAll( SECURE_NC_NAME, INSECURE_NAME );
   }
-
+  
   public AbstractClusterMessageDispatcher( Cluster cluster ) throws BindingException {
     this( );
     this.cluster = cluster;
@@ -93,20 +90,22 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
     this.actionPrefix = SECURE_NAME;
     this.remoteAddr = new InetSocketAddress( cluster.getConfiguration( ).getHostName( ), cluster.getConfiguration( ).getPort( ) );
   }
-
+  
   private AbstractClusterMessageDispatcher( ) throws BindingException {
-    this.channelFactory = ChannelUtil.getClientChannelFactory( );
     this.clientBootstrap = ChannelUtil.getClientBootstrap( this );
     this.binding = BindingManager.getBinding( "eucalyptus_ucsb_edu" );
-    this.secure = true;
   }
-
+  
+  public abstract void trigger( );
+  public abstract void upstreamMessage( ChannelHandlerContext ctx, MessageEvent e );
+  
   @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
+  public ChannelPipeline getPipeline( ) throws Exception {//FIXME: remove all these repetitions.
     ChannelPipeline pipeline = Channels.pipeline( );
+    pipeline.addLast( "encoder", new HttpRequestEncoder( ) );
     pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
     pipeline.addLast( "aggregator", new HttpChunkAggregator( 1048576 ) );
-    pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
+    ChannelUtil.addPipelineTimeout( pipeline );
     pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
     pipeline.addLast( "wssec", new ClusterWsSecHandler( ) );
     pipeline.addLast( "addressing", new AddressingHandler( this.actionPrefix + "#" ) );
@@ -115,149 +114,126 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
     pipeline.addLast( "handler", this );
     return pipeline;
   }
-
+  
+  private AtomicBoolean inFlightMessage = new AtomicBoolean( );
   public void write( Object o ) {
-    HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostName, this.port, this.servicePath , o );
-    if ( this.channel == null || !this.channel.isOpen( ) || !this.channel.isConnected( ) ) {
-      ChannelFuture channelOpenFuture = this.clientBootstrap.connect( this.remoteAddr );
-      channelOpenFuture.addListener( new DeferedWriter( request ) );
+    if( inFlightMessage.compareAndSet( false, true ) ) {
+      LOG.trace( this.hashCode() + " -> Sending request: " + LogUtil.lineObject( o ) );
+      ChannelFuture channelConnectFuture = this.clientBootstrap.connect( this.remoteAddr );
+      HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostName, this.port, this.servicePath, o );
+      channelConnectFuture.addListener( ChannelUtil.WRITE( request ) );
     } else {
-      this.channelWriteFuture = this.channel.write( request );
+      LOG.trace( this.hashCode() + " -> Rejecting subsequent write because of pending message." );
     }
   }
-
+  
+  @Override
   public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    if ( e instanceof MessageEvent ) {
-      this.downstreamMessage( ctx, ( MessageEvent ) e );
-    } else if ( e instanceof ExceptionEvent ) {
-      this.exceptionCaught( ctx, ( ExceptionEvent ) e );
-    } else {
-      ctx.sendDownstream( e );
-    }
+    LOG.trace( this.hashCode() + " -> Send upstream: " + e.getClass( ) );
+    ctx.sendDownstream( e );
   }
 
-  public abstract void downstreamMessage( ChannelHandlerContext ctx, MessageEvent e );
-
+  private void clearPending( ChannelFuture f ) {
+    this.inFlightMessage.set( false );
+    if( f.getChannel( ).isOpen( ) ) {
+      f.addListener( ChannelFutureListener.CLOSE );
+    }
+  }
+  
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+    LOG.trace( this.hashCode() + " -> Received upstream: " + e.getClass( ) );
     if ( e instanceof MessageEvent ) {
-      this.upstreamMessage( ctx, ( MessageEvent ) e );
+      this.clearPending( e.getFuture( ) );
+      if( ( (MessageEvent)e).getMessage( ) instanceof MappingHttpResponse ) {
+        MappingHttpResponse response = (MappingHttpResponse) ( (MessageEvent)e).getMessage( );
+        if( HttpResponseStatus.OK.equals( response.getStatus( ) ) ) {
+          this.upstreamMessage( ctx, ( MessageEvent ) e );          
+        } else {
+          throw new EucalyptusClusterException( response.getMessageString( ) );
+        }
+      }
+      ctx.sendUpstream( e );
     } else if ( e instanceof ExceptionEvent ) {
       this.exceptionCaught( ctx, ( ExceptionEvent ) e );
-    } else {
+      this.clearPending( e.getFuture( ) );
       ctx.sendUpstream( e );
-    }
-  }
-
-  public abstract void upstreamMessage( ChannelHandlerContext ctx, MessageEvent e );
-
-  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
-    if( e.getCause( ) instanceof AlreadyConnectedException ) {
-      LOG.debug( e );
-      LOG.trace( e.getCause( ), e.getCause( ) );
-    } else {
-      if ( this.channel != null ) {
-        this.channel.close( );
+    } else if ( e instanceof ChannelStateEvent ) {
+      ChannelStateEvent cse = (ChannelStateEvent) e;
+      switch(cse.getState( )) {
+        case CONNECTED: {
+          if( cse.getValue( ) == null ) {
+            this.clearPending( e.getFuture( ) );
+          }
+        } break;
+        case OPEN: {
+          if( !Boolean.TRUE.equals( cse.getValue( ) ) ) {
+          }
+        } break;
+        case BOUND: { ctx.sendUpstream( e ); } break;
+        case INTEREST_OPS: { ctx.sendUpstream( e ); } break;
+        default:
+          ctx.sendDownstream(e);
       }
-      LOG.debug( e.getCause( ), e.getCause( ) );
-      Channels.fireExceptionCaught( ctx, e.getCause( ) );
+    } else {
+      ctx.sendUpstream( e );      
     }
   }
-
-
+      
   protected void fireTimedStatefulTrigger( Event event ) {
     if ( this.timedTrigger( event ) ) {
-      LOG.debug( "Fire " + LogUtil.dumpObject( event ) + " on " + LogUtil.dumpObject( this ) );
+      LOG.debug( "Tick/tock: " + LogUtil.lineObject( this ) );
       this.trigger( );
     } else if ( event instanceof GenericEvent ) {
-      LOG.debug( "Fire " + LogUtil.dumpObject( event ) + " on " + LogUtil.dumpObject( this ) );
-      GenericEvent<Cluster> g = (GenericEvent<Cluster>) event;
-      if( !g.matches( this.getCluster( ) ) ) {
+      LOG.debug( "Fire event: " + LogUtil.lineObject( this ) );
+      GenericEvent<Cluster> g = ( GenericEvent<Cluster> ) event;
+      if ( !g.matches( this.getCluster( ) ) ) {
         return;
       }
-      if( g instanceof NewClusterEvent && !this.verified ) {
-        this.trigger();
+      if ( g instanceof NewClusterEvent && !this.verified ) {
+        this.trigger( );
       } else if ( event instanceof TeardownClusterEvent ) {
         this.verified = false;
-        this.cleanup( );
       }
     } else {
       LOG.debug( "Ignoring event which doesn't belong to me: " + LogUtil.dumpObject( event ) );
     }
   }
-
-  class DeferedWriter implements ChannelFutureListener {
-    private Object              request;
-    private MessageStackHandler handler;
-
-    DeferedWriter( final Object request ) {
-      this.request = request;
-    }
-
-    @Override
-    public void operationComplete( ChannelFuture channelFuture ) throws Exception {
-      try {
-        if ( channelFuture.isSuccess( ) ) {
-          channel = channelFuture.getChannel( );
-          channelWriteFuture = channelFuture.getChannel( ).write( request );
-        } else {
-          LOG.debug( channelFuture.getCause( ), channelFuture.getCause( ) );
-        }
-      } catch ( Exception e ) {
-        LOG.debug( e, e );
-      } 
-    }
+  
+  
+  
+  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
+    LOG.debug( e.getCause( ), e.getCause( ) );
   }
-
-  public void close( ) {
-    try {
-      LOG.debug( "Forcing the channel to close." );
-      this.channel.close( );
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
-    }
-  }
-
-  public void cleanup( ) {
-    try {
-      if ( this.channel != null ) {
-        this.close( );
-      }
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
-    }
-  }
-
-  public abstract void trigger( );
 
   public Cluster getCluster( ) {
     return cluster;
   }
-
+  
   public ClusterConfiguration getConfiguration( ) {
     return cluster.getConfiguration( );
   }
-
+  
   public ClusterCredentials getCredentials( ) {
     return cluster.getCredentials( );
   }
-
+  
   public String getName( ) {
     return cluster.getName( );
   }
-
+  
   public void setCluster( Cluster cluster ) {
     this.cluster = cluster;
   }
-
+  
   public boolean timedTrigger( Event c ) {
-    if( c instanceof ClockTick) {
-      return ((ClockTick)c).isBackEdge( );
+    if ( c instanceof ClockTick ) {
+      return ( ( ClockTick ) c ).isBackEdge( );
     } else {
       return false;
     }
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -267,7 +243,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
     result = prime * result + ( ( servicePath == null ) ? 0 : servicePath.hashCode( ) );
     return result;
   }
-
+  
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) return true;
