@@ -1,20 +1,18 @@
 package com.eucalyptus.cluster.handlers;
 
-import java.nio.channels.AlreadyConnectedException;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.event.NewClusterEvent;
-import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.GenericEvent;
+import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpResponse;
@@ -22,10 +20,8 @@ import com.eucalyptus.ws.MappingHttpResponse;
 import edu.ucsb.eucalyptus.cloud.Pair;
 import edu.ucsb.eucalyptus.cloud.entities.Address;
 import edu.ucsb.eucalyptus.cloud.net.Addresses;
-import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribePublicAddressesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribePublicAddressesType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 @ChannelPipelineCoverage("one")
 public class AddressStateHandler extends AbstractClusterMessageDispatcher {

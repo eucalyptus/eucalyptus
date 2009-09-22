@@ -70,17 +70,19 @@ import com.eucalyptus.ws.client.Client;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetworkType> {
   public static ConfigureNetworkCallback CALLBACK = new ConfigureNetworkCallback( ); 
   private static Logger LOG = Logger.getLogger( ConfigureNetworkCallback.class );
 
   public ConfigureNetworkCallback( ) {}
-  public void prepare( final ConfigureNetworkType msg ) throws Exception {
+  public void prepareAll( final ConfigureNetworkType msg ) throws Exception {
     this.fireEventAsyncToAllClusters( msg );
   }
-  public void process( final Client clusterClient, final ConfigureNetworkType msg ) throws Exception {
-    clusterClient.send( msg );
-  }
+  @Override
+  public void prepare( ConfigureNetworkType msg ) throws Exception {}
+  @Override
+  public void verify( EucalyptusMessage msg ) throws Exception {}
 
 }

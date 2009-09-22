@@ -63,6 +63,7 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 
 import com.eucalyptus.cluster.Cluster;
@@ -76,8 +77,10 @@ public class RebootCallback extends QueuedEventCallback<RebootInstancesType> {
 
   public RebootCallback( ) {}
 
-  public void process( final Client cluster, final RebootInstancesType msg ) throws Exception {
-    cluster.send( msg );
-  }
+  @Override
+  public void prepare( RebootInstancesType msg ) throws Exception {}
+
+  @Override
+  public void verify( EucalyptusMessage msg ) throws Exception {}
 
 }

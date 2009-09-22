@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.FailScriptFailException;
 
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -75,7 +76,6 @@ import edu.ucsb.eucalyptus.cloud.cluster.Networks;
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 

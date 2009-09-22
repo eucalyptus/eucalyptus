@@ -70,10 +70,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -85,17 +83,15 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
-import com.eucalyptus.ws.client.Client;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
-import com.eucalyptus.ws.util.ChannelUtil;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.GetKeysType;
 
 public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
-  private static Logger    LOG     = Logger.getLogger( QueuedEventCallback.class );
+  private static Logger LOG = Logger.getLogger( QueuedEventCallback.class );
   private ChannelFuture channelOpen;
+  private TYPE          request;
   
   public void waitForEvent( ) {
     Object event = null;
@@ -107,75 +103,77 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
     } while ( event == null );
     LOG.debug( "Found event of type: " + this.getClass( ).getCanonicalName( ) );
   }
-    
+  
   public void process( TYPE msg ) throws Exception {
-    super.getRequestQueue( ).add( (EucalyptusMessage) msg );
-    if( this.channelOpen != null && this.channelOpen.isDone( ) ) {
-      this.fireMessage( msg );
+    super.getRequestQueue( ).add( ( EucalyptusMessage ) msg );
+    if ( this.channelOpen != null && this.channelOpen.isDone( ) ) {
+      this.fireMessage( msg, this.channelOpen.getChannel( ) );
     } else {
-      LOG.debug( "Found channel pending: defering message " + msg.getClass( ).getCanonicalName( ) );      
+      LOG.debug( "Found channel pending: defering message " + msg.getClass( ).getCanonicalName( ) );
     }
   }
-
-  private void fireMessage( TYPE msg ) {
+  
+  private void fireMessage( TYPE msg, Channel channel ) throws Exception {
     LOG.debug( "Found channel open: writing message " + msg.getClass( ).getCanonicalName( ) );
     String servicePath = "/axis2/services/EucalyptusCC";//FIXME: handle this in a clean way.
-    Channel channel = this.channelOpen.getChannel( );
     InetSocketAddress addr = ( InetSocketAddress ) channel.getRemoteAddress( );
+    this.setRequest( msg );
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, addr.getHostName( ), addr.getPort( ), servicePath, msg );
+    try {
+      this.prepare( msg );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw e;
+    }
     channel.write( request );
   }
   
-  public abstract void process( Client cluster, TYPE msg ) throws Exception;
- 
+  public abstract void prepare( TYPE msg ) throws Exception;
+  
+  public abstract void verify( EucalyptusMessage msg ) throws Exception;
+  
+  @Override
+  public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
+    if ( e.getMessage( ) instanceof MappingHttpResponse ) {
+      MappingHttpResponse response = (MappingHttpResponse) e.getMessage( );
+      this.verify( (EucalyptusMessage)response.getMessage( ) );
+    }
+    super.messageReceived( ctx, e );
+  }
+  
   @Override
   public void connectRequested( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     this.channelOpen = e.getFuture( );
     super.connectRequested( ctx, e );
   }
-
+  
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    if( super.getRequestQueue( ).isEmpty( ) ) {
+    if ( super.getRequestQueue( ).isEmpty( ) ) {
       LOG.debug( "Request queue is empty, waiting for write request." );
     } else {
-      Object msg = this.getRequestQueue( ).poll( );      
+      Object msg = this.getRequestQueue( ).poll( );
       LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
-      this.fireMessage( (TYPE) msg );
+      this.fireMessage( ( TYPE ) msg, e.getChannel( ) );
     }
     super.channelConnected( ctx, e );
   }
-
-  @Override
-  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
-    LOG.debug( e.getCause( ), e.getCause( ) );
-    super.exceptionCaught( ctx, e );
-  }
-
-  @Override
-  public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
-    LOG.debug( "Channel message: " + LogUtil.lineObject( e ) );
-    if( e.getMessage( ) instanceof MappingHttpResponse ) {
-      super.getResponseQueue( ).add( e );
-    }
-    super.messageReceived( ctx, e );
-  }
-
+  
   @Override
   public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     this.channelOpen = e.getFuture( );
-    if( !super.getRequestQueue( ).isEmpty( ) ) {
-      Object msg = super.getRequestQueue( ).poll( ); 
+    if ( !super.getRequestQueue( ).isEmpty( ) ) {
+      Object msg = super.getRequestQueue( ).poll( );
       LOG.debug( "Channel opened: found pending request to send." + LogUtil.lineObject( msg ) );
-      this.fireMessage( ( TYPE ) msg );      
+      this.fireMessage( ( TYPE ) msg, e.getChannel( ) );
     }
     super.channelOpen( ctx, e );
   }
-
+  
   public abstract static class MultiClusterCallback<TYPE extends EucalyptusMessage> extends QueuedEventCallback<TYPE> {
     private List<QueuedEvent> callbackList = Lists.newArrayList( );
     
-    public abstract void prepare( TYPE msg ) throws Exception;
+    public abstract void prepareAll( TYPE msg ) throws Exception;
     
     protected List<QueuedEvent> fireEventAsyncToAllClusters( final TYPE msg ) {
       this.callbackList = Lists.newArrayList( );
@@ -188,7 +186,6 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
           c.fireEventAsync( q );
         } catch ( final Throwable e ) {
           LOG.error( "Error while sending to: " + c.getUri( ) + " " + msg.getClass( ).getSimpleName( ) );
-          LOG.debug( LogUtil.dumpObject( msg ) );
         }
       }
       return callbackList;
@@ -203,5 +200,13 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
       }
     }
     
+  }
+  
+  public TYPE getRequest( ) {
+    return this.request;
+  }
+  
+  public void setRequest( TYPE request ) {
+    this.request = request;
   }
 }

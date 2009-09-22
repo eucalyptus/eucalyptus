@@ -76,8 +76,11 @@ public class TerminateCallback extends QueuedEventCallback<TerminateInstancesTyp
   public TerminateCallback( ) {}
 
 
-  public void process( final Client cluster, final TerminateInstancesType msg ) throws Exception {
-    cluster.send( msg );
-  }
+  @Override
+  public void prepare( TerminateInstancesType msg ) throws Exception {}
+
+
+  @Override
+  public void verify( EucalyptusMessage msg ) throws Exception {}
 
 }

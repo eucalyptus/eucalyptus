@@ -72,8 +72,8 @@ import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType> {
 
@@ -85,23 +85,22 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
     this.networkToken = networkToken;
   }
 
-  public void process( final Client clusterClient, final StartNetworkType msg ) throws Exception {
-    try {
-      clusterClient.send( msg );
-    } catch ( Throwable e ) {
-      String err = "Error occured while sending message to cluster: " + clusterClient.getUri( );
-      LOG.warn( err, e );
-      throw new EucalyptusClusterException( err, e );
-    }
-  }
-
+  
+  
   @Override
-  public void prepare( StartNetworkType msg ) throws Exception {
+  public void prepareAll( StartNetworkType msg ) throws Exception {
     //FIXME: re-enable direct rather than lazy recovery of live networks
     //this.parent.msgMap.put( ClusterAllocator.State.ROLLBACK, new QueuedEvent<StopNetworkType>( new StopNetworkCallback( networkToken ), new StopNetworkType( ) ) );
-    msg.setNameserver( EucalyptusProperties.getSystemConfiguration( ).getNameserver( ) );
+    msg.setNameserver( edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getNameserverAddress( ) );
     msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
     this.fireEventAsyncToAllClusters( msg );
   }
+
+  @Override
+  public void verify( EucalyptusMessage msg ) throws Exception {}
+
+
+  @Override
+  public void prepare( StartNetworkType msg ) throws Exception {}
 
 }

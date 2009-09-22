@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.ws.client.Client;
@@ -76,16 +77,22 @@ import java.util.NoSuchElementException;
 public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType> {
 
   private static Logger LOG = Logger.getLogger( VolumeAttachCallback.class );
-
   public VolumeAttachCallback( ) {}
 
-  public void process( final Client cluster, final AttachVolumeType msg ) throws Exception {
-    AttachVolumeResponseType reply = ( AttachVolumeResponseType ) cluster.send( msg );
+  @Override
+  public void prepare( AttachVolumeType msg ) throws Exception {}
+
+  @Override
+  public void verify( EucalyptusMessage reply ) throws Exception {
+    this.verify( (AttachVolumeResponseType ) reply );
+  }
+
+  public void verify( AttachVolumeResponseType reply ) throws Exception {
     if ( !reply.get_return( ) ) {
-      LOG.debug( "Trying to remove invalid volume attachment " + msg.getVolumeId( ) + " from instance " + msg.getInstanceId( ) );
+      LOG.debug( "Trying to remove invalid volume attachment " + this.getRequest().getVolumeId( ) + " from instance " + this.getRequest().getInstanceId( ) );
       try {
-        VmInstance vm = VmInstances.getInstance( ).lookup( msg.getInstanceId( ) );
-        AttachedVolume failVol = new AttachedVolume( msg.getVolumeId( ) );
+        VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
+        AttachedVolume failVol = new AttachedVolume( this.getRequest().getVolumeId( ) );
         vm.getVolumes( ).remove( failVol );
         LOG.debug( "Removed failed attachment: " + failVol.getVolumeId( ) + " -> " + vm.getInstanceId( ) );
         LOG.debug( "Final volume attachments for " + vm.getInstanceId( ) + " " + vm.getVolumes( ) );
@@ -93,13 +100,14 @@ public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType> 
       }
     } else {
       try {
-        VmInstance vm = VmInstances.getInstance( ).lookup( msg.getInstanceId( ) );
-        AttachedVolume attachedVol = new AttachedVolume( msg.getVolumeId( ) );
+        VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
+        AttachedVolume attachedVol = new AttachedVolume( this.getRequest().getVolumeId( ) );
         LOG.debug( "Volumes marked as attached " + vm.getVolumes( ) + " to " + vm.getInstanceId( ) );
         attachedVol.setStatus( "attached" );
       } catch ( NoSuchElementException e1 ) {
       }
     }
+
   }
 
 }

@@ -75,8 +75,8 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
@@ -88,7 +88,6 @@ import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
@@ -98,7 +97,6 @@ import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 import edu.ucsb.eucalyptus.msgs.StopNetworkType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 import edu.ucsb.eucalyptus.util.Admin;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public class ClusterAllocator extends Thread {
 
@@ -124,6 +122,7 @@ public class ClusterAllocator extends Thread {
   }
 
   public void setupAddressMessages( List<String> addresses, List<VmInfo> runningVms ) {
+    
     if ( EucalyptusProperties.disableNetworking ) {
       return;
     } else if ( addresses.size() < runningVms.size() ) {
@@ -221,37 +220,42 @@ public class ClusterAllocator extends Thread {
   public void run() {
     this.state = State.CREATE_NETWORK;
     while ( !this.state.equals( State.FINISHED ) ) {
-      this.queueEvents();
-      switch ( this.state ) {
-        case CREATE_NETWORK:
-          this.setState( State.CREATE_NETWORK_RULES );
-          break;
-        case CREATE_NETWORK_RULES:
-          this.setState( State.CREATE_VMS );
-          break;
-        case CREATE_VMS:
-          this.setState( State.ASSIGN_ADDRESSES );
-          break;
-        case ASSIGN_ADDRESSES:
-          this.setState( State.FINISHED );
-          break;
-        case ROLLBACK:
-          this.setState( State.FINISHED );
-          break;
+      try {
+        this.queueEvents();
+        switch ( this.state ) {
+          case CREATE_NETWORK:
+            this.setState( State.CREATE_NETWORK_RULES );
+            break;
+          case CREATE_NETWORK_RULES:
+            this.setState( State.CREATE_VMS );
+            break;
+          case CREATE_VMS:
+            this.setState( State.ASSIGN_ADDRESSES );
+            break;
+          case ASSIGN_ADDRESSES:
+            this.setState( State.FINISHED );
+            break;
+          case ROLLBACK:
+            this.setState( State.FINISHED );
+            break;
+        }
+        this.clearQueue();
+      } catch ( Throwable e ) {
+        LOG.error( e, e );
       }
-      this.clearQueue();
     }
   }
 
   public void clearQueue() {
     QueuedEvent event = null;
     while ( ( event = this.pendingEvents.poll() ) != null ) {
-      LOG.debug( "-> Waiting for: " + LogUtil.lineObject( event.getCallback( ) ) );
-      QueuedEventCallback queuedCallback = event.getCallback();
+      Object o = null;
+      QueuedEventCallback queuedCallback = null;
       try {
-        LOG.debug( LogUtil.lineObject( queuedCallback.getResponse( ) ) );
-      } catch ( Exception e ) {
-        LOG.debug( e, e );
+        LOG.debug( "-> Waiting for: " + LogUtil.lineObject( event.getCallback( ) ) );
+        o = event.getCallback().getResponse( );
+      } catch( Throwable t ) {
+        LOG.debug( t, t );
       }
     }
   }

@@ -91,9 +91,7 @@ public class ClusterMessageQueue implements Runnable {
   public void enqueue( final QueuedEvent event ) {
     LOG.debug( "Queued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) + " for cluster " + this.getClusterName( ) );
     try {
-      while ( !this.msgQueue.contains( event ) && this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) ) {
-        ;
-      }
+      while ( !this.msgQueue.contains( event ) && this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
     } catch ( final InterruptedException e ) {
       LOG.debug( e, e );
     }

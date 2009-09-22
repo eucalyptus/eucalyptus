@@ -120,6 +120,7 @@ public class NioResponseHandler extends SimpleChannelHandler {
         MappingHttpResponse httpResponse = (MappingHttpResponse) response;
         if( httpResponse.getMessage( ) != null ) {
           this.response = (EucalyptusMessage) httpResponse.getMessage( );
+          return this.response;
         } else {
           this.exception = new EucalyptusClusterException( httpResponse.getMessageString( ) );
         }
@@ -128,12 +129,11 @@ public class NioResponseHandler extends SimpleChannelHandler {
         throw new EucalyptusClusterException( "Exception in NIO request.", (Throwable) response );
       }
     }
-    throw new EucalyptusClusterException( "Failed to retrieve result of asynchronous operation." + LogUtil.dumpObject( response ) );
+    throw new EucalyptusClusterException( "Failed to retrieve result of asynchronous operation." );
   }
   
   @Override
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {
-    LOG.debug( "-> Received response: " + LogUtil.dumpObject( e ) );
     LOG.debug( e.getCause( ), e.getCause( ) );
     this.responseQueue.offer( e.getCause( ) );
     e.getChannel( ).close( );
@@ -141,7 +141,6 @@ public class NioResponseHandler extends SimpleChannelHandler {
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
-    LOG.debug( "-> Received response: " + LogUtil.dumpObject( e ) );
     final MappingHttpMessage httpResponse = ( MappingHttpMessage ) e.getMessage( );
     final EucalyptusMessage reply = ( EucalyptusMessage ) httpResponse.getMessage( );
     this.responseQueue.offer( reply );
@@ -162,9 +161,6 @@ public class NioResponseHandler extends SimpleChannelHandler {
 
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    if( e instanceof ChannelStateEvent ) {
-      LOG.debug( LogUtil.dumpObject( e ) );      
-    }
     super.handleUpstream( ctx, e );
   }
 

@@ -63,57 +63,86 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.ws.client.Client;
 import com.google.common.collect.Lists;
+
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
+import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.ws.client.Client;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-
-import org.apache.log4j.Logger;
-
-class VmRunCallback extends QueuedEventCallback<VmRunType> {
+public class VmRunCallback extends QueuedEventCallback<VmRunType> {
 
   private static Logger LOG = Logger.getLogger( VmRunCallback.class );
 
   private ClusterAllocator parent;
   private ResourceToken token;
-
+  
   public VmRunCallback( final ClusterAllocator parent, final ResourceToken token ) {
     this.parent = parent;
     this.token = token;
   }
 
-  public void process( final Client clusterClient, final VmRunType msg ) throws Exception {
-    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, token ) );
-    Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
-    for ( String vmId : msg.getInstanceIds() )
-      parent.msgMap.put( ClusterAllocator.State.ROLLBACK, QueuedEvent.make( new TerminateCallback(  ), new TerminateInstancesType( vmId, msg ) ) );
-    VmRunResponseType reply = null;
+  public void prepare( final VmRunType msg ) throws Exception {
     try {
-      reply = ( VmRunResponseType ) clusterClient.send( msg );
+      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, token ) );
+      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
+    } catch ( Exception e2 ) {
+      LOG.debug( e2, e2 );
+    }
+  }
+
+  public void verify( VmRunResponseType reply ) throws Exception {
+    try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
       LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.redeemed, token ) );
-      if ( reply.get_return() ) {
-        for ( VmInfo vmInfo : reply.getVms() ) {
-          VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
-          vm.getNetworkConfig().setIpAddress( vmInfo.getNetParams().getIpAddress() );
-        }
-        this.parent.setupAddressMessages( Lists.newArrayList( this.token.getAddresses() ), Lists.newArrayList( reply.getVms() ) );
-        for ( VmInfo vmInfo : reply.getVms() ) {
-          VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
-          if( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) )
-            vm.getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
-        }
+    } catch ( Throwable e1 ) {
+      this.releaseAddresses( );
+      LOG.debug( e1, e1 );
+      return;
+    } 
+    try {
+      if ( reply != null && reply.get_return() ) {
+        this.assignAddresses( reply );
       } else {
+        this.releaseAddresses( );
         this.parent.getRollback().lazySet( true );
       }
-    } catch ( Exception e ) { throw e; }
+    } catch ( Exception e ) { 
+      LOG.debug( e, e );
+      throw e; 
+    }
+  }
+
+  private void assignAddresses( VmRunResponseType reply ) {
+    for ( VmInfo vmInfo : reply.getVms() ) {
+      VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
+      vm.getNetworkConfig().setIpAddress( vmInfo.getNetParams().getIpAddress() );
+    }
+    this.parent.setupAddressMessages( Lists.newArrayList( this.token.getAddresses() ), Lists.newArrayList( reply.getVms() ) );
+    for ( VmInfo vmInfo : reply.getVms() ) {
+      VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
+      if( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) )
+        vm.getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
+    }
+  }
+
+  private void releaseAddresses( ) {
+    LOG.debug( "Release unusable system owned addresses from failed vm run allocation." );
+    for( String s : this.token.getAddresses() ) {
+      AddressManager.releaseAddress( s );
+    }
+  }
+
+  @Override
+  public void verify( EucalyptusMessage msg ) throws Exception {
+    this.verify( (VmRunResponseType) msg );
   }
 
 }

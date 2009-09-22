@@ -64,6 +64,7 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.cloud.entities.Address;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
@@ -87,8 +88,11 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
     this.vmIp = parent.getInstanceAddress();
   }
 
-  public void process( final Client clusterClient, final UnassignAddressType msg ) throws Exception {
-    UnassignAddressResponseType reply = ( UnassignAddressResponseType ) clusterClient.send( msg );
+  @Override
+  public void prepare( UnassignAddressType msg ) throws Exception {}
+
+  @Override
+  public void verify( EucalyptusMessage msg ) throws Exception {
     VmInstance vm = null;
     try {
       vm = VmInstances.getInstance().lookup( vmId );
