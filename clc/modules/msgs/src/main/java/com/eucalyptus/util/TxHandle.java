@@ -57,21 +57,24 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
     this.stopWatch.unsplit( );
     return (splitTime-DatabaseUtil.MAX_OPEN_TIME)>this.startTime.getTimeInMillis( );
   }
+
   public void rollback( ) {
-    if( this.em.isOpen( ) ) {
-      try {
-        if ( this.delegate.isActive( ) ) {
-          this.delegate.rollback( );
-        }
-        this.em.close( );
-      } catch ( Throwable e ) {
-        this.em.close( );
-        LOG.error( e, e );
-        throw new RuntimeException( e );
-      }
-    } else {
-      //TODO: trace the stack here.  rollback might be OK for most use cases.
-    }
+   if ( this.delegate != null && this.delegate.isActive( ) ) {
+     this.delegate.rollback( );
+   }
+   if( this.em != null && this.em.isOpen( ) ) {
+     try {
+       this.em.close( );
+     } catch ( Throwable e ) {
+       LOG.error( e, e );
+       throw new RuntimeException( e );
+     }
+   } else {
+     Exception e = new Exception();
+     e.fillInStackTrace( );
+     LOG.debug( e, e );
+     //TODO: trace the stack here.  rollback might be OK for most use cases.
+   }
   }
 
   public Session getSession( ) {
