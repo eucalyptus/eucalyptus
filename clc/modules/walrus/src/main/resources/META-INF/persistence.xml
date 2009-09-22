@@ -67,8 +67,8 @@
 		<class>edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo</class>
 		<class>edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo</class>
 		<properties>
-			<property name="hibernate.connection.provider_class"
-				value="org.hibernate.connection.C3P0ConnectionProvider" />
+<!--			<property name="hibernate.connection.provider_class"
+				value="org.hibernate.connection.C3P0ConnectionProvider" />-->
 			<property name="hibernate.cache.provider_class" value="org.hibernate.cache.EhCacheProvider" />
 			<property name="hibernate.cache.provider_configuration_file_resource_path"
 				value="/ehcache.xml" />
@@ -86,12 +86,12 @@
             <!--
              ~ required c3p0 parameters.  set them from the env for sanity's sake.
             -->
-            <property name="hibernate.c3p0.acquire_increment" value="${euca.db.pool.acquire_increment}"/>
+<!--            <property name="hibernate.c3p0.acquire_increment" value="${euca.db.pool.acquire_increment}"/>
             <property name="hibernate.c3p0.idle_test_period" value="${euca.db.pool.idle_test_period}"/>
             <property name="hibernate.c3p0.timeout" value="${euca.db.pool.timeout}"/>
             <property name="hibernate.c3p0.max_size" value="${euca.db.pool.max_size}"/>
             <property name="hibernate.c3p0.max_statements" value="${euca.db.pool.max_statements}"/>
-            <property name="hibernate.c3p0.min_size" value="${euca.db.pool.min_size}"/>
+            <property name="hibernate.c3p0.min_size" value="${euca.db.pool.min_size}"/>-->
             </properties>
     </persistence-unit>
 
