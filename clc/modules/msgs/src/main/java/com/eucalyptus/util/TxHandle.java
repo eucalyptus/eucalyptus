@@ -60,7 +60,11 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
 
   public void rollback( ) {
     if ( this.delegate != null && this.delegate.isActive( ) ) {
-      this.delegate.rollback( );
+      try {
+        this.delegate.rollback( );
+      } catch ( Throwable e ) {
+        LOG.debug( e, e );
+      }
     }
     if( this.em != null && this.em.isOpen( ) ) {
       try {

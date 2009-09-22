@@ -88,9 +88,11 @@ import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
@@ -260,10 +262,15 @@ public class ClusterAllocator extends Thread {
     }
   }
 
+  @SuppressWarnings( "unchecked" )
   private void queueEvents() {
     for ( QueuedEvent event : this.msgMap.get( this.state ) ) {
-      this.pendingEvents.add( event );
-      this.cluster.getMessageQueue().enqueue( event );
+      if( event.getCallback( ) instanceof MultiClusterCallback ) {
+        ( ( MultiClusterCallback ) event.getCallback( ) ).fireEventAsyncToAllClusters( ( EucalyptusMessage ) event.getEvent( ) );
+      } else {
+        this.pendingEvents.add( event );
+        this.cluster.getMessageQueue().enqueue( event );        
+      }
     }
   }
 

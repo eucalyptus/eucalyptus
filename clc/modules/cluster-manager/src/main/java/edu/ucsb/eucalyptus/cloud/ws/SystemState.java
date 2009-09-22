@@ -161,16 +161,16 @@ public class SystemState {
   private static void cleanUp( final VmInstance vm ) {
     for ( Address address : Addresses.getInstance().listValues() ) {
       if ( vm.getInstanceId().equals( address.getInstanceId() ) ) {
-        if( address.getInstanceAddress() != null ) {
-          ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
-          SystemState.dispatch( vm.getPlacement(), new UnassignAddressCallback( address ), Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() ) );
-        }
         if( Component.eucalyptus.name().equals( address.getUserId() ) ) {
           try {
             (new AddressManager()).ReleaseAddress( Admin.makeMsg( ReleaseAddressType.class, address.getName() ) );
           } catch ( EucalyptusCloudException e ) {
           }
         }
+//        if( address.getInstanceAddress() != null ) {
+//          ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
+//          SystemState.dispatch( vm.getPlacement(), new UnassignAddressCallback( address ), Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() ) );
+//        }
       }
     }
     ClusterConfiguration config = Clusters.getInstance( ).lookup( vm.getPlacement( ) ).getConfiguration( );

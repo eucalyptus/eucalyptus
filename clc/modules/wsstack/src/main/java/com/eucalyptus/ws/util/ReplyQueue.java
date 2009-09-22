@@ -96,6 +96,9 @@ public class ReplyQueue {
   public static void addReplyListener( String correlationId, ChannelHandlerContext ctx ) {
     pending.put( correlationId, ctx );
   }
+  public static void removeReplyListener( String correlationId ) {
+    pending.remove( correlationId );
+  }
   
   @SuppressWarnings( "unchecked" )
   public void handle( EucalyptusMessage responseMessage ) {

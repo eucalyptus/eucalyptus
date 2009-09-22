@@ -64,12 +64,17 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.cloud.entities.Address;
+import edu.ucsb.eucalyptus.cloud.net.Addresses;
+import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.ws.client.Client;
+
 import org.apache.log4j.Logger;
 
 import java.util.NoSuchElementException;
@@ -89,7 +94,17 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   }
 
   @Override
-  public void prepare( UnassignAddressType msg ) throws Exception {}
+  public void prepare( UnassignAddressType msg ) throws Exception {
+    Address addr = null;
+    try {
+      addr = Addresses.getInstance( ).lookup( pubIp );
+    } catch ( Exception e ) {
+      new EucalyptusClusterException( "No such address to unassign: " + pubIp, e );
+    }
+    if( this.vmId.equals( addr.getInstanceId( ) ) ) {
+      new EucalyptusClusterException( "Address has been reassigned to the same vm: " + pubIp );      
+    }
+  }
 
   @Override
   public void verify( EucalyptusMessage msg ) throws Exception {
@@ -97,6 +112,9 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
     try {
       vm = VmInstances.getInstance().lookup( vmId );
       LOG.debug( "Unassign [" + pubIp + "] clearing VM " + vmId + ":" + vmIp );
+      if( this.pubIp.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
+        AddressManager.releaseAddress( pubIp );
+      }
       vm.getNetworkConfig().setIgnoredPublicIp( VmInstance.DEFAULT_IP );
     } catch ( NoSuchElementException e1 ) {}
 //    String addr = msg.getSource();

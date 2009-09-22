@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
@@ -81,8 +82,12 @@ public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetw
     this.fireEventAsyncToAllClusters( msg );
   }
   @Override
-  public void prepare( ConfigureNetworkType msg ) throws Exception {}
+  public void prepare( ConfigureNetworkType msg ) throws Exception {
+    LOG.debug("Sending configure network rules for: " + msg.getUserId( ) + "\n" + LogUtil.lineObject( msg.getRules( ) ) );
+  }
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {}
+  public void verify( EucalyptusMessage msg ) throws Exception {
+    
+  }
 
 }

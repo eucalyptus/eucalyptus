@@ -65,6 +65,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+
 import org.apache.log4j.Logger;
 
 import javax.crypto.Mac;
@@ -172,7 +173,7 @@ public class Registration extends HttpServlet {
   }
 
   private static String publicAddressConfiguration() {
-    if ( EucalyptusProperties.disableNetworking ) {
+    if ( com.eucalyptus.util.EucalyptusProperties.disableNetworking ) {
       return "        <Resource>\n" +
              "          <Name>elastic_ips</Name>\n" +
              "        </Resource>\n";

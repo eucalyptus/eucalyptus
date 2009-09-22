@@ -43,7 +43,7 @@ public class AbstractPersistent implements Serializable {
   public AbstractPersistent( ) {
     super( );
   }
-    
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -121,7 +121,7 @@ public class SshKeyPair extends UserMetadata implements Serializable {
   public SshKeyPair( String userName ) {
     super( userName );
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -193,7 +193,7 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
     }
     return vmNetwork;
   }  
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -303,11 +303,11 @@ public class NetworkRule {
     this.lowPort = lowPort;
     this.highPort = highPort;
   }
-
+  
   public boolean isValid() {
     return "tcp".equals( this.protocol ) || "udp".equals( this.protocol ) || "icmp".equals( this.protocol );
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -335,7 +335,7 @@ public class NetworkRule {
     return true;
   }
   
-
+  
 }
 
 @Entity

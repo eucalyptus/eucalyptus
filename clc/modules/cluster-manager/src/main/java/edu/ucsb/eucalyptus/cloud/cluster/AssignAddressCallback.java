@@ -88,11 +88,18 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
       if( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
         throw new EucalyptusClusterException( "Ignoring assignment to a vm which is not running: " + msg  );
       } else {
+        for( VmInstance aVm : VmInstances.getInstance( ).listValues( ) ) {
+          if( msg.getSource().equals( aVm.getNetworkConfig( ).getIgnoredPublicIp( ) ) && !vm.getInstanceId( ).equals( aVm.getInstanceId( ) ) 
+              && VmState.RUNNING.equals( aVm.getState( ) ) && VmState.PENDING.equals( aVm.getState( ) ) ) {
+            throw new EucalyptusClusterException( "Assign [" + msg.getSource() + "]  discarded because another VM already owns this IP." );
+          }
+        }
         LOG.debug( "Assign [" + msg.getSource() + "]  => [" + msg.getDestination() + "]" );
         this.parent.getNetworkConfig().setIgnoredPublicIp( msg.getSource() );
       }
     } catch ( Exception e ) {
       LOG.debug( e, e );
+      throw e;
     }
   }
 

@@ -85,8 +85,6 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
     this.networkToken = networkToken;
   }
 
-  
-  
   @Override
   public void prepareAll( StartNetworkType msg ) throws Exception {
     //FIXME: re-enable direct rather than lazy recovery of live networks
@@ -101,6 +99,9 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
 
 
   @Override
-  public void prepare( StartNetworkType msg ) throws Exception {}
+  public void prepare( StartNetworkType msg ) throws Exception {
+    msg.setNameserver( edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getNameserverAddress( ) );
+    msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
+  }
 
 }

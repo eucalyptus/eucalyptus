@@ -511,13 +511,12 @@ public class AddressManager implements Startable {
     }
   }
 
-  private static void unassignAddressFromVm( Address address, VmInstance vm ) {
-    //:: made it here, means it looks legitimate :://
+  public static void unassignAddressFromVm( Address address, VmInstance vm ) {
     EntityWrapper<Address> db = new EntityWrapper<Address>();
     try {
       UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
-      ClusterConfiguration config = Clusters.getInstance( ).lookup( address.getCluster( ) ).getConfiguration( );
       ClusterEnvelope.dispatch( address.getCluster(), QueuedEvent.make( new UnassignAddressCallback( address ), unassignMsg ) );
+      vm.getNetworkConfig( ).setIgnoredPublicIp( vm.getNetworkConfig( ).getIpAddress( ) );
       Address addr = db.getUnique( new Address( address.getName() ) );
       addr.unassign();
       address.unassign();

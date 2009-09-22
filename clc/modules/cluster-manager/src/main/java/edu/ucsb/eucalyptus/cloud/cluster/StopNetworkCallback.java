@@ -89,27 +89,30 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
   }
 
   @Override
-  public void prepareAll( final StopNetworkType msg ) {
-    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( v.getNetworkNames( ).contains( token.getName( ) ) && v.getPlacement( ).equals( token.getCluster( ) ) ) {
-        LOG.debug( "Returning stop network event since it still exists." );
-        return;
-      }
-    }
-    //TODO: likely need a transient uncommitted state for the token to avoid a race.
-    Network net = Networks.getInstance( ).lookup( token.getName( ) );
-    Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
-    LOG.debug( "Releasing network token back to cluster: " + token );
-    cluster.getState( ).releaseNetworkAllocation( token );
-    LOG.debug( "Removing network token: " + token );
-    net.removeToken( token.getCluster( ) );
-  }
+  public void prepareAll( final StopNetworkType msg ) {}
 
   @Override
   public void verify( EucalyptusMessage msg ) throws Exception {
+    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
+      if ( v.getNetworkNames( ).contains( token.getName( ) ) && v.getPlacement( ).equals( token.getCluster( ) ) ) {
+        throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
+      }
+    }
     try {
-      Networks.getInstance( ).deregister( token.getName( ) );
-    } catch ( Exception e ) {}
+      Network net = Networks.getInstance( ).lookup( token.getName( ) );
+      Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
+      LOG.debug( "Releasing network token back to cluster: " + token );
+      cluster.getState( ).releaseNetworkAllocation( token );
+      LOG.debug( "Removing network token: " + token );
+      net.removeToken( token.getCluster( ) );
+      try {
+        Networks.getInstance( ).deregister( token.getName( ) );
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+      }
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+    }
   }
 
   @Override

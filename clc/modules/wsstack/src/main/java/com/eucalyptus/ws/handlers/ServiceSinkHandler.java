@@ -68,6 +68,7 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -83,6 +84,7 @@ import org.mule.transport.NullPayload;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.ws.MappingHttpMessage;
+import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.Messaging;
@@ -197,4 +199,19 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       }
     }
   }
+
+  @Override
+  public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+    try {
+      MappingHttpMessage httpRequest = this.requestLocal.get( ctx.getChannel( ) );
+      if( httpRequest != null && httpRequest.getMessage( ) != null && httpRequest.getMessage( ) instanceof EucalyptusMessage ) {
+        EucalyptusMessage origRequest = (EucalyptusMessage) httpRequest.getMessage( );
+        ReplyQueue.removeReplyListener( origRequest.getCorrelationId( ) );     
+      }
+    } catch ( Throwable e1 ) {
+      LOG.debug( "Failed to remove the channel context on connection close.", e1 );
+    }
+    super.channelClosed( ctx, e );
+  }
+  
 }
