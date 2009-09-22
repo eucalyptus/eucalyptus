@@ -123,7 +123,7 @@ usage () {
 	echo "   --dhcpd <dhcpd>                  set the dhcpd binary to <name>"
 	echo "   --dhcp_user <user>               set the username to run dhcpd as"
 	echo "   --name <var>                     returns the value or <name>"
-	echo "   --import-conf <file>                  import variables from <file> into eucalyptus.conf"
+	echo "   --import-conf <file>             import variables from <file> into eucalyptus.conf"
 	echo "   --setup                          perform initial setup"
 	echo "   --check [nc|cc|cloud|sc|walrus]  pre-flight checks"
 	echo "   --sync [nc|cc|cloud|sc|walrus]   pre-flight checks"
@@ -701,6 +701,7 @@ if [ -n "$UPGRADE_CONF" -o -n "$IMPORTFILE" ]; then
 	    fi
 	done
 fi
+
 # we may need the location of the ssh key for eucalyptus
 EUCA_HOME="`getent passwd eucalyptus|cut -f 6 -d ':'`"
 if [ -f "${EUCA_HOME}/.ssh/id_rsa.pub" ]; then
