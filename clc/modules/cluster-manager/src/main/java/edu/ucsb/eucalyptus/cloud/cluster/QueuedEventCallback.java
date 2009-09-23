@@ -70,6 +70,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -90,13 +91,13 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
   private static Logger LOG = Logger.getLogger( QueuedEventCallback.class );
-  private ChannelFuture channelOpen;
+  private ChannelFuture channelConnected;
   private TYPE          request;
   
   public void process( TYPE msg ) throws Exception {
     super.getRequestQueue( ).add( ( EucalyptusMessage ) msg );
-    if ( this.channelOpen != null && this.channelOpen.isDone( ) ) {
-      this.fireMessage( msg, this.channelOpen.getChannel( ) );
+    if ( this.channelConnected != null && this.channelConnected.isDone( ) ) {
+      this.fireMessage( msg, this.channelConnected.getChannel( ) );
     } else {
       LOG.debug( "Found channel pending: defering message " + msg.getClass( ).getCanonicalName( ) );
     }
@@ -132,16 +133,17 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   
   @Override
   public void connectRequested( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    this.channelOpen = e.getFuture( );
+    this.channelConnected = e.getFuture( );
     super.connectRequested( ctx, e );
   }
   
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+    this.channelConnected = e.getFuture( );
     if ( super.getRequestQueue( ).isEmpty( ) ) {
       LOG.debug( "Request queue is empty, waiting for write request." );
     } else {
-      Object msg = this.getRequestQueue( ).poll( );
+      Object msg = this.getRequestQueue( ).peek( );
       LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
       this.fireMessage( ( TYPE ) msg, e.getChannel( ) );
     }
@@ -150,18 +152,12 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   
   @Override
   public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    this.channelOpen = e.getFuture( );
-    if ( !super.getRequestQueue( ).isEmpty( ) ) {
-      Object msg = super.getRequestQueue( ).poll( );
-      LOG.debug( "Channel opened: found pending request to send." + LogUtil.lineObject( msg ) );
-      this.fireMessage( ( TYPE ) msg, e.getChannel( ) );
-    }
     super.channelOpen( ctx, e );
   }
   
   public abstract static class MultiClusterCallback<TYPE extends EucalyptusMessage> extends QueuedEventCallback<TYPE> {
     private List<QueuedEvent> callbackList = Lists.newArrayList( );
-    
+    public abstract MultiClusterCallback<TYPE> newInstance();
     public abstract void prepareAll( TYPE msg ) throws Exception;
     
     protected List<QueuedEvent> fireEventAsyncToAllClusters( final TYPE msg ) {
@@ -170,7 +166,7 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
         LOG.info( "-> Sending " + msg.getClass( ).getSimpleName( ) + " network to: " + c.getUri( ) );
         LOG.debug( LogUtil.lineObject( msg ) );
         try {
-          QueuedEvent q = QueuedEvent.make( this, msg );
+          QueuedEvent q = QueuedEvent.make( this.newInstance( ), msg );
           callbackList.add( q );
           Clusters.sendClusterEvent( c, q );
         } catch ( final Throwable e ) {

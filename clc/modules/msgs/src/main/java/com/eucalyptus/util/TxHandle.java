@@ -76,7 +76,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
     } else {
       Exception e = new Exception();
       e.fillInStackTrace( );
-      LOG.debug( e, e );
+      LOG.trace( e, e );
       //TODO: trace the stack here.  rollback might be OK for most use cases.
     }
   }

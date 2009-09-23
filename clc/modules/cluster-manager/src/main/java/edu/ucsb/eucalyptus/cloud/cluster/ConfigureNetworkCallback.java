@@ -72,6 +72,7 @@ import com.eucalyptus.ws.client.Client;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 
 public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetworkType> {
   public static ConfigureNetworkCallback CALLBACK = new ConfigureNetworkCallback( ); 
@@ -88,6 +89,10 @@ public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetw
   @Override
   public void verify( EucalyptusMessage msg ) throws Exception {
     
+  }
+  @Override
+  public MultiClusterCallback<ConfigureNetworkType> newInstance( ) {
+    return new ConfigureNetworkCallback( );
   }
 
 }

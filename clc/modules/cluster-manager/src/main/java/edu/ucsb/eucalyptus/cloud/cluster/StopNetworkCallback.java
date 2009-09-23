@@ -108,10 +108,10 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
       try {
         Networks.getInstance( ).deregister( token.getName( ) );
       } catch ( Exception e ) {
-        LOG.debug( e, e );
+        LOG.debug( e );
       }
     } catch ( Exception e ) {
-      LOG.debug( e, e );
+      LOG.debug( e );
     }
   }
 
@@ -122,6 +122,11 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
         throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
       }
     }
+  }
+
+  @Override
+  public MultiClusterCallback<StopNetworkType> newInstance( ) {
+    return new StopNetworkCallback( token );
   }
 
 }

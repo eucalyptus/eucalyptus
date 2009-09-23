@@ -104,4 +104,9 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
     msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
   }
 
+  @Override
+  public MultiClusterCallback<StartNetworkType> newInstance( ) {
+    return new StartNetworkCallback( networkToken );
+  }
+
 }

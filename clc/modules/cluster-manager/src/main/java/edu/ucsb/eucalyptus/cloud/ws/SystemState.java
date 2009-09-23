@@ -171,8 +171,11 @@ public class SystemState {
 //        }
       }
     }
-    ClusterConfiguration config = Clusters.getInstance( ).lookup( vm.getPlacement( ) ).getConfiguration( );
-    SystemState.dispatch( vm.getPlacement(), new TerminateCallback(), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId() ) );
+    try {
+      Clusters.sendClusterEvent( vm.getPlacement( ), QueuedEvent.make( new TerminateCallback( ), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId() ) ) );
+    } catch ( Exception e ) {
+      LOG.debug( e );
+    }
     int index = vm.getNetworkIndex( );
     for( Network net : vm.getNetworks( ) ) {
       LOG.info( "Returning address index: " + index );
