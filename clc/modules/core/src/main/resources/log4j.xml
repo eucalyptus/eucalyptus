@@ -139,6 +139,7 @@
         <priority value="DEBUG"/>
         <appender-ref ref="logfile"/>
     </category>
+    <!-- 
     <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
         <priority value="INFO"/>
         <appender-ref ref="logfile"/>
@@ -150,11 +151,12 @@
     <category name="com.eucalyptus.ws.handlers.HmacV2Handler" additivity="false">
         <priority value="INFO"/>
         <appender-ref ref="logfile"/>
-    </category> 
+    </category>
     <category name="com.eucalyptus.util.EntityWrapper" additivity="true">
-        <priority value="TRACE"/>
+        <priority value="INFO"/>
         <appender-ref ref="logfile"/>
-    </category> 
+    </category>
+    -->
     <category name="org.apache.commons.beanutils.converters" additivity="false">
         <priority value="ERROR"/>
         <appender-ref ref="logfile"/>

@@ -102,10 +102,10 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   @Override
   public ChannelPipeline getPipeline( ) throws Exception {//FIXME: remove all these repetitions.
     ChannelPipeline pipeline = Channels.pipeline( );
+    ChannelUtil.addPipelineMonitors( pipeline, 30 );
     pipeline.addLast( "encoder", new HttpRequestEncoder( ) );
     pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
     pipeline.addLast( "aggregator", new HttpChunkAggregator( 1048576 ) );
-    ChannelUtil.addPipelineMonitors( pipeline, 30 );
     pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
     pipeline.addLast( "wssec", new ClusterWsSecHandler( ) );
     pipeline.addLast( "addressing", new AddressingHandler( this.actionPrefix + "#" ) );

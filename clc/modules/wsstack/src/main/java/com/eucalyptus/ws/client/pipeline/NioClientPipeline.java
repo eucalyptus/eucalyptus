@@ -114,7 +114,7 @@ public class NioClientPipeline implements ChannelPipelineFactory {
   
   public ChannelPipeline getPipeline( ) throws Exception {
     final ChannelPipeline pipeline = Channels.pipeline( );
-    
+    ChannelUtil.addPipelineMonitors( pipeline );    
     pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
     pipeline.addLast( "aggregator", new HttpChunkAggregator( 1048576 ) );
     pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
@@ -125,7 +125,6 @@ public class NioClientPipeline implements ChannelPipelineFactory {
     pipeline.addLast( "soap", new SoapHandler( ) );
     pipeline.addLast( "binding", this.bindingHandler );
     pipeline.addLast( "handler", this.handler );
-    ChannelUtil.addPipelineMonitors( pipeline );
     return pipeline;
   }
   

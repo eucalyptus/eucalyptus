@@ -83,6 +83,8 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.timeout.ReadTimeoutException;
+import org.jboss.netty.handler.timeout.WriteTimeoutException;
 
 import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -139,12 +141,17 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) throws Exception {
     final Channel ch = e.getChannel( );
     final Throwable cause = e.getCause( );
-
-    if ( cause instanceof TooLongFrameException ) {
+    
+    if( cause instanceof ReadTimeoutException ) {      
+      this.sendError( ctx, HttpResponseStatus.REQUEST_TIMEOUT );
+    } else if ( cause instanceof WriteTimeoutException ) {
+      Channels.fireExceptionCaught( ctx, cause );
+      ctx.getChannel( ).close( );
+    } else if ( cause instanceof TooLongFrameException ) {
       this.sendError( ctx, HttpResponseStatus.BAD_REQUEST );
       return;
     }
-    cause.printStackTrace( );
+    LOG.debug( "Internal Error.", cause );
     if ( ch.isConnected( ) ) {
       if ( e.getCause( ) instanceof WebServicesException ) {
         this.sendError( ctx, ( ( WebServicesException ) e.getCause( ) ).getStatus( ) );
