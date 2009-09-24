@@ -132,42 +132,32 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       } else if ( msge.getMessage( ) instanceof IsData ) {// Pass through for chunked messaging
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {// Handle single request-response MEP
-        final MappingHttpMessage request = this.requestLocal.get( ctx.getChannel( ) );
         EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
-        if ( reply == null ) {// TODO: fix this error reporting
-          LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
-          reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
-        }
-        LOG.info( EventRecord.create( Component.eucalyptus, reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, reply.getClass( ).getSimpleName( ) ) );
-        if ( reply instanceof WalrusDataGetResponseType ) {
-          if ( reply instanceof GetObjectResponseType ) {
-            final GetObjectResponseType getObjectResponse = ( GetObjectResponseType ) reply;
-            LOG.debug( getObjectResponse );
-            if ( getObjectResponse.getBase64Data( ) == null ) {
-              e.getFuture( ).cancel( );
-            } else {
-              sendDownstreamEvent( msge, reply );
-            }
-          } else {
-            e.getFuture( ).cancel( );
-          }
+        if ( reply instanceof GetObjectResponseType && ((GetObjectResponseType)reply).getBase64Data( ) == null ) {
+          e.getFuture( ).cancel( );
+          return;
         } else {
-          e = sendDownstreamEvent( e, reply );
+          e = sendDownstreamNewEvent( e, reply );
         }
       } else {
         e.getFuture( ).cancel( );
-        LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage." );
+        LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage:" + LogUtil.dumpObject( msge.getMessage( ) ) );
       }
-    }
-    if( e.getFuture( ).isCancelled( ) ) {
-      LOG.debug( "Cancelling send on : " + LogUtil.dumpObject( e ) );
+      if( e.getFuture( ).isCancelled( ) ) {
+        LOG.debug( "Cancelling send on : " + LogUtil.dumpObject( e ) );
+      } 
     } else {
       ctx.sendDownstream( e );
     }
   }
 
-  private ChannelEvent sendDownstreamEvent( ChannelEvent e, EucalyptusMessage reply ) {
+  private ChannelEvent sendDownstreamNewEvent( ChannelEvent e, EucalyptusMessage reply ) {
     final MappingHttpMessage request = this.requestLocal.get( e.getChannel( ) );
+    if ( reply == null ) {
+      LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
+      reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
+    }
+    LOG.info( EventRecord.create( Component.eucalyptus, reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, reply.getClass( ).getSimpleName( ) ) );
     final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
     final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( e.getChannel( ), e.getFuture( ), response, null );
     response.setMessage( reply );

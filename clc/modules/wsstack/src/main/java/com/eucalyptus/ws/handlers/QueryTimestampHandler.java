@@ -64,6 +64,7 @@
 package com.eucalyptus.ws.handlers;
 
 import java.net.URLDecoder;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Map;
 
@@ -116,7 +117,8 @@ public class QueryTimestampHandler extends MessageStackHandler {
         throw new AuthenticationException( "Failure to parse timestamp: Timestamp=" + timestamp + " Expires=" + exp );
       }
       if ( now.after( expires ) ) {
-        throw new AuthenticationException( "Message has expired: Timestamp=" + timestamp + " Expires=" + exp + " Deadline=" + expires );
+        String expiryTime = String.format( "%4d-%02d-%02d'T'%02d:%02d:%02d", expires.get( Calendar.YEAR ), expires.get( Calendar.MONTH ), expires.get( Calendar.DAY_OF_MONTH ), expires.get( Calendar.HOUR_OF_DAY ), expires.get( Calendar.MINUTE ), expires.get( Calendar.SECOND ) );
+        throw new AuthenticationException( "Message has expired: Timestamp=" + timestamp + " Expires=" + exp + " Deadline=" + expiryTime );
       }
     }
   }
