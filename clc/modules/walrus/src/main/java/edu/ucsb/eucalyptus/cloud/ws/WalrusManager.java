@@ -77,6 +77,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.CredentialProvider;
@@ -1424,7 +1426,7 @@ public class WalrusManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(objectInfo.canRead(userId)) {
 					String objectName = objectInfo.getObjectName();
-					MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
+					DefaultHttpResponse httpResponse = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.OK ); 
 					if(getMetaData) {
 						List<MetaDataInfo> metaDataInfos = objectInfo.getMetaData();
 						for(MetaDataInfo metaDataInfo : metaDataInfos) {
@@ -1605,7 +1607,7 @@ public class WalrusManager {
 							(byteRangeStart < 0 || byteRangeEnd < 0)) {
 						throw new InvalidRangeException("Range: " + byteRangeStart + "-" + byteRangeEnd + "object: " + bucketName + "/" + objectKey);
 					}
-					MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
+					DefaultHttpResponse httpResponse = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.OK ); 
 					if(ifMatch != null) {
 						if(!ifMatch.equals(etag) && !returnCompleteObjectOnFailure) {
 							db.rollback();

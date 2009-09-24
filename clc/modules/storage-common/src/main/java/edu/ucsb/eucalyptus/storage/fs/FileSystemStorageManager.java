@@ -78,6 +78,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
@@ -250,7 +251,7 @@ public class FileSystemStorageManager implements StorageManager {
         return -1;
     }
 
-	public void sendObject(Channel channel, MappingHttpResponse httpResponse, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
+	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
 		try {
 			RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
@@ -274,7 +275,7 @@ public class FileSystemStorageManager implements StorageManager {
 		}	
 	}
     
-	public void sendObject(Channel channel, MappingHttpResponse httpResponse, String bucketName, String objectName, long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
+	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
 		try {
 			RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
@@ -299,7 +300,7 @@ public class FileSystemStorageManager implements StorageManager {
 		}	
 	}
 
-	public void sendHeaders(Channel channel, MappingHttpResponse httpResponse, Long size, String etag,
+	public void sendHeaders(Channel channel, DefaultHttpResponse httpResponse, Long size, String etag,
 			String lastModified, String contentType, String contentDisposition) {
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
