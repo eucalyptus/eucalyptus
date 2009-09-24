@@ -61,10 +61,10 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 
 This package contains the java WS stack.
 
-%package wlarus
+%package walrus
 Summary:      Elastic Utility Computing Architecture - cloud controller
 Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
-Conflicts:    eucalyptus-cc < 1.6
+Conflicts:    eucalyptus-walrus < 1.6
 Group:        Applications/System
 
 %description walrus
@@ -92,7 +92,7 @@ This package contains the storage controller part of eucalyptus.
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
 Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
-Conflicts:    eucalyptus-cc < 1.6
+Conflicts:    eucalyptus-cloud < 1.6
 Group:        Applications/System
 
 %description cloud

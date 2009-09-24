@@ -113,6 +113,9 @@ usage () {
 	echo "   --deregister-walrus <host>       remove walrus to EUCALYPTUS"
 	echo "   --register-sc <name> <host>      add storage controller"
 	echo "   --deregister-sc <host>           remove storage controller to EUCALYPTUS"
+	echo "   --list-walruses                  list registered walrus(es)"
+	echo "   --list-clusters                  list registered CCs"
+	echo "   --list-scs                       list registered SCs"
 	echo "   --no-sync                        used only with --register-* to skip syncing keys"
 	echo "   --cc-port <port>                 set CC port"
 	echo "   --nc-port <port>                 set NC port"
@@ -160,6 +163,37 @@ comment () {
 uncomment () {
 	check_and_backup $1
 	sed -i "s<^[#[:blank:]]*\(${2}.*\)<\1<" $1
+}
+
+check_heartbeat() {
+	local __host="$1"
+	local __service="$2"
+	local ret=""
+
+	# checks
+	if [ -z "$__host" -o -z "$__service" ]; then
+		echo "check_heartbeat: need a host and a service!"
+		return 1
+	fi
+	if [ -z "$WGET" -o ! -x "$WGET" ]; then
+		echo "ERROR: wget is missing, cannot continue."
+		return 1
+	fi
+
+	# let's talk to the host and check if something is running
+	ret="`$WGET -o /dev/null -T 10 -t 1 -O - http://${__host}:8773/services/Heartbeat`"
+	if [ "$?" != "0" -o -z "$ret" ]; then
+		return 1
+	fi
+
+	# we need both ehabled and local to be true
+	if ! echo $ret |grep "enabled=true" > /dev/null  ; then
+		return 1
+	elif ! echo $ret |grep "local=true"  > /dev/null ; then
+		return 1
+	fi
+
+	return 0
 }
 
 check_ws() {
@@ -1131,7 +1165,13 @@ if [ -n "$WALRUS" -o -n "$WALRUS_MODE" ]; then
 	    exit 1
 	fi
 	
-    # sync the keys
+	# check that walrus is at least running on the remote host
+	sleep 3
+	if ! check_heartbeat ${WALRUS} walrus ; then
+		echo "Walrus is not up on host ${WALRUS}: check the logs"
+	fi
+	
+	# sync the keys
 	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${WALRUS} euca.p12 ; then
 	    echo "ERROR: failed to sync keys with ${WALRUS}."
             exit 1
