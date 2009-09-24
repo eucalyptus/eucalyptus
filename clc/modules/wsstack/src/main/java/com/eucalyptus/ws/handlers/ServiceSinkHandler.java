@@ -151,11 +151,12 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
             e.getFuture( ).cancel( );
             //            return;
           }
+        } else {
+          final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
+          final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
+          response.setMessage( reply );
+          e = newEvent;
         }
-        final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
-        final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
-        response.setMessage( reply );
-        e = newEvent;
       } else {
         e.getFuture( ).cancel( );
         LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage." );
