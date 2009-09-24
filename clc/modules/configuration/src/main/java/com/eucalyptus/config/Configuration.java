@@ -122,9 +122,9 @@ public class Configuration {
       throw new EucalyptusCloudException( e2 );
     }
     if ( request instanceof RegisterStorageControllerType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.storage.isLocal( ) ) {
-      throw new EucalyptusCloudException( "You do not have a local storage controller installed." );
+      throw new EucalyptusCloudException( "You do not have a local storage controller enabled (or not installed)." );
     } else if ( request instanceof RegisterWalrusType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.walrus.isLocal( ) ) { 
-      throw new EucalyptusCloudException( "You do not have a local walrus installed." );
+      throw new EucalyptusCloudException( "You do not have a local walrus enabled (or not installed)." );
     } else if ( request instanceof RegisterStorageControllerType ) {
       try {
         Configuration.getClusterConfiguration( request.getName( ) );

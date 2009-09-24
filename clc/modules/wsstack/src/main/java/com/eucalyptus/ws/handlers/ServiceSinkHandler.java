@@ -85,7 +85,6 @@ import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.Messaging;
@@ -97,7 +96,6 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
-import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )
 public class ServiceSinkHandler extends SimpleChannelHandler {
@@ -137,7 +135,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           e.getFuture( ).cancel( );
           return;
         } else {
-          e = sendDownstreamNewEvent( e, reply );
+          this.sendDownstreamNewEvent( ctx, e, reply );
         }
       } else {
         e.getFuture( ).cancel( );
@@ -151,17 +149,17 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
     }
   }
 
-  private ChannelEvent sendDownstreamNewEvent( ChannelEvent e, EucalyptusMessage reply ) {
-    final MappingHttpMessage request = this.requestLocal.get( e.getChannel( ) );
+  private void sendDownstreamNewEvent( ChannelHandlerContext ctx, ChannelEvent e, EucalyptusMessage reply ) {
+    final MappingHttpMessage request = this.requestLocal.get( ctx.getChannel( ) );
     if ( reply == null ) {
       LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
       reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
     }
     LOG.info( EventRecord.create( Component.eucalyptus, reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, reply.getClass( ).getSimpleName( ) ) );
     final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
-    final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( e.getChannel( ), e.getFuture( ), response, null );
+    final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
     response.setMessage( reply );
-    return newEvent;
+    ctx.sendDownstream( newEvent );
   }
   
   @Override
