@@ -405,22 +405,26 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			cluster.setName (((Label)p.getWidget(0)).getText());
 			storage.setName (((Label)p.getWidget(0)).getText());
 		}
+		
+		// CC section
 		cluster.setHost (((TextBox)g.getWidget(2, 1)).getText());
 		cluster.setPort (Integer.parseInt(((TextBox)g.getWidget(3, 1)).getText()));
-		storage.setHost (((TextBox)g.getWidget(5, 1)).getText());	
-		storage.setStorageInterface(((TextBox)g.getWidget(6, 1)).getText());
-		storage.setVolumesPath (((TextBox)g.getWidget(7, 1)).getText());
-		p = (HorizontalPanel)g.getWidget(8, 1);
-		storage.setMaxVolumeSizeInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
-		p = (HorizontalPanel)g.getWidget(9, 1);
-		storage.setTotalVolumesSizeInGB((Integer.parseInt(((TextBox)p.getWidget(0)).getText())));
-		p = (HorizontalPanel)g.getWidget(12, 1);
+		p = (HorizontalPanel)g.getWidget(5, 1);
 		systemConfig.setSystemReservedPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
-		p = (HorizontalPanel)g.getWidget(13, 1);
+		p = (HorizontalPanel)g.getWidget(6, 1);
 		systemConfig.setMaxUserPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
-		p = (HorizontalPanel)g.getWidget(14, 1);
+		p = (HorizontalPanel)g.getWidget(7, 1);
 		cluster.setMinVlans(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
 		cluster.setMaxVlans(Integer.parseInt(((TextBox)p.getWidget(1)).getText()));
+		
+		// SC section
+		storage.setHost (((TextBox)g.getWidget(9, 1)).getText());	
+		storage.setStorageInterface(((TextBox)g.getWidget(10, 1)).getText());
+		storage.setVolumesPath (((TextBox)g.getWidget(11, 1)).getText());
+		p = (HorizontalPanel)g.getWidget(12, 1);
+		storage.setMaxVolumeSizeInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
+		p = (HorizontalPanel)g.getWidget(13, 1);
+		storage.setTotalVolumesSizeInGB((Integer.parseInt(((TextBox)p.getWidget(0)).getText())));
 		//    systemConfig.setDoDynamicPublicAddresses( !((TextBox)p.getWidget(0)).isEnabled() ? true : false );
 	}
 
