@@ -120,15 +120,16 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   
   @SuppressWarnings( "unchecked" )
   @Override
-  public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+  public void handleDownstream( final ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e );
     if ( e instanceof MessageEvent ) {
       final MessageEvent msge = ( MessageEvent ) e;
       if ( msge.getMessage( ) instanceof NullPayload ) {
-        return;
-      }
-      if ( msge.getMessage( ) instanceof IsData ) {// Pass through for chunked messaging
-        ctx.sendDownstream( msge );
+        msge.getFuture( ).cancel( );
+      } else if ( msge.getMessage( ) instanceof HttpResponse ) {
+        ctx.sendDownstream( e );
+      } else if ( msge.getMessage( ) instanceof IsData ) {// Pass through for chunked messaging
+        ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {// Handle single request-response MEP
         final MappingHttpMessage request = this.requestLocal.get( ctx.getChannel( ) );
         EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
@@ -151,15 +152,13 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
         final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
         response.setMessage( reply );
-        ctx.sendDownstream( newEvent );
-      } else if ( msge.getMessage( ) instanceof HttpResponse ) {
-        ctx.sendDownstream( e );
+        e = newEvent;
       } else {
+        e.getFuture( ).cancel( );
         LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage." );
       }
-    } else {
-      ctx.sendDownstream( e );
     }
+    ctx.sendDownstream( e );
   }
   
   @Override
