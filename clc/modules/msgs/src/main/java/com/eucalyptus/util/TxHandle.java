@@ -1,5 +1,6 @@
 package com.eucalyptus.util;
 
+import java.lang.ref.WeakReference;
 import java.util.Calendar;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -19,14 +20,14 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   private static ConcurrentNavigableMap<String, TxHandle> outstanding = new ConcurrentSkipListMap<String,TxHandle>();
 
   private EntityManager     em;
-  private Session           session;
+  private WeakReference<Session>           session;
   private EntityTransaction delegate;
   private StackTraceElement owner;
   private Calendar          startTime;
   private String            txUuid;
   private StopWatch         stopWatch;
 
-  private long splitTime;
+  private volatile long splitTime = 0l;
   public TxHandle( String ctx ) {
     this.txUuid = String.format("%s:%s:%s",ctx, EntityWrapper.getMyStackTraceElement( ), UUID.randomUUID( ).toString( ) );
     this.startTime = Calendar.getInstance( );
@@ -37,7 +38,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
       this.em = anemf.createEntityManager( );
       this.delegate = em.getTransaction( );
       this.delegate.begin( );
-      this.session = ( Session ) em.getDelegate( );
+      this.session = new WeakReference<Session>(( Session ) em.getDelegate( ));
       outstanding.put( txUuid, this );
     } catch ( Throwable e ) {
       this.rollback( );
@@ -67,34 +68,53 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   }
 
   public void rollback( ) {
+    if( this.session != null ) {
+      this.session.clear( );        
+    }
     try {
       if ( this.delegate != null && this.delegate.isActive( ) ) {
         this.delegate.rollback( );
       }
     } catch( Throwable e ) {
-      LOG.trace( LogUtil.dumpObject( Thread.currentThread( ).getStackTrace( ) ), e );
+      LOG.error( e, e );
     } finally {
-      this.session = null;
-      outstanding.remove( this.txUuid );
+      this.delegate = null;
+      if( this.txUuid != null ) {
+        outstanding.remove( this.txUuid );
+      }
       if( this.em != null ) {
         this.em.close( );
       }
+      this.em = null;
+    }
+  }
+
+  private void verifyOpen( ) {
+    if( this.delegate == null || this.em == null ) {
+      throw new RuntimeException( "Calling a closed tx handle: " + this.txUuid );
     }
   }
 
   public void commit( ) {
+    if( this.session != null ) {
+      this.session.clear( );
+    }
+    this.verifyOpen( );
     try {
       this.delegate.commit( );
     } catch( RuntimeException e ) {
       if( this.delegate != null && this.delegate.isActive( ) ) {
         this.delegate.rollback( );
-        this.delegate = null;
         LOG.debug( e, e );
         throw e;
       }
     } finally {
+      this.delegate = null;
       outstanding.remove( this.txUuid );
-      this.em.close( );
+      if( this.em != null ) {
+        this.em.close( );
+      }
+      this.em = null;
     }
   }
   
@@ -103,6 +123,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
       TxHandle tx = outstanding.get( uuid );
       if( tx.isExpired() ) {
         LOG.error( LogUtil.subheader( "Long outstanding transaction handle for: " + uuid + " " + tx.txUuid ) );
+        outstanding.remove( uuid );
       }
     }
   }
@@ -125,7 +146,12 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   }
 
   public Session getSession( ) {
-    return session;
+    if( session.get( ) == null ) {
+      RuntimeException e = new RuntimeException( "Someone is calling a closed tx handle: " + this.txUuid );
+      LOG.error( e, e );
+      throw e;
+    }
+    return session.get( );
   }
 
   public Calendar getStartTime( ) {
