@@ -145,7 +145,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
             LOG.debug( getObjectResponse );
             if ( getObjectResponse.getBase64Data( ) == null ) {
               e.getFuture( ).cancel( );
-              return;
+//              return;
             }
           } else {
             e.getFuture( ).cancel( );
