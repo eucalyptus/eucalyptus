@@ -83,6 +83,7 @@ import org.mule.transport.NullPayload;
 
 import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
@@ -143,10 +144,12 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
             final GetObjectResponseType getObjectResponse = ( GetObjectResponseType ) reply;
             LOG.debug( getObjectResponse );
             if ( getObjectResponse.getBase64Data( ) == null ) {
+              e.getFuture( ).cancel( );
               return;
             }
           } else {
-            return;
+            e.getFuture( ).cancel( );
+            //            return;
           }
         }
         final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
@@ -158,7 +161,11 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage." );
       }
     }
-    ctx.sendDownstream( e );
+    if( e.getFuture( ).isCancelled( ) ) {
+      LOG.debug( "Cancelling send on : " + LogUtil.dumpObject( e ) );
+    } else {
+      ctx.sendDownstream( e );
+    }
   }
   
   @Override

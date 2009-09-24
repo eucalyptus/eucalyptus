@@ -66,11 +66,13 @@ package com.eucalyptus.ws.server;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -156,6 +158,9 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
     response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n", "UTF-8" ) );
-    ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
+    ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
+    writeFuture.addListener( ChannelFutureListener.CLOSE );
+    Channels.write( ctx, writeFuture, response );
+//    ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
   }
 }

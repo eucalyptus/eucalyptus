@@ -173,7 +173,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
         case BOUND: { ctx.sendUpstream( e ); } break;
         case INTEREST_OPS: { ctx.sendUpstream( e ); } break;
         default:
-          ctx.sendDownstream(e);
+          ctx.sendUpstream(e);
       }
     } else {
       ctx.sendUpstream( e );      
