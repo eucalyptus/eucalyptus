@@ -78,6 +78,7 @@ import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -135,19 +136,16 @@ public class BlockStorage {
 		volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();
-		if(System.getProperty("euca.disable.ebs") == null) {
-			blockManager.configure();
-			blockManager.initialize();
-			configure();
-			initialize();
-		}
+		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
 		if(StorageProperties.trackUsageStatistics) 
 			blockStorageStatistics = new BlockStorageStatistics();
 	}
 
 	public static void initialize() {
+		blockManager.configure();
+		blockManager.initialize();
+		configure();
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
-		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
 		try {
 			startupChecks();
 		} catch(EucalyptusCloudException ex) {
