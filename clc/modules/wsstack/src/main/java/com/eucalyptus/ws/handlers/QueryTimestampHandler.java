@@ -116,7 +116,7 @@ public class QueryTimestampHandler extends MessageStackHandler {
         throw new AuthenticationException( "Failure to parse timestamp: Timestamp=" + timestamp + " Expires=" + exp );
       }
       if ( now.after( expires ) ) {
-        throw new AuthenticationException( "Message has expired: Timestamp=" + timestamp + " Expires=" + exp );
+        throw new AuthenticationException( "Message has expired: Timestamp=" + timestamp + " Expires=" + exp + " Deadline=" + expires );
       }
     }
   }
