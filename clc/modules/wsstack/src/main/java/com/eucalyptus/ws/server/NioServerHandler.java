@@ -141,22 +141,23 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) throws Exception {
     final Channel ch = e.getChannel( );
     final Throwable cause = e.getCause( );
-    
     if( cause instanceof ReadTimeoutException ) {      
+      LOG.debug( cause, cause );
       this.sendError( ctx, HttpResponseStatus.REQUEST_TIMEOUT );
     } else if ( cause instanceof WriteTimeoutException ) {
+      LOG.debug( cause, cause );
       Channels.fireExceptionCaught( ctx, cause );
       ctx.getChannel( ).close( );
     } else if ( cause instanceof TooLongFrameException ) {
       this.sendError( ctx, HttpResponseStatus.BAD_REQUEST );
-      return;
-    }
-    LOG.debug( "Internal Error.", cause );
-    if ( ch.isConnected( ) ) {
-      if ( e.getCause( ) instanceof WebServicesException ) {
-        this.sendError( ctx, ( ( WebServicesException ) e.getCause( ) ).getStatus( ) );
-      } else {
-        this.sendError( ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR );
+    } else {
+      LOG.debug( "Internal Error.", cause );
+      if ( ch.isConnected( ) ) {
+        if ( e.getCause( ) instanceof WebServicesException ) {
+          this.sendError( ctx, ( ( WebServicesException ) e.getCause( ) ).getStatus( ) );
+        } else {
+          this.sendError( ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR );
+        }
       }
     }
   }
