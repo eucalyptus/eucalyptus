@@ -145,17 +145,14 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
             LOG.debug( getObjectResponse );
             if ( getObjectResponse.getBase64Data( ) == null ) {
               e.getFuture( ).cancel( );
-//              return;
+            } else {
+              sendDownstreamEvent( msge, reply );
             }
           } else {
             e.getFuture( ).cancel( );
-            //            return;
           }
         } else {
-          final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
-          final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
-          response.setMessage( reply );
-          e = newEvent;
+          e = sendDownstreamEvent( e, reply );
         }
       } else {
         e.getFuture( ).cancel( );
@@ -167,6 +164,14 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
     } else {
       ctx.sendDownstream( e );
     }
+  }
+
+  private ChannelEvent sendDownstreamEvent( ChannelEvent e, EucalyptusMessage reply ) {
+    final MappingHttpMessage request = this.requestLocal.get( e.getChannel( ) );
+    final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
+    final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( e.getChannel( ), e.getFuture( ), response, null );
+    response.setMessage( reply );
+    return newEvent;
   }
   
   @Override
