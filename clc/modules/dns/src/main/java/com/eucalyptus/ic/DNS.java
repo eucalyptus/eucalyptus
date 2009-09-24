@@ -80,7 +80,7 @@ public class DNS {
 	public EucalyptusMessage handle( EucalyptusMessage msg )
 	{
 		LOG.warn("DNS is queuing message");
-		LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() )) ;
+		LOG.info( EventRecord.create( this.getClass(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() )) ;
 		long startTime = System.currentTimeMillis();
 		try
 		{
@@ -92,7 +92,7 @@ public class DNS {
 		}
 		EucalyptusMessage reply = null;
 		reply = WalrusMessaging.dequeue( msg.getCorrelationId() );
-		LOG.info( EventRecord.create( this.getClass().getSimpleName(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
+		LOG.info( EventRecord.create( this.getClass(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
 		if ( reply == null )
 			return new EucalyptusErrorMessageType( this.getClass().getSimpleName(), msg, "Received a NULL reply" );
 		return reply;

@@ -28,6 +28,7 @@ import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 
 import com.eucalyptus.ws.client.NioBootstrap;
+import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.server.NioServerHandler;
 
@@ -42,7 +43,7 @@ public class ChannelUtil {
       pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
       pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
       pipeline.addLast( "handler", new NioServerHandler( ) );
-      ChannelUtil.addPipelineTimeout( pipeline );
+      ChannelUtil.addPipelineMonitors( pipeline );
       return pipeline;
     }
   }
@@ -83,13 +84,15 @@ public class ChannelUtil {
   // ChannelGroup channelGroup = new DefaultChannelGroup("Eucalyptus.");
   private static HashedWheelTimer       timer                          = new HashedWheelTimer( );
   
-  public static ChannelPipeline addPipelineTimeout( final ChannelPipeline pipeline ) {
-    return ChannelUtil.addPipelineTimeout( pipeline, 120 );
+  public static ChannelPipeline addPipelineMonitors( final ChannelPipeline pipeline ) {
+    return ChannelUtil.addPipelineMonitors( pipeline, 120 );
   }
-  public static ChannelPipeline addPipelineTimeout( ChannelPipeline pipeline, int i ) {
+
+  public static ChannelPipeline addPipelineMonitors( ChannelPipeline pipeline, int i ) {
     // TODO: decide on some parameters here.
-    pipeline.addAfter("encoder", "idlehandler", new IdleStateHandler( ChannelUtil.timer, i, i, i ) );
-    pipeline.addAfter("idlehandler", "readTimeout", new ReadTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );//FIXME: this should be bigger but is this for testing.
+    pipeline.addAfter("encoder", "state-monitor", new ChannelStateMonitor( ) );
+    pipeline.addAfter("state-monitor", "idlehandler", new IdleStateHandler( ChannelUtil.timer, i, i, i ) );
+    pipeline.addAfter("idlehandler", "readTimeout", new ReadTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
     pipeline.addAfter("readTimeout", "writeTimeout", new WriteTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
     return pipeline;    
   }

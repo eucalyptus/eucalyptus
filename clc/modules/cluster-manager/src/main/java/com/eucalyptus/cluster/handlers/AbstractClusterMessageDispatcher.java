@@ -105,7 +105,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
     pipeline.addLast( "encoder", new HttpRequestEncoder( ) );
     pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
     pipeline.addLast( "aggregator", new HttpChunkAggregator( 1048576 ) );
-    ChannelUtil.addPipelineTimeout( pipeline, 30 );
+    ChannelUtil.addPipelineMonitors( pipeline, 30 );
     pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
     pipeline.addLast( "wssec", new ClusterWsSecHandler( ) );
     pipeline.addLast( "addressing", new AddressingHandler( this.actionPrefix + "#" ) );

@@ -28,13 +28,13 @@ public class DatabaseUtil implements EventListener {
 
   private static Map<String, String>                   pools         = Maps.newHashMap( );
 
-  enum PoolConfig {
+  public enum PoolConfig {
     acquire_increment( 5 ),
-    idle_test_period( 300 ),
+    idle_test_period( 0 ),
     timeout( 10000 ),
-    max_size( 128 ),
+    max_size( 32 ),
     max_statements( 0 ),
-    min_size( 8 );
+    min_size( 2 );
     int value;
 
     PoolConfig( int value ) {

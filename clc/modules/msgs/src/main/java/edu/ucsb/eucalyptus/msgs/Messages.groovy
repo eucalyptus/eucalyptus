@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.msgs
 import org.jibx.runtime.BindingDirectory
 import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
+import com.eucalyptus.bootstrap.Component;
 
 import com.eucalyptus.util.EntityWrapper;
 
@@ -454,37 +455,6 @@ public class VmNetworkPeer  extends EucalyptusData {
 }
 
 
-
-public class EventRecord extends EucalyptusMessage {
-  
-  String host = "cloud";
-  String service;
-  long timestamp = System.currentTimeMillis();
-  String eventUserId;
-  String eventCorrelationId;
-  String eventId;
-  String other;
-  
-  def EventRecord(final service, final eventUserId, final eventCorrelationId, final eventId, final other) {
-    this.service = service;
-    this.eventUserId = eventUserId;
-    this.eventCorrelationId = eventCorrelationId;
-    this.eventId = eventId;
-    this.other = other;
-  }
-  
-  public EventRecord() {
-  }
-  
-  public String toString() {
-    return String.format("%s/%s:%s:%s:%s:%7.4f:%s", this.host, this.service, this.eventUserId, this.eventCorrelationId, this.eventId, this.timestamp / 1000.0f, this.other != null ? this.other : "");
-  }
-  
-  public static EventRecord create(final service, final eventUserId, final eventCorrelationId, final eventId, final other) {
-    return new EventRecord(service, eventUserId, eventCorrelationId, eventId, other);
-  }
-  
-}
 
 public class GetLogsType extends EucalyptusMessage implements Comparable {
   String serviceTag;

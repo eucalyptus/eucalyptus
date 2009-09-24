@@ -63,7 +63,10 @@
  */
 package com.eucalyptus.bootstrap;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.log4j.Logger;
+import org.hsqldb.DatabaseURL;
 import org.hsqldb.Server;
 import org.hsqldb.ServerConstants;
 import org.hsqldb.persist.HsqlProperties;
@@ -73,6 +76,8 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.util.DatabaseUtil;
+import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
 
@@ -85,11 +90,18 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   public static DatabaseBootstrapper getInstance( ) {
     synchronized ( LocalDatabaseBootstrapper.class ) {
       if ( singleton == null ) {
+        for( DatabaseUtil.PoolConfig p : DatabaseUtil.PoolConfig.values( ) ) {
+          LOG.debug( String.format( "Default pool config: %s=%s", p.getKey( ), p.getValue( ) ) ); 
+        }
         singleton = new LocalDatabaseBootstrapper( );
         SystemBootstrapper.setDatabaseBootstrapper( singleton );
       }
     }
     return singleton;
+  }
+
+  private static void setDefault( String key, Object value ) {
+    if( System.getProperties( ).containsKey( key ) )  System.setProperty( key, value.toString() );
   }
 
   private Server db;
@@ -117,9 +129,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
     } catch ( Exception e ) {
       LOG.debug( e, e );
     }
-    this.db = new Server( );
-    this.db.setProperties( new HsqlProperties( DatabaseConfig.getProperties( ) ) );
-    SystemBootstrapper.makeSystemThread( this ).start( );
+    createDatabase( );
     return true;
   }
 
@@ -132,16 +142,32 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
     }
   }
 
+  private static AtomicBoolean hup = new AtomicBoolean( false );
+  public void hup( ) {
+    if( hup.compareAndSet( false, true ) ) {
+      DebugUtil.printDebugDetails( );
+      try {
+        if ( this.db != null ) this.db.checkRunning( true );
+        this.db.start( );
+      } catch ( RuntimeException e ) {
+        this.db.stop( );
+        this.createDatabase( );
+        this.waitForDatabase( );        
+      }
+    } else {
+      LOG.info("Already scheduled a database restart.");
+    }
+  }
+
+  private void createDatabase( ) {
+    this.db = new Server( );
+    this.db.setProperties( new HsqlProperties( DatabaseConfig.getProperties( ) ) );
+    SystemBootstrapper.makeSystemThread( this ).start( );
+  }
+
   @Override
   public boolean start( ) throws Exception {
-    while ( this.db.getState( ) != 1 ) {
-      Throwable t = this.db.getServerError( );
-      if ( t != null ) {
-        LOG.error( t, t );
-        throw new RuntimeException( t );
-      }
-      LOG.info( "Waiting for database to start..." );
-    }
+    this.waitForDatabase( );
     try {
       GroovyUtil.evaluateScript( "startup.groovy" );
     } catch ( Exception e ) {
@@ -149,6 +175,20 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
       System.exit( -1 );
     }
     return true;
+  }
+
+  private void waitForDatabase( ) {
+    while ( this.db.getState( ) != 1 ) {
+      Throwable t = this.db.getServerError( );
+      if ( t != null ) {
+        LOG.error( t, t );
+        throw new RuntimeException( t );
+      }
+      try {
+        Thread.sleep( 1000 );
+      } catch ( InterruptedException e ) {}
+      LOG.info( "Waiting for database to start..." );
+    }
   }
 
   public void run( ) {
@@ -179,9 +219,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
         LOG.trace( "-> Ping database." );
         this.isRunning( );
       } catch ( RuntimeException e ) {
-        LOG.info( "-> Ping database." );
         LOG.fatal( e, e );
-        System.exit( 123 );
       }
     }
   }

@@ -82,6 +82,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
+import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.PipelineRegistry;
@@ -117,6 +118,9 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     try {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
+      if( DebugUtil.TRACE ) {
+        LOG.trace( request.getContent( ).toString( "UTF-8" ) );
+      }
       final ChannelPipeline pipeline = ctx.getPipeline( );
       FilteredPipeline filteredPipeline = PipelineRegistry.getInstance( ).find( request );
       filteredPipeline.unroll( pipeline );

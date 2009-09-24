@@ -125,7 +125,7 @@ public class NioClientPipeline implements ChannelPipelineFactory {
     pipeline.addLast( "soap", new SoapHandler( ) );
     pipeline.addLast( "binding", this.bindingHandler );
     pipeline.addLast( "handler", this.handler );
-    ChannelUtil.addPipelineTimeout( pipeline );
+    ChannelUtil.addPipelineMonitors( pipeline );
     return pipeline;
   }
   

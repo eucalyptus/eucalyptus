@@ -55,27 +55,27 @@
 <c3p0-config>
   <default-config>
     <!--  pool size -->
-    <property name="initialPoolSize">8</property>
-    <property name="minPoolSize">8</property>
-    <property name="maxPoolSize">128</property>
-    <property name="acquireIncrement">2</property>
+    <property name="initialPoolSize">2</property>
+    <property name="minPoolSize">2</property>
+    <property name="maxPoolSize">64</property>
+    <property name="acquireIncrement">5</property>
     <!--  connection aging  -->
-    <property name="maxConnectionAge">1800</property>
-    <property name="maxIdleTime">1200</property>
-    <property name="maxIdleTimeExcessConnections">600</property>
+    <property name="maxConnectionAge">300</property>
+    <property name="maxIdleTime">10</property>
+    <property name="maxIdleTimeExcessConnections">30</property>
     <!--  connection testing -->
     <property name="automaticTestTable">eucalyptus_yay</property>
-    <property name="idleConnectionTestPeriod">300</property>
-    <property name="testConnectionOnCheckin">false</property>
+    <property name="idleConnectionTestPeriod">0</property>
+    <property name="testConnectionOnCheckin">true</property>
     <property name="testConnectionOnCheckout">false</property>
     <!--  statement caching: careful to avoid thrashing -->
     <property name="maxStatements">0</property>
-    <property name="maxStatementsPerConnection">50</property>
-    <!--  retry lease: 12 seconds leaving 8 seconds -->
-    <property name="acquireRetryAttempts">12</property>
+    <property name="maxStatementsPerConnection">0</property>
+    <!--  retry lease: gives 5 seconds before a db timeout occurs. -->
+    <property name="acquireRetryAttempts">5</property>
     <property name="acquireRetryDelay">1000</property>
     <property name="checkoutTimeout">1000</property>
-    <property name="numHelperThreads">10</property>
+    <property name="numHelperThreads">1</property>
     <!--  where? oh where? can my fishy be? 
     <property name="unreturnedConnectionTimeout">60</property>
     <property name="debugUnreturnedConnectionStackTraces">true</property>

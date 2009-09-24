@@ -106,12 +106,9 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   
   private NioMessageReceiver                     msgReceiver;
   
-  public ServiceSinkHandler( ) {
-    super( );
-  }
+  public ServiceSinkHandler( ) {}
   
   public ServiceSinkHandler( final NioMessageReceiver msgReceiver ) {
-    super( );
     this.msgReceiver = msgReceiver;
   }
   
@@ -139,8 +136,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
           reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
         }
-        LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED,
-                                                         ( System.currentTimeMillis( ) - this.startTime ) ) );
+        LOG.info( EventRecord.create( Component.eucalyptus, reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, reply.getClass( ).getSimpleName( ) ) );
         if ( reply instanceof WalrusDataGetResponseType ) {
           if ( reply instanceof GetObjectResponseType ) {
             final GetObjectResponseType getObjectResponse = ( GetObjectResponseType ) reply;
@@ -186,7 +182,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           msg.setUserId( user.getUserName( ) );
           msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getUserName( ) );
         }
-        LOG.info( EventRecord.create( this.getClass( ).getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
+        LOG.info( EventRecord.create( Component.eucalyptus, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
         ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
         if ( this.msgReceiver == null ) {
           Messaging.dispatch( "vm://RequestQueue", msg );
@@ -199,19 +195,24 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       }
     }
   }
-
+  
   @Override
   public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     try {
       MappingHttpMessage httpRequest = this.requestLocal.get( ctx.getChannel( ) );
-      if( httpRequest != null && httpRequest.getMessage( ) != null && httpRequest.getMessage( ) instanceof EucalyptusMessage ) {
-        EucalyptusMessage origRequest = (EucalyptusMessage) httpRequest.getMessage( );
-        ReplyQueue.removeReplyListener( origRequest.getCorrelationId( ) );     
+      if ( httpRequest != null && httpRequest.getMessage( ) != null && httpRequest.getMessage( ) instanceof EucalyptusMessage ) {
+        EucalyptusMessage origRequest = ( EucalyptusMessage ) httpRequest.getMessage( );
+        ReplyQueue.removeReplyListener( origRequest.getCorrelationId( ) );
       }
     } catch ( Throwable e1 ) {
       LOG.debug( "Failed to remove the channel context on connection close.", e1 );
     }
     super.channelClosed( ctx, e );
+  }
+
+  @Override
+  public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
+    super.messageReceived( ctx, e );
   }
   
 }

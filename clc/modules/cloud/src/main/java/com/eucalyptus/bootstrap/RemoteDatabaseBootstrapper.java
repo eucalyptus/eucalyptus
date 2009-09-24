@@ -90,4 +90,11 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
     return true;//TODO: track remote connectionf failures.
   }
 
+  @Override
+  public void hup( ) {
+    //TODO: remote hup.
+  }
+
+  
+  
 }

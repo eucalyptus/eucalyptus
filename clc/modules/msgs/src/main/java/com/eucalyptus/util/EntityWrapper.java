@@ -76,10 +76,13 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.exception.JDBCConnectionException;
 
+import com.eucalyptus.bootstrap.Component;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.mchange.v2.resourcepool.CannotAcquireResourceException;
 import com.mchange.v2.resourcepool.TimeoutException;
+
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class EntityWrapper<TYPE> {
 
@@ -93,24 +96,27 @@ public class EntityWrapper<TYPE> {
   @SuppressWarnings( "unchecked" )
   public EntityWrapper( String persistenceContext ) {
     try {
-      DbEvent.CREATE.log( );
+      LOG.debug( EventRecord.create( Component.db, DbEvent.CREATE.begin( ) ) );
       this.tx = new TxHandle( persistenceContext );
     } catch ( Throwable e ) {
+      LOG.debug( EventRecord.create( Component.db, DbEvent.CREATE.fail( ),e.getMessage( ) ) );
       this.exceptionCaught( e );
       throw (RuntimeException) e ;
     }
+    LOG.debug( EventRecord.create( Component.db, DbEvent.CREATE.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
   }
 
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
-    DbEvent.QUERY.log( );
+    LOG.debug( EventRecord.create( Component.db, DbEvent.QUERY.begin( ), tx.getTxUuid( ) ) );
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).add( qbe ).list( );
+    LOG.debug( EventRecord.create( Component.db, DbEvent.QUERY.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
 
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
-    DbEvent.UNIQUE.log( );
+    LOG.debug( EventRecord.create( Component.db, DbEvent.UNIQUE.begin( ), tx.getTxUuid( ) ) );
     List<TYPE> res = this.query( example );
     if ( res.size( ) != 1 ) {
       String msg = null;
@@ -118,8 +124,10 @@ public class EntityWrapper<TYPE> {
       if ( msg != null && msg.startsWith( example.getClass( ).getCanonicalName( ) ) ) {
         msg = LogUtil.dumpObject( example );
       }
+      LOG.debug( EventRecord.create( Component.db, DbEvent.QUERY.fail( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
       throw new EucalyptusCloudException( "Error locating information for " + msg );
     }
+    LOG.debug( EventRecord.create( Component.db, DbEvent.QUERY.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
     return res.get( 0 );
   }
 
@@ -150,24 +158,26 @@ public class EntityWrapper<TYPE> {
   }
 
   public void rollback( ) {
+    LOG.debug( EventRecord.create( Component.db, DbEvent.ROLLBACK.begin( ), tx.getTxUuid( ) ) );
     try {
       this.tx.rollback( );
-      DbEvent.ROLLBACK.log( );
     } catch ( Exception e ) {
-      DbEvent.ROLLBACK.log( );
+      LOG.debug( EventRecord.create( Component.db, DbEvent.ROLLBACK.fail( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
       this.exceptionCaught( e );
     }
+    LOG.debug( EventRecord.create( Component.db, DbEvent.ROLLBACK.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
   }
 
   public void commit( ) {
+    LOG.debug( EventRecord.create( Component.db, DbEvent.COMMIT.begin( ), tx.getTxUuid( ) ) );
     try {
       this.tx.commit( );
-      DbEvent.COMMIT.log( );
     } catch ( Throwable e ) {
-      DbEvent.ROLLBACK.log( );
+      LOG.debug( EventRecord.create( Component.db, DbEvent.COMMIT.fail( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
       this.exceptionCaught( e );
       throw (RuntimeException) e ;
     }
+    LOG.debug( EventRecord.create( Component.db, DbEvent.COMMIT.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
   }
 
   public Session getSession( ) {
@@ -183,25 +193,37 @@ public class EntityWrapper<TYPE> {
     return ( EntityWrapper<NEWTYPE> ) this;
   }
 
+  public static StackTraceElement getMyStackTraceElement( ) {
+    int i = 0;
+    for ( StackTraceElement ste : Thread.currentThread( ).getStackTrace( ) ) {
+      if ( i++ < 2 || ste.getClassName( ).matches( ".*EntityWrapper.*" ) 
+          || ste.getClassName( ).matches( ".*TxHandle.*" )
+          || ste.getMethodName( ).equals( "getEntityWrapper" ) ) {
+        continue;
+      } else {
+        return ste;
+      }
+    }
+    throw new RuntimeException( "BUG: Reached bottom of stack trace without finding any relevent frames." );
+  }
+
   enum DbEvent {
     CREATE,
-    COMMIT {
-      public String toString( ) {
-        return "CLOSE " + this.name( );
-      }
-    },
-    ROLLBACK {
-      public String toString( ) {
-        return "CLOSE " + this.name( );
-      }
-    },
+    COMMIT,
+    ROLLBACK,
     UNIQUE,
     QUERY;
-    String getMessage( ) {
-      return this.toString( ) + " " + DebugUtil.getMyStackTraceElement( );
+    public String fail() {
+      return this.name( ) + ":FAIL";
     }
-    public void log( ) {
-      LOG.debug( this.getMessage( ) );
+    public String begin() {
+      return this.name( ) + ":BEGIN";
+    }
+    public String end() {
+      return this.name( ) + ":END";
+    }
+    public String getMessage( ) {
+      return EntityWrapper.getMyStackTraceElement( ).toString( );
     }
   }
 

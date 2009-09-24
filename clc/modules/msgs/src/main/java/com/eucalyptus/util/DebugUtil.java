@@ -12,25 +12,18 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.SystemBootstrapper;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SortedSetMultimap;
 
-public class DebugUtil {
+public class DebugUtil implements EventListener {
   private static Logger LOG   = Logger.getLogger( DebugUtil.class );
   public static boolean DEBUG = true;
-
-  public static StackTraceElement getMyStackTraceElement( ) {
-    Exception e = new Exception( );
-    e.fillInStackTrace( );
-    for ( StackTraceElement ste : e.getStackTrace( ) ) {
-      if ( ste.getClassName( ).startsWith( EntityWrapper.class.getCanonicalName( ).replaceAll( "\\.EntityWrapper.*", "" ) ) || ste.getMethodName( ).equals( "getEntityWrapper" ) ) {
-        continue;
-      } else {
-        return ste;
-      }
-    }
-    throw new RuntimeException( "BUG: Reached bottom of stack trace without finding any relevent frames." );
-  }
+  public static boolean TRACE;
 
   public static Throwable checkForCauseOfInterest( Throwable e, Class<? extends Throwable>... interestingExceptions ) {
     Throwable cause = e;
@@ -172,6 +165,22 @@ public class DebugUtil {
     for( String persistenceContext : DatabaseUtil.getPersistenceContexts( ) ) {
       EntityManagerFactoryImpl anemf = ( EntityManagerFactoryImpl ) DatabaseUtil.getEntityManagerFactory( persistenceContext );
       LOG.debug( LogUtil.subheader( persistenceContext + " hibernate statistics: " + anemf.getSessionFactory( ).getStatistics( ) ) );
+    }
+  }
+
+  public static void hup() {
+    SystemBootstrapper.getDatabaseBootstrapper( ).hup();//FIXME: continue.
+  }
+
+  @Override
+  public void advertiseEvent( Event event ) {
+    
+  }
+
+  @Override
+  public void fireEvent( Event event ) {
+    if( event instanceof ClockTick && ((ClockTick)event).isBackEdge( ) ) {
+      DebugUtil.updateThreadStatus( );
     }
   }
 
