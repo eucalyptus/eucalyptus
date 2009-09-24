@@ -190,7 +190,7 @@
         <appender-ref ref="logfile"/>
     </category>
     <category name="com.mchange" additivity="true">
-        <priority value="DEBUG"/>
+        <priority value="WARN"/>
         <appender-ref ref="console-log"/>
     </category>
     <category name="edu.ucsb.eucalyptus.cloud.ws.WalrusStatistics" additivity="true">
