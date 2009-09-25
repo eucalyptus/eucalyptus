@@ -30,7 +30,7 @@ public class SslSetup {
     System.setProperty("javax.net.ssl.trustStoreType","pkcs12");
     System.setProperty("javax.net.ssl.keyStore",SubDirectory.KEYS.toString( ) + File.separator + "euca.p12" );
     System.setProperty("javax.net.ssl.trustStore",SubDirectory.KEYS.toString( ) + File.separator + "euca.p12" );
-    System.setProperty("javax.net.debug","ssl"); 
+//    System.setProperty("javax.net.debug","ssl"); 
     System.setProperty("javax.net.ssl.keyStorePassword","eucalyptus");
     System.setProperty("javax.net.ssl.trustStorePassword","eucalyptus");
     SSLContext serverContext = null;
