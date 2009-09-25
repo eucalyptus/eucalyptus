@@ -42,9 +42,9 @@ public class KeyPairUtil {
     try {
       key = db.getUnique( new SshKeyPair( userName, keyName ) );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( EucalyptusCloudException e ) {
       db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find key pair: " + keyName + " for user " + userName, e );
+      throw e;
     }
     return key;
   }
@@ -57,9 +57,9 @@ public class KeyPairUtil {
       searchKey.setPublicKey( keyValue );
       key = db.getUnique( searchKey );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( EucalyptusCloudException e ) {
       db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find key pair associated with public key " + keyValue, e );
+      throw e;
     }
     return key;
   }
@@ -71,9 +71,9 @@ public class KeyPairUtil {
       key = db.getUnique( new SshKeyPair( userName, keyName ) );
       db.delete( key );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( EucalyptusCloudException e ) {
       db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find key pair: " + keyName, e );
+      throw e;
     }
     return key;
   }

@@ -79,7 +79,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -105,7 +104,6 @@ import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
-import com.eucalyptus.ws.util.ChannelUtil;
 
 import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
@@ -241,7 +239,6 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
 
   @Override
   public void unrollStage( ChannelPipeline pipeline ) {
-    ChannelUtil.addPipelineMonitors( pipeline );
     pipeline.addLast( "hb-get-handler", new SimpleHeartbeatHandler( ) );
     pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
     try {
@@ -281,14 +278,6 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
         ctx.sendUpstream( e );
       }
     }
-
-    @Override
-    public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
-      super.exceptionCaught( ctx, e );
-      e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-    }
-    
-    
 
   }
 

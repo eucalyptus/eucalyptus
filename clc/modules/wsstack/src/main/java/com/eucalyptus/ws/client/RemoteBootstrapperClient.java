@@ -109,7 +109,6 @@ import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
-import com.eucalyptus.ws.util.ChannelUtil;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
@@ -143,7 +142,6 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
 
   public ChannelPipeline getPipeline( ) throws Exception {
     ChannelPipeline pipeline = Channels.pipeline( );
-    ChannelUtil.addPipelineMonitors( pipeline );
     pipeline.addLast( "decoder", new HttpRequestEncoder( ) );
     pipeline.addLast( "encoder", new HttpResponseDecoder( ) );
     pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
@@ -166,7 +164,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
     @Override
     public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) {
       if ( e instanceof ExceptionEvent ) {
-        LOG.warn( ( ( ExceptionEvent ) e ).getCause( ), ( ( ExceptionEvent ) e ).getCause( ) );
+        LOG.error( ( ( ExceptionEvent ) e ).getCause( ), ( ( ExceptionEvent ) e ).getCause( ) );
         ctx.getChannel( ).close( );
       } else {
         ctx.sendDownstream( e );
@@ -176,7 +174,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
     @Override
     public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) {
       if ( e instanceof ExceptionEvent ) {
-        LOG.warn( ( ( ExceptionEvent ) e ).getCause( ), ( ( ExceptionEvent ) e ).getCause( ) );
+        LOG.error( ( ( ExceptionEvent ) e ).getCause( ), ( ( ExceptionEvent ) e ).getCause( ) );
         ctx.getChannel( ).close( );
       } else {
         ctx.sendUpstream( e );

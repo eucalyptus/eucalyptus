@@ -123,11 +123,11 @@ public class RemoteInfoHandler {
 		List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>( );
 		//FIXME: Min/max vlans values should be obtained
 		try {
-			for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) )
-				clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), 10, 4096 ) );
-		} catch ( Exception e ) {
-			LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
-		}
+      for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) )
+      	clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), 10, 4096 ) );
+    } catch ( Exception e ) {
+      LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
+    }
 		return clusterList;
 	}
 
@@ -158,44 +158,47 @@ public class RemoteInfoHandler {
 	public static synchronized List<StorageInfoWeb> getStorageList( ) throws EucalyptusCloudException {
 		List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
 		for( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
-			if( NetworkUtil.testLocal( cc.getHostName( ) ) && !Component.storage.isEnabled( ) ) {
-				storageList.add( StorageInfoWeb.DEFAULT_SC );
-				continue;
-			}
-			StorageControllerConfiguration c;
-			try {
-				c = Configuration.getStorageControllerConfiguration(  cc.getName( ) );
-				try {
-					GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType(c.getName());
-					if(NetworkUtil.testLocal( cc.getHostName( ) ) && Component.storage.isEnabled()) {
-						getStorageConfiguration.setName(StorageProperties.SC_LOCAL_NAME);
-					} 
-					ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, c.getHostName());
-					GetStorageConfigurationResponseType getStorageConfigResponse = 
-						scDispatch.send(getStorageConfiguration, GetStorageConfigurationResponseType.class);
-					storageList.add(new StorageInfoWeb(c.getName(), 
-							c.getHostName(), 
-							c.getPort(), 
-							getStorageConfigResponse.getStorageRootDirectory(), 
-							getStorageConfigResponse.getMaxVolumeSize(), 
-							getStorageConfigResponse.getMaxTotalVolumeSize(), 
-							getStorageConfigResponse.getStorageInterface(), 
-							getStorageConfigResponse.getZeroFillVolumes()));
-				} catch ( Throwable e ) {
-					LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
-					storageList.add(new StorageInfoWeb(c.getName(), 
-							c.getHostName(), 
-							c.getPort(), 
-							StorageInfoWeb.DEFAULT_SC.getVolumesPath( ), 
-							StorageInfoWeb.DEFAULT_SC.getMaxVolumeSizeInGB( ), 
-							StorageInfoWeb.DEFAULT_SC.getTotalVolumesSizeInGB( ), 
-							StorageInfoWeb.DEFAULT_SC.getStorageInterface( ), 
-							StorageInfoWeb.DEFAULT_SC.getZeroFillVolumes()));            
-				}
-			} catch ( Exception e1 ) {
-				storageList.add( StorageInfoWeb.DEFAULT_SC );
-			}
-		}
+		  if( NetworkUtil.testLocal( cc.getHostName( ) ) && !Component.storage.isEnabled( ) ) {
+        storageList.add( StorageInfoWeb.DEFAULT_SC );
+        continue;
+		  }
+		  StorageControllerConfiguration c;
+      try {
+        c = Configuration.getStorageControllerConfiguration(  cc.getName( ) );
+        try {
+          GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType(c.getName());
+          if(NetworkUtil.testLocal( cc.getHostName( ) ) && Component.storage.isEnabled()) {
+            getStorageConfiguration.setName(StorageProperties.SC_LOCAL_NAME);
+          } 
+          ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, c.getHostName());
+          GetStorageConfigurationResponseType getStorageConfigResponse = 
+            scDispatch.send(getStorageConfiguration, GetStorageConfigurationResponseType.class);
+          storageList.add(new StorageInfoWeb(c.getName(), 
+              c.getHostName(), 
+              c.getPort(), 
+              getStorageConfigResponse.getStorageRootDirectory(), 
+              getStorageConfigResponse.getMaxVolumeSize(), 
+              getStorageConfigResponse.getMaxTotalVolumeSize(), 
+              getStorageConfigResponse.getStorageInterface(), 
+              getStorageConfigResponse.getZeroFillVolumes()));
+          } catch ( Throwable e ) {
+            LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
+            //TODO: NEIL take a look at whether these are the sane defaults, 
+            //or maybe handle the remote messaging failure case differently 
+            //(e.g., sc is registered but down currently)
+            storageList.add(new StorageInfoWeb(c.getName(), 
+                c.getHostName(), 
+                c.getPort(), 
+                StorageInfoWeb.DEFAULT_SC.getVolumesPath( ), 
+                StorageInfoWeb.DEFAULT_SC.getMaxVolumeSizeInGB( ), 
+                StorageInfoWeb.DEFAULT_SC.getTotalVolumesSizeInGB( ), 
+                StorageInfoWeb.DEFAULT_SC.getStorageInterface( ), 
+                StorageInfoWeb.DEFAULT_SC.getZeroFillVolumes()));            
+          }
+      } catch ( Exception e1 ) {
+        storageList.add( StorageInfoWeb.DEFAULT_SC );
+      }
+    }
 		return storageList;
 	}
 
@@ -256,7 +259,7 @@ public class RemoteInfoHandler {
 			throw new SerializableException( e.getMessage( ) );
 		}
 	}
-
+	
 	public static void updateClusterConfigurations( List<ClusterConfiguration> clusterConfigs ) throws EucalyptusCloudException {
 		updateComponentConfigurations( Configuration.getClusterConfigurations( ), clusterConfigs );
 	}
@@ -317,7 +320,6 @@ public class RemoteInfoHandler {
 				new Configuration().registerComponent(regComponent);
 			}			
 		} catch ( Exception e ) {
-			LOG.error(e);
 			throw new EucalyptusCloudException( "Changing component configurations failed: " + e.getMessage( ), e );
 		}
 

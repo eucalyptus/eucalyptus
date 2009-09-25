@@ -226,7 +226,7 @@ public class BlockStorage {
 	}
 
 	public static void check() {
-	  File volumeDir = new File(StorageProperties.storageRootDirectory);
+		File volumeDir = new File(StorageProperties.storageRootDirectory);
 		if(!volumeDir.exists()) {
 			if(!volumeDir.mkdirs()) {
 				LOG.fatal("Unable to make volume root directory: " + StorageProperties.storageRootDirectory);

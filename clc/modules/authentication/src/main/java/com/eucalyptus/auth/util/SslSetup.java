@@ -1,6 +1,5 @@
 package com.eucalyptus.auth.util;
 
-import java.io.File;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -17,47 +16,35 @@ import javax.net.ssl.X509TrustManager;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.SubDirectory;
 
 public class SslSetup {
 
   private static final String     PROTOCOL = "TLS";
-  private static SSLContext SERVER_CONTEXT = null;
-  private static SSLContext CLIENT_CONTEXT = null;
+  private static final SSLContext SERVER_CONTEXT = null;
+  private static final SSLContext CLIENT_CONTEXT = null;
 
   static {
-/*    System.setProperty("javax.net.ssl.keyStoreType","pkcs12");
-    System.setProperty("javax.net.ssl.trustStoreType","pkcs12");
-    System.setProperty("javax.net.ssl.keyStore",SubDirectory.KEYS.toString( ) + File.separator + "euca.p12" );
-    System.setProperty("javax.net.ssl.trustStore",SubDirectory.KEYS.toString( ) + File.separator + "euca.p12" );
-    System.setProperty("javax.net.debug","ssl"); 
-    System.setProperty("javax.net.ssl.keyStorePassword","eucalyptus");
-    System.setProperty("javax.net.ssl.trustStorePassword","eucalyptus");
-    SSLContext serverContext = null;
-    SSLContext clientContext = null;
-    try {
-      KeyStore ks = EucaKeyStore.getInstance( ).getKeyStore( );
-      KeyManagerFactory kmf = KeyManagerFactory.getInstance( "SunX509" );
-      kmf.init( ks, Component.eucalyptus.name( ).toCharArray( ) );
-      serverContext = SSLContext.getInstance( "TLS" );
-      serverContext.init( kmf.getKeyManagers( ), SslSetup.SimpleTrustManager.getTrustManagers( ), null );
-      serverContext = SSLContext.getInstance( "SSLv3" );
-      serverContext.init( kmf.getKeyManagers( ), SslSetup.SimpleTrustManager.getTrustManagers( ), null );
-    } catch ( Exception e ) {
-      throw new Error( "Failed to initialize the server-side SSLContext", e );
-    }
-
-    try {
-      clientContext = SSLContext.getInstance( "TLS" );
-      clientContext.init( null, SslSetup.SimpleTrustManager.getTrustManagers( ), null );
-      clientContext = SSLContext.getInstance( "SSLv3" );
-      clientContext.init( null, SslSetup.SimpleTrustManager.getTrustManagers( ), null );
-    } catch ( Exception e ) {
-      throw new Error( "Failed to initialize the client-side SSLContext", e );
-    }
-
-    SERVER_CONTEXT = serverContext;
-    CLIENT_CONTEXT = clientContext;*/
+//    SSLContext serverContext = null;
+//    SSLContext clientContext = null;
+//    try {
+//      KeyStore ks = EucaKeyStore.getInstance( ).getKeyStore( );
+//      KeyManagerFactory kmf = KeyManagerFactory.getInstance( "SunX509" );
+//      kmf.init( ks, Component.eucalyptus.name( ).toCharArray( ) );
+//      serverContext = SSLContext.getInstance( "TLS" );
+//      serverContext.init( kmf.getKeyManagers( ), SslSetup.SimpleTrustManager.getTrustManagers( ), null );
+//    } catch ( Exception e ) {
+//      throw new Error( "Failed to initialize the server-side SSLContext", e );
+//    }
+//
+//    try {
+//      clientContext = SSLContext.getInstance( "TLS" );
+//      clientContext.init( null, SslSetup.SimpleTrustManager.getTrustManagers( ), null );
+//    } catch ( Exception e ) {
+//      throw new Error( "Failed to initialize the client-side SSLContext", e );
+//    }
+//
+//    SERVER_CONTEXT = serverContext;
+//    CLIENT_CONTEXT = clientContext;
   }
 
   public static SSLContext getServerContext( ) {
@@ -83,6 +70,7 @@ public class SslSetup {
         }
       } catch ( KeyStoreException e ) {
         LOG.error( e, e );
+        System.exit( 123 );
         return null;
       }
     }

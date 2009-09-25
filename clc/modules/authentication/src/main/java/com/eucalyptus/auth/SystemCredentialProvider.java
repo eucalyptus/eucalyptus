@@ -70,10 +70,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.log4j.Logger;
+import org.mortbay.jetty.security.Credential;
+
+import sun.security.krb5.internal.CredentialsUtil;
 
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.KeyTool;
-import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
@@ -175,8 +177,6 @@ public class SystemCredentialProvider extends Bootstrapper {
   public boolean load( Resource current ) throws Exception {
     try {
       Credentials.init( );
-      SslSetup.getClientContext( );
-      SslSetup.getServerContext( );
       for ( Component c : Component.values( ) ) {
         try {
           if ( !SystemCredentialProvider.check( c ) ) SystemCredentialProvider.init( c );

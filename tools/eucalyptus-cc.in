@@ -127,7 +127,7 @@ create_httpd_config() {
 	fi
 
 	# let's configure the CC 
-	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $CC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|"|sed "s|\(StartServers\).*|\1 5|"|sed "s|\(MinSpareServers\).*|\1 5|"|sed "s|\(MaxSpareServers\).*|\1 10|"|sed "s|\(MaxClients\).*|\1 8|" |sed "s|\(MinSpareThreads\).*|\1 25|" | sed "s|\(MaxSpareThreads\).*|\1 75|" | sed "s|\(ThreadsPerChild\).*|\1 1|" | sed "s|\(ThreadLimit\).*|\1 64|" >  $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
+	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $CC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|"|sed "s|\(StartServers\).*|\1 5|"|sed "s|\(MinSpareServers\).*|\1 5|"|sed "s|\(MaxSpareServers\).*|\1 10|"|sed "s|\(MaxClients\).*|\1 150|" |sed "s|\(MinSpareThreads\).*|\1 25|" | sed "s|\(MaxSpareThreads\).*|\1 75|" | sed "s|\(ThreadsPerChild\).*|\1 25|" | sed "s|\(ThreadLimit\).*|\1 64|" >  $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
 
 }
 

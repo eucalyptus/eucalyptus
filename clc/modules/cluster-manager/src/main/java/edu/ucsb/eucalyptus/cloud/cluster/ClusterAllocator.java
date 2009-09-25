@@ -268,12 +268,7 @@ public class ClusterAllocator extends Thread {
         this.pendingEvents.addAll( callback.fireEventAsyncToAllClusters( ( EucalyptusMessage ) event.getEvent( ) ) );
       } else {
         this.pendingEvents.add( event );
-        try {
-          this.cluster.sendEvent( event );
-        } catch ( Exception e ) {
-          LOG.debug( e, e );
-        }        
-//      this.cluster.getMessageQueue().enqueue( event );        
+        this.cluster.getMessageQueue().enqueue( event );        
       }
     }
   }

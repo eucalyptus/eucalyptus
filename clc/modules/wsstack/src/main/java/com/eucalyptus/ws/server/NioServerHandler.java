@@ -166,9 +166,9 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
     response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n", "UTF-8" ) );
-//    ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
-//    writeFuture.addListener( ChannelFutureListener.CLOSE );
-//    Channels.write( ctx, writeFuture, response );
-    ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
+    ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
+    writeFuture.addListener( ChannelFutureListener.CLOSE );
+    Channels.write( ctx, writeFuture, response );
+//    ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
   }
 }

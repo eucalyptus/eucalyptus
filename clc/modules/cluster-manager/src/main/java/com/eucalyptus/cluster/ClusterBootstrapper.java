@@ -133,20 +133,19 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
     LOG.info( "Loading clusters." );
     Component.cluster.markLocal( );
     Component.cluster.markEnabled( );
-    try {
-      for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) ) {
-        Cluster newCluster = ClusterUtil.createCluster( c );
-        this.registerClusterStateHandler( newCluster );
-        ListenerRegistry.getInstance( ).fireEvent( new NewClusterEvent( ).setMessage( newCluster ) );
-      }
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
+    for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) ) {
+      Cluster newCluster = ClusterUtil.createCluster( c );
+      this.registerClusterStateHandler( newCluster );
+      ListenerRegistry.getInstance( ).fireEvent( new NewClusterEvent( ).setMessage( newCluster ) );
     }
     return true;
   }
 
   @Override
   public boolean start( ) throws Exception {
+//    for( Cluster c : Clusters.getInstance( ).getEntries( ) ) {
+//      c.getThreadGroup( ).startThreads();
+//    }
     return true;
   }
 

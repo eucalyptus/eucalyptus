@@ -15,7 +15,7 @@ public class LogUtil {
   }
 
   public static String lineObject( Object o ) {
-    return String.format("%-200.200s",o.dump( ));
+    return String.format("%-100.100s",o.dump());
   }
 
 }
