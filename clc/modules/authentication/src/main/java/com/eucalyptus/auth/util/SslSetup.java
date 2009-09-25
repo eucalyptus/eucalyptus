@@ -20,8 +20,8 @@ import com.eucalyptus.bootstrap.Component;
 public class SslSetup {
 
   private static final String     PROTOCOL = "TLS";
-  private static final SSLContext SERVER_CONTEXT = null;
-  private static final SSLContext CLIENT_CONTEXT = null;
+  private static SSLContext SERVER_CONTEXT = null;
+  private static SSLContext CLIENT_CONTEXT = null;
 
   static {
     SSLContext serverContext = null;
