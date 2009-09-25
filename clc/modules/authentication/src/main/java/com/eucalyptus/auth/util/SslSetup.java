@@ -1,5 +1,6 @@
 package com.eucalyptus.auth.util;
 
+import java.io.File;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -16,6 +17,7 @@ import javax.net.ssl.X509TrustManager;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.SubDirectory;
 
 public class SslSetup {
 
@@ -24,6 +26,13 @@ public class SslSetup {
   private static SSLContext CLIENT_CONTEXT = null;
 
   static {
+    System.setProperty("javax.net.ssl.keyStoreType","pkcs12");
+    System.setProperty("javax.net.ssl.trustStoreType","pkcs12");
+    System.setProperty("javax.net.ssl.keyStore",SubDirectory.KEYS.toString( ) + File.separator + "euca.p12" );
+    System.setProperty("javax.net.ssl.trustStore",SubDirectory.KEYS.toString( ) + File.separator + "euca.p12" );
+    System.setProperty("javax.net.debug","ssl"); 
+    System.setProperty("javax.net.ssl.keyStorePassword","eucalyptus");
+    System.setProperty("javax.net.ssl.trustStorePassword","eucalyptus");
     SSLContext serverContext = null;
     SSLContext clientContext = null;
     try {
@@ -32,12 +41,16 @@ public class SslSetup {
       kmf.init( ks, Component.eucalyptus.name( ).toCharArray( ) );
       serverContext = SSLContext.getInstance( "TLS" );
       serverContext.init( kmf.getKeyManagers( ), SslSetup.SimpleTrustManager.getTrustManagers( ), null );
+      serverContext = SSLContext.getInstance( "SSLv3" );
+      serverContext.init( kmf.getKeyManagers( ), SslSetup.SimpleTrustManager.getTrustManagers( ), null );
     } catch ( Exception e ) {
       throw new Error( "Failed to initialize the server-side SSLContext", e );
     }
 
     try {
       clientContext = SSLContext.getInstance( "TLS" );
+      clientContext.init( null, SslSetup.SimpleTrustManager.getTrustManagers( ), null );
+      clientContext = SSLContext.getInstance( "SSLv3" );
       clientContext.init( null, SslSetup.SimpleTrustManager.getTrustManagers( ), null );
     } catch ( Exception e ) {
       throw new Error( "Failed to initialize the client-side SSLContext", e );

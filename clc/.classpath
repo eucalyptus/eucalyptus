@@ -70,7 +70,7 @@
 	<classpathentry kind="lib" path="lib/gwt-dev-linux-1.6.4.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-servlet-1.6.4.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-user-1.6.4.jar"/>
-	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
+	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar" sourcepath="/home/decker/libhsqldb-java/hsqldb-1.8.0.10"/>
 	<classpathentry kind="lib" path="lib/hsqldbutil-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/inetlib-1.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/janino-2.5.15-1.jar"/>
@@ -98,7 +98,7 @@
 	<classpathentry kind="lib" path="lib/junit-3.8.2.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="lib/mvel-1.3.14.jar"/>
-	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar" sourcepath="/home/decker/jbproject/netty-3.1.0.BETA1"/>
+	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar" sourcepath="/home/decker/jbproject.old/netty-3.1.0.CR1"/>
 	<classpathentry kind="lib" path="lib/openjdk-crypto.jar"/>
 	<classpathentry kind="lib" path="lib/regexp-1.4.jar"/>
 	<classpathentry kind="lib" path="lib/serializer.jar"/>
