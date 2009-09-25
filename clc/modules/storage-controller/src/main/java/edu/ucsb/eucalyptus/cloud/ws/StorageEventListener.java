@@ -95,7 +95,8 @@ public class StorageEventListener implements EventListener {
 	public void fireEvent(Event event) {
 		if(event instanceof StartComponentEvent) {
 			StartComponentEvent startComponentEvent = (StartComponentEvent) event;
-			if(Component.walrus.equals(startComponentEvent.getComponent())) {
+			if(Component.walrus.equals(startComponentEvent.getComponent()) &&
+					Component.storage.isEnabled()) {
 				BlockStorage.checkPending();
 			}
 		} else if(event instanceof StopComponentEvent) {
