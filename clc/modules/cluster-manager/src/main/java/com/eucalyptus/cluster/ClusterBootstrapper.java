@@ -147,6 +147,9 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
 
   @Override
   public boolean start( ) throws Exception {
+//    for( Cluster c : Clusters.getInstance( ).getEntries( ) ) {
+//      c.getThreadGroup( ).startThreads();
+//    }
     return true;
   }
 

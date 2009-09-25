@@ -137,29 +137,23 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
       } catch ( Throwable e1 ) {
         LOG.debug( e1, e1 );
         e.getChannel( ).close( );
-        throw new RuntimeException( e1 );
       }
     }
     super.messageReceived( ctx, e );
   }
-  
-  @Override
-  public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    this.channelConnected = e.getFuture( );
-    if ( this.getRequestQueue( ).peek( ) != null ) {
-      Object msg = this.getRequestQueue( ).poll( );
-      LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
-      this.fireMessage( ( TYPE ) msg, e.getChannel( ) );
-    }
-    super.channelConnected( ctx, e );
-  }
-  
+    
   @Override
   public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    if ( this.getRequestQueue( ).peek( ) != null ) {
-      Object msg = this.getRequestQueue( ).poll( );
-      LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
+    Object msg = null;
+    do {
+      msg = this.getRequestQueue( ).poll( 50, TimeUnit.MILLISECONDS );
+    } while( msg == null );
+    LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
+    try {
       this.fireMessage( ( TYPE ) msg, e.getChannel( ) );
+    } catch ( Exception e1 ) {
+      LOG.debug( e1, e1 );
+      e.getChannel( ).close( );
     }
     super.channelOpen( ctx, e );
   }

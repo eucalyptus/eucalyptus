@@ -80,19 +80,19 @@ import org.jboss.netty.channel.MessageEvent;
 
 public class QueuedEvent<TYPE> {
   private static Logger             LOG = Logger.getLogger( QueuedEvent.class );
-
+  
   private QueuedEventCallback<TYPE> callback;
   private TYPE                      event;
-
+  
   public static <T> QueuedEvent<T> make( final QueuedEventCallback callback, final T event ) {
     return new QueuedEvent<T>( callback, event );
   }
-
+  
   protected QueuedEvent( final QueuedEventCallback callback, final TYPE event ) {
     this.callback = callback;
     this.event = event;
   }
-
+  
   public QueuedEventCallback getCallback( ) {
     return callback;
   }
@@ -100,39 +100,34 @@ public class QueuedEvent<TYPE> {
   public TYPE getEvent( ) {
     return event;
   }
-
+  
   public void trigger( Cluster cluster ) {
     try {
       this.callback.process( this.event );
     } catch ( Throwable t ) {
-      if( t instanceof EucalyptusClusterException ) {
-        
-      } else {
-        LOG.debug( t, t );        
-      }
-    } 
+      LOG.debug( t, t );
+      this.callback.getResponseQueue( ).offer( t );
+    }
   }
-
+  
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
     if ( !( o instanceof QueuedEvent ) ) return false;
-
+    
     QueuedEvent that = ( QueuedEvent ) o;
-
+    
     if ( !callback.equals( that.callback ) ) return false;
     if ( !event.equals( that.event ) ) return false;
-
+    
     return true;
   }
-
+  
   @Override
   public int hashCode( ) {
     int result = callback.hashCode( );
     result = 31 * result + event.hashCode( );
     return result;
   }
-  
-  
   
 }

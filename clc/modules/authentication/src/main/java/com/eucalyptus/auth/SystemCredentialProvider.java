@@ -175,8 +175,8 @@ public class SystemCredentialProvider extends Bootstrapper {
   public boolean load( Resource current ) throws Exception {
     try {
       Credentials.init( );
-      SslSetup.getClientContext( );
-      SslSetup.getServerContext( );
+//      SslSetup.getClientContext( );
+//      SslSetup.getServerContext( );
       for ( Component c : Component.values( ) ) {
         try {
           if ( !SystemCredentialProvider.check( c ) ) SystemCredentialProvider.init( c );
