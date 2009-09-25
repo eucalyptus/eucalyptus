@@ -73,8 +73,8 @@
     <property name="maxStatementsPerConnection">0</property>
     <!--  retry lease: gives 5 seconds before a db timeout occurs. -->
     <property name="acquireRetryAttempts">5</property>
-    <property name="acquireRetryDelay">30000</property>
-    <property name="checkoutTimeout">30000</property>
+    <property name="acquireRetryDelay">1000</property>
+    <property name="checkoutTimeout">1000</property>
     <property name="numHelperThreads">1</property>
     <!--  where? oh where? can my fishy be? 
     <property name="unreturnedConnectionTimeout">60</property>
