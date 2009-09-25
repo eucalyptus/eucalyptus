@@ -96,22 +96,14 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   private static Logger         LOG             = Logger.getLogger( QueuedEventCallback.class );
   private ChannelFuture         channelConnected;
   private TYPE                  request;
-  private ChannelFutureListener CLEAR_PENDING   = new ChannelFutureListener( ) {
-                                                  @Override
-                                                  public void operationComplete( ChannelFuture future ) throws Exception {
-                                                    QueuedEventCallback.this.inFlightMessage.lazySet( false );
-                                                    
-                                                  }
-                                                };
-  private AtomicBoolean         inFlightMessage = new AtomicBoolean( false );
   
   public void process( TYPE msg ) throws Exception {
-    if ( this.channelConnected != null && this.channelConnected.isDone( ) && this.inFlightMessage.compareAndSet( false, true ) ) {
+    super.getRequestQueue( ).add( ( EucalyptusMessage ) msg );
+    if ( this.channelConnected != null && this.channelConnected.isDone( ) ) {
       this.channelConnected = null;
       this.fireMessage( msg, this.channelConnected.getChannel( ) );
     } else {
       LOG.debug( "Found channel pending: defering message " + msg.getClass( ).getCanonicalName( ) );
-      super.getRequestQueue( ).add( ( EucalyptusMessage ) msg );
     }
   }
   
@@ -126,7 +118,7 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
     } catch ( Exception e ) {
       LOG.debug( e, e );
       this.responseQueue.offer( e );
-      channel.close( ).addListener( CLEAR_PENDING );
+      channel.close( );
       throw e;
     }
     channel.write( request );
@@ -138,7 +130,6 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
-    this.inFlightMessage.lazySet( false );
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
       try {
@@ -155,12 +146,7 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     this.channelConnected = e.getFuture( );
-    ctx.getChannel( ).getCloseFuture( ).addListener( CLEAR_PENDING );
-    if ( super.getRequestQueue( ).isEmpty( ) ) {
-      LOG.debug( "Request queue is empty, waiting for write request." );
-      ctx.getChannel( ).close( );
-    } else if ( this.getRequestQueue( ).peek( ) != null ) {
-      this.inFlightMessage.compareAndSet( false, true );
+    if ( this.getRequestQueue( ).peek( ) != null ) {
       Object msg = this.getRequestQueue( ).poll( );
       LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
       this.fireMessage( ( TYPE ) msg, e.getChannel( ) );
@@ -171,7 +157,6 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   @Override
   public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     if ( this.getRequestQueue( ).peek( ) != null ) {
-      this.inFlightMessage.compareAndSet( false, true );
       Object msg = this.getRequestQueue( ).poll( );
       LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
       this.fireMessage( ( TYPE ) msg, e.getChannel( ) );

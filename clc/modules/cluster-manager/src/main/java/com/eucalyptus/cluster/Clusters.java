@@ -81,6 +81,7 @@ import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedLogEvent;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {
@@ -115,7 +116,11 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   public static void sendClusterEvent( Cluster cluster, QueuedEvent event ) throws GeneralSecurityException {
     NioClientPipeline cp = Clusters.getPipelineByType( event );
     NioClient nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
-    event.trigger( cluster );
+    try {
+      nioClient.dispatch( (EucalyptusMessage) event.getEvent( ) );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+    }
   }
 
   private static NioClientPipeline getPipelineByType( QueuedEvent event ) throws GeneralSecurityException {
