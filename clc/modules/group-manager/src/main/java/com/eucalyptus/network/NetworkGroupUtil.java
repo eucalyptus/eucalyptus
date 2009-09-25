@@ -83,8 +83,12 @@ public class NetworkGroupUtil {
   
   protected static void makeDefault( String userId ) {
     try {
-      createUserNetworkRulesGroup( userId, NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
-    } catch ( EucalyptusCloudException e1 ) {}
+      try {
+        getUserNetworkRulesGroup( userId, NetworkRulesGroup.NETWORK_DEFAULT_NAME );
+      } catch ( Throwable e ) {
+        createUserNetworkRulesGroup( userId, NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
+       }
+    } catch ( Throwable e1 ) {}
   }
 
   public static List<SecurityGroupItemType> getUserNetworks( String userId, List<String> groupNames ) throws EucalyptusCloudException {

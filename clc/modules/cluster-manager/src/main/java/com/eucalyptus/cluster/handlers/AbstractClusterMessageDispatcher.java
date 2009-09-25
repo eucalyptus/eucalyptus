@@ -120,7 +120,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   
   public void write( Object o ) {
     if( inFlightMessage.compareAndSet( false, true ) ) {
-      LOG.trace( this.hashCode() + " -> Sending request: " + LogUtil.lineObject( o ) );
+      LOG.debug( this.hashCode() + " -> Sending request: " + LogUtil.lineObject( o ) );
       ChannelFuture channelConnectFuture = this.clientBootstrap.connect( this.remoteAddr );
       HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostName, this.port, this.servicePath, o );
       channelConnectFuture.addListener( ChannelUtil.WRITE( request ) );
@@ -205,7 +205,6 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
     Throwable cause = e.getCause( );
     LOG.debug( cause, cause );
-    Channels.fireExceptionCaught( ctx, cause );
 //    if( cause instanceof ReadTimeoutException ) {      
 //    } else if ( cause instanceof WriteTimeoutException ) {
 //    }

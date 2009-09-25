@@ -24,27 +24,27 @@ public class SslSetup {
   private static final SSLContext CLIENT_CONTEXT = null;
 
   static {
-//    SSLContext serverContext = null;
-//    SSLContext clientContext = null;
-//    try {
-//      KeyStore ks = EucaKeyStore.getInstance( ).getKeyStore( );
-//      KeyManagerFactory kmf = KeyManagerFactory.getInstance( "SunX509" );
-//      kmf.init( ks, Component.eucalyptus.name( ).toCharArray( ) );
-//      serverContext = SSLContext.getInstance( "TLS" );
-//      serverContext.init( kmf.getKeyManagers( ), SslSetup.SimpleTrustManager.getTrustManagers( ), null );
-//    } catch ( Exception e ) {
-//      throw new Error( "Failed to initialize the server-side SSLContext", e );
-//    }
-//
-//    try {
-//      clientContext = SSLContext.getInstance( "TLS" );
-//      clientContext.init( null, SslSetup.SimpleTrustManager.getTrustManagers( ), null );
-//    } catch ( Exception e ) {
-//      throw new Error( "Failed to initialize the client-side SSLContext", e );
-//    }
-//
-//    SERVER_CONTEXT = serverContext;
-//    CLIENT_CONTEXT = clientContext;
+    SSLContext serverContext = null;
+    SSLContext clientContext = null;
+    try {
+      KeyStore ks = EucaKeyStore.getInstance( ).getKeyStore( );
+      KeyManagerFactory kmf = KeyManagerFactory.getInstance( "SunX509" );
+      kmf.init( ks, Component.eucalyptus.name( ).toCharArray( ) );
+      serverContext = SSLContext.getInstance( "TLS" );
+      serverContext.init( kmf.getKeyManagers( ), SslSetup.SimpleTrustManager.getTrustManagers( ), null );
+    } catch ( Exception e ) {
+      throw new Error( "Failed to initialize the server-side SSLContext", e );
+    }
+
+    try {
+      clientContext = SSLContext.getInstance( "TLS" );
+      clientContext.init( null, SslSetup.SimpleTrustManager.getTrustManagers( ), null );
+    } catch ( Exception e ) {
+      throw new Error( "Failed to initialize the client-side SSLContext", e );
+    }
+
+    SERVER_CONTEXT = serverContext;
+    CLIENT_CONTEXT = clientContext;
   }
 
   public static SSLContext getServerContext( ) {
@@ -70,7 +70,6 @@ public class SslSetup {
         }
       } catch ( KeyStoreException e ) {
         LOG.error( e, e );
-        System.exit( 123 );
         return null;
       }
     }

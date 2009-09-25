@@ -124,7 +124,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   @SuppressWarnings( "unchecked" )
   @Override
   public void handleDownstream( final ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e );
+    LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e.getClass( ) );
     if ( e instanceof MessageEvent ) {
       final MessageEvent msge = ( MessageEvent ) e;
       if ( msge.getMessage( ) instanceof NullPayload ) {
@@ -144,7 +144,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         }
       } else {
         e.getFuture( ).cancel( );
-        LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage:" + LogUtil.dumpObject( msge.getMessage( ) ) );
+        LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage:" + msge.getMessage( ).getClass( ) );
       }
       if( e.getFuture( ).isCancelled( ) ) {
         LOG.debug( "Cancelling send on : " + LogUtil.dumpObject( e ) );
