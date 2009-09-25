@@ -8,7 +8,6 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.entities.NetworkRule;
 import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -16,7 +15,6 @@ import com.eucalyptus.ws.util.Messaging;
 
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.cluster.ConfigureNetworkCallback;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
@@ -101,11 +99,7 @@ public class NetworkGroupManager {
       }
     }
     Network changedNetwork = ruleGroup.getVmNetwork( );
-    try {
-      Clusters.dispatchLocal( changedNetwork );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-    }
+    Messaging.dispatch( Component.cluster.getUri( ).toASCIIString( ), changedNetwork );
     return reply;
   }
 
@@ -125,7 +119,7 @@ public class NetworkGroupManager {
     ruleGroup.getNetworkRules().addAll( ruleList );
     NetworkGroupUtil.getEntityWrapper( ).mergeAndCommit( ruleGroup );
     Network changedNetwork = ruleGroup.getVmNetwork( );
-    Clusters.dispatchLocal( changedNetwork );
+    Messaging.dispatch( Component.cluster.getUri( ).toASCIIString( ), changedNetwork );
     reply.set_return( true );
 
     return reply;
