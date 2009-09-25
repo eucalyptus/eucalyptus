@@ -269,7 +269,8 @@ public class ClusterAllocator extends Thread {
       } else {
         this.pendingEvents.add( event );
         try {
-          this.cluster.sendEvent( event );
+          Clusters.dispatchEvent( this.cluster, event );
+//          this.cluster.sendEvent( event );
         } catch ( Exception e ) {
           LOG.debug( e, e );
         }        

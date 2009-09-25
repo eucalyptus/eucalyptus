@@ -78,10 +78,6 @@ public class ClusterEnvelope {
   private String clusterName;
   private QueuedEvent event;
 
-  public static void dispatch( String name, QueuedEvent event ) {
-    Messaging.dispatch( Component.cluster.getUri( ).toASCIIString( ), new ClusterEnvelope( name , event ) );
-  }
-
   public ClusterEnvelope( final String clusterName, final QueuedEvent event ) {
     this.clusterName = clusterName;
     this.event = event;

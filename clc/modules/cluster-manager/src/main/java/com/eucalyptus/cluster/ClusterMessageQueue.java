@@ -111,7 +111,7 @@ public class ClusterMessageQueue implements Runnable {
           LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
           final long msgStart = System.currentTimeMillis( );
           try {
-            Clusters.sendClusterEvent( this.clusterName, event );
+            Clusters.sendEvent( this.clusterName, event );
           } catch ( final Throwable e ) {
             LOG.debug( e, e );
           }

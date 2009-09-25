@@ -67,6 +67,8 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.ws.client.NioClient;
+import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
@@ -114,7 +116,10 @@ public class ClusterEndpoint implements Startable {
   }
 
   public void enqueue( ClusterEnvelope msg ) {
-    Clusters.getInstance().lookup( msg.getClusterName() ).getMessageQueue().enqueue( msg.getEvent() );
+    Cluster cluster = Clusters.getInstance().lookup( msg.getClusterName() );
+    NioClientPipeline cp = Clusters.getPipelineByType( msg.getEvent( ) );
+    NioClient nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
+    msg.getEvent( ).trigger( );
     RequestContext.getEventContext().setStopFurtherProcessing( true );
   }
 

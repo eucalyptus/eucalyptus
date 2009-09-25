@@ -70,6 +70,7 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.ws.client.Client;
 import com.eucalyptus.ws.client.NioClient;
@@ -77,8 +78,10 @@ import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
 import com.eucalyptus.ws.client.pipeline.LogClientPipeline;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
+import com.eucalyptus.ws.util.Messaging;
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.cloud.cluster.ClusterEnvelope;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedLogEvent;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
@@ -108,25 +111,41 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return list;
   }
 
-  public static void sendClusterEvent( String clusterName, QueuedEvent event ) throws Exception {
+  public static void sendEvent( String clusterName, QueuedEvent event ) throws Exception {
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-    Clusters.sendClusterEvent( cluster, event );
+    Clusters.sendEvent( cluster, event );
   }
 
-  public static void sendClusterEvent( Cluster cluster, QueuedEvent event ) throws GeneralSecurityException {
+  public static void dispatchLocal( Object o ) throws Exception {
+    Messaging.dispatch( Component.cluster.getUri( ).toASCIIString( ), o );
+  }
+  
+  public static void sendEvent( Cluster cluster, QueuedEvent event ) {
     NioClientPipeline cp = Clusters.getPipelineByType( event );
     NioClient nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
-    event.trigger( cluster );
+    event.trigger( );
   }
 
-  private static NioClientPipeline getPipelineByType( QueuedEvent event ) throws GeneralSecurityException {
+  public static void dispatchEvent( String name, QueuedEvent event ) {
+    Messaging.dispatch( Component.cluster.getUri( ).toASCIIString( ), new ClusterEnvelope( name , event ) );
+  }
+
+  public static void dispatchEvent( Cluster cluster, QueuedEvent event ) {
+    Messaging.dispatch( Component.cluster.getUri( ).toASCIIString( ), new ClusterEnvelope( cluster.getName( ) , event ) );    
+  }
+
+  public static NioClientPipeline getPipelineByType( QueuedEvent event ) {
     NioClientPipeline cp = null;
     if ( !( event instanceof QueuedLogEvent ) ) {
-      cp = new ClusterClientPipeline( event.getCallback( ) );
-    } else {
-      cp = new LogClientPipeline( event.getCallback( ) );
+      try {
+        cp = new ClusterClientPipeline( event.getCallback( ) );
+      } catch ( GeneralSecurityException e ) {
+        LOG.debug( e, e );
+      }
     }
+    cp = new LogClientPipeline( event.getCallback( ) );
     return cp;
   }
+
   
 }

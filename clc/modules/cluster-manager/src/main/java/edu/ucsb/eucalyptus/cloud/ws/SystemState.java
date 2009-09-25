@@ -172,7 +172,7 @@ public class SystemState {
       }
     }
     try {
-      Clusters.sendClusterEvent( vm.getPlacement( ), QueuedEvent.make( new TerminateCallback( ), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId() ) ) );
+      Clusters.sendEvent( vm.getPlacement( ), QueuedEvent.make( new TerminateCallback( ), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId() ) ) );
     } catch ( Exception e ) {
       LOG.debug( e );
     }

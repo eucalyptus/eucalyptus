@@ -165,7 +165,7 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
     
     public abstract void prepareAll( TYPE msg ) throws Exception;
     
-    protected List<QueuedEvent> fireEventAsyncToAllClusters( final TYPE msg ) {
+    public List<QueuedEvent> fireEventAsyncToAllClusters( final TYPE msg ) {
       this.callbackList = Lists.newArrayList( );
       for ( final Cluster c : Clusters.getInstance( ).listValues( ) ) {
         LOG.info( "-> Sending " + msg.getClass( ).getSimpleName( ) + " network to: " + c.getUri( ) );
@@ -173,7 +173,7 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
         try {
           QueuedEvent q = QueuedEvent.make( this.newInstance( ), msg );
           callbackList.add( q );
-          Clusters.sendClusterEvent( c, q );
+          Clusters.sendEvent( c, q );
         } catch ( final Throwable e ) {
           LOG.error( "Error while sending to: " + c.getUri( ) + " " + msg.getClass( ).getSimpleName( ) );
         }

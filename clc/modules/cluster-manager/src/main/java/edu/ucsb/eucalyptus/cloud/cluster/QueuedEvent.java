@@ -101,7 +101,7 @@ public class QueuedEvent<TYPE> {
     return event;
   }
   
-  public void trigger( Cluster cluster ) {
+  public void trigger( ) {
     try {
       this.callback.process( this.event );
     } catch ( Throwable t ) {
