@@ -96,6 +96,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )
 public class ServiceSinkHandler extends SimpleChannelHandler {
@@ -131,7 +132,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {// Handle single request-response MEP
         EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
-        if ( reply instanceof GetObjectResponseType && ((GetObjectResponseType)reply).getBase64Data( ) == null ) {
+        if ( reply instanceof WalrusDataGetResponseType 
+                && !( reply instanceof GetObjectResponseType && ((GetObjectResponseType)reply).getBase64Data( ) != null ) ) {
           e.getFuture( ).cancel( );
           return;
         } else {
