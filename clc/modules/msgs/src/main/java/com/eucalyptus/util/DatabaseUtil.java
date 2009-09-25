@@ -130,7 +130,6 @@ public class DatabaseUtil implements EventListener {
     	}
       } else {
     	  LOG.warn("-> Database performance severely degraded. Restarting.");
-    	  failCount = 0;
     	  System.exit(123);    	  
       }
     }
