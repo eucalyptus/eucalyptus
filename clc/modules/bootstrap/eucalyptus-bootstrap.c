@@ -561,8 +561,8 @@ int java_init(euca_opts *args, java_home_t *data) {
     	JVM_ARG(opt[++x],"-agentlib:jprofilerti=port=8849");
     	JVM_ARG(opt[++x],"-Xbootclasspath/a:%1$s/bin/agent.jar",GETARG(args,profiler_home));
     }
-    for (i=0; i<args->jvm_args_given; i++,x++) JVM_ARG(opt[x],"-X%s",args->jvm_args_arg[i]);
-    for (i=0; i<args->define_given; i++,x++) JVM_ARG(opt[x],"-D%s",args->define_arg[i]);
+    for (i=0; i<args->jvm_args_given; i++) JVM_ARG(opt[++x],"-X%s",args->jvm_args_arg[i]);
+    for (i=0; i<args->define_given; i++) JVM_ARG(opt[++x],"-D%s",args->define_arg[i]);
 
     opt[++x].optionString=java_class_path;
     opt[x].extraInfo=NULL;
