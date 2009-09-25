@@ -77,7 +77,7 @@ public enum Component {
   walrus( "vm://BukkitInternal" ),
   dns( "vm://DNSControlInternal" ),
   storage( "vm://StorageInternal" ),
-  db( "jdbc:hsqldb:hsqls://127.0.0.1/eucalyptus" ),
+  db( "jdbc:hsqldb:hsql://127.0.0.1:9001/eucalyptus" ),
   cluster( "vm://ClusterSink" ),
   jetty( "vm://HttpServer" ),
   any( true );
@@ -175,7 +175,7 @@ public enum Component {
 
   public String makeUri( String address ) {
     if ( Component.db.equals( this ) ) {
-      return String.format( "jdbc:hsqldb:hsqls://%s/eucalyptus", address );
+      return String.format( "jdbc:hsqldb:hsql://%s:%d/eucalyptus", address, 9001 );
     } else {
       return String.format( "http://%s:%d/internal/%s", address, 8773, this.localUri.replaceAll( "vm://", "" ) );
     }
