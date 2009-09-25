@@ -73,6 +73,13 @@
 <!--          <layout class="org.apache.log4j.PatternLayout"> -->
         <layout class="com.eucalyptus.util.EucaLayout"/>
     </appender>
+    <appender name="console-log" class="org.apache.log4j.RollingFileAppender">
+        <param name="Threshold" value="${euca.log.level}"/>
+        <param name="File" value="${euca.log.dir}/cloud-output.log"/>
+        <param name="MaxFileSize" value="10MB"/>
+        <param name="MaxBackupIndex" value="10"/>
+        <layout class="com.eucalyptus.util.EucaLayout"/>
+    </appender>
     <appender name="logfile" class="org.apache.log4j.RollingFileAppender">
         <param name="File" value="${euca.log.dir}/cloud-debug.log"/>
         <param name="MaxFileSize" value="10MB"/>
@@ -81,7 +88,6 @@
             <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%-.20c{1}:%.10t] %m%n"/>
         </layout>
     </appender>
-
     <appender name="errorlog" class="org.apache.log4j.RollingFileAppender">
         <param name="File" value="${euca.log.dir}/cloud-error.log"/>
         <param name="MaxFileSize" value="10MB"/>
@@ -109,11 +115,48 @@
             <param name="ConversionPattern" value="Timestamp: %d{ISO8601} %m%n"/>
         </layout>
     </appender>
-
+    <category name="com.eucalyptus" additivity="true">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
     <category name="edu.ucsb.eucalyptus" additivity="true">
         <priority value="DEBUG"/>
         <appender-ref ref="logfile"/>
     </category>
+    <!-- 
+      ~ NOTE: The following suppress very verbose but potentially useful output.
+      ~ Consider removing or changing these if you are having unexplained failures. 
+      -->
+    <category name="edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback" additivity="true">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <category name="com.eucalyptus.cluster.AbstractClusterMessageDispatcher" additivity="true">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="true">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <!-- 
+    <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
+        <priority value="INFO"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <category name="com.eucalyptus.ws.util.HmacUtils" additivity="false">
+        <priority value="INFO"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <category name="com.eucalyptus.ws.handlers.HmacV2Handler" additivity="false">
+        <priority value="INFO"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <category name="com.eucalyptus.util.EntityWrapper" additivity="true">
+        <priority value="INFO"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    -->
     <category name="org.apache.commons.beanutils.converters" additivity="false">
         <priority value="ERROR"/>
         <appender-ref ref="logfile"/>
@@ -147,8 +190,8 @@
         <appender-ref ref="logfile"/>
     </category>
     <category name="com.mchange" additivity="true">
-        <priority value="ERROR"/>
-        <appender-ref ref="logfile"/>
+        <priority value="WARN"/>
+        <appender-ref ref="console-log"/>
     </category>
     <category name="edu.ucsb.eucalyptus.cloud.ws.WalrusStatistics" additivity="true">
         <priority value="INFO"/>
@@ -160,7 +203,7 @@
     </category>
 
     <root>
-        <appender-ref ref="console"/>
+        <appender-ref ref="${euca.log.appender}"/>
         <appender-ref ref="errorlog"/>
     </root>
 
