@@ -21,7 +21,8 @@ import com.mchange.v2.c3p0.PooledDataSource;
 
 public class DatabaseUtil implements EventListener {
   static Logger                                        LOG           = Logger.getLogger( DatabaseUtil.class );
-  public static int                                    MAX_FAIL      = 1;
+  public static int                                    MAX_FAIL      = 5;
+  public static int                                    MAX_XTREME_FAIL      = 7;
   public static long                                   MAX_OPEN_TIME = 30 * 1000l;
   private static int                                   failCount     = 0;
   private static Map<String, EntityManagerFactoryImpl> emf           = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
@@ -120,8 +121,17 @@ public class DatabaseUtil implements EventListener {
     } else {
       if ( MAX_FAIL > failCount ) {
         LOG.warn( LogUtil.subheader( "Error using or obtaining a database connection, will try till " + ( MAX_FAIL - failCount++ ) + ">" + MAX_FAIL + " more times before reloading." ) );
+      } else if( MAX_XTREME_FAIL > failCount++) {
+        for ( PooledDataSource ds : ( Set<PooledDataSource> ) C3P0Registry.getPooledDataSources( ) ) {
+    	  try {
+    	    LOG.warn( "-> Resetting hard: " + ds.getDataSourceName( ) );
+    	    ds.hardReset();    	    
+    	  } catch ( Throwable e1 ) {}
+    	}
       } else {
-        System.exit( 123 );// reload.
+    	  LOG.warn("-> Database performance severely degraded. Restarting.");
+    	  failCount = 0;
+    	  System.exit(123);    	  
       }
     }
   }
