@@ -209,9 +209,9 @@ check_ws() {
 		ret=""
 	elif [ "$2" != "" ]; then
 		if [ "$VERBOSE" = "Y" ]; then
-			echo "$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name>.*;\1;'"
+			echo "$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name><euca:detail>\(.*\)</euca:detail>.*;\1 \2;'"
 		fi
-		eval "$2=\"`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name>.*;\1;'`\""
+		eval "$2=\"`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name><euca:detail>\(.*\)</euca:detail>.*;\1 \2;'`\""
 		ret="$?"
 		return $ret
 	else
@@ -1364,8 +1364,15 @@ for x in $LIST ; do
 		if [ -n "$LIST_RES" ]; then
 			echo "registered walruses:"
 		fi
+		tic="N"
 		for x in $LIST_RES ; do
-			echo "   $x"
+			if [ "$tic" = "N" ]; then
+				tic="Y"
+				echo -n "   $x "
+			else
+				tic="N"
+				echo "$x"
+			fi
 		done
 	fi
 	if [ "$x" = "storages" ]; then
@@ -1378,8 +1385,15 @@ for x in $LIST ; do
 		if [ -n "$LIST_RES" ]; then
 			echo "registered storage controllers:"
 		fi
+		tic="N"
 		for x in $LIST_RES ; do
-			echo "   $x"
+			if [ "$tic" = "N" ]; then
+				tic="Y"
+				echo -n "   $x "
+			else
+				tic="N"
+				echo "$x"
+			fi
 		done
 	fi
 	if [ "$x" = "clusters" ]; then
@@ -1392,8 +1406,15 @@ for x in $LIST ; do
 		if [ -n "$LIST_RES" ]; then
 			echo "registered clusters:"
 		fi
+		tic="N"
 		for x in $LIST_RES ; do
-			echo "   $x"
+			if [ "$tic" = "N" ]; then
+				tic="Y"
+				echo -n "   $x "
+			else
+				tic="N"
+				echo "$x"
+			fi
 		done
 	fi
 done
