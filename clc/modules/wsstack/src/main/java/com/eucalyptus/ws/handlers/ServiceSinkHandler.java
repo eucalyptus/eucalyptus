@@ -65,6 +65,7 @@ package com.eucalyptus.ws.handlers;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -77,6 +78,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.mule.DefaultMuleMessage;
 import org.mule.api.MuleMessage;
 import org.mule.transport.NullPayload;
@@ -192,7 +194,12 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         } else {
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
+      } else if( e instanceof IdleStateEvent ) {
+        LOG.debug( "Closing idle connection: " + e );
+        e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+        ctx.sendUpstream( e );
       }
+
     }
   }
   
