@@ -115,7 +115,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   public static void sendClusterEvent( Cluster cluster, QueuedEvent event ) throws GeneralSecurityException {
     NioClientPipeline cp = Clusters.getPipelineByType( event );
     NioClient nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
-    event.trigger( nioClient );
+    event.trigger( cluster );
   }
 
   private static NioClientPipeline getPipelineByType( QueuedEvent event ) throws GeneralSecurityException {

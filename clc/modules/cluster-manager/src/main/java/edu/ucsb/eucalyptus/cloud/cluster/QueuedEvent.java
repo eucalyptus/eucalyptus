@@ -63,6 +63,10 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import java.io.IOException;
+
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.ws.client.Client;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 
@@ -97,11 +101,15 @@ public class QueuedEvent<TYPE> {
     return event;
   }
 
-  public void trigger( Client cluster ) {
+  public void trigger( Cluster cluster ) {
     try {
       this.callback.process( this.event );
     } catch ( Throwable t ) {
-      LOG.debug( t, t );
+      if( t instanceof EucalyptusClusterException ) {
+        
+      } else {
+        LOG.debug( t, t );        
+      }
     } 
   }
 
