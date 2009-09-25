@@ -65,6 +65,7 @@ package com.eucalyptus.ws.handlers;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -77,6 +78,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.mule.DefaultMuleMessage;
 import org.mule.api.MuleMessage;
 import org.mule.transport.NullPayload;
@@ -96,6 +98,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )
 public class ServiceSinkHandler extends SimpleChannelHandler {
@@ -113,6 +116,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   
   @Override
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {//FIXME: handle exceptions cleanly.
+    LOG.debug( e.getCause( ) );
     LOG.trace( ctx.getChannel( ), e.getCause( ) );
     Channels.fireExceptionCaught( ctx.getChannel( ), e.getCause( ) );
   }
@@ -131,7 +135,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {// Handle single request-response MEP
         EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
-        if ( reply instanceof GetObjectResponseType && ((GetObjectResponseType)reply).getBase64Data( ) == null ) {
+        if ( reply instanceof WalrusDataGetResponseType 
+            && !( reply instanceof GetObjectResponseType && ((GetObjectResponseType)reply).getBase64Data( ) != null ) ) {
           e.getFuture( ).cancel( );
           return;
         } else {
@@ -193,6 +198,10 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
       }
+    } else if( e instanceof IdleStateEvent ) {
+      LOG.debug( "Closing idle connection: " + e );
+      e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+      ctx.sendUpstream( e );
     }
   }
   

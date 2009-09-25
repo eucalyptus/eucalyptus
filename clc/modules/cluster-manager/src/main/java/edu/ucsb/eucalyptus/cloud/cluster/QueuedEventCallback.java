@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -81,6 +82,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.handlers.AbstractClusterMessageDispatcher;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
@@ -93,10 +95,18 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   private static Logger LOG = Logger.getLogger( QueuedEventCallback.class );
   private ChannelFuture channelConnected;
   private TYPE          request;
-  
+  private ChannelFutureListener CLEAR_PENDING = new ChannelFutureListener( ) {
+    @Override
+    public void operationComplete( ChannelFuture future ) throws Exception {
+      QueuedEventCallback.this.inFlightMessage.lazySet( false );                
+    }
+  };  
+  private AtomicBoolean inFlightMessage = new AtomicBoolean( false );
+
   public void process( TYPE msg ) throws Exception {
     super.getRequestQueue( ).add( ( EucalyptusMessage ) msg );
-    if ( this.channelConnected != null && this.channelConnected.isDone( ) ) {
+    if ( this.channelConnected != null && this.channelConnected.isDone( ) && this.inFlightMessage.compareAndSet( false, true ) ) {
+      this.channelConnected = null;
       this.fireMessage( msg, this.channelConnected.getChannel( ) );
     } else {
       LOG.debug( "Found channel pending: defering message " + msg.getClass( ).getCanonicalName( ) );
@@ -113,9 +123,10 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
       this.prepare( msg );
     } catch ( Exception e ) {
       LOG.debug( e, e );
+      channel.close( ).addListener( CLEAR_PENDING );
       throw e;
     }
-    channel.write( request );
+    channel.write( request );      
   }
   
   public abstract void prepare( TYPE msg ) throws Exception;
@@ -126,23 +137,25 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse response = (MappingHttpResponse) e.getMessage( );
-      this.verify( (EucalyptusMessage)response.getMessage( ) );
+      try {
+        this.verify( (EucalyptusMessage)response.getMessage( ) );
+      } catch ( Throwable e1 ) {
+        LOG.debug( e1, e1 );
+        e.getChannel( ).close( );
+        throw new RuntimeException( e1 );
+      }
     }
     super.messageReceived( ctx, e );
   }
   
   @Override
-  public void connectRequested( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    this.channelConnected = e.getFuture( );
-    super.connectRequested( ctx, e );
-  }
-  
-  @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     this.channelConnected = e.getFuture( );
+    ctx.getChannel( ).getCloseFuture( ).addListener( CLEAR_PENDING );
     if ( super.getRequestQueue( ).isEmpty( ) ) {
       LOG.debug( "Request queue is empty, waiting for write request." );
-    } else {
+      ctx.getChannel( ).close( );
+    } else if ( this.inFlightMessage.compareAndSet( false, true )  ) {
       Object msg = this.getRequestQueue( ).peek( );
       LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
       this.fireMessage( ( TYPE ) msg, e.getChannel( ) );
@@ -185,4 +198,5 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   public void setRequest( TYPE request ) {
     this.request = request;
   }
+
 }
