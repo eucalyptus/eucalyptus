@@ -95,6 +95,7 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
     } catch ( Exception e2 ) {
       LOG.debug( e2, e2 );
+      throw e2;
     }
   }
 
