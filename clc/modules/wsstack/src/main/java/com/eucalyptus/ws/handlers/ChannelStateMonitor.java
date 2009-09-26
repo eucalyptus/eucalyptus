@@ -34,8 +34,8 @@ public class ChannelStateMonitor extends SimpleChannelHandler {
     Long openTime = this.openTime.getAndSet( 0 );
     Long roundTime = ( closeTime - openTime );
     LOG.debug( EventRecord.create( NioServer.class, EventType.SOCKET_CLOSE, closeTime.toString( ), roundTime.toString( ) ) );
-    LOG.debug( EventRecord.create( NioServer.class, EventType.SOCKET_BYTES_READ, rb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
-    LOG.debug( EventRecord.create( NioServer.class, EventType.SOCKET_BYTES_WRITE, wb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
+    LOG.trace( EventRecord.create( NioServer.class, EventType.SOCKET_BYTES_READ, rb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
+    LOG.trace( EventRecord.create( NioServer.class, EventType.SOCKET_BYTES_WRITE, wb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
   }
   
   @Override
@@ -47,7 +47,7 @@ public class ChannelStateMonitor extends SimpleChannelHandler {
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     openTime.getAndSet( System.currentTimeMillis( ) );
-    LOG.debug( EventRecord.create( NioServer.class, eventUserId, correlationId, EventType.SOCKET_OPEN, openTime.get( ) ) );
+    LOG.trace( EventRecord.create( NioServer.class, eventUserId, correlationId, EventType.SOCKET_OPEN, openTime.get( ) ) );
     super.channelConnected( ctx, e );
   }
   
