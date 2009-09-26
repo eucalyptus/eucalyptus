@@ -100,7 +100,7 @@ public class HmacUtils {
     Calendar ts = Calendar.getInstance( );
     for ( SimpleDateFormat tsFormat : iso8601 ) {
       try {
-        // tsFormat.setTimeZone( TimeZone.getTimeZone( "GMT" ) );
+        tsFormat.setTimeZone( TimeZone.getTimeZone( "GMT" ) );
         ts.setTime( tsFormat.parse( timestamp ) );
         return ts;
       } catch ( ParseException e ) {

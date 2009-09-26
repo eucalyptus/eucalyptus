@@ -145,7 +145,7 @@ public class HmacV2Handler extends MessageStackHandler {
           String computedSig = HmacUtils.getSignature( secretKey, canonicalString, Hashes.Mac.HmacSHA1 );
           LOG.debug( "VERSION1-SHA1:        " + computedSig + " -- " + sig );
           String decodedSig = URLDecoder.decode( sig ).replaceAll( "=", "" );
-          if ( !computedSig.equals( sig ) && !computedSig.equals( decodedSig ) ) {
+          if ( !computedSig.equals( sig.replaceAll( "=", "" ) ) && !computedSig.equals( decodedSig ) && !computedSig.equals( sig ) ) {
             throw new AuthenticationException( "User authentication failed." );
           }
         } else if ( sigVersion == 2 ) {
