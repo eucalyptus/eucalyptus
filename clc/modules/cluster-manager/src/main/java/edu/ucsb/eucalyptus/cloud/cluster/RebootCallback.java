@@ -68,6 +68,7 @@ import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 import org.apache.log4j.Logger;
 
@@ -82,5 +83,11 @@ public class RebootCallback extends QueuedEventCallback<RebootInstancesType> {
 
   @Override
   public void verify( EucalyptusMessage msg ) throws Exception {}
+
+  @Override
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( e, e );
+  }
 
 }

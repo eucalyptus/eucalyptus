@@ -74,6 +74,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
 
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -110,36 +111,39 @@ public class ClusterNodeState {
     VmTypeAvailability vmType = this.typeMap.get( vmTypeName );
     NavigableSet<VmTypeAvailability> sorted = this.sorted();
 
-    LOG.warn( "BEFORE ALLOCATE ============================" );
-    LOG.warn( sorted );
+    LOG.debug( "BEFORE ALLOCATE ============================" );
+    LOG.debug( sorted );
     //:: if not enough, then bail out :://
     if ( vmType.getAvailable() < quantity ) throw new NotEnoughResourcesAvailable("Not enough resources available: vm resources");
 
     Set<VmTypeAvailability> tailSet = sorted.tailSet( vmType );
     Set<VmTypeAvailability> headSet = sorted.headSet( vmType );
-    LOG.warn( "DURING ALLOCATE ============================" );
-    LOG.warn("TAILSET: " + tailSet );
-    LOG.warn("HEADSET: " + headSet );
+    LOG.debug( "DURING ALLOCATE ============================" );
+    LOG.debug("TAILSET: " + tailSet );
+    LOG.debug("HEADSET: " + headSet );
     //:: decrement available resources across the "active" partition :://
     for ( VmTypeAvailability v : tailSet )
       v.decrement( quantity );
     for ( VmTypeAvailability v : headSet )
       v.setAvailable( vmType.getAvailable() );
-    LOG.warn( "AFTER ALLOCATE ============================" );
-    LOG.warn( sorted );
+    LOG.debug( "AFTER ALLOCATE ============================" );
+    LOG.debug( sorted );
 
     ResourceToken token = new ResourceToken( this.clusterName, requestId, userName, quantity, this.virtualTimer++, vmTypeName );
+    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, token ) );
     this.pendingTokens.add( token );
     return token;
   }
 
   public synchronized void releaseToken( ResourceToken token ) {
+    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, token ) );
     this.pendingTokens.remove( token );
     this.submittedTokens.remove( token );
     this.redeemedTokens.remove( token );
   }
 
   public synchronized void submitToken( ResourceToken token ) throws NoSuchTokenException {
+    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, token ) );
     if ( this.pendingTokens.remove( token ) )
       this.submittedTokens.add( token );
     else
@@ -147,6 +151,7 @@ public class ClusterNodeState {
   }
 
   public synchronized void redeemToken( ResourceToken token ) throws NoSuchTokenException {
+    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.redeemed, token ) );
     if ( this.submittedTokens.remove( token ) )
       this.redeemedTokens.add( token );
     else

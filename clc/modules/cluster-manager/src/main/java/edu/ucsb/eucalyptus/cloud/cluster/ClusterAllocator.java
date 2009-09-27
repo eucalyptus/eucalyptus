@@ -77,6 +77,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
@@ -106,7 +107,7 @@ public class ClusterAllocator extends Thread {
 
   private State state;
   private AtomicBoolean rollback;
-  Multimap<State, QueuedEvent> msgMap;
+  private Multimap<State, QueuedEvent> msgMap;
   private Cluster cluster;
   private ConcurrentLinkedQueue<QueuedEvent> pendingEvents;
   private VmAllocationInfo vmAllocInfo;
@@ -124,7 +125,6 @@ public class ClusterAllocator extends Thread {
   }
 
   public void setupAddressMessages( List<String> addresses, List<VmInfo> runningVms ) {
-    
     if ( EucalyptusProperties.disableNetworking ) {
       return;
     } else if ( addresses.size() < runningVms.size() ) {
@@ -140,7 +140,7 @@ public class ClusterAllocator extends Thread {
           msg.setEffectiveUserId( Component.eucalyptus.name() );
           new AddressManager().AssociateAddress( msg );
         } catch ( Exception e ) {
-          LOG.error( e );
+          LOG.error( e, e );
         }
       }
     }
@@ -158,13 +158,12 @@ public class ClusterAllocator extends Thread {
     if ( networkToken != null ) {
       StartNetworkType msg = new StartNetworkType( this.vmAllocInfo.getRequest(), networkToken.getVlan(), networkToken.getNetworkName() );
       this.msgMap.put( State.CREATE_NETWORK, QueuedEvent.make( new StartNetworkCallback( networkToken ), msg ) );
-      this.msgMap.put( State.ROLLBACK, QueuedEvent.make( new StopNetworkCallback( networkToken ), new StopNetworkType( msg ) ) );
     }
     try {
       RunInstancesType request = this.vmAllocInfo.getRequest();
       Network network = Networks.getInstance().lookup( networkToken.getName() );
-      LOG.info( "Setting up rules for: " + network.getName() );
-      LOG.debug( network );
+      LOG.debug( LogUtil.header( "Setting up rules for: " + network.getName() ) );
+      LOG.debug( LogUtil.subheader( network.toString( ) ) );
       ConfigureNetworkType msg = new ConfigureNetworkType( network.getRules() );
       msg.setUserId( networkToken.getUserName( ) );
       msg.setEffectiveUserId( networkToken.getUserName( ) );
@@ -204,8 +203,12 @@ public class ClusterAllocator extends Thread {
     VmTypeInfo vmInfo = this.vmAllocInfo.getVmTypeInfo();
     String rsvId = this.vmAllocInfo.getReservationId();
     VmKeyInfo keyInfo = this.vmAllocInfo.getKeyInfo();
-
-    VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, token.getNetworkIndexes( ) );
+    ArrayList<String> networkIndexes = Lists.newArrayList( );
+    for( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
+      networkIndexes.add( index.toString( ) );
+    }
+    VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, networkIndexes );
+    LOG.debug( LogUtil.subheader( run.toString( ) ) );
     this.msgMap.put( State.CREATE_VMS, QueuedEvent.make( new VmRunCallback( this, token ), run ) );
   }
 
@@ -256,6 +259,8 @@ public class ClusterAllocator extends Thread {
         o = event.getCallback().getResponse( );
       } catch( Throwable t ) {
         LOG.debug( t, t );
+        this.rollback.lazySet( true );
+        this.state = State.ROLLBACK;
       }
     }
   }
@@ -269,15 +274,6 @@ public class ClusterAllocator extends Thread {
       } else {
         this.pendingEvents.add( event );
         this.cluster.getMessageQueue().enqueue( event );        
-      }
-    }
-  }
-
-  public void returnAllocationTokens() {
-    for( ResourceToken token : this.vmAllocInfo.getAllocationTokens() ) {
-      try {
-        Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
-      } catch ( NoSuchTokenException e ) {
       }
     }
   }

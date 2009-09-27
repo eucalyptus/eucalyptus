@@ -63,15 +63,11 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import java.util.NoSuchElementException;
-
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.LogUtil;
 
 import edu.ucsb.eucalyptus.cloud.entities.Address;
-import edu.ucsb.eucalyptus.cloud.net.Addresses;
-import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
@@ -90,9 +86,17 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   }
 
   @Override
-  public void prepare( UnassignAddressType msg ) throws Exception {}
+  public void prepare( UnassignAddressType msg ) throws Exception {
+    //FIXME-BETA: confirm that the address is not already allocated.
+  }
 
   @Override
   public void verify( EucalyptusMessage msg ) throws Exception {}
+
+  @Override
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( e, e );
+  }
 
 }

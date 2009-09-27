@@ -94,5 +94,10 @@ public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetw
   public MultiClusterCallback<ConfigureNetworkType> newInstance( ) {
     return new ConfigureNetworkCallback( );
   }
+  @Override
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( e, e );
+  }
 
 }

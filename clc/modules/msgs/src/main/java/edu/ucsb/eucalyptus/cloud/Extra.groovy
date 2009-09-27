@@ -71,6 +71,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ConcurrentSkipListSet
 
+import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.HasName;
 
 public class Pair {
@@ -298,6 +299,18 @@ public class Network implements HasName {
       this.availableAddresses.add( i );
     }
   }
+
+  public Integer allocateNetworkIndex() {
+    Integer next = this.availableAddresses.pollFirst( );
+    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, "networkIndex=" + next ) );
+    return next;
+  }
+
+  public void returnNetworkIndex( Integer addr ) {
+    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, "networkIndex=" + addr ) );
+    this.availableAddresses.add( addr );
+  }
+
   
   public NetworkToken addTokenIfAbsent(NetworkToken token) {
     this.networkTokens.putIfAbsent(token.getCluster(), token);
@@ -326,15 +339,10 @@ public class Network implements HasName {
   }
 
   @Override
-  public String toString() {
-    return "Network{" +
-           "name='" + name + '\'' +
-           ", networkName='" + networkName + '\'' +
-           ", userName='" + userName + '\'' +
-           ", rules=" + rules +
-           ", networkTokens=" + networkTokens +
-           '}';
+  public String toString( ) {
+    return this.dump( );
   }
+  
 
 }
 
@@ -342,7 +350,7 @@ public class NetworkToken implements Comparable {
 
   String networkName;
   String cluster;
-  int vlan;
+  Integer vlan;
   NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
   String userName;
   String name;
@@ -357,7 +365,7 @@ public class NetworkToken implements Comparable {
   
   @Override
   boolean equals(final Object o) {
-    if ( this == o ) return true;
+    if ( this.is( o ) ) return true;
     if ( !(o instanceof NetworkToken) ) return false;
     NetworkToken that = (NetworkToken) o;
 
@@ -380,19 +388,13 @@ public class NetworkToken implements Comparable {
 
   @Override
   public String toString() {
-    return "NetworkToken{" +
-           "networkName='" + networkName + '\'' +
-           ", cluster='" + cluster + '\'' +
-           ", vlan=" + vlan +
-           ", userName='" + userName + '\'' +
-           ", name='" + name + '\'' +
-           '}';
+    return this.dump( );
   }
 
   @Override
   public int compareTo(Object o) {
     NetworkToken that = (NetworkToken) o;
-    return (!this.cluster.equals(that.cluster) && (this.vlan == that.vlan)) ? this.vlan - that.vlan : this.cluster.compareTo(that.cluster);
+    return (!this.cluster.equals(that.cluster) && (this.vlan.equals( that.vlan ) ) ) ? this.vlan - that.vlan : this.cluster.compareTo(that.cluster);
   }
 
   public StopNetworkType getStopMessage() {
@@ -408,12 +410,11 @@ public class ResourceToken implements Comparable {
   String userName;
   ArrayList<String> instanceIds = new ArrayList<String>();
   ArrayList<String> addresses = new ArrayList<String>();
-  ArrayList<String> networkIndexes = new ArrayList<String>();
   ArrayList<NetworkToken> networkTokens = new ArrayList<NetworkToken>();
-  int amount;
+  Integer amount;
   String vmType;
   Date creationTime;
-  int sequenceNumber;
+  Integer sequenceNumber;
 
   public ResourceToken(final String cluster, final String correlationId, final String userName, final int amount, final int sequenceNumber, final String vmType) {
     this.cluster = cluster;
@@ -425,16 +426,18 @@ public class ResourceToken implements Comparable {
     this.vmType = vmType;
   }
 
-
+  public NetworkToken getPrimaryNetwork() {
+    return this.networkTokens.get( 0 );
+  }
 
   @Override
   public boolean equals(final Object o) {
-    if ( this == o ) return true;
+    if ( this.is( o ) ) return true;
     if ( !(o instanceof ResourceToken) ) return false;
 
     ResourceToken that = (ResourceToken) o;
 
-    if ( amount != that.amount ) return false;
+    if ( !amount.equals( that.amount ) ) return false;
     if ( !cluster.equals(that.cluster) ) return false;
     if ( !correlationId.equals(that.correlationId) ) return false;
     if ( !creationTime.equals(that.creationTime) ) return false;
@@ -459,7 +462,7 @@ public class ResourceToken implements Comparable {
 
   @Override
   public String toString() {
-    return String.format("ResourceToken={ cluster=%10s, vmType=%10s, amount=%04d ]", this.cluster, this.vmType, this.amount);
+    return this.dump( );
   }
 
 }
@@ -472,17 +475,6 @@ public class NodeInfo implements Comparable {
   NodeCertInfo certs = new NodeCertInfo();
   NodeLogInfo logs = new NodeLogInfo();
 
-  @Override
-  public String toString() {
-    return "NodeInfo{" +
-           "serviceTag='" + serviceTag.replaceAll("services/EucalyptusNC","") + '\'' +
-           ", name='" + name + '\'' +
-           ", lastSeen=" + lastSeen +
-           ", certs=" + certs +
-           ", logs=" + logs +
-           '}';
-  }
-
   def NodeInfo(final String serviceTag) {
     this.name = (new URI(serviceTag)).getHost();
     this.serviceTag = serviceTag;
@@ -490,8 +482,6 @@ public class NodeInfo implements Comparable {
     this.certs.setServiceTag(this.serviceTag);
     this.logs.setServiceTag(this.serviceTag);
   }
-
-
 
   def NodeInfo(NodeInfo orig, final NodeCertInfo certs) {
     this(orig.serviceTag);
@@ -505,8 +495,6 @@ public class NodeInfo implements Comparable {
     this.logs = logs;
   }
 
-
-
   def NodeInfo(final NodeCertInfo certs) {
     this(certs.getServiceTag());
     this.certs = certs;
@@ -517,7 +505,10 @@ public class NodeInfo implements Comparable {
     this.logs = logs;
   }
 
-
+  @Override
+  public String toString() {
+    return this.dump( );
+  }
 
   public void touch() {
     this.lastSeen = new Date();
@@ -528,7 +519,7 @@ public class NodeInfo implements Comparable {
   }
 
   boolean equals(final o) {
-    if ( this == o ) return true;
+    if ( this.is( o ) ) return true;
     if ( !(o instanceof NodeInfo) ) return false;
     NodeInfo nodeInfo = (NodeInfo) o;
     if ( !serviceTag.equals(nodeInfo.serviceTag) ) return false;

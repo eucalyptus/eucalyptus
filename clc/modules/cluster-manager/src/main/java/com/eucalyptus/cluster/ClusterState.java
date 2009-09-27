@@ -74,6 +74,7 @@ import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.cluster.Networks;
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public class ClusterState {
   private static Logger LOG = Logger.getLogger( ClusterState.class );
@@ -98,11 +99,11 @@ public class ClusterState {
   }
 
   public NetworkToken getNetworkAllocation( String userName, String networkName ) throws NotEnoughResourcesAvailable {
-    //FIXME: hack hack.  
-    try {
+   try {
       Network existingNet = Networks.getInstance( ).lookup( networkName );
       if( existingNet.getNetworkTokens( ).size( ) > 0 ) {
         NetworkToken token = new NetworkToken( clusterName, userName, networkName, existingNet.getNetworkTokens( ).get( 0 ).getVlan( ) );
+        LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.allocated, token ) );
         return token;        
       }
     } catch ( NoSuchElementException e ) {
@@ -114,10 +115,12 @@ public class ClusterState {
     Integer vlan = ClusterState.availableVlans.pollFirst();
     if( vlan == null ) throw new NotEnoughResourcesAvailable( "Not enough resources available: vlan tags" );
     NetworkToken token = new NetworkToken( clusterName, userName, networkName, vlan );
+    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, token ) );
     return token;
   }
 
   public void releaseNetworkAllocation( NetworkToken token ) {
+    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, token ) );
     try {
       Network existingNet = Networks.getInstance( ).lookup( token.getName( ) );
       if( existingNet.getNetworkTokens( ).size( ) > 1 ) {

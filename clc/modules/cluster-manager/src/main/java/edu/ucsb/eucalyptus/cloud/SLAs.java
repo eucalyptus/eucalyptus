@@ -64,6 +64,7 @@
 package edu.ucsb.eucalyptus.cloud;
 
 import edu.ucsb.eucalyptus.cloud.cluster.*;
+import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.util.*;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import groovy.lang.*;
@@ -74,6 +75,7 @@ import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.FailScriptFailException;
 import com.eucalyptus.util.GroovyUtil;
 import com.google.common.collect.Lists;
@@ -84,16 +86,16 @@ import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 public class SLAs {
-
+  
   private static Logger LOG                  = Logger.getLogger( SLAs.class );
-
+  
   static String         RULES_DIR_NAME       = BaseDirectory.CONF.toString( ) + File.separator + "rules";
   static String         ALLOC_RULES_DIR_NAME = RULES_DIR_NAME + File.separator + "allocation";
   static String         TIMER_RULES_DIR_NAME = RULES_DIR_NAME + File.separator + "timer";
   static String         STATE_RULES_DIR_NAME = RULES_DIR_NAME + File.separator + "state";
-
+  
   ScriptEngineManager   mgr                  = new ScriptEngineManager( );
-
+  
   public List<ResourceToken> doVmAllocation( VmAllocationInfo vmAllocInfo ) throws FailScriptFailException, NotEnoughResourcesAvailable {
     RunInstancesType request = vmAllocInfo.getRequest( );
     String clusterName = request.getAvailabilityZone( );
@@ -116,34 +118,63 @@ public class SLAs {
       for ( Cluster c : Clusters.getInstance( ).getEntries( ) )
         clusterStateList.add( c.getNodeState( ) );
       Allocator blah = this.getAllocator( );
-      return Lists.newArrayList( blah.allocate( request.getCorrelationId( ), request.getUserId( ), vmAllocInfo.getVmTypeInfo( ).getName( ), request.getMinCount( ), request.getMaxCount( ), clusterStateList ) );
+      return Lists.newArrayList( blah.allocate( request.getCorrelationId( ), request.getUserId( ), vmAllocInfo.getVmTypeInfo( ).getName( ), request.getMinCount( ),
+                                                request.getMaxCount( ), clusterStateList ) );
+    }
+  }
+  
+  public void doAddressAllocation( VmAllocationInfo vmAllocInfo ) throws NotEnoughResourcesAvailable {
+    int addrCount = 0;
+    List<ResourceToken> allocTokeList = vmAllocInfo.getAllocationTokens();
+    for ( ResourceToken token : allocTokeList ) {
+      addrCount += token.getAmount();
+    }
+    if ( !EucalyptusProperties.disableNetworking && ( "public".equals( vmAllocInfo.getRequest().getAddressingType() ) || vmAllocInfo.getRequest().getAddressingType() == null ) ) {
+      NavigableSet<String> addresses = AddressManager.allocateAddresses( addrCount );
+      for ( ResourceToken token : allocTokeList ) {
+        for ( int i = 0; i < token.getAmount(); i++ ) {
+          token.getAddresses().add( addresses.pollFirst() );            
+        }
+      }
     }
   }
 
-  public void doNetworkAllocation( String userId, List<ResourceToken> rscTokens, List<Network> networks ) throws NotEnoughResourcesAvailable {
+  public void doNetworkAllocation( VmAllocationInfo vmAllocInfo ) throws NotEnoughResourcesAvailable {
+    String userId = vmAllocInfo.getRequest().getUserId();
+    List<ResourceToken> rscTokens = vmAllocInfo.getAllocationTokens(); 
+    List<Network> networks = vmAllocInfo.getNetworks();
     ResourceToken firstRscToken = rscTokens.get( 0 );
     Network firstNet = networks.get( 0 );
+    Networks.getInstance( ).register( firstNet );
     try {
-      Networks.getInstance( ).lookup( firstNet.getName( ) );
-    } catch ( NoSuchElementException e ) {
-      Networks.getInstance( ).register( firstNet );
-    } finally {
-      try {
-        NetworkToken netToken = allocateClusterVlan( userId, firstRscToken.getCluster( ), firstNet.getName( ) );
-        firstRscToken.getNetworkTokens( ).add( netToken );
-      } catch ( NetworkAlreadyExistsException e ) {}      
+      NetworkToken netToken = allocateClusterVlan( userId, firstRscToken.getCluster( ), firstNet.getName( ) );
+      firstRscToken.getNetworkTokens( ).add( netToken );
+    } catch ( NetworkAlreadyExistsException e ) {
+      LOG.error( e, e );
+    }
+    for ( ResourceToken token : rscTokens ) {
+      for ( int i = 0; i < token.getAmount( ); i++ ) {
+        Integer addrIndex = firstNet.allocateNetworkIndex( );
+        if ( addrIndex == null ) {
+          LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, "networkIndexes=" + token.getPrimaryNetwork( ).getIndexes( ) ) );
+          token.getPrimaryNetwork( ).getIndexes( ).clear( );
+          throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + firstNet.getNetworkName( ) );
+        } else {
+          LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, "networkIndex=" + addrIndex ) );
+          token.getPrimaryNetwork( ).getIndexes( ).add( addrIndex );
+        }
+      }
+    }
+    try {} catch ( NoSuchElementException e ) {
+      throw new NotEnoughResourcesAvailable( "Error obtaining a reference to the network state.  This is a BUG." );
     }
   }
-
+  
   private NetworkToken allocateClusterVlan( final String userId, final String clusterName, final String networkName ) throws NotEnoughResourcesAvailable, NetworkAlreadyExistsException {
     ClusterState clusterState = Clusters.getInstance( ).lookup( clusterName ).getState( );
     Network existingNet = Networks.getInstance( ).lookup( networkName );
-
     NetworkToken networkToken = clusterState.getNetworkAllocation( userId, existingNet.getNetworkName( ) );
-    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, networkToken ) );
-
     if ( existingNet.hasToken( networkToken.getCluster( ) ) ) {
-      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, networkToken ) );
       clusterState.releaseNetworkAllocation( networkToken );
       throw new NetworkAlreadyExistsException( );
     } else {
@@ -152,7 +183,7 @@ public class SLAs {
       return networkToken;
     }
   }
-
+  
   private Allocator getAllocator( ) throws FailScriptFailException {
     Object blah = null;
     try {
@@ -163,5 +194,5 @@ public class SLAs {
     if ( !( blah instanceof Allocator ) ) throw new FailScriptFailException( blah.getClass( ) + " does not implement " + Allocator.class );
     return ( Allocator ) blah;
   }
-
+  
 }

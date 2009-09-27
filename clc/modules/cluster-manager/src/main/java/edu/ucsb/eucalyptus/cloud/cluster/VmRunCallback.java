@@ -66,10 +66,14 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
@@ -91,28 +95,27 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
 
   public void prepare( final VmRunType msg ) throws Exception {
     try {
-      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, token ) );
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
     } catch ( Exception e2 ) {
       LOG.debug( e2, e2 );
+      throw e2;
     }
   }
 
-  public void verify( VmRunResponseType reply ) throws Exception {
+  public void verify( EucalyptusMessage response ) throws Exception {
+    VmRunResponseType reply = (VmRunResponseType) response; 
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
-      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.redeemed, token ) );
-    } catch ( Throwable e1 ) {
-      this.releaseAddresses( );
-      LOG.debug( e1, e1 );
+    } catch ( Throwable e ) {
+      this.fail( e );
+      LOG.debug( e, e );
       return;
     } 
     try {
       if ( reply != null && reply.get_return() ) {
         this.assignAddresses( reply );
       } else {
-        this.releaseAddresses( );
-        this.parent.getRollback().lazySet( true );
+        this.fail( new EucalyptusClusterException( "RunInstances returned false." + this.getRequest( ) ) );
       }
     } catch ( Exception e ) { 
       LOG.debug( e, e );
@@ -133,16 +136,27 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
     }
   }
 
-  private void releaseAddresses( ) {
-    LOG.debug( "Release unusable system owned addresses from failed vm run allocation." );
+  @Override
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ) );
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
+    LOG.debug( "-> Release resource tokens for unused resources." );
+    try {
+      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
+    } catch ( Exception e2 ) {
+      LOG.debug( e2, e2 );
+    }
+    LOG.debug( "-> Release network index allocation." );
+    NetworkToken net = this.token.getPrimaryNetwork( );
+    Network network = Networks.getInstance( ).lookup( net.getName( ) );
+    for( Integer index : this.token.getPrimaryNetwork( ).getIndexes( ) ) {
+      network.returnNetworkIndex( index );
+    }
     for( String s : this.token.getAddresses() ) {
+      LOG.debug( "-> Release addresses from failed vm run allocation: " + s );
       AddressManager.releaseAddress( s );
     }
-  }
-
-  @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {
-    this.verify( (VmRunResponseType) msg );
+    this.parent.getRollback().lazySet( true );    
   }
 
 }

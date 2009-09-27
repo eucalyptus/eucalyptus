@@ -69,6 +69,7 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 import org.apache.log4j.Logger;
 
@@ -83,11 +84,8 @@ public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType> 
   public void prepare( AttachVolumeType msg ) throws Exception {}
 
   @Override
-  public void verify( EucalyptusMessage reply ) throws Exception {
-    this.verify( (AttachVolumeResponseType ) reply );
-  }
-
-  public void verify( AttachVolumeResponseType reply ) throws Exception {
+  public void verify( EucalyptusMessage response ) throws Exception {
+    AttachVolumeResponseType reply = (AttachVolumeResponseType) response;
     if ( !reply.get_return( ) ) {
       LOG.debug( "Trying to remove invalid volume attachment " + this.getRequest().getVolumeId( ) + " from instance " + this.getRequest().getInstanceId( ) );
       try {
@@ -108,6 +106,12 @@ public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType> 
       }
     }
 
+  }
+
+  @Override
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( e, e );
   }
 
 }

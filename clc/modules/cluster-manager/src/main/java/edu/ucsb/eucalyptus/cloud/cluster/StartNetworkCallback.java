@@ -67,6 +67,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 import com.google.common.collect.Lists;
 
@@ -87,8 +88,6 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
 
   @Override
   public void prepareAll( StartNetworkType msg ) throws Exception {
-    //FIXME: re-enable direct rather than lazy recovery of live networks
-    //this.parent.msgMap.put( ClusterAllocator.State.ROLLBACK, new QueuedEvent<StopNetworkType>( new StopNetworkCallback( networkToken ), new StopNetworkType( ) ) );
     msg.setNameserver( edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getNameserverAddress( ) );
     msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
     this.fireEventAsyncToAllClusters( msg );
@@ -107,6 +106,12 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
   @Override
   public MultiClusterCallback<StartNetworkType> newInstance( ) {
     return new StartNetworkCallback( networkToken );
+  }
+
+  @Override
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( e, e );
   }
 
 }

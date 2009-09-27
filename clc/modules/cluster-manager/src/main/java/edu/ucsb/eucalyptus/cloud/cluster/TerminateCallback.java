@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import edu.ucsb.eucalyptus.msgs.*;
 
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 import org.apache.log4j.Logger;
 
@@ -82,5 +83,12 @@ public class TerminateCallback extends QueuedEventCallback<TerminateInstancesTyp
 
   @Override
   public void verify( EucalyptusMessage msg ) throws Exception {}
+
+
+  @Override
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( e, e );
+  }
 
 }

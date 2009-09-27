@@ -66,9 +66,11 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -92,11 +94,10 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
   private static Logger LOG = Logger.getLogger( QueuedEventCallback.class );
   private ChannelFuture channelConnected;
-  private TYPE          request;
+  private AtomicReference<TYPE>          request = new AtomicReference<TYPE>(null);
   
   public void process( TYPE msg ) throws Exception {
-    super.getRequestQueue( ).add( ( EucalyptusMessage ) msg );
-    if ( this.channelConnected != null && this.channelConnected.isDone( ) ) {
+    if ( this.channelConnected != null && this.channelConnected.isDone( ) && this.setRequest( msg ) ) {
       this.fireMessage( msg, this.channelConnected.getChannel( ) );
     } else {
       LOG.debug( "Found channel pending: defering message " + msg.getClass( ).getCanonicalName( ) );
@@ -107,20 +108,16 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
     LOG.debug( "Found channel open: writing message " + msg.getClass( ).getCanonicalName( ) );
     String servicePath = "/axis2/services/EucalyptusCC";//FIXME: handle this in a clean way.
     InetSocketAddress addr = ( InetSocketAddress ) channel.getRemoteAddress( );
-    this.setRequest( msg );
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, addr.getHostName( ), addr.getPort( ), servicePath, msg );
     try {
       this.prepare( msg );
+      channel.write( request );
     } catch ( Exception e ) {
       LOG.debug( e, e );
+      this.fail( e );
       throw e;
     }
-    channel.write( request );
   }
-  
-  public abstract void prepare( TYPE msg ) throws Exception;
-  
-  public abstract void verify( EucalyptusMessage msg ) throws Exception;
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
@@ -131,21 +128,19 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
     super.messageReceived( ctx, e );
   }
   
-  @Override
-  public void connectRequested( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    this.channelConnected = e.getFuture( );
-    super.connectRequested( ctx, e );
-  }
+  public abstract void prepare( TYPE msg ) throws Exception;
+  
+  public abstract void verify( EucalyptusMessage msg ) throws Exception;
+
+  public abstract void fail( Throwable throwable );
   
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     this.channelConnected = e.getFuture( );
-    if ( super.getRequestQueue( ).isEmpty( ) ) {
-      LOG.debug( "Request queue is empty, waiting for write request." );
+    if ( this.getRequest( ) == null ) {
+      LOG.debug( "Request is null, waiting for message to send." );
     } else {
-      Object msg = this.getRequestQueue( ).peek( );
-      LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
-      this.fireMessage( ( TYPE ) msg, e.getChannel( ) );
+      this.fireMessage( ( TYPE ) this.getRequest(), e.getChannel( ) );
     }
     super.channelConnected( ctx, e );
   }
@@ -179,10 +174,17 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   }
   
   public TYPE getRequest( ) {
-    return this.request;
+    return this.request.get( );
   }
   
-  public void setRequest( TYPE request ) {
-    this.request = request;
+  public boolean setRequest( TYPE request ) {
+    return this.request.compareAndSet( null, request );
   }
+
+  @Override
+  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
+    this.fail( e.getCause( ) );
+    super.exceptionCaught( ctx, e );
+  }
+
 }

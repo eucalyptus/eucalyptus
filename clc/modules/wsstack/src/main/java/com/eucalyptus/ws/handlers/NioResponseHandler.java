@@ -106,10 +106,10 @@ public class NioResponseHandler extends SimpleChannelHandler {
   
   public EucalyptusMessage getResponse( ) throws Exception {
     Object response = null;
-    LOG.debug( "-> Waiting for response to event of type: " + this.getClass().getCanonicalName( ) );
     do {
       try {
-        response = this.responseQueue.poll( 1, TimeUnit.SECONDS );
+        LOG.debug( "-> Waiting for response to event of type: " + this.getClass().getCanonicalName( ) );
+        response = this.responseQueue.poll( 10, TimeUnit.MILLISECONDS );
       } catch ( final InterruptedException e ) {}
     } while ( ( response == null ) );
     if ( response != null ) {
@@ -157,11 +157,6 @@ public class NioResponseHandler extends SimpleChannelHandler {
 
   public Throwable getException( ) {
     return this.exception;
-  }
-
-  @Override
-  public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    super.handleUpstream( ctx, e );
   }
 
 }
