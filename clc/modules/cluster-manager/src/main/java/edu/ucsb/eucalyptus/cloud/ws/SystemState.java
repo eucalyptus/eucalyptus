@@ -177,7 +177,6 @@ public class SystemState {
     } catch ( Exception e ) {
       LOG.debug( e );
     }
-    vm.getNetworks( ).listIterator( ).next( ).returnNetworkIndex( vm.getNetworkIndex( ) );
   }
 
   private static void updateVmInstance( final String originCluster, final VmInfo runVm ) {
@@ -212,6 +211,9 @@ public class SystemState {
           vol.setStatus( "attached" );
         }
         vm.setVolumes( runVm.getVolumes() );
+        try {
+          Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
+        } catch ( Exception e ) {}
       }
     }
     catch ( NoSuchElementException e ) {
@@ -266,6 +268,7 @@ public class SystemState {
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.error( e );
           }
+          notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
             notwork = SystemState.getUserNetwork( runVm.getOwnerId(), netName );
