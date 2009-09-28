@@ -116,12 +116,12 @@ public class NioBootstrap extends Bootstrap {
     public void channelOpen( final ChannelHandlerContext context, final ChannelStateEvent event ) {
       try {
         event.getChannel( ).getConfig( ).setOptions( this.bootstrap.getOptions( ) );
-        event.getChannel( ).getConfig( ).setConnectTimeoutMillis( 10000 );
-        event.getChannel( ).getConfig( ).setWriteTimeoutMillis( 10000 );
-        event.getChannel( ).getConfig( ).setOption( "tcpNoDelay", true );
-        event.getChannel( ).getConfig( ).setOption( "keepAlive", true );
-        event.getChannel( ).getConfig( ).setOption( "reuseAddress", true );
-        event.getChannel( ).getConfig( ).setOption( "connectTimeoutMillis", 10000 );
+//        event.getChannel( ).getConfig( ).setConnectTimeoutMillis( 10000 );
+//        event.getChannel( ).getConfig( ).setWriteTimeoutMillis( 10000 );
+//        event.getChannel( ).getConfig( ).setOption( "tcpNoDelay", true );
+//        event.getChannel( ).getConfig( ).setOption( "keepAlive", true );
+//        event.getChannel( ).getConfig( ).setOption( "reuseAddress", true );
+//        event.getChannel( ).getConfig( ).setOption( "connectTimeoutMillis", 10000 );
       } finally {
         context.sendUpstream( event );
       }
