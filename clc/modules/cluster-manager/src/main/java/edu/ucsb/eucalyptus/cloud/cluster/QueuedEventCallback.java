@@ -165,7 +165,7 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
         try {
           QueuedEvent q = QueuedEvent.make( this.newInstance( ), msg );
           callbackList.add( q );
-          c.getMessageQueue( ).enqueue( q );
+          Clusters.sendClusterEvent( c, q );
         } catch ( final Throwable e ) {
           LOG.error( "Error while sending to: " + c.getUri( ) + " " + msg.getClass( ).getSimpleName( ) );
         }

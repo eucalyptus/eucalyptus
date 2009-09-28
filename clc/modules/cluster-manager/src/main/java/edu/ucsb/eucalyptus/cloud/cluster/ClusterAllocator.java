@@ -193,14 +193,14 @@ public class ClusterAllocator extends Thread {
     }
     try {
       RunInstancesType request = this.vmAllocInfo.getRequest();
-      Network network = Networks.getInstance().lookup( networkToken.getNetworkName() );
+      Network network = Networks.getInstance().lookup( networkToken.getName() );
       LOG.debug( LogUtil.header( "Setting up rules for: " + network.getName() ) );
       LOG.debug( LogUtil.subheader( network.toString( ) ) );
       ConfigureNetworkType msg = new ConfigureNetworkType( network.getRules() );
       msg.setUserId( networkToken.getUserName( ) );
       msg.setEffectiveUserId( networkToken.getUserName( ) );
       if ( !network.getRules().isEmpty() ) {
-        this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( new ConfigureNetworkCallback(), msg ) );
+        this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( ConfigureNetworkCallback.CALLBACK, msg ) );
       }
       //:: need to refresh the rules on the backend for all active networks which point to this network :://
       for( Network otherNetwork : Networks.getInstance().listValues() ) {
@@ -210,7 +210,7 @@ public class ClusterAllocator extends Thread {
           ConfigureNetworkType omsg = new ConfigureNetworkType( otherNetwork.getRules() );
           omsg.setUserId( otherNetwork.getUserName() );
           omsg.setEffectiveUserId( Component.eucalyptus.name() );
-          this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( new ConfigureNetworkCallback(), omsg ) );
+          this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( ConfigureNetworkCallback.CALLBACK, omsg ) );
         }
       }
     } catch ( NoSuchElementException e ) {}/* just added this network, shouldn't happen, if so just smile and nod */
