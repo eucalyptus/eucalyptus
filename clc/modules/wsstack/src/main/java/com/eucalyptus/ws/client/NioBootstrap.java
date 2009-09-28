@@ -189,9 +189,7 @@ public class NioBootstrap extends Bootstrap {
       } catch ( final InterruptedException e ) {}
     } while ( future == null );
     pipeline.remove( "connector" );
-    LOG.debug( EventRecord.create( pipeline.getLast( ).getClass( ).getSimpleName( ), Component.eucalyptus.name( ),
-                                   "CONNECT", future.getChannel( ).getRemoteAddress( ).toString( ),
-                                   future.getChannel( ).getLocalAddress( ).toString( ) ) );
+
     return future;
   }
 }

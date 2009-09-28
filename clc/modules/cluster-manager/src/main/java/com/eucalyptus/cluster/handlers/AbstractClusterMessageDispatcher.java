@@ -24,6 +24,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
@@ -47,6 +48,8 @@ import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
+
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public abstract class AbstractClusterMessageDispatcher implements ChannelPipelineFactory, ChannelUpstreamHandler, ChannelDownstreamHandler, EventListener {
   private static Logger     LOG            = Logger.getLogger( AbstractClusterMessageDispatcher.class );
@@ -125,6 +128,10 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   @Override
   public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     LOG.trace( this.hashCode() + " -> Send upstream: " + e.getClass( ) );
+    if( e instanceof MessageEvent ) {
+      LOG.debug( EventRecord.create( this.getClass( ).getSimpleName( ), Component.eucalyptus.name( ),
+                                     "CONNECT", ctx.getChannel( ).getLocalAddress( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
+    }
     ctx.sendDownstream( e );
   }
 
