@@ -515,6 +515,11 @@ public class AddressManager implements Startable {
   public static void unassignAddressFromVm( Address address, VmInstance vm ) {
     EntityWrapper<Address> db = new EntityWrapper<Address>();
     try {
+      vm.getNetworkConfig( ).setIgnoredPublicIp( vm.getNetworkConfig( ).getIpAddress( ) );
+      Address addr = db.getUnique( new Address( address.getName() ) );
+      addr.unassign();
+      address.unassign();
+      db.commit();
       try {
         UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
         UnassignAddressCallback callback = new UnassignAddressCallback( address );
@@ -523,11 +528,6 @@ public class AddressManager implements Startable {
       } catch ( Throwable e ) {
         LOG.debug( e, e );
       }
-      vm.getNetworkConfig( ).setIgnoredPublicIp( vm.getNetworkConfig( ).getIpAddress( ) );
-      Address addr = db.getUnique( new Address( address.getName() ) );
-      addr.unassign();
-      address.unassign();
-      db.commit();
     } catch ( EucalyptusCloudException e ) {
       db.rollback();
     }
@@ -541,6 +541,7 @@ public class AddressManager implements Startable {
       addr.unassign();
       addr.assign( vm.getInstanceId(), vm.getNetworkConfig().getIpAddress() );
       address.assign( vm.getInstanceId(), vm.getNetworkConfig().getIpAddress() );
+      db.commit();
       //:: dispatch the request to the cluster that owns the address :://
       try {
         AssignAddressType assignMsg = Admin.makeMsg( AssignAddressType.class, address.getName(), address.getInstanceAddress(), address.getInstanceId( ) );
@@ -550,7 +551,6 @@ public class AddressManager implements Startable {
       } catch ( Throwable e ) {
         LOG.debug( e, e );
       }
-      db.commit();
     } catch ( EucalyptusCloudException e ) {
       db.rollback();
     }
