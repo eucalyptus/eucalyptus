@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 
 import edu.ucsb.eucalyptus.cloud.entities.Address;
@@ -76,20 +77,17 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
 
   private static Logger LOG = Logger.getLogger( UnassignAddressCallback.class );
 
-  private String pubIp;
-  private String vmIp;
-  private String vmId;
-  
+  private Address parent;
   public UnassignAddressCallback( final Address parent ) {
-    this.vmId = parent.getInstanceId();
-    this.pubIp = parent.getName();
-    this.vmIp = parent.getInstanceAddress();
+    this.parent = parent;
   }
 
   @Override
   public void prepare( UnassignAddressType msg ) throws Exception {
-    //FIXME-BETA: confirm that the address is not already allocated.
     LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, LogUtil.subheader( msg.toString( "eucalyptus_ucsb_edu" ) ) ) );
+    if( this.parent.isAssigned( ) || this.parent.isPending( ) ) {
+      throw new EucalyptusClusterException( "Received request to unassign an address which is either not assigned or has an assignment pending: " + this.parent.toString( ) );
+    }
   }
 
   @Override
