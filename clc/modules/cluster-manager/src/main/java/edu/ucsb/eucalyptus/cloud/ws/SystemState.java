@@ -211,6 +211,7 @@ public class SystemState {
           vol.setStatus( "attached" );
         }
         vm.setVolumes( runVm.getVolumes() );
+	if( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) )
         try {
           Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
         } catch ( Exception e ) {}
@@ -262,13 +263,14 @@ public class SystemState {
         try {
           notwork = Networks.getInstance().lookup( runVm.getOwnerId() + "-" + netName );
           networks.add( notwork );
-          try {
+          try {	
             NetworkToken netToken = Clusters.getInstance().lookup( runVm.getPlacement() ).getState().extantAllocation( runVm.getOwnerId(), netName, runVm.getNetParams().getVlan() );
             notwork.addTokenIfAbsent( netToken );
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.error( e );
           }
-          notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetworkIndex( ) );
+	  if( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) )
+            notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
             notwork = SystemState.getUserNetwork( runVm.getOwnerId(), netName );
