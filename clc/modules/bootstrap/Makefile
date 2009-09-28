@@ -34,7 +34,7 @@ LDCMD = gcc
 
 OBJS =  eucalyptus-bootstrap.o eucalyptus-opts.o
 all: eucalyptus-cloud
-
+build: eucalyptus-cloud
 .c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 

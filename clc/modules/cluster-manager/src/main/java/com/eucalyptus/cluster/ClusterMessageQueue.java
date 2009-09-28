@@ -119,7 +119,7 @@ public class ClusterMessageQueue implements Runnable {
           } catch ( final Throwable e ) {
             LOG.debug( e, e );
           }
-          LOG.debug( LogUtil.subheader( String.format(
+          LOG.info( LogUtil.subheader( String.format(
                                                        "--> [q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s",
                                                        msgStart - start, System.currentTimeMillis( ) - msgStart,
                                                        this.msgQueue.size( ),

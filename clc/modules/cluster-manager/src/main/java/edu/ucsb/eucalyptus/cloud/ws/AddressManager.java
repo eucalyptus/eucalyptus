@@ -517,9 +517,9 @@ public class AddressManager implements Startable {
     try {
       try {
         UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
-        QueuedEvent q = QueuedEvent.make( new UnassignAddressCallback( address ), unassignMsg );
-        Clusters.sendClusterEvent( address.getCluster( ), q );
-        q.getCallback( ).getResponse( );
+        UnassignAddressCallback callback = new UnassignAddressCallback( address );
+        Clusters.sendClusterEvent( address.getCluster( ), QueuedEvent.make( callback, unassignMsg ) );
+        callback.waitForResponse( );
       } catch ( Throwable e ) {
         LOG.debug( e, e );
       }
@@ -544,9 +544,9 @@ public class AddressManager implements Startable {
       //:: dispatch the request to the cluster that owns the address :://
       try {
         AssignAddressType assignMsg = Admin.makeMsg( AssignAddressType.class, address.getName(), address.getInstanceAddress(), address.getInstanceId( ) );
-        QueuedEvent q = QueuedEvent.make( new AssignAddressCallback( vm ), assignMsg );
-        Clusters.sendClusterEvent( address.getCluster( ), q );
-        q.getCallback( ).getResponse( );
+        AssignAddressCallback callback = new AssignAddressCallback( vm );
+        Clusters.sendClusterEvent( address.getCluster( ), QueuedEvent.make( callback, assignMsg ) );
+        callback.waitForResponse( );
       } catch ( Throwable e ) {
         LOG.debug( e, e );
       }
