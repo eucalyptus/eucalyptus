@@ -397,6 +397,13 @@ public class EucalyptusManagement {
 			throw EucalyptusManagement.makeFault( "User does not exist" );
 		}
 		update( target, user );
+		try {
+			CredentialProvider.updateUser(user.getUserName(), user.isEnabled());
+		} catch ( NoSuchUserException e ) {
+			db.rollback();
+			LOG.error(e);
+			throw EucalyptusManagement.makeFault( "Unable to update user" );
+		}
 		db.commit();
 	}
 
