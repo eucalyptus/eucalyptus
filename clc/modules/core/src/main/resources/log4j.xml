@@ -127,6 +127,7 @@
       ~ NOTE: The following suppress very verbose but potentially useful output.
       ~ Consider removing or changing these if you are having unexplained failures. 
       -->
+    <!-- 
     <category name="edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback" additivity="false">
         <priority value="DEBUG"/>
         <appender-ref ref="logfile"/>
@@ -139,7 +140,6 @@
         <priority value="DEBUG"/>
         <appender-ref ref="logfile"/>
     </category>
-    <!-- 
     <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
         <priority value="INFO"/>
         <appender-ref ref="logfile"/>
