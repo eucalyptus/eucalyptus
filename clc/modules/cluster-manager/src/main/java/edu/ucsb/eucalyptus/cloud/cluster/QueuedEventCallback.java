@@ -80,6 +80,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
@@ -110,11 +111,15 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
     try {
       this.prepare( msg );
       channel.write( request );
-    } catch ( Exception e ) {
-      this.fail( e );
+    } catch ( Throwable e ) {
+      try {
+        this.fail( e );
+      } catch ( Exception e1 ) {
+        LOG.debug( e1, e1 );
+      }
       this.queueResponse( e );
       channel.close( );
-      throw e;
+      throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e.getMessage( ), e );
     }
   }
   
@@ -124,15 +129,14 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
       MappingHttpResponse response = (MappingHttpResponse) e.getMessage( );
       try {
         this.verify( (EucalyptusMessage)response.getMessage( ) );
-      } catch ( Exception e1 ) {
+      } catch ( Throwable e1 ) {
         LOG.debug( e1, e1 );
         this.fail( e1 );
         this.queueResponse( e1 );
         ctx.getChannel( ).close( );
-        throw e1;
+        throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e1.getMessage( ), e1 );
       }
     }
-    super.messageReceived( ctx, e );
   }
   
   public abstract void prepare( TYPE msg ) throws Exception;
@@ -140,16 +144,6 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   public abstract void verify( EucalyptusMessage msg ) throws Exception;
 
   public abstract void fail( Throwable throwable );
-  
-  @Override
-  public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    super.channelConnected( ctx, e );
-    if ( this.getRequest( ) == null ) {
-      LOG.debug( "Request is null, waiting for message to send." );
-    } else {
-      this.fireMessage( ctx.getChannel( ) );
-    }
-  }
   
   public abstract static class MultiClusterCallback<TYPE extends EucalyptusMessage> extends QueuedEventCallback<TYPE> {
     private List<QueuedEvent> callbackList = Lists.newArrayList( );
@@ -184,7 +178,11 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   
   @Override
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
-    this.fail( e.getCause( ) );
+    try {
+      this.fail( e.getCause( ) );
+    } catch ( Throwable e1 ) {
+      LOG.debug( e1, e1 );
+    }
     super.exceptionCaught( ctx, e.getCause( ) );
   }
 

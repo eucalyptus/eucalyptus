@@ -69,6 +69,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.ws.client.Client;
@@ -124,7 +125,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       cp = new ClusterClientPipeline( event.getCallback( ) );
     } else {
       cp = new LogClientPipeline( event.getCallback( ) );
-    }
+    }    
     return cp;
   }
   

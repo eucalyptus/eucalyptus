@@ -112,12 +112,12 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   private AtomicBoolean inFlightMessage = new AtomicBoolean( );
   public void write( Object o ) {
     if( inFlightMessage.compareAndSet( false, true ) ) {
-      LOG.trace( this.hashCode() + " -> Sending request: " + LogUtil.lineObject( o ) );
+      LOG.debug( this.hashCode() + " -> Sending request: " + LogUtil.lineObject( o ) );
       ChannelFuture channelConnectFuture = this.clientBootstrap.connect( this.remoteAddr );
       HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostName, this.port, this.servicePath, o );
       channelConnectFuture.addListener( ChannelUtil.WRITE( request ) );
     } else {
-      LOG.trace( this.hashCode() + " -> Rejecting subsequent write because of pending message." );
+      LOG.debug( this.hashCode() + " -> Rejecting subsequent write because of pending message." );
     }
   }
   
@@ -145,11 +145,9 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
         }
       }
       this.clearPending( e.getFuture( ) );
-      ctx.sendUpstream( e );
     } else if ( e instanceof ExceptionEvent ) {
       this.exceptionCaught( ctx, ( ExceptionEvent ) e );
       this.clearPending( e.getFuture( ) );
-      ctx.sendUpstream( e );
     } else if ( e instanceof ChannelStateEvent ) {
       ChannelStateEvent cse = (ChannelStateEvent) e;
       switch(cse.getState( )) {
