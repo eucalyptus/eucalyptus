@@ -269,7 +269,7 @@ public class SystemState {
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.error( e );
           }
-	  if( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) )
+	  if( VmState.RUNNING.equals( runVm.getState( ) ) || VmState.PENDING.equals( runVm.getState( ) ) )
             notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
