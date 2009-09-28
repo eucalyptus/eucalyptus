@@ -366,9 +366,13 @@ public class ImageUtil {
           } catch ( EucalyptusCloudException e ) {
           } finally {
             imgInfo.getUserGroups( ).add( target );
+            if("all".equals(target.getName()))
+          	  imgInfo.setPublic(true);
           }
         } else if ( !adding && imgInfo.getUserGroups( ).contains( target ) ) {
           imgInfo.getUserGroups( ).remove( target );
+          if("all".equals(target.getName()))
+        	  imgInfo.setPublic(false);
         } else if ( !adding ) { throw new EucalyptusCloudException( "image attribute: cant remove nonexistant permission." ); }
       } else if ( perm.isUser( ) ) {
         UserInfo target = new UserInfo( perm.getUserId( ) );
