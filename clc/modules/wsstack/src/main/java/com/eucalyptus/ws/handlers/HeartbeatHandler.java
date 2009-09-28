@@ -201,6 +201,8 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     Component.eucalyptus.setHostAddress( addr.getHostName( ) );
     Component.cluster.setHostAddress( addr.getHostName( ) );
     Component.jetty.setHostAddress( addr.getHostName( ) );
+    //FIXME: mark walrus and storage as disabled to prevent walrus->registered, sc->unregistered to cause sc to bootstrap.
+    //FIXME: remove existing bootstrappers/configuration for disabled component to prevent init.
     HeartbeatType msg = ( HeartbeatType ) request.getMessage( );
     LOG.info( LogUtil.header( "Got heartbeat event: " + LogUtil.dumpObject( msg ) ) );
     for ( HeartbeatComponentType component : msg.getComponents( ) ) {
@@ -221,12 +223,6 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     if ( foundDb ) {
       ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK ) );
       writeFuture.addListener( ChannelFutureListener.CLOSE );
-      writeFuture.addListener( new ChannelFutureListener( ) {
-        @Override
-        public void operationComplete( ChannelFuture future ) throws Exception {
-          channel.close( );
-        }
-      } );
       initialized = true;
     } else {
       ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_ACCEPTABLE ) );
