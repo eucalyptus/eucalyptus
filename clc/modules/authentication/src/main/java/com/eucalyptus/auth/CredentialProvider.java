@@ -312,4 +312,19 @@ public class CredentialProvider extends Bootstrapper {
 			throw new NoSuchUserException(e);
 		}
 	}
+	
+	public static void updateUser(String userName, Boolean isEnabled) throws NoSuchUserException {
+		User user = new User( );
+		user.setUserName( userName );
+		user.setIsEnabled(null);
+		EntityWrapper<User> db = Credentials.getEntityWrapper( );
+		try {
+			User foundUser = db.getUnique(user);
+			foundUser.setIsEnabled(isEnabled);
+			db.commit();
+		} catch (Exception e) {
+			db.rollback();
+			throw new NoSuchUserException(e);
+		}	
+	}
 }
