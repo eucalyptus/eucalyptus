@@ -200,7 +200,7 @@ public class ClusterAllocator extends Thread {
       msg.setUserId( networkToken.getUserName( ) );
       msg.setEffectiveUserId( networkToken.getUserName( ) );
       if ( !network.getRules().isEmpty() ) {
-        this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( ConfigureNetworkCallback.CALLBACK, msg ) );
+        this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( new ConfigureNetworkCallback(), msg ) );
       }
       //:: need to refresh the rules on the backend for all active networks which point to this network :://
       for( Network otherNetwork : Networks.getInstance().listValues() ) {
@@ -210,7 +210,7 @@ public class ClusterAllocator extends Thread {
           ConfigureNetworkType omsg = new ConfigureNetworkType( otherNetwork.getRules() );
           omsg.setUserId( otherNetwork.getUserName() );
           omsg.setEffectiveUserId( Component.eucalyptus.name() );
-          this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( ConfigureNetworkCallback.CALLBACK, omsg ) );
+          this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( new ConfigureNetworkCallback(), omsg ) );
         }
       }
     } catch ( NoSuchElementException e ) {}/* just added this network, shouldn't happen, if so just smile and nod */
