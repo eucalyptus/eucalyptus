@@ -27,30 +27,27 @@ public class ChannelStateMonitor extends SimpleChannelHandler {
   private String           eventUserId   = "unknown";
   private String           correlationId = "unknown";
   
-  public void split( ) {
+  public void split( ChannelHandlerContext ctx ) {
     Long rb = readBytes.getAndSet( 0l );
     Long wb = writeBytes.getAndSet( 0l );
     Long closeTime = System.currentTimeMillis( );
     Long openTime = this.openTime.getAndSet( 0 );
     Long roundTime = ( closeTime - openTime );
-    LOG.debug( EventRecord.create( NioServer.class, EventType.SOCKET_CLOSE, closeTime.toString( ), roundTime.toString( ) ) );
+    LOG.debug( EventRecord.create( ctx.getPipeline( ).getLast( ).getClass( ).getSimpleName( ), EventType.SOCKET_CLOSE, closeTime.toString( ), roundTime.toString( ), ctx.getChannel( ).getLocalAddress( ).toString( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
     LOG.trace( EventRecord.create( NioServer.class, EventType.SOCKET_BYTES_READ, rb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
     LOG.trace( EventRecord.create( NioServer.class, EventType.SOCKET_BYTES_WRITE, wb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
   }
   
   @Override
   public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    this.split( );
+    this.split( ctx );
     super.channelClosed( ctx, e );
   }
   
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     openTime.getAndSet( System.currentTimeMillis( ) );
-//    LOG.trace( EventRecord.create( NioServer.class, eventUserId, correlationId, EventType.SOCKET_OPEN, openTime.get( ) ) );
-    LOG.debug( EventRecord.create( ctx.getPipeline( ).getLast( ).getClass( ).getSimpleName( ), Component.eucalyptus.name( ),
-                                   "CONNECT", ctx.getChannel( ).getLocalAddress( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
-
+    LOG.debug( EventRecord.create( ctx.getPipeline( ).getLast( ).getClass( ).getSimpleName( ), EventType.SOCKET_OPEN, ctx.getChannel( ).getLocalAddress( ).toString( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
     super.channelConnected( ctx, e );
   }
   

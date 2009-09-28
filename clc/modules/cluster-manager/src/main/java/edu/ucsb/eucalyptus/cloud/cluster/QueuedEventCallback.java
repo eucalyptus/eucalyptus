@@ -91,20 +91,20 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
   private static Logger LOG = Logger.getLogger( QueuedEventCallback.class );
-  private ChannelFuture channelConnected;
+  private AtomicReference<ChannelFuture> channelConnected = new AtomicReference<ChannelFuture>();
   private AtomicReference<TYPE>          request = new AtomicReference<TYPE>(null);
   
   public void process( TYPE msg ) throws Exception {
-    if ( this.setRequest( msg ) && this.channelConnected != null && this.channelConnected.isDone( ) ) {
-      this.fireMessage( this.channelConnected.getChannel( ) );
+    if ( this.setRequest( msg ) && this.channelConnected.get( ) != null && this.channelConnected.get( ).isDone( ) ) {
+      this.fireMessage( this.channelConnected.get( ).getChannel( ) );
     } else {
-      LOG.debug( "Found channel pending: defering message " + msg.getClass( ).getCanonicalName( ) );
+      LOG.debug( "Found channel pending: defering message " + msg );
     }
   }
   
   private void fireMessage( Channel channel ) throws Exception {
     TYPE msg = this.getRequest( );
-    LOG.debug( LogUtil.subheader( "Found channel open: writing message " + msg.toString( ) ) );
+    LOG.debug( LogUtil.subheader( "Found channel open: writing message " + msg ) );
     String servicePath = "/axis2/services/EucalyptusCC";//FIXME: handle this in a clean way.
     InetSocketAddress addr = ( InetSocketAddress ) channel.getRemoteAddress( );
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, addr.getHostName( ), addr.getPort( ), servicePath, msg );
@@ -184,6 +184,17 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
       LOG.debug( e1, e1 );
     }
     super.exceptionCaught( ctx, e.getCause( ) );
+  }
+
+
+
+  @Override
+  public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+    this.channelConnected.compareAndSet( null, e.getFuture( ) );
+    if( e.getState( ) != null && this.request.get( ) != null ) {
+      this.fireMessage( e.getChannel( ) );
+    }
+    super.channelConnected( ctx, e );
   }
 
 }
