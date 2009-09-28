@@ -154,7 +154,7 @@ public class SLAs {
     try {
       firstNet = Networks.getInstance( ).lookup( networkName );
     } catch ( NoSuchElementException e ) {
-      Networks.getInstance( ).registerIfAbsent( firstNet, Networks.State.PENDING ); 
+      Networks.getInstance( ).registerIfAbsent( firstNet, Networks.State.ACTIVE ); 
       firstNet = Networks.getInstance( ).lookup( networkName );      
     }
     for ( ResourceToken token : rscTokens ) {

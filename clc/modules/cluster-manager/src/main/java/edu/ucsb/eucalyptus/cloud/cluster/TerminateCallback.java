@@ -65,10 +65,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;

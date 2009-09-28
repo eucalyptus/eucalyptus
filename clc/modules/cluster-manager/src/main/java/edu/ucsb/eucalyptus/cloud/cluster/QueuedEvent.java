@@ -97,15 +97,6 @@ public class QueuedEvent<TYPE> {
     return event;
   }
 
-  public void trigger( Client cluster ) {
-    throw new RuntimeException( "Do not call this anymore." );
-//    try {
-//      this.callback.process( this.event );
-//    } catch ( Throwable t ) {
-//      LOG.debug( t, t );
-//    } 
-  }
-
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;

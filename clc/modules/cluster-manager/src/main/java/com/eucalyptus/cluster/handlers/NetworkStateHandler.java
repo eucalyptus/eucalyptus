@@ -98,7 +98,7 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
             Networks.getInstance( ).setState( net.getName( ), Networks.State.DISABLED );
             this.getCluster( ).getState( ).releaseNetworkAllocation( net.getName( ) );
           }
-        } catch ( GeneralSecurityException e1 ) {
+        } catch ( NoSuchElementException e1 ) {
           LOG.debug( e1, e1 );
         }
       }
