@@ -7,7 +7,6 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -24,7 +23,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
@@ -48,8 +46,6 @@ import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
-
-import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public abstract class AbstractClusterMessageDispatcher implements ChannelPipelineFactory, ChannelUpstreamHandler, ChannelDownstreamHandler, EventListener {
   private static Logger     LOG            = Logger.getLogger( AbstractClusterMessageDispatcher.class );
@@ -160,13 +156,11 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
         case CONNECTED: {
           if( cse.getValue( ) == null ) {
             this.clearPending( e.getFuture( ) );
-          } else {
-            LOG.debug( EventRecord.create( this.getClass( ).getSimpleName( ), Component.eucalyptus.name( ),
-                                           "CONNECT", ctx.getChannel( ).getLocalAddress( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
           }
         } break;
         case OPEN: {
           if( !Boolean.TRUE.equals( cse.getValue( ) ) ) {
+            ctx.sendUpstream( e );
           }
         } break;
         case BOUND: { ctx.sendUpstream( e ); } break;

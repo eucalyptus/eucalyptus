@@ -172,10 +172,11 @@ public class NioResponseHandler extends SimpleChannelHandler {
     try {
       while( this.response.get( ) == null ) {
         try {
-          this.ready.await( 1000, TimeUnit.MILLISECONDS );
+          this.ready.await( 10000, TimeUnit.MILLISECONDS );
           LOG.debug( "Waiting for response." );
         } catch ( InterruptedException e ) {
           LOG.debug( e, e );
+          Thread.currentThread( ).interrupt( );
         }
       }
     } finally {
@@ -185,10 +186,10 @@ public class NioResponseHandler extends SimpleChannelHandler {
 
   @Override
   public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+    super.channelClosed( ctx, e );
     if( this.response.get( ) == null ) {
       this.queueResponse( new EucalyptusClusterException( LogUtil.dumpObject( e ) ) );
     }
-    super.channelClosed( ctx, e );
   }
 
   

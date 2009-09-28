@@ -47,7 +47,10 @@ public class ChannelStateMonitor extends SimpleChannelHandler {
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     openTime.getAndSet( System.currentTimeMillis( ) );
-    LOG.trace( EventRecord.create( NioServer.class, eventUserId, correlationId, EventType.SOCKET_OPEN, openTime.get( ) ) );
+//    LOG.trace( EventRecord.create( NioServer.class, eventUserId, correlationId, EventType.SOCKET_OPEN, openTime.get( ) ) );
+    LOG.debug( EventRecord.create( ctx.getPipeline( ).getLast( ).getClass( ).getSimpleName( ), Component.eucalyptus.name( ),
+                                   "CONNECT", ctx.getChannel( ).getLocalAddress( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
+
     super.channelConnected( ctx, e );
   }
   

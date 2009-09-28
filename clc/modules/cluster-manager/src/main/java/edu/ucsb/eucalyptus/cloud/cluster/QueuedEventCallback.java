@@ -65,14 +65,11 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -81,7 +78,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.LogUtil;
@@ -91,7 +87,6 @@ import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
   private static Logger LOG = Logger.getLogger( QueuedEventCallback.class );
@@ -118,6 +113,7 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
     } catch ( Exception e ) {
       this.fail( e );
       this.queueResponse( e );
+      channel.close( );
       throw e;
     }
   }
@@ -132,6 +128,7 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
         LOG.debug( e1, e1 );
         this.fail( e1 );
         this.queueResponse( e1 );
+        ctx.getChannel( ).close( );
         throw e1;
       }
     }
@@ -146,14 +143,12 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    LOG.debug( EventRecord.create( this.getClass( ).getSimpleName( ), Component.eucalyptus.name( ),
-                                   "CONNECT", ctx.getChannel( ).getLocalAddress( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
+    super.channelConnected( ctx, e );
     if ( this.getRequest( ) == null ) {
       LOG.debug( "Request is null, waiting for message to send." );
     } else {
       this.fireMessage( ctx.getChannel( ) );
     }
-    super.channelConnected( ctx, e );
   }
   
   public abstract static class MultiClusterCallback<TYPE extends EucalyptusMessage> extends QueuedEventCallback<TYPE> {
