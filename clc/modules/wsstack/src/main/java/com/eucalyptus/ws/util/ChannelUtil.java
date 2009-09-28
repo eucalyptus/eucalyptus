@@ -141,10 +141,10 @@ public class ChannelUtil {
   public static NioBootstrap getClientBootstrap( ChannelPipelineFactory factory ) {
     final NioBootstrap bootstrap = new NioBootstrap( ChannelUtil.getClientChannelFactory( ) );//TODO: pass port host, etc here.
     bootstrap.setPipelineFactory( factory );
-    bootstrap.setOption( "keepAlive", false );
-    bootstrap.setOption( "tcpNoDelay", false );
-    bootstrap.setOption( "reuseAddress", false );
-    bootstrap.setOption( "connectTimeoutMillis", 3000 );
+//    bootstrap.setOption( "keepAlive", false );
+//    bootstrap.setOption( "tcpNoDelay", false );
+//    bootstrap.setOption( "reuseAddress", false );
+//    bootstrap.setOption( "connectTimeoutMillis", 3000 );
     return bootstrap;
   }
   
