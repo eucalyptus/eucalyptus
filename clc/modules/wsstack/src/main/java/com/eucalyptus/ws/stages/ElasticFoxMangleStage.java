@@ -77,7 +77,7 @@ public class ElasticFoxMangleStage implements UnrollableStage {
 
   @Override
   public void unrollStage( ChannelPipeline pipeline ) {
-    
+    pipeline.addLast( "elasticfox-handler", new ElasticFoxMangleHandler( ) );
   }
   
 }
