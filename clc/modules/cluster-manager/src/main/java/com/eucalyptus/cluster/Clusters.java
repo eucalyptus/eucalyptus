@@ -113,20 +113,9 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     Clusters.sendClusterEvent( cluster, event );
   }
 
+  @SuppressWarnings( "unchecked" )
   public static void sendClusterEvent( Cluster cluster, QueuedEvent event ) throws GeneralSecurityException {
-    NioClientPipeline cp = Clusters.getPipelineByType( event );
-    NioClient nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
-    event.trigger( nioClient );
-  }
-
-  private static NioClientPipeline getPipelineByType( QueuedEvent event ) throws GeneralSecurityException {
-    NioClientPipeline cp = null;
-    if ( !( event instanceof QueuedLogEvent ) ) {
-      cp = new ClusterClientPipeline( event.getCallback( ) );
-    } else {
-      cp = new LogClientPipeline( event.getCallback( ) );
-    }    
-    return cp;
+    event.getCallback( ).fire( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), event.getEvent( ) );
   }
   
 }

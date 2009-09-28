@@ -98,11 +98,12 @@ public class QueuedEvent<TYPE> {
   }
 
   public void trigger( Client cluster ) {
-    try {
-      this.callback.process( this.event );
-    } catch ( Throwable t ) {
-      LOG.debug( t, t );
-    } 
+    throw new RuntimeException( "Do not call this anymore." );
+//    try {
+//      this.callback.process( this.event );
+//    } catch ( Throwable t ) {
+//      LOG.debug( t, t );
+//    } 
   }
 
   @Override

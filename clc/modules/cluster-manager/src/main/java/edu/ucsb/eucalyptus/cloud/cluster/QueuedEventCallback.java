@@ -64,12 +64,14 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import java.net.InetSocketAddress;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -84,33 +86,73 @@ import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
+import com.eucalyptus.ws.client.NioBootstrap;
+import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
+import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
+import com.eucalyptus.ws.util.ChannelUtil;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
-  private static Logger LOG = Logger.getLogger( QueuedEventCallback.class );
-  private AtomicReference<ChannelFuture> channelConnected = new AtomicReference<ChannelFuture>();
-  private AtomicReference<TYPE>          request = new AtomicReference<TYPE>(null);
+  private static Logger                  LOG              = Logger.getLogger( QueuedEventCallback.class );
+  private AtomicReference<TYPE>          request          = new AtomicReference<TYPE>( null );
+  private ChannelFuture                  connectFuture;
+  private NioBootstrap                   clientBootstrap;
   
-  public void process( TYPE msg ) throws Exception {
-    if ( this.setRequest( msg ) && this.channelConnected.get( ) != null && this.channelConnected.get( ).isDone( ) ) {
-      this.fireMessage( this.channelConnected.get( ).getChannel( ) );
-    } else {
-      LOG.debug( "Found channel pending: defering message " + msg );
+  @Override
+  public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
+    if ( e.getMessage( ) instanceof MappingHttpResponse ) {
+      MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
+      try {
+        this.verify( ( EucalyptusMessage ) response.getMessage( ) );
+      } catch ( Throwable e1 ) {
+        LOG.debug( e1, e1 );
+        this.fail( e1 );
+        super.queueResponse( e1 );
+        e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+        throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e1.getMessage( ), e1 );
+      }
     }
+    super.messageReceived( ctx, e );
   }
   
-  private void fireMessage( Channel channel ) throws Exception {
-    TYPE msg = this.getRequest( );
-    LOG.debug( LogUtil.subheader( "Found channel open: writing message " + msg ) );
-    String servicePath = "/axis2/services/EucalyptusCC";//FIXME: handle this in a clean way.
-    InetSocketAddress addr = ( InetSocketAddress ) channel.getRemoteAddress( );
-    HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, addr.getHostName( ), addr.getPort( ), servicePath, msg );
+  public abstract void prepare( TYPE msg ) throws Exception;
+  
+  public abstract void verify( EucalyptusMessage msg ) throws Exception;
+  
+  public abstract void fail( Throwable throwable );
+    
+  public TYPE getRequest( ) {
+    return this.request.get( );
+  }
+  
+  public boolean setRequest( TYPE request ) {
+    return this.request.compareAndSet( null, request );
+  }
+  
+  @Override
+  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
     try {
+      this.fail( e.getCause( ) );
+    } catch ( Throwable e1 ) {
+      LOG.debug( e1, e1 );
+    }
+    super.exceptionCaught( ctx, e );
+  }
+  
+  public void fire( String hostname, int port, String servicePath, TYPE msg ) {
+    try {
+      NioClientPipeline clientPipeline = new ClusterClientPipeline( this );
+      this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
+      InetSocketAddress addr = new InetSocketAddress( hostname, port );
+      this.request.set( msg );
+      this.connectFuture = this.clientBootstrap.connect( addr );
+      HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, addr.getHostName( ),
+        addr.getPort( ), servicePath, msg );
       this.prepare( msg );
-      channel.write( request );
+      this.connectFuture.addListener( ChannelUtil.WRITE( request ) );
     } catch ( Throwable e ) {
       try {
         this.fail( e );
@@ -118,36 +160,15 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
         LOG.debug( e1, e1 );
       }
       this.queueResponse( e );
-      channel.close( );
-      throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e.getMessage( ), e );
+      this.connectFuture.addListener( ChannelFutureListener.CLOSE );
     }
   }
-  
-  @Override
-  public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
-    if ( e.getMessage( ) instanceof MappingHttpResponse ) {
-      MappingHttpResponse response = (MappingHttpResponse) e.getMessage( );
-      try {
-        this.verify( (EucalyptusMessage)response.getMessage( ) );
-      } catch ( Throwable e1 ) {
-        LOG.debug( e1, e1 );
-        this.fail( e1 );
-        this.queueResponse( e1 );
-        ctx.getChannel( ).close( );
-        throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e1.getMessage( ), e1 );
-      }
-    }
-  }
-  
-  public abstract void prepare( TYPE msg ) throws Exception;
-  
-  public abstract void verify( EucalyptusMessage msg ) throws Exception;
-
-  public abstract void fail( Throwable throwable );
-  
+ 
   public abstract static class MultiClusterCallback<TYPE extends EucalyptusMessage> extends QueuedEventCallback<TYPE> {
     private List<QueuedEvent> callbackList = Lists.newArrayList( );
-    public abstract MultiClusterCallback<TYPE> newInstance();
+    
+    public abstract MultiClusterCallback<TYPE> newInstance( );
+    
     public abstract void prepareAll( TYPE msg ) throws Exception;
     
     protected List<QueuedEvent> fireEventAsyncToAllClusters( final TYPE msg ) {
@@ -165,36 +186,7 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
       }
       return callbackList;
     }
-        
-  }
-  
-  public TYPE getRequest( ) {
-    return this.request.get( );
-  }
-  
-  public boolean setRequest( TYPE request ) {
-    return this.request.compareAndSet( null, request );
-  }
-  
-  @Override
-  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
-    try {
-      this.fail( e.getCause( ) );
-    } catch ( Throwable e1 ) {
-      LOG.debug( e1, e1 );
-    }
-    super.exceptionCaught( ctx, e.getCause( ) );
-  }
-
-
-
-  @Override
-  public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    this.channelConnected.compareAndSet( null, e.getFuture( ) );
-    if( e.getState( ) != null && this.request.get( ) != null ) {
-      this.fireMessage( e.getChannel( ) );
-    }
-    super.channelConnected( ctx, e );
+    
   }
 
 }

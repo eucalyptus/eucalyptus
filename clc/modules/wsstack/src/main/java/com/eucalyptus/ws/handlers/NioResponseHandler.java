@@ -73,6 +73,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -116,12 +117,13 @@ public class NioResponseHandler extends SimpleChannelHandler {
   public void exceptionCaught( final ChannelHandlerContext ctx, final Throwable e ) {
     LOG.debug( e, e );
     this.queueResponse( e );
-    ctx.getChannel( ).close( );    
   }
 
   @Override
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {
     this.exceptionCaught( ctx, e.getCause( ) );
+    e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+    ctx.sendUpstream( e );
   }
   
   @Override
@@ -129,7 +131,8 @@ public class NioResponseHandler extends SimpleChannelHandler {
     final MappingHttpMessage httpResponse = ( MappingHttpMessage ) e.getMessage( );
     final EucalyptusMessage reply = ( EucalyptusMessage ) httpResponse.getMessage( );
     this.queueResponse( reply );
-    e.getChannel( ).close( );
+    e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+    ctx.sendUpstream( e );
   }
 
   public void queueResponse( Object o ) {
@@ -186,10 +189,10 @@ public class NioResponseHandler extends SimpleChannelHandler {
 
   @Override
   public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    super.channelClosed( ctx, e );
     if( this.response.get( ) == null ) {
       this.queueResponse( new EucalyptusClusterException( LogUtil.dumpObject( e ) ) );
     }
+    super.channelClosed( ctx, e );
   }
 
   
