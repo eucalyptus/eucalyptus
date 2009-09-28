@@ -91,7 +91,8 @@ public class NioBootstrap extends Bootstrap {
     private final SocketAddress                remoteAddress;
     private volatile boolean                   finished = false;
     
-    Connector( final Bootstrap bootstrap, final SocketAddress remoteAddress, final SocketAddress localAddress, final BlockingQueue<ChannelFuture> futureQueue ) {
+    Connector( final Bootstrap bootstrap, final SocketAddress remoteAddress, final SocketAddress localAddress,
+               final BlockingQueue<ChannelFuture> futureQueue ) {
       this.bootstrap = bootstrap;
       this.localAddress = localAddress;
       this.futureQueue = futureQueue;
@@ -110,12 +111,12 @@ public class NioBootstrap extends Bootstrap {
     public void channelOpen( final ChannelHandlerContext context, final ChannelStateEvent event ) {
       try {
         event.getChannel( ).getConfig( ).setOptions( this.bootstrap.getOptions( ) );
-        event.getChannel( ).getConfig( ).setConnectTimeoutMillis( 1000 );
+        event.getChannel( ).getConfig( ).setConnectTimeoutMillis( 10000 );
         event.getChannel( ).getConfig( ).setWriteTimeoutMillis( 10000 );
-        event.getChannel( ).getConfig( ).setOption("tcpNoDelay", true);
-        event.getChannel( ).getConfig( ).setOption("keepAlive", true);
-        event.getChannel( ).getConfig( ).setOption("reuseAddress", true);
-        event.getChannel( ).getConfig( ).setOption("connectTimeoutMillis", 1000);
+        event.getChannel( ).getConfig( ).setOption( "tcpNoDelay", false );
+        event.getChannel( ).getConfig( ).setOption( "keepAlive", false );
+        event.getChannel( ).getConfig( ).setOption( "reuseAddress", false );
+        event.getChannel( ).getConfig( ).setOption( "connectTimeoutMillis", 10000 );
       } finally {
         context.sendUpstream( event );
       }
@@ -172,20 +173,15 @@ public class NioBootstrap extends Bootstrap {
       throw new ChannelPipelineException( "Failed to initialize a pipeline.", e );
     }
     
-    pipeline.addFirst( "connector", new Connector( this, remoteAddress, localAddress, futureQueue ) );
-    
+    pipeline.addFirst( "connector", new Connector( this, remoteAddress, localAddress, futureQueue ) );    
     this.getFactory( ).newChannel( pipeline );
-    
-    // Wait until the future is available.
     ChannelFuture future = null;
     do {
       try {
-        future = futureQueue.poll( Integer.MAX_VALUE, TimeUnit.SECONDS );
+        future = futureQueue.poll( 50, TimeUnit.MILLISECONDS );
       } catch ( final InterruptedException e ) {
-        // Ignore
       }
-    } while ( future == null );
-    
+    } while ( future == null );    
     pipeline.remove( "connector" );
     
     return future;

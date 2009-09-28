@@ -63,16 +63,18 @@
  */
 package edu.ucsb.eucalyptus.cloud
 
-import edu.ucsb.eucalyptus.msgs.*
 
+import edu.ucsb.eucalyptus.msgs.*
+import org.apache.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ConcurrentSkipListSet
-
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.HasName;
+import com.google.common.collect.*;
 
 public class Pair {
 
@@ -161,6 +163,18 @@ public class VmInfo extends EucalyptusData {
   String placement;
 
   ArrayList<String> productCodes = new ArrayList<String>();
+
+  @Override
+  public String toString( ) {
+    return String.format(
+                          "VmInfo [groupNames=%s, imageId=%s, instanceId=%s, instanceType=%s, kernelId=%s, keyValue=%s, launchIndex=%s, launchTime=%s, netParams=%s, networkIndex=%s, ownerId=%s, placement=%s, productCodes=%s, ramdiskId=%s, reservationId=%s, serviceTag=%s, stateName=%s, userData=%s, volumes=%s]",
+                          this.groupNames, this.imageId, this.instanceId, this.instanceType, this.kernelId,
+                          this.keyValue, this.launchIndex, this.launchTime, this.netParams, this.networkIndex,
+                          this.ownerId, this.placement, this.productCodes, this.ramdiskId, this.reservationId,
+                          this.serviceTag, this.stateName, this.userData, this.volumes );
+  }
+
+  
 }
 
 public class VmRunType extends EucalyptusMessage {
@@ -229,12 +243,18 @@ public class VmRunType extends EucalyptusMessage {
 	    this.macAddresses = macAddresses;
 	    this.networkNames = networkNames;
 	    this.networkIndexList = networkIndexList;
-}
-  
-  public String toString() {
-    return this.dump( );
   }
 
+  @Override
+  public String toString( ) {
+    return String.format(
+                          "VmRunType [imageInfo=%s, instanceIds=%s, keyInfo=%s, launchIndex=%s, macAddresses=%s, max=%s, min=%s, networkIndexList=%s, networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s]",
+                          this.imageInfo, this.instanceIds, this.keyInfo, this.launchIndex, this.macAddresses,
+                          this.max, this.min, this.networkIndexList, this.networkNames, this.reservationId,
+                          this.userData, this.vlan, this.vmTypeInfo );
+  }  
+
+  
 }
 
 public class VmImageInfo {
@@ -261,6 +281,15 @@ public class VmImageInfo {
 
   def VmImageInfo() {}
 
+  @Override
+  public String toString( ) {
+    return String.format(
+                          "VmImageInfo [ancestorIds=%s, imageId=%s, imageLocation=%s, kernelId=%s, kernelLocation=%s, productCodes=%s, ramdiskId=%s, ramdiskLocation=%s, size=%s]",
+                          this.ancestorIds, this.imageId, this.imageLocation, this.kernelId, this.kernelLocation,
+                          this.productCodes, this.ramdiskId, this.ramdiskLocation, this.size );
+  }
+  
+
 }
 
 public class VmKeyInfo {
@@ -277,16 +306,23 @@ public class VmKeyInfo {
 
   def VmKeyInfo() {}
 
+  @Override
+  public String toString( ) {
+    return String.format( "VmKeyInfo [fingerprint=%s, name=%s, value=%s]", this.fingerprint, this.name, this.value );
+  }
+  
+
 }
 
 public class Network implements HasName {
-
+  private static Logger LOG = Logger.getLogger( Network.class );
   String name;
   String networkName;
   String userName;
   ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
-  ConcurrentMap<String, NetworkToken> networkTokens = new ConcurrentHashMap<String, NetworkToken>();
-  NavigableSet<Integer> availableAddresses;
+  private ConcurrentMap<String, NetworkToken> networkTokens = new ConcurrentHashMap<String,NetworkToken>();
+  private NavigableSet<Integer> availableAddresses;
+  Integer vlan = null;
 
   def Network() {}
 
@@ -295,38 +331,80 @@ public class Network implements HasName {
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
     this.availableAddresses = new ConcurrentSkipListSet<Integer>();
-    for( int i = 2; i < 8192; i++ ) {
+    for( int i = 2; i < 256; i++ ) {//FIXME: potentially a network can be more than a /24. update w/ real constraints at runtime.
       this.availableAddresses.add( i );
     }
   }
 
-  public Integer allocateNetworkIndex() {
+  public void extantNetworkIndex( String cluster, Integer index ) {
+    if( index < 2 ) {
+      this.availableAddresses.remove( index );
+    } else {
+      LOG.info( this.toString( ) );
+      if( this.availableAddresses.remove( index ) ) {
+        LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.allocated, "${this.name} networkIndex=${index}" ) );    
+        NetworkToken token = this.getClusterToken( cluster );
+        token.indexes.add( index );
+      }
+    }
+  }
+
+  public NetworkToken getClusterToken( String cluster ) {
+    return this.networkTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan ) );
+  }
+  
+  public void trim( Integer max ) {
+    this.availableAddresses.tailSet( max-1, true ).clear( );
+    this.availableAddresses.headSet( 2 ).clear();
+  }
+  
+  public void extantNetworkIndexes( List<Integer> indexes ) {
+    indexes.each{ this.extantNetworkIndex( Integer.parseInt( it ) ); };
+  }
+  
+  public Integer allocateNetworkIndex( String cluster ) {
     Integer next = this.availableAddresses.pollFirst( );
-    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, "networkIndex=" + next ) );
+    this.networkTokens.get( cluster ).getIndexes().add( next );
+    LOG.debug( this.toString( ) );
+    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, "${this.name} networkIndex=${next} on cluster=${cluster}" ) );
     return next;
   }
 
-  public void returnNetworkIndex( Integer addr ) {
-    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, "networkIndex=" + addr ) );
-    this.availableAddresses.add( addr );
+  public void returnNetworkIndexes( Collection<Integer> indexes ) {
+    LOG.debug( this.toString( ) );
+    indexes.each{ this.returnNetworkIndex( it ); };
   }
 
-  
+  public void returnNetworkIndex( Integer index ) {
+    if( index < 2 ) return;
+    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, "${this.name} networkIndex=${index}" ) );
+    this.availableAddresses.add( index );
+    this.networkTokens.values().each { 
+      it.getIndexes().remove( index );
+      if( it.getIndexes().size() == 0 ) {//FIXME: this is likely a race since .size is weakly consistent.
+        this.networkTokens.remove( it.getCluster() );
+      }
+    }
+  }
+
   public NetworkToken addTokenIfAbsent(NetworkToken token) {
-    this.networkTokens.putIfAbsent(token.getCluster(), token);
-  }
-
-  public NetworkToken getToken(String cluster) {
-    return this.networkTokens.get(cluster);
+    if( this.vlan == null ) {
+      this.vlan = token.getVlan( );
+    }
+    NetworkToken clusterToken = this.networkTokens.putIfAbsent( token.getCluster(), token );
+    return this.networkTokens.put(token.getCluster(), token);
   }
 
   public boolean hasToken(String cluster) {
-    return this.networkTokens.get(cluster);
+    return this.networkTokens.containsKey(cluster);
   }
 
+  public boolean hasTokens() {
+    return !this.networkTokens.values( ).isEmpty( );
+  }
 
-  public NetworkToken removeToken(String cluster) {
-    return this.networkTokens.remove(cluster);
+  public void removeToken(NetworkToken token) {
+    this.networkTokens.remove(token.getCluster( ));
   }
 
   public boolean isPeer( String peerName, String peerNetworkName ) {
@@ -340,7 +418,10 @@ public class Network implements HasName {
 
   @Override
   public String toString( ) {
-    return this.dump( );
+    return String.format(
+                          "Network [availableAddresses=%s, name=%s, networkName=%s, networkTokens=%s, rules=%s, userName=%s]",
+                          this.availableAddresses, this.name, this.networkName, this.networkTokens, this.rules,
+                          this.userName );
   }
   
 
@@ -372,6 +453,7 @@ public class NetworkToken implements Comparable {
     if ( !cluster.equals(that.cluster) ) return false;
     if ( !networkName.equals(that.networkName) ) return false;
     if ( !userName.equals(that.userName) ) return false;
+    if ( !indexes.equals(that.indexes) ) return false;
 
     return true;
   }
@@ -383,24 +465,23 @@ public class NetworkToken implements Comparable {
     result = networkName.hashCode();
     result = 31 * result + cluster.hashCode();
     result = 31 * result + userName.hashCode();
+    result = 31 * result + indexes.hashCode();
     return result;
   }
 
-  @Override
-  public String toString() {
-    return this.dump( );
-  }
 
+  
   @Override
   public int compareTo(Object o) {
     NetworkToken that = (NetworkToken) o;
     return (!this.cluster.equals(that.cluster) && (this.vlan.equals( that.vlan ) ) ) ? this.vlan - that.vlan : this.cluster.compareTo(that.cluster);
   }
 
-  public StopNetworkType getStopMessage() {
-    return new StopNetworkType(this.vlan, this.name);
+  @Override
+  public String toString( ) {
+    return String.format( "NetworkToken [cluster=%s, indexes=%s, name=%s, networkName=%s, userName=%s, vlan=%s]",
+                          this.cluster, this.indexes, this.name, this.networkName, this.userName, this.vlan );
   }
-
 }
 
 public class ResourceToken implements Comparable {
@@ -427,7 +508,7 @@ public class ResourceToken implements Comparable {
   }
 
   public NetworkToken getPrimaryNetwork() {
-    return this.networkTokens.get( 0 );
+    return this.networkTokens.size( ) > 0 ? this.networkTokens.get( 0 ) : null;
   }
 
   @Override
@@ -461,8 +542,11 @@ public class ResourceToken implements Comparable {
   }
 
   @Override
-  public String toString() {
-    return this.dump( );
+  public String toString( ) {
+    return String.format(
+                          "ResourceToken [addresses=%s, amount=%s, cluster=%s, correlationId=%s, creationTime=%s, instanceIds=%s, networkTokens=%s, sequenceNumber=%s, userName=%s, vmType=%s]",
+                          this.addresses, this.amount, this.cluster, this.correlationId, this.creationTime,
+                          this.instanceIds, this.networkTokens, this.sequenceNumber, this.userName, this.vmType );
   }
 
 }
@@ -505,10 +589,6 @@ public class NodeInfo implements Comparable {
     this.logs = logs;
   }
 
-  @Override
-  public String toString() {
-    return this.dump( );
-  }
 
   public void touch() {
     this.lastSeen = new Date();
@@ -530,4 +610,9 @@ public class NodeInfo implements Comparable {
     return serviceTag.hashCode();
   }
 
+  @Override
+  public String toString( ) {
+    return String.format( "NodeInfo [lastSeen=%s, logs=%s, name=%s, serviceTag=%s]", this.lastSeen, this.logs,
+                          this.name, this.serviceTag );
+  }
 }

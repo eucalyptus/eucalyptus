@@ -64,11 +64,14 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.LogUtil;
 
 import javax.persistence.*;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -81,13 +84,6 @@ public class Address implements HasName {
 
   private static Logger LOG = Logger.getLogger( Address.class );
 
-  @Transient
-  private final ReadWriteLock canHas = new ReentrantReadWriteLock( true );
-
-  public static String UNALLOCATED_USERID = "nobody";
-  public static String UNASSIGNED_INSTANCEID = "available";
-  public static String UNASSIGNED_INSTANCEADDR = "0.0.0.0";
-  public static String PENDING_ASSIGNMENT = "pending";
   @Id
   @GeneratedValue
   @Column( name = "address_id" )
@@ -104,6 +100,12 @@ public class Address implements HasName {
   private String instanceId;
   @Column( name = "address_instance_addr" )
   private String instanceAddress;
+  @Transient
+  private final ReadWriteLock canHas = new ReentrantReadWriteLock( true );
+  public static String UNALLOCATED_USERID = "nobody";
+  public static String UNASSIGNED_INSTANCEID = "available";
+  public static String UNASSIGNED_INSTANCEADDR = "0.0.0.0";
+  public static String PENDING_ASSIGNMENT = "pending";
 
   public Address() {}
 
@@ -147,6 +149,7 @@ public class Address implements HasName {
       return;
     } finally {
       this.canHas.writeLock().unlock();
+      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, this.toString( )   ) );
     }
   }
 
@@ -157,6 +160,7 @@ public class Address implements HasName {
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
     } finally {
       this.canHas.writeLock().unlock();
+      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.unassigned, this.toString( )  ) );
     }
   }
 
@@ -195,6 +199,7 @@ public class Address implements HasName {
       return true;
     } finally {
       this.canHas.writeLock().unlock();
+      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, this.toString( ) ) );
     }
   }
 
@@ -265,14 +270,11 @@ public class Address implements HasName {
   }
 
   @Override
-  public String toString() {
-    return "Address{" +
-           "name='" + name + '\'' +
-           ", cluster='" + cluster + '\'' +
-           ", sourceUserId='" + userId + '\'' +
-           ", assigned=" + assigned +
-           ", instanceId='" + instanceId + '\'' +
-           ", instanceAddress='" + instanceAddress + '\'' +
-           '}';
+  public String toString( ) {
+    return String.format( "Address [assigned=%s, cluster=%s, instanceAddress=%s, instanceId=%s, name=%s, userId=%s]",
+                          this.assigned, this.cluster, this.instanceAddress, this.instanceId, this.name, this.userId );
   }
+
+  
+
 }

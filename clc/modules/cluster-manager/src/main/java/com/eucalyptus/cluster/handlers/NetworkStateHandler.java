@@ -2,6 +2,7 @@ package com.eucalyptus.cluster.handlers;
 
 import java.net.SocketException;
 import java.nio.channels.AlreadyConnectedException;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -24,9 +25,15 @@ import com.eucalyptus.ws.MappingHttpResponse;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.StopNetworkCallback;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksType;
 import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
+import edu.ucsb.eucalyptus.msgs.StopNetworkType;
+import edu.ucsb.eucalyptus.util.Admin;
 
 @ChannelPipelineCoverage( "one" )
 public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
@@ -60,17 +67,43 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse resp = ( MappingHttpResponse ) e.getMessage( );
       DescribeNetworksResponseType reply = ( DescribeNetworksResponseType ) resp.getMessage( );
-      for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
-        try {
-          Network net = Networks.getInstance( ).lookup( netInfo.getUserName( ) + "-" + netInfo.getNetworkName( ) );
-          net.getAvailableAddresses( ).removeAll( netInfo.getAllocatedAddresses( ) );
-          net.getToken( this.getCluster( ).getName( ) ).setVlan( netInfo.getVlan( ) );
-        } catch ( NoSuchElementException e1 ) {
-          LOG.warn( "Got back network info for an extant allocation, but cant do anything with it." + LogUtil.dumpObject( netInfo ) );
-        }
+      for( Network net : Networks.getInstance( ).listValues( ) ) {
+        net.trim( reply.getAddrsPerNetwork( ) );
       }
       this.getCluster( ).getState( ).setAddressCapacity( reply.getAddrsPerNetwork( ) );
       this.getCluster( ).getState( ).setMode( reply.getMode( ) );
+      List<String> active = Lists.newArrayList( );
+      for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
+        Network net = null;
+        try {
+          net = Networks.getInstance( ).lookup( netInfo.getUserName( ) + "-" + netInfo.getNetworkName( ) );
+        } catch ( NoSuchElementException e1 ) {
+          net = new Network( netInfo.getUserName( ), netInfo.getNetworkName( ) );
+        }
+        active.add( net.getName( ) );
+        net.setVlan( netInfo.getVlan() );
+        NetworkToken netToken = new NetworkToken( this.getCluster( ).getName( ), netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getVlan( ) );
+        netToken = net.addTokenIfAbsent( netToken );
+        for( String index : netInfo.getAllocatedAddresses( ) ) {
+          try {
+            net.extantNetworkIndex( this.getCluster( ).getName( ), Integer.parseInt( index ) );
+          } catch ( NumberFormatException e2 ) {}
+        }
+      }
+      
+      for( Network net : Networks.getInstance( ).listValues( Networks.State.ACTIVE ) ) {
+        net.trim( reply.getAddrsPerNetwork( ) );
+        if( net.hasToken( this.getCluster( ).getName( ) ) ) continue;
+        try {
+          Clusters.sendClusterEvent( this.getCluster( ), this.getStopCallback( net ) );
+          if( !net.hasTokens( ) ) {
+            Networks.getInstance( ).setState( net.getName( ), Networks.State.DISABLED );
+            this.getCluster( ).getState( ).releaseNetworkAllocation( net.getName( ) );
+          }
+        } catch ( GeneralSecurityException e1 ) {
+          LOG.debug( e1, e1 );
+        }
+      }
       List<Cluster> ccList = Clusters.getInstance( ).listValues( );
       int ccNum = ccList.size( );
       for ( Cluster c : ccList ) {
@@ -87,6 +120,11 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
     }
   }
 
+  private QueuedEvent<StopNetworkType> getStopCallback( Network network ) {
+    NetworkToken token = new NetworkToken( network.getName( ), network.getUserName( ), network.getNetworkName( ), network.getVlan( ) );
+    return QueuedEvent.make( new StopNetworkCallback( token ), Admin.makeMsg( StopNetworkType.class, token.getUserName(), token.getNetworkName(), token.getVlan() ) ); 
+  }
+  
   @Override
   public void advertiseEvent( Event event ) {}
 

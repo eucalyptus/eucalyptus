@@ -69,6 +69,7 @@ import edu.ucsb.eucalyptus.msgs.*;
 
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
@@ -104,9 +105,9 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
       LOG.debug( "Releasing network token back to cluster: " + token );
       cluster.getState( ).releaseNetworkAllocation( token );
       LOG.debug( "Removing network token: " + token );
-      net.removeToken( token.getCluster( ) );
+      net.removeToken( token );
       try {
-        Networks.getInstance( ).deregister( token.getName( ) );
+        Networks.getInstance( ).setState( token.getName( ), Networks.State.DISABLED );
       } catch ( Exception e ) {
         LOG.debug( e );
       }
@@ -117,6 +118,7 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
 
   @Override
   public void prepare( StopNetworkType msg ) throws Exception {
+    //FIXME: handle dropping stop networks which may be generated for networks in the PENDING state. 
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
       if ( v.getNetworkNames( ).contains( token.getName( ) ) && v.getPlacement( ).equals( token.getCluster( ) ) ) {
         throw new EucalyptusClusterException( "Returning stop network event since it still exists." );

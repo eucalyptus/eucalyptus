@@ -111,39 +111,39 @@ public class ClusterNodeState {
     VmTypeAvailability vmType = this.typeMap.get( vmTypeName );
     NavigableSet<VmTypeAvailability> sorted = this.sorted();
 
-    LOG.debug( "BEFORE ALLOCATE ============================" );
+    LOG.debug( LogUtil.header("BEFORE ALLOCATE") );
     LOG.debug( sorted );
     //:: if not enough, then bail out :://
     if ( vmType.getAvailable() < quantity ) throw new NotEnoughResourcesAvailable("Not enough resources available: vm resources");
 
     Set<VmTypeAvailability> tailSet = sorted.tailSet( vmType );
     Set<VmTypeAvailability> headSet = sorted.headSet( vmType );
-    LOG.debug( "DURING ALLOCATE ============================" );
-    LOG.debug("TAILSET: " + tailSet );
-    LOG.debug("HEADSET: " + headSet );
+    LOG.debug( LogUtil.header("DURING ALLOCATE") );
+    LOG.debug(LogUtil.subheader( "TAILSET: \n" + tailSet) );
+    LOG.debug(LogUtil.subheader( "HEADSET: \n" + headSet) );
     //:: decrement available resources across the "active" partition :://
     for ( VmTypeAvailability v : tailSet )
       v.decrement( quantity );
     for ( VmTypeAvailability v : headSet )
       v.setAvailable( vmType.getAvailable() );
-    LOG.debug( "AFTER ALLOCATE ============================" );
+    LOG.debug( LogUtil.header("AFTER ALLOCATE") );
     LOG.debug( sorted );
 
     ResourceToken token = new ResourceToken( this.clusterName, requestId, userName, quantity, this.virtualTimer++, vmTypeName );
-    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, token ) );
+    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, token ) );
     this.pendingTokens.add( token );
     return token;
   }
 
   public synchronized void releaseToken( ResourceToken token ) {
-    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, token ) );
+    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, token ) );
     this.pendingTokens.remove( token );
     this.submittedTokens.remove( token );
     this.redeemedTokens.remove( token );
   }
 
   public synchronized void submitToken( ResourceToken token ) throws NoSuchTokenException {
-    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, token ) );
+    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, token ) );
     if ( this.pendingTokens.remove( token ) )
       this.submittedTokens.add( token );
     else
@@ -151,8 +151,8 @@ public class ClusterNodeState {
   }
 
   public synchronized void redeemToken( ResourceToken token ) throws NoSuchTokenException {
-    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.redeemed, token ) );
-    if ( this.submittedTokens.remove( token ) )
+    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.redeemed, token ) );
+    if ( this.submittedTokens.remove( token ) || this.pendingTokens.remove( token ) )
       this.redeemedTokens.add( token );
     else
       throw new NoSuchTokenException();
@@ -173,9 +173,9 @@ public class ClusterNodeState {
     this.redeemedTokens.clear();
 
     StringBuffer before = new StringBuffer();
-    before.append( "-> BEFORE: " );
+    before.append( "-> BEFORE: [" );
     StringBuffer after = new StringBuffer();
-    after.append( "-> AFTER: " );
+    after.append( "-> AFTER: [" );
     for ( ResourceType rsc : rscUpdate ) {
       VmTypeAvailability vmAvailable = this.typeMap.get( rsc.getInstanceType().getName() );
       before.append( String.format( " %s available=%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
@@ -183,10 +183,10 @@ public class ClusterNodeState {
       vmAvailable.setAvailable( rsc.getAvailableInstances() );
       vmAvailable.decrement( outstandingCount );
       vmAvailable.setMax( rsc.getMaxInstances() );
-      after.append( String.format( "%s available=%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
+      after.append( String.format( " %s available=%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
     }
-    LOG.debug( before.toString( ) );
-    LOG.debug( after.toString( ) );
+    LOG.debug( before.toString( ) + " ]");
+    LOG.debug( after.toString( ) + " ]");
   }
 
   private NavigableSet<VmTypeAvailability> sorted() {

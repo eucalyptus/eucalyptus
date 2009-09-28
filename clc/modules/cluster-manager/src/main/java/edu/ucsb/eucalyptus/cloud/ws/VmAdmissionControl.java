@@ -64,6 +64,7 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.FailScriptFailException;
@@ -72,7 +73,6 @@ import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.SLAs;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.Network;
-import edu.ucsb.eucalyptus.cloud.cluster.Networks;
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -109,21 +109,20 @@ public class VmAdmissionControl {
 
   public VmAllocationInfo evaluate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     SLAs sla = new SLAs();
-    List<ResourceToken> allocTokeList = null;
     try {
-      allocTokeList = sla.doVmAllocation( vmAllocInfo );
-    } catch ( Exception e ) {
+      vmAllocInfo.getAllocationTokens( ).addAll( sla.doVmAllocation( vmAllocInfo ) );
+    } catch ( Throwable e ) {
       LOG.debug( e, e );
-      for ( ResourceToken token : allocTokeList ) {
+      for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
         Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
       }
       throw new EucalyptusCloudException( e.getMessage( ) );
     } 
     try {
       sla.doAddressAllocation( vmAllocInfo );
-    } catch ( NotEnoughResourcesAvailable e ) {
+    } catch ( Throwable e ) {
       LOG.debug( e, e );
-      for ( ResourceToken token : allocTokeList ) {
+      for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
         Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
         for( String addr : token.getAddresses( ) ) {
           AddressManager.releaseAddress( addr );
@@ -133,19 +132,21 @@ public class VmAdmissionControl {
     } 
     try {
       sla.doNetworkAllocation( vmAllocInfo );
-    } catch ( NotEnoughResourcesAvailable e ) {
+    } catch ( Throwable e ) {
       LOG.debug( e, e );
-      for ( ResourceToken token : allocTokeList ) {
+      for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
         Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
         for( String addr : token.getAddresses( ) ) {
           AddressManager.releaseAddress( addr );
         }
-        Network net = Networks.getInstance().lookup( token.getPrimaryNetwork( ).getName( ) );
-        for( Integer i : token.getPrimaryNetwork( ).getIndexes( ) ) {
-          net.getAvailableAddresses( ).add( i );
+        if( token.getPrimaryNetwork( ) != null ) {
+          Network net = Networks.getInstance().lookup( token.getPrimaryNetwork( ).getName( ) );
+          for( Integer i : token.getPrimaryNetwork( ).getIndexes( ) ) {
+            net.returnNetworkIndex( i );
+          }
         }
       }
-      throw new EucalyptusCloudException( e.getMessage( ) );
+      throw new EucalyptusCloudException( e );
     } 
 
     return vmAllocInfo;

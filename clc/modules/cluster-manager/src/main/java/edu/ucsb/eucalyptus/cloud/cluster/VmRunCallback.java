@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
@@ -94,6 +95,7 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
   }
 
   public void prepare( final VmRunType msg ) throws Exception {
+    LOG.debug( LogUtil.subheader( msg.toString( ) ) );
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
     } catch ( Exception e2 ) {
@@ -142,7 +144,7 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
     LOG.debug( "-> Release resource tokens for unused resources." );
     try {
-      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
+      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
     } catch ( Exception e2 ) {
       LOG.debug( e2, e2 );
     }

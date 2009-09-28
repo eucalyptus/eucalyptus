@@ -66,6 +66,10 @@ package com.eucalyptus.ws.handlers;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
@@ -86,77 +90,107 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 @ChannelPipelineCoverage( "one" )
 public class NioResponseHandler extends SimpleChannelHandler {
   private static Logger                 LOG           = Logger.getLogger( NioResponseHandler.class );
-  
-  private Throwable exception = null;
-  private EucalyptusMessage response = null;
-  protected BlockingQueue<Object> responseQueue = new LinkedBlockingQueue<Object>( );
+  private Lock canHas = new ReentrantLock();
+  private Condition ready = canHas.newCondition( );
+  private AtomicReference<Object> response = new AtomicReference<Object>(null);
   protected BlockingQueue<EucalyptusMessage> requestQueue = new LinkedBlockingQueue<EucalyptusMessage>( );
 
   public boolean hasException( ) {
-    return this.responseQueue.isEmpty( ) && this.responseQueue.peek( ) instanceof Throwable;
+    return this.response.get() instanceof Throwable;
   }
   
   public boolean hasResponse( ) {
-    return this.responseQueue.isEmpty( ) && this.responseQueue.peek( ) instanceof EucalyptusMessage;
-  }
-  
-  public final boolean isReady( ) {
-    return !this.getRequestQueue( ).isEmpty( );
+    return this.response.get() instanceof EucalyptusMessage;
   }
   
   public EucalyptusMessage getResponse( ) throws Exception {
-    Object response = null;
-    do {
-      try {
-        LOG.debug( "-> Waiting for response to event of type: " + this.getClass().getCanonicalName( ) );
-        response = this.responseQueue.poll( 10, TimeUnit.MILLISECONDS );
-      } catch ( final InterruptedException e ) {}
-    } while ( ( response == null ) );
-    if ( response != null ) {
-      if ( response instanceof EucalyptusMessage ) {
-        this.response = ( EucalyptusMessage ) response;
-        return this.response;
-      } else if ( response instanceof MappingHttpResponse ) {
-        MappingHttpResponse httpResponse = (MappingHttpResponse) response;
-        if( httpResponse.getMessage( ) != null ) {
-          this.response = (EucalyptusMessage) httpResponse.getMessage( );
-          return this.response;
-        } else {
-          this.exception = new EucalyptusClusterException( httpResponse.getMessageString( ) );
-        }
-      } else if ( response instanceof Throwable ) {
-        this.exception = (Throwable) response;
-        throw new EucalyptusClusterException( "Exception in NIO request.", (Throwable) response );
-      }
+    this.waitForResponse( );
+    if( this.response.get( ) instanceof EucalyptusMessage ) {
+      return (EucalyptusMessage) this.response.get( );
+    } else if ( this.response.get() instanceof Throwable ) {
+      throw new EucalyptusClusterException( "Exception in NIO request.", (Throwable) this.response.get( ) );
     }
     throw new EucalyptusClusterException( "Failed to retrieve result of asynchronous operation." );
   }
-  
+
+  public void exceptionCaught( final ChannelHandlerContext ctx, final Throwable e ) {
+    LOG.debug( e, e );
+    this.queueResponse( e );
+    ctx.getChannel( ).close( );    
+  }
+
   @Override
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {
-    LOG.debug( e.getCause( ), e.getCause( ) );
-    this.responseQueue.offer( e.getCause( ) );
-    e.getChannel( ).close( );
+    this.exceptionCaught( ctx, e.getCause( ) );
   }
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
     final MappingHttpMessage httpResponse = ( MappingHttpMessage ) e.getMessage( );
     final EucalyptusMessage reply = ( EucalyptusMessage ) httpResponse.getMessage( );
-    this.responseQueue.offer( reply );
+    this.queueResponse( reply );
     e.getChannel( ).close( );
   }
 
-  public BlockingQueue<Object> getResponseQueue( ) {
-    return this.responseQueue;
-  }
-
-  public BlockingQueue<EucalyptusMessage> getRequestQueue( ) {
-    return this.requestQueue;
+  public void queueResponse( Object o ) {
+    if ( o instanceof MappingHttpResponse ) {
+      MappingHttpResponse httpResponse = (MappingHttpResponse) o;
+      if( httpResponse.getMessage( ) != null ) {
+        o = httpResponse.getMessage( );
+      } else {
+        o = new EucalyptusClusterException( httpResponse.getMessageString( ) );
+      }
+    }
+    this.canHas.lock( );
+    try {
+      if( !this.response.compareAndSet( null, o ) ) {
+        if( !( o instanceof Throwable ) ) {
+          LOG.debug( LogUtil.subheader( "Received spurious second response: " + LogUtil.dumpObject( o ) ) );
+        }
+        o = this.response.getAndSet( o );
+        LOG.debug( LogUtil.subheader( "Previous response was: " + LogUtil.dumpObject( this.response.get( ) ) ) );
+      } else {
+        if( o instanceof Throwable ) {
+          LOG.error( "Caught exception in asynchronous response handler.", (Throwable) o );
+        } else {
+          LOG.debug( this.getClass( ).getSimpleName( ) + " Got response of: " + LogUtil.lineObject( o ) );
+        }
+      }
+      this.ready.signalAll( );
+    } finally {
+      this.canHas.unlock( );
+    }
   }
 
   public Throwable getException( ) {
-    return this.exception;
+    this.waitForResponse();
+    return (Throwable) this.response.get( );
   }
 
+  public void waitForResponse( ) {
+    this.canHas.lock( );
+    try {
+      while( this.response.get( ) == null ) {
+        try {
+          this.ready.await( 50, TimeUnit.MILLISECONDS );
+          LOG.debug( "Waiting for response." );
+        } catch ( InterruptedException e ) {
+          LOG.debug( e, e );
+        }
+      }
+    } finally {
+      this.canHas.unlock( );
+    }
+  }
+
+  @Override
+  public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+    if( this.response.get( ) == null ) {
+      this.queueResponse( new EucalyptusClusterException( LogUtil.dumpObject( e ) ) );
+    }
+    super.channelClosed( ctx, e );
+  }
+
+  
+  
 }

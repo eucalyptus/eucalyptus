@@ -63,22 +63,24 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.msgs.*;
-
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.Client;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.util.LogUtil;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
 public class TerminateCallback extends QueuedEventCallback<TerminateInstancesType> {
 
   private static Logger LOG = Logger.getLogger( TerminateCallback.class );
-
   public TerminateCallback( ) {}
 
-
   @Override
-  public void prepare( TerminateInstancesType msg ) throws Exception {}
+  public void prepare( TerminateInstancesType msg ) throws Exception {
+  }
 
 
   @Override

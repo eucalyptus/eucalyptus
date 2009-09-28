@@ -73,7 +73,9 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
@@ -116,12 +118,42 @@ public class ClusterAllocator extends Thread {
     this.msgMap = Multimaps.newHashMultimap();
     this.vmAllocInfo = vmAllocInfo;
     this.pendingEvents = new ConcurrentLinkedQueue<QueuedEvent>();
-    this.cluster = Clusters.getInstance().lookup( vmToken.getCluster() );
     this.state = State.START;
     this.rollback = new AtomicBoolean( false );
-    for ( NetworkToken networkToken : vmToken.getNetworkTokens() )
-      this.setupNetworkMessages( networkToken );
-    this.setupVmMessages( vmToken );
+    try {
+      this.cluster = Clusters.getInstance().lookup( vmToken.getCluster() );
+      for ( NetworkToken networkToken : vmToken.getNetworkTokens() )
+        this.setupNetworkMessages( networkToken );
+      this.setupVmMessages( vmToken );
+    } catch ( Throwable e ) {
+      if( vmToken != null ) {
+        try {
+          Clusters.getInstance().lookup( vmToken.getCluster() ).getNodeState().releaseToken( vmToken );
+        } catch ( Throwable e1 ) {
+          LOG.debug( e1 );
+          LOG.trace( e1, e1 );
+        }
+        try {
+          for( String addr : vmToken.getAddresses( ) ) {
+            AddressManager.releaseAddress( addr );
+          }
+        } catch ( Throwable e1 ) {
+          LOG.debug( e1 );
+          LOG.trace( e1, e1 );
+        }
+        try {
+          if( vmToken.getPrimaryNetwork( ) != null ) {
+            Network net = Networks.getInstance().lookup( vmToken.getPrimaryNetwork( ).getName( ) );
+            for( Integer i : vmToken.getPrimaryNetwork( ).getIndexes( ) ) {
+              net.returnNetworkIndex( i );
+            }
+          }
+        } catch ( Throwable e1 ) {
+          LOG.debug( e1 );
+          LOG.trace( e1, e1 );
+        }
+      }
+    }
   }
 
   public void setupAddressMessages( List<String> addresses, List<VmInfo> runningVms ) {
@@ -161,7 +193,7 @@ public class ClusterAllocator extends Thread {
     }
     try {
       RunInstancesType request = this.vmAllocInfo.getRequest();
-      Network network = Networks.getInstance().lookup( networkToken.getName() );
+      Network network = Networks.getInstance().lookup( networkToken.getNetworkName() );
       LOG.debug( LogUtil.header( "Setting up rules for: " + network.getName() ) );
       LOG.debug( LogUtil.subheader( network.toString( ) ) );
       ConfigureNetworkType msg = new ConfigureNetworkType( network.getRules() );
@@ -185,18 +217,15 @@ public class ClusterAllocator extends Thread {
   }
 
   public void setupVmMessages( ResourceToken token ) {
-    List<String> macs = new ArrayList<String>();
-    List<String> networkNames = new ArrayList<String>();
+    List<String> macs = Lists.newArrayList( );
 
     for ( String instanceId : token.getInstanceIds() )
       macs.add( VmInstances.getAsMAC( instanceId ) );
 
-    int vlan = -1;
-    for ( Network net : vmAllocInfo.getNetworks() ) {
-      networkNames.add( net.getNetworkName() );
-      if ( vlan < 0 ) vlan = Networks.getInstance().lookup( net.getName() ).getToken( token.getCluster() ).getVlan();
-    }
-    if ( vlan < 0 ) vlan = 9;
+    int vlan = token.getPrimaryNetwork( ).getVlan( );
+    if ( vlan < 0 ) vlan = 9;//FIXME: general vlan, should be min-1?
+    List<String> networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getNetworkName( ) );
+    
 
     RunInstancesType request = this.vmAllocInfo.getRequest();
     VmImageInfo imgInfo = this.vmAllocInfo.getImageInfo();

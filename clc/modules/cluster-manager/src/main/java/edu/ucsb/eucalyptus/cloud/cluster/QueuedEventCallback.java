@@ -97,15 +97,16 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   private AtomicReference<TYPE>          request = new AtomicReference<TYPE>(null);
   
   public void process( TYPE msg ) throws Exception {
-    if ( this.channelConnected != null && this.channelConnected.isDone( ) && this.setRequest( msg ) ) {
-      this.fireMessage( msg, this.channelConnected.getChannel( ) );
+    if ( this.setRequest( msg ) && this.channelConnected != null && this.channelConnected.isDone( ) ) {
+      this.fireMessage( this.channelConnected.getChannel( ) );
     } else {
       LOG.debug( "Found channel pending: defering message " + msg.getClass( ).getCanonicalName( ) );
     }
   }
   
-  private void fireMessage( TYPE msg, Channel channel ) throws Exception {
-    LOG.debug( "Found channel open: writing message " + msg.getClass( ).getCanonicalName( ) );
+  private void fireMessage( Channel channel ) throws Exception {
+    TYPE msg = this.getRequest( );
+    LOG.debug( LogUtil.subheader( "Found channel open: writing message " + msg.toString( ) ) );
     String servicePath = "/axis2/services/EucalyptusCC";//FIXME: handle this in a clean way.
     InetSocketAddress addr = ( InetSocketAddress ) channel.getRemoteAddress( );
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, addr.getHostName( ), addr.getPort( ), servicePath, msg );
@@ -113,8 +114,8 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
       this.prepare( msg );
       channel.write( request );
     } catch ( Exception e ) {
-      LOG.debug( e, e );
       this.fail( e );
+      this.queueResponse( e );
       throw e;
     }
   }
@@ -123,7 +124,14 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse response = (MappingHttpResponse) e.getMessage( );
-      this.verify( (EucalyptusMessage)response.getMessage( ) );
+      try {
+        this.verify( (EucalyptusMessage)response.getMessage( ) );
+      } catch ( Exception e1 ) {
+        LOG.debug( e1, e1 );
+        this.fail( e1 );
+        this.queueResponse( e1 );
+        throw e1;
+      }
     }
     super.messageReceived( ctx, e );
   }
@@ -136,18 +144,12 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    this.channelConnected = e.getFuture( );
     if ( this.getRequest( ) == null ) {
       LOG.debug( "Request is null, waiting for message to send." );
     } else {
-      this.fireMessage( ( TYPE ) this.getRequest(), e.getChannel( ) );
+      this.fireMessage( ctx.getChannel( ) );
     }
     super.channelConnected( ctx, e );
-  }
-  
-  @Override
-  public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    super.channelOpen( ctx, e );
   }
   
   public abstract static class MultiClusterCallback<TYPE extends EucalyptusMessage> extends QueuedEventCallback<TYPE> {
@@ -158,7 +160,7 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
     protected List<QueuedEvent> fireEventAsyncToAllClusters( final TYPE msg ) {
       this.callbackList = Lists.newArrayList( );
       for ( final Cluster c : Clusters.getInstance( ).listValues( ) ) {
-        LOG.info( "-> Sending " + msg.getClass( ).getSimpleName( ) + " network to: " + c.getUri( ) );
+        LOG.debug( "-> Sending " + msg.getClass( ).getSimpleName( ) + " network to: " + c.getUri( ) );
         LOG.debug( LogUtil.lineObject( msg ) );
         try {
           QueuedEvent q = QueuedEvent.make( this.newInstance( ), msg );
@@ -180,11 +182,11 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   public boolean setRequest( TYPE request ) {
     return this.request.compareAndSet( null, request );
   }
-
+  
   @Override
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
     this.fail( e.getCause( ) );
-    super.exceptionCaught( ctx, e );
+    super.exceptionCaught( ctx, e.getCause( ) );
   }
 
 }

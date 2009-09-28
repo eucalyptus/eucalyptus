@@ -451,8 +451,10 @@ public class AddressManager implements Startable {
       db.delete( addr );
       currentAddr.release();
       Addresses.getInstance().disable( currentAddr.getName() );
+      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, currentAddr ) );
       db.commit();
     } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
       db.rollback();
     }
   }

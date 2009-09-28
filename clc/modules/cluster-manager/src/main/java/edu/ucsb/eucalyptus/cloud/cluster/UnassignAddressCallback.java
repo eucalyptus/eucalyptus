@@ -70,6 +70,7 @@ import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.entities.Address;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddressType> {
 
@@ -88,10 +89,13 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   @Override
   public void prepare( UnassignAddressType msg ) throws Exception {
     //FIXME-BETA: confirm that the address is not already allocated.
+    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, LogUtil.subheader( msg.toString( "eucalyptus_ucsb_edu" ) ) ) );
   }
 
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {}
+  public void verify( EucalyptusMessage msg ) throws Exception {
+    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.unassigned, LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) ) );
+  }
 
   @Override
   public void fail( Throwable e ) {

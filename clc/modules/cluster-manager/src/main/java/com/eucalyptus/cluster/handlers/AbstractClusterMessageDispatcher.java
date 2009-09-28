@@ -2,10 +2,8 @@ package com.eucalyptus.cluster.handlers;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
@@ -13,13 +11,11 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -47,7 +43,6 @@ import com.eucalyptus.ws.client.NioBootstrap;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
@@ -135,16 +130,13 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
 
   private void clearPending( ChannelFuture f ) {
     this.inFlightMessage.set( false );
-    if( f.getChannel( ).isOpen( ) ) {
-      f.addListener( ChannelFutureListener.CLOSE );
-    }
+    f.getChannel( ).close( );
   }
   
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     LOG.trace( this.hashCode() + " -> Received upstream: " + e.getClass( ) );
     if ( e instanceof MessageEvent ) {
-      this.clearPending( e.getFuture( ) );
       if( ( (MessageEvent)e).getMessage( ) instanceof MappingHttpResponse ) {
         MappingHttpResponse response = (MappingHttpResponse) ( (MessageEvent)e).getMessage( );
         if( HttpResponseStatus.OK.equals( response.getStatus( ) ) ) {
@@ -153,6 +145,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
           throw new EucalyptusClusterException( response.getMessageString( ) );
         }
       }
+      this.clearPending( e.getFuture( ) );
       ctx.sendUpstream( e );
     } else if ( e instanceof ExceptionEvent ) {
       this.exceptionCaught( ctx, ( ExceptionEvent ) e );

@@ -74,7 +74,9 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.FailScriptFailException;
 import com.eucalyptus.util.GroovyUtil;
@@ -144,44 +146,40 @@ public class SLAs {
     List<ResourceToken> rscTokens = vmAllocInfo.getAllocationTokens(); 
     List<Network> networks = vmAllocInfo.getNetworks();
     ResourceToken firstRscToken = rscTokens.get( 0 );
+    if( networks.size() < 1 ) {
+      throw new NotEnoughResourcesAvailable( "At least one network group must be specified." );
+    }
     Network firstNet = networks.get( 0 );
-    Networks.getInstance( ).register( firstNet );
+    String networkName = firstNet.getName( );
     try {
-      NetworkToken netToken = allocateClusterVlan( userId, firstRscToken.getCluster( ), firstNet.getName( ) );
-      firstRscToken.getNetworkTokens( ).add( netToken );
-    } catch ( NetworkAlreadyExistsException e ) {
-      LOG.error( e, e );
+      firstNet = Networks.getInstance( ).lookup( networkName );
+    } catch ( NoSuchElementException e ) {
+      Networks.getInstance( ).registerIfAbsent( firstNet, Networks.State.PENDING ); 
+      firstNet = Networks.getInstance( ).lookup( networkName );      
     }
     for ( ResourceToken token : rscTokens ) {
+      NetworkToken netToken = allocateClusterVlan( userId, token.getCluster( ), firstNet.getName( ) );
+      token.getNetworkTokens( ).add( netToken );
       for ( int i = 0; i < token.getAmount( ); i++ ) {
-        Integer addrIndex = firstNet.allocateNetworkIndex( );
+        Integer addrIndex = firstNet.allocateNetworkIndex( token.getCluster( ) );
         if ( addrIndex == null ) {
-          LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, "networkIndexes=" + token.getPrimaryNetwork( ).getIndexes( ) ) );
+          for( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
+            firstNet.returnNetworkIndex( index );
+          }
           token.getPrimaryNetwork( ).getIndexes( ).clear( );
           throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + firstNet.getNetworkName( ) );
         } else {
-          LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, "networkIndex=" + addrIndex ) );
-          token.getPrimaryNetwork( ).getIndexes( ).add( addrIndex );
+          token.getPrimaryNetwork( ).getIndexes().add( addrIndex );
         }
       }
     }
-    try {} catch ( NoSuchElementException e ) {
-      throw new NotEnoughResourcesAvailable( "Error obtaining a reference to the network state.  This is a BUG." );
-    }
   }
   
-  private NetworkToken allocateClusterVlan( final String userId, final String clusterName, final String networkName ) throws NotEnoughResourcesAvailable, NetworkAlreadyExistsException {
+  private NetworkToken allocateClusterVlan( final String userId, final String clusterName, final String networkName ) throws NotEnoughResourcesAvailable {
     ClusterState clusterState = Clusters.getInstance( ).lookup( clusterName ).getState( );
-    Network existingNet = Networks.getInstance( ).lookup( networkName );
-    NetworkToken networkToken = clusterState.getNetworkAllocation( userId, existingNet.getNetworkName( ) );
-    if ( existingNet.hasToken( networkToken.getCluster( ) ) ) {
-      clusterState.releaseNetworkAllocation( networkToken );
-      throw new NetworkAlreadyExistsException( );
-    } else {
-      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.accepted, networkToken ) );
-      existingNet.addTokenIfAbsent( networkToken );
-      return networkToken;
-    }
+    NetworkToken networkToken = clusterState.getNetworkAllocation( userId, networkName );
+    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.accepted, networkToken ) );
+    return networkToken;
   }
   
   private Allocator getAllocator( ) throws FailScriptFailException {

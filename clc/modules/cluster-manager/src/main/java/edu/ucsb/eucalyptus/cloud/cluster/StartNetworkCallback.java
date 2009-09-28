@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
@@ -94,7 +95,9 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
   }
 
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {}
+  public void verify( EucalyptusMessage msg ) throws Exception {
+    Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );
+  }
 
 
   @Override

@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.EucalyptusClusterException;
@@ -98,6 +99,7 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
         LOG.debug( "Assign [" + msg.getSource() + "]  => [" + msg.getDestination() + "]" );
         this.parent.getNetworkConfig().setIgnoredPublicIp( msg.getSource() );
       }
+      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw e;
@@ -105,7 +107,9 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   }
 
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {}
+  public void verify( EucalyptusMessage msg ) throws Exception {
+    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.allocated, LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) ) );
+  }
 
   @Override
   public void fail( Throwable e ) {

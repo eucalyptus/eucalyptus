@@ -70,6 +70,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.util.LogUtil;
+
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 
 public class ClusterMessageQueue implements Runnable {
@@ -112,11 +114,17 @@ public class ClusterMessageQueue implements Runnable {
           final long msgStart = System.currentTimeMillis( );
           try {
             Clusters.sendClusterEvent( this.clusterName, event );
+            event.getCallback( ).waitForResponse( );
+            //TODO: handle events which raised I/O exceptions to indicate the cluster state.
           } catch ( final Throwable e ) {
             LOG.debug( e, e );
           }
-          LOG.debug( String.format( "--> [q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s", msgStart - start, System.currentTimeMillis( ) - msgStart,
-                                    this.msgQueue.size( ), event.getCallback( ).getClass( ).getSimpleName( ), this.clusterName ) );
+          LOG.debug( LogUtil.subheader( String.format(
+                                                       "--> [q=%04dms,send=%04dms,qlen=%02d] message type %s, cluster %s",
+                                                       msgStart - start, System.currentTimeMillis( ) - msgStart,
+                                                       this.msgQueue.size( ),
+                                                       event.getCallback( ).getClass( ).getSimpleName( ),
+                                                       this.clusterName ) ) );
         }
       } catch ( final Throwable e ) {
         LOG.error( e, e );
