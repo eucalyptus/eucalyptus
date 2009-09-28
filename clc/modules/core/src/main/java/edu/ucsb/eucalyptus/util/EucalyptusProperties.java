@@ -223,7 +223,12 @@ public class EucalyptusProperties {
 	}
 
 	public static String getWalrusUrl() throws EucalyptusCloudException {
-		String walrusHost = Configuration.getWalrusConfiguration( "Walrus" ).getHostName( );
+		String walrusHost;
+    try {
+      walrusHost = Configuration.getWalrusConfiguration( Component.walrus.name( ) ).getHostName( );
+    } catch ( Exception e ) {
+      walrusHost = Configuration.getWalrusConfiguration( "Walrus" ).getHostName( );
+    }
 		return String.format( "http://%s:8773/services/Walrus", walrusHost == null ? "127.0.0.1" : walrusHost );
 	}
 
