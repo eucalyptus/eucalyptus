@@ -29,6 +29,9 @@ import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.StopNetworkCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
+import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksType;
 import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
@@ -86,7 +89,11 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
         netToken = net.addTokenIfAbsent( netToken );
         for( String index : netInfo.getAllocatedAddresses( ) ) {
           try {
-            net.extantNetworkIndex( this.getCluster( ).getName( ), Integer.parseInt( index ) );
+            for( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+              if( this.getCluster( ).getName( ).equals( vm.getPlacement( ) ) && VmState.RUNNING.equals( vm.getState( ) ) && vm.getNetworkNames( ).indexOf( net.getNetworkName( ) ) == 0 ) {
+                net.extantNetworkIndex( this.getCluster( ).getName( ), Integer.parseInt( index ) );                
+              }
+            }
           } catch ( NumberFormatException e2 ) {}
         }
       }
