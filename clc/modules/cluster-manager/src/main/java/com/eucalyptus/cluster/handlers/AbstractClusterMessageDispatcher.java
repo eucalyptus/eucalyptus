@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -129,7 +130,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
 
   private void clearPending( ChannelFuture f ) {
     this.inFlightMessage.set( false );
-    f.getChannel( ).close( );
+    f.addListener( ChannelFutureListener.CLOSE );
   }
   
   @Override
@@ -195,6 +196,7 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
     LOG.debug( e.getCause( ), e.getCause( ) );
+    e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
   }
 
   public Cluster getCluster( ) {
