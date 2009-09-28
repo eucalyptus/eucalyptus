@@ -128,10 +128,6 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
   @Override
   public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     LOG.trace( this.hashCode() + " -> Send upstream: " + e.getClass( ) );
-    if( e instanceof MessageEvent ) {
-      LOG.debug( EventRecord.create( this.getClass( ).getSimpleName( ), Component.eucalyptus.name( ),
-                                     "CONNECT", ctx.getChannel( ).getLocalAddress( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
-    }
     ctx.sendDownstream( e );
   }
 
@@ -164,6 +160,9 @@ public abstract class AbstractClusterMessageDispatcher implements ChannelPipelin
         case CONNECTED: {
           if( cse.getValue( ) == null ) {
             this.clearPending( e.getFuture( ) );
+          } else {
+            LOG.debug( EventRecord.create( this.getClass( ).getSimpleName( ), Component.eucalyptus.name( ),
+                                           "CONNECT", ctx.getChannel( ).getLocalAddress( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
           }
         } break;
         case OPEN: {

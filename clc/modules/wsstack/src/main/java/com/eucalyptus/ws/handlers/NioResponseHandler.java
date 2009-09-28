@@ -172,7 +172,7 @@ public class NioResponseHandler extends SimpleChannelHandler {
     try {
       while( this.response.get( ) == null ) {
         try {
-          this.ready.await( 50, TimeUnit.MILLISECONDS );
+          this.ready.await( 1000, TimeUnit.MILLISECONDS );
           LOG.debug( "Waiting for response." );
         } catch ( InterruptedException e ) {
           LOG.debug( e, e );

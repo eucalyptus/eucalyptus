@@ -146,10 +146,8 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    if( e instanceof MessageEvent ) {
-      LOG.debug( EventRecord.create( this.getClass( ).getSimpleName( ), Component.eucalyptus.name( ),
-                                     "CONNECT", ctx.getChannel( ).getLocalAddress( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
-    }
+    LOG.debug( EventRecord.create( this.getClass( ).getSimpleName( ), Component.eucalyptus.name( ),
+                                   "CONNECT", ctx.getChannel( ).getLocalAddress( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
     if ( this.getRequest( ) == null ) {
       LOG.debug( "Request is null, waiting for message to send." );
     } else {
