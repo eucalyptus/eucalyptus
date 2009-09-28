@@ -65,6 +65,7 @@
 
 package edu.ucsb.eucalyptus.util;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.util.DNSProperties;
@@ -221,9 +222,9 @@ public class EucalyptusProperties {
 		}
 	}
 
-	public static String getWalrusUrl() {
-		String cloudHost = getCloudHost( );
-		return String.format( "http://%s:8773/services/Walrus", cloudHost == null ? "127.0.0.1" : cloudHost );
+	public static String getWalrusUrl() throws EucalyptusCloudException {
+		String walrusHost = Configuration.getWalrusConfiguration( Component.walrus.name( ) ).getHostName( );
+		return String.format( "http://%s:8773/services/Walrus", walrusHost == null ? "127.0.0.1" : walrusHost );
 	}
 
 	private static String getCloudHost( ) {
@@ -250,6 +251,6 @@ public class EucalyptusProperties {
 
 	public enum TokenState {
 
-		preallocate, returned, accepted, submitted, allocated, redeemed;
+		preallocate, returned, accepted, submitted, allocated, redeemed, unassigned;
 	}
 }

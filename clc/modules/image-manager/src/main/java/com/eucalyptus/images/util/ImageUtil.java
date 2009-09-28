@@ -221,15 +221,20 @@ public class ImageUtil {
   
   public static String getImageUrl( String walrusUrl, final ImageInfo diskInfo ) throws EucalyptusCloudException {
     try {
-      URL url = new URL( ImageUtil.getStorageUrl( ) + diskInfo.getImageLocation( ) );
+      URL url = new URL( ImageUtil.getWalrusUrl( ) + diskInfo.getImageLocation( ) );
       return url.toString( );
     } catch ( MalformedURLException e ) {
       throw new EucalyptusCloudException( "Failed to parse image location as URL.", e );
     }
   }
   
-  public static String getStorageUrl( ) throws EucalyptusCloudException {
-    return EucalyptusProperties.getWalrusUrl( ) + "/";
+  public static String getWalrusUrl( ) throws EucalyptusCloudException {
+    try {
+      return EucalyptusProperties.getWalrusUrl( ) + "/";
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Walrus has not been configured.", e );
+    }
   }
   
   public static boolean isSet( String id ) {
