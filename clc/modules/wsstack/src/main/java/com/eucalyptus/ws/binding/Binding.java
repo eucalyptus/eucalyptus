@@ -125,6 +125,8 @@ public class Binding {
         bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType.class );
       } else if ( seedClass.getSimpleName( ).equals( "StorageController" ) ) {
         bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.StorageRequestType.class );
+      } else if ( seedClass.getSimpleName( ).equals( "VMwareBroker" ) ) {
+        bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.VMwareBrokerRequestType.class );
       } else {
         final Method[] methods = seedClass.getDeclaredMethods( );
         for ( final Method m : methods ) {
