@@ -83,6 +83,7 @@ public class NioServer {
     PipelineRegistry.getInstance( ).register( new WalrusRESTPostPipeline( ) );
     PipelineRegistry.getInstance( ).register( new EucalyptusQueryPipeline( ) );
     PipelineRegistry.getInstance( ).register( new WalrusSoapPipeline( ) );
+    PipelineRegistry.getInstance( ).register( new VMwareSoapPipeline( ) );
   }
 
   public void start( ) {
