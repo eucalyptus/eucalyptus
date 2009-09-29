@@ -140,7 +140,7 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
 
   @Override
   public void fail( Throwable e ) {
-    LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ) );
+    LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
     LOG.debug( "-> Release resource tokens for unused resources." );
     try {
