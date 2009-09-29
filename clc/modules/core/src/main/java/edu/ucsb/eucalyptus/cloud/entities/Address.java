@@ -212,6 +212,7 @@ public class Address implements HasName {
       return true;
     } finally {
       this.canHas.writeLock().unlock();
+      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.allocated, this.toString( ) ) );
     }
   }
 

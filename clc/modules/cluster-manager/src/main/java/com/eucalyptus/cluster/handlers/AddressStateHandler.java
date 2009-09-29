@@ -60,17 +60,16 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
       DescribePublicAddressesResponseType reply = (DescribePublicAddressesResponseType) resp.getMessage( );   
       if ( reply.get_return( ) ) {
         EucalyptusProperties.disableNetworking = false;
-        for ( Pair p : Pair.getPaired( reply.getAddresses( ), reply.getMapping( ) ) )
-          try {
-            Address blah = Addresses.getInstance( ).lookup( p.getLeft( ) );
-            blah.setInstanceAddress( p.getRight( ) );
-          } catch ( NoSuchElementException ex ) {
-            Addresses.getInstance( ).registerDisabled( new Address( p.getLeft( ), this.getCluster().getName( ) ) );
-          }
+//        for ( Pair p : Pair.getPaired( reply.getAddresses( ), reply.getMapping( ) ) ) {
+//          try {
+//            Address blah = Addresses.getInstance( ).lookup( p.getLeft( ) );
+//            blah.setInstanceAddress( p.getRight( ) );
+//          } catch ( NoSuchElementException ex ) {
+//            Addresses.getInstance( ).registerDisabled( new Address( p.getLeft( ), this.getCluster().getName( ) ) );
+//          }
+//        }
       } else {
-        if ( !EucalyptusProperties.disableNetworking ) {
-          LOG.warn( "Response from cluster [" + this.getCluster( ).getName( ) + "]: " + reply.getStatusMessage( ) );
-        }
+        LOG.warn( "Response from cluster [" + this.getCluster( ).getName( ) + "]: " + reply.getStatusMessage( ) );
         EucalyptusProperties.disableNetworking = true;
       }
       this.verified = true;
