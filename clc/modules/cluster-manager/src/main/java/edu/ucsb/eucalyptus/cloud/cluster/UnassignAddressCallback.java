@@ -85,9 +85,9 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   @Override
   public void prepare( UnassignAddressType msg ) throws Exception {
     LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, LogUtil.subheader( msg.toString( "eucalyptus_ucsb_edu" ) ) ) );
-    if( this.parent.isAssigned( ) || this.parent.isPending( ) ) {
-      throw new EucalyptusClusterException( "Received request to unassign an address which is either not assigned or has an assignment pending: " + this.parent.toString( ) );
-    }
+//    if( !this.parent.isAssigned( ) || this.parent.isPending( ) ) {
+//      throw new EucalyptusClusterException( "Received request to unassign an address which is either not assigned or has an assignment pending: " + this.parent.toString( ) );
+//    }
   }
 
   @Override
