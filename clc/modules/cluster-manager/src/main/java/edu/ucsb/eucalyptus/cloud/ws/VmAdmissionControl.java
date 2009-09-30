@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.FailScriptFailException;
@@ -125,7 +126,7 @@ public class VmAdmissionControl {
       for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
         Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
         for( String addr : token.getAddresses( ) ) {
-          AddressManager.releaseAddress( addr );
+          AddressUtil.releaseAddress( addr );
         }
       }
       throw new EucalyptusCloudException( e.getMessage( ) );
@@ -137,7 +138,7 @@ public class VmAdmissionControl {
       for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
         Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
         for( String addr : token.getAddresses( ) ) {
-          AddressManager.releaseAddress( addr );
+          AddressUtil.releaseAddress( addr );
         }
         if( token.getPrimaryNetwork( ) != null ) {
           Network net = Networks.getInstance().lookup( token.getPrimaryNetwork( ).getName( ) );

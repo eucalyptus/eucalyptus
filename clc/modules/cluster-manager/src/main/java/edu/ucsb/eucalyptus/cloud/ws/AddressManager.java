@@ -66,38 +66,28 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentNavigableMap;
 
 import org.apache.log4j.Logger;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.net.Addresses;
+import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
-import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
-import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.ClusterEnvelope;
-import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
-import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.Address;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
-import edu.ucsb.eucalyptus.cloud.net.Addresses;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
-import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
@@ -107,175 +97,13 @@ import edu.ucsb.eucalyptus.msgs.DisassociateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.DisassociateAddressType;
 import edu.ucsb.eucalyptus.msgs.ReleaseAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
-import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
-import edu.ucsb.eucalyptus.util.Admin;
 
-public class AddressManager implements Startable {
+public class AddressManager {
 
-  private static Logger LOG = Logger.getLogger( AddressManager.class );
-
-  public void start() throws MuleException {
-    synchronized( AddressManager.class ) {
-      EntityWrapper<Address> db = new EntityWrapper<Address>();
-      try {
-        List<Address> addrList = db.query( new Address() );
-        db.commit();
-        for ( Address addr : addrList ) {
-          try {
-            Addresses.getInstance().replace( addr.getName(), addr );
-          } catch ( NoSuchElementException e ) {
-            Addresses.getInstance().register( addr );
-          }
-        }
-      } catch ( Throwable e ) {
-        db.rollback( );
-      }
-    }
-  }
-
-  public static void updateAddressingMode() {
-    int allocatedCount = 0;
-    List<Address> activeList = Addresses.getInstance().listValues();
-    for( Address allocatedAddr : activeList ) {
-      if( Component.eucalyptus.name().equals( allocatedAddr.getUserId() ) ) {
-        allocatedCount++;
-          if( edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses() && !allocatedAddr.isAssigned() && !allocatedAddr.isPending() ) {
-            //:: deallocate unassigned addresses owned by eucalyptus when switching to dynamic public addressing :://
-            LOG.debug("Deallocating unassigned public address in dynamic public addressing mode: " + allocatedAddr.getName() );
-            EntityWrapper<Address> db = new EntityWrapper<Address>();
-            try {
-              Address dbAddr = db.getUnique( allocatedAddr );
-              db.delete( dbAddr );
-              db.commit();
-            } catch ( EucalyptusCloudException e ) {
-              db.rollback();
-            }
-            allocatedAddr.release();
-            Addresses.getInstance().disable( allocatedAddr.getName() );
-          }
-      }
-    }
-    LOG.debug("Found " + allocatedCount + " addresses allocated to eucalyptus" );
-      if( !edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses() ) {
-        int allocCount = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getSystemReservedPublicAddresses() - allocatedCount;
-        LOG.debug("Allocating additional " + allocCount + " addresses in static public addresing mode" );
-        ConcurrentNavigableMap<String, Address> unusedAddresses = Addresses.getInstance().getDisabledMap();
-        allocCount = unusedAddresses.size() < allocCount ? unusedAddresses.size() : allocCount;
-        if( allocCount > 0 ) {
-          List<Map.Entry<String, Address>> addressList = Lists.newArrayList();
-          for ( int i = 0; i < allocCount; i++ ) {
-            Map.Entry<String, Address> addressEntry = unusedAddresses.pollFirstEntry();
-            if ( addressEntry != null ) {
-              addressList.add( addressEntry );
-            } else {
-              break; //:: out of unused addresses :://
-            }
-          }
-          NavigableSet<String> ipList = Sets.newTreeSet();
-          for ( Map.Entry<String, Address> addressEntry : addressList ) {
-            LOG.debug("Allocating address for static public addressing: " + addressEntry.getValue().getName() );
-            Address address = addressEntry.getValue();
-            address.allocate( Component.eucalyptus.name( ) );
-            EntityWrapper<Address> db = new EntityWrapper<Address>();
-            try {
-              Address addr = db.getUnique( new Address( address.getName() ) );
-              addr.allocate( Component.eucalyptus.name( ));
-            } catch ( EucalyptusCloudException e ) {
-              db.merge( address );
-            }
-            db.commit();
-            ipList.add( address.getName() );
-            try {
-              Addresses.getInstance().register( address );
-            } catch ( Exception e ) {
-            }
-          }
-        } else {
-          for( String ipAddr : Addresses.getInstance().getActiveMap().descendingKeySet() ) {
-            Address addr = Addresses.getInstance().getActiveMap().get( ipAddr );
-            if( Component.eucalyptus.name( ).equals( addr.getUserId() ) && !addr.isAssigned() && !addr.isPending() ) {
-              if( allocCount++ >= 0 ) break;
-              EntityWrapper<Address> db = new EntityWrapper<Address>();
-              try {
-                Address dbAddr = db.getUnique( new Address(addr.getName()) );
-                db.delete( dbAddr );
-                db.commit();
-              } catch ( EucalyptusCloudException e ) {
-                db.rollback();
-              }
-              addr.release();
-              Addresses.getInstance().disable( addr.getName() );
-            }
-          }
-        }
-      }
-  }
-
-  public synchronized static NavigableSet<String> allocateAddresses( int count ) throws NotEnoughResourcesAvailable {
-    boolean doDynamic = true;
-    updateAddressingMode();  //:: make sure everything is up-to-date :://
-    doDynamic = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses();
-    NavigableSet<String> ipList = Sets.newTreeSet();
-    List<Address> addressList = Lists.newArrayList();
-    if( doDynamic ) {
-      ConcurrentNavigableMap<String, Address> unusedAddresses = Addresses.getInstance().getDisabledMap();
-      //:: try to fail fast if needed :://
-      if ( unusedAddresses.size() < count ) throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
-      for ( int i = 0; i < count; i++ ) {
-        Map.Entry<String, Address> addressEntry = unusedAddresses.pollFirstEntry();
-        if ( addressEntry != null ) {
-          Address addr = addressEntry.getValue();
-          addressList.add( addr );
-          ipList.add( addr.getName() );
-        } else {
-          for ( Address a : addressList ) {
-            unusedAddresses.putIfAbsent( a.getName(), a );
-          }
-          throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
-        }
-      }
-    } else {
-      List<Address> allocatedAddresses = Addresses.getInstance().listValues();
-      for( Address addr : allocatedAddresses ) {
-        if( !addr.isAssigned() && !addr.isPending() && Component.eucalyptus.name().equals( addr.getUserId() ) ) {
-          Addresses.getInstance().deregister( addr.getName() );
-          ipList.add( addr.getName() );
-          addressList.add( addr );
-          if( addressList.size() >= count ) break;
-        }
-      }
-      if( addressList.size() < count ) {
-        for( Address putBackAddr : addressList ) {
-          Addresses.getInstance().register( putBackAddr );
-        }
-        throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
-      }
-    }
-    for ( Address address : addressList ) {
-      assignSystemPublicAddress( address );
-    }
-    return ipList;
-  }
-
-  private static void assignSystemPublicAddress( final Address address ) {
-    address.allocate( Component.eucalyptus.name() );
-    address.assign( Address.PENDING_ASSIGNMENT, Address.PENDING_ASSIGNMENT );
-    EntityWrapper<Address> db = new EntityWrapper<Address>();
-    try {
-      Address addr = db.getUnique( new Address( address.getName() ) );
-      addr.allocate( Component.eucalyptus.name() );
-    } catch ( EucalyptusCloudException e ) {
-      db.merge( address );
-    }
-    db.commit();
-    try {
-      Addresses.getInstance().register( address );
-    } catch ( Exception e ) {
-    }
-  }
+  public static Logger LOG = Logger.getLogger( AddressManager.class );
 
   public AllocateAddressResponseType AllocateAddress( AllocateAddressType request ) throws EucalyptusCloudException {
-    AddressManager.updateAddressingMode();
+    AddressUtil.updateAddressingMode();
     int addrCount = 0;
     for( Address a : Addresses.getInstance().listValues() ) {
       if( request.getUserId().equals( a.getUserId() ) ) addrCount++;
@@ -283,25 +111,8 @@ public class AddressManager implements Startable {
     if( addrCount >= edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getMaxUserPublicAddresses() && !request.isAdministrator() )
       throw new EucalyptusCloudException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
 
-    ConcurrentNavigableMap<String, Address> unusedAddresses = Addresses.getInstance().getDisabledMap();
-    Map.Entry<String, Address> addressEntry = unusedAddresses.pollFirstEntry();
-
-    //:: address is null -- disabled map is empty :://
-    if ( addressEntry == null ) {
-      LOG.debug( LogUtil.header( LogUtil.dumpObject( Addresses.getInstance( ) ) ) );
-      throw new EucalyptusCloudException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
-    }
-
-    Address address = addressEntry.getValue();
-    address.allocate( request.getUserId() );
-    EntityWrapper<Address> db = new EntityWrapper<Address>();
-    try {
-      Address addr = db.getUnique( new Address( address.getName() ) );
-      addr.allocate( request.getUserId() );
-    } catch ( EucalyptusCloudException e ) {
-      db.merge( address );
-    }
-    db.commit();
+    String userId = request.getUserId( );
+    Address address = AddressUtil.nextAvailableAddress( userId );
 
     try {
       Addresses.getInstance().register( address );
@@ -314,7 +125,7 @@ public class AddressManager implements Startable {
   }
 
   public ReleaseAddressResponseType ReleaseAddress( ReleaseAddressType request ) throws EucalyptusCloudException {
-    AddressManager.updateAddressingMode();
+    AddressUtil.updateAddressingMode();
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply();
     reply.set_return( false );
 
@@ -328,8 +139,8 @@ public class AddressManager implements Startable {
       if ( address.isAssigned() && !address.isPending() ) {
         try {
           VmInstance oldVm = VmInstances.getInstance().lookup( address.getInstanceId() );
-          AddressManager.unassignAddressFromVm( address, oldVm );
-          AddressManager.tryAssignSystemAddress( oldVm );
+          AddressUtil.unassignAddressFromVm( address, oldVm );
+          AddressUtil.tryAssignSystemAddress( oldVm );
         } catch ( NoSuchElementException e ) {}
       }
 
@@ -337,7 +148,7 @@ public class AddressManager implements Startable {
         LOG.debug( "Not de-allocating system owned address in static public addressing mode: " + address.getName() );
         return reply;
       }
-      AddressManager.releaseAddress( address );
+      AddressUtil.releaseAddress( address );
       reply.set_return( true );
     }
     catch ( NoSuchElementException e ) {
@@ -348,24 +159,18 @@ public class AddressManager implements Startable {
   }
 
   public DescribeAddressesResponseType DescribeAddresses( DescribeAddressesType request ) throws EucalyptusCloudException {
-    AddressManager.updateAddressingMode();
+    AddressUtil.updateAddressingMode();
     DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply();
 
 
     boolean isAdmin = request.isAdministrator();
     for ( Address address : Addresses.getInstance().listValues() ) {
-      try {
-        VmInstances.getInstance().lookup( address.getInstanceId() );
-      } catch ( NoSuchElementException e ) {
-        EntityWrapper<Address> db = new EntityWrapper<Address>();
+      if( address.isAssigned( ) ) {
         try {
-          Address addr = db.getUnique( new Address( address.getName() ) );
-          addr.unassign();
-          db.commit();
-        } catch ( EucalyptusCloudException ex ) {
-          db.rollback();
+          VmInstances.getInstance().lookup( address.getInstanceId() );
+        } catch ( NoSuchElementException e ) {
+          AddressUtil.markAddressUnassigned( address );
         }
-        address.unassign();
       }
       if ( isAdmin || address.getUserId().equals( request.getUserId() ) ) {
         reply.getAddressesSet().add( address.getDescription( isAdmin ) );
@@ -379,7 +184,7 @@ public class AddressManager implements Startable {
   }
 
   public AssociateAddressResponseType AssociateAddress( AssociateAddressType request ) throws Exception {
-    AddressManager.updateAddressingMode();
+    AddressUtil.updateAddressingMode();
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply();
     reply.set_return( false );
 
@@ -412,14 +217,13 @@ public class AddressManager implements Startable {
       String currentPublicIp = vm.getNetworkConfig().getIgnoredPublicIp();
       try {
         Address currentAddr = Addresses.getInstance().lookup( currentPublicIp );
-        boolean release = Component.eucalyptus.name().equals( currentAddr.getUserId() ) && edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses();
-        LOG.debug( "Dispatching unassign message for: " + address );
-        AddressManager.unassignAddressFromVm( currentAddr, vm );
-        if( release ) {
-          AddressManager.releaseAddress( currentAddr );
+                LOG.debug( "Dispatching unassign message for: " + address );
+        if( currentAddr.isAssigned( ) ) {
+          AddressUtil.unassignAddressFromVm( currentAddr, vm );
+        } else {
+          AddressUtil.dispatchUnassignAddress( currentAddr, vm );
         }
       } catch ( NoSuchElementException e ) {
-        return reply;
       }
     }
     //:: handle the vm which the requested address may be assigned to :://
@@ -427,45 +231,27 @@ public class AddressManager implements Startable {
       LOG.debug( "Dispatching unassign message for: " + address );
       try {
         VmInstance oldVm = VmInstances.getInstance().lookup( address.getInstanceId() );
-        AddressManager.unassignAddressFromVm( address, oldVm );
-        AddressManager.tryAssignSystemAddress( oldVm );
-
-        if( !EucalyptusProperties.disableNetworking ) {
+        if( address.isAssigned( ) ) {
+          AddressUtil.unassignAddressFromVm( address, oldVm );
+        } else {
+          AddressUtil.dispatchUnassignAddress( address, oldVm );
         }
+        AddressUtil.tryAssignSystemAddress( oldVm );
+
+//        if( !EucalyptusProperties.disableNetworking ) {
+//        }
       } catch ( NoSuchElementException e ) {
         LOG.error( e, e );
       }
     }
 
-    AddressManager.assignAddressToVm( address, vm );
+    AddressUtil.assignAddressToVm( address, vm );
 
     return reply;
   }
 
-  public static void releaseAddress( final Address currentAddr ) {
-    EntityWrapper<Address> db = new EntityWrapper<Address>();
-    try {
-      Address addr = db.getUnique( new Address( currentAddr.getName() ) );
-      currentAddr.unassign();
-      addr.unassign();
-      db.delete( addr );
-      currentAddr.release();
-      Addresses.getInstance().disable( currentAddr.getName() );
-      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, currentAddr ) );
-      db.commit();
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
-      db.rollback();
-    }
-  }
-  
-  public static void releaseAddress( String s ) {
-    AddressManager.releaseAddress( new Address( s ) );
-  }
-
-
   public DisassociateAddressResponseType DisassociateAddress( DisassociateAddressType request ) throws EucalyptusCloudException {
-    AddressManager.updateAddressingMode();
+    AddressUtil.updateAddressingMode();
     DisassociateAddressResponseType reply = ( DisassociateAddressResponseType ) request.getReply();
     reply.set_return( false );
 
@@ -493,67 +279,9 @@ public class AddressManager implements Startable {
         return reply;
 
     reply.set_return( true );
-    AddressManager.unassignAddressFromVm( address, vm );
-    AddressManager.tryAssignSystemAddress( vm );
+    AddressUtil.unassignAddressFromVm( address, vm );
+    AddressUtil.tryAssignSystemAddress( vm );
     return reply;
-  }
-
-  private static void tryAssignSystemAddress( final VmInstance vm ) {
-    if( !EucalyptusProperties.disableNetworking ) {
-      try {
-        String newAddr = allocateAddresses( 1 ).pollFirst();
-        Address newAddress = Addresses.getInstance().lookup( newAddr );
-        AddressManager.assignAddressToVm( newAddress, vm );
-      } catch ( NotEnoughResourcesAvailable notEnoughResourcesAvailable ) {
-        LOG.error( "Attempt to assign a system address for " + vm.getInstanceId() + " failed due to lack of addresses." );
-      } catch ( NoSuchElementException e ) {
-        LOG.error( "Attempt to assign a system address for " + vm.getInstanceId() + " failed due to lack of addresses." );
-      }
-    }
-  }
-
-  public static void unassignAddressFromVm( Address address, VmInstance vm ) {
-    EntityWrapper<Address> db = new EntityWrapper<Address>();
-    try {
-      vm.getNetworkConfig( ).setIgnoredPublicIp( vm.getNetworkConfig( ).getIpAddress( ) );
-      Address addr = db.getUnique( new Address( address.getName() ) );
-      addr.unassign();
-      address.unassign();
-      db.commit();
-      try {
-        UnassignAddressType unassignMsg = Admin.makeMsg( UnassignAddressType.class, address.getName(), address.getInstanceAddress() );
-        UnassignAddressCallback callback = new UnassignAddressCallback( address );
-        Clusters.dispatchClusterEvent( address.getCluster( ), callback, unassignMsg );
-        callback.waitForResponse( );
-      } catch ( Throwable e ) {
-        LOG.debug( e, e );
-      }
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback();
-    }
-  }
-
-  private static void assignAddressToVm( Address address, VmInstance vm ) {
-    //:: record the assignment :://
-    EntityWrapper<Address> db = new EntityWrapper<Address>();
-    try {
-      Address addr = db.getUnique( new Address( address.getName() ) );
-      addr.unassign();
-      addr.assign( vm.getInstanceId(), vm.getNetworkConfig().getIpAddress() );
-      address.assign( vm.getInstanceId(), vm.getNetworkConfig().getIpAddress() );
-      db.commit();
-      //:: dispatch the request to the cluster that owns the address :://
-      try {
-        AssignAddressType assignMsg = Admin.makeMsg( AssignAddressType.class, address.getName(), address.getInstanceAddress(), address.getInstanceId( ) );
-        AssignAddressCallback callback = new AssignAddressCallback( vm );
-        Clusters.dispatchClusterEvent( address.getCluster( ), callback, assignMsg );
-        callback.waitForResponse( );
-      } catch ( Throwable e ) {
-        LOG.debug( e, e );
-      }
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback();
-    }
   }
 
 

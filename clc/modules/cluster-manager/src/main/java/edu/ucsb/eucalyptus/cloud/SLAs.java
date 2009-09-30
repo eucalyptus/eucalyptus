@@ -64,7 +64,7 @@
 package edu.ucsb.eucalyptus.cloud;
 
 import edu.ucsb.eucalyptus.cloud.cluster.*;
-import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
+import edu.ucsb.eucalyptus.cloud.entities.Address;
 import edu.ucsb.eucalyptus.util.*;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import groovy.lang.*;
@@ -75,12 +75,14 @@ import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.util.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.FailScriptFailException;
 import com.eucalyptus.util.GroovyUtil;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import javax.script.ScriptEngineManager;
 import java.io.File;
@@ -132,10 +134,13 @@ public class SLAs {
       addrCount += token.getAmount();
     }
     if ( !EucalyptusProperties.disableNetworking && ( "public".equals( vmAllocInfo.getRequest().getAddressingType() ) || vmAllocInfo.getRequest().getAddressingType() == null ) ) {
-      NavigableSet<String> addresses = AddressManager.allocateAddresses( addrCount );
+      List<Address> addressList = AddressUtil.allocateAddresses( addrCount );
+      Iterator<Address> iter = addressList.listIterator( );
       for ( ResourceToken token : allocTokeList ) {
         for ( int i = 0; i < token.getAmount(); i++ ) {
-          token.getAddresses().add( addresses.pollFirst() );            
+          Address next = iter.next( );
+          token.getAddresses().add( next.getName( ) );
+          next.assign( Address.PENDING_ASSIGNMENT, Address.PENDING_ASSIGNMENT );//FIXME: lame hack.
         }
       }
     }

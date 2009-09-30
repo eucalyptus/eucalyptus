@@ -67,6 +67,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
@@ -79,7 +80,6 @@ import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
-import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class VmRunCallback extends QueuedEventCallback<VmRunType> {
@@ -129,13 +129,10 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
     for ( VmInfo vmInfo : reply.getVms() ) {
       VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
       vm.getNetworkConfig().setIpAddress( vmInfo.getNetParams().getIpAddress() );
-    }
-    this.parent.setupAddressMessages( Lists.newArrayList( this.token.getAddresses() ), Lists.newArrayList( reply.getVms() ) );
-    for ( VmInfo vmInfo : reply.getVms() ) {
-      VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
       if( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) )
         vm.getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
     }
+    this.parent.setupAddressMessages( Lists.newArrayList( this.token.getAddresses() ), Lists.newArrayList( reply.getVms() ) );
   }
 
   @Override
@@ -156,7 +153,7 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
     }
     for( String s : this.token.getAddresses() ) {
       LOG.debug( "-> Release addresses from failed vm run allocation: " + s );
-      AddressManager.releaseAddress( s );
+      AddressUtil.releaseAddress( s );
     }
     this.parent.getRollback().lazySet( true );    
   }

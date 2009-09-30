@@ -76,6 +76,8 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.net.Addresses;
+import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
@@ -91,7 +93,7 @@ import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
+import edu.ucsb.eucalyptus.cloud.entities.Address;
 import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
@@ -135,7 +137,7 @@ public class ClusterAllocator extends Thread {
         }
         try {
           for( String addr : vmToken.getAddresses( ) ) {
-            AddressManager.releaseAddress( addr );
+            AddressUtil.releaseAddress( addr );
           }
         } catch ( Throwable e1 ) {
           LOG.debug( e1 );
@@ -162,15 +164,15 @@ public class ClusterAllocator extends Thread {
     } else if ( addresses.size() < runningVms.size() ) {
       LOG.error( "Number of running VMs is greater than number of assigned addresses!" );
     } else {
-      AddressManager.updateAddressingMode();
+      AddressUtil.updateAddressingMode();
       for ( VmInfo vm : runningVms ) {
         String addr = addresses.remove( 0 );
         try {
-          vm.getNetParams().setIgnoredPublicIp( addr );
-          AssociateAddressType msg = new AssociateAddressType( addr, vm.getInstanceId() );
-          msg.setUserId( vm.getOwnerId() );
-          msg.setEffectiveUserId( Component.eucalyptus.name() );
-          new AddressManager().AssociateAddress( msg );
+          VmInstance realVm = VmInstances.getInstance( ).lookup( vm.getInstanceId( ) );
+          Address address = Addresses.getInstance( ).lookup( addr );
+          address.setInstanceId( realVm.getInstanceId( ) );
+          address.setInstanceAddress( realVm.getNetworkConfig( ).getIpAddress( ) );
+          AddressUtil.dispatchAssignAddress( address, realVm );
         } catch ( Exception e ) {
           LOG.error( e, e );
         }

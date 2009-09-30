@@ -70,6 +70,8 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.entities.NetworkRulesGroup;
+import com.eucalyptus.net.Addresses;
+import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -78,7 +80,6 @@ import com.google.common.collect.*;
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.cluster.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.cloud.net.Addresses;
 import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.*;
@@ -161,18 +162,9 @@ public class SystemState {
   }
   
   private static void cleanUp( final VmInstance vm ) {
-    for ( Address address : Addresses.getInstance( ).listValues( ) ) {
-      if ( vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) {
-        if ( Component.eucalyptus.name( ).equals( address.getUserId( ) ) ) {
-          AddressManager.unassignAddressFromVm( address, vm );
-          AddressManager.releaseAddress( address );
-        }
-      }
-    }
-    try {
-      Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).returnNetworkIndex( vm.getNetworkIndex( ) );
-    } catch ( NoSuchElementException e1 ) {
-      LOG.debug( e1 );
+    if ( !VmState.TERMINATED.equals( vm.getState( ) ) && !VmState.BURIED.equals( vm.getState( ) ) ) {
+      SystemState.returnPublicAddress( vm );
+      SystemState.returnNetworkIndex( vm );
     }
     try {
       Clusters.sendClusterEvent( vm.getPlacement( ), QueuedEvent.make( new TerminateCallback( ),
@@ -181,6 +173,30 @@ public class SystemState {
       try {} catch ( Exception e ) {}
     } catch ( Exception e ) {
       LOG.debug( e );
+    }
+  }
+
+  private static void returnPublicAddress( final VmInstance vm ) {
+    for ( Address address : Addresses.getInstance( ).listValues( ) ) {
+      if ( vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) {
+        if ( Component.eucalyptus.name( ).equals( address.getUserId( ) ) ) {
+          AddressUtil.releaseAddress( address );
+        }
+      } else {
+        try {
+          AddressUtil.unassignAddressFromVm( address, vm );
+        } catch ( Throwable e ) {
+          LOG.debug( e, e );
+        }
+      }
+    }
+  }
+
+  private static void returnNetworkIndex( final VmInstance vm ) {
+    try {
+      Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).returnNetworkIndex( vm.getNetworkIndex( ) );
+    } catch ( NoSuchElementException e1 ) {
+      LOG.debug( e1 );
     }
   }
   
@@ -223,7 +239,7 @@ public class SystemState {
         } else {
           try {
             Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).returnNetworkIndex( vm.getNetworkIndex( ) );
-          } catch ( Exception e ) {}          
+          } catch ( Exception e ) {}
         }
       }
     } catch ( NoSuchElementException e ) {

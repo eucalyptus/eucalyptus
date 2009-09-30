@@ -58,83 +58,29 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
+package com.eucalyptus.net;
+
 /*
+ *
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.cloud.entities.Address;
-import edu.ucsb.eucalyptus.constants.VmState;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.EucalyptusClusterException;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.Client;
 
 import org.apache.log4j.Logger;
 
-public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType> {
-  private static Logger LOG = Logger.getLogger( AssignAddressCallback.class );
+import com.eucalyptus.event.AbstractNamedRegistry;
+
+import edu.ucsb.eucalyptus.cloud.entities.Address;
+
+public class Addresses extends AbstractNamedRegistry<Address> {
+  public static Logger    LOG       = Logger.getLogger( Addresses.class );
+  private static Addresses singleton = Addresses.getInstance( );
   
-  private Address       parentAddr;
-  private VmInstance    parentVm;
-  
-  public AssignAddressCallback( Address address, final VmInstance vm ) {
-    this.parentVm = vm;
-    this.parentAddr = address;
-    super.setRequest( new AssignAddressType( address.getName( ), vm.getNetworkConfig( ).getIpAddress( ),
-      vm.getInstanceId( ) ) );
-  }
-  
-  @Override
-  public void prepare( AssignAddressType msg ) throws Exception {
-    try {
-      VmInstance vm = VmInstances.getInstance( ).lookup( msg.getInstanceId( ) );
-      VmState vmState = vm.getState( );
-      if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
-        LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigning, LogUtil.FAIL,
-                                     parentAddr.toString( ) ) );
-        throw new IllegalStateException( "Ignoring assignment to a vm which is not running: " + msg );
-      } else {
-        //        for( VmInstance aVm : VmInstances.getInstance( ).listValues( ) ) {
-        //          if( msg.getSource().equals( aVm.getNetworkConfig( ).getIgnoredPublicIp( ) ) && !vm.getInstanceId( ).equals( aVm.getInstanceId( ) ) 
-        //              && VmState.RUNNING.equals( aVm.getState( ) ) && VmState.PENDING.equals( aVm.getState( ) ) ) {
-        //            throw new EucalyptusClusterException( "Assign [" + msg.getSource() + "]  discarded because another VM already owns this IP." );
-        //          }
-        //        }
-        this.parentVm.getNetworkConfig( ).setIgnoredPublicIp( msg.getSource( ) );
-        LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigning, parentAddr.toString( ) ) );
-      }
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      this.parentAddr.clearPending( );
-      throw e;
+  public static Addresses getInstance( ) {
+    synchronized ( Addresses.class ) {
+      if ( singleton == null ) singleton = new Addresses( );
     }
-  }
-  
-  @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {
-    try {
-      if ( !msg.get_return( ) ) {
-        LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigned, LogUtil.FAIL,
-                                     LogUtil.lineObject( parentAddr ) ) );
-      } else {
-        LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigned,
-                                     LogUtil.lineObject( parentAddr ) ) );
-      }
-    } finally {
-      this.parentAddr.clearPending( );
-    }
-  }
-  
-  @Override
-  public void fail( Throwable e ) {
-    //FIXME: assign fails: clean up state.
-    this.parentAddr.clearPending( );
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
-    LOG.debug( e, e );
+    return singleton;
   }
   
 }
