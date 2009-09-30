@@ -288,9 +288,13 @@ public class Address implements HasName {
       addr.setUserId( userId );
       db.commit();
     } catch ( Throwable e ) {
-      addr.setUserId( userId );
-      db.add( addr );
-      db.commit( );
+      try {
+        addr.setUserId( userId );
+        db.add( addr );
+        db.commit( );
+      } catch ( Throwable e1 ) {
+        db.rollback( );
+      }
     }
   }
   public void unassign( ) {

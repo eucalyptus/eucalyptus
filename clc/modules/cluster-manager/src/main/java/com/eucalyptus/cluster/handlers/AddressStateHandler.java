@@ -115,7 +115,7 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
 
   private boolean checkForPendingVm( Address addr ) {
     for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-      if ( vm.getNetworkConfig( ).getIpAddress( ).equals( addr.getInstanceAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) )) {
+      if ( vm.getNetworkConfig( ).getIpAddress( ).equals( addr.getInstanceAddress( ) ) || VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) {
         return true;
       }
     }
