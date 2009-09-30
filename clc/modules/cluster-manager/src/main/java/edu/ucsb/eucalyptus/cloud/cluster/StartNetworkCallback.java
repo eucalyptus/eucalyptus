@@ -73,7 +73,6 @@ import com.eucalyptus.ws.client.Client;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 

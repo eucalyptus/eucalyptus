@@ -117,6 +117,28 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   }
 
   @SuppressWarnings( "unchecked" )
+  public static void sendClusterEvent( Cluster cluster, QueuedEventCallback callback ) throws NoSuchElementException {
+    Clusters.sendClusterEvent( cluster, QueuedEvent.make( callback, callback.getRequest( ) ) );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void sendClusterEvent( String clusterName, QueuedEventCallback callback ) throws NoSuchElementException {
+    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+    Clusters.sendClusterEvent( cluster, QueuedEvent.make( callback, callback.getRequest( ) ) );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void dispatchClusterEvent( Cluster cluster, QueuedEventCallback callback ) throws NoSuchElementException {
+    cluster.getMessageQueue( ).enqueue( QueuedEvent.make( callback, callback.getRequest( ) ) );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void dispatchClusterEvent( String clusterName, QueuedEventCallback callback ) throws NoSuchElementException {
+    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+    Clusters.dispatchClusterEvent( cluster, callback );
+  }
+
+  @SuppressWarnings( "unchecked" )
   public static void dispatchClusterEvent( String clusterName, QueuedEventCallback callback, EucalyptusMessage msg ) throws NoSuchElementException {
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
     Clusters.dispatchClusterEvent( cluster, callback, msg );

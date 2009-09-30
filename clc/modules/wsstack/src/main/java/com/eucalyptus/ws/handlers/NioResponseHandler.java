@@ -80,13 +80,16 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.WriteCompletionEvent;
 
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpResponse;
 
+import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 @ChannelPipelineCoverage( "one" )
 public class NioResponseHandler extends SimpleChannelHandler {
@@ -122,8 +125,10 @@ public class NioResponseHandler extends SimpleChannelHandler {
   @Override
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {
     this.exceptionCaught( ctx, e.getCause( ) );
-    e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-    ctx.sendUpstream( e );
+    ctx.getChannel( ).close( );
+//FIXME: testing the effect of .close
+//    e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+//    ctx.sendUpstream( e );
   }
   
   @Override
@@ -131,8 +136,10 @@ public class NioResponseHandler extends SimpleChannelHandler {
     final MappingHttpMessage httpResponse = ( MappingHttpMessage ) e.getMessage( );
     final EucalyptusMessage reply = ( EucalyptusMessage ) httpResponse.getMessage( );
     this.queueResponse( reply );
-    e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-    ctx.sendUpstream( e );
+    ctx.getChannel( ).close( );
+//FIXME: testing the effect of .close
+//    e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+//    ctx.sendUpstream( e );
   }
 
   public void queueResponse( Object o ) {
@@ -182,6 +189,7 @@ public class NioResponseHandler extends SimpleChannelHandler {
           Thread.currentThread( ).interrupt( );
         }
       }
+      LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get().getClass( ).toString( ) ) );
     } finally {
       this.canHas.unlock( );
     }
@@ -194,7 +202,5 @@ public class NioResponseHandler extends SimpleChannelHandler {
     }
     super.channelClosed( ctx, e );
   }
-
-  
   
 }

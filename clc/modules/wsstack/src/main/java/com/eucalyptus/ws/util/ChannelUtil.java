@@ -67,11 +67,11 @@ public class ChannelUtil {
   public static int                     SERVER_POOL_MAX_THREADS        = 40;
   public static long                    SERVER_POOL_MAX_MEM_PER_CONN   = 1048576;
   public static long                    SERVER_POOL_TOTAL_MEM          = 100*1024*1024;
-  public static long                    SERVER_POOL_TIMEOUT_MILLIS     = 100;
-  public static int                     CLIENT_POOL_MAX_THREADS        = 20;
+  public static long                    SERVER_POOL_TIMEOUT_MILLIS     = 500;
+  public static int                     CLIENT_POOL_MAX_THREADS        = 40;
   public static long                    CLIENT_POOL_MAX_MEM_PER_CONN   = 1048576;
   public static long                    CLIENT_POOL_TOTAL_MEM          = 20*1024*1024;
-  public static long                    CLIENT_POOL_TIMEOUT_MILLIS     = 100;
+  public static long                    CLIENT_POOL_TIMEOUT_MILLIS     = 500;
   private static ThreadFactory          systemThreadFactory            = ChannelUtil.getSystemThreadFactory( );
   private static ChannelPipelineFactory serverPipelineFactory          = ChannelUtil.getServerPipeline( );
   /** order from here really matters. no touchy. **/

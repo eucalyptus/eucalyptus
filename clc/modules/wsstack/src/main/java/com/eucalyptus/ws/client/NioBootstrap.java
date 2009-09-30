@@ -117,9 +117,9 @@ public class NioBootstrap extends Bootstrap {
       try {
         event.getChannel( ).getConfig( ).setOptions( this.bootstrap.getOptions( ) );
         event.getChannel( ).getConfig( ).setConnectTimeoutMillis( 3000 );
-        event.getChannel( ).getConfig( ).setOption( "tcpNoDelay", false );
-        event.getChannel( ).getConfig( ).setOption( "keepAlive", false );
-        event.getChannel( ).getConfig( ).setOption( "reuseAddress", false );
+        event.getChannel( ).getConfig( ).setOption( "tcpNoDelay", true );
+        event.getChannel( ).getConfig( ).setOption( "keepAlive", true );
+        event.getChannel( ).getConfig( ).setOption( "reuseAddress", true );
         event.getChannel( ).getConfig( ).setOption( "connectTimeoutMillis", 3000 );
       } finally {
         context.sendUpstream( event );
