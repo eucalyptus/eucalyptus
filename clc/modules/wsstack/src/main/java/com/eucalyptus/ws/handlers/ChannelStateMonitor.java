@@ -33,9 +33,9 @@ public class ChannelStateMonitor extends SimpleChannelHandler {
     Long closeTime = System.currentTimeMillis( );
     Long openTime = this.openTime.getAndSet( 0 );
     Long roundTime = ( closeTime - openTime );
-    LOG.debug( EventRecord.create( ctx.getPipeline( ).getLast( ).getClass( ).getSimpleName( ), EventType.SOCKET_CLOSE, closeTime.toString( ), roundTime.toString( ), ctx.getChannel( ).getLocalAddress( ).toString( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
-    LOG.trace( EventRecord.create( NioServer.class, EventType.SOCKET_BYTES_READ, rb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
-    LOG.trace( EventRecord.create( NioServer.class, EventType.SOCKET_BYTES_WRITE, wb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
+    LOG.debug( EventRecord.here( ctx.getPipeline( ).getLast( ).getClass( ), EventType.SOCKET_CLOSE, closeTime.toString( ), roundTime.toString( ), ctx.getChannel( ).getLocalAddress( ).toString( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
+    LOG.trace( EventRecord.here( NioServer.class, EventType.SOCKET_BYTES_READ, rb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
+    LOG.trace( EventRecord.here( NioServer.class, EventType.SOCKET_BYTES_WRITE, wb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
   }
   
   @Override
@@ -47,7 +47,7 @@ public class ChannelStateMonitor extends SimpleChannelHandler {
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     openTime.getAndSet( System.currentTimeMillis( ) );
-    LOG.debug( EventRecord.create( ctx.getPipeline( ).getLast( ).getClass( ).getSimpleName( ), EventType.SOCKET_OPEN, ctx.getChannel( ).getLocalAddress( ).toString( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
+    LOG.debug( EventRecord.here( ctx.getPipeline( ).getLast( ).getClass( ), EventType.SOCKET_OPEN, ctx.getChannel( ).getLocalAddress( ).toString( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
     super.channelConnected( ctx, e );
   }
   

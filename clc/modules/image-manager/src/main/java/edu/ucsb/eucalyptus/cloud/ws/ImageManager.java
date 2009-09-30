@@ -220,6 +220,12 @@ public class ImageManager {
     // this should never fail noisily :://
     ArrayList<String> ancestorIds = ImageUtil.getAncestors( msg.getUserId( ), diskInfo.getImageLocation( ) );
     Long imgSize = ImageUtil.getSize( msg.getUserId( ), diskInfo.getImageLocation( ) );
+    if( !"kernel".equals( kernelInfo.getImageType( ) ) ) {
+      throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelInfo.toString( ) );
+    }
+    if( !"ramdisk".equals( ramdiskInfo.getImageType( ) ) ) {
+      throw new EucalyptusCloudException( "Image specified is not a ramdisk: " + ramdiskInfo.toString( ) );
+    }
     ImageUtil.checkStoredImage( kernelInfo );
     ImageUtil.checkStoredImage( diskInfo );
     ImageUtil.checkStoredImage( ramdiskInfo );

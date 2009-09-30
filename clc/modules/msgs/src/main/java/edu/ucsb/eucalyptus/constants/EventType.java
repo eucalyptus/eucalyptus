@@ -68,8 +68,12 @@ package edu.ucsb.eucalyptus.constants;
 public enum EventType {
   TIMEOUT,
   MSG_SERVICED,
+  MSG_SENT,
+  MSG_REJECTED,
   MSG_RECEIVED,
   QUEUE_LENGTH,
+  QUEUE_TIME,
+  SERVICE_TIME,
   MSG_PENDING,
   VM_RESERVED,
   VM_STARTING,
