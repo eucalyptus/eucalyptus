@@ -63,8 +63,8 @@
  */
 package com.eucalyptus.ws.util;
 
-import java.util.NavigableSet;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -86,16 +86,16 @@ public class PipelineRegistry {
     return PipelineRegistry.registry;
   }
 
-  private final NavigableSet<FilteredPipeline> pipelines = new ConcurrentSkipListSet<FilteredPipeline>( );
+  private final Map<Integer, FilteredPipeline> pipelines = new ConcurrentHashMap<Integer, FilteredPipeline>( );
 
   public void register( final FilteredPipeline pipeline ) {
     LOG.info( "-> Registering pipeline: " + pipeline.getPipelineName( ) );
-    this.pipelines.add( pipeline );
+    this.pipelines.put( pipeline.hashCode(), pipeline );
   }
 
   public FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     FilteredPipeline candidate = null;
-    for ( FilteredPipeline f : this.pipelines ) {
+    for ( FilteredPipeline f : this.pipelines.values()) {
       if ( f.accepts( request ) ) {
         if ( candidate != null ) {
           LOG.warn( "=> More than one candidate pipeline.  Ignoring offer by: " + f.getPipelineName( ) + " of type " + f.getClass( ).getSimpleName( ) );
