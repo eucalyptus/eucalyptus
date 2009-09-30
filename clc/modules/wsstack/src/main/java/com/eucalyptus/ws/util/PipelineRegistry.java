@@ -63,8 +63,8 @@
  */
 package com.eucalyptus.ws.util;
 
-import java.util.NavigableSet;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -72,6 +72,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.ws.server.DuplicatePipelineException;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.server.NoAcceptingPipelineException;
+
 
 public class PipelineRegistry {
   private static PipelineRegistry registry;
@@ -86,7 +87,7 @@ public class PipelineRegistry {
     return PipelineRegistry.registry;
   }
 
-  private final NavigableSet<FilteredPipeline> pipelines = new ConcurrentSkipListSet<FilteredPipeline>( );
+  private final List<FilteredPipeline> pipelines = new ArrayList<FilteredPipeline>( );
 
   public void register( final FilteredPipeline pipeline ) {
     LOG.info( "-> Registering pipeline: " + pipeline.getPipelineName( ) );
@@ -95,7 +96,7 @@ public class PipelineRegistry {
 
   public FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     FilteredPipeline candidate = null;
-    for ( FilteredPipeline f : this.pipelines ) {
+    for ( FilteredPipeline f : this.pipelines) {
       if ( f.accepts( request ) ) {
         if ( candidate != null ) {
           LOG.warn( "=> More than one candidate pipeline.  Ignoring offer by: " + f.getPipelineName( ) + " of type " + f.getClass( ).getSimpleName( ) );

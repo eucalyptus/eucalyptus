@@ -79,6 +79,7 @@
     <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" />
     <endpoint name="WalrusRequestQueueEndpoint" address="vm://WalrusRequestQueue" synchronous="false" />
     <endpoint name="StorageRequestQueueEndpoint" address="vm://StorageRequestQueue" synchronous="false" />
+    <endpoint name="VMwareBrokerRequestQueueEndpoint" address="vm://VMwareBrokerRequestQueue" synchronous="false" />
 
 	<model name="eucalyptus-bootstrap">
 		<default-service-exception-strategy>
@@ -104,6 +105,10 @@
 					<outbound-endpoint ref="StorageRequestQueueEndpoint" synchronous="false" />
 					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.StorageRequestType" />
 				</filtering-router>
+				<filtering-router>
+					<outbound-endpoint ref="VMwareBrokerRequestQueueEndpoint" synchronous="false" />
+					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VMwareBrokerRequestType" />
+				</filtering-router>				
 				<filtering-router>
 					<outbound-endpoint ref="EucalyptusRequestQueueEndpoint" synchronous="false" />
 					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />

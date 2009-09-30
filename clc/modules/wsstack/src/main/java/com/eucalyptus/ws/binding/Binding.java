@@ -117,6 +117,11 @@ public class Binding {
     this.buildRest( );
   }
 
+  protected Binding(final String name, final Class seedClass) throws BindingException {
+	  this(name);
+	  this.seed(seedClass);
+  }
+  
   public void seed( final Class seedClass ) throws BindingException {
     try {
       if ( seedClass.getSimpleName( ).equals( "Eucalyptus" ) ) {
@@ -125,7 +130,7 @@ public class Binding {
         bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType.class );
       } else if ( seedClass.getSimpleName( ).equals( "StorageController" ) ) {
         bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.StorageRequestType.class );
-      } else if ( seedClass.getSimpleName( ).equals( "VMwareBroker" ) ) {
+      } else if ( seedClass.getSimpleName( ).startsWith( "VMwareBroker" ) ) {
         bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.VMwareBrokerRequestType.class );
       } else {
         final Method[] methods = seedClass.getDeclaredMethods( );

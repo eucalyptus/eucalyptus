@@ -70,6 +70,7 @@
     <include path="cc-resources.xml"/>
     <include path="cc-vms.xml"/>
     <include path="cc-getlogs.xml"/>
+    <include path="vmware-broker-types.xml"/>
 
     <mapping name="AttachVolume" class="edu.ucsb.eucalyptus.msgs.AttachVolumeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
       <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
