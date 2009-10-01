@@ -224,7 +224,7 @@ public class Address implements HasName {
       String user = this.userId;
       if( !this.pending.get( ) ) {
         this.release( );
-        if( !Component.eucalyptus.name().equals( user ) || !AddressUtil.doDynamicAddressing( ) ) {
+        if( !Component.eucalyptus.name().equals( user ) || edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( ) && !allocatedAddr.isAssigned( ) && !allocatedAddr.isPending( ) ) {
           this.allocate( userId );
         }
       }
