@@ -101,6 +101,11 @@ static int doInitialize (struct nc_state_t *nc)
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
 
+        /* check connection is fresh */
+        if (!check_hypervisor_conn()) {
+          return ERROR_FATAL;
+	}
+
 	/* get resources */
 	if (virNodeGetInfo(nc->conn, &ni)) {
 		logprintfl (EUCAFATAL, "error: failed to discover resources\n");
