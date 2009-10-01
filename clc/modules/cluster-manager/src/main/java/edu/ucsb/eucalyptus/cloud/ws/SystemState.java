@@ -80,6 +80,7 @@ import com.google.common.collect.*;
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.cluster.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
+import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.*;
@@ -173,13 +174,16 @@ public class SystemState {
   
   private static void returnPublicAddress( final VmInstance vm ) {
     try {
+      LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, vm.getInstanceId( ) ) );
       Address address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
       if(vm.getNetworkConfig( ).getIpAddress( ).equals( address.getInstanceAddress( ) ) ) {
         if ( address.isSystemAllocated( ) ) {
+          LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
           AddressUtil.releaseAddress( address );
         } else {
           try {
             if ( address.isAssigned( ) ) {
+              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
               AddressUtil.unassignAddressFromVm( address, vm );
             }
           } catch ( Throwable e ) {
@@ -195,6 +199,7 @@ public class SystemState {
   
   private static void returnNetworkIndex( final VmInstance vm ) {
     try {
+      LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", vm.getNetworkNames( ).get( 0 ), Integer.toString( vm.getNetworkIndex( ) ) ) );
       Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).returnNetworkIndex( vm.getNetworkIndex( ) );
     } catch ( NoSuchElementException e1 ) {
       LOG.debug( e1, e1 );
@@ -343,8 +348,8 @@ public class SystemState {
                                           VmState.SHUTTING_DOWN.getName( ) ) );
           v.setState( VmState.SHUTTING_DOWN );
           v.resetStopWatch( );
-          SystemState.returnPublicAddress( v );
           SystemState.returnNetworkIndex( v );
+          SystemState.returnPublicAddress( v );
           SystemState.cleanUp( v );
         }
       } catch ( NoSuchElementException e ) {
