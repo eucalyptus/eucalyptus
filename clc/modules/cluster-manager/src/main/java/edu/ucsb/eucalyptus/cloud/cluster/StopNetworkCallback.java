@@ -99,16 +99,11 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
 
   @Override
   public void prepare( StopNetworkType msg ) throws Exception {
-    //FIXME: handle dropping stop networks which may be generated for networks in the PENDING state. 
-    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( v.getNetworkNames( ).contains( token.getName( ) ) && v.getPlacement( ).equals( token.getCluster( ) ) ) {
-        throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
-      }
-    }
     try {
       Network net = Networks.getInstance( ).lookup( token.getName( ) );
       Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
       LOG.debug( "Releasing network token back to cluster: " + token );
+      if( !net.hasTokens( ) ) throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
       cluster.getState( ).releaseNetworkAllocation( token );
     } catch ( Exception e ) {
       LOG.debug( e );

@@ -92,19 +92,7 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
       
       for( Network net : Networks.getInstance( ).listValues( Networks.State.ACTIVE ) ) {
         net.trim( reply.getAddrsPerNetwork( ) );
-//        if( net.hasToken( this.getCluster( ).getName( ) ) && net.getClusterToken( this.getCluster( ).getName( ) ).getIndexes( ).isEmpty( ) ) {
-//          try {
-//            net.removeToken( this.getCluster( ).getName( ) );
-//TODO: disable this check here for the time being.  ultimately needed for failure modes.
-//            Clusters.dispatchClusterEvent( this.getCluster( ), this.getStopCallback( net ) );
-//            if( !net.hasTokens( ) ) {
-//              Networks.getInstance( ).setState( net.getName( ), Networks.State.DISABLED );
-//              this.getCluster( ).getState( ).releaseNetworkAllocation( net.getName( ) );
-//            }
-//          } catch ( NoSuchElementException e1 ) {
-//            LOG.debug( e1, e1 );
-//          }
-//        }
+//TODO: update the network index/token state here.  ultimately needed for failure modes.
       }
       List<Cluster> ccList = Clusters.getInstance( ).listValues( );
       int ccNum = ccList.size( );
@@ -121,11 +109,6 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
       LOG.warn( "Received unknown message type. " + e.getMessage( ) );
     }
   }
-
-//  private QueuedEventCallback getStopCallback( Network network ) {
-//    NetworkToken token = new NetworkToken( network.getName( ), network.getUserName( ), network.getNetworkName( ), network.getVlan( ) );
-//    return new StopNetworkCallback( token ); 
-//  }
   
   @Override
   public void advertiseEvent( Event event ) {}
