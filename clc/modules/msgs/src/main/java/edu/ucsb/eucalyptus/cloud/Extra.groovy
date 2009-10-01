@@ -64,7 +64,9 @@
 package edu.ucsb.eucalyptus.cloud
 
 
+import edu.ucsb.eucalyptus.cloud.entities.Address.State;
 import edu.ucsb.eucalyptus.msgs.*
+
 import org.apache.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
@@ -340,10 +342,9 @@ public class Network implements HasName {
     if( index < 2 ) {
       this.availableNetworkIndexes.remove( index );
     } else {
-      LOG.info( this.toString( ) );
+      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.allocated, "netowrk=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
       if( this.availableNetworkIndexes.remove( index ) ) {
         this.assignedNetworkIndexes.add( index );
-        LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.allocated, "${this.name} networkIndex=${index}" ) );    
         NetworkToken token = this.getClusterToken( cluster );
         token.indexes.add( index );
       }
@@ -369,7 +370,7 @@ public class Network implements HasName {
     Integer nextIndex = this.availableNetworkIndexes.pollFirst( );
     this.assignedNetworkIndexes.add( nextIndex );
     this.clusterTokens.get( cluster ).getIndexes().add( nextIndex );
-    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, "${this.name} networkIndex=${nextIndex} on cluster=${cluster}" ) );
+    LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "netowrk=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
     return nextIndex;
   }
 
@@ -379,13 +380,13 @@ public class Network implements HasName {
   }
 
   public void returnNetworkIndex( Integer index ) {
-    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, "${this.name} networkIndex=${index}" ) );
+    LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.returned, "netowrk=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
     this.assignedNetworkIndexes.remove( index );
-    if( index < 2 ) return;
-    this.availableNetworkIndexes.add( index );
     this.clusterTokens.values().each { 
       it.getIndexes().remove( index );
     }
+    if( index < 2 ) return;
+    this.availableNetworkIndexes.add( index );
   }
 
   public NetworkToken addTokenIfAbsent(NetworkToken token) {
@@ -394,7 +395,7 @@ public class Network implements HasName {
     }
     NetworkToken clusterToken = this.clusterTokens.putIfAbsent( token.getCluster(), token );
     if( clusterToken == null ) clusterToken = this.clusterTokens.get( token.getCluster() );
-    return this.clusterTokens.put(token.getCluster(), token);
+    return clusterToken;
   }
 
   public boolean hasToken(String cluster) {
