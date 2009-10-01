@@ -320,8 +320,9 @@ public class Network implements HasName {
   String networkName;
   String userName;
   ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
-  private ConcurrentMap<String, NetworkToken> networkTokens = new ConcurrentHashMap<String,NetworkToken>();
-  private NavigableSet<Integer> availableAddresses;
+  private ConcurrentMap<String, NetworkToken> clusterTokens = new ConcurrentHashMap<String,NetworkToken>();
+  private NavigableSet<Integer> availableNetworkIndexes = new ConcurrentSkipListSet<Integer>();
+  private NavigableSet<Integer> assignedNetworkIndexes = new ConcurrentSkipListSet<Integer>();
   Integer vlan = null;
 
   def Network() {}
@@ -330,18 +331,18 @@ public class Network implements HasName {
     this.userName = userName;
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
-    this.availableAddresses = new ConcurrentSkipListSet<Integer>();
     for( int i = 2; i < 256; i++ ) {//FIXME: potentially a network can be more than a /24. update w/ real constraints at runtime.
-      this.availableAddresses.add( i );
+      this.availableNetworkIndexes.add( i );
     }
   }
-
+  
   public void extantNetworkIndex( String cluster, Integer index ) {
     if( index < 2 ) {
-      this.availableAddresses.remove( index );
+      this.availableNetworkIndexes.remove( index );
     } else {
       LOG.info( this.toString( ) );
-      if( this.availableAddresses.remove( index ) ) {
+      if( this.availableNetworkIndexes.remove( index ) ) {
+        this.assignedNetworkIndexes.add( index );
         LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.allocated, "${this.name} networkIndex=${index}" ) );    
         NetworkToken token = this.getClusterToken( cluster );
         token.indexes.add( index );
@@ -350,12 +351,14 @@ public class Network implements HasName {
   }
 
   public NetworkToken getClusterToken( String cluster ) {
-    return this.networkTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan ) );
+    NetworkToken token = this.networkTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan ) );
+    if( token == null ) token = this.clusterTokens.get( cluster );
+    return token;
   }
   
   public void trim( Integer max ) {
-    this.availableAddresses.tailSet( max-1, true ).clear( );
-    this.availableAddresses.headSet( 2 ).clear();
+    this.availableNetworkIndexes.tailSet( max-1, true ).clear( );
+    this.availableNetworkIndexes.headSet( 2 ).clear();
   }
   
   public void extantNetworkIndexes( List<Integer> indexes ) {
@@ -363,27 +366,25 @@ public class Network implements HasName {
   }
   
   public Integer allocateNetworkIndex( String cluster ) {
-    Integer next = this.availableAddresses.pollFirst( );
-    this.networkTokens.get( cluster ).getIndexes().add( next );
-    LOG.debug( this.toString( ) );
+    Integer nextIndex = this.availableNetworkIndexes.pollFirst( );
+    this.assignedNetworkIndexes.add( nextIndex );
+    this.clusterTokens.get( cluster ).getIndexes().add( nextIndex );
     LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, "${this.name} networkIndex=${next} on cluster=${cluster}" ) );
-    return next;
+    return nextIndex;
   }
 
   public void returnNetworkIndexes( Collection<Integer> indexes ) {
-    LOG.debug( this.toString( ) );
     indexes.each{ this.returnNetworkIndex( it ); };
+    LOG.debug( this.toString( ) );
   }
 
   public void returnNetworkIndex( Integer index ) {
     if( index < 2 ) return;
     LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, "${this.name} networkIndex=${index}" ) );
-    this.availableAddresses.add( index );
+    this.assignedNetworkIndexes.remove( index );
+    this.availableNetworkIndexes.add( index );
     this.networkTokens.values().each { 
       it.getIndexes().remove( index );
-      if( it.getIndexes().size() == 0 ) {//FIXME: this is likely a race since .size is weakly consistent.
-        this.networkTokens.remove( it.getCluster() );
-      }
     }
   }
 
@@ -392,6 +393,7 @@ public class Network implements HasName {
       this.vlan = token.getVlan( );
     }
     NetworkToken clusterToken = this.networkTokens.putIfAbsent( token.getCluster(), token );
+    if( clusterToken == null ) clusterToken = this.networkTokens.get( token.getCluster() );
     return this.networkTokens.put(token.getCluster(), token);
   }
 
@@ -453,7 +455,6 @@ public class NetworkToken implements Comparable {
     if ( !cluster.equals(that.cluster) ) return false;
     if ( !networkName.equals(that.networkName) ) return false;
     if ( !userName.equals(that.userName) ) return false;
-    if ( !indexes.equals(that.indexes) ) return false;
 
     return true;
   }
@@ -465,7 +466,6 @@ public class NetworkToken implements Comparable {
     result = networkName.hashCode();
     result = 31 * result + cluster.hashCode();
     result = 31 * result + userName.hashCode();
-    result = 31 * result + indexes.hashCode();
     return result;
   }
 

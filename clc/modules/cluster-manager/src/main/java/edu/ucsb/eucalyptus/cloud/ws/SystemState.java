@@ -162,10 +162,6 @@ public class SystemState {
   }
   
   private static void cleanUp( final VmInstance vm ) {
-    if ( VmState.TERMINATED.equals( vm.getState( ) ) || VmState.BURIED.equals( vm.getState( ) ) ) {
-      SystemState.returnPublicAddress( vm );
-      SystemState.returnNetworkIndex( vm );
-    }
     try {
       Clusters.dispatchClusterEvent( vm.getPlacement( ), new TerminateCallback( ), 
                                      Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId( ) ) ) ;
@@ -343,6 +339,8 @@ public class SystemState {
                                           VmState.SHUTTING_DOWN.getName( ) ) );
           v.setState( VmState.SHUTTING_DOWN );
           v.resetStopWatch( );
+          SystemState.returnPublicAddress( v );
+          SystemState.returnNetworkIndex( v );
           SystemState.cleanUp( v );
         } catch ( NoSuchElementException e ) {
           try {
@@ -369,6 +367,8 @@ public class SystemState {
           QueryResult result = ( QueryResult ) iter.next( );
           VmInstance v = ( VmInstance ) result.get( "vm" );
           
+          SystemState.returnPublicAddress( v );
+          SystemState.returnNetworkIndex( v );
           reply.getInstancesSet( ).add(
                                         new TerminateInstancesItemType( v.getInstanceId( ), v.getState( ).getCode( ),
                                           v.getState( ).getName( ), VmState.SHUTTING_DOWN.getCode( ),

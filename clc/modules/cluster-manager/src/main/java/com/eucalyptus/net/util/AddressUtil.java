@@ -57,11 +57,7 @@ public class AddressUtil {
   }
 
   public static void unassignAddressFromVm( Address address, VmInstance vm ) {
-    try {
-      AddressUtil.markAddressUnassigned( address );
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
-    }
+    AddressUtil.markAddressUnassigned( address );
     AddressUtil.dispatchUnassignAddress( address, vm );
   }
 
