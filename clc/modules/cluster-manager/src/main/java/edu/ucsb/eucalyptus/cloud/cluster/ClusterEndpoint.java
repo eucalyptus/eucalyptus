@@ -131,35 +131,44 @@ public class ClusterEndpoint implements Startable {
       reply.getAvailabilityZoneInfo().addAll( this.addHelpInfo() );
       return reply;
     }
+    if( request.getAvailabilityZoneSet( ).isEmpty( ) ) {
+      for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+        this.getDescriptionEntry( reply, c, request.isAdministrator( ) );
+      }
+    }
     for( String clusterName : request.getAvailabilityZoneSet( ) ) {
       try {
-        Cluster c = Clusters.getInstance( ).lookup( clusterName );
+        this.getDescriptionEntry( reply, Clusters.getInstance( ).lookup( clusterName ), request.isAdministrator( ) );
       } catch ( NoSuchElementException e ) {
-        for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-          reply.getAvailabilityZoneInfo( ).add( new ClusterInfoType( c.getConfiguration( ).getName( ), c.getConfiguration( ).getHostName( ) ) );
-          NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( request.getAvailabilityZoneSet() );
-          if ( tagList.size() == 1 ) tagList = c.getNodeTags();
-          else
-            tagList.retainAll( c.getNodeTags() );
-          if ( request.isAdministrator() && clusterName.equals( "verbose" ) ) {
-            reply.getAvailabilityZoneInfo().addAll( this.addSystemInfo( c ) );
-          } else if ( request.isAdministrator() && clusterName.equals( "certs" ) ) {
-            for ( String tag : tagList ) {
-              reply.getAvailabilityZoneInfo( ).addAll( this.addCertInfo( tag, c ) );
-            }
-          } else if ( request.isAdministrator() && clusterName.equals( "logs" )  ) {
-            for ( String tag : tagList ) {
-              reply.getAvailabilityZoneInfo().addAll( this.addLogInfo( tag, c ) );
-            }
-          }
-        }
-        if ( request.isAdministrator() && clusterName.equals( "coredump" ) ) {
+        if ( clusterName.equals( "coredump" ) ) {
           DebugUtil.printDebugDetails( );
           reply.getAvailabilityZoneInfo().addAll( this.dumpState() );
         }
       }
     }
     return reply;
+  }
+
+  private void getDescriptionEntry( DescribeAvailabilityZonesResponseType reply, Cluster c, boolean admin ) {
+    String clusterName = c.getName( );
+    reply.getAvailabilityZoneInfo( ).add( new ClusterInfoType( c.getConfiguration( ).getName( ), c.getConfiguration( ).getHostName( ) ) );
+    NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( );
+    if ( tagList.size() == 1 ) tagList = c.getNodeTags();
+    else
+      tagList.retainAll( c.getNodeTags() );
+    if( admin ) {
+      if ( clusterName.equals( "verbose" ) ) {
+        reply.getAvailabilityZoneInfo().addAll( this.addSystemInfo( c ) );
+      } else if ( clusterName.equals( "certs" ) ) {
+        for ( String tag : tagList ) {
+          reply.getAvailabilityZoneInfo( ).addAll( this.addCertInfo( tag, c ) );
+        }
+      } else if ( clusterName.equals( "logs" )  ) {
+        for ( String tag : tagList ) {
+          reply.getAvailabilityZoneInfo().addAll( this.addLogInfo( tag, c ) );
+        }
+      }
+    }
   }
 
   private static String INFO_FSTRING = "|- %s";
