@@ -90,7 +90,7 @@ public class AddressUtil {
     }
   }
 
-  public static List<Address>  tryAssignSystemAddress( int count ) throws Exception {
+  public static List<Address>  tryAssignSystemAddresses( int count ) throws Exception {
     if ( !EucalyptusProperties.disableNetworking ) {
       try {
         List<Address> newAddresses = AddressUtil.allocateAddresses( count );
