@@ -237,7 +237,7 @@ public class Address implements HasName {
         return true;
       } finally {
         this.canHas.writeLock( ).unlock( );
-        addAddress( this.getName( ), this.getCluster( ), this.getUserId( ) );
+        addAddress( this );
         LOG.debug( EventRecord.caller( this.getClass( ), this.state.get( ), this.toString( ) ) );
         try {
           Addresses.getInstance( ).register( this );
@@ -256,20 +256,16 @@ public class Address implements HasName {
       this.userId = UNALLOCATED_USERID;
       this.system = false;
       this.state.set( State.unallocated );
+      removeAddress( this.name );
       return;
     } finally {
       this.canHas.writeLock( ).unlock( );
-      removeAddress( this.name );
       LOG.debug( EventRecord.caller( this.getClass( ), this.state.get( ), this.toString( ) ) );
-      try {
-        Addresses.getInstance( ).disable( this.getName( ) );
-      } catch ( NoSuchElementException e ) {
-        LOG.debug( e );
-      }
     }
   }
 
   private static void removeAddress( String name ) {
+    Addresses.getInstance( ).disable( name );
     EntityWrapper<Address> db = new EntityWrapper<Address>( );
     try {
       Address dbAddr = db.getUnique( new Address( name ) );
@@ -280,17 +276,16 @@ public class Address implements HasName {
     }
   }
 
-  private static void addAddress( String name, String cluster, String userId ) {
-    Address addr = new Address( name, cluster );
+  private static void addAddress( Address address ) {
+    Address addr = new Address( address.getName( ), address.getCluster( ) );
     EntityWrapper<Address> db = new EntityWrapper<Address>();
     try {
-      addr = db.getUnique( new Address( name ) );
-      addr.setUserId( userId );
+      addr = db.getUnique( new Address( address.getName( ) ) );
+      addr.setUserId( address.getUserId( ) );
       db.commit();
     } catch ( Throwable e ) {
       try {
-        addr.setUserId( userId );
-        db.add( addr );
+        db.add( address );
         db.commit( );
       } catch ( Throwable e1 ) {
         db.rollback( );
