@@ -228,16 +228,16 @@ public class SystemState {
           vol.setStatus( "attached" );
         }
         vm.setVolumes( runVm.getVolumes( ) );
-        if ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) {
-          try {
-            Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).extantNetworkIndex( vm.getPlacement( ),
-                                                                                                 vm.getNetworkIndex( ) );
-          } catch ( Exception e ) {}
-        } else {
-          try {
-            Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).returnNetworkIndex( vm.getNetworkIndex( ) );
-          } catch ( Exception e ) {}
-        }
+//        if ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) {
+//          try {
+//            Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).extantNetworkIndex( vm.getPlacement( ),
+//                                                                                                 vm.getNetworkIndex( ) );
+//          } catch ( Exception e ) {}
+//        } else {
+//          try {
+//            Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).returnNetworkIndex( vm.getNetworkIndex( ) );
+//          } catch ( Exception e ) {}
+//        }
       }
     } catch ( NoSuchElementException e ) {
       try {

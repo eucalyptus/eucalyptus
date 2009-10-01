@@ -379,9 +379,9 @@ public class Network implements HasName {
   }
 
   public void returnNetworkIndex( Integer index ) {
-    if( index < 2 ) return;
     LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, "${this.name} networkIndex=${index}" ) );
     this.assignedNetworkIndexes.remove( index );
+    if( index < 2 ) return;
     this.availableNetworkIndexes.add( index );
     this.clusterTokens.values().each { 
       it.getIndexes().remove( index );
