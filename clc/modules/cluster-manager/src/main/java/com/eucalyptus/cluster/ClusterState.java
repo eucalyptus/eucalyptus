@@ -131,7 +131,6 @@ public class ClusterState {
     LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, token ) );
     try {
       Network existingNet = Networks.getInstance( ).lookup( token.getName( ) );
-      existingNet.returnNetworkIndexes( token.getIndexes( ) );      
       this.releaseNetworkAllocation( token.getName( ) );
     } catch ( NoSuchElementException e ) {
     }

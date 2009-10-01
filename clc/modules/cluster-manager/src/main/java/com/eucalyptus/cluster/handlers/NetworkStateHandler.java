@@ -70,6 +70,7 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse resp = ( MappingHttpResponse ) e.getMessage( );
       DescribeNetworksResponseType reply = ( DescribeNetworksResponseType ) resp.getMessage( );
+      LOG.debug( reply.toString( "eucalyptus_ucsb_edu") );
       for( Network net : Networks.getInstance( ).listValues( ) ) {
         net.trim( reply.getAddrsPerNetwork( ) );
       }

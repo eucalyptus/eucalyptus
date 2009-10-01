@@ -163,37 +163,41 @@ public class SystemState {
   
   private static void cleanUp( final VmInstance vm ) {
     try {
-      Clusters.dispatchClusterEvent( vm.getPlacement( ), new TerminateCallback( ), 
-                                     Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId( ) ) ) ;
+      Clusters.dispatchClusterEvent( vm.getPlacement( ), new TerminateCallback( ),
+                                     Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId( ) ) );
       try {} catch ( Exception e ) {}
     } catch ( Exception e ) {
       LOG.debug( e );
     }
   }
-
+  
   private static void returnPublicAddress( final VmInstance vm ) {
-    for ( Address address : Addresses.getInstance( ).listValues( ) ) {
-      if ( vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) {
+    try {
+      Address address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
+      if(vm.getNetworkConfig( ).getIpAddress( ).equals( address.getInstanceAddress( ) ) ) {
         if ( address.isSystemAllocated( ) ) {
           AddressUtil.releaseAddress( address );
-        }
-      } else {
-        try {
-          if( address.isAssigned( ) ) {
-            AddressUtil.unassignAddressFromVm( address, vm );
+        } else {
+          try {
+            if ( address.isAssigned( ) ) {
+              AddressUtil.unassignAddressFromVm( address, vm );
+            }
+          } catch ( Throwable e ) {
+            LOG.debug( e, e );
           }
-        } catch ( Throwable e ) {
-          LOG.debug( e, e );
         }
+        
       }
+    } catch ( NoSuchElementException e1 ) {
+      LOG.debug( e1, e1 );
     }
   }
-
+  
   private static void returnNetworkIndex( final VmInstance vm ) {
     try {
       Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).returnNetworkIndex( vm.getNetworkIndex( ) );
     } catch ( NoSuchElementException e1 ) {
-      LOG.debug( e1 );
+      LOG.debug( e1, e1 );
     }
   }
   
@@ -228,16 +232,16 @@ public class SystemState {
           vol.setStatus( "attached" );
         }
         vm.setVolumes( runVm.getVolumes( ) );
-//        if ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) {
-//          try {
-//            Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).extantNetworkIndex( vm.getPlacement( ),
-//                                                                                                 vm.getNetworkIndex( ) );
-//          } catch ( Exception e ) {}
-//        } else {
-//          try {
-//            Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).returnNetworkIndex( vm.getNetworkIndex( ) );
-//          } catch ( Exception e ) {}
-//        }
+        //        if ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) {
+        //          try {
+        //            Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).extantNetworkIndex( vm.getPlacement( ),
+        //                                                                                                 vm.getNetworkIndex( ) );
+        //          } catch ( Exception e ) {}
+        //        } else {
+        //          try {
+        //            Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).returnNetworkIndex( vm.getNetworkIndex( ) );
+        //          } catch ( Exception e ) {}
+        //        }
       }
     } catch ( NoSuchElementException e ) {
       try {
@@ -290,7 +294,7 @@ public class SystemState {
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.error( e );
           }
-//          notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetworkIndex( ) );
+          //          notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
             notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
@@ -329,61 +333,28 @@ public class SystemState {
     TerminateInstancesResponseType reply = ( TerminateInstancesResponseType ) request.getReply( );
     reply.set_return( true );
     
-    if ( request.isAdministrator( ) ) {
-      for ( String instanceId : request.getInstancesSet( ) ) {
+    for ( String instanceId : request.getInstancesSet( ) ) {
+      try {
+        VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
+        if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
+          reply.getInstancesSet( ).add(
+                                        new TerminateInstancesItemType( v.getInstanceId( ), v.getState( ).getCode( ),
+                                          v.getState( ).getName( ), VmState.SHUTTING_DOWN.getCode( ),
+                                          VmState.SHUTTING_DOWN.getName( ) ) );
+          v.setState( VmState.SHUTTING_DOWN );
+          v.resetStopWatch( );
+          SystemState.returnPublicAddress( v );
+          SystemState.returnNetworkIndex( v );
+          SystemState.cleanUp( v );
+        }
+      } catch ( NoSuchElementException e ) {
         try {
-          VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
-          reply.getInstancesSet( ).add(
-                                        new TerminateInstancesItemType( v.getInstanceId( ), v.getState( ).getCode( ),
-                                          v.getState( ).getName( ), VmState.SHUTTING_DOWN.getCode( ),
-                                          VmState.SHUTTING_DOWN.getName( ) ) );
-          v.setState( VmState.SHUTTING_DOWN );
-          v.resetStopWatch( );
-          SystemState.returnPublicAddress( v );
-          SystemState.returnNetworkIndex( v );
-          SystemState.cleanUp( v );
-        } catch ( NoSuchElementException e ) {
-          try {
-            VmInstance v = VmInstances.getInstance( ).lookupDisabled( instanceId );
-            v.setState( VmState.BURIED );
-          } catch ( NoSuchElementException e1 ) {
-            LOG.debug( e, e );
-          }
-          //Bug #334650: uncomment the following if it should throw an exception
-          //          throw new EucalyptusCloudException( e.getMessage() );
+          VmInstance v = VmInstances.getInstance( ).lookupDisabled( instanceId );
+          v.setState( VmState.BURIED );
+        } catch ( NoSuchElementException e1 ) {
+          //no such instance.
         }
       }
-      return reply;
-    }
-    
-    StateSnapshot state = SystemState.getSnapshot( RULE_FILE );
-    try {
-      QueryResults res = state.findInstances( request.getUserId( ), request.getInstancesSet( ) );
-      if ( res.size( ) == 0 )
-        reply.set_return( false );
-      else {
-        Iterator iter = res.iterator( );
-        while ( iter.hasNext( ) ) {
-          QueryResult result = ( QueryResult ) iter.next( );
-          VmInstance v = ( VmInstance ) result.get( "vm" );
-          
-          SystemState.returnPublicAddress( v );
-          SystemState.returnNetworkIndex( v );
-          reply.getInstancesSet( ).add(
-                                        new TerminateInstancesItemType( v.getInstanceId( ), v.getState( ).getCode( ),
-                                          v.getState( ).getName( ), VmState.SHUTTING_DOWN.getCode( ),
-                                          VmState.SHUTTING_DOWN.getName( ) ) );
-          v.setState( VmState.SHUTTING_DOWN );
-          v.resetStopWatch( );
-          SystemState.cleanUp( v );
-        }
-      }
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      //Bug #334650: uncomment the following if it should throw an exception
-      //      throw new EucalyptusCloudException( e );
-    } finally {
-      state.destroy( );
     }
     return reply;
   }
