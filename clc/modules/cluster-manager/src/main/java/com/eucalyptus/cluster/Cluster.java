@@ -274,4 +274,11 @@ public class Cluster implements HasName {
     return this.configuration.getServicePath( );
   }
 
+  @Override
+  public String toString( ) {
+    return String.format( "Cluster [configuration=%s, credentials=%s, mq=%s, nodeMap=%s, nodeState=%s, state=%s]",
+                          this.configuration, this.credentials, this.mq, this.nodeMap, this.nodeState, this.state );
+  }
+
+  
 }
