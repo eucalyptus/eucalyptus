@@ -63,9 +63,18 @@
  */
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
@@ -73,18 +82,11 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.net.Addresses;
-import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.util.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasName;
 
-import javax.persistence.*;
-
-import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 @Entity
 @Table( name = "addresses" )
