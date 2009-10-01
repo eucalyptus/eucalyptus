@@ -391,7 +391,7 @@ public class SystemState {
     try {
       Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
       if( !net.hasTokens( ) ) {
-        Clusters.dispatchClusterEvent( cluster, new StopNetworkCallback( new NetworkToken( cluster.getName( ), vm.getOwnerId( ), net.getName( ), net.getVlan( ) ) ) );
+        Clusters.dispatchClusterEvent( cluster, new StopNetworkCallback( new NetworkToken( cluster.getName( ), vm.getOwnerId( ), net.getNetworkName( ), net.getVlan( ) ) ) );
       }
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
