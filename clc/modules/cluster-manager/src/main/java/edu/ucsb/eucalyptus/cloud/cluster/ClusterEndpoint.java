@@ -131,28 +131,32 @@ public class ClusterEndpoint implements Startable {
       reply.getAvailabilityZoneInfo().addAll( this.addHelpInfo() );
       return reply;
     }
-    Collection<Cluster> clusterList = Clusters.getInstance().getEntries();
-    for ( Cluster c : clusterList ) {
-      reply.getAvailabilityZoneInfo().add( new ClusterInfoType( c.getConfiguration( ).getName( ), c.getConfiguration( ).getHostName( ) ) );
-      List<String> args = request.getAvailabilityZoneSet();
-      NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( request.getAvailabilityZoneSet() );
-      if ( tagList.size() == 1 ) tagList = c.getNodeTags();
-      else
-        tagList.retainAll( c.getNodeTags() );
-      if ( tagList.isEmpty() ) continue;
-
-      DebugUtil.printDebugDetails( );
-      if ( request.isAdministrator() && args.lastIndexOf( "verbose" ) == 0 )
-        reply.getAvailabilityZoneInfo().addAll( this.addSystemInfo( c ) );
-      else if ( request.isAdministrator() && args.lastIndexOf( "certs" ) == 0 )
-        for ( String tag : tagList )
-          reply.getAvailabilityZoneInfo().addAll( this.addCertInfo( tag, c ) );
-      else if ( request.isAdministrator() && args.lastIndexOf( "logs" ) == 0 )
-        for ( String tag : tagList )
-          reply.getAvailabilityZoneInfo().addAll( this.addLogInfo( tag, c ) );
-      else if ( request.isAdministrator() && args.lastIndexOf( "coredump" ) == 0 )
-        reply.getAvailabilityZoneInfo().addAll( this.dumpState() );
-
+    for( String clusterName : request.getAvailabilityZoneSet( ) ) {
+      try {
+        Cluster c = Clusters.getInstance( ).lookup( clusterName );
+      } catch ( NoSuchElementException e ) {
+        for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+          NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( request.getAvailabilityZoneSet() );
+          if ( tagList.size() == 1 ) tagList = c.getNodeTags();
+          else
+            tagList.retainAll( c.getNodeTags() );
+          if ( request.isAdministrator() && clusterName.equals( "verbose" ) ) {
+            reply.getAvailabilityZoneInfo().addAll( this.addSystemInfo( c ) );
+          } else if ( request.isAdministrator() && clusterName.equals( "certs" ) ) {
+            for ( String tag : tagList ) {
+              reply.getAvailabilityZoneInfo( ).addAll( this.addCertInfo( tag, c ) );
+            }
+          } else if ( request.isAdministrator() && clusterName.equals( "logs" )  ) {
+            for ( String tag : tagList ) {
+              reply.getAvailabilityZoneInfo().addAll( this.addLogInfo( tag, c ) );
+            }
+          }
+        }
+        if ( request.isAdministrator() && clusterName.equals( "coredump" ) ) {
+          DebugUtil.printDebugDetails( );
+          reply.getAvailabilityZoneInfo().addAll( this.dumpState() );
+        }
+      }
     }
     return reply;
   }
