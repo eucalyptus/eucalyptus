@@ -73,6 +73,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.net.Addresses;
+import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasName;
@@ -201,7 +202,7 @@ public class Address implements HasName {
       this.state.set( State.allocated );
       Addresses.getInstance( ).register( this );
       if ( Component.eucalyptus.name( ).equals( this.userId ) ) {
-        if( !(this.system = !edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( ) ) ) {
+        if ( !( this.system = !edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( ) ) ) {
           this.release( );
         }
       }
@@ -215,6 +216,21 @@ public class Address implements HasName {
                           "Address [cluster=%s, instanceAddress=%s, instanceId=%s, name=%s, pending=%s, state=%s, userId=%s]",
                           this.cluster, this.instanceAddress, this.instanceId, this.name, this.pending, this.state,
                           this.userId );
+  }
+  
+  public void clean() {
+    this.canHas.writeLock().lock( );
+    try {
+      String user = this.userId;
+      if( !this.pending.get( ) ) {
+        this.release( );
+        if( !Component.eucalyptus.name().equals( user ) || !AddressUtil.doDynamicAddressing( ) ) {
+          this.allocate( userId );
+        }
+      }
+    } finally {
+      this.canHas.writeLock( ).unlock( );
+    }
   }
   
   @Transient
@@ -263,7 +279,7 @@ public class Address implements HasName {
       LOG.debug( EventRecord.caller( this.getClass( ), this.state.get( ), this.toString( ) ) );
     }
   }
-
+  
   private static void removeAddress( String name ) {
     Addresses.getInstance( ).disable( name );
     EntityWrapper<Address> db = new EntityWrapper<Address>( );
@@ -275,14 +291,14 @@ public class Address implements HasName {
       db.rollback( );
     }
   }
-
+  
   private static void addAddress( Address address ) {
     Address addr = new Address( address.getName( ), address.getCluster( ) );
-    EntityWrapper<Address> db = new EntityWrapper<Address>();
+    EntityWrapper<Address> db = new EntityWrapper<Address>( );
     try {
       addr = db.getUnique( new Address( address.getName( ) ) );
       addr.setUserId( address.getUserId( ) );
-      db.commit();
+      db.commit( );
     } catch ( Throwable e ) {
       try {
         db.add( address );
@@ -292,6 +308,7 @@ public class Address implements HasName {
       }
     }
   }
+  
   public void unassign( ) {
     if ( !this.pending.compareAndSet( false, true ) ) {
       throw new IllegalStateException( "Trying to unassign an address which is already pending: " + this );
@@ -308,7 +325,7 @@ public class Address implements HasName {
     }
   }
   
-  private void doUnassign( ) {
+  public void doUnassign( ) {
     this.canHas.writeLock( ).lock( );
     try {
       this.instanceId = UNASSIGNED_INSTANCEID;
@@ -339,8 +356,8 @@ public class Address implements HasName {
       } else {
         this.doUnassign( );
       }
-    } else if( State.assigned.equals( this.state.get() ) ) {
-      LOG.debug( EventRecord.caller( this.getClass( ), this.state.get(), this.toString( ) ) );
+    } else if ( State.assigned.equals( this.state.get( ) ) ) {
+      LOG.debug( EventRecord.caller( this.getClass( ), this.state.get( ), this.toString( ) ) );
     }
     return result;
   }
@@ -389,7 +406,7 @@ public class Address implements HasName {
   public enum State {
     unallocated, allocated, system, unassigning, assigning, assigned;//allocated => unassigned
   }
-
+  
   public void setInstanceId( String instanceId ) {
     this.instanceId = instanceId;
   }

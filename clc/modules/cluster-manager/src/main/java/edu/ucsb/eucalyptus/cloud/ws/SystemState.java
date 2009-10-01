@@ -228,11 +228,18 @@ public class SystemState {
         } else return;
       } else {
         vm.resetStopWatch( );
-        if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) && !"".equals( runVm.getNetParams( ).getIpAddress( ) ) && runVm.getNetParams( ).getIpAddress( ) != null ) vm.getNetworkConfig( ).setIpAddress(
-                                                                                                                                                                                                                                   runVm.getNetParams( ).getIpAddress( ) );
-        if ( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) && !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIgnoredPublicIp( ) ) && !"".equals( runVm.getNetParams( ).getIgnoredPublicIp( ) ) && runVm.getNetParams( ).getIgnoredPublicIp( ) != null ) vm.getNetworkConfig( ).setIgnoredPublicIp(
-                                                                                                                                                                                                                                                                                                                                           runVm.getNetParams( ).getIgnoredPublicIp( ) );
+        if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) && !"".equals( runVm.getNetParams( ).getIpAddress( ) ) && runVm.getNetParams( ).getIpAddress( ) != null ) {
+          vm.getNetworkConfig( ).setIpAddress(runVm.getNetParams( ).getIpAddress( ) );
+        }
+        if ( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) && !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIgnoredPublicIp( ) ) && !"".equals( runVm.getNetParams( ).getIgnoredPublicIp( ) ) && runVm.getNetParams( ).getIgnoredPublicIp( ) != null ) {
+          vm.getNetworkConfig( ).setIgnoredPublicIp(runVm.getNetParams( ).getIgnoredPublicIp( ) );
+        }
+        VmState oldState = vm.getState( );
         vm.setState( VmState.Mapper.get( runVm.getStateName( ) ) );
+        if( VmState.PENDING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
+          SystemState.returnNetworkIndex( vm );
+          SystemState.returnPublicAddress( vm );
+        }
         for ( AttachedVolume vol : runVm.getVolumes( ) ) {
           vol.setInstanceId( vm.getInstanceId( ) );
           vol.setStatus( "attached" );
@@ -350,8 +357,8 @@ public class SystemState {
           v.setState( VmState.SHUTTING_DOWN );
           v.resetStopWatch( );
           SystemState.returnNetworkIndex( v );
-          SystemState.returnPublicAddress( v );
           SystemState.cleanUp( v );
+          SystemState.returnPublicAddress( v );
         }
       } catch ( NoSuchElementException e ) {
         try {

@@ -169,17 +169,18 @@ public class AddressManager {
         try {
           VmInstances.getInstance().lookup( address.getInstanceId() );
         } catch ( NoSuchElementException e ) {
-          AddressUtil.markAddressUnassigned( address );
+          AddressUtil.clearAddress( address );
         }
       }
       if ( isAdmin || address.getUserId().equals( request.getUserId() ) ) {
         reply.getAddressesSet().add( address.getDescription( isAdmin ) );
       }
     }
-    if ( request.isAdministrator() )
-      for ( Address address : Addresses.getInstance().listDisabledValues() )
+    if ( request.isAdministrator() ) {
+      for ( Address address : Addresses.getInstance().listDisabledValues() ) {
         reply.getAddressesSet().add( new DescribeAddressesResponseItemType( address.getName(), Address.UNALLOCATED_USERID ) );
-
+      }
+    }
     return reply;
   }
 

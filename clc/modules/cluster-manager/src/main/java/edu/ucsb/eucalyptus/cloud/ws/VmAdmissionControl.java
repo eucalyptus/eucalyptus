@@ -137,14 +137,14 @@ public class VmAdmissionControl {
       LOG.debug( e, e );
       for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
         Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
-        for( String addr : token.getAddresses( ) ) {
-          AddressUtil.releaseAddress( addr );
-        }
         if( token.getPrimaryNetwork( ) != null ) {
           Network net = Networks.getInstance().lookup( token.getPrimaryNetwork( ).getName( ) );
           for( Integer i : token.getPrimaryNetwork( ).getIndexes( ) ) {
             net.returnNetworkIndex( i );
           }
+        }
+        for( String addr : token.getAddresses( ) ) {
+          AddressUtil.releaseAddress( addr );
         }
       }
       throw new EucalyptusCloudException( e );

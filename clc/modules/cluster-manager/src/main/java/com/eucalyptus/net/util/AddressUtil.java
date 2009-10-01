@@ -72,6 +72,17 @@ public class AddressUtil {
       LOG.debug( e, e );
     }
   }
+  public static void dispatchUnassignAddress( Address address ) {
+    if( VmInstance.DEFAULT_IP.equals( address.getInstanceAddress( ) ) ) {
+      return;
+    }
+    try {
+      UnassignAddressCallback callback = new UnassignAddressCallback( address  );
+      Clusters.dispatchClusterEvent( address.getCluster( ), callback );
+    } catch ( Throwable e ) {
+      LOG.debug( e, e );
+    }
+  }
 
   public static void markAddressUnassigned( Address address ) {
     address.unassign( );
@@ -123,11 +134,13 @@ public class AddressUtil {
     currentAddr.release( );
   }
 
-
+  public static boolean doDynamicAddressing() {
+    return edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( );
+  }
   public synchronized static List<Address> allocateAddresses( int count ) throws NotEnoughResourcesAvailable {
     boolean doDynamic = true;
     AddressUtil.updateAddressingMode( ); //:: make sure everything is up-to-date :://
-    doDynamic = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( );
+    doDynamic = doDynamicAddressing();
     List<Address> addressList = null;
     if ( doDynamic ) {
       addressList = getDynamicSystemAddresses( count );
@@ -267,6 +280,19 @@ public class AddressUtil {
       return true;
     } else {
       return false;
+    }
+  }
+
+  public static void clearAddress( Address address ) {
+    if( !address.isPending( ) ) {
+      try {
+        markAddressUnassigned( address );
+        dispatchUnassignAddress( address );
+      } catch ( Throwable e1 ) {
+        AddressManager.LOG.debug( e1, e1 );
+      }
+    } else if( Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) ){
+      address.clean( );
     }
   }
 }
