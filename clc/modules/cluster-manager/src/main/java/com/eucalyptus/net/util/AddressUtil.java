@@ -107,6 +107,7 @@ public class AddressUtil {
         LOG.debug( e, e );
       }
     }
+    currentAddr.release( );
   }
 
 
