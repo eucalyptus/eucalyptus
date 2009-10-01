@@ -171,31 +171,37 @@ public class ClusterEndpoint implements Startable {
 
   private List<ClusterInfoType> dumpState() {
     List<ClusterInfoType> retList = Lists.newArrayList();
+    retList.add( new ClusterInfoType( "================== Addresses", "" ) );
     for ( Address addr : Addresses.getInstance().listValues() ) {
       String val = addr.toString();
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
+    retList.add( new ClusterInfoType( "================== Disabled Addresses", "" ) );
     for ( Address addr : Addresses.getInstance().listDisabledValues() ) {
       String val = addr.toString();
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
+    retList.add( new ClusterInfoType( "================== VMs", "" ) );
     for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
       String val = vm.toString();
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
+    retList.add( new ClusterInfoType( "================== Disabled VMs", "" ) );
     for ( VmInstance vm : VmInstances.getInstance().listDisabledValues() ) {
       String val = vm.toString();
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
+    retList.add( new ClusterInfoType( "================== Clusters", "" ) );
     for ( Cluster cluster : Clusters.getInstance().listValues() ) {
       String val = cluster.toString();
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
+    retList.add( new ClusterInfoType( "================== Networks", "" ) );
     for ( Network network : Networks.getInstance().listValues() ) {
       String val = network.toString();
       retList.add( new ClusterInfoType( val, "" ) );
