@@ -94,10 +94,12 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
 import edu.ucsb.eucalyptus.cloud.entities.Address;
+import edu.ucsb.eucalyptus.cloud.entities.Address.State;
 import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
@@ -172,6 +174,7 @@ public class ClusterAllocator extends Thread {
           Address address = Addresses.getInstance( ).lookup( addr );
           address.setInstanceId( realVm.getInstanceId( ) );
           address.setInstanceAddress( realVm.getNetworkConfig( ).getIpAddress( ) );
+          LOG.debug( EventRecord.caller( address.getClass( ), State.ASSIGN_ADDRESSES, address.toString( ) ) );
           AddressUtil.dispatchAssignAddress( address, realVm );
         } catch ( Exception e ) {
           LOG.error( e, e );
