@@ -107,18 +107,6 @@ public class AddressUtil {
         LOG.debug( e, e );
       }
     }
-    EntityWrapper<Address> db = new EntityWrapper<Address>( );
-    try {
-      Address addr = db.getUnique( new Address( currentAddr.getName( ) ) );
-      db.delete( addr );
-      currentAddr.release( );
-      LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned,
-                               currentAddr ) );
-      db.commit( );
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
-      db.rollback( );
-    }
   }
 
 
