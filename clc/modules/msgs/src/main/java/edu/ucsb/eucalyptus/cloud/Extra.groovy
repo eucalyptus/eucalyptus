@@ -369,7 +369,7 @@ public class Network implements HasName {
     Integer nextIndex = this.availableNetworkIndexes.pollFirst( );
     this.assignedNetworkIndexes.add( nextIndex );
     this.clusterTokens.get( cluster ).getIndexes().add( nextIndex );
-    LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "netowrk=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+    LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
     return nextIndex;
   }
 
@@ -379,7 +379,7 @@ public class Network implements HasName {
   }
 
   public void returnNetworkIndex( Integer index ) {
-    LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.returned, "netowrk=${this.name}","networkIndex=${index}") );
+    LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.returned, "network=${this.name}","networkIndex=${index}") );
     this.assignedNetworkIndexes.remove( index );
     this.clusterTokens.values().each { 
       it.getIndexes().remove( index );
