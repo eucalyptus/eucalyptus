@@ -135,14 +135,16 @@ public class ClusterEndpoint implements Startable {
       for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
         this.getDescriptionEntry( reply, c, request.isAdministrator( ) );
       }
-    }
-    for( String clusterName : request.getAvailabilityZoneSet( ) ) {
-      try {
-        this.getDescriptionEntry( reply, Clusters.getInstance( ).lookup( clusterName ), request.isAdministrator( ) );
-      } catch ( NoSuchElementException e ) {
-        if ( clusterName.equals( "coredump" ) ) {
-          DebugUtil.printDebugDetails( );
-          reply.getAvailabilityZoneInfo().addAll( this.dumpState() );
+    } else {
+      for( String clusterName : request.getAvailabilityZoneSet( ) ) {
+        try {
+          Cluster c = Clusters.getInstance( ).lookup( clusterName );
+          this.getDescriptionEntry( reply, c, request.isAdministrator( ) );
+        } catch ( NoSuchElementException e ) {
+          if ( clusterName.equals( "coredump" ) ) {
+            DebugUtil.printDebugDetails( );
+            reply.getAvailabilityZoneInfo().addAll( this.dumpState() );
+          }
         }
       }
     }
