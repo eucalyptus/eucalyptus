@@ -199,8 +199,9 @@ public class SystemState {
   
   private static void returnNetworkIndex( final VmInstance vm ) {
     try {
-      LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", vm.getNetworkNames( ).get( 0 ), Integer.toString( vm.getNetworkIndex( ) ) ) );
-      Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).returnNetworkIndex( vm.getNetworkIndex( ) );
+      String networkFqName = vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 );
+      LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( vm.getNetworkIndex( ) ) ) );
+      Networks.getInstance( ).lookup( networkFqName ).returnNetworkIndex( vm.getNetworkIndex( ) );
     } catch ( NoSuchElementException e1 ) {
       LOG.debug( e1, e1 );
     }
