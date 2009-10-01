@@ -80,11 +80,6 @@ public class Credentials {
 
   public static void init( ) {
     Security.addProvider( new BouncyCastleProvider( ) );
-    try {
-      Class.forName( "com.eucalyptus.auth.util.SslSetup" );
-    } catch ( ClassNotFoundException e ) {
-      LOG.error( e, e );
-    }
     org.apache.xml.security.Init.init( );
     WSSConfig.getDefaultWSConfig( ).addJceProvider( "BC", BouncyCastleProvider.class.getCanonicalName( ) );
     WSSConfig.getDefaultWSConfig( ).setTimeStampStrict( true );

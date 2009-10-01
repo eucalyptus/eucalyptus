@@ -66,6 +66,7 @@ package com.eucalyptus.bootstrap;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.util.SslSetup;
 
 @Provides( resource = Resource.Database )
 @Depends( resources = Resource.SystemCredentials, remote = Component.eucalyptus )
@@ -73,6 +74,7 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
   private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
   @Override
   public boolean load( Resource current ) throws Exception {
+    LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
     SystemBootstrapper.setDatabaseBootstrapper( this );
     LOG.info( "-> database host: " + System.getProperty("euca.db.host") );
     LOG.info( "-> database port: " + System.getProperty("euca.db.port") );
