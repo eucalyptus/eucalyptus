@@ -357,7 +357,13 @@ public class SystemState {
           SystemState.returnNetworkIndex( v );
           SystemState.cleanUp( v );
           SystemState.returnPublicAddress( v );
-          SystemState.checkNetwork( v );
+          try {
+            Network net = v.getNetworks( ).get( 0 );
+            Cluster cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
+            SystemState.checkNetwork( cluster, net );
+          } catch ( Throwable e ) {
+            LOG.debug(e,e);
+          }
         }
       } catch ( NoSuchElementException e ) {
         try {
@@ -377,24 +383,20 @@ public class SystemState {
     clusterMq.enqueue( QueuedEvent.make( event, msg ) );
   }
   
-  private static void checkNetwork( VmInstance vm ) {
-    Network net = vm.getNetworks( ).get( 0 );
-    for( Cluster cluster : Clusters.getInstance( ).listValues( ) ) {
-      if( net.hasToken( cluster.getName( ) ) && net.getClusterToken( cluster.getName( ) ).getIndexes( ).isEmpty( ) ) {
-        try {
-          net.removeToken( cluster.getName( ) );
-        } catch ( NoSuchElementException e1 ) {
-          LOG.debug( e1, e1 );
+  private static void checkNetwork( Cluster cluster, Network net ) {
+    try {
+      for( String clusterName : Clusters.getInstance( ).listKeys( ) ) {
+        if( net.hasToken( clusterName ) && net.getClusterToken( clusterName  ).getIndexes( ).isEmpty( ) ) {
+          try {
+            net.removeToken( cluster.getName( ) );
+          } catch ( NoSuchElementException e1 ) {
+            LOG.debug( e1, e1 );
+          }
         }
       }
-    }
-    try {
-      Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-      if( !net.hasTokens( ) ) {
-        Clusters.dispatchClusterEvent( cluster, new StopNetworkCallback( new NetworkToken( cluster.getName( ), vm.getOwnerId( ), net.getNetworkName( ), net.getVlan( ) ) ) );
-      }
-    } catch ( NoSuchElementException e ) {
-      LOG.debug( e, e );
+    } catch ( NoSuchElementException e2 ) { }
+    if( !net.hasTokens( ) ) {
+      Clusters.dispatchClusterEvent( cluster, new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getVlan( ) ) ) );
     }
   }
   
