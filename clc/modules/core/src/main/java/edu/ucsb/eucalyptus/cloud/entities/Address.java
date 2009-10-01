@@ -308,6 +308,7 @@ public class Address implements HasName {
         }
       } finally {
         this.state.set( State.allocated );
+        LOG.debug( EventRecord.caller( this.getClass( ), State.unassigning, this.toString( ) ) );
       }
     }
   }
@@ -319,7 +320,7 @@ public class Address implements HasName {
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
     } finally {
       this.canHas.writeLock( ).unlock( );
-      LOG.debug( EventRecord.caller( this.getClass( ), this.state.get( ), this.toString( ) ) );
+      LOG.debug( EventRecord.caller( this.getClass( ), State.allocated, this.toString( ) ) );
     }
   }
   
@@ -343,6 +344,8 @@ public class Address implements HasName {
       } else {
         this.doUnassign( );
       }
+    } else if( State.assigned.equals( this.state.get() ) ) {
+      LOG.debug( EventRecord.caller( this.getClass( ), this.state.get(), this.toString( ) ) );
     }
     return result;
   }
@@ -361,7 +364,7 @@ public class Address implements HasName {
         return true;
       } finally {
         this.canHas.writeLock( ).unlock( );
-        LOG.debug( EventRecord.caller( this.getClass( ), this.state.get( ), this.toString( ) ) );
+        LOG.debug( EventRecord.caller( this.getClass( ), State.assigning, this.toString( ) ) );
       }
     }
   }
