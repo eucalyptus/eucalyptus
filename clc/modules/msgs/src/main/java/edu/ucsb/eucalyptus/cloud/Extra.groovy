@@ -369,7 +369,7 @@ public class Network implements HasName {
     Integer nextIndex = this.availableNetworkIndexes.pollFirst( );
     this.assignedNetworkIndexes.add( nextIndex );
     this.clusterTokens.get( cluster ).getIndexes().add( nextIndex );
-    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, "${this.name} networkIndex=${next} on cluster=${cluster}" ) );
+    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, "${this.name} networkIndex=${nextIndex} on cluster=${cluster}" ) );
     return nextIndex;
   }
 
