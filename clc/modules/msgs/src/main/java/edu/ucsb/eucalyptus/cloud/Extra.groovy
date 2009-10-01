@@ -351,7 +351,7 @@ public class Network implements HasName {
   }
 
   public NetworkToken getClusterToken( String cluster ) {
-    NetworkToken token = this.networkTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan ) );
+    NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan ) );
     if( token == null ) token = this.clusterTokens.get( cluster );
     return token;
   }
@@ -383,7 +383,7 @@ public class Network implements HasName {
     LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, "${this.name} networkIndex=${index}" ) );
     this.assignedNetworkIndexes.remove( index );
     this.availableNetworkIndexes.add( index );
-    this.networkTokens.values().each { 
+    this.clusterTokens.values().each { 
       it.getIndexes().remove( index );
     }
   }
@@ -392,21 +392,21 @@ public class Network implements HasName {
     if( this.vlan == null ) {
       this.vlan = token.getVlan( );
     }
-    NetworkToken clusterToken = this.networkTokens.putIfAbsent( token.getCluster(), token );
-    if( clusterToken == null ) clusterToken = this.networkTokens.get( token.getCluster() );
-    return this.networkTokens.put(token.getCluster(), token);
+    NetworkToken clusterToken = this.clusterTokens.putIfAbsent( token.getCluster(), token );
+    if( clusterToken == null ) clusterToken = this.clusterTokens.get( token.getCluster() );
+    return this.clusterTokens.put(token.getCluster(), token);
   }
 
   public boolean hasToken(String cluster) {
-    return this.networkTokens.containsKey(cluster);
+    return this.clusterTokens.containsKey(cluster);
   }
 
   public boolean hasTokens() {
-    return !this.networkTokens.values( ).isEmpty( );
+    return !this.clusterTokens.values( ).isEmpty( );
   }
 
   public void removeToken(NetworkToken token) {
-    this.networkTokens.remove(token.getCluster( ));
+    this.clusterTokens.remove(token.getCluster( ));
   }
 
   public boolean isPeer( String peerName, String peerNetworkName ) {
@@ -421,8 +421,8 @@ public class Network implements HasName {
   @Override
   public String toString( ) {
     return String.format(
-                          "Network [availableNetworkIndexes=%s, assignedNetworkIndexes=%s, name=%s, networkName=%s, networkTokens=%s, rules=%s, userName=%s]",
-                          this.availableNetworkIndexes, this.assignedNetworkIndexes, this.name, this.networkName, this.networkTokens, this.rules,
+                          "Network [availableNetworkIndexes=%s, assignedNetworkIndexes=%s, name=%s, networkName=%s, clusterTokens=%s, rules=%s, userName=%s]",
+                          this.availableNetworkIndexes, this.assignedNetworkIndexes, this.name, this.networkName, this.clusterTokens, this.rules,
                           this.userName );
   }
   
