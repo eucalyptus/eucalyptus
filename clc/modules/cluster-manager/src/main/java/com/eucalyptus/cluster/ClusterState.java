@@ -126,11 +126,11 @@ public class ClusterState {
     if( !existingNet.hasTokens() ) {
       ClusterState.availableVlans.add( existingNet.getVlan( ) );
     }
+    Networks.getInstance( ).remove( networkName );
   }
   public void releaseNetworkAllocation( NetworkToken token ) {
     LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, token ) );
     try {
-      Network existingNet = Networks.getInstance( ).lookup( token.getName( ) );
       this.releaseNetworkAllocation( token.getName( ) );
     } catch ( NoSuchElementException e ) {
     }

@@ -102,8 +102,6 @@ public class SystemState {
   private static final String INSTANCE_TERMINATED = "User requested shutdown.";
   
   public static void handle( VmDescribeResponseType request ) {
-    SystemState.checkNetworks( );
-    
     String originCluster = request.getOriginCluster( );
     
     for ( VmInfo runVm : request.getVms( ) )
@@ -359,6 +357,7 @@ public class SystemState {
           SystemState.returnNetworkIndex( v );
           SystemState.cleanUp( v );
           SystemState.returnPublicAddress( v );
+          SystemState.checkNetwork( v );
         }
       } catch ( NoSuchElementException e ) {
         try {
@@ -372,40 +371,31 @@ public class SystemState {
     return reply;
   }
   
-  private static synchronized void checkNetworks( ) {
-    
-    Multimap<String, VmInstance> userVms = Multimaps.newArrayListMultimap( );
-    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) )
-      userVms.put( v.getOwnerId( ), v );
-    
-    NavigableSet<NetworkToken> revokedTokens = Sets.newTreeSet( );
-    for ( Network activeNet : Networks.getInstance( ).listValues( ) ) {
-      String user = activeNet.getUserName( );
-      LOG.debug( LogUtil.subheader( activeNet.toString( ) ) );
-      Multimap<String, String> clusterNetworkMap = Multimaps.newArrayListMultimap( );
-      
-      for ( VmInstance vm : userVms.get( user ) ) {
-        clusterNetworkMap.get( vm.getPlacement( ) ).addAll( vm.getNetworkNames( ) );
-      }
-      
-    }
-    for ( NetworkToken token : revokedTokens )
-      SystemState.dispatchStopNetwork( token );
-  }
-  
   private static <E extends EucalyptusMessage> void dispatch( String clusterName, QueuedEventCallback event, E msg ) {
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
     ClusterMessageQueue clusterMq = cluster.getMessageQueue( );
     clusterMq.enqueue( QueuedEvent.make( event, msg ) );
   }
   
-  private static void dispatchStopNetwork( NetworkToken token ) {
-    LOG.debug( "Dispatching stopNetwork for " + token.getName( ) + " on cluster " + token.getCluster( ) );
-    ClusterConfiguration config = Clusters.getInstance( ).lookup( token.getCluster( ) ).getConfiguration( );
-    QueuedEvent<StopNetworkType> event = QueuedEvent.make( new StopNetworkCallback( token ),
-                                                           Admin.makeMsg( StopNetworkType.class, token.getUserName( ),
-                                                                          token.getNetworkName( ), token.getVlan( ) ) );
-    Clusters.getInstance( ).lookup( token.getCluster( ) ).getMessageQueue( ).enqueue( event );
+  private static void checkNetwork( VmInstance vm ) {
+    Network net = vm.getNetworks( ).get( 0 );
+    for( Cluster cluster : Clusters.getInstance( ).listValues( ) ) {
+      if( net.hasToken( cluster.getName( ) ) && net.getClusterToken( cluster.getName( ) ).getIndexes( ).isEmpty( ) ) {
+        try {
+          net.removeToken( cluster.getName( ) );
+        } catch ( NoSuchElementException e1 ) {
+          LOG.debug( e1, e1 );
+        }
+      }
+    }
+    try {
+      Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
+      if( !net.hasTokens( ) ) {
+        Clusters.dispatchClusterEvent( cluster, new StopNetworkCallback( new NetworkToken( cluster.getName( ), vm.getOwnerId( ), net.getName( ), net.getVlan( ) ) ) );
+      }
+    } catch ( NoSuchElementException e ) {
+      LOG.debug( e, e );
+    }
   }
   
   private static void dispatchReboot( final String clusterName, final String instanceId, final EucalyptusMessage request ) {

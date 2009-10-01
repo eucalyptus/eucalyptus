@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.Admin;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -94,7 +95,11 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
   public void prepareAll( final StopNetworkType msg ) {}
 
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {
+  public void verify( EucalyptusMessage msg ) throws Exception {}
+
+  @Override
+  public void prepare( StopNetworkType msg ) throws Exception {
+    //FIXME: handle dropping stop networks which may be generated for networks in the PENDING state. 
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
       if ( v.getNetworkNames( ).contains( token.getName( ) ) && v.getPlacement( ).equals( token.getCluster( ) ) ) {
         throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
@@ -105,24 +110,8 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
       Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
       LOG.debug( "Releasing network token back to cluster: " + token );
       cluster.getState( ).releaseNetworkAllocation( token );
-      LOG.debug( "Removing network token: " + token );
-      try {
-        Networks.getInstance( ).setState( token.getName( ), Networks.State.DISABLED );
-      } catch ( Exception e ) {
-        LOG.debug( e );
-      }
     } catch ( Exception e ) {
       LOG.debug( e );
-    }
-  }
-
-  @Override
-  public void prepare( StopNetworkType msg ) throws Exception {
-    //FIXME: handle dropping stop networks which may be generated for networks in the PENDING state. 
-    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( v.getNetworkNames( ).contains( token.getName( ) ) && v.getPlacement( ).equals( token.getCluster( ) ) ) {
-        throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
-      }
     }
   }
 
