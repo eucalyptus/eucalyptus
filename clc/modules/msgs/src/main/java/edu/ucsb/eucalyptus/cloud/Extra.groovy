@@ -64,7 +64,6 @@
 package edu.ucsb.eucalyptus.cloud
 
 
-import edu.ucsb.eucalyptus.cloud.entities.Address.State;
 import edu.ucsb.eucalyptus.msgs.*
 
 import org.apache.log4j.Logger;
