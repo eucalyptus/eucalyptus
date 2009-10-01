@@ -103,7 +103,7 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
       Network net = Networks.getInstance( ).lookup( token.getName( ) );
       Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
       LOG.debug( "Releasing network token back to cluster: " + token );
-      if( !net.hasTokens( ) ) throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
+      if( net.hasTokens( ) ) throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
       cluster.getState( ).releaseNetworkAllocation( token );
     } catch ( Exception e ) {
       LOG.debug( e );

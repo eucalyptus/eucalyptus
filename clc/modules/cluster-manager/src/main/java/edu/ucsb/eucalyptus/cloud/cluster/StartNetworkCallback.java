@@ -108,6 +108,7 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
     try {
       msg.setNameserver( edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getNameserverAddress( ) );
       msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
+      
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }

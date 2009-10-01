@@ -131,27 +131,30 @@ public class ClusterEndpoint implements Startable {
       reply.getAvailabilityZoneInfo().addAll( this.addHelpInfo() );
       return reply;
     }
-    if( request.getAvailabilityZoneSet( ).isEmpty( ) ) {
+    List<String> args = request.getAvailabilityZoneSet( );
+    if( args.isEmpty( ) || args.contains( "verbose" ) || args.contains( "certs" ) || args.contains( "logs" ) || args.contains( "keys" ) ) {
       for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-        this.getDescriptionEntry( reply, c, request.isAdministrator( ) );
+        this.getDescriptionEntry( reply, c, request );
       }
     } else {
       for( String clusterName : request.getAvailabilityZoneSet( ) ) {
         try {
           Cluster c = Clusters.getInstance( ).lookup( clusterName );
-          this.getDescriptionEntry( reply, c, request.isAdministrator( ) );
+          this.getDescriptionEntry( reply, c, request );
         } catch ( NoSuchElementException e ) {
           if ( clusterName.equals( "coredump" ) ) {
             DebugUtil.printDebugDetails( );
             reply.getAvailabilityZoneInfo().addAll( this.dumpState() );
-          }
+          } 
         }
       }
     }
     return reply;
   }
 
-  private void getDescriptionEntry( DescribeAvailabilityZonesResponseType reply, Cluster c, boolean admin ) {
+  private void getDescriptionEntry( DescribeAvailabilityZonesResponseType reply, Cluster c, DescribeAvailabilityZonesType request ) {
+    boolean admin = request.isAdministrator( );
+    List<String> args = request.getAvailabilityZoneSet( );
     String clusterName = c.getName( );
     reply.getAvailabilityZoneInfo( ).add( new ClusterInfoType( c.getConfiguration( ).getName( ), c.getConfiguration( ).getHostName( ) ) );
     NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( );
@@ -159,13 +162,13 @@ public class ClusterEndpoint implements Startable {
     else
       tagList.retainAll( c.getNodeTags() );
     if( admin ) {
-      if ( clusterName.equals( "verbose" ) ) {
+      if ( args.contains( "verbose" ) ) {
         reply.getAvailabilityZoneInfo().addAll( this.addSystemInfo( c ) );
-      } else if ( clusterName.equals( "certs" ) ) {
+      } else if ( args.contains( "certs" ) ) {
         for ( String tag : tagList ) {
           reply.getAvailabilityZoneInfo( ).addAll( this.addCertInfo( tag, c ) );
         }
-      } else if ( clusterName.equals( "logs" )  ) {
+      } else if ( args.contains( "logs" )  ) {
         for ( String tag : tagList ) {
           reply.getAvailabilityZoneInfo().addAll( this.addLogInfo( tag, c ) );
         }
