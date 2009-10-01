@@ -134,13 +134,17 @@ public class SLAs {
       addrCount += token.getAmount();
     }
     if ( !EucalyptusProperties.disableNetworking && ( "public".equals( vmAllocInfo.getRequest().getAddressingType() ) || vmAllocInfo.getRequest().getAddressingType() == null ) ) {
-      List<Address> addressList = AddressUtil.allocateAddresses( addrCount );
+      List<Address> addressList;
+      try {
+        addressList = AddressUtil.tryAssignSystemAddresses( addrCount );
+      } catch ( Exception e ) {
+        throw new NotEnoughResourcesAvailable( e.getMessage( ), e );
+      }
       Iterator<Address> iter = addressList.listIterator( );
       for ( ResourceToken token : allocTokeList ) {
         for ( int i = 0; i < token.getAmount(); i++ ) {
           Address next = iter.next( );
           token.getAddresses().add( next.getName( ) );
-          next.assign( Address.PENDING_ASSIGNMENT, Address.PENDING_ASSIGNMENT );//FIXME: lame hack.
         }
       }
     }

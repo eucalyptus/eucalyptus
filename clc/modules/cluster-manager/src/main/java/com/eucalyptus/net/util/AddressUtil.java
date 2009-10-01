@@ -90,6 +90,23 @@ public class AddressUtil {
     }
   }
 
+  public static List<Address>  tryAssignSystemAddress( int count ) throws Exception {
+    if ( !EucalyptusProperties.disableNetworking ) {
+      try {
+        List<Address> newAddresses = AddressUtil.allocateAddresses( count );
+        for( Address newAddress : newAddresses ) {
+          newAddress.assign( Address.PENDING_ASSIGNMENT, Address.PENDING_ASSIGNMENT );//FIXME: lame hack.
+        }
+        return newAddresses;
+      } catch ( Exception e ) {
+        throw e;
+      }
+    } else {
+      throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (not supported by cluster)." );
+    }
+  }
+
+  
   public static void releaseAddress( String s ) {
     AddressUtil.releaseAddress( new Address( s ) );
   }
