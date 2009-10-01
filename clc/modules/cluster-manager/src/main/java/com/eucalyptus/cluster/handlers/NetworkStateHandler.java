@@ -92,15 +92,17 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
       
       for( Network net : Networks.getInstance( ).listValues( Networks.State.ACTIVE ) ) {
         net.trim( reply.getAddrsPerNetwork( ) );
-        if( net.hasToken( this.getCluster( ).getName( ) ) ) continue;
-        try {
-          Clusters.sendClusterEvent( this.getCluster( ), this.getStopCallback( net ) );
-          if( !net.hasTokens( ) ) {
-            Networks.getInstance( ).setState( net.getName( ), Networks.State.DISABLED );
-            this.getCluster( ).getState( ).releaseNetworkAllocation( net.getName( ) );
+        if( net.hasToken( this.getCluster( ).getName( ) ) && net.getClusterToken( this.getCluster( ).getName( ) ).getIndexes( ).isEmpty( ) ) {
+          try {
+            net.removeToken( this.getCluster( ).getName( ) );
+            Clusters.dispatchClusterEvent( this.getCluster( ), this.getStopCallback( net ) );
+            if( !net.hasTokens( ) ) {
+              Networks.getInstance( ).setState( net.getName( ), Networks.State.DISABLED );
+              this.getCluster( ).getState( ).releaseNetworkAllocation( net.getName( ) );
+            }
+          } catch ( NoSuchElementException e1 ) {
+            LOG.debug( e1, e1 );
           }
-        } catch ( NoSuchElementException e1 ) {
-          LOG.debug( e1, e1 );
         }
       }
       List<Cluster> ccList = Clusters.getInstance( ).listValues( );
@@ -119,9 +121,9 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
     }
   }
 
-  private QueuedEvent<StopNetworkType> getStopCallback( Network network ) {
+  private QueuedEventCallback getStopCallback( Network network ) {
     NetworkToken token = new NetworkToken( network.getName( ), network.getUserName( ), network.getNetworkName( ), network.getVlan( ) );
-    return QueuedEvent.make( new StopNetworkCallback( token ), Admin.makeMsg( StopNetworkType.class, token.getUserName(), token.getNetworkName(), token.getVlan() ) ); 
+    return new StopNetworkCallback( token ); 
   }
   
   @Override

@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.util.Admin;
 
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -86,6 +87,7 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
 
   public StopNetworkCallback( final NetworkToken networkToken ) {
     this.token = networkToken;
+    this.setRequest( Admin.makeMsg( StopNetworkType.class, token.getUserName(), token.getNetworkName(), token.getVlan() ) );
   }
 
   @Override
@@ -104,7 +106,6 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
       LOG.debug( "Releasing network token back to cluster: " + token );
       cluster.getState( ).releaseNetworkAllocation( token );
       LOG.debug( "Removing network token: " + token );
-      net.removeToken( token );
       try {
         Networks.getInstance( ).setState( token.getName( ), Networks.State.DISABLED );
       } catch ( Exception e ) {

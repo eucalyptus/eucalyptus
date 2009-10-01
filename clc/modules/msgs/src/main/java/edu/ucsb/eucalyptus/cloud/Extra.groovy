@@ -405,8 +405,8 @@ public class Network implements HasName {
     return !this.clusterTokens.values( ).isEmpty( );
   }
 
-  public void removeToken(NetworkToken token) {
-    this.clusterTokens.remove(token.getCluster( ));
+  public void removeToken(String cluster) {
+    this.clusterTokens.remove(cluster);
   }
 
   public boolean isPeer( String peerName, String peerNetworkName ) {
