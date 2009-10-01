@@ -222,9 +222,10 @@ public class Address implements HasName {
     this.canHas.writeLock().lock( );
     try {
       String user = this.userId;
-      if( !this.pending.get( ) ) {
+      if( !this.isPending( ) ) {
         this.release( );
-        if( !Component.eucalyptus.name().equals( user ) || edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( ) && !allocatedAddr.isAssigned( ) && !allocatedAddr.isPending( ) ) {
+        if( !Component.eucalyptus.name().equals( user ) 
+            || !edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( ) ) {
           this.allocate( userId );
         }
       }
