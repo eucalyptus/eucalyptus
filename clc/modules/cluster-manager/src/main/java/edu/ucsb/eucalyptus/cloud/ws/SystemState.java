@@ -162,14 +162,13 @@ public class SystemState {
   }
   
   private static void cleanUp( final VmInstance vm ) {
-    if ( !VmState.TERMINATED.equals( vm.getState( ) ) && !VmState.BURIED.equals( vm.getState( ) ) ) {
+    if ( VmState.TERMINATED.equals( vm.getState( ) ) || VmState.BURIED.equals( vm.getState( ) ) ) {
       SystemState.returnPublicAddress( vm );
       SystemState.returnNetworkIndex( vm );
     }
     try {
-      Clusters.sendClusterEvent( vm.getPlacement( ), QueuedEvent.make( new TerminateCallback( ),
-                                                                       Admin.makeMsg( TerminateInstancesType.class,
-                                                                                      vm.getInstanceId( ) ) ) );
+      Clusters.dispatchClusterEvent( vm.getPlacement( ), new TerminateCallback( ), 
+                                     Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId( ) ) ) ;
       try {} catch ( Exception e ) {}
     } catch ( Exception e ) {
       LOG.debug( e );
@@ -179,12 +178,14 @@ public class SystemState {
   private static void returnPublicAddress( final VmInstance vm ) {
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
       if ( vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) {
-        if ( Component.eucalyptus.name( ).equals( address.getUserId( ) ) ) {
+        if ( address.isSystemAllocated( ) ) {
           AddressUtil.releaseAddress( address );
         }
       } else {
         try {
-          AddressUtil.unassignAddressFromVm( address, vm );
+          if( address.isAssigned( ) ) {
+            AddressUtil.unassignAddressFromVm( address, vm );
+          }
         } catch ( Throwable e ) {
           LOG.debug( e, e );
         }
