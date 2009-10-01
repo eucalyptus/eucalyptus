@@ -421,8 +421,8 @@ public class Network implements HasName {
   @Override
   public String toString( ) {
     return String.format(
-                          "Network [availableAddresses=%s, name=%s, networkName=%s, networkTokens=%s, rules=%s, userName=%s]",
-                          this.availableAddresses, this.name, this.networkName, this.networkTokens, this.rules,
+                          "Network [availableNetworkIndexes=%s, assignedNetworkIndexes=%s, name=%s, networkName=%s, networkTokens=%s, rules=%s, userName=%s]",
+                          this.availableNetworkIndexes, this.assignedNetworkIndexes, this.name, this.networkName, this.networkTokens, this.rules,
                           this.userName );
   }
   
