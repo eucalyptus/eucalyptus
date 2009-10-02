@@ -612,7 +612,6 @@ public class NodeInfo implements Comparable {
 
   @Override
   public String toString( ) {
-    return String.format( "NodeInfo [lastSeen=%s, logs=%s, name=%s, serviceTag=%s]", this.lastSeen, this.logs,
-                          this.name, this.serviceTag );
+    return String.format( "NodeInfo [name=%s, lastSeen=%s, serviceTag=%s]", this.name, this.lastSeen, this.serviceTag );
   }
 }

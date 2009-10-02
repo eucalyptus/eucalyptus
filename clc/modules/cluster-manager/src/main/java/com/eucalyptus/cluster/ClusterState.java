@@ -179,6 +179,13 @@ public class ClusterState {
     this.addressCapacity = addressCapacity;
   }
 
+
+  @Override
+  public String toString( ) {
+    return String.format( "ClusterState [addressCapacity=%s, clusterName=%s, mode=%s]", this.addressCapacity,
+                          this.clusterName, this.mode );
+  }
+
   
 
 }

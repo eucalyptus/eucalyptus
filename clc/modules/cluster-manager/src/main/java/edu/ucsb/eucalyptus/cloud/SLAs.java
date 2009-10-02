@@ -128,12 +128,13 @@ public class SLAs {
   }
   
   public void doAddressAllocation( VmAllocationInfo vmAllocInfo ) throws NotEnoughResourcesAvailable {
+    if( EucalyptusProperties.disableNetworking ) return;
     int addrCount = 0;
     List<ResourceToken> allocTokeList = vmAllocInfo.getAllocationTokens();
     for ( ResourceToken token : allocTokeList ) {
       addrCount += token.getAmount();
     }
-    if ( !EucalyptusProperties.disableNetworking && ( "public".equals( vmAllocInfo.getRequest().getAddressingType() ) || vmAllocInfo.getRequest().getAddressingType() == null ) ) {
+    if ( "public".equals( vmAllocInfo.getRequest().getAddressingType() ) || vmAllocInfo.getRequest().getAddressingType() == null ) {
       List<Address> addressList;
       try {
         addressList = AddressUtil.tryAssignSystemAddresses( addrCount );
@@ -151,6 +152,7 @@ public class SLAs {
   }
 
   public void doNetworkAllocation( VmAllocationInfo vmAllocInfo ) throws NotEnoughResourcesAvailable {
+    if( EucalyptusProperties.disableNetworking ) return;
     String userId = vmAllocInfo.getRequest().getUserId();
     List<ResourceToken> rscTokens = vmAllocInfo.getAllocationTokens(); 
     List<Network> networks = vmAllocInfo.getNetworks();

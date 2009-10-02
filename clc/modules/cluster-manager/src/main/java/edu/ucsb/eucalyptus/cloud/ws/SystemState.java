@@ -63,34 +63,63 @@
  */
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import com.eucalyptus.bootstrap.Component;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+import org.apache.log4j.Logger;
+import org.drools.QueryResult;
+import org.drools.QueryResults;
+import org.mule.RequestContext;
+
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterMessageQueue;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.net.Addresses;
 import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.network.NetworkGroupUtil;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.*;
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.cluster.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.constants.EventType;
-import edu.ucsb.eucalyptus.constants.VmState;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.*;
-import org.apache.log4j.Logger;
-import org.drools.*;
-import org.mule.RequestContext;
-
+import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.util.Messaging;
 
-import java.util.*;
+import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
+import edu.ucsb.eucalyptus.cloud.VmImageInfo;
+import edu.ucsb.eucalyptus.cloud.VmInfo;
+import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
+import edu.ucsb.eucalyptus.cloud.cluster.ConsoleOutputCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.RebootCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.StopNetworkCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.TerminateCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
+import edu.ucsb.eucalyptus.cloud.entities.Address;
+import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.constants.VmState;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
+import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
+import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
+import edu.ucsb.eucalyptus.msgs.INTERNAL;
+import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
+import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import edu.ucsb.eucalyptus.util.Admin;
 
 public class SystemState {
   
@@ -171,37 +200,45 @@ public class SystemState {
   }
   
   private static void returnPublicAddress( final VmInstance vm ) {
-    try {
-      LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, vm.getInstanceId( ) ) );
-      Address address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
-      if(vm.getNetworkConfig( ).getIpAddress( ).equals( address.getInstanceAddress( ) ) ) {
-        if ( address.isSystemAllocated( ) ) {
-          LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
-          AddressUtil.releaseAddress( address );
-        } else {
-          try {
-            if ( address.isAssigned( ) ) {
-              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
-              AddressUtil.unassignAddressFromVm( address, vm );
+    if( EucalyptusProperties.disableNetworking ) {
+      return;
+    } else {
+      try {
+        LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, vm.getInstanceId( ) ) );
+        Address address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
+        if(vm.getNetworkConfig( ).getIpAddress( ).equals( address.getInstanceAddress( ) ) ) {
+          if ( address.isSystemAllocated( ) ) {
+            LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
+            AddressUtil.releaseAddress( address );
+          } else {
+            try {
+              if ( address.isAssigned( ) ) {
+                LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
+                AddressUtil.unassignAddressFromVm( address, vm );
+              }
+            } catch ( Throwable e ) {
+              LOG.debug( e, e );
             }
-          } catch ( Throwable e ) {
-            LOG.debug( e, e );
           }
+          
         }
-        
+      } catch ( NoSuchElementException e1 ) {
+        LOG.debug( e1, e1 );
       }
-    } catch ( NoSuchElementException e1 ) {
-      LOG.debug( e1, e1 );
     }
   }
   
   private static void returnNetworkIndex( final VmInstance vm ) {
-    try {
-      String networkFqName = vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 );
-      LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( vm.getNetworkIndex( ) ) ) );
-      Networks.getInstance( ).lookup( networkFqName ).returnNetworkIndex( vm.getNetworkIndex( ) );
-    } catch ( NoSuchElementException e1 ) {
-      LOG.debug( e1, e1 );
+    if( EucalyptusProperties.disableNetworking ) {
+      return;
+    } else {
+      try {
+        String networkFqName = vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 );
+        LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( vm.getNetworkIndex( ) ) ) );
+        Networks.getInstance( ).lookup( networkFqName ).returnNetworkIndex( vm.getNetworkIndex( ) );
+      } catch ( NoSuchElementException e1 ) {
+        LOG.debug( e1, e1 );
+      }
     }
   }
   
@@ -357,12 +394,14 @@ public class SystemState {
           SystemState.returnNetworkIndex( v );
           SystemState.cleanUp( v );
           SystemState.returnPublicAddress( v );
-          try {
-            Network net = v.getNetworks( ).get( 0 );
-            Cluster cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
-            SystemState.checkNetwork( cluster, net );
-          } catch ( Throwable e ) {
-            LOG.debug(e,e);
+          if( !EucalyptusProperties.disableNetworking ) {
+            try {
+              Network net = v.getNetworks( ).get( 0 );
+              Cluster cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
+              SystemState.checkNetwork( cluster, net );
+            } catch ( Throwable e ) {
+              LOG.debug(e,e);
+            }
           }
         }
       } catch ( NoSuchElementException e ) {

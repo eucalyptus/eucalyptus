@@ -192,7 +192,9 @@ public class ClusterAllocator extends Thread {
 
   @SuppressWarnings( "unchecked" )
   public void setupNetworkMessages( NetworkToken networkToken ) {
-    if ( networkToken != null ) {
+    if ( EucalyptusProperties.disableNetworking ) {
+      return;
+    } else if ( networkToken != null ) {
       StartNetworkType msg = new StartNetworkType( this.vmAllocInfo.getRequest(), networkToken.getVlan(), networkToken.getNetworkName() );
       this.msgMap.put( State.CREATE_NETWORK, QueuedEvent.make( new StartNetworkCallback( networkToken ), msg ) );
     }

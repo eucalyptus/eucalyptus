@@ -198,6 +198,8 @@ public class ClusterNodeState {
     return available;
   }
 
+  
+  
   public VmTypeAvailability getAvailability( String vmTypeName ) {
     return this.typeMap.get( vmTypeName );
   }
@@ -217,6 +219,13 @@ public class ClusterNodeState {
     public int compare( final ClusterNodeState o1, final ClusterNodeState o2 ) {
       return o1.getAvailability( this.vmTypeInfo.getName() ).getAvailable() - o2.getAvailability( this.vmTypeInfo.getName() ).getAvailable();
     }
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format(
+                          "ClusterNodeState [clusterName=%s, pendingTokens=%s, redeemedTokens=%s, submittedTokens=%s, typeMap=%s]",
+                          this.clusterName, this.pendingTokens, this.redeemedTokens, this.submittedTokens, this.typeMap );
   }
 
 }

@@ -224,6 +224,13 @@ public class Cluster implements HasName {
       return messageQueue;
     }
 
+    @Override
+    public String toString( ) {
+      return String.format( "MQ [messageQueue=%s, mqThread=%s, stopped=%s]", this.messageQueue, this.mqThread,
+                            this.stopped );
+    }
+
+    
   }
 
   public void sendEvent( QueuedEvent event ) throws Exception {
