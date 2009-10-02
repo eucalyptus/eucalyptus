@@ -65,7 +65,8 @@
 
 package edu.ucsb.eucalyptus.storage;
 
-import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
+import edu.ucsb.eucalyptus.util.StreamConsumer;
+
 import org.apache.log4j.Logger;
 
 public class AOEManager implements StorageExportManager {

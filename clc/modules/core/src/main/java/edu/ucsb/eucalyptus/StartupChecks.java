@@ -63,7 +63,6 @@
  */
 package edu.ucsb.eucalyptus;
 
-import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
@@ -73,6 +72,7 @@ import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.Volume;
+import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.UserManagement;
 import com.eucalyptus.util.StorageProperties;
 import org.apache.log4j.Logger;

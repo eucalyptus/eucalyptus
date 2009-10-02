@@ -1,63 +1,63 @@
 /*******************************************************************************
-*Copyright (c) 2009  Eucalyptus Systems, Inc.
-* 
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, only version 3 of the License.
-* 
-* 
-*  This file is distributed in the hope that it will be useful, but WITHOUT
-*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-*  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-*  for more details.
-* 
-*  You should have received a copy of the GNU General Public License along
-*  with this program.  If not, see <http://www.gnu.org/licenses/>.
-* 
-*  Please contact Eucalyptus Systems, Inc., 130 Castilian
-*  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
-*  if you need additional information or have any questions.
-* 
-*  This file may incorporate work covered under the following copyright and
-*  permission notice:
-* 
-*    Software License Agreement (BSD License)
-* 
-*    Copyright (c) 2008, Regents of the University of California
-*    All rights reserved.
-* 
-*    Redistribution and use of this software in source and binary forms, with
-*    or without modification, are permitted provided that the following
-*    conditions are met:
-* 
-*      Redistributions of source code must retain the above copyright notice,
-*      this list of conditions and the following disclaimer.
-* 
-*      Redistributions in binary form must reproduce the above copyright
-*      notice, this list of conditions and the following disclaimer in the
-*      documentation and/or other materials provided with the distribution.
-* 
-*    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-*    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-*    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-*    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-*    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-*    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-*    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-*    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-*    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-*    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-*    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-*    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-*    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-*    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-*    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-*    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-*    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-*    ANY SUCH LICENSES OR RIGHTS.
-*******************************************************************************/
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ * 
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ * 
+ *    Software License Agreement (BSD License)
+ * 
+ *    Copyright (c) 2008, Regents of the University of California
+ *    All rights reserved.
+ * 
+ *    Redistribution and use of this software in source and binary forms, with
+ *    or without modification, are permitted provided that the following
+ *    conditions are met:
+ * 
+ *      Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ * 
+ *      Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ * 
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *    ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************/
 /*
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
@@ -78,14 +78,15 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
-import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
-import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
 import edu.ucsb.eucalyptus.ic.StorageController;
+import edu.ucsb.eucalyptus.util.StreamConsumer;
+import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class LVM2Manager implements LogicalStorageManager {
 
@@ -120,93 +121,99 @@ public class LVM2Manager implements LogicalStorageManager {
 		if(!varDir.exists()) {
 			varDir.mkdirs();
 		}
-		String returnValue = getLvmVersion();
-		if(returnValue.length() == 0) {
-			throw new EucalyptusCloudException("Is lvm installed?");
-		} else {
-			LOG.info(returnValue);
-		}
-		returnValue = getVblade();
-		if(returnValue.length() == 0) {
-			throw new EucalyptusCloudException("vblade not found: Is it installed?");
-		} else {
-			LOG.info(returnValue);
+		try {
+			String returnValue = getLvmVersion();
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Is lvm installed?");
+			} else {
+				LOG.info(returnValue);
+			}
+			returnValue = getVblade();
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("vblade not found: Is it installed?");
+			} else {
+				LOG.info(returnValue);
+			}
+		} catch(ExecutionException ex) {
+			String error = "Unable to run command: " + ex.getMessage();
+			LOG.error(error);
+			throw new EucalyptusCloudException(error);
 		}
 	}
 
-	private String getLvmVersion() {
+	private String getLvmVersion() throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvm", "version"});
 	}
 
-	private String findFreeLoopback() {
+	private String findFreeLoopback() throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
 	}
 
-	private  String getLoopback(String loDevName) {
+	private  String getLoopback(String loDevName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", loDevName});
 	}
 
-	private String createPhysicalVolume(String loDevName) {
+	private String createPhysicalVolume(String loDevName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvcreate", loDevName});
 	}
 
-	private String createVolumeGroup(String pvName, String vgName) {
+	private String createVolumeGroup(String pvName, String vgName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgcreate", vgName, pvName});
 	}
 
-	private String extendVolumeGroup(String pvName, String vgName) {
+	private String extendVolumeGroup(String pvName, String vgName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgextend", vgName, pvName});
 	}
 
-	private String createLogicalVolume(String vgName, String lvName) {
+	private String createLogicalVolume(String vgName, String lvName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-l", "100%FREE", vgName});
 	}
 
-	private String createSnapshotLogicalVolume(String lvName, String snapLvName) {
+	private String createSnapshotLogicalVolume(String lvName, String snapLvName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-l", "100%FREE", lvName});
 	}
 
-	private String removeLogicalVolume(String lvName) {
+	private String removeLogicalVolume(String lvName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
 	}
 
-	private String disableLogicalVolume(String lvName) {
+	private String disableLogicalVolume(String lvName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-an", lvName});
 	}
 
-	private String removeVolumeGroup(String vgName) {
+	private String removeVolumeGroup(String vgName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgremove", vgName});
 	}
 
-	private String removePhysicalVolume(String loDevName) {
+	private String removePhysicalVolume(String loDevName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvremove", loDevName});
 	}
 
-	private String removeLoopback(String loDevName) {
+	private String removeLoopback(String loDevName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
 	}
 
-	private String reduceVolumeGroup(String vgName, String pvName) {
+	private String reduceVolumeGroup(String vgName, String pvName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
 	}
 
-	private String suspendDevice(String deviceName) {
+	private String suspendDevice(String deviceName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dmsetup", "-v", "suspend", deviceName});
 	}
 
-	private String resumeDevice(String deviceName) {
+	private String resumeDevice(String deviceName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dmsetup", "-v", "resume", deviceName});
 	}
 
-	private String getAoEStatus(String pid) {
+	private String getAoEStatus(String pid) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "cat", "/proc/", pid, "/cmdline"});
 	}
 
-	private String enableLogicalVolume(String lvName) {
+	private String enableLogicalVolume(String lvName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
 	}
 
-	private String getVblade() {
+	private String getVblade() throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "which", "vblade"});
 	}
 
@@ -231,23 +238,23 @@ public class LVM2Manager implements LogicalStorageManager {
 		return -1;
 	}
 
-	private String duplicateLogicalVolume(String oldLvName, String newLvName) {
+	private String duplicateLogicalVolume(String oldLvName, String newLvName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + blockSize});
 	}
 
-	private String createFile(String fileName, long size) {
+	private String createFile(String fileName, long size) throws ExecutionException {
 		if(!StorageProperties.zeroFillVolumes)
 			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + blockSize, "seek=" + (size -1)});
 		else
 			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + blockSize});
 	}
 
-	private String createEmptyFile(String fileName, int size) {
+	private String createEmptyFile(String fileName, int size) throws ExecutionException {
 		long fileSize = size * 1024;
 		return createFile(fileName, fileSize);
 	}
 
-	public String createAbsoluteEmptyFile(String fileName, long size) {
+	public String createAbsoluteEmptyFile(String fileName, long size) throws ExecutionException {
 		size = size / WalrusProperties.M;
 		return createFile(fileName, size);
 	}
@@ -311,10 +318,16 @@ public class LVM2Manager implements LogicalStorageManager {
 			String lvName = lvmVolInfo.getLvName();
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
-			String returnValue = removeLogicalVolume(absoluteLVName);
-			returnValue = removeVolumeGroup(vgName);
-			returnValue = removePhysicalVolume(loDevName);
-			removeLoopback(loDevName);
+			try {
+				String returnValue = removeLogicalVolume(absoluteLVName);
+				returnValue = removeVolumeGroup(vgName);
+				returnValue = removePhysicalVolume(loDevName);
+				removeLoopback(loDevName);
+			} catch(ExecutionException ex) {
+				db.rollback();
+				String error = "Unable to run command: " + ex.getMessage();
+				LOG.error(error);
+			}
 			db.delete(lvmVolInfo);
 			db.commit();
 		}
@@ -417,19 +430,19 @@ public class LVM2Manager implements LogicalStorageManager {
 		}
 	}
 
-	public String createDuplicateLoopback(String oldRawFileName, String rawFileName) throws EucalyptusCloudException {
+	public String createDuplicateLoopback(String oldRawFileName, String rawFileName) throws EucalyptusCloudException, ExecutionException {
 		dupFile(oldRawFileName, rawFileName);
 		return createLoopback(rawFileName);
 	}
 
-	public String createLoopback(String fileName, int size) throws EucalyptusCloudException {
+	public String createLoopback(String fileName, int size) throws EucalyptusCloudException, ExecutionException {
 		createEmptyFile(fileName, size);
 		if(!(new File(fileName).exists()))
 			throw new EucalyptusCloudException("Unable to create file " + fileName);
 		return createLoopback(fileName);
 	}
 
-	public String createLoopback(String fileName) throws EucalyptusCloudException {
+	public String createLoopback(String fileName) throws EucalyptusCloudException, ExecutionException {
 		int number_of_retries = 0;
 		int status = -1;
 		String loDevName;
@@ -453,7 +466,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		return losetup(absoluteFileName, loDevName);
 	}
 
-	public String createLoopback(String fileName, long size) throws EucalyptusCloudException {
+	public String createLoopback(String fileName, long size) throws EucalyptusCloudException, ExecutionException {
 		createAbsoluteEmptyFile(fileName, size);
 		if(!(new File(fileName).exists()))
 			throw new EucalyptusCloudException("Unable to create file " + fileName);
@@ -461,7 +474,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	//creates a logical volume (and a new physical volume and volume group)
-	public void createLogicalVolume(String loDevName, String vgName, String lvName) throws EucalyptusCloudException {
+	public void createLogicalVolume(String loDevName, String vgName, String lvName) throws EucalyptusCloudException, ExecutionException {
 		String returnValue = createPhysicalVolume(loDevName);
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("Unable to create physical volume for " + loDevName);
@@ -476,7 +489,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		}
 	}
 
-	public  void createSnapshotLogicalVolume(String loDevName, String vgName, String lvName, String snapLvName) throws EucalyptusCloudException {
+	public  void createSnapshotLogicalVolume(String loDevName, String vgName, String lvName, String snapLvName) throws EucalyptusCloudException, ExecutionException {
 		String returnValue = createPhysicalVolume(loDevName);
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("Unable to create physical volume for " + loDevName);
@@ -502,33 +515,37 @@ public class LVM2Manager implements LogicalStorageManager {
 		String rawFileName = StorageProperties.storageRootDirectory + "/" + volumeId;
 		//create file and attach to loopback device
 		long absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;
-		String loDevName = createLoopback(rawFileName, absoluteSize);
-		//create physical volume, volume group and logical volume
-		createLogicalVolume(loDevName, vgName, lvName);
-		//export logical volume
 		try {
-			int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
-			if(vbladePid < 0) {
-				throw new EucalyptusCloudException("Unable to export volume: " + volumeId);
+			String loDevName = createLoopback(rawFileName, absoluteSize);
+			//create physical volume, volume group and logical volume
+			createLogicalVolume(loDevName, vgName, lvName);
+			//export logical volume
+			try {
+				int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
+				if(vbladePid < 0) {
+					throw new EucalyptusCloudException("Unable to export volume: " + volumeId);
+				}
+			} catch(EucalyptusCloudException ex) {
+				LOG.error(ex);
+				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+				String returnValue = removeLogicalVolume(absoluteLVName);
+				returnValue = removeVolumeGroup(vgName);
+				returnValue = removePhysicalVolume(loDevName);
+				removeLoopback(loDevName);
+				throw ex;
 			}
-		} catch(EucalyptusCloudException ex) {
-			LOG.error(ex);
-			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-			String returnValue = removeLogicalVolume(absoluteLVName);
-			returnValue = removeVolumeGroup(vgName);
-			returnValue = removePhysicalVolume(loDevName);
-			removeLoopback(loDevName);
-			throw ex;
+			lvmVolumeInfo.setVolumeId(volumeId);
+			lvmVolumeInfo.setLoDevName(loDevName);
+			lvmVolumeInfo.setPvName(loDevName);
+			lvmVolumeInfo.setVgName(vgName);
+			lvmVolumeInfo.setLvName(lvName);
+			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+			lvmVolumeInfo.setSize(size);
+		} catch(ExecutionException ex) {
+			String error = "Unable to run command: " + ex.getMessage();
+			LOG.error(error);
+			throw new EucalyptusCloudException(error);
 		}
-
-		lvmVolumeInfo.setVolumeId(volumeId);
-		lvmVolumeInfo.setLoDevName(loDevName);
-		lvmVolumeInfo.setPvName(loDevName);
-		lvmVolumeInfo.setVgName(vgName);
-		lvmVolumeInfo.setLvName(lvName);
-		lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-		lvmVolumeInfo.setSize(size);
-
 		EntityWrapper<LVMVolumeInfo> db = StorageController.getEntityWrapper();
 		db.add(lvmVolumeInfo);
 		db.commit();
@@ -546,40 +563,47 @@ public class LVM2Manager implements LogicalStorageManager {
 				String lvName = "lv-" + Hashes.getRandom(4);
 				lvmVolumeInfo = new LVMVolumeInfo();
 
-				String rawFileName = StorageProperties.storageRootDirectory + "/" + volumeId;
-				//create file and attach to loopback device
-				File snapshotFile = new File(StorageProperties.storageRootDirectory + PATH_SEPARATOR + foundSnapshotInfo.getVolumeId());
-				assert(snapshotFile.exists());
-				long absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
-				size = (int)(snapshotFile.length() / StorageProperties.GB);
-				String loDevName = createLoopback(rawFileName, absoluteSize);
-				//create physical volume, volume group and logical volume
-				createLogicalVolume(loDevName, vgName, lvName);
-				//duplicate snapshot volume
-				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				duplicateLogicalVolume(foundSnapshotInfo.getLoFileName(), absoluteLVName);
-				//export logical volume
 				try {
-					int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
-					if(vbladePid < 0) {
-						throw new EucalyptusCloudException("Unable to export volume: " + volumeId);
+					String rawFileName = StorageProperties.storageRootDirectory + "/" + volumeId;
+					//create file and attach to loopback device
+					File snapshotFile = new File(StorageProperties.storageRootDirectory + PATH_SEPARATOR + foundSnapshotInfo.getVolumeId());
+					assert(snapshotFile.exists());
+					long absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
+					size = (int)(snapshotFile.length() / StorageProperties.GB);
+					String loDevName = createLoopback(rawFileName, absoluteSize);
+					//create physical volume, volume group and logical volume
+					createLogicalVolume(loDevName, vgName, lvName);
+					//duplicate snapshot volume
+					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+					duplicateLogicalVolume(foundSnapshotInfo.getLoFileName(), absoluteLVName);
+					//export logical volume
+					try {
+						int vbladePid = exportVolume(lvmVolumeInfo, vgName, lvName);
+						if(vbladePid < 0) {
+							throw new EucalyptusCloudException("Unable to export volume: " + volumeId);
+						}
+					} catch(EucalyptusCloudException ex) {
+						String returnValue = removeLogicalVolume(absoluteLVName);
+						returnValue = removeVolumeGroup(vgName);
+						returnValue = removePhysicalVolume(loDevName);
+						removeLoopback(loDevName);
+						throw ex;
 					}
-				} catch(EucalyptusCloudException ex) {
-					String returnValue = removeLogicalVolume(absoluteLVName);
-					returnValue = removeVolumeGroup(vgName);
-					returnValue = removePhysicalVolume(loDevName);
-					removeLoopback(loDevName);
-					throw ex;
+					lvmVolumeInfo.setVolumeId(volumeId);
+					lvmVolumeInfo.setLoDevName(loDevName);
+					lvmVolumeInfo.setPvName(loDevName);
+					lvmVolumeInfo.setVgName(vgName);
+					lvmVolumeInfo.setLvName(lvName);
+					lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+					lvmVolumeInfo.setSize(size);
+					db.add(lvmVolumeInfo);
+					db.commit();
+				}  catch(ExecutionException ex) {
+					db.rollback();
+					String error = "Unable to run command: " + ex.getMessage();
+					LOG.error(error);
+					throw new EucalyptusCloudException(error);
 				}
-				lvmVolumeInfo.setVolumeId(volumeId);
-				lvmVolumeInfo.setLoDevName(loDevName);
-				lvmVolumeInfo.setPvName(loDevName);
-				lvmVolumeInfo.setVgName(vgName);
-				lvmVolumeInfo.setLvName(lvName);
-				lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-				lvmVolumeInfo.setSize(size);
-				db.add(lvmVolumeInfo);
-				db.commit();
 			}
 		} else {
 			db.rollback();
@@ -604,7 +628,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			throw new EucalyptusCloudException("Snapshot backing file does not exist for: " + snapshotId);
 		}
 	}
-	
+
 	public void dupVolume(String volumeId, String dupVolumeId) throws EucalyptusCloudException {
 		EntityWrapper<LVMVolumeInfo> db = StorageController.getEntityWrapper();
 		LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(volumeId);
@@ -619,26 +643,32 @@ public class LVM2Manager implements LogicalStorageManager {
 			String rawFileName = StorageProperties.storageRootDirectory + "/" + dupVolumeId;
 			//create file and attach to loopback device
 			int size = (int)(volumeFile.length() / StorageProperties.GB);
-			String loDevName = createLoopback(rawFileName, size);
-			//create physical volume, volume group and logical volume
-			createLogicalVolume(loDevName, vgName, lvName);
-			//duplicate snapshot volume
-			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-			String absoluteVolumeLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() +
-			PATH_SEPARATOR + foundVolumeInfo.getLvName();
-			duplicateLogicalVolume(absoluteVolumeLVName, absoluteLVName);
+			try {
+				String loDevName = createLoopback(rawFileName, size);
+				//create physical volume, volume group and logical volume
+				createLogicalVolume(loDevName, vgName, lvName);
+				//duplicate snapshot volume
+				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+				String absoluteVolumeLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() +
+				PATH_SEPARATOR + foundVolumeInfo.getLvName();
+				duplicateLogicalVolume(absoluteVolumeLVName, absoluteLVName);
 
-			lvmVolumeInfo.setVolumeId(dupVolumeId);
-			lvmVolumeInfo.setLoDevName(loDevName);
-			lvmVolumeInfo.setPvName(loDevName);
-			lvmVolumeInfo.setVgName(vgName);
-			lvmVolumeInfo.setLvName(lvName);
-			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-			lvmVolumeInfo.setSize(size);
-			lvmVolumeInfo.setVbladePid(-1);
-			db.add(lvmVolumeInfo);
-
-			db.commit();
+				lvmVolumeInfo.setVolumeId(dupVolumeId);
+				lvmVolumeInfo.setLoDevName(loDevName);
+				lvmVolumeInfo.setPvName(loDevName);
+				lvmVolumeInfo.setVgName(vgName);
+				lvmVolumeInfo.setLvName(lvName);
+				lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+				lvmVolumeInfo.setSize(size);
+				lvmVolumeInfo.setVbladePid(-1);
+				db.add(lvmVolumeInfo);
+				db.commit();
+			} catch(ExecutionException ex) {
+				db.rollback();
+				String error = "Unable to run command: " + ex.getMessage();
+				LOG.error(error);
+				throw new EucalyptusCloudException(error);
+			}
 		} else {
 			db.rollback();
 			throw new EucalyptusCloudException("Could not dup volume " + volumeId);
@@ -690,21 +720,28 @@ public class LVM2Manager implements LogicalStorageManager {
 					}
 				}
 			}
-			String returnValue = removeLogicalVolume(absoluteLVName);
-			if(returnValue.length() == 0) {
-				throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
+			try {
+				String returnValue = removeLogicalVolume(absoluteLVName);
+				if(returnValue.length() == 0) {
+					throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
+				}
+				returnValue = removeVolumeGroup(vgName);
+				if(returnValue.length() == 0) {
+					throw new EucalyptusCloudException("Unable to remove volume group " + vgName);
+				}
+				returnValue = removePhysicalVolume(loDevName);
+				if(returnValue.length() == 0) {
+					throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
+				}
+				returnValue = removeLoopback(loDevName);
+				db.delete(foundLVMVolumeInfo);
+				db.commit();
+			} catch(ExecutionException ex) {
+				db.rollback();
+				String error = "Unable to run command: " + ex.getMessage();
+				LOG.error(error);
+				throw new EucalyptusCloudException(error);
 			}
-			returnValue = removeVolumeGroup(vgName);
-			if(returnValue.length() == 0) {
-				throw new EucalyptusCloudException("Unable to remove volume group " + vgName);
-			}
-			returnValue = removePhysicalVolume(loDevName);
-			if(returnValue.length() == 0) {
-				throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
-			}
-			returnValue = removeLoopback(loDevName);
-			db.delete(foundLVMVolumeInfo);
-			db.commit();
 		}  else {
 			db.rollback();
 			throw new EucalyptusCloudException("Unable to find volume: " + volumeId);
@@ -731,38 +768,46 @@ public class LVM2Manager implements LogicalStorageManager {
 			long snapshotSize = (size * StorageProperties.GB) / 2;
 			String rawFileName = StorageProperties.storageRootDirectory + "/" + volumeId + Hashes.getRandom(6);
 			//create file and attach to loopback device
-			String loDevName = createLoopback(rawFileName, snapshotSize);
-			//create physical volume, volume group and logical volume
-			createSnapshotLogicalVolume(loDevName, vgName, absoluteLVName, lvName);
+			try {
+				String loDevName = createLoopback(rawFileName, snapshotSize);
+				//create physical volume, volume group and logical volume
+				createSnapshotLogicalVolume(loDevName, vgName, absoluteLVName, lvName);
 
-			String snapRawFileName = StorageProperties.storageRootDirectory + "/" + snapshotId;
-			String absoluteSnapLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+				String snapRawFileName = StorageProperties.storageRootDirectory + "/" + snapshotId;
+				String absoluteSnapLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
-			duplicateLogicalVolume(absoluteSnapLVName, snapRawFileName);
+				duplicateLogicalVolume(absoluteSnapLVName, snapRawFileName);
 
-			String returnValue = removeLogicalVolume(absoluteSnapLVName);
-			if(returnValue.length() == 0) {
-				throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteSnapLVName);
+				String returnValue = removeLogicalVolume(absoluteSnapLVName);
+				if(returnValue.length() == 0) {
+					throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteSnapLVName);
+				}
+				returnValue = reduceVolumeGroup(vgName, loDevName);
+				if(returnValue.length() == 0) {
+					throw new EucalyptusCloudException("Unable to reduce volume group " + vgName + " logical volume: " + loDevName);
+				}
+				returnValue = removePhysicalVolume(loDevName);
+				if(returnValue.length() == 0) {
+					throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
+				}
+				returnValue = removeLoopback(loDevName);
+				if(!(new File(rawFileName)).delete()) {
+					LOG.error("Unable to remove temporary snapshot file: " + rawFileName);
+				}
+				snapshotInfo.setLoFileName(snapRawFileName);
+				snapshotInfo.setStatus(StorageProperties.Status.available.toString());
+				snapshotInfo.setVbladePid(-1);
+				snapshotInfo.setSize(size);
+				returnValues.add(vgName);
+				returnValues.add(lvName);
+				db.add(snapshotInfo);
+			} catch(ExecutionException ex) {
+				db.rollback();
+				String error = "Unable to run command: " + ex.getMessage();
+				LOG.error(error);
+				throw new EucalyptusCloudException(error);
 			}
-			returnValue = reduceVolumeGroup(vgName, loDevName);
-			if(returnValue.length() == 0) {
-				throw new EucalyptusCloudException("Unable to reduce volume group " + vgName + " logical volume: " + loDevName);
-			}
-			returnValue = removePhysicalVolume(loDevName);
-			if(returnValue.length() == 0) {
-				throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
-			}
-			returnValue = removeLoopback(loDevName);
-			if(!(new File(rawFileName)).delete()) {
-				LOG.error("Unable to remove temporary snapshot file: " + rawFileName);
-			}
-			snapshotInfo.setLoFileName(snapRawFileName);
-			snapshotInfo.setStatus(StorageProperties.Status.available.toString());
-			snapshotInfo.setVbladePid(-1);
-			snapshotInfo.setSize(size);
-			returnValues.add(vgName);
-			returnValues.add(lvName);
-			db.add(snapshotInfo);
+
 		}
 		db.commit();
 		return returnValues;
@@ -818,13 +863,21 @@ public class LVM2Manager implements LogicalStorageManager {
 		assert(snapshotSet.size() == snapshotFileNames.size());
 		int i = 0;
 		for(String snapshotFileName: snapshotFileNames) {
-			String loDevName = createLoopback(snapshotFileName);
-			LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotSet.get(i++));
-			lvmVolumeInfo.setLoDevName(loDevName);
-			lvmVolumeInfo.setMajorNumber(-1);
-			lvmVolumeInfo.setMinorNumber(-1);
-			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-			db.add(lvmVolumeInfo);
+			try {
+				String loDevName = createLoopback(snapshotFileName);
+				LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotSet.get(i++));
+				lvmVolumeInfo.setLoDevName(loDevName);
+				lvmVolumeInfo.setMajorNumber(-1);
+				lvmVolumeInfo.setMinorNumber(-1);
+				lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+				db.add(lvmVolumeInfo);
+			} catch(ExecutionException ex) {
+				db.rollback();
+				String error = "Unable to run command: " + ex.getMessage();
+				LOG.error(error);
+				throw new EucalyptusCloudException(error);
+			}
+
 		}
 		db.commit();
 	}
@@ -838,9 +891,14 @@ public class LVM2Manager implements LogicalStorageManager {
 			if(loDevName != null) {
 				String loFileName = foundVolumeInfo.getVolumeId();
 				String absoluteLoFileName = StorageProperties.storageRootDirectory + PATH_SEPARATOR + loFileName;
-				String returnValue = getLoopback(loDevName);
-				if(returnValue.length() <= 0) {
-					createLoopback(absoluteLoFileName, loDevName);
+				try {
+					String returnValue = getLoopback(loDevName);
+					if(returnValue.length() <= 0) {
+						createLoopback(absoluteLoFileName, loDevName);
+					}
+				} catch(ExecutionException ex) {
+					String error = "Unable to run command: " + ex.getMessage();
+					LOG.error(error);
 				}
 			}
 		}
@@ -850,7 +908,13 @@ public class LVM2Manager implements LogicalStorageManager {
 			if(pid > 0) {
 				//enable logical volumes
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
-				enableLogicalVolume(absoluteLVName);
+				try {
+					enableLogicalVolume(absoluteLVName);
+				} catch(ExecutionException ex) {
+					String error = "Unable to run command: " + ex.getMessage();
+					LOG.error(error);
+					continue;
+				}
 				String returnValue = aoeStatus(pid);
 				if(returnValue.length() == 0) {
 					int majorNumber = foundVolumeInfo.getMajorNumber();

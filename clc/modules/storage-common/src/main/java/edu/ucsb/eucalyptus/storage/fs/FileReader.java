@@ -72,7 +72,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public  class FileReader extends edu.ucsb.eucalyptus.storage.fs.FileIO {
+public  class FileReader extends FileIO {
 
     private static Logger LOG = Logger.getLogger(FileReader.class);
     private ByteBuffer buffer;

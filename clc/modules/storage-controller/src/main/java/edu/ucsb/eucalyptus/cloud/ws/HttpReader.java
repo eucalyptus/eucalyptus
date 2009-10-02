@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.StorageProperties;
 
+import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 
 

@@ -135,6 +135,7 @@ import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
+import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 
 public class WalrusControl {
