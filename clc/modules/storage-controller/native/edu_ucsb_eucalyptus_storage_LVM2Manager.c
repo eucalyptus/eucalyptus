@@ -19,7 +19,6 @@ int run_command_and_get_pid(char *cmd, char **args) {
     int fd[2];
     pipe(fd);
     int pid = -1;
-    char lol[128];
     int fds_to_close[1024];
     int curr_fd = 0;
 
