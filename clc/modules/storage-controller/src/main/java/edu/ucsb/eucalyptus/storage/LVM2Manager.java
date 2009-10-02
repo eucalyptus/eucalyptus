@@ -891,6 +891,12 @@ public class LVM2Manager implements LogicalStorageManager {
 			if(loDevName != null) {
 				String loFileName = foundVolumeInfo.getVolumeId();
 				String absoluteLoFileName = StorageProperties.storageRootDirectory + PATH_SEPARATOR + loFileName;
+				if(!new File(absoluteLoFileName).exists()) {
+					LOG.error("Backing volume: " + absoluteLoFileName + " not found. Invalidating volume."); 
+					foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
+					foundVolumeInfo.setVbladePid(-1);
+					continue;
+				}
 				try {
 					String returnValue = getLoopback(loDevName);
 					if(returnValue.length() <= 0) {
