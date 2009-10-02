@@ -46,6 +46,7 @@ int run_command_and_get_pid(char *cmd, char **args) {
         } else {
         home = strdup (home);
         }
+        fprintf(stderr, "command: %s\n", cmd);
         chdir(home);
 
         //close all open fds
