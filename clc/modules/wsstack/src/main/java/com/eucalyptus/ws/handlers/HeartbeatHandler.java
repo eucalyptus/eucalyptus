@@ -91,6 +91,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
@@ -215,6 +216,7 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     boolean foundDb = false;
     try {
       foundDb = NetworkUtil.testReachability( addr.getHostName( ) );
+      LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
       Credentials.getEntityWrapper( );
       foundDb = true;
     } catch ( Throwable e ) {
