@@ -64,11 +64,13 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.msgs.*;
+import edu.ucsb.eucalyptus.util.Admin;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
@@ -86,47 +88,37 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
 
   public StopNetworkCallback( final NetworkToken networkToken ) {
     this.token = networkToken;
+    this.setRequest( Admin.makeMsg( StopNetworkType.class, token.getUserName(), token.getNetworkName(), token.getVlan() ) );
   }
 
   @Override
   public void prepareAll( final StopNetworkType msg ) {}
 
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {
-    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( v.getNetworkNames( ).contains( token.getName( ) ) && v.getPlacement( ).equals( token.getCluster( ) ) ) {
-        throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
-      }
-    }
+  public void verify( EucalyptusMessage msg ) throws Exception {}
+
+  @Override
+  public void prepare( StopNetworkType msg ) throws Exception {
     try {
       Network net = Networks.getInstance( ).lookup( token.getName( ) );
       Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
       LOG.debug( "Releasing network token back to cluster: " + token );
+      if( net.hasTokens( ) ) throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
       cluster.getState( ).releaseNetworkAllocation( token );
-      LOG.debug( "Removing network token: " + token );
-      net.removeToken( token.getCluster( ) );
-      try {
-        Networks.getInstance( ).deregister( token.getName( ) );
-      } catch ( Exception e ) {
-        LOG.debug( e );
-      }
     } catch ( Exception e ) {
       LOG.debug( e );
     }
   }
 
   @Override
-  public void prepare( StopNetworkType msg ) throws Exception {
-    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( v.getNetworkNames( ).contains( token.getName( ) ) && v.getPlacement( ).equals( token.getCluster( ) ) ) {
-        throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
-      }
-    }
+  public MultiClusterCallback<StopNetworkType> newInstance( ) {
+    return new StopNetworkCallback( token );
   }
 
   @Override
-  public MultiClusterCallback<StopNetworkType> newInstance( ) {
-    return new StopNetworkCallback( token );
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( e, e );
   }
 
 }

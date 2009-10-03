@@ -69,7 +69,6 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
@@ -93,6 +92,11 @@ public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetw
   @Override
   public MultiClusterCallback<ConfigureNetworkType> newInstance( ) {
     return new ConfigureNetworkCallback( );
+  }
+  @Override
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( e, e );
   }
 
 }

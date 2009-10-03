@@ -243,12 +243,8 @@ public class VmInstance implements HasName {
     return runningInstance;
   }
 
-  @Override
-  public String toString( ) {
-    return "VmInstance{" + "reservationId='" + reservationId + '\'' + ", ownerId='" + ownerId + '\'' + ", instanceId='" + instanceId + '\'' + ", launchIndex=" + launchIndex + ", launchTime=" + launchTime + ", state=" + state + ", split=" + this.getSplitTime( ) / 1000f + ", reason='" + reason + '\''
-        + ", placement='" + placement + '\'' + ", networks=" + this.getNetworkNames( ) + "\n" + instanceId + ".networkConfig=" + networkConfig + "\n" + instanceId + ".imageInfo=" + imageInfo + "\n" + instanceId + ".vmTypeInfo=" + vmTypeInfo + "\n" + instanceId + ".keyInfo=" + keyInfo + '}';
-  }
 
+  
   public VmKeyInfo getKeyInfo( ) {
     return keyInfo;
   }
@@ -403,6 +399,16 @@ public class VmInstance implements HasName {
 
   public void setNetworkIndex( int networkIndex ) {
     this.networkIndex = networkIndex;
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format(
+                          "VmInstance [imageInfo=%s, instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networkIndex=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
+                          this.imageInfo, this.instanceId, this.keyInfo, this.launchIndex, this.launchTime,
+                          this.networkConfig, this.networkIndex, this.networks, this.ownerId, this.placement,
+                          this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch,
+                          this.userData, this.vmTypeInfo, this.volumes );
   }
     
 }

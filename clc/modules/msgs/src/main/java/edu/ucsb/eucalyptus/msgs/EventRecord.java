@@ -50,19 +50,25 @@ public class EventRecord extends EucalyptusMessage {
                          this.other != null ? this.other : "").replaceAll("::*",":");
   }
 
-  public static EventRecord create( final String component, final Object eventName, final String... other) {
-    EucalyptusMessage msg = tryForMessage( );
-    return create( component, msg.getUserId( ), msg.getCorrelationId( ), eventName.toString( ), getMessageString( other ), 1 );
+  public static EventRecord create( final String component, final String eventUserId, final String eventCorrelationId, final Object eventName, final String other, int dist ) {
+    return new EventRecord( component, eventUserId, eventCorrelationId, eventName.toString( ), getMessageString(other), 3 + dist );
   }
-  public static EventRecord create( final Component component, final Object eventName, final String... other) {
-    EucalyptusMessage msg = tryForMessage( );
-    return create( component.name( ), msg.getUserId( ), msg.getCorrelationId( ), eventName.toString( ), getMessageString( other ), 1 );
-  }
-  public static EventRecord create( final Class component, final Object eventName, final String... other) {
+  public static EventRecord here( final Class component, final Object eventName, final String... other) {
     EucalyptusMessage msg = tryForMessage( );
     return create( component.getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), eventName.toString( ), getMessageString( other ), 1 );
   }
-
+  public static EventRecord here( final String component, final Object eventName, final String... other) {
+    EucalyptusMessage msg = tryForMessage( );
+    return create( component, msg.getUserId( ), msg.getCorrelationId( ), eventName.toString( ), getMessageString( other ), 1 );
+  }
+  public static EventRecord here( final Component component, final Object eventName, final String... other) {
+    EucalyptusMessage msg = tryForMessage( );
+    return create( component.name( ), msg.getUserId( ), msg.getCorrelationId( ), eventName.toString( ), getMessageString( other ), 1 );
+  }
+  public static EventRecord caller( final Class component, final Object eventName, final String... other) {
+    EucalyptusMessage msg = tryForMessage( );
+    return create( component.getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), eventName.toString( ), getMessageString( other ), 2 );
+  }
   private static String getMessageString( final String... other ) {
     StringBuffer last = new StringBuffer();
     for(String x : other) {
@@ -70,7 +76,6 @@ public class EventRecord extends EucalyptusMessage {
     }
     return last.length()>1?last.substring( 1 ):last.toString( );
   }
-
   private static EucalyptusMessage tryForMessage( ) {
     EucalyptusMessage msg = null;
     MuleEvent event = RequestContext.getEvent( );
@@ -81,31 +86,6 @@ public class EventRecord extends EucalyptusMessage {
     }
     return msg==null?BOGUS:msg;
   }
-
-  public static EventRecord create( final String component, final String eventUserId, final String eventCorrelationId, final Object eventName, final String other ) {
-    return new EventRecord( component, eventUserId, eventCorrelationId, eventName.toString( ), getMessageString(other), 3 );
-  }
-  public static EventRecord create( final String component, final String eventUserId, final String eventCorrelationId, final Object eventName, final String other, int dist ) {
-    return new EventRecord( component, eventUserId, eventCorrelationId, eventName.toString( ), getMessageString(other), 3 + dist );
-  }
-  public static EventRecord create( final String component, final String eventUserId, final String eventCorrelationId, final Object eventName, final Long other) {
-    return create( component, eventUserId, eventCorrelationId, eventName.toString( ), other.toString( ), 1 );
-  }
-
-  public static EventRecord create( final Class component, final String eventUserId, final String eventCorrelationId, final Object eventName, final String other) {
-    return create( component.getSimpleName( ), eventUserId, eventCorrelationId, eventName.toString( ), getMessageString(other), 1 );
-  }
-  public static EventRecord create( final Class component, final String eventUserId, final String eventCorrelationId, final Object eventName, final Long other) {
-    return create( component.getSimpleName( ), eventUserId, eventCorrelationId, eventName.toString( ), other.toString( ), 1 );
-  }
-
-  public static EventRecord create( final Component component, final String eventUserId, final String eventCorrelationId, final Object eventName, final String other) {
-    return create( component.name( ), eventUserId, eventCorrelationId, eventName.toString( ), getMessageString(other), 1 );
-  }
-  public static EventRecord create( final Component component, final String eventUserId, final String eventCorrelationId, final Object eventName, final Long other) {
-    return create( component.name( ), eventUserId, eventCorrelationId, eventName.toString( ), other.toString( ), 1 );
-  }
-
 
 }
 

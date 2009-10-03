@@ -80,7 +80,7 @@ public class StorageController {
 
 	public EucalyptusMessage handle( EucalyptusMessage msg )
 	{
-		LOG.info( EventRecord.create( this.getClass(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() )) ;
+		LOG.info( EventRecord.here( this.getClass(), EventType.MSG_RECEIVED, msg.getClass().getSimpleName() )) ;
 		long startTime = System.currentTimeMillis();
 		try
 		{
@@ -92,7 +92,7 @@ public class StorageController {
 		}
 		EucalyptusMessage reply = null;
 		reply = WalrusMessaging.dequeue( msg.getCorrelationId() );
-		LOG.info( EventRecord.create( this.getClass(), msg.getUserId(), msg.getCorrelationId(), EventType.MSG_SERVICED, ( System.currentTimeMillis() - startTime ) ) );
+		LOG.info( EventRecord.here( this.getClass(), EventType.MSG_SERVICED, Long.toString( System.currentTimeMillis() - startTime ) ) );
 		if ( reply == null )
 			return null;//new EucalyptusErrorMessageType( msg, "Received a NULL reply", this.getClass().getSimpleName() );
 		return reply;

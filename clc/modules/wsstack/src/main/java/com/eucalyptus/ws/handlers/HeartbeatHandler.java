@@ -91,6 +91,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
@@ -201,6 +202,8 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     Component.eucalyptus.setHostAddress( addr.getHostName( ) );
     Component.cluster.setHostAddress( addr.getHostName( ) );
     Component.jetty.setHostAddress( addr.getHostName( ) );
+    //FIXME: mark walrus and storage as disabled to prevent walrus->registered, sc->unregistered to cause sc to bootstrap.
+    //FIXME: remove existing bootstrappers/configuration for disabled component to prevent init.
     HeartbeatType msg = ( HeartbeatType ) request.getMessage( );
     LOG.info( LogUtil.header( "Got heartbeat event: " + LogUtil.dumpObject( msg ) ) );
     for ( HeartbeatComponentType component : msg.getComponents( ) ) {
@@ -213,6 +216,7 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     boolean foundDb = false;
     try {
       foundDb = NetworkUtil.testReachability( addr.getHostName( ) );
+      LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
       Credentials.getEntityWrapper( );
       foundDb = true;
     } catch ( Throwable e ) {
@@ -221,12 +225,6 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     if ( foundDb ) {
       ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK ) );
       writeFuture.addListener( ChannelFutureListener.CLOSE );
-      writeFuture.addListener( new ChannelFutureListener( ) {
-        @Override
-        public void operationComplete( ChannelFuture future ) throws Exception {
-          channel.close( );
-        }
-      } );
       initialized = true;
     } else {
       ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_ACCEPTABLE ) );

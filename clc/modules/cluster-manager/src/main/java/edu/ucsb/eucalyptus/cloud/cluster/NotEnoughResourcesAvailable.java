@@ -74,4 +74,8 @@ public class NotEnoughResourcesAvailable extends Exception {
     super(string);
   }
 
+  public NotEnoughResourcesAvailable( String message, Exception e ) {
+    super( message, e );
+  }
+
 }
