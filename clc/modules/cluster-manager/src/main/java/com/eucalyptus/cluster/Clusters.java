@@ -63,7 +63,6 @@
  */
 package com.eucalyptus.cluster;
 
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -71,16 +70,10 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.event.AbstractNamedRegistry;
-import com.eucalyptus.ws.client.Client;
-import com.eucalyptus.ws.client.NioClient;
-import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
-import com.eucalyptus.ws.client.pipeline.LogClientPipeline;
-import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
-import com.eucalyptus.ws.handlers.NioResponseHandler;
-import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedLogEvent;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {
@@ -107,25 +100,49 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return list;
   }
 
-  public static void sendClusterEvent( String clusterName, QueuedEvent event ) throws Exception {
+  @SuppressWarnings( "unchecked" )
+  public static void sendClusterEvent( String clusterName, QueuedEvent event ) throws NoSuchElementException {
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
     Clusters.sendClusterEvent( cluster, event );
   }
 
-  public static void sendClusterEvent( Cluster cluster, QueuedEvent event ) throws GeneralSecurityException {
-    NioClientPipeline cp = Clusters.getPipelineByType( event );
-    NioClient nioClient = new NioClient( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), cp );
-    event.trigger( nioClient );
+  @SuppressWarnings( "unchecked" )
+  public static void sendClusterEvent( Cluster cluster, QueuedEvent event ) throws NoSuchElementException {
+    event.getCallback( ).fire( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), event.getEvent( ) );
   }
 
-  private static NioClientPipeline getPipelineByType( QueuedEvent event ) throws GeneralSecurityException {
-    NioClientPipeline cp = null;
-    if ( !( event instanceof QueuedLogEvent ) ) {
-      cp = new ClusterClientPipeline( event.getCallback( ) );
-    } else {
-      cp = new LogClientPipeline( event.getCallback( ) );
-    }
-    return cp;
+  @SuppressWarnings( "unchecked" )
+  public static void dispatchClusterEvent( Cluster cluster, QueuedEventCallback callback, EucalyptusMessage msg ) throws NoSuchElementException {
+    cluster.getMessageQueue( ).enqueue( QueuedEvent.make( callback, msg ) );
   }
+
+  @SuppressWarnings( "unchecked" )
+  public static void sendClusterEvent( Cluster cluster, QueuedEventCallback callback ) throws NoSuchElementException {
+    Clusters.sendClusterEvent( cluster, QueuedEvent.make( callback, callback.getRequest( ) ) );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void sendClusterEvent( String clusterName, QueuedEventCallback callback ) throws NoSuchElementException {
+    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+    Clusters.sendClusterEvent( cluster, QueuedEvent.make( callback, callback.getRequest( ) ) );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void dispatchClusterEvent( Cluster cluster, QueuedEventCallback callback ) throws NoSuchElementException {
+    cluster.getMessageQueue( ).enqueue( QueuedEvent.make( callback, callback.getRequest( ) ) );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void dispatchClusterEvent( String clusterName, QueuedEventCallback callback ) throws NoSuchElementException {
+    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+    Clusters.dispatchClusterEvent( cluster, callback );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void dispatchClusterEvent( String clusterName, QueuedEventCallback callback, EucalyptusMessage msg ) throws NoSuchElementException {
+    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+    Clusters.dispatchClusterEvent( cluster, callback, msg );
+  }
+
   
 }

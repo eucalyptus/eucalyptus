@@ -160,9 +160,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
       reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
     }
-    LOG.info( EventRecord.create( Component.eucalyptus, reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, reply.getClass( ).getSimpleName( ) ) );
-    HttpVersion httpVersion = request.getProtocolVersion() != null ? request.getProtocolVersion() : HttpVersion.HTTP_1_1;
-    final MappingHttpResponse response = new MappingHttpResponse(httpVersion);
+    LOG.info( EventRecord.here( Component.eucalyptus, EventType.MSG_SERVICED, reply.getClass( ).getSimpleName( ) ) );
+    final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
     final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
     response.setMessage( reply );
     ctx.sendDownstream( newEvent );
@@ -188,7 +187,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           msg.setUserId( user.getUserName( ) );
           msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getUserName( ) );
         }
-        LOG.info( EventRecord.create( Component.eucalyptus, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
+        LOG.info( EventRecord.here( Component.eucalyptus, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
         ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
         if ( this.msgReceiver == null ) {
           Messaging.dispatch( "vm://RequestQueue", msg );

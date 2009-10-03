@@ -69,6 +69,7 @@ import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 import org.apache.log4j.Logger;
 
@@ -79,18 +80,24 @@ public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType> 
   public VolumeDetachCallback( ) {}
   
   @Override
-  public void prepare( DetachVolumeType msg ) throws Exception {}
+  public void prepare( DetachVolumeType msg ) throws Exception {
+    //FIXME-BETA: make sure the volume is indeed attached.
+  }
   
   @Override
   public void verify( EucalyptusMessage msg ) throws Exception {
-    this.verify( ( DetachVolumeResponseType ) msg );
-  }
-  
-  public void verify( DetachVolumeResponseType response ) throws Exception {
-    if ( response.get_return( ) ) {
+    DetachVolumeResponseType reply = (DetachVolumeResponseType) msg;
+    if ( reply.get_return( ) ) {
       VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
+      //FIXME-BETA: mark the volume as detached.
       vm.getVolumes( ).remove( new AttachedVolume( this.getRequest( ).getVolumeId( ) ) );
     }
+  }
+
+  @Override
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( e, e );
   }
   
 }

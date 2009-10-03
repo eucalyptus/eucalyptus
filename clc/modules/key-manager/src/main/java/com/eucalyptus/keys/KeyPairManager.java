@@ -29,8 +29,9 @@ public class KeyPairManager {
   public VmKeyInfo resolve( VmInfo vmInfo ) throws EucalyptusCloudException {
     SshKeyPair kp = null;
     if ( vmInfo.getKeyValue() != null || !"".equals( vmInfo.getKeyValue() ) ) {
-      kp = KeyPairUtil.getUserKeyPairByValue( vmInfo.getOwnerId( ), vmInfo.getKeyValue( ) );
-      if( kp == null ) {
+      try {
+        kp = KeyPairUtil.getUserKeyPairByValue( vmInfo.getOwnerId( ), vmInfo.getKeyValue( ) );
+      } catch ( Exception e ) {
         kp = SshKeyPair.NO_KEY;
       }
     }

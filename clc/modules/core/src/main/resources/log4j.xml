@@ -85,7 +85,7 @@
         <param name="MaxFileSize" value="10MB"/>
         <param name="MaxBackupIndex" value="10"/>
         <layout class="org.apache.log4j.PatternLayout">
-            <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%-.20c{1}:%.10t] %m%n"/>
+            <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n"/>
         </layout>
     </appender>
     <appender name="errorlog" class="org.apache.log4j.RollingFileAppender">
@@ -127,19 +127,19 @@
       ~ NOTE: The following suppress very verbose but potentially useful output.
       ~ Consider removing or changing these if you are having unexplained failures. 
       -->
-    <category name="edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback" additivity="true">
-        <priority value="DEBUG"/>
-        <appender-ref ref="logfile"/>
-    </category>
-    <category name="com.eucalyptus.cluster.AbstractClusterMessageDispatcher" additivity="true">
-        <priority value="DEBUG"/>
-        <appender-ref ref="logfile"/>
-    </category>
-    <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="true">
-        <priority value="DEBUG"/>
-        <appender-ref ref="logfile"/>
-    </category>
     <!-- 
+    <category name="edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback" additivity="false">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <category name="com.eucalyptus.cluster.AbstractClusterMessageDispatcher" additivity="false">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="false">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
     <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
         <priority value="INFO"/>
         <appender-ref ref="logfile"/>

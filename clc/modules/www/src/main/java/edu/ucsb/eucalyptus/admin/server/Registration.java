@@ -120,7 +120,7 @@ public class Registration extends HttpServlet {
         "    </Service>\n" +
         "    <Service>\n" +
         "      <Name>s3</Name>\n" +
-        "      <EndpointUrl>" + getStorageUrl() + "</EndpointUrl>\n" +
+        "      <EndpointUrl>" + getWalrusUrl() + "</EndpointUrl>\n" +
         "      <Resources type=\"array\">\n" +
         "        <Resource>\n" +
         "          <Name>buckets</Name>\n" +
@@ -182,10 +182,12 @@ public class Registration extends HttpServlet {
     }
   }
 
-  private static String getStorageUrl() {
-    String walrusUrl = EucalyptusProperties.getWalrusUrl( );
-    if( !Component.walrus.isLocal( ) ) {
-      walrusUrl = "http://" + Component.walrus.getUri( ).getHost( ) + ":8773/services/Walrus/";
+  private static String getWalrusUrl() {
+    String walrusUrl;
+    try {
+      walrusUrl = EucalyptusProperties.getWalrusUrl( );
+    } catch ( Exception e ) {
+      walrusUrl = "NOT REGISTERED.";
     }
     return walrusUrl;
   }

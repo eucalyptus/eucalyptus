@@ -194,7 +194,9 @@ public class X509Download extends HttpServlet {
 
     sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
 
-    sb.append( "\nexport S3_URL=" + EucalyptusProperties.getWalrusUrl( ) );
+    try {
+      sb.append( "\nexport S3_URL=" + EucalyptusProperties.getWalrusUrl( ) );
+    } catch ( Exception e ) {}
     sb.append( "\nexport EC2_URL=" + EucalyptusProperties.getCloudUrl( ) );
     sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
     sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );

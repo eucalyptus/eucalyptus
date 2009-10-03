@@ -63,36 +63,70 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import java.util.NoSuchElementException;
-
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.net.Addresses;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.LogUtil;
 
 import edu.ucsb.eucalyptus.cloud.entities.Address;
-import edu.ucsb.eucalyptus.cloud.net.Addresses;
-import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
+import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddressType> {
 
   private static Logger LOG = Logger.getLogger( UnassignAddressCallback.class );
+  private Address       parentAddr;
+  private VmInstance    parentVm;
+  public UnassignAddressCallback( final Address address ) {
+    this.parentAddr = address;
+    super.setRequest( new UnassignAddressType( parentAddr.getName( ), parentAddr.getInstanceAddress( ) ) );
+  }
 
-  private String pubIp;
-  private String vmIp;
-  private String vmId;
-  
-  public UnassignAddressCallback( final Address parent ) {
-    this.vmId = parent.getInstanceId();
-    this.pubIp = parent.getName();
-    this.vmIp = parent.getInstanceAddress();
+  public UnassignAddressCallback( final Address address,final VmInstance vm ) {
+    this.parentAddr = address;
+    this.parentVm = vm;
+    super.setRequest( new UnassignAddressType( parentAddr.getName( ), vm.getNetworkConfig( ).getIpAddress( ) ) );
   }
 
   @Override
-  public void prepare( UnassignAddressType msg ) throws Exception {}
+  public void prepare( UnassignAddressType msg ) throws Exception {
+    LOG.debug( EventRecord.here( UnassignAddressCallback.class, Address.State.unassigning, parentAddr.toString( ) ) );
+//    if( !this.parent.isAssigned( ) || this.parent.isPending( ) ) {
+//      throw new EucalyptusClusterException( "Received request to unassign an address which is either not assigned or has an assignment pending: " + this.parent.toString( ) );
+//    }
+  }
 
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {}
+  public void verify( EucalyptusMessage msg ) {
+    LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.unassigned, LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) ) );
+    String ipAddress = this.getRequest( ).getSource( );
+    if( this.parentVm != null ) {
+      this.clearVm( ipAddress, this.parentVm );
+    } else {
+      for( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+        this.clearVm( ipAddress, vm );
+      }
+    }
+    this.parentAddr.clearPending( );
+  }
+
+  private void clearVm( String ipAddress, VmInstance vm ) {
+    NetworkConfigType netConfig = vm.getNetworkConfig( );  
+    if( netConfig.getIpAddress( ).equals( this.getRequest( ).getDestination( ) ) && ( netConfig.getIgnoredPublicIp( ).equals( ipAddress ) ) ) {
+      netConfig.setIgnoredPublicIp( netConfig.getIpAddress( ) );
+    }
+  }
+
+  @Override
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( e, e );
+    //FIXME: unassign fails clean up state.
+    this.parentAddr.clearPending( );
+  }
 
 }

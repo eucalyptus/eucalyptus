@@ -180,7 +180,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   }
 
   private void waitForDatabase( ) {
-    while ( this.db.getState( ) != 1 ) {
+    do {
       Throwable t = this.db.getServerError( );
       if ( t != null ) {
         LOG.error( t, t );
@@ -188,9 +188,11 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
       }
       try {
         Thread.sleep( 1000 );
-      } catch ( InterruptedException e ) {}
+      } catch ( InterruptedException e ) {
+        Thread.currentThread( ).interrupt( );
+      }
       LOG.info( "Waiting for database to start..." );
-    }
+    } while ( this.db.getState( ) != 1 );
   }
 
   public void run( ) {

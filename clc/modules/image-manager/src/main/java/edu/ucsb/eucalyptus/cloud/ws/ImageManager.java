@@ -117,7 +117,7 @@ public class ImageManager {
   public static Logger LOG = Logger.getLogger( ImageManager.class );
 
   public VmImageInfo resolve( VmInfo vmInfo ) throws EucalyptusCloudException {
-    String walrusUrl = ImageUtil.getStorageUrl( );
+    String walrusUrl = ImageUtil.getWalrusUrl( );
     ArrayList<String> productCodes = Lists.newArrayList( );
     ImageInfo diskInfo = null, kernelInfo = null, ramdiskInfo = null;
     String diskUrl = null, kernelUrl = null, ramdiskUrl = null;
@@ -140,7 +140,7 @@ public class ImageManager {
   }
 
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    String walrusUrl = ImageUtil.getStorageUrl( );
+    String walrusUrl = ImageUtil.getWalrusUrl( );
 
     RunInstancesType msg = vmAllocInfo.getRequest( );
     ImageInfo searchDiskInfo = new ImageInfo( msg.getImageId( ) );
@@ -154,7 +154,7 @@ public class ImageManager {
       }
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find kernel image: " + msg.getImageId( ) );
+      throw new EucalyptusCloudException( "Failed to find disk image: " + msg.getImageId( ) );
     }
     UserInfo user = null;
     try {
@@ -220,6 +220,12 @@ public class ImageManager {
     // this should never fail noisily :://
     ArrayList<String> ancestorIds = ImageUtil.getAncestors( msg.getUserId( ), diskInfo.getImageLocation( ) );
     Long imgSize = ImageUtil.getSize( msg.getUserId( ), diskInfo.getImageLocation( ) );
+    if( !"kernel".equals( kernelInfo.getImageType( ) ) ) {
+      throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelInfo.toString( ) );
+    }
+    if( !"ramdisk".equals( ramdiskInfo.getImageType( ) ) ) {
+      throw new EucalyptusCloudException( "Image specified is not a ramdisk: " + ramdiskInfo.toString( ) );
+    }
     ImageUtil.checkStoredImage( kernelInfo );
     ImageUtil.checkStoredImage( diskInfo );
     ImageUtil.checkStoredImage( ramdiskInfo );

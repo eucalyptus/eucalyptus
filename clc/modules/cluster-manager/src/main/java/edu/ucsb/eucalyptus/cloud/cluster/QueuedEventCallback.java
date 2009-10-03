@@ -64,8 +64,8 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.security.GeneralSecurityException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -75,116 +75,110 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
+import com.eucalyptus.ws.client.NioBootstrap;
+import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
+import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
-import com.google.common.collect.Lists;
+import com.eucalyptus.ws.util.ChannelUtil;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
-  private static Logger LOG = Logger.getLogger( QueuedEventCallback.class );
-  private ChannelFuture channelConnected;
-  private TYPE          request;
+  static Logger                 LOG     = Logger.getLogger( QueuedEventCallback.class );
+  private AtomicReference<TYPE> request = new AtomicReference<TYPE>( null );
+  private ChannelFuture         connectFuture;
+  private NioBootstrap          clientBootstrap;
   
-  public void process( TYPE msg ) throws Exception {
-    super.getRequestQueue( ).add( ( EucalyptusMessage ) msg );
-    if ( this.channelConnected != null && this.channelConnected.isDone( ) ) {
-      this.fireMessage( msg, this.channelConnected.getChannel( ) );
-    } else {
-      LOG.debug( "Found channel pending: defering message " + msg.getClass( ).getCanonicalName( ) );
+  @Override
+  public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
+    if ( e.getMessage( ) instanceof MappingHttpResponse ) {
+      MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
+      try {
+        this.verify( ( EucalyptusMessage ) response.getMessage( ) );
+      } catch ( Throwable e1 ) {
+        LOG.debug( e1, e1 );
+        this.fail( e1 );
+        super.queueResponse( e1 );
+        e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+        throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e1.getMessage( ), e1 );
+      }
     }
-  }
-  
-  private void fireMessage( TYPE msg, Channel channel ) throws Exception {
-    LOG.debug( "Found channel open: writing message " + msg.getClass( ).getCanonicalName( ) );
-    String servicePath = "/axis2/services/EucalyptusCC";//FIXME: handle this in a clean way.
-    InetSocketAddress addr = ( InetSocketAddress ) channel.getRemoteAddress( );
-    this.setRequest( msg );
-    HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, addr.getHostName( ), addr.getPort( ), servicePath, msg );
-    try {
-      this.prepare( msg );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      throw e;
-    }
-    channel.write( request );
+    super.messageReceived( ctx, e );
   }
   
   public abstract void prepare( TYPE msg ) throws Exception;
   
   public abstract void verify( EucalyptusMessage msg ) throws Exception;
   
-  @Override
-  public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
-    if ( e.getMessage( ) instanceof MappingHttpResponse ) {
-      MappingHttpResponse response = (MappingHttpResponse) e.getMessage( );
-      this.verify( (EucalyptusMessage)response.getMessage( ) );
-    }
-    super.messageReceived( ctx, e );
-  }
-  
-  @Override
-  public void connectRequested( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    this.channelConnected = e.getFuture( );
-    super.connectRequested( ctx, e );
-  }
-  
-  @Override
-  public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    this.channelConnected = e.getFuture( );
-    if ( super.getRequestQueue( ).isEmpty( ) ) {
-      LOG.debug( "Request queue is empty, waiting for write request." );
-    } else {
-      Object msg = this.getRequestQueue( ).peek( );
-      if(msg != null) {
-      LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
-      this.fireMessage( ( TYPE ) msg, e.getChannel( ) );
-      }
-    }
-    super.channelConnected( ctx, e );
-  }
-  
-  @Override
-  public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    super.channelOpen( ctx, e );
-  }
-  
-  public abstract static class MultiClusterCallback<TYPE extends EucalyptusMessage> extends QueuedEventCallback<TYPE> {
-    private List<QueuedEvent> callbackList = Lists.newArrayList( );
-    public abstract MultiClusterCallback<TYPE> newInstance();
-    public abstract void prepareAll( TYPE msg ) throws Exception;
-    
-    protected List<QueuedEvent> fireEventAsyncToAllClusters( final TYPE msg ) {
-      this.callbackList = Lists.newArrayList( );
-      for ( final Cluster c : Clusters.getInstance( ).listValues( ) ) {
-        LOG.info( "-> Sending " + msg.getClass( ).getSimpleName( ) + " network to: " + c.getUri( ) );
-        LOG.debug( LogUtil.lineObject( msg ) );
-        try {
-          QueuedEvent q = QueuedEvent.make( this.newInstance( ), msg );
-          callbackList.add( q );
-          Clusters.sendClusterEvent( c, q );
-        } catch ( final Throwable e ) {
-          LOG.error( "Error while sending to: " + c.getUri( ) + " " + msg.getClass( ).getSimpleName( ) );
-        }
-      }
-      return callbackList;
-    }
-        
-  }
+  public abstract void fail( Throwable throwable );
   
   public TYPE getRequest( ) {
-    return this.request;
+    return this.request.get( );
   }
   
-  public void setRequest( TYPE request ) {
-    this.request = request;
+  public boolean setRequest( TYPE request ) {
+    return this.request.compareAndSet( null, request );
   }
+  
+  @Override
+  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) {
+    try {
+      this.fail( e.getCause( ) );
+    } catch ( Throwable e1 ) {
+      LOG.debug( e1, e1 );
+    }
+    super.exceptionCaught( ctx, e );
+  }
+  
+  public void fire( String hostname, int port, String servicePath, TYPE msg ) {
+    try {
+      NioClientPipeline clientPipeline = new ClusterClientPipeline( this );
+      this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
+      InetSocketAddress addr = new InetSocketAddress( hostname, port );
+      this.request.set( msg );
+      this.connectFuture = this.clientBootstrap.connect( addr );
+      HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, addr.getHostName( ),
+        addr.getPort( ), servicePath, msg );
+      this.prepare( msg );
+      this.connectFuture.addListener( ChannelUtil.WRITE( request ) );
+    } catch ( Throwable e ) {
+      try {
+        this.fail( e );
+      } catch ( Exception e1 ) {
+        LOG.debug( e1, e1 );
+      }
+      this.queueResponse( e );
+      this.connectFuture.addListener( ChannelFutureListener.CLOSE );
+    }
+  }
+  
+  @Override
+  public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+    if ( !this.writeComplete ) {
+      this.queueResponse( new EucalyptusClusterException(
+        "Channel was closed before the write operation could be completed: " + LogUtil.dumpObject( this.getRequest( ) ) ) );
+    } else if ( writeComplete && this.getRequest( ) == null ) {
+      this.queueResponse( new EucalyptusClusterException(
+        "Channel was closed before the read operation could be completed: " + LogUtil.dumpObject( this.getRequest( ) ) ) );      
+    }
+    super.channelClosed( ctx, e );
+  }
+  
+  private volatile boolean writeComplete = false;  
+  @Override
+  public void writeComplete( ChannelHandlerContext ctx, WriteCompletionEvent e ) throws Exception {
+    super.writeComplete( ctx, e );
+    this.writeComplete = true;
+  }
+  
 }

@@ -480,23 +480,33 @@ void java_load_bootstrapper(void) {
 
 char* java_library_path(euca_opts *args) {
 #define JAVA_PATH_LEN 16384
-	char lib_dir[256],etc_dir[256],*jar_list=(char*)malloc(JAVA_PATH_LEN*sizeof(char));
-	__die(( strlen(GETARG(args,home))+strlen(EUCA_LIB_DIR)>=254),"Directory path too long: %s/%s", GETARG(args,home), EUCA_LIB_DIR);
-	snprintf(lib_dir,255,"%s%s",GETARG(args,home),EUCA_LIB_DIR);
-	snprintf(etc_dir,255,"%s%s",GETARG(args,home),EUCA_ETC_DIR);
-	if(!CHECK_ISDIR(lib_dir) ) __die(1,"Can't find library directory %s", lib_dir );
-	int wb = 0;
-	wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,"-Djava.class.path=%s",etc_dir);
-	DIR* lib_dir_p = opendir(lib_dir);
-	struct direct *dir_ent;
-	while ((dir_ent = readdir(lib_dir_p))!=0)  {
-		if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0 && strstr(dir_ent->d_name,"disabled") == NULL)  {
-				char jar[256];
-				snprintf(jar,255,"%s/%s",lib_dir,dir_ent->d_name);
-				if( (CHECK_ISREG(jar) || CHECK_ISLNK(jar)) ) wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,":%s",jar);
-		}
-	}
-	return jar_list;
+    char lib_dir[256],etc_dir[256],*jar_list=(char*)malloc(JAVA_PATH_LEN*sizeof(char));
+    __die(( strlen(GETARG(args,home))+strlen(EUCA_LIB_DIR)>=254),"Directory path too long: %s/%s", GETARG(args,home), EUCA_LIB_DIR);
+    snprintf(lib_dir,255,"%s%s",GETARG(args,home),EUCA_LIB_DIR);
+    snprintf(etc_dir,255,"%s%s",GETARG(args,home),EUCA_ETC_DIR);
+    if(!CHECK_ISDIR(lib_dir) ) __die(1,"Can't find library directory %s", lib_dir );
+    int wb = 0;
+    wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,"-Djava.class.path=%s",etc_dir);
+    DIR* lib_dir_p = opendir(lib_dir);
+    struct direct *dir_ent;
+    while ((dir_ent = readdir(lib_dir_p))!=0)  {
+            if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0 && strstr(dir_ent->d_name,"disabled") == NULL && strstr(dir_ent->d_name,"eucalyptus-") != NULL )  {
+                            char jar[256];
+                            snprintf(jar,255,"%s/%s",lib_dir,dir_ent->d_name);
+                            if( (CHECK_ISREG(jar) || CHECK_ISLNK(jar)) ) wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,":%s",jar);
+            }
+    }
+    closedir(lib_dir_p);
+    lib_dir_p = opendir(lib_dir);
+    while ((dir_ent = readdir(lib_dir_p))!=0)  {
+            if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0 && strstr(dir_ent->d_name,"disabled") == NULL && strstr(dir_ent->d_name,"eucalyptus-") == NULL)  {
+                            char jar[256];
+                            snprintf(jar,255,"%s/%s",lib_dir,dir_ent->d_name);
+                            if( (CHECK_ISREG(jar) || CHECK_ISLNK(jar)) ) wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,":%s",jar);
+            }
+    }
+    closedir(lib_dir_p);
+    return jar_list;
 }
 
 int java_init(euca_opts *args, java_home_t *data) {

@@ -65,12 +65,13 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.net.Addresses;
 import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.cloud.net.Addresses;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.Admin;
 import org.apache.log4j.Logger;
@@ -130,30 +131,49 @@ public class ClusterEndpoint implements Startable {
       reply.getAvailabilityZoneInfo().addAll( this.addHelpInfo() );
       return reply;
     }
-    Collection<Cluster> clusterList = Clusters.getInstance().getEntries();
-    for ( Cluster c : clusterList ) {
-      reply.getAvailabilityZoneInfo().add( new ClusterInfoType( c.getConfiguration( ).getName( ), c.getConfiguration( ).getHostName( ) ) );
-      List<String> args = request.getAvailabilityZoneSet();
-      NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( request.getAvailabilityZoneSet() );
-      if ( tagList.size() == 1 ) tagList = c.getNodeTags();
-      else
-        tagList.retainAll( c.getNodeTags() );
-      if ( tagList.isEmpty() ) continue;
-
-      DebugUtil.printDebugDetails( );
-      if ( request.isAdministrator() && args.lastIndexOf( "verbose" ) == 0 )
-        reply.getAvailabilityZoneInfo().addAll( this.addSystemInfo( c ) );
-      else if ( request.isAdministrator() && args.lastIndexOf( "certs" ) == 0 )
-        for ( String tag : tagList )
-          reply.getAvailabilityZoneInfo().addAll( this.addCertInfo( tag, c ) );
-      else if ( request.isAdministrator() && args.lastIndexOf( "logs" ) == 0 )
-        for ( String tag : tagList )
-          reply.getAvailabilityZoneInfo().addAll( this.addLogInfo( tag, c ) );
-      else if ( request.isAdministrator() && args.lastIndexOf( "coredump" ) == 0 )
-        reply.getAvailabilityZoneInfo().addAll( this.dumpState() );
-
+    List<String> args = request.getAvailabilityZoneSet( );
+    if( args.isEmpty( ) || args.contains( "verbose" ) || args.contains( "certs" ) || args.contains( "logs" ) || args.contains( "keys" ) ) {
+      for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+        this.getDescriptionEntry( reply, c, request );
+      }
+    } else {
+      for( String clusterName : request.getAvailabilityZoneSet( ) ) {
+        try {
+          Cluster c = Clusters.getInstance( ).lookup( clusterName );
+          this.getDescriptionEntry( reply, c, request );
+        } catch ( NoSuchElementException e ) {
+          if ( clusterName.equals( "coredump" ) ) {
+            DebugUtil.printDebugDetails( );
+            reply.getAvailabilityZoneInfo().addAll( this.dumpState() );
+          } 
+        }
+      }
     }
     return reply;
+  }
+
+  private void getDescriptionEntry( DescribeAvailabilityZonesResponseType reply, Cluster c, DescribeAvailabilityZonesType request ) {
+    boolean admin = request.isAdministrator( );
+    List<String> args = request.getAvailabilityZoneSet( );
+    String clusterName = c.getName( );
+    reply.getAvailabilityZoneInfo( ).add( new ClusterInfoType( c.getConfiguration( ).getName( ), c.getConfiguration( ).getHostName( ) ) );
+    NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( );
+    if ( tagList.size() == 1 ) tagList = c.getNodeTags();
+    else
+      tagList.retainAll( c.getNodeTags() );
+    if( admin ) {
+      if ( args.contains( "verbose" ) ) {
+        reply.getAvailabilityZoneInfo().addAll( this.addSystemInfo( c ) );
+      } else if ( args.contains( "certs" ) ) {
+        for ( String tag : tagList ) {
+          reply.getAvailabilityZoneInfo( ).addAll( this.addCertInfo( tag, c ) );
+        }
+      } else if ( args.contains( "logs" )  ) {
+        for ( String tag : tagList ) {
+          reply.getAvailabilityZoneInfo().addAll( this.addLogInfo( tag, c ) );
+        }
+      }
+    }
   }
 
   private static String INFO_FSTRING = "|- %s";
@@ -166,31 +186,37 @@ public class ClusterEndpoint implements Startable {
 
   private List<ClusterInfoType> dumpState() {
     List<ClusterInfoType> retList = Lists.newArrayList();
+    retList.add( new ClusterInfoType( "================== Addresses", "" ) );
     for ( Address addr : Addresses.getInstance().listValues() ) {
       String val = addr.toString();
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
+    retList.add( new ClusterInfoType( "================== Disabled Addresses", "" ) );
     for ( Address addr : Addresses.getInstance().listDisabledValues() ) {
       String val = addr.toString();
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
+    retList.add( new ClusterInfoType( "================== VMs", "" ) );
     for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
       String val = vm.toString();
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
+    retList.add( new ClusterInfoType( "================== Disabled VMs", "" ) );
     for ( VmInstance vm : VmInstances.getInstance().listDisabledValues() ) {
       String val = vm.toString();
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
+    retList.add( new ClusterInfoType( "================== Clusters", "" ) );
     for ( Cluster cluster : Clusters.getInstance().listValues() ) {
       String val = cluster.toString();
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
+    retList.add( new ClusterInfoType( "================== Networks", "" ) );
     for ( Network network : Networks.getInstance().listValues() ) {
       String val = network.toString();
       retList.add( new ClusterInfoType( val, "" ) );
