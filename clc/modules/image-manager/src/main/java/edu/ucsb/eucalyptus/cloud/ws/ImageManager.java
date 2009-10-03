@@ -223,7 +223,7 @@ public class ImageManager {
     if( !"kernel".equals( kernelInfo.getImageType( ) ) ) {
       throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelInfo.toString( ) );
     }
-    if( !"ramdisk".equals( ramdiskInfo.getImageType( ) ) ) {
+    if((ramdiskInfo != null) && !"ramdisk".equals( ramdiskInfo.getImageType( ) ) ) {
       throw new EucalyptusCloudException( "Image specified is not a ramdisk: " + ramdiskInfo.toString( ) );
     }
     ImageUtil.checkStoredImage( kernelInfo );

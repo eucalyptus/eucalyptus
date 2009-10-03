@@ -708,7 +708,7 @@ public class Cache {
 			{
 				addRRset(answers[i], cred);
 				completed = true;
-				if (curname == qname) {
+				if (curname != null && curname.equals(qname)) {
 					if (response == null)
 						response = new SetResponse(
 								SetResponse.SUCCESSFUL);
@@ -718,7 +718,7 @@ public class Cache {
 			} else if (type == Type.CNAME && name.equals(curname)) {
 				CNAMERecord cname;
 				addRRset(answers[i], cred);
-				if (curname.equals(qname))
+				if (curname != null && curname.equals(qname))
 					response = new SetResponse(SetResponse.CNAME,
 							answers[i]);
 				cname = (CNAMERecord) answers[i].first();

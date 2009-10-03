@@ -608,7 +608,8 @@ public class WalrusManager {
 						} else if(WalrusDataMessage.isEOF(dataMessage)) {
 							//commit object
 							try {
-								fileIO.finish();
+								if(fileIO != null)
+									fileIO.finish();
 								storageManager.renameObject(bucketName, tempObjectName, objectName);
 							} catch (IOException ex) {
 								LOG.error(ex);
@@ -845,7 +846,8 @@ public class WalrusManager {
 					try {
 						FileIO fileIO = storageManager.prepareForWrite(bucketName, objectName);
 						fileIO.write(base64Data);
-						fileIO.finish();
+						if(fileIO != null)
+							fileIO.finish();
 					} catch(Exception ex) {
 						throw new EucalyptusCloudException(ex);
 					}

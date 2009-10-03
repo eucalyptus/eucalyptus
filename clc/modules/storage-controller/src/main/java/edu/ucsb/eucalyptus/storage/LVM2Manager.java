@@ -427,18 +427,35 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public void dupFile(String oldFileName, String newFileName) {
+		FileOutputStream fileOutputStream = null;
+		FileChannel out = null;
+		FileInputStream fileInputStream = null;
+		FileChannel in = null;
 		try {
-			FileOutputStream fileOutputStream = new FileOutputStream(new File(newFileName));
-			FileChannel out = fileOutputStream.getChannel();
-			FileInputStream fileInputStream = new FileInputStream(new File(oldFileName));
-			FileChannel in = fileInputStream.getChannel();
+			fileOutputStream = new FileOutputStream(new File(newFileName));
+			out = fileOutputStream.getChannel();
+			fileInputStream = new FileInputStream(new File(oldFileName));
+			in = fileInputStream.getChannel();
 			in.transferTo(0, in.size(), out);
-			in.close();
-			out.close();
-			fileInputStream.close();
-			fileOutputStream.close();
 		} catch (Exception ex) {
 			ex.printStackTrace();
+		} finally {
+			if(fileOutputStream != null) {
+				try {
+					out.close();
+					fileOutputStream.close();
+				} catch (IOException e) {
+					LOG.error(e);
+				}
+			}
+			if(fileInputStream != null) {
+				try {
+					in.close();
+					fileInputStream.close();
+				} catch(IOException e) {
+					LOG.error(e);
+				}
+			}
 		}
 	}
 

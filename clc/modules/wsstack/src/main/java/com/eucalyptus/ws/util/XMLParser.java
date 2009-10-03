@@ -106,12 +106,21 @@ public class XMLParser {
 	public XMLParser(File file) {
 		this();
 		this.file = file;
+		FileInputStream fileInputStream = null;
 		try {
-			FileInputStream fileInputStream = new FileInputStream(file);
+			fileInputStream = new FileInputStream(file);
 			docRoot = docBuilder.parse(fileInputStream);
 			fileInputStream.close();
 		} catch (Exception ex) {
 			ex.printStackTrace();
+		} finally {
+			if(fileInputStream != null) {
+				try {
+					fileInputStream.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}	
+			}
 		}
 	}
 
