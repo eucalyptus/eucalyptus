@@ -101,6 +101,11 @@ static int doInitialize (struct nc_state_t *nc)
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
 
+        /* check connection is fresh */
+        if (!check_hypervisor_conn()) {
+          return ERROR_FATAL;
+	}
+
 	/* get resources */
 	if (virNodeGetInfo(nc->conn, &ni)) {
 		logprintfl (EUCAFATAL, "error: failed to discover resources\n");
@@ -120,7 +125,7 @@ static int doInitialize (struct nc_state_t *nc)
 	nc->mem_max = ni.memory/1024 - 32 - dom0_min_mem;
 
 	/* calculate the available cores */
-	nc->mem_max = ni.cpus;
+	nc->cores_max = ni.cpus;
 
 	/* let's adjust the values based on the config values */
 	if (nc->config_max_mem && nc->config_max_mem < nc->mem_max)

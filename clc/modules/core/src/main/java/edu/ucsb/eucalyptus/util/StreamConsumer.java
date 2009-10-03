@@ -59,40 +59,52 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * Author: Neil Soman <neil@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.util;
 
-import org.apache.log4j.Logger;
+import com.eucalyptus.util.WalrusProperties;
 
-public class SystemUtil {
-	private static Logger LOG = Logger.getLogger(SystemUtil.class);
+import java.io.*;
 
-	public static String run(String[] command) {
-		try
-		{
-			String commandString = "";
-			for(String part : command) {
-				commandString += part + " ";
-			}
-			LOG.debug("Running command: " + commandString);
-			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(command);
-			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-			StreamConsumer output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			proc.waitFor();
-			output.join();
-			return output.getReturnValue();
-		} catch (Throwable t) {
-			LOG.error(t, t);
-		}
-		return "";
-	}
+public class StreamConsumer extends Thread {
+    private InputStream is;
+    private File file;
+    private String returnValue;
 
-	public static void shutdownWithError(String errorMessage) {
-		LOG.fatal(errorMessage);
-		System.exit(0xEC2);
-	}        
+    public StreamConsumer(InputStream is) {
+        this.is = is;
+        returnValue = "";
+    }
+
+    public StreamConsumer(InputStream is, File file) {
+        this(is);
+        this.file = file;
+    }
+
+    public String getReturnValue() {
+        return returnValue;
+    }
+
+    public void run() {
+        try {
+            BufferedInputStream inStream = new BufferedInputStream(is);
+            BufferedOutputStream outStream = null;
+            if (file != null) {
+                outStream = new BufferedOutputStream(new FileOutputStream(file));
+            }
+            byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
+            int bytesRead;
+            while ((bytesRead = inStream.read(bytes)) > 0) {
+                returnValue += new String(bytes, 0, bytesRead);
+                if (outStream != null) {
+                    outStream.write(bytes, 0, bytesRead);
+                }
+            }
+            if (outStream != null)
+                outStream.close();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
 }

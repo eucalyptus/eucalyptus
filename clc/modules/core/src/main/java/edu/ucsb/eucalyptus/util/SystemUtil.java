@@ -59,50 +59,45 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman <neil@eucalyptus.com>
  */
-
-package edu.ucsb.eucalyptus.storage.fs;
+package edu.ucsb.eucalyptus.util;
 
 import org.apache.log4j.Logger;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.ExecutionException;
 
-public  class FileWriter extends FileIO {
+public class SystemUtil {
+	private static Logger LOG = Logger.getLogger(SystemUtil.class);
 
-    private static Logger LOG = Logger.getLogger(FileWriter.class);
+	public static String run(String[] command) throws ExecutionException {
+		try
+		{
+			String commandString = "";
+			for(String part : command) {
+				commandString += part + " ";
+			}
+			LOG.debug("Running command: " + commandString);
+			Runtime rt = Runtime.getRuntime();
+			Process proc = rt.exec(command);
+			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+			StreamConsumer output = new StreamConsumer(proc.getInputStream());
+			error.start();
+			output.start();
+			int pid = proc.waitFor();
+			output.join();
+			if(pid != 0)
+				throw new ExecutionException(commandString);
+			return output.getReturnValue();
+		} catch (Throwable t) {
+			LOG.error(t, t);
+		}
+		return "";
+	}
 
-    public FileWriter(String filename) throws Exception {
-        try {
-            channel = new FileOutputStream(filename).getChannel();
-        } catch( FileNotFoundException ex) {
-            LOG.error(ex);
-            throw ex;
-        }
-    }
-
-    public  int read(long offset) throws IOException {
-        return -1;
-    }
-
-    public void write(byte[] bytes) throws IOException {
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        channel.write(buffer);
-    }
-
-    public ByteBuffer getBuffer() {
-        return null;
-    }
-
-    public void finish() {
-        try {
-            channel.close();
-        } catch(IOException ex) {
-            LOG.error(ex);
-        }
-    }
+	public static void shutdownWithError(String errorMessage) {
+		LOG.fatal(errorMessage);
+		System.exit(0xEC2);
+	}        
 }

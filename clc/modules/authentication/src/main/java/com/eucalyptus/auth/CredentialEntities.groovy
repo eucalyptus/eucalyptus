@@ -107,12 +107,17 @@ public class User extends AbstractPersistent implements Serializable {
   String secretKey
   @Column( name = "auth_user_is_admin" )
   Boolean isAdministrator
+  @Column( name = "auth_user_is_enabled" )
+  Boolean isEnabled
   @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   List<X509Cert> certificates = []
-  public User(){}
+  public User(){
+	  this.isEnabled = true;
+  }
   public User( String userName ){
+	this();
     this.userName = userName
   }
 

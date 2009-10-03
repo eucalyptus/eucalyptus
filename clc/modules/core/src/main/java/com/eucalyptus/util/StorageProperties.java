@@ -74,7 +74,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.WalrusConfiguration;
 
-import edu.ucsb.eucalyptus.cloud.ws.SystemUtil;
+import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class StorageProperties {
 

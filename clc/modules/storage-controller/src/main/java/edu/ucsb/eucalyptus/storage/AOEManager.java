@@ -65,7 +65,8 @@
 
 package edu.ucsb.eucalyptus.storage;
 
-import edu.ucsb.eucalyptus.cloud.ws.StreamConsumer;
+import edu.ucsb.eucalyptus.util.StreamConsumer;
+
 import org.apache.log4j.Logger;
 
 public class AOEManager implements StorageExportManager {
@@ -76,7 +77,7 @@ public class AOEManager implements StorageExportManager {
         try
         {
             Runtime rt = Runtime.getRuntime();
-            Process proc = rt.exec(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "kill", "-9", String.valueOf(vbladePid)});
+            Process proc = rt.exec(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "kill", String.valueOf(vbladePid)});
             StreamConsumer error = new StreamConsumer(proc.getErrorStream());
             StreamConsumer output = new StreamConsumer(proc.getInputStream());
             error.start();

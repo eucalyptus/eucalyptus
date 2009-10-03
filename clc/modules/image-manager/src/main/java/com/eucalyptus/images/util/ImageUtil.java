@@ -143,11 +143,13 @@ public class ImageUtil {
     ArrayList<String> ancestorIds = Lists.newArrayList( );
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = WalrusUtil.getManifestData( Component.eucalyptus.name( ), imagePathParts[0], imagePathParts[1] );
+      Document inputSource = WalrusUtil.getManifestData( Component.eucalyptus.name( ), imagePathParts[0],
+                                                         imagePathParts[1] );
       XPath xpath = XPathFactory.newInstance( ).newXPath( );
       NodeList ancestors = null;
       try {
-        ancestors = ( NodeList ) xpath.evaluate( "/manifest/image/ancestry/ancestor_ami_id/text()", inputSource, XPathConstants.NODESET );
+        ancestors = ( NodeList ) xpath.evaluate( "/manifest/image/ancestry/ancestor_ami_id/text()", inputSource,
+                                                 XPathConstants.NODESET );
         if ( ancestors == null ) return ancestorIds;
         for ( int i = 0; i < ancestors.getLength( ); i++ ) {
           for ( String ancestorId : ancestors.item( i ).getNodeValue( ).split( "," ) ) {
@@ -169,7 +171,8 @@ public class ImageUtil {
     Long size = 0l;
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = WalrusUtil.getManifestData( Component.eucalyptus.name( ), imagePathParts[0], imagePathParts[1] );
+      Document inputSource = WalrusUtil.getManifestData( Component.eucalyptus.name( ), imagePathParts[0],
+                                                         imagePathParts[1] );
       XPath xpath = XPathFactory.newInstance( ).newXPath( );
       String rootSize = "0";
       try {
@@ -203,7 +206,8 @@ public class ImageUtil {
       try {
         signature = ( String ) xpath.evaluate( "/manifest/signature/text()", inputSource, XPathConstants.STRING );
       } catch ( XPathExpressionException e ) {}
-      if ( !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
+      if ( !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException(
+        "Manifest signature has changed since registration." );
       ImageManager.LOG.info( "Checking image: " + imgInfo.getImageLocation( ) );
       WalrusUtil.checkValid( imgInfo );
       ImageManager.LOG.info( "Triggering caching: " + imgInfo.getImageLocation( ) );
@@ -242,7 +246,8 @@ public class ImageUtil {
   }
   
   private static boolean userHasImagePermission( final UserInfo user, final ImageInfo img ) {
-    if ( img.getUserGroups( ).isEmpty( ) && !user.getUserName( ).equals( img.getImageOwnerId( ) ) && !user.isAdministrator( ) && !img.getPermissions( ).contains( user ) ) return true;
+    if ( img.getUserGroups( ).isEmpty( ) && !user.getUserName( ).equals( img.getImageOwnerId( ) ) && !user.isAdministrator( ) && !img.getPermissions( ).contains(
+                                                                                                                                                                  user ) ) return true;
     return false;
   }
   
@@ -258,7 +263,8 @@ public class ImageUtil {
     }
   }
   
-  public static VmImageInfo getVmImageInfo( final String walrusUrl, final ImageInfo diskInfo, final ImageInfo kernelInfo, final ImageInfo ramdiskInfo,
+  public static VmImageInfo getVmImageInfo( final String walrusUrl, final ImageInfo diskInfo,
+                                            final ImageInfo kernelInfo, final ImageInfo ramdiskInfo,
                                             final ArrayList<String> productCodes ) throws EucalyptusCloudException {
     String diskUrl = getImageUrl( walrusUrl, diskInfo );
     String kernelUrl = getImageUrl( walrusUrl, kernelInfo );
@@ -266,8 +272,9 @@ public class ImageUtil {
     if ( ramdiskInfo != null ) ramdiskUrl = getImageUrl( walrusUrl, ramdiskInfo );
     
     //:: create the response assets now since we might not have a ramdisk anyway :://
-    VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId( ), kernelInfo.getImageId( ), ramdiskInfo == null ? null : ramdiskInfo.getImageId( ), diskUrl, kernelUrl,
-                                             ramdiskInfo == null ? null : ramdiskUrl, productCodes );
+    VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId( ), kernelInfo.getImageId( ),
+      ramdiskInfo == null ? null : ramdiskInfo.getImageId( ), diskUrl, kernelUrl,
+      ramdiskInfo == null ? null : ramdiskUrl, productCodes );
     return vmImgInfo;
   }
   
@@ -304,7 +311,8 @@ public class ImageUtil {
   public static String extractArchitecture( Document inputSource, XPath xpath ) {
     String arch = null;
     try {
-      arch = ( String ) xpath.evaluate( "/manifest/machine_configuration/architecture/text()", inputSource, XPathConstants.STRING );
+      arch = ( String ) xpath.evaluate( "/manifest/machine_configuration/architecture/text()", inputSource,
+                                        XPathConstants.STRING );
     } catch ( XPathExpressionException e ) {
       ImageManager.LOG.warn( e.getMessage( ) );
     }
@@ -314,7 +322,8 @@ public class ImageUtil {
   public static String extractRamdiskId( Document inputSource, XPath xpath ) {
     String ramdiskId = null;
     try {
-      ramdiskId = ( String ) xpath.evaluate( "/manifest/machine_configuration/ramdisk_id/text()", inputSource, XPathConstants.STRING );
+      ramdiskId = ( String ) xpath.evaluate( "/manifest/machine_configuration/ramdisk_id/text()", inputSource,
+                                             XPathConstants.STRING );
     } catch ( XPathExpressionException e ) {
       ImageManager.LOG.warn( e.getMessage( ) );
     }
@@ -325,7 +334,8 @@ public class ImageUtil {
   public static String extractKernelId( Document inputSource, XPath xpath ) {
     String kernelId = null;
     try {
-      kernelId = ( String ) xpath.evaluate( "/manifest/machine_configuration/kernel_id/text()", inputSource, XPathConstants.STRING );
+      kernelId = ( String ) xpath.evaluate( "/manifest/machine_configuration/kernel_id/text()", inputSource,
+                                            XPathConstants.STRING );
     } catch ( XPathExpressionException e ) {
       ImageManager.LOG.warn( e.getMessage( ) );
     }
@@ -335,7 +345,8 @@ public class ImageUtil {
   
   public static String[] getImagePathParts( String imageLocation ) throws EucalyptusCloudException {
     String[] imagePathParts = imageLocation.split( "/" );
-    if ( imagePathParts.length != 2 ) throw new EucalyptusCloudException( "Image registration failed:  Invalid image location." );
+    if ( imagePathParts.length != 2 ) throw new EucalyptusCloudException(
+      "Image registration failed:  Invalid image location." );
     return imagePathParts;
   }
   
@@ -345,12 +356,13 @@ public class ImageUtil {
       GetBucketAccessControlPolicyResponseType reply = WalrusUtil.getBucketAcl( request, imagePathParts );
       
       if ( !request.getUserId( ).equals( reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( ) ) ) throw new EucalyptusCloudException(
-                                                                                                                                               "Image registration failed: you must own the bucket containing the image." );
+        "Image registration failed: you must own the bucket containing the image." );
       userName = reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( );
     }
   }
   
-  public static void applyImageAttributes( final EntityWrapper<ImageInfo> db, final ImageInfo imgInfo, final List<LaunchPermissionItemType> changeList, final boolean adding ) throws EucalyptusCloudException {
+  public static void applyImageAttributes( final EntityWrapper<ImageInfo> db, final ImageInfo imgInfo,
+                                           final List<LaunchPermissionItemType> changeList, final boolean adding ) throws EucalyptusCloudException {
     for ( LaunchPermissionItemType perm : changeList ) {
       if ( perm.isGroup( ) ) {
         UserGroupInfo target = new UserGroupInfo( perm.getGroup( ) );
@@ -361,9 +373,10 @@ public class ImageUtil {
             target = dbGroup.getUnique( target );
           } catch ( EucalyptusCloudException e ) {} finally {
             imgInfo.getUserGroups( ).add( target );
+            if ( "all".equals( target.getName( ) ) ) imgInfo.setPublic( true );
           }
         } else if ( !adding && imgInfo.getUserGroups( ).contains( target ) ) {
-          imgInfo.getUserGroups( ).remove( target );
+          if ( "all".equals( target.getName( ) ) ) imgInfo.setPublic( false );
         } else if ( !adding ) {
           throw new EucalyptusCloudException( "image attribute: cant remove nonexistant permission." );
         }
@@ -387,7 +400,8 @@ public class ImageUtil {
     }
   }
   
-  public static boolean modifyImageInfo( final String imageId, final String userId, final boolean isAdmin, final List<LaunchPermissionItemType> addList,
+  public static boolean modifyImageInfo( final String imageId, final String userId, final boolean isAdmin,
+                                         final List<LaunchPermissionItemType> addList,
                                          final List<LaunchPermissionItemType> remList ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     ImageInfo imgInfo = null;
