@@ -158,18 +158,17 @@ public class ClusterAllocator extends Thread {
     if ( networkToken != null ) {
       StartNetworkType msg = new StartNetworkType( this.vmAllocInfo.getRequest(), networkToken.getVlan(), networkToken.getNetworkName() );
       this.msgMap.put( State.CREATE_NETWORK, QueuedEvent.make( new StartNetworkCallback( networkToken ), msg ) );
-      this.msgMap.put( State.ROLLBACK, QueuedEvent.make( new StopNetworkCallback( networkToken ), new StopNetworkType( msg ) ) );
-    }
+      this.msgMap.put( State.ROLLBACK, QueuedEvent.make( new StopNetworkCallback( networkToken ), new StopNetworkType( msg ) ) );    
     try {
       RunInstancesType request = this.vmAllocInfo.getRequest();
       Network network = Networks.getInstance().lookup( networkToken.getName() );
       LOG.info( "Setting up rules for: " + network.getName() );
       LOG.debug( network );
-      ConfigureNetworkType msg = new ConfigureNetworkType( network.getRules() );
-      msg.setUserId( networkToken.getUserName( ) );
-      msg.setEffectiveUserId( networkToken.getUserName( ) );
+      ConfigureNetworkType msg1 = new ConfigureNetworkType( network.getRules() );
+      msg1.setUserId( networkToken.getUserName( ) );
+      msg1.setEffectiveUserId( networkToken.getUserName( ) );
       if ( !network.getRules().isEmpty() ) {
-        this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( ConfigureNetworkCallback.CALLBACK, msg ) );
+        this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( ConfigureNetworkCallback.CALLBACK, msg1 ) );
       }
       //:: need to refresh the rules on the backend for all active networks which point to this network :://
       for( Network otherNetwork : Networks.getInstance().listValues() ) {
@@ -183,6 +182,7 @@ public class ClusterAllocator extends Thread {
         }
       }
     } catch ( NoSuchElementException e ) {}/* just added this network, shouldn't happen, if so just smile and nod */
+    }
   }
 
   public void setupVmMessages( ResourceToken token ) {

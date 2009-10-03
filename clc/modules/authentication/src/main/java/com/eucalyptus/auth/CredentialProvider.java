@@ -105,10 +105,16 @@ public class CredentialProvider extends Bootstrapper {
 		EntityWrapper<X509Cert> db = Credentials.getEntityWrapper( );
 		try {
 			X509Cert certInfo = db.getUnique( new X509Cert( alias ) );
-			byte[] certBytes = UrlBase64.decode( certInfo.getPemCertificate( ).getBytes( ) );
-			X509Certificate x509 = Hashes.getPemCert( certBytes );
-			db.commit( );
-			return x509;
+			String pemCertificate = certInfo.getPemCertificate( );
+			if(pemCertificate != null) {
+			  byte[] certBytes = UrlBase64.decode( pemCertificate.getBytes( ) );
+			  X509Certificate x509 = Hashes.getPemCert( certBytes );			
+			  db.commit( );
+			  return x509;
+			} else {
+			  db.rollback();
+			  return null;				
+			}
 		} catch ( EucalyptusCloudException e ) {
 			db.rollback( );
 			throw new GeneralSecurityException( e );

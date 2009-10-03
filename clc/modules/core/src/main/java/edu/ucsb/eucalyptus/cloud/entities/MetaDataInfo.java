@@ -68,6 +68,8 @@ package edu.ucsb.eucalyptus.cloud.entities;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import sun.util.LocaleServiceProviderPool.LocalizedObjectGetter;
+
 import javax.persistence.*;
 
 @Entity
@@ -86,6 +88,12 @@ public class MetaDataInfo {
     private String value;
 
     public MetaDataInfo(){}
+
+    public MetaDataInfo(MetaDataInfo original) {
+        this.name = original.getName();
+        this.value = original.getValue();
+        this.objectName = original.getObjectName();        
+    }
 
     public Long getId()
     {
@@ -116,13 +124,6 @@ public class MetaDataInfo {
         this.value = value;
     }
 
-    public MetaDataInfo clone() {
-        MetaDataInfo metaDataInfo = new MetaDataInfo();
-        metaDataInfo.setName(name);
-        metaDataInfo.setValue(value);
-        metaDataInfo.setObjectName(objectName);
-        return metaDataInfo;
-    }
 
 	@Override
 	public int hashCode() {

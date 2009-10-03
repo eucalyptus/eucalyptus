@@ -98,7 +98,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
       URL url = new URL( "http://eucalyptus" + uri );
       this.servicePath = url.getPath( );
       this.parameters = new HashMap<String, String>( );
-      this.query = this.query == url.getQuery( ) ? this.query : url.getQuery( );// new URLCodec().decode(url.toURI( ).getQuery( ) ).replaceAll( " ", "+" );
+      this.query = this.query.equals(url.getQuery( )) ? this.query : url.getQuery( );// new URLCodec().decode(url.toURI( ).getQuery( ) ).replaceAll( " ", "+" );
       this.formFields = new HashMap<String, String>( );
       this.populateParameters();
     } catch ( MalformedURLException e ) {

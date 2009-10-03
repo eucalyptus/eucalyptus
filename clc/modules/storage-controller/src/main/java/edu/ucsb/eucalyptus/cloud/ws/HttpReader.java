@@ -77,12 +77,14 @@ public class HttpReader extends HttpTransfer {
 			InputStream httpIn;
 			httpIn = method.getResponseBodyAsStream();
 			int bytesRead;
-			BufferedOutputStream bufferedOut = new BufferedOutputStream(new FileOutputStream(compressedFile));
+			FileOutputStream fileOutputStream = new FileOutputStream(compressedFile);
+			BufferedOutputStream bufferedOut = new BufferedOutputStream(fileOutputStream);
 			while((bytesRead = httpIn.read(bytes)) > 0) {
 				bufferedOut.write(bytes, 0, bytesRead);
 			}
 			bufferedOut.close();
-
+			fileOutputStream.close();
+			
 			if(compressed) {
 				SystemUtil.run(new String[]{"/bin/gunzip", compressedFile.getAbsolutePath()});
 			}

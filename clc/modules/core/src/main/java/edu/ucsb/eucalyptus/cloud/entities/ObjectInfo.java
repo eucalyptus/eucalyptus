@@ -447,7 +447,7 @@ public class ObjectInfo implements Comparable {
     public List<MetaDataInfo> cloneMetaData() {
         ArrayList<MetaDataInfo> metaDataInfos = new ArrayList<MetaDataInfo>();
         for(MetaDataInfo metaDataInfo : metaData) {
-            metaDataInfos.add(metaDataInfo.clone());
+            metaDataInfos.add(new MetaDataInfo(metaDataInfo));
         }
         return metaDataInfos;
     }

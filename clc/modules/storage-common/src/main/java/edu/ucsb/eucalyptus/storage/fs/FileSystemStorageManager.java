@@ -239,11 +239,15 @@ public class FileSystemStorageManager implements StorageManager {
 		File oldObjectFile = new File (rootDirectory + FILE_SEPARATOR + sourceBucket + FILE_SEPARATOR + sourceObject);
 		File newObjectFile = new File (rootDirectory + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR + destinationObject);
 
-		FileChannel fileIn = new FileInputStream(oldObjectFile).getChannel();
-		FileChannel fileOut = new FileOutputStream(newObjectFile).getChannel();
+		FileInputStream fileInputStream = new FileInputStream(oldObjectFile);
+		FileChannel fileIn = fileInputStream.getChannel();
+		FileOutputStream fileOutputStream = new FileOutputStream(newObjectFile);
+		FileChannel fileOut = fileOutputStream.getChannel();
 		fileIn.transferTo(0, fileIn.size(), fileOut);
 		fileIn.close();
+		fileInputStream.close();
 		fileOut.close();
+		fileOutputStream.close();
 	}
 
 	public String getObjectPath(String bucket, String object) {

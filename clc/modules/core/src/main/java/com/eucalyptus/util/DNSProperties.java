@@ -104,23 +104,21 @@ public class DNSProperties {
 		List<NetworkInterface> ifaces = null;
 		try {
 			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-		}
-		catch ( SocketException e1 ) {}
-
-		for ( NetworkInterface iface : ifaces )
-			try {
-				if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-					for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-						if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address) ) {
-							ipAddr = iaddr;
-						} else if ( iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
-							ipAddr = iaddr;
+			for ( NetworkInterface iface : ifaces )
+				try {
+					if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
+						for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
+							if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address) ) {
+								ipAddr = iaddr;
+							} else if ( iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
+								ipAddr = iaddr;
+							}
 						}
 					}
 				}
-			}
+			catch ( SocketException e1 ) {}
+		}
 		catch ( SocketException e1 ) {}
-
 		if(ipAddr != null) {
 			DNSProperties.NS_IP = ipAddr.getHostAddress();
 			DNSProperties.NS_HOST = ipAddr.getCanonicalHostName();

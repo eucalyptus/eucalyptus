@@ -144,8 +144,10 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
       LOG.debug( "Request queue is empty, waiting for write request." );
     } else {
       Object msg = this.getRequestQueue( ).peek( );
+      if(msg != null) {
       LOG.debug( "Found pending request in the request queue: " + msg.getClass( ).getCanonicalName( ) );
       this.fireMessage( ( TYPE ) msg, e.getChannel( ) );
+      }
     }
     super.channelConnected( ctx, e );
   }

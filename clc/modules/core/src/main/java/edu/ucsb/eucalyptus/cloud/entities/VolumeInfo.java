@@ -197,12 +197,7 @@ public class VolumeInfo {
 
     @Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((scName == null) ? 0 : scName.hashCode());
-		result = prime * result
-				+ ((volumeId == null) ? 0 : volumeId.hashCode());
-		return result;
+    	return scName.hashCode() + volumeId.hashCode();		
 	}
 
 }

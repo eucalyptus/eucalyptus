@@ -208,6 +208,8 @@ public class WalrusImageManager {
 						}
 					}
 					List<String> parts = parser.getValues("//image/parts/part/filename");
+					if(parts == null) 
+						throw new DecryptionFailedException("Invalid manifest");
 					ArrayList<String> qualifiedPaths = new ArrayList<String>();
 					searchObjectInfo = new ObjectInfo();
 					searchObjectInfo.setBucketName(bucketName);
@@ -675,16 +677,25 @@ public class WalrusImageManager {
 		GZIPInputStream in = new GZIPInputStream(new FileInputStream(new File(decryptedImageName)));
 		File outFile = new File(tarredImageName);
 		ReadableByteChannel inChannel = Channels.newChannel(in);
-		WritableByteChannel outChannel = new FileOutputStream(outFile).getChannel();
+		FileOutputStream fileOutputStream = new FileOutputStream(outFile);
+		WritableByteChannel outChannel = fileOutputStream.getChannel();
 
-		ByteBuffer buffer = ByteBuffer.allocate(102400/*TODO: NEIL WalrusQueryDispatcher.DATA_MESSAGE_SIZE*/);
-		while (inChannel.read(buffer) != -1) {
-			buffer.flip();
-			outChannel.write(buffer);
-			buffer.clear();
+		ByteBuffer buffer = ByteBuffer.allocate(102400);
+		try {
+			while (inChannel.read(buffer) != -1) {
+				buffer.flip();
+				outChannel.write(buffer);
+				buffer.clear();
+			}
+		} catch(IOException ex) {
+			outChannel.close();
+			inChannel.close();
+			throw ex;
 		}
 		outChannel.close();
+		fileOutputStream.close();
 		inChannel.close();
+		in.close();
 	}
 
 	private long untarImage(String tarredImageName, String imageName) throws Exception {
@@ -726,10 +737,10 @@ public class WalrusImageManager {
 
 		public void run()
 		{
+			BufferedOutputStream outStream = null;
 			try
 			{
 				BufferedInputStream inStream = new BufferedInputStream(is);
-				BufferedOutputStream outStream = null;
 				if(file != null) {
 					outStream = new BufferedOutputStream(new FileOutputStream(file));
 				}
@@ -744,7 +755,13 @@ public class WalrusImageManager {
 					outStream.close();
 			} catch (IOException ex)
 			{
-				LOG.error(ex);
+				if(outStream != null)
+					try {
+						outStream.close();
+					} catch (IOException e) {
+						LOG.error(e);
+					}
+					LOG.error(ex);
 			}
 		}
 	}
@@ -788,16 +805,28 @@ public class WalrusImageManager {
 	}
 
 	private void assembleParts(final String name, List<String> parts) {
+		FileOutputStream fileOutputStream = null;
 		try {
-			FileChannel out = new FileOutputStream(new File(name)).getChannel();
+			fileOutputStream = new FileOutputStream(new File(name));
+			FileChannel out = fileOutputStream.getChannel();
 			for (String partName: parts) {
-				FileChannel in = new FileInputStream(new File(partName)).getChannel();
+				FileInputStream fileInputStream = new FileInputStream(new File(partName));
+				FileChannel in = fileInputStream.getChannel();
 				in.transferTo(0, in.size(), out);
 				in.close();
+				fileInputStream.close();
 			}
 			out.close();
+			fileOutputStream.close();
 		} catch (Exception ex) {
 			LOG.error(ex);
+		} finally {
+			if(fileOutputStream != null)
+				try {
+					fileOutputStream.close();
+				} catch (IOException e) {
+					LOG.error(e);
+				}
 		}
 	}
 

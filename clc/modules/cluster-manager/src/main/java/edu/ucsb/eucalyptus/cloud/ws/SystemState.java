@@ -415,7 +415,8 @@ public class SystemState {
       if ( !VmState.RUNNING.equals( v.getState() ) )
         throw new NoSuchElementException( "Instance " + request.getInstanceId() + " is not in a running state." );
       QueuedEvent<GetConsoleOutputType> event = QueuedEvent.make( new ConsoleOutputCallback( ), request );
-      cluster.getMessageQueue().enqueue( event );
+      if(cluster != null)
+          cluster.getMessageQueue().enqueue( event );
       return;
     } catch ( NoSuchElementException e ) {
       Messaging.dispatch( "vm://ReplyQueue", new EucalyptusErrorMessageType( RequestContext.getEventContext().getService().getComponent().getClass().getSimpleName(),

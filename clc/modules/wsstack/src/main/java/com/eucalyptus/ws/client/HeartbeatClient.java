@@ -74,9 +74,7 @@ public class HeartbeatClient {
         LOG.debug( "Sending configuration info to: " + channel.getRemoteAddress( ) );
         LOG.info( "Greetings to: " + channel.getRemoteAddress( ) );
       } else {
-        if( channelFuture != null ) {
-          LOG.warn( "Failed to connect to heartbeat service at " + remoteAddr + ": " + channelFuture.getCause( ).getMessage( ) );
-        }
+        LOG.warn( "Failed to connect to heartbeat service at " + remoteAddr + ": " + channelFuture.getCause( ).getMessage( ) );
         if( channel != null ) {
           channel.close( );            
         }

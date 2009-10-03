@@ -155,7 +155,7 @@ public class ImageCacheInfo implements Comparable {
 
     public int compareTo(Object o) {
         ImageCacheInfo info = (ImageCacheInfo) o;
-        if(info.getUseCount() == useCount)
+        if(info.getUseCount().equals(useCount))
             return 0 ;
         if(info.getUseCount() < useCount)
             return 1;

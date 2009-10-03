@@ -78,6 +78,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.mule.DefaultMuleMessage;
 import org.mule.api.MuleMessage;
@@ -160,7 +161,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
     }
     LOG.info( EventRecord.create( Component.eucalyptus, reply.getUserId( ), reply.getCorrelationId( ), EventType.MSG_SERVICED, reply.getClass( ).getSimpleName( ) ) );
-    final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
+    HttpVersion httpVersion = request.getProtocolVersion() != null ? request.getProtocolVersion() : HttpVersion.HTTP_1_1;
+    final MappingHttpResponse response = new MappingHttpResponse(httpVersion);
     final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
     response.setMessage( reply );
     ctx.sendDownstream( newEvent );
@@ -192,7 +194,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           Messaging.dispatch( "vm://RequestQueue", msg );
         } else if ( ( user == null ) || ( ( user != null ) && user.getIsAdministrator( ) ) ) {
           final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ) );
-          ctx.getChannel( ).write( reply.getPayload( ) );
+          if(reply != null)
+              ctx.getChannel( ).write( reply.getPayload( ) );
         } else {
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }

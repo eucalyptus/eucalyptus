@@ -34,7 +34,9 @@ public class KeyPairManager {
         kp = SshKeyPair.NO_KEY;
       }
     }
-    return new VmKeyInfo( kp.getDisplayName(), kp.getPublicKey(), kp.getFingerPrint() );
+    if(kp != null)
+        return new VmKeyInfo( kp.getDisplayName(), kp.getPublicKey(), kp.getFingerPrint() );
+	return null;
   }
 
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {

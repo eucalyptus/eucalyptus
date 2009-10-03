@@ -42,11 +42,11 @@ public class HttpTransfer {
 		HttpMethodBase method = null;
 		if(httpVerb.equals("PUT")) {
 			method = new  PutMethodWithProgress(addr);
-		} else if(httpVerb.equals("GET")) {
-			method = new GetMethod(addr);
 		} else if(httpVerb.equals("DELETE")) {
 			method = new DeleteMethod(addr);
-		}
+		} else  {
+			method = new GetMethod(addr);
+		} 
 		method.setRequestHeader("Authorization", "Euca");
 		method.setRequestHeader("Date", date);
 		//method.setRequestHeader("Expect", "100-continue");

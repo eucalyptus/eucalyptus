@@ -118,27 +118,31 @@ public class WalrusSoapHandler extends MessageStackHandler {
 			} else {
 				final SOAPHeader header = env.getHeader( );
 				final List<SOAPHeaderBlock> headers = Lists.newArrayList( header.examineAllHeaderBlocks( ) );
-				// :: try to get the fault info from the soap header -- hello there? :://
-				String action = "ProblemAction";
-				String relatesTo = "RelatesTo";
-				for ( final SOAPHeaderBlock headerBlock : headers ) {
-					if ( action.equals( headerBlock.getLocalName( ) ) ) {
-						action = headerBlock.getText( );
-					} else if ( relatesTo.equals( headerBlock.getLocalName( ) ) ) {
-						relatesTo = headerBlock.getText( );
+				if(headers != null) {
+					// :: try to get the fault info from the soap header -- hello there? :://
+					String action = "ProblemAction";
+					String relatesTo = "RelatesTo";
+					for ( final SOAPHeaderBlock headerBlock : headers ) {
+						if ( action.equals( headerBlock.getLocalName( ) ) ) {
+							action = headerBlock.getText( );
+						} else if ( relatesTo.equals( headerBlock.getLocalName( ) ) ) {
+							relatesTo = headerBlock.getText( );
+						}
+					}
+					// :: process the real fault :://
+					final SOAPFault fault = env.getBody( ).getFault( );
+					if(fault != null) {
+						String faultReason = "";
+						final Iterator children = fault.getChildElements( );
+						while ( children.hasNext( ) ) {
+							final OMElement child = ( OMElement ) children.next( );
+							faultReason += child.getText( );
+						}
+						final String faultCode = fault.getCode( ).getText( );
+						faultReason = faultReason.replaceAll( faultCode, "" );
+						throw new EucalyptusRemoteFault( action, relatesTo, faultCode, faultReason );
 					}
 				}
-				// :: process the real fault :://
-				final SOAPFault fault = env.getBody( ).getFault( );
-				String faultReason = "";
-				final Iterator children = fault.getChildElements( );
-				while ( children.hasNext( ) ) {
-					final OMElement child = ( OMElement ) children.next( );
-					faultReason += child.getText( );
-				}
-				final String faultCode = fault.getCode( ).getText( );
-				faultReason = faultReason.replaceAll( faultCode, "" );
-				throw new EucalyptusRemoteFault( action, relatesTo, faultCode, faultReason );
 			}
 		}
 	}
@@ -166,13 +170,13 @@ public class WalrusSoapHandler extends MessageStackHandler {
 				httpMessage.getSoapEnvelope( ).getBody( ).addChild( httpMessage.getOmMessage( ) );
 			}
 			ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
-			
+
 			HoldMe.canHas.lock( );
 			try {
-		     httpMessage.getSoapEnvelope( ).serialize( byteOut );//HACK: xml breakage?
-	    } finally {
-	      HoldMe.canHas.unlock();
-	    }
+				httpMessage.getSoapEnvelope( ).serialize( byteOut );//HACK: xml breakage?
+			} finally {
+				HoldMe.canHas.unlock();
+			}
 
 			ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) );
 			httpMessage.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
@@ -183,36 +187,36 @@ public class WalrusSoapHandler extends MessageStackHandler {
 
 	private static SOAPEnvelope createFault(  String faultCode, String faultReason, String faultDetails, 
 			String resourceType, String resource )  {
-    HoldMe.canHas.lock( );
-    try {
-      SOAPFactory soapFactory = HoldMe.getOMSOAP11Factory();
+		HoldMe.canHas.lock( );
+		try {
+			SOAPFactory soapFactory = HoldMe.getOMSOAP11Factory();
 
-      SOAPFaultCode soapFaultCode = soapFactory.createSOAPFaultCode();
-      soapFaultCode.setText( SOAP11Constants.FAULT_CODE_SENDER + "." + faultCode );
+			SOAPFaultCode soapFaultCode = soapFactory.createSOAPFaultCode();
+			soapFaultCode.setText( SOAP11Constants.FAULT_CODE_SENDER + "." + faultCode );
 
-      SOAPFaultReason soapFaultReason = soapFactory.createSOAPFaultReason();
-      soapFaultReason.setText( faultReason );
+			SOAPFaultReason soapFaultReason = soapFactory.createSOAPFaultReason();
+			soapFaultReason.setText( faultReason );
 
-      SOAPFaultDetail soapFaultDetail = soapFactory.createSOAPFaultDetail();
+			SOAPFaultDetail soapFaultDetail = soapFactory.createSOAPFaultDetail();
 
-      if(resource != null) {
-        OMElement detail = soapFactory.createOMElement(new QName(resourceType));
-        detail.setText(resource);
-        soapFaultDetail.addDetailEntry(detail);
-      } else {
-        soapFaultDetail.setText(faultDetails);
-      }
+			if(resource != null) {
+				OMElement detail = soapFactory.createOMElement(new QName(resourceType));
+				detail.setText(resource);
+				soapFaultDetail.addDetailEntry(detail);
+			} else {
+				soapFaultDetail.setText(faultDetails);
+			}
 
-      SOAPEnvelope soapEnv = soapFactory.getDefaultEnvelope( );
-      SOAPFault soapFault = soapFactory.createSOAPFault( );
-      soapFault.setCode( soapFaultCode );
-      soapFault.setDetail( soapFaultDetail );
-      soapFault.setReason( soapFaultReason );
-      soapEnv.getBody( ).addFault( soapFault );
-      return soapEnv;
-    } finally {
-      HoldMe.canHas.unlock();
-    }
+			SOAPEnvelope soapEnv = soapFactory.getDefaultEnvelope( );
+			SOAPFault soapFault = soapFactory.createSOAPFault( );
+			soapFault.setCode( soapFaultCode );
+			soapFault.setDetail( soapFaultDetail );
+			soapFault.setReason( soapFaultReason );
+			soapEnv.getBody( ).addFault( soapFault );
+			return soapEnv;
+		} finally {
+			HoldMe.canHas.unlock();
+		}
 	}
 
 }

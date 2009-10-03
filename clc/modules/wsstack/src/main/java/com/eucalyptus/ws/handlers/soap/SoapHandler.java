@@ -98,7 +98,8 @@ public class SoapHandler extends MessageStackHandler {
         message.setOmMessage( env.getBody( ).getFirstElement( ) );
       } else {
         final SOAPHeader header = env.getHeader( );
-        final List<SOAPHeaderBlock> headers = Lists.newArrayList( header.examineAllHeaderBlocks( ) );
+        if(header != null) {
+        final List<SOAPHeaderBlock> headers = Lists.newArrayList( header.examineAllHeaderBlocks( ) );        
         // :: try to get the fault info from the soap header -- hello there? :://
         String action = "ProblemAction";
         String relatesTo = "RelatesTo";
@@ -108,9 +109,10 @@ public class SoapHandler extends MessageStackHandler {
           } else if ( relatesTo.equals( headerBlock.getLocalName( ) ) ) {
             relatesTo = headerBlock.getText( );
           }
-        }
+        }        
         // :: process the real fault :://
         final SOAPFault fault = env.getBody( ).getFault( );
+        if(fault != null) {
         String faultReason = "";
         final Iterator children = fault.getChildElements( );
         while ( children.hasNext( ) ) {
@@ -118,8 +120,10 @@ public class SoapHandler extends MessageStackHandler {
           faultReason += child.getText( );
         }
         final String faultCode = fault.getCode( ).getText( );
-        faultReason = faultReason.replaceAll( faultCode, "" );
+        faultReason = faultReason.replaceAll( faultCode, "" );        
         throw new EucalyptusRemoteFault( action, relatesTo, faultCode, faultReason );
+        }
+        }
       }
     }
   }

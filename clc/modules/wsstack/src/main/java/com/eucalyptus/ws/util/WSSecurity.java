@@ -171,8 +171,11 @@ public class WSSecurity {
   public static Element getSecurityElement( final Element env ) {
     final SOAPConstants soapConstants = WSSecurityUtil.getSOAPConstants( env );
     final Element soapHeaderElement = ( Element ) WSSecurityUtil.getDirectChildElement( env, soapConstants.getHeaderQName( ).getLocalPart( ), soapConstants.getEnvelopeURI( ) );
+    if(soapHeaderElement != null) {
     final Element securityNode = ( Element ) WSSecurityUtil.getDirectChildElement( soapHeaderElement, WSConstants.WSSE_LN, WSConstants.WSSE_NS );
     return securityNode;
+    }
+    return null;
   }
 
   public static X509Certificate getVerifiedCertificate( SOAPEnvelope envelope ) throws WSSecurityException, XMLSignatureException {
@@ -181,11 +184,14 @@ public class WSSecurity {
     elem.build( );
     final Element env = ( ( Element ) elem );
     final Element securityNode = getSecurityElement( env );
+    if(securityNode != null) {
     final Element signatureNode = getSignatureElement( securityNode );
-    final XMLSignature sig = getXmlSignature( signatureNode );
+    final XMLSignature sig = getXmlSignature( signatureNode );    
     if ( sig.getKeyInfo( ) == null ) throw new WSSecurityException( WSSecurityException.SECURITY_TOKEN_UNAVAILABLE );
     X509Certificate cert = verifySignature( securityNode, sig );
     return cert;
+    }
+    return null;
   }
 
 }

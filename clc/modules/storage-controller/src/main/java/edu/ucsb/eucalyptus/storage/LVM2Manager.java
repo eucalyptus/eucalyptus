@@ -68,6 +68,7 @@ package edu.ucsb.eucalyptus.storage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
@@ -404,13 +405,20 @@ public class LVM2Manager implements LogicalStorageManager {
 		}
 
 		File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+		FileOutputStream fileOutStream = null;
 		try {
-			FileOutputStream fileOutStream = new FileOutputStream(vbladePidFile);
+			fileOutStream = new FileOutputStream(vbladePidFile);
 			String pidString = String.valueOf(pid);
 			fileOutStream.write(pidString.getBytes());
-			fileOutStream.close();
 		} catch (Exception ex) {
 			LOG.error("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
+		} finally {
+			if(fileOutStream != null)
+				try {
+					fileOutStream.close();
+				} catch (IOException e) {
+					LOG.error(e);
+				}
 		}
 		lvmVolumeInfo.setVbladePid(pid);
 		lvmVolumeInfo.setMajorNumber(majorNumber);
@@ -420,11 +428,15 @@ public class LVM2Manager implements LogicalStorageManager {
 
 	public void dupFile(String oldFileName, String newFileName) {
 		try {
-			FileChannel out = new FileOutputStream(new File(newFileName)).getChannel();
-			FileChannel in = new FileInputStream(new File(oldFileName)).getChannel();
+			FileOutputStream fileOutputStream = new FileOutputStream(new File(newFileName));
+			FileChannel out = fileOutputStream.getChannel();
+			FileInputStream fileInputStream = new FileInputStream(new File(oldFileName));
+			FileChannel in = fileInputStream.getChannel();
 			in.transferTo(0, in.size(), out);
 			in.close();
 			out.close();
+			fileInputStream.close();
+			fileOutputStream.close();
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
@@ -928,13 +940,20 @@ public class LVM2Manager implements LogicalStorageManager {
 					pid = exportManager.exportVolume(StorageProperties.iface, absoluteLVName, majorNumber, minorNumber);
 					foundVolumeInfo.setVbladePid(pid);
 					File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+					FileOutputStream fileOutStream = null;
 					try {
-						FileOutputStream fileOutStream = new FileOutputStream(vbladePidFile);
+						fileOutStream = new FileOutputStream(vbladePidFile);
 						String pidString = String.valueOf(pid);
 						fileOutStream.write(pidString.getBytes());
 						fileOutStream.close();
 					} catch (Exception ex) {
-						LOG.error("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
+						if(fileOutStream != null)
+							try {
+								fileOutStream.close();
+							} catch (IOException e) {
+								LOG.error(e);
+							}
+							LOG.error("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
 					}
 				}
 			}
@@ -976,8 +995,9 @@ public class LVM2Manager implements LogicalStorageManager {
 		File file = new File("/proc/" + pid + "/cmdline");
 		String returnString = "";
 		if(file.exists()) {
+			FileInputStream fileIn = null;
 			try {
-				FileInputStream fileIn = new FileInputStream(file);
+				fileIn = new FileInputStream(file);
 				byte[] bytes = new byte[512];
 				int bytesRead;
 				while((bytesRead = fileIn.read(bytes)) > 0) {
@@ -985,6 +1005,13 @@ public class LVM2Manager implements LogicalStorageManager {
 				}
 			} catch (Exception ex) {
 				LOG.warn("could not find " + file.getAbsolutePath());
+			} finally {
+				if(fileIn != null)
+					try {
+						fileIn.close();
+					} catch (IOException e) {
+						LOG.error(e);
+					}
 			}
 		}
 		return returnString;

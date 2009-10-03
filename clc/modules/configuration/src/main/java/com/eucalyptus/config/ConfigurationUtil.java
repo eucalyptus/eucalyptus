@@ -2,6 +2,7 @@ package com.eucalyptus.config;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
@@ -68,6 +69,7 @@ public class ConfigurationUtil {
     File keyDir = new File( directory );
     Configuration.LOG.info( "creating keys in " + directory );
     if ( !keyDir.mkdir( ) ) { throw new EucalyptusCloudException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) ); }
+    FileWriter out = null;
     try {
       KeyTool keyTool = new KeyTool( );
       KeyPair clusterKp = keyTool.getKeyPair( );
@@ -83,7 +85,7 @@ public class ConfigurationUtil {
       X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
       String hexSig = Hashes.getHexSignature( );
       keyTool.writePem( SubDirectory.KEYS.toString( ) + File.separator + "cloud-cert.pem", systemX509 );
-      FileWriter out = new FileWriter( directory + File.separator + "vtunpass" );
+      out = new FileWriter( directory + File.separator + "vtunpass" );
       out.write( hexSig );
       out.flush( );
       out.close( );
@@ -105,6 +107,13 @@ public class ConfigurationUtil {
       }
     } catch ( Exception eee ) {
       throw new EucalyptusCloudException( eee );
+    } finally {
+    	if(out != null)
+			try {
+				out.close();
+			} catch (IOException e) {
+				Configuration.LOG.error(e);
+			}
     }
   }
 

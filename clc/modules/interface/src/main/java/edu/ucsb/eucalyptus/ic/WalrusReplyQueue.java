@@ -104,24 +104,6 @@ public class WalrusReplyQueue {
 			Throwable ex = muleMsg.getException().getCause();
 			EucalyptusMessage errMsg;
 
-			String ipAddr = "127.0.0.1";
-			List<NetworkInterface> ifaces = null;
-			try {
-				ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-			} catch ( SocketException e1 ) {}
-
-			for ( NetworkInterface iface : ifaces ) {
-				try {
-					if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-						for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-							if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address) ) {
-								ipAddr = iaddr.getHostAddress();
-								break;
-							}
-						}
-					}
-				} catch ( SocketException e1 ) {}
-			}
 
 			errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage());
 			replies.putMessage( errMsg );

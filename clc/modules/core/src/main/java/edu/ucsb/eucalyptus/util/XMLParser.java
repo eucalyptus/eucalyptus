@@ -80,6 +80,7 @@ import javax.xml.xpath.XPathFactory;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,6 +118,7 @@ public class XMLParser {
       try {
         FileInputStream fileInputStream = new FileInputStream( file );
         docRoot = docBuilder.parse( fileInputStream );
+        fileInputStream.close();
       } catch ( Exception ex ) {
         ex.printStackTrace( );
       }
@@ -186,17 +188,24 @@ public class XMLParser {
 
     public String getXML(String name) {
         if(rawData == null) {
+            FileInputStream in = null;
             try {
-                FileInputStream in = new FileInputStream(file);
+                 in = new FileInputStream(file);
                 rawData = "";
                 byte[] bytes = new byte[1024];
                 int bytesRead = 0;
                 while ((bytesRead = in.read(bytes)) > 0) {
                     rawData += new String(bytes, 0, bytesRead);
                 }
-                in.close();
             } catch (Exception ex) {
                 ex.printStackTrace();
+            } finally {
+            	if(in != null)
+					try {
+						in.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
             }
         }
 

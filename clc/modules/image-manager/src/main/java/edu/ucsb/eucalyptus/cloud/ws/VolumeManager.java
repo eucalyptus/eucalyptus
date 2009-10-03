@@ -314,7 +314,7 @@ public class VolumeManager {
         }
       }
     }
-    if ( volume == null || vm == null ) {
+    if ( volume == null) {
       throw new EucalyptusCloudException( "Volume is not attached: " + request.getVolumeId() );
     }
     if( !vm.getInstanceId().equals( request.getInstanceId() ) && request.getInstanceId() != null && !request.getInstanceId().equals("" ) ) {

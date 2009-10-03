@@ -680,13 +680,15 @@ public class WalrusManager {
 							byte[] data = dataMessage.getPayload();
 							//start writing object (but do not commit yet)
 							try {
-								fileIO.write(data);
+								if(fileIO != null)
+									fileIO.write(data);
 							} catch (IOException ex) {
 								LOG.error(ex);
 							}
 							//calculate md5 on the fly
 							size += data.length;
-							digest.update(data);
+							if(digest != null)
+								digest.update(data);
 						}
 					}
 				} catch (InterruptedException ex) {

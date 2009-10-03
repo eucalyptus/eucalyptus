@@ -6,6 +6,7 @@ import groovy.lang.GroovyObject;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -41,11 +42,20 @@ public class GroovyUtil {
   }
 
   public static void evaluateScript( String fileName ) throws FailScriptFailException {
+    FileReader fileReader = null;
     try {
-      getGroovyEngine().eval( new FileReader( SubDirectory.SCRIPTS + File.separator + fileName ) );
+      fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName );
+	  getGroovyEngine().eval( fileReader );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
       throw new FailScriptFailException( "Executing the requested script failed: " + fileName, e );
+    } finally {
+    	if(fileReader != null)
+			try {
+				fileReader.close();
+			} catch (IOException e) {
+				LOG.error(e);
+			}
     }
   }
 
