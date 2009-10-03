@@ -171,7 +171,8 @@ public class WalrusImageManager {
 							List<String> aliases = CredentialProvider.getAliases();
 							for(String alias : aliases) {
 								X509Certificate cert = CredentialProvider.getCertificate(alias);
-								verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+								if(cert != null)
+									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if(verified)
 									break;
 							}

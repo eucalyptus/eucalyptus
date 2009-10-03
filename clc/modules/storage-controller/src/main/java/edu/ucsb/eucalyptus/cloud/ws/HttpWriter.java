@@ -44,10 +44,12 @@ public class HttpWriter extends HttpTransfer {
 					addr += "=" + value;
 			}
 			method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
-			method.setRequestHeader("Transfer-Encoding", "chunked");
-			method.addRequestHeader(StorageProperties.StorageParameters.EucaSnapSize.toString(), String.valueOf(file.length()));
-			((PutMethodWithProgress)method).setOutFile(file);
-			((PutMethodWithProgress)method).setCallBack(callback);
+			if(method != null) {
+				method.setRequestHeader("Transfer-Encoding", "chunked");
+				method.addRequestHeader(StorageProperties.StorageParameters.EucaSnapSize.toString(), String.valueOf(file.length()));
+				((PutMethodWithProgress)method).setOutFile(file);
+				((PutMethodWithProgress)method).setCallBack(callback);
+			}
 		}
 	}
 

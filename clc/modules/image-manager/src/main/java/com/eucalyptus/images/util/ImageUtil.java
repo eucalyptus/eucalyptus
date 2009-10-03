@@ -129,10 +129,12 @@ public class ImageUtil {
     try {
       Signature sigVerifier = Signature.getInstance( "SHA1withRSA" );
       X509Certificate cert = CredentialProvider.getCertificate( alias );
-      PublicKey publicKey = cert.getPublicKey( );
-      sigVerifier.initVerify( publicKey );
-      sigVerifier.update( pad.getBytes( ) );
-      ret = sigVerifier.verify( Hashes.hexToBytes( signature ) );
+      if(cert != null) {
+        PublicKey publicKey = cert.getPublicKey( );
+        sigVerifier.initVerify( publicKey );
+        sigVerifier.update( pad.getBytes( ) );
+        ret = sigVerifier.verify( Hashes.hexToBytes( signature ) );
+      }
     } catch ( Exception ex ) {
       LOG.warn( ex.getMessage( ) );
     }
@@ -354,10 +356,11 @@ public class ImageUtil {
     String userName = null;
     if ( !request.isAdministrator( ) ) {
       GetBucketAccessControlPolicyResponseType reply = WalrusUtil.getBucketAcl( request, imagePathParts );
-      
-      if ( !request.getUserId( ).equals( reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( ) ) ) throw new EucalyptusCloudException(
+      if(reply != null) {
+        if ( !request.getUserId( ).equals( reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( ) ) ) throw new EucalyptusCloudException(
         "Image registration failed: you must own the bucket containing the image." );
-      userName = reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( );
+        userName = reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( );
+      }
     }
   }
   

@@ -142,11 +142,11 @@ public class ObjectReader extends Thread {
 					if ((bytesRemaining - bytesRead) > 0) {
 						ByteBuffer buffer = fileIO.getBuffer();
 						if(buffer != null)
-							getQueue.put(WalrusDataMessage.DataMessage(fileIO.getBuffer(), bytesRead));
+							getQueue.put(WalrusDataMessage.DataMessage(buffer, bytesRead));
 					} else {
 						ByteBuffer buffer = fileIO.getBuffer();
 						if(buffer != null)
-							getQueue.put(WalrusDataMessage.DataMessage(fileIO.getBuffer(), (int) bytesRemaining));
+							getQueue.put(WalrusDataMessage.DataMessage(buffer, (int) bytesRemaining));
 					}
 					bytesRemaining -= bytesRead;
 					offset += bytesRead;

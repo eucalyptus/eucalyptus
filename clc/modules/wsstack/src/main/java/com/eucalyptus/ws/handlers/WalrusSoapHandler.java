@@ -117,8 +117,8 @@ public class WalrusSoapHandler extends MessageStackHandler {
 				message.setOmMessage( env.getBody( ).getFirstElement( ) );
 			} else {
 				final SOAPHeader header = env.getHeader( );
+				if(header != null) {
 				final List<SOAPHeaderBlock> headers = Lists.newArrayList( header.examineAllHeaderBlocks( ) );
-				if(headers != null) {
 					// :: try to get the fault info from the soap header -- hello there? :://
 					String action = "ProblemAction";
 					String relatesTo = "RelatesTo";

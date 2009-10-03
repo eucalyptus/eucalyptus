@@ -718,12 +718,12 @@ public class Cache {
 			} else if (type == Type.CNAME && name.equals(curname)) {
 				CNAMERecord cname;
 				addRRset(answers[i], cred);
-				if (curname == qname)
+				if (curname.equals(qname))
 					response = new SetResponse(SetResponse.CNAME,
 							answers[i]);
 				cname = (CNAMERecord) answers[i].first();
 				curname = cname.getTarget();
-			} else if (type == Type.DNAME && curname.subdomain(name)) {
+			} else if (type == Type.DNAME && curname != null && curname.subdomain(name)) {
 				DNAMERecord dname;
 				addRRset(answers[i], cred);
 				if (curname.equals(qname))

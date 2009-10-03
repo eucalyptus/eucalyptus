@@ -156,6 +156,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
 
   private void sendDownstreamNewEvent( ChannelHandlerContext ctx, ChannelEvent e, EucalyptusMessage reply ) {
     final MappingHttpMessage request = this.requestLocal.get( ctx.getChannel( ) );
+    if(request != null) {
     if ( reply == null ) {
       LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
       reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
@@ -165,6 +166,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
     final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
     response.setMessage( reply );
     ctx.sendDownstream( newEvent );
+    }
   }
   
   @Override

@@ -615,7 +615,8 @@ public class WalrusManager {
 								messenger.removeQueue(key, randomKey);
 								throw new EucalyptusCloudException(objectKey);
 							}
-							md5 = Hashes.bytesToHex(digest.digest());
+							if(digest != null)
+								md5 = Hashes.bytesToHex(digest.digest());
 							lastModified = new Date();
 							dbObject = WalrusControl.getEntityWrapper();
 							objectInfos = dbObject.query(new ObjectInfo(bucketName, objectKey));
@@ -670,7 +671,8 @@ public class WalrusManager {
 								md5 = monitor.getMd5();
 							}
 							//ok we are done here
-							fileIO.finish();
+							if(fileIO != null)
+								fileIO.finish();
 							ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, tempObjectName, -1L);
 							objectDeleter.start();
 							LOG.info("Transfer interrupted: "+ key);

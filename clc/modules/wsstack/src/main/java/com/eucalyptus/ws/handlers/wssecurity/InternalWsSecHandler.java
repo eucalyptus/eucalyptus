@@ -112,8 +112,10 @@ public class InternalWsSecHandler extends WsSecHandler {
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
       SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
       X509Certificate cert = WSSecurity.getVerifiedCertificate( envelope );
-      if( !cert.equals( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( ) ) ) {
-        throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );
+      if(cert != null) {
+        if( !cert.equals( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( ) ) ) {
+          throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );
+        }
       }
     }
   }

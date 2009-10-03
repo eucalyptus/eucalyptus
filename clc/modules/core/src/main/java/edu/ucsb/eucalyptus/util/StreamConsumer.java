@@ -87,10 +87,10 @@ public class StreamConsumer extends Thread {
     }
 
     public void run() {
+        BufferedOutputStream outStream = null;
+        FileOutputStream fileOutputStream = null;
         try {
             BufferedInputStream inStream = new BufferedInputStream(is);
-            BufferedOutputStream outStream = null;
-            FileOutputStream fileOutputStream = null;
             if (file != null) {
                 fileOutputStream = new FileOutputStream(file);
 				outStream = new BufferedOutputStream(fileOutputStream);
@@ -103,12 +103,17 @@ public class StreamConsumer extends Thread {
                     outStream.write(bytes, 0, bytesRead);
                 }
             }
-            if (outStream != null) {
-                outStream.close();
-                fileOutputStream.close();
-            }
         } catch (IOException ex) {
             ex.printStackTrace();
+        } finally {
+            if (outStream != null) {
+                try {
+					outStream.close();
+	                fileOutputStream.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+            }
         }
     }
 }
