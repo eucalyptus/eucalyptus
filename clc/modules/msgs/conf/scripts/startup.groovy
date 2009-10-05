@@ -1,6 +1,8 @@
 import org.hibernate.HibernateException;
 
 import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -10,6 +12,17 @@ import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.util.UserManagement;
 
+EntityWrapper<User> dbu = Credentials.getEntityWrapper( );
+try {
+  for( User u : dbu.query( new User( ) ) ) {
+    if( u.getIsEnabled() != Boolean.FALSE ) {
+      u.setIsEnabled( Boolean.TRUE )
+    }
+  }
+  dbu.commit();
+} catch( Throwable e ) {
+  dbu.rollback();
+}
 EntityWrapper<VmType> db2 = new EntityWrapper<VmType>( );
 try {
   if( db2.query( new VmType() ).size( ) == 0 ) { 
@@ -58,3 +71,5 @@ try {
   }
   return true;
 }
+
+
