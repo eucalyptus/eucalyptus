@@ -93,7 +93,9 @@ public class AddressUtil {
     if ( !EucalyptusProperties.disableNetworking ) {
       try {
         Address newAddress = AddressUtil.allocateAddresses( vm.getPlacement( ), 1 ).get( 0 );
-        assignAddressToVm( newAddress, vm );
+        newAddress.setInstanceId( vm.getInstanceId( ) );
+        newAddress.setInstanceAddress( vm.getNetworkConfig( ).getIpAddress( ) );
+        AddressUtil.dispatchAssignAddress( newAddress, vm );
       } catch ( NotEnoughResourcesAvailable notEnoughResourcesAvailable ) {
         LOG.error( "Attempt to assign a system address for " + vm.getInstanceId( ) + " failed due to lack of addresses." );
       } catch ( Exception e ) {
@@ -106,9 +108,6 @@ public class AddressUtil {
     if ( !EucalyptusProperties.disableNetworking ) {
       try {
         List<Address> newAddresses = AddressUtil.allocateAddresses( token.getCluster(), token.getAmount( ) );
-        for( Address newAddress : newAddresses ) {
-          newAddress.assign( Address.PENDING_ASSIGNMENT, Address.PENDING_ASSIGNMENT );//FIXME: lame hack.
-        }
         return newAddresses;
       } catch ( Exception e ) {
         throw e;
