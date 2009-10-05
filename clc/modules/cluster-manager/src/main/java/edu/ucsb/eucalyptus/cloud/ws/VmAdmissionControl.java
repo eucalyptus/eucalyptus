@@ -69,12 +69,12 @@ import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.FailScriptFailException;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
 
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.SLAs;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.Network;
-import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import org.apache.log4j.Logger;

@@ -81,6 +81,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.FailScriptFailException;
 import com.eucalyptus.util.GroovyUtil;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -129,15 +130,13 @@ public class SLAs {
   
   public void doAddressAllocation( VmAllocationInfo vmAllocInfo ) throws NotEnoughResourcesAvailable {
     if( EucalyptusProperties.disableNetworking ) return;
-    int addrCount = 0;
-    List<ResourceToken> allocTokeList = vmAllocInfo.getAllocationTokens();
-    for ( ResourceToken token : allocTokeList ) {
-      addrCount += token.getAmount();
-    }
     if ( "public".equals( vmAllocInfo.getRequest().getAddressingType() ) || vmAllocInfo.getRequest().getAddressingType() == null ) {
-      List<Address> addressList;
+      List<ResourceToken> allocTokeList = vmAllocInfo.getAllocationTokens();
+      List<Address> addressList = Lists.newArrayList();
       try {
-        addressList = AddressUtil.tryAssignSystemAddresses( addrCount );
+        for ( ResourceToken token : allocTokeList ) {
+          addressList.addAll( AddressUtil.tryAssignSystemAddresses( token ) );
+        }
       } catch ( Exception e ) {
         throw new NotEnoughResourcesAvailable( e.getMessage( ), e );
       }
@@ -152,7 +151,6 @@ public class SLAs {
   }
 
   public void doNetworkAllocation( VmAllocationInfo vmAllocInfo ) throws NotEnoughResourcesAvailable {
-    if( EucalyptusProperties.disableNetworking ) return;
     String userId = vmAllocInfo.getRequest().getUserId();
     List<ResourceToken> rscTokens = vmAllocInfo.getAllocationTokens(); 
     List<Network> networks = vmAllocInfo.getNetworks();
@@ -168,6 +166,8 @@ public class SLAs {
       Networks.getInstance( ).registerIfAbsent( firstNet, Networks.State.ACTIVE ); 
       firstNet = Networks.getInstance( ).lookup( networkName );      
     }
+//TODO: verify this doesn't break static/system mode.
+//    if( EucalyptusProperties.disableNetworking ) return;
     for ( ResourceToken token : rscTokens ) {
       NetworkToken netToken = allocateClusterVlan( userId, token.getCluster( ), firstNet.getName( ) );
       token.getNetworkTokens( ).add( netToken );

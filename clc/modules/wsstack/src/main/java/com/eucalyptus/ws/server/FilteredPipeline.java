@@ -79,6 +79,9 @@ import com.eucalyptus.ws.handlers.ServiceSinkHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.util.ChannelUtil;
 
+import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
+
 public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   private static Logger               LOG    = Logger.getLogger( FilteredPipeline.class );
   private final List<UnrollableStage> stages = new ArrayList<UnrollableStage>( );
@@ -96,7 +99,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   public boolean accepts( final HttpRequest message ) {
     final boolean result = this.checkAccepts( message );
     if ( result ) {
-      LOG.debug( "Unrolling pipeline: " + this.getClass( ).getSimpleName( ) );
+      LOG.debug( EventRecord.here( this.getClass(), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ) );
     }
     return result;
   }
@@ -125,7 +128,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
         pipeline.addLast( "service-sink", new ServiceSinkHandler( ) );
       }
       for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
-        LOG.trace( " - handler: key=" + e.getKey( ) + " class=" + e.getValue( ).getClass( ).getSimpleName( ) );
+        LOG.debug( EventRecord.here( this.getClass(), EventType.PIPELINE_HANDLER, e.getKey(), e.getValue( ).getClass( ).getSimpleName( ) ) );
       }
     } catch ( final Exception e ) {
       LOG.error( "Error unrolling pipeline: " + this.getPipelineName( ) );

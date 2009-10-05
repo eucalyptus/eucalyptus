@@ -101,7 +101,7 @@ get_status() {
 	local name="$2"
 	local ret="false"
 
-	ret="`$WGET -O - -o /dev/null --timeout=$TOUT http://${address}:8773/services/Heartbeat|grep \"${name}\" |sed 's/.*enabled=\([[:alnum:]]*\)[[:blank:]].*/\1/'`"
+	ret="`$WGET -O - -o /dev/null --timeout=$TOUT http://${address}:8773/services/Heartbeat|grep \"${name}\" |sed 's/.*local=\([[:alnum:]]*\)[[:blank:]].*/\1/'`"
 	
 	if [ "$ret" = "true" ]; then	
 		return 0

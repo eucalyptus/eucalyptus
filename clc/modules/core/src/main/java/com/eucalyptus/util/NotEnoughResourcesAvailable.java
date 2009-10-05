@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.util;
 
 /**
  * User: decker
