@@ -20,6 +20,7 @@ import com.eucalyptus.util.EucalyptusProperties.TokenState;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
 import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
@@ -91,7 +92,7 @@ public class AddressUtil {
   public static void tryAssignSystemAddress( final VmInstance vm ) {
     if ( !EucalyptusProperties.disableNetworking ) {
       try {
-        Address newAddress = AddressUtil.allocateAddresses( 1 ).get( 0 );
+        Address newAddress = AddressUtil.allocateAddresses( vm.getPlacement( ), 1 ).get( 0 );
         assignAddressToVm( newAddress, vm );
       } catch ( NotEnoughResourcesAvailable notEnoughResourcesAvailable ) {
         LOG.error( "Attempt to assign a system address for " + vm.getInstanceId( ) + " failed due to lack of addresses." );
@@ -100,11 +101,10 @@ public class AddressUtil {
       }
     }
   }
-
-  public static List<Address>  tryAssignSystemAddresses( int count ) throws Exception {
+  public static List<Address>  tryAssignSystemAddresses( ResourceToken token ) throws Exception {
     if ( !EucalyptusProperties.disableNetworking ) {
       try {
-        List<Address> newAddresses = AddressUtil.allocateAddresses( count );
+        List<Address> newAddresses = AddressUtil.allocateAddresses( token.getCluster(), token.getAmount( ) );
         for( Address newAddress : newAddresses ) {
           newAddress.assign( Address.PENDING_ASSIGNMENT, Address.PENDING_ASSIGNMENT );//FIXME: lame hack.
         }
@@ -137,13 +137,13 @@ public class AddressUtil {
   public static boolean doDynamicAddressing() {
     return edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( );
   }
-  public synchronized static List<Address> allocateAddresses( int count ) throws NotEnoughResourcesAvailable {
+  public synchronized static List<Address> allocateAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
     boolean doDynamic = true;
     AddressUtil.updateAddressingMode( ); //:: make sure everything is up-to-date :://
     doDynamic = doDynamicAddressing();
     List<Address> addressList = null;
     if ( doDynamic ) {
-      addressList = getDynamicSystemAddresses( count );
+      addressList = getDynamicSystemAddresses( cluster, count );
     } else {
       addressList = getStaticSystemAddresses( count );
     }
@@ -153,7 +153,7 @@ public class AddressUtil {
     return addressList;
   }
 
-  private static List<Address> getDynamicSystemAddresses( int count ) throws NotEnoughResourcesAvailable {
+  private static List<Address> getDynamicSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
     ConcurrentNavigableMap<String, Address> unusedAddresses = Addresses.getInstance( ).getDisabledMap( );
     //:: try to fail fast if needed :://
     if ( unusedAddresses.size( ) < count ) throw new NotEnoughResourcesAvailable(
