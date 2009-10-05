@@ -845,9 +845,10 @@ public class WalrusManager {
 					foundObject.setObjectName(objectName);
 					try {
 						FileIO fileIO = storageManager.prepareForWrite(bucketName, objectName);
-						fileIO.write(base64Data);
-						if(fileIO != null)
+						if(fileIO != null) {
+							fileIO.write(base64Data);
 							fileIO.finish();
+						}
 					} catch(Exception ex) {
 						throw new EucalyptusCloudException(ex);
 					}

@@ -3,6 +3,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
@@ -70,6 +71,8 @@ public class HttpReader extends HttpTransfer {
 
 	private void getResponseToFile() {
 		byte[] bytes = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
+		FileOutputStream fileOutputStream = null;
+		BufferedOutputStream bufferedOut = null;
 		try {
 			File compressedFile = new File(file.getAbsolutePath() + ".gz");				
 			assert(method != null);
@@ -77,20 +80,33 @@ public class HttpReader extends HttpTransfer {
 			InputStream httpIn;
 			httpIn = method.getResponseBodyAsStream();
 			int bytesRead;
-			FileOutputStream fileOutputStream = new FileOutputStream(compressedFile);
-			BufferedOutputStream bufferedOut = new BufferedOutputStream(fileOutputStream);
+			fileOutputStream = new FileOutputStream(compressedFile);
+			bufferedOut = new BufferedOutputStream(fileOutputStream);
 			while((bytesRead = httpIn.read(bytes)) > 0) {
 				bufferedOut.write(bytes, 0, bytesRead);
 			}
-			bufferedOut.close();
-			fileOutputStream.close();
-			
+
 			if(compressed) {
 				SystemUtil.run(new String[]{"/bin/gunzip", compressedFile.getAbsolutePath()});
 			}
 			method.releaseConnection();
 		} catch (Exception ex) {
 			LOG.error(ex, ex);
+		} finally {
+			if(bufferedOut != null) {
+				try {
+					bufferedOut.close();
+				} catch (IOException e) {
+					LOG.error(e);	
+				}
+			}
+			if(fileOutputStream != null) {
+				try {
+					fileOutputStream.close();
+				} catch (IOException e) {
+					LOG.error(e);	
+				}
+			}
 		}
 	}
 

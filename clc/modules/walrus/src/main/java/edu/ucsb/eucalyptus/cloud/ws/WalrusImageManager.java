@@ -689,14 +689,13 @@ public class WalrusImageManager {
 				buffer.clear();
 			}
 		} catch(IOException ex) {
-			outChannel.close();
-			inChannel.close();
 			throw ex;
-		}
-		outChannel.close();
-		fileOutputStream.close();
-		inChannel.close();
-		in.close();
+		} finally {
+			outChannel.close();
+			fileOutputStream.close();
+			inChannel.close();
+			in.close();
+		}		
 	}
 
 	private long untarImage(String tarredImageName, String imageName) throws Exception {
@@ -807,11 +806,12 @@ public class WalrusImageManager {
 
 	private void assembleParts(final String name, List<String> parts) {
 		FileOutputStream fileOutputStream = null;
+		FileInputStream fileInputStream = null;
 		try {
 			fileOutputStream = new FileOutputStream(new File(name));
 			FileChannel out = fileOutputStream.getChannel();
 			for (String partName: parts) {
-				FileInputStream fileInputStream = new FileInputStream(new File(partName));
+				fileInputStream = new FileInputStream(new File(partName));
 				FileChannel in = fileInputStream.getChannel();
 				in.transferTo(0, in.size(), out);
 				in.close();
@@ -822,12 +822,20 @@ public class WalrusImageManager {
 		} catch (Exception ex) {
 			LOG.error(ex);
 		} finally {
-			if(fileOutputStream != null)
+			if(fileOutputStream != null) {
 				try {
 					fileOutputStream.close();
 				} catch (IOException e) {
 					LOG.error(e);
 				}
+			}
+			if(fileInputStream != null) {
+				try {
+					fileInputStream.close();
+				} catch (IOException e) {
+					LOG.error(e);
+				}
+			}
 		}
 	}
 
