@@ -81,6 +81,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.FailScriptFailException;
 import com.eucalyptus.util.GroovyUtil;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -150,7 +151,6 @@ public class SLAs {
   }
 
   public void doNetworkAllocation( VmAllocationInfo vmAllocInfo ) throws NotEnoughResourcesAvailable {
-    if( EucalyptusProperties.disableNetworking ) return;
     String userId = vmAllocInfo.getRequest().getUserId();
     List<ResourceToken> rscTokens = vmAllocInfo.getAllocationTokens(); 
     List<Network> networks = vmAllocInfo.getNetworks();
@@ -166,6 +166,8 @@ public class SLAs {
       Networks.getInstance( ).registerIfAbsent( firstNet, Networks.State.ACTIVE ); 
       firstNet = Networks.getInstance( ).lookup( networkName );      
     }
+//TODO: verify this doesn't break static/system mode.
+//    if( EucalyptusProperties.disableNetworking ) return;
     for ( ResourceToken token : rscTokens ) {
       NetworkToken netToken = allocateClusterVlan( userId, token.getCluster( ), firstNet.getName( ) );
       token.getNetworkTokens( ).add( netToken );

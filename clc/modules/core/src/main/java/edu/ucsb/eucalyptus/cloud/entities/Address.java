@@ -227,7 +227,7 @@ public class Address implements HasName {
       if( !this.isPending( ) ) {
         this.release( );
         if( !Component.eucalyptus.name().equals( user ) 
-            || !edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( ) ) {
+            || !Addresses.doDynamicAddressing( ) ) {
           this.allocate( userId );
         }
       }

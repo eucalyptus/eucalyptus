@@ -155,9 +155,7 @@ public class SystemState {
           vm.setReason( INSTANCE_EXPIRED );
           SystemState.cleanUp( vm );
         }
-      } catch ( NoSuchElementException e ) {
-        /* should never happen, just pulled the key set, if it does ignore it */
-      }
+      } catch ( NoSuchElementException e ) {}
     }
     
     List<String> knownVmIds = new ArrayList<String>( );
@@ -528,8 +526,11 @@ public class SystemState {
     }
     
     StateSnapshot state = SystemState.getSnapshot( RULE_FILE );
-    for ( VmInstance v : VmInstances.getInstance( ).getDisabledEntries( ) )
-      if ( !VmState.BURIED.equals( v.getState( ) ) ) state.insert( v );
+    for ( VmInstance v : VmInstances.getInstance( ).getDisabledEntries( ) ) {
+      if ( !VmState.BURIED.equals( v.getState( ) ) ) { 
+        state.insert( v );
+      }      
+    }
     
     try {
       QueryResults res = state.findInstances( userId, instancesSet );
