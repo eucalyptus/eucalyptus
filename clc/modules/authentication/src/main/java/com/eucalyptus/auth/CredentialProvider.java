@@ -139,7 +139,7 @@ public class CredentialProvider extends Bootstrapper {
 	public static String getQueryId( String userName ) throws GeneralSecurityException {
 		String queryId = null;
 		EntityWrapper<User> db = Credentials.getEntityWrapper( );
-		User searchUser = new User( userName );
+		User searchUser = new User( userName, true );
 		try {
 			User user = db.getUnique( searchUser );
 			queryId = user.getQueryId( );
@@ -156,6 +156,7 @@ public class CredentialProvider extends Bootstrapper {
 		EntityWrapper<User> db = Credentials.getEntityWrapper( );
 		User searchUser = new User( );
 		searchUser.setQueryId( queryId );
+		searchUser.setIsEnabled( true );
 		try {
 			User user = db.getUnique( searchUser );
 			secretKey = user.getSecretKey( );
@@ -189,7 +190,7 @@ public class CredentialProvider extends Bootstrapper {
 		User searchUser = new User( );
 		X509Cert searchCert = new X509Cert( );
 		searchCert.setPemCertificate( certPem );
-
+    searchUser.setIsEnabled( true );
 		EntityWrapper<User> db = Credentials.getEntityWrapper( );
 		try {
 			Session session = db.getSession( );
@@ -266,7 +267,7 @@ public class CredentialProvider extends Bootstrapper {
 	public static User getUser( String userName ) throws NoSuchUserException {
 		User user = null;
 		EntityWrapper<User> db = Credentials.getEntityWrapper( );
-		User searchUser = new User( userName );
+		User searchUser = new User( userName, true );
 		try {
 			user = db.getUnique( searchUser );
 			db.commit( );
@@ -278,8 +279,7 @@ public class CredentialProvider extends Bootstrapper {
 	}
 
 	 public static User addUser( String userName, Boolean isAdmin, String queryId, String secretKey ) throws UserExistsException {
-	    User newUser = new User( );
-	    newUser.setUserName( userName );
+	    User newUser = new User( userName, true );
 	    newUser.setQueryId( queryId );
 	    newUser.setSecretKey( secretKey );
 	    newUser.setIsAdministrator( isAdmin );
@@ -306,8 +306,7 @@ public class CredentialProvider extends Bootstrapper {
 	}
 	
 	public static void deleteUser(String userName) throws NoSuchUserException {
-		User user = new User( );
-		user.setUserName( userName );
+		User user = new User( userName );
 		EntityWrapper<User> db = Credentials.getEntityWrapper( );
 		try {
 			User foundUser = db.getUnique(user);
@@ -320,9 +319,7 @@ public class CredentialProvider extends Bootstrapper {
 	}
 	
 	public static void updateUser(String userName, Boolean isEnabled) throws NoSuchUserException {
-		User user = new User( );
-		user.setUserName( userName );
-		user.setIsEnabled(null);
+		User user = new User( userName );
 		EntityWrapper<User> db = Credentials.getEntityWrapper( );
 		try {
 			User foundUser = db.getUnique(user);
