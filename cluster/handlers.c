@@ -2124,7 +2124,8 @@ int init_config(void) {
       *pubBroadcastAddress=NULL,
       *pubRouter=NULL,
       *pubDNS=NULL,
-      *localIp=NULL;
+      *localIp=NULL,
+      *cloudIp=NULL;
     uint32_t *ips, *nms;
     int initFail=0, len;
     
@@ -2202,6 +2203,8 @@ int init_config(void) {
       if (!localIp) {
 	logprintfl(EUCAWARN, "VNET_LOCALIP not defined, will attempt to auto-discover (consider setting this explicitly if tunnelling does not function properly.)\n");
       }
+      cloudIp = getConfString(configFile, "VNET_CLOUDIP");
+
       if (!pubSubnet || !pubSubnetMask || !pubDNS || !numaddrs) {
 	logprintfl(EUCAFATAL,"in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");
 	initFail = 1;
@@ -2215,7 +2218,7 @@ int init_config(void) {
     
     sem_wait(vnetConfigLock);
     
-    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubRouter, daemon, dhcpuser, NULL, localIp);
+    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubRouter, daemon, dhcpuser, NULL, localIp, cloudIp);
     
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 
