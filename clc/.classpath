@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" output="modules/msgs/build" path="modules/msgs/src/main/java"/>
+	<classpathentry kind="src" output="modules/vmware-broker/build" path="modules/vmware-broker/src/main/java"/>
 	<classpathentry kind="src" output="modules/core/build" path="modules/core/src/main/java"/>
 	<classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/main/java"/>
 	<classpathentry kind="src" output="modules/interface/build" path="modules/interface/src/main/java"/>
@@ -112,5 +113,8 @@
 	<classpathentry kind="lib" path="lib/xml-security-1.4.2.jar"/>
 	<classpathentry kind="lib" path="lib/xom-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/xpp3-1.1.3.4.O.jar"/>
+	<classpathentry kind="lib" path="lib/vijava220090625.jar"/>
+	<classpathentry kind="lib" path="lib/vim.jar"/>
+	<classpathentry kind="lib" path="lib/vim25.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
