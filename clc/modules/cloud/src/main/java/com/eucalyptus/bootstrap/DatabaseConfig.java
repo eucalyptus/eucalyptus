@@ -136,7 +136,7 @@ public class DatabaseConfig {
     props.setProperty( ServerConstants.SC_KEY_NO_SYSTEM_EXIT, Boolean.TRUE.toString( ) );
     props.setProperty( ServerConstants.SC_KEY_PORT, "9001" );
     props.setProperty( ServerConstants.SC_KEY_REMOTE_OPEN_DB, Boolean.TRUE.toString( ) );
-    // props.setProperty( ServerConstants.SC_KEY_TLS, Boolean.TRUE );
+    props.setProperty( ServerConstants.SC_KEY_TLS, Boolean.TRUE.toString( ) );
     for ( DatabaseConfig.Internal i : DatabaseConfig.Internal.values( ) ) {
       props.putAll( i.getProperties( ) );
     }

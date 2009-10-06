@@ -59,28 +59,52 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- *
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * Author: Neil Soman <neil@eucalyptus.com>
  */
+package edu.ucsb.eucalyptus.util;
 
-package edu.ucsb.eucalyptus.cloud.cluster;
+import com.eucalyptus.util.WalrusProperties;
 
-import com.eucalyptus.event.AbstractNamedRegistry;
+import java.io.*;
 
-import edu.ucsb.eucalyptus.cloud.*;
+public class StreamConsumer extends Thread {
+    private InputStream is;
+    private File file;
+    private String returnValue;
 
-public class Networks extends AbstractNamedRegistry<Network> {
-
-  private static Networks singleton = getInstance();
-
-  public static Networks getInstance()
-  {
-    synchronized ( Networks.class )
-    {
-      if ( singleton == null )
-        singleton = new Networks();
+    public StreamConsumer(InputStream is) {
+        this.is = is;
+        returnValue = "";
     }
-    return singleton;
-  }
 
+    public StreamConsumer(InputStream is, File file) {
+        this(is);
+        this.file = file;
+    }
+
+    public String getReturnValue() {
+        return returnValue;
+    }
+
+    public void run() {
+        try {
+            BufferedInputStream inStream = new BufferedInputStream(is);
+            BufferedOutputStream outStream = null;
+            if (file != null) {
+                outStream = new BufferedOutputStream(new FileOutputStream(file));
+            }
+            byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
+            int bytesRead;
+            while ((bytesRead = inStream.read(bytes)) > 0) {
+                returnValue += new String(bytes, 0, bytesRead);
+                if (outStream != null) {
+                    outStream.write(bytes, 0, bytesRead);
+                }
+            }
+            if (outStream != null)
+                outStream.close();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
 }

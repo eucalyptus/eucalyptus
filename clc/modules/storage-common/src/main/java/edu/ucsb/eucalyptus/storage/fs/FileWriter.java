@@ -72,7 +72,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public  class FileWriter extends edu.ucsb.eucalyptus.storage.fs.FileIO {
+public  class FileWriter extends FileIO {
 
     private static Logger LOG = Logger.getLogger(FileWriter.class);
 

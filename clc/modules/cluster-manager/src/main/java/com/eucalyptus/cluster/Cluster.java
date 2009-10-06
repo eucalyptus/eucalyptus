@@ -224,6 +224,13 @@ public class Cluster implements HasName {
       return messageQueue;
     }
 
+    @Override
+    public String toString( ) {
+      return String.format( "MQ [messageQueue=%s, mqThread=%s, stopped=%s]", this.messageQueue, this.mqThread,
+                            this.stopped );
+    }
+
+    
   }
 
   public void sendEvent( QueuedEvent event ) throws Exception {
@@ -274,4 +281,11 @@ public class Cluster implements HasName {
     return this.configuration.getServicePath( );
   }
 
+  @Override
+  public String toString( ) {
+    return String.format( "Cluster [configuration=%s, credentials=%s, mq=%s, nodeMap=%s, nodeState=%s, state=%s]",
+                          this.configuration, this.credentials, this.mq, this.nodeMap, this.nodeState, this.state );
+  }
+
+  
 }

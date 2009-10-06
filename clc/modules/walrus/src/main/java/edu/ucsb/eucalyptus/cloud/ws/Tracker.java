@@ -65,6 +65,9 @@ package edu.ucsb.eucalyptus.cloud.ws;
  */
 
 import com.eucalyptus.util.WalrusProperties;
+
+import edu.ucsb.eucalyptus.util.StreamConsumer;
+
 import org.apache.log4j.Logger;
 
 import java.io.File;

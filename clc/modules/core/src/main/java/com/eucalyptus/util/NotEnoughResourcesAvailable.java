@@ -61,38 +61,21 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.util;
 
-import org.apache.log4j.Logger;
+/**
+ * User: decker
+ * Date: Dec 1, 2008
+ * Time: 2:43:07 AM
+ */
+public class NotEnoughResourcesAvailable extends Exception {
 
-public class SystemUtil {
-	private static Logger LOG = Logger.getLogger(SystemUtil.class);
+  public NotEnoughResourcesAvailable( String string ) {
+    super(string);
+  }
 
-	public static String run(String[] command) {
-		try
-		{
-			String commandString = "";
-			for(String part : command) {
-				commandString += part + " ";
-			}
-			LOG.debug("Running command: " + commandString);
-			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(command);
-			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-			StreamConsumer output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			proc.waitFor();
-			output.join();
-			return output.getReturnValue();
-		} catch (Throwable t) {
-			LOG.error(t, t);
-		}
-		return "";
-	}
+  public NotEnoughResourcesAvailable( String message, Exception e ) {
+    super( message, e );
+  }
 
-	public static void shutdownWithError(String errorMessage) {
-		LOG.fatal(errorMessage);
-		System.exit(0xEC2);
-	}        
 }

@@ -73,10 +73,15 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.net.Addresses;
+import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
@@ -88,11 +93,13 @@ import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
+import edu.ucsb.eucalyptus.cloud.entities.Address;
+import edu.ucsb.eucalyptus.cloud.entities.Address.State;
 import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
@@ -106,7 +113,7 @@ public class ClusterAllocator extends Thread {
 
   private State state;
   private AtomicBoolean rollback;
-  Multimap<State, QueuedEvent> msgMap;
+  private Multimap<State, QueuedEvent> msgMap;
   private Cluster cluster;
   private ConcurrentLinkedQueue<QueuedEvent> pendingEvents;
   private VmAllocationInfo vmAllocInfo;
@@ -115,32 +122,62 @@ public class ClusterAllocator extends Thread {
     this.msgMap = Multimaps.newHashMultimap();
     this.vmAllocInfo = vmAllocInfo;
     this.pendingEvents = new ConcurrentLinkedQueue<QueuedEvent>();
-    this.cluster = Clusters.getInstance().lookup( vmToken.getCluster() );
     this.state = State.START;
     this.rollback = new AtomicBoolean( false );
-    for ( NetworkToken networkToken : vmToken.getNetworkTokens() )
-      this.setupNetworkMessages( networkToken );
-    this.setupVmMessages( vmToken );
+    try {
+      this.cluster = Clusters.getInstance().lookup( vmToken.getCluster() );
+      for ( NetworkToken networkToken : vmToken.getNetworkTokens() )
+        this.setupNetworkMessages( networkToken );
+      this.setupVmMessages( vmToken );
+    } catch ( Throwable e ) {
+      if( vmToken != null ) {
+        try {
+          Clusters.getInstance().lookup( vmToken.getCluster() ).getNodeState().releaseToken( vmToken );
+        } catch ( Throwable e1 ) {
+          LOG.debug( e1 );
+          LOG.trace( e1, e1 );
+        }
+        try {
+          for( String addr : vmToken.getAddresses( ) ) {
+            AddressUtil.releaseAddress( addr );
+          }
+        } catch ( Throwable e1 ) {
+          LOG.debug( e1 );
+          LOG.trace( e1, e1 );
+        }
+        try {
+          if( vmToken.getPrimaryNetwork( ) != null ) {
+            Network net = Networks.getInstance().lookup( vmToken.getPrimaryNetwork( ).getName( ) );
+            for( Integer i : vmToken.getPrimaryNetwork( ).getIndexes( ) ) {
+              net.returnNetworkIndex( i );
+            }
+          }
+        } catch ( Throwable e1 ) {
+          LOG.debug( e1 );
+          LOG.trace( e1, e1 );
+        }
+      }
+    }
   }
 
   public void setupAddressMessages( List<String> addresses, List<VmInfo> runningVms ) {
-    
     if ( EucalyptusProperties.disableNetworking ) {
       return;
     } else if ( addresses.size() < runningVms.size() ) {
       LOG.error( "Number of running VMs is greater than number of assigned addresses!" );
     } else {
-      AddressManager.updateAddressingMode();
+      AddressUtil.updateAddressingMode();
       for ( VmInfo vm : runningVms ) {
         String addr = addresses.remove( 0 );
         try {
-          vm.getNetParams().setIgnoredPublicIp( addr );
-          AssociateAddressType msg = new AssociateAddressType( addr, vm.getInstanceId() );
-          msg.setUserId( vm.getOwnerId() );
-          msg.setEffectiveUserId( Component.eucalyptus.name() );
-          new AddressManager().AssociateAddress( msg );
+          VmInstance realVm = VmInstances.getInstance( ).lookup( vm.getInstanceId( ) );
+          Address address = Addresses.getInstance( ).lookup( addr );
+          address.setInstanceId( realVm.getInstanceId( ) );
+          address.setInstanceAddress( realVm.getNetworkConfig( ).getIpAddress( ) );
+          LOG.debug( EventRecord.caller( address.getClass( ), State.ASSIGN_ADDRESSES, address.toString( ) ) );
+          AddressUtil.dispatchAssignAddress( address, realVm );
         } catch ( Exception e ) {
-          LOG.error( e );
+          LOG.error( e, e );
         }
       }
     }
@@ -155,16 +192,17 @@ public class ClusterAllocator extends Thread {
 
   @SuppressWarnings( "unchecked" )
   public void setupNetworkMessages( NetworkToken networkToken ) {
-    if ( networkToken != null ) {
+    if ( EucalyptusProperties.disableNetworking ) {
+      return;
+    } else if ( networkToken != null ) {
       StartNetworkType msg = new StartNetworkType( this.vmAllocInfo.getRequest(), networkToken.getVlan(), networkToken.getNetworkName() );
       this.msgMap.put( State.CREATE_NETWORK, QueuedEvent.make( new StartNetworkCallback( networkToken ), msg ) );
-      this.msgMap.put( State.ROLLBACK, QueuedEvent.make( new StopNetworkCallback( networkToken ), new StopNetworkType( msg ) ) );
     }
     try {
       RunInstancesType request = this.vmAllocInfo.getRequest();
       Network network = Networks.getInstance().lookup( networkToken.getName() );
-      LOG.info( "Setting up rules for: " + network.getName() );
-      LOG.debug( network );
+      LOG.debug( LogUtil.header( "Setting up rules for: " + network.getName() ) );
+      LOG.debug( LogUtil.subheader( network.toString( ) ) );
       ConfigureNetworkType msg = new ConfigureNetworkType( network.getRules() );
       msg.setUserId( networkToken.getUserName( ) );
       msg.setEffectiveUserId( networkToken.getUserName( ) );
@@ -186,26 +224,27 @@ public class ClusterAllocator extends Thread {
   }
 
   public void setupVmMessages( ResourceToken token ) {
-    List<String> macs = new ArrayList<String>();
-    List<String> networkNames = new ArrayList<String>();
+    List<String> macs = Lists.newArrayList( );
 
     for ( String instanceId : token.getInstanceIds() )
       macs.add( VmInstances.getAsMAC( instanceId ) );
 
-    int vlan = -1;
-    for ( Network net : vmAllocInfo.getNetworks() ) {
-      networkNames.add( net.getNetworkName() );
-      if ( vlan < 0 ) vlan = Networks.getInstance().lookup( net.getName() ).getToken( token.getCluster() ).getVlan();
-    }
-    if ( vlan < 0 ) vlan = 9;
+    int vlan = token.getPrimaryNetwork( ).getVlan( );
+    if ( vlan < 0 ) vlan = 9;//FIXME: general vlan, should be min-1?
+    List<String> networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getNetworkName( ) );
+    
 
     RunInstancesType request = this.vmAllocInfo.getRequest();
     VmImageInfo imgInfo = this.vmAllocInfo.getImageInfo();
     VmTypeInfo vmInfo = this.vmAllocInfo.getVmTypeInfo();
     String rsvId = this.vmAllocInfo.getReservationId();
     VmKeyInfo keyInfo = this.vmAllocInfo.getKeyInfo();
-
-    VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, token.getNetworkIndexes( ) );
+    ArrayList<String> networkIndexes = Lists.newArrayList( );
+    for( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
+      networkIndexes.add( index.toString( ) );
+    }
+    VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, networkIndexes );
+    LOG.debug( LogUtil.subheader( run.toString( ) ) );
     this.msgMap.put( State.CREATE_VMS, QueuedEvent.make( new VmRunCallback( this, token ), run ) );
   }
 
@@ -256,6 +295,8 @@ public class ClusterAllocator extends Thread {
         o = event.getCallback().getResponse( );
       } catch( Throwable t ) {
         LOG.debug( t, t );
+        this.rollback.lazySet( true );
+        this.state = State.ROLLBACK;
       }
     }
   }
@@ -269,15 +310,6 @@ public class ClusterAllocator extends Thread {
       } else {
         this.pendingEvents.add( event );
         this.cluster.getMessageQueue().enqueue( event );        
-      }
-    }
-  }
-
-  public void returnAllocationTokens() {
-    for( ResourceToken token : this.vmAllocInfo.getAllocationTokens() ) {
-      try {
-        Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
-      } catch ( NoSuchTokenException e ) {
       }
     }
   }

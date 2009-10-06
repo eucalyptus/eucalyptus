@@ -69,6 +69,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.Bootstrap;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
@@ -81,6 +82,10 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
+import com.eucalyptus.bootstrap.Component;
+
+import edu.ucsb.eucalyptus.msgs.EventRecord;
+
 public class NioBootstrap extends Bootstrap {
   
   @ChannelPipelineCoverage( "one" )
@@ -91,7 +96,8 @@ public class NioBootstrap extends Bootstrap {
     private final SocketAddress                remoteAddress;
     private volatile boolean                   finished = false;
     
-    Connector( final Bootstrap bootstrap, final SocketAddress remoteAddress, final SocketAddress localAddress, final BlockingQueue<ChannelFuture> futureQueue ) {
+    Connector( final Bootstrap bootstrap, final SocketAddress remoteAddress, final SocketAddress localAddress,
+               final BlockingQueue<ChannelFuture> futureQueue ) {
       this.bootstrap = bootstrap;
       this.localAddress = localAddress;
       this.futureQueue = futureQueue;
@@ -110,12 +116,11 @@ public class NioBootstrap extends Bootstrap {
     public void channelOpen( final ChannelHandlerContext context, final ChannelStateEvent event ) {
       try {
         event.getChannel( ).getConfig( ).setOptions( this.bootstrap.getOptions( ) );
-        event.getChannel( ).getConfig( ).setConnectTimeoutMillis( 1000 );
-        event.getChannel( ).getConfig( ).setWriteTimeoutMillis( 10000 );
-        event.getChannel( ).getConfig( ).setOption("tcpNoDelay", true);
-        event.getChannel( ).getConfig( ).setOption("keepAlive", true);
-        event.getChannel( ).getConfig( ).setOption("reuseAddress", true);
-        event.getChannel( ).getConfig( ).setOption("connectTimeoutMillis", 1000);
+        event.getChannel( ).getConfig( ).setConnectTimeoutMillis( 3000 );
+        event.getChannel( ).getConfig( ).setOption( "tcpNoDelay", true );
+        event.getChannel( ).getConfig( ).setOption( "keepAlive", true );
+        event.getChannel( ).getConfig( ).setOption( "reuseAddress", true );
+        event.getChannel( ).getConfig( ).setOption( "connectTimeoutMillis", 3000 );
       } finally {
         context.sendUpstream( event );
       }
@@ -158,6 +163,8 @@ public class NioBootstrap extends Bootstrap {
     return this.connect( remoteAddress, localAddress );
   }
   
+  private static Logger LOG = Logger.getLogger( NioBootstrap.class );
+  
   public ChannelFuture connect( final SocketAddress remoteAddress, final SocketAddress localAddress ) {
     
     if ( remoteAddress == null ) {
@@ -173,21 +180,15 @@ public class NioBootstrap extends Bootstrap {
     }
     
     pipeline.addFirst( "connector", new Connector( this, remoteAddress, localAddress, futureQueue ) );
-    
     this.getFactory( ).newChannel( pipeline );
-    
-    // Wait until the future is available.
     ChannelFuture future = null;
     do {
       try {
-        future = futureQueue.poll( Integer.MAX_VALUE, TimeUnit.SECONDS );
-      } catch ( final InterruptedException e ) {
-        // Ignore
-      }
+        future = futureQueue.poll( 50, TimeUnit.MILLISECONDS );
+      } catch ( final InterruptedException e ) {}
     } while ( future == null );
-    
     pipeline.remove( "connector" );
-    
+
     return future;
   }
 }

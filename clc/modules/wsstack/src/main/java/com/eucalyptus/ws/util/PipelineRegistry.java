@@ -73,6 +73,8 @@ import com.eucalyptus.ws.server.DuplicatePipelineException;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.server.NoAcceptingPipelineException;
 
+import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class PipelineRegistry {
   private static PipelineRegistry registry;
@@ -99,7 +101,7 @@ public class PipelineRegistry {
     for ( FilteredPipeline f : this.pipelines) {
       if ( f.accepts( request ) ) {
         if ( candidate != null ) {
-          LOG.warn( "=> More than one candidate pipeline.  Ignoring offer by: " + f.getPipelineName( ) + " of type " + f.getClass( ).getSimpleName( ) );
+          LOG.debug( EventRecord.here( this.getClass(), EventType.PIPELINE_DUPLICATE, f.getPipelineName( ), f.getClass( ).getSimpleName( ) ) );
         } else {
           candidate = f;
         }

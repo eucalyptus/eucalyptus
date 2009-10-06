@@ -6,13 +6,14 @@ import edu.ucsb.eucalyptus.cloud.Network;
 
 public class Networks extends StatefulNamedRegistry<Network, Networks.State>{
   public enum State {
-    ACTIVE,
     DISABLED,
     AWAITING_PEER,
+    PENDING,
+    ACTIVE,
   }
   private static Networks singleton = getInstance();
 
-  public Networks( State... states ) {
+  private Networks( State... states ) {
     super( State.values( ) );
   }
 

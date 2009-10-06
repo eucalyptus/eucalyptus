@@ -66,12 +66,13 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback.MultiClusterCallback;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 
@@ -87,26 +88,41 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
 
   @Override
   public void prepareAll( StartNetworkType msg ) throws Exception {
-    //FIXME: re-enable direct rather than lazy recovery of live networks
-    //this.parent.msgMap.put( ClusterAllocator.State.ROLLBACK, new QueuedEvent<StopNetworkType>( new StopNetworkCallback( networkToken ), new StopNetworkType( ) ) );
     msg.setNameserver( edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getNameserverAddress( ) );
     msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
     this.fireEventAsyncToAllClusters( msg );
   }
 
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {}
+  public void verify( EucalyptusMessage msg ) throws Exception {
+    try {
+      Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );
+    } catch ( Throwable e ) {
+      LOG.debug( e, e );
+    }
+  }
 
 
   @Override
   public void prepare( StartNetworkType msg ) throws Exception {
-    msg.setNameserver( edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getNameserverAddress( ) );
-    msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
+    try {
+      msg.setNameserver( edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getNameserverAddress( ) );
+      msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
+      
+    } catch ( Throwable e ) {
+      LOG.debug( e, e );
+    }
   }
 
   @Override
   public MultiClusterCallback<StartNetworkType> newInstance( ) {
     return new StartNetworkCallback( networkToken );
+  }
+
+  @Override
+  public void fail( Throwable e ) {
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( e, e );
   }
 
 }

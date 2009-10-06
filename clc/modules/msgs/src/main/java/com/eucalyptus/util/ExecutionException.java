@@ -61,50 +61,26 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.util;
 
-import com.eucalyptus.util.WalrusProperties;
+public class ExecutionException extends Exception {
+  private String message;
+  
+  public ExecutionException( ) {
+    super( "Unable to execute command" );
+  }
 
-import java.io.*;
+  public ExecutionException( String message ) {
+    super( message );
+    this.message = message;
+  }
 
-public class StreamConsumer extends Thread {
-    private InputStream is;
-    private File file;
-    private String returnValue;
+  public ExecutionException( Throwable ex ) {
+    super( "Unable to execute command", ex );
+  }
 
-    public StreamConsumer(InputStream is) {
-        this.is = is;
-        returnValue = "";
-    }
-
-    public StreamConsumer(InputStream is, File file) {
-        this(is);
-        this.file = file;
-    }
-
-    public String getReturnValue() {
-        return returnValue;
-    }
-
-    public void run() {
-        try {
-            BufferedInputStream inStream = new BufferedInputStream(is);
-            BufferedOutputStream outStream = null;
-            if (file != null) {
-                outStream = new BufferedOutputStream(new FileOutputStream(file));
-            }
-            byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
-            int bytesRead;
-            while ((bytesRead = inStream.read(bytes)) > 0) {
-                returnValue += new String(bytes, 0, bytesRead);
-                if (outStream != null) {
-                    outStream.write(bytes, 0, bytesRead);
-                }
-            }
-            if (outStream != null)
-                outStream.close();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
+  public ExecutionException( String message, Throwable ex ) {
+    super( message, ex );
+    this.message = message;
+  }
 }

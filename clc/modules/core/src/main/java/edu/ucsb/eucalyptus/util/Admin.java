@@ -80,7 +80,7 @@ public class Admin {
       msg.setUserId( Component.eucalyptus.name( ) );
       msg.setEffectiveUserId( Component.eucalyptus.name( ) );
       StackTraceElement elem = new Throwable().fillInStackTrace().getStackTrace()[ 1 ];
-      msg.setCorrelationId( String.format( "%s.%s.%s-%s", elem.getClassName(), elem.getMethodName(), elem.getLineNumber(), regarding.getCorrelationId() ) );
+      msg.setCorrelationId(regarding.getCorrelationId());
       return msg;
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -115,7 +115,7 @@ public class Admin {
       msg.setEffectiveUserId( Component.eucalyptus.name( ) );
       StackTraceElement elem = new Throwable().fillInStackTrace().getStackTrace()[ 1 ];
       EucalyptusMessage reMsg = msg;
-      msg.setCorrelationId( String.format( "%s.%s.%s-%s", elem.getClassName(), elem.getMethodName(), elem.getLineNumber(), reMsg.getCorrelationId() ) );
+      msg.setCorrelationId( reMsg.getCorrelationId() );
       return msg;
     } catch ( Exception e ) {
       LOG.error( e, e );

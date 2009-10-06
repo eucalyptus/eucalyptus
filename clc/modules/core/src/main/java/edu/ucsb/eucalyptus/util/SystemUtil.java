@@ -58,29 +58,46 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
-package edu.ucsb.eucalyptus.cloud.net;
 /*
- *
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * Author: Neil Soman <neil@eucalyptus.com>
  */
+package edu.ucsb.eucalyptus.util;
 
+import org.apache.log4j.Logger;
 
-import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.ExecutionException;
 
-import edu.ucsb.eucalyptus.cloud.entities.Address;
+public class SystemUtil {
+	private static Logger LOG = Logger.getLogger(SystemUtil.class);
 
-public class Addresses extends AbstractNamedRegistry<Address> {
+	public static String run(String[] command) throws ExecutionException {
+		try
+		{
+			String commandString = "";
+			for(String part : command) {
+				commandString += part + " ";
+			}
+			LOG.debug("Running command: " + commandString);
+			Runtime rt = Runtime.getRuntime();
+			Process proc = rt.exec(command);
+			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+			StreamConsumer output = new StreamConsumer(proc.getInputStream());
+			error.start();
+			output.start();
+			int pid = proc.waitFor();
+			output.join();
+			if(pid != 0)
+				throw new ExecutionException(commandString);
+			return output.getReturnValue();
+		} catch (Throwable t) {
+			LOG.error(t, t);
+		}
+		return "";
+	}
 
-  private static Addresses singleton = getInstance();
-
-  public static Addresses getInstance()
-  {
-    synchronized ( Addresses.class )
-    {
-      if ( singleton == null )
-        singleton = new Addresses();
-    }
-    return singleton;
-  }
-
+	public static void shutdownWithError(String errorMessage) {
+		LOG.fatal(errorMessage);
+		System.exit(0xEC2);
+	}        
 }
