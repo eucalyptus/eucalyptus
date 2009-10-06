@@ -98,6 +98,7 @@ public class DNSBootstrapper extends Bootstrapper {
 	@Override
 	public boolean load(Resource current ) throws Exception {
 		LOG.info("Initializing DNS");
+		SystemBootstrapper.hello();
 		DNSControl.initialize();
 		return true;
 	}

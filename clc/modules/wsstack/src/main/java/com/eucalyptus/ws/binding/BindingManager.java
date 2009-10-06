@@ -86,4 +86,10 @@ public class BindingManager {
     return newBinding;
   }
 
+  public static Binding getBinding( final String bindingName, final Class seedClass ) throws BindingException {
+	    if ( BindingManager.bindingMap.containsKey( bindingName ) ) { return BindingManager.bindingMap.get( bindingName ); }
+	    final Binding newBinding = new Binding( bindingName, seedClass );
+	    BindingManager.bindingMap.put( bindingName, newBinding );
+	    return newBinding;
+  }
 }

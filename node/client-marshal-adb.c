@@ -69,6 +69,28 @@ permission notice:
 
 #define NULL_ERROR_MSG "() could not be invoked (check NC host, port, and credentials)\n"
 
+// we'll stick the original URI into the correlation ID
+static char * newCorrelationId (ncStub * st, char * orig) 
+{
+    int i, j = 0;
+    
+    char * new = malloc (strlen (st->endpoint_uri) + strlen (orig) + 2);
+    // "sanitize" the string for Base64 encoding by removing everything except characters, numbers, and '/'
+    /*
+    for (i = 0; i<strlen(st->endpoint_uri); i++) {
+        int c = st->endpoint_uri [i];
+        if ((c>='a' && c<='z') || (c>='A' && c<='Z') || (c>='0' && c<='9') || c=='/') {
+            new [j++] = c;
+        }
+    }
+    new [j++] = '-'; // stick a hyphen on the end to separate the sanitized URI from correlation ID proper
+    new [j] = '\0';
+    */
+    sprintf (new, "%s %s", st->endpoint_uri, orig);
+    
+    return new;
+}
+
 ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir) 
 {
     axutil_env_t * env = NULL;
@@ -87,8 +109,11 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
         client_home = AXIS2_GETENV("AXIS2C_HOME");
     }
     
-    /* TODO: what if endpoint_uri, home, or env are NULL? */
-    stub = axis2_stub_create_EucalyptusNC(env, client_home, (axis2_char_t *)endpoint_uri);
+    char * uri = "http://localhost:8773/services/VMwareBroker"; // TODO move to config file
+    logprintfl (EUCADEBUG, "DEBUG: redirecting request to %s\n", uri);    
+
+    /* TODO: what if endpoint_uri, home, or env are NULL? */    
+    stub = axis2_stub_create_EucalyptusNC(env, client_home, (axis2_char_t *)uri);
 
     if (stub && (st = malloc (sizeof(ncStub)))) {
         st->env=env;

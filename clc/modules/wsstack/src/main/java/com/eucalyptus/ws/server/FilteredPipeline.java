@@ -103,7 +103,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   
   @Override
   public int compareTo( final FilteredPipeline o ) {
-    return ( this.getClass( ).getCanonicalName( ) + this.getPipelineName( ) ).compareTo( ( o.getClass( ).getCanonicalName( ) + o.getPipelineName( ) ) );
+    return ( this.getPipelineName( ) + this.getClass( ).getCanonicalName( ) ).compareTo( (this.getPipelineName( ) + o.getClass( ).getCanonicalName( ) ) );
   }
   
   public abstract String getPipelineName( );
