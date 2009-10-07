@@ -64,6 +64,7 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusProperties;
 
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
@@ -76,8 +77,14 @@ public class CreateVmInstances {
     String reservationId = VmInstances.getId( vmAllocInfo.getReservationIndex( ), 0 ).replaceAll( "i-", "r-" );
     int vmIndex = 1; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
     for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
-      for ( Integer networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
-        VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, networkIndex );
+      if( !EucalyptusProperties.disableNetworking ) {
+        for ( Integer networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
+          VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, networkIndex );
+          VmInstances.getInstance( ).register( vmInst );
+          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
+        }
+      } else {
+        VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, -1 );
         VmInstances.getInstance( ).register( vmInst );
         token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
       }
