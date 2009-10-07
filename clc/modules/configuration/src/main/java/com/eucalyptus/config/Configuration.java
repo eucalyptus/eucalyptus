@@ -206,9 +206,9 @@ public class Configuration {
 
   public static void fireStopComponent( ComponentConfiguration componentConfig ) throws EucalyptusCloudException {
     StopComponentEvent e = null;
-    if ( Component.walrus.equals( componentConfig.getComponent( ) ) && ( Component.walrus.isLocal( ) || NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) ) {
+    if ( Component.walrus.equals( componentConfig.getComponent( ) ) && NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) {
       e = StopComponentEvent.getLocal( componentConfig );
-    } else if ( Component.storage.equals( componentConfig.getComponent( ) ) && ( Component.storage.isLocal( ) || NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) ) {
+    } else if ( Component.storage.equals( componentConfig.getComponent( ) ) && NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) {
       e = StopComponentEvent.getLocal( componentConfig );
     } else {
       e = StopComponentEvent.getRemote( componentConfig );
