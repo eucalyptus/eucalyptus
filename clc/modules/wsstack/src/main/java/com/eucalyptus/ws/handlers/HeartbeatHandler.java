@@ -71,14 +71,12 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
@@ -90,14 +88,12 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.RemoteConfiguration;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.BindingException;
@@ -108,7 +104,6 @@ import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
-import com.eucalyptus.ws.util.ChannelUtil;
 
 import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
@@ -144,8 +139,6 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     Component.eucalyptus.setHostAddress( addr.getHostName( ) );
     Component.cluster.setHostAddress( addr.getHostName( ) );
     Component.jetty.setHostAddress( addr.getHostName( ) );
-    //FIXME: mark walrus and storage as disabled to prevent walrus->registered, sc->unregistered to cause sc to bootstrap.
-    //FIXME: remove existing bootstrappers/configuration for disabled component to prevent init.
     HeartbeatType msg = ( HeartbeatType ) request.getMessage( );
     LOG.info( LogUtil.header( "Got heartbeat event: " + LogUtil.dumpObject( msg ) ) );
     for ( HeartbeatComponentType component : msg.getComponents( ) ) {
@@ -283,16 +276,17 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       Component c = Component.valueOf( startedComponent.getComponent( ) );
       try {
         if ( Component.walrus.equals( c ) ) {
+          System.exit( 123 );//FIXME: For now we need to do a hard-reload since we cant dynamicly change the mule config.
           ComponentConfiguration config = Configuration.getWalrusConfiguration( startedComponent.getName( ) );
           Configuration.fireStartComponent( config );
         }
         if ( Component.storage.equals( c ) ) {
+          System.exit( 123 );//FIXME: For now we need to do a hard-reload since we cant dynamicly change the mule config.
           ComponentConfiguration config = Configuration.getStorageControllerConfiguration( startedComponent.getName( ) );
           Configuration.fireStartComponent( config );
         }
       } catch ( Exception e1 ) {
-        // potential remote race here, just ignore it
-        // if register/deregister is too fast.
+        LOG.debug( e1, e1 );
       }
     }
     for ( ComponentType stoppedComponent : hb.getStopped( ) ) {
@@ -300,14 +294,15 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       Component c = Component.valueOf( stoppedComponent.getComponent( ) );
       try {
         if ( Component.walrus.equals( c ) ) {
+          System.exit( 123 );//FIXME: For now we need to do a hard-reload since we cant dynamicly change the mule config.
           Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
         }
         if ( Component.storage.equals( c ) ) {
+          System.exit( 123 );//FIXME: For now we need to do a hard-reload since we cant dynamicly change the mule config.
           Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
         }
       } catch ( Exception e1 ) {
-        // potential remote race here, just ignore it
-        // if register/deregister is too fast.
+        LOG.debug( e1, e1 );
       }
     }
   }
