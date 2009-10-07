@@ -166,8 +166,7 @@ public class SLAs {
       Networks.getInstance( ).registerIfAbsent( firstNet, Networks.State.ACTIVE ); 
       firstNet = Networks.getInstance( ).lookup( networkName );      
     }
-//TODO: verify this doesn't break static/system mode.
-//    if( EucalyptusProperties.disableNetworking ) return;
+    if( EucalyptusProperties.disableNetworking ) return;
     for ( ResourceToken token : rscTokens ) {
       NetworkToken netToken = allocateClusterVlan( userId, token.getCluster( ), firstNet.getName( ) );
       token.getNetworkTokens( ).add( netToken );
