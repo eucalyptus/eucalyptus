@@ -153,11 +153,11 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       initializedComponents.add( component.getComponent( ) );
     }
     //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
-    if( !msg.getComponents( ).contains( Component.storage.name( ) ) ) {
+    if( !initializedComponents.contains( Component.storage.name( ) ) ) {
       Component.storage.markDisabled( );
     }
     //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
-    if( !msg.getComponents( ).contains( Component.storage.name( ) ) ) {
+    if( !initializedComponents.contains( Component.walrus.name( ) ) ) {
       Component.walrus.markDisabled( );
     }
     System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
