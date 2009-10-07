@@ -124,6 +124,10 @@ public enum Component {
     this.enabled = true;
   }
 
+  public void markDisabled( ) {
+    this.enabled = false;
+  }
+
   public boolean isEnabled( ) {
     return enabled;
   }

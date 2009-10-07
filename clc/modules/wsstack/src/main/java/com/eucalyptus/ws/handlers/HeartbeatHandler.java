@@ -66,6 +66,7 @@ import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -91,6 +92,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.RemoteConfiguration;
@@ -104,6 +106,7 @@ import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
@@ -114,6 +117,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   private static Logger  LOG         = Logger.getLogger( HeartbeatHandler.class );
   private Channel        channel;
   private static boolean initialized = false;
+  private static List<String> initializedComponents = Lists.newArrayList( );
   
   public HeartbeatHandler( ) {
     super( );
@@ -145,6 +149,16 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
       System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
       Component.valueOf( component.getComponent( ) ).markLocal( );
+      //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+      initializedComponents.add( component.getComponent( ) );
+    }
+    //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+    if( !msg.getComponents( ).contains( Component.storage.name( ) ) ) {
+      Component.storage.markDisabled( );
+    }
+    //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+    if( !msg.getComponents( ).contains( Component.storage.name( ) ) ) {
+      Component.walrus.markDisabled( );
     }
     System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
     System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
@@ -272,16 +286,26 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   
   private void handleHeartbeat( MappingHttpRequest request ) throws URISyntaxException {
     HeartbeatType hb = ( HeartbeatType ) request.getMessage( );
+    //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+    List<String> registeredComponents = Lists.newArrayList( );
+    for ( HeartbeatComponentType component : hb.getComponents( ) ) {
+      if( !initializedComponents.contains( component.getComponent( ) ) ) {
+        System.exit(123);//HUP
+      }
+      registeredComponents.add( component.getComponent( ) );
+    }
+    if( !registeredComponents.containsAll( initializedComponents ) ) {
+      System.exit(123);//HUP
+    }
+    //FIXME: end.
     for ( ComponentType startedComponent : hb.getStarted( ) ) {
       Component c = Component.valueOf( startedComponent.getComponent( ) );
       try {
         if ( Component.walrus.equals( c ) ) {
-          System.exit( 123 );//FIXME: For now we need to do a hard-reload since we cant dynamicly change the mule config.
           ComponentConfiguration config = Configuration.getWalrusConfiguration( startedComponent.getName( ) );
           Configuration.fireStartComponent( config );
         }
         if ( Component.storage.equals( c ) ) {
-          System.exit( 123 );//FIXME: For now we need to do a hard-reload since we cant dynamicly change the mule config.
           ComponentConfiguration config = Configuration.getStorageControllerConfiguration( startedComponent.getName( ) );
           Configuration.fireStartComponent( config );
         }
@@ -294,11 +318,9 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       Component c = Component.valueOf( stoppedComponent.getComponent( ) );
       try {
         if ( Component.walrus.equals( c ) ) {
-          System.exit( 123 );//FIXME: For now we need to do a hard-reload since we cant dynamicly change the mule config.
           Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
         }
         if ( Component.storage.equals( c ) ) {
-          System.exit( 123 );//FIXME: For now we need to do a hard-reload since we cant dynamicly change the mule config.
           Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
         }
       } catch ( Exception e1 ) {
