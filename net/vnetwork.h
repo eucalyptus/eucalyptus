@@ -111,9 +111,9 @@ typedef struct vnetConfig_t {
   char privInterface[32];
   char bridgedev[32];
   char mode[32];
-  char localIp[32];
+  //  char localIp[32];
   uint32_t localIps[32];
-  uint32_t nw, nm, euca_ns;
+  uint32_t nw, nm, euca_ns, cloudIp;
   int role;
   int enabled;
   int initialized;
@@ -128,7 +128,7 @@ typedef struct vnetConfig_t {
 } vnetConfig;
 
 enum {NC, CC, CLC};
-void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp);
+void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *cloudIp);
 
 int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
@@ -191,6 +191,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
 int vnetSaveIPTables(vnetConfig *vnetconfig);
 int vnetLoadIPTables(vnetConfig *vnetconfig);
 int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule);
+int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet);
 
 char *host2ip(char *host);
 char *hex2dot(uint32_t in);

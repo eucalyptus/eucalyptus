@@ -114,13 +114,14 @@ public class User extends AbstractPersistent implements Serializable {
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   List<X509Cert> certificates = []
   public User(){
-    this.isEnabled = true;
   }
   public User( String userName ){
-    this();
     this.userName = userName
   }
-  
+  public User( String userName, Boolean isEnabled ){
+    this(userName);
+    this.isEnabled = isEnabled
+  }
   @Override
   public int hashCode( ) {
     final int prime = 31;
