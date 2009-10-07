@@ -255,7 +255,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
       LOG.debug( LogUtil.subheader( "-> Adding remote bootstrapper for host: " + config.getHostName( ) ) );
       this.heartbeatMap.put( config.getHostName( ), new HeartbeatClient( this.clientBootstrap, config.getHostName( ), config.getPort( ) ) );
     }
-    if ( !this.componentMap.containsValue( config ) ) {
+    if ( !this.componentMap.containsEntry( config.getHostName(), config ) ) {
       LOG.debug( "-> Adding remote component to the bootstrapper map: " + LogUtil.dumpObject( config ) );
       this.componentMap.put( config.getHostName( ), config );
     }
@@ -267,6 +267,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
       this.componentMap.remove( config.getHostName( ), config );
       if ( this.componentMap.get( config.getHostName( ) ).isEmpty( ) ) {
         HeartbeatClient hb = this.heartbeatMap.remove( config.getHostName( ) );
+        hb.send( this.componentMap.get( hb.getHostName( ) ) );
         hb.close( );
         LOG.debug( LogUtil.subheader( "-> Removing remote bootstrapper for host: " + config.getHostName( ) ) );
       }

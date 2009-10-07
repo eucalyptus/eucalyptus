@@ -64,7 +64,11 @@
 package com.eucalyptus.bootstrap;
 
 
+import java.util.List;
+
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Lists;
 
 @Provides
 @Depends
@@ -91,5 +95,16 @@ public abstract class Bootstrapper {
     return true;
   }
 
+  public static boolean delayedDependsCheck( Bootstrapper b ) {
+    if( b.getClass( ).getAnnotation( Depends.class ) != null ) {
+      Depends deps = b.getClass( ).getAnnotation( Depends.class );
+      for( Component local : deps.local( ) ) {
+        if( !local.isEnabled( ) || !local.isLocal( ) ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
   
 }
