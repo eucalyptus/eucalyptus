@@ -155,7 +155,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   public boolean equals( Object obj ) {
     if ( this.is( obj ) ) return true;
     if ( obj == null ) return false;
-    if ( getClass( ).is( obj.getClass( ) ) ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     ComponentConfiguration other = ( ComponentConfiguration ) obj;
     if ( hostName == null ) {
       if ( other.hostName != null ) return false;

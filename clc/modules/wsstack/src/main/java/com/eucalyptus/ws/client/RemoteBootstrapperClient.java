@@ -102,6 +102,7 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.BindingHandler;
@@ -202,20 +203,20 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
       ComponentEvent e = ( ComponentEvent ) event;
       if ( !Component.walrus.equals( e.getComponent( ) ) && !Component.storage.equals( e.getComponent( ) ) ) {
         return;
+      } else if ( e.getConfiguration( ).getPort( ) < 0 ) {
+        return;
       } else {
         ComponentConfiguration config = e.getConfiguration( );
         if ( event instanceof StartComponentEvent ) {
-          if ( !e.isLocal( ) ) {
+          if( !NetworkUtil.testLocal( e.getConfiguration( ).getHostName( ) ) ) {
             this.addRemoteComponent( config );
           }
           this.fireRemoteStartEvent( config );
         } else if ( event instanceof StopComponentEvent ) {
-          if ( event instanceof StartComponentEvent ) {
-            this.fireRemoteStopEvent( config );
-            if ( !e.isLocal( ) ) {
-              this.removeRemoteComponent( config );
-            }
+          if( !NetworkUtil.testLocal( e.getConfiguration( ).getHostName( ) ) ) {
+            this.removeRemoteComponent( config );
           }
+          this.fireRemoteStopEvent( config );
         }
       }
     } else if ( event instanceof ClockTick ) {
@@ -256,7 +257,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
       LOG.debug( LogUtil.subheader( "-> Adding remote bootstrapper for host: " + config.getHostName( ) ) );
       this.heartbeatMap.put( config.getHostName( ), new HeartbeatClient( this.clientBootstrap, config.getHostName( ), config.getPort( ) ) );
     }
-    if ( !this.componentMap.containsValue( config ) ) {
+    if ( !this.componentMap.containsEntry( config.getHostName(), config ) ) {
       LOG.debug( "-> Adding remote component to the bootstrapper map: " + LogUtil.dumpObject( config ) );
       this.componentMap.put( config.getHostName( ), config );
     }
@@ -268,6 +269,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
       this.componentMap.remove( config.getHostName( ), config );
       if ( this.componentMap.get( config.getHostName( ) ).isEmpty( ) ) {
         HeartbeatClient hb = this.heartbeatMap.remove( config.getHostName( ) );
+        hb.send( this.componentMap.get( hb.getHostName( ) ) );
         hb.close( );
         LOG.debug( LogUtil.subheader( "-> Removing remote bootstrapper for host: " + config.getHostName( ) ) );
       }
