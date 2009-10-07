@@ -102,6 +102,7 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.BindingHandler;
@@ -205,17 +206,15 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
       } else {
         ComponentConfiguration config = e.getConfiguration( );
         if ( event instanceof StartComponentEvent ) {
-          if ( !e.isLocal( ) ) {
+          if( !NetworkUtil.testLocal( e.getConfiguration( ).getHostName( ) ) ) {
             this.addRemoteComponent( config );
           }
           this.fireRemoteStartEvent( config );
         } else if ( event instanceof StopComponentEvent ) {
-          if ( event instanceof StartComponentEvent ) {
-            this.fireRemoteStopEvent( config );
-            if ( !e.isLocal( ) ) {
-              this.removeRemoteComponent( config );
-            }
+          if( !NetworkUtil.testLocal( e.getConfiguration( ).getHostName( ) ) ) {
+            this.removeRemoteComponent( config );
           }
+          this.fireRemoteStopEvent( config );
         }
       }
     } else if ( event instanceof ClockTick ) {
