@@ -69,28 +69,6 @@ permission notice:
 
 #define NULL_ERROR_MSG "() could not be invoked (check NC host, port, and credentials)\n"
 
-// we'll stick the original URI into the correlation ID
-static char * newCorrelationId (ncStub * st, char * orig) 
-{
-    int i, j = 0;
-    
-    char * new = malloc (strlen (st->endpoint_uri) + strlen (orig) + 2);
-    // "sanitize" the string for Base64 encoding by removing everything except characters, numbers, and '/'
-    /*
-    for (i = 0; i<strlen(st->endpoint_uri); i++) {
-        int c = st->endpoint_uri [i];
-        if ((c>='a' && c<='z') || (c>='A' && c<='Z') || (c>='0' && c<='9') || c=='/') {
-            new [j++] = c;
-        }
-    }
-    new [j++] = '-'; // stick a hyphen on the end to separate the sanitized URI from correlation ID proper
-    new [j] = '\0';
-    */
-    sprintf (new, "%s %s", st->endpoint_uri, orig);
-    
-    return new;
-}
-
 ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir) 
 {
     axutil_env_t * env = NULL;
@@ -238,6 +216,7 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     adb_ncRunInstanceType_t * request = adb_ncRunInstanceType_create(env);
     
     // set standard input fields
+    adb_ncRunInstanceType_set_hostName(request, env, st->endpoint_uri);
     if (meta) {
         adb_ncRunInstanceType_set_correlationId(request, env, meta->correlationId);
         adb_ncRunInstanceType_set_userId(request, env, meta->userId);
