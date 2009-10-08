@@ -42,7 +42,7 @@ public class SslSetup {
     System.setProperty( "javax.net.ssl.keyStoreType", "PKCS12" );
     System.setProperty( "javax.net.ssl.trustStorePassword", Component.eucalyptus.name( ) );
     System.setProperty( "javax.net.ssl.keyStorePassword", Component.eucalyptus.name( ) );
-    System.setProperty( "javax.net.debug", "none" );//set this to "ssl" for debugging.
+    System.setProperty( "javax.net.debug", "ssl" );//set this to "ssl" for debugging.
     try {
       serverContext = SSLContext.getInstance( "TLS" );
       serverContext.init( SslSetup.SimpleKeyManager.getKeyManagers( ), SslSetup.SimpleTrustManager.getTrustManagers( ), null );
