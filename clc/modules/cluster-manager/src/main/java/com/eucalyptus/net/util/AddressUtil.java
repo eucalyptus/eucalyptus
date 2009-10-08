@@ -119,7 +119,12 @@ public class AddressUtil {
 
   
   public static void releaseAddress( String s ) {
-    AddressUtil.releaseAddress( new Address( s ) );//FIXME: this needs to lookup the actual address.
+    try {
+      Address addr = Addresses.getInstance( ).lookup( s );
+      AddressUtil.releaseAddress( addr );
+    } catch ( NoSuchElementException e ) {
+      LOG.debug( e, e );
+    }
   }
 
   public static void releaseAddress( final Address currentAddr ) {

@@ -78,6 +78,7 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.Address;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
+import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
@@ -153,9 +154,11 @@ public class AddressManager {
     boolean isAdmin = request.isAdministrator();
     for ( Address address : Addresses.getInstance().listValues() ) {
       if( address.isAssigned( ) ) {
+        VmInstance vm = null;
         try {
-          VmInstances.getInstance().lookup( address.getInstanceId() );
-        } catch ( NoSuchElementException e ) {
+          vm = VmInstances.getInstance().lookup( address.getInstanceId() );
+        } catch ( NoSuchElementException e ) {}
+        if( vm == null || VmState.TERMINATED.equals( vm.getState( ) ) || VmState.BURIED.equals( vm.getState( ) ) ) {  
           AddressUtil.clearAddress( address );
         }
       }
