@@ -37,6 +37,7 @@ public class VMwareBrokerResponseType extends EucalyptusMessage {
 }
 
 public class VMwareBrokerRequestType extends EucalyptusMessage {
+	String nodeName;
 }
 
 public class VirtualMachineType extends EucalyptusData {
