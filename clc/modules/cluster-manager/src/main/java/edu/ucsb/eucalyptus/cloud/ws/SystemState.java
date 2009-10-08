@@ -188,6 +188,7 @@ public class SystemState {
   }
   
   private static void cleanUp( final VmInstance vm ) {
+    SystemState.returnNetworkIndex( vm );
     try {
       Clusters.dispatchClusterEvent( vm.getPlacement( ), new TerminateCallback( ),
                                      Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId( ) ) );
@@ -195,6 +196,7 @@ public class SystemState {
     } catch ( Exception e ) {
       LOG.debug( e );
     }
+    SystemState.returnPublicAddress( vm );
   }
   
   private static void returnPublicAddress( final VmInstance vm ) {
@@ -204,23 +206,20 @@ public class SystemState {
       try {
         LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, vm.getInstanceId( ) ) );
         Address address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
-        if(vm.getNetworkConfig( ).getIpAddress( ).equals( address.getInstanceAddress( ) ) ) {
+        if(vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) {
           if ( address.isSystemAllocated( ) ) {
             LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
             AddressUtil.releaseAddress( address );
           } else {
-            try {
-              if ( address.isAssigned( ) ) {
-                LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
-                AddressUtil.unassignAddressFromVm( address, vm );
-              }
-            } catch ( Throwable e ) {
-              LOG.debug( e, e );
+            if ( address.isAssigned( ) ) {
+              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
+              AddressUtil.unassignAddressFromVm( address, vm );
             }
-          }
-          
+          }          
         }
-      } catch ( NoSuchElementException e1 ) {
+      } catch ( NoSuchElementException e ) {
+        //this case is OK and we silently ignore it.
+      } catch ( Throwable e1 ) {
         LOG.debug( e1, e1 );
       }
     }
@@ -230,12 +229,16 @@ public class SystemState {
     if( EucalyptusProperties.disableNetworking ) {
       return;
     } else {
-      try {
-        String networkFqName = vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 );
-        LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( vm.getNetworkIndex( ) ) ) );
-        Networks.getInstance( ).lookup( networkFqName ).returnNetworkIndex( vm.getNetworkIndex( ) );
-      } catch ( NoSuchElementException e1 ) {
-        LOG.debug( e1, e1 );
+      int networkIndex = vm.getNetworkIndex( );
+      vm.setNetworkIndex( -1 );
+      if( networkIndex > 0 ) {
+        try {
+          String networkFqName = vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 );
+          LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ) );
+          Networks.getInstance( ).lookup( networkFqName ).returnNetworkIndex( networkIndex );
+        } catch ( NoSuchElementException e1 ) {
+          LOG.debug( e1, e1 );
+        }
       }
     }
   }
@@ -389,9 +392,9 @@ public class SystemState {
                                           VmState.SHUTTING_DOWN.getName( ) ) );
           v.setState( VmState.SHUTTING_DOWN );
           v.resetStopWatch( );
-          SystemState.returnNetworkIndex( v );
+//          SystemState.returnNetworkIndex( v );
           SystemState.cleanUp( v );
-          SystemState.returnPublicAddress( v );
+//          SystemState.returnPublicAddress( v );
           if( !EucalyptusProperties.disableNetworking ) {
             try {
               Network net = v.getNetworks( ).get( 0 );

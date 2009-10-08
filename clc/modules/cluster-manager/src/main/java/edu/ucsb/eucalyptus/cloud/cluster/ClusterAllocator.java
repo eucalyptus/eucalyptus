@@ -172,9 +172,11 @@ public class ClusterAllocator extends Thread {
         try {
           VmInstance realVm = VmInstances.getInstance( ).lookup( vm.getInstanceId( ) );
           Address address = Addresses.getInstance( ).lookup( addr );
-          address.setInstanceId( realVm.getInstanceId( ) );
-          address.setInstanceAddress( realVm.getNetworkConfig( ).getIpAddress( ) );
-          LOG.debug( EventRecord.caller( address.getClass( ), State.ASSIGN_ADDRESSES, address.toString( ) ) );
+          String vmIp = realVm.getNetworkConfig( ).getIpAddress( );
+          String vmId = realVm.getInstanceId( );
+          address.setInstanceId( vmId );
+          address.setInstanceAddress( vmIp );
+          LOG.debug( EventRecord.caller( address.getClass( ), State.ASSIGN_ADDRESSES, address.toString( ), vmIp, vmId ) );
           AddressUtil.dispatchAssignAddress( address, realVm );
         } catch ( Exception e ) {
           LOG.error( e, e );

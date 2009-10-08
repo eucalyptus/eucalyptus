@@ -172,10 +172,6 @@ public class Address implements HasName {
   }
   
   public String getInstanceAddress( ) {
-    //TODO: verify this O.K. w/ hibernate
-    //    if( this.getAssigned( ) ) {
-    //      throw new IllegalStateException( "Attempting to get an instance address from an unassigned instance: " + this );
-    //    }
     return instanceAddress;
   }
   
