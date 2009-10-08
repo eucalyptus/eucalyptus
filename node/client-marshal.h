@@ -67,6 +67,7 @@ typedef struct ncStub_t {
   axutil_env_t * env;
   axis2_char_t * client_home;
   axis2_char_t * endpoint_uri;
+  axis2_char_t * node_name;
   axis2_stub_t * stub;
 } ncStub;
 
