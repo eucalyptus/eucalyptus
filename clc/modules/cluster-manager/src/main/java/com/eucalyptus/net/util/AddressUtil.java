@@ -119,7 +119,7 @@ public class AddressUtil {
 
   
   public static void releaseAddress( String s ) {
-    AddressUtil.releaseAddress( new Address( s ) );
+    AddressUtil.releaseAddress( new Address( s ) );//FIXME: this needs to lookup the actual address.
   }
 
   public static void releaseAddress( final Address currentAddr ) {

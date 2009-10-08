@@ -84,9 +84,11 @@ public class CreateVmInstances {
           token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
         }
       } else {
-        VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, -1 );
-        VmInstances.getInstance( ).register( vmInst );
-        token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
+        for ( int i = 0; i < token.getAmount( ); i++ ) {
+          VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, -1 );
+          VmInstances.getInstance( ).register( vmInst );
+          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
+        }
       }
     }
     vmAllocInfo.setReservationId( reservationId );
