@@ -166,20 +166,21 @@ public class SLAs {
       Networks.getInstance( ).registerIfAbsent( firstNet, Networks.State.ACTIVE ); 
       firstNet = Networks.getInstance( ).lookup( networkName );      
     }
-    if( EucalyptusProperties.disableNetworking ) return;
     for ( ResourceToken token : rscTokens ) {
       NetworkToken netToken = allocateClusterVlan( userId, token.getCluster( ), firstNet.getName( ) );
       token.getNetworkTokens( ).add( netToken );
-      for ( int i = 0; i < token.getAmount( ); i++ ) {
-        Integer addrIndex = firstNet.allocateNetworkIndex( token.getCluster( ) );
-        if ( addrIndex == null ) {
-          for( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
-            firstNet.returnNetworkIndex( index );
+      if( !EucalyptusProperties.disableNetworking ) {
+        for ( int i = 0; i < token.getAmount( ); i++ ) {
+          Integer addrIndex = firstNet.allocateNetworkIndex( token.getCluster( ) );
+          if ( addrIndex == null ) {
+            for( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
+              firstNet.returnNetworkIndex( index );
+            }
+            token.getPrimaryNetwork( ).getIndexes( ).clear( );
+            throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + firstNet.getNetworkName( ) );
+          } else {
+            token.getPrimaryNetwork( ).getIndexes().add( addrIndex );
           }
-          token.getPrimaryNetwork( ).getIndexes( ).clear( );
-          throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + firstNet.getNetworkName( ) );
-        } else {
-          token.getPrimaryNetwork( ).getIndexes().add( addrIndex );
         }
       }
     }
