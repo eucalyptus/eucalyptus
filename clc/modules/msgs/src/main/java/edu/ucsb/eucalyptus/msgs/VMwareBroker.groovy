@@ -184,6 +184,18 @@ public class EucalyptusNCNcTerminateInstanceResponseType extends VMwareBrokerRes
     def EucalyptusNCNcTerminateInstanceResponseType() {}
 }
 
+public class EucalyptusNCNcStartNetworkType extends VMwareBrokerRequestType {
+	ArrayList<String> remoteHosts = new ArrayList<String>();
+    Integer remoteHostPort;
+    Integer vlan;
+    def EucalyptusNCNcStartNetworkType() {}
+}
+
+public class EucalyptusNCNcStartNetworkResponseType extends VMwareBrokerResponseType {
+    String networkStatus;
+    def EucalyptusNCNcStartNetworkResponseType() {}
+}
+
 /* Template */
 /*
 public class EucalyptusNCNcXXXType extends VMwareBrokerRequestType {
