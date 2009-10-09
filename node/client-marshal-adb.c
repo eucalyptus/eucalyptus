@@ -90,12 +90,20 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
     char * uri = endpoint_uri;
 
     // extract node name from the endpoint
-    char * p = strstr ("://", uri); // find "http[s]://..."
-    if (p==NULL) return NULL;
+    char * p = strstr (uri, "://"); // find "http[s]://..."
+    if (p==NULL) {
+      logprintfl (EUCAERROR, "ncStubCreate received invalid URI %s\n", uri);
+      return NULL;
+    }
     char * node_name = strdup (p+3); // copy without the protocol prefix
-    if (node_name==NULL) return NULL;
+    if (node_name==NULL) {
+      logprintfl (EUCAERROR, "ncStubCreate is out of memory\n");
+      return NULL;
+    }
     if ((p = strchr (node_name, ':')) != NULL) *p = '\0'; // cut off the port
     if ((p = strchr (node_name, '/')) != NULL) *p = '\0'; // if there is no port
+
+    logprintfl (EUCADEBUG, "DEBUG: requested URI %s\n", uri);
 
     // see if we should redirect to the VMware broker
     if (strstr (uri, "VMwareBroker")) {
@@ -232,7 +240,7 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     adb_ncRunInstanceType_t * request = adb_ncRunInstanceType_create(env);
     
     // set standard input fields
-    adb_ncRunInstanceType_set_nodeName(request, env, st->endpoint_uri);
+    adb_ncRunInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
         adb_ncRunInstanceType_set_correlationId(request, env, meta->correlationId);
         adb_ncRunInstanceType_set_userId(request, env, meta->userId);
@@ -299,7 +307,7 @@ int ncGetConsoleOutputStub (ncStub *st, ncMetadata *meta, char *instanceId, char
     adb_ncGetConsoleOutputType_t * request = adb_ncGetConsoleOutputType_create(env);
     
     /* set input fields */
-    adb_ncGetConsoleOutputType_set_nodeName(request, env, st->endpoint_uri);
+    adb_ncGetConsoleOutputType_set_nodeName(request, env, st->node_name);
     if (meta) {
         adb_ncGetConsoleOutputType_set_correlationId(request, env, meta->correlationId);
         adb_ncGetConsoleOutputType_set_userId(request, env, meta->userId);
@@ -340,7 +348,7 @@ int ncRebootInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId)
     adb_ncRebootInstanceType_t * request = adb_ncRebootInstanceType_create(env);
     
     /* set input fields */
-    adb_ncRebootInstanceType_set_nodeName(request, env, st->endpoint_uri);
+    adb_ncRebootInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
         adb_ncRebootInstanceType_set_correlationId(request, env, meta->correlationId);
         adb_ncRebootInstanceType_set_userId(request, env, meta->userId);
@@ -379,7 +387,7 @@ int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instId, int *sh
     adb_ncTerminateInstanceType_t * request = adb_ncTerminateInstanceType_create(env);
     
     /* set input fields */
-    adb_ncTerminateInstanceType_set_nodeName(request, env, st->endpoint_uri);
+    adb_ncTerminateInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
         adb_ncTerminateInstanceType_set_correlationId(request, env, meta->correlationId);
         adb_ncTerminateInstanceType_set_userId(request, env, meta->userId);
@@ -422,7 +430,7 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
     adb_ncDescribeInstancesType_t * request = adb_ncDescribeInstancesType_create(env);
     
     /* set input fields */
-    adb_ncDescribeInstancesType_set_nodeName(request, env, st->endpoint_uri);
+    adb_ncDescribeInstancesType_set_nodeName(request, env, st->node_name);
     if (meta) {
         adb_ncDescribeInstancesType_set_correlationId(request, env, meta->correlationId);
         adb_ncDescribeInstancesType_set_userId(request, env, meta->userId);
@@ -476,7 +484,7 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
     adb_ncDescribeResourceType_t * request = adb_ncDescribeResourceType_create(env);
     
     /* set input fields */
-    adb_ncDescribeResourceType_set_nodeName(request, env, st->endpoint_uri);
+    adb_ncDescribeResourceType_set_nodeName(request, env, st->node_name);
     if (meta) {
         adb_ncDescribeResourceType_set_correlationId(request, env, meta->correlationId);
         adb_ncDescribeResourceType_set_userId(request, env, meta->userId);
@@ -529,7 +537,7 @@ int ncPowerDownStub  (ncStub *st, ncMetadata *meta) {
   adb_ncPowerDownType_t * request = adb_ncPowerDownType_create (env);
   
   // set standard input fields
-  adb_ncPowerDownType_set_nodeName(request, env, st->endpoint_uri);
+  adb_ncPowerDownType_set_nodeName(request, env, st->node_name);
   if (meta) {
     adb_ncPowerDownType_set_correlationId (request, env, meta->correlationId);
     adb_ncPowerDownType_set_userId (request, env, meta->userId);
@@ -565,7 +573,7 @@ int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char **peers, int peersLe
     adb_ncStartNetworkType_t * request = adb_ncStartNetworkType_create (env);
     
     // set standard input fields
-    adb_ncStartNetworkType_set_nodeName(request, env, st->endpoint_uri);
+    adb_ncStartNetworkType_set_nodeName(request, env, st->node_name);
     if (meta) {
         adb_ncStartNetworkType_set_correlationId (request, env, meta->correlationId);
         adb_ncStartNetworkType_set_userId (request, env, meta->userId);
@@ -613,7 +621,7 @@ int ncAttachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     adb_ncAttachVolumeType_t * request = adb_ncAttachVolumeType_create (env);
     
     // set standard input fields
-    adb_ncAttachVolumeType_set_nodeName(request, env, st->endpoint_uri);
+    adb_ncAttachVolumeType_set_nodeName(request, env, st->node_name);
     if (meta) {
         adb_ncAttachVolumeType_set_correlationId (request, env, meta->correlationId);
         adb_ncAttachVolumeType_set_userId (request, env, meta->userId);
@@ -654,7 +662,7 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     adb_ncDetachVolumeType_t * request = adb_ncDetachVolumeType_create (env);
     
     // set standard input fields
-    adb_ncDetachVolumeType_set_nodeName(request, env, st->endpoint_uri);
+    adb_ncDetachVolumeType_set_nodeName(request, env, st->node_name);
     if (meta) {
         adb_ncDetachVolumeType_set_correlationId (request, env, meta->correlationId);
         adb_ncDetachVolumeType_set_userId (request, env, meta->userId);
@@ -698,7 +706,7 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     adb_ncOPERATIONType_t * request = adb_ncOPERATIONType_create (env);
     
     // set standard input fields
-    adb_ncOPERATIONType_set_nodeName(request, env, st->endpoint_uri);
+    adb_ncOPERATIONType_set_nodeName(request, env, st->node_name);
     if (meta) {
         adb_ncOPERATIONType_set_correlationId (request, env, meta->correlationId);
         adb_ncOPERATIONType_set_userId (request, env, meta->userId);

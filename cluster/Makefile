@@ -3,7 +3,7 @@
 
 include ../Makedefs
 
-WSDLPATH=../wsdl/
+WSDLPATH=../wsdl
 CCWSDLNAME=eucalyptus_cc.wsdl
 CCWSDL=$(WSDLPATH)/$(CCWSDLNAME)
 NCWSDLNAME=eucalyptus_nc.wsdl
@@ -23,7 +23,7 @@ all: server client
 
 build: all
 
-generated/stubs: $(CCWSDL)
+generated/stubs: $(CCWSDL) $(NCWSDL)
 	rm -rf generated
 	mkdir -p generated
 	@echo Generating client stubs
