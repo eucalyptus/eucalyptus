@@ -171,12 +171,16 @@ public class SystemBootstrapper {
           LOG.info( LogUtil.header( "Loading " + r ) );
         }
         for ( Bootstrapper b : r.getBootstrappers( ) ) {
-          try {
-            LOG.info( "-> load: " + b.getClass( ) );
-            boolean result = b.load( r );
-          } catch ( Exception e ) {
-            LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
-            return false;
+          if( !Bootstrapper.delayedDependsCheck( b ) ) {
+            LOG.info( "-X Skipping load since depends check failed: " + b.getClass( ) );            
+          } else {
+            try {
+              LOG.info( "-> load: " + b.getClass( ) );
+              boolean result = b.load( r );
+            } catch ( Exception e ) {
+              LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
+              return false;
+            }
           }
         }
       }
@@ -195,12 +199,16 @@ public class SystemBootstrapper {
           LOG.info( LogUtil.header( "Starting " + r ) );
         }
         for ( Bootstrapper b : r.getBootstrappers( ) ) {
-          try {
-            LOG.info( "-> start: " + b.getClass( ) );
-            boolean result = b.start( );
-          } catch ( Exception e ) {
-            LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
-            System.exit( 123 );
+          if( !Bootstrapper.delayedDependsCheck( b ) ) {
+            LOG.info( "-X Skipping start since depends check failed: " + b.getClass( ) );            
+          } else {
+            try {
+              LOG.info( "-> start: " + b.getClass( ) );
+              boolean result = b.start( );
+            } catch ( Exception e ) {
+              LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
+              System.exit( 123 );
+            }
           }
         }
       }

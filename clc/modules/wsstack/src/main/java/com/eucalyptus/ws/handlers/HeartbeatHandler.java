@@ -66,19 +66,18 @@ import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
@@ -90,14 +89,13 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.RemoteConfiguration;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.BindingException;
@@ -108,7 +106,7 @@ import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
-import com.eucalyptus.ws.util.ChannelUtil;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
@@ -119,6 +117,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   private static Logger  LOG         = Logger.getLogger( HeartbeatHandler.class );
   private Channel        channel;
   private static boolean initialized = false;
+  private static List<String> initializedComponents = Lists.newArrayList( );
   
   public HeartbeatHandler( ) {
     super( );
@@ -144,14 +143,22 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     Component.eucalyptus.setHostAddress( addr.getHostName( ) );
     Component.cluster.setHostAddress( addr.getHostName( ) );
     Component.jetty.setHostAddress( addr.getHostName( ) );
-    //FIXME: mark walrus and storage as disabled to prevent walrus->registered, sc->unregistered to cause sc to bootstrap.
-    //FIXME: remove existing bootstrappers/configuration for disabled component to prevent init.
     HeartbeatType msg = ( HeartbeatType ) request.getMessage( );
     LOG.info( LogUtil.header( "Got heartbeat event: " + LogUtil.dumpObject( msg ) ) );
     for ( HeartbeatComponentType component : msg.getComponents( ) ) {
       LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
       System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
       Component.valueOf( component.getComponent( ) ).markLocal( );
+      //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+      initializedComponents.add( component.getComponent( ) );
+    }
+    //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+    if( !initializedComponents.contains( Component.storage.name( ) ) ) {
+      Component.storage.markDisabled( );
+    }
+    //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+    if( !initializedComponents.contains( Component.walrus.name( ) ) ) {
+      Component.walrus.markDisabled( );
     }
     System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
     System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
@@ -279,6 +286,18 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   
   private void handleHeartbeat( MappingHttpRequest request ) throws URISyntaxException {
     HeartbeatType hb = ( HeartbeatType ) request.getMessage( );
+    //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+    List<String> registeredComponents = Lists.newArrayList( );
+    for ( HeartbeatComponentType component : hb.getComponents( ) ) {
+      if( !initializedComponents.contains( component.getComponent( ) ) ) {
+        System.exit(123);//HUP
+      }
+      registeredComponents.add( component.getComponent( ) );
+    }
+    if( !registeredComponents.containsAll( initializedComponents ) ) {
+      System.exit(123);//HUP
+    }
+    //FIXME: end.
     for ( ComponentType startedComponent : hb.getStarted( ) ) {
       Component c = Component.valueOf( startedComponent.getComponent( ) );
       try {
@@ -291,8 +310,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
           Configuration.fireStartComponent( config );
         }
       } catch ( Exception e1 ) {
-        // potential remote race here, just ignore it
-        // if register/deregister is too fast.
+        LOG.debug( e1, e1 );
       }
     }
     for ( ComponentType stoppedComponent : hb.getStopped( ) ) {
@@ -306,8 +324,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
           Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
         }
       } catch ( Exception e1 ) {
-        // potential remote race here, just ignore it
-        // if register/deregister is too fast.
+        LOG.debug( e1, e1 );
       }
     }
   }

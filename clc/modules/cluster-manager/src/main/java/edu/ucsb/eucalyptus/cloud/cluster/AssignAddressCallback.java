@@ -96,14 +96,10 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
       if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
         LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigning, LogUtil.FAIL,
                                      parentAddr.toString( ) ) );
+        this.parentAddr.clearPending( );
+        this.parentAddr.release( );
         throw new IllegalStateException( "Ignoring assignment to a vm which is not running: " + msg );
       } else {
-        //        for( VmInstance aVm : VmInstances.getInstance( ).listValues( ) ) {
-        //          if( msg.getSource().equals( aVm.getNetworkConfig( ).getIgnoredPublicIp( ) ) && !vm.getInstanceId( ).equals( aVm.getInstanceId( ) ) 
-        //              && VmState.RUNNING.equals( aVm.getState( ) ) && VmState.PENDING.equals( aVm.getState( ) ) ) {
-        //            throw new EucalyptusClusterException( "Assign [" + msg.getSource() + "]  discarded because another VM already owns this IP." );
-        //          }
-        //        }
         this.parentVm.getNetworkConfig( ).setIgnoredPublicIp( msg.getSource( ) );
         LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigning, parentAddr.toString( ) ) );
       }

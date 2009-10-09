@@ -367,9 +367,13 @@ public class Network implements HasName {
   
   public Integer allocateNetworkIndex( String cluster ) {
     Integer nextIndex = this.availableNetworkIndexes.pollFirst( );
-    this.assignedNetworkIndexes.add( nextIndex );
-    this.clusterTokens.get( cluster ).getIndexes().add( nextIndex );
-    LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+    if( nextIndex == null ) { 
+      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+    } else {
+      this.assignedNetworkIndexes.add( nextIndex );
+      this.clusterTokens.get( cluster ).getIndexes().add( nextIndex );
+      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+    }
     return nextIndex;
   }
 

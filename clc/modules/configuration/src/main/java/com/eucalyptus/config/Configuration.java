@@ -122,9 +122,9 @@ public class Configuration {
       throw new EucalyptusCloudException( e2 );
     }
     if ( request instanceof RegisterStorageControllerType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.storage.isLocal( ) ) {
-      throw new EucalyptusCloudException( "You do not have a local storage controller enabled (or not installed)." );
+      throw new EucalyptusCloudException( "You do not have a local storage controller enabled (or it is not installed)." );
     } else if ( request instanceof RegisterWalrusType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.walrus.isLocal( ) ) { 
-      throw new EucalyptusCloudException( "You do not have a local walrus enabled (or not installed)." );
+      throw new EucalyptusCloudException( "You do not have a local walrus enabled (or it is not installed)." );
     } else if ( request instanceof RegisterStorageControllerType ) {
       try {
         Configuration.getClusterConfiguration( request.getName( ) );
@@ -206,9 +206,9 @@ public class Configuration {
 
   public static void fireStopComponent( ComponentConfiguration componentConfig ) throws EucalyptusCloudException {
     StopComponentEvent e = null;
-    if ( Component.walrus.equals( componentConfig.getComponent( ) ) && ( Component.walrus.isLocal( ) || NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) ) {
+    if ( Component.walrus.equals( componentConfig.getComponent( ) ) && NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) {
       e = StopComponentEvent.getLocal( componentConfig );
-    } else if ( Component.storage.equals( componentConfig.getComponent( ) ) && ( Component.storage.isLocal( ) || NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) ) {
+    } else if ( Component.storage.equals( componentConfig.getComponent( ) ) && NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) {
       e = StopComponentEvent.getLocal( componentConfig );
     } else {
       e = StopComponentEvent.getRemote( componentConfig );
