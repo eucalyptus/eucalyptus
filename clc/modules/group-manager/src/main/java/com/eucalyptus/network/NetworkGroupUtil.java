@@ -91,6 +91,28 @@ public class NetworkGroupUtil {
     }
   }
 
+  public static List<SecurityGroupItemType> getUserNetworksAdmin( String userId, List<String> groupNames ) throws EucalyptusCloudException {
+    List<SecurityGroupItemType> groupInfoList = Lists.newArrayList( );
+    if ( groupNames.isEmpty( ) ) {
+      return NetworkGroupUtil.getUserNetworks( userId, groupNames );
+    } else {
+      for ( String groupName : groupNames ) {
+        if ( NetworkGroupUtil.isUserGroupRef( groupName ) ) {
+          groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( userId, Lists.newArrayList( groupName ) ) );
+        } else {
+          groupInfoList.addAll( NetworkGroupUtil.getUserNetworksAdmin( groupName ) );
+        }
+      }
+    }
+    return groupInfoList;
+  }
+  public static boolean isUserGroupRef( String adminGroupName ) {
+    return adminGroupName.indexOf( "-" ) != -1;
+  }
+  public static List<SecurityGroupItemType> getUserNetworksAdmin( String adminGroupName ) throws EucalyptusCloudException {
+    return getUserNetworks( adminGroupName.split("-")[0], Lists.newArrayList( adminGroupName.replaceFirst( "\\w*-", "" ) ) );
+  }
+
   public static List<SecurityGroupItemType> getUserNetworks( String userId, List<String> groupNames ) throws EucalyptusCloudException {
     List<SecurityGroupItemType> groupInfoList = Lists.newArrayList();
     List<NetworkRulesGroup> userGroups = Lists.newArrayList( );

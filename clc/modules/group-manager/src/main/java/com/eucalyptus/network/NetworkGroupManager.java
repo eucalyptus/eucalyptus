@@ -7,11 +7,13 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.NetworkRule;
 import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.util.Messaging;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
@@ -63,12 +65,16 @@ public class NetworkGroupManager {
   public DeleteSecurityGroupResponseType delete( DeleteSecurityGroupType request ) throws EucalyptusCloudException {
     NetworkGroupUtil.makeDefault( request.getUserId( ) );//ensure the default group exists to cover some old broken installs
     DeleteSecurityGroupResponseType reply = (DeleteSecurityGroupResponseType) request.getReply( ); 
-    try {
-      NetworkGroupUtil.deleteUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
-      reply.set_return( true );
-    } catch ( Exception e ) {
-      LOG.debug(e,e);
-      reply.set_return( true );
+    if( request.isAdministrator( ) && request.getGroupName( ).indexOf( "-" ) != -1 ) {
+      NetworkGroupUtil.deleteUserNetworkRulesGroup( request.getGroupName( ).split("-")[0], request.getGroupName( ).replaceFirst("\\w*-","") );      
+    } else {
+      try {
+        NetworkGroupUtil.deleteUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
+        reply.set_return( true );
+      } catch ( Exception e ) {
+        LOG.debug(e,e);
+        reply.set_return( true );
+      }
     }
     return reply;
   }
@@ -76,10 +82,18 @@ public class NetworkGroupManager {
   public DescribeSecurityGroupsResponseType describe( DescribeSecurityGroupsType request ) throws EucalyptusCloudException {
     NetworkGroupUtil.makeDefault( request.getUserId( ) );//ensure the default group exists to cover some old broken installs
     DescribeSecurityGroupsResponseType reply = ( DescribeSecurityGroupsResponseType ) request.getReply();
-    try {
-      reply.getSecurityGroupInfo( ).addAll( NetworkGroupUtil.getUserNetworks( request.getUserId( ), request.getSecurityGroupSet( ) ) );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
+    if( request.isAdministrator( ) && !request.getSecurityGroupSet( ).isEmpty( ) ) {
+      try {
+        reply.getSecurityGroupInfo( ).addAll( NetworkGroupUtil.getUserNetworksAdmin( request.getUserId( ), request.getSecurityGroupSet( ) ) );
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+      }
+    } else {
+      try {
+        reply.getSecurityGroupInfo( ).addAll( NetworkGroupUtil.getUserNetworks( request.getUserId( ), request.getSecurityGroupSet( ) ) );
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+      }
     }
     return reply;
   }
