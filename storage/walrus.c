@@ -76,7 +76,7 @@ permission notice:
 #include "misc.h"
 #include "walrus.h"
 
-#define TOTAL_RETRIES 5 /* download is retried in case of connection problems */
+#define TOTAL_RETRIES 10 /* download is retried in case of connection problems */
 #define FIRST_TIMEOUT 4 /* in seconds, goes in powers of two afterwards */
 #define CHUNK 262144 /* buffer size for decompression operations */
 #define BUFSIZE 4096 /* should be big enough for CERT and the signature */
@@ -217,7 +217,6 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     } else {
         logprintfl (EUCADEBUG, "walrus_request(): writing %s output to %s\n", verb, outfile);
 	}
-
     int retries = TOTAL_RETRIES;
     int timeout = FIRST_TIMEOUT;
     do {
@@ -262,8 +261,6 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
             retries--;
 
         } else {
-            retries = 0; // do not retry if we go a proper HTTP response
-
             long httpcode;
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpcode);
             /* TODO: pull out response message, too */
@@ -272,10 +269,14 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
             case 200L: /* all good */
                 logprintfl (EUCAINFO, "walrus_request(): saved image in %s\n", outfile);
                 code = OK;
+		retries = 0;
                 break;
-                
+	    case 408L: /* timeout, retry */
+	      logprintfl (EUCAWARN, "walrus_request(): server responded with HTTP code %ld (timeout), retrying\n", httpcode);
+	      logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
+	      break;
             default: /* some kind of error */
-                logprintfl (EUCAERROR, "walrus_request(): server responded with HTTP code %ld\n", httpcode);
+                logprintfl (EUCAERROR, "walrus_request(): server responded with HTTP code %ld, retrying\n", httpcode);
                 logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
             }
         }
