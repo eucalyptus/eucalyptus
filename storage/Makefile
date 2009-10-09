@@ -5,10 +5,14 @@
 include ../Makedefs
 
 STORAGE_LIBS = ${LIBS} -lcurl
+IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o walrus.o img.o cache.o ami2vmx.o do_convert.o
 
-all: storage.o walrus.o Wclient
+all: storage.o walrus.o Wclient euca_imager
 
 build: all
+
+euca_imager: Makefile euca_imager.c $(IMAGER_LIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) euca_imager.c -o euca_imager $(IMAGER_LIBS) -lcurl
 
 Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o
 	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o $(STORAGE_LIBS)
@@ -38,11 +42,11 @@ test: test.c storage.h storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../
 	make -C ../util
 
 clean:
-	rm -rf *~ *.o Wclient
+	rm -rf *~ *.o Wclient euca_imager
 
 distclean:
 
 install:
-
+	@$(INSTALL) -m 0755 euca_imager $(usrdir)/lib/eucalyptus
 deploy:
 

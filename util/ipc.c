@@ -65,6 +65,9 @@ permission notice:
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <fcntl.h> /* For O_* */
+#include <string.h>
+#include <strings.h>
+
 #include "misc.h" /* logprintfl */
 #include "ipc.h"
 
@@ -73,7 +76,12 @@ permission notice:
 
 #define DECLARE_ARG union semun { int val; struct semid_ds *buf; ushort *array; } arg
 
-sem * sem_alloc (const int val, const char * name) 
+sem * sem_alloc (const int val, const char * name)
+{
+    return sem_realloc (val, name, O_EXCL);
+}
+
+sem * sem_realloc (const int val, const char * name, int flags) 
 {
     DECLARE_ARG;
 
@@ -81,12 +89,15 @@ sem * sem_alloc (const int val, const char * name)
     if (s==NULL) return NULL;
     bzero (s, sizeof (sem));
     s->sysv = -1;
-
+    s->flags = flags;
+    
     if (name) { /* named semaphores */
-        if ( sem_unlink (name) == 0) { /* clean up in case previous sem holder crashed */
-            logprintfl (EUCAINFO, "sem_alloc(): cleaning up old semaphore %s\n", name);
+        if (s->flags & O_EXCL) {
+            if ( sem_unlink (name) == 0) { /* clean up in case previous sem holder crashed */
+                logprintfl (EUCAINFO, "sem_alloc(): cleaning up old semaphore %s\n", name);
+            }
         }
-        if ((s->posix = sem_open (name, O_CREAT | O_EXCL, 0644, val))==SEM_FAILED) {
+        if ((s->posix = sem_open (name, O_CREAT | flags, 0644, val))==SEM_FAILED) {
             free (s);
             return NULL;
         }
@@ -146,7 +157,9 @@ void sem_free (sem * s)
     
     if (s && s->posix) {
         sem_close (s->posix);
-        sem_unlink (s->name);
+        if (s->flags & O_EXCL) {
+            sem_unlink (s->name);            
+        }
         free (s->name);
     }
     

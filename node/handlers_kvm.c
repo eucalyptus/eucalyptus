@@ -69,6 +69,8 @@ permission notice:
 #include <errno.h>
 #include <pthread.h>
 #include <signal.h> /* SIGINT */
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "ipc.h"
 #include "misc.h"

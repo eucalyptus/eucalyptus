@@ -60,16 +60,8 @@ permission notice:
 #ifndef INCLUDE_MISC_H
 #define INCLUDE_MISC_H
 
+#include <stdio.h>
 #include <stdarg.h>
-
-#ifndef NO_AXIS /* for compiling on systems without Axis */
-#include <neethi_policy.h>
-#include <neethi_util.h>
-#include <axutil_utils.h>
-#include <axis2_client.h>
-#include <axis2_stub.h>
-int InitWSSEC(axutil_env_t *env, axis2_stub_t *stub, char *policyFile);
-#endif
 
 #define TIMERSTART(a) double a;                                 \
   {                                                             \
@@ -91,6 +83,7 @@ enum {EUCADEBUG2, EUCADEBUG, EUCAINFO, EUCAWARN, EUCAERROR, EUCAFATAL};
 
 char * replace_string (char ** stringp, char * source, char * destination );
 int sscanf_lines (char * lines, char * format, void * varp);
+char * fp2str (FILE * fp);
 char * system_output (char * shell_command );
 char *getConfString(char *configFile, char *key);
 

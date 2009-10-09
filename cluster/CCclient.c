@@ -60,7 +60,7 @@ permission notice:
 #include <stdio.h>
 #include <time.h>
 #include <misc.h>
-
+#include <euca_axis.h>
 #include <cc-client-marshal.h>
 
 #ifndef MODE

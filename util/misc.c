@@ -73,13 +73,11 @@ permission notice:
 #include <fcntl.h> /* open */
 #include <utime.h> /* utime */
 #include <sys/wait.h>
-
-#ifndef NO_AXIS /* for compiling on systems without Axis */
-#include <neethi_policy.h>
-#include <neethi_util.h>
-#include <axutil_utils.h>
-#include <axis2_client.h>
-#include <axis2_stub.h>
+#include <sys/types.h>
+#include <dirent.h> // opendir, etc
+#include <errno.h> // errno
+#include <sys/time.h> // gettimeofday
+#include <limits.h>
 
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
   int i, done, rc, j;
@@ -142,31 +140,6 @@ pid_t timewait(pid_t pid, int *status, int timeout) {
   }
   return(rc);
 }
-
-int InitWSSEC(axutil_env_t *env, axis2_stub_t *stub, char *policyFile) {
-  axis2_svc_client_t *svc_client = NULL;
-  neethi_policy_t *policy = NULL;
-  axis2_status_t status = AXIS2_FAILURE;
-
-  //return(0);
-
-  svc_client =  axis2_stub_get_svc_client(stub, env);
-  if (!svc_client) {
-    logprintfl (EUCAERROR, "InitWSSEC(): ERROR could not get svc_client from stub\n");
-    return(1);
-  }
-  axis2_svc_client_engage_module(svc_client, env, "rampart");
-
-  policy = neethi_util_create_policy_from_file(env, policyFile);
-  if (!policy) {
-    logprintfl (EUCAERROR, "InitWSSEC(): ERROR could not initialize policy file %s\n", policyFile);
-    return(1);
-  }
-  status = axis2_svc_client_set_policy(svc_client, env, policy);
-    
-  return(0);
-}
-#endif /* NO_AXIS */
 
 int timelog=0; /* change to 1 for TIMELOG entries */
 
@@ -386,53 +359,61 @@ int sscanf_lines (char * lines, char * format, void * varp)
     return found;
 }
 
+char * fp2str (FILE * fp)
+{
+#   define INCREMENT 512
+  int buf_max = INCREMENT;
+  int buf_current = 0;
+  char * last_read;
+  char * buf = NULL;
+
+  if (fp==NULL) return NULL;
+  do {
+    // create/enlarge the buffer
+    void * new_buf;
+    if ((new_buf = realloc (buf, buf_max)) == NULL) {
+      if ( buf != NULL ) { // previous realloc()s worked
+	free (buf); // free partial buffer
+      }
+      return NULL;
+    }
+    buf = new_buf;
+    logprintfl (EUCADEBUG2, "fp2str: enlarged buf to %d\n", buf_max);
+
+    do { // read in until EOF or buffer is full
+      last_read = fgets (buf+buf_current, buf_max-buf_current, fp);
+      if ( last_read != NULL )
+	buf_current = strlen(buf);
+      logprintfl (EUCADEBUG2, "fp2str: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
+    } while ( last_read && buf_max > buf_current+1 ); /* +1 is needed for fgets() to put \0 */
+        
+    buf_max += INCREMENT; /* in case it is full */
+  } while (last_read);
+
+  if ( buf_current < 1 ) {
+    free (buf);
+    buf = NULL;
+  }
+
+  return buf;
+}
+
 /* execute system(shell_command) and return stdout in new string
  * pointed to by *stringp */
 char * system_output (char * shell_command )
 {
-#   define INCREMENT 512
-    int buf_max = INCREMENT;
-    int buf_current = 0;
-    char * buf = NULL;
-    char * last_read;
-    FILE * fp;
+  char * buf = NULL;
+  FILE * fp;
 
-    /* forks off command (this doesn't fail if command doesn't exist */
-    logprintfl (EUCADEBUG, "system_output(): [%s]\n", shell_command);
-    if ( (fp=popen(shell_command, "r")) == NULL) 
-        return NULL; /* caller can check errno */
-    
-    do {
-        /* create/enlarge the buffer */
-        void * new_buf;
-        if ((new_buf = realloc (buf, buf_max)) == NULL) {
-            if ( buf != NULL ) { /* previous realloc()s worked */
-                free (buf); /* free partial buffer */
-                buf = NULL;
-            }
-            break;
-        }
-        buf = new_buf;
-        logprintfl (EUCADEBUG2, "system_output: enlarged buf to %d\n", buf_max);
+  /* forks off command (this doesn't fail if command doesn't exist */
+  logprintfl (EUCADEBUG, "system_output(): [%s]\n", shell_command);
+  if ( (fp=popen(shell_command, "r")) == NULL) 
+    return NULL; /* caller can check errno */
+  buf = fp2str (fp);
 
-        do { /* read in output until EOF or buffer is full */
-            last_read = fgets (buf+buf_current, buf_max-buf_current, fp);
-            if ( last_read != NULL )
-                buf_current = strlen(buf);
-            logprintfl (EUCADEBUG2, "system_output: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
-        } while ( last_read && buf_max > buf_current+1 ); /* +1 is needed for fgets() to put \0 */
-        
-        buf_max += INCREMENT; /* in case it is full */
-    } while (last_read);
-
-    if ( buf_current < 1 ) {
-        free (buf);
-        buf = NULL;
-    }
-    pclose(fp);
-    return buf;
+  pclose(fp);
+  return buf;
 }
-
 
 char *getConfString(char *configFile, char *key) {
   int rc;

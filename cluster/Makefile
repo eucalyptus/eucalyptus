@@ -16,7 +16,7 @@ CLIENTKILLALL=euca_killall
 NCLIBS=../util/data.o ../node/client-marshal-adb.o ../util/ipc.o
 SCLIBS=../storage/storage.o
 VNLIBS=../net/vnetwork.o ../util/misc.o
-WSSECLIBS=../util/euca_auth.o
+WSSECLIBS=../util/euca_axis.o
 CC_LIBS 	= ${LIBS} -lcurl
 
 all: server client
@@ -50,10 +50,10 @@ $(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o 
 client: $(CLIENT)_full $(CLIENTKILLALL)
 
 $(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
-	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CC_LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o $(CLIENT).c cc-client-marshal-adb.c -DMODE=1
+	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CC_LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o $(WSSECLIBS) ../util/euca_auth.o $(CLIENT).c cc-client-marshal-adb.c -DMODE=1
 
 $(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
-	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CC_LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o $(CLIENT).c cc-client-marshal-adb.c -DMODE=0
+	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CC_LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o $(WSSECLIBS) ../util/euca_auth.o $(CLIENT).c cc-client-marshal-adb.c -DMODE=0
 
 deploy:
 	$(INSTALL) -d $(AXIS2C_SERVICES)/$(SERVICE_NAME)/
