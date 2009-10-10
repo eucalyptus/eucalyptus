@@ -337,7 +337,7 @@ char * replace_string (char ** stringp, char * source, char * destination )
     
     buf = malloc(sizeof(char) * maxlen);
     new_string = malloc(sizeof(char) * maxlen); /* TODO: this has to be dynamic */
-    if (!buf !! !new_string) {
+    if (!buf || !new_string) {
         fprintf(stderr, "replace_string: out of memory\n");
 	if (buf) free(buf);
 	if (new_string) free(new_string);
