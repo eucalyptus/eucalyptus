@@ -32,13 +32,29 @@ package edu.ucsb.eucalyptus.msgs
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
+
+// parent to all requests/replies used by VMwareBroker/NC,
+// which inherit correlationId and userId from EucalyptusMessage
+
+public class VMwareBrokerRequestType extends EucalyptusMessage {
+	String nodeName;
+
+	public String toString() {
+		toString("");
+	}
+    public String toString(String msg) {
+    	return "VMwareBrokerRequest {" 
+    	+ msg 
+    	+ " userId=" + getUserId() 
+    	+ " correlationId=" + getCorrelationId() + "}";
+    }
+}
+
 public class VMwareBrokerResponseType extends EucalyptusMessage {
   	def VMwareBrokerResponseType() {}
 }
 
-public class VMwareBrokerRequestType extends EucalyptusMessage {
-	String nodeName;
-}
+// fields used by {Run|Describe}Instance
 
 public class VirtualMachineType extends EucalyptusData {
 	Integer memory;
@@ -108,11 +124,22 @@ public class InstanceType extends EucalyptusData {
 	ArrayList<String> groupNames = new ArrayList<String>();
 	ArrayList<VolumeType> volumes = new ArrayList<VolumeType>();
 	String serviceTag;
+
+	InstanceType clone ()
+	{
+		return this.clone();
+	}
 }
+
+// DescribeResource
 
 public class EucalyptusNCNcDescribeResourceType extends VMwareBrokerRequestType {		
     String resourceType;
     def EucalyptusNCNcDescribeResourceType() {}
+
+    public String toString() {
+    	return super.toString(getClass().getSimpleName() + " resourceType=" + getResourceType());
+    }
 }
 
 public class EucalyptusNCNcDescribeResourceResponseType extends VMwareBrokerResponseType {
@@ -127,6 +154,8 @@ public class EucalyptusNCNcDescribeResourceResponseType extends VMwareBrokerResp
     def EucalyptusNCNcDescribeResourceResponseType() {}
 }
 
+// GetConsoleOutput
+
 public class EucalyptusNCNcGetConsoleOutputType extends VMwareBrokerRequestType {
     String instanceId;
     def EucalyptusNCNcGetConsoleOutputType() {}
@@ -137,6 +166,8 @@ public class EucalyptusNCNcGetConsoleOutputResponseType extends VMwareBrokerResp
     def EucalyptusNCNcGetConsoleOutputResponseType() {}
 }
 
+// DescribeInstances
+
 public class EucalyptusNCNcDescribeInstancesType extends VMwareBrokerRequestType {
     ArrayList<String> instanceIds = new ArrayList<String>();
     def EucalyptusNCNcDescribeInstancesType() {}
@@ -146,6 +177,8 @@ public class EucalyptusNCNcDescribeInstancesResponseType extends VMwareBrokerRes
 	ArrayList<InstanceType> instances = new ArrayList<InstanceType>();
     def EucalyptusNCNcDescribeInstancesResponseType() {}
 }
+
+// RunInstance
 
 public class EucalyptusNCNcRunInstanceType extends VMwareBrokerRequestType {
 	String imageId;
@@ -172,6 +205,8 @@ public class EucalyptusNCNcRunInstanceResponseType extends VMwareBrokerResponseT
     def EucalyptusNCNcRunInstanceResponseType() {}
 }
 
+// TerminateInstance
+
 public class EucalyptusNCNcTerminateInstanceType extends VMwareBrokerRequestType {
     String instanceId;
     def EucalyptusNCNcTerminateInstanceType() {}
@@ -183,6 +218,8 @@ public class EucalyptusNCNcTerminateInstanceResponseType extends VMwareBrokerRes
 	String previousState;
     def EucalyptusNCNcTerminateInstanceResponseType() {}
 }
+
+// StartNetwork
 
 public class EucalyptusNCNcStartNetworkType extends VMwareBrokerRequestType {
 	ArrayList<String> remoteHosts = new ArrayList<String>();
@@ -196,7 +233,62 @@ public class EucalyptusNCNcStartNetworkResponseType extends VMwareBrokerResponse
     def EucalyptusNCNcStartNetworkResponseType() {}
 }
 
-/* Template */
+// RebootInstance
+
+public class EucalyptusNCNcRebootInstanceType extends VMwareBrokerRequestType {
+    String instanceId;
+    def EucalyptusNCNcRebootInstanceType() {}
+}
+
+public class EucalyptusNCNcRebootInstanceResponseType extends VMwareBrokerResponseType {
+    Boolean	status;
+    def EucalyptusNCNcRebootInstanceResponseType() {}
+}
+
+// AttachVolume
+
+public class EucalyptusNCNcAttachVolumeType extends VMwareBrokerRequestType {
+    String instanceId;
+    String volumeId;
+    String remoteDev;
+    String localDev;
+    def EucalyptusNCNcAttachVolumeType() {}
+}
+
+public class EucalyptusNCNcAttachVolumeResponseType extends VMwareBrokerResponseType {
+    def EucalyptusNCNcAttachVolumeResponseType() {}
+}
+
+// DetachVolume
+
+public class EucalyptusNCNcDetachVolumeType extends VMwareBrokerRequestType {
+    String instanceId;
+    String volumeId;
+    String remoteDev;
+    String localDev;
+    Boolean force;
+    def EucalyptusNCNcDetachVolumeType() {}
+}
+
+public class EucalyptusNCNcDetachVolumeResponseType extends VMwareBrokerResponseType {
+    def EucalyptusNCNcDetachVolumeResponseType() {}
+}
+
+// PowerDown
+
+public class EucalyptusNCNcPowerDownType extends VMwareBrokerRequestType {
+    def EucalyptusNCNcPowerDownType() {}
+
+    public String toString() {
+    	return super.toString(getClass().getSimpleName());
+    }
+}
+
+public class EucalyptusNCNcPowerDownResponseType extends VMwareBrokerResponseType {
+    def EucalyptusNCNcPowerDownResponseType() {}
+}
+
+// Template 
 /*
 public class EucalyptusNCNcXXXType extends VMwareBrokerRequestType {
     String instanceId;
