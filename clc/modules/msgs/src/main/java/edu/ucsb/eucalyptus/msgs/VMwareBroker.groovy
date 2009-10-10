@@ -46,10 +46,7 @@ public class VMwareBrokerRequestType extends EucalyptusMessage {
 
   	@Override
     public String toString(String msg) {
-    	return "VMwareBrokerRequest {{" 
-    	+ msg 
-    	+ " userId=" + getUserId() 
-    	+ " correlationId=" + getCorrelationId() + "}}";
+    	return "VMwareBrokerRequest [" + msg + " userId=" + getUserId() + " correlationId=" + getCorrelationId() + "]";
     }
 }
 
@@ -132,11 +129,15 @@ public class InstanceType extends EucalyptusData {
 	ArrayList<String> groupNames = new ArrayList<String>();
 	ArrayList<VolumeType> volumes = new ArrayList<VolumeType>();
 	String serviceTag;
+}
 
-	InstanceType clone ()
-	{
-		return this.clone();
+private String simplifyClassName ()
+{
+	String name = getClass().getSimpleName();
+	if (name.startsWith("EucalyptusNCNc") && name.endsWith("Type")) {
+		name = name.substring(14, name.length()-5);
 	}
+	return name;
 }
 
 // DescribeResource
@@ -147,8 +148,8 @@ public class EucalyptusNCNcDescribeResourceType extends VMwareBrokerRequestType 
 
   	@Override
     public String toString() {
-    	//return super.toString(getClass().getSimpleName() + " resourceType=" + getResourceType());
-    	return ">>>>>" + getClass().getSimpleName() + " resourceType=" + getResourceType();
+    	//return super.toString( + " resourceType=" + getResourceType());
+    	return ">>>>>" + simplifyClassName() + " resourceType=" + getResourceType();
 
     }
 }
