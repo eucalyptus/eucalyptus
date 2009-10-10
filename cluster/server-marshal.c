@@ -1015,7 +1015,10 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   
   ret = adb_RunInstancesResponse_create(env);
   adb_RunInstancesResponse_set_RunInstancesResponse(ret, env, rirt);
-  
+  free(networkIndexList);
+  free(macAddrs);
+  free(netNames);
+  free(instIds);
   
   return(ret);
 }

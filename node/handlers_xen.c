@@ -207,7 +207,9 @@ doRunInstance(		struct nc_state_t *nc,
     /* do the potentially long tasks in a thread */
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
     if (!attr) { 
-        logprintfl (EUCAWARN, "Warning: out of memory\n");
+        free_instance (&instance);
+        logprintfl (EUCAFATAL, "Warning: out of memory\n");
+        return 1;
     }
     pthread_attr_init(attr);
     pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);

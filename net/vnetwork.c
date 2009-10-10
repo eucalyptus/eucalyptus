@@ -590,8 +590,8 @@ int vnetRestoreTablesFromMemory(vnetConfig *vnetconfig) {
   FH = fdopen(fd, "w");
   if (!FH) {
     close(fd);
-    free(file);
     unlink(file);
+    free(file);
     return(1);
   }
   
