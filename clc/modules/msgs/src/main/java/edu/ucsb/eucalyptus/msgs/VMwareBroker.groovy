@@ -139,6 +139,8 @@ public class EucalyptusNCNcDescribeResourceType extends VMwareBrokerRequestType 
 
     public String toString() {
     	return super.toString(getClass().getSimpleName() + " resourceType=" + getResourceType());
+    	return ">>>>>" + getClass().getSimpleName() + " resourceType=" + getResourceType();
+
     }
 }
 
