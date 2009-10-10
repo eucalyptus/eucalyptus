@@ -792,7 +792,7 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
     outmac[0] = '\0';
     rc = vnetGetNextHost(vnetconfig, outmac, outprivip, 0, -1);
     if (!rc) {
-      snprintf(outpubip, strlen(outprivip), "%s", outprivip);
+      snprintf(outpubip, strlen(outprivip)+1, "%s", outprivip);
       ret = 0;
     }
   } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
