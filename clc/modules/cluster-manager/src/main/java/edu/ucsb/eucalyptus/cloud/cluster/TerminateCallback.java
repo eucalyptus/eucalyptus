@@ -73,7 +73,7 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 public class TerminateCallback extends QueuedEventCallback<TerminateInstancesType> {
 
   private static Logger LOG = Logger.getLogger( TerminateCallback.class );
-  public TerminateCallback( ) {}
+  public TerminateCallback( ) {}//TODO: generate message here.
 
   @Override
   public void prepare( TerminateInstancesType msg ) throws Exception {

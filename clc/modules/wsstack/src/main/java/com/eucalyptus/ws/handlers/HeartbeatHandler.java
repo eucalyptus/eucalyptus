@@ -64,24 +64,24 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -89,10 +89,10 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.RemoteConfiguration;
@@ -106,110 +106,59 @@ import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
-import com.eucalyptus.ws.util.ChannelUtil;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatType;
 
 @ChannelPipelineCoverage( "one" )
-public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler, UnrollableStage {
+public class HeartbeatHandler extends SimpleChannelHandler implements UnrollableStage {
   private static Logger  LOG         = Logger.getLogger( HeartbeatHandler.class );
   private Channel        channel;
   private static boolean initialized = false;
-
+  private static List<String> initializedComponents = Lists.newArrayList( );
+  
   public HeartbeatHandler( ) {
     super( );
     initialized = true;
   }
-
+  
   public HeartbeatHandler( Channel channel ) {
     super( );
     this.channel = channel;
   }
-
+  
   @Override
   public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     ctx.sendDownstream( e );
   }
-
-  @Override
-  public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    if ( e instanceof MessageEvent ) {
-      Object message = ( ( MessageEvent ) e ).getMessage( );
-      if ( message instanceof MappingHttpRequest ) {
-        MappingHttpRequest request = ( ( MappingHttpRequest ) message );
-        if ( HttpMethod.GET.equals( request.getMethod( ) ) ) {
-          MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
-          String resp = "";
-          for ( Component c : Component.values( ) ) {
-            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.name( ), c.isEnabled( ), c.isLocal( ), c.isInitialized( ) );
-          }
-          ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
-          response.setContent( buf );
-          response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
-          response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-          ChannelFuture writeFuture = ctx.getChannel( ).write( response );
-          writeFuture.addListener( ChannelFutureListener.CLOSE );
-        } else if ( !initialized ) {
-          initialize( ctx, request );
-        } else if ( request.getMessage( ) instanceof HeartbeatType ) {
-          HeartbeatType hb = ( HeartbeatType ) request.getMessage( );
-          for ( ComponentType startedComponent : hb.getStarted( ) ) {
-            Component c = Component.valueOf( startedComponent.getComponent( ) );
-            try {
-              if ( Component.walrus.equals( c ) ) {
-                ComponentConfiguration config = Configuration.getWalrusConfiguration( startedComponent.getName( ) );
-                Configuration.fireStartComponent( config );
-              }
-              if ( Component.storage.equals( c ) ) {
-                ComponentConfiguration config = Configuration.getStorageControllerConfiguration( startedComponent.getName( ) );
-                Configuration.fireStartComponent( config );
-              }
-            } catch ( Exception e1 ) {
-              // potential remote race here, just ignore it
-              // if register/deregister is too fast.
-            }
-          }
-          for ( ComponentType stoppedComponent : hb.getStopped( ) ) {
-            URI uri = new URI( stoppedComponent.getUri( ) );
-            Component c = Component.valueOf( stoppedComponent.getComponent( ) );
-            try {
-              if ( Component.walrus.equals( c ) ) {                
-                Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
-              }
-              if ( Component.storage.equals( c ) ) {
-                Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
-              }
-            } catch ( Exception e1 ) {
-              // potential remote race here, just ignore it
-              // if register/deregister is too fast.
-            }
-          }
-        } else {
-          ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_ACCEPTABLE ) );
-          writeFuture.addListener( ChannelFutureListener.CLOSE );
-        }
-      }
-    }
-  }
-
-  private void initialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
+  
+  private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
     InetSocketAddress addr = ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( );
     LOG.info( LogUtil.subheader( "Using " + addr.getHostName( ) + " as the database address." ) );
     Component.db.setHostAddress( addr.getHostName( ) );
+    Component.db.markEnabled( );
     Component.dns.setHostAddress( addr.getHostName( ) );
     Component.eucalyptus.setHostAddress( addr.getHostName( ) );
     Component.cluster.setHostAddress( addr.getHostName( ) );
     Component.jetty.setHostAddress( addr.getHostName( ) );
-    //FIXME: mark walrus and storage as disabled to prevent walrus->registered, sc->unregistered to cause sc to bootstrap.
-    //FIXME: remove existing bootstrappers/configuration for disabled component to prevent init.
     HeartbeatType msg = ( HeartbeatType ) request.getMessage( );
     LOG.info( LogUtil.header( "Got heartbeat event: " + LogUtil.dumpObject( msg ) ) );
     for ( HeartbeatComponentType component : msg.getComponents( ) ) {
       LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
       System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
       Component.valueOf( component.getComponent( ) ).markLocal( );
+      //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+      initializedComponents.add( component.getComponent( ) );
+    }
+    //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+    if( !initializedComponents.contains( Component.storage.name( ) ) ) {
+      Component.storage.markDisabled( );
+    }
+    //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+    if( !initializedComponents.contains( Component.walrus.name( ) ) ) {
+      Component.walrus.markDisabled( );
     }
     System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
     System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
@@ -217,29 +166,32 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     try {
       foundDb = NetworkUtil.testReachability( addr.getHostName( ) );
       LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
-      Credentials.getEntityWrapper( );
       foundDb = true;
     } catch ( Throwable e ) {
       foundDb = false;
     }
     if ( foundDb ) {
-      ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK ) );
+      HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
+      ChannelFuture writeFuture = ctx.getChannel( ).write( response );
       writeFuture.addListener( ChannelFutureListener.CLOSE );
       initialized = true;
+      if ( this.channel != null ) {
+        this.channel.close( );
+      }
     } else {
-      ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_ACCEPTABLE ) );
+      HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_ACCEPTABLE );
+      ChannelFuture writeFuture = ctx.getChannel( ).write( response );
       writeFuture.addListener( ChannelFutureListener.CLOSE );
     }
   }
-
+  
   @Override
   public String getStageName( ) {
     return "heartbeat";
   }
-
+  
   @Override
   public void unrollStage( ChannelPipeline pipeline ) {
-    ChannelUtil.addPipelineMonitors( pipeline );
     pipeline.addLast( "hb-get-handler", new SimpleHeartbeatHandler( ) );
     pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
     try {
@@ -256,10 +208,10 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
     }
     pipeline.addLast( "heartbeat", new HeartbeatHandler( ) );
   }
-
+  
   @ChannelPipelineCoverage( "one" )
   public static class SimpleHeartbeatHandler extends SimpleChannelHandler {
-
+    
     @Override
     public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
       if ( e.getMessage( ) instanceof HttpRequest && HttpMethod.GET.equals( ( ( HttpRequest ) e.getMessage( ) ).getMethod( ) ) ) {
@@ -267,7 +219,8 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
         HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
         String resp = "";
         for ( Component c : Component.values( ) ) {
-          resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.name( ), c.isEnabled( ), c.isLocal( ), c.isInitialized( ) );
+          resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.name( ),
+                                 c.isEnabled( ), c.isLocal( ), c.isInitialized( ) );
         }
         ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
         response.setContent( buf );
@@ -279,14 +232,106 @@ public class HeartbeatHandler implements ChannelUpstreamHandler, ChannelDownstre
         ctx.sendUpstream( e );
       }
     }
-
+    
     @Override
     public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
       e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
       super.exceptionCaught( ctx, e );
     }
-
-
+    
   }
-
+  
+  @Override
+  public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
+    e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+    super.exceptionCaught( ctx, e );
+  }
+  
+  @Override
+  public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
+    Object message = ( ( MessageEvent ) e ).getMessage( );
+    if ( message instanceof MappingHttpRequest ) {
+      MappingHttpRequest request = ( ( MappingHttpRequest ) message );
+      if ( HttpMethod.GET.equals( request.getMethod( ) ) ) {
+        handleGet( ctx, request );
+      } else if ( !initialized ) {
+        handleInitialize( ctx, request );
+      } else if ( request.getMessage( ) instanceof HeartbeatType ) {
+        handleHeartbeat( request );
+      } else {
+        ChannelFuture writeFuture = ctx.getChannel( ).write(
+                                                             new DefaultHttpResponse( request.getProtocolVersion( ),
+                                                               HttpResponseStatus.NOT_ACCEPTABLE ) );
+        writeFuture.addListener( ChannelFutureListener.CLOSE );
+      }
+    } else {
+      super.messageReceived( ctx, e );
+    }
+  }
+  
+  private void handleGet( ChannelHandlerContext ctx, MappingHttpRequest request ) {
+    MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
+    String resp = "";
+    for ( Component c : Component.values( ) ) {
+      resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.name( ),
+                             c.isEnabled( ), c.isLocal( ), c.isInitialized( ) );
+    }
+    ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
+    response.setContent( buf );
+    response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
+    response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
+    ChannelFuture writeFuture = ctx.getChannel( ).write( response );
+    writeFuture.addListener( ChannelFutureListener.CLOSE );
+  }
+  
+  private void handleHeartbeat( MappingHttpRequest request ) throws URISyntaxException {
+    HeartbeatType hb = ( HeartbeatType ) request.getMessage( );
+    //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
+    List<String> registeredComponents = Lists.newArrayList( );
+    for ( HeartbeatComponentType component : hb.getComponents( ) ) {
+      if( !initializedComponents.contains( component.getComponent( ) ) ) {
+        System.exit(123);//HUP
+      }
+      registeredComponents.add( component.getComponent( ) );
+    }
+    if( !registeredComponents.containsAll( initializedComponents ) ) {
+      System.exit(123);//HUP
+    }
+    //FIXME: end.
+    for ( ComponentType startedComponent : hb.getStarted( ) ) {
+      Component c = Component.valueOf( startedComponent.getComponent( ) );
+      try {
+        if ( Component.walrus.equals( c ) ) {
+          ComponentConfiguration config = Configuration.getWalrusConfiguration( startedComponent.getName( ) );
+          Configuration.fireStartComponent( config );
+        }
+        if ( Component.storage.equals( c ) ) {
+          ComponentConfiguration config = Configuration.getStorageControllerConfiguration( startedComponent.getName( ) );
+          Configuration.fireStartComponent( config );
+        }
+      } catch ( Exception e1 ) {
+        LOG.debug( e1, e1 );
+      }
+    }
+    for ( ComponentType stoppedComponent : hb.getStopped( ) ) {
+      URI uri = new URI( stoppedComponent.getUri( ) );
+      Component c = Component.valueOf( stoppedComponent.getComponent( ) );
+      try {
+        if ( Component.walrus.equals( c ) ) {
+          Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
+        }
+        if ( Component.storage.equals( c ) ) {
+          Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
+        }
+      } catch ( Exception e1 ) {
+        LOG.debug( e1, e1 );
+      }
+    }
+  }
+  
+  @Override
+  public void writeComplete( ChannelHandlerContext ctx, WriteCompletionEvent e ) throws Exception {
+    super.writeComplete( ctx, e );
+  }
+  
 }

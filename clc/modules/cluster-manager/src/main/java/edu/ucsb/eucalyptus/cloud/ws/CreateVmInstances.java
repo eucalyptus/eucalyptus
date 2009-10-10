@@ -64,6 +64,7 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusProperties;
 
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
@@ -72,29 +73,40 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 
 public class CreateVmInstances {
   
-  public VmAllocationInfo allocate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
-  {
-    String reservationId = VmInstances.getId( vmAllocInfo.getReservationIndex(), 0 ).replaceAll( "i-", "r-" );
-    int i = 1; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
-    for ( ResourceToken token : vmAllocInfo.getAllocationTokens() ) {
-      for ( Integer index : token.getPrimaryNetwork( ).getIndexes( ) )
-      {
-        VmInstance vmInst = new VmInstance( reservationId,
-                                            i - 1,
-                                            VmInstances.getId( vmAllocInfo.getReservationIndex(), i++ ),
-                                            vmAllocInfo.getRequest().getUserId(),
-                                            token.getCluster(),
-                                            vmAllocInfo.getUserData(),
-                                            vmAllocInfo.getImageInfo(),
-                                            vmAllocInfo.getKeyInfo(),
-                                            vmAllocInfo.getVmTypeInfo(),
-                                            vmAllocInfo.getNetworks(),
-                                            index.toString( ) );
-        VmInstances.getInstance().register( vmInst );
-        token.getInstanceIds().add( vmInst.getInstanceId() );
+  public VmAllocationInfo allocate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
+    String reservationId = VmInstances.getId( vmAllocInfo.getReservationIndex( ), 0 ).replaceAll( "i-", "r-" );
+    int vmIndex = 1; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
+    for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
+      if( !EucalyptusProperties.disableNetworking ) {
+        for ( Integer networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
+          VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, networkIndex );
+          VmInstances.getInstance( ).register( vmInst );
+          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
+        }
+      } else {
+        for ( int i = 0; i < token.getAmount( ); i++ ) {
+          VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, -1 );
+          VmInstances.getInstance( ).register( vmInst );
+          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
+        }
       }
     }
     vmAllocInfo.setReservationId( reservationId );
     return vmAllocInfo;
+  }
+
+  private VmInstance getVmInstance( VmAllocationInfo vmAllocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
+    VmInstance vmInst = new VmInstance( reservationId,
+                                        index - 1,
+                                        VmInstances.getId( vmAllocInfo.getReservationIndex(), index ),
+                                        vmAllocInfo.getRequest().getUserId(),
+                                        token.getCluster(),
+                                        vmAllocInfo.getUserData(),
+                                        vmAllocInfo.getImageInfo(),
+                                        vmAllocInfo.getKeyInfo(),
+                                        vmAllocInfo.getVmTypeInfo(),
+                                        vmAllocInfo.getNetworks(),
+                                        networkIndex.toString( ) );
+    return vmInst;
   }
 }

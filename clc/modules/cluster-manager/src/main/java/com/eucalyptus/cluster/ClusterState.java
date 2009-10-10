@@ -69,10 +69,11 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
+
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
-import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public class ClusterState {

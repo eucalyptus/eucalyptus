@@ -141,10 +141,8 @@ int convert_dev_names(	char *localDev,
 			char *localDevReal,
 			char *localDevTag) 
 {
-    char *strptr;
-
     bzero(localDevReal, 32);
-    if ((strptr = strchr(localDev, '/')) != NULL) {
+    if (strchr(localDev, '/') != NULL) {
         sscanf(localDev, "/dev/%s", localDevReal);
     } else {
         snprintf(localDevReal, 32, "%s", localDev);
@@ -185,9 +183,7 @@ print_running_domains (void)
 virConnectPtr *
 check_hypervisor_conn()
 {
-	char *tmp;
-
-	if (nc_state.conn == NULL || (tmp = virConnectGetURI(nc_state.conn)) == NULL) {
+	if (nc_state.conn == NULL || virConnectGetURI(nc_state.conn) == NULL) {
 		nc_state.conn = virConnectOpen (nc_state.uri);
 		if (nc_state.conn == NULL) {
 			logprintfl (EUCAFATAL, "Failed to connect to %s\n", nc_state.uri);
@@ -310,6 +306,7 @@ refresh_instance_info(	struct nc_state_t *nc,
             if (!rc) {
 	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
 	      strncpy(instance->ncnet.publicIp, ip, 32);
+	      if (ip) free(ip);
             }
 	  }
         }
@@ -318,6 +315,7 @@ refresh_instance_info(	struct nc_state_t *nc,
             if (!rc) {
                 logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
                 strncpy(instance->ncnet.privateIp, ip, 32);
+	        if (ip) free(ip);
             }
         }
     }
@@ -485,11 +483,13 @@ void *startup_thread (void * arg)
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
+	if (brname) free(brname);
         return NULL;
     }
     if (instance->state!=BOOTING) {
         logprintfl (EUCAFATAL, "Startup of instance %s was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
+	if (brname) free(brname);
         return NULL;
     }
     
@@ -500,6 +500,7 @@ void *startup_thread (void * arg)
                               &(instance->params), 
                               instance->ncnet.privateMac, instance->ncnet.publicMac, 
                               brname, &xml);
+    if (brname) free(brname);
     if (xml) logprintfl (EUCADEBUG2, "libvirt XML config:\n%s\n", xml);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to create libvirt XML config for instance %s\n", instance->instanceId);
@@ -752,7 +753,7 @@ static int init (void)
 	bridge = getConfString(config, "VNET_BRIDGE");
 	tmp = getConfString(config, "VNET_MODE");
 	
-	vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL);
+	vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL, NULL);
 	if (hypervisor) free(hypervisor);
 	if (bridge) free(bridge);
 	if (tmp) free(tmp);

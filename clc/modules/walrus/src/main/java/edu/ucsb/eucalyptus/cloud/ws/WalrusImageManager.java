@@ -919,6 +919,7 @@ public class WalrusImageManager {
 								LOG.error(ex);
 								db2.rollback();
 								db.rollback();
+								semaphore.release();
 								throw new EucalyptusCloudException("monitor failure");
 							}
 						}
@@ -926,6 +927,7 @@ public class WalrusImageManager {
 							LOG.error("Tired of waiting to cache image: " + bucketName + "/" + objectKey + " giving up");
 							db2.rollback();
 							db.rollback();
+							semaphore.release();
 							throw new EucalyptusCloudException("caching failure");
 						}
 						//caching may have modified the db. repeat the query
@@ -939,6 +941,7 @@ public class WalrusImageManager {
 						} else {
 							db.rollback();
 							db2.rollback();
+							semaphore.release();
 							throw new NoSuchEntityException(objectKey);
 						}
 					}
@@ -952,6 +955,7 @@ public class WalrusImageManager {
 					storageManager.sendObject(request.getChannel(), httpResponse, bucketName, imageKey, unencryptedSize, null, 
 							DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
 							objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
+					semaphore.release();
 					db.commit();
 					db2.commit();
 					return reply;

@@ -65,27 +65,20 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
-import org.mule.api.MuleException;
-import org.mule.api.lifecycle.Startable;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.net.Addresses;
 import com.eucalyptus.net.util.AddressUtil;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.EucalyptusProperties;
 
-import edu.ucsb.eucalyptus.cloud.cluster.ClusterEnvelope;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.Address;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
+import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
@@ -112,12 +105,7 @@ public class AddressManager {
       throw new EucalyptusCloudException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
 
     String userId = request.getUserId( );
-    Address address = AddressUtil.nextAvailableAddress( userId );
-
-    try {
-      Addresses.getInstance().register( address );
-    } catch ( Exception e ) {
-    }
+    Address address = Addresses.getInstance( ).getNextAvailable( userId );
 
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply();
     reply.setPublicIp( address.getName() );
@@ -166,9 +154,11 @@ public class AddressManager {
     boolean isAdmin = request.isAdministrator();
     for ( Address address : Addresses.getInstance().listValues() ) {
       if( address.isAssigned( ) ) {
+        VmInstance vm = null;
         try {
-          VmInstances.getInstance().lookup( address.getInstanceId() );
-        } catch ( NoSuchElementException e ) {
+          vm = VmInstances.getInstance().lookup( address.getInstanceId() );
+        } catch ( NoSuchElementException e ) {}
+        if( vm == null || VmState.TERMINATED.equals( vm.getState( ) ) || VmState.BURIED.equals( vm.getState( ) ) ) {  
           AddressUtil.clearAddress( address );
         }
       }

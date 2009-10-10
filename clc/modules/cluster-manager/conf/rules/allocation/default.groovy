@@ -60,7 +60,7 @@
 *******************************************************************************/
 import edu.ucsb.eucalyptus.cloud.ResourceToken
 import com.eucalyptus.cluster.ClusterState
-import edu.ucsb.eucalyptus.cloud.cluster.NotEnoughResourcesAvailable
+import com.eucalyptus.util.NotEnoughResourcesAvailable
 import edu.ucsb.eucalyptus.cloud.cluster.Allocator
 import com.eucalyptus.cluster.ClusterNodeState
 

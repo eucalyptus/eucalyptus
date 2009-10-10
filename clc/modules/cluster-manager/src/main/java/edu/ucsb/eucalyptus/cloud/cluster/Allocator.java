@@ -68,6 +68,7 @@ import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import java.util.*;
 
 import com.eucalyptus.cluster.ClusterNodeState;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
 
 public interface Allocator {
 

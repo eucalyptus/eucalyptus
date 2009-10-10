@@ -484,6 +484,12 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   ruleLen = adb_configureNetworkType_sizeof_rules(cnt, env);
   done=0;
   destNameLast = strdup("EUCAFIRST");
+  if (!destNameLast) {
+    logprintf("ERROR: out of memory\n");
+    status = AXIS2_FALSE;
+    snprintf(statusMessage, 255, "ERROR");
+    return ret;
+  }
   
   for (j=0; j<ruleLen && !done; j++) {
     nr = adb_configureNetworkType_get_rules_at(cnt, env, j);

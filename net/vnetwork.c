@@ -82,7 +82,7 @@ permission notice:
 
 char *iptablesCache=NULL;
 
-void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp) {
+void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *cloudIp) {
   uint32_t nw=0, nm=0, unw=0, unm=0, dns=0, bc=0, rt=0, rc=0, slashnet=0, *ips=NULL, *nms=NULL;
   int vlan=0, numaddrs=1, len, i;
   char cmd[256];
@@ -101,12 +101,19 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     if (bridgedev) strncpy(vnetconfig->bridgedev, bridgedev, 32);
     if (daemon) strncpy(vnetconfig->dhcpdaemon, daemon, 1024);
     if (dhcpuser) strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
-    //    if (localIp) strncpy(vnetconfig->localIp, localIp, 32);
     if (localIp) {
       char *ipbuf=NULL;
       ipbuf = host2ip(localIp);
       if (ipbuf) {
 	vnetAddLocalIP(vnetconfig, dot2hex(ipbuf));
+	free(ipbuf);
+      }
+    }
+    if (cloudIp) {
+      char *ipbuf=NULL;
+      ipbuf = host2ip(cloudIp);
+      if (ipbuf) {
+	vnetconfig->cloudIp = dot2hex(ipbuf);
 	free(ipbuf);
       }
     }
@@ -178,11 +185,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	snprintf(cmd, 256, "-A POSTROUTING -d ! %s/%d -j MASQUERADE", network, slashnet);
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
-	snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
-	rc = system(cmd);
-	
-	snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination 169.254.169.254:8773", network, slashnet);
-	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+	rc = vnetSetMetadataRedirect(vnetconfig, network, slashnet);
 
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
@@ -215,6 +218,31 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
       }
     }
   }
+}
+
+int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet) {
+  char cmd[256];
+  int rc;
+
+  if (!vnetconfig || !network) {
+    logprintfl(EUCAERROR, "invalid parameters to vnetSetMetadataRedirect()\n");
+    return(1);
+  }
+
+  snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
+  rc = system(cmd);
+  
+  if (vnetconfig->cloudIp != 0) {
+    char *ipbuf;
+    ipbuf = hex2dot(vnetconfig->cloudIp);
+    snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination %s:8773", network, slashnet, ipbuf);
+    if (ipbuf) free(ipbuf);
+  } else {
+    snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination 169.254.169.254:8773", network, slashnet);
+  }
+  rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+
+  return(0);
 }
 
 int vnetInitTunnels(vnetConfig *vnetconfig) {
@@ -764,7 +792,7 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
     outmac[0] = '\0';
     rc = vnetGetNextHost(vnetconfig, outmac, outprivip, 0, -1);
     if (!rc) {
-      snprintf(outpubip, strlen(outprivip), "%s", outprivip);
+      snprintf(outpubip, strlen(outprivip)+1, "%s", outprivip);
       ret = 0;
     }
   } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {

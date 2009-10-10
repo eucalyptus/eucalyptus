@@ -76,7 +76,7 @@ permission notice:
 #include "misc.h"
 #include "walrus.h"
 
-#define TOTAL_RETRIES 5 /* download is retried in case of connection problems */
+#define TOTAL_RETRIES 10 /* download is retried in case of connection problems */
 #define FIRST_TIMEOUT 4 /* in seconds, goes in powers of two afterwards */
 #define CHUNK 262144 /* buffer size for decompression operations */
 #define BUFSIZE 4096 /* should be big enough for CERT and the signature */
@@ -146,6 +146,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	curl = curl_easy_init ();
 	if (curl==NULL) {
 		logprintfl (EUCAERROR, "walrus_request(): could not initialize libcurl\n");
+		fclose(fp);
 		return code;
 	}
 
@@ -160,6 +161,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         /* TODO: HEAD isn't very useful atm since we don't look at headers */
         curl_easy_setopt (curl, CURLOPT_NOBODY, 1L);
     } else {
+	fclose(fp);
         logprintfl (EUCAERROR, "walrus_request(): invalid HTTP verb %s\n", verb);
         return ERROR; /* TODO: dealloc structs before returning! */
     }
@@ -187,7 +189,10 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 
 	time_t t = time(NULL);
 	char * date_str = asctime(localtime(&t)); /* points to a static area */
-	if (date_str==NULL) return ERROR;
+	if (date_str==NULL) {
+	       fclose(fp);
+       	       return ERROR;
+	}
 	assert (strlen(date_str)+7<=STRSIZE);
 	date_str [strlen(date_str)-1] = '\0'; /* trim off the newline */
 	char date_hdr [STRSIZE];
@@ -195,17 +200,24 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	headers = curl_slist_append (headers, date_hdr);
 
 	char * cert_str = euca_get_cert (0); /* read the cloud-wide cert */
-	if (cert_str==NULL) return ERROR;
+	if (cert_str==NULL) {
+	       fclose(fp);
+       	       return ERROR;
+	}
 	char * cert64_str = base64_enc ((unsigned char *)cert_str, strlen(cert_str));
 	assert (strlen(cert64_str)+11<=BUFSIZE);
 	char cert_hdr [BUFSIZE];
 	snprintf (cert_hdr, BUFSIZE, "EucaCert: %s", cert64_str);
     logprintfl (EUCADEBUG2, "walrus_request(): base64 certificate, %s\n", get_string_stats(cert64_str));
 	headers = curl_slist_append (headers, cert_hdr);
+	free (cert64_str);
 	free (cert_str);
 
 	char * sig_str = euca_sign_url (verb, date_str, url_path); /* create Walrus-compliant sig */
-	if (sig_str==NULL) return ERROR;
+	if (sig_str==NULL) {
+	       fclose(fp);
+       	       return ERROR;
+	}
 	assert (strlen(sig_str)+16<=BUFSIZE);
 	char sig_hdr [BUFSIZE];
 	snprintf (sig_hdr, BUFSIZE, "EucaSignature: %s", sig_str);
@@ -217,7 +229,6 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     } else {
         logprintfl (EUCADEBUG, "walrus_request(): writing %s output to %s\n", verb, outfile);
 	}
-
     int retries = TOTAL_RETRIES;
     int timeout = FIRST_TIMEOUT;
     do {
@@ -262,8 +273,6 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
             retries--;
 
         } else {
-            retries = 0; // do not retry if we go a proper HTTP response
-
             long httpcode;
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpcode);
             /* TODO: pull out response message, too */
@@ -272,10 +281,14 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
             case 200L: /* all good */
                 logprintfl (EUCAINFO, "walrus_request(): saved image in %s\n", outfile);
                 code = OK;
+		retries = 0;
                 break;
-                
+	    case 408L: /* timeout, retry */
+	      logprintfl (EUCAWARN, "walrus_request(): server responded with HTTP code %ld (timeout), retrying\n", httpcode);
+	      logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
+	      break;
             default: /* some kind of error */
-                logprintfl (EUCAERROR, "walrus_request(): server responded with HTTP code %ld\n", httpcode);
+                logprintfl (EUCAERROR, "walrus_request(): server responded with HTTP code %ld, retrying\n", httpcode);
                 logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
             }
         }
@@ -287,7 +300,6 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         remove (outfile);
     }
 
-	free (cert64_str);
 	free (sig_str);
 	curl_slist_free_all (headers);
 	curl_easy_cleanup (curl);
