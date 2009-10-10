@@ -39,19 +39,27 @@ package edu.ucsb.eucalyptus.msgs
 public class VMwareBrokerRequestType extends EucalyptusMessage {
 	String nodeName;
 
+  	@Override
 	public String toString() {
 		toString("");
 	}
+
+  	@Override
     public String toString(String msg) {
-    	return "VMwareBrokerRequest {" 
+    	return "VMwareBrokerRequest {{" 
     	+ msg 
     	+ " userId=" + getUserId() 
-    	+ " correlationId=" + getCorrelationId() + "}";
+    	+ " correlationId=" + getCorrelationId() + "}}";
     }
 }
 
 public class VMwareBrokerResponseType extends EucalyptusMessage {
   	def VMwareBrokerResponseType() {}
+
+  	@Override
+  	public void setStatusMessage (String msg) {
+  		// TODO: don't suppress the message once CC can accept statusMessage 
+  	}
 }
 
 // fields used by {Run|Describe}Instance
@@ -137,8 +145,9 @@ public class EucalyptusNCNcDescribeResourceType extends VMwareBrokerRequestType 
     String resourceType;
     def EucalyptusNCNcDescribeResourceType() {}
 
+  	@Override
     public String toString() {
-    	return super.toString(getClass().getSimpleName() + " resourceType=" + getResourceType());
+    	//return super.toString(getClass().getSimpleName() + " resourceType=" + getResourceType());
     	return ">>>>>" + getClass().getSimpleName() + " resourceType=" + getResourceType();
 
     }
@@ -281,6 +290,7 @@ public class EucalyptusNCNcDetachVolumeResponseType extends VMwareBrokerResponse
 public class EucalyptusNCNcPowerDownType extends VMwareBrokerRequestType {
     def EucalyptusNCNcPowerDownType() {}
 
+  	@Override
     public String toString() {
     	return super.toString(getClass().getSimpleName());
     }
