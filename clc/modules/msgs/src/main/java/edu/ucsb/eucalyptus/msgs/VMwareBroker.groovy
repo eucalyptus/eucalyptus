@@ -131,21 +131,21 @@ public class InstanceType extends EucalyptusData {
 	String serviceTag;
 }
 
-private String simplifyClassName ()
-{
-	String name = getClass().getSimpleName();
-	if (name.startsWith("EucalyptusNCNc") && name.endsWith("Type")) {
-		name = name.substring(14, name.length()-5);
-	}
-	return name;
-}
-
 // DescribeResource
 
 public class EucalyptusNCNcDescribeResourceType extends VMwareBrokerRequestType {		
     String resourceType;
     def EucalyptusNCNcDescribeResourceType() {}
 
+    private String simplifyClassName ()
+    {
+    	String name = getClass().getSimpleName();
+    	if (name.startsWith("EucalyptusNCNc") && name.endsWith("Type")) {
+    		name = name.substring(14, name.length()-5);
+    	}
+    	return name;
+    }
+    
   	@Override
     public String toString() {
     	//return super.toString( + " resourceType=" + getResourceType());
