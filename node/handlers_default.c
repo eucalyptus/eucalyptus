@@ -320,6 +320,7 @@ doStartNetwork(	struct nc_state_t *nc,
 		logprintfl (EUCAINFO, "StartNetwork(): SUCCESS return from vnetStartNetwork %d\n", rc);
 	}
 	logprintfl (EUCAINFO, "StartNetwork(): done\n");
+	if (brname) free(brname);
 
 	return (ret);
 }

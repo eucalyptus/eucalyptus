@@ -306,6 +306,7 @@ refresh_instance_info(	struct nc_state_t *nc,
             if (!rc) {
 	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
 	      strncpy(instance->ncnet.publicIp, ip, 32);
+	      if (ip) free(ip);
             }
 	  }
         }
@@ -314,6 +315,7 @@ refresh_instance_info(	struct nc_state_t *nc,
             if (!rc) {
                 logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
                 strncpy(instance->ncnet.privateIp, ip, 32);
+	        if (ip) free(ip);
             }
         }
     }
@@ -481,11 +483,13 @@ void *startup_thread (void * arg)
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
+	if (brname) free(brname);
         return NULL;
     }
     if (instance->state!=BOOTING) {
         logprintfl (EUCAFATAL, "Startup of instance %s was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
+	if (brname) free(brname);
         return NULL;
     }
     
@@ -496,6 +500,7 @@ void *startup_thread (void * arg)
                               &(instance->params), 
                               instance->ncnet.privateMac, instance->ncnet.publicMac, 
                               brname, &xml);
+    if (brname) free(brname);
     if (xml) logprintfl (EUCADEBUG2, "libvirt XML config:\n%s\n", xml);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to create libvirt XML config for instance %s\n", instance->instanceId);

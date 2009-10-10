@@ -643,6 +643,7 @@ int ensure_path_exists (const char * path)
                 printf ("trying to create path %s\n", path_copy);
                 if ( mkdir (path_copy, mode) == -1) {
                     printf ("error: failed to create path %s\n", path_copy);
+		    if (path_copy) free(path_copy);
                     return errno;
                 }
             }
@@ -1053,12 +1054,14 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
 int scStoreStringToInstanceFile (const char *userId, const char *instanceId, const char * file, const char * data)
 {
     FILE * fp;
+    int ret = ERROR;
 	char path [BUFSIZE];
 	snprintf (path, BUFSIZE, "%s/%s/%s/%s", sc_instance_path, userId, instanceId, file);
     if ( (fp = fopen (path, "w")) != NULL ) {
-        if ( fputs (data, fp) == EOF ) return ERROR;
+        if ( fputs (data, fp) != EOF ) {
+           ret = OK;
+	}
         fclose (fp);
-        return OK;
     }
-    return ERROR;
+    return ret;
 }

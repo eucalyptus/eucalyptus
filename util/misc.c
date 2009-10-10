@@ -87,7 +87,9 @@ int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
   struct stat statbuf;
 
   for (i=0; i<LASTHELPER; i++) {
-    path = strdup(getenv("PATH"));
+    tok = getenv("PATH");
+    if (!tok) return (1);
+    path = strdup(tok);
     if (!path) {
       return(1);
     }
@@ -113,6 +115,7 @@ int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
     }
     if (!done) {
       logprintfl(EUCAERROR, "cannot find helper '%s' in your path\n", helpers[i]);
+      if (path) free(path);
       return(1);
     }
 
