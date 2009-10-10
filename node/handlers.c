@@ -141,10 +141,8 @@ int convert_dev_names(	char *localDev,
 			char *localDevReal,
 			char *localDevTag) 
 {
-    char *strptr;
-
     bzero(localDevReal, 32);
-    if ((strptr = strchr(localDev, '/')) != NULL) {
+    if (strchr(localDev, '/') != NULL) {
         sscanf(localDev, "/dev/%s", localDevReal);
     } else {
         snprintf(localDevReal, 32, "%s", localDev);
@@ -185,9 +183,7 @@ print_running_domains (void)
 virConnectPtr *
 check_hypervisor_conn()
 {
-	char *tmp;
-
-	if (nc_state.conn == NULL || (tmp = virConnectGetURI(nc_state.conn)) == NULL) {
+	if (nc_state.conn == NULL || virConnectGetURI(nc_state.conn) == NULL) {
 		nc_state.conn = virConnectOpen (nc_state.uri);
 		if (nc_state.conn == NULL) {
 			logprintfl (EUCAFATAL, "Failed to connect to %s\n", nc_state.uri);

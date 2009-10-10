@@ -271,6 +271,10 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 
   if (getuid() != 0) {
     output = strdup("NOT SUPPORTED");
+    if (!output) {
+      fprintf(stderr, "strdup failed (out of memory?)\n");
+      return 1;
+    }
     *consoleOutput = base64_enc((unsigned char *)output, strlen(output));    
     if (output) free(output);
     return(0);
