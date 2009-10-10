@@ -137,6 +137,7 @@ public class EucalyptusNCNcDescribeResourceType extends VMwareBrokerRequestType 
     String resourceType;
     def EucalyptusNCNcDescribeResourceType() {}
 
+    /*
     private String simplifyClassName ()
     {
     	String name = getClass().getSimpleName();
@@ -145,11 +146,12 @@ public class EucalyptusNCNcDescribeResourceType extends VMwareBrokerRequestType 
     	}
     	return name;
     }
+    */
     
   	@Override
     public String toString() {
     	//return super.toString( + " resourceType=" + getResourceType());
-    	return ">>>>>" + simplifyClassName() + " resourceType=" + getResourceType();
+    	return ">>>>>" + getClass().getSimpleName() + " resourceType=" + getResourceType();
 
     }
 }
