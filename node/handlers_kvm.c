@@ -100,9 +100,10 @@ static int doInitialize (struct nc_state_t *nc)
 #define GET_VALUE(name,var) \
 	if (get_value (s, name, &var)) { \
 		logprintfl (EUCAFATAL, "error: did not find %s in output from %s\n", name, nc->get_info_cmd_path); \
-		free (s); \
+		if (s) free (s); \
 		return ERROR_FATAL; \
 	}
+	if (s) free(s);
 
 	GET_VALUE("nr_cores", nc->cores_max);
 	GET_VALUE("total_memory", nc->mem_max);

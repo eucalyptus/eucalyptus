@@ -371,9 +371,13 @@ char * replace_string (char ** stringp, char * source, char * destination )
 /* returns 1 if there was match and 0 otherwise */
 int sscanf_lines (char * lines, char * format, void * varp) 
 {
-    char * copy = strdup(lines);
+    char * copy;
     char * start, * end;
     int found = 0;
+
+    if (lines == NULL) return 0;
+    copy = strdup(lines);
+    if (!copy) return 0;
 
     for (start = copy; start && *start!='\0' && !found; start = end+1 ) {
         int newline = 0;
@@ -391,6 +395,7 @@ int sscanf_lines (char * lines, char * format, void * varp)
             end--; /* so that start=='\0' */
         }
     }
+    if (copy) free(copy);
         
     return found;
 }
