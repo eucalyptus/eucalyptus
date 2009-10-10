@@ -2227,12 +2227,14 @@ int init_config(void) {
     
     if (initFail) {
       logprintfl(EUCAFATAL, "bad network parameters, must fix before system will work\n");
+      if (cloudIp) free(cloudIp);
       return(1);
     }
     
     sem_wait(vnetConfigLock);
     
     vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubRouter, daemon, dhcpuser, NULL, localIp, cloudIp);
+    if (cloudIp) free(cloudIp);
     
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 

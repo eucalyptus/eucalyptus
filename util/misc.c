@@ -371,9 +371,13 @@ char * replace_string (char ** stringp, char * source, char * destination )
 /* returns 1 if there was match and 0 otherwise */
 int sscanf_lines (char * lines, char * format, void * varp) 
 {
-    char * copy = strdup(lines);
+    char * copy;
     char * start, * end;
     int found = 0;
+
+    if (!lines) return found;
+    copy = strdup(lines);
+    if (!copy) return found;
 
     for (start = copy; start && *start!='\0' && !found; start = end+1 ) {
         int newline = 0;
@@ -391,6 +395,7 @@ int sscanf_lines (char * lines, char * format, void * varp)
             end--; /* so that start=='\0' */
         }
     }
+    free(copy);
         
     return found;
 }
@@ -1030,6 +1035,7 @@ long long dir_size (const char * path)
     }
     if (stat (path, &mystat) < 0) {
         logprintfl (EUCAWARN, "warning: could not stat %s\n", path);
+	closedir(dir);
         return -1;
     }
     size += (long long)mystat.st_size;
