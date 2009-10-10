@@ -381,7 +381,7 @@ static long long init_cache (const char * cache_path)
 
         if (stat (image_path, &mystat) < 0) {
             logprintfl (EUCAWARN, "warning: could not stat %s\n", image_path);
-	    close_dir(image_dir);
+	    closedir(image_dir);
             continue;
         }
         image_size += mystat.st_size;
