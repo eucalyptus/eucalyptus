@@ -337,7 +337,7 @@ char * replace_string (char ** stringp, char * source, char * destination )
     
     buf = malloc(sizeof(char) * maxlen);
     new_string = malloc(sizeof(char) * maxlen); /* TODO: this has to be dynamic */
-    if (!buf !! !new_string) {
+    if (!buf || !new_string) {
         fprintf(stderr, "replace_string: out of memory\n");
 	if (buf) free(buf);
 	if (new_string) free(new_string);
@@ -375,9 +375,9 @@ int sscanf_lines (char * lines, char * format, void * varp)
     char * start, * end;
     int found = 0;
 
-    if (lines == NULL) return 0;
+    if (!lines) return found;
     copy = strdup(lines);
-    if (!copy) return 0;
+    if (!copy) return found;
 
     for (start = copy; start && *start!='\0' && !found; start = end+1 ) {
         int newline = 0;
@@ -395,7 +395,11 @@ int sscanf_lines (char * lines, char * format, void * varp)
             end--; /* so that start=='\0' */
         }
     }
+<<<<<<< TREE
     if (copy) free(copy);
+=======
+    free(copy);
+>>>>>>> MERGE-SOURCE
         
     return found;
 }
@@ -1035,6 +1039,7 @@ long long dir_size (const char * path)
     }
     if (stat (path, &mystat) < 0) {
         logprintfl (EUCAWARN, "warning: could not stat %s\n", path);
+	closedir(dir);
         return -1;
     }
     size += (long long)mystat.st_size;

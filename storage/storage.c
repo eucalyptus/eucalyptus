@@ -110,6 +110,10 @@ int scInitConfig (void)
     char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
     if (!home) {
         home = strdup(""); /* root by default */
+	if (!home) {
+           logprintfl (EUCAERROR, "out of memory\n");
+           return 1;
+	}
     }
     
     snprintf(config, BUFSIZE, EUCALYPTUS_CONF_LOCATION, home);
@@ -137,15 +141,18 @@ int scInitConfig (void)
     /* we need to have valid path */
     if (check_directory(sc_instance_path)) {
 	    logprintfl (EUCAERROR, "ERROR: INSTANCE_PATH (%s) does not exist!\n", sc_instance_path);
+	    free(home);
 	    return(1);
     }
 
     if (euca_init_cert ()) {
         logprintfl (EUCAFATAL, "failed to find cryptographic certificates\n");
+        free(home);
         return 1;
     }
 
     snprintf (disk_convert_command_path, BUFSIZE, EUCALYPTUS_DISK_CONVERT, home, home);
+    free(home);
 
     scConfigInit=1;
     return(0);
@@ -182,6 +189,7 @@ ncInstance * scRecoverInstanceInfo (const char *instanceId)
      * directory (we're assuming that instanceIds are unique in the system) */
     if ((insts_dir=opendir(sc_instance_path))==NULL) {
 	    logprintfl(EUCADEBUG, "scRecoverInstanceInfo: failed to open %s!\n", sc_instance_path);
+	    free(instance);
 	    return NULL;
     }
     while ((dir_entry=readdir(insts_dir))!=NULL) {
@@ -194,8 +202,10 @@ ncInstance * scRecoverInstanceInfo (const char *instanceId)
             break; /* we got it! */
         }
     }
+    closedir(insts_dir);
     if (userId==NULL) {
 	    logprintfl(EUCADEBUG, "scRecoverInstanceInfo: didn't find instance %s!\n", instanceId);
+	    free(instance);
 	    return NULL;
     }
 
@@ -371,6 +381,7 @@ static long long init_cache (const char * cache_path)
 
         if (stat (image_path, &mystat) < 0) {
             logprintfl (EUCAWARN, "warning: could not stat %s\n", image_path);
+	    closedir(image_dir);
             continue;
         }
         image_size += mystat.st_size;
@@ -414,6 +425,7 @@ static long long init_cache (const char * cache_path)
                 strncpy (X_digest, name, BUFSIZE);
             }
         }
+	closedir(image_dir);
 
         if (image_files > 0) { /* ignore empty directories */
             if (image_files != 2 || strncmp (X, X_digest, BUFSIZE) != 0 ) {

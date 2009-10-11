@@ -187,6 +187,11 @@ doRunInstance (	struct nc_state_t *nc,
 
     /* do the potentially long tasks in a thread */
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
+    if (!attr) {
+        free_instance (&instance);
+        logprintfl (EUCAFATAL, "Error: out of memory\n");
+        return 1;
+    }
     pthread_attr_init(attr);
     pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
 
@@ -197,9 +202,11 @@ doRunInstance (	struct nc_state_t *nc,
         remove_instance (&global_instances, instance);
         sem_v (inst_sem);
         free_instance (&instance);
+	free(attr);
         return 1;
     }
     pthread_attr_destroy(attr);
+    if (attr) free(attr);
 
     * outInst = instance;
     return 0;
