@@ -1434,6 +1434,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  while(rc && ((time(NULL) - startRun) < config->wakeThresh)){
 	    rc = ncStartNetworkStub(ncs, ccMeta, NULL, 0, 0, vlan, NULL);
 	    rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, mac, mac, vlan, userData, launchIndex, netNames, netNamesLen, &outInst);
+            sleep (30);
 	  }
 	  if (!rc) {
 	    //rc = write(filedes[1], outInst, sizeof(ncInstance));

@@ -46,7 +46,17 @@ public class VMwareBrokerRequestType extends EucalyptusMessage {
 
   	@Override
     public String toString(String msg) {
-    	return "VMwareBrokerRequest [" + msg + " userId=" + getUserId() + " correlationId=" + getCorrelationId() + "]";
+    	return "VMwareBrokerRequest {" + msg + " userId=" + getUserId() + " correlationId=" + getCorrelationId() + " }";
+    }
+
+  	// extract the useful name from the class, for nicer logging
+    private String simplifyClassName ()
+    {
+    	String name = getClass().getSimpleName();
+    	if (name.startsWith("EucalyptusNCNc") && name.endsWith("Type")) {
+    		name = name.substring(14, name.length()-5);
+    	}
+    	return name;
     }
 }
 
@@ -136,22 +146,11 @@ public class InstanceType extends EucalyptusData {
 public class EucalyptusNCNcDescribeResourceType extends VMwareBrokerRequestType {		
     String resourceType;
     def EucalyptusNCNcDescribeResourceType() {}
-
-    /*
-    private String simplifyClassName ()
-    {
-    	String name = getClass().getSimpleName();
-    	if (name.startsWith("EucalyptusNCNc") && name.endsWith("Type")) {
-    		name = name.substring(14, name.length()-5);
-    	}
-    	return name;
-    }
-    */
-    
+   
   	@Override
     public String toString() {
-    	//return super.toString( + " resourceType=" + getResourceType());
-    	return "}}}}}" + getClass().getSimpleName() + " resourceType=" + getResourceType();
+    	return super.toString(simplifyClassName() + " resourceType=" + getResourceType());
+    	//return "}}}}} " + simplifyClassName() + " resourceType=" + getResourceType();
 
     }
 }
@@ -185,6 +184,13 @@ public class EucalyptusNCNcGetConsoleOutputResponseType extends VMwareBrokerResp
 public class EucalyptusNCNcDescribeInstancesType extends VMwareBrokerRequestType {
     ArrayList<String> instanceIds = new ArrayList<String>();
     def EucalyptusNCNcDescribeInstancesType() {}
+
+  	@Override
+    public String toString() {
+    	return super.toString(simplifyClassName() + " instances={" + instanceIds + "}");
+    	//return "}}}}} " + simplifyClassName() + " resourceType=" + getResourceType();
+
+    }
 }
 
 public class EucalyptusNCNcDescribeInstancesResponseType extends VMwareBrokerResponseType {
