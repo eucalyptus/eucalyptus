@@ -50,9 +50,9 @@ public class VMwareBrokerRequestType extends EucalyptusMessage {
     }
 
   	// extract the useful name from the class, for nicer logging
-    private String simplifyClassName ()
+    public String simplifyClassName (Class c)
     {
-    	String name = getClass().getSimpleName();
+    	String name = c.getSimpleName();
     	if (name.startsWith("EucalyptusNCNc") && name.endsWith("Type")) {
     		name = name.substring(14, name.length()-5);
     	}
@@ -149,7 +149,7 @@ public class EucalyptusNCNcDescribeResourceType extends VMwareBrokerRequestType 
    
   	@Override
     public String toString() {
-    	return super.toString(simplifyClassName() + " resourceType=" + getResourceType());
+    	return super.toString("DescribeResource: resourceType=" + getResourceType());
     	//return "}}}}} " + simplifyClassName() + " resourceType=" + getResourceType();
 
     }
@@ -187,7 +187,7 @@ public class EucalyptusNCNcDescribeInstancesType extends VMwareBrokerRequestType
 
   	@Override
     public String toString() {
-    	return super.toString(simplifyClassName() + " instances={" + instanceIds + "}");
+    	return super.toString("DescribeInstances instances={" + instanceIds + "}");
     	//return "}}}}} " + simplifyClassName() + " resourceType=" + getResourceType();
 
     }
