@@ -555,6 +555,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
       done++;
     }
   }
+  if (destNameLast) free(destNameLast);
   
   if (done) {
     logprintf("ERROR: doConfigureNetwork() returned fail %d\n", rc);

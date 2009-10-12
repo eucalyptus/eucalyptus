@@ -602,9 +602,16 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   print_instanceCache();
 
   *outServiceTags = malloc(sizeof(char *) * config->numResources);
-  *outServiceTagsLen = config->numResources;
-  for (i=0; i<config->numResources; i++) {
-    (*outServiceTags)[i] = strdup(config->resourcePool[i].ncURL);
+  if (*outServiceTags == NULL) {
+      *outServiceTagsLen = 0;
+       logprintfl(EUCAWARN,"cannot allocate outServiceTags\n");
+  } else {
+      *outServiceTagsLen = config->numResources;
+      for (i=0; i<config->numResources; i++) {
+        (*outServiceTags)[i] = strdup(config->resourcePool[i].ncURL);
+        if ((*outServiceTags)[i] == NULL) 
+           logprintfl(EUCAWARN,"not enough memory fot outServiceTags[%d]\n", i);
+      }
   }
   
   *outTypesMax = NULL;
@@ -617,6 +624,13 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
       if (*outTypesAvail) free(*outTypesAvail);
       if (*outTypesMax) free(*outTypesMax);
       *outTypesLen = 0;
+      if (*outServiceTags) {
+         for (i=0; i < config->numResources; i++) 
+            if ((*outServiceTags)[i]) free((*outServiceTags)[i]);
+         free(*outServiceTags);
+      }
+      *outServiceTags = NULL;
+      *outServiceTagsLen = 0;
       return(1);
   }
   bzero(*outTypesMax, sizeof(int) * vmLen);
@@ -630,6 +644,13 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
       if (*outTypesAvail) free(*outTypesAvail);
       if (*outTypesMax) free(*outTypesMax);
       *outTypesLen = 0;
+      if (*outServiceTags) {
+         for (i=0; i < config->numResources; i++) 
+            if ((*outServiceTags)[i]) free((*outServiceTags)[i]);
+         free(*outServiceTags);
+      }
+      *outServiceTags = NULL;
+      *outServiceTagsLen = 0;
       return(1);
     }
   }
@@ -976,6 +997,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 		  rc = mac2ip(vnetconfig, myInstance->ccnet.publicMac, &ip);
 		  if (!rc) {
 		    strncpy(myInstance->ccnet.publicIp, ip, 24);
+		    free(ip);
 		  }
 		}
 	      }
@@ -983,6 +1005,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 		rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
 		if (!rc) {
 		  strncpy(myInstance->ccnet.privateIp, ip, 24);
+		  free(ip);
 		}
 	      }
 	    }
@@ -2101,7 +2124,7 @@ int init_config(void) {
 	sem_wait(configLock);
 	config->numResources = numHosts;
 	memcpy(config->resourcePool, res, sizeof(resource) * numHosts);
-	if (res) free(res);
+	free(res);
 	sem_post(configLock);
       }
     }
@@ -2144,7 +2167,6 @@ int init_config(void) {
     int initFail=0, len;
     
     // DHCP Daemon Configuration Params
-    daemon = NULL;
     daemon = getConfString(configFile, "VNET_DHCPDAEMON");
     if (!daemon) {
       logprintfl(EUCAWARN,"no VNET_DHCPDAEMON defined in config, using default\n");
@@ -2165,7 +2187,6 @@ int init_config(void) {
     {
       int usednew=0;
       
-      pubInterface = NULL;
       pubInterface = getConfString(configFile, "VNET_PUBINTERFACE");
       if (!pubInterface) {
 	logprintfl(EUCAWARN,"VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n");
@@ -2249,6 +2270,11 @@ int init_config(void) {
     if (pubDNS) free(pubDNS);
     if (pubRouter) free(pubRouter);
     if (numaddrs) free(numaddrs);
+    if (pubmode) free(pubmode);
+    if (dhcpuser) free(dhcpuser);
+    if (daemon) free(daemon);
+    if (privInterface) free(privInterface);
+    if (pubInterface) free(pubInterface);
     
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 
