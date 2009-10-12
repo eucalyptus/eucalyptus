@@ -229,7 +229,7 @@ int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet)
     return(1);
   }
 
-  snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
+  snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 scope link dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
   rc = system(cmd);
   
   if (vnetconfig->cloudIp != 0) {

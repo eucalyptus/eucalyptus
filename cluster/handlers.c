@@ -2418,7 +2418,7 @@ int restoreNetworkState() {
   // restore ip addresses                                                                                      
   logprintfl(EUCAINFO, "restarting ips\n");
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-    snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254/32 dev %s", config->eucahome, vnetconfig->privInterface);
+    snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254/32 scope link dev %s", config->eucahome, vnetconfig->privInterface);
     logprintfl(EUCAINFO,"running cmd %s\n", cmd);
     rc = system(cmd);
     if (rc) {
