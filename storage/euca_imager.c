@@ -39,9 +39,13 @@ static void usage (const char * msg)
 
 static char * key = NULL;
 
-static void err (const char * msg)
+static void err (const char *format, ...)
 {
-    fprintf (stderr, "error: %s\n", msg);
+    va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, "error: " format "\n", ap);
+    fflush(stderr);
+    va_end(ap);
     if (key) free (key);
     img_cleanup ();
     exit (1);
@@ -164,7 +168,7 @@ int main (int argc, char * argv[])
         }
         key = fp2str (fp);
         if (key==NULL) {
-            err ("failed to read the key file");
+            err ("failed to read the key file ");
         }
     }
     

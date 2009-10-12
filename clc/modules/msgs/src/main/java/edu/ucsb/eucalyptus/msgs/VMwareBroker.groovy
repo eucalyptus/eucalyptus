@@ -46,7 +46,7 @@ public class VMwareBrokerRequestType extends EucalyptusMessage {
 
   	@Override
     public String toString(String msg) {
-  		String paddedMsg = (msg.length()>0 && !msg.endsWith(" "))?(msg+" "):(msg);
+  		String paddedMsg = (msg.size()>0 && !msg.endsWith(" "))?(msg+" "):(msg);
     	return "VMwareBrokerRequest {" + msg + "userId=" + getUserId() + " nodeName=" + this.nodeName + "}";
     }
 }
