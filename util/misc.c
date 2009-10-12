@@ -395,11 +395,7 @@ int sscanf_lines (char * lines, char * format, void * varp)
             end--; /* so that start=='\0' */
         }
     }
-<<<<<<< TREE
-    if (copy) free(copy);
-=======
     free(copy);
->>>>>>> MERGE-SOURCE
         
     return found;
 }
