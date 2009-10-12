@@ -539,6 +539,7 @@ get_conf_var(	const char *path,
 		*ptr = '\0';
 		*value = strdup(ret);
 		if (*value == NULL) {
+		  fclose(f);
 		  free(buf);
 		  return -1;
 		}
@@ -576,8 +577,12 @@ from_var_to_char_list(	const char *v) {
 		return NULL;
 	}
 	tmp = malloc(sizeof(char*));
+	if (tmp == NULL) {
+		return NULL;
+	}
 	value = strdup(v);
-	if (tmp == NULL || value == NULL) {
+	if (value == NULL) {
+		free(tmp);
 		return NULL;
 	}
 	tmp[0] = NULL;
@@ -951,6 +956,10 @@ int cat (const char * file_name)
 	char buf [BUFSIZE];
 	
 	int fd = open (file_name, O_RDONLY);
+	if (fd == -1) {
+		// we should print some error
+		return put;
+	}
 	while ( ( got = read (fd, buf, BUFSIZE)) > 0) {
 		put += write (1, buf, got);
 	}

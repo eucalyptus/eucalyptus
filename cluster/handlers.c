@@ -1778,7 +1778,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
       
       sem_post(vnetConfigLock);
       
-      if (myInstance) free(myInstance);
+      free(myInstance);
     } else {
       start = 0;
       stop = config->numResources;
@@ -2205,7 +2205,6 @@ int init_config(void) {
       if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS || !pubmacmap) {
 	logprintfl(EUCAFATAL,"in 'STATIC' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, VNET_DNS, and VNET_MACMAP'\n");
 	initFail = 1;
-      } else {
       }
     } else if (!strcmp(pubmode, "MANAGED") || !strcmp(pubmode, "MANAGED-NOVLAN")) {
       numaddrs = getConfString(configFile, "VNET_ADDRSPERNET");
@@ -2228,6 +2227,15 @@ int init_config(void) {
     if (initFail) {
       logprintfl(EUCAFATAL, "bad network parameters, must fix before system will work\n");
       if (cloudIp) free(cloudIp);
+      if (pubSubnet) free(pubSubnet);
+      if (pubSubnetMask) free(pubSubnetMask);
+      if (pubBroadcastAddress) free(pubBroadcastAddress);
+      if (pubRouter) free(pubRouter);
+      if (pubDNS) free(pubDNS);
+      if (pubmacmap) free(pubmacmap);
+      if (numaddrs) free(numaddrs);
+      if (pubips) free(pubips);
+      if (localIp) free(localIp);
       return(1);
     }
     
@@ -2235,6 +2243,12 @@ int init_config(void) {
     
     vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubRouter, daemon, dhcpuser, NULL, localIp, cloudIp);
     if (cloudIp) free(cloudIp);
+    if (pubSubnet) free(pubSubnet);
+    if (pubSubnetMask) free(pubSubnetMask);
+    if (pubBroadcastAddress) free(pubBroadcastAddress);
+    if (pubDNS) free(pubDNS);
+    if (pubRouter) free(pubRouter);
+    if (numaddrs) free(numaddrs);
     
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 
@@ -2251,6 +2265,7 @@ int init_config(void) {
 	toka = strtok_r(NULL, " ", &ptra);
       }
       vnetKickDHCP(vnetconfig);
+      free(pubmacmap);
     } else if (pubips) {
       char *ip, *ptra, *toka;
       toka = strtok_r(pubips, " ", &ptra);
@@ -2282,6 +2297,7 @@ int init_config(void) {
 	if (ips) free(ips);
 	if (nms) free(nms);
       }
+      free(pubips);
     }
     
     //    vnetPrintNets(vnetconfig);
@@ -2446,12 +2462,16 @@ int restoreNetworkState() {
   }
   for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
     if (vnetconfig->publicips[i].allocated) {
-      snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, hex2dot(vnetconfig->publicips[i].ip), vnetconfig->pubInterface);
+      char *tmp;
+
+      tmp = hex2dot(vnetconfig->publicips[i].ip);
+      snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, tmp, vnetconfig->pubInterface);
       logprintfl(EUCAINFO,"running cmd %s\n", cmd);
       rc = system(cmd);
       if (rc) {
-        logprintfl(EUCAWARN, "cannot add ip %s\n", hex2dot(vnetconfig->publicips[i].ip));
+        logprintfl(EUCAWARN, "cannot add ip %s\n", tmp);
       }
+      free(tmp);
     }
   }
 
@@ -2465,6 +2485,7 @@ int restoreNetworkState() {
       if (rc) {
         logprintfl(EUCADEBUG, "failed to reactivate network: %d", i);
       }
+      if (*brname) free(*brname);
     }
   }
   // get DHCPD back up and running
@@ -2503,6 +2524,7 @@ int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHos
   rc = get_conf_var(configFile, CONFIG_NC_PORT, &tmpstr);
   if (rc != 1) {
     // error
+    free(ncservice);
     logprintfl(EUCAFATAL,"parsing config file (%s) for NC_PORT\n", configFile);
     return(1);
   } else {
@@ -2513,11 +2535,13 @@ int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHos
   rc = get_conf_var(configFile, CONFIG_NODES, &tmpstr);
   if (rc != 1) {
     // error
+    free(ncservice);
     logprintfl(EUCAWARN,"NODES parameter is missing from (%s)\n", configFile);
     return(0);
   } else {
     hosts = from_var_to_char_list(tmpstr);
     if (hosts == NULL) {
+      free(ncservice);
       logprintfl(EUCAWARN, "NODES list is empty in configfile (%s)\n", configFile);
       if (tmpstr) free(tmpstr);
       return(0);
@@ -2546,6 +2570,7 @@ int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHos
       i++;
     }
   }
+  free(ncservice);
   if (hosts) free(hosts);
   if (tmpstr) free(tmpstr);
   return(0);

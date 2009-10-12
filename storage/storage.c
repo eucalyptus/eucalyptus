@@ -270,8 +270,9 @@ void LogprintfCache (void)
     }
     for ( e = cache_head; e; e=e->next) {
         bzero (&mystat, sizeof (mystat));
-        stat (e->path, &mystat);
-        logprintfl (EUCAINFO, "\t%5dMB %8dsec %s\n", e->size_mb, mystat.st_mtime, e->path);
+        if (stat (e->path, &mystat) == 0) {
+           logprintfl (EUCAINFO, "\t%5dMB %8dsec %s\n", e->size_mb, mystat.st_mtime, e->path);
+	}
     }
 }
 
