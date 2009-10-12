@@ -2485,7 +2485,7 @@ int restoreNetworkState() {
       if (rc) {
         logprintfl(EUCADEBUG, "failed to reactivate network: %d", i);
       }
-      if (*brname) free(*brname);
+      if (brname) free(brname);
     }
   }
   // get DHCPD back up and running
