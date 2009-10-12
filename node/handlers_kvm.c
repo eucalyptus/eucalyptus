@@ -103,10 +103,11 @@ static int doInitialize (struct nc_state_t *nc)
 		if (s) free (s); \
 		return ERROR_FATAL; \
 	}
-	if (s) free(s);
 
 	GET_VALUE("nr_cores", nc->cores_max);
 	GET_VALUE("total_memory", nc->mem_max);
+	if (s) free(s);
+
 	/* we leave 256M to the host  */
 	nc->mem_max -= 256;
 

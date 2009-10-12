@@ -1076,7 +1076,11 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   
   snprintf (buf, 512, "%s/euca-dhcp.leases", vnetconfig->path);
   rc = open(buf, O_WRONLY | O_CREAT, 0644);
-  close(rc);
+  if (rc != -1) {
+    close(rc);
+  } else {
+    logprintfl(EUCAWARN, "Fail to create/open euca-dhcp.leases\n");
+  }
   //  snprintf (buf, 512, "touch %s/euca-dhcp.leases", vnetconfig->path);
   //  logprintfl(EUCADEBUG, "executing: %s\n", buf);
   //  rc = system (buf);
@@ -1735,13 +1739,18 @@ int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *net
       } else {
 	*outbrname = strdup(vnetconfig->privInterface);
       }
+      if (*outbrname == NULL) {
+         logprintfl(EUCAERROR, "vnetStartNetwork: out of memory!\n");
+      }
+    } else {
+         logprintfl(EUCADEBUG, "vnetStartNetwork: outbrname is NULL\n");
     }
     rc = 0;
   } else {
     rc = vnetStartNetworkManaged(vnetconfig, vlan, userName, netName, outbrname);
   }
   
-  if (vnetconfig->role != NC && *outbrname) {
+  if (vnetconfig->role != NC && outbrname && *outbrname) {
     vnetAddDev(vnetconfig, *outbrname);
   }
   return(rc);
@@ -1980,6 +1989,10 @@ int instId2mac(char *instId, char *outmac) {
   dst[0] = '\0';
   
   p = strstr(instId, "i-");
+  if (p == NULL) {
+    logprintfl(EUCAWARN, "invalid instId passed to instId2mac()\n");
+    return(1);
+  }
   p += 2;
   if (strlen(p) == 8) {
     strncat(dst, "d0:0d", 5);
