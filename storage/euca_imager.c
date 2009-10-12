@@ -168,7 +168,7 @@ int main (int argc, char * argv[])
         }
         key = fp2str (fp);
         if (key==NULL) {
-            err ("failed to read the key file ");
+            err ("failed to read the key file %s", key_file);
         }
     }
     
