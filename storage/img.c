@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <time.h>
+#include <regex.h>
 
 #include "eucalyptus.h" // EUCALYPTUS_ENV_VAR_NAME
 #include "ami2vmx.h"
@@ -37,7 +38,7 @@ static void max_to_str (char * str, const int size, int limit_mb)
 img_env * img_init (char * wdir, int wdir_max_mb, char * cdir, int cdir_max_mb) 
 {
     if (g_env.initialized==0) {
-        // stuff in this clause only should be done once
+        // this clause only execute once
         bzero (&g_env, sizeof(g_env));
         
         if ((img_sem = sem_realloc (1, "eucalyptus-img-semaphore", 0)) == NULL) {
@@ -48,42 +49,44 @@ img_env * img_init (char * wdir, int wdir_max_mb, char * cdir, int cdir_max_mb)
         g_env.initialized = 1;
     }
     
-    // the rest of the stuff is OK to redo (so img_init users can pick up new files or change params)
-    
+    // the rest is OK to redo (so img_init users can pick up new files or change params)
+
+    g_env.wloc.type = PATH; // only PATH for now    
     if (wdir!=NULL && strlen(wdir)>0) {
         if (check_directory (wdir)) {
     	    logprintfl (EUCAERROR, "ERROR: working directory (%s) does not exist!\n", wdir);
             return NULL;
         }
-        strncpy (g_env.wdir, wdir, sizeof (g_env.wdir));
+        strncpy (g_env.wloc.path, wdir, sizeof (g_env.wloc.path));
     } else {
-        if (getcwd (g_env.wdir, sizeof (g_env.wdir))==NULL) {
+        if (getcwd (g_env.wloc.path, sizeof (g_env.wloc.path))==NULL) {
             logprintfl (EUCAERROR, "ERROR: failed to obtain current working directory!\n");
             return NULL;   
         }
     }
-    g_env.wdir_max_mb = wdir_max_mb;
+    g_env.wloc_max_mb = wdir_max_mb;
     char s [SIZE];
-    max_to_str (s, SIZE, g_env.wdir_max_mb); // pretty-print it
-    logprintfl (EUCAINFO, "img_init: working directory=%s limit=%s\n", g_env.wdir, s);
+    max_to_str (s, SIZE, g_env.wloc_max_mb); // pretty-print it
+    logprintfl (EUCAINFO, "img_init: working directory=%s limit=%s\n", g_env.wloc.path, s);
     
     if (cdir!=NULL && strlen(cdir)>0 && cdir_max_mb!=0) {
+        g_env.cloc.type = PATH; // only PATH for now
         if (check_directory (cdir)) {
     	    logprintfl (EUCAERROR, "ERROR: cache directory (%s) does not exist!\n", cdir);
     	    return NULL;
         }
-        strncpy (g_env.cdir, cdir, sizeof(g_env.cdir));
-        g_env.cdir_max_mb = cdir_max_mb;
-        max_to_str (s, SIZE, g_env.cdir_max_mb); // pretty-print it
-        logprintfl (EUCAINFO, "img_init: cache directory=%s limit=%s\n", g_env.cdir, s);
-        long long size_b = init_cache (g_env.cdir);
+        strncpy (g_env.cloc.path, cdir, sizeof(g_env.cloc.path));
+        g_env.cloc_max_mb = cdir_max_mb;
+        max_to_str (s, SIZE, g_env.cloc_max_mb); // pretty-print it
+        logprintfl (EUCAINFO, "img_init: cache directory=%s limit=%s\n", g_env.cloc.path, s);
+        long long size_b = init_cache (g_env.cloc.path);
         if (size_b<0) {
     	    logprintfl (EUCAERROR, "ERROR: failed to initialize or verify cache directory (%s)\n", cdir);
     	    return NULL;           
         }
         int size_mb = size_b / MEGABYTE;
-        if (g_env.cdir_max_mb>0 && size_mb > g_env.cdir_max_mb) {
-            logprintfl (EUCAWARN, "img_init: cache size (%dMB) exceeds the limit (%dMB)!\n", size_mb, g_env.cdir_max_mb);
+        if (g_env.cloc_max_mb>0 && size_mb > g_env.cloc_max_mb) {
+            logprintfl (EUCAWARN, "img_init: cache size (%dMB) exceeds the limit (%dMB)!\n", size_mb, g_env.cloc_max_mb);
         }
     }
     
@@ -123,7 +126,12 @@ img_env * img_init (char * wdir, int wdir_max_mb, char * cdir, int cdir_max_mb)
     return &g_env;
 } 
 
-static int parse_img_spec (img_ptr * img, const char * str)
+static void strnsub (char * dest, const char *src, const unsigned int sindex, const unsigned int eindex, const unsigned int size)
+{
+    strncpy (dest, src+sindex, ((eindex-sindex)>size)?size:eindex-sindex);
+}
+
+static int parse_img_spec (img_loc * img, const char * str)
 {
     char low [SIZE];
     int i;
@@ -131,26 +139,61 @@ static int parse_img_spec (img_ptr * img, const char * str)
     for (i=0; i<SIZE && i<strlen(str); i++) {
         low [i] = tolower (str[i]);
     }
-    
+
     if (!strncmp (low, "http://", 7) || !strncmp (low, "https://", 8)) {
         if (strstr (str, "services/Walrus")) {
             img->type=WALRUS;
+            strncpy (img->url, str, sizeof(img->url));
+       
+        } else if (strstr (str, "dcPath=")) {            
+            // EXAMPLE: https://192.168.7.236/folder/i-4DD50852?dcPath=ha-datacenter&dsName=S1
+            char * ex = "^[Hh][Tt][Tt][Pp][Ss]?://([^/]+)/([^\\?]+)\\?dcPath=([^&]+)&dsName=(.*)$";
+            regmatch_t pmatch[5];
+            regex_t re;
+            int status;
+            
+            if (regcomp (&re, ex, REG_EXTENDED) != 0) {
+                logprintfl (EUCAERROR, "parse_img_spec: failed to compile regular expression for vSphere URL: %s\n", ex);
+                return 1;
+            }
+            status = regexec (&re, str, (size_t)5, pmatch, 0);
+            regfree (&re);
+            if (status != 0) {
+                logprintfl (EUCAERROR, "parse_img_spec: failed to match the syntax of vSphere URL (%s)\nwith regular expression %s\n", str, ex);
+                return 1;
+            }
+            if (re.re_nsub!=4) {
+                logprintfl (EUCAERROR, "parse_img_spec: unexpected number of matched elements in %s\n", ex);
+                return 1;
+            }
+
+            img->type=VSPHERE;
+            strncpy (img->url,            str, sizeof (img->url));
+            strnsub (img->vsphere_host,   str, pmatch[1].rm_so, pmatch[1].rm_eo, sizeof (img->vsphere_host));
+            strnsub (img->path,           str, pmatch[2].rm_so, pmatch[2].rm_eo, sizeof (img->path));
+            strnsub (img->vsphere_dcPath, str, pmatch[3].rm_so, pmatch[3].rm_eo, sizeof (img->vsphere_dcPath));
+            strnsub (img->vsphere_dsName, str, pmatch[4].rm_so, pmatch[4].rm_eo, sizeof (img->vsphere_dsName));
+
+            //logprintfl (EUCADEBUG, "parse_img_spec: re_nsub=%d host=%s path=%s dc=%s ds=%s\n", re.re_nsub, img->vsphere_host, img->path, img->vsphere_dcPath, img->vsphere_dsName);
+
         } else {
             img->type=HTTP;
+            strncpy (img->url, str, sizeof(img->url));
         }
+
     } else if (!strncmp (low, "sftp://", 7)) {
         img->type=SFTP;
+        strncpy (img->url, str, sizeof(img->url));
+
     } else {
         img->type=PATH;
+        strncpy (img->path, str, sizeof(img->path));
     }
-    strncpy (img->loc, str, sizeof (img->loc));
     
     return 0;
 }
 
-int img_init_spec (img_spec * spec, const char * id, 
-    const char * src, const img_creds * src_creds, 
-    const char * dst, const img_creds * dst_creds)
+int img_init_spec (img_spec * spec, const char * id, const char * loc, const img_creds * creds)
 {
     bzero (spec, sizeof(spec));
     
@@ -159,17 +202,11 @@ int img_init_spec (img_spec * spec, const char * id,
     else
         return 0; // if no ID is given, this function just zeroes out the struct
         
-    if (parse_img_spec (&(spec->src), src)) return 1;
-    if (src_creds) 
-        memcpy (&(spec->src.creds), src_creds, sizeof(img_creds));
+    if (parse_img_spec (&(spec->location), loc)) return 1;
+    if (creds) 
+        memcpy (&(spec->location.creds), creds, sizeof(img_creds));
     else 
-        spec->src.creds.type=NONE;
-        
-    if (parse_img_spec (&(spec->dst), dst)) return 1;
-    if (dst_creds) 
-        memcpy (&(spec->dst.creds), dst_creds, sizeof(img_creds));
-    else
-        spec->src.creds.type=NONE;
+        spec->location.creds.type=NONE;
     
     return 0;
 }
@@ -179,18 +216,19 @@ void img_cleanup (void)
     sem_free (img_sem);
 }
 
-static char * img_spec_type_str (int type)
+static char * img_spec_type_str (const int type)
 {
     switch (type) {
         case PATH: return "path";
         case HTTP: return "http";
+        case VSPHERE: return "vsphere";
         case WALRUS: return "walrus";
         case SFTP: return "sftp";
         default: return "unknown";
     }
 }
 
-static char * img_creds_type_str (int type)
+static char * img_creds_type_str (const int type)
 {
     switch (type) {
         case NONE: return "none";
@@ -201,18 +239,27 @@ static char * img_creds_type_str (int type)
     }
 }
 
+static const char * img_creds_location_str (const img_loc * loc)
+{
+    switch (loc->type) {
+    case PATH: return loc->path;
+    case HTTP: return loc->url;
+    case VSPHERE: return loc->url;
+    case WALRUS: return loc->url;
+    case SFTP: return loc->url;
+    default: return "";
+    }
+}
+
 static void print_img_spec (const char * name, const img_spec * spec)
 {
     if (name==NULL || spec==NULL || strlen(name)==0 || strlen(spec->id)==0) return;
-    logprintfl (EUCADEBUG, "\t%s: id=%s\n", name, spec->id);
-    logprintfl (EUCADEBUG, "\t\tsrc: type=%-7s creds=%-8s %s\n", 
-        img_spec_type_str (spec->src.type),
-        img_creds_type_str (spec->src.creds.type), 
-        spec->src.loc);
-    logprintfl (EUCADEBUG, "\t\tdst: type=%-7s creds=%-8s %s\n", 
-        img_spec_type_str (spec->dst.type),
-        img_creds_type_str (spec->dst.creds.type), 
-        spec->dst.loc);
+    logprintfl (EUCADEBUG, "\t%s: id=%-12ss type=%-7s creds=%-8s %s\n", 
+                name, 
+                spec->id,
+                img_spec_type_str (spec->location.type),
+                img_creds_type_str (spec->location.creds.type), 
+                img_creds_location_str (&(spec->location)));
 }
 
 /* wait for file 'appear' to appear or for file 'disappear' to disappear */
@@ -312,7 +359,7 @@ static long long get_cached_file (const char * src_url, const char * dst_path, c
 	char digest_path     [SIZE];
 
 	snprintf (tmp_digest_path, SIZE, "%s-digest",      dst_path);
-	snprintf (cached_dir,      SIZE, "%s/%s",          g_env.cdir, cache_key);
+	snprintf (cached_dir,      SIZE, "%s/%s",          g_env.cloc.path, cache_key);
 	snprintf (cached_path,     SIZE, "%s/content",     cached_dir);
 	snprintf (staging_path,    SIZE, "%s-staging",     cached_path);
 	snprintf (digest_path,     SIZE, "%s-digest",      cached_path);
@@ -690,18 +737,19 @@ static int gen_vmdk (const char * disk_path, const char * vmdk_path)
     return 0;
 }
 
-static int upload_vmdk (const char * disk_path, const char * vmdk_path,
-    const char * url_spec, const char * login, const char * password) 
+static int upload_vmdk (const char * disk_path, const char * vmdk_path, const img_spec * dest)
 {
+    const img_loc * loc = &(dest->location);
     char cmd[1024];
     char url[1024];
-    
+
     #define CURL "/usr/bin/curl --insecure --user '%s:%s' '%s' -T '%s'"
     
     logprintfl (EUCAINFO, "uploading disk backing files to destination\n");    
     
-    snprintf (url, sizeof(url), url_spec, "disk-flat.vmdk");
-    snprintf (cmd, sizeof(cmd), CURL, login, password, url, disk_path);
+    // EXAMPLE: https://192.168.7.236/folder/i-4DD50852?dcPath=ha-datacenter&dsName=S1
+    snprintf (url, sizeof(url), "https://%s/%s/%s/%s?dcPath=%s&dsName=%s", loc->vsphere_host, loc->path, dest->id, "disk-flat.vmdk", loc->vsphere_dcPath, loc->vsphere_dsName);
+    snprintf (cmd, sizeof(cmd), CURL, loc->creds.login, loc->creds.password, url, disk_path);
     logprintfl (EUCADEBUG, "\t%s\n", cmd);
     int rc = system (cmd);
     if (rc) {
@@ -709,8 +757,8 @@ static int upload_vmdk (const char * disk_path, const char * vmdk_path,
         return 1;        
     }
     
-    snprintf (url, sizeof(url), url_spec, "disk.vmdk");   
-    snprintf (cmd, sizeof(cmd), CURL, login, password, url, vmdk_path);
+    snprintf (url, sizeof(url), "https://%s/%s/%s/%s?dcPath=%s&dsName=%s", loc->vsphere_host, loc->path, dest->id, "disk.vmdk", loc->vsphere_dcPath, loc->vsphere_dsName);
+    snprintf (cmd, sizeof(cmd), CURL, loc->creds.login, loc->creds.password, url, vmdk_path);
     logprintfl (EUCADEBUG, "\t%s\n", cmd);
     rc = system (cmd);    
     if (rc) {
@@ -720,15 +768,8 @@ static int upload_vmdk (const char * disk_path, const char * vmdk_path,
     return 0;
 }
 
-int img_convert (const char * fmt, const char * unique,
-    img_spec * root, img_spec * kernel, img_spec * ramdisk, 
-    const char * key, int rsize_mb, int ssize_mb, int esize_mb)
+int img_convert (img_spec * root, img_spec * kernel, img_spec * ramdisk, img_spec * dest, const char * key, int rsize_mb, int ssize_mb, int esize_mb)
 {
-    if (fmt==NULL || strlen(fmt)<1 || root==NULL) {
-        logprintfl (EUCAFATAL, "img_convert: format or root not specified\n");
-        return 1;
-    }
-    
     int rc, force = 0;
     rc = verify_ami2vmx_helpers(force);
     if (rc) {
@@ -737,28 +778,25 @@ int img_convert (const char * fmt, const char * unique,
     }
     
     // print diagnostic information
-    logprintfl (EUCADEBUG, "img_convert: format=%s\n", fmt);
-    print_img_spec ("root", root);
-    print_img_spec ("kernel", kernel);
-    print_img_spec ("ramdisk", ramdisk);
+    logprintfl (EUCADEBUG, "img_convert:\n");
+    print_img_spec ("EMI", root);
+    print_img_spec ("EKI", kernel);
+    print_img_spec ("RMI", ramdisk);
+    print_img_spec ("dst", dest);
     
     // see if we have a saved copy of this exact disk image
     char hash [SIZE]; 
     gen_hash (hash, sizeof(hash), root->id, kernel->id, ramdisk->id, key, rsize_mb, ssize_mb, esize_mb);
-    char cached_path      [SIZE]; snprintf (cached_path,      SIZE, "%s/%s-disk",     g_env.wdir, hash);
-    char cached_path_vmdk [SIZE]; snprintf (cached_path_vmdk, SIZE, "%s/%s-disk.vmdk", g_env.wdir, hash);
+    char cached_path      [SIZE]; snprintf (cached_path,      SIZE, "%s/%s-disk",      g_env.wloc.path, hash);
+    char cached_path_vmdk [SIZE]; snprintf (cached_path_vmdk, SIZE, "%s/%s-disk.vmdk", g_env.wloc.path, hash);
     
     if (file_size (cached_path)>0 && file_size (cached_path_vmdk)>0) {
         logprintfl (EUCAINFO, "found a cached copy of the file in %s\n", cached_path);
-        rc = upload_vmdk (cached_path, cached_path_vmdk, root->dst.loc, root->dst.creds.login, root->dst.creds.password);
+        rc = upload_vmdk (cached_path, cached_path_vmdk, dest);
 
     } else {
         char unique_path [SIZE]; 
-        if (unique) {
-            snprintf (unique_path,  SIZE, "%s/%s", g_env.wdir, unique);
-        } else {
-            snprintf (unique_path,  SIZE, "%s", g_env.wdir); // alas, no so unique
-        }
+        snprintf (unique_path,  SIZE, "%s/%s", g_env.wloc.path, dest->id);
         char image_path   [SIZE]; snprintf (image_path,   SIZE, "%s/%s",           unique_path, root->id);
         char kernel_path  [SIZE]; snprintf (kernel_path,  SIZE, "%s/%s",           unique_path, kernel->id);
         char ramdisk_path [SIZE]; snprintf (ramdisk_path, SIZE, "%s/%s",           unique_path, ramdisk->id);
@@ -766,9 +804,9 @@ int img_convert (const char * fmt, const char * unique,
         char vmdk_path    [SIZE]; snprintf (vmdk_path,    SIZE, "%s/%s-disk.vmdk", unique_path, root->id);
 
         int rc = build_disk_image ("admin", 
-            root->id, root->src.loc, image_path,
-            kernel->id, kernel->src.loc, kernel_path,
-            ramdisk->id, ramdisk->src.loc, ramdisk_path,
+            root->id, root->location.url, image_path,
+            kernel->id, kernel->location.url, kernel_path,
+            ramdisk->id, ramdisk->location.url, ramdisk_path,
             key, rsize_mb+ssize_mb, ssize_mb);
         if (rc) {
             logprintfl (EUCAFATAL, "failed to download the necessary components\n");
@@ -797,7 +835,7 @@ int img_convert (const char * fmt, const char * unique,
         }
         
         if (gen_vmdk (disk_path, vmdk_path) || 
-            upload_vmdk (disk_path, vmdk_path, root->dst.loc, root->dst.creds.login, root->dst.creds.password)) {
+            upload_vmdk (disk_path, vmdk_path, dest)) {
             rc = 1;
             goto cleanup;
         }
@@ -817,9 +855,7 @@ int img_convert (const char * fmt, const char * unique,
         unlink (image_path);
         unlink (kernel_path);
         unlink (ramdisk_path);
-        if (unique) {
-            rmdir (unique_path);        
-        }
+        rmdir (unique_path);        
     }
 
     return rc;

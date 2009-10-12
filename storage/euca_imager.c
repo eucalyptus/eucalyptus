@@ -19,19 +19,21 @@ static void usage (const char * msg)
     fprintf (stderr, "Usage: euca_imager [parameters]\n"
         "\nRequired parameters:\n"
         "\t-f {xen|kvm}                 output format\n"
-        "\t-I [src,dst,id]              disk image SPEC*\n"
-        "\t-K [src,dst,id]              kernel image SPEC*\n"
+        "\t-I [loc,id]                  disk image SPEC*\n"
+        "\t-K [loc,id]                  kernel image SPEC*\n"
+        "\t-D [loc,id]                  destination SPEC*\n"
         "\nOptional parameters:\n"
-        "\t-R [src,dst,id]              ramdisk image SPEC*\n"
+        "\t-R [loc,id]                  ramdisk image SPEC*\n"
         "\t-S [root,swap,ephemeral]     root partition limit + partition sizes, in MB\n"
         "\t-k [key]                     ssh key file to inject, stdin if '-'\n"
         "\t-W [work dir,max size]       work directory + size in MB, if dst is remote\n"
         "\t-C [cache dir,max size]      cache directory + size in MB, if any\n"
-        "\t-l [login] -p [password]     remote dst HTTP auth credentials\n"
+        "\t-l [login] -p [password]     credentials, on command-line or in files\n"
         "\t-u [string]                  unique string for this invocation\n"
         "\t-h                           print this message\n"
+        "\t-a                           print whole argv[]\n"
         "\n* - SPEC consists of source & destination file paths or URLs + unique ID\n"
-        "    e.g.: -I http://localhost:8773/services/Walrus/bucket/image.manifest.xml,/tmp/image,emi-12345\n"
+        "    e.g.: -I http://localhost:8773/services/Walrus/bucket/image.manifest.xml,emi-12345\n"
         "\n"  
         ); 
     exit (1); 
@@ -56,7 +58,7 @@ static void err (const char *format, ...)
 }
 
 // dst is src with all 'old' chars replaced by 'new' chars
-static void strnsub (int size, char * dst, const char * src, char old, char new)
+static void strnsubchr (int size, char * dst, const char * src, char old, char new)
 {
     if (dst==NULL || src==NULL) return;
     
@@ -73,9 +75,10 @@ static void strnsub (int size, char * dst, const char * src, char old, char new)
 int main (int argc, char * argv[])
 {
     char * fmt = NULL;
-    char isrc [256], idst [256], iid [256] = "";
-    char ksrc [256], kdst [256], kid [256] = "";
-    char rsrc [256], rdst [256], rid [256] = "";
+    char isrc [256], iid [256] = "";
+    char ksrc [256], kid [256] = "";
+    char rsrc [256], rid [256] = "";
+    char  dst [256], did [256] = "";
     int rsize = -1; // -1 = unlimited
     int ssize = 0;
     int esize = 0;
@@ -84,15 +87,14 @@ int main (int argc, char * argv[])
     char cdir [256] = ""; int cdir_max = -1;
     char * login = NULL; char * password = NULL;
     char s [1024];
-    char * unique = NULL;
 
     int i;    
     int ch;
-    while ((ch = getopt (argc, argv, "af:I:K:S:R:k:W:C:A:l:p:u:h")) != -1) {
+    while ((ch = getopt (argc, argv, "af:I:K:S:R:D:k:W:C:A:l:p:h")) != -1) {
         switch (ch) {
             case 'a':
             for (i=0; i<argc; i++) {
-                fprintf (stderr, "%s ", argv[i]);
+                fprintf (stderr, "%s ", argv[i]); // for debugging
             }
             fprintf (stderr, "\n");
             break;
@@ -102,25 +104,31 @@ int main (int argc, char * argv[])
             break;
 
             case 'I':
-            strnsub (sizeof(s), s, optarg, ',', ' ');
-            if (sscanf (s, "%255s %255s %255s", isrc, idst, iid)!=3)
+            strnsubchr (sizeof(s), s, optarg, ',', ' ');
+            if (sscanf (s, "%255s %255s", isrc, iid)!=2)
                 usage ("failed to parse -I parameter");
             break;
 
             case 'K':
-            strnsub (sizeof(s), s, optarg, ',', ' ');
-            if (sscanf (s, "%255s %255s %255s", ksrc, kdst, kid)!=3)
+            strnsubchr (sizeof(s), s, optarg, ',', ' ');
+            if (sscanf (s, "%255s %255s", ksrc, kid)!=2)
                 usage ("failed to parse -K parameter");
             break;
 
             case 'R':
-            strnsub (sizeof(s), s, optarg, ',', ' ');
-            if (sscanf (s, "%255s %255s %255s", rsrc, rdst, rid)!=3)
+            strnsubchr (sizeof(s), s, optarg, ',', ' ');
+            if (sscanf (s, "%255s %255s", rsrc, rid)!=2)
                 usage ("failed to parse -R parameter");
             break;
 
+            case 'D':
+            strnsubchr (sizeof(s), s, optarg, ',', ' ');
+            if (sscanf (s, "%255s %255s", dst, did)!=2)
+                usage ("failed to parse -D parameter");
+            break;
+
             case 'S':
-            strnsub (sizeof(s), s, optarg, ',', ' ');
+            strnsubchr (sizeof(s), s, optarg, ',', ' ');
             if (sscanf (s, "%d %d %d", &rsize, &ssize, &esize)!=3)
                 usage ("failed to parse -S parameter");
             break;
@@ -130,13 +138,13 @@ int main (int argc, char * argv[])
             break;
 
             case 'W':
-            strnsub (sizeof(s), s, optarg, ',', ' ');
+            strnsubchr (sizeof(s), s, optarg, ',', ' ');
             if (sscanf (s, "%255s %d", wdir, &wdir_max)!=2)
                 usage ("failed to parse the working dir spec");
             break;
 
             case 'C':
-            strnsub (sizeof(s), s, optarg, ',', ' ');
+            strnsubchr (sizeof(s), s, optarg, ',', ' ');
             if (sscanf (s, "%255s %d", cdir, &cdir_max)!=2)
                 usage ("failed to parse the cache dir spec");
             break;
@@ -149,10 +157,6 @@ int main (int argc, char * argv[])
             password = optarg;
             break;
 
-            case 'u':
-            unique = optarg;
-            break;
-            
             case 'h': 
             case '?':
             default:
@@ -194,24 +198,49 @@ int main (int argc, char * argv[])
     if (login!=NULL || password!=NULL) {
         if (login==NULL || password==NULL) 
             usage ("both login and password must be specified");
+
+        // if login or password are readable files, we read the values from them
+        char * login_file = strdup (login);
+        char * password_file = strdup (password);
+        FILE * fp;
+        if ((fp = fopen (login_file, "r"))!=NULL) {
+            login = fp2str (fp);
+            if (login==NULL) {
+                err ("failed to read login from file %s", login_file);
+            }
+        }
+        if ((fp = fopen (password_file, "r"))!=NULL) {
+            password = fp2str (fp);
+            if (password==NULL) {
+                err ("failed to read password from file %s", password_file);
+            }
+        }
+        free (login_file);
+        free (password_file);
+        
         strncpy (creds.login, login, sizeof(creds.login));
         strncpy (creds.password, password, sizeof(creds.password));
-        creds.type=HTTP;
+        creds.type=PASSWORD;
     }
     
     // use the same creds for all sources and same creds for all destinations
     img_creds * src_creds = &(env->default_walrus_creds); // Walrus creds from default location, if found
-    img_creds * dst_creds = &creds;
      
     img_spec root; 
     img_spec kernel;
     img_spec ramdisk;
-    if (img_init_spec (&root,    iid, isrc, src_creds, idst, dst_creds)) exit (1);
-    if (img_init_spec (&kernel,  kid, ksrc, src_creds, kdst, dst_creds)) exit (1); // kid=="" is OK
-    if (img_init_spec (&ramdisk, rid, rsrc, src_creds, rdst, dst_creds)) exit (1); // rid=="" is OK
-    
+    img_spec destination;
+    if (img_init_spec (&root,        iid, isrc, src_creds)) exit (1);
+    root.type = EMI;
+    if (img_init_spec (&kernel,      kid, ksrc, src_creds)) exit (1); // kid=="" is OK
+    kernel.type = EKI;
+    if (img_init_spec (&ramdisk,     rid, rsrc, src_creds)) exit (1); // rid=="" is OK
+    ramdisk.type = ERI;
+    if (img_init_spec (&destination, did,  dst, &creds)) exit (1);
+    destination.type = VDDK; // TODO: support others eventualy
+
     // do all the hard work
-    int ret = img_convert (fmt, unique, &root, &kernel, &ramdisk, key, rsize, ssize, esize);
+    int ret = img_convert (&root, &kernel, &ramdisk, &destination, key, rsize, ssize, esize);
     if (ret) err ("download, conversion, or upload failed");
     
     img_cleanup ();
