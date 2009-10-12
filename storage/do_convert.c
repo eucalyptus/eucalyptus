@@ -131,7 +131,7 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
    
     logprintfl (EUCAINFO, "Mounting volume...\n");
     //output = pruntf("/home/dmitrii/Desktop/eucalyptus/branches/1.6-vmware-broker/usr/lib/eucalyptus/euca_rootwrap %s -o loop %s %s", helpers_path[MOUNT], loopdev, tmpdir);
-    output = pruntf("/home/dmitrii/Desktop/eucalyptus/branches/1.6-vmware-broker/usr/lib/eucalyptus/euca_rootwrap mount %s %s", loopdev, tmpdir);
+    output = pruntf("/home/dmitrii/Desktop/eucalyptus/branches/1.6-vmware-broker/usr/lib/eucalyptus/euca_mountwrap mount %s %s", loopdev, tmpdir);
     if (!output) {
       logprintfl (EUCAINFO, "ERROR: \n");
       return(1);
@@ -212,7 +212,7 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
       fgetc(stdin);
     }
     //output = pruntf("%s %s", helpers_path[UMOUNT], tmpdir);
-    output = pruntf("/home/dmitrii/Desktop/eucalyptus/branches/1.6-vmware-broker/usr/lib/eucalyptus/euca_rootwrap umount %s", tmpdir);
+    output = pruntf("/home/dmitrii/Desktop/eucalyptus/branches/1.6-vmware-broker/usr/lib/eucalyptus/euca_mountwrap umount %s", tmpdir);
     if (!output) {
       printf("ERROR: \n");
       return(1);

@@ -42,10 +42,14 @@ static char * key = NULL;
 static void err (const char *format, ...)
 {
     va_list ap;
+
     va_start(ap, format);
-    vfprintf(stderr, "error: " format "\n", ap);
+    fprintf (stderr, "error: ");
+    vfprintf(stderr, format, ap);
+    fprintf (stderr, "\n");
     fflush(stderr);
     va_end(ap);
+
     if (key) free (key);
     img_cleanup ();
     exit (1);
@@ -81,7 +85,8 @@ int main (int argc, char * argv[])
     char * login = NULL; char * password = NULL;
     char s [1024];
     char * unique = NULL;
-    
+
+    int i;    
     int ch;
     while ((ch = getopt (argc, argv, "af:I:K:S:R:k:W:C:A:l:p:u:h")) != -1) {
         switch (ch) {
@@ -89,7 +94,7 @@ int main (int argc, char * argv[])
             for (i=0; i<argc; i++) {
                 fprintf (stderr, "%s ", argv[i]);
             }
-            fprintf ("\n");
+            fprintf (stderr, "\n");
             break;
             
             case 'f':
