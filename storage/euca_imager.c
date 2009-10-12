@@ -83,8 +83,15 @@ int main (int argc, char * argv[])
     char * unique = NULL;
     
     int ch;
-    while ((ch = getopt (argc, argv, "f:I:K:S:R:k:W:C:A:l:p:u:h")) != -1) {
+    while ((ch = getopt (argc, argv, "af:I:K:S:R:k:W:C:A:l:p:u:h")) != -1) {
         switch (ch) {
+            case 'a':
+            for (i=0; i<argc; i++) {
+                fprintf (stderr, "%s ", argv[i]);
+            }
+            fprintf ("\n");
+            break;
+            
             case 'f':
             fmt = optarg; 
             break;
