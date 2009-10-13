@@ -67,6 +67,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 
 import java.security.MessageDigest;
+import java.util.NoSuchElementException;
 import java.util.zip.Adler32;
 
 import com.eucalyptus.auth.util.Hashes;
@@ -106,6 +107,24 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
                                 instanceId.substring( 6, 8 ),
                                 instanceId.substring( 8, 10 ) );
     return mac;
+  }
+  
+  public VmInstance lookupByInstanceIp ( String ip ) {
+    for( VmInstance vm : this.listValues( ) ) {
+      if( ip.equals( vm.getNetworkConfig( ).getIpAddress( ) ) ) {
+        return vm;
+      }
+    }
+    throw new NoSuchElementException( "Can't find registered object with ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
+  }
+
+  public VmInstance lookupByPublicIp ( String ip ) {
+    for( VmInstance vm : this.listValues( ) ) {
+      if( ip.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
+        return vm;
+      }
+    }
+    throw new NoSuchElementException( "Can't find registered object with public ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
   }
 
 }

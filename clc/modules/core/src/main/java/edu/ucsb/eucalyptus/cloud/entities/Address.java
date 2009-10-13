@@ -155,8 +155,14 @@ public class Address implements HasName {
     return this.assigned;
   }
   
-  public void setAssigned( final Boolean assigned ) {
-    this.assigned = assigned;
+  public void setAssigned( ) {
+    
+  }
+  public void setAssigned( final String instanceId, final String instanceAddress ) {
+    this.instanceId = instanceId;
+    this.instanceAddress = instanceAddress;
+    this.state.set( State.assigned );
+    addAddress( this );
   }
   
   public String getCluster( ) {
@@ -196,11 +202,14 @@ public class Address implements HasName {
       this.doUnassign( );
       this.state.set( State.unallocated );
       Addresses.getInstance( ).registerDisabled( this );
+    } else if( !this.instanceId.equals( UNASSIGNED_INSTANCEID ) ) {
+      this.state.set( State.assigned );      
+      Addresses.getInstance( ).register( this );
     } else {
       this.state.set( State.allocated );
       Addresses.getInstance( ).register( this );
-      if ( Component.eucalyptus.name( ).equals( this.userId ) ) {
-        if ( !( this.system = !edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( ) ) ) {
+      if ( Component.eucalyptus.name( ).equals( this.userId ) && !this.isAssigned( ) ) {
+        if ( !( this.system = !Addresses.doDynamicAddressing( ) ) ) {
           this.release( );
         }
       }
@@ -235,7 +244,11 @@ public class Address implements HasName {
   @Transient
   private volatile boolean system = false;
   
-  public boolean allocate( String userId ) {
+  public boolean isAllocated() {
+    return UNALLOCATED_USERID.equals( this.userId );
+  }
+  
+  public void allocate( String userId ) {
     if ( !this.pending.compareAndSet( false, false ) ) {
       throw new IllegalStateException( "Trying to allocate an address which is already pending: " + this );
     } else if ( !this.state.compareAndSet( State.unallocated, State.allocated ) ) {
@@ -249,9 +262,6 @@ public class Address implements HasName {
         if ( Component.eucalyptus.name( ).equals( userId ) ) {
           system = true;
         }
-        return true;
-      } finally {
-        this.canHas.writeLock( ).unlock( );
         addAddress( this );
         LOG.debug( EventRecord.caller( this.getClass( ), this.state.get( ), this.toString( ) ) );
         try {
@@ -259,6 +269,8 @@ public class Address implements HasName {
         } catch ( NoSuchElementException e ) {
           LOG.debug( e );
         }
+      } finally {
+        this.canHas.writeLock( ).unlock( );
       }
     }
   }
