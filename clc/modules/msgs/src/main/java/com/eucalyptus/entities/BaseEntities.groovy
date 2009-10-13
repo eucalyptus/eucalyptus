@@ -158,7 +158,7 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
   @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = [ @JoinColumn( name = "id" ) ], inverseJoinColumns = [ @JoinColumn( name = "metadata_network_rule_id" ) ] )
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-  Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
+  List<NetworkRule> networkRules = new ArrayList<NetworkRule>( );
   public static String NETWORK_DEFAULT_NAME = "default";
   public NetworkRulesGroup( ) {
   }  

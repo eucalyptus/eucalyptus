@@ -14,6 +14,10 @@ import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.util.Messaging;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Constraint;
+import com.google.common.collect.Constraints;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -101,11 +105,24 @@ public class NetworkGroupManager {
   public RevokeSecurityGroupIngressResponseType revoke( RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException {
     RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply();
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
-    List<NetworkRule> ruleList = Lists.newArrayList( );
+    final List<NetworkRule> ruleList = Lists.newArrayList( );
     for ( IpPermissionType ipPerm : request.getIpPermissions() ) {
       ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
     }
-    if ( ruleGroup.getNetworkRules().removeAll( ruleList ) ) {
+    List<NetworkRule> filtered = Lists.newArrayList( Iterables.filter( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>() {
+      @Override public boolean apply( NetworkRule rule ) {
+        for( NetworkRule r : ruleList ) {
+          if( r.equals( rule ) && r.getNetworkPeers( ).equals( rule.getNetworkPeers( ) ) && r.getIpRanges( ).equals( rule.getIpRanges( ) ) ) {
+            return true;
+          }
+        }
+        return false;
+      }
+    } ) );
+    if ( filtered.size() == ruleList.size() ) {
+      for( NetworkRule r : filtered ) {
+        ruleGroup.getNetworkRules( ).remove( r );
+      }
       NetworkGroupUtil.getEntityWrapper().mergeAndCommit( ruleGroup );
     } else if ( request.getIpPermissions( ).size( ) == 1 && request.getIpPermissions( ).get( 0 ).getIpProtocol( ) == null ) {
       //LAME: this is for the query-based clients which send incomplete named-network requests.
@@ -131,16 +148,24 @@ public class NetworkGroupManager {
     AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply();
     EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
-    List<NetworkRule> ruleList = Lists.newArrayList( );
-    for ( IpPermissionType ipPerm : request.getIpPermissions() ) {
+    final List<NetworkRule> ruleList = Lists.newArrayList( );
+    for ( IpPermissionType ipPerm : request.getIpPermissions( ) ) {
       ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
     }
-    for ( NetworkRule newRule : ruleList ) {
-      if ( ruleGroup.getNetworkRules().contains( newRule ) || !newRule.isValid() ) {
-        reply.set_return( false );
-        db.rollback( );
-        return reply;
+    if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
+      @Override
+      public boolean apply( NetworkRule rule ) {
+        for ( NetworkRule r : ruleList ) {
+          if ( r.equals( rule ) && r.getNetworkPeers( ).equals( rule.getNetworkPeers( ) ) && r.getIpRanges( ).equals( rule.getIpRanges( ) ) ) {
+            return true || !r.isValid( );
+          }
+        }
+        return false;
       }
+    } ) ) {
+      reply.set_return( false );
+      db.rollback( );
+      return reply;
     }
     ruleGroup.getNetworkRules().addAll( ruleList );
     db.merge( ruleGroup );
