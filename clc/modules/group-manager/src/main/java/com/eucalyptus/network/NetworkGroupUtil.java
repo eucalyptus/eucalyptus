@@ -5,6 +5,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.User;
 import com.eucalyptus.entities.IpRange;
 import com.eucalyptus.entities.NetworkPeer;
 import com.eucalyptus.entities.NetworkRule;
@@ -94,7 +96,9 @@ public class NetworkGroupUtil {
   public static List<SecurityGroupItemType> getUserNetworksAdmin( String userId, List<String> groupNames ) throws EucalyptusCloudException {
     List<SecurityGroupItemType> groupInfoList = Lists.newArrayList( );
     if ( groupNames.isEmpty( ) ) {
-      return NetworkGroupUtil.getUserNetworks( userId, groupNames );
+      for( User u : CredentialProvider.getAllUsers( ) ) {
+        groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( u.getUserName( ), groupNames ) );        
+      }
     } else {
       for ( String groupName : groupNames ) {
         if ( NetworkGroupUtil.isUserGroupRef( groupName ) ) {

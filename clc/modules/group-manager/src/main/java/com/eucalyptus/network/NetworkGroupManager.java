@@ -82,7 +82,7 @@ public class NetworkGroupManager {
   public DescribeSecurityGroupsResponseType describe( DescribeSecurityGroupsType request ) throws EucalyptusCloudException {
     NetworkGroupUtil.makeDefault( request.getUserId( ) );//ensure the default group exists to cover some old broken installs
     DescribeSecurityGroupsResponseType reply = ( DescribeSecurityGroupsResponseType ) request.getReply();
-    if( request.isAdministrator( ) && !request.getSecurityGroupSet( ).isEmpty( ) ) {
+    if( request.isAdministrator( ) ) {
       try {
         reply.getSecurityGroupInfo( ).addAll( NetworkGroupUtil.getUserNetworksAdmin( request.getUserId( ), request.getSecurityGroupSet( ) ) );
       } catch ( Exception e ) {
