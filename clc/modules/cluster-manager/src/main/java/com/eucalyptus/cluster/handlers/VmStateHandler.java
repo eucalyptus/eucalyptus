@@ -1,5 +1,7 @@
 package com.eucalyptus.cluster.handlers;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -7,7 +9,9 @@ import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.util.ClusterUtil;
 import com.eucalyptus.event.Event;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpResponse;
 
@@ -22,7 +26,7 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 @ChannelPipelineCoverage("one")
 public class VmStateHandler extends AbstractClusterMessageDispatcher {
   private static Logger LOG = Logger.getLogger( NetworkStateHandler.class );
-
+  private AtomicBoolean init = new AtomicBoolean( false );
   public VmStateHandler( Cluster cluster ) throws BindingException {
     super( cluster );
   }
@@ -58,7 +62,15 @@ public class VmStateHandler extends AbstractClusterMessageDispatcher {
         }
       }
       SystemState.handle( reply );
-      this.verified = true;
+      if( this.init.compareAndSet( false, true ) ) {
+        try {
+          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
+        } catch ( Exception e1 ) {
+          LOG.error( e1, e1 );
+        }
+        this.getCluster( ).start( );
+        LOG.info( LogUtil.header( "Starting threads for cluster: " + this.getCluster( ) ) );
+      }
     }
   }
 
