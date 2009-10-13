@@ -970,6 +970,7 @@ int logcat (int debug_level, const char * file_name)
 	char buf [BUFSIZE];
 	
 	FILE *fp = fopen (file_name, "r");
+	if (!fp) return got;
     while ( fgets (buf, BUFSIZE, fp) ) {
         int l = strlen (buf);
         if ( l<0 ) 

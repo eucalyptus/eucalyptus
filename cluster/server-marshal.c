@@ -506,6 +506,12 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     }
     if (destNameLast) free(destNameLast);
     destNameLast = strdup(destName);
+    if (!destNameLast) {
+      logprintf("ERROR: out of memory\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+      return ret;
+    }
 
     userNames = NULL;
     namedLen = adb_networkRule_sizeof_userNames(nr, env);

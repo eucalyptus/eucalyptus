@@ -252,7 +252,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
     char *tmp;
     home = NULL;
     tmp = getenv("EUCALYPTUS");
-    if (tmp) tmp = strdup(tmp);
+    if (tmp) home = strdup(tmp);
     if (!home) {
       home = strdup("");
     }

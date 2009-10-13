@@ -1353,6 +1353,10 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   
   *outInstsLen = 0;
   
+  if (!ccvm) {
+    logprintfl(EUCAERROR,"RunInstances(): invalid ccvm\n");
+    return(-1);
+  }
   if (minCount <= 0 || maxCount <= 0 || instIdsLen < maxCount) {
     logprintfl(EUCAERROR,"RunInstances(): bad min or max count, or not enough instIds (%d, %d, %d)\n", minCount, maxCount, instIdsLen);
     return(-1);
