@@ -128,12 +128,14 @@ public class SoapHandler extends MessageStackHandler {
 
   @Override
   public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
-    if ( event.getMessage( ) instanceof MappingHttpResponse ) {
-      final MappingHttpResponse httpMessage = ( MappingHttpResponse ) event.getMessage( );
+    if ( event.getMessage( ) instanceof MappingHttpMessage ) {
+      final MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
       if( httpMessage.getMessage( ) instanceof EucalyptusErrorMessageType ) {
         EucalyptusErrorMessageType errMsg = (EucalyptusErrorMessageType) httpMessage.getMessage( );
         httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ) );
-        httpMessage.setStatus( HttpResponseStatus.INTERNAL_SERVER_ERROR );
+        if( httpMessage instanceof MappingHttpResponse ) {
+          ((MappingHttpResponse) httpMessage).setStatus( HttpResponseStatus.INTERNAL_SERVER_ERROR );
+        }
       } else {
         // :: assert sourceElem != null :://
         httpMessage.setSoapEnvelope( HoldMe.getOMSOAP11Factory( ).getDefaultEnvelope( ) );
