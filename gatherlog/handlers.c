@@ -76,11 +76,20 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
   
   bufsize = 1000 * 1024;
   buf = malloc(bufsize);
+  if (!buf) {
+      printf("Out of memory!\n");
+      return 1;
+  }
   
   if (!strcmp(service, "self")) {
     home = strdup(getenv("EUCALYPTUS"));
     if (!home) {
       home = strdup("");
+    }
+    if (!home) {
+      printf("Out of memory!\n");
+      free(buf);
+      return 1;
     }
 
     
@@ -231,11 +240,20 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
   
   bufsize = 1000 * 1024;
   buf = malloc(bufsize);
+  if (!buf) {
+     printf("Out of memory!\n");
+     return 1;
+  }
   
   if (!strcmp(service, "self")) {
     home = strdup(getenv("EUCALYPTUS"));
     if (!home) {
       home = strdup("");
+    }
+    if (!home) {
+      printf("Out of memory!\n");
+      free(buf);
+      return 1;
     }
     
     snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/cluster-cert.pem", home);
