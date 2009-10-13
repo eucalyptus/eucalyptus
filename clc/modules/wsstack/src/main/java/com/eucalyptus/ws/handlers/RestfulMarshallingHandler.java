@@ -74,6 +74,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.config.Configuration;
@@ -126,7 +127,8 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       try {
         if( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType ) {
           EucalyptusErrorMessageType errMsg = (EucalyptusErrorMessageType) httpResponse.getMessage( );
-          Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ).serialize( byteOut );
+          byteOut.write( Binding.createRestFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getCorrelationId() ).getBytes( ) );
+          httpResponse.setStatus( HttpResponseStatus.BAD_REQUEST );
         } else {
           try {
             OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );

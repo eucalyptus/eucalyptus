@@ -341,7 +341,7 @@ public class Network implements HasName {
     if( index < 2 ) {
       this.availableNetworkIndexes.remove( index );
     } else {
-      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.allocated, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.allocated, "network=${this.name}","cluster=${cluster}","networkIndex=${index}") );
       if( this.availableNetworkIndexes.remove( index ) ) {
         this.assignedNetworkIndexes.add( index );
         NetworkToken token = this.getClusterToken( cluster );
