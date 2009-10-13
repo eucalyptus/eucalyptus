@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.cluster;
 
+import java.util.List;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -70,7 +71,12 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -82,16 +88,40 @@ import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 public class ClusterState {
   private static Logger LOG = Logger.getLogger( ClusterState.class );
   private String clusterName;
-  private static NavigableSet<Integer> availableVlans = new ConcurrentSkipListSet<Integer>();
+  private static NavigableSet<Integer> availableVlans = populate();
   private Integer mode = 1;
   private Integer addressCapacity;
 
-  public static void trim( int min, int max ) {
-    availableVlans.remove( availableVlans.headSet( min, false ) );
-    availableVlans.remove( availableVlans.tailSet( max, false ) );
+  public static void trim( ) {
+    NavigableSet<Integer> newVlanList = Sets.newTreeSet( );
+    int min = 1;
+    int max = 4095;
+    try {
+      for( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
+        min = cc.getMinVlan( ) > min ? cc.getMinVlan( ) : min;
+        max = cc.getMaxVlan( ) < max ? cc.getMaxVlan( ) : max;
+      }
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
+    }
+    for( int i = min; i < max; i ++ ) newVlanList.add( i );
+    newVlanList.removeAll( availableVlans );
+    availableVlans.removeAll( availableVlans.headSet( min ) );
+    availableVlans.removeAll( availableVlans.tailSet( max ) );
+    for( int i = min; i < max; i ++ ) { 
+      if( !newVlanList.contains( i ) ) { 
+        availableVlans.add( i );
+      }
+    }
     LOG.debug( EventRecord.here( Component.cluster, "CONFIG_VLANS", Integer.toString( min ), Integer.toString( max ), availableVlans.toString( ) ) ); 
   }
   
+  private static NavigableSet<Integer> populate( ) {
+    NavigableSet<Integer> list = new ConcurrentSkipListSet<Integer>();
+    for( int i = 1; i < 4095; i++ ) list.add( i );
+    return list;
+  }
+
   public ClusterState( String clusterName ) {
     this.clusterName = clusterName;
   }

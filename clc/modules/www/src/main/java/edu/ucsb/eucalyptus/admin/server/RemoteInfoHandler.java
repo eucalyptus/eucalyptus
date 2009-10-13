@@ -115,8 +115,15 @@ public class RemoteInfoHandler {
 		//FIXME: Min/max vlans values should be updated
 		List<ClusterConfiguration> clusterConfig = Lists.newArrayList( );
 		for ( ClusterInfoWeb clusterWeb : newClusterList ) {
-			clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ), clusterWeb.getMinVlans( ), clusterWeb.getMaxVlans( ) ) );
-			ClusterState.trim( clusterWeb.getMinVlans( ), clusterWeb.getMaxVlans( ) );
+	    try {
+        ClusterConfiguration ccConfig = Configuration.getClusterConfiguration( clusterWeb.getName( ) );
+        ccConfig.setMaxVlan( clusterWeb.getMaxVlans( ) );
+        ccConfig.setMinVlan( clusterWeb.getMinVlans( ) );
+        Configuration.getEntityWrapper( ).mergeAndCommit( ccConfig );
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+      }
+			clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ) ) );
 		}
 		updateClusterConfigurations( clusterConfig );
 	}
@@ -261,6 +268,7 @@ public class RemoteInfoHandler {
 
 	public static void updateClusterConfigurations( List<ClusterConfiguration> clusterConfigs ) throws EucalyptusCloudException {
 		updateComponentConfigurations( Configuration.getClusterConfigurations( ), clusterConfigs );
+		ClusterState.trim( );
 	}
 
 	public static void updateStorageControllerConfigurations( List<StorageControllerConfiguration> storageControllerConfigs ) throws EucalyptusCloudException {
