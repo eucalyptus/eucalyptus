@@ -11,6 +11,7 @@ import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.NetworkRule;
 import com.eucalyptus.entities.NetworkRulesGroup;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.util.Messaging;
 import com.google.common.collect.Lists;
@@ -100,38 +101,50 @@ public class NetworkGroupManager {
   public RevokeSecurityGroupIngressResponseType revoke( RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException {
     RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply();
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
+    List<NetworkRule> ruleList = Lists.newArrayList( );
     for ( IpPermissionType ipPerm : request.getIpPermissions() ) {
-      List<NetworkRule> ruleList = NetworkGroupUtil.getNetworkRules( ipPerm );
-      if ( ruleGroup.getNetworkRules().containsAll( ruleList ) ) {
-        for ( NetworkRule delRule : ruleList ) {
-          ruleGroup.getNetworkRules().remove( delRule );
-          NetworkGroupUtil.getEntityWrapper().mergeAndCommit( ruleGroup );
+      ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
+    }
+    if ( ruleGroup.getNetworkRules().removeAll( ruleList ) ) {
+      NetworkGroupUtil.getEntityWrapper().mergeAndCommit( ruleGroup );
+    } else if ( request.getIpPermissions( ).size( ) == 1 && request.getIpPermissions( ).get( 0 ).getIpProtocol( ) == null ) {
+      //LAME: this is for the query-based clients which send incomplete named-network requests.
+      for( NetworkRule rule : ruleList ) {
+        if ( ruleGroup.getNetworkRules().remove( rule ) ) {
+          reply.set_return( true );
         }
-      } else {
-        reply.set_return( false );
-        return reply;
       }
+      if( reply.get_return( ) ) {
+        NetworkGroupUtil.getEntityWrapper().mergeAndCommit( ruleGroup );
+      }
+    } else {
+      reply.set_return( false );
+      return reply;
     }
     Network changedNetwork = ruleGroup.getVmNetwork( );
     Messaging.dispatch( Component.cluster.getUri( ).toASCIIString( ), changedNetwork );
+    reply.set_return( true );
     return reply;
   }
 
   public AuthorizeSecurityGroupIngressResponseType authorize( AuthorizeSecurityGroupIngressType request ) throws Exception{
     AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply();
+    EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
-    List<NetworkRule> ruleList = new ArrayList<NetworkRule>();
+    List<NetworkRule> ruleList = Lists.newArrayList( );
     for ( IpPermissionType ipPerm : request.getIpPermissions() ) {
       ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
-    }    
+    }
     for ( NetworkRule newRule : ruleList ) {
       if ( ruleGroup.getNetworkRules().contains( newRule ) || !newRule.isValid() ) {
         reply.set_return( false );
+        db.rollback( );
         return reply;
       }
     }
     ruleGroup.getNetworkRules().addAll( ruleList );
-    NetworkGroupUtil.getEntityWrapper( ).mergeAndCommit( ruleGroup );
+    db.merge( ruleGroup );
+    db.commit( );
     Network changedNetwork = ruleGroup.getVmNetwork( );
     Messaging.dispatch( Component.cluster.getUri( ).toASCIIString( ), changedNetwork );
     reply.set_return( true );

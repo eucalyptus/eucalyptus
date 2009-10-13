@@ -234,7 +234,7 @@ public class NetworkPeer {
   }
   public boolean equals( final Object o ) {
     if ( this.is(o) ) return true;
-    if ( o == null || !getClass().is(o.getClass()) ) return false;
+    if ( o == null || !getClass().equals(o.getClass()) ) return false;
     
     NetworkPeer that = ( NetworkPeer ) o;
     
@@ -258,6 +258,11 @@ public class NetworkPeer {
     ruleList.add( new NetworkRule( "icmp", -1, -1, new NetworkPeer( this.getUserQueryKey(), this.getGroupName() ) ) );
     return ruleList;
   }
+
+  @Override
+  public String toString( ) {
+    return String.format( "NetworkPeer [groupName=%s, userQueryKey=%s]", this.groupName, this.userQueryKey );
+  }
   
 }
 
@@ -276,11 +281,11 @@ public class NetworkRule {
   Integer lowPort;
   @Column( name = "metadata_network_rule_high_port" )
   Integer highPort;
-  @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
+  @OneToMany( cascade=[CascadeType.REMOVE,CascadeType.MERGE,CascadeType.PERSIST], fetch=FetchType.EAGER )
   @JoinTable( name = "metadata_network_rule_has_ip_range", joinColumns = [ @JoinColumn( name = "metadata_network_rule_id" ) ], inverseJoinColumns = [ @JoinColumn( name = "metadata_network_rule_ip_range_id" ) ] )
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   Set<IpRange> ipRanges = new HashSet<IpRange>();
-  @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
+  @OneToMany( cascade=[CascadeType.REMOVE,CascadeType.MERGE,CascadeType.PERSIST], fetch=FetchType.EAGER )
   @JoinTable( name = "metadata_network_rule_has_peer_network", joinColumns = [ @JoinColumn( name = "metadata_network_rule_id" ) ], inverseJoinColumns = [ @JoinColumn( name = "metadata_network_rule_peer_network_id" ) ] )
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   Set<NetworkPeer> networkPeers = new HashSet<NetworkPeer>();
@@ -321,7 +326,7 @@ public class NetworkRule {
   public boolean equals( Object obj ) {
     if ( this.is(obj) ) return true;
     if ( obj == null ) return false;
-    if ( !getClass( ).is( obj.getClass( ) ) ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     NetworkRule other = ( NetworkRule ) obj;
     if ( highPort == null ) {
       if ( other.highPort != null ) return false;
@@ -333,6 +338,12 @@ public class NetworkRule {
       if ( other.protocol != null ) return false;
     } else if ( !protocol.equals( other.protocol ) ) return false;
     return true;
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format( "NetworkRule [highPort=%s, id=%s, ipRanges=%s, lowPort=%s, networkPeers=%s, protocol=%s]",
+                          this.highPort, this.id, this.ipRanges, this.lowPort, this.networkPeers, this.protocol );
   }
   
   
@@ -353,18 +364,29 @@ public class IpRange {
   public IpRange( final String value ) {
     this.value = value;
   }
-  public boolean equals( final Object o ) {
-    if ( this.is(o) ) return true;
-    if ( o == null || !getClass().is( o.getClass() ) ) return false;
-    
-    IpRange ipRange = ( IpRange ) o;
-    
-    if ( !value.equals( ipRange.value ) ) return false;
-    
-    return true;
-  }
-  public int hashCode() {
-    return value.hashCode();
-  }
+
   
+  @Override
+  public String toString( ) {
+    return String.format( "IpRange [value=%s]", this.value );
+  }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.value == null ) ? 0 : this.value.hashCode( ) );
+    return result;
+  }
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this.is( obj ) ) return true;
+    if ( obj == null ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
+    IpRange other = ( IpRange ) obj;
+    if ( this.value == null ) {
+      if ( other.value != null ) return false;
+    } else if ( !this.value.equals( other.value ) ) return false;
+    return true;
+  }  
 }

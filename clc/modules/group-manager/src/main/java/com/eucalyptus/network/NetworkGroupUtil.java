@@ -101,7 +101,7 @@ public class NetworkGroupUtil {
       }
     } else {
       for ( String groupName : groupNames ) {
-        if ( NetworkGroupUtil.isUserGroupRef( groupName ) ) {
+        if ( !NetworkGroupUtil.isUserGroupRef( groupName ) ) {
           groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( userId, Lists.newArrayList( groupName ) ) );
         } else {
           groupInfoList.addAll( NetworkGroupUtil.getUserNetworksAdmin( groupName ) );
