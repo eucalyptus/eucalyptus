@@ -93,14 +93,12 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
   
   if (!vnetconfig->initialized) {
     bzero(vnetconfig, sizeof(vnetConfig));
-    /* those are checked by param_check */
-    strncpy(vnetconfig->path, path, 1024);
-    strncpy(vnetconfig->eucahome, eucahome, 1024);
-    strncpy(vnetconfig->pubInterface, pubInterface, 32);
-    strncpy(vnetconfig->mode, mode, 32);
-    strncpy(vnetconfig->bridgedev, bridgedev, 32);
-    strncpy(vnetconfig->dhcpdaemon, daemon, 1024);
-    /* those are not */
+    if (path) strncpy(vnetconfig->path, path, 1024);
+    if (eucahome) strncpy(vnetconfig->eucahome, eucahome, 1024);
+    if (pubInterface) strncpy(vnetconfig->pubInterface, pubInterface, 32);
+    if (mode) strncpy(vnetconfig->mode, mode, 32);
+    if (bridgedev) strncpy(vnetconfig->bridgedev, bridgedev, 32);
+    if (daemon) strncpy(vnetconfig->dhcpdaemon, daemon, 1024);
     if (privInterface) strncpy(vnetconfig->privInterface, privInterface, 32);
     if (dhcpuser) strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
     if (localIp) {
@@ -355,8 +353,12 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) 
       vnetconfig->networks[vlan].addrs[found].ip = dot2hex(ip);
     } else {
       newip = hex2dot(vnetconfig->networks[vlan].nw + found);
-      vnetconfig->networks[vlan].addrs[found].ip = dot2hex(newip);
-      if (newip) free(newip);
+      if (!newip) {
+         logprintfl(EUCAWARN,"Out of memory\n");
+      } else {
+         vnetconfig->networks[vlan].addrs[found].ip = dot2hex(newip);
+         free(newip);
+      }
     }
     vnetconfig->networks[vlan].numhosts++;
   } else {

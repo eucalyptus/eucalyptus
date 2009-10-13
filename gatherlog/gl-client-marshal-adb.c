@@ -86,7 +86,7 @@ int gl_getLogs(char *service, char **outCClog, char **outNClog, char **outHlog, 
   }
   response = adb_GetLogsResponse_get_GetLogsResponse(out, env);
 
-  outservice = adb_getLogsResponseType_get_serviceTag(response, env);
+  //outservice = adb_getLogsResponseType_get_serviceTag(response, env);
   *outCClog = adb_getLogsResponseType_get_CCLog(response, env);
   *outNClog = adb_getLogsResponseType_get_NCLog(response, env);
   *outHlog = adb_getLogsResponseType_get_httpdLog(response, env);
@@ -119,7 +119,7 @@ int gl_getKeys(char *service, char **outCCCert, char **outNCCert, axutil_env_t *
   }
   response = adb_GetKeysResponse_get_GetKeysResponse(out, env);
   
-  outservice = adb_getKeysResponseType_get_serviceTag(response, env);
+  //outservice = adb_getKeysResponseType_get_serviceTag(response, env);
   *outCCCert = adb_getKeysResponseType_get_CCcert(response, env);
   *outNCCert = adb_getKeysResponseType_get_NCcert(response, env);
 

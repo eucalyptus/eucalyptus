@@ -82,9 +82,12 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
   }
   
   if (!strcmp(service, "self")) {
-    home = strdup(getenv("EUCALYPTUS"));
+    char *tmp;
+    home = NULL;
+    tmp = getenv("EUCALYPTUS");
+    if (tmp) home = strdup(tmp);
     if (!home) {
-      home = strdup("");
+       home = strdup("");
     }
     if (!home) {
       printf("Out of memory!\n");
@@ -246,7 +249,10 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
   }
   
   if (!strcmp(service, "self")) {
-    home = strdup(getenv("EUCALYPTUS"));
+    char *tmp;
+    home = NULL;
+    tmp = getenv("EUCALYPTUS");
+    if (tmp) tmp = strdup(tmp);
     if (!home) {
       home = strdup("");
     }

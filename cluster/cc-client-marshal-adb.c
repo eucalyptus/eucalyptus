@@ -794,7 +794,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	
 	it = adb_describeInstancesResponseType_get_instances_at(dirt, env, i);
 	instId = adb_ccInstanceType_get_instanceId(it, env);
-	amiId = adb_ccInstanceType_get_imageId(it, env);
+	//amiId = adb_ccInstanceType_get_imageId(it, env);
 	reservationId = adb_ccInstanceType_get_reservationId(it, env);
 	ownerId = adb_ccInstanceType_get_ownerId(it, env);
 	keyName = adb_ccInstanceType_get_keyName(it, env);

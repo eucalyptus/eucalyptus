@@ -1014,10 +1014,13 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	    logprintfl(EUCADEBUG, "returning instance state: %s/%s\n", myInstance->instanceId, myInstance->state);
 	  }
 	}
-	for (j=0; j<ncOutInstsLen; j++) {
-	  free_instance(&(ncOutInsts[j]));
-	}
-	if (ncOutInsts) free(ncOutInsts);
+      }
+      if (ncOutInsts) {
+        for (j=0; j<ncOutInstsLen; j++) {
+          free_instance(&(ncOutInsts[j]));
+        }
+        free(ncOutInsts);
+        ncOutInsts = NULL;
       }
     }
   }
@@ -2170,18 +2173,21 @@ int init_config(void) {
     daemon = getConfString(configFile, "VNET_DHCPDAEMON");
     if (!daemon) {
       logprintfl(EUCAWARN,"no VNET_DHCPDAEMON defined in config, using default\n");
-      daemon = NULL;
     }
     
     dhcpuser = getConfString(configFile, "VNET_DHCPUSER");
     if (!dhcpuser) {
       dhcpuser = strdup("root");
+      if (!dhcpuser)
+         logprintfl(EUCAWARN,"Out of memory\n");
     }
     
     pubmode = getConfString(configFile, "VNET_MODE");
     if (!pubmode) {
       logprintfl(EUCAWARN,"VNET_MODE is not defined, defaulting to 'SYSTEM'\n");
       pubmode = strdup("SYSTEM");
+      if (!pubmode)
+         logprintfl(EUCAWARN,"Out of memory\n");
     }
     
     {
