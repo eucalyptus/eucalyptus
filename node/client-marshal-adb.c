@@ -151,7 +151,7 @@ static int datetime_to_unix (axutil_date_time_t *dt, axutil_env_t *env)
 
 static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axutil_env_t * env)
 {
-    adb_virtualMachineType_t * vm_type = adb_instanceType_get_instanceType(instance, env);
+    adb_virtualMachineType_t * vm_type;
     ncInstParams params;
     bzero(&params, sizeof(ncInstParams));
     vm_type = adb_instanceType_get_instanceType(instance, env);
