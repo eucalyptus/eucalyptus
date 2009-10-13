@@ -253,7 +253,7 @@ public class Configuration {
       List<ClusterConfiguration> componentList = db.query( new ClusterConfiguration( ) );
       for( ClusterConfiguration cc : componentList ) {
         if( cc.getMinVlan( ) == null ) cc.setMinVlan( 10 );
-        if( cc.getMaxVlan( ) == null ) cc.setMinVlan( 4095 );
+        if( cc.getMaxVlan( ) == null ) cc.setMaxVlan( 4095 );
       }
       db.commit( );
       return componentList;
