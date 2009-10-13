@@ -67,6 +67,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
@@ -115,6 +116,7 @@ public class RemoteInfoHandler {
 		List<ClusterConfiguration> clusterConfig = Lists.newArrayList( );
 		for ( ClusterInfoWeb clusterWeb : newClusterList ) {
 			clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ), clusterWeb.getMinVlans( ), clusterWeb.getMaxVlans( ) ) );
+			ClusterState.trim( clusterWeb.getMinVlans( ), clusterWeb.getMaxVlans( ) );
 		}
 		updateClusterConfigurations( clusterConfig );
 	}
