@@ -123,7 +123,7 @@ public class RemoteInfoHandler {
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
-			clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ) ) );
+			clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ), clusterWeb.getMinVlans( ), clusterWeb.getMaxVlans( ) ) );
 		}
 		updateClusterConfigurations( clusterConfig );
 	}
