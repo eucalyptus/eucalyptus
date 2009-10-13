@@ -96,7 +96,12 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     if (path) strncpy(vnetconfig->path, path, 1024);
     if (eucahome) strncpy(vnetconfig->eucahome, eucahome, 1024);
     if (pubInterface) strncpy(vnetconfig->pubInterface, pubInterface, 32);
-    if (mode) strncpy(vnetconfig->mode, mode, 32);
+    if (mode) {
+       strncpy(vnetconfig->mode, mode, 32);
+    } else {
+       logprintfl(EUCAERROR, "vnetInit: NULL mode!\n");
+       return;
+    }
     if (bridgedev) strncpy(vnetconfig->bridgedev, bridgedev, 32);
     if (daemon) strncpy(vnetconfig->dhcpdaemon, daemon, 1024);
     if (privInterface) strncpy(vnetconfig->privInterface, privInterface, 32);
