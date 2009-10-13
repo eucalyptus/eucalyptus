@@ -281,13 +281,12 @@ public class SystemState {
           vol.setStatus( "attached" );
         }
         vm.setVolumes( runVm.getVolumes( ) );
-//FIXME: must get the network index back
-//        if ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) {
-//          try {
-//            vm.setNetworkIndex( runVm.getNetworkIndex( ) );
-//            Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 )  ).extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
-//          } catch ( Exception e ) {}
-//        }
+        if ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) {
+          try {
+            vm.setNetworkIndex( runVm.getNetworkIndex( ) );
+            Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 )  ).extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
+          } catch ( Exception e ) {}
+        }
       }
     } catch ( NoSuchElementException e ) {
       try {
