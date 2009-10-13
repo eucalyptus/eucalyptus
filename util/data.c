@@ -189,10 +189,9 @@ ncResource * allocate_resource (char *nodeStatus,
 {
     ncResource * res;
     
+    if (!nodeStatus) return NULL;
     if (!(res = malloc(sizeof(ncResource)))) return NULL;
-    if (nodeStatus) {
-      strncpy(res->nodeStatus, nodeStatus, CHAR_BUFFER_SIZE);
-    }
+    strncpy(res->nodeStatus, nodeStatus, CHAR_BUFFER_SIZE);
     if (publicSubnets) {
       strncpy(res->publicSubnets, publicSubnets, CHAR_BUFFER_SIZE);
     }
@@ -203,7 +202,6 @@ ncResource * allocate_resource (char *nodeStatus,
     res->numberOfCoresMax = numberOfCoresMax;
     res->numberOfCoresAvailable = numberOfCoresAvailable;
     
-    if (!res->nodeStatus ) free_resource(&res);
     return res;
 }
 

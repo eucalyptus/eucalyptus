@@ -1094,7 +1094,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   //  logprintfl(EUCADEBUG, "executing: %s\n", buf);
   //  rc = system (buf);
   
-  if (strncmp(vnetconfig->dhcpuser, "root", 32) && vnetconfig->path && strncmp(vnetconfig->path, "/", 1024) && strstr(vnetconfig->path, "eucalyptus/net")) {
+  if (strncmp(vnetconfig->dhcpuser, "root", 32) && strncmp(vnetconfig->path, "/", 1024) && strstr(vnetconfig->path, "eucalyptus/net")) {
     snprintf(buf, 512, "%s/usr/lib/eucalyptus/euca_rootwrap chgrp -R %s %s", vnetconfig->eucahome, vnetconfig->dhcpuser, vnetconfig->path);
     logprintfl(EUCADEBUG, "executing: %s\n", buf);
     rc = system(buf);
