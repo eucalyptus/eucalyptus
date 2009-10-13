@@ -978,8 +978,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 	    myInstance->networkIndex = -1;
 	    
 	    cacheInstance=NULL;
-	    find_instanceCacheId(ncOutInsts[j]->instanceId, &cacheInstance);
-	    if (cacheInstance) {
+	    if (!find_instanceCacheId(ncOutInsts[j]->instanceId, &cacheInstance)) {
 	      logprintfl(EUCADEBUG, "\t%s in cache\n", ncOutInsts[j]->instanceId);
 	      memcpy(myInstance, cacheInstance, sizeof(ccInstance));
 	    }
@@ -1133,7 +1132,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   strncpy(dst->keyName, src->keyName, 1024);
   strncpy(dst->launchIndex, src->launchIndex, 64);
   strncpy(dst->userData, src->userData, 64);
-  for (i=0; i<src->groupNamesSize || i >= 64; i++) {
+  for (i=0; i < src->groupNamesSize && i < 64; i++) {
     snprintf(dst->groupNames[i], 32, "%s", src->groupNames[i]);
   }
   strncpy(dst->state, src->stateName, 16);
@@ -2391,16 +2390,15 @@ int init_config(void) {
   if (tmpstr) free(tmpstr);
 
   // WS-Security
-  rc = get_conf_var(configFile, "ENABLE_WS_SECURITY", &tmpstr);
-  if (rc != 1) {
+  use_wssec = 0;
+  tmpstr = getConfString(configFile, "ENABLE_WS_SECURITY");
+  if (!tmpstr) {
     // error
     logprintfl(EUCAFATAL,"parsing config file (%s) for ENABLE_WS_SECURITY\n", configFile);
     return(1);
   } else {
     if (!strcmp(tmpstr, "Y")) {
       use_wssec = 1;
-    } else {
-      use_wssec = 0;
     }
   }
   if (tmpstr) free(tmpstr);
