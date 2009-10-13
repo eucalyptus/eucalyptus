@@ -86,6 +86,14 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
     } else {
         client_home = AXIS2_GETENV("AXIS2C_HOME");
     }
+    if (client_home == NULL) {
+        logprintfl (EUCAERROR, "ERROR: cannot get AXIS2C_HOME");
+	return NULL;
+    }
+    if (endpoint_uri == NULL) {
+        logprintfl (EUCAERROR, "ERROR: empty endpoint_url");
+	return NULL;
+    }
     
     /* TODO: what if endpoint_uri, home, or env are NULL? */
     stub = axis2_stub_create_EucalyptusNC(env, client_home, (axis2_char_t *)endpoint_uri);
@@ -95,6 +103,11 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
         st->client_home=strdup((char *)client_home);
         st->endpoint_uri=(axis2_char_t *)strdup(endpoint_uri);
         st->stub=stub;
+	if (st->client_home == NULL || st->endpoint_uri == NULL) {
+            logprintfl (EUCAWARN, "WARNING: out of memory");
+	}
+    } else {
+        logprintfl (EUCAWARN, "WARNING: out of memory");
     } 
     
     return st;

@@ -576,7 +576,11 @@ long long scFSCK (bunchOfInstances ** instances)
             snprintf (instance_path, BUFSIZE, "%s/%s", user_path, iname);
 
             if (!strcmp("cache", iname) &&
-                !strcmp(EUCALYPTUS_ADMIN, uname)) { /* cache is in admin's dir */
+                	!strcmp(EUCALYPTUS_ADMIN, uname)) { /* cache is in admin's dir */
+		if (cache_path) {
+                    logprintfl (EUCADEBUG, "Found a second cache_path?\n");
+		    free(cache_path);
+		}
                 cache_path = strdup (instance_path);
                 continue;
             }
