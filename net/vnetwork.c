@@ -229,7 +229,7 @@ int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet)
     return(1);
   }
 
-  snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
+  snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 scope link dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
   rc = system(cmd);
   
   if (vnetconfig->cloudIp != 0) {
@@ -792,7 +792,7 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
     outmac[0] = '\0';
     rc = vnetGetNextHost(vnetconfig, outmac, outprivip, 0, -1);
     if (!rc) {
-      snprintf(outpubip, strlen(outprivip), "%s", outprivip);
+      snprintf(outpubip, strlen(outprivip)+1, "%s", outprivip);
       ret = 0;
     }
   } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
@@ -1861,7 +1861,7 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
 
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
     network = hex2dot(vnetconfig->nw);
-    snprintf(cmd, 255, "-A POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
+    snprintf(cmd, 255, "-I POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
     if (network) free(network);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
   }
