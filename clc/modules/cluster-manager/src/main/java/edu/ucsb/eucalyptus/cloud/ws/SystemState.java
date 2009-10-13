@@ -275,7 +275,7 @@ public class SystemState {
         if( VmState.PENDING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
           SystemState.returnNetworkIndex( vm );
           SystemState.returnPublicAddress( vm );
-        } else if ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) {
+        } else if ( vm.getNetworkIndex( )>0 && runVm.getNetworkIndex( )>0 && ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) ) {
           try {
             vm.setNetworkIndex( runVm.getNetworkIndex( ) );
             Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 )  ).extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
