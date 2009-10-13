@@ -2208,14 +2208,16 @@ int init_config(void) {
 	tmpstr = getConfString(configFile, "VNET_INTERFACE");
 	if (tmpstr) {
 	  logprintfl(EUCAWARN, "VNET_INTERFACE is deprecated, please use VNET_PUBINTERFACE and VNET_PRIVINTERFACE instead.  Will set both to value of VNET_INTERFACE (%s) for now.\n", tmpstr);
+	  if (pubInterface) free(pubInterface);
 	  pubInterface = strdup(tmpstr);
+	  if (privInterface) free(privInterface);
 	  privInterface = strdup(tmpstr);
 	}
 	if (tmpstr) free(tmpstr);
       }
     }
 
-    if (!strcmp(pubmode, "STATIC")) {
+    if (pubmode && !strcmp(pubmode, "STATIC")) {
       pubSubnet = getConfString(configFile, "VNET_SUBNET");
       pubSubnetMask = getConfString(configFile, "VNET_NETMASK");
       pubBroadcastAddress = getConfString(configFile, "VNET_BROADCAST");
@@ -2227,7 +2229,7 @@ int init_config(void) {
 	logprintfl(EUCAFATAL,"in 'STATIC' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, VNET_DNS, and VNET_MACMAP'\n");
 	initFail = 1;
       }
-    } else if (!strcmp(pubmode, "MANAGED") || !strcmp(pubmode, "MANAGED-NOVLAN")) {
+    } else if (pubmode && (!strcmp(pubmode, "MANAGED") || !strcmp(pubmode, "MANAGED-NOVLAN"))) {
       numaddrs = getConfString(configFile, "VNET_ADDRSPERNET");
       pubSubnet = getConfString(configFile, "VNET_SUBNET");
       pubSubnetMask = getConfString(configFile, "VNET_NETMASK");
@@ -2257,6 +2259,11 @@ int init_config(void) {
       if (numaddrs) free(numaddrs);
       if (pubips) free(pubips);
       if (localIp) free(localIp);
+      if (pubInterface) free(pubInterface);
+      if (privInterface) free(privInterface);
+      if (dhcpuser) free(dhcpuser);
+      if (daemon) free(daemon);
+      if (pubmode) free(pubmode);
       return(1);
     }
     
