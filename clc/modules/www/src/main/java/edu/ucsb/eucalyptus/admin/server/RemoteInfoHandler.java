@@ -124,7 +124,7 @@ public class RemoteInfoHandler {
 		//FIXME: Min/max vlans values should be obtained
 		try {
 			for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) )
-				clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), 10, 4096 ) );
+				clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), c.getMinVlan(), c.getMaxVlan( ) ) );
 		} catch ( Exception e ) {
 			LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
 		}

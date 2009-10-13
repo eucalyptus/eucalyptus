@@ -102,6 +102,7 @@ public class Cluster implements HasName {
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
     this.credentials = credentials;
     this.mq = new MQ();
+    ClusterState.trim( configuration.getMinVlan( ), configuration.getMaxVlan( ) );
   }
 
   public ClusterCredentials getCredentials( ) {
