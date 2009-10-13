@@ -1818,7 +1818,20 @@ int vnetAddPublicIP(vnetConfig *vnetconfig, char *inip) {
       slashnet = atoi(ptr);
       minip = theip+1;
       numips = pow(2.0, (double)(32 - slashnet)) - 2;
-  } else {
+    } else if ((ptr = strchr(ip, '-'))) {
+      *ptr = '\0';
+      ptr++;
+      minip = dot2hex(ip);
+      theip = dot2hex(ptr);
+      numips = (theip - minip)+1;
+      logprintfl(EUCADEBUG, "IP RANGE CHECK: %s %s %d\n", hex2dot(minip), hex2dot(theip), numips);
+      // check (ip >= 0x7F000000 && ip <= 0x7FFFFFFF) looks for ip in lo range
+      if (numips <= 0 || numips > 256 || (minip >= 0x7F000000 && minip <= 0x7FFFFFFF) || (theip >= 0x7F000000 && theip <= 0x7FFFFFFF)) {
+	logprintfl(EUCAERROR, "incorrect PUBLICIPS range specified: %s-%s\n", ip, ptr);
+	numips = 0;
+      }
+
+    } else {
       minip = dot2hex(ip);
       numips = 1;
     }
@@ -2087,10 +2100,10 @@ int mac2ip(vnetConfig *vnetconfig, char *mac, char **ip) {
 }
 
 uint32_t dot2hex(char *in) {
-  int a, b, c, d, rc;
+  int a=0, b=0, c=0, d=0, rc;
 
   rc = sscanf(in, "%d.%d.%d.%d", &a, &b, &c, &d);
-  if (rc != 4) {
+  if (rc != 4 || (a<0||a>255) || (b<0||b>255) || (c<0||c>255) || (d<0||d>255)) {
     a=127;
     b=0;
     c=0;
