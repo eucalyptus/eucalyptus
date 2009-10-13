@@ -231,7 +231,7 @@ public class SystemState {
     } else {
       int networkIndex = vm.getNetworkIndex( );
       vm.setNetworkIndex( -1 );
-      if( networkIndex > 0 ) {
+      if( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
         try {
           String networkFqName = vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 );
           LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ) );
