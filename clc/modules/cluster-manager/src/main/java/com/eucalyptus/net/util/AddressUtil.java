@@ -295,6 +295,7 @@ public class AddressUtil {
   private static void handleOrphan( String cluster, Address address ) {
     Integer orphanCount = 1;
     orphanCount = orphans.putIfAbsent( address.getName( ), orphanCount );
+    orphanCount = (orphanCount == null) ? 1 : orphanCount;
     orphans.put( address.getName( ), orphanCount + 1 );
     LOG.warn( "Found orphaned public ip address: " + address + " count=" + orphanCount );
     if( orphanCount > 10 ) {
