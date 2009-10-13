@@ -251,6 +251,10 @@ public class Configuration {
     EntityWrapper<ClusterConfiguration> db = Configuration.getEntityWrapper( );
     try {
       List<ClusterConfiguration> componentList = db.query( new ClusterConfiguration( ) );
+      for( ClusterConfiguration cc : componentList ) {
+        if( cc.getMinVlan( ) == null ) cc.setMinVlan( 10 );
+        if( cc.getMaxVlan( ) == null ) cc.setMinVlan( 4095 );
+      }
       db.commit( );
       return componentList;
     } catch ( Exception e ) {

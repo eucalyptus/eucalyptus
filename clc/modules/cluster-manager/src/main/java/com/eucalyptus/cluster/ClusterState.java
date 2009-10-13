@@ -69,24 +69,31 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
+import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public class ClusterState {
   private static Logger LOG = Logger.getLogger( ClusterState.class );
   private String clusterName;
-  private static NavigableSet<Integer> availableVlans;
+  private static NavigableSet<Integer> availableVlans = new ConcurrentSkipListSet<Integer>();
   private Integer mode = 1;
   private Integer addressCapacity;
+
+  public static void trim( int min, int max ) {
+    availableVlans.remove( availableVlans.headSet( min, false ) );
+    availableVlans.remove( availableVlans.tailSet( max, false ) );
+    LOG.debug( EventRecord.here( Component.cluster, "CONFIG_VLANS", Integer.toString( min ), Integer.toString( max ), availableVlans.toString( ) ) ); 
+  }
   
   public ClusterState( String clusterName ) {
     this.clusterName = clusterName;
-    this.availableVlans = new ConcurrentSkipListSet<Integer>();
-    for ( int i = 10; i < 4096; i++ ) this.availableVlans.add( i );
   }
 
 
