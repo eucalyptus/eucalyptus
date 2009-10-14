@@ -308,13 +308,12 @@ public class SystemState {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
       } catch ( NumberFormatException e ) {}
       
-      //:: TODO: populate these asynchronously... :://
       VmImageInfo imgInfo = null;
+//FIXME: really need to populate these asynchronously for multi-cluster/split component... 
       try {
         imgInfo = ( VmImageInfo ) Messaging.send( "vm://ImageResolve", runVm );
       } catch ( EucalyptusCloudException e ) {
-        imgInfo = new VmImageInfo( runVm.getImageId( ), runVm.getKernelId( ), runVm.getRamdiskId( ), null, null, null,
-          null );
+      imgInfo = new VmImageInfo( runVm.getImageId( ), runVm.getKernelId( ), runVm.getRamdiskId( ), null, null, null,null );
       }
       VmKeyInfo keyInfo = null;
       try {

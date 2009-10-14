@@ -66,10 +66,13 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.config.Configuration;
 import com.eucalyptus.images.util.ImageUtil;
 import com.eucalyptus.images.util.WalrusUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
@@ -134,8 +137,12 @@ public class ImageManager {
       db.rollback( );
     }
     VmImageInfo vmImgInfo = new VmImageInfo( vmInfo.getImageId( ), vmInfo.getKernelId( ), vmInfo.getRamdiskId( ), diskUrl, null, null, productCodes );
-    ArrayList<String> ancestorIds = ImageUtil.getAncestors( vmInfo.getOwnerId( ), diskInfo.getImageLocation( ) );
-    vmImgInfo.setAncestorIds( ancestorIds );
+    if( Component.walrus.isLocal( ) ) {
+      ArrayList<String> ancestorIds = ImageUtil.getAncestors( vmInfo.getOwnerId( ), diskInfo.getImageLocation( ) );
+      vmImgInfo.setAncestorIds( ancestorIds );
+    } else {//FIXME: handle populating these in a defered way for the remote case.
+      vmImgInfo.setAncestorIds( new ArrayList<String>() );
+    }
     return vmImgInfo;
   }
 
