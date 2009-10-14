@@ -107,13 +107,16 @@ int scInitConfig (void)
         return 1;
     }
     /* read in configuration */
-    char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
-    if (!home) {
+    char *home, *tmp;
+    tmp = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    if (tmp) {
+        home = strdup(tmp);
+    } else {
         home = strdup(""); /* root by default */
-	if (!home) {
-           logprintfl (EUCAERROR, "out of memory\n");
-           return 1;
-	}
+    }
+    if (!home) {
+       logprintfl (EUCAERROR, "out of memory\n");
+       return 1;
     }
     
     snprintf(config, BUFSIZE, EUCALYPTUS_CONF_LOCATION, home);
@@ -121,8 +124,7 @@ int scInitConfig (void)
         logprintfl (EUCAINFO, "SC is looking for configuration in %s\n", config);
         
         if (get_conf_var(config, INSTANCE_PATH, &s)>0){ 
-            sc_instance_path = strdup (s); 
-            free (s); 
+            sc_instance_path = s; 
         }
 
         if (get_conf_var(config, CONFIG_NC_CACHE_SIZE, &s)>0){ 

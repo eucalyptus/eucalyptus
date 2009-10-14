@@ -318,9 +318,9 @@ doStartNetwork(	struct nc_state_t *nc,
 	} else {
 		ret = 0;
 		logprintfl (EUCAINFO, "StartNetwork(): SUCCESS return from vnetStartNetwork %d\n", rc);
+		if (brname) free(brname);
 	}
 	logprintfl (EUCAINFO, "StartNetwork(): done\n");
-	if (brname) free(brname);
 
 	return (ret);
 }
