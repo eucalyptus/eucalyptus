@@ -79,10 +79,8 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
       GetKeysResponseType msg = (GetKeysResponseType) resp.getMessage( );
       boolean certs = ClusterUtil.checkCerts( msg, this.getCluster( ) );
       if( certs && !this.verified ) {
-        this.getCluster( ).start( );
         try {
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
-          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new ResourceStateHandler( this.getCluster( ) ) );
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new VmStateHandler( this.getCluster( ) ) );

@@ -187,6 +187,7 @@ public class SLAs {
   }
   
   private NetworkToken allocateClusterVlan( final String userId, final String clusterName, final String networkName ) throws NotEnoughResourcesAvailable {
+    ClusterState.trim( );
     ClusterState clusterState = Clusters.getInstance( ).lookup( clusterName ).getState( );
     NetworkToken networkToken = clusterState.getNetworkAllocation( userId, networkName );
     LOG.info( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.accepted, networkToken ) );

@@ -93,6 +93,7 @@ public class ClusterMessageQueue implements Runnable {
   }
   
   public void enqueue( final QueuedEvent event ) {
+    LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent().toString() ) );
     LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent().toString() ), new Exception() );  
     LOG.debug( "Queued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) + " for cluster " + this.getClusterName( ) );
     try {

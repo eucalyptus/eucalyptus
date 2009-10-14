@@ -101,7 +101,7 @@ public class VmInstance implements HasName {
 
   private Date                 launchTime;
   private StopWatch            stopWatch;
-  private int                  networkIndex;
+  private volatile int                  networkIndex;
 
   private String               userData;
   private String               reason;
