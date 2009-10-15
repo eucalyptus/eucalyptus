@@ -75,10 +75,12 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.MappingHttpMessage;
+import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.google.common.collect.Lists;
@@ -135,6 +137,9 @@ public class SoapHandler extends MessageStackHandler {
       if( httpMessage.getMessage( ) instanceof EucalyptusErrorMessageType ) {
         EucalyptusErrorMessageType errMsg = (EucalyptusErrorMessageType) httpMessage.getMessage( );
         httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ) );
+        if( httpMessage instanceof MappingHttpResponse ) {
+          ((MappingHttpResponse) httpMessage).setStatus( HttpResponseStatus.INTERNAL_SERVER_ERROR );
+        }
       } else {
         // :: assert sourceElem != null :://
         httpMessage.setSoapEnvelope( HoldMe.getOMSOAP11Factory( ).getDefaultEnvelope( ) );

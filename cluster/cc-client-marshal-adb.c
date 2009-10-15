@@ -791,6 +791,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	char *state;
 	char *reservationId;
 	char *ownerId, *keyName;
+	int networkIndex;
 	
 	it = adb_describeInstancesResponseType_get_instances_at(dirt, env, i);
 	instId = adb_ccInstanceType_get_instanceId(it, env);
@@ -801,6 +802,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	state = adb_ccInstanceType_get_stateName(it, env);
 	nct = adb_ccInstanceType_get_netParams(it, env);
 	vm = adb_ccInstanceType_get_instanceType(it, env);
+	networkIndex = adb_ccInstanceType_get_networkIndex(it, env);
 
 	if (0)
 	{
@@ -834,7 +836,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	vol = adb_ccInstanceType_get_volumes_at(it, env, 0);
 	volId = adb_volumeType_get_volumeId(vol, env);
 
-	printf("Desc: %s %s %s %s %s %s %s %s %d %s %s %d %d %d %s %s %s %s %s\n", instId, reservationId, ownerId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_publicMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId);
+	printf("Desc: %s %s %s %s %s %s %s %s %d %s %s %d %d %d %s %s %s %s %s %d\n", instId, reservationId, ownerId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_publicMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
 	
       }
     }

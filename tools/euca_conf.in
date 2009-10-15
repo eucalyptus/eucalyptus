@@ -561,6 +561,10 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "--register-sc" ]; then
+		if [ $# -lt 3 ]; then
+			echo "--register-sc requires a CC and a hostname"
+			exit 1
+		fi
 		SC_MODE="ADD"
 		SCNAME="$2"
 		SCHOST="$3"

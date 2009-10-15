@@ -184,10 +184,8 @@ public class ClusterAllocator extends Thread {
       }
     }
     for( String addr : addresses ) {
-      try {
-        new AddressManager().ReleaseAddress( Admin.makeMsg( ReleaseAddressType.class, addr ) );
-        LOG.warn( "Released unused public address: " + addr );
-      } catch ( EucalyptusCloudException e ) {}
+      AddressUtil.releaseAddress( addr );
+      LOG.warn( "Released unused public address: " + addr );
     }
 
   }

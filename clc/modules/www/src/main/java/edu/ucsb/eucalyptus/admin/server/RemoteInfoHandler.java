@@ -67,6 +67,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
@@ -114,7 +115,15 @@ public class RemoteInfoHandler {
 		//FIXME: Min/max vlans values should be updated
 		List<ClusterConfiguration> clusterConfig = Lists.newArrayList( );
 		for ( ClusterInfoWeb clusterWeb : newClusterList ) {
-			clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ) ) );
+	    try {
+        ClusterConfiguration ccConfig = Configuration.getClusterConfiguration( clusterWeb.getName( ) );
+        ccConfig.setMaxVlan( clusterWeb.getMaxVlans( ) );
+        ccConfig.setMinVlan( clusterWeb.getMinVlans( ) );
+        Configuration.getEntityWrapper( ).mergeAndCommit( ccConfig );
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+      }
+			clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ), clusterWeb.getMinVlans( ), clusterWeb.getMaxVlans( ) ) );
 		}
 		updateClusterConfigurations( clusterConfig );
 	}
@@ -124,7 +133,7 @@ public class RemoteInfoHandler {
 		//FIXME: Min/max vlans values should be obtained
 		try {
 			for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) )
-				clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), 10, 4096 ) );
+				clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), c.getMinVlan(), c.getMaxVlan( ) ) );
 		} catch ( Exception e ) {
 			LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
 		}
@@ -259,6 +268,7 @@ public class RemoteInfoHandler {
 
 	public static void updateClusterConfigurations( List<ClusterConfiguration> clusterConfigs ) throws EucalyptusCloudException {
 		updateComponentConfigurations( Configuration.getClusterConfigurations( ), clusterConfigs );
+		ClusterState.trim( );
 	}
 
 	public static void updateStorageControllerConfigurations( List<StorageControllerConfiguration> storageControllerConfigs ) throws EucalyptusCloudException {

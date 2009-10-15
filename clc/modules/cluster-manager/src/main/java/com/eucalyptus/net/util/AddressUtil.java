@@ -1,11 +1,15 @@
 package com.eucalyptus.net.util;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
 import java.util.NoSuchElementException;
-import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
 
@@ -15,20 +19,18 @@ import com.eucalyptus.net.Addresses;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
-import com.eucalyptus.util.EucalyptusProperties.TokenState;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
+import edu.ucsb.eucalyptus.cloud.Pair;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.Address;
-import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
-import edu.ucsb.eucalyptus.cloud.ws.AddressManager;
+import edu.ucsb.eucalyptus.constants.VmState;
 
 public class AddressUtil {
 
@@ -162,29 +164,118 @@ public class AddressUtil {
     }
   }
 
-  private static volatile boolean init = false;
-  public static boolean initialize() {
-    if( !init ) {
-      EntityWrapper<Address> db = new EntityWrapper<Address>();
+  private static ConcurrentMap<String,AtomicBoolean> clusterInit = getClusterAddressMap();
+  public static boolean initialize( String cluster, List<Pair> ccList  ) {
+    if( AddressUtil.tryInit( cluster ) ) {
       try {
-        List<Address> addrList = db.query( new Address() );
-        db.commit();
+        List<Address> addrList = getStoredAddresses( cluster );
+        List<String> ccListAddrs = Lists.transform( ccList, new Function<Pair,String>() {
+          @Override public String apply( Pair p ) { return p.getLeft( ); }          
+        });
         for ( Address addr : addrList ) {
-          addr.init( );
-          try {
-            Addresses.getInstance().replace( addr );
-          } catch ( NoSuchElementException e ) {
-            Addresses.getInstance().register( addr );
+          if( ccListAddrs.contains( addr.getName( ) ) ) {
+            Pair current = checkHasCurrentState( addr.getName( ), ccList );
+            if( current != null ) {
+              try {
+                VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( current.getRight( ) );
+                addr.setAssigned( vm.getInstanceId( ), current.getRight( ) );
+              } catch ( Exception e ) {
+                addr.doUnassign( );
+              }
+            }
+            addr.init( );
+            ccList.remove( current );
+          } else {
+            try {
+              addr.release( );
+              Addresses.getInstance( ).deregister( addr.getName( ) );
+            } catch ( Throwable e ) {
+              LOG.debug( e );
+            }
           }
         }
+        for( Pair current : ccList ) {
+          Address addr = AddressUtil.lookupOrCreate( cluster, current );
+          try {
+            VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( current.getRight( ) );
+            addr.allocate( Component.eucalyptus.name( ) );
+            addr.setAssigned( vm.getInstanceId( ), current.getRight( ) );
+          } catch ( Exception e ) {
+            addr.doUnassign( );
+          }
+          addr.init( );
+        }
       } catch ( Throwable e ) {
-        db.rollback( );
+        clusterInit.get( cluster ).set( false );
       }
-      init = true;
       return true;
     } else {
       return false;
     }
+  }
+
+  private static List<Address> getStoredAddresses( String cluster ) {
+    EntityWrapper<Address> db = new EntityWrapper<Address>();
+    Address clusterAddr = new Address();
+    clusterAddr.setCluster( cluster );
+    List<Address> addrList = Lists.newArrayList( );
+    try {
+      addrList = db.query( clusterAddr );
+      db.commit();
+    } catch ( Exception e1 ) {
+      db.rollback( );
+    }
+    return addrList;
+  }
+
+  private static Pair checkHasCurrentState( String publicAddress, List<Pair> list ) {
+    for( Pair p : list ) {
+      if( p.getLeft( ).equals( publicAddress ) ) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  private static ConcurrentMap<String, AtomicBoolean> getClusterAddressMap( ) {
+    synchronized(AddressUtil.class) {
+      if( clusterInit == null ) {
+        clusterInit = new ConcurrentHashMap<String,AtomicBoolean>();
+        for( String cluster : Clusters.getInstance( ).listKeys( ) ) {
+          clusterInit.put( cluster, new AtomicBoolean( false ) );
+        }      
+      }
+    }
+    return clusterInit;
+  }
+  
+  public static Address lookupOrCreate( String cluster, Pair p ) {
+    Address address;
+    try {
+      try {
+        address = Addresses.getInstance( ).lookup( p.getLeft( ) );
+      } catch ( NoSuchElementException e1 ) {
+        address = Addresses.getInstance( ).lookupDisabled( p.getLeft( ) );
+      }
+    } catch ( NoSuchElementException e ) {
+      LOG.debug( e );
+      address = new Address( p.getLeft( ), cluster );
+      try {
+        VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( p.getRight( ) );
+        address.allocate( Component.eucalyptus.name( ) );
+        address.setAssigned( vm.getInstanceId( ), p.getRight( ) );
+      } catch ( Exception e1 ) {
+        //TODO: dispatch unassign for unknown address.
+      }      
+      address.init( );
+    }
+    return address;
+  }
+
+  
+  private static boolean tryInit( String cluster ) {
+    clusterInit.putIfAbsent( cluster, new AtomicBoolean( false ) );
+    return clusterInit.get( cluster ).compareAndSet( false, true );
   }
 
   public static void clearAddress( Address address ) {
@@ -199,4 +290,59 @@ public class AddressUtil {
       address.clean( );
     }
   }
+
+  private static ConcurrentNavigableMap<String,Integer> orphans = new ConcurrentSkipListMap<String,Integer>();
+  private static void handleOrphan( String cluster, Address address ) {
+    Integer orphanCount = 1;
+    orphanCount = orphans.putIfAbsent( address.getName( ), orphanCount );
+    orphanCount = (orphanCount == null) ? 1 : orphanCount;
+    orphans.put( address.getName( ), orphanCount + 1 );
+    LOG.warn( "Found orphaned public ip address: " + address + " count=" + orphanCount );
+    if( orphanCount > 10 ) {
+      orphans.remove( address.getName( ) );
+      Clusters.dispatchClusterEvent( cluster, new UnassignAddressCallback( address ) );
+    }
+  }
+  
+  public static void update( String cluster, List<Pair> ccList ) {
+    List<String> ccListAddrs = Lists.transform( ccList, new Function<Pair,String>() {
+      @Override public String apply( Pair p ) { return p.getLeft( ); }          
+    });
+    for ( Pair p : ccList ) {
+      Address address = AddressUtil.lookupOrCreate( cluster, p );
+      try {
+        InetAddress addr = Inet4Address.getByName( p.getRight( ) );
+        VmInstance vm;
+        try {
+          vm = VmInstances.getInstance( ).lookupByInstanceIp( p.getRight( ) );
+          if( Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) ) {
+            address.allocate( Component.eucalyptus.name() );
+          }
+          if( !address.isAssigned( ) ) {
+            address.setAssigned( vm.getInstanceId( ), p.getRight( ) );
+          }
+          orphans.remove( address.getName( ) );
+        } catch ( Exception e1 ) {
+          if( !addr.isLoopbackAddress( ) && !AddressUtil.checkForPendingVm() ) {
+            AddressUtil.handleOrphan( cluster, address );
+          } else {
+            orphans.remove( address.getName( ) );
+          }
+        }
+      } catch ( UnknownHostException e1 ) {
+        LOG.debug( e1, e1 );
+        orphans.remove( address.getName( ) );
+      }
+    }          
+  }
+
+  private static boolean checkForPendingVm() {
+    for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+      if ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 }

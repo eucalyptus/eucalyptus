@@ -231,7 +231,7 @@ public class SystemState {
     } else {
       int networkIndex = vm.getNetworkIndex( );
       vm.setNetworkIndex( -1 );
-      if( networkIndex > 0 ) {
+      if( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
         try {
           String networkFqName = vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 );
           LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ) );
@@ -275,22 +275,18 @@ public class SystemState {
         if( VmState.PENDING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
           SystemState.returnNetworkIndex( vm );
           SystemState.returnPublicAddress( vm );
+        } else if ( vm.getNetworkIndex( )>0 && runVm.getNetworkIndex( )>0 && ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) ) {
+          try {
+            vm.setNetworkIndex( runVm.getNetworkIndex( ) );
+            Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 )  ).extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
+          } catch ( Exception e ) {}
         }
+
         for ( AttachedVolume vol : runVm.getVolumes( ) ) {
           vol.setInstanceId( vm.getInstanceId( ) );
           vol.setStatus( "attached" );
         }
         vm.setVolumes( runVm.getVolumes( ) );
-        //        if ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) {
-        //          try {
-        //            Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).extantNetworkIndex( vm.getPlacement( ),
-        //                                                                                                 vm.getNetworkIndex( ) );
-        //          } catch ( Exception e ) {}
-        //        } else {
-        //          try {
-        //            Networks.getInstance( ).lookup( vm.getNetworkNames( ).get( 0 ) ).returnNetworkIndex( vm.getNetworkIndex( ) );
-        //          } catch ( Exception e ) {}
-        //        }
       }
     } catch ( NoSuchElementException e ) {
       try {
@@ -312,13 +308,12 @@ public class SystemState {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
       } catch ( NumberFormatException e ) {}
       
-      //:: TODO: populate these asynchronously... :://
       VmImageInfo imgInfo = null;
+//FIXME: really need to populate these asynchronously for multi-cluster/split component... 
       try {
         imgInfo = ( VmImageInfo ) Messaging.send( "vm://ImageResolve", runVm );
       } catch ( EucalyptusCloudException e ) {
-        imgInfo = new VmImageInfo( runVm.getImageId( ), runVm.getKernelId( ), runVm.getRamdiskId( ), null, null, null,
-          null );
+      imgInfo = new VmImageInfo( runVm.getImageId( ), runVm.getKernelId( ), runVm.getRamdiskId( ), null, null, null,null );
       }
       VmKeyInfo keyInfo = null;
       try {
@@ -343,7 +338,7 @@ public class SystemState {
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.error( e );
           }
-          //          notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetworkIndex( ) );
+          notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
             notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
@@ -392,9 +387,7 @@ public class SystemState {
                                           VmState.SHUTTING_DOWN.getName( ) ) );
           v.setState( VmState.SHUTTING_DOWN );
           v.resetStopWatch( );
-//          SystemState.returnNetworkIndex( v );
           SystemState.cleanUp( v );
-//          SystemState.returnPublicAddress( v );
           if( !EucalyptusProperties.disableNetworking ) {
             try {
               Network net = v.getNetworks( ).get( 0 );

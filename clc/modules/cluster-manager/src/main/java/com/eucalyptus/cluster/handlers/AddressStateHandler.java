@@ -38,7 +38,6 @@ import edu.ucsb.eucalyptus.msgs.DescribePublicAddressesType;
 public class AddressStateHandler extends AbstractClusterMessageDispatcher {
   private static Logger LOG = Logger.getLogger( NetworkStateHandler.class );
   
-  private static ConcurrentNavigableMap<String,Integer> orphans = new ConcurrentSkipListMap<String,Integer>();
   public AddressStateHandler( Cluster cluster ) throws BindingException {
     super( cluster );
   }
@@ -75,24 +74,8 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
       DescribePublicAddressesResponseType reply = ( DescribePublicAddressesResponseType ) resp.getMessage( );
       if ( reply.get_return( ) ) {
         EucalyptusProperties.disableNetworking = false;
-        AddressUtil.initialize( );
-        for ( Pair p : Pair.getPaired( reply.getAddresses( ), reply.getMapping( ) ) ) {
-          Address address = getAddress( p );
-          try {
-            InetAddress addr = Inet4Address.getByName( p.getRight( ) );
-            address.setInstanceAddress( p.getRight( ) );
-            VmInstance vm = getVmInstance( p );
-            if ( vm != null ) {
-              orphans.remove( address.getName( ) );
-            } else if( !addr.isLoopbackAddress( ) && !this.checkForPendingVm( address ) ) {
-              handleOrphan( address );
-            } else {
-              orphans.remove( address.getName( ) );
-            }
-          } catch ( UnknownHostException e1 ) {
-            LOG.debug( e1, e1 );
-            orphans.remove( address.getName( ) );
-          }
+        if( !AddressUtil.initialize( this.getCluster( ).getName( ), Pair.getPaired( reply.getAddresses( ), reply.getMapping( ) ) ) ) {
+          AddressUtil.update( this.getCluster( ).getName( ), Pair.getPaired( reply.getAddresses( ), reply.getMapping( ) ) );
         }
       } else {
         LOG.warn( "Response from cluster [" + this.getCluster( ).getName( ) + "]: " + reply.getStatusMessage( ) );
@@ -102,37 +85,8 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
     }
   }
 
-  private void handleOrphan( Address address ) {
-    Integer orphanCount = 1;
-    orphanCount = orphans.putIfAbsent( address.getName( ), orphanCount );
-    orphans.put( address.getName( ), orphanCount + 1 );
-    LOG.warn( "Found orphaned public ip address: " + address + " count=" + orphanCount );
-    if( orphanCount > 10 ) {
-      orphans.remove( address.getName( ) );
-      Clusters.dispatchClusterEvent( this.getCluster( ), new UnassignAddressCallback( address ) );
-    }
-  }
-
-  private boolean checkForPendingVm( Address addr ) {
-    for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-      if ( vm.getNetworkConfig( ).getIpAddress( ).equals( addr.getInstanceAddress( ) ) || VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) {
-        return true;
-      }
-    }
-    return false;
-  }
-  
-  private VmInstance getVmInstance( Pair p ) {
-    VmInstance assignee = null;
-    for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-      if ( vm.getNetworkConfig( ).getIpAddress( ).equals( p.getLeft( ) ) ) {
-        assignee = vm;
-      }
-    }
-    return assignee;
-  }
-  
-  private Address getAddress( Pair p ) {
+    
+  public static Address getAddress( String cluster, Pair p ) {
     Address address;
     try {
       try {
@@ -142,7 +96,7 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
       }
     } catch ( NoSuchElementException e ) {
       LOG.debug( e );
-      address = new Address( p.getLeft( ), this.getCluster( ).getName( ) );
+      address = new Address( p.getLeft( ), cluster );
       address.init( );
     }
     return address;
