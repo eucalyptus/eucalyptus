@@ -23,6 +23,7 @@ static img_env g_env = { initialized: 0 };
 static sem * img_sem;
 static char add_key_command_path [SIZE] = "";
 static char disk_convert_command_path [SIZE] = "";
+static char * euca_home = NULL;
 
 static void max_to_str (char * str, const int size, int limit_mb) 
 {
@@ -92,7 +93,7 @@ img_env * img_init (char * wdir, int wdir_max_mb, char * cdir, int cdir_max_mb)
     
     // try looking for stuff relative to $EUCALYPTUS env var
     char root [] = "";
-	char * euca_home = getenv(EUCALYPTUS_ENV_VAR_NAME);
+	euca_home = getenv(EUCALYPTUS_ENV_VAR_NAME);
     if (!euca_home) {
         euca_home = root;
     }
@@ -294,7 +295,6 @@ static int wait_for_file (const char * appear, const char * disappear, const int
 /* if path=A/B/C but only A exists, this will try to create B and C */
 static int ensure_path_exists (const char * path)
 {
-    mode_t mode = 0777;
     int len = strlen(path);
     char * path_copy = strdup(path);
     int i;
@@ -315,7 +315,7 @@ static int ensure_path_exists (const char * path)
         if ( try_it ) {
             if ( stat (path_copy, &buf) == -1 ) {
                 logprintfl (EUCADEBUG, "trying to create path %s\n", path_copy);
-                if ( mkdir (path_copy, mode) == -1) {
+                if ((mkdir (path_copy, (mode_t)0) == -1) || (chmod (path_copy, (mode_t)0774 == -1))) {
                     printf ("error: failed to create path %s\n", path_copy);
                     return errno;
                 }
@@ -771,7 +771,10 @@ static int upload_vmdk (const char * disk_path, const char * vmdk_path, const im
 int img_convert (img_spec * root, img_spec * kernel, img_spec * ramdisk, img_spec * dest, const char * key, int rsize_mb, int ssize_mb, int esize_mb)
 {
     int rc, force = 0;
-    rc = verify_ami2vmx_helpers(force);
+    char path [512];
+
+    snprintf (path, 512, "%s/usr/lib/eucalyptus", euca_home);
+    rc = verify_ami2vmx_helpers(force, path);
     if (rc) {
         logprintfl (EUCAFATAL, "failed to verify helpers\n");
         return 1;

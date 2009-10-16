@@ -53,7 +53,7 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
   logprintfl (EUCAINFO, "Looking for loop devices...\n");
   done=0;
   for (i=0; i<30 && !done; i++) {
-    output = pruntf("%s -f", helpers_path[LOSETUP]);
+      output = pruntf("%s %s -f", helpers_path[ROOTWRAP], helpers_path[LOSETUP]);
     if (strstr(output, "/dev/loop")) {
       loopdev = strdup(output);
       ptr = strrchr(loopdev, '\n');
@@ -63,7 +63,7 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
   }
   if (done) {
     logprintfl (EUCAINFO, "Attaching disk to loop device...\n");
-    output = pruntf("%s -o 32256 %s %s-disk", helpers_path[LOSETUP], loopdev, infile);
+    output = pruntf("%s %s -o 32256 %s %s-disk", helpers_path[ROOTWRAP], helpers_path[LOSETUP], loopdev, infile);
     if (!output) {
       logprintfl (EUCAINFO, "ERROR: cannot attach %s-disk to loop device %s\n", infile, loopdev);
       return(1);
@@ -75,14 +75,14 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
   
   logprintfl (EUCAINFO, "Copying infile data to intermediate disk file...\n");
   //  run ("$DD if=$partition of=$loopdevp bs=512k >/dev/null 2>&1", 11);  
-  output = pruntf("%s if=%s of=%s bs=512k", helpers_path[DD], infile, loopdev);
+  output = pruntf("%s %s if=%s of=%s bs=512k", helpers_path[ROOTWRAP], helpers_path[DD], infile, loopdev);
   if (!output) {
     logprintfl (EUCAINFO, "ERROR: cannot copy infile to intermediate loop device\n");
     return(1);
   }
 
-  output = pruntf("%s", helpers_path[SYNC]);
-  output = pruntf("%s -d %s", helpers_path[LOSETUP], loopdev);
+  output = pruntf("%s %s", helpers_path[ROOTWRAP], helpers_path[SYNC]);
+  output = pruntf("%s %s -d %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], loopdev);
   if (!output) {
     logprintfl (EUCAINFO, "ERROR: cannot detach loop device\n");
     return(1);
@@ -92,14 +92,14 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
   first_sector = last_sector+1;
   last_sector = first_sector + (ephemeral * 2000);
   //  run ("$PARTED --script $partition mkpartfs primary ext2 ${first_sector}s ${last_sector}s", 5);
-  output = pruntf("%s --script %s-disk mkpartfs primary ext2 %ds %ds", helpers_path[PARTED], infile, first_sector, last_sector);
+  output = pruntf("%s %s --script %s-disk mkpartfs primary ext2 %ds %ds", helpers_path[ROOTWRAP], helpers_path[PARTED], infile, first_sector, last_sector);
   if (!output) {
     logprintfl (EUCAINFO, "ERROR: cannot set up ephemeral partition\n");
     return(1);
   }
 
   first_sector = last_sector+1;
-  output = pruntf("%s --script %s-disk mkpartfs primary linux-swap %ds 100%%", helpers_path[PARTED], infile, first_sector);
+  output = pruntf("%s %s --script %s-disk mkpartfs primary linux-swap %ds 100%%", helpers_path[ROOTWRAP], helpers_path[PARTED], infile, first_sector);
   if (!output) {
     logprintfl (EUCAINFO, "ERROR: cannot set up swap partition\n");
     return(1);
@@ -110,7 +110,7 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
     tmpdir = mkdtemp(dtemplate);
     done=0;
     for (i=0; i<30 && !done; i++) {
-      output = pruntf("%s -f", helpers_path[LOSETUP]);
+      output = pruntf("%s %s -f", helpers_path[ROOTWRAP], helpers_path[LOSETUP]);
       if (strstr(output, "/dev/loop")) {
 	loopdev = strdup(output);
 	ptr = strrchr(loopdev, '\n');
@@ -119,7 +119,7 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
       }
     }
     if (done) {
-      output = pruntf("%s -o 32256 %s %s-disk", helpers_path[LOSETUP], loopdev, infile);
+      output = pruntf("%s %s -o 32256 %s %s-disk", helpers_path[ROOTWRAP], helpers_path[LOSETUP], loopdev, infile);
       if (!output) {
 	logprintfl (EUCAINFO, "ERROR: cannot attach %s-disk to loop device %s\n", infile, loopdev);
 	return(1);
@@ -130,27 +130,27 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
     }
    
     logprintfl (EUCAINFO, "Mounting volume...\n");
-    //output = pruntf("/home/dmitrii/Desktop/eucalyptus/branches/1.6-vmware-broker/usr/lib/eucalyptus/euca_rootwrap %s -o loop %s %s", helpers_path[MOUNT], loopdev, tmpdir);
-    output = pruntf("/home/dmitrii/Desktop/eucalyptus/branches/1.6-vmware-broker/usr/lib/eucalyptus/euca_mountwrap mount %s %s", loopdev, tmpdir);
+    //output = pruntf("%s %s -o loop %s %s", helpers_path[MOUNT], loopdev, tmpdir);
+    output = pruntf("%s %s mount %s %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], loopdev, tmpdir);
     if (!output) {
       logprintfl (EUCAINFO, "ERROR: \n");
       return(1);
     }
 
     logprintfl (EUCAINFO, "Installing boot loader...\n");
-    output = pruntf("%s -p %s/boot/grub/", helpers_path[MKDIR], tmpdir);
+    output = pruntf("%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], tmpdir);
     if (!output) {
       logprintfl (EUCAINFO, "ERROR: \n");
       return(1);
     }
 
-    output = pruntf("%s /boot/grub/stage1 %s/boot/grub", helpers_path[CP], tmpdir);
+    output = pruntf("%s %s /boot/grub/stage1 %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], tmpdir);
     if (!output) {
       logprintfl (EUCAINFO, "ERROR: \n");
       return(1);
     }
 
-    output = pruntf("%s /boot/grub/stage2 %s/boot/grub", helpers_path[CP], tmpdir);
+    output = pruntf("%s %s /boot/grub/stage2 %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], tmpdir);
     if (!output) {
       logprintfl (EUCAINFO, "ERROR: \n");
       return(1);
@@ -173,14 +173,14 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
     }
     
     logprintfl (EUCAINFO, "Installing kernel, ramdisk and modules...\n");
-    output = pruntf("%s %s %s/boot/%s", helpers_path[CP], kernel, tmpdir, kfile);
+    output = pruntf("%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, tmpdir, kfile);
     if (!output) {
       logprintfl (EUCAINFO, "ERROR: \n");
       return(1);
     }
 
     if (ramdisk) {
-      output = pruntf("%s %s %s/boot/%s", helpers_path[CP], ramdisk, tmpdir, rfile);
+      output = pruntf("%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, tmpdir, rfile);
       if (!output) {
 	logprintfl (EUCAINFO, "ERROR: \n");
 	return(1);
@@ -191,7 +191,7 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
     while(strlen(modules) && modules[strlen(modules)-1] == '/') {
       modules[strlen(modules)-1] = '\0';
     }
-    output = pruntf("%s -az %s %s/lib/modules/", helpers_path[RSYNC], modules, tmpdir);
+    output = pruntf("%s %s -az %s %s/lib/modules/", helpers_path[ROOTWRAP], helpers_path[RSYNC], modules, tmpdir);
     if (!output) {
       logprintfl (EUCAINFO, "ERROR: \n");
       return(1);
@@ -212,13 +212,13 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
       fgetc(stdin);
     }
     //output = pruntf("%s %s", helpers_path[UMOUNT], tmpdir);
-    output = pruntf("/home/dmitrii/Desktop/eucalyptus/branches/1.6-vmware-broker/usr/lib/eucalyptus/euca_mountwrap umount %s", tmpdir);
+    output = pruntf("%s %s umount %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], tmpdir);
     if (!output) {
       printf("ERROR: \n");
       return(1);
     }
 
-    output = pruntf("%s -d %s", helpers_path[LOSETUP], loopdev);
+    output = pruntf("%s %s -d %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], loopdev);
     if (!output) {
       printf("ERROR: \n");
       return(1);
@@ -237,7 +237,7 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
     return 0; // dmitrii stops here
     
     logprintfl (EUCAINFO, "Converting intermediate volume to VMWare image...\n");
-    output = pruntf("%s convert -f raw %s-disk -O vmdk %s", helpers_path[KVMIMG], infile, outfile);
+    output = pruntf("%s %s convert -f raw %s-disk -O vmdk %s", helpers_path[ROOTWRAP], helpers_path[KVMIMG], infile, outfile);
     if (!output) {
       logprintfl (EUCAINFO, "ERROR: VMX conversion failed\n");
       return(1);

@@ -8,7 +8,7 @@
 #include <stdarg.h>
 #include <ami2vmx.h>
 
-char *helpers[LASTHELPER] = {"losetup", "mount", "kvm-img,qemu-img", "grub", "parted", "mv", "dd", "sync", "mkdir", "cp", "rsync", "umount"};
+char *helpers[LASTHELPER] = {"losetup", "mount", "kvm-img,qemu-img", "grub", "parted", "mv", "dd", "sync", "mkdir", "cp", "rsync", "umount", "euca_rootwrap", "euca_mountwrap"};
 char *helpers_path[LASTHELPER];
 
 #ifdef AMI2VMX
@@ -152,17 +152,21 @@ void usage(void) {
 
 #endif
 
-int verify_ami2vmx_helpers(int force) {
+int verify_ami2vmx_helpers(int force, char * extra_path) {
   int i, done, rc, j;
   char *tok, *toka, *path, *helper, file[1024], *save, *savea;
   struct stat statbuf;
 
   for (i=0; i<LASTHELPER; i++) {
-    path = strdup(getenv("PATH"));
-    if (!path) {
+    if (getenv("PATH")==NULL) {
       return(1);
     }
-
+    path = malloc (strlen(getenv("PATH"))+((extra_path==NULL)?(0):(strlen(extra_path)))+2);
+    if (path==NULL) {
+        return 1;
+    }
+    sprintf (path, "%s:%s", extra_path, getenv("PATH"));
+    
     tok = strtok_r(path, ":", &save);
     done=0;
     while(tok && !done) {
