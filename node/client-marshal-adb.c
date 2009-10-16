@@ -458,7 +458,7 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
             
             * outInstsLen = adb_ncDescribeInstancesResponseType_sizeof_instances(response, env);
             if (* outInstsLen) {
-                * outInsts = malloc (sizeof(* outInstsLen));
+	      * outInsts = malloc (sizeof(ncInstance *) * *outInstsLen);
                 if ( * outInsts == NULL ) { 
                     logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeInstancesStub()\n");
                     * outInstsLen = 0;

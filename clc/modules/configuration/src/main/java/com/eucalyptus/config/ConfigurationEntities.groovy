@@ -206,10 +206,17 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusCC";
   @Transient
   private static String INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
-
+  Integer minVlan;
+  Integer maxVlan;
+  
   public ClusterConfiguration( ) {}
   public ClusterConfiguration( String name, String hostName, Integer port ) {
     super( name, hostName, port, DEFAULT_SERVICE_PATH );
+  }
+  public ClusterConfiguration( String name, String hostName, Integer port, Integer minVlan, Integer maxVlan ) {
+    super( name, hostName, port, DEFAULT_SERVICE_PATH );
+    this.minVlan = minVlan;
+    this.maxVlan = maxVlan;
   }
   public String getInsecureServicePath() {
     return INSECURE_SERVICE_PATH;

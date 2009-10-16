@@ -66,6 +66,7 @@ package com.eucalyptus.ws.stages;
 import java.util.ArrayList;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -85,12 +86,13 @@ import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
+@ChannelPipelineCoverage("one")
 public class ElasticFoxMangleHandler extends MessageStackHandler {
 
   @Override
   public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-    if ( event.getMessage( ) instanceof MappingHttpResponse ) {
-      MappingHttpResponse message = ( MappingHttpResponse ) event.getMessage( );
+    if ( event.getMessage( ) instanceof MappingHttpRequest ) {
+      MappingHttpRequest message = ( MappingHttpRequest ) event.getMessage( );
       if ( message.getMessage( ) instanceof ModifyImageAttributeType ) {
         ModifyImageAttributeType pure = ( ( ModifyImageAttributeType ) message.getMessage( ) );
         pure.setImageId( purifyImageIn( pure.getImageId( ) ) );
@@ -127,8 +129,8 @@ public class ElasticFoxMangleHandler extends MessageStackHandler {
 
   @Override
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-    if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-      MappingHttpRequest message = ( MappingHttpRequest ) event.getMessage( );
+    if ( event.getMessage( ) instanceof MappingHttpResponse ) {
+      MappingHttpResponse message = ( MappingHttpResponse ) event.getMessage( );
       if ( message.getMessage( ) instanceof DescribeImagesResponseType ) {
         DescribeImagesResponseType purify = ( DescribeImagesResponseType ) message.getMessage( );
         for ( ImageDetails img : purify.getImagesSet( ) ) {

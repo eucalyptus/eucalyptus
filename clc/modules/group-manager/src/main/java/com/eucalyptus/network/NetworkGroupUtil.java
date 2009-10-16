@@ -5,6 +5,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.User;
 import com.eucalyptus.entities.IpRange;
 import com.eucalyptus.entities.NetworkPeer;
 import com.eucalyptus.entities.NetworkRule;
@@ -89,6 +91,30 @@ public class NetworkGroupUtil {
         createUserNetworkRulesGroup( userId, NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
       } catch ( Exception e1 ) {}
     }
+  }
+
+  public static List<SecurityGroupItemType> getUserNetworksAdmin( String userId, List<String> groupNames ) throws EucalyptusCloudException {
+    List<SecurityGroupItemType> groupInfoList = Lists.newArrayList( );
+    if ( groupNames.isEmpty( ) ) {
+      for( User u : CredentialProvider.getAllUsers( ) ) {
+        groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( u.getUserName( ), groupNames ) );        
+      }
+    } else {
+      for ( String groupName : groupNames ) {
+        if ( !NetworkGroupUtil.isUserGroupRef( groupName ) ) {
+          groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( userId, Lists.newArrayList( groupName ) ) );
+        } else {
+          groupInfoList.addAll( NetworkGroupUtil.getUserNetworksAdmin( groupName ) );
+        }
+      }
+    }
+    return groupInfoList;
+  }
+  public static boolean isUserGroupRef( String adminGroupName ) {
+    return adminGroupName.indexOf( "-" ) != -1;
+  }
+  public static List<SecurityGroupItemType> getUserNetworksAdmin( String adminGroupName ) throws EucalyptusCloudException {
+    return getUserNetworks( adminGroupName.split("-")[0], Lists.newArrayList( adminGroupName.replaceFirst( "\\w*-", "" ) ) );
   }
 
   public static List<SecurityGroupItemType> getUserNetworks( String userId, List<String> groupNames ) throws EucalyptusCloudException {
