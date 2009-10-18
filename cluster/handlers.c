@@ -1484,7 +1484,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  allocate_ccInstance(myInstance, instId, amiId, kernelId, ramdiskId, amiURL, kernelURL, ramdiskURL, ownerId, "Pending", time(NULL), reservationId, &(myInstance->ccnet), &(myInstance->ccvm), myInstance->ncHostIdx, keyName, myInstance->serviceTag, userData, launchIndex, myInstance->groupNames, myInstance->volumes, myInstance->volumesSize, myInstance->networkIndex);
 
 	  // instance info that CC has
-	  myInstance->networkIndex = thenidx;
+	  if (thenidx >= 0) {
+	    myInstance->networkIndex = networkIndexList[thenidx];
+	  }
 	  myInstance->ts = time(NULL);
 	  if (strcmp(pubip, "0.0.0.0")) {
 	    strncpy(myInstance->ccnet.publicIp, pubip, 16);
