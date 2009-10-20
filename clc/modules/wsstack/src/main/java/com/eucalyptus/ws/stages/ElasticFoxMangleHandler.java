@@ -91,8 +91,8 @@ public class ElasticFoxMangleHandler extends MessageStackHandler {
 
   @Override
   public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-    if ( event.getMessage( ) instanceof MappingHttpResponse ) {
-      MappingHttpResponse message = ( MappingHttpResponse ) event.getMessage( );
+    if ( event.getMessage( ) instanceof MappingHttpRequest ) {
+      MappingHttpRequest message = ( MappingHttpRequest ) event.getMessage( );
       if ( message.getMessage( ) instanceof ModifyImageAttributeType ) {
         ModifyImageAttributeType pure = ( ( ModifyImageAttributeType ) message.getMessage( ) );
         pure.setImageId( purifyImageIn( pure.getImageId( ) ) );
@@ -129,8 +129,8 @@ public class ElasticFoxMangleHandler extends MessageStackHandler {
 
   @Override
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-    if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-      MappingHttpRequest message = ( MappingHttpRequest ) event.getMessage( );
+    if ( event.getMessage( ) instanceof MappingHttpResponse ) {
+      MappingHttpResponse message = ( MappingHttpResponse ) event.getMessage( );
       if ( message.getMessage( ) instanceof DescribeImagesResponseType ) {
         DescribeImagesResponseType purify = ( DescribeImagesResponseType ) message.getMessage( );
         for ( ImageDetails img : purify.getImagesSet( ) ) {
