@@ -240,7 +240,9 @@ refresh_instance_info(	struct nc_state_t *nc,
     if (now==TEARDOWN)
         return;
     
+    sem_p(hyp_sem);
     virDomainPtr dom = virDomainLookupByName (nc_state.conn, instance->instanceId);
+    sem_v(hyp_sem);
     if (dom == NULL) { /* hypervisor doesn't know about it */
         if (now==RUNNING ||
             now==BLOCKED ||
@@ -259,11 +261,15 @@ refresh_instance_info(	struct nc_state_t *nc,
         return;
     }
     virDomainInfo info;
+    sem_p(hyp_sem);
     int error = virDomainGetInfo(dom, &info);
+    sem_v(hyp_sem);
     if (error < 0 || info.state == VIR_DOMAIN_NOSTATE) {
         logprintfl (EUCAWARN, "warning: failed to get informations for domain %s\n", instance->instanceId);
         /* what to do? hopefully we'll find out more later */
+	sem_p(hyp_sem);
         virDomainFree (dom);
+	sem_v(hyp_sem);
         return;
     } 
     int xen = info.state;
@@ -295,7 +301,9 @@ refresh_instance_info(	struct nc_state_t *nc,
         logprintfl (EUCAERROR, "error: refresh...(): unexpected state (%d) for instance %s\n", now, instance->instanceId);
         return;
     }
+    sem_p(hyp_sem);
     virDomainFree(dom);
+    sem_v(hyp_sem);
 
     /* if instance is running, try to find out its IP address */
     if (instance->state==RUNNING ||
@@ -524,7 +532,9 @@ void *startup_thread (void * arg)
     }
     eventlog("NC", instance->userId, "", "instanceBoot", "begin"); /* TODO: bring back correlationId */
     
+    sem_p(hyp_sem);
     virDomainFree(dom);
+    sem_v(hyp_sem);
     logprintfl (EUCAINFO, "started VM instance %s\n", instance->instanceId);
     
     return NULL;
@@ -558,13 +568,17 @@ void adopt_instances()
 		const char * dom_name;
 		ncInstance * instance;
 
+		sem_p(hyp_sem);
 		dom = virDomainLookupByID(nc_state.conn, dom_ids[i]);
+		sem_v(hyp_sem);
 		if (!dom) {
 			logprintfl (EUCAWARN, "WARNING: failed to lookup running domain #%d, ignoring it\n", dom_ids[i]);
 			continue;
 		}
 
+		sem_p(hyp_sem);
 		error = virDomainGetInfo(dom, &info);
+		sem_v(hyp_sem);
 		if (error < 0 || info.state == VIR_DOMAIN_NOSTATE) {
 			logprintfl (EUCAWARN, "WARNING: failed to get info on running domain #%d, ignoring it\n", dom_ids[i]);
 			continue;
@@ -577,10 +591,13 @@ void adopt_instances()
 			continue;
 		}
 
+		sem_p(hyp_sem);
 		if ((dom_name = virDomainGetName(dom))==NULL) {
-			logprintfl (EUCAWARN, "WARNING: failed to get name of running domain #%d, ignoring it\n", dom_ids[i]);
+		        sem_v(hyp_sem);
+		        logprintfl (EUCAWARN, "WARNING: failed to get name of running domain #%d, ignoring it\n", dom_ids[i]);
 			continue;
 		}
+		sem_v(hyp_sem);
 
 		if (!strcmp(dom_name, "Domain-0"))
 			continue;
@@ -602,7 +619,9 @@ void adopt_instances()
 		logprintfl (EUCAINFO, "- adopted running domain %s from user %s\n", instance->instanceId, instance->userId);
 		/* TODO: try to look up IPs? */
 
+		sem_p(hyp_sem);
 		virDomainFree (dom);
+		sem_v(hyp_sem);
 	}
 }
 

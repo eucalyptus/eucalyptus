@@ -147,7 +147,9 @@ doTerminateInstance(	struct nc_state_t *nc,
 	/* try stopping the KVM domain */
 	conn = check_hypervisor_conn();
 	if (conn) {
-		virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
+	        sem_p(hyp_sem);
+	        virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
+		sem_v(hyp_sem);
 		if (dom) {
 			/* also protect 'destroy' commands, just in case */
 			sem_p (hyp_sem);
@@ -156,7 +158,9 @@ doTerminateInstance(	struct nc_state_t *nc,
 			if (err==0) {
 				logprintfl (EUCAINFO, "destroyed domain for instance %s\n", instanceId);
 			}
+			sem_p(hyp_sem);
 			virDomainFree(dom); /* necessary? */
+			sem_v(hyp_sem);
 		} else {
 			if (instance->state != BOOTING)
 				logprintfl (EUCAWARN, "warning: domain %s to be terminated not running on hypervisor\n", instanceId);

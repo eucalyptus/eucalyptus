@@ -240,7 +240,9 @@ static int doRebootInstance(	struct nc_state_t *nc,
     /* reboot the Xen domain */
     conn = check_hypervisor_conn();
     if (conn) {
+        sem_p(hyp_sem);
         virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
+	sem_v(hyp_sem);
         if (dom) {
             /* also protect 'reboot', just in case */
             sem_p (hyp_sem);
@@ -249,7 +251,9 @@ static int doRebootInstance(	struct nc_state_t *nc,
             if (err==0) {
                 logprintfl (EUCAINFO, "rebooting Xen domain for instance %s\n", instanceId);
             }
+	    sem_p(hyp_sem);
             virDomainFree(dom); /* necessary? */
+	    sem_v(hyp_sem);
         } else {
             if (instance->state != BOOTING) {
                 logprintfl (EUCAWARN, "warning: domain %s to be rebooted not running on hypervisor\n", instanceId);
@@ -369,7 +373,9 @@ doAttachVolume (	struct nc_state_t *nc,
     /* try attaching to the Xen domain */
     conn = check_hypervisor_conn();
     if (conn) {
+        sem_p(hyp_sem);
         virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
+	sem_v(hyp_sem);
         if (dom) {
 
             int err = 0;
@@ -386,7 +392,9 @@ doAttachVolume (	struct nc_state_t *nc,
             } else {
                 logprintfl (EUCAINFO, "attached %s to %s in domain %s\n", remoteDev, localDevReal, instanceId);
             }
+	    sem_p(hyp_sem);
             virDomainFree(dom);
+	    sem_v(hyp_sem);
         } else {
             if (instance->state != BOOTING) {
                 logprintfl (EUCAWARN, "warning: domain %s not running on hypervisor, cannot attach device\n", instanceId);
@@ -441,7 +449,9 @@ doDetachVolume (	struct nc_state_t *nc,
     /* try attaching to the Xen domain */
     conn = check_hypervisor_conn(); 
     if (conn) {
+        sem_p(hyp_sem);
         virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
+	sem_v(hyp_sem);
         if (dom) {
 	    int err = 0, fd, rc, pid, status;
             char xml [1024], tmpfile[32], cmd[1024];
@@ -479,7 +489,9 @@ doDetachVolume (	struct nc_state_t *nc,
 	    }
 #if 0
 	    if (!getuid()) {
+	      sem_p(hyp_sem);
 	      err = virDomainDetachDevice (dom, xml);
+	      sem_v(hyp_sem);
 	    } else {
 	      
 	      /* virsh detach function does not work as non-root user on xen (bug). workaround is to shellout to virsh */
@@ -511,7 +523,9 @@ doDetachVolume (	struct nc_state_t *nc,
             } else {
                 logprintfl (EUCAINFO, "detached %s as %s in domain %s\n", remoteDev, localDevReal, instanceId);
             }
+	    sem_p(hyp_sem);
             virDomainFree(dom);
+	    sem_v(hyp_sem);
 	} else {
             if (instance->state != BOOTING) {
                 logprintfl (EUCAWARN, "warning: domain %s not running on hypervisor, cannot detach device\n", instanceId);
