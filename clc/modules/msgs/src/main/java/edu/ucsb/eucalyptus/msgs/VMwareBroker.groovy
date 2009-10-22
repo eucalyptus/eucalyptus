@@ -1,6 +1,5 @@
 package edu.ucsb.eucalyptus.msgs
 
-import edu.ucsb.eucalyptus.cloud.ws.VMwareBrokerProperties;
 /*
  * Software License Agreement (BSD License)
  *
