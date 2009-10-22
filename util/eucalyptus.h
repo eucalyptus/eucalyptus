@@ -133,6 +133,7 @@ typedef enum instance_states_t {
     NEW, 
     WAITING,
     BOOTING,
+    CANCELED,
     TERMINATING,
     AWOL,
 
@@ -156,6 +157,7 @@ static char * instance_state_names[] = {
     "New",
     "Waiting",
     "Booting",
+    "Canceled",
     "Terminating",
     "AWOL",
 
