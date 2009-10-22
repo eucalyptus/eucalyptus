@@ -54,6 +54,11 @@ public class VMwareBrokerRequestType extends EucalyptusMessage {
 }
 
 public class VMwareBrokerResponseType extends EucalyptusMessage {
+
+	public static final String STATUS_MSG_NOT_SUPPORTED = "method not supported";
+	public static final String STATUS_MSG_SUCCESS = "method succeeded";
+	public static final String STATUS_MSG_FAILURE = "method failed";
+	
   	def VMwareBrokerResponseType() {}
 
   	@Override
@@ -63,7 +68,7 @@ public class VMwareBrokerResponseType extends EucalyptusMessage {
 
   	// unused (handler must cast the response)
   	public VMwareBrokerResponseType withSuccess () {
-  		withSuccess (VMwareBrokerProperties.STATUS_MSG_SUCCESS); // default OK message
+  		withSuccess (STATUS_MSG_SUCCESS); // default OK message
   	}
   	
   	public VMwareBrokerResponseType withSuccess (String msg) {
@@ -74,7 +79,7 @@ public class VMwareBrokerResponseType extends EucalyptusMessage {
 
   	// unused
   	public VMwareBrokerResponseType withFailure () {
-  		withFailure (VMwareBrokerProperties.STATUS_MSG_NOT_SUPPORTED); // default error message
+  		withFailure (STATUS_MSG_NOT_SUPPORTED); // default error message
   	}
   	
   	public VMwareBrokerResponseType withFailure (String msg) {
