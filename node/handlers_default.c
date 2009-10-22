@@ -170,9 +170,9 @@ doTerminateInstance(	struct nc_state_t *nc,
 	/* change the state and let the monitoring_thread clean up state */
     sem_p (inst_sem);
     if (instance->state==BOOTING) {
-        change_state (instance, SHUTOFF);
-    } else {
         change_state (instance, CANCELED);
+    } else {
+        change_state (instance, SHUTOFF);
     }
     sem_v (inst_sem);
 	*previousState = instance->stateCode;
