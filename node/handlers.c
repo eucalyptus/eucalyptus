@@ -205,6 +205,7 @@ void change_state(	ncInstance *instance,
     instance->state = (int) state;
     switch (state) { /* mapping from NC's internal states into external ones */
     case BOOTING:
+    case CANCELED:
         instance->stateCode = PENDING;
         break;
     case RUNNING:
@@ -257,7 +258,7 @@ refresh_instance_info(	struct nc_state_t *nc,
             	change_state (instance, SHUTOFF);
             }
         }
-        /* else 'now' stays in SHUTFOFF, BOOTING or CRASHED */
+        /* else 'now' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED */
         return;
     }
     virDomainInfo info;
@@ -401,7 +402,7 @@ monitoring_thread (void *arg)
             /* query for current state, if any */
 	    refresh_instance_info (nc, instance);
 
-            /* don't touch running threads */
+            /* don't touch running or canceled threads */
             if (instance->state!=BOOTING && 
                 instance->state!=SHUTOFF &&
                 instance->state!=SHUTDOWN &&
@@ -495,7 +496,7 @@ void *startup_thread (void * arg)
         change_state (instance, SHUTOFF);
         return NULL;
     }
-    if (instance->state!=BOOTING) {
+    if (instance->state==CANCELED) {
         logprintfl (EUCAFATAL, "Startup of instance %s was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         return NULL;
@@ -535,8 +536,15 @@ void *startup_thread (void * arg)
     sem_p(hyp_sem);
     virDomainFree(dom);
     sem_v(hyp_sem);
-    logprintfl (EUCAINFO, "started VM instance %s\n", instance->instanceId);
-    
+
+    // check one more time for cancellation
+    if (instance->state==CANCELED) {
+        logprintfl (EUCAFATAL, "startup of instance %s was cancelled\n", instance->instanceId);
+        change_state (instance, SHUTOFF);
+    } else {
+        logprintfl (EUCAINFO, "started VM instance %s\n", instance->instanceId);
+    }
+
     return NULL;
 }
 
