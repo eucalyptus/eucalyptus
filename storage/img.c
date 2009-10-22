@@ -315,7 +315,7 @@ static int ensure_path_exists (const char * path)
         if ( try_it ) {
             if ( stat (path_copy, &buf) == -1 ) {
                 logprintfl (EUCADEBUG, "trying to create path %s\n", path_copy);
-                if ((mkdir (path_copy, (mode_t)0) == -1) || (chmod (path_copy, (mode_t)0774 == -1))) {
+                if ((mkdir (path_copy, (mode_t)0) == -1) || (chmod (path_copy, (mode_t)0774) == -1)) {
                     printf ("error: failed to create path %s\n", path_copy);
                     return errno;
                 }
