@@ -130,7 +130,9 @@
       </inbound>
       <component class="edu.ucsb.eucalyptus.ic.Eucalyptus" />
       <outbound>
+        <outbound-pass-through-router>
           <outbound-endpoint ref="ReplyQueueEndpoint" />
+        </outbound-pass-through-router>
       </outbound>
     </service>
 
@@ -139,9 +141,6 @@
 				<inbound-endpoint ref="EucalyptusWS" />
 			</inbound>
 			<component class="edu.ucsb.eucalyptus.ic.Eucalyptus" />
-      <outbound>
-          <outbound-endpoint ref="ReplyQueueEndpoint" />
-      </outbound>
 		</service>
 
 	</model>
