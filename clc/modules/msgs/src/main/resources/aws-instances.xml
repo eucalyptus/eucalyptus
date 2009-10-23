@@ -170,6 +170,7 @@
         <structure name="monitoring" usage="optional">
             <value name="enabled" field="monitoring"/>
         </structure>
+        <value name="subnetId" field="subnetId" usage="optional"/>
     </mapping>
 
 

@@ -150,6 +150,8 @@ public class RunInstancesType extends VmControlMessage {
   @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>(); //** added 2008-02-01  **/
   boolean monitoring = false;
+  String subnetId;
+  String vpcId;
 
 
   ArrayList<Integer> networkIndexList = new ArrayList<Integer>();

@@ -180,7 +180,7 @@ do_status() {
 	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid
 	if [ -s $pidfile ]; then
 		pid=`cat $pidfile 2> /dev/null`
-		if ps ax|grep $pid|grep httpd-cc.conf > /dev/null ; then
+		if ps axww|grep $pid|grep httpd-cc.conf > /dev/null ; then
 			# we are good
 			return 0
 		fi

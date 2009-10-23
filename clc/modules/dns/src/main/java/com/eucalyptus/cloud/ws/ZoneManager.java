@@ -103,6 +103,10 @@ public class ZoneManager {
 		return zones.get(name);
 	}
 
+	public static void registerZone( Name name, Zone z ) {
+	  zones.putIfAbsent( name, z );
+	}
+	
 	public static void addZone(ZoneInfo zoneInfo, SOARecordInfo soaRecordInfo, NSRecordInfo nsRecordInfo) {
 		try {
 			String nameString = zoneInfo.getName();

@@ -232,7 +232,7 @@ public class EucalyptusProperties {
 		return String.format( "http://%s:8773/services/Walrus", walrusHost == null ? "127.0.0.1" : walrusHost );
 	}
 
-	private static String getCloudHost( ) {
+	public static String getCloudHost( ) {
 		String cloudHost = null;
 		try {
 			cloudHost = EucalyptusProperties.getSystemConfiguration( ).getCloudHost( );
