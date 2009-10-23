@@ -64,6 +64,8 @@
 
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -226,10 +228,20 @@ public class VmInstance implements HasName {
     runningInstance.setRamdisk( this.imageInfo.getRamdiskId( ) );
     runningInstance.setProductCodes( this.imageInfo.getProductCodes( ) );
 
-    runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getIpAddress( ) );
-    if ( !VmInstance.DEFAULT_IP.equals( this.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) runningInstance.setDnsName( this.getNetworkConfig( ).getIgnoredPublicIp( ) );
-    else runningInstance.setDnsName( this.getNetworkConfig( ).getIpAddress( ) );
-
+    if( Component.dns.isLocal( ) ) {
+      try {
+        StringBuffer sb = new StringBuffer( ).append( "euca-" );
+        sb.append( this.getNetworkConfig( ).getIpAddress( ).replaceAll( "\\.", "-" ) );
+        sb.append( ".eucalyptus." );
+        String dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
+        runningInstance.setDnsName( sb.toString( ) + dnsDomain );
+        runningInstance.setPrivateDnsName( sb.toString() + "internal" ); 
+      } catch ( Exception e ) {
+        setRunningIpAddresses( runningInstance );
+      }
+    } else {
+      setRunningIpAddresses( runningInstance );
+    } 
     if ( this.getReason( ) != null || !"".equals( this.getReason( ) ) ) runningInstance.setReason( this.getReason( ) );
 
     if ( this.getKeyInfo( ) != null ) runningInstance.setKeyName( this.getKeyInfo( ).getName( ) );
@@ -241,6 +253,15 @@ public class VmInstance implements HasName {
     runningInstance.setLaunchTime( this.launchTime );
 
     return runningInstance;
+  }
+
+  private void setRunningIpAddresses( RunningInstancesItemType runningInstance ) {
+    runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getIpAddress( ) );
+    if ( !VmInstance.DEFAULT_IP.equals( this.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
+      runningInstance.setDnsName( this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+    } else {
+      runningInstance.setDnsName( this.getNetworkConfig( ).getIpAddress( ) );
+    }
   }
 
 

@@ -348,7 +348,7 @@ public class Address implements HasName {
   }
   
   public boolean isSystemAllocated( ) {
-    return Component.eucalyptus.name( ).equals( this.getUserId( ) ) && ( system || this.isAssigned( ) );
+    return Component.eucalyptus.name( ).equals( this.getUserId( ) );
   }
   
   public boolean isAssigned( ) {
