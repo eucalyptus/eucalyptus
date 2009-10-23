@@ -118,11 +118,7 @@ public class WalrusSnapshotInfo {
 
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((snapshotId == null) ? 0 : snapshotId.hashCode());
-		return result;
+		return snapshotId.hashCode();
 	}
 
 	@Override

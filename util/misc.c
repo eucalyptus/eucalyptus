@@ -87,7 +87,9 @@ int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
   struct stat statbuf;
 
   for (i=0; i<LASTHELPER; i++) {
-    path = strdup(getenv("PATH"));
+    tok = getenv("PATH");
+    if (!tok) return (1);
+    path = strdup(tok);
     if (!path) {
       return(1);
     }
@@ -113,6 +115,7 @@ int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
     }
     if (!done) {
       logprintfl(EUCAERROR, "cannot find helper '%s' in your path\n", helpers[i]);
+      if (path) free(path);
       return(1);
     }
 
@@ -334,6 +337,12 @@ char * replace_string (char ** stringp, char * source, char * destination )
     
     buf = malloc(sizeof(char) * maxlen);
     new_string = malloc(sizeof(char) * maxlen); /* TODO: this has to be dynamic */
+    if (!buf || !new_string) {
+        fprintf(stderr, "replace_string: out of memory\n");
+	if (buf) free(buf);
+	if (new_string) free(new_string);
+	return NULL;
+    }
     bzero(new_string, maxlen);
     
     start = * stringp;
@@ -362,9 +371,13 @@ char * replace_string (char ** stringp, char * source, char * destination )
 /* returns 1 if there was match and 0 otherwise */
 int sscanf_lines (char * lines, char * format, void * varp) 
 {
-    char * copy = strdup(lines);
+    char * copy;
     char * start, * end;
     int found = 0;
+
+    if (!lines) return found;
+    copy = strdup(lines);
+    if (!copy) return found;
 
     for (start = copy; start && *start!='\0' && !found; start = end+1 ) {
         int newline = 0;
@@ -382,6 +395,7 @@ int sscanf_lines (char * lines, char * format, void * varp)
             end--; /* so that start=='\0' */
         }
     }
+    free(copy);
         
     return found;
 }
@@ -521,6 +535,7 @@ get_conf_var(	const char *path,
 		*ptr = '\0';
 		*value = strdup(ret);
 		if (*value == NULL) {
+		  fclose(f);
 		  free(buf);
 		  return -1;
 		}
@@ -558,8 +573,12 @@ from_var_to_char_list(	const char *v) {
 		return NULL;
 	}
 	tmp = malloc(sizeof(char*));
+	if (tmp == NULL) {
+		return NULL;
+	}
 	value = strdup(v);
-	if (tmp == NULL || value == NULL) {
+	if (value == NULL) {
+		free(tmp);
 		return NULL;
 	}
 	tmp[0] = NULL;
@@ -933,6 +952,10 @@ int cat (const char * file_name)
 	char buf [BUFSIZE];
 	
 	int fd = open (file_name, O_RDONLY);
+	if (fd == -1) {
+		// we should print some error
+		return put;
+	}
 	while ( ( got = read (fd, buf, BUFSIZE)) > 0) {
 		put += write (1, buf, got);
 	}
@@ -947,6 +970,7 @@ int logcat (int debug_level, const char * file_name)
 	char buf [BUFSIZE];
 	
 	FILE *fp = fopen (file_name, "r");
+	if (!fp) return got;
     while ( fgets (buf, BUFSIZE, fp) ) {
         int l = strlen (buf);
         if ( l<0 ) 
@@ -1021,6 +1045,7 @@ long long dir_size (const char * path)
     }
     if (stat (path, &mystat) < 0) {
         logprintfl (EUCAWARN, "warning: could not stat %s\n", path);
+	closedir(dir);
         return -1;
     }
     size += (long long)mystat.st_size;

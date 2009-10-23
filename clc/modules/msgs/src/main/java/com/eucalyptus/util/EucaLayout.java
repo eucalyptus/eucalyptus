@@ -101,7 +101,9 @@ public class EucaLayout extends PatternLayout {
     } else if ( event.getFQNOfLoggerClass( ).matches(".*JDBCExceptionReporter.*") ) {
       return "";
     }
-    String[] messages = event.getRenderedMessage( ).split( "\n" );
+    String renderedMessage = event.getRenderedMessage( );
+    if(renderedMessage != null) {
+	String[] messages = renderedMessage.split( "\n" );
     StringBuffer sb = new StringBuffer( );
     boolean con = false;
     for( int i = 0; i < messages.length; i++ ) {
@@ -121,8 +123,10 @@ public class EucaLayout extends PatternLayout {
         }
         con = true;        
 //      }      
-    }
+    }    
     return sb.toString( );
+    }
+    return null;
   }
 
   @Override

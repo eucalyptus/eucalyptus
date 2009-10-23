@@ -224,10 +224,12 @@ public class ImageStoreWidget extends Composite {
         ImageData imageData = imageMap.get(imageUri);
         if (imageData != null) {
             ImageWidget imageWidget = imageData.createImageWidget();
-            imageWidget.addInstallHandler(runActionInstallHandler);
-            imageWidget.addCancelHandler(runActionCancelHandler);
-            imageWidget.addClearErrorHandler(runActionClearErrorHandler);
-            return imageWidget;
+            if(imageWidget != null) {
+              imageWidget.addInstallHandler(runActionInstallHandler);
+              imageWidget.addCancelHandler(runActionCancelHandler);
+              imageWidget.addClearErrorHandler(runActionClearErrorHandler);
+              return imageWidget;
+            }
         }
         return null;
     }

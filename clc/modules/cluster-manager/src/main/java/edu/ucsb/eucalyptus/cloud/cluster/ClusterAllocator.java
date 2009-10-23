@@ -124,13 +124,13 @@ public class ClusterAllocator extends Thread {
     this.pendingEvents = new ConcurrentLinkedQueue<QueuedEvent>();
     this.state = State.START;
     this.rollback = new AtomicBoolean( false );
+    if( vmToken != null ) {
     try {
       this.cluster = Clusters.getInstance().lookup( vmToken.getCluster() );
       for ( NetworkToken networkToken : vmToken.getNetworkTokens() )
         this.setupNetworkMessages( networkToken );
       this.setupVmMessages( vmToken );
     } catch ( Throwable e ) {
-      if( vmToken != null ) {
         try {
           Clusters.getInstance().lookup( vmToken.getCluster() ).getNodeState().releaseToken( vmToken );
         } catch ( Throwable e1 ) {
@@ -200,6 +200,7 @@ public class ClusterAllocator extends Thread {
     }
     try {
       RunInstancesType request = this.vmAllocInfo.getRequest();
+      if(networkToken != null) {
       Network network = Networks.getInstance().lookup( networkToken.getName() );
       LOG.debug( LogUtil.header( "Setting up rules for: " + network.getName() ) );
       LOG.debug( LogUtil.subheader( network.toString( ) ) );
@@ -208,7 +209,7 @@ public class ClusterAllocator extends Thread {
       msg.setEffectiveUserId( networkToken.getUserName( ) );
       if ( !network.getRules().isEmpty() ) {
         this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( ConfigureNetworkCallback.CALLBACK, msg ) );
-      }
+      }      
       //:: need to refresh the rules on the backend for all active networks which point to this network :://
       for( Network otherNetwork : Networks.getInstance().listValues() ) {
         if( otherNetwork.isPeer( network.getUserName(), network.getNetworkName() ) ) {
@@ -219,6 +220,7 @@ public class ClusterAllocator extends Thread {
           omsg.setEffectiveUserId( Component.eucalyptus.name() );
           this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( ConfigureNetworkCallback.CALLBACK, omsg ) );
         }
+      }
       }
     } catch ( NoSuchElementException e ) {}/* just added this network, shouldn't happen, if so just smile and nod */
   }

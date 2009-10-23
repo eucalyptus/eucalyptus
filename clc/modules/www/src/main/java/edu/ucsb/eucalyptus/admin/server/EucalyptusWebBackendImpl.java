@@ -129,8 +129,10 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 
 	private void load_props() throws SerializableException
 	{
+		FileInputStream fileInputStream = null;
 		try {
-			props.load(new FileInputStream(PROPERTIES_FILE));
+			fileInputStream = new FileInputStream(PROPERTIES_FILE);
+			props.load(fileInputStream);
 			props.setProperty("version", System.getProperty("euca.version"));
 			thanks_for_signup =         props.getProperty("thanks-for-signup");
 			signup_email =              props.getProperty("signup-email-address");
@@ -188,6 +190,13 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			throw new SerializableException("Could not read server configuration");
 		} catch (IllegalArgumentException e) {
 			throw new SerializableException("Malformed escape sequence in server configuration");
+		} finally {
+			if(fileInputStream != null)
+				try {
+					fileInputStream.close();
+				} catch (IOException e) {
+					LOG.error(e);
+				}
 		}
 	}
 
@@ -756,7 +765,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
 
 		try {
-		RemoteInfoHandler.setWalrusList(walrusList);
+			RemoteInfoHandler.setWalrusList(walrusList);
 		} catch(EucalyptusCloudException e) {
 			throw new SerializableException(e.getMessage());
 		}

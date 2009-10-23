@@ -140,6 +140,11 @@ public class BootstrapFactory {
             }
           }
         }
+        try {
+			jar.close();
+		} catch (IOException e) {
+			LOG.error(e);
+		}
       }
     }
   }

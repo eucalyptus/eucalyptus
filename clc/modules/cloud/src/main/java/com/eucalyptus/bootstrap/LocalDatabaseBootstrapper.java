@@ -147,8 +147,10 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
     if( hup.compareAndSet( false, true ) ) {
       DebugUtil.printDebugDetails( );
       try {
-        if ( this.db != null ) this.db.checkRunning( true );
-        this.db.start( );
+        if ( this.db != null ) { 
+          this.db.checkRunning( true );
+          this.db.start( );
+        }
       } catch ( RuntimeException e ) {
         this.db.stop( );
         this.createDatabase( );

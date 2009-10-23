@@ -163,7 +163,8 @@ public abstract class WsSecHandler extends MessageStackHandler {
         try {
           final StAXSOAPModelBuilder stAXSOAPModelBuilder = new StAXSOAPModelBuilder( elem.getXMLStreamReader( ), HoldMe.getOMSOAP11Factory( ), null );
           envelope = stAXSOAPModelBuilder.getSOAPEnvelope( );
-          envelope.build( );
+          if(envelope != null)
+            envelope.build( );
         } finally {
           HoldMe.canHas.unlock( );
         }

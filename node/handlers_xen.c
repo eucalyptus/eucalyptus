@@ -206,6 +206,11 @@ doRunInstance(		struct nc_state_t *nc,
 
     /* do the potentially long tasks in a thread */
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
+    if (!attr) { 
+        free_instance (&instance);
+        logprintfl (EUCAFATAL, "Warning: out of memory\n");
+        return 1;
+    }
     pthread_attr_init(attr);
     pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
     
@@ -216,9 +221,11 @@ doRunInstance(		struct nc_state_t *nc,
         remove_instance (&global_instances, instance);
         sem_v (inst_sem);
         free_instance (&instance);
+	if (attr) free(attr);
         return 1;
     }
     pthread_attr_destroy(attr);
+    if (attr) free(attr);
 
     * outInst = instance;
     return 0;
@@ -275,6 +282,10 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 
   if (getuid() != 0) {
     output = strdup("NOT SUPPORTED");
+    if (!output) {
+      fprintf(stderr, "strdup failed (out of memory?)\n");
+      return 1;
+    }
     *consoleOutput = base64_enc((unsigned char *)output, strlen(output));    
     if (output) free(output);
     return(0);

@@ -106,7 +106,7 @@ usage () {
 	echo "   --no-scp                         don't use scp"
 	echo "   --get-credentials <zipfile>      download credentials to <zipfile>"
 	echo "   --register-nodes \"host host ...\" add new nodes to EUCALYPTUS"
-	echo "   --delete-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
+	echo "   --deregister-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
 	echo "   --register-cluster <name> <host> add new cluster to EUCALYPTUS"
 	echo "   --deregister-cluster <name>      remove cluster from EUCALYPTUS"
 	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
@@ -561,6 +561,10 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "--register-sc" ]; then
+		if [ $# -lt 3 ]; then
+			echo "--register-sc requires a CC and a hostname"
+			exit 1
+		fi
 		SC_MODE="ADD"
 		SCNAME="$2"
 		SCHOST="$3"

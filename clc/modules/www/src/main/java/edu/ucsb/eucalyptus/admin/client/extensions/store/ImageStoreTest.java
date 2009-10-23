@@ -70,7 +70,9 @@ public class ImageStoreTest implements EntryPoint {
   public void onModuleLoad() {
     ImageStoreClient imageStoreClient = new ImageStoreClient("mySessionId");
     ImageStoreWidget imageStore = new ImageStoreWidget(imageStoreClient);
-    RootPanel.get("ImageStore").add(imageStore);
+    RootPanel rootPanel = RootPanel.get("ImageStore");
+    if(rootPanel != null)
+	    rootPanel.add(imageStore);
   }
 
 }

@@ -87,7 +87,7 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *attachVolume
   ccMeta.correlationId = adb_attachVolumeType_get_correlationId(avt, env);
   ccMeta.userId = adb_attachVolumeType_get_userId(avt, env);
   
-  cid = adb_attachVolumeType_get_correlationId(avt, env);
+  //cid = adb_attachVolumeType_get_correlationId(avt, env);
   
   volumeId = adb_attachVolumeType_get_volumeId(avt, env);
   instanceId = adb_attachVolumeType_get_instanceId(avt, env);
@@ -137,7 +137,7 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume
   ccMeta.correlationId = adb_detachVolumeType_get_correlationId(dvt, env);
   ccMeta.userId = adb_detachVolumeType_get_userId(dvt, env);
   
-  cid = adb_detachVolumeType_get_correlationId(dvt, env);
+  //cid = adb_detachVolumeType_get_correlationId(dvt, env);
   
   volumeId = adb_detachVolumeType_get_volumeId(dvt, env);
   instanceId = adb_detachVolumeType_get_instanceId(dvt, env);
@@ -187,8 +187,8 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, co
   ccMeta.correlationId = adb_stopNetworkType_get_correlationId(snt, env);
   ccMeta.userId = adb_stopNetworkType_get_userId(snt, env);
   
-  userName = adb_stopNetworkType_get_userId(snt, env);
-  cid = adb_stopNetworkType_get_correlationId(snt, env);
+  //userName = adb_stopNetworkType_get_userId(snt, env);
+  //cid = adb_stopNetworkType_get_correlationId(snt, env);
   
   vlan = adb_stopNetworkType_get_vlan(snt, env);
   netName = adb_stopNetworkType_get_netName(snt, env);
@@ -383,7 +383,7 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t *assignAdd
   ccMeta.correlationId = adb_assignAddressType_get_correlationId(aat, env);
   ccMeta.userId = adb_assignAddressType_get_userId(aat, env);
   
-  cid = adb_assignAddressType_get_correlationId(aat, env);
+  //cid = adb_assignAddressType_get_correlationId(aat, env);
   
   src = adb_assignAddressType_get_source(aat, env);
   dst = adb_assignAddressType_get_dest(aat, env);
@@ -484,6 +484,12 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   ruleLen = adb_configureNetworkType_sizeof_rules(cnt, env);
   done=0;
   destNameLast = strdup("EUCAFIRST");
+  if (!destNameLast) {
+    logprintf("ERROR: out of memory\n");
+    status = AXIS2_FALSE;
+    snprintf(statusMessage, 255, "ERROR");
+    return ret;
+  }
   
   for (j=0; j<ruleLen && !done; j++) {
     nr = adb_configureNetworkType_get_rules_at(cnt, env, j);
@@ -500,6 +506,12 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     }
     if (destNameLast) free(destNameLast);
     destNameLast = strdup(destName);
+    if (!destNameLast) {
+      logprintf("ERROR: out of memory\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+      return ret;
+    }
 
     userNames = NULL;
     namedLen = adb_networkRule_sizeof_userNames(nr, env);
@@ -549,6 +561,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
       done++;
     }
   }
+  if (destNameLast) free(destNameLast);
   
   if (done) {
     logprintf("ERROR: doConfigureNetwork() returned fail %d\n", rc);
@@ -1009,7 +1022,10 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   
   ret = adb_RunInstancesResponse_create(env);
   adb_RunInstancesResponse_set_RunInstancesResponse(ret, env, rirt);
-  
+  free(networkIndexList);
+  free(macAddrs);
+  free(netNames);
+  free(instIds);
   
   return(ret);
 }

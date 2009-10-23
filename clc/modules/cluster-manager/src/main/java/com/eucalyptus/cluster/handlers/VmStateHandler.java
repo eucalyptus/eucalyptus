@@ -49,7 +49,8 @@ public class VmStateHandler extends AbstractClusterMessageDispatcher {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse resp = ( MappingHttpResponse ) e.getMessage( );
       VmDescribeResponseType reply = (VmDescribeResponseType) resp.getMessage( );
-      if ( reply != null ) reply.setOriginCluster( this.getCluster( ).getConfiguration( ).getName( ) );
+      if ( reply != null ) {
+      reply.setOriginCluster( this.getCluster( ).getConfiguration( ).getName( ) );
       for ( VmInfo vmInfo : reply.getVms( ) ) {
         vmInfo.setPlacement( this.getCluster( ).getConfiguration( ).getName( ) );
         VmTypeInfo typeInfo = vmInfo.getInstanceType( );
@@ -62,6 +63,7 @@ public class VmStateHandler extends AbstractClusterMessageDispatcher {
         }
       }
       SystemState.handle( reply );
+      }
       if( this.init.compareAndSet( false, true ) ) {
         try {
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );

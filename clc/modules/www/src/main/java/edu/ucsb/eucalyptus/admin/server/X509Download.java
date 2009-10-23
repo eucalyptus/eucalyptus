@@ -183,7 +183,9 @@ public class X509Download extends HttpServlet {
 
     ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
     ZipOutputStream zipOut = new ZipOutputStream( byteOut );
-    String baseName = EucalyptusProperties.NAME_SHORT + "-" + userName + "-" + Hashes.getFingerPrint( keyPair.getPublic( ) ).replaceAll( ":", "" ).toLowerCase( ).substring( 0, 8 );
+    String fingerPrint = Hashes.getFingerPrint( keyPair.getPublic( ) );    
+    if(fingerPrint != null) {
+	String baseName = EucalyptusProperties.NAME_SHORT + "-" + userName + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase( ).substring( 0, 8 );
 
     zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
     StringBuffer sb = new StringBuffer( );
@@ -223,7 +225,7 @@ public class X509Download extends HttpServlet {
     zipOut.putNextEntry( new ZipEntry( baseName + "-cert.pem" ) );
     zipOut.write( Hashes.getPemBytes( x509 ) );
     zipOut.closeEntry( );
-
+    }
     /** close the zip output stream and return the bytes **/
     zipOut.close( );
     return byteOut.toByteArray( );

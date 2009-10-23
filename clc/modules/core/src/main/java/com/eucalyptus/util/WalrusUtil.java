@@ -86,20 +86,19 @@ public class WalrusUtil {
 		List<NetworkInterface> ifaces = null;
 		try {
 			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-		} catch ( SocketException e1 ) {}
-
-		for ( NetworkInterface iface : ifaces ) {
-			try {
-				if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-					for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-						if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address) ) {
-							ipAddress = iaddr.getHostAddress();
-							break;
+			for ( NetworkInterface iface : ifaces ) {
+				try {
+					if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
+						for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
+							if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address) ) {
+								ipAddress = iaddr.getHostAddress();
+								break;
+							}
 						}
 					}
-				}
-			} catch ( SocketException e1 ) {}
-		}
+				} catch ( SocketException e1 ) {}
+			}	
+		} catch ( SocketException e1 ) {}
 	}
 
 	public static EucalyptusMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {

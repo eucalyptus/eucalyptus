@@ -107,9 +107,16 @@ int scInitConfig (void)
         return 1;
     }
     /* read in configuration */
-    char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
-    if (!home) {
+    char *home, *tmp;
+    tmp = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    if (tmp) {
+        home = strdup(tmp);
+    } else {
         home = strdup(""); /* root by default */
+    }
+    if (!home) {
+       logprintfl (EUCAERROR, "out of memory\n");
+       return 1;
     }
     
     snprintf(config, BUFSIZE, EUCALYPTUS_CONF_LOCATION, home);
@@ -117,8 +124,7 @@ int scInitConfig (void)
         logprintfl (EUCAINFO, "SC is looking for configuration in %s\n", config);
         
         if (get_conf_var(config, INSTANCE_PATH, &s)>0){ 
-            sc_instance_path = strdup (s); 
-            free (s); 
+            sc_instance_path = s; 
         }
 
         if (get_conf_var(config, CONFIG_NC_CACHE_SIZE, &s)>0){ 
@@ -137,15 +143,18 @@ int scInitConfig (void)
     /* we need to have valid path */
     if (check_directory(sc_instance_path)) {
 	    logprintfl (EUCAERROR, "ERROR: INSTANCE_PATH (%s) does not exist!\n", sc_instance_path);
+	    free(home);
 	    return(1);
     }
 
     if (euca_init_cert ()) {
         logprintfl (EUCAFATAL, "failed to find cryptographic certificates\n");
+        free(home);
         return 1;
     }
 
     snprintf (disk_convert_command_path, BUFSIZE, EUCALYPTUS_DISK_CONVERT, home, home);
+    free(home);
 
     scConfigInit=1;
     return(0);
@@ -182,6 +191,7 @@ ncInstance * scRecoverInstanceInfo (const char *instanceId)
      * directory (we're assuming that instanceIds are unique in the system) */
     if ((insts_dir=opendir(sc_instance_path))==NULL) {
 	    logprintfl(EUCADEBUG, "scRecoverInstanceInfo: failed to open %s!\n", sc_instance_path);
+	    free(instance);
 	    return NULL;
     }
     while ((dir_entry=readdir(insts_dir))!=NULL) {
@@ -194,8 +204,10 @@ ncInstance * scRecoverInstanceInfo (const char *instanceId)
             break; /* we got it! */
         }
     }
+    closedir(insts_dir);
     if (userId==NULL) {
 	    logprintfl(EUCADEBUG, "scRecoverInstanceInfo: didn't find instance %s!\n", instanceId);
+	    free(instance);
 	    return NULL;
     }
 
@@ -260,8 +272,9 @@ void LogprintfCache (void)
     }
     for ( e = cache_head; e; e=e->next) {
         bzero (&mystat, sizeof (mystat));
-        stat (e->path, &mystat);
-        logprintfl (EUCAINFO, "\t%5dMB %8dsec %s\n", e->size_mb, mystat.st_mtime, e->path);
+        if (stat (e->path, &mystat) == 0) {
+           logprintfl (EUCAINFO, "\t%5dMB %8dsec %s\n", e->size_mb, mystat.st_mtime, e->path);
+	}
     }
 }
 
@@ -371,6 +384,7 @@ static long long init_cache (const char * cache_path)
 
         if (stat (image_path, &mystat) < 0) {
             logprintfl (EUCAWARN, "warning: could not stat %s\n", image_path);
+	    closedir(image_dir);
             continue;
         }
         image_size += mystat.st_size;
@@ -414,6 +428,7 @@ static long long init_cache (const char * cache_path)
                 strncpy (X_digest, name, BUFSIZE);
             }
         }
+	closedir(image_dir);
 
         if (image_files > 0) { /* ignore empty directories */
             if (image_files != 2 || strncmp (X, X_digest, BUFSIZE) != 0 ) {
@@ -563,7 +578,11 @@ long long scFSCK (bunchOfInstances ** instances)
             snprintf (instance_path, BUFSIZE, "%s/%s", user_path, iname);
 
             if (!strcmp("cache", iname) &&
-                !strcmp(EUCALYPTUS_ADMIN, uname)) { /* cache is in admin's dir */
+                	!strcmp(EUCALYPTUS_ADMIN, uname)) { /* cache is in admin's dir */
+		if (cache_path) {
+                    logprintfl (EUCADEBUG, "Found a second cache_path?\n");
+		    free(cache_path);
+		}
                 cache_path = strdup (instance_path);
                 continue;
             }
@@ -643,6 +662,7 @@ int ensure_path_exists (const char * path)
                 printf ("trying to create path %s\n", path_copy);
                 if ( mkdir (path_copy, mode) == -1) {
                     printf ("error: failed to create path %s\n", path_copy);
+		    if (path_copy) free(path_copy);
                     return errno;
                 }
             }
@@ -1053,12 +1073,14 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
 int scStoreStringToInstanceFile (const char *userId, const char *instanceId, const char * file, const char * data)
 {
     FILE * fp;
+    int ret = ERROR;
 	char path [BUFSIZE];
 	snprintf (path, BUFSIZE, "%s/%s/%s/%s", sc_instance_path, userId, instanceId, file);
     if ( (fp = fopen (path, "w")) != NULL ) {
-        if ( fputs (data, fp) == EOF ) return ERROR;
+        if ( fputs (data, fp) != EOF ) {
+           ret = OK;
+	}
         fclose (fp);
-        return OK;
     }
-    return ERROR;
+    return ret;
 }

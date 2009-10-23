@@ -608,14 +608,16 @@ public class WalrusManager {
 						} else if(WalrusDataMessage.isEOF(dataMessage)) {
 							//commit object
 							try {
-								fileIO.finish();
+								if(fileIO != null)
+									fileIO.finish();
 								storageManager.renameObject(bucketName, tempObjectName, objectName);
 							} catch (IOException ex) {
 								LOG.error(ex);
 								messenger.removeQueue(key, randomKey);
 								throw new EucalyptusCloudException(objectKey);
 							}
-							md5 = Hashes.bytesToHex(digest.digest());
+							if(digest != null)
+								md5 = Hashes.bytesToHex(digest.digest());
 							lastModified = new Date();
 							dbObject = WalrusControl.getEntityWrapper();
 							objectInfos = dbObject.query(new ObjectInfo(bucketName, objectKey));
@@ -670,7 +672,8 @@ public class WalrusManager {
 								md5 = monitor.getMd5();
 							}
 							//ok we are done here
-							fileIO.finish();
+							if(fileIO != null)
+								fileIO.finish();
 							ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, tempObjectName, -1L);
 							objectDeleter.start();
 							LOG.info("Transfer interrupted: "+ key);
@@ -680,13 +683,15 @@ public class WalrusManager {
 							byte[] data = dataMessage.getPayload();
 							//start writing object (but do not commit yet)
 							try {
-								fileIO.write(data);
+								if(fileIO != null)
+									fileIO.write(data);
 							} catch (IOException ex) {
 								LOG.error(ex);
 							}
 							//calculate md5 on the fly
 							size += data.length;
-							digest.update(data);
+							if(digest != null)
+								digest.update(data);
 						}
 					}
 				} catch (InterruptedException ex) {
@@ -840,8 +845,10 @@ public class WalrusManager {
 					foundObject.setObjectName(objectName);
 					try {
 						FileIO fileIO = storageManager.prepareForWrite(bucketName, objectName);
-						fileIO.write(base64Data);
-						fileIO.finish();
+						if(fileIO != null) {
+							fileIO.write(base64Data);
+							fileIO.finish();
+						}
 					} catch(Exception ex) {
 						throw new EucalyptusCloudException(ex);
 					}

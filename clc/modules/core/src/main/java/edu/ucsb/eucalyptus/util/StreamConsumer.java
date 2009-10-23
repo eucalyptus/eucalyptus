@@ -87,11 +87,13 @@ public class StreamConsumer extends Thread {
     }
 
     public void run() {
+        BufferedOutputStream outStream = null;
+        FileOutputStream fileOutputStream = null;
         try {
             BufferedInputStream inStream = new BufferedInputStream(is);
-            BufferedOutputStream outStream = null;
             if (file != null) {
-                outStream = new BufferedOutputStream(new FileOutputStream(file));
+                fileOutputStream = new FileOutputStream(file);
+				outStream = new BufferedOutputStream(fileOutputStream);
             }
             byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
             int bytesRead;
@@ -101,10 +103,17 @@ public class StreamConsumer extends Thread {
                     outStream.write(bytes, 0, bytesRead);
                 }
             }
-            if (outStream != null)
-                outStream.close();
         } catch (IOException ex) {
             ex.printStackTrace();
+        } finally {
+            if (outStream != null) {
+                try {
+					outStream.close();
+	                fileOutputStream.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+            }
         }
     }
 }

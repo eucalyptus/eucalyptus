@@ -152,7 +152,9 @@ public abstract class AbstractKeyStore {
 
   public void store( ) throws IOException, GeneralSecurityException {
     AbstractKeyStore.LOG.info( "Writing back keystore: " + this.fileName );
-    this.keyStore.store( new FileOutputStream( this.fileName ), this.password.toCharArray( ) );
+    FileOutputStream fileOutputStream = new FileOutputStream( this.fileName );
+	this.keyStore.store( fileOutputStream, this.password.toCharArray( ) );
+	fileOutputStream.close();
   }
 
   private void init( ) throws IOException, GeneralSecurityException {
