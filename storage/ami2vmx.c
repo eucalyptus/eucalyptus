@@ -7,8 +7,9 @@
 #include <sys/stat.h>
 #include <stdarg.h>
 #include <ami2vmx.h>
+#include "misc.h" // logprintfle
 
-char *helpers[LASTHELPER] = {"losetup", "mount", "kvm-img,qemu-img", "grub", "parted", "mv", "dd", "sync", "mkdir", "cp", "rsync", "umount", "euca_rootwrap", "euca_mountwrap"};
+char *helpers[LASTHELPER] = {"losetup", "mount", "kvm-img,qemu-img", "grub", "parted", "mv", "dd", "sync", "mkdir", "cp", "rsync", "umount", "cat", "euca_rootwrap", "euca_mountwrap"};
 char *helpers_path[LASTHELPER];
 
 #ifdef AMI2VMX
@@ -307,8 +308,9 @@ char *pruntff(char *format, ...) {
   if (!IF) {
     printf("ERROR: cannot popen() cmd '%s' for read\n", cmd);
     return(NULL);
-  }
-  
+  } 
+  logprintfl (EUCADEBUG, "- %s\n", cmd);
+
   output = malloc(sizeof(char) * outsize);
   while((bytes = fread(output+(outsize-1025), 1, 1024, IF)) > 0) {
     output[(outsize-1025)+bytes] = '\0';
