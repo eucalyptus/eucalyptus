@@ -107,8 +107,7 @@
 				</filtering-router>
 				<filtering-router>
 					<outbound-endpoint ref="SnapshotWS" />
-					<payload-type-filter
-						expectedType="edu.ucsb.eucalyptus.msgs.BlockSnapshotMessage" />
+					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockSnapshotMessage" />
 				</filtering-router>
 				<filtering-router>
 					<outbound-endpoint ref="AddressWS" />
@@ -118,14 +117,31 @@
 					<outbound-endpoint ref="GroupsWS" />
 					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage" />
 				</filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="ShortBusWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+        </filtering-router>
 			</outbound>
 		</service>
+
+    <service name="ShortBus">
+      <inbound>
+        <inbound-endpoint ref="ShortBusWS" />
+      </inbound>
+      <component class="edu.ucsb.eucalyptus.ic.Eucalyptus" />
+      <outbound>
+          <outbound-endpoint ref="ReplyQueueEndpoint" />
+      </outbound>
+    </service>
 
 		<service name="Eucalyptus">
 			<inbound>
 				<inbound-endpoint ref="EucalyptusWS" />
 			</inbound>
 			<component class="edu.ucsb.eucalyptus.ic.Eucalyptus" />
+      <outbound>
+          <outbound-endpoint ref="ReplyQueueEndpoint" />
+      </outbound>
 		</service>
 
 	</model>

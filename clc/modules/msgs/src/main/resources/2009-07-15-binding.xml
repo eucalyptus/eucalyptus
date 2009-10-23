@@ -72,5 +72,6 @@
     <include path="aws-security.xml"/>
     <include path="aws-zones.xml"/>
     <include path="aws-ebs.xml"/>
+    <include path="aws-vpc.xml"/>
     <include path="aws-unimplemented.xml"/>
 </binding>

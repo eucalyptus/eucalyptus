@@ -66,6 +66,7 @@
 package com.eucalyptus.cloud.ws;
 
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.dns.TransientZone;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
 
@@ -134,6 +135,12 @@ public class DNSControl {
 			for(ARecordInfo aRecInfo : aRecInfos) {
 				ZoneManager.addRecord(aRecInfo);
 			}
+      try {
+        ZoneManager.registerZone( TransientZone.getExternalName( ), TransientZone.getInstanceExternalZone( ) );
+        ZoneManager.registerZone( TransientZone.getInternalName( ), TransientZone.getInstanceInternalZone( ) );
+      } catch ( TextParseException e ) {
+        LOG.debug( e, e );
+      }
 			db.commit();
 		} catch(EucalyptusCloudException ex) {		
 			db.rollback();
