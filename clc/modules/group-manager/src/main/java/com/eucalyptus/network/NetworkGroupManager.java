@@ -103,6 +103,7 @@ public class NetworkGroupManager {
     return reply;
   }
   public RevokeSecurityGroupIngressResponseType revoke( RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException {
+    NetworkGroupUtil.makeDefault( request.getUserId( ) );//ensure the default group exists to cover some old broken installs
     RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply();
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
     final List<NetworkRule> ruleList = Lists.newArrayList( );
@@ -145,6 +146,7 @@ public class NetworkGroupManager {
   }
 
   public AuthorizeSecurityGroupIngressResponseType authorize( AuthorizeSecurityGroupIngressType request ) throws Exception{
+    NetworkGroupUtil.makeDefault( request.getUserId( ) );//ensure the default group exists to cover some old broken installs
     AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply();
     EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
