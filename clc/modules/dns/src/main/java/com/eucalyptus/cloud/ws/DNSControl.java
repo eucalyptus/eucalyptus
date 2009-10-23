@@ -138,7 +138,7 @@ public class DNSControl {
       try {
         ZoneManager.registerZone( TransientZone.getExternalName( ), TransientZone.getInstanceExternalZone( ) );
         ZoneManager.registerZone( TransientZone.getInternalName( ), TransientZone.getInstanceInternalZone( ) );
-      } catch ( TextParseException e ) {
+      } catch ( Throwable e ) {
         LOG.debug( e, e );
       }
 			db.commit();
