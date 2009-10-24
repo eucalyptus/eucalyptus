@@ -77,6 +77,9 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
         if( !AddressUtil.initialize( this.getCluster( ).getName( ), Pair.getPaired( reply.getAddresses( ), reply.getMapping( ) ) ) ) {
           AddressUtil.update( this.getCluster( ).getName( ), Pair.getPaired( reply.getAddresses( ), reply.getMapping( ) ) );
         }
+        for( Address a : Addresses.getInstance( ).listValues( ) ) {
+          if( !a.isAllocated( ) ) a.release( );
+        }
       } else {
         LOG.warn( "Response from cluster [" + this.getCluster( ).getName( ) + "]: " + reply.getStatusMessage( ) );
         EucalyptusProperties.disableNetworking = true;
