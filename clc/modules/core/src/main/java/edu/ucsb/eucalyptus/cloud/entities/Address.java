@@ -245,7 +245,7 @@ public class Address implements HasName {
   private volatile boolean system = false;
   
   public boolean isAllocated() {
-    return UNALLOCATED_USERID.equals( this.userId );
+    return !UNALLOCATED_USERID.equals( this.userId );
   }
   
   public void allocate( String userId ) {
