@@ -292,7 +292,11 @@ public class Address implements HasName {
   }
   
   private static void removeAddress( String name ) {
-    Addresses.getInstance( ).disable( name );
+    try {
+      Addresses.getInstance( ).disable( name );
+    } catch ( NoSuchElementException e1 ) {
+      LOG.debug( e1 );
+    }
     EntityWrapper<Address> db = new EntityWrapper<Address>( );
     try {
       Address dbAddr = db.getUnique( new Address( name ) );
