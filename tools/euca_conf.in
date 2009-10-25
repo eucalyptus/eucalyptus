@@ -95,6 +95,10 @@ RSYNC="`which rsync 2> /dev/null`"
 WGET="`which wget 2> /dev/null`"
 VERBOSE="N"
 LIST=""
+ENABLED=""
+DISABLED=""
+TO_START=""
+
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -128,8 +132,10 @@ usage () {
 	echo "   --name <var>                     returns the value or <name>"
 	echo "   --import-conf <file>             import variables from <file> into eucalyptus.conf"
 	echo "   --setup                          perform initial setup"
-	echo "   --check [nc|cc|cloud|sc|walrus]  pre-flight checks"
-	echo "   --sync [nc|cc|cloud|sc|walrus]   pre-flight checks"
+	echo "   --enable {clc|walrus|sc}         enable service at next start"
+	echo "   --disable {clc|walrus|sc}        disable service at next start"
+	echo "   --check {nc|cc|cloud|sc|walrus}  pre-flight checks"
+	echo "   --sync {nc|cc|cloud|sc|walrus}   pre-flight checks"
 	echo "   --version                        eucalyptus version"
 	echo
 }
@@ -594,6 +600,24 @@ while [ $# -gt 0 ]; do
 			exit 1
 		fi
 		CHECK="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "--enable" ]; then 
+		if [ "$2" != "clc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+			echo "--enable requires clc, sc or walrus"
+			exit 1
+		fi
+		ENABLED="$ENABLED $2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "--disable" ]; then 
+		if [ "$2" != "clc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+			echo "--disable requires clc, sc or walrus"
+			exit 1
+		fi
+		DISABLED="$DISABLED $2"
 		shift; shift
 		continue
 	fi
@@ -1422,3 +1446,21 @@ for x in $LIST ; do
 		done
 	fi
 done
+
+# enable/disable services
+if [ -r $EUCALYPTUS/var/lib/eucalyptus/services ]; then
+	for x in `cat $EUCALYPTUS/var/lib/eucalyptus/services` ; do
+		TO_START="$TO_START $x"
+	done
+fi
+if [ -n "$DISABLED" -o -n "$ENABLED" ]; then
+	for x in $TO_START $ENABLED ; do
+		to_start="Y"
+		for y in $DISABLED ; do
+			if [ "$x" != "$y" ]; then
+				to_start="N"
+			fi
+		done
+		[ $to_start = "Y" ] && echo $x
+	done | sort | uniq > $EUCALYPTUS/var/lib/eucalyptus/services
+fi

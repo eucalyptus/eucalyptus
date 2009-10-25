@@ -63,14 +63,14 @@
 # description: script for starting and stopping eucalyptus java ws services
 #
 ### BEGIN INIT INFO
-# Provides:                   eucalyptus-WS
+# Provides:                   eucalyptus
 # Required-Start:             $remote_fs $syslog 
 # Should-Start:               START
 # Required-Stop:              $remote_fs $syslog 
 # Default-Start:              2 3 4 5
 # Default-Stop:	              0 1 6
-# Short-Description:          Start Eucalyptus CONFNAME
-# Description:                Start the Eucalyptus CONFNAME
+# Short-Description:          Start Eucalyptus 
+# Description:                Start the Eucalyptus services
 # X-UnitedLinux-Default-Enabled: yes
 ### END INIT INFO
 #
@@ -79,8 +79,8 @@
 
 # we need to source the current path in case of manual intallation
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
-DESC="Eucalyptus CONFNAME"
-NAME="WS"
+DESC="Eucalyptus services"
+NAME="eucalyptus-cloud"
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
 EUCA_USER="eucalyptus"
@@ -149,7 +149,7 @@ read_ws_list() {
 	WALRUS_WS="N"
 	CLOUD_WS="N"
 
-	for x in `cat $EUCALYPTUS/var/run/eucalyptus/ws 2> /dev/null` ; do
+	for x in `cat $EUCALYPTUS/var/lib/eucalyptus/services 2> /dev/null` ; do
 		case $x in
 		storage) 
 			STORAGE_WS="Y"
@@ -166,75 +166,7 @@ read_ws_list() {
 		esac
 	done
 }
-# write the running services
-write_ws_list() {
-	echo "" > $EUCALYPTUS/var/run/eucalyptus/ws
-	if [ "$STORAGE_WS" = "Y" ]; then
-		echo "storage" >> $EUCALYPTUS/var/run/eucalyptus/ws 
-	fi
-	if [ "$WALRUS_WS" = "Y" ]; then
-		echo "walrus" >> $EUCALYPTUS/var/run/eucalyptus/ws 
-	fi
-	if [ "$CLOUD_WS" = "Y" ]; then
-		echo "cloud" >> $EUCALYPTUS/var/run/eucalyptus/ws 
-	fi
-}
-# without parameter returns if the service is running or not
-# the parameter can be 'enable' or 'disable', and it sets the
-# corresponding variable
-handle_ws() {
-	if [ "$NAME" = "cloud" ]; then
-		case "$1" in
-		enable)
-			CLOUD_WS="Y"
-			return 0
-			;;
-		disable)
-			CLOUD_WS="N"
-			return 0
-			;;
-		*)
-			if [ "$CLOUD_WS" = "Y" ]; then
-				return 0
-			fi
-			;;
-		esac
-	elif [ "$NAME" = "walrus" ]; then
-		case "$1" in
-		enable)
-			WALRUS_WS="Y"
-			return 0
-			;;
-		disable)
-			WALRUS_WS="N"
-			return 0
-			;;
-		*)
-			if [ "$WALRUS_WS" = "Y" ]; then
-				return 0
-			fi
-			;;
-		esac
-	elif [ "$NAME" = "sc" ]; then
-		case "$1" in
-		enable)
-			STORAGE_WS="Y"
-			return 0
-			;;
-		disable)
-			STORAGE_WS="N"
-			return 0
-			;;
-		*)
-			if [ "$STORAGE_WS" = "Y" ]; then
-				return 0
-			fi
-			;;
-		esac
-	fi
-	return 1
-}
-	
+
 check_java() {
 	java_min_version="1.6.0"
 
@@ -287,8 +219,6 @@ do_start() {
 	if [ "$CLOUD_WS" != "Y" ]; then
 		OPTS="$OPTS --disable-cloud"
 	fi
-	# these are the services we started
-	write_ws_list
 
 	if [ "${STORAGE_WS}${CLOUD_WS}${WALRUS_WS}" = "NNN" ]; then
 		# nothing to start
@@ -312,17 +242,14 @@ do_status() {
 		pid=`cat ${pidfile} 2> /dev/null`
 		if ! ps axww|grep $pid|grep eucalyptus-cloud.pid > /dev/null; then
 			# pid file is not matching
-			rm -f $EUCALYPTUS/var/run/eucalyptus/ws
 			rm -f ${pidfile}
 			return 1
 		fi
 	else
 		# no pidfile, no running services
-		rm -f $EUCALYPTUS/var/run/eucalyptus/ws
 		return 1
 	fi
 
-	handle_ws
 	return $?
 }
 
@@ -361,14 +288,14 @@ fi
 export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
 #VERBOSE="yes"
 
-# read started services
+# read services to start
 read_ws_list
 
 case "$1" in
   start)
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_daemon_msg "Starting $DESC" "eucalyptus-$NAME"
+			log_daemon_msg "Starting $DESC" "$NAME"
 		else
 			echo -n "Starting $DESC: "
 		fi
@@ -386,10 +313,6 @@ case "$1" in
 		exit 0
 	fi
 
-	# since other services could be running, we stop the container
-	# before starting
-	handle_ws enable
-	do_stop
 	do_start
 
 	case "$?" in
@@ -435,8 +358,7 @@ case "$1" in
 	fi
 
 	do_stop
-	handle_ws disable
-	do_start
+
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_end_msg 0
@@ -457,12 +379,8 @@ case "$1" in
 	fi
 	;;
   *)
-	echo "Usage: eucalyptus-$NAME {start|stop|restart}" >&2
+	echo "Usage: $NAME {start|stop|restart}" >&2
 	exit 3
 	;;
 esac
 
-# these are the services we started
-write_ws_list
-
-:

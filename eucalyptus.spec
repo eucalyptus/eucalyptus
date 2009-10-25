@@ -172,7 +172,8 @@ ls /usr/share/eucalyptus/*jar|grep -v eucalyptus-walrus|grep -v eucalyptus-stora
 %clean
 rm -rf /etc/eucalyptus /usr/lib/eucalyptus /usr/share/eucalyptus
 rm -rf /var/lib/eucalyptus /var/run/eucalyptus /var/log/eucalyptus
-rm -rf /usr/sbin/euca_* /usr/sbin/eucalytpus-cloud $RPM_BUILD_DIR/eucalyptus
+rm -rf /usr/sbin/euca_conf /usr/sbin/euca_sync_key /usr/sbin/euca_killall
+rm -rf /usr/sbin/eucalytpus-cloud $RPM_BUILD_DIR/eucalyptus
 rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc
 rm -rf /etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-sc
 rm -rf /etc/init.d/eucalyptus-walrus
@@ -329,7 +330,6 @@ then
 		fi
 	fi
 fi
-chkconfig --add eucalyptus-cloud
 
 %post cloud
 chkconfig --add eucalyptus-cloud
@@ -355,12 +355,6 @@ if [ "$1" = "0" ];
 then
 	rm -rf /var/log/eucalyptus
 	rm -rf /etc/eucalyptus/http*
-fi
-
-%postun common-java
-if [ "$1" = "0" ];
-then
-	rm -f /usr/share/eucalyptus/*.jar.disabled
 fi
 
 %preun cloud
@@ -429,6 +423,10 @@ then
 fi
 
 %changelog gl
+*Sun Nov 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.6.1)
+- install in / instead of /opt/eucalyptus
+
 *Mon Jun 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.5.2)
 
@@ -439,6 +437,10 @@ fi
 - Added new service
 
 %changelog cloud
+*Sun Nov 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.6.1)
+- install in / instead of /opt/eucalyptus
+
 *Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
 - New version (1.5.2)
 
@@ -480,6 +482,10 @@ fi
 - Fix the instance ID naming collision.
 
 %changelog cc
+*Sun Nov 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.6.1)
+- install in / instead of /opt/eucalyptus
+
 *Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
 - New version (1.5.2)
 
@@ -497,6 +503,10 @@ fi
   this module.
 
 %changelog nc
+*Sun Nov 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.6.1)
+- install in / instead of /opt/eucalyptus
+
 *Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
 - New version (1.5.2)
 
@@ -523,6 +533,10 @@ fi
 - More robust checking for running instances.
 
 %changelog
+*Sun Nov 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.6.1)
+- install in / instead of /opt/eucalyptus
+
 *Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
 - New version (1.5.2)
 
