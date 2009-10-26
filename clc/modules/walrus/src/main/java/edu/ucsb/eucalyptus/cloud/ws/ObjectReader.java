@@ -68,7 +68,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileIO;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
-import edu.ucsb.eucalyptus.util.WalrusSemaphore;
+import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
@@ -87,7 +87,7 @@ public class ObjectReader extends Thread {
 	private long byteRangeEnd;
 	private boolean compressed;
 	private boolean deleteAfterXfer;
-	private WalrusSemaphore semaphore;
+	private EucaSemaphore semaphore;
 
 	public ObjectReader(String bucketName, String objectName, long objectSize, LinkedBlockingQueue<WalrusDataMessage> getQueue, StorageManager storageManager) {
 		this.bucketName = bucketName;
@@ -108,7 +108,7 @@ public class ObjectReader extends Thread {
 		this.storageManager = storageManager;
 	}
 
-	public ObjectReader(String bucketName, String objectName, long objectSize, LinkedBlockingQueue<WalrusDataMessage> getQueue, boolean deleteAfterXfer, WalrusSemaphore semaphore, StorageManager storageManager) {
+	public ObjectReader(String bucketName, String objectName, long objectSize, LinkedBlockingQueue<WalrusDataMessage> getQueue, boolean deleteAfterXfer, EucaSemaphore semaphore, StorageManager storageManager) {
 		this(bucketName, objectName, objectSize, getQueue, storageManager);
 		this.deleteAfterXfer = deleteAfterXfer;
 		this.semaphore = semaphore;

@@ -76,6 +76,7 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
+import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
@@ -121,6 +122,8 @@ import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
 import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
+import edu.ucsb.eucalyptus.util.EucaSemaphore;
+import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
 public class BlockStorage {
 
@@ -348,6 +351,7 @@ public class BlockStorage {
 					blockManager.deleteVolume(volumeId);
 					volumeStorageManager.deleteObject("", volumeId);
 					db.delete(foundVolume);
+					EucaSemaphoreDirectory.removeSemaphore(volumeId);
 					if(StorageProperties.trackUsageStatistics) { 
 						blockStorageStatistics.decrementVolumeCount();
 						blockStorageStatistics.updateSpaceUsed(-(foundVolume.getSize() * StorageProperties.GB));
@@ -764,7 +768,14 @@ public class BlockStorage {
 
 		public void run() {
 			try {
+				EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
+				try {
+					semaphore.acquire();
+				} catch(InterruptedException ex) {
+					throw new EucalyptusCloudException("semaphore could not be acquired");
+				}
 				blockManager.createSnapshot(volumeId, snapshotId);
+				semaphore.release();
 				List<String> returnValues = blockManager.prepareForTransfer(snapshotId);
 				snapshotFileName = returnValues.get(0);
 				transferSnapshot();				

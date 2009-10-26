@@ -449,7 +449,7 @@ public class WalrusImageManager {
 	}
 
 	private void flushCachedImage (String bucketName, String objectKey) throws Exception {
-		WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectKey);
+		EucaSemaphore semaphore = EucaSemaphoreDirectory.getSemaphore(bucketName + "/" + objectKey);
 		while(semaphore.inUse()) {
 			try {
 				synchronized (semaphore) {
@@ -459,7 +459,7 @@ public class WalrusImageManager {
 				LOG.error(ex);
 			}
 		}
-		imageMessenger.removeSemaphore(bucketName + "/" + objectKey);
+		EucaSemaphoreDirectory.removeSemaphore(bucketName + "/" + objectKey);
 		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
 		List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
@@ -858,7 +858,7 @@ public class WalrusImageManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
 				if(objectInfo.canRead(userId) || request.isAdministrator() ) {
-					WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectKey);
+					EucaSemaphore semaphore = EucaSemaphoreDirectory.getSemaphore(bucketName + "/" + objectKey);
 					try {
 						semaphore.acquire();
 					} catch(InterruptedException ex) {

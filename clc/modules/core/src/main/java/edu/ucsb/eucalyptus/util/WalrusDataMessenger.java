@@ -77,12 +77,10 @@ public class WalrusDataMessenger {
 
     private ConcurrentHashMap<String, ConcurrentHashMap<String,LinkedBlockingQueue<WalrusDataMessage>>> queueMap;
     private ConcurrentHashMap<String, WalrusMonitor> monitorMap;
-    private ConcurrentHashMap<String, WalrusSemaphore> semaphoreMap;
 
     public WalrusDataMessenger() {
         queueMap = new ConcurrentHashMap<String, ConcurrentHashMap<String,LinkedBlockingQueue<WalrusDataMessage>>>();
         monitorMap = new ConcurrentHashMap<String, WalrusMonitor>();
-        semaphoreMap = new ConcurrentHashMap<String, WalrusSemaphore>();
     }
 
     public LinkedBlockingQueue<WalrusDataMessage> getQueue(String key1, String key2) {
@@ -133,20 +131,6 @@ public class WalrusDataMessenger {
     public void removeMonitor(String key) {
         if(monitorMap.containsKey(key)) {
             monitorMap.remove(key);
-        }
-    }
-
-    public WalrusSemaphore getSemaphore(String key) {
-        WalrusSemaphore semaphore = semaphoreMap.putIfAbsent(key, new WalrusSemaphore());
-        if (semaphore == null) {
-            semaphore = semaphoreMap.get(key);
-        }
-        return semaphore;
-    }
-
-    public void removeSemaphore(String key) {
-        if(semaphoreMap.containsKey(key)) {
-            semaphoreMap.remove(key);
         }
     }
 }

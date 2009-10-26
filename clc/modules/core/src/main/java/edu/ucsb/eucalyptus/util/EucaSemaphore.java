@@ -60,18 +60,18 @@
 *******************************************************************************/
 /*
  *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman neil@eucalyptus.com
  */
 package edu.ucsb.eucalyptus.util;
 
 import java.util.concurrent.Semaphore;
 
 
-public class WalrusSemaphore {
+public class EucaSemaphore {
     private Semaphore semaphore;
 
-    public WalrusSemaphore() {
-        semaphore = new Semaphore(Integer.MAX_VALUE);
+    public EucaSemaphore(int permits) {
+        semaphore = new Semaphore(permits);
     }
 
     public void acquire() throws InterruptedException {
