@@ -498,7 +498,7 @@ adb_ncGetConsoleOutputResponse_t* ncGetConsoleOutputMarshal (adb_ncGetConsoleOut
     eventlog("NC", userId, correlationId, "GetConsoleOutput", "begin");
     { // do it
         ncMetadata meta = { correlationId, userId };
-        char * consoleOutput;
+        char * consoleOutput=NULL;
 
         int error = doGetConsoleOutput (&meta, instanceId, &consoleOutput);
     
@@ -515,6 +515,7 @@ adb_ncGetConsoleOutputResponse_t* ncGetConsoleOutputMarshal (adb_ncGetConsoleOut
             // set operation-specific fields in output
             adb_ncGetConsoleOutputResponseType_set_consoleOutput(output, env, consoleOutput);
         }
+	if (consoleOutput) free(consoleOutput);
     }
     // set response to output
     adb_ncGetConsoleOutputResponse_set_ncGetConsoleOutputResponse(response, env, output);
