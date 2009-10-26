@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.cloud.cluster.*;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 
 public class VmMetadata {
   private static Logger LOG = Logger.getLogger( VmMetadata.class );
@@ -76,7 +77,7 @@ public class VmMetadata {
       if ( vmIp.equals( vm.getNetworkConfig().getIpAddress() ) || vmIp.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) ) {
 
         if ( url.equals( "user-data" ) || url.equals( "user-data/" ) )
-          return vm.getUserData();
+          return new String(Base64.decode(vm.getUserData()));
         else if ( !url.startsWith( "meta-data" ) )
           return null;
         url = url.replaceAll("meta-data/?","");
