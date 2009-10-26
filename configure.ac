@@ -91,6 +91,9 @@ if test -n "${AXIS2C_HOME}" ; then
 		done
 		LIBS="-L${AXIS2C_HOME}/lib ${LIBS}"
 	fi
+	if test -d ${AXIS2C_HOME}/modules/rampart ; then
+		LIBS="-L${AXIS2C_HOME}/modules/rampart ${LIBS}"
+	fi
 fi
 if test -n "${LIBVIRT_HOME}" ; then
 	if test -d "${LIBVIRT_HOME}"/include ; then
@@ -178,8 +181,6 @@ AC_CHECK_LIB([axutil],[main],,AC_MSG_ERROR([Cannot find libaxutil]))
 AC_CHECK_LIB([m],[main])
 AC_CHECK_LIB([mod_rampart],[main],,AC_MSG_ERROR([Cannot find libmod_rampart]))
 AC_CHECK_LIB([neethi],[main],,AC_MSG_ERROR([Cannot find libneethi!]))
-AC_CHECK_LIB([omxmlsec],[main],,AC_MSG_ERROR([Cannot find libomxmlsec!]))
-AC_CHECK_LIB([oxstokens],[main],,AC_MSG_ERROR([Cannot find liboxstokens!]))
 AC_CHECK_LIB([pthread],[main])
 AC_CHECK_LIB([rt],[main])
 AC_CHECK_LIB([virt],[main],true,AC_MSG_ERROR([Cannot find libvirt!]))
