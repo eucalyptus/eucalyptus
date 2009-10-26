@@ -72,6 +72,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.BindingStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
+import com.eucalyptus.ws.stages.VMwareBrokerAuthenticationStage;
 
 public class VMwareSoapPipeline extends FilteredPipeline {
 
@@ -87,7 +88,7 @@ public class VMwareSoapPipeline extends FilteredPipeline {
 
   @Override
   protected void addStages( List<UnrollableStage> stages ) {
-    stages.add( new SoapUserAuthenticationStage( ) );
+    stages.add( new VMwareBrokerAuthenticationStage( ) );
     stages.add( new BindingStage( ) );
   }
 

@@ -76,7 +76,7 @@ public class SoapUserAuthenticationStage implements UnrollableStage {
   public void unrollStage( final ChannelPipeline pipeline ) {
     pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
     pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-    //pipeline.addLast( "ws-security", new UserWsSecHandler( ) );
+    pipeline.addLast( "ws-security", new UserWsSecHandler( ) );
   }
 
   @Override

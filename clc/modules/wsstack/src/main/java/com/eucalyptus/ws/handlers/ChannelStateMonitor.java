@@ -33,7 +33,7 @@ public class ChannelStateMonitor extends SimpleChannelHandler {
     Long closeTime = System.currentTimeMillis( );
     Long openTime = this.openTime.getAndSet( 0 );
     Long roundTime = ( closeTime - openTime );
-    LOG.debug( EventRecord.here( ctx.getPipeline( ).getLast( ).getClass( ), EventType.SOCKET_CLOSE, closeTime.toString( ), roundTime.toString( ), ctx.getChannel( ).getLocalAddress( ).toString( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
+ //   LOG.debug( EventRecord.here( ctx.getPipeline( ).getLast( ).getClass( ), EventType.SOCKET_CLOSE, closeTime.toString( ), roundTime.toString( ), ctx.getChannel( ).getLocalAddress( ).toString( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
     LOG.trace( EventRecord.here( NioServer.class, EventType.SOCKET_BYTES_READ, rb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
     LOG.trace( EventRecord.here( NioServer.class, EventType.SOCKET_BYTES_WRITE, wb.toString( ), Float.toString( ( wb * 1020.0f ) / ( roundTime * 1024.0f ) ) ) );
   }
