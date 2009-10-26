@@ -19,7 +19,7 @@
 
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       1.6.0
+Version:       1.6-devel
 Release:       1
 License:       BSD
 Group:         Applications/System
@@ -163,7 +163,7 @@ fi
 cd clc
 make deps
 cd ..
-make
+make 2> err.log > out.log
 
 %install
 make install
@@ -195,26 +195,23 @@ rm -rf /etc/init.d/eucalyptus-walrus
 /etc/eucalyptus/eucalyptus-version
 
 %files common-java -f jar_list
+/etc/init.d/eucalyptus-cloud
 /etc/eucalyptus/cloud.d
-/etc/eucalyptus/cloud.xml
 /var/lib/eucalyptus/db
 /var/lib/eucalyptus/modules
 /var/lib/eucalyptus/webapps
-/usr/lib/eucalyptus/libfsstorage.so
 /usr/lib/eucalyptus/liblvm2control.so
 /usr/sbin/eucalyptus-cloud
 
 %files cloud
 /etc/init.d/eucalyptus-cloud
-/usr/share/eucalyptus/eucalyptus-interface-%{version}.jar
+/usr/share/eucalyptus/eucalyptus-cloud-%{version}.jar
 
 %files walrus
-/etc/init.d/eucalyptus-walrus
 /usr/share/eucalyptus/eucalyptus-walrus-%{version}.jar
 
 %files sc
-/etc/init.d/eucalyptus-sc
-/usr/share/eucalyptus/eucalyptus-sc-%{version}.jar
+/usr/share/eucalyptus/eucalyptus-storagecontroller-%{version}.jar
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
@@ -423,7 +420,7 @@ then
 fi
 
 %changelog gl
-*Sun Nov 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.6.1)
 - install in / instead of /opt/eucalyptus
 
@@ -437,7 +434,7 @@ fi
 - Added new service
 
 %changelog cloud
-*Sun Nov 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.6.1)
 - install in / instead of /opt/eucalyptus
 
@@ -482,7 +479,7 @@ fi
 - Fix the instance ID naming collision.
 
 %changelog cc
-*Sun Nov 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.6.1)
 - install in / instead of /opt/eucalyptus
 
@@ -503,7 +500,7 @@ fi
   this module.
 
 %changelog nc
-*Sun Nov 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.6.1)
 - install in / instead of /opt/eucalyptus
 
@@ -533,7 +530,7 @@ fi
 - More robust checking for running instances.
 
 %changelog
-*Sun Nov 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.6.1)
 - install in / instead of /opt/eucalyptus
 

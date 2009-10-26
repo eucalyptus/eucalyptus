@@ -51,6 +51,9 @@ rm -rf $RPM_BUILD_DIR/axis2c-src-%{version}
 /opt/euca-axis2c
 
 %changelog
+*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- upgraded to version 1.6
+
 *Tue Jun 16 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - we depend now on the system's httpd
 
