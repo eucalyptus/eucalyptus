@@ -1465,20 +1465,34 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  time_t startRun;
 	  ret=0;
 	  close(filedes[0]);
-	  ncs = ncStubCreate(res->ncURL, NULL, NULL);
-	  if (config->use_wssec) {
-	    rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
-	  }
 	  logprintfl(EUCAINFO,"\tclient (%s) running instance: %s %s %s %s %d %s\n", res->ncURL, instId, amiId, mac, mac, vlan, keyName);
 	  logprintfl(EUCAINFO,"\tasking for virtual hardware (mem/disk/cores): %d/%d/%d\n", ncvm.memorySize, ncvm.diskSize, ncvm.numberOfCores);
 	  rc = 1;
 	  startRun = time(NULL);
 	  while(rc && ((time(NULL) - startRun) < config->wakeThresh)){
-	    rc = ncStartNetworkStub(ncs, ccMeta, NULL, 0, 0, vlan, NULL);
+            int clientpid;
+
+            // call StartNetwork client
+            clientpid = fork();
+	    if (!clientpid) {
+	     ncs = ncStubCreate(res->ncURL, NULL, NULL);
+	     if (config->use_wssec) {
+	       rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
+	     }
+	     rc = ncStartNetworkStub(ncs, ccMeta, NULL, 0, 0, vlan, NULL);
+	     exit(0);
+            } else {
+	      rc = timewait(clientpid, &status, 30);
+	    }
+
+            // call RunInstances client
+            ncs = ncStubCreate(res->ncURL, NULL, NULL);
+	    if (config->use_wssec) {
+	      rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
+	    }
 	    rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, mac, mac, vlan, userData, launchIndex, netNames, netNamesLen, &outInst);
 	  }
 	  if (!rc) {
-	    //rc = write(filedes[1], outInst, sizeof(ncInstance));
 	    ret = 0;
 	  } else {
 	    ret = 1;
@@ -1487,20 +1501,23 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  exit(ret);
 	} else {
 	  close(filedes[1]);
-	  //	  outInst = malloc(sizeof(ncInstance));
-	  op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	  logprintfl(EUCADEBUG, "\ttime left for op: %d\n", op_timer / (maxCount - i));
-	  //	  rbytes = timeread(filedes[0], outInst, sizeof(ncInstance), op_timer / (maxCount - i));
-	  rbytes = 1;
 	  close(filedes[0]);
-	  if (rbytes <= 0) {
+	  /*
+	    op_timer = OP_TIMEOUT - (time(NULL) - op_start);
+	    logprintfl(EUCADEBUG, "\ttime left for op: %d\n", op_timer / (maxCount - i));
+	    rbytes = timeread(filedes[0], outInst, sizeof(ncInstance), op_timer / (maxCount - i));
+	    rbytes = 1;
+	    close(filedes[0]);
+	    if (rbytes <= 0) {
 	    // read went badly
 	    kill(pid, SIGKILL);
 	    wait(&status);
 	    rc = -1;
-	  } else {
+	    } else {
 	    rc = 0;
-	  }
+	    }
+	  */
+	  rc = 0;
 	  logprintfl(EUCAINFO,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
 	}
 	if (rc != 0) {
