@@ -225,7 +225,7 @@ AC_CONFIG_FILES([Makedefs
 		tools/eucalyptus-cc:tools/eucalyptus-cc.in
 		tools/eucalyptus-nc:tools/eucalyptus-nc.in
 		tools/euca_conf:tools/euca_conf.in
-		tools/eucalyptus-java-ws:tools/eucalyptus-java-ws.in])
+		tools/eucalyptus-cloud:tools/eucalyptus-cloud.in])
 
 AC_DEFINE_UNQUOTED(EUCA_VERSION, "$EUCA_VERSION")
 

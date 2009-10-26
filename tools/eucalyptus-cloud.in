@@ -80,7 +80,7 @@
 # we need to source the current path in case of manual intallation
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus services"
-NAME="eucalyptus-cloud"
+NAME=""
 ANT="`which ant 2> /dev/null`"
 JAVA="`which java 2> /dev/null`"
 EUCA_USER="eucalyptus"
@@ -147,18 +147,22 @@ fi
 read_ws_list() {
 	STORAGE_WS="N"
 	WALRUS_WS="N"
-	CLOUD_WS="N"
+	CLOUD_WS="N"	
+	NAME=""
 
 	for x in `cat $EUCALYPTUS/var/lib/eucalyptus/services 2> /dev/null` ; do
 		case $x in
-		storage) 
-			STORAGE_WS="Y"
-			;;
 		walrus)
 			WALRUS_WS="Y"
+			NAME="walrus $NAME"
 			;;
-		cloud)
+		storage|sc) 
+			STORAGE_WS="Y"
+			NAME="storage $NAME"
+			;;
+		cloud|clc)
 			CLOUD_WS="Y"
+			NAME="clc $NAME"
 			;;
 		*)
 			echo "Unknown service! ($x)"
@@ -379,7 +383,7 @@ case "$1" in
 	fi
 	;;
   *)
-	echo "Usage: $NAME {start|stop|restart}" >&2
+	echo "Usage: $0 {start|stop|restart}" >&2
 	exit 3
 	;;
 esac
