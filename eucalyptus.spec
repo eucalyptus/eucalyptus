@@ -326,16 +326,16 @@ then
 fi
 
 %post cloud
+/usr/sbin/euca_conf --enable cloud
 chkconfig --add eucalyptus-cloud
-/etc/init.d/eucalyptus-cloud stop > /dev/null 2> /dev/null
 
 %post walrus
+/usr/sbin/euca_conf --enable walrus
 chkconfig --add eucalyptus-walrus
-/etc/init.d/eucalyptus-walrus stop > /dev/null 2> /dev/null
 
 %post sc
+/usr/sbin/euca_conf --enable sc
 chkconfig --add eucalyptus-sc
-/etc/init.d/eucalyptus-sc stop > /dev/null 2> /dev/null
 
 %post cc
 chkconfig --add eucalyptus-cc
