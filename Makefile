@@ -71,11 +71,6 @@ distclean: clean
 	@# they where part of CLEAN
 	@rm -rf lib 
 
-# the following target is used to remove eucalyptuys from your system
-uninstall:
-	@echo something to do here
-
-
 Makedefs: Makedefs.in config.status
 	./config.status
 
