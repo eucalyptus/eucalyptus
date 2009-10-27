@@ -377,7 +377,7 @@ case "$1" in
   	;;
   status)
 	if do_status ; then
-		echo "$DESC is running"
+		echo "$DESC ($NAME) is/are running"
 	else
 		exit 3
 	fi
