@@ -55,6 +55,11 @@ install: deploy
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
+uninstall:
+	@$(RM) -f $(etcdir)/eucalyptus/eucalyptus-version
+	@for subdir in $(SUBDIRS); do \
+		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
+
 clean:
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
@@ -65,11 +70,6 @@ distclean: clean
 	@rm -f config.cache config.log config.status Makedefs tags TAGS
 	@# they where part of CLEAN
 	@rm -rf lib 
-
-# the following target is used to remove eucalyptuys from your system
-uninstall:
-	@echo something to do here
-
 
 Makedefs: Makedefs.in config.status
 	./config.status

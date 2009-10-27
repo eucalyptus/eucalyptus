@@ -50,3 +50,5 @@ install:
 	@$(INSTALL) -m 0755 euca_imager $(usrdir)/lib/eucalyptus
 deploy:
 
+uninstall:
+

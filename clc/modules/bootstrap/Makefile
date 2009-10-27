@@ -49,5 +49,7 @@ install:
 	$(INSTALL) -m 0755 eucalyptus-cloud $(sbindir)/eucalyptus-cloud
 
 clean:
-	rm -f $(OBJS) eucalyptus-cloud
+	@$(RM) -f $(OBJS) eucalyptus-cloud
 
+uninstall:
+	@$(RM) -f $(sbindir)/eucalyptus-cloud

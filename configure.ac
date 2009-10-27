@@ -91,6 +91,9 @@ if test -n "${AXIS2C_HOME}" ; then
 		done
 		LIBS="-L${AXIS2C_HOME}/lib ${LIBS}"
 	fi
+	if test -d ${AXIS2C_HOME}/modules/rampart ; then
+		LIBS="-L${AXIS2C_HOME}/modules/rampart ${LIBS}"
+	fi
 fi
 if test -n "${LIBVIRT_HOME}" ; then
 	if test -d "${LIBVIRT_HOME}"/include ; then
@@ -105,6 +108,7 @@ AC_PROG_AWK
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
+AC_PATH_PROG(RM, rm):w
 
 # let's search for WSDL2C.sh
 # we cannot use AC_PROG_PATH because WSDL2C.sh is not executable
@@ -178,8 +182,6 @@ AC_CHECK_LIB([axutil],[main],,AC_MSG_ERROR([Cannot find libaxutil]))
 AC_CHECK_LIB([m],[main])
 AC_CHECK_LIB([mod_rampart],[main],,AC_MSG_ERROR([Cannot find libmod_rampart]))
 AC_CHECK_LIB([neethi],[main],,AC_MSG_ERROR([Cannot find libneethi!]))
-AC_CHECK_LIB([omxmlsec],[main],,AC_MSG_ERROR([Cannot find libomxmlsec!]))
-AC_CHECK_LIB([oxstokens],[main],,AC_MSG_ERROR([Cannot find liboxstokens!]))
 AC_CHECK_LIB([pthread],[main])
 AC_CHECK_LIB([rt],[main])
 AC_CHECK_LIB([virt],[main],true,AC_MSG_ERROR([Cannot find libvirt!]))
@@ -225,13 +227,14 @@ AC_CONFIG_FILES([Makedefs
 		tools/eucalyptus-cc:tools/eucalyptus-cc.in
 		tools/eucalyptus-nc:tools/eucalyptus-nc.in
 		tools/euca_conf:tools/euca_conf.in
-		tools/eucalyptus-java-ws:tools/eucalyptus-java-ws.in])
+		tools/eucalyptus-cloud:tools/eucalyptus-cloud.in])
 
 AC_DEFINE_UNQUOTED(EUCA_VERSION, "$EUCA_VERSION")
 
 AC_SUBST(EUCA_VERSION)
 AC_SUBST(TOP)
 AC_SUBST(ANT)
+AC_SUBST(RM)
 AC_SUBST(WSDL2C)
 AC_SUBST(JAVA_HOME)
 AC_SUBST(AXIS2C_HOME)

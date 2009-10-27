@@ -21,3 +21,6 @@ clean:
 install:
 	mkdir -p $(EUCALYPTUS)/usr/lib/eucalyptus/
 	cp $(LIBDIR)/$(LVM2_SO) $(EUCALYPTUS)/usr/lib/eucalyptus/
+
+uninstall:
+	rm -r $(EUCALYPTUS)/usr/lib/eucalyptus/$(LVM2_SO)

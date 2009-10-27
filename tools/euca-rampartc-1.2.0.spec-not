@@ -58,5 +58,8 @@ rm -rf $RPM_BUILD_DIR/rampartc-src-%{version}
 /opt/euca-axis2c
 
 %changelog
+*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- upgraded to 1.3
+
 *Tue Jun 16 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - created separate package for rampartc
