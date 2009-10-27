@@ -226,6 +226,7 @@ do_start() {
 
 	if [ "${STORAGE_WS}${CLOUD_WS}${WALRUS_WS}" = "NNN" ]; then
 		# nothing to start
+		NAME="none"
 		return 0
 	fi
 
