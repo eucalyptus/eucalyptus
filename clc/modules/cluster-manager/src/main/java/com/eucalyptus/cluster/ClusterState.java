@@ -98,8 +98,10 @@ public class ClusterState {
     int max = 4095;
     try {
       for( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
-        min = cc.getMinVlan( ) > min ? cc.getMinVlan( ) : min;
-        max = cc.getMaxVlan( ) < max ? cc.getMaxVlan( ) : max;
+ 	if(cc.getMinVlan() != null)
+            min = cc.getMinVlan( ) > min ? cc.getMinVlan( ) : min;
+	if(cc.getMaxVlan() != null)
+            max = cc.getMaxVlan( ) < max ? cc.getMaxVlan( ) : max;
       }
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );

@@ -100,10 +100,15 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     if (path) strncpy(vnetconfig->path, path, 1024);
     if (eucahome) strncpy(vnetconfig->eucahome, eucahome, 1024);
     if (pubInterface) strncpy(vnetconfig->pubInterface, pubInterface, 32);
-    if (privInterface) strncpy(vnetconfig->privInterface, privInterface, 32);
-    if (mode) strncpy(vnetconfig->mode, mode, 32);
+    if (mode) {
+       strncpy(vnetconfig->mode, mode, 32);
+    } else {
+       logprintfl(EUCAERROR, "vnetInit: NULL mode!\n");
+       return;
+    }
     if (bridgedev) strncpy(vnetconfig->bridgedev, bridgedev, 32);
     if (daemon) strncpy(vnetconfig->dhcpdaemon, daemon, 1024);
+    if (privInterface) strncpy(vnetconfig->privInterface, privInterface, 32);
     if (dhcpuser) strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
     if (localIp) {
       char *ipbuf=NULL;
@@ -357,8 +362,12 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) 
       vnetconfig->networks[vlan].addrs[found].ip = dot2hex(ip);
     } else {
       newip = hex2dot(vnetconfig->networks[vlan].nw + found);
-      vnetconfig->networks[vlan].addrs[found].ip = dot2hex(newip);
-      if (newip) free(newip);
+      if (!newip) {
+         logprintfl(EUCAWARN,"Out of memory\n");
+      } else {
+         vnetconfig->networks[vlan].addrs[found].ip = dot2hex(newip);
+         free(newip);
+      }
     }
     vnetconfig->networks[vlan].numhosts++;
   } else {
@@ -594,8 +603,8 @@ int vnetRestoreTablesFromMemory(vnetConfig *vnetconfig) {
   FH = fdopen(fd, "w");
   if (!FH) {
     close(fd);
-    free(file);
     unlink(file);
+    free(file);
     return(1);
   }
   
@@ -1080,12 +1089,16 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   
   snprintf (buf, 512, "%s/euca-dhcp.leases", vnetconfig->path);
   rc = open(buf, O_WRONLY | O_CREAT, 0644);
-  close(rc);
+  if (rc != -1) {
+    close(rc);
+  } else {
+    logprintfl(EUCAWARN, "Fail to create/open euca-dhcp.leases\n");
+  }
   //  snprintf (buf, 512, "touch %s/euca-dhcp.leases", vnetconfig->path);
   //  logprintfl(EUCADEBUG, "executing: %s\n", buf);
   //  rc = system (buf);
   
-  if (strncmp(vnetconfig->dhcpuser, "root", 32) && vnetconfig->path && strncmp(vnetconfig->path, "/", 1024) && strstr(vnetconfig->path, "eucalyptus/net")) {
+  if (strncmp(vnetconfig->dhcpuser, "root", 32) && strncmp(vnetconfig->path, "/", 1024) && strstr(vnetconfig->path, "eucalyptus/net")) {
     snprintf(buf, 512, "%s/usr/lib/eucalyptus/euca_rootwrap chgrp -R %s %s", vnetconfig->eucahome, vnetconfig->dhcpuser, vnetconfig->path);
     logprintfl(EUCADEBUG, "executing: %s\n", buf);
     rc = system(buf);
@@ -1739,13 +1752,18 @@ int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *net
       } else {
 	*outbrname = strdup(vnetconfig->privInterface);
       }
+      if (*outbrname == NULL) {
+         logprintfl(EUCAERROR, "vnetStartNetwork: out of memory!\n");
+      }
+    } else {
+         logprintfl(EUCADEBUG, "vnetStartNetwork: outbrname is NULL\n");
     }
     rc = 0;
   } else {
     rc = vnetStartNetworkManaged(vnetconfig, vlan, userName, netName, outbrname);
   }
   
-  if (vnetconfig->role != NC && *outbrname) {
+  if (vnetconfig->role != NC && outbrname && *outbrname) {
     vnetAddDev(vnetconfig, *outbrname);
   }
   return(rc);
@@ -1997,6 +2015,10 @@ int instId2mac(char *instId, char *outmac) {
   dst[0] = '\0';
   
   p = strstr(instId, "i-");
+  if (p == NULL) {
+    logprintfl(EUCAWARN, "invalid instId passed to instId2mac()\n");
+    return(1);
+  }
   p += 2;
   if (strlen(p) == 8) {
     strncat(dst, "d0:0d", 5);

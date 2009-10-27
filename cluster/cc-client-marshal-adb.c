@@ -163,9 +163,17 @@ int cc_getConsoleOutput(char *instId, axutil_env_t *env, axis2_stub_t *stub) {
       printf("operation fault '%s'\n", adb_getConsoleOutputResponseType_get_statusMessage(tirt, env));
       return(1);
     } else {
+      char *tmp;
+
       output = adb_getConsoleOutputResponseType_get_consoleOutput(tirt, env);
       printf("RAW CONSOLE OUTPUT: %s\n", output);
-      printf("RAW CONSOLE OUTPUT: %s\n", base64_dec((unsigned char *)output, strlen(output)));
+      tmp = base64_dec((unsigned char *)output, strlen(output));
+      if (tmp) {
+         printf("RAW CONSOLE OUTPUT: %s\n", tmp);
+         free(tmp);
+      } else {
+         printf("Out of memory!\n");
+      }
     }
   }
   return(0);
@@ -783,12 +791,11 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	char *state;
 	char *reservationId;
 	char *ownerId, *keyName;
-	axutil_date_time_t *dt;
 	int networkIndex;
 	
 	it = adb_describeInstancesResponseType_get_instances_at(dirt, env, i);
 	instId = adb_ccInstanceType_get_instanceId(it, env);
-	amiId = adb_ccInstanceType_get_imageId(it, env);
+	//amiId = adb_ccInstanceType_get_imageId(it, env);
 	reservationId = adb_ccInstanceType_get_reservationId(it, env);
 	ownerId = adb_ccInstanceType_get_ownerId(it, env);
 	keyName = adb_ccInstanceType_get_keyName(it, env);
@@ -797,9 +804,9 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	vm = adb_ccInstanceType_get_instanceType(it, env);
 	networkIndex = adb_ccInstanceType_get_networkIndex(it, env);
 
-	dt = adb_ccInstanceType_get_launchTime(it, env);
 	if (0)
 	{
+	  axutil_date_time_t *dt;
 	  time_t ts, tsu, tsdelta, tsdelta_min;
 	  struct tm *tmu;
 	  ts = time(NULL);
@@ -807,6 +814,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	  tsu = mktime(tmu);
 	  tsdelta = (tsu - ts) / 3600;
 	  tsdelta_min = ((tsu - ts) - (tsdelta * 3600)) / 60;
+	  dt = adb_ccInstanceType_get_launchTime(it, env);
 
 	  struct tm t = {
 	    axutil_date_time_get_second(dt, env),

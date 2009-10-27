@@ -87,6 +87,15 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
         client_home = AXIS2_GETENV("AXIS2C_HOME");
     }
 
+    if (client_home == NULL) {
+        logprintfl (EUCAERROR, "ERROR: cannot get AXIS2C_HOME");
+	return NULL;
+    }
+    if (endpoint_uri == NULL) {
+        logprintfl (EUCAERROR, "ERROR: empty endpoint_url");
+	return NULL;
+    }
+
     char * uri = endpoint_uri;
 
     // extract node name from the endpoint
@@ -120,6 +129,11 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
         st->endpoint_uri=(axis2_char_t *)strdup(endpoint_uri);
 	st->node_name=(axis2_char_t *)strdup(node_name);
         st->stub=stub;
+	if (st->client_home == NULL || st->endpoint_uri == NULL) {
+            logprintfl (EUCAWARN, "WARNING: out of memory");
+	}
+    } else {
+        logprintfl (EUCAWARN, "WARNING: out of memory");
     } 
     
     free (node_name);
@@ -165,7 +179,7 @@ static int datetime_to_unix (axutil_date_time_t *dt, axutil_env_t *env)
 
 static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axutil_env_t * env)
 {
-    adb_virtualMachineType_t * vm_type = adb_instanceType_get_instanceType(instance, env);
+    adb_virtualMachineType_t * vm_type;
     ncInstParams params;
     bzero(&params, sizeof(ncInstParams));
     vm_type = adb_instanceType_get_instanceType(instance, env);
@@ -458,7 +472,7 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
             
             * outInstsLen = adb_ncDescribeInstancesResponseType_sizeof_instances(response, env);
             if (* outInstsLen) {
-	      * outInsts = malloc (sizeof(ncInstance *) * *outInstsLen);
+                * outInsts = malloc (sizeof(ncInstance *) * *outInstsLen);
                 if ( * outInsts == NULL ) { 
                     logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeInstancesStub()\n");
                     * outInstsLen = 0;

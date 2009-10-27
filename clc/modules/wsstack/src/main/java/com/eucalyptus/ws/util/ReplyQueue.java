@@ -149,7 +149,8 @@ public class ReplyQueue {
     }
     if ( errMsg == null ) {
       ByteArrayOutputStream exStream = new ByteArrayOutputStream( );
-      exception.printStackTrace( new PrintStream( exStream ) );
+      if(exception != null)
+          exception.printStackTrace( new PrintStream( exStream ) );
       errMsg = new EucalyptusErrorMessageType( exMsg.getComponentName( ), msg, "Internal Error: \n" + exStream.toString( ) );
     }
     return errMsg;

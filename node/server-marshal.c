@@ -82,7 +82,6 @@ adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, c
     axis2_char_t * userId = adb_ncPowerDownType_get_userId(input, env);
 
     // get operation-specific fields from input
-    axis2_char_t * cid = adb_ncPowerDownType_get_correlationId(input, env);
     fprintf(stderr, "powerdown called\n\n");
     eventlog("NC", userId, correlationId, "PowerDown", "begin");
     { // do it
@@ -131,7 +130,6 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
     axis2_char_t * userId = adb_ncStartNetworkType_get_userId(input, env);
 
     // get operation-specific fields from input
-    axis2_char_t * cid = adb_ncStartNetworkType_get_correlationId(input, env);
     int port = adb_ncStartNetworkType_get_remoteHostPort(input, env);
     int vlan = adb_ncStartNetworkType_get_vlan(input, env);
     int peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env);
@@ -500,7 +498,7 @@ adb_ncGetConsoleOutputResponse_t* ncGetConsoleOutputMarshal (adb_ncGetConsoleOut
     eventlog("NC", userId, correlationId, "GetConsoleOutput", "begin");
     { // do it
         ncMetadata meta = { correlationId, userId };
-        char * consoleOutput;
+        char * consoleOutput=NULL;
 
         int error = doGetConsoleOutput (&meta, instanceId, &consoleOutput);
     
@@ -517,6 +515,7 @@ adb_ncGetConsoleOutputResponse_t* ncGetConsoleOutputMarshal (adb_ncGetConsoleOut
             // set operation-specific fields in output
             adb_ncGetConsoleOutputResponseType_set_consoleOutput(output, env, consoleOutput);
         }
+	if (consoleOutput) free(consoleOutput);
     }
     // set response to output
     adb_ncGetConsoleOutputResponse_set_ncGetConsoleOutputResponse(response, env, output);

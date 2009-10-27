@@ -102,12 +102,14 @@ static int doInitialize (struct nc_state_t *nc)
 #define GET_VALUE(name,var) \
 	if (get_value (s, name, &var)) { \
 		logprintfl (EUCAFATAL, "error: did not find %s in output from %s\n", name, nc->get_info_cmd_path); \
-		free (s); \
+		if (s) free (s); \
 		return ERROR_FATAL; \
 	}
 
 	GET_VALUE("nr_cores", nc->cores_max);
 	GET_VALUE("total_memory", nc->mem_max);
+	if (s) free(s);
+
 	/* we leave 256M to the host  */
 	nc->mem_max -= 256;
 
@@ -188,6 +190,11 @@ doRunInstance (	struct nc_state_t *nc,
 
     /* do the potentially long tasks in a thread */
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
+    if (!attr) {
+        free_instance (&instance);
+        logprintfl (EUCAFATAL, "Error: out of memory\n");
+        return 1;
+    }
     pthread_attr_init(attr);
     pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
 
@@ -198,9 +205,11 @@ doRunInstance (	struct nc_state_t *nc,
         remove_instance (&global_instances, instance);
         sem_v (inst_sem);
         free_instance (&instance);
+	free(attr);
         return 1;
     }
     pthread_attr_destroy(attr);
+    if (attr) free(attr);
 
     * outInst = instance;
     return 0;

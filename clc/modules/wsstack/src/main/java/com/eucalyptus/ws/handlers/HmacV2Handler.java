@@ -113,6 +113,7 @@ public class HmacV2Handler extends MessageStackHandler {
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       httpRequest.getContent( ).readBytes( bos, httpRequest.getContent( ).readableBytes( ) );
       String blah = bos.toString( );
+      bos.close();
       if ( !parameters.containsKey( SecurityParameter.AWSAccessKeyId.toString( ) ) ) throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.AWSAccessKeyId );
       if ( !parameters.containsKey( SecurityParameter.Signature.toString( ) ) ) throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.Signature );
       // :: note we remove the sig :://

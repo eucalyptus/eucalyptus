@@ -62,67 +62,34 @@
  *
  * Author: Neil Soman neil@eucalyptus.com
  */
+package edu.ucsb.eucalyptus.util;
 
-package com.eucalyptus.util;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import org.apache.log4j.Logger;
-import java.util.UUID;
-import java.util.List;
-import java.util.Collections;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.Inet6Address;
 
-public class DNSProperties {
+public class EucaSemaphoreDirectory {
+	private static ConcurrentHashMap<String, EucaSemaphore> semaphoreMap = new ConcurrentHashMap<String, EucaSemaphore>();
 
-	private static Logger LOG = Logger.getLogger( DNSProperties.class );
-	public static String DB_NAME             = "eucalyptus_dns";
-	public static String ADDRESS = "0.0.0.0";
-	public static int PORT = 53;
-	public static int MAX_MESSAGE_SIZE = 1024;
-	public static String DOMAIN = "localhost";
-	public static String NS_HOST = "nshost." + DOMAIN;
-	public static String NS_IP = "127.0.0.1";
-
-	static {
-		updateHost();
-	}
-
-	public static void update() {
-		SystemConfiguration systemConfiguration = EucalyptusProperties.getSystemConfiguration();
-		DOMAIN = systemConfiguration.getDnsDomain();
-		NS_HOST = systemConfiguration.getNameserver();
-		NS_IP = systemConfiguration.getNameserverAddress();
-	}
-
-	private static void updateHost () {
-		InetAddress ipAddr = null;
-		List<NetworkInterface> ifaces = null;
-		try {
-			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-			for ( NetworkInterface iface : ifaces )
-				try {
-					if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-						for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-							if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address) ) {
-								ipAddr = iaddr;
-							} else if ( iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
-								ipAddr = iaddr;
-							}
-						}
-					}
-				}
-			catch ( SocketException e1 ) {}
+	public static EucaSemaphore getSemaphore(String key) {
+		EucaSemaphore semaphore = semaphoreMap.putIfAbsent(key, new EucaSemaphore(Integer.MAX_VALUE));
+		if (semaphore == null) {
+			semaphore = semaphoreMap.get(key);
 		}
-		catch ( SocketException e1 ) {}
-		if(ipAddr != null) {
-			DNSProperties.NS_IP = ipAddr.getHostAddress();
-			DNSProperties.NS_HOST = ipAddr.getCanonicalHostName();
+		return semaphore;
+	}
+
+	public static EucaSemaphore getSolitarySemaphore(String key) {
+		EucaSemaphore semaphore = semaphoreMap.putIfAbsent(key, new EucaSemaphore(1));
+		if (semaphore == null) {
+			semaphore = semaphoreMap.get(key);
+		}
+		return semaphore;
+	}
+
+	public static void removeSemaphore(String key) {
+		if(semaphoreMap.containsKey(key)) {
+			semaphoreMap.remove(key);
 		}
 	}
-
 }

@@ -98,12 +98,15 @@ public class StateSnapshot {
     PackageBuilder builder = new PackageBuilder( pkgBuilderCfg );
     builder.addPackageFromDrl( source );
     org.drools.rule.Package pkg = builder.getPackage();
-    RuleBase ruleBase = RuleBaseFactory.newRuleBase();
-    ruleBase.addPackage( pkg );
-    StatefulSession workingMemory = ruleBase.newStatefulSession();
-    for ( VmInstance v : VmInstances.getInstance().listValues() )
-      workingMemory.insert( v );
-    return workingMemory;
+    if(pkg != null) {
+      RuleBase ruleBase = RuleBaseFactory.newRuleBase();
+      ruleBase.addPackage( pkg );    
+      StatefulSession workingMemory = ruleBase.newStatefulSession();
+      for ( VmInstance v : VmInstances.getInstance().listValues() )
+        workingMemory.insert( v );
+      return workingMemory;
+      }
+    return null;
   }
 
   public void insert( Object o ) {

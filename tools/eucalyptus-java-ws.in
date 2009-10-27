@@ -310,7 +310,7 @@ do_start() {
 do_status() {
 	if [ -s ${pidfile} ]; then
 		pid=`cat ${pidfile} 2> /dev/null`
-		if ! ps ax|grep $pid|grep eucalyptus-cloud.pid > /dev/null; then
+		if ! ps axww|grep $pid|grep eucalyptus-cloud.pid > /dev/null; then
 			# pid file is not matching
 			rm -f $EUCALYPTUS/var/run/eucalyptus/ws
 			rm -f ${pidfile}

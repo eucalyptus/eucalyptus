@@ -119,13 +119,14 @@ public class AddressingHandler extends MessageStackHandler {
 
       // :: set soap addressing info :://
       final OMNamespace wsaNs = HoldMe.getOMFactory( ).createOMNamespace( WSA_NAMESPACE, WSA_NAMESPACE_PREFIX );
+      if(header != null) {
       final SOAPHeaderBlock wsaToHeader = header.addHeaderBlock( WSA_TO, wsaNs );
       wsaToHeader.setText( httpMessage.getUri( ) );
       final SOAPHeaderBlock wsaActionHeader = header.addHeaderBlock( WSA_ACTION, wsaNs );
       wsaActionHeader.setText( action );
       final SOAPHeaderBlock wsaMsgId = header.addHeaderBlock( WSA_MESSAGE_ID, wsaNs );
       wsaMsgId.setText( "urn:uuid:" + UUID.randomUUID( ).toString( ).replaceAll( "-", "" ).toUpperCase( ) );
-
+      }
     }
   }
 }

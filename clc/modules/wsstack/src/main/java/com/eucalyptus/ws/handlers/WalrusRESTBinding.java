@@ -635,9 +635,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				ArrayList<Grant> grants = new ArrayList<Grant>();
 
 				List<String> permissions = xmlParser.getValues("//AccessControlList/Grant/Permission");
+				if(permissions == null)
+					throw new BindingException("malformed access control list");
 
 				DTMNodeList grantees = xmlParser.getNodes("//AccessControlList/Grant/Grantee");
-
+				if(grantees == null)
+					throw new BindingException("malformed access control list");
 
 				for(int i = 0 ; i < grantees.getLength() ; ++i) {
 					String id = xmlParser.getValue(grantees.item(i), "ID");
@@ -685,8 +688,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				ArrayList<Grant> grants = new ArrayList<Grant>();
 
 				List<String> permissions = xmlParser.getValues("/AccessControlList/Grant/Permission");
+				if(permissions == null)
+					throw new BindingException("malformed access control list");
 
 				DTMNodeList grantees = xmlParser.getNodes("/AccessControlList/Grant/Grantee");
+				if(grantees == null)
+					throw new BindingException("malformed access control list");
 
 
 				for(int i = 0 ; i < grantees.getLength() ; ++i) {

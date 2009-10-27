@@ -141,10 +141,8 @@ int convert_dev_names(	char *localDev,
 			char *localDevReal,
 			char *localDevTag) 
 {
-    char *strptr;
-
     bzero(localDevReal, 32);
-    if ((strptr = strchr(localDev, '/')) != NULL) {
+    if (strchr(localDev, '/') != NULL) {
         sscanf(localDev, "/dev/%s", localDevReal);
     } else {
         snprintf(localDevReal, 32, "%s", localDev);
@@ -185,9 +183,7 @@ print_running_domains (void)
 virConnectPtr *
 check_hypervisor_conn()
 {
-	char *tmp;
-
-	if (nc_state.conn == NULL || (tmp = virConnectGetURI(nc_state.conn)) == NULL) {
+	if (nc_state.conn == NULL || virConnectGetURI(nc_state.conn) == NULL) {
 		nc_state.conn = virConnectOpen (nc_state.uri);
 		if (nc_state.conn == NULL) {
 			logprintfl (EUCAFATAL, "Failed to connect to %s\n", nc_state.uri);
@@ -205,6 +201,7 @@ void change_state(	ncInstance *instance,
     instance->state = (int) state;
     switch (state) { /* mapping from NC's internal states into external ones */
     case BOOTING:
+    case CANCELED:
         instance->stateCode = PENDING;
         break;
     case RUNNING:
@@ -240,7 +237,9 @@ refresh_instance_info(	struct nc_state_t *nc,
     if (now==TEARDOWN)
         return;
     
+    sem_p(hyp_sem);
     virDomainPtr dom = virDomainLookupByName (nc_state.conn, instance->instanceId);
+    sem_v(hyp_sem);
     if (dom == NULL) { /* hypervisor doesn't know about it */
         if (now==RUNNING ||
             now==BLOCKED ||
@@ -255,15 +254,19 @@ refresh_instance_info(	struct nc_state_t *nc,
             	change_state (instance, SHUTOFF);
             }
         }
-        /* else 'now' stays in SHUTFOFF, BOOTING or CRASHED */
+        /* else 'now' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED */
         return;
     }
     virDomainInfo info;
+    sem_p(hyp_sem);
     int error = virDomainGetInfo(dom, &info);
+    sem_v(hyp_sem);
     if (error < 0 || info.state == VIR_DOMAIN_NOSTATE) {
         logprintfl (EUCAWARN, "warning: failed to get informations for domain %s\n", instance->instanceId);
         /* what to do? hopefully we'll find out more later */
+	sem_p(hyp_sem);
         virDomainFree (dom);
+	sem_v(hyp_sem);
         return;
     } 
     int xen = info.state;
@@ -295,7 +298,9 @@ refresh_instance_info(	struct nc_state_t *nc,
         logprintfl (EUCAERROR, "error: refresh...(): unexpected state (%d) for instance %s\n", now, instance->instanceId);
         return;
     }
+    sem_p(hyp_sem);
     virDomainFree(dom);
+    sem_v(hyp_sem);
 
     /* if instance is running, try to find out its IP address */
     if (instance->state==RUNNING ||
@@ -310,6 +315,7 @@ refresh_instance_info(	struct nc_state_t *nc,
             if (!rc) {
 	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
 	      strncpy(instance->ncnet.publicIp, ip, 32);
+	      if (ip) free(ip);
             }
 	  }
         }
@@ -318,6 +324,7 @@ refresh_instance_info(	struct nc_state_t *nc,
             if (!rc) {
                 logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
                 strncpy(instance->ncnet.privateIp, ip, 32);
+	        if (ip) free(ip);
             }
         }
     }
@@ -393,7 +400,7 @@ monitoring_thread (void *arg)
             /* query for current state, if any */
 	    refresh_instance_info (nc, instance);
 
-            /* don't touch running threads */
+            /* don't touch running or canceled threads */
             if (instance->state!=BOOTING && 
                 instance->state!=SHUTOFF &&
                 instance->state!=SHUTDOWN &&
@@ -457,7 +464,7 @@ void *startup_thread (void * arg)
 {
     ncInstance * instance = (ncInstance *)arg;
     virDomainPtr dom = NULL;
-    char * disk_path, * xml;
+    char * disk_path, * xml=NULL;
     char *brname=NULL;
     int error;
     
@@ -485,11 +492,13 @@ void *startup_thread (void * arg)
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
+	if (brname) free(brname);
         return NULL;
     }
-    if (instance->state!=BOOTING) {
+    if (instance->state==CANCELED) {
         logprintfl (EUCAFATAL, "Startup of instance %s was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
+	if (brname) free(brname);
         return NULL;
     }
     
@@ -500,6 +509,7 @@ void *startup_thread (void * arg)
                               &(instance->params), 
                               instance->ncnet.privateMac, instance->ncnet.publicMac, 
                               brname, &xml);
+    if (brname) free(brname);
     if (xml) logprintfl (EUCADEBUG2, "libvirt XML config:\n%s\n", xml);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to create libvirt XML config for instance %s\n", instance->instanceId);
@@ -517,6 +527,7 @@ void *startup_thread (void * arg)
     sem_p (hyp_sem); 
     dom = virDomainCreateLinux (nc_state.conn, xml, 0);
     sem_v (hyp_sem);
+    if (xml) free(xml);
     if (dom == NULL) {
         logprintfl (EUCAFATAL, "hypervisor failed to start domain\n");
         change_state (instance, SHUTOFF);
@@ -524,9 +535,18 @@ void *startup_thread (void * arg)
     }
     eventlog("NC", instance->userId, "", "instanceBoot", "begin"); /* TODO: bring back correlationId */
     
+    sem_p(hyp_sem);
     virDomainFree(dom);
-    logprintfl (EUCAINFO, "started VM instance %s\n", instance->instanceId);
-    
+    sem_v(hyp_sem);
+
+    // check one more time for cancellation
+    if (instance->state==CANCELED) {
+        logprintfl (EUCAFATAL, "startup of instance %s was cancelled\n", instance->instanceId);
+        change_state (instance, SHUTOFF);
+    } else {
+        logprintfl (EUCAINFO, "started VM instance %s\n", instance->instanceId);
+    }
+
     return NULL;
 }
 
@@ -558,13 +578,17 @@ void adopt_instances()
 		const char * dom_name;
 		ncInstance * instance;
 
+		sem_p(hyp_sem);
 		dom = virDomainLookupByID(nc_state.conn, dom_ids[i]);
+		sem_v(hyp_sem);
 		if (!dom) {
 			logprintfl (EUCAWARN, "WARNING: failed to lookup running domain #%d, ignoring it\n", dom_ids[i]);
 			continue;
 		}
 
+		sem_p(hyp_sem);
 		error = virDomainGetInfo(dom, &info);
+		sem_v(hyp_sem);
 		if (error < 0 || info.state == VIR_DOMAIN_NOSTATE) {
 			logprintfl (EUCAWARN, "WARNING: failed to get info on running domain #%d, ignoring it\n", dom_ids[i]);
 			continue;
@@ -577,10 +601,13 @@ void adopt_instances()
 			continue;
 		}
 
+		sem_p(hyp_sem);
 		if ((dom_name = virDomainGetName(dom))==NULL) {
-			logprintfl (EUCAWARN, "WARNING: failed to get name of running domain #%d, ignoring it\n", dom_ids[i]);
+		        sem_v(hyp_sem);
+		        logprintfl (EUCAWARN, "WARNING: failed to get name of running domain #%d, ignoring it\n", dom_ids[i]);
 			continue;
 		}
+		sem_v(hyp_sem);
 
 		if (!strcmp(dom_name, "Domain-0"))
 			continue;
@@ -602,7 +629,9 @@ void adopt_instances()
 		logprintfl (EUCAINFO, "- adopted running domain %s from user %s\n", instance->instanceId, instance->userId);
 		/* TODO: try to look up IPs? */
 
+		sem_p(hyp_sem);
 		virDomainFree (dom);
+		sem_v(hyp_sem);
 	}
 }
 

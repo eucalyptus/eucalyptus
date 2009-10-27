@@ -245,7 +245,7 @@ public class Address implements HasName {
   private volatile boolean system = false;
   
   public boolean isAllocated() {
-    return UNALLOCATED_USERID.equals( this.userId );
+    return !UNALLOCATED_USERID.equals( this.userId );
   }
   
   public void allocate( String userId ) {
@@ -292,7 +292,11 @@ public class Address implements HasName {
   }
   
   private static void removeAddress( String name ) {
-    Addresses.getInstance( ).disable( name );
+    try {
+      Addresses.getInstance( ).disable( name );
+    } catch ( NoSuchElementException e1 ) {
+      LOG.debug( e1 );
+    }
     EntityWrapper<Address> db = new EntityWrapper<Address>( );
     try {
       Address dbAddr = db.getUnique( new Address( name ) );
@@ -348,7 +352,7 @@ public class Address implements HasName {
   }
   
   public boolean isSystemAllocated( ) {
-    return Component.eucalyptus.name( ).equals( this.getUserId( ) ) && ( system || this.isAssigned( ) );
+    return Component.eucalyptus.name( ).equals( this.getUserId( ) );
   }
   
   public boolean isAssigned( ) {
