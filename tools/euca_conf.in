@@ -132,10 +132,10 @@ usage () {
 	echo "   --name <var>                     returns the value or <name>"
 	echo "   --import-conf <file>             import variables from <file> into eucalyptus.conf"
 	echo "   --setup                          perform initial setup"
-	echo "   --enable {clc|walrus|sc}         enable service at next start"
-	echo "   --disable {clc|walrus|sc}        disable service at next start"
+	echo "   --enable {cloud|walrus|sc}       enable service at next start"
+	echo "   --disable {cloud|walrus|sc}      disable service at next start"
 	echo "   --check {nc|cc|cloud|sc|walrus}  pre-flight checks"
-	echo "   --sync {nc|cc|cloud|sc|walrus}   pre-flight checks"
+#	echo "   --sync {nc|cc|cloud|sc|walrus}   pre-flight checks"
 	echo "   --version                        eucalyptus version"
 	echo
 }
@@ -604,8 +604,8 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "--enable" ]; then 
-		if [ "$2" != "clc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "--enable requires clc, sc or walrus"
+		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+			echo "--enable requires cloud, sc or walrus"
 			exit 1
 		fi
 		ENABLED="$ENABLED $2"
@@ -613,8 +613,8 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "--disable" ]; then 
-		if [ "$2" != "clc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "--disable requires clc, sc or walrus"
+		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+			echo "--disable requires cloud, sc or walrus"
 			exit 1
 		fi
 		DISABLED="$DISABLED $2"

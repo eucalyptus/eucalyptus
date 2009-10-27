@@ -156,13 +156,13 @@ read_ws_list() {
 			WALRUS_WS="Y"
 			NAME="walrus $NAME"
 			;;
-		storage|sc) 
+		sc) 
 			STORAGE_WS="Y"
-			NAME="storage $NAME"
+			NAME="sc $NAME"
 			;;
-		cloud|clc)
+		cloud)
 			CLOUD_WS="Y"
-			NAME="clc $NAME"
+			NAME="cloud $NAME"
 			;;
 		*)
 			echo "Unknown service! ($x)"
