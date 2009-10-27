@@ -1457,7 +1457,7 @@ if [ -n "$DISABLED" -o -n "$ENABLED" ]; then
 	for x in $TO_START $ENABLED ; do
 		to_start="Y"
 		for y in $DISABLED ; do
-			if [ "$x" != "$y" ]; then
+			if [ "$x" = "$y" ]; then
 				to_start="N"
 			fi
 		done
