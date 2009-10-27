@@ -57,4 +57,4 @@ install: build
 	@$(INSTALL) -m 755 populate_arp.pl $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_conf $(sbindir)
 	@$(INSTALL) -m 755 euca_sync_key $(sbindir)
-
+	@$(INSTALL) -m 755 euca_vmware $(datarootdir)/eucalyptus

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+if [ -z "$EUCALYPTUS" ] ; then
+        echo "EUCALYPTUS is not set"
+        exit 1
+fi
+
+# add all jars in $EUCALYPTUS/usr/share/eucalyptus
+for FILE in $EUCALYPTUS/usr/share/eucalyptus/*.jar; do    
+    if [ "$FILE" == "$EUCALYPTUS/usr/share/eucalyptus/commons-logging-1.1.1.jar" ]; then
+        continue
+    fi
+
+    if [ "$FILE" == "$EUCALYPTUS/usr/share/eucalyptus/commons-logging-api-1.1.1.jar" ]; then
+        continue
+    fi
+
+	export CLASSPATH=${FILE}:${CLASSPATH}
+done
+export CLASSPATH="$EUCALYPTUS/usr/share/eucalyptus/jcl-over-slf4j-1.5.2.jar:$CLASSPATH"
+export CLASSPATH="$EUCALYPTUS/usr/share/eucalyptus/vijava220090625.jar:$CLASSPATH"
+
+java edu.ucsb.eucalyptus.cloud.ws.VMwareClient $@
