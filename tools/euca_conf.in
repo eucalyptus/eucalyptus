@@ -136,7 +136,7 @@ usage () {
 	echo "   --setup                          perform initial setup"
 	echo "   --enable {cloud|walrus|sc}       enable service at next start"
 	echo "   --disable {cloud|walrus|sc}      disable service at next start"
-	echo "   --check {nc|cc|cloud|sc|walrus}  pre-flight checks"
+	echo "   --check {nc|cc|cloud|sc|walrus|vmware}  pre-flight checks"
 #	echo "   --sync {nc|cc|cloud|sc|walrus}   pre-flight checks"
 	echo "   --version                        eucalyptus version"
 	echo
@@ -607,7 +607,7 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "-check" -o "$1" = "--check" ]; then 
-		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" -a "$2" != "vmware"]; then
 			echo "-check requires cc, nc, sc, walrus or cloud"
 			exit 1
 		fi
@@ -959,6 +959,11 @@ if [ -n "$CHECK" ]; then
 		exit 1
 	    fi
 	fi
+
+	if [ "$CHECK" = "vmware" ]; then
+		$EUCALYPTUS/usr/share/eucalyptus/euca_vmware --config $EUCALYPTUS/etc/eucalyptus/vmware_conf.xml
+	fi
+
 	# good to go
 	exit 0
 fi
