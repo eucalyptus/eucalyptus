@@ -32,3 +32,7 @@ install:
 
 deploy:
 
+uninstall:
+	@$(RM) -f $(usrdir)/lib/eucalyptus/euca_rootwrap
+	@$(RM) -f $(usrdir)/lib/eucalyptus/euca_mountwrap
+

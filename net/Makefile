@@ -19,3 +19,6 @@ distclean:
 install:
 
 deploy:
+
+uninstall:
+

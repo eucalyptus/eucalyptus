@@ -46,3 +46,5 @@ install:
 
 deploy:
 
+uninstall:
+

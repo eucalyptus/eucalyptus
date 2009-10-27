@@ -67,3 +67,6 @@ distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) *~* *#*
 
 install:
+
+uninstall:
+	@$(RM) -rf $(AXIS2C_SERVICES)/$(SERVICE_NAME)

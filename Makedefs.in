@@ -44,6 +44,7 @@ INSTALL		= @INSTALL@
 ANT		= @ANT@ -e
 WSDL2C		= @WSDL2C@
 JAVA_HOME       = @JAVA_HOME@
+RM		= @RM@
 
 # compile time configurations
 euca_theme	= @INTERFACE_THEME@

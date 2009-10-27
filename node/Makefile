@@ -101,3 +101,9 @@ distclean:
 install: deploy
 	$(INSTALL) nc-client-policy.xml $(vardir)/lib/eucalyptus/keys/
 	$(INSTALL) -m 0755 test_nc $(sbindir)/euca_test_nc
+
+uninstall:
+	$(RM) -f $(vardir)/lib/eucalyptus/keys/nc-client-policy.xml
+	$(RM) -f $(sbindir)/euca_test_nc
+	$(RM) -rf $(AXIS2C_SERVICES)/$(SERVICE_NAME)
+
