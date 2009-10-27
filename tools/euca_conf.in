@@ -95,6 +95,7 @@ RSYNC="`which rsync 2> /dev/null`"
 WGET="`which wget 2> /dev/null`"
 VERBOSE="N"
 LIST=""
+VMWARE=""
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -109,6 +110,8 @@ usage () {
 	echo "   --deregister-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
 	echo "   --register-cluster <name> <host> add new cluster to EUCALYPTUS"
 	echo "   --deregister-cluster <name>      remove cluster from EUCALYPTUS"
+	echo "   --register-vmware <host>         add new vmware to EUCALYPTUS"
+#	echo "   --deregister-vmware              remove vmware from EUCALYPTUS"
 	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
 	echo "   --deregister-walrus <host>       remove walrus to EUCALYPTUS"
 	echo "   --register-sc <name> <host>      add storage controller"
@@ -582,9 +585,19 @@ while [ $# -gt 0 ]; do
 		shift; shift; shift
 		continue
 	fi
+	if [ "$1" = "--register-vmware" ]; then
+		VMWARE="$2"
+		shift; shift; shift
+		continue
+	fi
 	if [ "$1" = "--deregister-cluster" ]; then
 		CLUSNAME="$2"
 		CLUSMODE="DEL"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "--deregister-vmware" ]; then
+		echo "--deregister-vmware is not implemented yet"
 		shift; shift
 		continue
 	fi
@@ -1273,6 +1286,12 @@ if [ -n "$SCNAME" ]; then
 	echo
 	echo "SUCCESS: Storage controller for cluster '${SCNAME}' successfully deregistered."
     fi
+fi
+
+if [ -n "$VMWARE" ]; then
+	change_var_value $FILE ENABLE_WS_SECURITY "N"
+	change_var_value $FILE NC_SERVICE "/services/VMwareBroker"
+	$EUCALYPTUS/usr/share/eucalyptus/euca_vmware --prompt --config $EUCALYPTUS/etc/eucalyptus/vmware_conf.xml
 fi
 
 # operations on the nodes
