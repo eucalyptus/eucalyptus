@@ -11,7 +11,7 @@ build: all
 deploy:
 
 clean:
-	rm -f *~ *.o
+	$(RM) -f *~ *.o
 
 distclean:
 	@echo "removing generated files scripts ..."
@@ -42,4 +42,23 @@ install: build
 	@$(INSTALL) -m 755 populate_arp.pl $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_conf $(sbindir)
 	@$(INSTALL) -m 755 euca_sync_key $(sbindir)
+
+uninstall: 
+	@$(RM) -f $(etcdir)/init.d/eucalyptus-cloud
+	@$(RM) -f $(etcdir)/init.d/eucalyptus-nc
+	@$(RM) -f $(etcdir)/init.d/eucalyptus-cc
+	@$(RM) -f $(etcdir)/eucalyptus/httpd*
+	@$(RM) -f $(etcdir)/eucalyptus/eucalyptus.conf
+	@$(RM) -f $(etcdir)/eucalyptus/vtunall.conf.template
+	@$(RM) -f $(datarootdir)/eucalyptus/add_key.pl
+	@$(RM) -f $(datarootdir)/eucalyptus/gen_libvirt_xml
+	@$(RM) -f $(datarootdir)/eucalyptus/gen_kvm_libvirt_xml
+	@$(RM) -f $(datarootdir)/eucalyptus/detach.pl
+	@$(RM) -f $(datarootdir)/eucalyptus/partition2disk
+	@$(RM) -f $(datarootdir)/eucalyptus/get_xen_info
+	@$(RM) -f $(datarootdir)/eucalyptus/get_sys_info
+	@$(RM) -f $(datarootdir)/eucalyptus/euca_ipt
+	@$(RM) -f $(datarootdir)/eucalyptus/populate_arp.pl
+	@$(RM) -f $(sbindir)/euca_conf
+	@$(RM) -f $(sbindir)/euca_sync_key
 

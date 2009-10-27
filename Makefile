@@ -55,6 +55,11 @@ install: deploy
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
+uninstall:
+	@$(RM) -f $(etcdir)/eucalyptus/eucalyptus-version
+	@for subdir in $(SUBDIRS); do \
+		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
+
 clean:
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done

@@ -19,7 +19,7 @@
 
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       1.6-devel
+Version:       1.6.1
 Release:       1
 License:       BSD
 Group:         Applications/System
@@ -170,13 +170,10 @@ make install
 ls /usr/share/eucalyptus/*jar|grep -v eucalyptus-walrus|grep -v eucalyptus-storagecontroller|grep -v eucalyptus-interface > jar_list
 
 %clean
-rm -rf /etc/eucalyptus /usr/lib/eucalyptus /usr/share/eucalyptus
-rm -rf /var/lib/eucalyptus /var/run/eucalyptus /var/log/eucalyptus
-rm -rf /usr/sbin/euca_conf /usr/sbin/euca_sync_key /usr/sbin/euca_killall
-rm -rf /usr/sbin/eucalytpus-cloud $RPM_BUILD_DIR/eucalyptus
-rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc
-rm -rf /etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-sc
-rm -rf /etc/init.d/eucalyptus-walrus
+make uninstall
+rm -rf $RPM_BUILD_DIR/eucalyptus
+rm -rf /var/lib/eucalyptus
+rm -rf /etc/eucalyptus
 
 %files
 %doc LICENSE INSTALL README CHANGELOG
@@ -205,13 +202,13 @@ rm -rf /etc/init.d/eucalyptus-walrus
 
 %files cloud
 /etc/init.d/eucalyptus-cloud
-/usr/share/eucalyptus/eucalyptus-cloud-%{version}.jar
+/usr/share/eucalyptus/eucalyptus-cloud-*.jar
 
 %files walrus
-/usr/share/eucalyptus/eucalyptus-walrus-%{version}.jar
+/usr/share/eucalyptus/eucalyptus-walrus-*.jar
 
 %files sc
-/usr/share/eucalyptus/eucalyptus-storagecontroller-%{version}.jar
+/usr/share/eucalyptus/eucalyptus-storagecontroller-*.jar
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC

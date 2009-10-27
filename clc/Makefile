@@ -69,3 +69,9 @@ install: build
 
 deploy: install
 
+uninstall:
+	make -C modules/storage-controller/native uninstall
+	make -C modules/bootstrap uninstall
+	$(RM) -rf $(etcdir)/eucalyptus/cloud.d
+	$(RM) -rf $(datarootdir)/eucalyptus/*jar
+	$(RM) -rf $(vardir)/eucalyptus/webapps
