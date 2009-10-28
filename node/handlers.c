@@ -466,7 +466,7 @@ void *startup_thread (void * arg)
 {
     ncInstance * instance = (ncInstance *)arg;
     virDomainPtr dom = NULL;
-    char * disk_path, * xml;
+    char * disk_path, * xml=NULL;
     char *brname=NULL;
     int error;
     
@@ -529,6 +529,7 @@ void *startup_thread (void * arg)
     sem_p (hyp_sem); 
     dom = virDomainCreateLinux (nc_state.conn, xml, 0);
     sem_v (hyp_sem);
+    if (xml) free(xml);
     if (dom == NULL) {
         logprintfl (EUCAFATAL, "hypervisor failed to start domain\n");
         change_state (instance, SHUTOFF);
