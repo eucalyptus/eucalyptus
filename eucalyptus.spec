@@ -271,7 +271,6 @@ then
 
 	rm -f var/eucalyptus/db/eucalyptus.lck
 	tar cf /root/eucalyptus-pre-%{version}-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
-	fi
 fi
 
 %post
