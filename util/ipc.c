@@ -65,6 +65,7 @@ permission notice:
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <fcntl.h> /* For O_* */
+#include <pthread.h>
 #include "misc.h" /* logprintfl */
 #include "ipc.h"
 
@@ -82,7 +83,11 @@ sem * sem_alloc (const int val, const char * name)
     bzero (s, sizeof (sem));
     s->sysv = -1;
 
-    if (name) { /* named semaphores */
+
+    if (name && !strcmp(name, "mutex")) { /* use pthread mutex */
+      s->usemutex = 1;
+      pthread_mutex_init(&(s->mutex), NULL);
+    } else if (name) { /* named semaphores */
         if ( sem_unlink (name) == 0) { /* clean up in case previous sem holder crashed */
             logprintfl (EUCAINFO, "sem_alloc(): cleaning up old semaphore %s\n", name);
         }
@@ -114,8 +119,12 @@ sem * sem_alloc (const int val, const char * name)
 
 int sem_p (sem * s)
 {
+    if (s && s->usemutex) {
+        return(pthread_mutex_lock(&(s->mutex)));
+    }
+
     if (s && s->posix) {
-        return sem_wait (s->posix);
+        return sem_wait(s->posix);
     }
 
     if (s && s->sysv > 0) {
@@ -128,8 +137,12 @@ int sem_p (sem * s)
 
 int sem_v (sem * s)
 {
+    if (s && s->usemutex) {
+        return(pthread_mutex_unlock(&(s->mutex)));
+    }
+
     if (s && s->posix) {
-        return sem_post (s->posix);
+        return sem_post(s->posix);
     }
 
     if (s && s->sysv > 0) {

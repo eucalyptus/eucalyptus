@@ -63,10 +63,13 @@ permission notice:
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <semaphore.h>
+#include <pthread.h>
 
 typedef struct sem_struct {
     int sysv;
     sem_t * posix;
+    pthread_mutex_t mutex;
+    int usemutex;
     char * name;
 } sem;
 
