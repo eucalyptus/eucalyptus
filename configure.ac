@@ -108,7 +108,7 @@ AC_PROG_AWK
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
-AC_PATH_PROG(RM, rm):w
+AC_PATH_PROG(RM, rm)
 
 # let's search for WSDL2C.sh
 # we cannot use AC_PROG_PATH because WSDL2C.sh is not executable
