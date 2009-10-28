@@ -107,7 +107,7 @@ public class VirtualMachineType extends EucalyptusData {
 public class NetConfigType extends EucalyptusData {
 	String macAddress;
 	String ignoredMacAddress;
-	int vlan;
+	Integer vlan;
 	String ipAddress;
 	String ignoredPublicIp;
 	
