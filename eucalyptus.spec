@@ -167,13 +167,19 @@ make 2> err.log > out.log
 
 %install
 make install
-ls /usr/share/eucalyptus/*jar|grep -v eucalyptus-walrus|grep -v eucalyptus-storagecontroller|grep -v eucalyptus-interface > jar_list
+ls /usr/share/eucalyptus/*jar|grep -v eucalyptus-walrus|grep -v eucalyptus-storagecontroller|grep -v eucalyptus-cloud > jar_list
 
 %clean
 make uninstall
 rm -rf $RPM_BUILD_DIR/eucalyptus
+# most of the files are taken care of by uninstall, but not the
+# directories
 rm -rf /var/lib/eucalyptus
+rm -rf /var/run/eucalyptus
+rm -rf /usr/lib/eucalyptus
+rm -rf /usr/share/eucalyptus
 rm -rf /etc/eucalyptus
+rm -rf /usr/share/doc/eucalyptus-%{version}
 
 %files
 %doc LICENSE INSTALL README CHANGELOG
@@ -326,16 +332,16 @@ then
 fi
 
 %post cloud
+/usr/sbin/euca_conf --enable cloud
 chkconfig --add eucalyptus-cloud
-/etc/init.d/eucalyptus-cloud stop > /dev/null 2> /dev/null
 
 %post walrus
+/usr/sbin/euca_conf --enable walrus
 chkconfig --add eucalyptus-walrus
-/etc/init.d/eucalyptus-walrus stop > /dev/null 2> /dev/null
 
 %post sc
+/usr/sbin/euca_conf --enable sc
 chkconfig --add eucalyptus-sc
-/etc/init.d/eucalyptus-sc stop > /dev/null 2> /dev/null
 
 %post cc
 chkconfig --add eucalyptus-cc
