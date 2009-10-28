@@ -51,4 +51,5 @@ install:
 deploy:
 
 uninstall:
+	@$(RM) -f $(usrdir)/lib/eucalyptus/euca_imager
 
