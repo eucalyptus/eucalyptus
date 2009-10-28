@@ -237,40 +237,40 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /opt/euca-axis2c/services/EucalyptusGL
 
 %pre
-if [ -x /etc/init.d/eucalyptus ]; 
-then
-	# stop the old services
-	/etc/init.d/eucalyptus stop || true
-	chkconfig --del eucalyptus || true
-fi
 if [ "$1" = "2" ]; 
 then
-	cd /opt/eucalyptus
+	# let's see where we installed
+	if [ -d /opt/eucalyptus/eucalyptus/eucalyptus-version ];
+	then
+		cd /opt/eucalyptus
+	else
+		cd /
+	fi
 
-	# save a copy of the old conf file
-	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.preupgrade
-
-	# let's check if we have already the db in the right place, then
-	# it's an upgrade from >= 1.5.x and no special case
+	# only upgrade from 1.5 is supported
 	if [ ! -e etc/eucalyptus/eucalyptus-version ];
 	then
+		echo "Cannot upgrade from version earlier than 1.5"
+		exit 2
+	fi
+	old_version="`cat etc/eucalyptus/eucalyptus-version`"
+	if [ `expr $old_version "<" 1.5` -eq 0 ];
+	then
+		echo "Cannot upgrade from version earlier than 1.5"
+		exit 2
+	fi
 
-		# we upgrade only from 1.4
-		if [ ! -e usr/share/eucalyptus/euca_ipt ];
-		then
-			echo "Cannot upgrade from version earlier than 1.4"
-			exit 2
-		fi
+	# used for upgrade
+	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.preupgrade
 
-		# let's try to save the old configuration
-		if [ -e /root/eucalyptus-pre-%{version}-rollback.tar ];
-		then
-			mv -f /root/eucalyptus-pre-%{version}-rollback.tar /root/eucalyptus-pre-%{version}-rollback.tar.old
-		fi
+	# let's save older version of conf file. db and keys
+	if [ -e /root/eucalyptus-pre-%{version}-rollback.tar ];
+	then
+		mv -f /root/eucalyptus-pre-%{version}-rollback.tar /root/eucalyptus-pre-%{version}-rollback.tar.old
+	fi
 
-		# let's save database and keys
-		rm -f var/eucalyptus/db/eucalyptus.lck
-		tar cf /root/eucalyptus-pre-%{version}-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
+	rm -f var/eucalyptus/db/eucalyptus.lck
+	tar cf /root/eucalyptus-pre-%{version}-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
 	fi
 fi
 
@@ -291,7 +291,13 @@ fi
 # upgrade?
 if [ "$1" = "2" ];
 then
-	cd /opt/eucalyptus
+	# let's see where we installed
+	if [ -d /opt/eucalyptus/eucalyptus/eucalyptus-version ];
+	then
+		cd /opt/eucalyptus
+	else
+		cd /
+	fi
 	
 	# eucalyptus.conf was marked noreplace, so the new one could be named
 	# *.rpmnew. Let's move it over (we did take a copy anyway)
@@ -305,43 +311,21 @@ then
 	then
 		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.preupgrade 
 	fi
-
-	# and now let's move the keys into the new place
-	if [ -e var/eucalyptus/keys/cloud-cert.pem ];
-	then
-		mv -f var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
-	fi
 fi
 # final setup and set the new user
 /usr/sbin/euca_conf -d / -setup -user eucalyptus
 
 %post common-java
-if [ "$1" = "2" ]; 
-then
-	cd /opt/eucalyptus
-
-	# if upgrading from version 1.5.x nothing to do
-	if [ ! -e var/lib/eucalyptus/db/eucalyptus.script ];
-	then
-		if [ -d var/eucalyptus/db ];
-		then
-			mkdir -p var/lib/eucalyptus/db
-			cp -ar var/eucalyptus/db var/lib/eucalyptus
-		fi
-	fi
-fi
+chkconfig --add eucalyptus-cloud
 
 %post cloud
 /usr/sbin/euca_conf --enable cloud
-chkconfig --add eucalyptus-cloud
 
 %post walrus
 /usr/sbin/euca_conf --enable walrus
-chkconfig --add eucalyptus-walrus
 
 %post sc
 /usr/sbin/euca_conf --enable sc
-chkconfig --add eucalyptus-sc
 
 %post cc
 chkconfig --add eucalyptus-cc
