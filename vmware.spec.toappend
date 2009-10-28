@@ -17,10 +17,6 @@ installation.
 /usr/share/eucalyptus/euca_vmware
 /usr/lib/eucalyptus/euca_imager
 
-%post vmware-broker
-# we need to be sure eucalyptus user can write the conf file
-chown eucalyptus /etc/eucalyptus/eucalyptus.conf
-
 %changelog vmware-broker
 *Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - new package
