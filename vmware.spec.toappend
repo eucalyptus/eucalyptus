@@ -14,6 +14,8 @@ installation.
 
 %files vmware-broker
 /usr/share/eucalyptus/*vmware*jar
+/usr/share/eucalyptus/euca_vmware
+/usr/lib/eucalyptus/euca_imager
 
 %changelog vmware-broker
 *Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)

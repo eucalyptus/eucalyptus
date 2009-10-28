@@ -1,6 +1,13 @@
 #!/bin/bash
 
 if [ -z "$EUCALYPTUS" ] ; then
+	if [ -d /opt/eucalyptus/etc ]; then
+		EUCALYPTUS="/opt/eucalyptus"
+	else
+		EUCALYPTUS="/"
+	fi
+fi
+if [ ! -e $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
         echo "EUCALYPTUS is not set"
         exit 1
 fi
