@@ -135,6 +135,7 @@ create_httpd_config() {
 do_start() {
 	# let's check if we have apache2
 	if [ ! -x $HTTPD ]; then
+		echo
 		echo "cannot find httpd (was set to <$HTTPD>)!"
 		exit 1
 	fi
@@ -160,6 +161,7 @@ do_start() {
 	# dhcpd, so better check we know how to use it
 	if [ "$VNET_MODE" = "MANAGED" -o "$VNET_MODE" = "STATIC" ]; then
 		if [ -z "$VNET_DHCPDAEMON" -o ! -x $VNET_DHCPDAEMON ]; then
+			echo
 			echo "Cannot find dhcp server!"
 			exit 1
 		fi
@@ -171,6 +173,7 @@ do_start() {
 
 	# now we start the services
 	if  ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf ; then
+		echo
 		echo "Failed to start the CC!"
 		exit 1
 	fi

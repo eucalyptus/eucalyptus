@@ -136,6 +136,7 @@ create_httpd_config() {
 # crude way to start the axis2c services
 do_start() {
 	if [ ! -x $HTTPD ]; then
+		echo
 		echo "cannot find httpd (was set to <$HTTPD>)!"
 		exit 1
 	fi
@@ -146,8 +147,10 @@ do_start() {
 
 	# we have a program to test the hypervisor and more for the NC
 	if [ ! -x $EUCALYPTUS/usr/sbin/euca_test_nc ]; then
+		echo
 		echo "Cannot check Node Controller: missing euca_test_nc."
 	elif ! $EUCALYPTUS/usr/sbin/euca_test_nc $HYPERVISOR > $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log 2>&1 ; then
+		echo
 		echo "Node Controller cannot be started: errors in $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log"
 		exit 1
 	fi
@@ -164,8 +167,10 @@ do_start() {
 
 	# we need aoe loaded 
 	if [ -z "$MODPROBE" ]; then
+		echo
 		echo "Cannot find modprobe: you may have problems."
 	elif ! $MODPROBE aoe ; then
+		echo
 		echo "Failed to load aoe: you may experience problems"
 	fi
 
@@ -173,6 +178,7 @@ do_start() {
 	if [ -w /proc/sys/net/ipv4/ip_forward ]; then
 		VAL=`cat /proc/sys/net/ipv4/ip_forward`
 		if [ "$VAL" = "0" ]; then
+			echo
 			echo "Enabling IP forwarding for eucalyptus."
 			echo -n 1 > /proc/sys/net/ipv4/ip_forward
 		fi
@@ -180,6 +186,7 @@ do_start() {
 	if [ -w /proc/sys/net/bridge/bridge-nf-call-iptables ]; then
 		VAL=`cat /proc/sys/net/bridge/bridge-nf-call-iptables`
 		if [ "$VAL" = "0" ]; then
+			echo
 			echo "Enabling bridge netfiltering for eucalyptus."
 			echo 1 >  /proc/sys/net/bridge/bridge-nf-call-iptables
 		fi
@@ -189,6 +196,7 @@ do_start() {
 	create_httpd_config
 
 	if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf ; then
+		echo
 		echo "Failed to start the NC!"
 		exit 1
 	fi
