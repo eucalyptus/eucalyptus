@@ -167,13 +167,19 @@ make 2> err.log > out.log
 
 %install
 make install
-ls /usr/share/eucalyptus/*jar|grep -v eucalyptus-walrus|grep -v eucalyptus-storagecontroller|grep -v eucalyptus-interface > jar_list
+ls /usr/share/eucalyptus/*jar|grep -v eucalyptus-walrus|grep -v eucalyptus-storagecontroller|grep -v eucalyptus-cloud > jar_list
 
 %clean
 make uninstall
 rm -rf $RPM_BUILD_DIR/eucalyptus
+# most of the files are taken care of by uninstall, but not the
+# directories
 rm -rf /var/lib/eucalyptus
+rm -rf /var/run/eucalyptus
+rm -rf /usr/lib/eucalyptus
+rm -rf /usr/share/eucalyptus
 rm -rf /etc/eucalyptus
+rm -rf /usr/share/doc/eucalyptus-%{version}
 
 %files
 %doc LICENSE INSTALL README CHANGELOG
