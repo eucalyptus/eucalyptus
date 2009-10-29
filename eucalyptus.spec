@@ -149,6 +149,7 @@ This package contains the internal log service of eucalyptus.
 %setup -n eucalyptus-%{version}
 
 %build
+export ANT_OPTS="-Xss1024k"
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
 cd clc
 make deps
