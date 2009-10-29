@@ -9,13 +9,13 @@
 
 Summary:       Elastic Utility Computing Architecture - axis2c
 Name:          euca-axis2c
-Version:       1.5.0
-Release:       2
+Version:       1.6.0
+Release:       1
 License:       Apache
 BuildRequires: %{__httpd}-devel
 Requires:      %{__httpd}
 Group:         Applications/System
-Source:        http://open.eucalyptus.com/dependencies/1.5.0/axis2c-src-1.5.0.tgz
+Source:        http://open.eucalyptus.com/dependencies/1.6.0/axis2c-src-1.6.0.tgz
 Patch0:        euca-axis2c-DESTDIRfix.patch
 BuildRoot:     %{_tmppath}/%{name}-%{version}-%{release}-build
 URL:           http://open.eucalyptus.com

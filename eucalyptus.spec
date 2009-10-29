@@ -11,7 +11,7 @@
 %if %is_centos
 %define __dhcp    dhcp
 %define __httpd   httpd
-%define __libvirt euca-libvirt >= 1.5
+%define __libvirt libvirt >= 0.6
 %define __xen     xen
 %define __curl    curl
 %define __bridge  xenbr0
@@ -24,7 +24,7 @@ Release:       1
 License:       GPL
 Group:         Applications/System
 %if %is_centos
-BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
+BuildRequires: gcc, make, libvirt >= 0.6, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
 Requires:      vconfig, aoetools, vblade, wget, rsync
 %endif
 %if %is_suse
@@ -154,12 +154,7 @@ if [ -f tools/eucalyptus.conf.rpmbased ];
 then
 	cp -f tools/eucalyptus.conf.rpmbased tools/eucalyptus.conf
 fi
-%if %is_suse
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
-%endif
-%if %is_centos
-./configure --with-libvirt=/opt/euca-libvirt --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
-%endif
 cd clc
 make deps
 cd ..
