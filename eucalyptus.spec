@@ -21,7 +21,7 @@ Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       1.6.1
 Release:       1
-License:       BSD
+License:       GPL
 Group:         Applications/System
 %if %is_centos
 BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
@@ -207,7 +207,6 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /usr/sbin/eucalyptus-cloud
 
 %files cloud
-/etc/init.d/eucalyptus-cloud
 /usr/share/eucalyptus/eucalyptus-cloud-*.jar
 
 %files walrus
@@ -340,66 +339,19 @@ then
 	rm -rf /etc/eucalyptus/http*
 fi
 
-%preun cloud
-if [ -x /usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-cloud ]; 
-	then
-		/etc/init.d/eucalyptus-cloud stop || /bin/true
-	fi
-fi
+%preun common-java
 if [ "$1" = "0" ];
 then
 	chkconfig --del eucalyptus-cloud || true
 fi
 
-%preun walrus
-if [ -x /usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-walrus ]; 
-	then
-		/etc/init.d/eucalyptus-walrus stop || /bin/true
-	fi
-fi
-if [ "$1" = "0" ];
-then
-	chkconfig --del eucalyptus-walrus || true
-fi
-
-%preun sc
-if [ -x /usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-sc ]; 
-	then
-		/etc/init.d/eucalyptus-sc stop || /bin/true
-	fi
-fi
-if [ "$1" = "0" ];
-then
-	chkconfig --del eucalyptus-sc || true
-fi
-
 %preun cc
-if [ -x /usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-cc ]; 
-	then
-		/etc/init.d/eucalyptus-cc stop || /bin/true
-	fi
-fi
 if [ "$1" = "0" ];
 then
 	chkconfig --del eucalyptus-cc || true
 fi
 
 %preun nc
-if [ -x /usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-nc ]; 
-	then
-		/etc/init.d/eucalyptus-nc stop || /bin/true
-	fi
-fi
 if [ "$1" = "0" ];
 then
 	chkconfig --del eucalyptus-nc || true
