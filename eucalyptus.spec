@@ -318,6 +318,16 @@ chkconfig --add eucalyptus-cloud
 
 %post cloud
 /usr/sbin/euca_conf --enable cloud
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	if ! grep 8773:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	then
+		echo "--port=8773:tcp" >> /etc/sysconfig/system-config-securitylevel
+		echo "--port=8443:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
+fi
+%endif
 
 %post walrus
 /usr/sbin/euca_conf --enable walrus
@@ -327,9 +337,27 @@ chkconfig --add eucalyptus-cloud
 
 %post cc
 chkconfig --add eucalyptus-cc
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	if ! grep 8774:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	then
+		echo "--port=8774:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
+fi
+%endif
 
 %post nc
 chkconfig --add eucalyptus-nc
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	if ! grep 8775:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	then
+		echo "--port=8775:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
+fi
+%endif
 
 %postun
 # in case of removal let's try to clean up the best we can
@@ -338,6 +366,31 @@ then
 	rm -rf /var/log/eucalyptus
 	rm -rf /etc/eucalyptus/http*
 fi
+
+%postun cloud
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	sed -i '/^--port=8773/ d' /etc/sysconfig/system-config-securitylevel
+	sed -i '/^--port=8443/ d' /etc/sysconfig/system-config-securitylevel
+fi
+%endif
+
+%postun cc
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	sed -i '/^--port=8774/ d' /etc/sysconfig/system-config-securitylevel
+fi
+%endif
+
+%postun nc
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	sed -i '/^--port=8775/ d' /etc/sysconfig/system-config-securitylevel
+fi
+%endif
 
 %preun common-java
 if [ "$1" = "0" ];
