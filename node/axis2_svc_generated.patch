@@ -4,7 +4,7 @@
          #include <axis2_svc_skeleton.h>
          #include <stdio.h>
          #include <axis2_svc.h>
-+#include "euca_auth.h"
++#include "euca_axis.h"
  
          /**
           * functions prototypes
