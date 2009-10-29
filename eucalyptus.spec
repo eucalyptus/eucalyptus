@@ -274,7 +274,7 @@ if ! getent passwd eucalyptus > /dev/null ; then
 %endif
 fi
 # let's configure eucalyptus
-/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus -hypervisor xen -bridge %{__bridge} 
+/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor xen -bridge %{__bridge}
 
 # upgrade?
 if [ "$1" = "2" ];
@@ -301,7 +301,7 @@ then
 	fi
 fi
 # final setup and set the new user
-/usr/sbin/euca_conf -d / -setup -user eucalyptus
+/usr/sbin/euca_conf -setup -user eucalyptus
 
 %post common-java
 chkconfig --add eucalyptus-cloud
@@ -353,7 +353,7 @@ if [ -e /etc/PolicyKit/PolicyKit.conf ];
 then
 	if ! grep eucalyptus /etc/PolicyKit/PolicyKit.conf > /dev/null ;
 	then
-		sed -i '/<config version/ a <match action="org.libvirt.unix.manage">\n   <match user="eucalpytus">\n      <return result="yes"/>\n   </match>\n</match>' /etc/PolicyKit/PolicyKit.conf
+		sed -i '/<config version/ a <match action="org.libvirt.unix.manage">\n   <match user="eucalyptus">\n      <return result="yes"/>\n   </match>\n</match>' /etc/PolicyKit/PolicyKit.conf
 	fi
 fi
 %endif
