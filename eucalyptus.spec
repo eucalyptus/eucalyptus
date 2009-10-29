@@ -149,11 +149,6 @@ This package contains the internal log service of eucalyptus.
 %setup -n eucalyptus-%{version}
 
 %build
-# let's be sure we have the right configuration file
-if [ -f tools/eucalyptus.conf.rpmbased ];
-then
-	cp -f tools/eucalyptus.conf.rpmbased tools/eucalyptus.conf
-fi
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
 cd clc
 make deps
@@ -248,7 +243,7 @@ then
 		exit 2
 	fi
 	old_version="`cat etc/eucalyptus/eucalyptus-version`"
-	if [ `expr $old_version "<" 1.5` -eq 0 ];
+	if [ `expr $old_version "<" 1.5` -eq 1 ];
 	then
 		echo "Cannot upgrade from version earlier than 1.5"
 		exit 2
@@ -278,8 +273,8 @@ if ! getent passwd eucalyptus > /dev/null ; then
 	adduser -M eucalyptus 
 %endif
 fi
-# let's get the default bridge 
-/usr/sbin/euca_conf -bridge %{__bridge} 
+# let's configure eucalyptus
+/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus -hypervisor xen -bridge %{__bridge} 
 
 # upgrade?
 if [ "$1" = "2" ];
