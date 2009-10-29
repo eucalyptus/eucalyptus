@@ -21,7 +21,7 @@ Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       1.6.1
 Release:       1
-License:       GPL
+License:       GPLv3
 Group:         Applications/System
 %if %is_centos
 BuildRequires: gcc, make, libvirt >= 0.6, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
@@ -146,14 +146,9 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the internal log service of eucalyptus.
 
 %prep
-%setup -n eucalyptus
+%setup -n eucalyptus-%{version}
 
 %build
-# let's be sure we have the right configuration file
-if [ -f tools/eucalyptus.conf.rpmbased ];
-then
-	cp -f tools/eucalyptus.conf.rpmbased tools/eucalyptus.conf
-fi
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
 cd clc
 make deps
@@ -186,6 +181,7 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /usr/share/eucalyptus/euca_ipt
 /usr/share/eucalyptus/populate_arp.pl
 /usr/lib/eucalyptus/euca_rootwrap
+/usr/lib/eucalyptus/euca_mountwrap
 /usr/sbin/euca_conf
 /usr/sbin/euca_sync_key
 /usr/sbin/euca_killall
@@ -216,7 +212,6 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /etc/eucalyptus/vtunall.conf.template
 
 %files nc
-/usr/lib/eucalyptus/euca_mountwrap
 /usr/share/eucalyptus/gen_libvirt_xml
 /usr/share/eucalyptus/gen_kvm_libvirt_xml
 /usr/share/eucalyptus/partition2disk
@@ -248,7 +243,7 @@ then
 		exit 2
 	fi
 	old_version="`cat etc/eucalyptus/eucalyptus-version`"
-	if [ `expr $old_version "<" 1.5` -eq 0 ];
+	if [ `expr $old_version "<" 1.5` -eq 1 ];
 	then
 		echo "Cannot upgrade from version earlier than 1.5"
 		exit 2
@@ -278,8 +273,8 @@ if ! getent passwd eucalyptus > /dev/null ; then
 	adduser -M eucalyptus 
 %endif
 fi
-# let's get the default bridge 
-/usr/sbin/euca_conf -bridge %{__bridge} 
+# let's configure eucalyptus
+/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus -hypervisor xen -bridge %{__bridge} 
 
 # upgrade?
 if [ "$1" = "2" ];
@@ -353,6 +348,16 @@ then
 	fi
 fi
 %endif
+%if %is_suse
+if [ -e /etc/PolicyKit/PolicyKit.conf ]; 
+then
+	if ! grep eucalyptus /etc/PolicyKit/PolicyKit.conf > /dev/null ;
+	then
+		sed -i '/<config version/ a <match action="org.libvirt.unix.manage">\n   <match user="eucalpytus">\n      <return result="yes"/>\n   </match>\n</match>' /etc/PolicyKit/PolicyKit.conf
+	fi
+fi
+%endif
+
 
 %postun
 # in case of removal let's try to clean up the best we can

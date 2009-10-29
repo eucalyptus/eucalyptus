@@ -123,6 +123,7 @@
 		<mkdir dir="${gwt.war.dir}" />
 		<java classpathref="gwtcompilerclasspath" fork="true" failonerror="true" classname="com.google.gwt.dev.Compiler">
 			<jvmarg value="-Xmx1024m" />
+			<jvmarg value="-Xss1024k" />
 			<arg line="-war ${gwt.war.build.dir}" />
 			<arg line="-style OBF" />
 			<arg line="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
