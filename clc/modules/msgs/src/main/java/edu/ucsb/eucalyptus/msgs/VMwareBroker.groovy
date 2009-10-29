@@ -1,5 +1,9 @@
 package edu.ucsb.eucalyptus.msgs
 
+import org.apache.log4j.Logger;
+
+import edu.ucsb.eucalyptus.cloud.ws.VMwareControl;
+
 /*
  * Software License Agreement (BSD License)
  *
@@ -57,7 +61,9 @@ public class VMwareBrokerResponseType extends EucalyptusMessage {
 	public static final String STATUS_MSG_NOT_SUPPORTED = "method not supported";
 	public static final String STATUS_MSG_SUCCESS = "method succeeded";
 	public static final String STATUS_MSG_FAILURE = "method failed";
-	
+
+	private static Logger LOG = Logger.getLogger( VMwareBrokerResponseType.class );
+
   	def VMwareBrokerResponseType() {}
 
   	@Override
@@ -72,7 +78,7 @@ public class VMwareBrokerResponseType extends EucalyptusMessage {
   	
   	public VMwareBrokerResponseType withSuccess (String msg) {
   		this.setStatusMessage (msg);
-  		this.set_return (false);
+  		this.set_return (true);
   		return this;
   	}
 
@@ -82,6 +88,7 @@ public class VMwareBrokerResponseType extends EucalyptusMessage {
   	}
   	
   	public VMwareBrokerResponseType withFailure (String msg) {
+  		LOG.error(msg);
   		this.setStatusMessage (msg);
   		this.set_return (false);
   		return this;
