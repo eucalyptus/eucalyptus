@@ -181,6 +181,7 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /usr/share/eucalyptus/euca_ipt
 /usr/share/eucalyptus/populate_arp.pl
 /usr/lib/eucalyptus/euca_rootwrap
+/usr/lib/eucalyptus/euca_mountwrap
 /usr/sbin/euca_conf
 /usr/sbin/euca_sync_key
 /usr/sbin/euca_killall
@@ -211,7 +212,6 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /etc/eucalyptus/vtunall.conf.template
 
 %files nc
-/usr/lib/eucalyptus/euca_mountwrap
 /usr/share/eucalyptus/gen_libvirt_xml
 /usr/share/eucalyptus/gen_kvm_libvirt_xml
 /usr/share/eucalyptus/partition2disk
@@ -348,6 +348,16 @@ then
 	fi
 fi
 %endif
+%if %is_suse
+if [ -e /etc/PolicyKit/PolicyKit.conf ]; 
+then
+	if ! grep eucalyptus /etc/PolicyKit/PolicyKit.conf > /dev/null ;
+	then
+		sed -i '/<config version/ a <match action="org.libvirt.unix.manage">\n   <match user="eucalpytus">\n      <return result="yes"/>\n   </match>\n</match>' /etc/PolicyKit/PolicyKit.conf
+	fi
+fi
+%endif
+
 
 %postun
 # in case of removal let's try to clean up the best we can
