@@ -87,6 +87,8 @@ permission notice:
 /* used by lower level handlers */
 sem *hyp_sem;	/* semaphore for serializing domain creation */
 sem *inst_sem;	/* guarding access to global instance structs */
+sem *addkey_sem;	/* guarding access to global instance structs */
+
 bunchOfInstances *global_instances = NULL; 
 
 // declarations of available handlers
@@ -487,7 +489,7 @@ void *startup_thread (void * arg)
                                  instance->kernelId, instance->kernelURL, 
                                  instance->ramdiskId, instance->ramdiskURL, 
                                  instance->instanceId, instance->keyName, 
-                                 &disk_path, hyp_sem, nc_state.convert_to_disk,
+                                 &disk_path, addkey_sem, nc_state.convert_to_disk,
 				 instance->params.diskSize*1024);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
@@ -713,8 +715,9 @@ static int init (void)
 	nc_state.config_network_port = NC_NET_PORT_DEFAULT;
 	strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
 
-	hyp_sem = sem_alloc (1, "eucalyptus-nc-semaphore");
-	inst_sem = sem_alloc (1, "eucalyptus-nc-inst-semaphore");
+	hyp_sem = sem_alloc (1, "mutex");
+	inst_sem = sem_alloc (1, "mutex");
+	addkey_sem = sem_alloc (1, "mutex");
 	if (!hyp_sem || !inst_sem) {
 		logprintfl (EUCAFATAL, "failed to create and initialize a semaphore\n");
 		return ERROR_FATAL;

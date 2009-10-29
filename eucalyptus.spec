@@ -11,7 +11,7 @@
 %if %is_centos
 %define __dhcp    dhcp
 %define __httpd   httpd
-%define __libvirt euca-libvirt >= 1.5
+%define __libvirt libvirt >= 0.6
 %define __xen     xen
 %define __curl    curl
 %define __bridge  xenbr0
@@ -21,10 +21,10 @@ Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       1.6.1
 Release:       1
-License:       BSD
+License:       GPL
 Group:         Applications/System
 %if %is_centos
-BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
+BuildRequires: gcc, make, libvirt >= 0.6, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
 Requires:      vconfig, aoetools, vblade, wget, rsync
 %endif
 %if %is_suse
@@ -154,12 +154,7 @@ if [ -f tools/eucalyptus.conf.rpmbased ];
 then
 	cp -f tools/eucalyptus.conf.rpmbased tools/eucalyptus.conf
 fi
-%if %is_suse
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
-%endif
-%if %is_centos
-./configure --with-libvirt=/opt/euca-libvirt --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
-%endif
 cd clc
 make deps
 cd ..
@@ -207,7 +202,6 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /usr/sbin/eucalyptus-cloud
 
 %files cloud
-/etc/init.d/eucalyptus-cloud
 /usr/share/eucalyptus/eucalyptus-cloud-*.jar
 
 %files walrus
@@ -271,7 +265,6 @@ then
 
 	rm -f var/eucalyptus/db/eucalyptus.lck
 	tar cf /root/eucalyptus-pre-%{version}-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
-	fi
 fi
 
 %post
@@ -320,6 +313,16 @@ chkconfig --add eucalyptus-cloud
 
 %post cloud
 /usr/sbin/euca_conf --enable cloud
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	if ! grep 8773:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	then
+		echo "--port=8773:tcp" >> /etc/sysconfig/system-config-securitylevel
+		echo "--port=8443:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
+fi
+%endif
 
 %post walrus
 /usr/sbin/euca_conf --enable walrus
@@ -329,9 +332,27 @@ chkconfig --add eucalyptus-cloud
 
 %post cc
 chkconfig --add eucalyptus-cc
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	if ! grep 8774:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	then
+		echo "--port=8774:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
+fi
+%endif
 
 %post nc
 chkconfig --add eucalyptus-nc
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	if ! grep 8775:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	then
+		echo "--port=8775:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
+fi
+%endif
 
 %postun
 # in case of removal let's try to clean up the best we can
@@ -341,66 +362,44 @@ then
 	rm -rf /etc/eucalyptus/http*
 fi
 
-%preun cloud
-if [ -x /usr/sbin/euca_conf ];
+%postun cloud
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
-	if [ -x /etc/init.d/eucalyptus-cloud ]; 
-	then
-		/etc/init.d/eucalyptus-cloud stop || /bin/true
-	fi
+	sed -i '/^--port=8773/ d' /etc/sysconfig/system-config-securitylevel
+	sed -i '/^--port=8443/ d' /etc/sysconfig/system-config-securitylevel
 fi
+%endif
+
+%postun cc
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	sed -i '/^--port=8774/ d' /etc/sysconfig/system-config-securitylevel
+fi
+%endif
+
+%postun nc
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	sed -i '/^--port=8775/ d' /etc/sysconfig/system-config-securitylevel
+fi
+%endif
+
+%preun common-java
 if [ "$1" = "0" ];
 then
 	chkconfig --del eucalyptus-cloud || true
 fi
 
-%preun walrus
-if [ -x /usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-walrus ]; 
-	then
-		/etc/init.d/eucalyptus-walrus stop || /bin/true
-	fi
-fi
-if [ "$1" = "0" ];
-then
-	chkconfig --del eucalyptus-walrus || true
-fi
-
-%preun sc
-if [ -x /usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-sc ]; 
-	then
-		/etc/init.d/eucalyptus-sc stop || /bin/true
-	fi
-fi
-if [ "$1" = "0" ];
-then
-	chkconfig --del eucalyptus-sc || true
-fi
-
 %preun cc
-if [ -x /usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-cc ]; 
-	then
-		/etc/init.d/eucalyptus-cc stop || /bin/true
-	fi
-fi
 if [ "$1" = "0" ];
 then
 	chkconfig --del eucalyptus-cc || true
 fi
 
 %preun nc
-if [ -x /usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-nc ]; 
-	then
-		/etc/init.d/eucalyptus-nc stop || /bin/true
-	fi
-fi
 if [ "$1" = "0" ];
 then
 	chkconfig --del eucalyptus-nc || true
