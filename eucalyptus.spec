@@ -21,7 +21,7 @@ Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       1.6.1
 Release:       1
-License:       GPL
+License:       GPLv3
 Group:         Applications/System
 %if %is_centos
 BuildRequires: gcc, make, libvirt >= 0.6, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
