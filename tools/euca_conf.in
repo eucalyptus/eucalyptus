@@ -963,7 +963,9 @@ if [ -n "$CHECK" ]; then
 	fi
 
 	if [ "$CHECK" = "vmware" ]; then
-		$EUCALYPTUS/usr/share/eucalyptus/euca_vmware --config $EUCALYPTUS/etc/eucalyptus/vmware_conf.xml
+		if ! $EUCALYPTUS/usr/share/eucalyptus/euca_vmware --config $EUCALYPTUS/etc/eucalyptus/vmware_conf.xml ; then
+			exit 1
+		fi
 	fi
 
 	# good to go
@@ -1321,7 +1323,9 @@ fi
 if [ -n "$VMWARE" ]; then
 	change_var_value $FILE ENABLE_WS_SECURITY "N"
 	change_var_value $FILE NC_SERVICE "/services/VMwareBroker"
-	$EUCALYPTUS/usr/share/eucalyptus/euca_vmware --prompt --config $EUCALYPTUS/etc/eucalyptus/vmware_conf.xml
+	if ! $EUCALYPTUS/usr/share/eucalyptus/euca_vmware --prompt --config $EUCALYPTUS/etc/eucalyptus/vmware_conf.xml ; then
+		exit 1
+	fi
 fi
 
 # operations on the nodes
