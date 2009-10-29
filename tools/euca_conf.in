@@ -830,7 +830,7 @@ if [ -n "$SETUP" ]; then
 	let $((ret += $?))
 	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus
 	let $((ret += $?))
-	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus/eucalytpus/conf
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
 	let $((ret += $?))
 
 	# let's create more needed directory with the right permissions
