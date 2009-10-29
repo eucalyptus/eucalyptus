@@ -52,7 +52,7 @@ import com.eucalyptus.util.StorageProperties;
 
 //baseDir = "/disk1/import"
 //targetDir = "/disk1/import"
-baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
+baseDir = "/disk2/dbupgrade/1.5.2db.orig"
 targetDir = baseDir;
 targetDbPrefix= "eucalyptus"
 
@@ -75,10 +75,10 @@ def getSqlVolumes() {
 db = getSql();
 dbVolumes = getSqlVolumes( );
 
-
 System.setProperty("euca.home",System.getenv("EUCALYPTUS"))
 System.setProperty("euca.var.dir","${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/")
 System.setProperty("euca.log.dir", "${System.getenv('EUCALYPTUS')}/var/log/eucalyptus/")
+Component c = Component.db
 System.setProperty("euca.db.host", "jdbc:hsqldb:file:${targetDir}/${targetDbPrefix}")
 System.setProperty("euca.db.password", "${System.getenv('EUCALYPTUS_DB')}");
 System.setProperty("euca.log.level", 'INFO');
@@ -398,7 +398,7 @@ db.rows('SELECT * FROM SNAPSHOTS').each{
 		s.setVolumeId(it.VOLUME_NAME);
 		s.setStatus(it.STATUS);
 		s.setStartTime(new Date());
-		s.setProgress(it.PROGRESS);
+		s.setProgress("100");
 		dbSnap.add(s);
 		dbSnap.commit();
 	  } catch (Throwable t) {
