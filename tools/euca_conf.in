@@ -844,6 +844,8 @@ if [ -n "$SETUP" ]; then
 	let $((ret += $?))
 	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
 	let $((ret += $?))
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus
+	let $((ret += $?))
 
 	# let's create more needed directory with the right permissions
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
