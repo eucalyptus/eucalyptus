@@ -113,7 +113,7 @@ usage () {
 	echo "   --deregister-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
 	echo "   --register-cluster <name> <host> add new cluster to EUCALYPTUS"
 	echo "   --deregister-cluster <name>      remove cluster from EUCALYPTUS"
-	echo "   --register-vmware <host>         add new vmware to EUCALYPTUS"
+	echo "   --register-vmware                add new vmware to EUCALYPTUS"
 #	echo "   --deregister-vmware              remove vmware from EUCALYPTUS"
 	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
 	echo "   --deregister-walrus <host>       remove walrus to EUCALYPTUS"
@@ -397,6 +397,11 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
+	if [ "$1" = "--register-vmware" ]; then
+		VMWARE="Y"
+		shift;
+		continue
+	fi
 	if [ "$1" = "-noscp" -o "$1" = "--no-scp" ]; then 
 	    SCP=""
 	    shift
@@ -587,11 +592,6 @@ while [ $# -gt 0 ]; do
 		CLUSNAME="$2"
 		NEWCLUS="$3"
 		CLUSMODE="ADD"
-		shift; shift; shift
-		continue
-	fi
-	if [ "$1" = "--register-vmware" ]; then
-		VMWARE="$2"
 		shift; shift; shift
 		continue
 	fi
