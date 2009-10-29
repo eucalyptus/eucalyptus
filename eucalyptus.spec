@@ -146,7 +146,7 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the internal log service of eucalyptus.
 
 %prep
-%setup -n eucalyptus
+%setup -n eucalyptus-%{version}
 
 %build
 # let's be sure we have the right configuration file
