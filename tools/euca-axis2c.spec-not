@@ -34,7 +34,7 @@ This is the packaging of axis2c for Eucalyptus.
 %patch0 -p0
 
 %build
-CFLAGS="-w" ./configure --prefix=/opt/euca-axis2c --with-apache2=/usr/include/%{__httpd} --with-apr=/usr/include/apr-1
+CFLAGS="-w" ./configure --prefix=/opt/euca-axis2c --with-apache2=/usr/include/%{__httpd} --with-apr=/usr/include/apr-1 --disable-multi-thread
 make
 
 %install
