@@ -54,6 +54,7 @@ import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import java.net.URI;
+import com.eucalyptus.util.DatabaseUtil;
 
 //baseDir = "/disk1/import"
 //targetDir = "/disk1/import"
@@ -473,3 +474,4 @@ db.rows('SELECT * FROM SYSTEM_INFO').each{
   dbSCConfig.commit()
 }
 
+DatabaseUtil.closeAllEMFs()
