@@ -367,7 +367,7 @@ then
 	rm -rf /etc/eucalyptus/http*
 fi
 
-%postun cloud
+%preun cloud
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
@@ -375,8 +375,31 @@ then
 	sed -i '/^--port=8443/ d' /etc/sysconfig/system-config-securitylevel
 fi
 %endif
+/usr/sbin/euca_conf --disable cloud
+[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
 
-%postun cc
+
+%preun walrus
+/usr/sbin/euca_conf --disable walrus
+[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
+
+%preun sc
+/usr/sbin/euca_conf --disable sc
+[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
+
+%preun common-java
+/etc/init.d/eucalyptus-cloud stop || true
+if [ "$1" = "0" ];
+then
+	chkconfig --del eucalyptus-cloud || true
+fi
+
+%preun cc
+/etc/init.d/eucalyptus-cc stop || true
+if [ "$1" = "0" ];
+then
+	chkconfig --del eucalyptus-cc || true
+fi
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
@@ -384,31 +407,18 @@ then
 fi
 %endif
 
-%postun nc
+%preun nc
+/etc/init.d/eucalyptus-nc stop || true
+if [ "$1" = "0" ];
+then
+	chkconfig --del eucalyptus-nc || true
+fi
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
 	sed -i '/^--port=8775/ d' /etc/sysconfig/system-config-securitylevel
 fi
 %endif
-
-%preun common-java
-if [ "$1" = "0" ];
-then
-	chkconfig --del eucalyptus-cloud || true
-fi
-
-%preun cc
-if [ "$1" = "0" ];
-then
-	chkconfig --del eucalyptus-cc || true
-fi
-
-%preun nc
-if [ "$1" = "0" ];
-then
-	chkconfig --del eucalyptus-nc || true
-fi
 
 %changelog gl
 *Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
