@@ -141,19 +141,13 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
         logprintfl (EUCAINFO, "Installing boot loader...\n");
         output = pruntf("%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], tmpdir);
         if (!output) {
-            logprintfl (EUCAINFO, "ERROR: \n");
+            logprintfl (EUCAINFO, "ERROR: failed to create grub directory\n");
             return(1);
         }
       
-        output = pruntf("%s %s /boot/grub/stage1 %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], tmpdir);
+        output = pruntf("%s %s /boot/grub/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], tmpdir);
         if (!output) {
-            logprintfl (EUCAINFO, "ERROR: \n");
-            return(1);
-        }
-      
-        output = pruntf("%s %s /boot/grub/stage2 %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], tmpdir);
-        if (!output) {
-            logprintfl (EUCAINFO, "ERROR: \n");
+            logprintfl (EUCAINFO, "ERROR: failed to copy stage files into grub directory\n");
             return(1);
         }
       
@@ -176,14 +170,14 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
         logprintfl (EUCAINFO, "Installing kernel, ramdisk and modules...\n");
         output = pruntf("%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, tmpdir, kfile);
         if (!output) {
-            logprintfl (EUCAINFO, "ERROR: \n");
+            logprintfl (EUCAINFO, "ERROR: failed to copy the kernel to boot directory\n");
             return(1);
         }
       
         if (ramdisk) {
             output = pruntf("%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, tmpdir, rfile);
             if (!output) {
-                logprintfl (EUCAINFO, "ERROR: \n");
+                logprintfl (EUCAINFO, "ERROR: failed to copy the ramdisk to boot directory\n");
                 return(1);
             }
         }
@@ -194,7 +188,7 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
             }
             output = pruntf("%s %s -az %s %s/lib/modules/", helpers_path[ROOTWRAP], helpers_path[RSYNC], modules, tmpdir);
             if (!output) {
-                logprintfl (EUCAINFO, "ERROR: \n");
+                logprintfl (EUCAINFO, "ERROR: failed to rsync the modules\n");
                 return(1);
             }
         }
@@ -209,9 +203,9 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
             return(1);
         }
         if (ramdisk) {
-            fprintf(FH, "default 0\ntimeout 10\n\ntitle=TheOS\nroot (hd0,0)\nkernel /boot/%s root=/dev/sda1 ro quiet splash\ninitrd /boot/%s\nquiet\n", kfile, rfile);
+            fprintf(FH, "default 0\ntimeout 5\n\ntitle TheOS\nroot (hd0,0)\nkernel /boot/%s root=/dev/sda1 ro\ninitrd /boot/%s\n", kfile, rfile);
         } else {
-            fprintf(FH, "default 0\ntimeout 10\n\ntitle=TheOS\nroot (hd0,0)\nkernel /boot/%s root=/dev/sda1 ro quiet splash\nquiet\n", kfile);
+            fprintf(FH, "default 0\ntimeout 5\n\ntitle TheOS\nroot (hd0,0)\nkernel /boot/%s root=/dev/sda1 ro\n", kfile);
         }
         fflush(FH);
         output = pruntf("%s %s %s %s/boot/grub/menu.lst", helpers_path[ROOTWRAP], helpers_path[CP], ftemplate, tmpdir);
@@ -219,6 +213,25 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
         unlink (ftemplate);
         if (!output) {
             logprintfl (EUCAERROR, "ERROR: failed to copy %s to %s/boot/grub/menu.lst\n", ftemplate, tmpdir);
+            return 1;
+        }
+        
+        FILE * FH = fdopen(mkstemp (ftemplate), "w");
+        if (FH==NULL) {
+            logprintfl (EUCAINFO, "ERROR: failed to create a temporary file\n");
+            return(1);
+        }
+        if (ramdisk) {
+            fprintf(FH, "default=0\ntimeout=5\n\ntitle TheOS\n\troot (hd0,0)\n\tkernel /boot/%s root=/dev/sda1 ro\n\tinitrd /boot/%s\n", kfile, rfile);
+        } else {
+            fprintf(FH, "default=0\ntimeout=5\n\ntitle TheOS\n\troot (hd0,0)\n\tkernel /boot/%s root=/dev/sda1 ro\n", kfile);
+        }
+        fflush(FH);
+        output = pruntf("%s %s %s %s/boot/grub/grub.conf", helpers_path[ROOTWRAP], helpers_path[CP], ftemplate, tmpdir);
+        fclose(FH);
+        unlink (ftemplate);
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: failed to copy %s to %s/boot/grub/grub.conf\n", ftemplate, tmpdir);
             return 1;
         }
     }
