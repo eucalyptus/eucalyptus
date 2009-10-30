@@ -49,10 +49,15 @@ import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.config.StorageControllerConfiguration;
+import java.net.URI;
 
 //baseDir = "/disk1/import"
 //targetDir = "/disk1/import"
-baseDir = "/disk2/dbupgrade/1.5.2db.orig"
+baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
 targetDbPrefix= "eucalyptus"
 
@@ -450,5 +455,24 @@ db.rows('SELECT * FROM LVMMETADATA').each{
 }
 
 db.rows('SELECT * FROM CLUSTERS').each{ 
-  println "CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
+  println "Adding CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
+  EntityWrapper<ClusterConfiguration> dbClusterConfig = Configuration.getEntityWrapper()
+  ClusterConfiguration clusterConfig = new ClusterConfiguration(it.CLUSTER_NAME, it.CLUSTER_HOST, it.CLUSTER_PORT)
+  dbClusterConfig.add(clusterConfig)
+  dbClusterConfig.commit();
+}
+
+
+db.rows('SELECT * FROM SYSTEM_INFO').each{
+	URI uri = new URI(it.SYSTEM_INFO_STORAGE_URL)
+	println "Adding Walrus: name=walrus host=${uri.getHost()} port=${uri.getPort()}"
+	EntityWrapper<WalrusConfiguration> dbWalrusConfig = Configuration.getEntityWrapper()
+	WalrusConfiguration walrusConfig = new WalrusConfiguration("walrus", uri.getHost(), uri.getPort())
+	dbWalrusConfig.add(walrusConfig)
+	dbWalrusConfig.commit()
+	println "Adding SC: name=StorageController-local host=${uri.getHost()} port=${uri.getPort()}"
+	EntityWrapper<StorageControllerConfiguration> dbSCConfig = Configuration.getEntityWrapper()
+	StorageControllerConfiguration storageConfig = new StorageControllerConfiguration("StorageController-local", uri.getHost(), uri.getPort())
+	dbSCConfig.add(storageConfig)
+	dbSCConfig.commit()
 }
