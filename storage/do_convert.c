@@ -216,7 +216,8 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
             return 1;
         }
         
-        FH = fdopen(mkstemp (ftemplate), "w");
+        char ftemplate2[] = "/tmp/euca.XXXXXX";
+        FH = fdopen(mkstemp (ftemplate2), "w");
         if (FH==NULL) {
             logprintfl (EUCAINFO, "ERROR: failed to create a temporary file\n");
             return(1);
@@ -227,11 +228,11 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
             fprintf(FH, "default=0\ntimeout=5\n\ntitle TheOS\n\troot (hd0,0)\n\tkernel /boot/%s root=/dev/sda1 ro\n", kfile);
         }
         fflush(FH);
-        output = pruntf("%s %s %s %s/boot/grub/grub.conf", helpers_path[ROOTWRAP], helpers_path[CP], ftemplate, tmpdir);
+        output = pruntf("%s %s %s %s/boot/grub/grub.conf", helpers_path[ROOTWRAP], helpers_path[CP], ftemplate2, tmpdir);
         fclose(FH);
         unlink (ftemplate);
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: failed to copy %s to %s/boot/grub/grub.conf\n", ftemplate, tmpdir);
+            logprintfl (EUCAERROR, "ERROR: failed to copy %s to %s/boot/grub/grub.conf\n", ftemplate2, tmpdir);
             return 1;
         }
     }

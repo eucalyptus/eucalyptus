@@ -134,7 +134,7 @@ public class SystemBootstrapper {
   public boolean init( ) throws Exception {
     boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
     boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
-    LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
+    //LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
     DebugUtil.DEBUG = doDebug;
     DebugUtil.TRACE = doDebug;
     try {
