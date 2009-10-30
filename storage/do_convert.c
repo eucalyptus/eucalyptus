@@ -216,7 +216,7 @@ int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *m
             return 1;
         }
         
-        FILE * FH = fdopen(mkstemp (ftemplate), "w");
+        FH = fdopen(mkstemp (ftemplate), "w");
         if (FH==NULL) {
             logprintfl (EUCAINFO, "ERROR: failed to create a temporary file\n");
             return(1);
