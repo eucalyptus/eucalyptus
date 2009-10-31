@@ -49,7 +49,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     eucalyptus >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Requires:     eucalyptus >= 1.6, java-sdk >= 1.6.0, lvm2
 Conflicts:    eucalyptus < 1.6
 Group:        Applications/System
 
@@ -63,7 +63,7 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, lvm2
 Conflicts:    eucalyptus-walrus < 1.6
 Group:        Applications/System
 
@@ -77,7 +77,7 @@ This package contains walrus.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2, vblade, aoetools
+Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, lvm2, vblade
 Conflicts:    eucalyptus-cloud < 1.6
 Group:        Applications/System
 
@@ -91,7 +91,7 @@ This package contains the storage controller part of eucalyptus.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, lvm2
 Conflicts:    eucalyptus-cloud < 1.6
 Group:        Applications/System
 
@@ -119,7 +119,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}, aoetools
+Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
 Conflicts:    eucalyptus < 1.6, eucalyptus-cc < 1.6
 Group:        Applications/System
 
