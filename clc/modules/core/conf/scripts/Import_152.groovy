@@ -60,7 +60,7 @@ import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 
-baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
+baseDir = "/disk2/dbupgrade/1.5.2db.orig" //"${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
 targetDbPrefix= "eucalyptus"
 
@@ -528,3 +528,5 @@ db.rows('SELECT * FROM SYSTEM_INFO').each{
 
 //flush
 DatabaseUtil.closeAllEMFs();
+//the db will not sync to disk even after a close in some cases. Wait a bit.
+Thread.sleep(5000);

@@ -524,3 +524,5 @@ db.rows('SELECT * FROM SYSTEM_INFO').each{
 
 //flush
 DatabaseUtil.closeAllEMFs();
+//the db will not sync to disk even after a close in some cases. Wait a bit.
+Thread.sleep(5000);
