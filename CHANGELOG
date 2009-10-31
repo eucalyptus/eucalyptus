@@ -1,16 +1,17 @@
 *Sun Nov 1 2009 Eucalyptus Systems (support@eucalyptus.com)
     * Version 1.6.1
-    * Added support for multicluster
-    * Allow components to be hosted on different machines
-    * Support for dynamic DNS
-    * Better startup (no need for ant anymore, mush faster)
+    * Added support for multiple clusters (availability zones)
+    * Allow components (cloud, walrus, sc, cc, nc) to be hosted on
+      different machines
+    * Support for dynamic instance and bucket DNS
+    * Better startup (no need for ant anymore, much faster)
     * Reworked part of the network provisioning code for
-      multicluster and better handling of the public IPs
+      multi-cluster and better handling public IP addressing
     * Hypervisor improvements
          o switched default kvm ethernet interface to e1000
-         o serialized the calls to the xen hypervisor
-    * Added heplers to integrate with nagios and/or ganglia
-    * The Web UI is now themable (at compile time)
+         o serialized calls to the xen hypervisor
+    * Added helpers to integrate with nagios and/or ganglia
+    * The Web UI is now theme-able (at compile time)
     * A lot of work toward long term stability: run the code thru
       different code/memory checker, re-engineer the java stack to be
       faster and more robust.
