@@ -1,3 +1,32 @@
+*Sun Nov 1 2009 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 1.6.1
+    * Added support for multicluster
+    * Allow components to be hosted on different machines
+    * Support for dynamic DNS
+    * Better startup (no need for ant anymore, mush faster)
+    * Reworked part of the network provisioning code for
+      multicluster and better handling of the public IPs
+    * Hypervisor improvements
+         o switched default kvm ethernet interface to e1000
+         o serialized the calls to the xen hypervisor
+    * Added heplers to integrate with nagios and/or ganglia
+    * The Web UI is now themable (at compile time)
+    * A lot of work toward long term stability: run the code thru
+      different code/memory checker, re-engineer the java stack to be
+      faster and more robust.
+    * Closes bugs:
+
+      #426469 #426576 #428546 #428654 #428710 #430260 #430356 #430888
+      #430922 #431939 #430830 #431933 #431935 #426469 #431934 #431937
+      #431931 #426467 #430830 #426389 #426389 #430944 #432604 #432823
+      #436274 #436276 #436290 #436313 #436407 #436885 #436917 #437014
+      #437026 #436407 #430957 #430226 #388934 #440744 #440817 #440950
+      #441033 #441035 #441020 #441019 #443325 #443325 #443314 #444838
+      #445206 #444908 #445206 #444908 #445997 #447585 #447555 #444838
+      #449135 #438565 #449948 #430266 #398867 #449948 #401996 #449944
+      #450915 #451795 #454405 #456877 #456878 #461394 #461444 #460085
+      #404842 #462940 #456878 #406049 
+
 *Fri Jul 17 2009 Eucalyptus Systems (support@eucalyptus.com)
     * Version 1.5.2
     * A lot of bug fixes and improvements
