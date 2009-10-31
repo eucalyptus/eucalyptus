@@ -26,6 +26,7 @@ CC = gcc
 CFLAGS = -g -O2 -DOS_LINUX -DDSO_DLFCN \
 		 -I$(JAVA_HOME)/include \
 		 -I$(JAVA_HOME)/include/linux \
+		 -I../../../util \
 		 -Wall -Wstrict-prototypes
 LDFLAGS =  -ldl -lpthread
 JAVACFLAGS = 
