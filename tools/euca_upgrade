@@ -165,7 +165,7 @@ else
 fi
 
 # we got here so let's reset the state and copy over the old db/keys
-for x in `ls $NEW_EUCA/var/lib/eucalyptus/keys/` ; do
+for x in `ls $NEW_EUCA/var/lib/eucalyptus/keys/ | grep -v policy\.xml` ; do
 	if [ "$x" != $BCK_NAME ]; then
 		rm -rf $x
 	fi
@@ -178,7 +178,7 @@ done
 ret=0
 cp -r $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME/* $NEW_EUCA/var/lib/eucalyptus/db
 let $((ret += $?))
-cp -r $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME/* $NEW_EUCA/var/lib/eucalyptus/keys
+cp -r $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME/*.p* $NEW_EUCA/var/lib/eucalyptus/keys
 let $((ret += $?))
 if [ $ret -gt 0 ]; then
 	echo "Failed to copy old database/keys!"
@@ -186,7 +186,7 @@ if [ $ret -gt 0 ]; then
 fi
 
 # time to do the real upgrade
-EUCALYPTUS="$NEW_EUCA"
+export EUCALYPTUS="$NEW_EUCA"
 for FILE in ${EUCALYPTUS}/usr/share/eucalyptus/*.jar; do
 	export CLASSPATH=${FILE}:${CLASSPATH}
 done
@@ -195,5 +195,6 @@ $OPENSSL pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 -name eucalyp
 
 export EUCALYPTUS_DB=`echo -n eucalyptus | $OPENSSL dgst -sha256 -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem -hex 2>/dev/null`
 
+echo -n "Upgrading your database..."
 $GROOVY ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_152.groovy >/dev/null 2>&1
-
+echo "done."
