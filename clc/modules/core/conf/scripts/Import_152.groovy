@@ -455,8 +455,11 @@ db.rows('SELECT * FROM LVMMETADATA').each{
   }
 }
 
+String clusterName = "testCluster";
+
 db.rows('SELECT * FROM CLUSTERS').each{ 
   println "Adding CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
+  clusterName = it.CLUSTER_NAME;
   EntityWrapper<ClusterConfiguration> dbClusterConfig = Configuration.getEntityWrapper();
   try {
     ClusterConfiguration clusterConfig = new ClusterConfiguration(it.CLUSTER_NAME, it.CLUSTER_HOST, it.CLUSTER_PORT);
@@ -467,7 +470,6 @@ db.rows('SELECT * FROM CLUSTERS').each{
 	dbClusterConfig.rollback();
   }
 }
-
 
 db.rows('SELECT * FROM SYSTEM_INFO').each{
 	URI uri = new URI(it.SYSTEM_INFO_STORAGE_URL)
@@ -484,7 +486,7 @@ db.rows('SELECT * FROM SYSTEM_INFO').each{
 	println "Adding SC: name=StorageController-local host=${uri.getHost()} port=${uri.getPort()}"
 	EntityWrapper<StorageControllerConfiguration> dbSCConfig = Configuration.getEntityWrapper();
 	try {
-	  StorageControllerConfiguration storageConfig = new StorageControllerConfiguration("StorageController-local", uri.getHost(), uri.getPort());
+	  StorageControllerConfiguration storageConfig = new StorageControllerConfiguration(clusterName, uri.getHost(), uri.getPort());
 	  dbSCConfig.add(storageConfig);
 	  dbSCConfig.commit();
     } catch(Throwable t) {

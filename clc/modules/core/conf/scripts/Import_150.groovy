@@ -451,8 +451,11 @@ db.rows('SELECT * FROM LVMMETADATA').each{
   }
 }
 
+String clusterName = "testCluster";
+
 db.rows('SELECT * FROM CLUSTERS').each{ 
   println "Adding CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
+  clusterName = it.CLUSTER_NAME
   EntityWrapper<ClusterConfiguration> dbClusterConfig = Configuration.getEntityWrapper()
   ClusterConfiguration clusterConfig = new ClusterConfiguration(it.CLUSTER_NAME, it.CLUSTER_HOST, it.CLUSTER_PORT)
   dbClusterConfig.add(clusterConfig)
@@ -469,7 +472,7 @@ db.rows('SELECT * FROM SYSTEM_INFO').each{
   dbWalrusConfig.commit()
   println "Adding SC: name=StorageController-local host=${uri.getHost()} port=${uri.getPort()}"
   EntityWrapper<StorageControllerConfiguration> dbSCConfig = Configuration.getEntityWrapper()
-  StorageControllerConfiguration storageConfig = new StorageControllerConfiguration("StorageController-local", uri.getHost(), uri.getPort())
+  StorageControllerConfiguration storageConfig = new StorageControllerConfiguration(clusterName, uri.getHost(), uri.getPort())
   dbSCConfig.add(storageConfig)
   dbSCConfig.commit()
 }
