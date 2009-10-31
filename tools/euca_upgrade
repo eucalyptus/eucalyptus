@@ -1,0 +1,199 @@
+#!/bin/bash
+#
+#Copyright (c) 2009  Eucalyptus Systems, Inc.   
+#
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by 
+#the Free Software Foundation, only version 3 of the License.  
+# 
+#This file is distributed in the hope that it will be useful, but WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#for more details.  
+#
+#You should have received a copy of the GNU General Public License along
+#with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+#Please contact Eucalyptus Systems, Inc., 130 Castilian
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+#if you need additional information or have any questions.
+#
+#This file may incorporate work covered under the following copyright and
+#permission notice:
+#
+#  Software License Agreement (BSD License)
+#
+#  Copyright (c) 2008, Regents of the University of California
+#  
+#
+#  Redistribution and use of this software in source and binary forms, with
+#  or without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+#  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+#  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+#  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+#  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+#  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+#  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+#  ANY SUCH LICENSES OR RIGHTS.
+#
+
+NEW_EUCA=""
+OLD_EUCA=""
+FORCE=""
+BCK_NAME="1.5"
+GROOVY="`which groovy 2> /dev/null`"
+OPENSSL="`which openssl 2> /dev/null`"
+
+usage() {
+	echo "$0 [options]"
+	echo
+	echo "This script attempts to upgrade an old installation of eucalyptus"
+	echo
+	echo "   --help                   this page"
+	echo "   --new <euca_dir>         where the new eucalyptus is installed"
+	echo "   --old <euca_dir>         where the old eucalyptus is installed"
+	echo "   --force                  attempt the upgrade even if a database is detected"
+	echo
+}
+
+while [ $# -gt 0 ]; do
+	if [ "$1" = "-h" -o "$1" = "-help" -o "$1" = "?" -o "$1" = "--help" ]; then
+		usage
+		exit 1
+	fi
+	if [ "$1" = "--new" ]; then
+		if [ -z "$2" ]; then
+			echo "--new requires eucalyptus directory"
+			exit
+		fi
+		NEW_EUCA="$2"
+		shift; shift;
+		continue
+	fi
+	if [ "$1" = "--old" ]; then
+		if [ -z "$2" ]; then
+			echo "--old requires eucalyptus directory"
+			exit
+		fi
+		OLD_EUCA="$2"
+		shift; shift;
+		continue
+	fi
+	if [ "$1" == "--force" ]; then
+		FORCE="Y"
+		shift
+		continue
+	fi
+	usage
+	exit 1
+done
+
+# check we have the right binaries
+if [ -z "$OPENSSL" -o -z "$GROOVY" ]; then
+	echo "Missing openssl or groovy!"
+	exit 1
+fi
+
+# default NEW install
+if [ -z "$NEW_EUCA" ]; then
+	if [ -d /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ]; then
+		NEW_EUCA="/opt/eucalyptus"
+	fi
+fi 
+if [ -z "$OLD_EUCA" ]; then
+	echo "Use --old to specify the installation to upgrade"
+	exit 1
+fi
+
+# let's check Eucalyptus' installations
+if [ ! -d $OLD_EUCA -o ! -e $OLD_EUCA/var/lib/eucalyptus/db/eucalyptus_volumes.script ]; then
+	echo "$OLD_EUCA is not a valid 1.5.x Eucalyptus database"
+	exit 1
+fi
+if [ ! -e $NEW_EUCA/etc/eucalyptus/eucalyptus-version ]; then
+	echo "Use --new to specify a valid eucalyptus installation"
+	exit 1;
+fi
+euca_version="`cat $NEW_EUCA/etc/eucalyptus/eucalyptus-version 2> /dev/null`"
+if [ `expr $euca_version "<" 1.6` -eq 1 ]; then
+	echo "$NEW_EUCA is not a 1.6.x Eucalyptus installation"
+	exit 2
+fi
+
+# let's take a backup
+if [ -d $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME ]; then
+	if [ "$FORCE" != "Y" ]; then
+		echo "Upgrade already ran: use --force if you want to run it again"
+		exit 1
+	fi
+else
+	ret=0
+	mkdir $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME
+	let $((ret += $?))
+	mkdir $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME
+	let $((ret += $?))
+	cp -r $OLD_EUCA/var/lib/eucalyptus/db/* $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME
+	let $((ret += $?))
+	cp -r $OLD_EUCA/var/lib/eucalyptus/keys/* $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME
+	let $((ret += $?))
+	if [ $ret -gt 0 ]; then
+		echo "Failed to backup database and/or keys!"
+		exit 1
+	fi
+fi
+
+# we got here so let's reset the state and copy over the old db/keys
+for x in `ls $NEW_EUCA/var/lib/eucalyptus/keys/` ; do
+	if [ "$x" != $BCK_NAME ]; then
+		rm -rf $x
+	fi
+done
+for x in `ls $NEW_EUCA/var/lib/eucalyptus/db/` ; do
+	if [ "$x" != "1.5" ]; then
+		rm -rf $x
+	fi
+done
+ret=0
+cp -r $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME/* $NEW_EUCA/var/lib/eucalyptus/db
+let $((ret += $?))
+cp -r $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME/* $NEW_EUCA/var/lib/eucalyptus/keys
+let $((ret += $?))
+if [ $ret -gt 0 ]; then
+	echo "Failed to copy old database/keys!"
+	exit 1
+fi
+
+# time to do the real upgrade
+EUCALYPTUS="$NEW_EUCA"
+for FILE in ${EUCALYPTUS}/usr/share/eucalyptus/*.jar; do
+	export CLASSPATH=${FILE}:${CLASSPATH}
+done
+
+$OPENSSL pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes 2>/dev/null | grep -A30 "friendlyName: eucalyptus" | grep -A26 "BEGIN RSA" > ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
+
+export EUCALYPTUS_DB=`echo -n eucalyptus | $OPENSSL dgst -sha256 -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem -hex 2>/dev/null`
+
+$GROOVY ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_152.groovy >/dev/null 2>&1
+

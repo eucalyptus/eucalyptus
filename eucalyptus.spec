@@ -229,21 +229,15 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 if [ "$1" = "2" ]; 
 then
 	# let's see where we installed
+	cd /
 	if [ -d /opt/eucalyptus/eucalyptus/eucalyptus-version ];
 	then
 		cd /opt/eucalyptus
-	else
-		cd /
 	fi
 
 	# only upgrade from 1.5 is supported
-	if [ ! -e etc/eucalyptus/eucalyptus-version ];
-	then
-		echo "Cannot upgrade from version earlier than 1.5"
-		exit 2
-	fi
 	old_version="`cat etc/eucalyptus/eucalyptus-version`"
-	if [ `expr $old_version "<" 1.5` -eq 1 ];
+	if [ -z "$old_version" -o `expr $old_version "<" 1.5` -eq 1 ];
 	then
 		echo "Cannot upgrade from version earlier than 1.5"
 		exit 2
@@ -280,11 +274,10 @@ fi
 if [ "$1" = "2" ];
 then
 	# let's see where we installed
+	cd /
 	if [ -d /opt/eucalyptus/eucalyptus/eucalyptus-version ];
 	then
 		cd /opt/eucalyptus
-	else
-		cd /
 	fi
 	
 	# eucalyptus.conf was marked noreplace, so the new one could be named
@@ -305,6 +298,13 @@ fi
 
 %post common-java
 chkconfig --add eucalyptus-cloud
+if [ "$1" = "2" ];
+then
+	if [ -e /opt/eucalyptus/var/lib/eucalyptus/db/eucalyptus_volumes.script ];
+	then
+		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new /
+	fi
+fi
 
 %post cloud
 /usr/sbin/euca_conf --enable cloud
@@ -368,57 +368,66 @@ then
 fi
 
 %preun cloud
-%if %is_centos
-if [ -e /etc/sysconfig/system-config-securitylevel ];
+if [ "$1" = "0" ];
 then
-	sed -i '/^--port=8773/ d' /etc/sysconfig/system-config-securitylevel
-	sed -i '/^--port=8443/ d' /etc/sysconfig/system-config-securitylevel
-fi
+%if %is_centos
+	if [ -e /etc/sysconfig/system-config-securitylevel ];
+	then
+		sed -i '/^--port=8773/ d' /etc/sysconfig/system-config-securitylevel
+		sed -i '/^--port=8443/ d' /etc/sysconfig/system-config-securitylevel
+	fi
 %endif
-/usr/sbin/euca_conf --disable cloud
-[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
+	/usr/sbin/euca_conf --disable cloud
+	[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
+fi
 
 
 %preun walrus
-/usr/sbin/euca_conf --disable walrus
-[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
-
-%preun sc
-/usr/sbin/euca_conf --disable sc
-[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
-
-%preun common-java
-/etc/init.d/eucalyptus-cloud stop || true
 if [ "$1" = "0" ];
 then
+	/usr/sbin/euca_conf --disable walrus
+	[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
+fi
+
+%preun sc
+if [ "$1" = "0" ];
+then
+	/usr/sbin/euca_conf --disable sc
+	[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
+fi
+
+%preun common-java
+if [ "$1" = "0" ];
+then
+	/etc/init.d/eucalyptus-cloud stop || true
 	chkconfig --del eucalyptus-cloud || true
 fi
 
 %preun cc
-/etc/init.d/eucalyptus-cc stop || true
 if [ "$1" = "0" ];
 then
+	/etc/init.d/eucalyptus-cc stop || true
 	chkconfig --del eucalyptus-cc || true
-fi
 %if %is_centos
-if [ -e /etc/sysconfig/system-config-securitylevel ];
-then
-	sed -i '/^--port=8774/ d' /etc/sysconfig/system-config-securitylevel
-fi
+	if [ -e /etc/sysconfig/system-config-securitylevel ];
+	then
+		sed -i '/^--port=8774/ d' /etc/sysconfig/system-config-securitylevel
+	fi
 %endif
+fi
 
 %preun nc
-/etc/init.d/eucalyptus-nc stop || true
 if [ "$1" = "0" ];
 then
+	/etc/init.d/eucalyptus-nc stop || true
 	chkconfig --del eucalyptus-nc || true
-fi
 %if %is_centos
-if [ -e /etc/sysconfig/system-config-securitylevel ];
-then
-	sed -i '/^--port=8775/ d' /etc/sysconfig/system-config-securitylevel
-fi
+	if [ -e /etc/sysconfig/system-config-securitylevel ];
+	then
+		sed -i '/^--port=8775/ d' /etc/sysconfig/system-config-securitylevel
+	fi
 %endif
+fi
 
 %changelog gl
 *Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)

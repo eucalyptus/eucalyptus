@@ -39,6 +39,7 @@ install: build
 	@$(INSTALL) -m 755 get_xen_info $(datarootdir)/eucalyptus/get_xen_info
 	@$(INSTALL) -m 755 get_sys_info $(datarootdir)/eucalyptus/get_sys_info
 	@$(INSTALL) -m 755 euca_ipt $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 euca_upgrade $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 populate_arp.pl $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_conf $(sbindir)
 	@$(INSTALL) -m 755 euca_sync_key $(sbindir)
@@ -58,6 +59,7 @@ uninstall:
 	@$(RM) -f $(datarootdir)/eucalyptus/get_xen_info
 	@$(RM) -f $(datarootdir)/eucalyptus/get_sys_info
 	@$(RM) -f $(datarootdir)/eucalyptus/euca_ipt
+	@$(RM) -f $(datarootdir)/eucalyptus/euca_upgrade
 	@$(RM) -f $(datarootdir)/eucalyptus/populate_arp.pl
 	@$(RM) -f $(sbindir)/euca_conf
 	@$(RM) -f $(sbindir)/euca_sync_key
