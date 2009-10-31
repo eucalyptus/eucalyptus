@@ -25,11 +25,11 @@ License:       GPLv3
 Group:         Applications/System
 %if %is_centos
 BuildRequires: gcc, make, libvirt >= 0.6, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
-Requires:      vconfig, aoetools, vblade, wget, rsync
+Requires:      vconfig, wget, rsync
 %endif
 %if %is_suse
 BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
-Requires:      vlan, aoetools, vblade
+Requires:      vlan
 %endif
 
 Conflicts:     eucalyptus-cloud < 1.6, eucalyptus-cc < 1.6, eucalyptus-nc < 1.6
@@ -77,7 +77,7 @@ This package contains walrus.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
+Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2, vblade, aoetools
 Conflicts:    eucalyptus-cloud < 1.6
 Group:        Applications/System
 
@@ -119,7 +119,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
+Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}, aoetools
 Conflicts:    eucalyptus < 1.6, eucalyptus-cc < 1.6
 Group:        Applications/System
 
