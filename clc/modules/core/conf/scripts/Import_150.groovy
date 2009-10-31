@@ -55,9 +55,10 @@ import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import java.net.URI;
 import com.eucalyptus.util.DatabaseUtil;
+import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
+import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 
-//baseDir = "/disk1/import"
-//targetDir = "/disk1/import"
 baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
 targetDbPrefix= "eucalyptus"
@@ -451,30 +452,75 @@ db.rows('SELECT * FROM LVMMETADATA').each{
   }
 }
 
+
 String clusterName = "testCluster";
 
 db.rows('SELECT * FROM CLUSTERS').each{ 
   println "Adding CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
-  clusterName = it.CLUSTER_NAME
-  EntityWrapper<ClusterConfiguration> dbClusterConfig = Configuration.getEntityWrapper()
-  ClusterConfiguration clusterConfig = new ClusterConfiguration(it.CLUSTER_NAME, it.CLUSTER_HOST, it.CLUSTER_PORT)
-  dbClusterConfig.add(clusterConfig)
-  dbClusterConfig.commit();
+  clusterName = it.CLUSTER_NAME;
+  EntityWrapper<ClusterConfiguration> dbClusterConfig = Configuration.getEntityWrapper();
+  try {
+    ClusterConfiguration clusterConfig = new ClusterConfiguration(it.CLUSTER_NAME, it.CLUSTER_HOST, it.CLUSTER_PORT);
+    dbClusterConfig.add(clusterConfig);
+    dbClusterConfig.commit();
+  } catch (Throwable t) {
+	t.printStackTrace();
+	dbClusterConfig.rollback();
+  }
 }
-
 
 db.rows('SELECT * FROM SYSTEM_INFO').each{
-  URI uri = new URI(it.SYSTEM_INFO_STORAGE_URL)
-  println "Adding Walrus: name=walrus host=${uri.getHost()} port=${uri.getPort()}"
-  EntityWrapper<WalrusConfiguration> dbWalrusConfig = Configuration.getEntityWrapper()
-  WalrusConfiguration walrusConfig = new WalrusConfiguration("walrus", uri.getHost(), uri.getPort())
-  dbWalrusConfig.add(walrusConfig)
-  dbWalrusConfig.commit()
-  println "Adding SC: name=StorageController-local host=${uri.getHost()} port=${uri.getPort()}"
-  EntityWrapper<StorageControllerConfiguration> dbSCConfig = Configuration.getEntityWrapper()
-  StorageControllerConfiguration storageConfig = new StorageControllerConfiguration(clusterName, uri.getHost(), uri.getPort())
-  dbSCConfig.add(storageConfig)
-  dbSCConfig.commit()
+	URI uri = new URI(it.SYSTEM_INFO_STORAGE_URL)
+	println "Adding Walrus: name=walrus host=${uri.getHost()} port=${uri.getPort()}"
+	EntityWrapper<WalrusConfiguration> dbWalrusConfig = Configuration.getEntityWrapper();
+	EntityWrapper<WalrusInfo> dbWalrus = WalrusControl.getEntityWrapper();
+	try {
+	  WalrusConfiguration walrusConfig = new WalrusConfiguration("walrus", uri.getHost(), uri.getPort());
+	  dbWalrusConfig.add(walrusConfig);
+	  dbWalrusConfig.commit();
+	  try {
+	    WalrusInfo walrusInfo = dbWalrus.getUnique(new WalrusInfo());
+	    walrusInfo.setStorageDir(it.SYSTEM_STORAGE_DIR)
+	    walrusInfo.setStorageMaxBucketsPerUser(it.SYSTEM_STORAGE_MAX_BUCKETS_PER_USER)
+	    walrusInfo.setStorageMaxBucketSizeInMB((int)(it.SYSTEM_STORAGE_MAX_BUCKET_SIZE_MB / WalrusProperties.M))
+	    walrusInfo.setStorageMaxCacheSizeInMB((int)(it.SYSTEM_STORAGE_CACHE_SIZE_MB / WalrusProperties.M))
+	    walrusInfo.setStorageMaxTotalSnapshotSizeInGb(it.SYSTEM_STORAGE_SNAPSHOT_SIZE_GB)
+	  } catch(Throwable t) {		 
+	    WalrusInfo walrusInfo = new WalrusInfo(WalrusProperties.NAME,
+			  it.SYSTEM_STORAGE_DIR,
+			  it.SYSTEM_STORAGE_MAX_BUCKETS_PER_USER,
+			  (int)(it.SYSTEM_STORAGE_MAX_BUCKET_SIZE_MB / WalrusProperties.M),
+			  (int)(it.SYSTEM_STORAGE_CACHE_SIZE_MB / WalrusProperties.M),
+			  it.SYSTEM_STORAGE_SNAPSHOT_SIZE_GB)
+	    dbWalrus.add(walrusInfo)	    
+	  }
+	  dbWalrus.commit();
+	} catch(Throwable t) {
+	  t.printStackTrace();
+	  dbWalrusConfig.rollback();
+	  dbWalrus.rollback();
+	}
+	println "Adding SC: name=StorageController-local host=${uri.getHost()} port=${uri.getPort()}"
+	EntityWrapper<StorageControllerConfiguration> dbSCConfig = Configuration.getEntityWrapper();
+	EntityWrapper<StorageInfo> dbSC = StorageController.getEntityWrapper();		
+	try {
+	  StorageControllerConfiguration storageConfig = new StorageControllerConfiguration(clusterName, uri.getHost(), uri.getPort());
+	  dbSCConfig.add(storageConfig);
+	  dbSCConfig.commit();
+	  StorageInfo storageInfo = new StorageInfo(StorageProperties.SC_LOCAL_NAME,
+			  it.SYSTEM_STORAGE_MAX_VOLUME_SIZE_GB,
+			  "eth0",
+			  it.SYSTEM_STORAGE_VOLUME_SIZE_GB,
+			  it.SYSTEM_STORAGE_VOLUMES_DIR,
+			  false);
+	  dbSC.add(storageInfo);
+	  dbSC.commit();
+    } catch(Throwable t) {
+	  t.printStackTrace();
+	  dbSCConfig.rollback();
+	  dbSC.rollback();
+	}
 }
 
-DatabaseUtil.closeAllEMFs()
+//flush
+DatabaseUtil.closeAllEMFs();
