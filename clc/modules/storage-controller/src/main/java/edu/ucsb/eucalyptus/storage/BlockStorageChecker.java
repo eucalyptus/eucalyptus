@@ -85,6 +85,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class BlockStorageChecker {
 	private static Logger LOG = Logger.getLogger(BlockStorageChecker.class);
@@ -247,29 +248,8 @@ public class BlockStorageChecker {
 
 	public void transferPendingSnapshots() throws EucalyptusCloudException {
 		if(!transferredPending) {
-			EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
-			SnapshotInfo snapshotInfo = new SnapshotInfo();
-			snapshotInfo.setShouldTransfer(true);
-			List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
-			if(snapshotInfos.size() > 0) {
-				SnapshotInfo snapInfo = snapshotInfos.get(0);
-				String snapshotId = snapInfo.getSnapshotId();
-				List<String> returnValues = blockManager.prepareForTransfer(snapshotId);
-				String snapshotFileName = returnValues.get(0);
-				File snapshotFile = new File(snapshotFileName);
-				Map<String, String> httpParamaters = new HashMap<String, String>();
-				HttpWriter httpWriter;
-				SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, snapshotFile.length(), StorageProperties.TRANSFER_CHUNK_SIZE);
-				httpWriter = new HttpWriter("PUT", snapshotFile, callback, "snapset", snapshotId, "StoreSnapshot", null, httpParamaters);
-				snapInfo.setShouldTransfer(false);
-				try {
-					httpWriter.run();
-				} catch(Exception ex) {
-					LOG.error(ex, ex);
-					this.cleanFailedSnapshot(snapshotId);
-				}
-			}
-			db.commit();
+			SnapshotTransfer transferrer = new SnapshotTransfer(this);
+			transferrer.start();
 			transferredPending = true;
 		}
 	}
@@ -291,6 +271,45 @@ public class BlockStorageChecker {
 		} finally {
 			if(getMethod != null)
 				getMethod.releaseConnection();
+		}
+	}
+	
+	private class SnapshotTransfer extends Thread {
+		private BlockStorageChecker checker;
+		public SnapshotTransfer(final BlockStorageChecker checker) {
+			this.checker = checker;
+		}
+		
+		public void run() {
+			EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+			SnapshotInfo snapshotInfo = new SnapshotInfo();
+			snapshotInfo.setShouldTransfer(true);
+			List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+			if(snapshotInfos.size() > 0) {
+				SnapshotInfo snapInfo = snapshotInfos.get(0);
+				String snapshotId = snapInfo.getSnapshotId();
+				db.commit();	
+				List<String> returnValues;
+				try {
+					returnValues = blockManager.prepareForTransfer(snapshotId);
+				} catch (EucalyptusCloudException e) {
+					LOG.error(e);
+					return;
+				}
+				String snapshotFileName = returnValues.get(0);
+				File snapshotFile = new File(snapshotFileName);
+				Map<String, String> httpParamaters = new HashMap<String, String>();
+				HttpWriter httpWriter;
+				SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, snapshotFile.length(), StorageProperties.TRANSFER_CHUNK_SIZE);
+				httpWriter = new HttpWriter("PUT", snapshotFile, callback, "snapset-" + UUID.randomUUID(), snapshotId, "StoreSnapshot", null, httpParamaters);
+				try {
+					httpWriter.run();
+				} catch(Exception ex) {
+					db.rollback();
+					LOG.error(ex, ex);
+					checker.cleanFailedSnapshot(snapshotId);
+				}
+			}
 		}
 	}
 }

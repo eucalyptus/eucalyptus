@@ -413,7 +413,7 @@ db.rows('SELECT * FROM SNAPSHOTS').each{
 		s.setScName(StorageProperties.SC_LOCAL_NAME);
 		s.setUserName(it.SNAPSHOT_USER_NAME);
 		s.setVolumeId(it.VOLUME_NAME);
-		s.setStatus(it.STATUS);
+		s.setStatus(StorageProperties.Status.pending.toString());
 		s.setStartTime(new Date());
 		s.setProgress("0");
 		dbSnap.add(s);

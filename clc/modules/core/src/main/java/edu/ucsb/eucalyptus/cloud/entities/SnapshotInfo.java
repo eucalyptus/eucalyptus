@@ -99,7 +99,6 @@ public class SnapshotInfo {
     private Boolean shouldTransfer;
     
     public SnapshotInfo() {
-    	this.shouldTransfer = false;
     	this.scName = StorageProperties.NAME;
     }
 
