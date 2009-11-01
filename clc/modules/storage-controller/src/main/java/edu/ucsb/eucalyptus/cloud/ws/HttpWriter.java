@@ -58,7 +58,7 @@ public class HttpWriter extends HttpTransfer {
 			httpClient.executeMethod(method);
 			method.releaseConnection();
 		} catch (Exception ex) {
-			throw new EucalyptusCloudException("error transferring");
+			throw new EucalyptusCloudException("error transferring", ex);
 		}
 	}
 }

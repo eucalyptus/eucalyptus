@@ -380,7 +380,7 @@ db.rows('SELECT * FROM VOLUMES').each{
 }
 
 db.rows('SELECT * FROM SNAPSHOTS').each{ 
-	  println "Adding snapshit: ${it.SNAPSHOT_NAME}"
+	  println "Adding snapshot: ${it.SNAPSHOT_NAME}"
 
 	  EntityWrapper<VolumeInfo> dbSnap = StorageController.getEntityWrapper(); 
 	  try {
@@ -391,6 +391,7 @@ db.rows('SELECT * FROM SNAPSHOTS').each{
 		s.setVolumeId(it.VOLUME_NAME);
 		s.setStatus(it.STATUS);
 		s.setStartTime(new Date());
+		s.setProgress("0");
 		dbSnap.add(s);
 		dbSnap.commit();
 	  } catch (Throwable t) {
@@ -482,6 +483,7 @@ dbVolumes.rows("SELECT * FROM SNAPSHOT").each{
 	    s.setState(State.valueOf(it.STATE));
 	    s.setParentVolume(it.PARENTVOLUME);
 	    s.setCluster(clusterName);
+	    s.setMappedState(StorageProperties.Status.pending.toString());
 	    dbSnap.add(s);
 	    dbSnap.commit();
 	  } catch (Throwable t) {

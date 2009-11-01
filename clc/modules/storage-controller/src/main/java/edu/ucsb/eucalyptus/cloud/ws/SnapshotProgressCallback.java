@@ -23,6 +23,7 @@ public class SnapshotProgressCallback implements CallBack {
 	public void run() {
 		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
+		snapshotInfo.setShouldTransfer(null);
 		try {
 			SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
 			if(foundSnapshotInfo.getProgress() == null)
@@ -41,6 +42,7 @@ public class SnapshotProgressCallback implements CallBack {
 	public void finish() {
 		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
+		snapshotInfo.setShouldTransfer(null);
 		try {
 			SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
 			foundSnapshotInfo.setProgress(String.valueOf(100));
@@ -55,6 +57,7 @@ public class SnapshotProgressCallback implements CallBack {
 	public void failed() {
 		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
+		snapshotInfo.setShouldTransfer(null);
 		try {
 			SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
 			foundSnapshotInfo.setProgress(String.valueOf(0));

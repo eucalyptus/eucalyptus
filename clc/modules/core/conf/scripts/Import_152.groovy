@@ -415,7 +415,7 @@ db.rows('SELECT * FROM SNAPSHOTS').each{
 		s.setVolumeId(it.VOLUME_NAME);
 		s.setStatus(it.STATUS);
 		s.setStartTime(new Date());
-		s.setProgress("100");
+		s.setProgress("0");
 		dbSnap.add(s);
 		dbSnap.commit();
 	  } catch (Throwable t) {
@@ -506,6 +506,7 @@ dbVolumes.rows("SELECT * FROM SNAPSHOT").each{
 	    s.setState(State.valueOf(it.STATE));
 	    s.setParentVolume(it.PARENTVOLUME);
 	    s.setCluster(clusterName);
+	    s.setMappedState(StorageProperties.Status.pending.toString());
 	    dbSnap.add(s);
 	    dbSnap.commit();
 	  } catch (Throwable t) {
