@@ -322,9 +322,12 @@ db.rows('SELECT * FROM BUCKETS').each{
     	objectInfo.setGlobalWrite(obj.GLOBAL_WRITE);
     	objectInfo.setGlobalReadACP(obj.GLOBAL_READ_ACP);
     	objectInfo.setGlobalWriteACP(obj.GLOBAL_WRITE_ACP);
+    	objectInfo.setSize(obj.SIZE);
     	objectInfo.setEtag(obj.ETAG);
     	objectInfo.setLastModified(new Date());
     	objectInfo.setStorageClass(obj.STORAGE_CLASS);
+    	objectInfo.setContentType("");
+    	objectInfo.setContentDisposition("");
         db.rows("SELECT g.* FROM object_has_grants has_thing LEFT OUTER JOIN grants g on g.grant_id=has_thing.grant_id WHERE has_thing.object_id=${ obj.OBJECT_ID }").each{  grant ->
         println "--> grant: ${obj.OBJECT_NAME}/${grant.USER_ID}"
           GrantInfo grantInfo = new GrantInfo();
