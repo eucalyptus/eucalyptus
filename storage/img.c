@@ -743,7 +743,7 @@ static int upload_vmdk (const char * disk_path, const char * vmdk_path, const im
     char cmd[1024];
     char url[1024];
 
-    #define CURL "/usr/bin/curl --insecure --user '%s:%s' '%s' -T '%s'"
+    #define CURL "/usr/bin/curl --silent --insecure --user '%s:%s' '%s' -T '%s'"
     
     logprintfl (EUCAINFO, "uploading disk backing files to destination\n");    
     
