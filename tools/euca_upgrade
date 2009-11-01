@@ -162,8 +162,25 @@ else
 		echo "Failed to backup database and/or keys!"
 		exit 1
 	fi
-fi
 
+	# backup the configuration file
+	eucaold="`cat $OLD_EUCA/etc/eucalyptus/eucalyptus-version 2> /dev/null`"
+	if [ -z "$eucaold" -a -e $OLD_EUCA/etc/eucalyptus/eucalyptus.conf ]; then
+		eucaold="1.5"
+	fi
+	if [ `expr $eucaold "<" 1.6` -eq 1 ]; then
+		# 1.6 didn't install on top of old 1.5
+		cp $OLD_EUCA/etc/eucalyptus/eucalyptus.conf $NEW_EUCA/etc/eucalyptus/eucalyptus.conf-1.5
+	else
+		# we should have the .old version
+		cp $NEW_EUCA/etc/eucalyptus/eucalyptus.conf.old $NEW_EUCA/etc/eucalyptus/eucalyptus.conf-1.5
+	fi
+	if [ $? -gt 0 ]; then
+		echo "Failed to find the old configuration file"
+		exit 1
+	fi
+fi
+	
 # we got here so let's reset the state and copy over the old db/keys
 for x in `ls $NEW_EUCA/var/lib/eucalyptus/keys/ | grep -v policy\.xml` ; do
 	if [ "$x" != $BCK_NAME ]; then
@@ -194,7 +211,10 @@ if [ -e $NEW_EUCA/var/lib/eucalyptus/db/eucalyptus.script ]; then
 	fi
 fi
 
-# time to do the real upgrade
+# upgrade the conf file
+$EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --upgrade-conf $NEW_EUCA/etc/eucalyptus/eucalyptus.conf-1.5
+
+# upgrade the database
 export EUCALYPTUS="$NEW_EUCA"
 for FILE in ${EUCALYPTUS}/usr/share/eucalyptus/*.jar; do
 	export CLASSPATH=${FILE}:${CLASSPATH}

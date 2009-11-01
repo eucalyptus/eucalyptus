@@ -244,7 +244,7 @@ then
 	fi
 
 	# used for upgrade
-	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.preupgrade
+	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.old
 
 	# let's save older version of conf file. db and keys
 	if [ -e /root/eucalyptus-pre-%{version}-rollback.tar ];
@@ -285,12 +285,6 @@ then
 	if [ -e etc/eucalyptus/eucalyptus.conf.rpmnew -a etc/eucalyptus/eucalyptus.conf.rpmnew -nt etc/eucalyptus/eucalyptus.conf ];
 	then
 		cp -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
-	fi
-
-	# if we have an old config file we try to upgrade
-	if [ -e etc/eucalyptus/eucalyptus.conf.preupgrade ];
-	then
-		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.preupgrade 
 	fi
 fi
 # final setup and set the new user
