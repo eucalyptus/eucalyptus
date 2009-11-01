@@ -60,6 +60,7 @@ import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import java.security.cert.X509Certificate;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.ClusterCredentials;
 
 baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
@@ -473,8 +474,16 @@ db.rows('SELECT * FROM CLUSTERS').each{
 
 X509Cert certInfo = new X509Cert("cc-" + clusterName);
 certInfo.setPemCertificate(System.getenv('EUCALYPTUS_CLUSTER_CERT'))
+X509Cert ncCertInfo = new X509Cert("nc-" + clusterName);
+ncCertInfo.setPemCertificate(System.getenv('EUCALYPTUS_NODE_CERT'))
+ClusterCredentials clusterCreds = new ClusterCredentials(clusterName);
+clusterCreds.setClusterCertificate(certInfo);
+clusterCreds.setNodeCertificate(ncCertInfo);
 EntityWrapper<X509Cert> dbCert = Credentials.getEntityWrapper();
 dbCert.add(certInfo);
+dbCert.add(ncCertInfo);
+EntityWrapper<ClusterCredentials> dbClusterCreds = dbCert.recast(ClusterCredentials.class);
+dbClusterCreds.add(clusterCreds);
 dbCert.commit();
 
 

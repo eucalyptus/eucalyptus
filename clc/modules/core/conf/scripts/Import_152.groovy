@@ -67,6 +67,7 @@ import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.Hashes.Digest;
 import java.security.cert.X509Certificate;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.ClusterCredentials;
 
 baseDir = "/disk2/dbupgrade/1.5.2db.orig" //"${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
@@ -497,8 +498,16 @@ db.rows('SELECT * FROM CLUSTERS').each{
 
 X509Cert certInfo = new X509Cert("cc-" + clusterName);
 certInfo.setPemCertificate(System.getenv('EUCALYPTUS_CLUSTER_CERT'))
+X509Cert ncCertInfo = new X509Cert("nc-" + clusterName);
+ncCertInfo.setPemCertificate(System.getenv('EUCALYPTUS_NODE_CERT'))
+ClusterCredentials clusterCreds = new ClusterCredentials(clusterName);
+clusterCreds.setClusterCertificate(certInfo);
+clusterCreds.setNodeCertificate(ncCertInfo);
 EntityWrapper<X509Cert> dbCert = Credentials.getEntityWrapper();
 dbCert.add(certInfo);
+dbCert.add(ncCertInfo);
+EntityWrapper<ClusterCredentials> dbClusterCreds = dbCert.recast(ClusterCredentials.class);
+dbClusterCreds.add(clusterCreds);
 dbCert.commit();
 
 db.rows('SELECT * FROM SYSTEM_INFO').each{
