@@ -202,7 +202,9 @@ done
 
 $OPENSSL pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes 2>/dev/null | grep -A30 "friendlyName: eucalyptus" | grep -A26 "BEGIN RSA" > ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
 
-export EUCALYPTUS_DB=`echo -n eucalyptus | $OPENSSL dgst -sha256 -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem -hex 2>/dev/null`
+export EUCALYPTUS_DB="`echo -n eucalyptus | $OPENSSL dgst -sha256 -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem -hex 2>/dev/null`"
+
+export EUCALYPTUS_CLUSTER_CERT="`openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/clusters.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes -nokeys 2>/dev/null | sed '1,/friendlyName: cc-/ d ; /-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' -n | openssl base64 | sed '{:q;N;s/\n//g;s/=/./g;s/+/-/g;s/\//_/g;t q}'`"
 
 echo -n "Upgrading your database..."
 $GROOVY ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${EUCA_VER}.groovy >/dev/null 2>&1
