@@ -283,9 +283,6 @@ HTTPD_HOME="/"
 for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 	for x in `/bin/ls $y 2> /dev/null`; do
 		# this is for the RPM installed pacakges
-		if [ "$x" = "euca-libvirt" ]; then
-			export LIBVIRT_HOME="$y/$x"
-		fi
 		if [ "$x" = "euca-axis2c" ]; then
 			export AXIS2C_HOME="$y/$x"
 		fi
@@ -294,9 +291,6 @@ for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 			if [ -e $y/$x/lib/libmod_axis2.so ]; then
 				export AXIS2C_HOME="$y/$x"
 			fi
-		fi
-		if [ "`echo $x | cut -f 1 -d -`" = "libvirt" ]; then
-			export LIBVIRT_HOME="$y/$x"
 		fi
 	done
 done
@@ -317,12 +311,6 @@ fi
 if [ -z "${HTTPD}" ]; then
 	echo "apache2/httpd daemon not found!"
 	exit 1
-fi
-
-# if we have a custom libvirt let's use it
-if [ -n "$LIBVIRT_HOME" ]; then
-	export LD_LIBRARY_PATH="$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$LD_LIBRARY_PATH"
-	export PATH="$LIBVIRT_HOME/bin:$PATH"
 fi
 
 # set the library path correctly
