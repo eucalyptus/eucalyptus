@@ -208,7 +208,7 @@ public class ImageUtil {
       try {
         signature = ( String ) xpath.evaluate( "/manifest/signature/text()", inputSource, XPathConstants.STRING );
       } catch ( XPathExpressionException e ) {}
-      if ( !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException(
+      if ( imgInfo.getSignature( ) != null && !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException(
         "Manifest signature has changed since registration." );
       ImageManager.LOG.info( "Checking image: " + imgInfo.getImageLocation( ) );
       WalrusUtil.checkValid( imgInfo );
