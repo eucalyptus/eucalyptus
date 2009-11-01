@@ -250,23 +250,6 @@ dbVolumes.rows("SELECT * FROM VOLUME").each{
   }
 }
 
-dbVolumes.rows("SELECT * FROM SNAPSHOT").each{
-  println "Adding snapshot: ${it.DISPLAYNAME}"
-  
-  EntityWrapper<Snapshot> dbSnap = SnapshotManager.getEntityWrapper( );
-  try {
-    Snapshot s = new Snapshot(it.USERNAME,it.DISPLAYNAME);
-    s.setBirthday(it.BIRTHDAY);
-    s.setState(State.valueOf(it.STATE));
-    s.setParentVolume(it.PARENTVOLUME);
-    dbSnap.add(s);
-    dbSnap.commit();
-  } catch (Throwable t) {
-    t.printStackTrace();
-    dbSnap.rollback();
-  }
-}
-
 db.rows('SELECT * FROM BUCKETS').each{
   println "Adding bucket: ${it.BUCKET_NAME}"
 
@@ -488,6 +471,24 @@ dbCert.add(ncCertInfo);
 EntityWrapper<ClusterCredentials> dbClusterCreds = dbCert.recast(ClusterCredentials.class);
 dbClusterCreds.add(clusterCreds);
 dbCert.commit();
+
+dbVolumes.rows("SELECT * FROM SNAPSHOT").each{
+	  println "Adding snapshot: ${it.DISPLAYNAME}"
+	  
+	  EntityWrapper<Snapshot> dbSnap = SnapshotManager.getEntityWrapper( );
+	  try {
+	    Snapshot s = new Snapshot(it.USERNAME,it.DISPLAYNAME);
+	    s.setBirthday(it.BIRTHDAY);
+	    s.setState(State.valueOf(it.STATE));
+	    s.setParentVolume(it.PARENTVOLUME);
+	    s.setCluster(clusterName);
+	    dbSnap.add(s);
+	    dbSnap.commit();
+	  } catch (Throwable t) {
+	    t.printStackTrace();
+	    dbSnap.rollback();
+	  }
+	}
 
 
 db.rows('SELECT * FROM SYSTEM_INFO').each{
