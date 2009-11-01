@@ -339,7 +339,7 @@ db.rows('SELECT * FROM BUCKETS').each{
       //Do bucket object stuff here.
       EntityWrapper<ObjectInfo> dbObject = WalrusControl.getEntityWrapper();
       try {
-    	ObjectInfo objectInfo = new ObjectInfo(it.BUCKET_NAME, obj.OBJECT_NAME);
+    	ObjectInfo objectInfo = new ObjectInfo(it.BUCKET_NAME, obj.OBJECT_KEY);
     	objectInfo.setObjectName(obj.OBJECT_NAME);
     	objectInfo.setOwnerId(obj.OWNER_ID);
     	objectInfo.setGlobalRead(obj.GLOBAL_READ);
