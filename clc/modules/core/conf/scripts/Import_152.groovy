@@ -69,7 +69,7 @@ import java.security.cert.X509Certificate;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.ClusterCredentials;
 
-baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
+baseDir = "/disk2/dbupgrade/1.5.2db.orig" //"${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
 targetDbPrefix= "eucalyptus"
 
@@ -466,7 +466,7 @@ db.rows('SELECT * FROM LVMMETADATA').each{
   }
 }
 
-String clusterName = "testCluster";
+def clusterName = "testCluster";
 
 db.rows('SELECT * FROM CLUSTERS').each{ 
   println "Adding CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
@@ -515,6 +515,12 @@ dbVolumes.rows("SELECT * FROM SNAPSHOT").each{
 	  }
 }
 
+def getInterface() {
+  def oldEucaConf = new File("${System.getenv('EUCALYPTUS')}/etc/eucalyptus/eucalyptus.conf.1.5");
+    oldEucaConf.text.find(/VNET_INTERFACE="(.*)"/) { fullline, iface ->      
+	  return iface.toString()
+    }
+}
 
 db.rows('SELECT * FROM SYSTEM_INFO').each{
 	URI uri = new URI(it.SYSTEM_INFO_STORAGE_URL)
@@ -556,7 +562,7 @@ db.rows('SELECT * FROM SYSTEM_INFO').each{
 	  dbSCConfig.commit();
 	  StorageInfo storageInfo = new StorageInfo(StorageProperties.SC_LOCAL_NAME,
 			  it.SYSTEM_STORAGE_MAX_VOLUME_SIZE_GB,
-			  "eth0",
+			  getInterface(),
 			  it.SYSTEM_STORAGE_VOLUME_SIZE_GB,
 			  it.SYSTEM_STORAGE_VOLUMES_DIR,
 			  false);
