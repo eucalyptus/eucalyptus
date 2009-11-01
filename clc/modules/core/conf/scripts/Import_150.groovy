@@ -58,6 +58,8 @@ import com.eucalyptus.util.DatabaseUtil;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
+import java.security.cert.X509Certificate;
+import com.eucalyptus.auth.X509Cert;
 
 baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
@@ -468,6 +470,13 @@ db.rows('SELECT * FROM CLUSTERS').each{
 	dbClusterConfig.rollback();
   }
 }
+
+X509Cert certInfo = new X509Cert("cc-" + clusterName);
+certInfo.setPemCertificate(System.getenv('EUCALYPTUS_CLUSTER_CERT'))
+EntityWrapper<X509Cert> dbCert = Credentials.getEntityWrapper();
+dbCert.add(certInfo);
+dbCert.commit();
+
 
 db.rows('SELECT * FROM SYSTEM_INFO').each{
 	URI uri = new URI(it.SYSTEM_INFO_STORAGE_URL)

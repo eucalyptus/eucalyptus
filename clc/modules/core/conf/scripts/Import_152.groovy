@@ -1,10 +1,12 @@
 
 import java.security.*;
+
 import javax.crypto.spec.*;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.util.SubDirectory;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.util.EntityWrapper;
@@ -54,11 +56,17 @@ import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
+
+import java.io.File;
 import java.net.URI;
 import com.eucalyptus.util.DatabaseUtil;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
+import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.auth.util.Hashes.Digest;
+import java.security.cert.X509Certificate;
+import com.eucalyptus.auth.X509Cert;
 
 baseDir = "/disk2/dbupgrade/1.5.2db.orig" //"${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
@@ -83,11 +91,25 @@ def getSqlVolumes() {
 db = getSql();
 dbVolumes = getSqlVolumes( );
 
+
 System.setProperty("euca.home",System.getenv("EUCALYPTUS"))
 System.setProperty("euca.var.dir","${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/")
 System.setProperty("euca.log.dir", "${System.getenv('EUCALYPTUS')}/var/log/eucalyptus/")
 Component c = Component.db
 System.setProperty("euca.db.host", "jdbc:hsqldb:file:${targetDir}/${targetDbPrefix}")
+
+def getDbPass() {
+  Credentials.init();
+  EucaKeyStore keyStore = EucaKeyStore.getCleanInstance();
+  KeyPair kp = keyStore.getKeyPair("eucalyptus", "eucalyptus");
+  PrivateKey pk = kp.getPrivate();
+  Signature signer = Signature.getInstance( "SHA256withRSA" );
+  signer.initSign( pk );
+  signer.update( "eucalyptus".getBytes( ) );
+  byte[] sig = signer.sign( );
+  return Hashes.bytesToHex( sig );
+}
+
 System.setProperty("euca.db.password", "${System.getenv('EUCALYPTUS_DB')}");
 System.setProperty("euca.log.level", 'INFO');
 
@@ -472,6 +494,12 @@ db.rows('SELECT * FROM CLUSTERS').each{
 	dbClusterConfig.rollback();
   }
 }
+
+X509Cert certInfo = new X509Cert("cc-" + clusterName);
+certInfo.setPemCertificate(System.getenv('EUCALYPTUS_CLUSTER_CERT'))
+EntityWrapper<X509Cert> dbCert = Credentials.getEntityWrapper();
+dbCert.add(certInfo);
+dbCert.commit();
 
 db.rows('SELECT * FROM SYSTEM_INFO').each{
 	URI uri = new URI(it.SYSTEM_INFO_STORAGE_URL)
