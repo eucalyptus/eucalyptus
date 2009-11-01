@@ -185,6 +185,15 @@ if [ $ret -gt 0 ]; then
 	exit 1
 fi
 
+# let's see which version we have
+EUCA_VER="152"
+if [ -e $NEW_EUCA/var/lib/eucalyptus/db/eucalyptus.script ]; then
+	EUCA_VER="150"
+	if grep -i RESERVED_PUBLIC_ADDRESS $NEW_EUCA/var/lib/eucalyptus/db/eucalyptus.script > /dev/null 2> /dev/null ; then
+		EUCA_VER="152"
+	fi
+fi
+
 # time to do the real upgrade
 export EUCALYPTUS="$NEW_EUCA"
 for FILE in ${EUCALYPTUS}/usr/share/eucalyptus/*.jar; do
@@ -196,5 +205,5 @@ $OPENSSL pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 -name eucalyp
 export EUCALYPTUS_DB=`echo -n eucalyptus | $OPENSSL dgst -sha256 -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem -hex 2>/dev/null`
 
 echo -n "Upgrading your database..."
-$GROOVY ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_152.groovy >/dev/null 2>&1
+$GROOVY ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${EUCA_VER}.groovy >/dev/null 2>&1
 echo "done."
