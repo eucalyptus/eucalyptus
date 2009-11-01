@@ -69,7 +69,7 @@ import java.security.cert.X509Certificate;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.ClusterCredentials;
 
-baseDir = "/disk2/dbupgrade/1.5.2db.orig" //"${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
+baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
 targetDbPrefix= "eucalyptus"
 
