@@ -93,6 +93,9 @@ System.setProperty("euca.db.host", "jdbc:hsqldb:file:${targetDir}/${targetDbPref
 System.setProperty("euca.db.password", "${System.getenv('EUCALYPTUS_DB')}");
 System.setProperty("euca.log.level", 'INFO');
 
+def vtunPassFile = new File("${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/keys/vtunpass");
+vtunPassFile.write("${System.getenv('EUCALYPTUS_DB')}");
+
 ["${baseDir}/eucalyptus_general.script","${baseDir}/eucalyptus_images.script","${baseDir}/eucalyptus_auth.script","${baseDir}/eucalyptus_config.script","${baseDir}/eucalyptus_walrus.script","${baseDir}/eucalyptus_storage.script","${baseDir}/eucalyptus_dns.script"].each{
 new File(it).write("CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" + 
           "CREATE USER SA PASSWORD \"" + System.getProperty( "euca.db.password" ) + "\"\n" +

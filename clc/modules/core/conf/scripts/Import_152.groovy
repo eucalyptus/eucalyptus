@@ -69,7 +69,7 @@ import java.security.cert.X509Certificate;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.ClusterCredentials;
 
-baseDir = "/disk2/dbupgrade/1.5.2db.orig" //"${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
+baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
 targetDbPrefix= "eucalyptus"
 
@@ -113,6 +113,9 @@ def getDbPass() {
 
 System.setProperty("euca.db.password", "${System.getenv('EUCALYPTUS_DB')}");
 System.setProperty("euca.log.level", 'INFO');
+
+def vtunPassFile = new File("${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/keys/vtunpass");
+vtunPassFile.write("${System.getenv('EUCALYPTUS_DB')}");
 
 ["${baseDir}/eucalyptus_general.script","${baseDir}/eucalyptus_images.script","${baseDir}/eucalyptus_auth.script","${baseDir}/eucalyptus_config.script","${baseDir}/eucalyptus_walrus.script","${baseDir}/eucalyptus_storage.script","${baseDir}/eucalyptus_dns.script"].each{
 new File(it).write("CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" + 
