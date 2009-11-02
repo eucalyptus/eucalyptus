@@ -3,9 +3,8 @@
 #DEBHELPER#
 
 if [ "$1" = "configure" ]; then
-    /usr/sbin/euca_conf --enable walrus
     if [ -e /etc/init.d/eucalyptus-cloud ]; then
-        /etc/init.d/eucalyptus-cloud restart || true
+        /etc/init.d/eucalyptus-cloud start || true
     fi
 fi
 

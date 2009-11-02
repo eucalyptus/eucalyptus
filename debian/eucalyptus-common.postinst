@@ -6,49 +6,31 @@ then
 	then
 		adduser --system --shell /bin/bash --home /var/lib/eucalyptus --group eucalyptus
 	fi
-
 	if [ -z "$2" ]
 	then
-		# Some initial configuration
 		euca_conf -d / /etc/eucalyptus/eucalyptus.conf
 		euca_conf --dhcpd /usr/sbin/dhcpd3
 		euca_conf --dhcp_user dhcpd
 		dpkg-statoverride --update --add root eucalyptus 04754 /usr/lib/eucalyptus/euca_rootwrap
 	fi
-
-	if dpkg --compare-versions "$2" lt-nl 1.6~bzr515-0ubuntu4
+	statoverride="$(dpkg-statoverride --list /usr/share/eucalyptus/euca_rootwrap || true)"
+	if [ -n "$statoverride" ]
 	then
-		statoverride="$(dpkg-statoverride --list /usr/share/eucalyptus/euca_rootwrap || true)"
-		if [ -n "$statoverride" ]
+		if [ "$statoverride" = 'root eucalyptus 04750 /usr/share/eucalyptus/euca_rootwrap' ]
 		then
-			if [ "$statoverride" = 'root eucalyptus 04750 /usr/share/eucalyptus/euca_rootwrap' ]
-			then
-				# The admin hasn't touched it, so we set it to the new standard value
-				dpkg-statoverride --update --add root eucalyptus 04754 /usr/lib/eucalyptus/euca_rootwrap
-			else
-				# The admin has altered it, so we migrate the statoverride to the new file
-				dpkg-statoverride --update --add $(echo $statoverride | sed -e 's!usr/share!usr/lib!')
-			fi
-			dpkg-statoverride --remove /usr/share/eucalyptus/euca_rootwrap
+			# The admin hasn't touched it, so we set it to the new standard value
+			dpkg-statoverride --update --add root eucalyptus 04754 /usr/lib/eucalyptus/euca_rootwrap
+		else
+			# The admin has altered it, so we migrate the statoverride to the new file
+			dpkg-statoverride --update --add $(echo $statoverride | sed -e 's!usr/share!usr/lib!')
 		fi
+		dpkg-statoverride --remove /usr/share/eucalyptus/euca_rootwrap
 	fi
-
-	if dpkg --compare-versions "$2" lt 1.5~bzr212-0ubuntu2
-	then
-		chsh -s /bin/bash eucalyptus
-	fi
-
-	if dpkg --compare-versions "$2" lt 1.5~bzr198-0ubuntu3
-	then
-		euca_conf -user eucalyptus /etc/eucalyptus/eucalyptus.conf
-	fi
-
+	chsh -s /bin/bash eucalyptus
+	euca_conf -user eucalyptus /etc/eucalyptus/eucalyptus.conf
 	chown -R eucalyptus:eucalyptus /var/lib/eucalyptus/ /var/log/eucalyptus
 	chmod 700 /var/lib/eucalyptus/keys
 
-	if [ -e /etc/init/eucalyptus.conf ]; then
-		start eucalyptus || :
-	fi
 fi
 
 #DEBHELPER#
