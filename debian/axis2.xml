@@ -1,0 +1,128 @@
+<axisconfig name="Axis2/C">
+    <!-- ================================================= -->
+    <!-- Parameters -->
+    <!-- ================================================= -->
+    <!-- Uncomment following to enable MTOM support globally -->
+    <!--parameter name="enableMTOM" locked="false">true</parameter-->
+
+    <!-- Set the suitable size for optimum memory usage when sending large attachments -->
+    <!--parameter name="MTOMBufferSize" locked="false">10</parameter-->
+    <!--parameter name="MTOMMaxBuffers" locked="false">1000</parameter-->
+    <!--parameter name="EnableMTOMServiceCallback" locked="false">true</parameter-->
+    <!--parameter name="attachmentDIR" locked="false">/path/to/the/attachment/caching/dir/</parameter-->    
+    <!--parameter name="MTOMCachingCallback" locked="false">/path/to/the/caching_callback</parameter-->
+    <!--parameter name="MTOMSendingCallback" locked="false">/path/to/the/sending_callback</parameter-->
+
+    <!-- Enable REST -->
+    <parameter name="enableREST" locked="false">true</parameter>
+
+    <!-- Uncomment following to persist op_ctx, useful with RM -->
+    <!--parameter name="persistOperationContext" locked="false">true</parameter-->
+
+    <!--if you want to extract the service archive file and work with that please uncomment this-->
+    <!--else , it wont extract archive file or does not take into consideration if someone drop-->
+    <!--exploded directory into /service directory-->
+    <!--<parameter name="extractServiceArchive" locked="false">true</parameter>-->
+
+
+    <!-- ================================================= -->
+    <!-- Message Receivers -->
+    <!-- ================================================= -->
+    <!-- This is the Deafult Message Receiver for the Request Response style Operations -->
+    <!--messageReceiver mep="INOUT" class="axis2_receivers"/-->
+
+  
+    <!-- ================================================= -->
+    <!-- Transport Ins -->
+    <!-- ================================================= -->
+  
+    <transportReceiver name="http" class="axis2_http_receiver">
+        <parameter name="port" locked="false">6060</parameter>
+        <parameter name="exposeHeaders" locked="true">false</parameter>
+    </transportReceiver>
+  
+    <!--transportReceiver name="https" class="axis2_http_receiver">
+        <parameter name="port" locked="false">6060</parameter>
+        <parameter name="exposeHeaders" locked="true">false</parameter>
+    </transportReceiver-->
+  
+    <!--transportReceiver name="tcp" class="axis2_tcp_receiver">
+        <parameter name="port" locked="false">6060</parameter>
+    </transportReceiver-->
+
+
+    <!-- ================================================= -->
+    <!-- Transport Outs -->
+    <!-- ================================================= -->
+
+    <transportSender name="http" class="axis2_http_sender">
+        <parameter name="PROTOCOL" locked="false">HTTP/1.1</parameter>
+        <parameter name="xml-declaration" insert="false"/>
+        <!--parameter name="Transfer-Encoding">chunked</parameter-->
+        <!--parameter name="HTTP-Authentication" username="" password="" locked="true"/-->
+        <!--parameter name="PROXY" proxy_host="127.0.0.1" proxy_port="8080" proxy_username="" proxy_password="" locked="true"/-->
+    </transportSender>
+
+    <!-- Uncomment the following with appropriate parameters to enable the SSL transport sender.
+         Also make sure that the appropriate transport receiver is enabled above.-->
+    <!--transportSender name="https" class="axis2_http_sender">
+        <parameter name="PROTOCOL" locked="false">HTTP/1.1</parameter>
+        <parameter name="xml-declaration" insert="false"/>
+    </transportSender>
+    <parameter name="SERVER_CERT">/path/to/ca/certificate</parameter>
+    <parameter name="KEY_FILE">/path/to/client/certificate/chain/file</parameter>
+    <parameter name="SSL_PASSPHRASE">passphrase</parameter>
+    -->
+
+    <!-- Uncomment this one with the appropriate papameters to enable the TCP transport Sender-->
+    <!--transportSender name="tcp" class="axis2_tcp_sender">
+        <parameter name="PROTOCOL" locked="false">TCP</parameter>
+        <parameter name="xml-declaration" insert="false"/>
+    </transportSender-->
+
+
+    <!-- ================================================= -->
+    <!-- Global Modules  -->
+    <!-- ================================================= -->
+    <!-- Comment this to disable Addressing -->
+    <module ref="addressing"/>
+
+
+    <!--Configuring module , providing paramters for modules whether they refer or not-->
+    <!--<moduleConfig name="addressing">-->
+    <!--<parameter name="addressingPara" locked="false">N/A</parameter>-->
+    <!--</moduleConfig>-->
+
+    <!-- ================================================= -->
+    <!-- Phases  -->
+    <!-- ================================================= -->
+    <phaseOrder type="inflow">
+        <!-- System pre defined phases       -->
+        <phase name="Transport"/>
+        <phase name="PreDispatch"/>
+        <phase name="Dispatch"/>
+        <phase name="PostDispatch"/>
+        <phase name="Security"/>
+        <phase name="Rahas"/>
+        <!-- End system pre defined phases       -->
+        <!-- After PostDispatch phase, module or service author can add any phase as required  -->
+        <!-- User defined phases could be added here -->
+        <!--phase name="userphase1"/-->
+    </phaseOrder>
+    <phaseOrder type="outflow">
+        <!-- User defined phases could be added here -->
+        <!--phase name="userphase1"/-->
+        <!--system predefined phase-->
+        <phase name="MessageOut"/>
+        <phase name="Security"/>
+    </phaseOrder>
+    <phaseOrder type="INfaultflow">
+        <!-- User defined phases could be added here -->
+        <!--phase name="userphase1"/-->
+    </phaseOrder>
+    <phaseOrder type="Outfaultflow">
+        <!-- User defined phases could be added here -->
+        <!--phase name="userphase1"/-->
+        <phase name="MessageOut"/>
+    </phaseOrder>
+</axisconfig>

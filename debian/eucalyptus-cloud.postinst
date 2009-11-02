@@ -1,0 +1,15 @@
+#!/bin/sh
+
+if [ "$1" = "configure" ]
+then
+    if ! dpkg-statoverride --list /var/lib/eucalyptus/db >/dev/null 2>&1; then
+        chown eucalyptus:eucalyptus /var/lib/eucalyptus/db
+        chmod 700 /var/lib/eucalyptus/db
+    fi
+    /usr/sbin/euca_conf --enable cloud
+    if [ -e /etc/init.d/eucalyptus-cloud ]; then
+        /etc/init.d/eucalyptus-cloud restart || :
+    fi
+fi
+
+#DEBHELPER#

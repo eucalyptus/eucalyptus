@@ -1,0 +1,50 @@
+#!/bin/sh
+
+if [ "$1" = "configure" ]
+then
+    if dpkg --compare-versions "$2" lt 1.5~bzr198-0ubuntu4
+    then
+        euca_conf -hypervisor kvm /etc/eucalyptus/eucalyptus.conf
+    fi
+
+    if dpkg --compare-versions "$2" lt 1.6~bzr588-0ubuntu5
+    then
+        euca_conf --instances /var/lib/eucalyptus/instances /etc/eucalyptus/eucalyptus.conf
+    fi
+
+    if dpkg --compare-versions "$2" lt 1.5~bzr203-0ubuntu2
+    then
+        adduser eucalyptus libvirtd
+    fi
+
+    EUCA_HOME=`getent passwd eucalyptus | cut -f6 -d:`
+    if ! [ -d "$EUCA_HOME/.ssh" ]
+    then
+        mkdir "$EUCA_HOME/.ssh" 
+    fi
+    if ! [ -f "$EUCA_HOME/.ssh/authorized_keys" ]
+    then
+        touch "$EUCA_HOME/.ssh/authorized_keys" 
+    fi
+
+    if dpkg --compare-versions "$2" lt 1.5~bzr212-0ubuntu2
+    then
+        if [ -d "$EUCA_HOME/.ssh" ]
+        then
+            chown eucalyptus "$EUCA_HOME/.ssh" 
+            chmod 755 "$EUCA_HOME/.ssh" 
+        fi
+        if [ -f "$EUCA_HOME/.ssh/authorized_keys" ]
+        then
+            chown eucalyptus "$EUCA_HOME/.ssh/authorized_keys" 
+            chmod 600 "$EUCA_HOME/.ssh/authorized_keys" 
+        fi
+    fi
+
+    if [ -e /etc/init.d/eucalyptus-nc ]; then
+        /etc/init.d/eucalyptus-nc restart || :
+    fi
+
+fi
+
+#DEBHELPER#

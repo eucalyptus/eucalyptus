@@ -1,0 +1,42 @@
+#!/bin/sh
+
+
+if [ "$1" = "configure" ]
+then
+    if ! dpkg-statoverride --list /var/lib/eucalyptus/CC >/dev/null 2>&1; then
+        chown eucalyptus:eucalyptus /var/lib/eucalyptus/CC
+        chmod 700 /var/lib/eucalyptus/CC
+    fi
+    if ! dpkg-statoverride --list /var/lib/eucalyptus/keys >/dev/null 2>&1; then
+        chown eucalyptus:eucalyptus /var/lib/eucalyptus/keys
+        chmod 700 /var/lib/eucalyptus/keys
+    fi
+
+    if dpkg --compare-versions "$2" lt 1.5~bzr212-0ubuntu2
+    then
+        EUCA_HOME=`getent passwd eucalyptus | cut -f6 -d:`
+        if ! [ -d "$EUCA_HOME/.ssh" ]
+        then
+            mkdir "$EUCA_HOME/.ssh" 
+            chown eucalyptus "$EUCA_HOME/.ssh" 
+            chmod 755 "$EUCA_HOME/.ssh" 
+        fi
+        if ! [ -f "$EUCA_HOME/.ssh/id_rsa" ]
+        then
+            su eucalyptus -c "ssh-keygen -N '' -t rsa -f $EUCA_HOME/.ssh/id_rsa"
+        fi
+    fi
+
+    if [ -n "$2" ] && dpkg --compare-versions "$2" lt 1.6~bzr588-0ubuntu5
+    then
+	for s in eucalyptus-cc eucalyptus-walrus eucalyptus-cloud; do
+	    update-rc.d -f ${s} remove
+	done
+    fi
+
+    if [ -e /etc/init.d/eucalyptus-cc ]; then
+        /etc/init.d/eucalyptus-cc start || :
+    fi
+fi
+
+#DEBHELPER#

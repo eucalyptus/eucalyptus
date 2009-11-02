@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "remove" ]; then
+    if [ -e /etc/init/eucalyptus-cc.conf ]; then
+        stop eucalyptus-cc || :
+    fi
+fi
+
+#DEBHELPER#
+
+exit 0

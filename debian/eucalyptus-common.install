@@ -1,0 +1,9 @@
+/var/log
+/var/run
+/etc/eucalyptus/eucalyptus-version
+/usr/lib/eucalyptus/euca_mountwrap
+/usr/lib/eucalyptus/euca_rootwrap
+/usr/sbin/euca_conf
+/usr/sbin/euca_sync_key
+/etc/eucalyptus/httpd.conf
+/etc/eucalyptus/eucalyptus.conf

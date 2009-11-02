@@ -1,0 +1,16 @@
+/usr/share/eucalyptus/eucalyptus-auth-*.jar
+/usr/share/eucalyptus/eucalyptus-core-*.jar
+/usr/share/eucalyptus/eucalyptus-groupmgr-*.jar
+/usr/share/eucalyptus/eucalyptus-dns-*.jar
+/usr/share/eucalyptus/eucalyptus-msgs-*.jar
+/usr/share/eucalyptus/eucalyptus-ws-*.jar
+/usr/share/eucalyptus/eucalyptus-imagemgr-*.jar
+/usr/share/eucalyptus/eucalyptus-storage-common-*.jar
+/usr/share/eucalyptus/eucalyptus-clustermgr-*.jar
+/usr/share/eucalyptus/eucalyptus-keymgr-*.jar
+/usr/share/eucalyptus/eucalyptus-config-*.jar
+/etc/eucalyptus/cloud.d
+/usr/lib/eucalyptus/liblvm2control.so
+/var/lib/eucalyptus/webapps
+/usr/sbin/eucalyptus-cloud
+/etc/init.d/eucalyptus-cloud
