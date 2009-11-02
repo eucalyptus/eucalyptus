@@ -234,9 +234,18 @@ then
 	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
 
 	# stop all old services
-	[ -x etc/init.d/eucalyptus-cloud ] && etc/init.d/eucalyptus-cloud stop 
-	[ -x etc/init.d/eucalyptus-cc ] && etc/init.d/eucalyptus-cc stop
-	[ -x etc/init.d/eucalyptus-nc ] && etc/init.d/eucalyptus-nc stop
+	if [ -x etc/init.d/eucalyptus-cloud ];
+	then
+		 etc/init.d/eucalyptus-cloud stop
+	fi
+	if [ -x etc/init.d/eucalyptus-cc ]; 
+	then
+		 etc/init.d/eucalyptus-cc stop
+	fi
+	if [ -x etc/init.d/eucalyptus-nc ]; 
+	then
+		 etc/init.d/eucalyptus-nc stop
+	fi
 fi
 
 %post
@@ -256,21 +265,6 @@ fi
 # final setup and set the new user
 /usr/sbin/euca_conf -setup -user eucalyptus
 
-# upgrade from 1.5
-if [ "$1" = "2" ];
-then
-	cd /
-	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
-	if [ -e var/lib/eucalyptus/db/eucalyptus_volumes.properties ];
-	then
-		if [ -e etc/eucalyptus/eucalyptus.conf ]; 
-		then
-			cp -f etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
-		fi
-		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new /
-	fi
-fi
-
 %post common-java
 chkconfig --add eucalyptus-cloud
 
@@ -286,6 +280,20 @@ then
 	fi
 fi
 %endif
+# upgrade from 1.5
+if [ "$1" = "2" ];
+then
+	cd /
+	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
+	if [ -e var/lib/eucalyptus/db/eucalyptus_volumes.properties ];
+	then
+		if [ -e etc/eucalyptus/eucalyptus.conf ]; 
+		then
+			cp -f etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
+		fi
+		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new /
+	fi
+fi
 
 %post walrus
 /usr/sbin/euca_conf --enable walrus
@@ -348,7 +356,7 @@ then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable cloud
 	if [ -e /etc/init.d/eucalyptus-cloud ];
 	then 
-		/etc/init.d/eucalyptus-cloud restart || true
+		/etc/init.d/eucalyptus-cloud restart 
 	fi
 fi
 
@@ -359,7 +367,7 @@ then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable walrus
 	if [ -e /etc/init.d/eucalyptus-cloud ];
 	then 
-		/etc/init.d/eucalyptus-cloud restart || true
+		/etc/init.d/eucalyptus-cloud restart
 	fi
 fi
 
@@ -369,23 +377,23 @@ then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable sc
 	if [ -e /etc/init.d/eucalyptus-cloud ];
 	then 
-		/etc/init.d/eucalyptus-cloud restart || true
+		/etc/init.d/eucalyptus-cloud restart
 	fi
 fi
 
 %preun common-java
 if [ "$1" = "0" ];
 then
-	/etc/init.d/eucalyptus-cloud stop || true
-	chkconfig --del eucalyptus-cloud || true
+	/etc/init.d/eucalyptus-cloud stop
+	chkconfig --del eucalyptus-cloud
 	rm -f /var/lib/eucalyptus/services
 fi
 
 %preun cc
 if [ "$1" = "0" ];
 then
-	/etc/init.d/eucalyptus-cc stop || true
-	chkconfig --del eucalyptus-cc || true
+	/etc/init.d/eucalyptus-cc stop
+	chkconfig --del eucalyptus-cc
 %if %is_centos
 	if [ -e /etc/sysconfig/system-config-securitylevel ];
 	then
@@ -397,8 +405,8 @@ fi
 %preun nc
 if [ "$1" = "0" ];
 then
-	/etc/init.d/eucalyptus-nc stop || true
-	chkconfig --del eucalyptus-nc || true
+	/etc/init.d/eucalyptus-nc stop
+	chkconfig --del eucalyptus-nc
 %if %is_centos
 	if [ -e /etc/sysconfig/system-config-securitylevel ];
 	then
