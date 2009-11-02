@@ -236,18 +236,9 @@ then
 	fi
 
 	# stop all old services
-	if [ -x etc/init.d/eucalyptus-cloud ];
-	then
-		etc/init.d/eucalyptus-cloud stop
-	fi
-	if [ -x etc/init.d/eucalyptus-cc ];
-	then
-		etc/init.d/eucalyptus-cc stop
-	fi
-	if [ -x etc/init.d/eucalyptus-nc ];
-	then
-		etc/init.d/eucalyptus-nc stop
-	fi
+	[ -x etc/init.d/eucalyptus-cloud ] && etc/init.d/eucalyptus-cloud stop
+	[ -x etc/init.d/eucalyptus-cc ] && etc/init.d/eucalyptus-cc stop
+	[ -x etc/init.d/eucalyptus-nc ] && etc/init.d/eucalyptus-nc stop
 
 	# only upgrade from 1.5 is supported
 	old_version="`cat etc/eucalyptus/eucalyptus-version 2> /dev/null`"
@@ -383,7 +374,7 @@ then
 		sed -i '/^--port=8443/ d' /etc/sysconfig/system-config-securitylevel
 	fi
 %endif
-	/usr/sbin/euca_conf --disable cloud
+	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable cloud
 	[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
 fi
 
@@ -391,14 +382,14 @@ fi
 %preun walrus
 if [ "$1" = "0" ];
 then
-	/usr/sbin/euca_conf --disable walrus
+	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable walrus
 	[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
 fi
 
 %preun sc
 if [ "$1" = "0" ];
 then
-	/usr/sbin/euca_conf --disable sc
+	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable sc
 	[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
 fi
 
@@ -407,6 +398,7 @@ if [ "$1" = "0" ];
 then
 	/etc/init.d/eucalyptus-cloud stop || true
 	chkconfig --del eucalyptus-cloud || true
+	rm -f /var/lib/eucalyptus/services
 fi
 
 %preun cc
