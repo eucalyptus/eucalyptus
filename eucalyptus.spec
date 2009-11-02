@@ -235,9 +235,30 @@ then
 		cd /opt/eucalyptus
 	fi
 
+	# stop all old services
+	if [ -x etc/init.d/eucalyptus-cloud ];
+	then
+		etc/init.d/eucalyptus-cloud stop
+	fi
+	if [ -x etc/init.d/eucalyptus-cc ];
+	then
+		etc/init.d/eucalyptus-cc stop
+	fi
+	if [ -x etc/init.d/eucalyptus-nc ];
+	then
+		etc/init.d/eucalyptus-nc stop
+	fi
+
 	# only upgrade from 1.5 is supported
-	old_version="`cat etc/eucalyptus/eucalyptus-version`"
-	if [ -z "$old_version" -o `expr $old_version "<" 1.5` -eq 1 ];
+	old_version="`cat etc/eucalyptus/eucalyptus-version 2> /dev/null`"
+	if [ -n "$old_version" ];
+	then
+		if [ `expr $old_version "<" 1.5` -eq 1 ];
+		then
+			old_version=""
+		fi
+	fi
+	if [ -z "$old_version" ];
 	then
 		echo "Cannot upgrade from version earlier than 1.5"
 		exit 2
@@ -245,15 +266,6 @@ then
 
 	# used for upgrade
 	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.old
-
-	# let's save older version of conf file. db and keys
-	if [ -e /root/eucalyptus-pre-%{version}-rollback.tar ];
-	then
-		mv -f /root/eucalyptus-pre-%{version}-rollback.tar /root/eucalyptus-pre-%{version}-rollback.tar.old
-	fi
-
-	rm -f var/eucalyptus/db/eucalyptus.lck
-	tar cf /root/eucalyptus-pre-%{version}-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
 fi
 
 %post
