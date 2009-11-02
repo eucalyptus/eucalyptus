@@ -118,7 +118,7 @@ fi
 
 # default NEW install
 if [ -z "$NEW_EUCA" ]; then
-	if [ -d /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ]; then
+	if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ]; then
 		NEW_EUCA="/opt/eucalyptus"
 	fi
 fi 
