@@ -180,6 +180,7 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /usr/share/eucalyptus/add_key.pl
 /usr/share/eucalyptus/euca_ipt
 /usr/share/eucalyptus/populate_arp.pl
+/usr/share/eucalyptus/euca_upgrade
 /usr/lib/eucalyptus/euca_rootwrap
 /usr/lib/eucalyptus/euca_mountwrap
 /usr/sbin/euca_conf
@@ -196,7 +197,6 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /var/lib/eucalyptus/webapps
 /usr/lib/eucalyptus/liblvm2control.so
 /usr/sbin/eucalyptus-cloud
-/usr/share/eucalyptus/euca_upgrade
 
 %files cloud
 /usr/share/eucalyptus/eucalyptus-cloud-*.jar
@@ -259,15 +259,17 @@ fi
 # final setup and set the new user
 /usr/sbin/euca_conf -setup -user eucalyptus
 
-%post common-java
-chkconfig --add eucalyptus-cloud
+# upgrade from 1.5
 if [ "$1" = "2" ];
 then
 	if [ -e /opt/eucalyptus/var/lib/eucalyptus/db/eucalyptus_volumes.properties ];
 	then
-		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new / || true
+		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new /
 	fi
 fi
+
+%post common-java
+chkconfig --add eucalyptus-cloud
 
 %post cloud
 /usr/sbin/euca_conf --enable cloud
