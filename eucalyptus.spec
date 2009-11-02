@@ -157,7 +157,7 @@ make 2> err.log > out.log
 
 %install
 make install
-ls /usr/share/eucalyptus/*jar|grep -v eucalyptus-walrus|grep -v eucalyptus-storagecontroller|grep -v eucalyptus-cloud > jar_list
+ls /usr/share/eucalyptus/*jar > jar_list
 
 %clean
 make uninstall
@@ -199,13 +199,10 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /usr/sbin/eucalyptus-cloud
 
 %files cloud
-/usr/share/eucalyptus/eucalyptus-cloud-*.jar
 
 %files walrus
-/usr/share/eucalyptus/eucalyptus-walrus-*.jar
 
 %files sc
-/usr/share/eucalyptus/eucalyptus-storagecontroller-*.jar
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
@@ -356,7 +353,7 @@ then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable cloud
 	if [ -e /etc/init.d/eucalyptus-cloud ];
 	then 
-		/etc/init.d/eucalyptus-cloud restart 
+		/etc/init.d/eucalyptus-cloud restart || true
 	fi
 fi
 
@@ -367,7 +364,7 @@ then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable walrus
 	if [ -e /etc/init.d/eucalyptus-cloud ];
 	then 
-		/etc/init.d/eucalyptus-cloud restart
+		/etc/init.d/eucalyptus-cloud restart || true
 	fi
 fi
 
@@ -377,7 +374,7 @@ then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable sc
 	if [ -e /etc/init.d/eucalyptus-cloud ];
 	then 
-		/etc/init.d/eucalyptus-cloud restart
+		/etc/init.d/eucalyptus-cloud restart || true
 	fi
 fi
 

@@ -111,13 +111,6 @@ if [ -z "$EUCALYPTUS" ] ; then
 fi
 export EUCALYPTUS
 
-# just a quick way to check if we have the package still installed: at
-# times we can still have the init.d script
-if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
-	echo "Some eucalyptus components are missing"
-	exit 1
-fi
-
 create_httpd_config() {
 	IPS="all"
 	
@@ -144,6 +137,10 @@ do_start() {
 	if [ ! -x $HTTPD ]; then
 		echo
 		echo "cannot find httpd (was set to <$HTTPD>)!"
+		exit 1
+	fi
+	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+		echo "Some eucalyptus components are missing"
 		exit 1
 	fi
 

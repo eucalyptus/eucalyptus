@@ -129,19 +129,17 @@ if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
 		echo "Warning: you should check EUCALYPTUS in conf file"
 	fi
 else
+	# on removal of RPM we can get in a state in which the conf file
+	# is gone but the services are still running: make this hard
+	# failure only if we are not stopping
 	echo "Cannot find eucalyptus configuration file!"
-	exit 1
+	if [ "$1" != "stop" ]; then
+		exit 1
+	fi
 fi
 export EUCALYPTUS
 
 pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
-
-# just a quick way to check if we have the package still installed: at
-# times we can still have the init.d script
-if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
-	echo "Some eucalyptus components are missing"
-	exit 1
-fi
 
 # read in the services which should be running
 read_ws_list() {
@@ -209,6 +207,11 @@ do_start() {
 	local OPTS=""
 
 	# basic checks
+	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+		echo "Some eucalyptus components are missing"
+		exit 1
+	fi
+
 	check_java
 	
 	cd $EUCALYPTUS/etc/eucalyptus
@@ -216,12 +219,21 @@ do_start() {
 	# enabled services
 	if [ "$STORAGE_WS" != "Y" ]; then
 		OPTS="$OPTS --disable-storage"
+		if ! $EUCALYPTUS/usr/sbin/euca_conf --check sc ; then
+			exit 1
+		fi
 	fi
 	if [ "$WALRUS_WS" != "Y" ]; then
 		OPTS="$OPTS --disable-walrus"
+		if ! $EUCALYPTUS/usr/sbin/euca_conf --check walrus ; then
+			exit 1
+		fi
 	fi
 	if [ "$CLOUD_WS" != "Y" ]; then
 		OPTS="$OPTS --disable-cloud"
+		if ! $EUCALYPTUS/usr/sbin/euca_conf --check cloud ; then
+			exit 1
+		fi
 	fi
 
 	if [ "${STORAGE_WS}${CLOUD_WS}${WALRUS_WS}" = "NNN" ]; then
