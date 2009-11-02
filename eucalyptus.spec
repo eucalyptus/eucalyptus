@@ -237,9 +237,6 @@ then
 	[ -x etc/init.d/eucalyptus-cloud ] && etc/init.d/eucalyptus-cloud stop 
 	[ -x etc/init.d/eucalyptus-cc ] && etc/init.d/eucalyptus-cc stop
 	[ -x etc/init.d/eucalyptus-nc ] && etc/init.d/eucalyptus-nc stop
-
-	# used for upgrade
-	cp -f etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old
 fi
 
 %post
@@ -262,8 +259,14 @@ fi
 # upgrade from 1.5
 if [ "$1" = "2" ];
 then
-	if [ -e /opt/eucalyptus/var/lib/eucalyptus/db/eucalyptus_volumes.properties ];
+	cd /
+	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
+	if [ -e var/lib/eucalyptus/db/eucalyptus_volumes.properties ];
 	then
+		if [ -e etc/eucalyptus/eucalyptus.conf ]; 
+		then
+			cp -f etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
+		fi
 		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new /
 	fi
 fi
