@@ -161,7 +161,7 @@ ls /usr/share/eucalyptus/*jar|grep -v eucalyptus-walrus|grep -v eucalyptus-stora
 
 %clean
 make uninstall
-rm -rf $RPM_BUILD_DIR/eucalyptus
+rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 # most of the files are taken care of by uninstall, but not the
 # directories
 rm -rf /var/lib/eucalyptus
