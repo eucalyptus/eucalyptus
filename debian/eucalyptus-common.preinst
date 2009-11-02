@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if [ "$1" = "upgrade" ];
+then
+	if dpkg --compare-versions "$2" lt 1.6
+	then
+		cp -f /etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old
+	fi
+fi
+
+#DEBHELPER#
