@@ -240,21 +240,6 @@ then
 	[ -x etc/init.d/eucalyptus-cc ] && etc/init.d/eucalyptus-cc stop
 	[ -x etc/init.d/eucalyptus-nc ] && etc/init.d/eucalyptus-nc stop
 
-	# only upgrade from 1.5 is supported
-	old_version="`cat etc/eucalyptus/eucalyptus-version 2> /dev/null`"
-	if [ -n "$old_version" ];
-	then
-		if [ `expr $old_version "<" 1.5` -eq 1 ];
-		then
-			old_version=""
-		fi
-	fi
-	if [ -z "$old_version" ];
-	then
-		echo "Cannot upgrade from version earlier than 1.5"
-		exit 2
-	fi
-
 	# used for upgrade
 	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.old
 fi
@@ -299,7 +284,7 @@ if [ "$1" = "2" ];
 then
 	if [ -e /opt/eucalyptus/var/lib/eucalyptus/db/eucalyptus_volumes.script ];
 	then
-		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new /
+		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new / || true
 	fi
 fi
 

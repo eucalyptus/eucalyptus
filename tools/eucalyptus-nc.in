@@ -135,6 +135,12 @@ create_httpd_config() {
 
 # crude way to start the axis2c services
 do_start() {
+	# fixes #469984
+	IPTABLES="`which iptables 2> /dev/null`"
+	if [ -n "$IPTABLES" ]; then
+		[ -x $IPTABLES ] && $IPTABLES -L -n > /dev/null 2> /dev/null
+	fi
+
 	if [ ! -x $HTTPD ]; then
 		echo
 		echo "cannot find httpd (was set to <$HTTPD>)!"
