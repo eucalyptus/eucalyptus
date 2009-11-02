@@ -165,8 +165,12 @@ else
 
 	# backup the configuration file
 	eucaold="`cat $OLD_EUCA/etc/eucalyptus/eucalyptus-version 2> /dev/null`"
-	if [ -z "$eucaold" -a -e $OLD_EUCA/etc/eucalyptus/eucalyptus.conf ]; then
-		eucaold="1.5"
+	if [ -z "$eucaold" ]; then
+		if [  -e $OLD_EUCA/etc/eucalyptus/eucalyptus.conf ]; then
+			eucaold="1.5"
+		else
+			eucaold="1.6"
+		fi
 	fi
 	if [ `expr $eucaold "<" 1.6` -eq 1 ]; then
 		# 1.6 didn't install on top of old 1.5
@@ -212,10 +216,10 @@ if [ -e $NEW_EUCA/var/lib/eucalyptus/db/eucalyptus.script ]; then
 fi
 
 # upgrade the conf file
+export EUCALYPTUS="$NEW_EUCA"
 $EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --upgrade-conf $NEW_EUCA/etc/eucalyptus/eucalyptus.conf-1.5
 
 # upgrade the database
-export EUCALYPTUS="$NEW_EUCA"
 for FILE in ${EUCALYPTUS}/usr/share/eucalyptus/*.jar; do
 	export CLASSPATH=${FILE}:${CLASSPATH}
 done

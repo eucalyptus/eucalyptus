@@ -196,6 +196,7 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /var/lib/eucalyptus/webapps
 /usr/lib/eucalyptus/liblvm2control.so
 /usr/sbin/eucalyptus-cloud
+/usr/share/eucalyptus/euca_upgrade
 
 %files cloud
 /usr/share/eucalyptus/eucalyptus-cloud-*.jar
@@ -340,7 +341,10 @@ then
 	fi
 %endif
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable cloud
-	[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
+	if [ -e /etc/init.d/eucalyptus-cloud ];
+	then 
+		/etc/init.d/eucalyptus-cloud restart || true
+	fi
 fi
 
 
@@ -348,14 +352,20 @@ fi
 if [ "$1" = "0" ];
 then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable walrus
-	[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
+	if [ -e /etc/init.d/eucalyptus-cloud ];
+	then 
+		/etc/init.d/eucalyptus-cloud restart || true
+	fi
 fi
 
 %preun sc
 if [ "$1" = "0" ];
 then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable sc
-	[ -e /etc/init.d/eucalyptus-cloud ] && /etc/init.d/eucalyptus-cloud restart
+	if [ -e /etc/init.d/eucalyptus-cloud ];
+	then 
+		/etc/init.d/eucalyptus-cloud restart || true
+	fi
 fi
 
 %preun common-java
