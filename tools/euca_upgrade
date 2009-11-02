@@ -128,7 +128,7 @@ if [ -z "$OLD_EUCA" ]; then
 fi
 
 # let's check Eucalyptus' installations
-if [ ! -d $OLD_EUCA -o ! -e $OLD_EUCA/var/lib/eucalyptus/db/eucalyptus_volumes.script ]; then
+if [ ! -d $OLD_EUCA -o ! -e $OLD_EUCA/var/lib/eucalyptus/db/eucalyptus_volumes.properties ]; then
 	echo "$OLD_EUCA is not a valid 1.5.x Eucalyptus database"
 	exit 1
 fi

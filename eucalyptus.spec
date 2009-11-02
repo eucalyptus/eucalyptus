@@ -230,18 +230,15 @@ if [ "$1" = "2" ];
 then
 	# let's see where we installed
 	cd /
-	if [ -d /opt/eucalyptus/eucalyptus/eucalyptus-version ];
-	then
-		cd /opt/eucalyptus
-	fi
+	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
 
 	# stop all old services
-	[ -x etc/init.d/eucalyptus-cloud ] && etc/init.d/eucalyptus-cloud stop
+	[ -x etc/init.d/eucalyptus-cloud ] && etc/init.d/eucalyptus-cloud stop 
 	[ -x etc/init.d/eucalyptus-cc ] && etc/init.d/eucalyptus-cc stop
 	[ -x etc/init.d/eucalyptus-nc ] && etc/init.d/eucalyptus-nc stop
 
 	# used for upgrade
-	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.old
+	cp -f etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old
 fi
 
 %post
@@ -258,23 +255,6 @@ fi
 # let's configure eucalyptus
 /usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor xen -bridge %{__bridge}
 
-# upgrade?
-if [ "$1" = "2" ];
-then
-	# let's see where we installed
-	cd /
-	if [ -d /opt/eucalyptus/eucalyptus/eucalyptus-version ];
-	then
-		cd /opt/eucalyptus
-	fi
-	
-	# eucalyptus.conf was marked noreplace, so the new one could be named
-	# *.rpmnew. Let's move it over (we did take a copy anyway)
-	if [ -e etc/eucalyptus/eucalyptus.conf.rpmnew -a etc/eucalyptus/eucalyptus.conf.rpmnew -nt etc/eucalyptus/eucalyptus.conf ];
-	then
-		cp -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
-	fi
-fi
 # final setup and set the new user
 /usr/sbin/euca_conf -setup -user eucalyptus
 
@@ -282,7 +262,7 @@ fi
 chkconfig --add eucalyptus-cloud
 if [ "$1" = "2" ];
 then
-	if [ -e /opt/eucalyptus/var/lib/eucalyptus/db/eucalyptus_volumes.script ];
+	if [ -e /opt/eucalyptus/var/lib/eucalyptus/db/eucalyptus_volumes.properties ];
 	then
 		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new / || true
 	fi
