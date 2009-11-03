@@ -9,8 +9,7 @@ then
 	if [ -z "$2" ]
 	then
 		euca_conf -d / /etc/eucalyptus/eucalyptus.conf
-		euca_conf --dhcpd /usr/sbin/dhcpd3
-		euca_conf --dhcp_user dhcpd
+		euca_conf --dhcpd /usr/sbin/dhcpd3 --dhcp_user dhcpd
 		dpkg-statoverride --update --add root eucalyptus 04754 /usr/lib/eucalyptus/euca_rootwrap
 	fi
 	statoverride="$(dpkg-statoverride --list /usr/share/eucalyptus/euca_rootwrap || true)"
@@ -27,7 +26,7 @@ then
 		dpkg-statoverride --remove /usr/share/eucalyptus/euca_rootwrap
 	fi
 	chsh -s /bin/bash eucalyptus
-	euca_conf -user eucalyptus /etc/eucalyptus/eucalyptus.conf
+	euca_conf -user eucalyptus -bridge br0 --hypervisor xen --instances /var/lib/eucalyptus/instances
 	chown -R eucalyptus:eucalyptus /var/lib/eucalyptus/ /var/log/eucalyptus
 	chmod 700 /var/lib/eucalyptus/keys
 
