@@ -1,3 +1,4 @@
+/usr/share/eucalyptus/antlr.jar
 /usr/share/eucalyptus/eucalyptus-cloud-*.jar
 /usr/share/eucalyptus/eucalyptus-www-*.jar
 /usr/share/eucalyptus/eucalyptus-interface-*.jar
