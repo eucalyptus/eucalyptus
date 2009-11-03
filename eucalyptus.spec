@@ -322,6 +322,7 @@ then
 		if [ ! -e /var/lib/eucalyptus/keys/cluster-pk.pem ]; 
 		then
 			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/cluster*.pem /var/lib/eucalyptus/keys
+			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/node*.pem /var/lib/eucalyptus/keys
 		fi
 	fi
 fi
@@ -352,6 +353,7 @@ then
 	then
 		if [ ! -e /var/lib/eucalyptus/keys/node-pk.pem ]; 
 		then
+			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/cluster-cert.pem /var/lib/eucalyptus/keys
 			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/node*.pem /var/lib/eucalyptus/keys
 		fi
 	fi
