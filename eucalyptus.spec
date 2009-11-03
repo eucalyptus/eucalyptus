@@ -288,6 +288,12 @@ then
 		then
 			cp -f etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
 		fi
+		# if groovy was installed on the same shell the
+		# environment can be wrong: we need to souce groovy env
+		if [ -e /etc/profile.d/groovy.sh ];
+		then
+			. /etc/profile.d/groovy.sh
+		fi
 		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new /
 	fi
 fi
