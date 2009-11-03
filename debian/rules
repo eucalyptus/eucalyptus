@@ -25,7 +25,8 @@ setup-lib:
 	@sed -i 's/AXIS2C_HOME\/lib/\/usr\/lib\/apache2\/modules/g' tools/httpd.conf
 	mkdir -p $(DEB_DESTDIR)/var/run/eucalyptus
 	mkdir -p clc/axis2-modules/modules
-	cp -fv /usr/share/java/antlr.jar /usr/share/eucalytpus/
+	mkdir -p /usr/share/eucalyptus/
+	cp -fv /usr/share/java/antlr.jar /usr/share/eucalyptus/
 	touch setup-lib
 
 install/eucalyptus-common::
