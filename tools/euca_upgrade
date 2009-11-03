@@ -154,9 +154,9 @@ else
 	let $((ret += $?))
 	mkdir $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME
 	let $((ret += $?))
-	cp -r $OLD_EUCA/var/lib/eucalyptus/db/* $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME
+	cp --preserve -r $OLD_EUCA/var/lib/eucalyptus/db/* $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME
 	let $((ret += $?))
-	cp -r $OLD_EUCA/var/lib/eucalyptus/keys/* $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME
+	cp --preserve -r $OLD_EUCA/var/lib/eucalyptus/keys/* $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME
 	let $((ret += $?))
 	if [ $ret -gt 0 ]; then
 		echo "Failed to backup database and/or keys!"
@@ -174,10 +174,10 @@ else
 	fi
 	if [ `expr $eucaold "<" 1.6` -eq 1 ]; then
 		# 1.6 didn't install on top of old 1.5
-		cp $OLD_EUCA/etc/eucalyptus/eucalyptus.conf $NEW_EUCA/etc/eucalyptus/eucalyptus.conf-1.5
+		cp --preserve $OLD_EUCA/etc/eucalyptus/eucalyptus.conf $NEW_EUCA/etc/eucalyptus/eucalyptus.conf-1.5
 	else
 		# we should have the .old version
-		cp $NEW_EUCA/etc/eucalyptus/eucalyptus.conf.old $NEW_EUCA/etc/eucalyptus/eucalyptus.conf-1.5
+		cp --preserve $NEW_EUCA/etc/eucalyptus/eucalyptus.conf.old $NEW_EUCA/etc/eucalyptus/eucalyptus.conf-1.5
 	fi
 	if [ $? -gt 0 ]; then
 		echo "Failed to find the old configuration file"
@@ -197,9 +197,9 @@ for x in `ls $NEW_EUCA/var/lib/eucalyptus/db/` ; do
 	fi
 done
 ret=0
-cp -r $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME/* $NEW_EUCA/var/lib/eucalyptus/db
+cp --preserve -r $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME/* $NEW_EUCA/var/lib/eucalyptus/db
 let $((ret += $?))
-cp -r $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME/*.p* $NEW_EUCA/var/lib/eucalyptus/keys
+cp --preserve -r $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME/*.p* $NEW_EUCA/var/lib/eucalyptus/keys
 let $((ret += $?))
 if [ $ret -gt 0 ]; then
 	echo "Failed to copy old database/keys!"

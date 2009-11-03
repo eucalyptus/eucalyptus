@@ -286,7 +286,7 @@ then
 	then
 		if [ -e etc/eucalyptus/eucalyptus.conf ]; 
 		then
-			cp -f etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
+			cp --preserve -f etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
 		fi
 		# if groovy was installed on the same shell the
 		# environment can be wrong: we need to souce groovy env
@@ -315,6 +315,16 @@ then
 	fi
 fi
 %endif
+if [ "$1" = "2" ];
+then
+	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/cluster-pk.pem ]; 
+	then
+		if [ ! -e /var/lib/eucalyptus/keys/cluster-pk.pem ]; 
+		then
+			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/cluster*.pem /var/lib/eucalyptus/keys
+		fi
+	fi
+fi
 
 %post nc
 chkconfig --add eucalyptus-nc
@@ -336,6 +346,16 @@ then
 	fi
 fi
 %endif
+if [ "$1" = "2" ];
+then
+	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/node-pk.pem ]; 
+	then
+		if [ ! -e /var/lib/eucalyptus/keys/node-pk.pem ]; 
+		then
+			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/node*.pem /var/lib/eucalyptus/keys
+		fi
+	fi
+fi
 
 
 %postun
