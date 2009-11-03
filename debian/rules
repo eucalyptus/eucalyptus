@@ -27,10 +27,11 @@ setup-lib:
 	mkdir -p clc/axis2-modules/modules
 	touch setup-lib
 
-install/eucalyptus-common::
+install/eucalyptus-java-common::
 	mkdir -p debian/tmp/usr/share/eucalyptus
 	cp -fvL /usr/share/java/antlr.jar debian/tmp/usr/share/eucalyptus/antlr.jar
-#install/eucalyptus-common::
+
+install/eucalyptus-common::
 	mkdir -p $(DEB_DESTDIR)/var/run/eucalyptus
 	sed -i 's/^FILE=.*$$/FILE="\/etc\/eucalyptus\/eucalyptus.conf"/g' debian/tmp/usr/sbin/euca_conf
 #	cp -fv tools/eucalyptus.conf.debian debian/tmp/etc/eucalyptus/eucalyptus.conf
