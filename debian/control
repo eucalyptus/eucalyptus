@@ -47,7 +47,7 @@ Vcs-Bzr: http://bazaar.launchpad.net/~ubuntu-core-dev/eucalyptus/ubuntu
 
 Package: eucalyptus-common
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, adduser, openssh-server, openssh-client
+Depends: ${shlibs:Depends}, ${misc:Depends}, adduser, openssh-server, openssh-client, sudo
 Recommends: avahi-utils, unzip
 Description: Elastic Utility Computing Architecture - Common files
  EUCALYPTUS is an open source service overlay that implements elastic
