@@ -231,5 +231,5 @@ export EUCALYPTUS_CLUSTER_CERT="`openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucaly
 export EUCALYPTUS_NODE_CERT="`openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/clusters.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes -nokeys 2>/dev/null | sed '1,/friendlyName: nc-/ d ; /friendlyName/,$ d ; /-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' -n | openssl base64 | sed '{:q;N;s/\n//g;s/=/./g;s/+/-/g;s/\//_/g;t q}'`"
 
 echo -n "Upgrading your database..."
-$GROOVY ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${EUCA_VER}.groovy >/dev/null 2>&1
+$GROOVY ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${EUCA_VER}.groovy >$EUCALYPTUS/var/log/eucalyptus/upgrade.log 2>&1
 echo "done."
