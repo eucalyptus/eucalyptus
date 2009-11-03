@@ -15,6 +15,10 @@ EUCA_USER="eucalyptus"
 # store functionality of Eucalyptus
 # DISABLE_EBS="Y"
 
+# Uncomment this field if you do not plan on using the dynamic DNS
+# functionality of Eucalyptus
+DISABLE_DNS="Y"
+
 # This variable controls whether ws-security is enabled between
 # eucalyptus components.  The default settings provide secure
 # connections between the Cloud, Cluster, and Node Controllers and we
@@ -31,14 +35,6 @@ ENABLE_WS_SECURITY="Y"
 LOGLEVEL="DEBUG"
 
 ####
-# The following are Cloud Controller configuration options.
-####
-
-# The Cloud Controller needs 2 ports.
-CLOUD_PORT="8773"
-CLOUD_SSL_PORT="8443"
-
-####
 # These following are Cluster Controller configuration options.
 ####
 
@@ -47,9 +43,20 @@ CC_PORT="8774"
 
 # This option configures the Cluster Controller's scheduling policy.
 # Currently, this option can be set to GREEDY (first node that is
-# found that can run the VM will be chosen) or ROUNDROBIN (nodes are
-# selected one after another until one is found that can run the VM).
+# found that can run the VM will be chosen), ROUNDROBIN (nodes are
+# selected one after another until one is found that can run the VM),
+# or POWERSAVE (nodes are put to sleep when they are not running VMs,
+# and reawakened when new resources are required.  VMs will be placed
+# on the first awake machine, followed by machines that are asleep).
 SCHEDPOLICY="ROUNDROBIN"
+
+# Powersave options.  POWER_IDLETHRESH is the number of seconds that a
+# node can remain idle (i.e. no running VMs) before a powerdown is
+# attempted.  POWER_WAKETHRESH is the number of seconds that
+# Eucalyptus should wait after attempting a node wake-up before it
+# will consider the node actually down (and not waking up).
+POWER_IDLETHRESH="300"
+POWER_WAKETHRESH="300"
 
 # The list of Node Controllers the Cluster Controller will communicate with. 
 #
@@ -72,7 +79,7 @@ NC_PORT="8775"
 # The hypervisor that the Node Controller will interact with in order
 # to manage virtual machines.  Currently, supported values are 'kvm'
 # and 'xen'.
-HYPERVISOR="xen"
+HYPERVISOR="kvm"
 
 # The maximum amount of memory Eucalyptus is allowed to use on the node:
 # if you leave this commented out, Eucalyptus will use all available
@@ -111,7 +118,7 @@ HYPERVISOR="xen"
 # needed by the maximum number of instances allowed on the node.
 # This directory should be local to the Node Controller (as
 # opposed to a NFS share) for performance reasons.
-INSTANCE_PATH="not_configured"
+INSTANCE_PATH="/var/lib/eucalyptus/instances"
 
 # The maximum amount of disk space, in Megabytes, that Eucalyptus is 
 # allowed to use in the cache directory (INSTANCES_PATH/eucalyptus/cache).
@@ -122,21 +129,25 @@ INSTANCE_PATH="not_configured"
 # The following are networking options
 ####
 
-# VNET_INTERFACE specifies the local physical ethernet interface that
-# eucalyptus should use to manage the VM network.  On the front-end,
-# this should be set to the device that is attached to the same
-# ethernet network as your nodes.  On the nodes, this should be set to
+# VNET_PRIVINTERFACE and VNET_PUBINTERFACE specify the local physical
+# ethernet interfaces that eucalyptus should use to manage the VM
+# network.  On the front-end, VNET_PRIVINTERFACE should be set to the
+# device that is attached to the same ethernet network as your nodes.
+# VNET_PUBINTERFACE should be set to the device which is connected to
+# the 'public' network.  If you have only one interface, these should
+# be set to the same value.  On the nodes, both should be set to
 # either the name of the bridge that has been set up by Xen (xenbr0,
 # eth0, etc), or the physical ethernet device that is attached to the
 # xen bridge (peth0, peth1, etc), depending on your xen configuration.
-VNET_INTERFACE="peth0"
+VNET_PUBINTERFACE="eth0"
+VNET_PRIVINTERFACE="eth0"
 
 # (node setting only) VNET_BRIDGE should be set to the name of the
 # bridge that xen has configured.  This is typically named 'xenbr0,
 # xenbr1, etc' on older Xen versions, and 'eth0, eth1, etc' on newer
 # Xen versions.  The command 'brctl show' will give you more
 # information on your local bridge setup.
-VNET_BRIDGE="eth0"
+VNET_BRIDGE="br0"
 
 # This indicates where we have a dhcp server binary. We use it to provide
 # the images with IPs: Eucalyptus provides its own configuration per
@@ -147,30 +158,42 @@ VNET_DHCPDAEMON="/usr/sbin/dhcpd3"
 # user.  If this is the case, set the name of that user here (by
 # default, Eucalyptus will set up DHCPD configuration files and
 # directories as owned by root).
-VNET_DHCPUSER="root"
+VNET_DHCPUSER="dhcpcd"
 
 # Following are example eucalyptus VM networking configurations.
-# There are three modes to choose from (MANAGED, SYSTEM, or STATIC)
-# and each has its own sub-options.  The first mode (MANAGED)
-# configured eucalyptus to fully manage the VM networks, and enables
-# the ability to use security groups and dynamic public IP assignment.
-# VNET_SUBNET should be set to an IP subnet that is free for
-# eucalyptus to use (i.e. no other system connected to your network
-# directly is configured with addresses from this subnet).
-# VNET_NETMASK defines the size of the subnet.  VNET_DNS should be set
-# to a DNS server that your systems use (usually safe to use the same
-# DNS that is configured on the front-end).  VNET_ADDRSPERNET can be
-# used to limit the number of instances that can be attached to each
-# named security group simultaneously.  Finally, VNET_PUBLICIPS should
-# be set to any public IPs, that are currently unused, that can be
-# dynamically assigned to VMs.  Of these options, only VNET_PUBLICIPS
-# can be left blank or undefined.
+# There are four modes to choose from (MANAGED, MANAGED-NOVLAN,
+# SYSTEM, or STATIC) and each has its own sub-options.  The first
+# modes (MANAGED, MANAGED-NOVLAN) configure eucalyptus to fully manage
+# the VM networks, and enables the ability to use security groups and
+# dynamic public IP assignment (with and without vlan tagging of
+# security group networks, respectively).  VNET_SUBNET should be set
+# to an IP subnet that is free for eucalyptus to use (i.e. no other
+# system connected to your network directly is configured with
+# addresses from this subnet).  VNET_NETMASK defines the size of the
+# subnet.  VNET_DNS should be set to a DNS server that your systems
+# use (usually safe to use the same DNS that is configured on the
+# front-end).  VNET_ADDRSPERNET can be used to limit the number of
+# instances that can be attached to each named security group
+# simultaneously.  Finally, VNET_PUBLICIPS should be set to any public
+# IPs, that are currently unused, that can be dynamically assigned to
+# VMs.  Of these options, only VNET_PUBLICIPS can be left blank or
+# undefined.  If you are running in multi-cluster mode (more than one
+# CC), you should uncomment VNET_LOCALIP and set it to the local IP of
+# the CC that is accessible by all other CCs in the system.  If
+# VNET_LOCALIP is unset, the CC will try to determine the list of all
+# IPs currently assigned to the machine at CC run time.  If your CC
+# and CLC are on different machines, uncomment VNET_CLOUDIP and set it
+# to your cloud-contoller's IP address (must be an address that can be
+# reached by the CC).
+
 #VNET_MODE="MANAGED"
 #VNET_SUBNET="192.168.0.0"
 #VNET_NETMASK="255.255.0.0"
 #VNET_DNS="your-dns-server-ip"
 #VNET_ADDRSPERNET="32"
 #VNET_PUBLICIPS="your-free-public-ip-1 your-free-public-ip-2 ..."
+#VNET_LOCALIP="your-public-interface's-ip"
+#VNET_CLOUDIP="your-cloud-controller's-ip"
 
 # If you would like eucalyptus to not manage the VM network at all,
 # you can set VNET_MODE to SYSTEM.  In this mode, VM interfaces are

@@ -27,15 +27,19 @@ then
         fi
     fi
 
-    if [ -n "$2" ] && dpkg --compare-versions "$2" lt 1.6~bzr588-0ubuntu5
-    then
-	for s in eucalyptus-cc eucalyptus-walrus eucalyptus-cloud; do
-	    update-rc.d -f ${s} remove
-	done
+    update-rc.d eucalyptus-cc start 20 2 3 4 5 . stop 20 1 . >/dev/null
+
+    if which invoke-rc.d >/dev/null 2>&1; then
+        invoke-rc.d eucalyptus-cc stop > /dev/null 2>&1 ||true
+    else
+        /etc/init.d/eucalyptus-cc stop > /dev/null 2>&1 ||true
     fi
 
-    if [ -e /etc/init.d/eucalyptus-cc ]; then
-        /etc/init.d/eucalyptus-cc start || :
+
+    if which invoke-rc.d >/dev/null 2>&1; then
+        invoke-rc.d eucalyptus-cc start ||true
+    else
+        /etc/init.d/eucalyptus-cc start ||true
     fi
 fi
 

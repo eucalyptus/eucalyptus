@@ -26,25 +26,28 @@ then
     then
         touch "$EUCA_HOME/.ssh/authorized_keys" 
     fi
-
-    if dpkg --compare-versions "$2" lt 1.5~bzr212-0ubuntu2
-    then
-        if [ -d "$EUCA_HOME/.ssh" ]
-        then
-            chown eucalyptus "$EUCA_HOME/.ssh" 
-            chmod 755 "$EUCA_HOME/.ssh" 
-        fi
-        if [ -f "$EUCA_HOME/.ssh/authorized_keys" ]
-        then
-            chown eucalyptus "$EUCA_HOME/.ssh/authorized_keys" 
-            chmod 600 "$EUCA_HOME/.ssh/authorized_keys" 
-        fi
+    DO_SUDO="$DO_UBUNTU`grep "^eucalyptus" /etc/sudoers`" 
+    if [ -z "$DO_SUDO" ]
+    then 
+      echo 'eucalyptus ALL=NOPASSWD: /usr/sbin/xm'>> /etc/sudoers; 
     fi
 
-    if [ -e /etc/init.d/eucalyptus-nc ]; then
-        /etc/init.d/eucalyptus-nc restart || :
+
+    update-rc.d eucalyptus-nc start 20 2 3 4 5 . stop 20 1 . >/dev/null
+
+    if which invoke-rc.d >/dev/null 2>&1; then
+        invoke-rc.d eucalyptus-nc stop > /dev/null 2>&1 ||true
+    else
+        /etc/init.d/eucalyptus-nc stop > /dev/null 2>&1 ||true
     fi
 
+
+
+    if which invoke-rc.d >/dev/null 2>&1; then
+        invoke-rc.d eucalyptus-nc start ||true
+    else
+        /etc/init.d/eucalyptus-nc start ||true
+    fi
 fi
 
 #DEBHELPER#
