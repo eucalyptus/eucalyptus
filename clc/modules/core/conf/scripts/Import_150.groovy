@@ -496,7 +496,7 @@ dbVolumes.rows("SELECT * FROM SNAPSHOT").each{
 	}
 
 def getInterface() {
-	  def oldEucaConf = new File("${System.getenv('EUCALYPTUS')}/etc/eucalyptus/eucalyptus.conf.1.5");
+	  def oldEucaConf = new File("${System.getenv('EUCALYPTUS')}/etc/eucalyptus/eucalyptus.conf-1.5");
 	    oldEucaConf.text.find(/VNET_INTERFACE="(.*)"/) { fullline, iface ->      
 		  return iface.toString()
 	    }
