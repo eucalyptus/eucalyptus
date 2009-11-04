@@ -46,7 +46,7 @@ Homepage: http://open.eucalyptus.com/
 
 Package: eucalyptus-common
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, adduser, openssh-server, openssh-client, sudo
+Depends: ${shlibs:Depends}, ${misc:Depends}, adduser, openssh-server, openssh-client, sudo, rsync
 Recommends: avahi-utils, unzip
 Description: Elastic Utility Computing Architecture - Common files
  EUCALYPTUS is an open source service overlay that implements elastic
