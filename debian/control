@@ -42,8 +42,7 @@ Build-Depends: cdbs, debhelper (>= 7), libaxis2c-dev, librampart0, librampart-de
  libantlr-java,
  ant
 Standards-Version: 3.8.0
-Homepage: http://eucalyptus.cs.ucsb.edu/
-Vcs-Bzr: http://bazaar.launchpad.net/~ubuntu-core-dev/eucalyptus/ubuntu
+Homepage: http://open.eucalyptus.com/
 
 Package: eucalyptus-common
 Architecture: any

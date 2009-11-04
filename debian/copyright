@@ -1,9 +1,10 @@
-This package was debianized by Soren Hansen <soren@ubuntu.com> on
-Wed, 11 Feb 2009 02:11:00 +0200
+This package was originally debianized by Soren Hansen <soren@ubuntu.com> on
+Wed, 11 Feb 2009 02:11:00 +0200 and subsequently modififed by Chris 
+Grzegorczyk <grze@eucalyptus.com>
 
 It was downloaded from http://launchpad.net/eucalyptus
 
-Upstream Authors:
+Authors:
  * Dan Nurmi <nurmi@eucalyptus.com>
  * Chris Grzegorczyk <grze@eucalyptus.com>
  * Graziano Obertelli <graziano@eucalyptus.com>
@@ -77,6 +78,5 @@ The rest of the Eucalyptus source code is covered by the GPLv3:
  On Debian systems, the complete text of the GNU General Public
  License, version 3, can be found in /usr/share/common-licenses/GPL-3.
 
-The Debian packaging is copyright 2009, Soren Hansen <soren@ubuntu.com>,
-Dustin Kirkland <kirkland@canonical.com>  and is licensed under the same
-license.
+The Debian packaging is copyright 2009, Soren Hansen <soren@ubuntu.com>
+and was originally released under the BSD license.
