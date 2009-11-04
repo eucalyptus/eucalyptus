@@ -11,6 +11,10 @@ then
 		euca_conf -d / /etc/eucalyptus/eucalyptus.conf
 		euca_conf --dhcpd /usr/sbin/dhcpd3 --dhcp_user dhcpd
 		dpkg-statoverride --update --add root eucalyptus 04754 /usr/lib/eucalyptus/euca_rootwrap
+	else
+		if dpkg --compare-versions "$2" lt "1.6" ; then
+			/usr/share/eucalyptus/euca_upgrade --old / --new / --conf
+		fi
 	fi
 	statoverride="$(dpkg-statoverride --list /usr/share/eucalyptus/euca_rootwrap || true)"
 	if [ -n "$statoverride" ]

@@ -256,8 +256,20 @@ if ! getent passwd eucalyptus > /dev/null ; then
 	adduser -M eucalyptus 
 %endif
 fi
-# let's configure eucalyptus
-/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor xen -bridge %{__bridge}
+
+if [ "$1" = "1" ]; 
+then
+	# let's configure eucalyptus
+	/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor xen -bridge %{__bridge}
+fi
+if [ "$1" = "2" ];
+then
+	if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf ]; 
+	then
+		cp --preserve -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
+	fi
+	/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new / --conf
+fi
 
 # final setup and set the new user
 /usr/sbin/euca_conf -setup -user eucalyptus
@@ -284,17 +296,13 @@ then
 	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
 	if [ -e var/lib/eucalyptus/db/eucalyptus_volumes.properties ];
 	then
-		if [ -e etc/eucalyptus/eucalyptus.conf ]; 
-		then
-			cp --preserve -f etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
-		fi
 		# if groovy was installed on the same shell the
 		# environment can be wrong: we need to souce groovy env
 		if [ -e /etc/profile.d/groovy.sh ];
 		then
 			. /etc/profile.d/groovy.sh
 		fi
-		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new /
+		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new / --db
 	fi
 fi
 
