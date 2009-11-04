@@ -191,7 +191,7 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common, apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, eucalyptus-gl, adduser, avahi-utils, librampart0, parted
 Suggests: aoetools
 Recommends: libvirt-bin, kvm, vlan, bridge-utils, powernap
-Conflicts: apache2-mpm-itk
+Conflicts: apache2-mpm-itk, qemu
 Description: Elastic Utility Computing Architecture - Node controller
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
