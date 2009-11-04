@@ -2,20 +2,8 @@
 
 if [ "$1" = "configure" ]
 then
-    if dpkg --compare-versions "$2" lt 1.5~bzr198-0ubuntu4
-    then
-        euca_conf -hypervisor kvm /etc/eucalyptus/eucalyptus.conf
-    fi
-
-    if dpkg --compare-versions "$2" lt 1.6~bzr588-0ubuntu5
-    then
-        euca_conf --instances /var/lib/eucalyptus/instances /etc/eucalyptus/eucalyptus.conf
-    fi
-
-    if dpkg --compare-versions "$2" lt 1.5~bzr203-0ubuntu2
-    then
-        adduser eucalyptus libvirtd
-    fi
+    adduser eucalyptus libvirtd 2>&1 > /dev/null
+    adduser eucalyptus libvirt 2>&1 > /dev/null
 
     EUCA_HOME=`getent passwd eucalyptus | cut -f6 -d:`
     if ! [ -d "$EUCA_HOME/.ssh" ]
