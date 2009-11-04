@@ -26,7 +26,7 @@ then
 		dpkg-statoverride --remove /usr/share/eucalyptus/euca_rootwrap
 	fi
 	chsh -s /bin/bash eucalyptus
-	euca_conf -user eucalyptus -bridge br0 --hypervisor xen --instances /var/lib/eucalyptus/instances
+	euca_conf -user eucalyptus -bridge br0 --hypervisor kvm --instances /var/lib/eucalyptus/instances
 	chown -R eucalyptus:eucalyptus /var/lib/eucalyptus/ /var/log/eucalyptus
 	chmod 700 /var/lib/eucalyptus/keys
 

@@ -72,7 +72,7 @@ Description: Elastic Utility Computing Architecture - Storage controller
 Package: eucalyptus-cloud
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common, eucalyptus-java-common
-Recommends: python-image-store-proxy, postfix | mail-transport-agent
+Recommends: postfix | mail-transport-agent
 Replaces: eucalyptus-cc (<= 1.6~bzr919-0ubuntu3),
  eucalyptus-sc (<= 1.6~bzr919-0ubuntu3),
  eucalyptus-walrus (<= 1.6~bzr919-0ubuntu3)
