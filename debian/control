@@ -188,10 +188,10 @@ Description: Elastic Utility Computing Architecture - Cluster controller
 
 Package: eucalyptus-nc
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common, apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, eucalyptus-gl, adduser, avahi-utils, librampart0, parted, kvm, libvirt-bin
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common, apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, eucalyptus-gl, adduser, avahi-utils, librampart0, parted, libvirt-bin
 Suggests: aoetools
-Recommends: vlan, bridge-utils, powernap
-Conflicts: apache2-mpm-itk, qemu
+Recommends: vlan, bridge-utils, kvm, powernap
+Conflicts: apache2-mpm-itk, qemu (< 0.11.0-0)
 Description: Elastic Utility Computing Architecture - Node controller
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
