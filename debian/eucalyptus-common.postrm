@@ -5,11 +5,6 @@ purge)
 	dpkg-statoverride --remove /usr/lib/eucalyptus/euca_rootwrap || true
 	rm -rf /etc/eucalyptus /var/lib/eucalyptus /var/log/eucalyptus /var/run/eucalyptus
 	;;
-remove)
-	if [ -e /etc/init/eucalyptus.conf ]; then
-		stop eucalyptus || :
-	fi
-	;;
 esac
 
 #DEBHELPER#
