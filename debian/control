@@ -188,7 +188,7 @@ Description: Elastic Utility Computing Architecture - Cluster controller
 
 Package: eucalyptus-nc
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common, apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, eucalyptus-gl, adduser, avahi-utils, librampart0
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common, apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, eucalyptus-gl, adduser, avahi-utils, librampart0, parted
 Suggests: aoetools
 Recommends: libvirt-bin, kvm, vlan, bridge-utils, powernap
 Conflicts: apache2-mpm-itk
