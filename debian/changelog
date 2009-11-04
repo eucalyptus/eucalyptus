@@ -1,8 +1,8 @@
-eucalyptus (1.6.1~bzr982-0euca1) karmic; urgency=low
+eucalyptus (1.6.1~bzr1045-0euca1) karmic; urgency=low
 
-  * 1.6.1 release for
+  * 1.6.1 release 
 
- -- chris grzegorczyk <grze@eucalyptus.com>  Thu, 29 Oct 2009 13:36:41 -0700
+ -- chris grzegorczyk <grze@eucalyptus.com>  Thu, 5 Nov 2009 13:36:41 -0700
  
 eucalyptus (1.6.0-0euca1) karmic; urgency=low
 

@@ -1,4 +1,4 @@
-*Sun Nov 1 2009 Eucalyptus Systems (support@eucalyptus.com)
+*Thu Nov 5 2009 Eucalyptus Systems (support@eucalyptus.com)
     * Version 1.6.1
     * Added support for multiple clusters (availability zones)
     * Allow components (cloud, walrus, sc, cc, nc) to be hosted on
@@ -15,7 +15,7 @@
     * A lot of work toward long term stability: run the code thru
       different code/memory checker, re-engineer the java stack to be
       faster and more robust.
-    * Closes bugs:
+    * V Closes bugs:
 
       #426469 #426576 #428546 #428654 #428710 #430260 #430356 #430888
       #430922 #431939 #430830 #431933 #431935 #426469 #431934 #431937
