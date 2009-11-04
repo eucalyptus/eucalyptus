@@ -91,11 +91,13 @@ while [ $# -gt 0 ]; do
 		DB="Y"
 		CONF="N"
 		shift
+		continue
 	fi
 	if [ "$1" = "--conf" ]; then
 		DB="N"
 		CONF="Y"
 		shift
+		continue
 	fi
 	if [ "$1" = "--new" ]; then
 		if [ -z "$2" ]; then

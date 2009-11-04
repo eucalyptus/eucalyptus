@@ -760,8 +760,8 @@ if [ -n "$UPGRADE_CONF" -o -n "$IMPORTFILE" ]; then
 	    eval y="$y"
 	    if [ -n "$y" ]; then
 		if [ "$x" = "VNET_INTERFACE" ]; then
-			echo "VNET_PRIVINTERFACE=\"${y}\"" >> $FILE
-			echo "VNET_PUBINTERFACE=\"${y}\"" >> $FILE
+			change_var_value $FILE VNET_PRIVINTERFACE "${y}"
+			change_var_value $FILE VNET_PUBINTERFACE "${y}"
 		else
 			echo "$x=\"${y}\"" >> $FILE
 		fi

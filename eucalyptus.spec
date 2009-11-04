@@ -24,11 +24,11 @@ Release:       1
 License:       GPLv3
 Group:         Applications/System
 %if %is_centos
-BuildRequires: gcc, make, libvirt >= 0.6, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
+BuildRequires: gcc, make, libvirt >= 0.6, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Requires:      vconfig, wget, rsync
 %endif
 %if %is_suse
-BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
+BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Requires:      vlan
 %endif
 
@@ -105,7 +105,7 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, iptables, bridge-utils, eucalyptus-gl >= 1.5, %{__dhcp}, vtun
+Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, eucalyptus-gl >= 1.6, %{__dhcp}, vtun
 Conflicts:    eucalyptus < 1.6, eucalyptus-nc < 1.6
 Group:        Applications/System
 
@@ -119,7 +119,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
+Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-gl >= 1.6, %{__libvirt}, %{__curl}, %{__xen}
 Conflicts:    eucalyptus < 1.6, eucalyptus-cc < 1.6
 Group:        Applications/System
 
@@ -133,7 +133,7 @@ This package contains the node controller part of eucalyptus.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
+Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Conflicts:    eucalyptus < 1.6
 Group:        Applications/System
 
@@ -449,7 +449,7 @@ then
 fi
 
 %changelog gl
-*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+*Thu Nov 5 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.6.1)
 - install in / instead of /opt/eucalyptus
 
@@ -463,7 +463,7 @@ fi
 - Added new service
 
 %changelog cloud
-*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+*Thu Nov 5 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.6.1)
 - install in / instead of /opt/eucalyptus
 
@@ -508,7 +508,7 @@ fi
 - Fix the instance ID naming collision.
 
 %changelog cc
-*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+*Thu Nov 5 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.6.1)
 - install in / instead of /opt/eucalyptus
 
@@ -529,7 +529,7 @@ fi
   this module.
 
 %changelog nc
-*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+*Thu Nov 5 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.6.1)
 - install in / instead of /opt/eucalyptus
 
@@ -559,7 +559,7 @@ fi
 - More robust checking for running instances.
 
 %changelog
-*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+*Thu Nov 5 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.6.1)
 - install in / instead of /opt/eucalyptus
 
