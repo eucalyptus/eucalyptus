@@ -1,7 +1,6 @@
 /var/log
 /var/run
 /etc/eucalyptus/eucalyptus.conf
-/usr/share/eucalyptus/add_key.pl
 /usr/share/eucalyptus/euca_ipt
 /usr/share/eucalyptus/populate_arp.pl
 /usr/share/eucalyptus/euca_upgrade
