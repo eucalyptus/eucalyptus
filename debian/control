@@ -174,8 +174,8 @@ Description: Elastic Utility Computing Architecture - Common Java package
 
 Package: eucalyptus-cc
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common, apache2, libapache2-mod-axis2c, eucalyptus-gl, avahi-utils, librampart0
-Recommends: vlan, powerwake, dhcp3-server, libpam-modules (>= 1.0.1-9ubuntu3)
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common, apache2, libapache2-mod-axis2c, eucalyptus-gl, avahi-utils, librampart0, bridge-utils, vlan, dhcp3-server
+Recommends: powerwake, libpam-modules (>= 1.0.1-9ubuntu3)
 Suggests: vtun
 Conflicts: apache2-mpm-itk
 Description: Elastic Utility Computing Architecture - Cluster controller
