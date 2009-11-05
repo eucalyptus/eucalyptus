@@ -95,7 +95,6 @@ public class LVM2Manager implements LogicalStorageManager {
 	public static final String lvmRootDirectory = "/dev";
 	public static final String PATH_SEPARATOR = "/";
 	public static boolean initialized = false;
-	public static String hostName = "localhost";
 	public static final int MAX_LOOP_DEVICES = 256;
 	public static final int MAX_MINOR_NUMBER = 16;
 	private  static final String blockSize = "1M";
@@ -271,11 +270,11 @@ public class LVM2Manager implements LogicalStorageManager {
 
 	public void configure() {
 		try {
-			hostName = InetAddress.getLocalHost().getHostName();
 			EntityWrapper<LVMMetaInfo> db = StorageController.getEntityWrapper();
-			LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
+			LVMMetaInfo metaInfo = new LVMMetaInfo();
 			List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
 			if(metaInfoList.size() <= 0) {
+				metaInfo.setHostName(StorageProperties.NAME);
 				metaInfo.setMajorNumber(0);
 				metaInfo.setMinorNumber(0);
 				db.add(metaInfo);
@@ -351,7 +350,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		int majorNumber = -1;
 		int minorNumber = -1;
 		List<Integer> deviceNumbers = new ArrayList<Integer>();
-		LVMMetaInfo metaInfo = new LVMMetaInfo(hostName);
+		LVMMetaInfo metaInfo = new LVMMetaInfo();
 		EntityWrapper<LVMMetaInfo> db = StorageController.getEntityWrapper();
 		List<LVMMetaInfo> metaInfoList = db.query(metaInfo);
 		if(metaInfoList.size() > 0) {
