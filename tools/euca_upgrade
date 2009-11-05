@@ -148,6 +148,13 @@ fi
 
 # upgrade conf file (and keys backup) 
 if [ "$CONF" = "Y" ]; then
+	# we need euca_conf later (the new version)
+	if [ ! -x $NEW_EUCA/usr/sbin/euca_conf ];
+	then
+		echo "Cannot find new euca_conf!"
+		exit 1
+	fi
+
 	# backup the keys
 	if [ -d $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME ]; then
 		if [ "$FORCE" != "Y" ]; then
