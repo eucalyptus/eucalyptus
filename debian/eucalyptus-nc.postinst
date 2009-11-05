@@ -14,12 +14,7 @@ then
     then
         touch "$EUCA_HOME/.ssh/authorized_keys" 
     fi
-    DO_SUDO="$DO_UBUNTU`grep "^eucalyptus" /etc/sudoers`" 
-    if [ -z "$DO_SUDO" ]
-    then 
-      echo 'eucalyptus ALL=NOPASSWD: /usr/sbin/xm'>> /etc/sudoers; 
-    fi
-
+    chown -R eucalyptus.eucalyptus /var/lib/eucalyptus/.ssh    
 
     update-rc.d eucalyptus-nc start 99 2 3 4 5 . stop 20 0 1 6 . >/dev/null
 
