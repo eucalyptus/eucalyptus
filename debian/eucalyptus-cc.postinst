@@ -27,7 +27,7 @@ then
         fi
     fi
 
-    update-rc.d eucalyptus-cc start 20 2 3 4 5 . stop 20 1 . >/dev/null
+    update-rc.d eucalyptus-cc start 20 2 3 4 5 . stop 20 0 1 6 . >/dev/null
 
     if which invoke-rc.d >/dev/null 2>&1; then
         invoke-rc.d eucalyptus-cc stop > /dev/null 2>&1 ||true
