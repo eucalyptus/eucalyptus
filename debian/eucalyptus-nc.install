@@ -1,3 +1,4 @@
+/usr/lib/eucalyptus/euca_mountwrap
 /etc/init.d/eucalyptus-nc
 /usr/share/eucalyptus/add_key.pl
 /usr/share/eucalyptus/detach.pl

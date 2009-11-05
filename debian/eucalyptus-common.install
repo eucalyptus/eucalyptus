@@ -5,7 +5,6 @@
 /usr/share/eucalyptus/populate_arp.pl
 /usr/share/eucalyptus/euca_upgrade
 /usr/lib/eucalyptus/euca_rootwrap
-/usr/lib/eucalyptus/euca_mountwrap
 /usr/sbin/euca_conf
 /usr/sbin/euca_sync_key
 /usr/sbin/euca_killall
