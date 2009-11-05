@@ -4,7 +4,7 @@ if [ "$1" = "upgrade" ];
 then
 	if dpkg --compare-versions "$2" lt 1.6
 	then
-		mv -v /etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old
+		cp -a /etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old
 	fi
 fi
 
