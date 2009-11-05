@@ -157,7 +157,7 @@ if [ "$CONF" = "Y" ]; then
 	else
 		mkdir -p $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME
 		let $((ret += $?))
-		cp --preserve -r $OLD_EUCA/var/lib/eucalyptus/keys/* $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME
+		tar -C $OLD_EUCA/var/lib/eucalyptus/keys --exclude=$BCK_NAME -cf - .|tar -C $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME -xf -
 		let $((ret += $?))
 		if [ $ret -gt 0 ]; then
 			echo "Failed to backup keys!"
@@ -199,7 +199,7 @@ if [ "$CONF" = "Y" ]; then
 	# upgrade the conf file
 	export EUCALYPTUS="$NEW_EUCA"
 	echo -n "Upgrading the configuration ..."
-	$EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --upgrade-conf $NEW_EUCA/etc/eucalyptus/eucalyptus.conf-1.5
+	$EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --upgrade-conf $NEW_EUCA/etc/eucalyptus/eucalyptus.conf-1.5 $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf 
 	echo "done."
 fi
 	
@@ -227,7 +227,7 @@ if [ "$DB" = "Y" ]; then
 		ret=0
 		mkdir -p $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME
 		let $((ret += $?))
-		cp --preserve -r $OLD_EUCA/var/lib/eucalyptus/db/* $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME
+		tar -C $OLD_EUCA/var/lib/eucalyptus/db --exclude=$BCK_NAME -cf - .|tar -C $NEW_EUCA/var/lib/eucalyptus/db/$BCK_NAME -xf -
 		let $((ret += $?))
 		if [ $ret -gt 0 ]; then
 			echo "Failed to backup database!"
