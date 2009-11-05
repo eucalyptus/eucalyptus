@@ -198,9 +198,13 @@ if [ "$CONF" = "Y" ]; then
 			rm -rf $x
 		fi
 	done
-	if ! cp --preserve -r $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME/*.p* $NEW_EUCA/var/lib/eucalyptus/keys ; then
-		echo "Failed to copy over old keys!"
-		exit 1
+	if ls $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME/*.p* 2> /dev/null > /dev/null ; then
+		if ! cp --preserve -r $NEW_EUCA/var/lib/eucalyptus/keys/$BCK_NAME/*.p* $NEW_EUCA/var/lib/eucalyptus/keys ; then
+			echo "Failed to copy over old keys!"
+			exit 1
+		fi
+	else
+		echo "No old keys found"
 	fi
 
 	# upgrade the conf file
