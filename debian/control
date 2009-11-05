@@ -47,6 +47,7 @@ Homepage: http://open.eucalyptus.com/
 Package: eucalyptus-common
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, adduser, openssh-server, openssh-client, sudo, rsync
+Replaces: eucalyptus-common (< 1.6)
 Recommends: avahi-utils, unzip
 Description: Elastic Utility Computing Architecture - Common files
  EUCALYPTUS is an open source service overlay that implements elastic
@@ -163,6 +164,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, vblade, lvm2, dmsetup, openssh-serv
  libxom-java,
  libxpp3-java
 Replaces: eucalyptus-javadeps, eucalyptus-common, eucalyptus-cloud (< 1.6.1)
+Conflicts: eucalyptus-javadeps
 Description: Elastic Utility Computing Architecture - Common Java package
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
