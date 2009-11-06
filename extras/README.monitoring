@@ -1,0 +1,98 @@
+Monitoring for Eucalyptus
+=========================
+
+This document explains how to integrate Eucalyptus within a running nagios
+and ganglia installations. You will then be able to monitor basic status
+of a running Eucalyptus system. We'll start from Nagios, and you will see
+ganglia instructions following.
+
+You should check http://open.eucalyptus.com for newer version of these
+scripts, up-to-date information and help.
+
+NAGIOS
+======
+
+Prerequisite
+============
+
+Have a Eucalyptus (1.6 or higher)  installation running. You should have
+one CLC and at least one Walrus, SC, CC and NC. For simplicity in this
+document we expect to install nagios on the CLC machine and that all the
+machines are 'visible' by the CLC machine. 
+
+Install nagios on the CLC machine (for example for ubuntu/debian install
+nagios3) and read the package instructions. You should be able to login to
+the nagios graphical interface (usually http://localhost/nagios3) and see
+your host informations there.
+
+Setup
+=====
+
+We will use the passive cheks capability of nagios, and to do so you need
+to check that the the named pipe exists. Usually is
+	/var/lib/nagios3/rw/nagios.cmd
+but you can check in nagios.cfg which file that is supposed to be. Nagios
+should create it at startup when you change
+	check_external_commands=1
+into nagios,cfg.
+
+To create the configuration for the eucalyptus machine, you can use the
+script nagios.sh. For example
+	nagios.sh -setup -nodes "two three four" -cc "one" -cloud one -walrus "one" > eucalyptus.cfg
+assumes that hosts 'one' has the cloud manager, walrus and the cc, while
+machines two, three and four are the nc. Inspect the generated file
+(eucalyptus.cfg) and it all looks good, you can move it to the nagios
+configuration directory (usually /etc/nagios3/conf.d) and restart nagios.
+
+Running
+=======
+
+Nagios should now display the Eucalyptus machines and services, but there
+won't be any data reporting yet. To do so you can now run the same
+script, in the example 
+	nagios.sh -nodes "two three four" -cc "one" -cloud one -walrus "one"
+(usually the script runs in a cron job). Give sometime to nagios to
+process the information (more so if you just started it) and you should
+now be able to monitor the status of Eucalyptus hosts and services.
+
+NOTE: some of the eucalyptus hosts may show a status of PENDING in some
+nagios screens (Host detail in particular). This is no really true since
+the tests are taken, but nagios report them as such becasue some tests
+aren't under nagios control. You will see the correct values in the others
+screens.
+
+GANGLIA
+=======
+
+Prerequisite
+============
+
+Have a working ganglia installation. In particular you should one of more
+gmond running on the machines you want monitored (nc, sc and walrus), and
+at least one gmetad and one webfrontend to collect and to show all the
+data. You should be able to see ganglia's graphs (usually at
+http://localhost/ganglia).
+
+You need to have a working Eucalyptus installation (1.6 or higher).
+
+Setup
+=====
+
+You may want to customize ganglia (gmetad in particular) to be able to
+group all the nodes under a 'cluster' to be able to see the aggregation of
+the resources. In particular on nodes with multiple NICs you may have to
+specify by hand which interface to bind to.
+
+Eucalyptus (1.6 or higher) should already be setup and working.
+
+
+Running
+=======
+
+To start pushing data into ganglia you can use the script ganglia.sh. You
+will need to specify which type of machine you are monnitoring (nc for
+node controller, sc for storage controller and walrus) and where
+Eucalyptus is installed. For example
+	ganglia.sh -type nc -d /opt/eucalyptus
+
+You may want to run the above command line from a cronjob.

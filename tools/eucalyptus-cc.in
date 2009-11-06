@@ -1,4 +1,62 @@
 #!/bin/bash
+#Copyright (c) 2009  Eucalyptus Systems, Inc.	
+#
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by 
+#the Free Software Foundation, only version 3 of the License.  
+# 
+#This file is distributed in the hope that it will be useful, but WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#for more details.  
+#
+#You should have received a copy of the GNU General Public License along
+#with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+#Please contact Eucalyptus Systems, Inc., 130 Castilian
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+#if you need additional information or have any questions.
+#
+#This file may incorporate work covered under the following copyright and
+#permission notice:
+#
+#  Software License Agreement (BSD License)
+#
+#  Copyright (c) 2008, Regents of the University of California
+#  
+#
+#  Redistribution and use of this software in source and binary forms, with
+#  or without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+#  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+#  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+#  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+#  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+#  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+#  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+#  ANY SUCH LICENSES OR RIGHTS.
+#
 #
 # Init script for the Eucalyptus cluster controller
 #
@@ -50,13 +108,6 @@ if [ -z "$EUCALYPTUS" ] ; then
 fi
 export EUCALYPTUS
 
-# just a quick way to check if we have the package still installed: at
-# times we can still have the init.d script
-if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
-	echo "Some eucalyptus components are missing"
-	exit 1
-fi
-
 create_httpd_config() {
 	IPS="all"
 	
@@ -69,18 +120,30 @@ create_httpd_config() {
 	fi
 
 	# let's configure the CC 
-	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $CC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|"|sed "s|\(StartServers\).*|\1 5|"|sed "s|\(MinSpareServers\).*|\1 5|"|sed "s|\(MaxSpareServers\).*|\1 10|"|sed "s|\(MaxClients\).*|\1 25|" |sed "s|\(MinSpareThreads\).*|\1 5|" | sed "s|\(MaxSpareThreads\).*|\1 10|" | sed "s|\(ThreadsPerChild\).*|\1 25|">  $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
+	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $CC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|"|sed "s|\(StartServers\).*|\1 5|"|sed "s|\(MinSpareServers\).*|\1 5|"|sed "s|\(MaxSpareServers\).*|\1 10|"|sed "s|\(MaxClients\).*|\1 8|" |sed "s|\(MinSpareThreads\).*|\1 25|" | sed "s|\(MaxSpareThreads\).*|\1 75|" | sed "s|\(ThreadsPerChild\).*|\1 1|" | sed "s|\(ThreadLimit\).*|\1 64|" >  $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
+
 }
 
 # crude way to start the axis2c services
 do_start() {
+	# fixes #469984 (was against NC but CC may have similar issue)
+	IPTABLES="`which iptables 2> /dev/null`"
+	if [ -n "$IPTABLES" ]; then
+		[ -x $IPTABLES ] && $IPTABLES -L -n > /dev/null 2> /dev/null
+	fi
+
 	# let's check if we have apache2
 	if [ ! -x $HTTPD ]; then
+		echo
 		echo "cannot find httpd (was set to <$HTTPD>)!"
 		exit 1
 	fi
+	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+		echo "Some eucalyptus components are missing"
+		exit 1
+	fi
 
-	if ! $EUCALYPTUS/usr/sbin/euca_conf -check cc ; then
+	if ! $EUCALYPTUS/usr/sbin/euca_conf --check cc ; then
 		exit 1
 	fi
 
@@ -101,6 +164,7 @@ do_start() {
 	# dhcpd, so better check we know how to use it
 	if [ "$VNET_MODE" = "MANAGED" -o "$VNET_MODE" = "STATIC" ]; then
 		if [ -z "$VNET_DHCPDAEMON" -o ! -x $VNET_DHCPDAEMON ]; then
+			echo
 			echo "Cannot find dhcp server!"
 			exit 1
 		fi
@@ -112,6 +176,7 @@ do_start() {
 
 	# now we start the services
 	if  ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf ; then
+		echo
 		echo "Failed to start the CC!"
 		exit 1
 	fi
@@ -121,7 +186,7 @@ do_status() {
 	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid
 	if [ -s $pidfile ]; then
 		pid=`cat $pidfile 2> /dev/null`
-		if ps ax|grep $pid|grep httpd-cc.conf > /dev/null ; then
+		if ps axww|grep $pid|grep httpd-cc.conf > /dev/null ; then
 			# we are good
 			return 0
 		fi
@@ -162,7 +227,7 @@ do_stop() {
 
 	# let's be sure we are killing the right process
 	if ! do_status ; then
-		rm $pidfile
+		rm -f $pidfile
 		return 
 	fi
 
@@ -221,20 +286,16 @@ HTTPD_HOME="/"
 for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 	for x in `/bin/ls $y 2> /dev/null`; do
 		# this is for the RPM installed pacakges
-		if [ "$x" = "euca-libvirt" ]; then
-			export LIBVIRT_HOME="$y/$x"
-		fi
 		if [ "$x" = "euca-axis2c" ]; then
-			export AXIS2C_HOME="$y/$x"
+			if [ -e $y/$x/lib/libmod_axis2.so ]; then
+				export AXIS2C_HOME="$y/$x"
+			fi
 		fi
 		# this is for system or source installed
 		if [ "`echo $x | cut -f 1 -d -`" = "axis2c" ]; then
 			if [ -e $y/$x/lib/libmod_axis2.so ]; then
 				export AXIS2C_HOME="$y/$x"
 			fi
-		fi
-		if [ "`echo $x | cut -f 1 -d -`" = "libvirt" ]; then
-			export LIBVIRT_HOME="$y/$x"
 		fi
 	done
 done
@@ -257,14 +318,8 @@ if [ -z "${HTTPD}" ]; then
 	exit 1
 fi
 
-# if we have a custom libvirt let's use it
-if [ -n "$LIBVIRT_HOME" ]; then
-	export LD_LIBRARY_PATH="$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$LD_LIBRARY_PATH"
-	export PATH="$LIBVIRT_HOME/bin:$PATH"
-fi
-
 # set the library path correctly
-export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
 
 case "$1" in
   start)

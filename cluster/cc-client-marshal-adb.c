@@ -1,3 +1,62 @@
+/*
+Copyright (c) 2009  Eucalyptus Systems, Inc.	
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation, only version 3 of the License.  
+ 
+This file is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.  
+
+You should have received a copy of the GNU General Public License along
+with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+Please contact Eucalyptus Systems, Inc., 130 Castilian
+Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+if you need additional information or have any questions.
+
+This file may incorporate work covered under the following copyright and
+permission notice:
+
+  Software License Agreement (BSD License)
+
+  Copyright (c) 2008, Regents of the University of California
+  
+
+  Redistribution and use of this software in source and binary forms, with
+  or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+  ANY SUCH LICENSES OR RIGHTS.
+*/
 #include <stdio.h>
 #include <time.h>
 #include <misc.h>
@@ -104,9 +163,17 @@ int cc_getConsoleOutput(char *instId, axutil_env_t *env, axis2_stub_t *stub) {
       printf("operation fault '%s'\n", adb_getConsoleOutputResponseType_get_statusMessage(tirt, env));
       return(1);
     } else {
+      char *tmp;
+
       output = adb_getConsoleOutputResponseType_get_consoleOutput(tirt, env);
       printf("RAW CONSOLE OUTPUT: %s\n", output);
-      printf("RAW CONSOLE OUTPUT: %s\n", base64_dec((unsigned char *)output, strlen(output)));
+      tmp = base64_dec((unsigned char *)output, strlen(output));
+      if (tmp) {
+         printf("RAW CONSOLE OUTPUT: %s\n", tmp);
+         free(tmp);
+      } else {
+         printf("Out of memory!\n");
+      }
     }
   }
   return(0);
@@ -535,7 +602,7 @@ int cc_startNetwork(int vlan, char *netName, char **ccs, int ccsLen, axutil_env_
   return(0);
 }
 
-int cc_describeNetworks(char **ccs, int ccsLen, axutil_env_t *env, axis2_stub_t *stub) {
+int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
   //  char meh[32];
   adb_DescribeNetworks_t *input;
@@ -546,6 +613,9 @@ int cc_describeNetworks(char **ccs, int ccsLen, axutil_env_t *env, axis2_stub_t 
   sn = adb_describeNetworksType_create(env);
   input = adb_DescribeNetworks_create(env);
   
+  if (nameserver) {
+    adb_describeNetworksType_set_nameserver(sn, env, nameserver);
+  }
   adb_describeNetworksType_set_userId(sn, env, "eucalyptus");
   {
     char cidstr[9];
@@ -721,21 +791,22 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	char *state;
 	char *reservationId;
 	char *ownerId, *keyName;
-	axutil_date_time_t *dt;
+	int networkIndex;
 	
 	it = adb_describeInstancesResponseType_get_instances_at(dirt, env, i);
 	instId = adb_ccInstanceType_get_instanceId(it, env);
-	amiId = adb_ccInstanceType_get_imageId(it, env);
+	//amiId = adb_ccInstanceType_get_imageId(it, env);
 	reservationId = adb_ccInstanceType_get_reservationId(it, env);
 	ownerId = adb_ccInstanceType_get_ownerId(it, env);
 	keyName = adb_ccInstanceType_get_keyName(it, env);
 	state = adb_ccInstanceType_get_stateName(it, env);
 	nct = adb_ccInstanceType_get_netParams(it, env);
 	vm = adb_ccInstanceType_get_instanceType(it, env);
+	networkIndex = adb_ccInstanceType_get_networkIndex(it, env);
 
-	dt = adb_ccInstanceType_get_launchTime(it, env);
 	if (0)
 	{
+	  axutil_date_time_t *dt;
 	  time_t ts, tsu, tsdelta, tsdelta_min;
 	  struct tm *tmu;
 	  ts = time(NULL);
@@ -743,6 +814,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	  tsu = mktime(tmu);
 	  tsdelta = (tsu - ts) / 3600;
 	  tsdelta_min = ((tsu - ts) - (tsdelta * 3600)) / 60;
+	  dt = adb_ccInstanceType_get_launchTime(it, env);
 
 	  struct tm t = {
 	    axutil_date_time_get_second(dt, env),
@@ -764,7 +836,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	vol = adb_ccInstanceType_get_volumes_at(it, env, 0);
 	volId = adb_volumeType_get_volumeId(vol, env);
 
-	printf("Desc: %s %s %s %s %s %s %s %s %d %s %s %d %d %d %s %s %s %s %s\n", instId, reservationId, ownerId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_publicMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId);
+	printf("Desc: %s %s %s %s %s %s %s %s %d %s %s %d %d %d %s %s %s %s %s %d\n", instId, reservationId, ownerId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_publicMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
 	
       }
     }

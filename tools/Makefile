@@ -5,27 +5,25 @@
 include ../Makedefs
 
 all:
-	@echo nothing to do here
 
 build: all
 
 deploy:
 
 clean:
-	rm -f *~ *.o
+	$(RM) -f *~ *.o
 
 distclean:
-	@rm -rf eucalyptus
+	@echo "removing generated files scripts ..."
+	@rm -rf eucalyptus eucalyptus-cloud eucalyptus-walrus eucalyptus-sc
 
-install: deploy
+install: build
 	@if test -e /etc/init.d/eucalyptus ; then \
 		mv /etc/init.d/eucalyptus /etc/init.d/eucalyptus.old ; \
 		echo "Moving away old init.d script"; fi
 	@if test -e $(etcdir)/init.d/eucalyptus ; then \
 		mv $(etcdir)/init.d/eucalyptus $(etcdir)/init.d/eucalyptus.old ; fi
 	@$(INSTALL) -m 755 eucalyptus-cloud $(etcdir)/init.d
-	@$(INSTALL) -m 755 eucalyptus-walrus $(etcdir)/init.d
-	@$(INSTALL) -m 755 eucalyptus-sc $(etcdir)/init.d
 	@$(INSTALL) -m 755 eucalyptus-nc $(etcdir)/init.d
 	@$(INSTALL) -m 755 eucalyptus-cc $(etcdir)/init.d
 	@$(INSTALL) -m 644 httpd.conf $(etcdir)/eucalyptus
@@ -41,7 +39,28 @@ install: deploy
 	@$(INSTALL) -m 755 get_xen_info $(datarootdir)/eucalyptus/get_xen_info
 	@$(INSTALL) -m 755 get_sys_info $(datarootdir)/eucalyptus/get_sys_info
 	@$(INSTALL) -m 755 euca_ipt $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 euca_upgrade $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 populate_arp.pl $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_conf $(sbindir)
 	@$(INSTALL) -m 755 euca_sync_key $(sbindir)
+
+uninstall: 
+	@$(RM) -f $(etcdir)/init.d/eucalyptus-cloud
+	@$(RM) -f $(etcdir)/init.d/eucalyptus-nc
+	@$(RM) -f $(etcdir)/init.d/eucalyptus-cc
+	@$(RM) -f $(etcdir)/eucalyptus/httpd*
+	@$(RM) -f $(etcdir)/eucalyptus/eucalyptus.conf
+	@$(RM) -f $(etcdir)/eucalyptus/vtunall.conf.template
+	@$(RM) -f $(datarootdir)/eucalyptus/add_key.pl
+	@$(RM) -f $(datarootdir)/eucalyptus/gen_libvirt_xml
+	@$(RM) -f $(datarootdir)/eucalyptus/gen_kvm_libvirt_xml
+	@$(RM) -f $(datarootdir)/eucalyptus/detach.pl
+	@$(RM) -f $(datarootdir)/eucalyptus/partition2disk
+	@$(RM) -f $(datarootdir)/eucalyptus/get_xen_info
+	@$(RM) -f $(datarootdir)/eucalyptus/get_sys_info
+	@$(RM) -f $(datarootdir)/eucalyptus/euca_ipt
+	@$(RM) -f $(datarootdir)/eucalyptus/euca_upgrade
+	@$(RM) -f $(datarootdir)/eucalyptus/populate_arp.pl
+	@$(RM) -f $(sbindir)/euca_conf
+	@$(RM) -f $(sbindir)/euca_sync_key
 

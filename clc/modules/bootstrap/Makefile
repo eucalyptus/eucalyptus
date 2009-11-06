@@ -23,11 +23,10 @@
 ###############################################################################
 include ../../../Makedefs
 CC = gcc
-JAVAC = /usr/lib/jvm/java-6-openjdk/bin/javac
-JAR = /usr/lib/jvm/java-6-openjdk/bin/jar
-CFLAGS = -g -O2 -DOS_LINUX -DDSO_DLFCN -DCPU=\"amd64\" \
-		 -I/usr/lib/jvm/java-6-openjdk/include \
-		 -I/usr/lib/jvm/java-6-openjdk/include/linux \
+CFLAGS = -g -O2 -DOS_LINUX -DDSO_DLFCN \
+		 -I$(JAVA_HOME)/include \
+		 -I$(JAVA_HOME)/include/linux \
+		 -I../../../util \
 		 -Wall -Wstrict-prototypes
 LDFLAGS =  -ldl -lpthread
 JAVACFLAGS = 
@@ -36,7 +35,7 @@ LDCMD = gcc
 
 OBJS =  eucalyptus-bootstrap.o eucalyptus-opts.o
 all: eucalyptus-cloud
-
+build: eucalyptus-cloud
 .c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -51,5 +50,7 @@ install:
 	$(INSTALL) -m 0755 eucalyptus-cloud $(sbindir)/eucalyptus-cloud
 
 clean:
-	rm -f $(OBJS) eucalyptus-cloud
+	@$(RM) -f $(OBJS) eucalyptus-cloud
 
+uninstall:
+	@$(RM) -f $(sbindir)/eucalyptus-cloud

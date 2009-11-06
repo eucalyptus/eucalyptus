@@ -1,3 +1,62 @@
+/*
+Copyright (c) 2009  Eucalyptus Systems, Inc.	
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation, only version 3 of the License.  
+ 
+This file is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.  
+
+You should have received a copy of the GNU General Public License along
+with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+Please contact Eucalyptus Systems, Inc., 130 Castilian
+Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+if you need additional information or have any questions.
+
+This file may incorporate work covered under the following copyright and
+permission notice:
+
+  Software License Agreement (BSD License)
+
+  Copyright (c) 2008, Regents of the University of California
+  
+
+  Redistribution and use of this software in source and binary forms, with
+  or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+  ANY SUCH LICENSES OR RIGHTS.
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +87,7 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *attachVolume
   ccMeta.correlationId = adb_attachVolumeType_get_correlationId(avt, env);
   ccMeta.userId = adb_attachVolumeType_get_userId(avt, env);
   
-  cid = adb_attachVolumeType_get_correlationId(avt, env);
+  //cid = adb_attachVolumeType_get_correlationId(avt, env);
   
   volumeId = adb_attachVolumeType_get_volumeId(avt, env);
   instanceId = adb_attachVolumeType_get_instanceId(avt, env);
@@ -78,7 +137,7 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume
   ccMeta.correlationId = adb_detachVolumeType_get_correlationId(dvt, env);
   ccMeta.userId = adb_detachVolumeType_get_userId(dvt, env);
   
-  cid = adb_detachVolumeType_get_correlationId(dvt, env);
+  //cid = adb_detachVolumeType_get_correlationId(dvt, env);
   
   volumeId = adb_detachVolumeType_get_volumeId(dvt, env);
   instanceId = adb_detachVolumeType_get_instanceId(dvt, env);
@@ -128,8 +187,8 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, co
   ccMeta.correlationId = adb_stopNetworkType_get_correlationId(snt, env);
   ccMeta.userId = adb_stopNetworkType_get_userId(snt, env);
   
-  userName = adb_stopNetworkType_get_userId(snt, env);
-  cid = adb_stopNetworkType_get_correlationId(snt, env);
+  //userName = adb_stopNetworkType_get_userId(snt, env);
+  //cid = adb_stopNetworkType_get_correlationId(snt, env);
   
   vlan = adb_stopNetworkType_get_vlan(snt, env);
   netName = adb_stopNetworkType_get_netName(snt, env);
@@ -171,7 +230,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char **clusterControllers;
+  char **clusterControllers=NULL, *nameserver=NULL;
   int clusterControllersLen=0;
   ncMetadata ccMeta;
   vnetConfig *outvnetConfig=NULL;
@@ -182,16 +241,20 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   ccMeta.correlationId = adb_describeNetworksType_get_correlationId(snt, env);
   ccMeta.userId = adb_describeNetworksType_get_userId(snt, env);
   
+  nameserver = adb_describeNetworksType_get_nameserver(snt, env);
+  
   clusterControllersLen = adb_describeNetworksType_sizeof_clusterControllers(snt, env);
   clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
   for (i=0; i<clusterControllersLen; i++) {
-    clusterControllers[i] = adb_describeNetworksType_get_clusterControllers_at(snt, env, i);
+    char *incc;
+    incc = adb_describeNetworksType_get_clusterControllers_at(snt, env, i);
+    clusterControllers[i] = host2ip(incc);
   }
   
   snrt = adb_describeNetworksResponseType_create(env);
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doDescribeNetworks(&ccMeta, clusterControllers, clusterControllersLen, outvnetConfig);
+    rc = doDescribeNetworks(&ccMeta, nameserver, clusterControllers, clusterControllersLen, outvnetConfig);
     if (rc) {
       logprintf("ERROR: doDescribeNetworks() returned fail %d\n", rc);
       status = AXIS2_FALSE;
@@ -212,12 +275,9 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 	  adb_networkType_set_vlan(nt, env, i);
 	  adb_networkType_set_netName(nt, env, outvnetConfig->users[i].netName);
 	  adb_networkType_set_userName(nt, env, outvnetConfig->users[i].userName);
-	  logprintfl(EUCADEBUG, "ACTIVE VLAN: %d\n", i);
-	  logprintfl(EUCADEBUG, "NETNAME: %s USERNAME: %s\n", outvnetConfig->users[i].netName, outvnetConfig->users[i].userName);
 	  for (j=0; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
 	    if (outvnetConfig->networks[i].addrs[j].active) {
 	      adb_networkType_add_activeAddrs(nt, env, j);
-	      logprintfl(EUCADEBUG, "\tACTIVE ADDR: %s\n", hex2dot(outvnetConfig->networks[i].addrs[j].ip));
 	    }
 	  }
 	  adb_describeNetworksResponseType_add_activeNetworks(snrt, env, nt);
@@ -225,8 +285,10 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
       }
       
       status = AXIS2_TRUE;
-      //      snprintf(statusMessage, 255, "SUCCESS");
     }
+  }
+  for (i=0; i<clusterControllersLen; i++) {
+    if (clusterControllers[i]) free(clusterControllers[i]);
   }
   if (clusterControllers) free(clusterControllers);
   
@@ -321,7 +383,7 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t *assignAdd
   ccMeta.correlationId = adb_assignAddressType_get_correlationId(aat, env);
   ccMeta.userId = adb_assignAddressType_get_userId(aat, env);
   
-  cid = adb_assignAddressType_get_correlationId(aat, env);
+  //cid = adb_assignAddressType_get_correlationId(aat, env);
   
   src = adb_assignAddressType_get_source(aat, env);
   dst = adb_assignAddressType_get_dest(aat, env);
@@ -422,6 +484,12 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   ruleLen = adb_configureNetworkType_sizeof_rules(cnt, env);
   done=0;
   destNameLast = strdup("EUCAFIRST");
+  if (!destNameLast) {
+    logprintf("ERROR: out of memory\n");
+    status = AXIS2_FALSE;
+    snprintf(statusMessage, 255, "ERROR");
+    return ret;
+  }
   
   for (j=0; j<ruleLen && !done; j++) {
     nr = adb_configureNetworkType_get_rules_at(cnt, env, j);
@@ -438,6 +506,12 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     }
     if (destNameLast) free(destNameLast);
     destNameLast = strdup(destName);
+    if (!destNameLast) {
+      logprintf("ERROR: out of memory\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+      return ret;
+    }
 
     userNames = NULL;
     namedLen = adb_networkRule_sizeof_userNames(nr, env);
@@ -482,12 +556,13 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     if (userNames) free(userNames);
     if (sourceNames) free(sourceNames);
     if (sourceNets) free(sourceNets);
-
+    
     if (rc) {
       done++;
     }
   }
-
+  if (destNameLast) free(destNameLast);
+  
   if (done) {
     logprintf("ERROR: doConfigureNetwork() returned fail %d\n", rc);
     status = AXIS2_FALSE;
@@ -516,7 +591,7 @@ adb_GetConsoleOutputResponse_t* GetConsoleOutputMarshal (adb_GetConsoleOutput_t*
   
   //input vars
   adb_getConsoleOutputType_t *gcot=NULL;
-
+  
   // working vars
   int rc;
   axis2_bool_t status=AXIS2_TRUE;
@@ -574,7 +649,8 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *netName, **clusterControllers;
+  char *netName=NULL, **clusterControllers=NULL, *nameserver=NULL;
+  
   int vlan, clusterControllersLen=0;
   ncMetadata ccMeta;
   
@@ -584,18 +660,19 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   
   vlan = adb_startNetworkType_get_vlan(snt, env);
   netName = adb_startNetworkType_get_netName(snt, env);
-  
+  nameserver = adb_startNetworkType_get_nameserver(snt, env);
+
   clusterControllersLen = adb_startNetworkType_sizeof_clusterControllers(snt, env);
   clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
   for (i=0; i<clusterControllersLen; i++) {
-    clusterControllers[i] = adb_startNetworkType_get_clusterControllers_at(snt, env, i);
+    clusterControllers[i] = host2ip(adb_startNetworkType_get_clusterControllers_at(snt, env, i));
   }
   
   
   snrt = adb_startNetworkResponseType_create(env);
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doStartNetwork(&ccMeta, netName, vlan, clusterControllers, clusterControllersLen);
+    rc = doStartNetwork(&ccMeta, netName, vlan, nameserver, clusterControllers, clusterControllersLen);
     if (rc) {
       logprintf("ERROR: doStartNetwork() returned fail %d\n", rc);
       status = AXIS2_FALSE;
@@ -631,11 +708,11 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
   int vmLen=0, outTypesLen=0, outServiceTagsLen=0;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char **outServiceTags;
-  virtualMachine *vms;
-  adb_virtualMachineType_t *vm;
+  char **outServiceTags=NULL;
+  virtualMachine *vms=NULL;
+  adb_virtualMachineType_t *vm=NULL;
   ncMetadata ccMeta;
-  
+
   drt = adb_DescribeResources_get_DescribeResources(describeResources, env);
   ccMeta.correlationId = adb_describeResourcesType_get_correlationId(drt, env);
   ccMeta.userId = adb_describeResourcesType_get_userId(drt, env);
@@ -672,7 +749,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
 	free(outServiceTags[i]);
       }
     }
-    free(outServiceTags);
+    if (outServiceTags) free(outServiceTags);
 
     for (i=0; i<outTypesLen; i++) {
       adb_ccResourceType_t *rt=NULL;
@@ -815,6 +892,8 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
     adb_ccInstanceType_add_volumes(dst, env, vol);
   }
 
+  adb_ccInstanceType_set_networkIndex(dst, env, src->networkIndex);
+
   netconf = adb_netConfigType_create(env);
   adb_netConfigType_set_privateMacAddress(netconf, env, src->ccnet.privateMac);
   adb_netConfigType_set_publicMacAddress(netconf, env, src->ccnet.publicMac);
@@ -911,7 +990,6 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
     }
   }
   
-  // logic
   rirt = adb_runInstancesResponseType_create(env);
 
   rc=1;
@@ -944,7 +1022,10 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   
   ret = adb_RunInstancesResponse_create(env);
   adb_RunInstancesResponse_set_RunInstancesResponse(ret, env, rirt);
-  
+  free(networkIndexList);
+  free(macAddrs);
+  free(netNames);
+  free(instIds);
   
   return(ret);
 }

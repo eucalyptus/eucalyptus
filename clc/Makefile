@@ -3,12 +3,45 @@
 #
 include ../Makedefs
 
+theme_dir	= ${TOP}/clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes
+web_prop_dir	= ${TOP}/clc/modules/www/conf
+
+.PHONY: all build update_properties update_theme deps extras install
+
 all: build
 
 deps:
 	$(ANT) deps
 
-build:
+update_properties: ${web_prop_dir}/eucalyptus-web.properties
+
+${web_prop_dir}/eucalyptus-web.properties: ${web_prop_dir}/eucalyptus-web-default.properties ${TOP}/Makedefs
+	@sed "s/\(^extensions =\).*/\1 ${extensions}/" < ${web_prop_dir}/eucalyptus-web-default.properties > ${web_prop_dir}/eucalyptus-web.properties
+	@echo "Copied defaults to ${web_prop_dir}/eucalyptus-web.properties"
+
+update_theme:
+	@if test -d ${theme_dir}/${euca_theme} ; then \
+		if [ "`readlink ${theme_dir}/active`" != "${euca_theme}" ] ; then \
+			echo "Making '${euca_theme}' the active theme" ; \
+			rm -f ${theme_dir}/active ; \
+			ln -sf ${euca_theme} ${theme_dir}/active ; \
+		fi \
+	else \
+		echo "Theme ${theme_dir}/${euca_theme} is not found!"; exit 1; \
+	fi \
+
+extras: update_properties
+	@if test -n "${euca_theme}" ; then \
+		$(MAKE) update_theme; \
+	else \
+		if [ "`readlink ${theme_dir}/active`" != "eucalyptus" ] ; then \
+			echo "Making 'eucalyptus' the active theme" ; \
+			rm -f ${theme_dir}/active ; \
+			ln -sf eucalyptus ${theme_dir}/active ; \
+		fi \
+	fi
+
+build: extras
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
@@ -36,3 +69,9 @@ install: build
 
 deploy: install
 
+uninstall:
+	make -C modules/storage-controller/native uninstall
+	make -C modules/bootstrap uninstall
+	$(RM) -rf $(etcdir)/eucalyptus/cloud.d
+	$(RM) -rf $(datarootdir)/eucalyptus/*jar
+	$(RM) -rf $(vardir)/eucalyptus/webapps

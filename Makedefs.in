@@ -4,7 +4,7 @@
 #
 
 # which version
-export VERSION		= @VERSION@
+export VERSION		= @EUCA_VERSION@
 
 # packages we depend upon 
 export AXIS2C_HOME	= @AXIS2C_HOME@
@@ -30,11 +30,9 @@ bindir		= ${prefix}/usr/bin
 sbindir		= ${prefix}/usr/sbin
 datarootdir	= ${usrdir}/share
 
-# where we are going to install eucalyptus, and Co.
+# where we are going to install eucalyptus and where are the sources
 export EUCALYPTUS	= ${prefix}
 TOP			= @TOP@
-DIST_DIR		= eucalyptus-$(VERSION)
-DIST_ROOT		= $(TOP)/$(DIST_DIR)
 
 # system dependents 
 CC		= @CC@
@@ -45,3 +43,9 @@ LIBS		= @LIBS@
 INSTALL		= @INSTALL@
 ANT		= @ANT@ -e
 WSDL2C		= @WSDL2C@
+JAVA_HOME       = @JAVA_HOME@
+RM		= @RM@
+
+# compile time configurations
+euca_theme	= @INTERFACE_THEME@
+extensions	= @EXTENSIONS@

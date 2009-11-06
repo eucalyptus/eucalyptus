@@ -1,33 +1,64 @@
+/*******************************************************************************
+*Copyright (c) 2009  Eucalyptus Systems, Inc.
+* 
+*  This program is free software: you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation, only version 3 of the License.
+* 
+* 
+*  This file is distributed in the hope that it will be useful, but WITHOUT
+*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+*  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+*  for more details.
+* 
+*  You should have received a copy of the GNU General Public License along
+*  with this program.  If not, see <http://www.gnu.org/licenses/>.
+* 
+*  Please contact Eucalyptus Systems, Inc., 130 Castilian
+*  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+*  if you need additional information or have any questions.
+* 
+*  This file may incorporate work covered under the following copyright and
+*  permission notice:
+* 
+*    Software License Agreement (BSD License)
+* 
+*    Copyright (c) 2008, Regents of the University of California
+*    All rights reserved.
+* 
+*    Redistribution and use of this software in source and binary forms, with
+*    or without modification, are permitted provided that the following
+*    conditions are met:
+* 
+*      Redistributions of source code must retain the above copyright notice,
+*      this list of conditions and the following disclaimer.
+* 
+*      Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+* 
+*    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+*    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+*    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+*    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+*    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+*    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+*    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+*    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+*    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+*    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+*    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+*    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+*    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+*    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+*    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+*    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+*    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+*    ANY SUCH LICENSES OR RIGHTS.
+*******************************************************************************/
 /*
- * Software License Agreement (BSD License)
- *
- * Copyright (c) 2008, Regents of the University of California
- * All rights reserved.
- *
- * Redistribution and use of this software in source and binary forms, with or
- * without modification, are permitted provided that the following conditions
- * are met:
- *
- * * Redistributions of source code must retain the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer in the documentation and/or other
- *   materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
@@ -42,9 +73,13 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import edu.ucsb.eucalyptus.util.UserManagement;
 
 import javax.persistence.*;
+
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.CredentialProvider;
 
 @Entity
 @Table( name = "Grants" )
@@ -58,21 +93,19 @@ public class GrantInfo {
 	private String userId;
     @Column(name="grantGroup")
     private String grantGroup;
-    @Column(name="entity_name")
-    private String entityName;
-	@Column(name="read")
-	private Boolean read;
-	@Column(name="write")
-	private Boolean write;
-	@Column(name="read_acp")
-	private Boolean readACP;
-	@Column(name="write_acp")
-	private Boolean writeACP;
+	@Column(name="allow_read")
+	private Boolean canRead;
+	@Column(name="allow_write")
+	private Boolean canWrite;
+	@Column(name="allow_read_acp")
+	private Boolean canReadACP;
+	@Column(name="allow_write_acp")
+	private Boolean canWriteACP;
 
     private static Logger LOG = Logger.getLogger( ObjectInfo.class );
 
     public GrantInfo(){
-        read = write = readACP = writeACP = false;
+        canRead = canWrite = canReadACP = canWriteACP = false;
     }
 
 	public Long getId()
@@ -80,12 +113,12 @@ public class GrantInfo {
 		return this.id;
 	}
 
-	public boolean isRead() {
-		return read;
+	public boolean canRead() {
+		return canRead;
 	}
 
-	public void setRead(Boolean read) {
-		this.read = read;
+	public void setCanRead(Boolean canRead) {
+		this.canRead = canRead;
 	}
 
 	public String getUserId() {
@@ -104,40 +137,32 @@ public class GrantInfo {
         this.grantGroup = grantGroup;
     }
 
-    public String getEntityName() {
-        return entityName;
-    }
-
-    public void setEntityName(String entityName) {
-        this.entityName = entityName;
-    }
-
-    public boolean isWrite() {
-		return write;
+    public boolean canWrite() {
+		return canWrite;
 	}
 
-	public void setWrite(Boolean write) {
-		this.write = write;
+	public void setCanWrite(Boolean canWrite) {
+		this.canWrite = canWrite;
 	}
 
-	public boolean isReadACP() {
-		return readACP;
+	public boolean canReadACP() {
+		return canReadACP;
 	}
 
-	public void setReadACP(Boolean readACP) {
-		this.readACP = readACP;
+	public void setCanReadACP(Boolean canReadACP) {
+		this.canReadACP = canReadACP;
 	}
 
 	public boolean isWriteACP() {
-		return writeACP;
+		return canWriteACP;
 	}
 
-	public void setWriteACP(Boolean writeACP) {
-		this.writeACP = writeACP;
+	public void setCanWriteACP(Boolean writeACP) {
+		this.canWriteACP = writeACP;
 	}
 
 	public void setFullControl() {
-		read = write = readACP = writeACP = true;
+		canRead = canWrite = canReadACP = canWriteACP = true;
 	}
 
 	public static void addGrants(String ownerId, List<GrantInfo>grantInfos, AccessControlListType accessControlList) {
@@ -157,7 +182,11 @@ public class GrantInfo {
                         String id = grantee.getCanonicalUser().getID();
                         if(id == null || id.length() == 0)
                             continue;
-                        displayName = UserManagement.getUserName(id);
+                        try {
+                          displayName = CredentialProvider.getUserName( id );
+                        } catch ( GeneralSecurityException e ) {
+                          LOG.warn(e,e);
+                        }
 			if(displayName == null)
 			    continue;
                     }
@@ -168,13 +197,13 @@ public class GrantInfo {
 				if (permission.equals("FULL_CONTROL")) {
 					grantInfo.setFullControl();
 				}   else if (permission.equals("READ")) {
-					grantInfo.setRead(true);
+					grantInfo.setCanRead(true);
 				}   else if (permission.equals("WRITE")) {
-					grantInfo.setWrite(true);
+					grantInfo.setCanWrite(true);
 				}   else if (permission.equals("READ_ACP")) {
-					grantInfo.setReadACP(true);
+					grantInfo.setCanReadACP(true);
 				}   else if (permission.equals("WRITE_ACP")) {
-					grantInfo.setWriteACP(true);
+					grantInfo.setCanWriteACP(true);
 				}
 				grantInfos.add(grantInfo);
 			}
@@ -189,4 +218,5 @@ public class GrantInfo {
 		grantInfo.setFullControl();
 		grantInfos.add(grantInfo);
 	}
+
 }

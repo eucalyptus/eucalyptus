@@ -1,0 +1,211 @@
+/*
+ * CSS stylesheet for the standard Eucalyptus theme
+ */
+
+a:focus {-moz-outline: none /* fx 1.07*/ outline:none /* fx 1.05, Safari, Mac IE*/}
+
+body {
+    background-color: white;
+    color: black;
+    font-family: Arial, sans-serif;
+    font-size: medium;
+    margin: 0px;
+}
+
+body a { 
+    color: green;
+}
+
+button{
+	margin: 3px 3px 3px 3px;
+}
+
+.euca-greeting-normal {
+    color: black;
+}
+.euca-greeting-warning {
+    color: orange;
+}
+.euca-greeting-error {
+    color: red;
+}
+.euca-greeting-disabled {
+	color: gray;
+	font-size: medium;
+}
+.euca-greeting-pending {
+    color: orange;
+    text-decoration: blink;
+    text-align:center;
+}
+.euca-login-panel {
+    border: solid;
+    border-width: 1px;
+    border-color: #FF6600;
+    background: #FFCC33;
+    padding: 20px 20px 20px 20px;
+}
+.euca-remember-text {
+    font-size: x-small;
+    font-style: italic;
+}
+.euca-small-text {
+    font-size: x-small;
+	color: gray;
+}
+
+.euca-small-text a {
+    text-decoration: none;
+    font-size: x-small;
+	color: gray;
+}
+.euca-section-header {
+    padding: 5px 5px 5px 5px;
+    font-weight: bold;
+    font-size: large;
+    text-align: center;
+}
+
+.euca-top-bar {
+    background: #FFCC33;
+    padding: 4px 15px 2px 2px;
+    font-weight: bold;
+    font-size: large;
+    text-align: left;
+    width: 100%;
+}
+
+.euca-top-bar-left { 
+    margin-left:10px;
+    margin-top:2px; 
+}
+
+.euca-top-bar-right { 
+    margin-right:20px;
+    margin-top:20px;
+}
+
+.euca-tab-contents {
+    vertical-align: middle;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 15px;
+}
+
+.euca-message-bar {
+	width: 100%;
+	height: 2em;
+}
+
+.euca-config-component {
+	margin: 0 auto; /* center components */	
+}
+
+.euca-tab-with-text { 
+    width: 480px;
+}
+
+.highlighted {
+    border: solid;
+    border-width: 5px;
+    border-color: red;
+}
+
+.euca-error-hint {
+    font-size: x-small;
+    font-style: italic;
+    color: red;
+}
+
+.gwt-TabBar {
+    background-color: #FFFF66;
+    font-size: smaller;
+}
+
+.gwt-TabBar .gwt-TabBarFirst {
+    height: 100%;
+    padding-left: 3px;
+}
+
+.gwt-TabBar .gwt-TabBarRest {
+    padding-right: 3px;
+}
+
+.gwt-TabBar .gwt-TabBarItem {
+    padding: 4px 10px 4px 10px;
+    margin: 4px 10px 0px 10px;
+    cursor: pointer;
+    text-align: center;
+    -moz-outline: none; /* fx 1.07*/ outline: none; /* fx 1.05, Safari, Mac IE*/
+}
+
+.gwt-TabBar .gwt-TabBarItem-selected {
+    background-color: white;
+    cursor: default;
+    text-align: center;
+}
+
+.gwt-TabBarItem:hover {
+    text-decoration: underline;
+}
+
+.euca-text {
+    font-size: smaller;
+}
+
+.euca-button {
+    cursor: pointer;
+}
+
+.euca-table {
+    border-spacing: 0;
+    padding: 4px;
+}
+
+.euca-action-link {
+    font-size: x-small;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.gwt-Hyperlink a { 
+}
+
+.euca-table-heading-row {
+    font-weight: bold;
+    font-size: smaller;
+}
+
+.euca-table-odd-row {
+    font-size: smaller;
+    background: white;
+}
+
+.euca-table-even-row {
+    font-size: smaller;
+    background: #FFFF66;
+}
+
+.gwt-DialogBox { 
+    border: solid;
+    border-width: 1px;
+    border-color: #FF6600;
+    background: #FFCC33;
+    padding: 20px 20px 20px 20px;
+    width: 400px;
+}
+.gwt-DialogBox .Caption {
+    font-size: bold;	
+}
+.gwt-DialogBox .dialogContent { 
+    padding: 10px 0px 0px 0px;
+}
+
+.euca-inline-image {
+	padding: 3px 3px 3px 3px;
+}
+
+.euca-nonfirst-cluster-entry {
+	border-top:1px dashed grey;
+	padding:10px;
+}

@@ -1,8 +1,67 @@
 #!/bin/bash
+#Copyright (c) 2009  Eucalyptus Systems, Inc.	
 #
-FAKEREG="yes"
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by 
+#the Free Software Foundation, only version 3 of the License.  
+# 
+#This file is distributed in the hope that it will be useful, but WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#for more details.  
+#
+#You should have received a copy of the GNU General Public License along
+#with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+#Please contact Eucalyptus Systems, Inc., 130 Castilian
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+#if you need additional information or have any questions.
+#
+#This file may incorporate work covered under the following copyright and
+#permission notice:
+#
+#  Software License Agreement (BSD License)
+#
+#  Copyright (c) 2008, Regents of the University of California
+#  
+#
+#  Redistribution and use of this software in source and binary forms, with
+#  or without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+#  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+#  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+#  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+#  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+#  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+#  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+#  ANY SUCH LICENSES OR RIGHTS.
+#
+#
+#FAKEREG="yes"
 
 FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
+IMPORTFILE=""
 EUCALYPTUS=""
 CC_PORT=""
 NC_PORT=""
@@ -18,7 +77,6 @@ BRIDGE=""
 NEWNODES=""
 NODEMODE=""
 WALRUS_MODE=""
-REGISTER_CLC=""
 SYNC=""
 WALRUS=""
 WALRUS_MODE=""
@@ -29,10 +87,18 @@ UPGRADE_CONF=""
 SETUP=""
 VERSION=""
 CHECK=""
+TOSYNC=""
 TO_BACKUP="Y"
+CREDENTIALZIPFILE=""
 SCP="`which scp 2> /dev/null`"
 RSYNC="`which rsync 2> /dev/null`"
 WGET="`which wget 2> /dev/null`"
+VERBOSE="N"
+LIST=""
+ENABLED=""
+DISABLED=""
+TO_START=""
+
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -40,28 +106,36 @@ usage () {
 	echo "where <file> is the configuration file ($FILE by default)"
 	echo "   --help                           this message"
 	echo "   -d <dir>                         point EUCALYPTUS to <dir>"
-#	echo "   --no-rsync                       don't use rsync (ie remote node have no root)"
+	echo "   --no-rsync                       don't use rsync"
+	echo "   --no-scp                         don't use scp"
+	echo "   --get-credentials <zipfile>      download credentials to <zipfile>"
 	echo "   --register-nodes \"host host ...\" add new nodes to EUCALYPTUS"
-	echo "   --delete-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
+	echo "   --deregister-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
 	echo "   --register-cluster <name> <host> add new cluster to EUCALYPTUS"
 	echo "   --deregister-cluster <name>      remove cluster from EUCALYPTUS"
 	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
 	echo "   --deregister-walrus <host>       remove walrus to EUCALYPTUS"
 	echo "   --register-sc <name> <host>      add storage controller"
 	echo "   --deregister-sc <host>           remove storage controller to EUCALYPTUS"
-	echo "   --register-clc <host>            point local walrus to CLC location"
-	echo "   --sync                           used only with --register-* to sync keys"
+	echo "   --list-walruses                  list registered walrus(es)"
+	echo "   --list-clusters                  list registered CCs"
+	echo "   --list-scs                       list registered SCs"
+	echo "   --no-sync                        used only with --register-* to skip syncing keys"
 	echo "   --cc-port <port>                 set CC port"
 	echo "   --nc-port <port>                 set NC port"
 	echo "   --instances <path>               set the INSTANCE path"
-	echo "   --cloud-port <port1> <port2>     set the 2 cloud ports"
+#	echo "   --cloud-port <port1> <port2>     set the 2 cloud ports"
 	echo "   --hypervisor <kvm|xen>           set hypervisor to use"
 	echo "   --user <euca_user>               set the user to use"
 	echo "   --dhcpd <dhcpd>                  set the dhcpd binary to <name>"
 	echo "   --dhcp_user <user>               set the username to run dhcpd as"
 	echo "   --name <var>                     returns the value or <name>"
+	echo "   --import-conf <file>             import variables from <file> into eucalyptus.conf"
 	echo "   --setup                          perform initial setup"
-	echo "   --check [nc|cc|cloud|sc|walrus]  pre-flight checks"
+	echo "   --enable {cloud|walrus|sc}       enable service at next start"
+	echo "   --disable {cloud|walrus|sc}      disable service at next start"
+	echo "   --check {nc|cc|cloud|sc|walrus}  pre-flight checks"
+#	echo "   --sync {nc|cc|cloud|sc|walrus}   pre-flight checks"
 	echo "   --version                        eucalyptus version"
 	echo
 }
@@ -84,33 +158,121 @@ check_and_backup () {
 # 3 paramenter: the file, the variable name, the new value
 change_var_value () {
 	check_and_backup $1
-	cp $1 /tmp/euca-tmp.$$
-	sed "s<^[[:blank:]#]*\(${2}\).*<\1=\"${3}\"<" /tmp/euca-tmp.$$ > $1
-	rm -f /tmp/euca-tmp.$$
+	sed -i "s<^[[:blank:]#]*\(${2}\).*<\1=\"${3}\"<" $1
 }
 # comment lines matching $2 ($1 is the file)
 comment () {
 	check_and_backup $1
-	cp $1 /tmp/euca-tmp.$$
-	sed "s<^[[:blank:]]*\(${2}.*\)<#\1<" /tmp/euca-tmp.$$ > $1
-	rm -f /tmp/euca-tmp.$$
+	sed -i "s<^[[:blank:]]*\(${2}.*\)<#\1<" $1
 }
 # comment lines matching $2 ($1 is the file)
 uncomment () {
 	check_and_backup $1
-	cp $1 /tmp/euca-tmp.$$
-	sed "s<^[#[:blank:]]*\(${2}.*\)<\1<" /tmp/euca-tmp.$$ > $1
-	rm -f /tmp/euca-tmp.$$
+	sed -i "s<^[#[:blank:]]*\(${2}.*\)<\1<" $1
+}
+
+check_heartbeat() {
+	local __host="$1"
+	local __service="$2"
+	local ret=""
+
+	# checks
+	if [ -z "$__host" -o -z "$__service" ]; then
+		echo "check_heartbeat: need a host and a service!"
+		return 1
+	fi
+	if [ -z "$WGET" -o ! -x "$WGET" ]; then
+		echo "ERROR: wget is missing, cannot continue."
+		return 1
+	fi
+
+	# let's talk to the host and check if something is running
+	ret="`$WGET -o /dev/null -T 10 -t 1 -O - http://${__host}:8773/services/Heartbeat`"
+	if [ "$?" != "0" -o -z "$ret" ]; then
+		return 1
+	fi
+
+	# we need both ehabled and local to be true
+	if ! echo $ret |grep "enabled=true" > /dev/null  ; then
+		return 1
+	elif ! echo $ret |grep "local=true"  > /dev/null ; then
+		return 1
+	fi
+
+	return 0
+}
+
+check_ws() {
+	local URL="$1"
+	local ret=""
+
+	if [ -z "$URL" ]; then
+		echo "check_ws: need a URL!"
+		return 1
+	fi
+	
+	if [ -n "${FAKEREG}" ]; then
+		ret=""
+	elif [ "$2" != "" ]; then
+		if [ "$VERBOSE" = "Y" ]; then
+			echo "$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name><euca:detail>\(.*\)</euca:detail>.*;\1 \2;'"
+		fi
+		eval "$2=\"`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name><euca:detail>\(.*\)</euca:detail>.*;\1 \2;'`\""
+		ret="$?"
+		return $ret
+	else
+		if [ "$VERBOSE" = "Y" ]; then
+			echo "$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'"
+		fi
+		ret="`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'`"
+	fi
+	if test -n "$ret" ; then
+		echo $ret
+		return 1
+	fi
+	return 0
+}
+
+component_sync_keys() {
+    local COMPONENT=""
+    local NAME=""
+    
+    if [ "$SYNC" = "N" ]; then
+	return 0
+    fi
+    
+    if [ $# -lt 1 ]; then
+	return 1
+    fi
+    
+    COMPONENT="$1"
+    shift
+    NAME="$2"
+    shift
+
+    if [ "$COMPONENT" = "walrus" ]; then
+	echo "syncing walrus"
+    elif [ "$COMPONENT" = "cc" ]; then
+	echo "syncing cc($NAME)"
+    elif [ "$COMPONENT" = "sc" ]; then
+	echo "syncing sc($NAME)"
+    elif [ "$COMPONENT" = "nc" ]; then
+	echo "syncing nc"
+    fi
+
+
 }
 
 # copy files over.
-# $1 is the remote host
-# everything else are the files to copy
 sync_keys() {
         local SOURCEDIR=""
 	local DESTDIR=""
 	local REMOTE=""
 	local FILES=""
+
+	if [ "$SYNC" = "N" ]; then
+	    return 0
+	fi
 
 	if [ $# -lt 4 ]; then
 		return 1
@@ -141,7 +303,7 @@ sync_keys() {
 			echo "ERROR: cannot find cluster credentials."
 			exit 1
 		    else
-			if ! rsync $i $DESTDIR ; then
+			if ! rsync -a $i $DESTDIR ; then
 			    echo "ERROR: cannot copy file (${i}) to destination (${DESTDIR})"
 			    return 1
 			fi
@@ -213,6 +375,31 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
+	if [ "$1" = "--list-scs" ]; then 
+	    LIST="$LIST storages"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "--list-walruses" ]; then 
+	    LIST="$LIST walruses"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "--list-clusters" ]; then 
+	    LIST="$LIST clusters"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "--verbose" ]; then 
+	    VERBOSE="Y"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "-noscp" -o "$1" = "--no-scp" ]; then 
+	    SCP=""
+	    shift
+	    continue
+	fi
 	if [ "$1" = "-version" -o "$1" = "--version" ]; then 
 	    VERSION="Y"
 	    shift
@@ -223,8 +410,13 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
-	if [ "$1" = "--sync" ]; then 
-	    SYNC="Y"
+	if [ "$1" = "--no-sync" ]; then 
+	    SYNC="N"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "--deregister-walrus" ]; then
+	    WALRUS_MODE="DEL"
 	    shift
 	    continue
 	fi
@@ -232,6 +424,10 @@ while [ $# -gt 0 ]; do
 		# we dont have options with no argument, so it has to be
 		# the file
 		FILE="$1"
+		if [ "${FILE:0:1}" = '-' ]; then
+			usage
+			exit 1
+		fi
 		break
 	fi
 
@@ -277,6 +473,15 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi		
+	if [ "$1" = "-import-conf" -o "$1" = "--import-conf" ]; then
+	        IMPORTFILE="$2"
+		if [ ! -e "$IMPORTFILE" ]; then
+			echo "Cannot read $IMPORTFILE"
+			exit 1
+		fi
+		shift; shift
+		continue
+	fi
 	if [ "$1" = "-dhcpd" -o "$1" = "--dhcpd" ]; then
 		DHCPD="$2"
 		shift; shift
@@ -332,6 +537,11 @@ while [ $# -gt 0 ]; do
 		shift; shift; shift
 		continue
 	fi
+	if [ "$1" = "--get-credentials" ]; then
+	        CREDENTIALZIPFILE="${2}"
+		shift; shift;
+		continue
+	fi
 	if [ "$1" = "-addnode" -o "$1" = "--register-nodes" ]; then 
 		NEWNODES="${2}"
 		NODEMODE="ADD"
@@ -344,20 +554,9 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
-	if [ "$1" = "--deregister-walrus" ]; then
-		WALRUS_MODE="DEL"
-		WALRUS="$2"
-		shift; shift
-		continue
-	fi
 	if [ "$1" = "--register-walrus" ]; then
 		WALRUS_MODE="ADD"
 		WALRUS="$2"
-		shift; shift
-		continue
-	fi
-	if [ "$1" = "--register-clc" ]; then
-		REGISTER_CLC="$2"
 		shift; shift
 		continue
 	fi
@@ -368,6 +567,10 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "--register-sc" ]; then
+		if [ $# -lt 3 ]; then
+			echo "--register-sc requires a CC and a hostname"
+			exit 1
+		fi
 		SC_MODE="ADD"
 		SCNAME="$2"
 		SCHOST="$3"
@@ -387,7 +590,7 @@ while [ $# -gt 0 ]; do
 	fi
 	if [ "$1" = "--deregister-cluster" ]; then
 		CLUSNAME="$2"
-		CLUSMDDE="DEL"
+		CLUSMODE="DEL"
 		shift; shift
 		continue
 	fi
@@ -397,6 +600,33 @@ while [ $# -gt 0 ]; do
 			exit 1
 		fi
 		CHECK="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "--enable" ]; then 
+		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+			echo "--enable requires cloud, sc or walrus"
+			exit 1
+		fi
+		ENABLED="$ENABLED $2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "--disable" ]; then 
+		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+			echo "--disable requires cloud, sc or walrus"
+			exit 1
+		fi
+		DISABLED="$DISABLED $2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "-sync" -o "$1" = "--sync" ]; then 
+		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+			echo "-sync requires cc, nc, sc, walrus or cloud"
+			exit 1
+		fi
+		TOSYNC="$2"
 		shift; shift
 		continue
 	fi
@@ -479,42 +709,63 @@ for x in $NAME ; do
 	echo "$x=$VALUE"
 done
 
-# modify the current conf file based on an older configuration
-if [ -n "$UPGRADE_CONF" ]; then
-	VARS="EUCA_USER ENABLE_WS_SECURITY DISABLE_EBS HYPERVISOR LOGLEVEL CLOUD_PORT CLOUD_SSL_PORT SWAP_SIZE CC_PORT SCHEDPOLICY NODES NC_SERVICE NC_PORT MAX_MEM MAX_CORES INSTANCE_PATH VNET_INTERFACE VNET_BRIDGE VNET_DHCPDAEMON"
-	VNET_VARS="VNET_MODE VNET_SUBNET VNET_NETMASK VNET_DNS VNET_ADDRSPERNET VNET_PUBLICIPS VNET_BROADCAST VNET_ROUTER VNET_MACMAP"
+# modify the current conf file based on an older configuration, or from import file
+if [ -n "$UPGRADE_CONF" -o -n "$IMPORTFILE" ]; then
+	VARS="EUCA_USER ENABLE_WS_SECURITY DISABLE_EBS HYPERVISOR LOGLEVEL SWAP_SIZE CC_PORT MANUAL_INSTANCES_CLEANUP NC_CACHE_SIZE SCHEDPOLICY NODES NC_SERVICE NC_PORT MAX_MEM MAX_CORES INSTANCE_PATH VNET_BRIDGE VNET_DHCPDAEMON VNET_DHCPUSER"
+	VNET_VARS="VNET_MODE VNET_SUBNET VNET_NETMASK VNET_DNS VNET_ADDRSPERNET VNET_PUBLICIPS VNET_BROADCAST VNET_ROUTER VNET_MACMAP VNET_INTERFACE"
 	
+	if [ -n "$UPGRADE_CONF" ]; then
 	# source the old config
-	. $UPGRADE_CONF
+	    VARS_TO_DO=$VARS
+	    VNET_VARS_TO_DO=$VNET_VARS
+	    . $UPGRADE_CONF
+	elif [ -n "$IMPORTFILE" ]; then
+	    VARS_TO_DO=""
+	    VNET_VARS_TO_DO=""
+	    . $IMPORTFILE
+	    for i in $VNET_VARS
+	    do
+		VAL="$(echo \$${i})"
+		eval VAL=$VAL
+		if [ -n "$VAL" ]; then
+		    VNET_VARS_TO_DO="$VNET_VARS_TO_DO $i"
+		fi
+	    done
+	fi
 
 	# let's start from no network
-	for x in $VNET_VARS ; do
-		comment $FILE $x
+	for x in $VNET_VARS_TO_DO ; do
+	    comment $FILE $x
 	done
-		
+	
 	# modified the defined variables
-	for x in $VARS ; do
-		y="$(echo \$${x})"
-		eval y="$y"
-		if [ -z "$y" ]; then
+	for x in $VARS_TO_DO ; do
+	    y="$(echo \$${x})"
+	    eval y="$y"
+	    if [ -z "$y" ]; then
 			# we just leave NODES uncommented even if it's empty
-			if [ "$x" != "NODES" ]; then
-				comment $FILE $x
-			fi
-		else
-			uncomment $FILE $x
-			change_var_value $FILE $x "${y}"
-		fi
+		    if [ "$x" != "NODES" ]; then
+			comment $FILE $x
+		    fi
+	    else
+		uncomment $FILE $x
+		change_var_value $FILE $x "${y}"
+	    fi
 	done
 	# and add the network variables
 	echo >> $FILE
-	echo "# network configuration from the old configuration file" >> $FILE
-	for x in $VNET_VARS ; do
-		y="$(echo \$${x})"
-		eval y="$y"
-		if [ -n "$y" ]; then
+	echo "# network configuration from the input configuration file" >> $FILE
+	for x in $VNET_VARS_TO_DO ; do
+	    y="$(echo \$${x})"
+	    eval y="$y"
+	    if [ -n "$y" ]; then
+		if [ "$x" = "VNET_INTERFACE" ]; then
+			change_var_value $FILE VNET_PRIVINTERFACE "${y}"
+			change_var_value $FILE VNET_PUBINTERFACE "${y}"
+		else
 			echo "$x=\"${y}\"" >> $FILE
 		fi
+	    fi
 	done
 fi
 
@@ -556,11 +807,15 @@ if [ -n "$SETUP" ]; then
 		fi
 		EUCA_GROUP="`$ID -ng $EUCA_USER 2>/dev/null`"
 		if [ -z "$EUCA_GROUP" ]; then
-			echo "Cannot detect $EUCA_USER group: using $EUCA_USER"
+			echo "Cannot detect $EUCA_USER group"
 			exit 1
 		fi
-		chown root:$EUCA_GROUP $ROOTWRAP
-		chmod 4750 $ROOTWRAP
+		if ! chown root:$EUCA_GROUP $ROOTWRAP ; then
+			exit 1
+		fi
+		if ! chmod 4750 $ROOTWRAP ; then
+			exit 1
+		fi
 	fi
 	
 	# let's create the instance path
@@ -569,19 +824,45 @@ if [ -n "$SETUP" ]; then
 			echo "Failed to create instance path!"
 			exit 1
 		fi
-		chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH
+		if ! chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH ; then
+			exit 1
+		fi
 	fi
+
+	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus
+	ret=$?
+	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/log/eucalyptus
+	let $((ret += $?))
+	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus
+	let $((ret += $?))
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+	let $((ret += $?))
 
 	# let's create more needed directory with the right permissions
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
-	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/db
+	let $((ret += $?))
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/db
+	let $((ret += $?))
 	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/db
+	let $((ret += $?))
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/keys
-	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/keys
+	let $((ret += $?))
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/keys
+	let $((ret += $?))
 	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/keys
+	let $((ret += $?))
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/CC
-	chown $EUCA_USER $EUCALYPTUS/var/lib/eucalyptus/CC
+	let $((ret += $?))
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/CC
+	let $((ret += $?))
 	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/CC
+	let $((ret += $?))
+
+	exit $ret
+fi
+
+if [ -n "$TOSYNC" ]; then
+    echo "not implemented"
 fi
 
 # pre-flight checks
@@ -594,7 +875,8 @@ if [ -n "$CHECK" ]; then
 			VBLADE="`which vblade 2> /dev/null`"
 			if [ -z "$VBLADE" ]; then
 				echo
-				echo "WARNING: EBS is enabled and vblade was not found"
+				echo "ERROR: EBS is enabled and vblade was not found"
+				exit 1
 			fi
 		fi
 	fi
@@ -648,46 +930,63 @@ if [ -n "$CHECK" ]; then
 
 	# let's set up directories which could disappears if /var/run is
 	# in memory
-	mkdir -p $EUCALYPTUS/var/run/eucalyptus
-	mkdir -p $EUCALYPTUS/var/log/eucalyptus
-
-	# set up eucalyptus var locations to be owned by EUCA_USER
-	for y in $EUCALYPTUS/var/lib/eucalyptus/ $EUCALYPTUS/var/run/eucalyptus/ $EUCALYPTUS/var/log/eucalyptus/ $INSTANCE_PATH; do
-		if [ $y != "/" -a -d $y ]; then
-			if ! chown -R $EUCA_USER:$EUCA_GROUP $y ; then
-				echo "Problem setting permissions for $y"
-			fi
+	if [ ! -d $EUCALYPTUS/var/run/eucalyptus ]; then
+		if ! mkdir -p $EUCALYPTUS/var/run/eucalyptus ; then
+			# error should come from mkdir
+			exit 1
 		fi
-	done
+	fi
+	if ! chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus ; then
+	    # error should come from chown
+	    exit 1
+	fi
+
+
+	if [ "$CHECK" = "cc" ]; then
+	    if [ ! -d $EUCALYPTUS/var/run/eucalyptus/net ]; then
+		if ! mkdir -p $EUCALYPTUS/var/run/eucalyptus/net ; then
+			# error should come from mkdir
+		    exit 1
+		fi
+	    fi
+	    if ! chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus/net ; then
+			# error should come from chown
+		exit 1
+	    fi
+	fi
+	# good to go
+	exit 0
 fi
 
 createCloudURL () {
-    SKEY=""
-    ARGS="AWSAccessKeyId=ISMvKXpXpadDiUoOSoAfww"
+    if ! getSecretKey; then
+	echo "ERROR: cannot get credentials"
+	return 1
+    fi
+    ARGS="AWSAccessKeyId=$AKEY"
     KEY=$1
     shift
     VAL=$1
     shift
     while ( test -n "$KEY" -a -n "$VAL")
     do
-	if [ "${KEY}" = "KEY" ]; then
-	    SKEY=$VAL
-	else
-	    ARGS="${ARGS}&${KEY}=${VAL}"
-	fi
+	ARGS="${ARGS}&${KEY}=${VAL}"
 	KEY=$1
 	shift
 	VAL=$1
 	shift
     done
     if [ -z "$SKEY" ]; then
-	echo "ERROR: need to pass in KEY parameter."
+	echo "ERROR: SKEY parameter is not set."
 	export URL=""
 	return 1
     fi
-    ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=2008-12-01"
-    SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Eucalyptus\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
-    export URL="http://127.0.0.1:8773/services/Eucalyptus?${ARGS}&Signature=${SIGNATURE}"
+    ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date -u '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=eucalyptus"
+    SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Configuration\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
+    export URL="http://127.0.0.1:8773/services/Configuration?${ARGS}&Signature=${SIGNATURE}"
+	if [ "$VERBOSE" = "Y" ]; then
+		echo $URL
+	fi
     return 0
 }
 
@@ -706,6 +1005,15 @@ getSecretKey() {
 	return 1
     fi
     SKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1))
+
+   FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Qq][Uu][Ee][Rr][Yy]_[Ii][Dd]/ {print NR}'`
+   if [ "$FIELD" = "" ]; then
+     echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
+     export AKEY=""
+     return 1
+   fi
+   AKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1))
+
     return 0
 }
 
@@ -731,8 +1039,9 @@ checkLocalService() {
 		fi
 	    done
 	fi
-
-	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8773/services/|grep Eucalyptus > /dev/null"
+	
+	CMD="$WGET -T 10 -t 1 -O - -o /dev/null --no-check-certificate https://127.0.0.1:8443/register | grep CloudVersion > /dev/null 2> /dev/null"
+#	CMD="echo CLC CHECK NOT IMPLEMENTED"
     elif [ "$SERVICE" = "CC" ]; then
 	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC > /dev/null"
     fi
@@ -747,88 +1056,130 @@ checkLocalService() {
     return 0
 }
 
-# adding a new cluster
-if [ -n "$NEWCLUS" ]; then
+if [ -n "$CREDENTIALZIPFILE" ]; then
+    if [ -f "$CREDENTIALZIPFILE" ]; then
+	echo "file '$CREDENTIALZIPFILE' already exists, please remove and try again"
+	exit 1
+    fi
     if ! checkLocalService "CLC" ; then
 	exit 1
     fi
-    
-    if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
-	SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${CLUSNAME}/
-	DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+
+    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
+	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
     else
-	echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful!"
+	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface."
+        exit 1
+    fi
+    FIELD=`grep -i "CREATE .*TABLE USERS" ${DBDIR}/* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Cc][Ee][Rr][Tt][Ii][Ff][Ii][Cc][Aa][Tt][Ee]_[Cc][Oo][Dd][Ee]/ {print NR}'`
+    if [ -z "$FIELD" ]; then
+	echo "cannot find code field in database, please go to the Eucalyptus web UI to obtain credentials."
 	exit 1
     fi
-
-    SKEY=""
-    if ! getSecretKey ; then
+    KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1))
+    if [ -z "$KEY" ]; then
+	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
 	exit 1
     fi
-    
-    URL=""
-    if ! createCloudURL "KEY" "$SKEY" "Action" "DescribeAvailabilityZones"; then
-	exit 1
-    fi
-
-    CMD="wget -O - \"$URL\" 2>/dev/null | grep UP"
-    if [ -n "${FAKEREG}" ]; then
-	CMD="echo"
-    fi
-    if eval $CMD ; then 
-	echo "ERROR: there is already a cluster registered with the system."
-	exit 1
-    fi
-
-    URL=""
-    if ! createCloudURL "KEY" "$SKEY" "Action" "AddCluster" "Host" "${NEWCLUS}" "Name" "${CLUSNAME}" "Port" "${CC_PORT}"; then
-	exit 1
-    fi
-    CMD="wget -O - \"$URL\" 2>/dev/null"
-    if [ -n "${FAKEREG}" ]; then
-	CMD="echo"
-    fi
+    CMD="$WGET --no-check-certificate \"https://localhost:8443/getX509?user=admin&code=$KEY\" -O $CREDENTIALZIPFILE"
     if ! eval $CMD ; then
-	echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
+	echo "failed to obtain credentals, please try again or go to the Eucalyptus web UI."
+	exit 1
+    fi
+fi
+
+# adding a new cluster
+if [ -n "$CLUSNAME" ]; then
+    if ! checkLocalService "CLC" ; then
 	exit 1
     fi
 
-    if [ -n "${FAKEREG}" ]; then
-	mkdir -p $SOURCEDIR
+    if [ "$CLUSMODE" = "ADD" ]; then
+	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
+	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${CLUSNAME}/
+	    DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+	else
+	    echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful!"
+	    exit 1
+	fi
+	
+	URL=""
+	if ! createCloudURL "Action" "RegisterCluster" "Host" "${NEWCLUS}" "Name" "${CLUSNAME}" "Port" "${CC_PORT}"; then
+	    exit 1
+	fi
+	
+	if ! check_ws "$URL" ; then
+		echo "ERROR: failed to register new cluster, please log in to the admin interface and check cloud status."
+		exit 1
+	fi
+	
 	if [ -n "${FAKEREG}" ]; then
 	    mkdir -p $SOURCEDIR
-	    for i in cluster node
-	    do 
-		if [ ! -e "$SOURCEDIR/${i}-cert.pem" -o ! -e "$SOURCEDIR/${i}-pk.pem" ]; then
-		    openssl req -new -nodes -x509 -out $SOURCEDIR/${i}-cert.pem -keyout $SOURCEDIR/${i}-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
-		fi
-	    done
+	    if [ -n "${FAKEREG}" ]; then
+		mkdir -p $SOURCEDIR
+		for i in cluster node
+		do 
+		    if [ ! -e "$SOURCEDIR/${i}-cert.pem" -o ! -e "$SOURCEDIR/${i}-pk.pem" ]; then
+			openssl req -new -nodes -x509 -out $SOURCEDIR/${i}-cert.pem -keyout $SOURCEDIR/${i}-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
+		    fi
+		done
+	    fi
 	fi
-    fi
-
-    # create tunnel password
-    TUNPASS=`md5sum $DESTDIR/cloud-pk.pem | awk '{print $1}'`
-    if [ ${TUNPASS} != "" ]; then
-	echo ${TUNPASS} > $SOURCEDIR/vtunpass
-	chmod 0600 $SOURCEDIR/vtunpass
-	chown ${EUCA_USER} $SOURCEDIR/vtunpass
-    else
-	echo "WARN: Unable to create tunnel password file, tunneling will not function"
-    fi
-    
+	
     # sync the keys
-    if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass ; then
-	echo "ERROR: failed to sync keys with ${NEWCLUS}."
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass; then
+	    echo "ERROR: failed to sync keys with ${NEWCLUS}."
+	fi
+	if ! sync_keys ${DESTDIR} ${DESTDIR} ${NEWCLUS} cloud-cert.pem; then
+	    echo "ERROR: failed to sync keys with ${NEWCLUS}."
+            exit 1
+	fi
+	echo
+	echo "SUCCESS: new cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully registered."
+    elif [ "$CLUSMODE" = "DEL" ]; then
+	URL=""
+	# let's see if we have such a cluster
+	LIST_RES=""
+	if ! createCloudURL "Action" "DescribeClusters" ; then
+		exit 1
+	fi
+	if ! check_ws "$URL" LIST_RES ; then
+		echo "ERROR: cannot talk with CLC"
+		exit 1
+	fi
+	FOUND="N"
+	for x in $LIST_RES ; do
+		if [ "$x" = "${CLUSNAME}" ]; then
+			FOUND="Y"
+			break
+		fi
+	done
+	if [ "$FOUND" = "N" ]; then
+		echo "No registered cluster $CLUSNAME was found"
+		exit 1
+	fi
+
+	# now let's deregister
+	URL=""
+	if ! createCloudURL "Action" "DeregisterCluster" "Name" "${CLUSNAME}"; then
+	    exit 1
+	fi
+	
+	if ! check_ws "$URL" ; then
+		echo "ERROR: failed to deregister new cluster, please log in to the admin interface and check cloud status."
+		exit 1
+	fi	
+	echo
+	echo "SUCCESS: cluster '${CLUSNAME}' successfully deregistered."
     fi
-    echo "SUCCESS: new cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully registered."
 fi
 
 # walrus
-if [ -n "$WALRUS" ]; then
+if [ -n "$WALRUS" -o -n "$WALRUS_MODE" ]; then
     if ! checkLocalService "CLC" ; then
 	exit 1
     fi
-
+    
     if [ "$WALRUS_MODE" = "ADD" ]; then
 	echo "Adding WALRUS host $WALRUS"
 	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
@@ -839,46 +1190,46 @@ if [ -n "$WALRUS" ]; then
 	    exit 1
 	fi
 	
-	SKEY=""
-	if ! getSecretKey ; then
+	URL=""
+	if ! createCloudURL "Action" "RegisterWalrus" "Host" "${WALRUS}" "Name" "walrus" "Port" "8773"; then
+	    exit 1
+	fi
+
+	if ! check_ws "$URL" ; then
+	    echo "ERROR: failed to register Walrus, please log in to the admin interface and check cloud status."
 	    exit 1
 	fi
 	
-	URL=""
-	if ! createCloudURL "KEY" "$SKEY" "Action" "AddWalrus" "Host" "${WALRUS}" ; then
-	    exit 1
+	# check that walrus is at least running on the remote host
+	sleep 3
+	if ! check_heartbeat ${WALRUS} walrus ; then
+		echo "Walrus is not up on host ${WALRUS}: check the logs"
 	fi
-	CMD="wget -O - \"$URL\" 2>/dev/null"
-	if [ -n "${FAKEREG}" ]; then
-	    CMD="echo"
-	fi
-	if ! eval $CMD ; then
-	    echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
-	    exit 1
-	fi
-	if [ -n "${FAKEREG}" ]; then
-	    mkdir -p $SOURCEDIR
-	    for i in walrus
-	    do 
-		if [ ! -e "$SOURCEDIR/${i}-cert.pem" -o ! -e "$SOURCEDIR/${i}-pk.pem" ]; then
-		    openssl req -new -nodes -x509 -out $SOURCEDIR/${i}-cert.pem -keyout $SOURCEDIR/${i}-pk.pem -days 365 -subj "/C=US/ST=CA/L=City/CN=localhost/emailAddress=root@localhost"
-		fi
-	    done
-	fi
-    
-    # sync the keys
-	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${WALRUS} walrus-cert.pem walrus-pk.pem ; then
+	
+	# sync the keys
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${WALRUS} euca.p12 ; then
 	    echo "ERROR: failed to sync keys with ${WALRUS}."
+            exit 1
 	fi
+	echo
 	echo "SUCCESS: new walrus on host '${WALRUS}' successfully registered."
 	
     elif [ "$WALRUS_MODE" = "DEL" ]; then
-	echo "not implemented"
+	URL=""
+	if ! createCloudURL "Action" "DeregisterWalrus" "Name" "walrus"; then
+	    exit 1
+	fi
+	if ! check_ws "$URL" ; then
+	    echo "ERROR: failed to deregister Walrus, please log in to the admin interface and check cloud status."
+	    exit 1
+	fi
+        echo
+        echo "SUCCESS: Walrus successfully deregistered."
     fi
 fi
 
 # sc
-if [ -n "$SCHOST" ]; then
+if [ -n "$SCNAME" ]; then
     if ! checkLocalService "CLC" ; then
 	exit 1
     fi
@@ -886,28 +1237,19 @@ if [ -n "$SCHOST" ]; then
     if [ "$SC_MODE" = "ADD" ]; then
 	echo "Adding SC $SCHOST to cluster $SCNAME"
 	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
-	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/${SCNAME}
+	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
 	    DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
 	else
 	    echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful!"
 	    exit 1
 	fi
 	
-	SKEY=""
-	if ! getSecretKey ; then
-	    exit 1
-	fi
-	
 	URL=""
-	if ! createCloudURL "KEY" "$SKEY" "Action" "AddStorageController" "Host" "${SCHOST}" "Name" "${SCNAME}"; then
+	if ! createCloudURL "Action" "RegisterStorageController" "Host" "${SCHOST}" "Name" "${SCNAME}" "Port" "8773"; then
 	    exit 1
 	fi
-	CMD="wget -O - \"$URL\" 2>/dev/null"
-	if [ -n "${FAKEREG}" ]; then
-	    CMD="echo"
-	fi
-	if ! eval $CMD ; then
-	    echo "ERROR: failed to register new cluster, please log in to the admin interface and check cluster status."
+	if ! check_ws "$URL"; then
+	    echo "ERROR: failed to register storage controller, please log in to the admin interface and check cloud status."
 	    exit 1
 	fi
 	if [ -n "${FAKEREG}" ]; then
@@ -921,27 +1263,47 @@ if [ -n "$SCHOST" ]; then
 	fi
     
     # sync the keys
-	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${SCHOST} sc-cert.pem sc-pk.pem; then
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${SCHOST} euca.p12; then
 	    echo "ERROR: failed to sync keys with ${SCHOST}."
+	    exit 1
 	fi
+	echo
 	echo "SUCCESS: new SC for cluster '${SCNAME}' on host '${SCHOST}' successfully registered."
 
     elif [ "$SC_MODE" = "DEL" ]; then
-	echo "not implemented"
-    fi
-fi
-
-# CLC registration
-if [ -n "$REGISTER_CLC" ]; then
-	if [ -n "$WGET" ]; then
-		if ! $WGET -O - -o /dev/null http://$REGISTER_CLC:8773/services/|grep Eucalyptus > /dev/null ; then
-			echo "Cannot contact CLC on $REGISTER_CLC."
-			exit 1
-		fi
-	else
-		echo "wget is missing: cannot check if service is running."
+	# let's see if we have such a storage controller
+	LIST_RES=""
+	if ! createCloudURL "Action" "DescribeStorageControllers" ; then
+		exit 1
 	fi
-	echo "not implemented"
+	if ! check_ws "$URL" LIST_RES ; then
+		echo "ERROR: cannot talk with CLC"
+		exit 1
+	fi
+	FOUND="N"
+	for x in $LIST_RES ; do
+		if [ "$x" = "${SCNAME}" ]; then
+			FOUND="Y"
+			break
+		fi
+	done
+	if [ "$FOUND" = "N" ]; then
+		echo "No registered storage controller $SCNAME was found"
+		exit 1
+	fi
+
+	# now let's deregister
+	URL=""
+	if ! createCloudURL "Action" "DeregisterStorageController" "Name" "${SCNAME}"; then
+	    exit 1
+	fi
+	if ! check_ws "$URL" ; then
+	    echo "ERROR: failed to deregister StorageController, please log in to the admin interface and check cloud status."
+	    exit 1
+	fi
+	echo
+	echo "SUCCESS: Storage controller for cluster '${SCNAME}' successfully deregistered."
+    fi
 fi
 
 # operations on the nodes
@@ -996,7 +1358,7 @@ if [ -n "$NODEMODE" ]; then
 		fi
 	
 		# let's sync keys with the nodes
-		if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWNODE} node-cert.pem cluster-cert.pem node-pk.pem ; then
+		if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWNODE} node-cert.pem cluster-cert.pem node-pk.pem cloud-cert.pem; then
 			echo
 			echo "ERROR: could not synchronize keys with $NEWNODE!"
 			echo "The configuration will not have this node."
@@ -1022,4 +1384,90 @@ if [ -n "$NODEMODE" ]; then
 			change_var_value $FILE NODES "${NODES}"
 		fi
 	done
+fi
+
+for x in $LIST ; do
+	LIST_RES=""
+
+	if [ "$x" = "walruses" ]; then
+		if ! createCloudURL "Action" "DescribeWalruses" ; then
+			exit 1
+		fi
+		if ! check_ws "$URL" LIST_RES ; then
+			exit 1
+		fi
+		if [ -n "$LIST_RES" ]; then
+			echo "registered walruses:"
+		fi
+		tic="N"
+		for x in $LIST_RES ; do
+			if [ "$tic" = "N" ]; then
+				tic="Y"
+				echo -n "   $x "
+			else
+				tic="N"
+				echo "$x"
+			fi
+		done
+	fi
+	if [ "$x" = "storages" ]; then
+		if ! createCloudURL "Action" "DescribeStorageControllers" ; then
+			exit 1
+		fi
+		if ! check_ws "$URL" LIST_RES ; then
+			exit 1
+		fi
+		if [ -n "$LIST_RES" ]; then
+			echo "registered storage controllers:"
+		fi
+		tic="N"
+		for x in $LIST_RES ; do
+			if [ "$tic" = "N" ]; then
+				tic="Y"
+				echo -n "   $x "
+			else
+				tic="N"
+				echo "$x"
+			fi
+		done
+	fi
+	if [ "$x" = "clusters" ]; then
+		if ! createCloudURL "Action" "DescribeClusters" ; then
+			exit 1
+		fi
+		if ! check_ws "$URL" LIST_RES ; then
+			exit 1
+		fi
+		if [ -n "$LIST_RES" ]; then
+			echo "registered clusters:"
+		fi
+		tic="N"
+		for x in $LIST_RES ; do
+			if [ "$tic" = "N" ]; then
+				tic="Y"
+				echo -n "   $x "
+			else
+				tic="N"
+				echo "$x"
+			fi
+		done
+	fi
+done
+
+# enable/disable services
+if [ -r $EUCALYPTUS/var/lib/eucalyptus/services ]; then
+	for x in `cat $EUCALYPTUS/var/lib/eucalyptus/services` ; do
+		TO_START="$TO_START $x"
+	done
+fi
+if [ -n "$DISABLED" -o -n "$ENABLED" ]; then
+	for x in $TO_START $ENABLED ; do
+		to_start="Y"
+		for y in $DISABLED ; do
+			if [ "$x" = "$y" ]; then
+				to_start="N"
+			fi
+		done
+		[ $to_start = "Y" ] && echo $x
+	done | sort | uniq > $EUCALYPTUS/var/lib/eucalyptus/services
 fi

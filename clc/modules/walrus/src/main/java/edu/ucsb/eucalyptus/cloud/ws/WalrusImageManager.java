@@ -1,34 +1,65 @@
+/*******************************************************************************
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ * 
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ * 
+ *    Software License Agreement (BSD License)
+ * 
+ *    Copyright (c) 2008, Regents of the University of California
+ *    All rights reserved.
+ * 
+ *    Redistribution and use of this software in source and binary forms, with
+ *    or without modification, are permitted provided that the following
+ *    conditions are met:
+ * 
+ *      Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ * 
+ *      Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ * 
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *    ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************/
 package edu.ucsb.eucalyptus.cloud.ws;
 /*
- * Software License Agreement (BSD License)
- *
- * Copyright (c) 2008, Regents of the University of California
- * All rights reserved.
- *
- * Redistribution and use of this software in source and binary forms, with or
- * without modification, are permitted provided that the following conditions
- * are met:
- *
- * * Redistributions of source code must retain the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer in the documentation and/or other
- *   materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
@@ -43,14 +74,22 @@ import org.apache.tools.ant.util.DateUtils;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
 import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.auth.Hashes;
+import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.MappingHttpResponse;
@@ -91,7 +130,7 @@ public class WalrusImageManager {
 	}
 
 	private String decryptImage(String bucketName, String objectKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
-		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -129,10 +168,11 @@ public class WalrusImageManager {
 					if(isAdministrator) {
 						try {
 							boolean verified = false;
-							List<String> aliases = Credentials.Users.getAliases();
+							List<String> aliases = CredentialProvider.getAliases();
 							for(String alias : aliases) {
-								X509Certificate cert = Credentials.Users.getCertificate(alias);
-								verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+								X509Certificate cert = CredentialProvider.getCertificate(alias);
+								if(cert != null)
+									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if(verified)
 									break;
 							}
@@ -145,25 +185,20 @@ public class WalrusImageManager {
 							throw new DecryptionFailedException("signature verification");
 						}
 					} else {
-						EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-						UserInfo userInfo = new UserInfo(userId);
-						List<UserInfo> foundUserInfos = db2.query(userInfo);
-						if(foundUserInfos.size() == 0) {
-							db2.rollback();
-							db.rollback();
-							throw new AccessDeniedException(userId);
-						}
-						List<CertificateInfo> certInfos = foundUserInfos.get(0).getCertificates();
 						boolean signatureVerified = false;
-						for(CertificateInfo certInfo: certInfos) {
-							String alias = certInfo.getCertAlias();
+						User user = null;
+						try {
+							user = CredentialProvider.getUser( userId );
+						} catch ( NoSuchUserException e ) {
+							throw new AccessDeniedException(userId,e);            
+						}         
+						for(X509Cert certInfo: user.getCertificates( )) {
 							try {
-								X509Certificate cert = Credentials.Users.getCertificate(alias);
+								X509Certificate cert = X509Cert.toCertificate( certInfo );
 								signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if (signatureVerified)
 									break;
 							} catch(Exception ex) {
-								db2.rollback();
 								db.rollback();
 								LOG.error(ex, ex);
 								throw new DecryptionFailedException("signature verification");
@@ -172,9 +207,10 @@ public class WalrusImageManager {
 						if(!signatureVerified) {
 							throw new NotAuthorizedException("Invalid signature");
 						}
-						db2.commit();
 					}
 					List<String> parts = parser.getValues("//image/parts/part/filename");
+					if(parts == null) 
+						throw new DecryptionFailedException("Invalid manifest");
 					ArrayList<String> qualifiedPaths = new ArrayList<String>();
 					searchObjectInfo = new ObjectInfo();
 					searchObjectInfo.setBucketName(bucketName);
@@ -198,7 +234,8 @@ public class WalrusImageManager {
 					byte[] key;
 					byte[] iv;
 					try {
-						PrivateKey pk = (PrivateKey) EucaKeyStore.getInstance( ).getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
+						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(
+								Component.eucalyptus ).getPrivateKey();
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						String keyString = new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey)));
@@ -246,12 +283,16 @@ public class WalrusImageManager {
 
 
 	private void checkManifest(String bucketName, String objectKey, String userId) throws EucalyptusCloudException {
-		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		BucketInfo bucket = null;
+		try {
+			bucket = db.getUnique(bucketInfo);
+		} catch(Throwable t) {
+			throw new EucalyptusCloudException("Unable to get bucket: " + bucketName, t);
+		}
 
-
-		if (bucketList.size() > 0) {
+		if (bucket != null) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -270,16 +311,12 @@ public class WalrusImageManager {
 					String image = parser.getXML("image");
 					String machineConfiguration = parser.getXML("machine_configuration");
 
-					EntityWrapper<UserInfo> db2 = new EntityWrapper<UserInfo>();
-					UserInfo userInfo = new UserInfo(userId);
-					List<UserInfo> foundUserInfos = db2.query(userInfo);
-					if(foundUserInfos.size() == 0) {
-						db2.rollback();
-						db.rollback();
-						throw new AccessDeniedException(userId);
-					}
-
-					List<CertificateInfo> certInfos = foundUserInfos.get(0).getCertificates();
+					User user = null;
+					try {
+						user = CredentialProvider.getUser( userId );
+					} catch ( NoSuchUserException e ) {
+						throw new AccessDeniedException(userId,e);            
+					}         
 					boolean signatureVerified = false;
 
 					Signature sigVerifier;
@@ -290,10 +327,9 @@ public class WalrusImageManager {
 						throw new DecryptionFailedException("SHA1withRSA not found");
 					}
 
-					for(CertificateInfo certInfo: certInfos) {
-						String alias = certInfo.getCertAlias();
+					for(X509Cert certInfo: user.getCertificates( )) {
 						try {
-							X509Certificate cert = Credentials.Users.getCertificate(alias);
+							X509Certificate cert = X509Cert.toCertificate( certInfo );
 							PublicKey publicKey = cert.getPublicKey();
 							sigVerifier.initVerify(publicKey);
 							sigVerifier.update((machineConfiguration + image).getBytes());
@@ -302,7 +338,6 @@ public class WalrusImageManager {
 								break;
 							}
 						} catch(Exception ex) {
-							db2.rollback();
 							db.rollback();
 							LOG.error(ex, ex);
 							throw new DecryptionFailedException("signature verification");
@@ -317,22 +352,20 @@ public class WalrusImageManager {
 					byte[] key;
 					byte[] iv;
 					try {
-						PrivateKey pk = (PrivateKey) EucaKeyStore.getInstance( ).getKey(EucalyptusProperties.NAME, EucalyptusProperties.NAME);
+						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getPrivateKey();
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						key = Hashes.hexToBytes(new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey))));
 						iv = Hashes.hexToBytes(new String(cipher.doFinal(Hashes.hexToBytes(encryptedIV))));
 					} catch(Exception ex) {
-						db2.rollback();
 						db.rollback();
 						LOG.error(ex, ex);
 						throw new DecryptionFailedException("AES params");
 					}
-					db2.commit();
 					db.commit();
 				} else {
 					db.rollback();
-					throw new AccessDeniedException(objectKey);
+					throw new AccessDeniedException("Key", objectKey);
 				}
 			} else {
 				db.rollback();
@@ -345,42 +378,42 @@ public class WalrusImageManager {
 	}
 
 	private boolean isCached(String bucketName, String manifestKey) {
-		EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		try {
 			ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
+			db.commit();
 			if(foundImageCacheInfo.getInCache())
 				return true;
 			else
 				return false;
 		} catch(Exception ex) {
-			return false;
-		} finally {
 			db.commit();
-		}
+			return false;
+		} 
 	}
 
 	private long checkCachingProgress(String bucketName, String manifestKey, long oldBytesRead) {
-		EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		try {
 			ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
 			String cacheImageKey = foundImageCacheInfo.getImageName().replaceAll(".tgz", "");
 			long objectSize = storageManager.getObjectSize(bucketName, cacheImageKey);
+			db.commit();
 			if(objectSize > 0) {
 				return objectSize - oldBytesRead;
 			}
 			return oldBytesRead;
 		} catch (Exception ex) {
-			return oldBytesRead;
-		} finally {
 			db.commit();
+			return oldBytesRead;
 		}
 	}
 
 	private synchronized void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
 
-		EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
 		String decryptedImageKey = null;
@@ -416,7 +449,7 @@ public class WalrusImageManager {
 	}
 
 	private void flushCachedImage (String bucketName, String objectKey) throws Exception {
-		WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectKey);
+		EucaSemaphore semaphore = EucaSemaphoreDirectory.getSemaphore(bucketName + "/" + objectKey);
 		while(semaphore.inUse()) {
 			try {
 				synchronized (semaphore) {
@@ -426,8 +459,8 @@ public class WalrusImageManager {
 				LOG.error(ex);
 			}
 		}
-		imageMessenger.removeSemaphore(bucketName + "/" + objectKey);
-		EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+		EucaSemaphoreDirectory.removeSemaphore(bucketName + "/" + objectKey);
+		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
 		List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
 
@@ -510,7 +543,7 @@ public class WalrusImageManager {
 
 				}
 				Long oldCacheSize = 0L;
-				EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+				EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 				List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
 				for(ImageCacheInfo imageCacheInfo: imageCacheInfos) {
 					if(imageCacheInfo.getInCache()) {
@@ -574,7 +607,7 @@ public class WalrusImageManager {
 					notifyWaiters();
 					return;
 				}
-				EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+				EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 				ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
 				searchImageCacheInfo.setInCache(true);
 				List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
@@ -620,7 +653,7 @@ public class WalrusImageManager {
 				storageManager.deleteAbsoluteObject(decryptedImageName);
 				storageManager.deleteAbsoluteObject(tarredImageName);
 
-				EntityWrapper<ImageCacheInfo>db = new EntityWrapper<ImageCacheInfo>();
+				EntityWrapper<ImageCacheInfo>db = WalrusControl.getEntityWrapper();
 				ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 				List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
 				if(foundImageCacheInfos.size() > 0) {
@@ -645,16 +678,24 @@ public class WalrusImageManager {
 		GZIPInputStream in = new GZIPInputStream(new FileInputStream(new File(decryptedImageName)));
 		File outFile = new File(tarredImageName);
 		ReadableByteChannel inChannel = Channels.newChannel(in);
-		WritableByteChannel outChannel = new FileOutputStream(outFile).getChannel();
+		FileOutputStream fileOutputStream = new FileOutputStream(outFile);
+		WritableByteChannel outChannel = fileOutputStream.getChannel();
 
-		ByteBuffer buffer = ByteBuffer.allocate(102400/*TODO: NEIL WalrusQueryDispatcher.DATA_MESSAGE_SIZE*/);
-		while (inChannel.read(buffer) != -1) {
-			buffer.flip();
-			outChannel.write(buffer);
-			buffer.clear();
-		}
-		outChannel.close();
-		inChannel.close();
+		ByteBuffer buffer = ByteBuffer.allocate(102400);
+		try {
+			while (inChannel.read(buffer) != -1) {
+				buffer.flip();
+				outChannel.write(buffer);
+				buffer.clear();
+			}
+		} catch(IOException ex) {
+			throw ex;
+		} finally {
+			outChannel.close();
+			fileOutputStream.close();
+			inChannel.close();
+			in.close();
+		}		
 	}
 
 	private long untarImage(String tarredImageName, String imageName) throws Exception {
@@ -696,10 +737,10 @@ public class WalrusImageManager {
 
 		public void run()
 		{
+			BufferedOutputStream outStream = null;
 			try
 			{
 				BufferedInputStream inStream = new BufferedInputStream(is);
-				BufferedOutputStream outStream = null;
 				if(file != null) {
 					outStream = new BufferedOutputStream(new FileOutputStream(file));
 				}
@@ -714,7 +755,13 @@ public class WalrusImageManager {
 					outStream.close();
 			} catch (IOException ex)
 			{
-				LOG.error(ex);
+				if(outStream != null)
+					try {
+						outStream.close();
+					} catch (IOException e) {
+						LOG.error(e);
+					}
+					LOG.error(ex);
 			}
 		}
 	}
@@ -758,16 +805,37 @@ public class WalrusImageManager {
 	}
 
 	private void assembleParts(final String name, List<String> parts) {
+		FileOutputStream fileOutputStream = null;
+		FileInputStream fileInputStream = null;
 		try {
-			FileChannel out = new FileOutputStream(new File(name)).getChannel();
+			fileOutputStream = new FileOutputStream(new File(name));
+			FileChannel out = fileOutputStream.getChannel();
 			for (String partName: parts) {
-				FileChannel in = new FileInputStream(new File(partName)).getChannel();
+				fileInputStream = new FileInputStream(new File(partName));
+				FileChannel in = fileInputStream.getChannel();
 				in.transferTo(0, in.size(), out);
 				in.close();
+				fileInputStream.close();
 			}
 			out.close();
+			fileOutputStream.close();
 		} catch (Exception ex) {
 			LOG.error(ex);
+		} finally {
+			if(fileOutputStream != null) {
+				try {
+					fileOutputStream.close();
+				} catch (IOException e) {
+					LOG.error(e);
+				}
+			}
+			if(fileInputStream != null) {
+				try {
+					fileInputStream.close();
+				} catch (IOException e) {
+					LOG.error(e);
+				}
+			}
 		}
 	}
 
@@ -779,7 +847,7 @@ public class WalrusImageManager {
 		String objectKey = request.getKey();
 		String userId = request.getUserId();
 
-		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 		if (bucketList.size() > 0) {
@@ -790,28 +858,40 @@ public class WalrusImageManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
 				if(objectInfo.canRead(userId) || request.isAdministrator() ) {
-					WalrusSemaphore semaphore = imageMessenger.getSemaphore(bucketName + "/" + objectKey);
+					EucaSemaphore semaphore = EucaSemaphoreDirectory.getSemaphore(bucketName + "/" + objectKey);
 					try {
 						semaphore.acquire();
 					} catch(InterruptedException ex) {
 						throw new EucalyptusCloudException("semaphore could not be acquired");
 					}
-					EntityWrapper<ImageCacheInfo> db2 = new EntityWrapper<ImageCacheInfo>();
+					EntityWrapper<ImageCacheInfo> db2 = WalrusControl.getEntityWrapper();
 					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
 					List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
+					if(foundImageCacheInfos.size() > 0) {
+						ImageCacheInfo imageCacheInfo = foundImageCacheInfos.get(0);
+						if(imageCacheInfo.getInCache() && 
+								(!storageManager.objectExists(bucketName, imageCacheInfo.getImageName()))) {
+							db2.delete(imageCacheInfo);
+							db2.commit();
+							db2 = WalrusControl.getEntityWrapper();
+							foundImageCacheInfos = db2.query(searchImageCacheInfo);
+						}						
+					}
 
-					if((foundImageCacheInfos.size() == 0) || (!imageCachers.containsKey(bucketName + objectKey))) {
+					if((foundImageCacheInfos.size() == 0) || 
+							(!imageCachers.containsKey(bucketName + objectKey))) {
 						db2.commit();
 						//issue a cache request
 						cacheImage(bucketName, objectKey, userId, request.isAdministrator());
 						//query db again
-						db2 = new EntityWrapper<ImageCacheInfo>();
+						db2 = WalrusControl.getEntityWrapper();
 						foundImageCacheInfos = db2.query(searchImageCacheInfo);
 					}
 					ImageCacheInfo foundImageCacheInfo = null;
 					if(foundImageCacheInfos.size() > 0)
 						foundImageCacheInfo = foundImageCacheInfos.get(0);
-					if((foundImageCacheInfo == null) || (!foundImageCacheInfo.getInCache())) {
+					if((foundImageCacheInfo == null) || 
+							(!foundImageCacheInfo.getInCache())) {
 						boolean cached = false;
 						WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
 						synchronized (monitor) {
@@ -839,6 +919,7 @@ public class WalrusImageManager {
 								LOG.error(ex);
 								db2.rollback();
 								db.rollback();
+								semaphore.release();
 								throw new EucalyptusCloudException("monitor failure");
 							}
 						}
@@ -846,11 +927,12 @@ public class WalrusImageManager {
 							LOG.error("Tired of waiting to cache image: " + bucketName + "/" + objectKey + " giving up");
 							db2.rollback();
 							db.rollback();
+							semaphore.release();
 							throw new EucalyptusCloudException("caching failure");
 						}
 						//caching may have modified the db. repeat the query
 						db2.commit();
-						db2 = new EntityWrapper<ImageCacheInfo>();
+						db2 = WalrusControl.getEntityWrapper();
 						foundImageCacheInfos = db2.query(searchImageCacheInfo);
 						if(foundImageCacheInfos.size() > 0) {
 							foundImageCacheInfo = foundImageCacheInfos.get(0);
@@ -859,6 +941,7 @@ public class WalrusImageManager {
 						} else {
 							db.rollback();
 							db2.rollback();
+							semaphore.release();
 							throw new NoSuchEntityException(objectKey);
 						}
 					}
@@ -868,16 +951,17 @@ public class WalrusImageManager {
 					reply.setSize(unencryptedSize);
 					reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
 					reply.setEtag("");
-					MappingHttpResponse httpResponse = new MappingHttpResponse( HttpVersion.HTTP_1_1 ); 
+					DefaultHttpResponse httpResponse = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.OK ); 
 					storageManager.sendObject(request.getChannel(), httpResponse, bucketName, imageKey, unencryptedSize, null, 
 							DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
 							objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed());                            
+					semaphore.release();
 					db.commit();
 					db2.commit();
 					return reply;
 				} else {
 					db.rollback();
-					throw new AccessDeniedException(objectKey);
+					throw new AccessDeniedException("Key", objectKey);
 				}
 
 			} else {
@@ -897,25 +981,29 @@ public class WalrusImageManager {
 		String objectKey = request.getKey();
 		String userId = request.getUserId();
 
-		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		BucketInfo bucket = null;
+		try {
+			bucket = db.getUnique(bucketInfo);
+		} catch(Throwable t) {
+			throw new EucalyptusCloudException("Unable to get bucket", t);
+		}
 
-
-		if (bucketList.size() > 0) {
+		if (bucket != null) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(objectInfo.canRead(userId)) {
+					db.commit();
 					checkManifest(bucketName, objectKey, userId);
 					reply.setSuccess(true);
-					db.commit();
 					return reply;
 				} else {
 					db.rollback();
-					throw new AccessDeniedException(objectKey);
+					throw new AccessDeniedException("Key", objectKey);
 				}
 			} else {
 				db.rollback();
@@ -935,7 +1023,7 @@ public class WalrusImageManager {
 		String userId = request.getUserId();
 
 
-		EntityWrapper<BucketInfo> db = new EntityWrapper<BucketInfo>();
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -947,7 +1035,7 @@ public class WalrusImageManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
 				if(objectInfo.canRead(userId)) {
-					EntityWrapper<ImageCacheInfo> db2 = new EntityWrapper<ImageCacheInfo>();
+					EntityWrapper<ImageCacheInfo> db2 = WalrusControl.getEntityWrapper();
 					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 					List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
 					db2.commit();
@@ -955,17 +1043,20 @@ public class WalrusImageManager {
 						cacheImage(bucketName, manifestKey, userId, request.isAdministrator());
 						reply.setSuccess(true);
 					}
+					db.commit( );
 					return reply;
 				} else {
 					db.rollback();
-					throw new AccessDeniedException(manifestKey);
+					throw new AccessDeniedException("Key", manifestKey);
 				}
 
 			} else {
+				db.rollback( );
 				throw new NoSuchEntityException(manifestKey);
 
 			}
 		} else {
+			db.rollback( );
 			throw new NoSuchBucketException(bucketName);
 		}
 	}
@@ -976,7 +1067,7 @@ public class WalrusImageManager {
 		String bucketName = request.getBucket();
 		String manifestKey = request.getKey();
 
-		EntityWrapper<ImageCacheInfo> db = new EntityWrapper<ImageCacheInfo>();
+		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
 

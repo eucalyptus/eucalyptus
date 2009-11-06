@@ -20,7 +20,7 @@
  *
  *
  ******************************************************************************
- * Author: Chris Grzegorczyk grze@eucalyptus.com
+ * Author: chris grzegorczyk grze@eucalyptus.com
  ******************************************************************************/
 #ifndef __EUCALYPTUS_BOOTSTRAP_H__
 #define __EUCALYPTUS_BOOTSTRAP_H__
@@ -69,6 +69,7 @@ static int debug = 0;
 #define EUCA_ETC_DIR "/etc/eucalyptus/cloud.d"
 
 #define EUCA_MAIN "com/eucalyptus/bootstrap/SystemBootstrapper"
+#define EUCA_RET_RELOAD 123
 
 typedef struct {
 	char* method_name;
@@ -108,6 +109,7 @@ static char *jvm_default_opts[] = {
 	    "-Xbootclasspath/p:%1$s/usr/share/eucalyptus/openjdk-crypto.jar",
 	    "-Xmx256m",
 	    "-XX:+UseConcMarkSweepGC",
+	    "-Djava.net.preferIPv4Stack=true",
 	    "-Djava.security.policy=%1$s/etc/eucalyptus/cloud.d/security.policy",
 	    "-Djava.library.path=%1$s/usr/lib/eucalyptus",
 	    "-Deuca.home=%1$s/",
@@ -115,12 +117,14 @@ static char *jvm_default_opts[] = {
 	    "-Deuca.lib.dir=%1$s/usr/share/eucalyptus",
 	    "-Deuca.conf.dir=%1$s/etc/eucalyptus/cloud.d",
 	    "-Deuca.log.dir=%1$s/var/log/eucalyptus",
-	    "-Deuca.version=1.6-devel",
+	    "-Deuca.version=1.6.1",
 	    NULL,
 };
 static char *libjvm_paths[ ] = {
-	"%1$s/jre/lib/" CPU "/server/libjvm.so",
-	"%1$s/lib/" CPU "/server/libjvm.so",
+	"%1$s/jre/lib/amd64/server/libjvm.so",
+	"%1$s/lib/amd64/server/libjvm.so",
+	"%1$s/jre/lib/i386/server/libjvm.so",
+	"%1$s/lib/i386/server/libjvm.so",
 	NULL,
 };
 static struct stat home;
@@ -138,6 +142,7 @@ static JNIEnv *env=NULL;
 static bootstrapper_t bootstrap;
 #define CHECK_ISDIR(path) (( path == NULL || ( stat( path, &home ) != 0 ) ) ? 0 : S_ISDIR(home.st_mode) )
 #define CHECK_ISREG(path) (( path == NULL || ( stat( path, &home ) != 0 ) ) ? 0 : S_ISREG(home.st_mode) )
+#define CHECK_ISLNK(path) (( path == NULL || ( stat( path, &home ) != 0 ) ) ? 0 : S_ISLNK(home.st_mode) )
 int main( int argc, char *argv[ ] );
 void main_reload( void );
 void main_shutdown( void );

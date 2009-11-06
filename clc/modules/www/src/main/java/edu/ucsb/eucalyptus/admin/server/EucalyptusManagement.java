@@ -1,43 +1,78 @@
+/*******************************************************************************
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ * 
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ * 
+ *    Software License Agreement (BSD License)
+ * 
+ *    Copyright (c) 2008, Regents of the University of California
+ *    All rights reserved.
+ * 
+ *    Redistribution and use of this software in source and binary forms, with
+ *    or without modification, are permitted provided that the following
+ *    conditions are met:
+ * 
+ *      Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ * 
+ *      Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ * 
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *    ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************/
 /*
- * Software License Agreement (BSD License)
- *
- * Copyright (c) 2008, Regents of the University of California
- * All rights reserved.
- *
- * Redistribution and use of this software in source and binary forms, with or
- * without modification, are permitted provided that the following conditions
- * are met:
- *
- * * Redistributions of source code must retain the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer in the documentation and/or other
- *   materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Dmitrii Zagorodnov dmitrii@cs.ucsb.edu
  */
 
 package edu.ucsb.eucalyptus.admin.server;
 
-import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
+import com.eucalyptus.entities.NetworkRulesGroup;
+import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.util.NetworkUtil;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.ImageInfoWeb;
@@ -49,7 +84,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
-import edu.ucsb.eucalyptus.cloud.entities.NetworkRulesGroup;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
@@ -63,14 +97,17 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -109,8 +146,6 @@ public class EucalyptusManagement {
 		target.setIsEnabled( user.isEnabled() );
 		target.setIsAdministrator( user.isAdministrator() );
 		target.setPasswordExpires( user.getPasswordExpires() );
-		target.setQueryId( user.getQueryId() );
-		target.setSecretKey( user.getSecretKey() );
 		target.setTemporaryPassword( user.getTemporaryPassword() );
 	}
 
@@ -131,9 +166,17 @@ public class EucalyptusManagement {
 		target.setIsEnabled( user.isEnabled() );
 		target.setIsAdministrator( user.isAdministrator() );
 		target.setPasswordExpires( user.getPasswordExpires() );
-		target.setQueryId( user.getQueryId() );
-		target.setSecretKey( user.getSecretKey() );
 		target.setTemporaryPassword( user.getTemporaryPassword() );
+		String queryId = "uninitialized";
+		String secretKey = "uninitialized";
+		try {
+			queryId = CredentialProvider.getQueryId( user.getUserName( ) );
+			secretKey = CredentialProvider.getSecretKey( queryId );
+		} catch ( GeneralSecurityException e ) {
+			LOG.debug( e, e );
+		}
+		target.setQueryId( queryId );
+		target.setSecretKey( secretKey );
 	}
 
 	public static void update( UserInfo target, UserInfoWeb user )
@@ -153,8 +196,6 @@ public class EucalyptusManagement {
 		target.setIsEnabled( user.isEnabled() );
 		target.setIsAdministrator( user.isAdministrator() );
 		target.setPasswordExpires( user.getPasswordExpires() );
-		target.setQueryId( user.getQueryId() );
-		target.setSecretKey( user.getSecretKey() );
 		target.setTemporaryPassword( user.getTemporaryPassword() );
 	}
 
@@ -178,25 +219,7 @@ public class EucalyptusManagement {
 
 	public static String getError( String message )
 	{
-		return "<html><title>HTTP/1.0 403 Forbidden</title><body><div align=\"center\"><p><h1>403: Forbidden</h1></p><p><img src=\"img/error-1.jpg\" /></p><p><h3 style=\"font-color: red;\">" + message + "</h3></p></div></body></html>";
-	}
-
-	public static String[] getUserCertificateAliases( String userName ) throws SerializableException
-	{
-		EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>();
-		List<UserInfo> userList = dbWrapper.query( new UserInfo( userName ) );
-		if ( userList.size() != 1 )
-		{
-			dbWrapper.rollback();
-			throw EucalyptusManagement.makeFault("User does not exist" );
-		}
-		UserInfo user = ( UserInfo ) userList.get( 0 );
-		String[] certInfo = new String[user.getCertificates().size()];
-		int i = 0;
-		for ( CertificateInfo c : user.getCertificates() )
-			certInfo[ i++ ] = c.getCertAlias();
-		dbWrapper.commit();
-		return certInfo;
+		return "<html><title>HTTP/1.0 403 Forbidden</title><body><div align=\"center\"><p><h1>403: Forbidden</h1></p><p><img src=\"themes/active/logo.png\" /></p><p><h3 style=\"font-color: red;\">" + message + "</h3></p></div></body></html>";
 	}
 
 	/* TODO: for now 'pattern' is ignored and all users are returned */
@@ -232,22 +255,22 @@ public class EucalyptusManagement {
 		List<UserInfo> userList = dbWrapper.query( new UserInfo( userName ) );
 		if ( userList.size() != 1 )
 		{
-	    try {//TODO: temporary hack to support older user info objects
-	      if( "admin".equals( userName )) {
-  	      UserInfo u = UserManagement.generateAdmin( );
-  	      dbWrapper.add( u );
-  	      UserGroupInfo allGroup = new UserGroupInfo( "all" );
-  	      dbWrapper.getSession( ).persist( new Counters( ) );
-  	      dbWrapper.commit( );
-  	      return EucalyptusManagement.fromServer( u );
-	      } else {
-	        dbWrapper.rollback( );
-	        throw EucalyptusManagement.makeFault("User does not exist" );	        
-	      }
-	    } catch ( Exception e ) {
-	      dbWrapper.rollback( );
-	      throw EucalyptusManagement.makeFault("User does not exist" );
-	    }
+			try {//TODO: temporary hack to support older user info objects
+				if( "admin".equals( userName )) {
+					UserInfo u = UserManagement.generateAdmin( );
+					dbWrapper.add( u );
+					UserGroupInfo allGroup = new UserGroupInfo( "all" );
+					dbWrapper.getSession( ).persist( new Counters( ) );
+					dbWrapper.commit( );
+					return EucalyptusManagement.fromServer( u );
+				} else {
+					dbWrapper.rollback( );
+					throw EucalyptusManagement.makeFault("User does not exist" );	        
+				}
+			} catch ( Exception e ) {
+				dbWrapper.rollback( );
+				throw EucalyptusManagement.makeFault("User does not exist" );
+			}
 		}
 		dbWrapper.commit();
 		return EucalyptusManagement.fromServer( userList.get( 0 ) );
@@ -308,13 +331,17 @@ public class EucalyptusManagement {
 
 		UserInfo newUser = EucalyptusManagement.fromClient( webUser );
 		newUser.setReservationId( 0l );
-		newUser.getNetworkRulesGroup().add( NetworkRulesGroup.getDefaultGroup() );
+		try {
+			NetworkGroupUtil.createUserNetworkRulesGroup( newUser.getUserName( ), NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
+		} catch ( EucalyptusCloudException e1 ) {
+			LOG.debug( e1, e1 );
+		}
 
 		dbWrapper.add( newUser );
 		dbWrapper.commit();
 
-		try {//TODO: fix this nicely
-			Credentials.addUser(newUser.getUserName( ),newUser.isAdministrator( ));
+		try {//FIXME: fix this nicely
+			CredentialProvider.addUser(newUser.getUserName( ),newUser.isAdministrator( ));
 		} catch ( UserExistsException e ) {
 			LOG.error(e);
 		}
@@ -344,6 +371,12 @@ public class EucalyptusManagement {
 		}
 		db.delete( userList.get(0) );
 		db.commit();
+		try {
+			CredentialProvider.deleteUser(userName);
+		} catch ( NoSuchUserException e ) {
+			LOG.error(e);
+			throw EucalyptusManagement.makeFault( "Unable to delete user" );
+		}
 	}
 
 	public static void commitWebUser( UserInfoWeb webUser ) throws SerializableException
@@ -364,6 +397,13 @@ public class EucalyptusManagement {
 			throw EucalyptusManagement.makeFault( "User does not exist" );
 		}
 		update( target, user );
+		try {
+			CredentialProvider.updateUser(user.getUserName(), user.isEnabled());
+		} catch ( NoSuchUserException e ) {
+			db.rollback();
+			LOG.error(e);
+			throw EucalyptusManagement.makeFault( "Unable to update user" );
+		}
 		db.commit();
 	}
 
@@ -452,49 +492,11 @@ public class EucalyptusManagement {
 		}
 	}
 
-	public static String getInternalIpAddress ()
-	{
-		String ipAddr = null;
-		String localAddr = "127.0.0.1";
-
-		List<NetworkInterface> ifaces = null;
-		try {
-			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-		}
-		catch ( SocketException e1 ) {}
-
-		for ( NetworkInterface iface : ifaces )
-			try {
-				if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-					for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-						if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
-							ipAddr = iaddr.getHostAddress();
-						} else if ( iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
-							localAddr = iaddr.getHostAddress();
-						}
-					}
-				}
-			}
-		catch ( SocketException e1 ) {}
-
-		return ipAddr == null ? localAddr : ipAddr;
-	}
-
 	public static SystemConfigWeb getSystemConfig() throws SerializableException
 	{
 		EntityWrapper<SystemConfiguration> db = new EntityWrapper<SystemConfiguration>();
-		SystemConfiguration sysConf;
-		try
-		{
-			sysConf = db.getUnique( new SystemConfiguration() );
-			validateSystemConfiguration(sysConf);
-		} catch(EucalyptusCloudException e) {
-			sysConf = validateSystemConfiguration(null);
-		}
-		finally {
-			db.commit();
-		}
-		return new SystemConfigWeb( sysConf.getStorageUrl(),
+		SystemConfiguration sysConf = EucalyptusProperties.getSystemConfiguration();
+		return new SystemConfigWeb( 
 				sysConf.getDefaultKernel(),
 				sysConf.getDefaultRamdisk(),
 				sysConf.getMaxUserPublicAddresses(),
@@ -503,105 +505,8 @@ public class EucalyptusManagement {
 				sysConf.getZeroFillVolumes(),
 				sysConf.getDnsDomain(),
 				sysConf.getNameserver(),
-				sysConf.getNameserverAddress());
-	}
-
-	public static WalrusInfoWeb getWalrusConfig() throws SerializableException
-	{
-		EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>();
-		WalrusInfo walrusInfo;
-		try
-		{
-			walrusInfo = db.getUnique( new WalrusInfo() );
-			validateWalrusConfiguration(walrusInfo);
-		} catch(EucalyptusCloudException e) {
-			walrusInfo = validateWalrusConfiguration(null);
-		}
-		finally {
-			db.commit();
-		}
-		return new WalrusInfoWeb(walrusInfo.getName(), 
-				walrusInfo.getStorageDir(), 
-				walrusInfo.getStorageMaxBucketsPerUser(), 
-				walrusInfo.getStorageMaxBucketSizeInMB(), 
-				walrusInfo.getStorageMaxCacheSizeInMB(), 
-				walrusInfo.getStorageMaxTotalSnapshotSizeInGb());
-	}
-
-	private static SystemConfiguration validateSystemConfiguration(SystemConfiguration sysConf) {
-		if(sysConf == null) {
-			sysConf = new SystemConfiguration();
-		}
-		if(sysConf.getStorageUrl() == null) {
-			String ipAddr = getInternalIpAddress ();
-			String wUrl = String.format( "http://%s:8773/services/" + WalrusProperties.SERVICE_NAME, ipAddr );
-			sysConf.setStorageUrl(wUrl);
-		}
-		if(sysConf.getDefaultKernel() == null) {
-			ImageInfo q = new ImageInfo();
-			EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
-
-			q.setImageType( EucalyptusProperties.IMAGE_KERNEL );
-			List<ImageInfo> res = db2.query(q);
-			if( res.size() > 0 )
-				sysConf.setDefaultKernel(res.get(0).getImageId());
-		}
-		if(sysConf.getDefaultRamdisk() == null) {
-			ImageInfo q = new ImageInfo();
-			EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
-
-			q.setImageType( EucalyptusProperties.IMAGE_RAMDISK );
-			List<ImageInfo> res = db2.query(q);
-			if( res.size() > 0 )
-				sysConf.setDefaultRamdisk(res.get(0).getImageId());
-		}
-		if(sysConf.getDnsDomain() == null) {
-			sysConf.setDnsDomain(DNSProperties.DOMAIN);
-		}
-		if(sysConf.getNameserver() == null) {
-			sysConf.setNameserver(DNSProperties.NS_HOST);
-		}
-		if(sysConf.getNameserverAddress() == null) {
-			sysConf.setNameserverAddress(DNSProperties.NS_IP);
-		}
-		if( sysConf.getMaxUserPublicAddresses() == null ) {
-			sysConf.setMaxUserPublicAddresses( 5 );
-		}
-		if( sysConf.isDoDynamicPublicAddresses() == null ) {
-			sysConf.setDoDynamicPublicAddresses( true );
-		}
-		if( sysConf.getSystemReservedPublicAddresses() == null ) {
-			sysConf.setSystemReservedPublicAddresses( 10 );
-		}
-		if(sysConf.getZeroFillVolumes() == null) {
-			sysConf.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
-		}
-		return sysConf;
-	}
-
-	private static WalrusInfo validateWalrusConfiguration(WalrusInfo walrusInfo) {
-		if(walrusInfo == null) 
-			walrusInfo = new WalrusInfo();
-		
-		if(walrusInfo.getName() == null)
-			walrusInfo.setName("walrus-name");
-		
-		if(walrusInfo.getStorageDir() == null) 
-			walrusInfo.setStorageDir(WalrusProperties.bucketRootDirectory.replaceAll( "//","/" ));
-
-		if(walrusInfo.getStorageMaxBucketsPerUser() == null) 
-			walrusInfo.setStorageMaxBucketsPerUser(WalrusProperties.MAX_BUCKETS_PER_USER);
-
-		if(walrusInfo.getStorageMaxBucketSizeInMB() == null) 
-			walrusInfo.setStorageMaxBucketSizeInMB((int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M));
-
-		if(walrusInfo.getStorageMaxCacheSizeInMB() == null) 
-			walrusInfo.setStorageMaxCacheSizeInMB((int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M));
-
-		if(walrusInfo.getStorageMaxTotalSnapshotSizeInGb() == null) 
-			walrusInfo.setStorageMaxTotalSnapshotSizeInGb(StorageProperties.MAX_TOTAL_SNAPSHOT_SIZE);   
-		
-		return walrusInfo;
+				sysConf.getNameserverAddress(),
+				sysConf.getCloudHost( ));
 	}
 
 	public static void setSystemConfig( final SystemConfigWeb systemConfig )
@@ -610,12 +515,8 @@ public class EucalyptusManagement {
 		try
 		{
 			SystemConfiguration sysConf = db.getUnique( new SystemConfiguration() );
-			//:: TODO: verify the URL :://
-			sysConf.setStorageUrl( systemConfig.getWalrusUrl() );
-			//:: TODO: check the path exists && is writeable, create directory if needed :://
-			//:: TODO: verify the EKI :://
+			sysConf.setCloudHost( systemConfig.getCloudHost() );
 			sysConf.setDefaultKernel( systemConfig.getDefaultKernelId() );
-			//:: TODO: verify the ERI :://
 			sysConf.setDefaultRamdisk( systemConfig.getDefaultRamdiskId() );
 
 			sysConf.setDnsDomain(systemConfig.getDnsDomain());
@@ -626,12 +527,11 @@ public class EucalyptusManagement {
 			sysConf.setSystemReservedPublicAddresses( systemConfig.getSystemReservedPublicAddresses() );
 			sysConf.setZeroFillVolumes(systemConfig.getZeroFillVolumes());
 			db.commit();
-			WalrusProperties.update();
-			StorageProperties.update();
+			DNSProperties.update();
 		}
 		catch ( EucalyptusCloudException e )
 		{
-			db.add( new SystemConfiguration(systemConfig.getWalrusUrl(),
+			db.add( new SystemConfiguration(
 					systemConfig.getDefaultKernelId(),
 					systemConfig.getDefaultRamdiskId(),
 					systemConfig.getMaxUserPublicAddresses(),
@@ -640,10 +540,9 @@ public class EucalyptusManagement {
 					systemConfig.getZeroFillVolumes(),
 					systemConfig.getDnsDomain(),
 					systemConfig.getNameserver(),
-					systemConfig.getNameserverAddress()));
+					systemConfig.getNameserverAddress(),
+					systemConfig.getCloudHost( )));
 			db.commit();
-			WalrusProperties.update();
-			StorageProperties.update();
 			DNSProperties.update();
 		}
 	}
@@ -659,7 +558,13 @@ public class EucalyptusManagement {
 
 		try {
 			httpClient.executeMethod(method);
-			String str = method.getResponseBodyAsString();
+			String str = "";
+			InputStream in = method.getResponseBodyAsStream();
+			byte[] readBytes = new byte[1024];
+			int bytesRead = -1;
+			while((bytesRead = in.read(readBytes)) > 0) {
+				str += new String(readBytes, 0, bytesRead);
+			}
 			Matcher matcher = Pattern.compile(".*your ip is (.*)").matcher(str);
 			if (matcher.find()) {
 				ipAddr = matcher.group(1);
@@ -683,13 +588,9 @@ public class EucalyptusManagement {
 	public static CloudInfoWeb getCloudInfo (boolean setExternalHostPort) throws SerializableException
 	{
 		String cloudRegisterId = null;
-		try {
-			cloudRegisterId = EucalyptusProperties.getSystemConfiguration().getRegistrationId();
-		} catch ( EucalyptusCloudException e ) {
-			cloudRegisterId = "this should never be unset!";
-		}
+	    cloudRegisterId = EucalyptusProperties.getSystemConfiguration().getRegistrationId();
 		CloudInfoWeb cloudInfo = new CloudInfoWeb();
-		cloudInfo.setInternalHostPort (getInternalIpAddress() + ":8443");
+		cloudInfo.setInternalHostPort (EucalyptusProperties.getInternalIpAddress() + ":8443");
 		if (setExternalHostPort) {
 			String ipAddr = getExternalIpAddress();
 			if (ipAddr!=null) {

@@ -11,7 +11,7 @@
 %if %is_centos
 %define __dhcp    dhcp
 %define __httpd   httpd
-%define __libvirt euca-libvirt >= 1.5
+%define __libvirt libvirt >= 0.6
 %define __xen     xen
 %define __curl    curl
 %define __bridge  xenbr0
@@ -19,20 +19,20 @@
 
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       1.5.2
+Version:       1.6.1
 Release:       1
-License:       BSD
+License:       GPLv3
 Group:         Applications/System
 %if %is_centos
-BuildRequires: gcc, make, euca-libvirt >= 1.5, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
-Requires:      vconfig, aoetools, vblade, wget, rsync
+BuildRequires: gcc, make, libvirt >= 0.6, curl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Requires:      vconfig, wget, rsync
 %endif
 %if %is_suse
-BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
-Requires:      vlan, aoetools, vblade
+BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Requires:      vlan
 %endif
 
-Conflicts:     eucalyptus-cloud < 1.5, eucalyptus-cc < 1.5, eucalyptus-nc < 1.5
+Conflicts:     eucalyptus-cloud < 1.6, eucalyptus-cc < 1.6, eucalyptus-nc < 1.6
 Vendor:        Eucalyptus Systems
 #Icon:          someicon.xpm
 Source:        http://open.eucalyptus.com/downloads/eucalyptus-%{version}.tgz
@@ -47,10 +47,52 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the common parts: you will need to install either
 eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
+%package common-java
+Summary:      Elastic Utility Computing Architecture - ws java stack 
+Requires:     eucalyptus >= 1.6, java-sdk >= 1.6.0, lvm2, groovy
+Conflicts:    eucalyptus < 1.6
+Group:        Applications/System
+
+%description common-java
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains the java WS stack.
+
+%package walrus
+Summary:      Elastic Utility Computing Architecture - cloud controller
+Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, lvm2
+Conflicts:    eucalyptus-walrus < 1.6
+Group:        Applications/System
+
+%description walrus
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains walrus.
+
+%package sc
+Summary:      Elastic Utility Computing Architecture - walrus
+Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, lvm2, vblade
+Conflicts:    eucalyptus-cloud < 1.6
+Group:        Applications/System
+
+%description sc
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains the storage controller part of eucalyptus.
+
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus >= 1.5.2, java-sdk >= 1.6.0, ant, ant-nodeps, lvm2
-Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
+Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, lvm2
+Conflicts:    eucalyptus-cloud < 1.6
 Group:        Applications/System
 
 %description cloud
@@ -63,8 +105,8 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, iptables, bridge-utils, eucalyptus-gl >= 1.5, %{__dhcp}
-Conflicts:    eucalyptus < 1.5, eucalyptus-nc < 1.5
+Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, eucalyptus-gl >= 1.6, %{__dhcp}, vtun
+Conflicts:    eucalyptus < 1.6, eucalyptus-nc < 1.6
 Group:        Applications/System
 
 %description cc
@@ -77,8 +119,8 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.5.2, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0, bridge-utils, eucalyptus-gl >= 1.5, %{__libvirt}, %{__curl}, %{__xen}
-Conflicts:    eucalyptus < 1.5, eucalyptus-cc < 1.5
+Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-gl >= 1.6, %{__libvirt}, %{__curl}, %{__xen}
+Conflicts:    eucalyptus < 1.6, eucalyptus-cc < 1.6
 Group:        Applications/System
 
 %description nc
@@ -91,8 +133,8 @@ This package contains the node controller part of eucalyptus.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus >= 1.5, %{__httpd}, euca-axis2c >= 1.5.0, euca-rampartc >= 1.2.0
-Conflicts:    eucalyptus < 1.5
+Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Conflicts:    eucalyptus < 1.6
 Group:        Applications/System
 
 %description gl
@@ -104,116 +146,102 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the internal log service of eucalyptus.
 
 %prep
-%setup -n eucalyptus
+%setup -n eucalyptus-%{version}
 
 %build
-# let's be sure we have the right configuration file
-if [ -f tools/eucalyptus.conf.rpmbased ];
-then
-	cp -f tools/eucalyptus.conf.rpmbased tools/eucalyptus.conf
-fi
-%if %is_suse
-./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
-%endif
-%if %is_centos
-./configure --with-libvirt=/opt/euca-libvirt --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/opt/eucalyptus
-%endif
+./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
 cd clc
 make deps
 cd ..
-make
+make 2> err.log > out.log
 
 %install
 make install
+ls /usr/share/eucalyptus/*jar > jar_list
 
 %clean
-rm -rf /opt/eucalyptus/etc /opt/eucalyptus/usr /opt/eucalyptus/var
-rm -rf /opt/eucalyptus/lib
-rm -rf $RPM_BUILD_DIR/eucalyptus
-rm -f /etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-cc
+make uninstall
+rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
+# most of the files are taken care of by uninstall, but not the
+# directories
+rm -rf /var/lib/eucalyptus
+rm -rf /var/run/eucalyptus
+rm -rf /usr/lib/eucalyptus
+rm -rf /usr/share/eucalyptus
+rm -rf /etc/eucalyptus
+rm -rf /usr/share/doc/eucalyptus-%{version}
 
 %files
 %doc LICENSE INSTALL README CHANGELOG
-/opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
-/opt/eucalyptus/var/lib/eucalyptus/keys
-/opt/eucalyptus/var/log
-/opt/eucalyptus/var/run
-/opt/eucalyptus/usr/share/eucalyptus/add_key.pl
-/opt/eucalyptus/usr/share/eucalyptus/euca_ipt
-/opt/eucalyptus/usr/share/eucalyptus/populate_arp.pl
-/opt/eucalyptus/usr/lib/eucalyptus/euca_rootwrap
-/opt/eucalyptus/usr/sbin/euca_conf
-/opt/eucalyptus/usr/sbin/euca_sync_key
-/opt/eucalyptus/usr/sbin/euca_killall
-/opt/eucalyptus/etc/eucalyptus/httpd.conf
-/opt/eucalyptus/etc/eucalyptus/eucalyptus-version
+/etc/eucalyptus/eucalyptus.conf
+/var/lib/eucalyptus/keys
+/var/log/eucalyptus
+/var/run/eucalyptus
+/usr/share/eucalyptus/add_key.pl
+/usr/share/eucalyptus/euca_ipt
+/usr/share/eucalyptus/populate_arp.pl
+/usr/share/eucalyptus/euca_upgrade
+/usr/lib/eucalyptus/euca_rootwrap
+/usr/lib/eucalyptus/euca_mountwrap
+/usr/sbin/euca_conf
+/usr/sbin/euca_sync_key
+/usr/sbin/euca_killall
+/etc/eucalyptus/httpd.conf
+/etc/eucalyptus/eucalyptus-version
+
+%files common-java -f jar_list
+/etc/init.d/eucalyptus-cloud
+/etc/eucalyptus/cloud.d
+/var/lib/eucalyptus/db
+/var/lib/eucalyptus/modules
+/var/lib/eucalyptus/webapps
+/usr/lib/eucalyptus/liblvm2control.so
+/usr/sbin/eucalyptus-cloud
 
 %files cloud
-/opt/eucalyptus/etc/eucalyptus/cloud.d/eucalyptus.xml
-/opt/eucalyptus/etc/eucalyptus/cloud.d
-/opt/eucalyptus/etc/eucalyptus/cloud.xml
-/opt/eucalyptus/usr/share/eucalyptus/*jar
-/opt/eucalyptus/var/lib/eucalyptus/db
-/opt/eucalyptus/var/lib/eucalyptus/modules
-/opt/eucalyptus/var/lib/eucalyptus/webapps
-/opt/eucalyptus/usr/lib/eucalyptus/libfsstorage.so
-/opt/eucalyptus/usr/lib/eucalyptus/liblvm2control.so
-/opt/eucalyptus/etc/init.d/eucalyptus-cloud
+
+%files walrus
+
+%files sc
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
-/opt/eucalyptus/etc/init.d/eucalyptus-cc
+/etc/init.d/eucalyptus-cc
+/etc/eucalyptus/vtunall.conf.template
 
 %files nc
-/opt/eucalyptus/usr/lib/eucalyptus/euca_mountwrap
-/opt/eucalyptus/usr/share/eucalyptus/gen_libvirt_xml
-/opt/eucalyptus/usr/share/eucalyptus/gen_kvm_libvirt_xml
-/opt/eucalyptus/usr/share/eucalyptus/partition2disk
-/opt/eucalyptus/usr/share/eucalyptus/get_xen_info
-/opt/eucalyptus/usr/share/eucalyptus/get_sys_info
-/opt/eucalyptus/usr/share/eucalyptus/detach.pl
-/opt/eucalyptus/usr/sbin/euca_test_nc
+/usr/share/eucalyptus/gen_libvirt_xml
+/usr/share/eucalyptus/gen_kvm_libvirt_xml
+/usr/share/eucalyptus/partition2disk
+/usr/share/eucalyptus/get_xen_info
+/usr/share/eucalyptus/get_sys_info
+/usr/share/eucalyptus/detach.pl
+/usr/sbin/euca_test_nc
 /opt/euca-axis2c/services/EucalyptusNC
-/opt/eucalyptus/etc/init.d/eucalyptus-nc
+/etc/init.d/eucalyptus-nc
 
 %files gl
 /opt/euca-axis2c/services/EucalyptusGL
 
 %pre
-if [ -x /etc/init.d/eucalyptus ]; 
-then
-	# stop the old services
-	/etc/init.d/eucalyptus stop || true
-	chkconfig --del eucalyptus || true
-fi
 if [ "$1" = "2" ]; 
 then
-	cd /opt/eucalyptus
+	# let's see where we installed
+	cd /
+	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
 
-	# save a copy of the old conf file
-	cp -f etc/eucalyptus/eucalyptus.conf etc/eucalyptus/eucalyptus.conf.preupgrade
-
-	# let's check if we have already the db in the right place, then
-	# it's an upgrade from >= 1.5.x and no special case
-	if [ ! -e etc/eucalyptus/eucalyptus-version ];
+	# stop all old services
+	if [ -x etc/init.d/eucalyptus-cloud ];
 	then
-
-		# we upgrade only from 1.4
-		if [ ! -e usr/share/eucalyptus/euca_ipt ];
-		then
-			echo "Cannot upgrade from version earlier than 1.4"
-			exit 2
-		fi
-
-		# let's try to save the old configuration
-		if [ -e /root/eucalyptus-pre-%{version}-rollback.tar ];
-		then
-			mv -f /root/eucalyptus-pre-%{version}-rollback.tar /root/eucalyptus-pre-%{version}-rollback.tar.old
-		fi
-
-		# let's save database and keys
-		rm -f var/eucalyptus/db/eucalyptus.lck
-		tar cf /root/eucalyptus-pre-%{version}-rollback.tar var/eucalyptus/db var/eucalyptus/keys/*.p* 2> /dev/null || true
+		 etc/init.d/eucalyptus-cloud stop
+	fi
+	if [ -x etc/init.d/eucalyptus-cc ]; 
+	then
+		 etc/init.d/eucalyptus-cc stop
+	fi
+	if [ -x etc/init.d/eucalyptus-nc ]; 
+	then
+		 etc/init.d/eucalyptus-nc stop
 	fi
 fi
 
@@ -228,114 +256,203 @@ if ! getent passwd eucalyptus > /dev/null ; then
 	adduser -M eucalyptus 
 %endif
 fi
-# let's get the default bridge 
-/opt/eucalyptus/usr/sbin/euca_conf -bridge %{__bridge} 
 
-# upgrade?
+if [ "$1" = "1" ]; 
+then
+	# let's configure eucalyptus
+	/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor xen -bridge %{__bridge}
+fi
 if [ "$1" = "2" ];
 then
-	cd /opt/eucalyptus
-	
-	# eucalyptus.conf was marked noreplace, so the new one could be named
-	# *.rpmnew. Let's move it over (we did take a copy anyway)
-	if [ -e etc/eucalyptus/eucalyptus.conf.rpmnew -a etc/eucalyptus/eucalyptus.conf.rpmnew -nt etc/eucalyptus/eucalyptus.conf ];
+	if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf ]; 
 	then
-		cp -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.rpmnew /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
+		cp --preserve -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
 	fi
-
-	# if we have an old config file we try to upgrade
-	if [ -e etc/eucalyptus/eucalyptus.conf.preupgrade ];
-	then
-		usr/sbin/euca_conf -upgrade-conf /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf.preupgrade 
-	fi
-
-	# and now let's move the keys into the new place
-	if [ -e var/eucalyptus/keys/cloud-cert.pem ];
-	then
-		mv -f var/eucalyptus/keys/*.p* var/lib/eucalyptus/keys
-	fi
+	/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new / --conf
 fi
+
 # final setup and set the new user
-/opt/eucalyptus/usr/sbin/euca_conf -d /opt/eucalyptus -setup -user eucalyptus
+/usr/sbin/euca_conf -setup -user eucalyptus
+
+%post common-java
+chkconfig --add eucalyptus-cloud
 
 %post cloud
-if [ "$1" = "2" ]; 
+/usr/sbin/euca_conf --enable cloud
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
-	cd /opt/eucalyptus
-
-	# if upgrading from version 1.5.x nothing to do
-	if [ ! -e var/lib/eucalyptus/db/eucalyptus.script ];
+	if ! grep 8773:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
 	then
-		if [ -d var/eucalyptus/db ];
+		echo "--port=8773:tcp" >> /etc/sysconfig/system-config-securitylevel
+		echo "--port=8443:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
+fi
+%endif
+# upgrade from 1.5
+if [ "$1" = "2" ];
+then
+	cd /
+	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
+	if [ -e var/lib/eucalyptus/db/eucalyptus_volumes.properties ];
+	then
+		# if groovy was installed on the same shell the
+		# environment can be wrong: we need to souce groovy env
+		if [ -e /etc/profile.d/groovy.sh ];
 		then
-			mkdir -p var/lib/eucalyptus/db
-			cp -ar var/eucalyptus/db var/lib/eucalyptus
+			. /etc/profile.d/groovy.sh
+		fi
+		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new / --db
+	fi
+fi
+
+%post walrus
+/usr/sbin/euca_conf --enable walrus
+
+%post sc
+/usr/sbin/euca_conf --enable sc
+
+%post cc
+chkconfig --add eucalyptus-cc
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	if ! grep 8774:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	then
+		echo "--port=8774:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
+fi
+%endif
+if [ "$1" = "2" ];
+then
+	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/cluster-pk.pem ]; 
+	then
+		if [ ! -e /var/lib/eucalyptus/keys/cluster-pk.pem ]; 
+		then
+			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/cluster*.pem /var/lib/eucalyptus/keys
+			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/node*.pem /var/lib/eucalyptus/keys
 		fi
 	fi
 fi
-ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-cloud
-chkconfig --add eucalyptus-cloud
-
-%post cc
-ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-cc
-chkconfig --add eucalyptus-cc
 
 %post nc
-ln -sf /opt/eucalyptus/etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-nc
-. /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf
 chkconfig --add eucalyptus-nc
+%if %is_centos
+if [ -e /etc/sysconfig/system-config-securitylevel ];
+then
+	if ! grep 8775:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	then
+		echo "--port=8775:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
+fi
+%endif
+%if %is_suse
+if [ -e /etc/PolicyKit/PolicyKit.conf ]; 
+then
+	if ! grep eucalyptus /etc/PolicyKit/PolicyKit.conf > /dev/null ;
+	then
+		sed -i '/<config version/ a <match action="org.libvirt.unix.manage">\n   <match user="eucalyptus">\n      <return result="yes"/>\n   </match>\n</match>' /etc/PolicyKit/PolicyKit.conf
+	fi
+fi
+%endif
+if [ "$1" = "2" ];
+then
+	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/node-pk.pem ]; 
+	then
+		if [ ! -e /var/lib/eucalyptus/keys/node-pk.pem ]; 
+		then
+			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/cluster-cert.pem /var/lib/eucalyptus/keys
+			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/node*.pem /var/lib/eucalyptus/keys
+		fi
+	fi
+fi
+
 
 %postun
 # in case of removal let's try to clean up the best we can
 if [ "$1" = "0" ];
 then
-	rm -rf /opt/eucalyptus/var/log
-	rm -rf /opt/eucalyptus/usr
-	rm -rf /opt/eucalyptus/etc/eucalyptus/http*
-	rm -rf /opt/eucalyptus/etc/init.d
-	# for now we leave the keys, the database and the config file
+	rm -rf /var/log/eucalyptus
+	rm -rf /etc/eucalyptus/http*
 fi
 
 %preun cloud
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-cloud ]; 
-	then
-		/etc/init.d/eucalyptus-cloud stop || /bin/true
-	fi
-fi
 if [ "$1" = "0" ];
 then
-	chkconfig --del eucalyptus-cloud || true
+%if %is_centos
+	if [ -e /etc/sysconfig/system-config-securitylevel ];
+	then
+		sed -i '/^--port=8773/ d' /etc/sysconfig/system-config-securitylevel
+		sed -i '/^--port=8443/ d' /etc/sysconfig/system-config-securitylevel
+	fi
+%endif
+	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable cloud
+	if [ -e /etc/init.d/eucalyptus-cloud ];
+	then 
+		/etc/init.d/eucalyptus-cloud restart || true
+	fi
+fi
+
+
+%preun walrus
+if [ "$1" = "0" ];
+then
+	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable walrus
+	if [ -e /etc/init.d/eucalyptus-cloud ];
+	then 
+		/etc/init.d/eucalyptus-cloud restart || true
+	fi
+fi
+
+%preun sc
+if [ "$1" = "0" ];
+then
+	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable sc
+	if [ -e /etc/init.d/eucalyptus-cloud ];
+	then 
+		/etc/init.d/eucalyptus-cloud restart || true
+	fi
+fi
+
+%preun common-java
+if [ "$1" = "0" ];
+then
+	/etc/init.d/eucalyptus-cloud stop
+	chkconfig --del eucalyptus-cloud
+	rm -f /var/lib/eucalyptus/services
 fi
 
 %preun cc
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-cc ]; 
-	then
-		/etc/init.d/eucalyptus-cc stop || /bin/true
-	fi
-fi
 if [ "$1" = "0" ];
 then
-	chkconfig --del eucalyptus-cc || true
+	/etc/init.d/eucalyptus-cc stop
+	chkconfig --del eucalyptus-cc
+%if %is_centos
+	if [ -e /etc/sysconfig/system-config-securitylevel ];
+	then
+		sed -i '/^--port=8774/ d' /etc/sysconfig/system-config-securitylevel
+	fi
+%endif
 fi
 
 %preun nc
-if [ -x /opt/eucalyptus/usr/sbin/euca_conf ];
-then
-	if [ -x /etc/init.d/eucalyptus-nc ]; 
-	then
-		/etc/init.d/eucalyptus-nc stop || /bin/true
-	fi
-fi
 if [ "$1" = "0" ];
 then
-	chkconfig --del eucalyptus-nc || true
+	/etc/init.d/eucalyptus-nc stop
+	chkconfig --del eucalyptus-nc
+%if %is_centos
+	if [ -e /etc/sysconfig/system-config-securitylevel ];
+	then
+		sed -i '/^--port=8775/ d' /etc/sysconfig/system-config-securitylevel
+	fi
+%endif
 fi
 
 %changelog gl
+*Thu Nov 5 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.6.1)
+- install in / instead of /opt/eucalyptus
+
 *Mon Jun 15 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.5.2)
 
@@ -346,6 +463,10 @@ fi
 - Added new service
 
 %changelog cloud
+*Thu Nov 5 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.6.1)
+- install in / instead of /opt/eucalyptus
+
 *Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
 - New version (1.5.2)
 
@@ -387,6 +508,10 @@ fi
 - Fix the instance ID naming collision.
 
 %changelog cc
+*Thu Nov 5 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.6.1)
+- install in / instead of /opt/eucalyptus
+
 *Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
 - New version (1.5.2)
 
@@ -404,6 +529,10 @@ fi
   this module.
 
 %changelog nc
+*Thu Nov 5 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.6.1)
+- install in / instead of /opt/eucalyptus
+
 *Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
 - New version (1.5.2)
 
@@ -430,6 +559,10 @@ fi
 - More robust checking for running instances.
 
 %changelog
+*Thu Nov 5 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.6.1)
+- install in / instead of /opt/eucalyptus
+
 *Mon Jun 15 2009 eucalyptus systems (support@open.eucalyptus.com)
 - New version (1.5.2)
 

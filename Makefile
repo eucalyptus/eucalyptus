@@ -12,22 +12,9 @@ SUBDIRS			=	tools \
 				gatherlog \
 				node  \
 				cluster \
-				clc
+			        clc
 
-# files we are going to package
-DIST_FILES		=	CHANGELOG \
-				configure \
-				eucalyptus.spec \
-				INSTALL \
-				install-sh \
-				LICENSE \
-				Makedefs.in \
-				Makefile \
-				README \
-				VERSION
-DIST_NAME		= $(DIST_DIR).tgz
-
-.PHONY: all clean distclean build dist
+.PHONY: all clean distclean build 
 
 all: build
 
@@ -68,10 +55,8 @@ install: deploy
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
-dist:
-	@rm -rf $(DIST_ROOT) $(DIST_NAME)
-	@$(INSTALL) -d $(DIST_ROOT)
-	@$(INSTALL) $(DIST_FILES) $(DIST_ROOT)
+uninstall:
+	@$(RM) -f $(etcdir)/eucalyptus/eucalyptus-version
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
@@ -85,11 +70,6 @@ distclean: clean
 	@rm -f config.cache config.log config.status Makedefs tags TAGS
 	@# they where part of CLEAN
 	@rm -rf lib 
-
-# the following target is used to remove eucalyptuys from your system
-uninstall:
-	@echo something to do here
-
 
 Makedefs: Makedefs.in config.status
 	./config.status

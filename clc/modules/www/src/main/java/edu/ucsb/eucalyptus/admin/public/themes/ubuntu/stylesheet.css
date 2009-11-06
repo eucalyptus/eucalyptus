@@ -1,0 +1,242 @@
+/*
+ * CSS stylesheet for the Ubuntu Enterprise Cloud theme
+ */
+
+a:focus {-moz-outline: none /* fx 1.07*/ outline:none /* fx 1.05, Safari, Mac IE*/}
+
+body {
+   background: #FFF url('img/page_background.png') center top no-repeat;
+   
+    color: black;
+    font-family: Arial, sans-serif;
+    font-size: 77%;
+
+    margin: 0px;
+	padding:0;
+}
+
+body a { 
+    color: green;
+}
+
+h3,.euca-section-header{
+	color:#ff6600; /*orange*/
+	font-size:1.1em;
+	padding-top:20px;
+	margin-top:0;
+	font-weight:bold;
+}
+p{
+	/* padding-top:20px;
+	padding-bottom:20px; */
+	color:#737373;
+	font-size:0.85em;
+}
+td{
+	font-size:1.12em;
+}
+.content{
+	width:480px;
+}
+
+button{
+	margin: 3px 3px 3px 3px;
+}
+
+table.euca-top-bar, .gwt-TabBar, .euca-tab-contents{
+	width:964px;
+	overflow:hidden;
+	margin:0 auto;
+}
+
+.euca-tab-contents{
+	padding-left:100px;
+	padding-bottom:50px;
+	padding-right:200px;
+	background: url(img/powered_by_eucalyptus.png) no-repeat top right;
+}
+.euca-top-bar{
+	padding-left:50px;
+	padding-top:25px; /* + 25 by dmitrii */
+}
+
+.euca-top-bar-right {
+	font-size:.6em;
+	margin-top: 20px;
+	margin-right:50px;
+}
+.euca-top-bar-right a{
+	font-weight:bold;
+	color:black;
+	text-decoration: none;
+}
+.euca-top-bar-right a:hover{
+	text-decoration: underline;
+}
+
+.euca-message-bar { /* added by dmitrii */
+	width: 950px;
+	height: 1.5em;
+	margin: 0 auto;
+}
+
+.euca-greeting-normal {
+    color: black;
+}
+.euca-greeting-warning {
+    color: orange;
+}
+.euca-greeting-error {
+    color: red;
+}
+.euca-greeting-disabled {
+	color: gray;
+	font-size: medium;
+}
+.euca-greeting-pending {
+    color: orange;
+    text-decoration: blink;
+    text-align:center;
+}
+.euca-login-panel {
+    border: solid;
+    border-width: 1px;
+    border-color: #FF6600;
+    background: #FFCC33;
+    padding: 20px 20px 20px 20px;
+}
+.euca-remember-text {
+    font-size: x-small;
+    font-style: italic;
+}
+.euca-small-text {
+    font-size: x-small;
+	color: gray;
+}
+
+.euca-small-text a {
+    text-decoration: none;
+    font-size: x-small;
+	color: gray;
+}
+
+.euca-top-bar {
+	height:100px;
+	margin:0;
+    background: #FFF url(img/header_background.png) right repeat-y;
+    padding-left:50px;
+    font-weight: bold;
+    font-size: large;
+    text-align: left;
+}
+
+.highlighted {
+    border: solid;
+    border-width: 5px;
+    border-color: red;
+}
+
+.euca-error-hint {
+    font-size: x-small;
+    font-style: italic;
+    color: red;
+}
+
+.gwt-TabBar {  
+	background:url(img/navbar_background.png) no-repeat;
+	height:56px;
+
+}
+
+
+.gwt-TabBar .gwt-TabBarFirst {
+    padding-left: 70px;
+}
+
+.gwt-TabBar .gwt-TabBarRest {
+    padding-right: 3px;
+}
+
+.gwt-TabBar .gwt-TabBarItem {
+    padding: 14px 10px 24px 20px;
+	color:white;
+  	margin:0;
+    cursor: pointer;
+    text-align: center;
+    -moz-outline: none; /* fx 1.07*/ outline: none; /* fx 1.05, Safari, Mac IE*/
+}
+.gwt-TabBar .gwt-TabBarItem-wrapper-selected{
+	background: url(img/tab_background.png) no-repeat top left;
+}
+.gwt-TabBar .gwt-TabBarItem-selected {
+    cursor: default;
+    text-align: center;
+	background: url(img/tab_background_right.png) right top no-repeat;
+	padding-right:20px;
+	color:black;
+	font-weight:bold;
+}
+
+
+.gwt-TabBarItem:hover {
+    text-decoration: underline;
+}
+
+.euca-text {
+    font-size: smaller;
+}
+
+.euca-button {
+    cursor: pointer;
+}
+
+.euca-table {
+    border-spacing: 0;
+    padding: 4px;
+}
+
+.euca-action-link {
+    font-size: x-small;
+	text-decoration: underline;
+	cursor: pointer;
+	color: green;
+}
+
+.euca-table-heading-row {
+    font-weight: bold;
+    font-size: smaller;
+}
+
+.euca-table-odd-row {
+    font-size: smaller;
+    background: white;
+}
+
+.euca-table-even-row {
+    font-size: smaller;
+    background: #E8E8E8;
+}
+
+.gwt-DialogBox { 
+    border: solid;
+    border-width: 1px;
+    border-color: #FF6600;
+    background: #FFCC33;
+    padding: 20px 20px 20px 20px;
+    width: 400px;
+}
+.gwt-DialogBox .Caption {
+    font-size: bold;	
+}
+.gwt-DialogBox .dialogContent { 
+    padding: 10px 0px 0px 0px;
+}
+
+.euca-inline-image {
+	padding: 3px 3px 3px 3px;
+}
+
+.euca-nonfirst-cluster-entry {
+	border-top:1px dashed grey;
+	padding:10px;
+}

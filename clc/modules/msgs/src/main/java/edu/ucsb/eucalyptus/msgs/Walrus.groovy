@@ -1,36 +1,68 @@
+/*******************************************************************************
+*Copyright (c) 2009  Eucalyptus Systems, Inc.
+* 
+*  This program is free software: you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation, only version 3 of the License.
+* 
+* 
+*  This file is distributed in the hope that it will be useful, but WITHOUT
+*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+*  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+*  for more details.
+* 
+*  You should have received a copy of the GNU General Public License along
+*  with this program.  If not, see <http://www.gnu.org/licenses/>.
+* 
+*  Please contact Eucalyptus Systems, Inc., 130 Castilian
+*  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+*  if you need additional information or have any questions.
+* 
+*  This file may incorporate work covered under the following copyright and
+*  permission notice:
+* 
+*    Software License Agreement (BSD License)
+* 
+*    Copyright (c) 2008, Regents of the University of California
+*    All rights reserved.
+* 
+*    Redistribution and use of this software in source and binary forms, with
+*    or without modification, are permitted provided that the following
+*    conditions are met:
+* 
+*      Redistributions of source code must retain the above copyright notice,
+*      this list of conditions and the following disclaimer.
+* 
+*      Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+* 
+*    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+*    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+*    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+*    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+*    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+*    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+*    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+*    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+*    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+*    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+*    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+*    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+*    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+*    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+*    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+*    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+*    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+*    ANY SUCH LICENSES OR RIGHTS.
+*******************************************************************************/
 package edu.ucsb.eucalyptus.msgs
-import org.jboss.netty.handler.codec.http.HttpResponseStatusimport org.jboss.netty.channel.Channel;
-import edu.ucsb.eucalyptus.constants.IsData;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.channel.Channel;
+
 /*
- * Software License Agreement (BSD License)
- *
- * Copyright (c) 2008, Regents of the University of California
- * All rights reserved.
- *
- * Redistribution and use of this software in source and binary forms, with or
- * without modification, are permitted provided that the following conditions
- * are met:
- *
- * * Redistributions of source code must retain the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer in the documentation and/or other
- *   materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
@@ -73,12 +105,6 @@ public class WalrusDeleteType extends WalrusRequestType {
 }
 
 public class WalrusDeleteResponseType extends WalrusResponseType {
-}
-
-public class InitializeWalrusType extends WalrusRequestType {
-}
-
-public class InitializeWalrusResponseType extends WalrusResponseType {
 }
 
 public class CanonicalUserType extends EucalyptusData {
@@ -165,47 +191,50 @@ public class GetObjectAccessControlPolicyType extends WalrusRequestType {
 }
 
 public class WalrusErrorMessageType extends EucalyptusMessage {
-	protected String code;
 	protected String message;
+	protected String code;
+	protected HttpResponseStatus status;
+	protected String resourceType;
+	protected String resource;
 	protected String requestId;
 	protected String hostId;
-	protected Integer httpCode;
-	protected HttpResponseStatus status;
-	
-	public Integer getHttpCode() {
-		return httpCode;
+
+	def WalrusErrorMessageType() {}
+
+	def WalrusErrorMessageType(String message,
+			String code,
+			HttpResponseStatus status,
+			String resourceType,
+			String resource,
+			String requestId,
+			String hostId) {
+		this.message = message;
+		this.code = code;
+		this.status = status;
+		this.resourceType = resourceType;
+		this.resource = resource;
+		this.requestId = requestId;
+		this.hostId = hostId;
 	}
 	
 	public HttpResponseStatus getStatus() {
 		return status;
 	}
-}
 
-public class WalrusBucketErrorMessageType extends WalrusErrorMessageType {
-	protected String bucketName;
-	
-	public WalrusBucketErrorMessageType() {
+	public String getCode() {
+		return code;
 	}
-	
-	public WalrusBucketErrorMessageType(String bukkit, String code, String message, Integer httpCode, String requestId, String hostId) {
-		bucketName = bukkit;
-		this.code = code;
-		this.message = message;
-		this.requestId = requestId;
-		this.hostId = hostId;
-		this.httpCode = httpCode;
+
+	public String getMessage() {
+		return message;
 	}
-	public WalrusBucketErrorMessageType(String bukkit, String code, String message, HttpResponseStatus status, String requestId, String hostId) {
-		bucketName = bukkit;
-		this.code = code;
-		this.message = message;
-		this.requestId = requestId;
-		this.hostId = hostId;
-		this.status = status;
+
+	public String getResourceType() {
+		return resourceType;
 	}
-	
-	public String toString() {
-		return "BucketErrorMessage:" + message + bucketName;
+
+	public String getResource() {
+		return resource;
 	}
 }
 
@@ -271,10 +300,6 @@ public class CreateBucketType extends WalrusRequestType {
 }
 
 public class CreateBucketResponseType extends WalrusResponseType {
-	CreateBucketResponseMessage createBucketResponse;
-}
-
-public class CreateBucketResponseMessage extends EucalyptusData {
 	String bucket;
 }
 
@@ -371,6 +396,7 @@ public class PostObjectType extends WalrusDataRequestType {
 	String storageClass;
 	String successActionRedirect;
 	Integer successActionStatus;
+	String contentType;
 }
 
 public class CopyObjectType extends WalrusRequestType {
@@ -561,6 +587,7 @@ public class SetBucketLoggingStatusResponseType extends WalrusResponseType {
 }
 
 public class UpdateWalrusConfigurationType extends WalrusRequestType {
+	String name;
 	String bucketRootDirectory;
 	Integer maxBucketsPerUser;
 	Long maxBucketSize;
@@ -570,6 +597,7 @@ public class UpdateWalrusConfigurationType extends WalrusRequestType {
 	def UpdateWalrusConfigurationType() {}
 
 	def UpdateWalrusConfigurationType(WalrusStateType walrusState) {
+		this.name = walrusState.getName();
 		this.bucketRootDirectory = walrusState.getBucketsRootDirectory();
 		this.maxBucketsPerUser = walrusState.getMaxBucketsPerUser();
 		this.maxBucketSize = walrusState.getMaxBucketSizeInMB();
@@ -579,6 +607,41 @@ public class UpdateWalrusConfigurationType extends WalrusRequestType {
 }
 
 public class UpdateWalrusConfigurationResponseType extends WalrusResponseType {
+}
+
+public class GetWalrusConfigurationType extends WalrusRequestType {
+	String name;
+
+	def GetWalrusConfigurationType() {}
+
+	def GetWalrusConfigurationType(String name) {
+		this.name = name;
+	}
+}
+
+public class GetWalrusConfigurationResponseType extends WalrusRequestType {
+	String name;
+	String bucketRootDirectory;
+	Integer maxBucketsPerUser;
+	Long maxBucketSize;
+	Long imageCacheSize;
+	Integer totalSnapshotSize;
+
+	def GetWalrusConfigurationResponseType() {}
+
+	def GetWalrusConfigurationResponseType(String name,
+			String bucketRootDirectory,
+			Integer maxBucketsPerUser,
+			Long maxBucketSize,
+			Long imageCacheSize,
+			Integer totalSnapshotSize) {
+		this.name = name;
+		this.bucketRootDirectory = bucketRootDirectory;
+		this.maxBucketsPerUser = maxBucketsPerUser;
+		this.maxBucketSize = maxBucketSize;
+		this.imageCacheSize = imageCacheSize;
+		this.totalSnapshotSize = totalSnapshotSize;
+	}
 }
 
 public class GetDecryptedImageType extends WalrusDataGetRequestType {
@@ -613,9 +676,7 @@ public class FlushCachedImageResponseType extends WalrusDataResponseType {
 }
 
 public class StoreSnapshotType extends WalrusDataRequestType {
-	String contentLength;
-	String snapshotvgname;
-	String snapshotlvname;
+	String snapshotSize;
 }
 
 public class StoreSnapshotResponseType extends WalrusDataResponseType {
@@ -629,8 +690,42 @@ public class DeleteWalrusSnapshotType extends WalrusRequestType {
 public class DeleteWalrusSnapshotResponseType extends WalrusResponseType {
 }
 
-public class GetWalrusSnapshotType extends WalrusDataRequestType {
+public class GetWalrusSnapshotType extends WalrusDataGetRequestType {
 }
 
-public class GetWalrusSnapshotResponseType extends WalrusDataResponseType {
+public class GetWalrusSnapshotResponseType extends WalrusDataGetResponseType {
+}
+
+public class WalrusUsageStatsRecord extends StatEventRecord {
+	Long bytesIn;
+	Long bytesOut;
+	Integer numberOfBuckets;
+	Long totalSpaceUsed;
+	
+	def WalrusUsageStatsRecord() {}
+
+	def WalrusUsageStatsRecord(Long bytesIn, 
+			Long bytesOut,
+			Integer numberOfBuckets,
+			Long totalSpaceUsed) {
+		super("Walrus", System.getProperty("euca.version"));
+		this.bytesIn = bytesIn;
+		this.bytesOut = bytesOut;
+		this.numberOfBuckets = numberOfBuckets;
+		this.totalSpaceUsed = totalSpaceUsed;
+	}
+
+	public String toString() {
+		return String.format("Service: %s Version: %s Bytes In: %s Bytes Out: %s Buckets: %d Space Used: %s", 
+				service, 
+				version, 
+				bytesIn, 
+				bytesOut, 
+				numberOfBuckets, 
+				totalSpaceUsed);
+	}
+	
+	public static WalrusUsageStatsRecord create(Long bytesIn, Long bytesOut, Integer numberOfBuckets, Long totalSpaceUsed) {
+		return new WalrusUsageStatsRecord(bytesIn, bytesOut, numberOfBuckets, totalSpaceUsed);
+	}
 }

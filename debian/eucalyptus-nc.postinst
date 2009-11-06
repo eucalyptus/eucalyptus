@@ -1,0 +1,36 @@
+#!/bin/sh
+
+if [ "$1" = "configure" ]
+then
+    adduser eucalyptus libvirtd 2>&1 > /dev/null
+    adduser eucalyptus libvirt 2>&1 > /dev/null
+
+    EUCA_HOME=`getent passwd eucalyptus | cut -f6 -d:`
+    if ! [ -d "$EUCA_HOME/.ssh" ]
+    then
+        mkdir "$EUCA_HOME/.ssh" 
+    fi
+    if ! [ -f "$EUCA_HOME/.ssh/authorized_keys" ]
+    then
+        touch "$EUCA_HOME/.ssh/authorized_keys" 
+    fi
+    chown -R eucalyptus.eucalyptus /var/lib/eucalyptus/.ssh    
+
+    update-rc.d eucalyptus-nc start 99 2 3 4 5 . stop 20 0 1 6 . >/dev/null
+
+    if which invoke-rc.d >/dev/null 2>&1; then
+        invoke-rc.d eucalyptus-nc stop > /dev/null 2>&1 ||true
+    else
+        /etc/init.d/eucalyptus-nc stop > /dev/null 2>&1 ||true
+    fi
+
+
+
+    if which invoke-rc.d >/dev/null 2>&1; then
+        invoke-rc.d eucalyptus-nc start ||true
+    else
+        /etc/init.d/eucalyptus-nc start ||true
+    fi
+fi
+
+#DEBHELPER#

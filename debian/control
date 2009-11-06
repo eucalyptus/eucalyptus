@@ -1,0 +1,215 @@
+Source: eucalyptus
+Section: admin
+Priority: extra
+Maintainer: chris grzegorczyk <grze@eucalyptus.com>
+XSBC-Original-Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Build-Depends: cdbs, debhelper (>= 7), libaxis2c-dev, librampart0, librampart-dev, default-jdk, ant, libvirt-dev, quilt, libcurl4-gnutls-dev, libssl-dev, ant-optional, zlib1g-dev, pkg-config, libavahi-core-dev, libdebian-installer-dev,
+ libbackport-util-concurrent-java,
+ libwsdl4j-java,
+ libhsqldb-java,
+ libaxiom-java,
+ libbcprov-java,
+ libcap-dev,
+ libcommons-io-java,
+ libcommons-fileupload-java,
+ libcommons-httpclient-java,
+ libcommons-lang-java,
+ libcommons-pool-java (>= 1.4),
+ libc3p0-java,
+ libdnsjava-java,
+ libdrools-core-java,
+ libeucalyptus-commons-ext-java (>=0.4.1),
+ libgnumail-java,
+ libgeronimo-j2ee-connector-1.5-spec-java,
+ libgeronimo-jpa-3.0-spec-java,
+ libgoogle-collections-java,
+ groovy (>= 1.6.3),
+ libgwt-user-java,
+ libjaxp1.3-java,
+ libjetty6-java,
+ libjibx-java (>= 1.1.6a),
+ libjson-java,
+ junit,
+ liblog4j1.2-java,
+ libnetty-java,
+ libservlet2.5-java,
+ libwss4j-java,
+ libxalan2-java,
+ libxerces2-java,
+ libxml-security-java (>= 1.4.2-1ubuntu1),
+ libgwt-dev-java,
+ libecj-java,
+ libantlr-java,
+ ant
+Standards-Version: 3.8.0
+Homepage: http://open.eucalyptus.com/
+
+Package: eucalyptus-common
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, adduser, openssh-server, openssh-client, sudo, rsync
+Replaces: eucalyptus-common (< 1.6)
+Recommends: avahi-utils, unzip
+Description: Elastic Utility Computing Architecture - Common files
+ EUCALYPTUS is an open source service overlay that implements elastic
+ computing using existing resources. The goal of EUCALYPTUS is to allow
+ sites with existing clusters and server infrastructure to co-host an
+ elastic computing service that is interface-compatible with Amazon's EC2.
+ .
+ This package contains the common parts: you will need to install either
+ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
+
+Package: eucalyptus-sc
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6), eucalyptus-java-common
+Description: Elastic Utility Computing Architecture - Storage controller
+ EUCALYPTUS is an open source service overlay that implements elastic
+ computing using existing resources. The goal of EUCALYPTUS is to allow
+ sites with existing clusters and server infrastructure to co-host an
+ elastic computing service that is interface-compatible with Amazon's EC2.
+ .
+ This package contains the storage controller part of eucalyptus.
+
+Package: eucalyptus-cloud
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6), eucalyptus-java-common
+Recommends: postfix | mail-transport-agent
+Replaces: eucalyptus-cc (<= 1.6~bzr919-0ubuntu3),
+ eucalyptus-sc (<= 1.6~bzr919-0ubuntu3),
+ eucalyptus-walrus (<= 1.6~bzr919-0ubuntu3)
+Description: Elastic Utility Computing Architecture - Cloud controller
+ EUCALYPTUS is an open source service overlay that implements elastic
+ computing using existing resources. The goal of EUCALYPTUS is to allow
+ sites with existing clusters and server infrastructure to co-host an
+ elastic computing service that is interface-compatible with Amazon's EC2.
+ .
+ This package contains the cloud controller part of eucalyptus.
+
+Package: eucalyptus-walrus
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6), eucalyptus-java-common
+Description: Elastic Utility Computing Architecture - Walrus (S3)
+ EUCALYPTUS is an open source service overlay that implements elastic
+ computing using existing resources. The goal of EUCALYPTUS is to allow
+ sites with existing clusters and server infrastructure to co-host an
+ elastic computing service that is interface-compatible with Amazon's EC2.
+ .
+ This package contains Walrus, the S3 part of eucalyptus.
+
+Package: eucalyptus-java-common
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, vblade, lvm2, dmsetup, openssh-server, eucalyptus-common (> 1.6),
+ default-jre-headless | java5-runtime-headless,
+ libecj-java,
+ libbackport-util-concurrent-java,
+ libaxiom-java,
+ libbcprov-java,
+ libcommons-fileupload-java,
+ libcommons-httpclient-java,
+ libcommons-lang-java,
+ libcommons-pool-java (>= 1.4),
+ libdnsjava-java,
+ libdrools-core-java,
+ libeucalyptus-commons-ext-java,
+ libgnumail-java,
+ libgeronimo-jpa-3.0-spec-java,
+ libgoogle-collections-java,
+ groovy (>= 1.6.3),
+ libgwt-user-java,
+ libjaxp1.3-java,
+ libjetty6-java,
+ libjibx-java (>= 1.1.6a),
+ libjson-java,
+ junit,
+ liblog4j1.2-java,
+ libnetty-java,
+ libservlet2.5-java,
+ libwss4j-java,
+ libxalan2-java,
+ libxerces2-java,
+ libxml-security-java (>= 1.4.2-1ubuntu1),
+ antlr3,
+ libantlr-java,
+ libasm2-java,
+ libbcel-java,
+ libbsf-java,
+ libc3p0-java,
+ libcglib2.1-java,
+ libcommons-beanutils-java,
+ libcommons-cli-java,
+ libcommons-codec-java,
+ libcommons-collections3-java,
+ libcommons-discovery-java,
+ libcommons-io-java,
+ libcommons-jxpath-java,
+ libcommons-logging-java,
+ libdom4j-java,
+ libezmorph-java,
+ libgnujaf-java,
+ libgeronimo-ejb-3.0-spec-java,
+ libgeronimo-j2ee-connector-1.5-spec-java,
+ libgeronimo-jms-1.1-spec-java,
+ libgeronimo-jta-1.0.1b-spec-java,
+ libgeronimo-jacc-1.1-spec-java,
+ libgeronimo-interceptor-3.0-spec-java,
+ libhsqldb-java,
+ janino,
+ libjavassist-java,
+ libjaxen-java,
+ libjug-java,
+ libexcalibur-logkit-java,
+ libmvel-java,
+ libregexp-java,
+ libslf4j-java,
+ libwsdl4j-java,
+ libxom-java,
+ libxpp3-java
+Replaces: eucalyptus-javadeps, eucalyptus-common, eucalyptus-cloud (< 1.6.1)
+Conflicts: eucalyptus-javadeps
+Description: Elastic Utility Computing Architecture - Common Java package
+ EUCALYPTUS is an open source service overlay that implements elastic
+ computing using existing resources. The goal of EUCALYPTUS is to allow
+ sites with existing clusters and server infrastructure to co-host an
+ elastic computing service that is interface-compatible with Amazon's EC2.
+ .
+ This package contains everything the java based packages share.
+
+Package: eucalyptus-cc
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6), apache2, libapache2-mod-axis2c, eucalyptus-gl, avahi-utils, librampart0, bridge-utils, vlan, dhcp3-server
+Recommends: powerwake, libpam-modules (>= 1.0.1-9ubuntu3)
+Suggests: vtun
+Conflicts: apache2-mpm-itk
+Description: Elastic Utility Computing Architecture - Cluster controller
+ EUCALYPTUS is an open source service overlay that implements elastic
+ computing using existing resources. The goal of EUCALYPTUS is to allow
+ sites with existing clusters and server infrastructure to co-host an
+ elastic computing service that is interface-compatible with Amazon's EC2.
+ .
+ This package contains the cluster controller part of eucalyptus.
+
+Package: eucalyptus-nc
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6), apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, eucalyptus-gl, adduser, avahi-utils, librampart0, parted, libvirt-bin
+Suggests: aoetools
+Replaces: eucalyptus-common (< 1.6.1)
+Recommends: vlan, bridge-utils, kvm, powernap
+Conflicts: apache2-mpm-itk, qemu (< 0.11.0-0)
+Description: Elastic Utility Computing Architecture - Node controller
+ EUCALYPTUS is an open source service overlay that implements elastic
+ computing using existing resources. The goal of EUCALYPTUS is to allow
+ sites with existing clusters and server infrastructure to co-host an
+ elastic computing service that is interface-compatible with Amazon's EC2.
+ .
+ This package contains the node controller part of eucalyptus.
+
+Package: eucalyptus-gl
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6)
+Description: Elastic Utility Computing Architecture - Logging service
+ EUCALYPTUS is an open source service overlay that implements elastic
+ computing using existing resources. The goal of EUCALYPTUS is to allow
+ sites with existing clusters and server infrastructure to co-host an
+ elastic computing service that is interface-compatible with Amazon's EC2.
+ .
+ This package contains the internal log service of eucalyptus.
+

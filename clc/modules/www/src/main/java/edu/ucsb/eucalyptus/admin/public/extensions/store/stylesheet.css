@@ -1,0 +1,264 @@
+/** Add css rules here for your application. */
+
+/** Example rules used by the template application (remove for your app) */
+h1 {
+  font-size: 2em;
+  font-weight: bold;
+  color: #777777;
+  margin: 40px 0px 70px;
+  text-align: center;
+}
+
+.sendButton {
+  display: block;
+  font-size: 16pt;
+}
+
+/** Most GWT widgets already have a style name defined */
+.gwt-DialogBox {
+  width: 400px;
+}
+
+.dialogVPanel {
+  margin: 5px;
+}
+
+.serverResponseLabelError {
+  color: red;
+}
+
+/** Set ids using widget.getElement().setId("idOfElement") */
+#closeButton {
+  margin: 15px 6px 6px;
+}
+
+.istore-image-store-widget {
+  width: 510px;
+}
+
+.istore-section-title {
+  font-weight: bold;
+  font-size: 150%;
+  padding-top: 1.5em;
+  padding-bottom: 0.5em;
+  color: #ff7309;
+}
+
+.istore-section-summary {
+  padding-bottom: 0.5em;
+}
+
+.istore-global-error-message {
+  font-weight: bold;
+  font-size: 130%;
+  padding-top: 1.5em;
+  padding-bottom: 1.5em;
+  color: #ff0000;
+}
+
+.istore-image-widget {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.istore-image-widget .istore-left-panels {
+  width: 510px;
+}
+
+.istore-image-widget .istore-image-icon-panel,
+.istore-image-widget .istore-title-panel,
+.istore-image-widget .istore-command-panel {
+  margin-left: 10px;
+}
+
+.istore-image-widget .istore-known-provider-title {
+  font-weight: bold;
+  text-decoration: none;
+  color: #c90016;
+}
+
+.istore-image-widget .istore-provider-title,
+.istore-image-widget .istore-provider-title-by {
+  font-size: 85%;
+}
+
+.istore-image-widget .istore-image-title {
+  font-size: 130%;
+  font-weight: bold;
+  color: #c90016;
+  padding-bottom: 7px;
+}
+
+.istore-image-widget .istore-image-summary {
+  padding-bottom: 7px;
+}
+
+.istore-image-widget .istore-read-more-label,
+.istore-image-widget .istore-cancel-anchor {
+  text-decoration: underline;
+  color: #878787;
+}
+
+.istore-image-widget .istore-cancel-panel,
+.istore-image-widget .istore-show-error-panel,
+.istore-image-widget .istore-how-to-run-panel {
+  text-align: right;
+}
+
+.istore-image-widget .istore-show-error-anchor {
+  text-decoration: underline;
+  color: #ff0000;
+}
+
+.istore-image-widget .istore-how-to-run-anchor {
+  font-weight: bold;
+  text-decoration: underline;
+  color: #517e1d;
+}
+
+.istore-image-widget .istore-spinner {
+  vertical-align: middle;
+  padding-left: 10px;
+}
+
+.istore-image-widget .istore-progress-bar-widget,
+.istore-image-widget .istore-upgrade-icon {
+  padding-top: 10px;
+}
+
+.istore-image-widget .gwt-DisclosurePanel .content,
+.istore-image-state-table .gwt-DisclosurePanel .content {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.istore-image-widget .istore-visible-image-details-panel {
+  padding-bottom: 0.5em;
+}
+
+.istore-image-widget .istore-hidden-image-details-panel {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+}
+
+.istore-image-widget .istore-image-detail-label {
+  font-weight: bold;
+}
+
+.istore-image-widget .istore-image-detail-value-label {
+  padding-left: 0.5em;
+}
+
+.istore-image-widget .istore-install-button {
+  cursor: pointer;
+}
+
+
+.istore-image-widget .istore-install-button-progress {
+  cursor: progress;
+}
+
+.istore-status-widget {
+  padding-top: 1em;
+}
+
+.istore-status-widget .istore-header-label {
+  padding-bottom: 0.5em;
+  text-decoration: underline;
+  font-weight: bold;
+  color: #517e1d;
+  height: 1em;  /* Prevent scrolling when showing/hiding the status widget. */
+}
+
+.istore-status-widget .istore-table-header {
+  font-weight: bold;
+  color: #517e1d;
+}
+
+.istore-status-widget .istore-table tr:first-child {
+  background: #f2f2f2;
+}
+
+.istore-status-widget .istore-table td {
+  border-top: 1px solid #cecece;
+  padding: 0.3em 1em 0.3em 1em;
+}
+
+.istore-status-widget .istore-table tr:first-child td {
+  border-top: #ffffff;
+}
+
+.istore-status-widget .istore-table td:first-child {
+  border-right: 1px dashed #cecece;
+  width: 400px;
+}
+
+.istore-status-widget .istore-image-title {
+  min-width: 20em;
+  padding-right: 3em;
+}
+
+.istore-status-widget .istore-image-status {
+  font-style: italic;
+}
+
+.istore-status-widget .istore-show-error-anchor {
+  text-decoration: underline;
+  color: #ff0000;
+}
+
+.istore-image-error-dialog textarea {
+  border: 1px solid black;
+  width: 40em;
+  height: 10em;
+}
+
+.istore-how-to-run-dialog .istore-summary-label,
+.istore-how-to-run-dialog .istore-footer-label {
+  /* width: 40em; removed by dmitrii */
+  margin: 1em 0.5em 1em 0.5em;
+}
+
+.istore-how-to-run-dialog .istore-command-label {
+  margin-left: 2em;
+  font-style: italic;
+}
+
+.istore-dialog .istore-button-panel {
+  text-align: right;
+}
+
+.istore-image-section-widget .istore-image-separator {
+  text-align: center;
+}
+
+.istore-search-panel .istore-search-box {
+  border: solid 1px black;
+  vertical-align: middle;
+  padding: 2px;
+  padding-left: 0.3em;
+  height: 26px;
+  font-size: 100%;
+  margin-right: 10px;
+  width: 350px; /* Update the spinner position when changing this. */
+}
+
+.istore-search-panel .istore-search-button {
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.istore-search-panel .istore-search-box-progress {
+  border-color: #878787;
+  color: #878787;
+  /* XXX How to make this URL generic? */
+  background-image: url("img/spinner.gif");
+  background-repeat: no-repeat;
+  background-position: 325px center; /* Should be updated with the text box width. */
+  padding-right: 28px; /* Hide the text under the spinner. */
+}
+
+.istore-search-panel .istore-search-button-progress {
+  cursor: progress;
+}

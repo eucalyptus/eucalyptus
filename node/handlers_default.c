@@ -1,3 +1,62 @@
+/*
+Copyright (c) 2009  Eucalyptus Systems, Inc.	
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation, only version 3 of the License.  
+ 
+This file is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.  
+
+You should have received a copy of the GNU General Public License along
+with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+Please contact Eucalyptus Systems, Inc., 130 Castilian
+Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+if you need additional information or have any questions.
+
+This file may incorporate work covered under the following copyright and
+permission notice:
+
+  Software License Agreement (BSD License)
+
+  Copyright (c) 2008, Regents of the University of California
+  
+
+  Redistribution and use of this software in source and binary forms, with
+  or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+  ANY SUCH LICENSES OR RIGHTS.
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU /* strnlen */
@@ -27,26 +86,18 @@
 
 
 /* coming from handlers.c */
-extern sem * xen_sem;
+extern sem * hyp_sem;
 extern sem * inst_sem;
 extern bunchOfInstances * global_instances;
 
-/* temporary: will be cleaned out*/
-static struct nc_state_t *nc = NULL;
-
 static int
-doInitialize (struct nc_state_t *parent_nc) 
+doInitialize (struct nc_state_t *nc) 
 {
-	if (!parent_nc)
-		return ERROR_FATAL;
-
-	nc = parent_nc;
-
 	return OK;
 }
 
 static int
-doRunInstance (	ncMetadata *meta, char *instanceId,
+doRunInstance (	struct nc_state_t *nc, ncMetadata *meta, char *instanceId,
 		char *reservationId, ncInstParams *params, 
 		char *imageId, char *imageURL, 
 		char *kernelId, char *kernelURL, 
@@ -55,25 +106,30 @@ doRunInstance (	ncMetadata *meta, char *instanceId,
 		char *userData, char *launchIndex, 
 		char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
+	logprintfl(EUCAERROR, "no default for doRunInstance!\n");
 	return ERROR_FATAL;
 }
 
 static int
-doRebootInstance(ncMetadata *meta, char *instanceId) 
+doRebootInstance(struct nc_state_t *nc, ncMetadata *meta, char *instanceId) 
 {    
-    return ERROR_FATAL;
+	logprintfl(EUCAERROR, "no default for doRebootInstance!\n");
+	return ERROR_FATAL;
 }
 
 static int
-doGetConsoleOutput(	ncMetadata *meta,
+doGetConsoleOutput(	struct nc_state_t *nc, 
+			ncMetadata *meta,
 			char *instanceId,
 			char **consoleOutput)
 {
+	logprintfl(EUCAERROR, "no default for doGetConsoleOutput!\n");
 	return ERROR_FATAL;
 }
 
 static int
-doTerminateInstance(	ncMetadata *meta,
+doTerminateInstance(	struct nc_state_t *nc,
+			ncMetadata *meta,
 			char *instanceId,
 			int *shutdownState,
 			int *previousState)
@@ -81,8 +137,6 @@ doTerminateInstance(	ncMetadata *meta,
 	ncInstance *instance, *vninstance;
 	virConnectPtr *conn;
 	int err;
-
-	logprintfl (EUCAINFO, "doTerminateInstance() invoked (id=%s)\n", instanceId);
 
 	sem_p (inst_sem); 
 	instance = find_instance(&global_instances, instanceId);
@@ -93,16 +147,20 @@ doTerminateInstance(	ncMetadata *meta,
 	/* try stopping the KVM domain */
 	conn = check_hypervisor_conn();
 	if (conn) {
-		virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
+	        sem_p(hyp_sem);
+	        virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
+		sem_v(hyp_sem);
 		if (dom) {
 			/* also protect 'destroy' commands, just in case */
-			sem_p (xen_sem);
+			sem_p (hyp_sem);
 			err = virDomainDestroy (dom);
-			sem_v (xen_sem);
+			sem_v (hyp_sem);
 			if (err==0) {
 				logprintfl (EUCAINFO, "destroyed domain for instance %s\n", instanceId);
 			}
+			sem_p(hyp_sem);
 			virDomainFree(dom); /* necessary? */
+			sem_v(hyp_sem);
 		} else {
 			if (instance->state != BOOTING)
 				logprintfl (EUCAWARN, "warning: domain %s to be terminated not running on hypervisor\n", instanceId);
@@ -110,7 +168,13 @@ doTerminateInstance(	ncMetadata *meta,
 	} 
 
 	/* change the state and let the monitoring_thread clean up state */
-	change_state (instance, SHUTOFF);
+    sem_p (inst_sem);
+    if (instance->state==BOOTING) {
+        change_state (instance, CANCELED);
+    } else {
+        change_state (instance, SHUTOFF);
+    }
+    sem_v (inst_sem);
 	*previousState = instance->stateCode;
 	*shutdownState = instance->stateCode;
 
@@ -118,7 +182,8 @@ doTerminateInstance(	ncMetadata *meta,
 }
 
 static int
-doDescribeInstances(	ncMetadata *meta,
+doDescribeInstances(	struct nc_state_t *nc,
+			ncMetadata *meta,
 			char **instIds,
 			int instIdsLen,
 			ncInstance ***outInsts,
@@ -131,11 +196,11 @@ doDescribeInstances(	ncMetadata *meta,
 	*outInsts = NULL;
 
 	sem_p (inst_sem);
-	if (instIdsLen == 0) { /* describe all instances */
+	if (instIdsLen == 0) /* describe all instances */
 		total = total_instances (&global_instances);
-	} else {
+	else 
 		total = instIdsLen;
-	}
+
 	*outInsts = malloc(sizeof(ncInstance *)*total);
 	if ((*outInsts) == NULL) {
 		sem_v (inst_sem);
@@ -168,7 +233,8 @@ doDescribeInstances(	ncMetadata *meta,
 }
 
 static int
-doDescribeResource(	ncMetadata *meta,
+doDescribeResource(	struct nc_state_t *nc,
+			ncMetadata *meta,
 			char *resourceType,
 			ncResource **outRes)
 {
@@ -223,18 +289,18 @@ doDescribeResource(	ncMetadata *meta,
         logprintfl (EUCAERROR, "Out of memory\n");
         return 1;
     }
-    * outRes = res;
+    *outRes = res;
 
     return OK;
 }
 
 static int
-doPowerDown(ncMetadata *ccMeta)
+doPowerDown(	struct nc_state_t *nc,
+		ncMetadata *ccMeta)
 {
 	char cmd[1024];
 	int rc;
 
-	logprintfl(EUCADEBUG, "PowerOff called\n");
 	snprintf(cmd, 1024, "%s /etc/init.d/powernap now", nc->rootwrap_cmd_path);
 	logprintfl(EUCADEBUG, "saving power: %s\n", cmd);
 	rc = system(cmd);
@@ -242,13 +308,11 @@ doPowerDown(ncMetadata *ccMeta)
 	if (rc)
 		logprintfl(EUCAERROR, "cmd failed: %d\n", rc);
   
-	logprintfl(EUCADEBUG, "PowerOff done\n");
-
 	return OK;
 }
 
 static int
-doStartNetwork(	vnetConfig *vnetconfig,
+doStartNetwork(	struct nc_state_t *nc,
 		ncMetadata *ccMeta, 
 		char **remoteHosts, 
 		int remoteHostsLen, 
@@ -257,15 +321,14 @@ doStartNetwork(	vnetConfig *vnetconfig,
 	int rc, ret, i, status;
 	char *brname;
 
-	logprintfl (EUCAINFO, "StartNetwork(): called\n");
-
-	rc = vnetStartNetwork(vnetconfig, vlan, NULL, NULL, &brname);
+	rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, &brname);
 	if (rc) {
 		ret = 1;
 		logprintfl (EUCAERROR, "StartNetwork(): ERROR return from vnetStartNetwork %d\n", rc);
 	} else {
 		ret = 0;
 		logprintfl (EUCAINFO, "StartNetwork(): SUCCESS return from vnetStartNetwork %d\n", rc);
+		if (brname) free(brname);
 	}
 	logprintfl (EUCAINFO, "StartNetwork(): done\n");
 
@@ -273,23 +336,27 @@ doStartNetwork(	vnetConfig *vnetconfig,
 }
 
 static int
-doAttachVolume(	ncMetadata *meta,
+doAttachVolume(	struct nc_state_t *nc,
+		ncMetadata *meta,
 		char *instanceId,
 		char *volumeId,
 		char *remoteDev,
 		char *localDev)
 {
+	logprintfl(EUCAERROR, "no default for doAttachVolume!\n");
 	return ERROR_FATAL;
 }
 
 static int
-doDetachVolume(	ncMetadata *meta,
+doDetachVolume(	struct nc_state_t *nc,
+		ncMetadata *meta,
 		char *instanceId,
 		char *volumeId,
 		char *remoteDev,
 		char *localDev,
 		int force)
 {
+	logprintfl(EUCAERROR, "no default for doDetachVolume!\n");
 	return ERROR_FATAL;
 }
 

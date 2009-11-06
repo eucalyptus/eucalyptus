@@ -37,7 +37,7 @@
  *    limitations under the License.
  *
  ******************************************************************************
- * Author: Chris Grzegorczyk grze@eucalyptus.com
+ * Author: chris grzegorczyk grze@eucalyptus.com
  ******************************************************************************/
 #include "eucalyptus-bootstrap.h"
 
@@ -146,6 +146,17 @@ static int set_caps(int caps)
 	}
 	return 0;
 }
+
+static int set_keys_ownership(char *home, int uid, int gid){
+  char filename[2048];
+  int rc;
+  
+  snprintf(filename, 2047, "%s/var/lib/eucalyptus/keys/euca.p12", home);
+  rc = chown(filename, uid, gid);
+  
+  return(0);
+}
+
 static int linuxset_user_group(char *user, int uid, int gid){
 	if (set_caps(CAPS)!=0) __abort(-1,getuid()!= uid,"set_caps(CAPS) failed");
 	__abort(-1,(prctl(PR_SET_KEEPCAPS,1,0,0,0) < 0),"prctl failed in linuxset_user_group");
@@ -242,6 +253,7 @@ static int child( euca_opts *args, java_home_t *data, uid_t uid, gid_t gid ) {
 	__die(java_init( args, data ) != 1, "Failed to initialize Eucalyptus.");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.init))==0,"Failed to init Eucalyptus.");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.load))==0,"Failed to load Eucalyptus.");
+	__abort(4, set_keys_ownership( GETARG( args, home ), uid, gid ) != 0,"Setting ownership of keyfile failed." );
 	__abort(4, linuxset_user_group( GETARG( args, user ), uid, gid ) != 0,"Setting the user failed." );
 	__abort(4, (set_caps(0)!=0), "set_caps (0) failed");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.start))==0,"Failed to start Eucalyptus.");
@@ -253,7 +265,7 @@ static int child( euca_opts *args, java_home_t *data, uid_t uid, gid_t gid ) {
 	while( !stopping ) sleep( 60 );
 	__debug( "Shutdown or reload requested: exiting" );
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.stop))==0,"Failed to stop Eucalyptus.");
-	if( doreload == 1 ) ret = 123;
+	if( doreload == 1 ) ret = EUCA_RET_RELOAD;
 	else ret = 0;
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.destroy))==0,"Failed to destroy Eucalyptus.");
 	__die((JVM_destroy( ret ) != 1), "Failed trying to destroy JVM... bailing out seems like the right thing to do" );
@@ -325,16 +337,17 @@ int main( int argc, char *argv[ ] ) {
 	}
 	if( strcmp( argv[ 0 ], "eucalyptus-cloud" ) != 0 ) {
 		char *oldpath = getenv( "LD_LIBRARY_PATH" ),*libf = java_library( args, data );
-		char *old = argv[ 0 ],buf[ 2048 ],*tmp = NULL,*p1 = NULL,*p2 = NULL;
+		char *old = argv[ 0 ],buf[ 4096 ],*tmp = NULL,*p1 = NULL,*p2 = NULL;
 		p1 = strdup( libf );
 		tmp = strrchr( p1, '/' );
 		if( tmp != NULL ) tmp[ 0 ] = '\0';
 		p2 = strdup( p1 );
 		tmp = strrchr( p2, '/' );
 		if( tmp != NULL ) tmp[ 0 ] = '\0';
-		if( oldpath == NULL ) snprintf( buf, 2048, "%s:%s", p1, p2 );
-		else snprintf( buf, 2048, "%s:%s:%s", oldpath, p1, p2 );
+		if( oldpath == NULL ) snprintf( buf, 4096, "%s:%s:%s/bin/linux-x64", p1, p2, GETARG(args,profiler_home) );
+		else snprintf( buf, 4096, "%s:%s:%s:%s/bin/linux-x64", oldpath, p1, p2, GETARG(args,profiler_home) );
 		tmp = strdup( buf );
+
 		setenv( "LD_LIBRARY_PATH", tmp, 1 );
 		__debug( "Invoking w/ LD_LIBRARY_PATH=%s", getenv( "LD_LIBRARY_PATH" ) );
 		argv[ 0 ] = "eucalyptus-cloud";
@@ -344,14 +357,15 @@ int main( int argc, char *argv[ ] ) {
 	}
 	__debug( "Running w/ LD_LIBRARY_PATH=%s", getenv( "LD_LIBRARY_PATH" ) );
 	if(args->fork_flag) {
-		if(args->debug_flag) {
-			__debug("Ignoring --fork because of --debug.");
-		} else {
+//TODO: commented out for the time being to make dan happi.
+//		if(args->debug_flag) {
+//			__debug("Ignoring --fork because of --debug.");
+//		} else {
 			pid = fork( );
 			__die(( pid == -1 ),"Cannot detach from parent process" );
 			if( pid != 0 ) return wait_child( args, pid );
 			setsid( );
-		}
+//		}
 	}
 	set_output(GETARG(args,out), GETARG(args,err));
 	while( ( pid = fork( ) ) != -1 ) {
@@ -362,6 +376,7 @@ int main( int argc, char *argv[ ] ) {
 		signal( SIGINT, controller );
 		while( waitpid( pid, &status, 0 ) != pid );
 		if( WIFEXITED( status ) ) {
+			__debug( "Eucalyptus exited with status: %d", status );
 			status = WEXITSTATUS( status );
 			if( status != 122 ) unlink( GETARG( args, pidfile ) );
 			if( status == 123 ) {
@@ -465,23 +480,33 @@ void java_load_bootstrapper(void) {
 
 char* java_library_path(euca_opts *args) {
 #define JAVA_PATH_LEN 16384
-	char lib_dir[256],etc_dir[256],*jar_list=(char*)malloc(JAVA_PATH_LEN*sizeof(char));
-	__die(( strlen(GETARG(args,home))+strlen(EUCA_LIB_DIR)>=254),"Directory path too long: %s/%s", GETARG(args,home), EUCA_LIB_DIR);
-	snprintf(lib_dir,255,"%s%s",GETARG(args,home),EUCA_LIB_DIR);
-	snprintf(etc_dir,255,"%s%s",GETARG(args,home),EUCA_ETC_DIR);
-	if(!CHECK_ISDIR(lib_dir) ) __die(1,"Can't find library directory %s", lib_dir );
-	int wb = 0;
-	wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,"-Djava.class.path=%s",etc_dir);
-	DIR* lib_dir_p = opendir(lib_dir);
-	struct direct *dir_ent;
-	while ((dir_ent = readdir(lib_dir_p))!=0)  {
-		if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0)  {
-				char jar[256];
-				snprintf(jar,255,"%s/%s",lib_dir,dir_ent->d_name);
-				if( CHECK_ISREG(jar) ) wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,":%s",jar);
-		}
-	}
-	return jar_list;
+    char lib_dir[256],etc_dir[256],*jar_list=(char*)malloc(JAVA_PATH_LEN*sizeof(char));
+    __die(( strlen(GETARG(args,home))+strlen(EUCA_LIB_DIR)>=254),"Directory path too long: %s/%s", GETARG(args,home), EUCA_LIB_DIR);
+    snprintf(lib_dir,255,"%s%s",GETARG(args,home),EUCA_LIB_DIR);
+    snprintf(etc_dir,255,"%s%s",GETARG(args,home),EUCA_ETC_DIR);
+    if(!CHECK_ISDIR(lib_dir) ) __die(1,"Can't find library directory %s", lib_dir );
+    int wb = 0;
+    wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,"-Djava.class.path=%s",etc_dir);
+    DIR* lib_dir_p = opendir(lib_dir);
+    struct direct *dir_ent;
+    while ((dir_ent = readdir(lib_dir_p))!=0)  {
+            if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0 && strstr(dir_ent->d_name,"disabled") == NULL && strstr(dir_ent->d_name,"eucalyptus-") != NULL )  {
+                            char jar[256];
+                            snprintf(jar,255,"%s/%s",lib_dir,dir_ent->d_name);
+                            if( (CHECK_ISREG(jar) || CHECK_ISLNK(jar)) ) wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,":%s",jar);
+            }
+    }
+    closedir(lib_dir_p);
+    lib_dir_p = opendir(lib_dir);
+    while ((dir_ent = readdir(lib_dir_p))!=0)  {
+            if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0 && strstr(dir_ent->d_name,"disabled") == NULL && strstr(dir_ent->d_name,"eucalyptus-") == NULL)  {
+                            char jar[256];
+                            snprintf(jar,255,"%s/%s",lib_dir,dir_ent->d_name);
+                            if( (CHECK_ISREG(jar) || CHECK_ISLNK(jar)) ) wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,":%s",jar);
+            }
+    }
+    closedir(lib_dir_p);
+    return jar_list;
 }
 
 int java_init(euca_opts *args, java_home_t *data) {
@@ -503,19 +528,53 @@ int java_init(euca_opts *args, java_home_t *data) {
     char* java_class_path = java_library_path(args);
     __debug("Using classpath:\n%s",java_class_path);
 #define JVM_MAX_OPTS 128
-    int x = -1, i;
+    int x = -1, i = 0;
     opt=(JavaVMOption *)malloc(JVM_MAX_OPTS*sizeof(JavaVMOption));
     for(i=0;i<JVM_MAX_OPTS;i++) opt[i].extraInfo=NULL;
+    i = -1;
+    while(jvm_default_opts[++i]!= NULL) JVM_ARG(opt[++x],jvm_default_opts[i],GETARG(args,home));
     JVM_ARG(opt[++x],"-Deuca.log.level=%1$s",GETARG(args,log_level));
+    JVM_ARG(opt[++x],"-Deuca.log.appender=%1$s",GETARG(args,log_appender));
+    JVM_ARG(opt[++x],"-Deuca.db.port=%1$d",9001);//TODO: add cli parameter
+    JVM_ARG(opt[++x],"-Deuca.db.host=%1$s",GETARG(args,cloud_host));
+    JVM_ARG(opt[++x],"-Deuca.walrus.host=%1$s",GETARG(args,walrus_host));
+    if(args->disable_dns_flag) {
+    	JVM_ARG(opt[++x],"-Deuca.disable.dns=true");
+    }
+    if(args->disable_storage_flag) {
+    	JVM_ARG(opt[++x],"-Deuca.disable.storage=true");
+    }
+    if(args->disable_cloud_flag) {
+     	JVM_ARG(opt[++x],"-Deuca.disable.eucalyptus=true");
+     }
+    if(args->disable_walrus_flag) {
+     	JVM_ARG(opt[++x],"-Deuca.disable.walrus=true");
+     }
+    if(args->remote_dns_flag) {
+    	JVM_ARG(opt[++x],"-Deuca.remote.dns=true");
+    }
+    if(args->remote_storage_flag) {
+    	JVM_ARG(opt[++x],"-Deuca.remote.storage=true");
+    }
+    if(args->remote_cloud_flag) {
+     	JVM_ARG(opt[++x],"-Deuca.remote.cloud=true");
+     }
+    if(args->remote_walrus_flag) {
+     	JVM_ARG(opt[++x],"-Deuca.remote.walrus=true");
+     }
+
     if(args->debug_flag) {
     	JVM_ARG(opt[++x],"-Xdebug");
     	JVM_ARG(opt[++x],"-Xrunjdwp:transport=dt_socket,server=y,suspend=%2$s,address=%1$d",GETARG(args,debug_port),(args->debug_suspend_flag?"y":"n"));
     }
-    while(jvm_default_opts[++x]!= NULL) JVM_ARG(opt[x],jvm_default_opts[x],GETARG(args,home));
-    for (i=0; i<args->jvm_args_given; i++,x++) JVM_ARG(opt[x],"-X%s",args->jvm_args_arg[i]);
-    for (i=0; i<args->define_given; i++,x++) JVM_ARG(opt[x],"-D%s",args->define_arg[i]);
+    if(args->profile_flag) {
+    	JVM_ARG(opt[++x],"-agentlib:jprofilerti=port=8849");
+    	JVM_ARG(opt[++x],"-Xbootclasspath/a:%1$s/bin/agent.jar",GETARG(args,profiler_home));
+    }
+    for (i=0; i<args->jvm_args_given; i++) JVM_ARG(opt[++x],"-X%s",args->jvm_args_arg[i]);
+    for (i=0; i<args->define_given; i++) JVM_ARG(opt[++x],"-D%s",args->define_arg[i]);
 
-    opt[x].optionString=java_class_path;
+    opt[++x].optionString=java_class_path;
     opt[x].extraInfo=NULL;
     opt[++x].optionString="abort";
     opt[x].extraInfo=java_fail;
@@ -531,7 +590,8 @@ int java_init(euca_opts *args, java_home_t *data) {
         __debug("+-------------------------------------------------------");
     }
     __debug("Starting JVM.");
-    jint ret=(*hotspot_main)(&jvm, &env, &arg);
+    jint ret = 0;
+    while((ret=(*hotspot_main)(&jvm, &env, &arg)==123));
     __die(ret<0,"Failed to create JVM");
     java_load_bootstrapper();
     return 1;

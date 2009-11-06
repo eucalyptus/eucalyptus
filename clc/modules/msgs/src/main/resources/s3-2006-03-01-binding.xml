@@ -1,27 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
 	<!--
-		~ Software License Agreement (BSD License) ~ ~ Copyright (c) 2008,
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		~ Copyright (c) 2009 Eucalyptus Systems, Inc. ~ ~ This program is free
+		software: you can redistribute it and/or modify ~ it under the terms
+		of the GNU General Public License as published by ~ the Free Software
+		Foundation, only version 3 of the License. ~ ~ ~ This file is
+		distributed in the hope that it will be useful, but WITHOUT ~ ANY
+		WARRANTY; without even the implied warranty of MERCHANTABILITY or ~
+		FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License ~
+		for more details. ~ ~ You should have received a copy of the GNU
+		General Public License along ~ with this program. If not, see
+		http://www.gnu.org/licenses/. ~ ~ Please contact Eucalyptus Systems,
+		Inc., 130 Castilian ~ Dr., Goleta, CA 93101 USA or visit
+		http://www.eucalyptus.com/licenses/ ~ if you need additional
+		information or have any questions. ~ ~ This file may incorporate work
+		covered under the following copyright and ~ permission notice: ~ ~
+		Software License Agreement (BSD License) ~ ~ Copyright (c) 2008,
 		Regents of the University of California ~ All rights reserved. ~ ~
 		Redistribution and use of this software in source and binary forms,
-		with or ~ without modification, are permitted provided that the
-		following conditions ~ are met: ~ ~ * Redistributions of source code
-		must retain the above ~ copyright notice, this list of conditions and
-		the ~ following disclaimer. ~ ~ * Redistributions in binary form must
-		reproduce the above ~ copyright notice, this list of conditions and
-		the ~ following disclaimer in the documentation and/or other ~
-		materials provided with the distribution. walrus ~ ~ THIS SOFTWARE IS
-		PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" ~ AND ANY
-		EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE ~
-		IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-		PURPOSE ~ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-		CONTRIBUTORS BE ~ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-		SPECIAL, EXEMPLARY, OR ~ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-		LIMITED TO, PROCUREMENT OF ~ SUBSTITUTE GOODS OR SERVICES; LOSS OF
-		USE, DATA, OR PROFITS; OR BUSINESS ~ INTERRUPTION) HOWEVER CAUSED AND
-		ON ANY THEORY OF LIABILITY, WHETHER IN ~ CONTRACT, STRICT LIABILITY,
-		OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ~ ARISING IN ANY WAY OUT
-		OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE ~ POSSIBILITY OF
-		SUCH DAMAGE. ~ ~ Author: Sunil Soman sunils@cs.ucsb.edu
+		with ~ or without modification, are permitted provided that the
+		following ~ conditions are met: ~ ~ Redistributions of source code
+		must retain the above copyright notice, ~ this list of conditions and
+		the following disclaimer. ~ ~ Redistributions in binary form must
+		reproduce the above copyright ~ notice, this list of conditions and
+		the following disclaimer in the ~ documentation and/or other materials
+		provided with the distribution. ~ ~ THIS SOFTWARE IS PROVIDED BY THE
+		COPYRIGHT HOLDERS AND CONTRIBUTORS "AS ~ IS" AND ANY EXPRESS OR
+		IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED ~ TO, THE IMPLIED
+		WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A ~ PARTICULAR PURPOSE
+		ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER ~ OR
+		CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+		~ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+		~ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR ~
+		PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+		~ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+		~ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS ~
+		SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+		~ THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+		~ LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+		~ SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY
+		DISCOVERING ~ IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF
+		CALIFORNIA, SANTA ~ BARBARA WHO WILL THEN ASCERTAIN THE MOST
+		APPROPRIATE REMEDY, WHICH IN ~ THE REGENTS’ DISCRETION MAY INCLUDE,
+		WITHOUT LIMITATION, REPLACEMENT ~ OF THE CODE SO IDENTIFIED, LICENSING
+		OF THE CODE SO IDENTIFIED, OR ~ WITHDRAWAL OF THE CODE CAPABILITY TO
+		THE EXTENT NEEDED TO COMPLY WITH ~ ANY SUCH LICENSES OR RIGHTS.
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		~ Author: Sunil Soman sunils@cs.ucsb.edu
 	-->
 
 <binding force-classes="true" add-constructors="true"
@@ -56,10 +81,10 @@
 	<mapping name="ListAllMyBucketsResponse"
 		class="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType">
 		<structure name="ListAllMyBucketsResponse">
-		<structure name="Owner" field="owner"
-			map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" />
-		<structure name="Buckets" field="bucketList"
-			map-as="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsList" />
+			<structure name="Owner" field="owner"
+				map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" />
+			<structure name="Buckets" field="bucketList"
+				map-as="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsList" />
 		</structure>
 	</mapping>
 
@@ -88,8 +113,8 @@
 	<mapping name="GetBucketAccessControlPolicyResponse"
 		class="edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType">
 		<structure name="GetBucketAccessControlPolicyResponse">
-		<structure field="accessControlPolicy"
-			map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" usage="optional" />
+			<structure field="accessControlPolicy"
+				map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" usage="optional" />
 		</structure>
 	</mapping>
 
@@ -139,8 +164,8 @@
 	<mapping name="GetObjectAccessControlPolicyResponse"
 		class="edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType">
 		<structure name="GetObjectAccessControlPolicyResponse">
-		<structure field="accessControlPolicy"
-			map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" />
+			<structure field="accessControlPolicy"
+				map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" />
 		</structure>
 	</mapping>
 
@@ -218,19 +243,11 @@
 		<value name="URI" field="uri" />
 	</mapping>
 
-	<mapping class="edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType"
-		abstract="true">
+	<mapping name="Error" class="edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType">
 		<value name="Code" field="code" />
 		<value name="Message" field="message" />
+		<value name="Resource" field="resource" />
 		<value name="RequestId" field="requestId" />
-		<value name="HostId" field="hostId" />
-		<value name="HttpCode" field="httpCode" usage="optional" />
-	</mapping>
-
-	<mapping name="Error" extends="edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType"
-		class="edu.ucsb.eucalyptus.msgs.WalrusBucketErrorMessageType">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType" />
-		<value name="BucketName" field="bucketName" />
 	</mapping>
 
 	<mapping name="CreateBucket" class="edu.ucsb.eucalyptus.msgs.CreateBucketType"
@@ -246,13 +263,9 @@
 
 	<mapping name="CreateBucketResponse"
 		class="edu.ucsb.eucalyptus.msgs.CreateBucketResponseType">
-		<structure field="createBucketResponse"
-			map-as="edu.ucsb.eucalyptus.msgs.CreateBucketResponseMessage" />
-	</mapping>
-
-	<mapping name="CreateBucketReturn"
-		class="edu.ucsb.eucalyptus.msgs.CreateBucketResponseMessage">
-		<value name="BucketName" field="bucket" />
+		<structure name="CreateBucketResponse">
+			<value name="BucketName" field="bucket" />
+		</structure>
 	</mapping>
 
 	<mapping name="DeleteBucket" class="edu.ucsb.eucalyptus.msgs.DeleteBucketType">
@@ -264,7 +277,7 @@
 	<mapping name="DeleteBucketResponse"
 		class="edu.ucsb.eucalyptus.msgs.DeleteBucketResponseType">
 		<structure name="DeleteBucketResponse">
-		<structure field="status" map-as="edu.ucsb.eucalyptus.msgs.Status" />
+			<structure field="status" map-as="edu.ucsb.eucalyptus.msgs.Status" />
 		</structure>
 	</mapping>
 
@@ -290,7 +303,7 @@
 
 	<mapping name="PutObjectResponse" class="edu.ucsb.eucalyptus.msgs.PutObjectResponseType">
 		<structure name="PutObjectResponse">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+			<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
 		</structure>
 	</mapping>
 
@@ -310,7 +323,7 @@
 
 	<mapping name="CopyObjectResponse" class="edu.ucsb.eucalyptus.msgs.CopyObjectResponseType">
 		<structure name="CopyObjectResult">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+			<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
 		</structure>
 	</mapping>
 
@@ -366,6 +379,7 @@
 			usage="optional" />
 		<value name="SuccessActionStatus" field="successActionStatus"
 			usage="optional" />
+		<value name="ContentType" field="contentType" usage="optional" />
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
 			usage="optional" />
 	</mapping>
@@ -391,7 +405,7 @@
 	<mapping name="PutObjectInlineResponse"
 		class="edu.ucsb.eucalyptus.msgs.PutObjectInlineResponseType">
 		<structure name="PutObjectInlineResponse">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+			<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
 		</structure>
 	</mapping>
 
@@ -408,9 +422,9 @@
 
 	<mapping name="GetObjectResponse" class="edu.ucsb.eucalyptus.msgs.GetObjectResponseType">
 		<structure name="GetObjectResponse">
-		<structure field="status" map-as="edu.ucsb.eucalyptus.msgs.Status" />
-		<value name="Data" field="base64Data" usage="optional" />
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+			<structure field="status" map-as="edu.ucsb.eucalyptus.msgs.Status" />
+			<value name="Data" field="base64Data" usage="optional" />
+			<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
 		</structure>
 	</mapping>
 
@@ -433,8 +447,8 @@
 	<mapping name="GetObjectExtendedResponse"
 		class="edu.ucsb.eucalyptus.msgs.GetObjectExtendedResponseType">
 		<structure name="GetObjectResponse">
-		<structure field="status" map-as="edu.ucsb.eucalyptus.msgs.Status" />
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+			<structure field="status" map-as="edu.ucsb.eucalyptus.msgs.Status" />
+			<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
 		</structure>
 	</mapping>
 
@@ -448,8 +462,8 @@
 	<mapping name="DeleteObjectResponse"
 		class="edu.ucsb.eucalyptus.msgs.DeleteObjectResponseType">
 		<structure name="DeleteObjectResponse">
-		<value name="Code" field="code" />
-		<value name="Description" field="description" />
+			<value name="Code" field="code" />
+			<value name="Description" field="description" />
 		</structure>
 	</mapping>
 
@@ -466,25 +480,25 @@
 
 	<mapping name="ListBucketResponse" class="edu.ucsb.eucalyptus.msgs.ListBucketResponseType">
 		<structure name="ListBucketResponse">
-		<collection field="metaData"
-			factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-			<structure map-as="edu.ucsb.eucalyptus.msgs.MetaDataEntry" />
-		</collection>
-		<value name="Name" field="name" />
-		<value name="Prefix" field="prefix" />
-		<value name="Marker" field="marker" usage="optional" />
-		<value name="NextMarker" field="nextMarker" usage="optional" />
-		<value name="MaxKeys" field="maxKeys" />
-		<value name="Delimiter" field="delimiter" usage="optional" />
-		<value name="IsTruncated" field="isTruncated" />
-		<collection field="contents"
-			factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-			<structure map-as="edu.ucsb.eucalyptus.msgs.ListEntry" />
-		</collection>
-		<collection name="CommonPrefixes" field="commonPrefixes"
-			factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-			<structure map-as="edu.ucsb.eucalyptus.msgs.PrefixEntry" />
-		</collection>
+			<collection field="metaData"
+				factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+				<structure map-as="edu.ucsb.eucalyptus.msgs.MetaDataEntry" />
+			</collection>
+			<value name="Name" field="name" />
+			<value name="Prefix" field="prefix" />
+			<value name="Marker" field="marker" usage="optional" />
+			<value name="NextMarker" field="nextMarker" usage="optional" />
+			<value name="MaxKeys" field="maxKeys" />
+			<value name="Delimiter" field="delimiter" usage="optional" />
+			<value name="IsTruncated" field="isTruncated" />
+			<collection field="contents"
+				factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+				<structure map-as="edu.ucsb.eucalyptus.msgs.ListEntry" />
+			</collection>
+			<collection name="CommonPrefixes" field="commonPrefixes"
+				factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+				<structure map-as="edu.ucsb.eucalyptus.msgs.PrefixEntry" />
+			</collection>
 		</structure>
 	</mapping>
 
@@ -536,15 +550,13 @@
 	<mapping name="GetDecryptedImageResponse"
 		class="edu.ucsb.eucalyptus.msgs.GetDecryptedImageResponseType">
 		<structure name="GetDecryptedImageResponse">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+			<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
 		</structure>
 	</mapping>
 
 	<mapping name="StoreSnapshot" class="edu.ucsb.eucalyptus.msgs.StoreSnapshotType">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType" />
-		<value name="ContentLength" field="contentLength" />
-		<value name="SnapshotVgName" field="snapshotvgname" />
-		<value name="SnapshotLvName" field="snapshotlvname" />
+		<value name="SnapshotSize" field="snapshotSize" />
 	</mapping>
 
 	<mapping name="StoreSnapshotResponse"
@@ -576,11 +588,13 @@
 	<mapping name="UpdateWalrusConfiguration"
 		class="edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType"
 		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
-		<value name="BucketRootDirectory" field="bucketRootDirectory" usage="optional"/>
-		<value name="MaxBucketsPerUser" field="maxBucketsPerUser" usage="optional"/>
-		<value name="MaxBucketSize" field="maxBucketSize" usage="optional"/>
-		<value name="ImageCacheSize" field="imageCacheSize" usage="optional"/>
-		<value name="TotalSnapshotSize" field="totalSnapshotSize" usage="optional"/>
+		<value name="Name" field="name" />
+		<value name="BucketRootDirectory" field="bucketRootDirectory"
+			usage="optional" />
+		<value name="MaxBucketsPerUser" field="maxBucketsPerUser" usage="optional" />
+		<value name="MaxBucketSize" field="maxBucketSize" usage="optional" />
+		<value name="ImageCacheSize" field="imageCacheSize" usage="optional" />
+		<value name="TotalSnapshotSize" field="totalSnapshotSize" usage="optional" />
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
 			usage="optional" />
 	</mapping>
@@ -588,4 +602,22 @@
 	<mapping name="UpdateWalrusConfigurationResponse"
 		class="edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationResponseType">
 	</mapping>
+
+	<mapping name="GetWalrusConfiguration"
+		class="edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType"
+		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<value name="Name" field="name" />
+	</mapping>
+
+	<mapping name="GetWalrusConfigurationResponse"
+		class="edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType">
+		<value name="Name" field="name" />
+		<value name="BucketRootDirectory" field="bucketRootDirectory"
+			usage="optional" />
+		<value name="MaxBucketsPerUser" field="maxBucketsPerUser" usage="optional" />
+		<value name="MaxBucketSize" field="maxBucketSize" usage="optional" />
+		<value name="ImageCacheSize" field="imageCacheSize" usage="optional" />
+		<value name="TotalSnapshotSize" field="totalSnapshotSize" usage="optional" />
+	</mapping>
+
 </binding>

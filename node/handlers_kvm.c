@@ -1,18 +1,73 @@
+/*
+Copyright (c) 2009  Eucalyptus Systems, Inc.	
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation, only version 3 of the License.  
+ 
+This file is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.  
+
+You should have received a copy of the GNU General Public License along
+with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+Please contact Eucalyptus Systems, Inc., 130 Castilian
+Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+if you need additional information or have any questions.
+
+This file may incorporate work covered under the following copyright and
+permission notice:
+
+  Software License Agreement (BSD License)
+
+  Copyright (c) 2008, Regents of the University of California
+  
+
+  Redistribution and use of this software in source and binary forms, with
+  or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+  ANY SUCH LICENSES OR RIGHTS.
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU /* strnlen */
 #include <string.h> /* strlen, strcpy */
 #include <time.h>
-#include <limits.h> /* INT_MAX */
 #include <sys/types.h> /* fork */
 #include <sys/wait.h> /* waitpid */
 #include <unistd.h>
-#include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
-#include <sys/stat.h>
 #include <pthread.h>
-#include <sys/vfs.h> /* statfs */
 #include <signal.h> /* SIGINT */
 
 #include "ipc.h"
@@ -23,23 +78,17 @@
 #include <euca_auth.h>
 
 /* coming from handlers.c */
-extern sem * xen_sem;
+extern sem * hyp_sem;
 extern sem * inst_sem;
 extern bunchOfInstances * global_instances;
 
-/* temporary: will be cleaned out*/
-static struct nc_state_t *nc = NULL;
-
 #define HYPERVISOR_URI "qemu:///system"
 
-static int doInitialize (struct nc_state_t *parent_nc) 
+static int doInitialize (struct nc_state_t *nc) 
 {
-	if (!parent_nc) 
-		return ERROR_FATAL;
-
+	char *s = NULL;
+        
 	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
-
-	nc = parent_nc;
 
 	/* set up paths of Eucalyptus commands NC relies on */
 	snprintf (nc->gen_libvirt_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
@@ -47,73 +96,45 @@ static int doInitialize (struct nc_state_t *parent_nc)
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
 
-    /* open the connection to hypervisor */
-    if (! check_hypervisor_conn ()) 
-        return ERROR_FATAL;
-
-    adopt_instances();
-
-    /* discover resource capacity */
-    { 
-        const char * ipath = scGetInstancePath();
-        char buf [CHAR_BUFFER_SIZE];
-        char * s = NULL;
-        int len;
-        
-        /* xm info will be used for memory and cores */
-        s = system_output (nc->get_info_cmd_path);
+	s = system_output (nc->get_info_cmd_path);
 #define GET_VALUE(name,var) \
-        if (get_value (s, name, &var)) { \
-            logprintfl (EUCAFATAL, "error: did not find %s in output from %s\n", name, nc->get_info_cmd_path); \
-            free (s); \
-            return ERROR_FATAL; \
-        }
+	if (get_value (s, name, &var)) { \
+		logprintfl (EUCAFATAL, "error: did not find %s in output from %s\n", name, nc->get_info_cmd_path); \
+		if (s) free (s); \
+		return ERROR_FATAL; \
+	}
 
-        /* calculate mem_max */
-        {
-            long long total_memory = 0;
-            
-            GET_VALUE("total_memory", total_memory);
-            
-            nc->mem_max = total_memory - 256;
-            if (nc->config_max_mem && nc->mem_max>nc->config_max_mem) 
-	      nc->mem_max = nc->config_max_mem; /* reduce if the number exceeds config limits */
-            logprintfl (EUCAINFO, "Maximum memory available = %lld\n", nc->mem_max);
-        }
+	GET_VALUE("nr_cores", nc->cores_max);
+	GET_VALUE("total_memory", nc->mem_max);
+	if (s) free(s);
 
-        /* calculate cores_max */
-        {
-             long long nr_cores; 
-         
-             GET_VALUE("nr_cores", nr_cores);
-            
-             nc->cores_max = (int)nr_cores; 
-             /* unlike with disk or memory limits, use the limit as the
-              * number of cores, regardless of whether the actual number
-              * of cores is bigger or smaller */
-             if (nc->config_max_cores) 
-	       nc->cores_max = nc->config_max_cores; 
-             logprintfl (EUCAINFO, "Maximum cores available = %d\n", nc->cores_max);
-        }
-    }
+	/* we leave 256M to the host  */
+	nc->mem_max -= 256;
 
-    pthread_t tcb;
-    if ( pthread_create (&tcb, NULL, monitoring_thread, nc) ) {
-        logprintfl (EUCAFATAL, "failed to spawn a monitoring thread\n");
-        return ERROR_FATAL;
-    }
+	/* let's adjust the values based on the config values */
+	if (nc->config_max_mem && nc->config_max_mem < nc->mem_max)
+		nc->mem_max = nc->config_max_mem;
+	if (nc->config_max_cores)
+		nc->cores_max = nc->config_max_cores;
 
-    return OK;
+	logprintfl(EUCAINFO, "Using %lld cores\n", nc->cores_max);
+	logprintfl(EUCAINFO, "Using %lld memory\n", nc->mem_max);
+
+	return OK;
 }
 
-static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, 
-                   char *imageId, char *imageURL, 
-                   char *kernelId, char *kernelURL, 
-                   char *ramdiskId, char *ramdiskURL, 
-                   char *keyName, 
-                   char *privMac, char *pubMac, int vlan, 
-                   char *userData, char *launchIndex, char **groupNames, int groupNamesSize,
-                   ncInstance **outInst)
+static int
+doRunInstance (	struct nc_state_t *nc,
+		ncMetadata *meta,
+		char *instanceId,
+		char *reservationId, ncInstParams *params, 
+		char *imageId, char *imageURL, 
+		char *kernelId, char *kernelURL, 
+		char *ramdiskId, char *ramdiskURL, 
+		char *keyName, 
+		char *privMac, char *pubMac, int vlan, 
+		char *userData, char *launchIndex, char **groupNames,
+		int groupNamesSize, ncInstance **outInst)
 {
     ncInstance * instance = NULL;
     * outInst = NULL;
@@ -121,16 +142,6 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
     pid_t pid;
     ncNetConf ncnet;
 
-    logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d\n", 
-                instanceId, params->numberOfCores, params->diskSize, params->memorySize);
-    logprintfl (EUCAINFO, "                         image=%s at %s\n", imageId, imageURL);
-    logprintfl (EUCAINFO, "                         krnel=%s at %s\n", kernelId, kernelURL);
-    if (ramdiskId) {
-        logprintfl (EUCAINFO, "                         rmdsk=%s at %s\n", ramdiskId, ramdiskURL);
-    }
-    logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s pubMAC=%s\n",
-                vlan, privMac, pubMac);
-    
     strcpy(ncnet.privateMac, privMac);
     strcpy(ncnet.publicMac, pubMac);
     ncnet.vlan = vlan;
@@ -177,6 +188,11 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
 
     /* do the potentially long tasks in a thread */
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
+    if (!attr) {
+        free_instance (&instance);
+        logprintfl (EUCAFATAL, "Error: out of memory\n");
+        return 1;
+    }
     pthread_attr_init(attr);
     pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
 
@@ -187,9 +203,11 @@ static int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationI
         remove_instance (&global_instances, instance);
         sem_v (inst_sem);
         free_instance (&instance);
+	free(attr);
         return 1;
     }
     pthread_attr_destroy(attr);
+    if (attr) free(attr);
 
     * outInst = instance;
     return 0;
@@ -224,10 +242,10 @@ static void * rebooting_thread (void *arg)
         return NULL;
     }
 
-    sem_p (xen_sem);
+    sem_p (hyp_sem);
     // for KVM, must stop and restart the instance
     int error = virDomainDestroy (dom); // TODO: change to Shutdown?  TODO: is this synchronous?
-    sem_v (xen_sem);
+    sem_v (hyp_sem);
     virDomainFree(dom);
     if (error) {
         free (xml);
@@ -235,9 +253,9 @@ static void * rebooting_thread (void *arg)
     }
     
     // domain is now shut down, create a new one with the same XML
-    sem_p (xen_sem); 
+    sem_p (hyp_sem); 
     dom = virDomainCreateLinux (*conn, xml, 0);
-    sem_v (xen_sem);
+    sem_v (hyp_sem);
     free (xml);
     
     if (dom==NULL) {
@@ -250,8 +268,11 @@ static void * rebooting_thread (void *arg)
     return NULL;
 }
 
-static int doRebootInstance(ncMetadata *meta, char *instanceId) 
-{    
+static int
+doRebootInstance(	struct nc_state_t *nc,
+			ncMetadata *meta,
+			char *instanceId) 
+{
     sem_p (inst_sem); 
     ncInstance *instance = find_instance (&global_instances, instanceId);
     sem_v (inst_sem);
@@ -270,7 +291,11 @@ static int doRebootInstance(ncMetadata *meta, char *instanceId)
     return OK;
 }
 
-static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **consoleOutput) {
+static int
+doGetConsoleOutput(	struct nc_state_t *nc,
+			ncMetadata *meta,
+			char *instanceId,
+			char **consoleOutput) {
   char *console_output;
   char console_file[1024];
   int rc, fd;
@@ -309,14 +334,18 @@ static int doGetConsoleOutput(ncMetadata *meta, char *instanceId, char **console
   return(0);
 }
 
-static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
+static int
+doAttachVolume (	struct nc_state_t *nc,
+			ncMetadata *meta,
+			char *instanceId,
+			char *volumeId,
+			char *remoteDev,
+			char *localDev)
 {
     int ret = OK;
     ncInstance *instance;
     virConnectPtr *conn;
     char localDevReal[32], localDevTag[256];
-
-    logprintfl (EUCAINFO, "doAttachVolume() invoked (id=%s vol=%s remote=%s local=%s)\n", instanceId, volumeId, remoteDev, localDev);
 
     // fix up format of incoming local dev name, if we need to
     ret = convert_dev_names (localDev, localDevReal, localDevTag);
@@ -341,9 +370,9 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
 
             /* protect KVM calls, just in case */
-            sem_p (xen_sem);
+            sem_p (hyp_sem);
             err = virDomainAttachDevice (dom, xml);
-            sem_v (xen_sem);
+            sem_v (hyp_sem);
             if (err) {
                 logprintfl (EUCAERROR, "virDomainAttachDevice() failed (err=%d) XML=%s\n", err, xml);
                 ret = ERROR;
@@ -377,14 +406,19 @@ static int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
     return ret;
 }
 
-static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+static int
+doDetachVolume (	struct nc_state_t *nc,
+			ncMetadata *meta,
+			char *instanceId,
+			char *volumeId,
+			char *remoteDev,
+			char *localDev,
+			int force)
 {
     int ret = OK;
     ncInstance * instance;
     virConnectPtr *conn;
     char localDevReal[32], localDevTag[256];
-
-    logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
 
     // fix up format of incoming local dev name, if we need to
     ret = convert_dev_names (localDev, localDevReal, localDevTag);
@@ -413,9 +447,9 @@ static int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, c
             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
 
             /* protect KVM calls, just in case */
-            sem_p (xen_sem);
+            sem_p (hyp_sem);
             err = virDomainDetachDevice (dom, xml);
-            sem_v (xen_sem);
+            sem_v (hyp_sem);
             if (err) {
 	      logprintfl (EUCAERROR, "virDomainDetachDevice() failed (err=%d) XML=%s\n", err, xml);
 	      ret = ERROR;

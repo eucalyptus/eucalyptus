@@ -6,6 +6,8 @@
 #   configure   [--with-axis2c=<dir>]
 #		[--with-axis2=<dir>]
 #		[--with-libvirt=<dir>]
+#		[--with-interface-theme=<name>]
+#		[--enable-appliance-store]
 #               [--enable-debug]
 
 AC_PREREQ(2.61)
@@ -16,7 +18,7 @@ AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
 AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
 AC_USE_SYSTEM_EXTENSIONS
-VERSION="`cat VERSION`"
+EUCA_VERSION="`cat VERSION`"
 
 # let's figure out where is the source tree
 if test ${srcdir} = "." ; then
@@ -30,6 +32,8 @@ AXIS2C_HOME="${AXIS2C_HOME}"
 AXIS2_HOME="${AXIS2_HOME}"
 AXIS2C_SERVICES=""
 LIBVIRT_HOME="${LIBVIRT_HOME}"
+INTERFACE_THEME="eucalyptus"
+EXTENSIONS=""
 ANT=""
 JAVA=""
 WSDL2C=""
@@ -58,6 +62,15 @@ AC_ARG_WITH(axis2,
 AC_ARG_WITH(libvirt,
         [  --with-libvirt=<dir>                 where libvirt is installed],
         [LIBVIRT_HOME="${withval}"])
+AC_ARG_WITH(interface-theme,
+        [  --with-interface-theme=<name>        the theme to be used],
+        [INTERFACE_THEME="${withval}"])
+AC_ARG_ENABLE(appliance-store,
+        [  --enable-appliance-store             enable the store tab],
+                [if test "${enableval}" != "no"; then
+                        EXTENSIONS="store"
+                fi])
+
 AC_ARG_ENABLE(debug,
         [  --enable-debug                       include debugging info when compiling],
                 [if test "${enableval}" != "no"; then
@@ -78,6 +91,9 @@ if test -n "${AXIS2C_HOME}" ; then
 		done
 		LIBS="-L${AXIS2C_HOME}/lib ${LIBS}"
 	fi
+	if test -d ${AXIS2C_HOME}/modules/rampart ; then
+		LIBS="-L${AXIS2C_HOME}/modules/rampart ${LIBS}"
+	fi
 fi
 if test -n "${LIBVIRT_HOME}" ; then
 	if test -d "${LIBVIRT_HOME}"/include ; then
@@ -92,6 +108,7 @@ AC_PROG_AWK
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
+AC_PATH_PROG(RM, rm)
 
 # let's search for WSDL2C.sh
 # we cannot use AC_PROG_PATH because WSDL2C.sh is not executable
@@ -165,8 +182,6 @@ AC_CHECK_LIB([axutil],[main],,AC_MSG_ERROR([Cannot find libaxutil]))
 AC_CHECK_LIB([m],[main])
 AC_CHECK_LIB([mod_rampart],[main],,AC_MSG_ERROR([Cannot find libmod_rampart]))
 AC_CHECK_LIB([neethi],[main],,AC_MSG_ERROR([Cannot find libneethi!]))
-AC_CHECK_LIB([omxmlsec],[main],,AC_MSG_ERROR([Cannot find libomxmlsec!]))
-AC_CHECK_LIB([oxstokens],[main],,AC_MSG_ERROR([Cannot find liboxstokens!]))
 AC_CHECK_LIB([pthread],[main])
 AC_CHECK_LIB([rt],[main])
 AC_CHECK_LIB([virt],[main],true,AC_MSG_ERROR([Cannot find libvirt!]))
@@ -212,15 +227,14 @@ AC_CONFIG_FILES([Makedefs
 		tools/eucalyptus-cc:tools/eucalyptus-cc.in
 		tools/eucalyptus-nc:tools/eucalyptus-nc.in
 		tools/euca_conf:tools/euca_conf.in
-		tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
-		tools/eucalyptus-walrus:tools/eucalyptus-walrus.in
-		tools/eucalyptus-sc:tools/eucalyptus-sc.in])
+		tools/eucalyptus-cloud:tools/eucalyptus-cloud.in])
 
-AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
+AC_DEFINE_UNQUOTED(EUCA_VERSION, "$EUCA_VERSION")
 
-AC_SUBST(VERSION)
+AC_SUBST(EUCA_VERSION)
 AC_SUBST(TOP)
 AC_SUBST(ANT)
+AC_SUBST(RM)
 AC_SUBST(WSDL2C)
 AC_SUBST(JAVA_HOME)
 AC_SUBST(AXIS2C_HOME)
@@ -231,6 +245,8 @@ AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 AC_SUBST(LIBS)
 AC_SUBST(INCLUDES)
+AC_SUBST(EXTENSIONS)
+AC_SUBST(INTERFACE_THEME)
 
 
 

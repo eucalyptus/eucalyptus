@@ -1,9 +1,81 @@
+/*******************************************************************************
+*Copyright (c) 2009  Eucalyptus Systems, Inc.
+* 
+*  This program is free software: you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation, only version 3 of the License.
+* 
+* 
+*  This file is distributed in the hope that it will be useful, but WITHOUT
+*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+*  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+*  for more details.
+* 
+*  You should have received a copy of the GNU General Public License along
+*  with this program.  If not, see <http://www.gnu.org/licenses/>.
+* 
+*  Please contact Eucalyptus Systems, Inc., 130 Castilian
+*  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+*  if you need additional information or have any questions.
+* 
+*  This file may incorporate work covered under the following copyright and
+*  permission notice:
+* 
+*    Software License Agreement (BSD License)
+* 
+*    Copyright (c) 2008, Regents of the University of California
+*    All rights reserved.
+* 
+*    Redistribution and use of this software in source and binary forms, with
+*    or without modification, are permitted provided that the following
+*    conditions are met:
+* 
+*      Redistributions of source code must retain the above copyright notice,
+*      this list of conditions and the following disclaimer.
+* 
+*      Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+* 
+*    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+*    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+*    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+*    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+*    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+*    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+*    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+*    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+*    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+*    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+*    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+*    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+*    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+*    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+*    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+*    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+*    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+*    ANY SUCH LICENSES OR RIGHTS.
+*******************************************************************************/
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
 package edu.ucsb.eucalyptus.cloud
 
-import edu.ucsb.eucalyptus.constants.HasName
+
 import edu.ucsb.eucalyptus.msgs.*
+
+import org.apache.log4j.Logger;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.ConcurrentSkipListSet
+import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.util.HasName;
+import com.google.common.collect.*;
 
 public class Pair {
 
@@ -40,6 +112,7 @@ public class VmAllocationInfo implements RequestTransactionScript {
 
   List<ResourceToken> allocationTokens = new ArrayList<ResourceToken>();
   List<String> addresses = new ArrayList<String>();
+  ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
 
   def VmAllocationInfo() {}
 
@@ -84,12 +157,25 @@ public class VmInfo extends EucalyptusData {
   String serviceTag;
   String userData;
   String launchIndex;
+  Integer networkIndex;
   ArrayList<String> groupNames = new ArrayList<String>();
   ArrayList<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
 
   String placement;
 
   ArrayList<String> productCodes = new ArrayList<String>();
+
+  @Override
+  public String toString( ) {
+    return String.format(
+                          "VmInfo [groupNames=%s, imageId=%s, instanceId=%s, instanceType=%s, kernelId=%s, keyValue=%s, launchIndex=%s, launchTime=%s, netParams=%s, networkIndex=%s, ownerId=%s, placement=%s, productCodes=%s, ramdiskId=%s, reservationId=%s, serviceTag=%s, stateName=%s, userData=%s, volumes=%s]",
+                          this.groupNames, this.imageId, this.instanceId, this.instanceType, this.kernelId,
+                          this.keyValue, this.launchIndex, this.launchTime, this.netParams, this.networkIndex,
+                          this.ownerId, this.placement, this.productCodes, this.ramdiskId, this.reservationId,
+                          this.serviceTag, this.stateName, this.userData, this.volumes );
+  }
+
+  
 }
 
 public class VmRunType extends EucalyptusMessage {
@@ -106,6 +192,7 @@ public class VmRunType extends EucalyptusMessage {
   List<String> instanceIds = new ArrayList<String>();
   List<String> macAddresses = new ArrayList<String>();
   List<String> networkNames = new ArrayList<String>();
+  ArrayList<String> networkIndexList = new ArrayList<String>();
 
 
   def VmRunType() {}
@@ -114,7 +201,7 @@ public class VmRunType extends EucalyptusMessage {
                 final String reservationId, final String userData, final int amount,
                 final VmImageInfo imageInfo, final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo,
                 final List<String> instanceIds, final List<String> macAddresses,
-                final int vlan, final List<String> networkNames) {
+                final int vlan, final List<String> networkNames, final List<String> networkIndexList ) {
     this.correlationId = request.correlationId;
     this.userId = request.userId;
     this.effectiveUserId = request.effectiveUserId;
@@ -129,6 +216,7 @@ public class VmRunType extends EucalyptusMessage {
     this.instanceIds = instanceIds;
     this.macAddresses = macAddresses;
     this.networkNames = networkNames;
+    this.networkIndexList = networkIndexList;
   }
 
   def VmRunType(RunInstancesType request) {
@@ -137,14 +225,37 @@ public class VmRunType extends EucalyptusMessage {
     this.userId = request.userId;
   }
 
-
-
-
-  public String toString() {
-    /** TODO-1.4: do something reasonable here    **/
-    return this.correlationId;
+  public VmRunType(RunInstancesType request, String reservationId, String userData,
+		int amount, VmImageInfo imageInfo, VmTypeInfo vmTypeInfo, VmKeyInfo keyInfo,
+		ArrayList<String> instanceIds, List<String> macAddresses, int vlan,
+		List<String> networkNames, ArrayList<String> networkIndexList) {
+	    this.correlationId = request.correlationId;
+	    this.userId = request.userId;
+	    this.effectiveUserId = request.effectiveUserId;
+	    this.reservationId = reservationId;
+	    this.userData = userData;
+	    this.min = amount;
+	    this.max = amount;
+	    this.vlan = vlan;
+	    this.imageInfo = imageInfo;
+	    this.vmTypeInfo = vmTypeInfo;
+	    this.keyInfo = keyInfo;
+	    this.instanceIds = instanceIds;
+	    this.macAddresses = macAddresses;
+	    this.networkNames = networkNames;
+	    this.networkIndexList = networkIndexList;
   }
 
+  @Override
+  public String toString( ) {
+    return String.format(
+                          "VmRunType [imageInfo=%s, instanceIds=%s, keyInfo=%s, launchIndex=%s, macAddresses=%s, max=%s, min=%s, networkIndexList=%s, networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s]",
+                          this.imageInfo, this.instanceIds, this.keyInfo, this.launchIndex, this.macAddresses,
+                          this.max, this.min, this.networkIndexList, this.networkNames, this.reservationId,
+                          this.userData, this.vlan, this.vmTypeInfo );
+  }  
+
+  
 }
 
 public class VmImageInfo {
@@ -171,6 +282,15 @@ public class VmImageInfo {
 
   def VmImageInfo() {}
 
+  @Override
+  public String toString( ) {
+    return String.format(
+                          "VmImageInfo [ancestorIds=%s, imageId=%s, imageLocation=%s, kernelId=%s, kernelLocation=%s, productCodes=%s, ramdiskId=%s, ramdiskLocation=%s, size=%s]",
+                          this.ancestorIds, this.imageId, this.imageLocation, this.kernelId, this.kernelLocation,
+                          this.productCodes, this.ramdiskId, this.ramdiskLocation, this.size );
+  }
+  
+
 }
 
 public class VmKeyInfo {
@@ -187,15 +307,24 @@ public class VmKeyInfo {
 
   def VmKeyInfo() {}
 
+  @Override
+  public String toString( ) {
+    return String.format( "VmKeyInfo [fingerprint=%s, name=%s, value=%s]", this.fingerprint, this.name, this.value );
+  }
+  
+
 }
 
 public class Network implements HasName {
-
+  private static Logger LOG = Logger.getLogger( Network.class );
   String name;
   String networkName;
   String userName;
   ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
-  ConcurrentMap<String, NetworkToken> networkTokens = new ConcurrentHashMap<String, NetworkToken>();
+  private ConcurrentMap<String, NetworkToken> clusterTokens = new ConcurrentHashMap<String,NetworkToken>();
+  private NavigableSet<Integer> availableNetworkIndexes = new ConcurrentSkipListSet<Integer>();
+  private NavigableSet<Integer> assignedNetworkIndexes = new ConcurrentSkipListSet<Integer>();
+  Integer vlan = null;
 
   def Network() {}
 
@@ -203,24 +332,85 @@ public class Network implements HasName {
     this.userName = userName;
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
+    for( int i = 2; i < 256; i++ ) {//FIXME: potentially a network can be more than a /24. update w/ real constraints at runtime.
+      this.availableNetworkIndexes.add( i );
+    }
+  }
+  
+  public void extantNetworkIndex( String cluster, Integer index ) {
+    if( index < 2 ) {
+      this.availableNetworkIndexes.remove( index );
+    } else {
+      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.allocated, "network=${this.name}","cluster=${cluster}","networkIndex=${index}") );
+      if( this.availableNetworkIndexes.remove( index ) ) {
+        this.assignedNetworkIndexes.add( index );
+        NetworkToken token = this.getClusterToken( cluster );
+        token.indexes.add( index );
+      }
+    }
   }
 
+  public NetworkToken getClusterToken( String cluster ) {
+    NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan ) );
+    if( token == null ) token = this.clusterTokens.get( cluster );
+    return token;
+  }
+  
+  public void trim( Integer max ) {
+    this.availableNetworkIndexes.tailSet( max-1, true ).clear( );
+    this.availableNetworkIndexes.headSet( 2 ).clear();
+  }
+  
+  public void extantNetworkIndexes( List<Integer> indexes ) {
+    indexes.each{ this.extantNetworkIndex( Integer.parseInt( it ) ); };
+  }
+  
+  public Integer allocateNetworkIndex( String cluster ) {
+    Integer nextIndex = this.availableNetworkIndexes.pollFirst( );
+    if( nextIndex == null ) { 
+      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+    } else {
+      this.assignedNetworkIndexes.add( nextIndex );
+      this.clusterTokens.get( cluster ).getIndexes().add( nextIndex );
+      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+    }
+    return nextIndex;
+  }
+
+  public void returnNetworkIndexes( Collection<Integer> indexes ) {
+    indexes.each{ this.returnNetworkIndex( it ); };
+    LOG.debug( this.toString( ) );
+  }
+
+  public void returnNetworkIndex( Integer index ) {
+    LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.returned, "network=${this.name}","networkIndex=${index}") );
+    this.assignedNetworkIndexes.remove( index );
+    this.clusterTokens.values().each { 
+      it.getIndexes().remove( index );
+    }
+    if( index < 2 ) return;
+    this.availableNetworkIndexes.add( index );
+  }
 
   public NetworkToken addTokenIfAbsent(NetworkToken token) {
-    this.networkTokens.putIfAbsent(token.getCluster(), token);
-  }
-
-  public NetworkToken getToken(String cluster) {
-    return this.networkTokens.get(cluster);
+    if( this.vlan == null ) {
+      this.vlan = token.getVlan( );
+    }
+    NetworkToken clusterToken = this.clusterTokens.putIfAbsent( token.getCluster(), token );
+    if( clusterToken == null ) clusterToken = this.clusterTokens.get( token.getCluster() );
+    return clusterToken;
   }
 
   public boolean hasToken(String cluster) {
-    return this.networkTokens.get(cluster);
+    return this.clusterTokens.containsKey(cluster);
   }
 
+  public boolean hasTokens() {
+    return !this.clusterTokens.values( ).isEmpty( );
+  }
 
-  public NetworkToken removeToken(String cluster) {
-    return this.networkTokens.remove(cluster);
+  public void removeToken(String cluster) {
+    this.clusterTokens.remove(cluster);
   }
 
   public boolean isPeer( String peerName, String peerNetworkName ) {
@@ -233,15 +423,13 @@ public class Network implements HasName {
   }
 
   @Override
-  public String toString() {
-    return "Network{" +
-           "name='" + name + '\'' +
-           ", networkName='" + networkName + '\'' +
-           ", userName='" + userName + '\'' +
-           ", rules=" + rules +
-           ", networkTokens=" + networkTokens +
-           '}';
+  public String toString( ) {
+    return String.format(
+                          "Network [availableNetworkIndexes=%s, assignedNetworkIndexes=%s, name=%s, networkName=%s, clusterTokens=%s, rules=%s, userName=%s]",
+                          this.availableNetworkIndexes, this.assignedNetworkIndexes, this.name, this.networkName, this.clusterTokens, this.rules,
+                          this.userName );
   }
+  
 
 }
 
@@ -249,21 +437,22 @@ public class NetworkToken implements Comparable {
 
   String networkName;
   String cluster;
-  int vlan;
+  Integer vlan;
+  NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
   String userName;
   String name;
 
-  def NetworkToken(final String cluster, final String userName, final String networkName, final int vlan) {
+  def NetworkToken(final String cluster, final String userName, final String networkName, final int vlan ) {
     this.networkName = networkName;
     this.cluster = cluster;
     this.vlan = vlan;
     this.userName = userName;
     this.name = this.userName + "-" + this.networkName;
   }
-
+  
   @Override
   boolean equals(final Object o) {
-    if ( this == o ) return true;
+    if ( this.is( o ) ) return true;
     if ( !(o instanceof NetworkToken) ) return false;
     NetworkToken that = (NetworkToken) o;
 
@@ -284,27 +473,19 @@ public class NetworkToken implements Comparable {
     return result;
   }
 
-  @Override
-  public String toString() {
-    return "NetworkToken{" +
-           "networkName='" + networkName + '\'' +
-           ", cluster='" + cluster + '\'' +
-           ", vlan=" + vlan +
-           ", userName='" + userName + '\'' +
-           ", name='" + name + '\'' +
-           '}';
-  }
 
+  
   @Override
   public int compareTo(Object o) {
     NetworkToken that = (NetworkToken) o;
-    return (!this.cluster.equals(that.cluster) && (this.vlan == that.vlan)) ? this.vlan - that.vlan : this.cluster.compareTo(that.cluster);
+    return (!this.cluster.equals(that.cluster) && (this.vlan.equals( that.vlan ) ) ) ? this.vlan - that.vlan : this.cluster.compareTo(that.cluster);
   }
 
-  public StopNetworkType getStopMessage() {
-    return new StopNetworkType(this.vlan, this.name);
+  @Override
+  public String toString( ) {
+    return String.format( "NetworkToken [cluster=%s, indexes=%s, name=%s, networkName=%s, userName=%s, vlan=%s]",
+                          this.cluster, this.indexes, this.name, this.networkName, this.userName, this.vlan );
   }
-
 }
 
 public class ResourceToken implements Comparable {
@@ -315,10 +496,10 @@ public class ResourceToken implements Comparable {
   ArrayList<String> instanceIds = new ArrayList<String>();
   ArrayList<String> addresses = new ArrayList<String>();
   ArrayList<NetworkToken> networkTokens = new ArrayList<NetworkToken>();
-  int amount;
+  Integer amount;
   String vmType;
   Date creationTime;
-  int sequenceNumber;
+  Integer sequenceNumber;
 
   public ResourceToken(final String cluster, final String correlationId, final String userName, final int amount, final int sequenceNumber, final String vmType) {
     this.cluster = cluster;
@@ -330,16 +511,18 @@ public class ResourceToken implements Comparable {
     this.vmType = vmType;
   }
 
-
+  public NetworkToken getPrimaryNetwork() {
+    return this.networkTokens.size( ) > 0 ? this.networkTokens.get( 0 ) : null;
+  }
 
   @Override
   public boolean equals(final Object o) {
-    if ( this == o ) return true;
+    if ( this.is( o ) ) return true;
     if ( !(o instanceof ResourceToken) ) return false;
 
     ResourceToken that = (ResourceToken) o;
 
-    if ( amount != that.amount ) return false;
+    if ( !amount.equals( that.amount ) ) return false;
     if ( !cluster.equals(that.cluster) ) return false;
     if ( !correlationId.equals(that.correlationId) ) return false;
     if ( !creationTime.equals(that.creationTime) ) return false;
@@ -363,8 +546,11 @@ public class ResourceToken implements Comparable {
   }
 
   @Override
-  public String toString() {
-    return String.format("ResourceToken={ cluster=%10s, vmType=%10s, amount=%04d ]", this.cluster, this.vmType, this.amount);
+  public String toString( ) {
+    return String.format(
+                          "ResourceToken [addresses=%s, amount=%s, cluster=%s, correlationId=%s, creationTime=%s, instanceIds=%s, networkTokens=%s, sequenceNumber=%s, userName=%s, vmType=%s]",
+                          this.addresses, this.amount, this.cluster, this.correlationId, this.creationTime,
+                          this.instanceIds, this.networkTokens, this.sequenceNumber, this.userName, this.vmType );
   }
 
 }
@@ -377,17 +563,6 @@ public class NodeInfo implements Comparable {
   NodeCertInfo certs = new NodeCertInfo();
   NodeLogInfo logs = new NodeLogInfo();
 
-  @Override
-  public String toString() {
-    return "NodeInfo{" +
-           "serviceTag='" + serviceTag.replaceAll("services/EucalyptusNC","") + '\'' +
-           ", name='" + name + '\'' +
-           ", lastSeen=" + lastSeen +
-           ", certs=" + certs +
-           ", logs=" + logs +
-           '}';
-  }
-
   def NodeInfo(final String serviceTag) {
     this.name = (new URI(serviceTag)).getHost();
     this.serviceTag = serviceTag;
@@ -395,8 +570,6 @@ public class NodeInfo implements Comparable {
     this.certs.setServiceTag(this.serviceTag);
     this.logs.setServiceTag(this.serviceTag);
   }
-
-
 
   def NodeInfo(NodeInfo orig, final NodeCertInfo certs) {
     this(orig.serviceTag);
@@ -410,8 +583,6 @@ public class NodeInfo implements Comparable {
     this.logs = logs;
   }
 
-
-
   def NodeInfo(final NodeCertInfo certs) {
     this(certs.getServiceTag());
     this.certs = certs;
@@ -423,7 +594,6 @@ public class NodeInfo implements Comparable {
   }
 
 
-
   public void touch() {
     this.lastSeen = new Date();
   }
@@ -433,7 +603,7 @@ public class NodeInfo implements Comparable {
   }
 
   boolean equals(final o) {
-    if ( this == o ) return true;
+    if ( this.is( o ) ) return true;
     if ( !(o instanceof NodeInfo) ) return false;
     NodeInfo nodeInfo = (NodeInfo) o;
     if ( !serviceTag.equals(nodeInfo.serviceTag) ) return false;
@@ -444,4 +614,8 @@ public class NodeInfo implements Comparable {
     return serviceTag.hashCode();
   }
 
+  @Override
+  public String toString( ) {
+    return String.format( "NodeInfo [name=%s, lastSeen=%s, serviceTag=%s]", this.name, this.lastSeen, this.serviceTag );
+  }
 }

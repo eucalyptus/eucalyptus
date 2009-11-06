@@ -1,44 +1,76 @@
-/*
+/*******************************************************************************
+ *Copyright (c) 2009 Eucalyptus Systems, Inc.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ * This file is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ * for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Please contact Eucalyptus Systems, Inc., 130 Castilian
+ * Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ * if you need additional information or have any questions.
+ * 
+ * This file may incorporate work covered under the following copyright and
+ * permission notice:
+ * 
  * Software License Agreement (BSD License)
- *
+ * 
  * Copyright (c) 2008, Regents of the University of California
  * All rights reserved.
- *
- * Redistribution and use of this software in source and binary forms, with or
- * without modification, are permitted provided that the following conditions
- * are met:
- *
- * * Redistributions of source code must retain the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above
- *   copyright notice, this list of conditions and the
- *   following disclaimer in the documentation and/or other
- *   materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * Author: Chris Grzegorczyk grze@cs.ucsb.edu
+ * 
+ * Redistribution and use of this software in source and binary forms, with
+ * or without modification, are permitted provided that the following
+ * conditions are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ * THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ * LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ * ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************/
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.util.HasName;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
-import edu.ucsb.eucalyptus.constants.HasName;
 import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
@@ -55,49 +87,49 @@ import java.util.Map;
 
 public class VmInstance implements HasName {
 
-  private static Logger LOG = Logger.getLogger( VmInstance.class );
+  private static Logger        LOG         = Logger.getLogger( VmInstance.class );
 
-  public static String DEFAULT_IP = "0.0.0.0";
+  public static String         DEFAULT_IP  = "0.0.0.0";
 
-  //:: parent ref :://
-  private String reservationId;
-  //:: unique index in reservation :://
-  private int launchIndex;
-  //:: my id :://
-  private String instanceId;
-  //:: owner :://
-  private String ownerId;
-  private String placement;
+  // :: parent ref :://
+  private String               reservationId;
+  // :: unique index in reservation :://
+  private int                  launchIndex;
+  // :: my id :://
+  private String               instanceId;
+  // :: owner :://
+  private String               ownerId;
+  private String               placement;
 
-  private Date launchTime;
-  private StopWatch stopWatch;
+  private Date                 launchTime;
+  private StopWatch            stopWatch;
+  private volatile int                  networkIndex;
 
-  private String userData;
-  private String reason;
-  private VmImageInfo imageInfo;
-  private VmKeyInfo keyInfo;
-  private VmTypeInfo vmTypeInfo;
-  private List<Network> networks = Lists.newArrayList();
-  private VmState state;
-  private StringBuffer consoleOutput;
-  private List<AttachedVolume> volumes = Lists.newArrayList();
-  private NetworkConfigType networkConfig;
-  private Boolean privateNetwork;
-  private List<String> ancestorIds = Lists.newArrayList();
+  private String               userData;
+  private String               reason;
+  private VmImageInfo          imageInfo;
+  private VmKeyInfo            keyInfo;
+  private VmTypeInfo           vmTypeInfo;
+  private List<Network>        networks    = Lists.newArrayList( );
+  private VmState              state;
+  private StringBuffer         consoleOutput;
+  private List<AttachedVolume> volumes     = Lists.newArrayList( );
+  private NetworkConfigType    networkConfig;
+  private Boolean              privateNetwork;
+  private List<String>         ancestorIds = Lists.newArrayList( );
 
-  public VmInstance() {
-    this.launchTime = new Date();
+  public VmInstance( ) {
+    this.launchTime = new Date( );
     this.state = VmState.PENDING;
-    this.networkConfig = new NetworkConfigType();
-    this.stopWatch = new StopWatch();
-    this.stopWatch.start();
-    this.consoleOutput = new StringBuffer();
-    this.volumes = new ArrayList<AttachedVolume>();
+    this.networkConfig = new NetworkConfigType( );
+    this.stopWatch = new StopWatch( );
+    this.stopWatch.start( );
+    this.consoleOutput = new StringBuffer( );
+    this.volumes = new ArrayList<AttachedVolume>( );
   }
 
-  public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement, final String userData,
-                     final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks ) {
-    this();
+  public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement, final String userData, final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks, String networkIndex ) {
+    this( );
 
     this.reservationId = reservationId;
     this.launchIndex = launchIndex;
@@ -109,25 +141,21 @@ public class VmInstance implements HasName {
     this.keyInfo = keyInfo;
     this.vmTypeInfo = vmTypeInfo;
     this.networks = networks;
-
-    String mac = String.format( "%s:%s:%s:%s",
-                                this.instanceId.substring( 2, 4 ),
-                                this.instanceId.substring( 4, 6 ),
-                                this.instanceId.substring( 6, 8 ),
-                                this.instanceId.substring( 8, 10 ) );
+    this.networkIndex = Integer.parseInt( networkIndex );
+    String mac = String.format( "%s:%s:%s:%s", this.instanceId.substring( 2, 4 ), this.instanceId.substring( 4, 6 ), this.instanceId.substring( 6, 8 ), this.instanceId.substring( 8, 10 ) );
     this.networkConfig.setMacAddress( "d0:0d:" + mac );
     this.networkConfig.setIgnoredMacAddress( "d0:0f:" + mac );
     this.networkConfig.setIpAddress( DEFAULT_IP );
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
   }
 
-  public String getName() {
+  public String getName( ) {
     return this.instanceId;
   }
 
   public boolean equals( Object o ) {
     if ( this == o ) return true;
-    if ( o == null || getClass() != o.getClass() ) return false;
+    if ( o == null || getClass( ) != o.getClass( ) ) return false;
 
     VmInstance vmInstance = ( VmInstance ) o;
 
@@ -140,44 +168,46 @@ public class VmInstance implements HasName {
     this.launchTime = launchTime;
   }
 
-  public int hashCode() {
-    return instanceId.hashCode();
+  public int hashCode( ) {
+    return instanceId.hashCode( );
   }
 
-  public String getReservationId() {
+  public String getReservationId( ) {
     return reservationId;
   }
 
-  public String getInstanceId() {
+  public String getInstanceId( ) {
     return instanceId;
   }
 
-  public String getOwnerId() {
+  public String getOwnerId( ) {
     return ownerId;
   }
 
-  public int getLaunchIndex() {
+  public int getLaunchIndex( ) {
     return launchIndex;
   }
 
-  public String getPlacement() {
+  public String getPlacement( ) {
     return placement;
   }
 
-  public Date getLaunchTime() {
+  public Date getLaunchTime( ) {
     return launchTime;
   }
 
-  public VmState getState() {
+  public VmState getState( ) {
     return state;
   }
 
   public void setState( final VmState state ) {
-    LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId(), this.getState(), state ) );
+    if ( this.getState( ) != null && !this.getState( ).equals( state ) ) {
+      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), state ) );
+    }
     this.state = state;
   }
 
-  public String getUserData() {
+  public String getUserData( ) {
     return userData;
   }
 
@@ -185,35 +215,39 @@ public class VmInstance implements HasName {
     this.userData = userData;
   }
 
-  public RunningInstancesItemType getAsRunningInstanceItemType() {
-    RunningInstancesItemType runningInstance = new RunningInstancesItemType();
+  public RunningInstancesItemType getAsRunningInstanceItemType( ) {
+    RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
 
     runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );
-    runningInstance.setStateCode( Integer.toString( this.state.getCode() ) );
-    runningInstance.setStateName( this.state.getName() );
+    runningInstance.setStateCode( Integer.toString( this.state.getCode( ) ) );
+    runningInstance.setStateName( this.state.getName( ) );
 
     runningInstance.setInstanceId( this.instanceId );
-    runningInstance.setImageId( this.imageInfo.getImageId() );
-    runningInstance.setKernel( this.imageInfo.getKernelId() );
-    runningInstance.setRamdisk( this.imageInfo.getRamdiskId() );
-    runningInstance.setProductCodes( this.imageInfo.getProductCodes() );
+    runningInstance.setImageId( this.imageInfo.getImageId( ) );
+    runningInstance.setKernel( this.imageInfo.getKernelId( ) );
+    runningInstance.setRamdisk( this.imageInfo.getRamdiskId( ) );
+    runningInstance.setProductCodes( this.imageInfo.getProductCodes( ) );
 
-    runningInstance.setPrivateDnsName( this.getNetworkConfig().getIpAddress() );
-    if( !VmInstance.DEFAULT_IP.equals( this.getNetworkConfig().getIgnoredPublicIp() ) )
-      runningInstance.setDnsName( this.getNetworkConfig().getIgnoredPublicIp() );
-    else
-      runningInstance.setDnsName( this.getNetworkConfig().getIpAddress() );
+    if( Component.dns.isLocal( ) ) {
+      try {
+        StringBuffer sb = new StringBuffer( ).append( "euca-" );
+        sb.append( this.getNetworkConfig( ).getIpAddress( ).replaceAll( "\\.", "-" ) );
+        sb.append( ".eucalyptus." );
+        String dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
+        runningInstance.setDnsName( sb.toString( ) + dnsDomain );
+        runningInstance.setPrivateDnsName( sb.toString() + "internal" ); 
+      } catch ( Exception e ) {
+        setRunningIpAddresses( runningInstance );
+      }
+    } else {
+      setRunningIpAddresses( runningInstance );
+    } 
+    if ( this.getReason( ) != null || !"".equals( this.getReason( ) ) ) runningInstance.setReason( this.getReason( ) );
 
-    if ( this.getReason() != null || !"".equals( this.getReason() ) )
-      runningInstance.setReason( this.getReason() );
+    if ( this.getKeyInfo( ) != null ) runningInstance.setKeyName( this.getKeyInfo( ).getName( ) );
+    else runningInstance.setKeyName( "" );
 
-    if ( this.getKeyInfo() != null )
-      runningInstance.setKeyName( this.getKeyInfo().getName() );
-    else
-      runningInstance.setKeyName( "" );
-
-
-    runningInstance.setInstanceType( this.getVmTypeInfo().getName() );
+    runningInstance.setInstanceType( this.getVmTypeInfo( ).getName( ) );
     runningInstance.setPlacement( this.placement );
 
     runningInstance.setLaunchTime( this.launchTime );
@@ -221,27 +255,18 @@ public class VmInstance implements HasName {
     return runningInstance;
   }
 
-  @Override
-  public String toString() {
-    return "VmInstance{" +
-           "reservationId='" + reservationId + '\'' +
-           ", ownerId='" + ownerId + '\'' +
-           ", instanceId='" + instanceId + '\'' +
-           ", launchIndex=" + launchIndex +
-           ", launchTime=" + launchTime +
-           ", state=" + state +
-           ", split=" + this.getSplitTime() / 1000f +
-           ", reason='" + reason + '\'' +
-           ", placement='" + placement + '\'' +
-           ", networks=" + this.getNetworkNames() +
-           "\n" + instanceId + ".networkConfig=" + networkConfig +
-           "\n" + instanceId + ".imageInfo=" + imageInfo +
-           "\n" + instanceId + ".vmTypeInfo=" + vmTypeInfo +
-           "\n" + instanceId + ".keyInfo=" + keyInfo +
-           '}';
+  private void setRunningIpAddresses( RunningInstancesItemType runningInstance ) {
+    runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getIpAddress( ) );
+    if ( !VmInstance.DEFAULT_IP.equals( this.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
+      runningInstance.setDnsName( this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+    } else {
+      runningInstance.setDnsName( this.getNetworkConfig( ).getIpAddress( ) );
+    }
   }
 
-  public VmKeyInfo getKeyInfo() {
+
+  
+  public VmKeyInfo getKeyInfo( ) {
     return keyInfo;
   }
 
@@ -249,7 +274,7 @@ public class VmInstance implements HasName {
     this.keyInfo = keyInfo;
   }
 
-  public VmTypeInfo getVmTypeInfo() {
+  public VmTypeInfo getVmTypeInfo( ) {
     return vmTypeInfo;
   }
 
@@ -257,14 +282,14 @@ public class VmInstance implements HasName {
     this.vmTypeInfo = vmTypeInfo;
   }
 
-  public List<Network> getNetworks() {
+  public List<Network> getNetworks( ) {
     return networks;
   }
 
-  public List<String> getNetworkNames() {
-    List<String> nets = new ArrayList<String>();
-    for ( Network net : this.getNetworks() )
-      nets.add( net.getNetworkName() );
+  public List<String> getNetworkNames( ) {
+    List<String> nets = new ArrayList<String>( );
+    for ( Network net : this.getNetworks( ) )
+      nets.add( net.getNetworkName( ) );
     return nets;
   }
 
@@ -272,7 +297,7 @@ public class VmInstance implements HasName {
     this.networks = networks;
   }
 
-  public NetworkConfigType getNetworkConfig() {
+  public NetworkConfigType getNetworkConfig( ) {
     return networkConfig;
   }
 
@@ -280,7 +305,7 @@ public class VmInstance implements HasName {
     this.networkConfig = networkConfig;
   }
 
-  public VmImageInfo getImageInfo() {
+  public VmImageInfo getImageInfo( ) {
     return imageInfo;
   }
 
@@ -288,7 +313,7 @@ public class VmInstance implements HasName {
     this.imageInfo = imageInfo;
   }
 
-  public List<AttachedVolume> getVolumes() {
+  public List<AttachedVolume> getVolumes( ) {
     return volumes;
   }
 
@@ -296,7 +321,7 @@ public class VmInstance implements HasName {
     this.volumes = volumes;
   }
 
-  public List<String> getAncestorIds() {
+  public List<String> getAncestorIds( ) {
     return ancestorIds;
   }
 
@@ -306,24 +331,24 @@ public class VmInstance implements HasName {
 
   public String getByKey( String path ) {
 
-    Map<String, String> m = new HashMap<String, String>();
-    m.put( "ami-id", this.getImageInfo().getImageId() );
-    m.put( "product-codes", this.getImageInfo().getProductCodes().toString().replaceAll("[\\Q[]\\E]","").replaceAll( ", ", "\n" ) );
-    m.put( "ami-launch-index", "" + this.getLaunchIndex() );
-    m.put( "ancestor-ami-ids", this.getImageInfo().getAncestorIds().toString().replaceAll("[\\Q[]\\E]","").replaceAll( ", ", "\n" ) );
+    Map<String, String> m = new HashMap<String, String>( );
+    m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
+    m.put( "product-codes", this.getImageInfo( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
+    m.put( "ami-launch-index", "" + this.getLaunchIndex( ) );
+    m.put( "ancestor-ami-ids", this.getImageInfo( ).getAncestorIds( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
 
-    m.put( "ami-manifest-path", this.getImageInfo().getImageLocation() );
-    m.put( "hostname", this.getNetworkConfig().getIgnoredPublicIp() );
-    m.put( "instance-id", this.getInstanceId() );
-    m.put( "instance-type", this.getVmTypeInfo().getName() );
-    m.put( "local-hostname", this.getNetworkConfig().getIpAddress() );
-    m.put( "local-ipv4", this.getNetworkConfig().getIpAddress() );
-    m.put( "public-hostname", this.getNetworkConfig().getIgnoredPublicIp() );
-    m.put( "public-ipv4", this.getNetworkConfig().getIgnoredPublicIp() );
-    m.put( "reservation-id", this.getReservationId() );
-    m.put( "kernel-id", this.getImageInfo().getKernelId() );
-    m.put( "ramdisk-id", this.getImageInfo().getRamdiskId() );
-    m.put( "security-groups", this.getNetworkNames().toString().replaceAll("[\\Q[]\\E]","").replaceAll( ", ", "\n" ) );
+    m.put( "ami-manifest-path", this.getImageInfo( ).getImageLocation( ) );
+    m.put( "hostname", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+    m.put( "instance-id", this.getInstanceId( ) );
+    m.put( "instance-type", this.getVmTypeInfo( ).getName( ) );
+    m.put( "local-hostname", this.getNetworkConfig( ).getIpAddress( ) );
+    m.put( "local-ipv4", this.getNetworkConfig( ).getIpAddress( ) );
+    m.put( "public-hostname", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+    m.put( "public-ipv4", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+    m.put( "reservation-id", this.getReservationId( ) );
+    m.put( "kernel-id", this.getImageInfo( ).getKernelId( ) );
+    m.put( "ramdisk-id", this.getImageInfo( ).getRamdiskId( ) );
+    m.put( "security-groups", this.getNetworkNames( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
 
     m.put( "block-device-mapping/", "emi\nephemeral\nroot\nswap" );
     m.put( "block-device-mapping/emi", "sda1" );
@@ -332,48 +357,48 @@ public class VmInstance implements HasName {
     m.put( "block-device-mapping/swap", "sda3" );
     m.put( "block-device-mapping/root", "/dev/sda1" );
 
-    m.put( "public-keys/", "0=" + this.getKeyInfo().getName() );
+    m.put( "public-keys/", "0=" + this.getKeyInfo( ).getName( ) );
     m.put( "public-keys/0", "openssh-key" );
     m.put( "public-keys/0/", "openssh-key" );
-    m.put( "public-keys/0/openssh-key", this.getKeyInfo().getValue() );
+    m.put( "public-keys/0/openssh-key", this.getKeyInfo( ).getValue( ) );
 
     m.put( "placement/", "availability-zone" );
-    m.put( "placement/availability-zone", this.getPlacement() );
+    m.put( "placement/availability-zone", this.getPlacement( ) );
 
-    if( path == null ) path = "";
+    if ( path == null ) path = "";
     String dir = "";
-    for( String entry : m.keySet() ) {
-      if( entry.contains("/") && !entry.endsWith("/") ) continue;
+    for ( String entry : m.keySet( ) ) {
+      if ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) continue;
       dir += entry + "\n";
     }
-    m.put("",dir);
+    m.put( "", dir );
 
-    LOG.debug("Servicing metadata request:" + path + " -> " + m.get(path) );
-    if( m.containsKey( path + "/" ) ) path+="/";
-    return m.get(path).replaceAll( "\n*\\z","" );
+    LOG.debug( "Servicing metadata request:" + path + " -> " + m.get( path ) );
+    if ( m.containsKey( path + "/" ) ) path += "/";
+    return m.get( path ).replaceAll( "\n*\\z", "" );
   }
 
   public int compareTo( final Object o ) {
     VmInstance that = ( VmInstance ) o;
-    return this.getName().compareTo( that.getName() );
+    return this.getName( ).compareTo( that.getName( ) );
   }
 
-  public synchronized long resetStopWatch() {
-    this.stopWatch.stop();
-    long ret = this.stopWatch.getTime();
-    this.stopWatch.reset();
-    this.stopWatch.start();
+  public synchronized long resetStopWatch( ) {
+    this.stopWatch.stop( );
+    long ret = this.stopWatch.getTime( );
+    this.stopWatch.reset( );
+    this.stopWatch.start( );
     return ret;
   }
 
-  public synchronized long getSplitTime() {
-    this.stopWatch.split();
-    long ret = this.stopWatch.getSplitTime();
-    this.stopWatch.unsplit();
+  public synchronized long getSplitTime( ) {
+    this.stopWatch.split( );
+    long ret = this.stopWatch.getSplitTime( );
+    this.stopWatch.unsplit( );
     return ret;
   }
 
-  public String getReason() {
+  public String getReason( ) {
     return reason;
   }
 
@@ -381,11 +406,30 @@ public class VmInstance implements HasName {
     this.reason = reason;
   }
 
-  public StringBuffer getConsoleOutput() {
+  public StringBuffer getConsoleOutput( ) {
     return consoleOutput;
   }
 
   public void setConsoleOutput( final StringBuffer consoleOutput ) {
     this.consoleOutput = consoleOutput;
   }
+
+  public int getNetworkIndex( ) {
+    return networkIndex;
+  }
+
+  public void setNetworkIndex( int networkIndex ) {
+    this.networkIndex = networkIndex;
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format(
+                          "VmInstance [imageInfo=%s, instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networkIndex=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
+                          this.imageInfo, this.instanceId, this.keyInfo, this.launchIndex, this.launchTime,
+                          this.networkConfig, this.networkIndex, this.networks, this.ownerId, this.placement,
+                          this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch,
+                          this.userData, this.vmTypeInfo, this.volumes );
+  }
+    
 }

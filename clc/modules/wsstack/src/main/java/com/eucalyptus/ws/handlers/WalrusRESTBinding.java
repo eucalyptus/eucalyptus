@@ -1,3 +1,63 @@
+/*******************************************************************************
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ * 
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ * 
+ *    Software License Agreement (BSD License)
+ * 
+ *    Copyright (c) 2008, Regents of the University of California
+ *    All rights reserved.
+ * 
+ *    Redistribution and use of this software in source and binary forms, with
+ *    or without modification, are permitted provided that the following
+ *    conditions are met:
+ * 
+ *      Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ * 
+ *      Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ * 
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *    ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************/
 package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayOutputStream;
@@ -15,31 +75,34 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-import net.sf.json.groovy.JsonSlurper;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.apache.xml.dtm.ref.DTMNodeList;
-import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.util.EucalyptusProperties;
+import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.util.HoldMe;
+import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.BindingException;
+import com.eucalyptus.ws.InvalidOperationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
-import com.eucalyptus.auth.Hashes;
-import com.eucalyptus.util.StorageProperties;
-import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.collect.Lists;
 
@@ -50,16 +113,15 @@ import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
+import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import groovy.lang.GroovyObject;
-import com.eucalyptus.auth.User;
 
 public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static Logger LOG = Logger.getLogger( WalrusRESTBinding.class );
@@ -84,9 +146,21 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				WalrusDataGetRequestType getObject = (WalrusDataGetRequestType) msg;
 				getObject.setChannel(ctx.getChannel());
 			}
+			if(msg instanceof WalrusDataRequestType) {
+				String expect = httpRequest.getHeader(HttpHeaders.Names.EXPECT);
+				if(expect != null) {
+					if(expect.equals("100-continue")) {
+						HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE );
+						DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), event.getFuture(), response, null );
+						ctx.sendDownstream( newEvent );
+					}
+				}
+			}
 		} else if(event.getMessage() instanceof HttpChunk) {
-			HttpChunk httpChunk = (HttpChunk) event.getMessage();
-			handleHttpChunk(httpChunk);
+			if(putQueue != null) {
+				HttpChunk httpChunk = (HttpChunk) event.getMessage();
+				handleHttpChunk(httpChunk);
+			}
 		}
 	}
 
@@ -100,11 +174,19 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
 			} else {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.ucsb.edu" ) );
+				if(putQueue != null) {
+					putQueue = null;
+				}
 			}
 			if(msg != null) {
 				OMElement omMsg = binding.toOM( msg );
 				ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-				omMsg.serialize( byteOut );
+				HoldMe.canHas.lock(); 
+				try {
+					omMsg.serialize( byteOut );
+				} finally {
+					HoldMe.canHas.unlock();
+				}
 				byte[] req = byteOut.toByteArray();
 				ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes() ) );
@@ -155,13 +237,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 
 	@Override
-	public Object bind( final String userId, final boolean admin, final MappingHttpRequest httpRequest ) throws BindingException {
+	public Object bind( final String userId, final boolean admin, final MappingHttpRequest httpRequest ) throws Exception {
 		String servicePath = httpRequest.getServicePath();
 		Map bindingArguments = new HashMap();
 		final String operationName = getOperation(httpRequest, bindingArguments);
 
 		if(operationName == null)
-			throw new BindingException("Could not determine operation name for " + servicePath);
+			throw new InvalidOperationException("Could not determine operation name for " + servicePath);
 
 		Map<String, String> params = httpRequest.getParameters();
 
@@ -239,7 +321,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
 		if(targetHost.contains(".walrus")) {
 			String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
-			path += bucket + "/";
+			path = "/" + bucket + path;
 		}
 
 		if(path.length() > 0) {
@@ -270,6 +352,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					if(value.toLowerCase().equals(operation.toString().toLowerCase())) {
 						operationName = operation.toString();
 						walrusInternalOperation = true;
+						if(httpRequest.containsHeader(StorageProperties.StorageParameters.EucaSnapSize.toString())) {
+							operationParams.put("SnapshotSize", httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaSnapSize.toString()));
+						}
 						break;
 					}
 				}
@@ -288,27 +373,30 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 				if(verb.equals(WalrusProperties.HTTPVerb.POST.toString())) {
 					//TODO: handle POST.
-					Map<String, String> formFields = processPOSTParams(httpRequest);
+					Map formFields = httpRequest.getFormFields();
 
 					String objectKey = null;
-					String file = "";
+					String file = (String) formFields.get(WalrusProperties.FormField.file.toString());
 					String authenticationHeader = "";
-					formFields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
 					if(formFields.containsKey(WalrusProperties.FormField.key.toString())) {
-						objectKey = formFields.get(WalrusProperties.FormField.key.toString());
+						objectKey = (String) formFields.get(WalrusProperties.FormField.key.toString());
 						objectKey = objectKey.replaceAll("\\$\\{filename\\}", file);
 						operationParams.put("Key", objectKey);
 					}
 					if(formFields.containsKey(WalrusProperties.FormField.acl.toString())) {
-						String acl = formFields.get(WalrusProperties.FormField.acl.toString());
+						String acl = (String) formFields.get(WalrusProperties.FormField.acl.toString());
 						httpRequest.addHeader(WalrusProperties.AMZ_ACL, acl);
 					}
+					if(formFields.containsKey(WalrusProperties.FormField.redirect.toString())) {
+						String successActionRedirect = (String) formFields.get(WalrusProperties.FormField.redirect.toString());
+						operationParams.put("SuccessActionRedirect", successActionRedirect);
+					}
 					if(formFields.containsKey(WalrusProperties.FormField.success_action_redirect.toString())) {
-						String successActionRedirect = formFields.get(WalrusProperties.FormField.success_action_redirect.toString());
+						String successActionRedirect = (String) formFields.get(WalrusProperties.FormField.success_action_redirect.toString());
 						operationParams.put("SuccessActionRedirect", successActionRedirect);
 					}
 					if(formFields.containsKey(WalrusProperties.FormField.success_action_status.toString())) {
-						Integer successActionStatus = Integer.parseInt(formFields.get(WalrusProperties.FormField.success_action_status.toString()));
+						Integer successActionStatus = Integer.parseInt((String)formFields.get(WalrusProperties.FormField.success_action_status.toString()));
 						if(successActionStatus == 200 || successActionStatus == 201)
 							operationParams.put("SuccessActionStatus", successActionStatus);
 						else
@@ -316,91 +404,16 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					} else {
 						operationParams.put("SuccessActionStatus", 204);
 					}
-					if(formFields.containsKey(WalrusProperties.FormField.policy.toString())) {
-						String policy = new String(Base64.decode(formFields.remove(WalrusProperties.FormField.policy.toString())));
-						String policyData;
-						try {
-							policyData = new String(Base64.encode(policy.getBytes()));
-						} catch (Exception ex) {
-							LOG.warn(ex, ex);
-							throw new BindingException("error reading policy data.");
-						}
-						//parse policy
-						try {
-							JsonSlurper jsonSlurper = new JsonSlurper();
-							JSONObject policyObject = (JSONObject)jsonSlurper.parseText(policy);
-							String expiration = (String) policyObject.get(WalrusProperties.PolicyHeaders.expiration.toString());
-							if(expiration != null) {
-								Date expirationDate = DateUtils.parseIso8601DateTimeOrDate(expiration);
-								if((new Date()).getTime() > expirationDate.getTime()) {
-									LOG.warn("Policy has expired.");
-									//TODO: currently this will be reported as an invalid operation
-									//Fix this to report a security exception
-									throw new BindingException("Policy has expired.");
-								}
-							}
-							List<String> policyItemNames = new ArrayList<String>();
-
-							JSONArray conditions = (JSONArray) policyObject.get(WalrusProperties.PolicyHeaders.conditions.toString());
-							for (int i = 0 ; i < conditions.size() ; ++i) {
-								Object policyItem = conditions.get(i);
-								if(policyItem instanceof JSONObject) {
-									JSONObject jsonObject = (JSONObject) policyItem;
-									if(!exactMatch(jsonObject, formFields, policyItemNames)) {
-										LOG.warn("Policy verification failed. ");
-										throw new BindingException("Policy verification failed.");
-									}
-								} else if(policyItem instanceof  JSONArray) {
-									JSONArray jsonArray = (JSONArray) policyItem;
-									if(!partialMatch(jsonArray, formFields, policyItemNames)) {
-										LOG.warn("Policy verification failed. ");
-										throw new BindingException("Policy verification failed.");
-									}
-								}
-							}
-
-							Set<String> formFieldsKeys = formFields.keySet();
-							for(String formKey : formFieldsKeys) {
-								if(formKey.startsWith(WalrusProperties.IGNORE_PREFIX))
-									continue;
-								boolean fieldOkay = false;
-								for(WalrusProperties.IgnoredFields field : WalrusProperties.IgnoredFields.values()) {
-									if(formKey.equals(field.toString().toLowerCase())) {
-										fieldOkay = true;
-										break;
-									}
-								}
-								if(fieldOkay)
-									continue;
-								if(policyItemNames.contains(formKey))
-									continue;
-								LOG.warn("All fields except those marked with x-ignore- should be in policy.");
-								throw new BindingException("All fields except those marked with x-ignore- should be in policy.");
-							}
-						} catch(Exception ex) {
-							//rethrow
-							LOG.warn(ex);
-							if(ex instanceof BindingException)
-								throw (BindingException)ex;
-						}
-						//all form uploads without a policy are anonymous
-						if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString().toLowerCase())) {
-							String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString().toLowerCase());
-							authenticationHeader += "AWS" + " " + accessKeyId + ":";
-						}
-						if(formFields.containsKey(WalrusProperties.FormField.signature.toString())) {
-							String signature = formFields.remove(WalrusProperties.FormField.signature.toString());
-							authenticationHeader += signature;
-							httpRequest.addHeader(WalrusAuthenticationHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
-						}
-						httpRequest.addHeader(WalrusProperties.FormField.FormUploadPolicyData.toString(), policyData);
+					if(formFields.containsKey(WalrusProperties.CONTENT_TYPE)) {
+						operationParams.put("ContentType", formFields.get(WalrusProperties.CONTENT_TYPE));
 					}
 					String key = target[0] + "." + objectKey;
 					String randomKey = key + "." + Hashes.getRandom(10);
-					operationParams.put("ContentLength", (new Long(contentLength).toString()));
+					if(contentLengthString != null)
+						operationParams.put("ContentLength", (new Long(contentLength).toString()));
 					operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
 					putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
-					handleFirstChunk(httpRequest, contentLength);
+					handleFirstChunk(httpRequest, (ChannelBuffer)formFields.get(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk"), contentLength);
 				}
 
 			} else {
@@ -472,7 +485,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						String contentDisposition = httpRequest.getHeader("Content-Disposition");
 						if(contentDisposition != null)
 							operationParams.put("ContentDisposition", contentDisposition);
-						operationParams.put("ContentLength", (new Long(contentLength).toString()));
+						if(contentLengthString != null)
+							operationParams.put("ContentLength", (new Long(contentLength).toString()));
 						operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
 						putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
 						handleFirstChunk(httpRequest, contentLength);
@@ -580,61 +594,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		return operationName;	
 	}
 
-	private Map<String, String> processPOSTParams(MappingHttpRequest httpRequest) throws BindingException {
-		Map<String, String> formFields = new HashMap<String, String>();
-		String contentType = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
-		if(contentType != null) {
-			if(contentType.startsWith(WalrusProperties.MULTIFORM_DATA_TYPE)) {
-				String boundary = getFormFieldKeyName(contentType, "boundary");
-				boundary = "--" + boundary + "\r\n";
-				String message = getMessageString(httpRequest);
-				String[] parts = message.split(boundary);
-				for(String part : parts) {
-					Map<String, String> keyMap = getFormField(part, "name");
-					Set<String> keys = keyMap.keySet();
-					for(String key : keys) {
-						formFields.put(key, keyMap.get(key));
-					}
-				}
-			}
-		} else {
-			throw new BindingException("No Content-Type specified");
-		}
-
-		return formFields;
-	}
-
-	private Map<String, String> getFormField(String message, String key) {
-		Map<String, String> keymap = new HashMap<String, String>();
-		String[] parts = message.split(";");
-		if(parts.length == 2) {
-			if (parts[1].contains(key + "=")) {
-				String keystring = parts[1].substring(parts[1].indexOf('=') + 1);
-				String[] keyparts = keystring.split("\r\n\r\n");
-				String keyName = keyparts[0];
-				keyName = keyName.replaceAll("\"", "");
-				String value = keyparts[1].replaceAll("\r\n", "");
-				keymap.put(keyName, value);
-			}
-		}
-		return keymap;		
-	}
-
-	private String getFormFieldKeyName(String message, String key) {
-		String[] parts = message.split(";");
-		if(parts.length > 1) {
-			if (parts[1].contains(key + "=")) {
-				String keystring = parts[1].substring(parts[1].indexOf('=') + 1);
-				String[] keyparts = keystring.split("\r\n\r\n");
-				String keyName = keyparts[0];
-				keyName = keyName.replaceAll("\r\n", "");
-				keyName = keyName.replaceAll("\"", "");
-				return keyName;
-			}
-		}
-		return null;		
-	}
-
 	private void parseExtendedHeaders(Map operationParams, String headerString, String value) {
 		if(headerString.equals(WalrusProperties.ExtendedGetHeaders.Range.toString())) {
 			String prefix = "bytes=";
@@ -676,9 +635,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				ArrayList<Grant> grants = new ArrayList<Grant>();
 
 				List<String> permissions = xmlParser.getValues("//AccessControlList/Grant/Permission");
+				if(permissions == null)
+					throw new BindingException("malformed access control list");
 
 				DTMNodeList grantees = xmlParser.getNodes("//AccessControlList/Grant/Grantee");
-
+				if(grantees == null)
+					throw new BindingException("malformed access control list");
 
 				for(int i = 0 ; i < grantees.getLength() ; ++i) {
 					String id = xmlParser.getValue(grantees.item(i), "ID");
@@ -726,8 +688,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				ArrayList<Grant> grants = new ArrayList<Grant>();
 
 				List<String> permissions = xmlParser.getValues("/AccessControlList/Grant/Permission");
+				if(permissions == null)
+					throw new BindingException("malformed access control list");
 
 				DTMNodeList grantees = xmlParser.getNodes("/AccessControlList/Grant/Grantee");
+				if(grantees == null)
+					throw new BindingException("malformed access control list");
 
 
 				for(int i = 0 ; i < grantees.getLength() ; ++i) {
@@ -809,10 +775,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			Set<String> headerNames = httpRequest.getHeaderNames();
 			ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 			for(String key : headerNames) {
-				if(key.startsWith(WalrusProperties.AMZ_META_HEADER_PREFIX)) {
+				if(key.toLowerCase().startsWith(WalrusProperties.AMZ_META_HEADER_PREFIX)) {
 					MetaDataEntry metaDataEntry = new MetaDataEntry();
 					metaDataEntry.setName(key.substring(WalrusProperties.AMZ_META_HEADER_PREFIX.length()));
-					metaDataEntry.setValue(httpRequest.getAndRemoveHeader(key));
+					metaDataEntry.setValue(httpRequest.getHeader(key));
 					metaData.add(metaDataEntry);
 				}
 			}
@@ -949,7 +915,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		while(iterator.hasNext()) {
 			String key = iterator.next();
 			key = key.replaceAll("\\$", "");
-			policyItemNames.add(key.toLowerCase());
+			policyItemNames.add(key);
 			try {
 				if(jsonObject.get(key).equals(formFields.get(key)))
 					returnValue = true;
@@ -971,15 +937,15 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			String condition = (String) jsonArray.get(0);
 			String key = (String) jsonArray.get(1);
 			key = key.replaceAll("\\$", "");
-			policyItemNames.add(key.toLowerCase());
+			policyItemNames.add(key);
 			String value = (String) jsonArray.get(2);
 			if(condition.contains("eq")) {
 				if(value.equals(formFields.get(key)))
 					returnValue = true;
 			} else if(condition.contains("starts-with")) {
-				if(!formFields.containsKey(key.toLowerCase()))
+				if(!formFields.containsKey(key))
 					return false;
-				if(formFields.get(key.toLowerCase()).startsWith(value))
+				if(formFields.get(key).startsWith(value))
 					returnValue = true;
 			}
 		} catch(Exception ex) {
@@ -1015,7 +981,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	private void handleFirstChunk(MappingHttpRequest httpRequest, long dataLength) {
 		ChannelBuffer buffer = httpRequest.getContent();
-		byte[] bytes = new byte[DATA_MESSAGE_SIZE];        
 		try {
 			putQueue.put(WalrusDataMessage.StartOfData(dataLength));
 			buffer.markReaderIndex( );
@@ -1029,6 +994,21 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		}
 
 	}
+
+	private void handleFirstChunk(MappingHttpRequest httpRequest, ChannelBuffer firstChunk, long dataLength) {
+		try {
+			putQueue.put(WalrusDataMessage.StartOfData(dataLength));
+			byte[] read = new byte[firstChunk.readableBytes( )];
+			firstChunk.readBytes( read );
+			putQueue.put(WalrusDataMessage.DataMessage(read));
+			if(!httpRequest.isChunked())
+				putQueue.put(WalrusDataMessage.EOF());
+		} catch (Exception ex) {
+			LOG.error(ex, ex);
+		}
+
+	}
+
 
 	public static synchronized WalrusDataMessenger getReadMessenger() {
 		if (getMessenger == null) {

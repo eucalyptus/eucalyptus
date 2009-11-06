@@ -1,0 +1,10 @@
+#!/bin/sh
+
+case "$1" in
+purge)
+	dpkg-statoverride --remove /usr/lib/eucalyptus/euca_rootwrap || true
+	rm -rf /etc/eucalyptus /var/lib/eucalyptus /var/log/eucalyptus /var/run/eucalyptus
+	;;
+esac
+
+#DEBHELPER#
