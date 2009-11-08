@@ -150,7 +150,7 @@ check_and_backup () {
 
 	# let's see if we need a copy
 	if [ "$TO_BACKUP" = "Y" ]; then
-		cp $1 $1.bak
+		cp -a $1 $1.bak
 		TO_BACKUP="N"
 	fi
 }
@@ -297,370 +297,370 @@ sync_keys() {
 	if [ ${REMOTE} = "127.0.0.1" -o ${REMOTE} = localhost -o ${REMOTE} = "`hostname -s`" -o ${REMOTE} = "`hostname -f`" ]; then
 	    # machine is localhost, not need for remote syncing
 	    if [ -d "$SOURCEDIR" ]; then
-		for i in $FILES
-		do
-		    if [ ! -e $i ]; then
-			echo "ERROR: cannot find cluster credentials."
-			exit 1
-		    else
-			if ! rsync -a $i $DESTDIR ; then
-			    echo "ERROR: cannot copy file (${i}) to destination (${DESTDIR})"
-			    return 1
-			fi
-		    fi
-		done		    
+	for i in $FILES
+	do
+	    if [ ! -e $i ]; then
+		echo "ERROR: cannot find cluster credentials."
+		exit 1
 	    else
-		echo "ERROR: Cannot find source keys directory."
-		return 1
-	    fi
-	    return 0
-	fi
-
-	# try rsync first 
-	if [ -n "$RSYNC" ]; then
-	    echo
-	    echo  -n "Trying rsync to sync keys with \"${REMOTE}\"..."
-	    if $RSYNC -az ${FILES} ${REMOTE}:${DESTDIR}/ > /dev/null ; then
-		echo "done."
-		return 0
-	    else
-		echo "failed."
-	    fi
-	fi
-
-	# scp next
-	if [ -n "$SCP" ]; then
-	    echo
-	    if [ "$EUCA_USER" = "" ]; then
-		if getent passwd eucalyptus > /dev/null ; then
-		    echo "Using 'eucalyptus' as EUCA_USER"
-		    EUCA_USER="eucalyptus"
-		else
-		    echo "EUCA_USER is not defined!"
+		if ! rsync -a $i $DESTDIR ; then
+		    echo "ERROR: cannot copy file (${i}) to destination (${DESTDIR})"
 		    return 1
 		fi
 	    fi
-	    echo
-	    echo "Trying scp to sync keys with \"${1}\" (user \"${EUCA_USER}\")..."
-	    if sudo -u ${EUCA_USER} $SCP ${FILES} ${EUCA_USER}@${REMOTE}:${DESTDIR} > /dev/null ; then
-		echo "done."
-		return 0
-	    else
-		echo "failed."
-	    fi
-	fi
-	
+	done		    
+    else
+	echo "ERROR: Cannot find source keys directory."
 	return 1
+    fi
+    return 0
+fi
+
+# try rsync first 
+if [ -n "$RSYNC" ]; then
+    echo
+    echo  -n "Trying rsync to sync keys with \"${REMOTE}\"..."
+    if $RSYNC -az ${FILES} ${REMOTE}:${DESTDIR}/ > /dev/null ; then
+	echo "done."
+	return 0
+    else
+	echo "failed."
+    fi
+fi
+
+# scp next
+if [ -n "$SCP" ]; then
+    echo
+    if [ "$EUCA_USER" = "" ]; then
+	if getent passwd eucalyptus > /dev/null ; then
+	    echo "Using 'eucalyptus' as EUCA_USER"
+	    EUCA_USER="eucalyptus"
+	else
+	    echo "EUCA_USER is not defined!"
+	    return 1
+	fi
+    fi
+    echo
+    echo "Trying scp to sync keys with \"${1}\" (user \"${EUCA_USER}\")..."
+    if sudo -u ${EUCA_USER} $SCP ${FILES} ${EUCA_USER}@${REMOTE}:${DESTDIR} > /dev/null ; then
+	echo "done."
+	return 0
+    else
+	echo "failed."
+    fi
+fi
+
+return 1
 }
 
 if [ $# -eq 0 ]; then
-	usage
-	exit 1
+usage
+exit 1
 fi
 
 # let's parse the command line
 while [ $# -gt 0 ]; do
-	if [ "$1" = "-h" -o "$1" = "-help" -o "$1" = "?" -o "$1" = "--help" ]; then
+if [ "$1" = "-h" -o "$1" = "-help" -o "$1" = "?" -o "$1" = "--help" ]; then
+	usage
+	exit 1
+fi
+
+if [ "$1" = "-synckeys" -o "$1" = "-synckey" ]; then 
+    NODEMODE="SYNC"
+    shift
+    continue
+fi
+if [ "$1" = "-norsync" -o "$1" = "--no-rsync" ]; then 
+    RSYNC=""
+    shift
+    continue
+fi
+if [ "$1" = "--list-scs" ]; then 
+    LIST="$LIST storages"
+    shift
+    continue
+fi
+if [ "$1" = "--list-walruses" ]; then 
+    LIST="$LIST walruses"
+    shift
+    continue
+fi
+if [ "$1" = "--list-clusters" ]; then 
+    LIST="$LIST clusters"
+    shift
+    continue
+fi
+if [ "$1" = "--verbose" ]; then 
+    VERBOSE="Y"
+    shift
+    continue
+fi
+if [ "$1" = "-noscp" -o "$1" = "--no-scp" ]; then 
+    SCP=""
+    shift
+    continue
+fi
+if [ "$1" = "-version" -o "$1" = "--version" ]; then 
+    VERSION="Y"
+    shift
+    continue
+fi
+if [ "$1" = "-setup" -o "$1" = "--setup" ]; then 
+    SETUP="Y"
+    shift
+    continue
+fi
+if [ "$1" = "--no-sync" ]; then 
+    SYNC="N"
+    shift
+    continue
+fi
+if [ "$1" = "--deregister-walrus" ]; then
+    WALRUS_MODE="DEL"
+    shift
+    continue
+fi
+if [ $# -eq 1 ]; then
+	# we dont have options with no argument, so it has to be
+	# the file
+	FILE="$1"
+	if [ "${FILE:0:1}" = '-' ]; then
 		usage
 		exit 1
 	fi
+	break
+fi
 
-	if [ "$1" = "-synckeys" -o "$1" = "-synckey" ]; then 
-	    NODEMODE="SYNC"
-	    shift
-	    continue
-	fi
-	if [ "$1" = "-norsync" -o "$1" = "--no-rsync" ]; then 
-	    RSYNC=""
-	    shift
-	    continue
-	fi
-	if [ "$1" = "--list-scs" ]; then 
-	    LIST="$LIST storages"
-	    shift
-	    continue
-	fi
-	if [ "$1" = "--list-walruses" ]; then 
-	    LIST="$LIST walruses"
-	    shift
-	    continue
-	fi
-	if [ "$1" = "--list-clusters" ]; then 
-	    LIST="$LIST clusters"
-	    shift
-	    continue
-	fi
-	if [ "$1" = "--verbose" ]; then 
-	    VERBOSE="Y"
-	    shift
-	    continue
-	fi
-	if [ "$1" = "-noscp" -o "$1" = "--no-scp" ]; then 
-	    SCP=""
-	    shift
-	    continue
-	fi
-	if [ "$1" = "-version" -o "$1" = "--version" ]; then 
-	    VERSION="Y"
-	    shift
-	    continue
-	fi
-	if [ "$1" = "-setup" -o "$1" = "--setup" ]; then 
-	    SETUP="Y"
-	    shift
-	    continue
-	fi
-	if [ "$1" = "--no-sync" ]; then 
-	    SYNC="N"
-	    shift
-	    continue
-	fi
-	if [ "$1" = "--deregister-walrus" ]; then
-	    WALRUS_MODE="DEL"
-	    shift
-	    continue
-	fi
-	if [ $# -eq 1 ]; then
-		# we dont have options with no argument, so it has to be
-		# the file
-		FILE="$1"
-		if [ "${FILE:0:1}" = '-' ]; then
-			usage
-			exit 1
-		fi
-		break
-	fi
+# all other parameters requires at least 1 argument
+if [ $# -lt 2 ]; then
+	usage
+	exit 1
+fi
 
-	# all other parameters requires at least 1 argument
-	if [ $# -lt 2 ]; then
-		usage
+# old command line options not used anylonger
+if [ "$1" = "-cc" -o "$1" = "-nc" -o "$1" = "-cloud" ]; then
+	echo "-cc, -nc and -cloud are not used anymore"
+	shift; shift;
+	continue
+fi
+
+if [ "$1" = "-d" ]; then
+	if [ ! -d "${2}" ]; then
+		echo "Is $2 where Eucalyptus is installed?"
 		exit 1
 	fi
-
-	# old command line options not used anylonger
-	if [ "$1" = "-cc" -o "$1" = "-nc" -o "$1" = "-cloud" ]; then
-		echo "-cc, -nc and -cloud are not used anymore"
-		shift; shift;
-		continue
+	EUCALYPTUS="${2}"
+	shift; shift
+	continue
+fi
+if [ "$1" = "-name" -o "$1" = "--name" ]; then
+	NAME="$NAME $2"
+	shift; shift
+	continue
+fi		
+if [ "$1" = "-bridge" ]; then
+	BRIDGE="$2"
+	shift; shift
+	continue
+fi		
+if [ "$1" = "-upgrade-conf" -o "$1" = "--upgrade-conf" ]; then
+	# hidden options to upgrade from an older version
+	UPGRADE_CONF="$2"
+	if [ ! -e "$UPGRADE_CONF" ]; then
+		echo "Cannot read $UPGRADE_CONF"
+		exit 1
 	fi
-
-	if [ "$1" = "-d" ]; then
-		if [ ! -d "${2}" ]; then
-			echo "Is $2 where Eucalyptus is installed?"
-			exit 1
-		fi
-		EUCALYPTUS="${2}"
-		shift; shift
-		continue
+	shift; shift
+	continue
+fi		
+if [ "$1" = "-import-conf" -o "$1" = "--import-conf" ]; then
+	IMPORTFILE="$2"
+	if [ ! -e "$IMPORTFILE" ]; then
+		echo "Cannot read $IMPORTFILE"
+		exit 1
 	fi
-	if [ "$1" = "-name" -o "$1" = "--name" ]; then
-		NAME="$NAME $2"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "-bridge" ]; then
-		BRIDGE="$2"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "-upgrade-conf" -o "$1" = "--upgrade-conf" ]; then
-		# hidden options to upgrade from an older version
-		UPGRADE_CONF="$2"
-		if [ ! -e "$UPGRADE_CONF" ]; then
-			echo "Cannot read $UPGRADE_CONF"
-			exit 1
-		fi
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "-import-conf" -o "$1" = "--import-conf" ]; then
-	        IMPORTFILE="$2"
-		if [ ! -e "$IMPORTFILE" ]; then
-			echo "Cannot read $IMPORTFILE"
-			exit 1
-		fi
-		shift; shift
-		continue
+	shift; shift
+	continue
+fi
+if [ "$1" = "-dhcpd" -o "$1" = "--dhcpd" ]; then
+	DHCPD="$2"
+	shift; shift
+	continue
+fi		
+if [ "$1" = "-dhcp_user" -o "$1" = "--dhcp_user" ]; then
+	DHCPC_USER="$2"
+	shift; shift
+	continue
+fi		
+if [ "$1" = "-nodes" ]; then
+	NODES="${2}"
+	shift; shift
+	continue
+fi		
+if [ "$1" = "-ccp" -o "$1" = "--cc-port" ]; then
+	CC_PORT="$2"
+	shift; shift
+	continue
+fi		
+if [ "$1" = "-ncp" -o "$1" = "--nc-port" ]; then
+	NC_PORT="$2"
+	shift; shift
+	continue
+fi
+if [ "$1" = "-instances" -o "$1" = "--instances" ]; then
+	INSTANCE="$2"
+	shift; shift
+	continue
+fi
+if [ "$1" = "-user" -o "$1" = "--user" ]; then
+	EUCA_USER="$2"
+	shift; shift
+	continue
+fi
+if [ "$1" = "-hypervisor" -o "$1" = "--hypervisor" ]; then
+	if [ "$2" != "xen" -a "$2" != "kvm" ]; then
+		echo "Only kvm or xen are supported at the moment"
+		exit 1
 	fi
-	if [ "$1" = "-dhcpd" -o "$1" = "--dhcpd" ]; then
-		DHCPD="$2"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "-dhcp_user" -o "$1" = "--dhcp_user" ]; then
-		DHCPC_USER="$2"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "-nodes" ]; then
-		NODES="${2}"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "-ccp" -o "$1" = "--cc-port" ]; then
-		CC_PORT="$2"
-		shift; shift
-		continue
-	fi		
-	if [ "$1" = "-ncp" -o "$1" = "--nc-port" ]; then
-		NC_PORT="$2"
-		shift; shift
-		continue
+	HYPERVISOR="$2"
+	shift; shift
+	continue
+fi
+if [ "$1" = "-cloudp" ]; then
+	if [ $# -lt 3 ]; then
+		echo "We need 2 ports for cloud controller"
+		exit 1
 	fi
-	if [ "$1" = "-instances" -o "$1" = "--instances" ]; then
-		INSTANCE="$2"
-		shift; shift
-		continue
-	fi
-	if [ "$1" = "-user" -o "$1" = "--user" ]; then
-		EUCA_USER="$2"
-		shift; shift
-		continue
-	fi
-	if [ "$1" = "-hypervisor" -o "$1" = "--hypervisor" ]; then
-		if [ "$2" != "xen" -a "$2" != "kvm" ]; then
-			echo "Only kvm or xen are supported at the moment"
-			exit 1
-		fi
-		HYPERVISOR="$2"
-		shift; shift
-		continue
-	fi
-	if [ "$1" = "-cloudp" ]; then
-		if [ $# -lt 3 ]; then
-			echo "We need 2 ports for cloud controller"
-			exit 1
-		fi
 # doesn't work right now
 #		CLOUD_PORT="$2"
 #		CLOUD_SSL_PORT="$3"
-		shift; shift; shift
-		continue
+	shift; shift; shift
+	continue
+fi
+if [ "$1" = "--get-credentials" ]; then
+	CREDENTIALZIPFILE="${2}"
+	shift; shift;
+	continue
+fi
+if [ "$1" = "-addnode" -o "$1" = "--register-nodes" ]; then 
+	NEWNODES="${2}"
+	NODEMODE="ADD"
+	shift; shift
+	continue
+fi
+if [ "$1" = "-delnode" -o "$1" = "--deregister-nodes" ]; then 
+	NEWNODES="${2}"
+	NODEMODE="REM"
+	shift; shift
+	continue
+fi
+if [ "$1" = "--register-walrus" ]; then
+	WALRUS_MODE="ADD"
+	WALRUS="$2"
+	shift; shift
+	continue
+fi
+if [ "$1" = "--deregister-sc" ]; then
+	SC_MODE="DEL"
+	SCNAME="$2"
+	shift; shift
+	continue
+fi
+if [ "$1" = "--register-sc" ]; then
+	if [ $# -lt 3 ]; then
+		echo "--register-sc requires a CC and a hostname"
+		exit 1
 	fi
-	if [ "$1" = "--get-credentials" ]; then
-	        CREDENTIALZIPFILE="${2}"
-		shift; shift;
-		continue
+	SC_MODE="ADD"
+	SCNAME="$2"
+	SCHOST="$3"
+	shift; shift; shift
+	continue
+fi
+if [ "$1" = "-addcluster" -o "$1" = "--register-cluster" ]; then
+	if [ $# -lt 3 ]; then
+		echo "--register-cluster requires a user assigned name and CC hostname"
+		exit 1
 	fi
-	if [ "$1" = "-addnode" -o "$1" = "--register-nodes" ]; then 
-		NEWNODES="${2}"
-		NODEMODE="ADD"
-		shift; shift
-		continue
+	CLUSNAME="$2"
+	NEWCLUS="$3"
+	CLUSMODE="ADD"
+	shift; shift; shift
+	continue
+fi
+if [ "$1" = "--deregister-cluster" ]; then
+	CLUSNAME="$2"
+	CLUSMODE="DEL"
+	shift; shift
+	continue
+fi
+if [ "$1" = "-check" -o "$1" = "--check" ]; then 
+	if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+		echo "-check requires cc, nc, sc, walrus or cloud"
+		exit 1
 	fi
-	if [ "$1" = "-delnode" -o "$1" = "--deregister-nodes" ]; then 
-		NEWNODES="${2}"
-		NODEMODE="REM"
-		shift; shift
-		continue
+	CHECK="$2"
+	shift; shift
+	continue
+fi
+if [ "$1" = "--enable" ]; then 
+	if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+		echo "--enable requires cloud, sc or walrus"
+		exit 1
 	fi
-	if [ "$1" = "--register-walrus" ]; then
-		WALRUS_MODE="ADD"
-		WALRUS="$2"
-		shift; shift
-		continue
+	ENABLED="$ENABLED $2"
+	shift; shift
+	continue
+fi
+if [ "$1" = "--disable" ]; then 
+	if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+		echo "--disable requires cloud, sc or walrus"
+		exit 1
 	fi
-	if [ "$1" = "--deregister-sc" ]; then
-		SC_MODE="DEL"
-		SCNAME="$2"
-		shift; shift
-		continue
+	DISABLED="$DISABLED $2"
+	shift; shift
+	continue
+fi
+if [ "$1" = "-sync" -o "$1" = "--sync" ]; then 
+	if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
+		echo "-sync requires cc, nc, sc, walrus or cloud"
+		exit 1
 	fi
-	if [ "$1" = "--register-sc" ]; then
-		if [ $# -lt 3 ]; then
-			echo "--register-sc requires a CC and a hostname"
-			exit 1
-		fi
-		SC_MODE="ADD"
-		SCNAME="$2"
-		SCHOST="$3"
-		shift; shift; shift
-		continue
-	fi
-	if [ "$1" = "-addcluster" -o "$1" = "--register-cluster" ]; then
-		if [ $# -lt 3 ]; then
-			echo "--register-cluster requires a user assigned name and CC hostname"
-			exit 1
-		fi
-		CLUSNAME="$2"
-		NEWCLUS="$3"
-		CLUSMODE="ADD"
-		shift; shift; shift
-		continue
-	fi
-	if [ "$1" = "--deregister-cluster" ]; then
-		CLUSNAME="$2"
-		CLUSMODE="DEL"
-		shift; shift
-		continue
-	fi
-	if [ "$1" = "-check" -o "$1" = "--check" ]; then 
-		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "-check requires cc, nc, sc, walrus or cloud"
-			exit 1
-		fi
-		CHECK="$2"
-		shift; shift
-		continue
-	fi
-	if [ "$1" = "--enable" ]; then 
-		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "--enable requires cloud, sc or walrus"
-			exit 1
-		fi
-		ENABLED="$ENABLED $2"
-		shift; shift
-		continue
-	fi
-	if [ "$1" = "--disable" ]; then 
-		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "--disable requires cloud, sc or walrus"
-			exit 1
-		fi
-		DISABLED="$DISABLED $2"
-		shift; shift
-		continue
-	fi
-	if [ "$1" = "-sync" -o "$1" = "--sync" ]; then 
-		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "-sync requires cc, nc, sc, walrus or cloud"
-			exit 1
-		fi
-		TOSYNC="$2"
-		shift; shift
-		continue
-	fi
-	usage 
-	exit 1
+	TOSYNC="$2"
+	shift; shift
+	continue
+fi
+usage 
+exit 1
 done
 
 if [ -z "${FILE}" -o ! -f "${FILE}" ]; then
-	echo "$FILE is not a valid eucalyptus configuration file"
-	exit  1
+echo "$FILE is not a valid eucalyptus configuration file"
+exit  1
 fi
 
 # if asked to print the version that's all we do
 if [ "$VERSION" = "Y" ]; then
-	. $FILE
+. $FILE
 
-	if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus-version ]; then
-		VERSION="$EUCALYPTUS/etc/eucalyptus/eucalyptus-version"
-	elif [ -e @prefix@/etc/eucalyptus/eucalyptus-version ]; then
-		VERSION="@prefix@/etc/eucalyptus/eucalyptus-version"
-	fi
-	if [ -n "$VERSION" ]; then
-		echo -n "Eucalyptus version: "
-		cat $VERSION 
-	else
-		echo "Cannot find eucalyptus installation!"
-		exit 1
-	fi
-	exit 0
+if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus-version ]; then
+	VERSION="$EUCALYPTUS/etc/eucalyptus/eucalyptus-version"
+elif [ -e @prefix@/etc/eucalyptus/eucalyptus-version ]; then
+	VERSION="@prefix@/etc/eucalyptus/eucalyptus-version"
+fi
+if [ -n "$VERSION" ]; then
+	echo -n "Eucalyptus version: "
+	cat $VERSION 
+else
+	echo "Cannot find eucalyptus installation!"
+	exit 1
+fi
+exit 0
 fi
 
 # let's change the value
 if [ -n "$EUCALYPTUS" ]; then
-	change_var_value $FILE EUCALYPTUS "${EUCALYPTUS}"
+change_var_value $FILE EUCALYPTUS "${EUCALYPTUS}"
 fi
 if [ -n "$CC_PORT" ]; then
 	change_var_value $FILE CC_PORT "${CC_PORT}"
@@ -835,7 +835,7 @@ if [ -n "$SETUP" ]; then
 	let $((ret += $?))
 	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus
 	let $((ret += $?))
-	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus
 	let $((ret += $?))
 
 	# let's create more needed directory with the right permissions
