@@ -3,7 +3,8 @@ Section: admin
 Priority: extra
 Maintainer: chris grzegorczyk <grze@eucalyptus.com>
 XSBC-Original-Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
-Build-Depends: cdbs, debhelper (>= 7), libaxis2c-dev, librampart0, librampart-dev, default-jdk, ant, libvirt-dev, quilt, libcurl4-gnutls-dev, libssl-dev, ant-optional, zlib1g-dev, pkg-config, libavahi-core-dev, libdebian-installer-dev,
+Build-Depends: cdbs, debhelper (>= 7), libaxis2c-dev, librampart0, librampart-dev, default-jdk, ant, libvirt-dev, quilt, 
+ libcurl4-gnutls-dev, libssl-dev, ant-optional, zlib1g-dev, pkg-config, libavahi-core-dev, libdebian-installer-dev,
  libbackport-util-concurrent-java,
  libwsdl4j-java,
  libhsqldb-java,
@@ -47,7 +48,8 @@ Homepage: http://open.eucalyptus.com/
 Package: eucalyptus-common
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, adduser, openssh-server, openssh-client, sudo, rsync
-Replaces: eucalyptus-common (< 1.6)
+Conflicts: eucalyptus-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-java-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-cloud (<< 1.6.1~bzr1066-0euca1), eucalyptus-walrus (<< 1.6.1~bzr1066-0euca1), eucalyptus-gl (<< 1.6.1~bzr1066-0euca1), eucalyptus-sc (<< 1.6.1~bzr1066-0euca1), eucalyptus-nc (<< 1.6.1~bzr1066-0euca1)
+Replaces: eucalyptus-common (= 1.5.1-0euca2), eucalyptus-common (= 1.5.2-0euca424ga68) 
 Recommends: avahi-utils, unzip
 Description: Elastic Utility Computing Architecture - Common files
  EUCALYPTUS is an open source service overlay that implements elastic
@@ -60,7 +62,8 @@ Description: Elastic Utility Computing Architecture - Common files
 
 Package: eucalyptus-sc
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6), eucalyptus-java-common
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.1~bzr1066-0euca1), eucalyptus-java-common (>= 1.6.1~bzr1066-0euca1)
+Conflicts:  eucalyptus-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-java-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-cloud (<< 1.6.1~bzr1066-0euca1), eucalyptus-walrus (<< 1.6.1~bzr1066-0euca1), eucalyptus-gl (<< 1.6.1~bzr1066-0euca1), eucalyptus-sc (<< 1.6.1~bzr1066-0euca1), eucalyptus-nc (<< 1.6.1~bzr1066-0euca1)
 Description: Elastic Utility Computing Architecture - Storage controller
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
@@ -71,11 +74,14 @@ Description: Elastic Utility Computing Architecture - Storage controller
 
 Package: eucalyptus-cloud
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6), eucalyptus-java-common
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.1~bzr1066-0euca1), eucalyptus-java-common (>= 1.6.1~bzr1066-0euca1)
 Recommends: postfix | mail-transport-agent
-Replaces: eucalyptus-cc (<= 1.6~bzr919-0ubuntu3),
- eucalyptus-sc (<= 1.6~bzr919-0ubuntu3),
- eucalyptus-walrus (<= 1.6~bzr919-0ubuntu3)
+Conflicts: eucalyptus-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-java-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-cloud (<< 1.6.1~bzr1066-0euca1), eucalyptus-walrus (<< 1.6.1~bzr1066-0euca1), eucalyptus-gl (<< 1.6.1~bzr1066-0euca1), eucalyptus-sc (<< 1.6.1~bzr1066-0euca1), eucalyptus-nc (<< 1.6.1~bzr1066-0euca1)
+Replaces: eucalyptus-cc (<< 1.5.2-1),
+ eucalyptus-sc (<< 1.5.2-1),
+ eucalyptus-walrus (<< 1.5.2-1),
+ eucalyptus-cloud (= 1.5.1-0euca2), 
+ eucalyptus-cloud (= 1.5.2-0euca424ga68) 
 Description: Elastic Utility Computing Architecture - Cloud controller
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
@@ -86,7 +92,8 @@ Description: Elastic Utility Computing Architecture - Cloud controller
 
 Package: eucalyptus-walrus
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6), eucalyptus-java-common
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.1~bzr1066-0euca1), eucalyptus-java-common (>= 1.6.1~bzr1066-0euca1)
+Conflicts: eucalyptus-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-java-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-cloud (<< 1.6.1~bzr1066-0euca1), eucalyptus-walrus (<< 1.6.1~bzr1066-0euca1), eucalyptus-gl (<< 1.6.1~bzr1066-0euca1), eucalyptus-sc (<< 1.6.1~bzr1066-0euca1), eucalyptus-nc (<< 1.6.1~bzr1066-0euca1)
 Description: Elastic Utility Computing Architecture - Walrus (S3)
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
@@ -97,7 +104,7 @@ Description: Elastic Utility Computing Architecture - Walrus (S3)
 
 Package: eucalyptus-java-common
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, vblade, lvm2, dmsetup, openssh-server, eucalyptus-common (> 1.6),
+Depends: ${shlibs:Depends}, ${misc:Depends}, vblade, lvm2, dmsetup, openssh-server, eucalyptus-common (>= 1.6.1~bzr1066-0euca1),
  default-jre-headless | java5-runtime-headless,
  libecj-java,
  libbackport-util-concurrent-java,
@@ -163,8 +170,8 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, vblade, lvm2, dmsetup, openssh-serv
  libwsdl4j-java,
  libxom-java,
  libxpp3-java
-Replaces: eucalyptus-javadeps, eucalyptus-common, eucalyptus-cloud (< 1.6.1)
-Conflicts: eucalyptus-javadeps
+Replaces: eucalyptus-javadeps, eucalyptus-common, eucalyptus-cloud 
+Conflicts: eucalyptus-javadeps,  eucalyptus-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-java-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-cloud (<< 1.6.1~bzr1066-0euca1), eucalyptus-walrus (<< 1.6.1~bzr1066-0euca1), eucalyptus-gl (<< 1.6.1~bzr1066-0euca1), eucalyptus-sc (<< 1.6.1~bzr1066-0euca1), eucalyptus-nc (<< 1.6.1~bzr1066-0euca1)
 Description: Elastic Utility Computing Architecture - Common Java package
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
@@ -175,10 +182,12 @@ Description: Elastic Utility Computing Architecture - Common Java package
 
 Package: eucalyptus-cc
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6), apache2, libapache2-mod-axis2c, eucalyptus-gl, avahi-utils, librampart0, bridge-utils, vlan, dhcp3-server
-Recommends: powerwake, libpam-modules (>= 1.0.1-9ubuntu3)
-Suggests: vtun
-Conflicts: apache2-mpm-itk
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.1~bzr1066-0euca1), apache2, libapache2-mod-axis2c, 
+  eucalyptus-gl (>= 1.6.1~bzr1066-0euca1), avahi-utils, librampart0, bridge-utils, vlan, dhcp3-server
+Recommends: vtun, libpam-modules (>= 1.0.1-9ubuntu3)
+Suggests: powerwake
+Conflicts: apache2-mpm-itk,  eucalyptus-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-java-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-cloud (<< 1.6.1~bzr1066-0euca1), eucalyptus-walrus (<< 1.6.1~bzr1066-0euca1), eucalyptus-gl (<< 1.6.1~bzr1066-0euca1), eucalyptus-sc (<< 1.6.1~bzr1066-0euca1), eucalyptus-nc (<< 1.6.1~bzr1066-0euca1)
+Replaces: eucalyptus-cc (= 1.5.1-0euca2), eucalyptus-cc (= 1.5.2-0euca424ga68) 
 Description: Elastic Utility Computing Architecture - Cluster controller
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
@@ -189,11 +198,13 @@ Description: Elastic Utility Computing Architecture - Cluster controller
 
 Package: eucalyptus-nc
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6), apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, eucalyptus-gl, adduser, avahi-utils, librampart0, parted, libvirt-bin
-Suggests: aoetools
-Replaces: eucalyptus-common (< 1.6.1)
-Recommends: vlan, bridge-utils, kvm, powernap
-Conflicts: apache2-mpm-itk, qemu (< 0.11.0-0)
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.1~bzr1066-0euca1), 
+  apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, 
+  eucalyptus-gl (>= 1.6.1~bzr1066-0euca1), adduser, avahi-utils, librampart0, parted, libvirt-bin
+Suggests: powernap
+Replaces: eucalyptus-common, eucalyptus-nc (= 1.5.1-0euca2), eucalyptus-nc (= 1.5.2-0euca424ga68) 
+Recommends: vlan, bridge-utils, kvm, aoetools
+Conflicts: apache2-mpm-itk, qemu (<< 0.11.0-0),  eucalyptus-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-java-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-cloud (<< 1.6.1~bzr1066-0euca1), eucalyptus-walrus (<< 1.6.1~bzr1066-0euca1), eucalyptus-gl (<< 1.6.1~bzr1066-0euca1), eucalyptus-sc (<< 1.6.1~bzr1066-0euca1), eucalyptus-nc (<< 1.6.1~bzr1066-0euca1)
 Description: Elastic Utility Computing Architecture - Node controller
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
@@ -204,7 +215,9 @@ Description: Elastic Utility Computing Architecture - Node controller
 
 Package: eucalyptus-gl
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (> 1.6)
+Conflicts:   eucalyptus-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-java-common (<< 1.6.1~bzr1066-0euca1), eucalyptus-cloud (<< 1.6.1~bzr1066-0euca1), eucalyptus-walrus (<< 1.6.1~bzr1066-0euca1), eucalyptus-gl (<< 1.6.1~bzr1066-0euca1), eucalyptus-sc (<< 1.6.1~bzr1066-0euca1), eucalyptus-nc (<< 1.6.1~bzr1066-0euca1)
+Replaces: eucalyptus-gl (= 1.5.1-0euca2), eucalyptus-gl (= 1.5.2-0euca424ga68) 
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.1~bzr1066-0euca1)
 Description: Elastic Utility Computing Architecture - Logging service
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
