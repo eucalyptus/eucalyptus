@@ -529,6 +529,20 @@
 		<value name="LocationConstraint" field="locationConstraint" />
 	</mapping>
 
+	<mapping name="TargetGrants" class="edu.ucsb.eucalyptus.msgs.TargetGrants">
+		<collection factory="org.jibx.runtime.Utility.arrayListFactory"
+			field="grants">
+			<structure name="Grant" map-as="edu.ucsb.eucalyptus.msgs.Grant" />
+		</collection>
+	</mapping>
+
+	<mapping name="LoggingEnabled" class="edu.ucsb.eucalyptus.msgs.LoggingEnabled">
+		<value name="TargetBucket" field="targetBucket" />
+		<value name="TargetPrefix" field="targetPrefix" />
+		<structure map-as="edu.ucsb.eucalyptus.msgs.TargetGrants"
+			field="targetGrants" usage="optional" />
+	</mapping>
+
 	<mapping name="GetBucketLoggingStatus"
 		class="edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
 		<value name="Bucket" field="bucket" />
@@ -536,11 +550,23 @@
 			usage="optional" />
 	</mapping>
 
+	<mapping name="GetBucketLoggingStatusResponse"
+		class="edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusResponseType">
+		<structure map-as="edu.ucsb.eucalyptus.msgs.LoggingEnabled"
+			field="loggingEnabled" usage="optional" />
+	</mapping>
+
 	<mapping name="SetBucketLoggingStatus"
 		class="edu.ucsb.eucalyptus.msgs.SetBucketLoggingStatusType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
 		<value name="Bucket" field="bucket" />
+		<structure map-as="edu.ucsb.eucalyptus.msgs.LoggingEnabled"
+			field="loggingEnabled" usage="optional" />
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
 			usage="optional" />
+	</mapping>
+
+	<mapping name="SetBucketLoggingStatusResponse"
+		class="edu.ucsb.eucalyptus.msgs.SetBucketLoggingStatusResponseType">
 	</mapping>
 
 	<mapping name="GetDecryptedImage" class="edu.ucsb.eucalyptus.msgs.GetDecryptedImageType">
@@ -604,8 +630,7 @@
 	</mapping>
 
 	<mapping name="GetWalrusConfiguration"
-		class="edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType"
-		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		class="edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
 		<value name="Name" field="name" />
 	</mapping>
 

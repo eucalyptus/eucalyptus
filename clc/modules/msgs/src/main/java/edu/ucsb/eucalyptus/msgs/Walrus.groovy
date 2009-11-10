@@ -1,3 +1,5 @@
+package edu.ucsb.eucalyptus.msgs
+
 /*******************************************************************************
 *Copyright (c) 2009  Eucalyptus Systems, Inc.
 * 
@@ -58,7 +60,6 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
-package edu.ucsb.eucalyptus.msgs
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.channel.Channel;
 
@@ -572,15 +573,27 @@ public class GetBucketLocationResponseType extends WalrusResponseType {
 	String locationConstraint;
 }
 
+public class TargetGrants extends EucalyptusData {
+	ArrayList<Grant> grants = new ArrayList<Grant>();
+}
+
+public class LoggingEnabled extends EucalyptusData {
+	String targetBucket;
+	String targetPrefix;
+	TargetGrants targetGrants;
+}
+
 public class GetBucketLoggingStatusType extends WalrusRequestType {
 	String bucket;
 }
 
 public class GetBucketLoggingStatusResponseType extends WalrusResponseType {
+	LoggingEnabled loggingEnabled;
 }
 
 public class SetBucketLoggingStatusType extends WalrusRequestType {
 	String bucket;
+	LoggingEnabled loggingEnabled;
 }
 
 public class SetBucketLoggingStatusResponseType extends WalrusResponseType {

@@ -127,6 +127,8 @@ import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.GetBucketLocationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketLocationType;
+import edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusType;
+import edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusResponseType;
 import edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.GetObjectExtendedResponseType;
@@ -152,6 +154,8 @@ import edu.ucsb.eucalyptus.msgs.PutObjectType;
 import edu.ucsb.eucalyptus.msgs.RemoveARecordType;
 import edu.ucsb.eucalyptus.msgs.SetBucketAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.SetBucketAccessControlPolicyType;
+import edu.ucsb.eucalyptus.msgs.SetBucketLoggingStatusResponseType;
+import edu.ucsb.eucalyptus.msgs.SetBucketLoggingStatusType;
 import edu.ucsb.eucalyptus.msgs.SetObjectAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.SetObjectAccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.SetRESTBucketAccessControlPolicyResponseType;
@@ -1867,5 +1871,15 @@ public class WalrusManager {
 			db.rollback();
 			throw new NoSuchBucketException(sourceBucket);
 		}
+	}
+
+	public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) {
+		SetBucketLoggingStatusResponseType reply = (SetBucketLoggingStatusResponseType) request.getReply();
+		return reply;
+	}
+
+	public GetBucketLoggingStatusResponseType getBucketLoggingStatus(GetBucketLoggingStatusType request) {
+		GetBucketLoggingStatusResponseType reply = (GetBucketLoggingStatusResponseType) request.getReply();
+		return reply;
 	}
 }

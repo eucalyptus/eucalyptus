@@ -357,15 +357,11 @@ public class WalrusControl {
 	}
 
 	public GetBucketLoggingStatusResponseType GetBucketLoggingStatus(GetBucketLoggingStatusType request) throws EucalyptusCloudException {
-		GetBucketLoggingStatusResponseType reply = (GetBucketLoggingStatusResponseType) request.getReply();
-
-		throw new NotImplementedException("GetBucketLoggingStatus");
+		return walrusManager.getBucketLoggingStatus(request);
 	}
 
 	public SetBucketLoggingStatusResponseType SetBucketLoggingStatus(SetBucketLoggingStatusType request) throws EucalyptusCloudException {
-		SetBucketLoggingStatusResponseType reply = (SetBucketLoggingStatusResponseType) request.getReply();
-
-		throw new NotImplementedException("SetBucketLoggingStatus");
+		return walrusManager.setBucketLoggingStatus(request);
 	}
 
 	public GetDecryptedImageResponseType GetDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {
