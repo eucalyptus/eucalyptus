@@ -1,0 +1,14 @@
+#!/bin/sh
+
+if [ "$1" = "remove" ]
+then
+    if which invoke-rc.d >/dev/null 2>&1; then
+        invoke-rc.d eucalyptus-nc stop || true
+    else
+        /etc/init.d/eucalyptus-nc stop || true
+    fi
+
+fi
+
+#DEBHELPER#
+

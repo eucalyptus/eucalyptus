@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 
 import org.apache.log4j.Logger;
@@ -83,10 +84,11 @@ public class DatabaseUtil implements EventListener {
 				for ( PoolConfig p : PoolConfig.values( ) ) {
 					LOG.debug( "-> db pool property: " + LogUtil.lineObject( p ) );
 				}
+				EntityManagerFactoryImpl createEntityManagerFactory = (EntityManagerFactoryImpl) Persistence.createEntityManagerFactory( persistenceContext );
+				emf.put( persistenceContext, createEntityManagerFactory );
 				LOG.info( "-> Setting up persistence context for : " + persistenceContext );
 				LOG.info( "-> database host: " + System.getProperty( "euca.db.host" ) );
 				LOG.info( "-> database port: " + System.getProperty( "euca.db.port" ) );
-				emf.put( persistenceContext, ( EntityManagerFactoryImpl ) Persistence.createEntityManagerFactory( persistenceContext ) );
 				for ( PooledDataSource ds : ( Set<PooledDataSource> ) C3P0Registry.getPooledDataSources( ) ) {
 					if ( pools.containsValue( persistenceContext ) ) break;
 					if ( !pools.containsKey( ds.getDataSourceName( ) ) ) {
@@ -151,4 +153,11 @@ public class DatabaseUtil implements EventListener {
 		}
 	}
 
+	public static void closeAllEMFs() {
+		for(String key : emf.keySet()) {
+			EntityManagerFactoryImpl factory = (EntityManagerFactoryImpl) emf.get(key);
+			if(factory.isOpen())
+				factory.close();
+		}
+	}
 }

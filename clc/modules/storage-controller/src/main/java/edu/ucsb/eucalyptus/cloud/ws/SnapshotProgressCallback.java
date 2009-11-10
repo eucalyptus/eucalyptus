@@ -45,6 +45,7 @@ public class SnapshotProgressCallback implements CallBack {
 			SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
 			foundSnapshotInfo.setProgress(String.valueOf(100));
 			foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
+			foundSnapshotInfo.setShouldTransfer(false);
 		} catch (Exception ex) {
 			db.rollback();
 			LOG.warn(ex);

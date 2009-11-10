@@ -93,13 +93,7 @@ public class StorageEventListener implements EventListener {
 
 	@Override
 	public void fireEvent(Event event) {
-		if(event instanceof StartComponentEvent) {
-			StartComponentEvent startComponentEvent = (StartComponentEvent) event;
-			if(Component.walrus.equals(startComponentEvent.getComponent()) &&
-					Component.storage.isEnabled()) {
-				BlockStorage.checkPending();
-			}
-		} else if(event instanceof StopComponentEvent) {
+		if(event instanceof StopComponentEvent) {
 			StopComponentEvent stopComponentEvent = (StopComponentEvent) event;
 			ComponentConfiguration config = stopComponentEvent.getConfiguration();
 			StorageInfo storageInfo = new StorageInfo();

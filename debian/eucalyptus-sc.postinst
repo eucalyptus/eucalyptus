@@ -1,0 +1,12 @@
+#!/bin/sh
+
+#DEBHELPER#
+
+if [ "$1" = "configure" ]; then
+    /usr/sbin/euca_conf --enable sc
+    if [ -e /etc/init.d/eucalyptus-cloud ]; then
+        /etc/init.d/eucalyptus-cloud restart || true
+    fi
+fi
+
+exit 0

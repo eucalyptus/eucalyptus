@@ -16,7 +16,8 @@ BuildRequires: %{__httpd}-devel, euca-axis2c >= 1.6.0
 Requires:      euca-axis2c >= 1.5.0
 Group:         Applications/System
 Source:        http://open.eucalyptus.com/dependencies/1.6.0/rampartc-src-1.3.0.tgz
-Patch:         euca-rampartc-DESTDIRfix.patch
+Patch0:        rampartc-1.3.0-euca.patch
+Patch1:        euca-rampartc-DESTDIRfix.patch
 BuildRoot:     %{_tmppath}/%{name}-%{version}-%{release}-build
 URL:           http://open.eucalyptus.com
 Provides:      euca-rampartc

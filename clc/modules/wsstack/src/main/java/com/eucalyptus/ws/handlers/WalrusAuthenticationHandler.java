@@ -253,6 +253,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
 				try {
 					String signature = URLDecoder.decode(parameters.remove(SecurityParameter.Signature.toString()), "UTF-8");
+					signature = signature.replaceAll(" ", "+");
 					if(signature == null) {
 						throw new AuthenticationException("User authentication failed. Null signature.");
 					}

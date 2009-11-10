@@ -1,0 +1,3 @@
+#!/bin/bash
+# we never need these files but 1.5.2 might leave them lying around.
+rm -f /etc/eucalyptus/cloud.d/storage-* /etc/eucalyptus/cloud.d/walrus-* /etc/eucalyptus/cloud.d/eucalyptus-[^j]*.xml /etc/eucalyptus/cloud.d/*axis2* /etc/eucalyptus/cloud.d/cluster-policy.xml /etc/eucalyptus/cloud.d/off-policy.xml /etc/eucalyptus/cloud.d/policy.xml

@@ -1,0 +1,3 @@
+usr/lib/axis2/lib      /etc/eucalyptus/axis2/lib
+usr/lib/axis2/modules  /etc/eucalyptus/axis2/modules
+usr/lib/axis2/services /etc/eucalyptus/axis2/services

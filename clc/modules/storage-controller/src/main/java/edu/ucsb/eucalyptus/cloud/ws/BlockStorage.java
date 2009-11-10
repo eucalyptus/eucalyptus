@@ -436,6 +436,7 @@ public class BlockStorage {
 	//returns snapshots in progress or at the SC
 	public DescribeStorageSnapshotsResponseType DescribeStorageSnapshots( DescribeStorageSnapshotsType request ) throws EucalyptusCloudException {
 		DescribeStorageSnapshotsResponseType reply = ( DescribeStorageSnapshotsResponseType ) request.getReply();
+		checker.transferPendingSnapshots();
 		List<String> snapshotSet = request.getSnapshotSet();
 		ArrayList<SnapshotInfo> snapshotInfos = new ArrayList<SnapshotInfo>();
 		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();

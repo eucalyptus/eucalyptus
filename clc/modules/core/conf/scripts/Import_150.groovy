@@ -49,9 +49,19 @@ import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.config.StorageControllerConfiguration;
+import java.net.URI;
+import com.eucalyptus.util.DatabaseUtil;
+import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
+import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
+import java.security.cert.X509Certificate;
+import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.ClusterCredentials;
 
-//baseDir = "/disk1/import"
-//targetDir = "/disk1/import"
 baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
 targetDbPrefix= "eucalyptus"
@@ -82,6 +92,9 @@ System.setProperty("euca.log.dir", "${System.getenv('EUCALYPTUS')}/var/log/eucal
 System.setProperty("euca.db.host", "jdbc:hsqldb:file:${targetDir}/${targetDbPrefix}")
 System.setProperty("euca.db.password", "${System.getenv('EUCALYPTUS_DB')}");
 System.setProperty("euca.log.level", 'INFO');
+
+def vtunPassFile = new File("${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/keys/vtunpass");
+vtunPassFile.write("${System.getenv('EUCALYPTUS_DB')}");
 
 ["${baseDir}/eucalyptus_general.script","${baseDir}/eucalyptus_images.script","${baseDir}/eucalyptus_auth.script","${baseDir}/eucalyptus_config.script","${baseDir}/eucalyptus_walrus.script","${baseDir}/eucalyptus_storage.script","${baseDir}/eucalyptus_dns.script"].each{
 new File(it).write("CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" + 
@@ -240,23 +253,6 @@ dbVolumes.rows("SELECT * FROM VOLUME").each{
   }
 }
 
-dbVolumes.rows("SELECT * FROM SNAPSHOT").each{
-  println "Adding snapshot: ${it.DISPLAYNAME}"
-  
-  EntityWrapper<Snapshot> dbSnap = SnapshotManager.getEntityWrapper( );
-  try {
-    Snapshot s = new Snapshot(it.USERNAME,it.DISPLAYNAME);
-    s.setBirthday(it.BIRTHDAY);
-    s.setState(State.valueOf(it.STATE));
-    s.setParentVolume(it.PARENTVOLUME);
-    dbSnap.add(s);
-    dbSnap.commit();
-  } catch (Throwable t) {
-    t.printStackTrace();
-    dbSnap.rollback();
-  }
-}
-
 db.rows('SELECT * FROM BUCKETS').each{
   println "Adding bucket: ${it.BUCKET_NAME}"
 
@@ -312,9 +308,12 @@ db.rows('SELECT * FROM BUCKETS').each{
     	objectInfo.setGlobalWrite(obj.GLOBAL_WRITE);
     	objectInfo.setGlobalReadACP(obj.GLOBAL_READ_ACP);
     	objectInfo.setGlobalWriteACP(obj.GLOBAL_WRITE_ACP);
+    	objectInfo.setSize(obj.SIZE);
     	objectInfo.setEtag(obj.ETAG);
     	objectInfo.setLastModified(new Date());
     	objectInfo.setStorageClass(obj.STORAGE_CLASS);
+    	objectInfo.setContentType("");
+    	objectInfo.setContentDisposition("");
         db.rows("SELECT g.* FROM object_has_grants has_thing LEFT OUTER JOIN grants g on g.grant_id=has_thing.grant_id WHERE has_thing.object_id=${ obj.OBJECT_ID }").each{  grant ->
         println "--> grant: ${obj.OBJECT_NAME}/${grant.USER_ID}"
           GrantInfo grantInfo = new GrantInfo();
@@ -384,7 +383,7 @@ db.rows('SELECT * FROM VOLUMES').each{
 }
 
 db.rows('SELECT * FROM SNAPSHOTS').each{ 
-	  println "Adding snapshit: ${it.SNAPSHOT_NAME}"
+	  println "Adding snapshot: ${it.SNAPSHOT_NAME}"
 
 	  EntityWrapper<VolumeInfo> dbSnap = StorageController.getEntityWrapper(); 
 	  try {
@@ -393,8 +392,9 @@ db.rows('SELECT * FROM SNAPSHOTS').each{
 		s.setScName(StorageProperties.SC_LOCAL_NAME);
 		s.setUserName(it.SNAPSHOT_USER_NAME);
 		s.setVolumeId(it.VOLUME_NAME);
-		s.setStatus(it.STATUS);
+		s.setStatus(StorageProperties.Status.pending.toString());
 		s.setStartTime(new Date());
+		s.setProgress("0");
 		dbSnap.add(s);
 		dbSnap.commit();
 	  } catch (Throwable t) {
@@ -445,6 +445,117 @@ db.rows('SELECT * FROM LVMMETADATA').each{
   }
 }
 
+
+def clusterName = "testCluster";
+
 db.rows('SELECT * FROM CLUSTERS').each{ 
-  println "CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
+  println "Adding CLUSTER: name=${it.CLUSTER_NAME} host=${it.CLUSTER_HOST} port=${it.CLUSTER_PORT}"
+  clusterName = it.CLUSTER_NAME;
+  EntityWrapper<ClusterConfiguration> dbClusterConfig = Configuration.getEntityWrapper();
+  try {
+    ClusterConfiguration clusterConfig = new ClusterConfiguration(it.CLUSTER_NAME, it.CLUSTER_HOST, it.CLUSTER_PORT);
+    dbClusterConfig.add(clusterConfig);
+    dbClusterConfig.commit();
+  } catch (Throwable t) {
+	t.printStackTrace();
+	dbClusterConfig.rollback();
+  }
 }
+
+X509Cert certInfo = new X509Cert("cc-" + clusterName);
+certInfo.setPemCertificate(System.getenv('EUCALYPTUS_CLUSTER_CERT'))
+X509Cert ncCertInfo = new X509Cert("nc-" + clusterName);
+ncCertInfo.setPemCertificate(System.getenv('EUCALYPTUS_NODE_CERT'))
+ClusterCredentials clusterCreds = new ClusterCredentials(clusterName);
+clusterCreds.setClusterCertificate(certInfo);
+clusterCreds.setNodeCertificate(ncCertInfo);
+EntityWrapper<X509Cert> dbCert = Credentials.getEntityWrapper();
+dbCert.add(certInfo);
+dbCert.add(ncCertInfo);
+EntityWrapper<ClusterCredentials> dbClusterCreds = dbCert.recast(ClusterCredentials.class);
+dbClusterCreds.add(clusterCreds);
+dbCert.commit();
+
+dbVolumes.rows("SELECT * FROM SNAPSHOT").each{
+	  println "Adding snapshot: ${it.DISPLAYNAME}"
+	  
+	  EntityWrapper<Snapshot> dbSnap = SnapshotManager.getEntityWrapper( );
+	  try {
+	    Snapshot s = new Snapshot(it.USERNAME,it.DISPLAYNAME);
+	    s.setBirthday(it.BIRTHDAY);
+	    s.setState(State.valueOf(it.STATE));
+	    s.setParentVolume(it.PARENTVOLUME);
+	    s.setCluster(clusterName);
+	    s.setMappedState(StorageProperties.Status.pending.toString());
+	    dbSnap.add(s);
+	    dbSnap.commit();
+	  } catch (Throwable t) {
+	    t.printStackTrace();
+	    dbSnap.rollback();
+	  }
+	}
+
+def getInterface() {
+	  def oldEucaConf = new File("${System.getenv('EUCALYPTUS')}/etc/eucalyptus/eucalyptus.conf-1.5");
+	    oldEucaConf.text.find(/VNET_INTERFACE="(.*)"/) { fullline, iface ->      
+		  return iface.toString()
+	    }
+}
+
+db.rows('SELECT * FROM SYSTEM_INFO').each{
+	URI uri = new URI(it.SYSTEM_INFO_STORAGE_URL)
+	println "Adding Walrus: name=walrus host=${uri.getHost()} port=${uri.getPort()}"
+	EntityWrapper<WalrusConfiguration> dbWalrusConfig = Configuration.getEntityWrapper();
+	EntityWrapper<WalrusInfo> dbWalrus = WalrusControl.getEntityWrapper();
+	try {
+	  WalrusConfiguration walrusConfig = new WalrusConfiguration("walrus", uri.getHost(), uri.getPort());
+	  dbWalrusConfig.add(walrusConfig);
+	  dbWalrusConfig.commit();
+	  try {
+	    WalrusInfo walrusInfo = dbWalrus.getUnique(new WalrusInfo());
+	    walrusInfo.setStorageDir(it.SYSTEM_STORAGE_DIR)
+	    walrusInfo.setStorageMaxBucketsPerUser(it.SYSTEM_STORAGE_MAX_BUCKETS_PER_USER)
+	    walrusInfo.setStorageMaxBucketSizeInMB((int)(it.SYSTEM_STORAGE_MAX_BUCKET_SIZE_MB / WalrusProperties.M))
+	    walrusInfo.setStorageMaxCacheSizeInMB((int)(it.SYSTEM_STORAGE_CACHE_SIZE_MB / WalrusProperties.M))
+	    walrusInfo.setStorageMaxTotalSnapshotSizeInGb(it.SYSTEM_STORAGE_SNAPSHOT_SIZE_GB)
+	  } catch(Throwable t) {		 
+	    WalrusInfo walrusInfo = new WalrusInfo(WalrusProperties.NAME,
+			  it.SYSTEM_STORAGE_DIR,
+			  it.SYSTEM_STORAGE_MAX_BUCKETS_PER_USER,
+			  (int)(it.SYSTEM_STORAGE_MAX_BUCKET_SIZE_MB / WalrusProperties.M),
+			  (int)(it.SYSTEM_STORAGE_CACHE_SIZE_MB / WalrusProperties.M),
+			  it.SYSTEM_STORAGE_SNAPSHOT_SIZE_GB)
+	    dbWalrus.add(walrusInfo)	    
+	  }
+	  dbWalrus.commit();
+	} catch(Throwable t) {
+	  t.printStackTrace();
+	  dbWalrusConfig.rollback();
+	  dbWalrus.rollback();
+	}
+	println "Adding SC: name=StorageController-local host=${uri.getHost()} port=${uri.getPort()}"
+	EntityWrapper<StorageControllerConfiguration> dbSCConfig = Configuration.getEntityWrapper();
+	EntityWrapper<StorageInfo> dbSC = StorageController.getEntityWrapper();		
+	try {
+	  StorageControllerConfiguration storageConfig = new StorageControllerConfiguration(clusterName, uri.getHost(), uri.getPort());
+	  dbSCConfig.add(storageConfig);
+	  dbSCConfig.commit();
+	  StorageInfo storageInfo = new StorageInfo(StorageProperties.SC_LOCAL_NAME,
+			  it.SYSTEM_STORAGE_MAX_VOLUME_SIZE_GB,
+			  getInterface(),
+			  it.SYSTEM_STORAGE_VOLUME_SIZE_GB,
+			  it.SYSTEM_STORAGE_VOLUMES_DIR,
+			  false);
+	  dbSC.add(storageInfo);
+	  dbSC.commit();
+    } catch(Throwable t) {
+	  t.printStackTrace();
+	  dbSCConfig.rollback();
+	  dbSC.rollback();
+	}
+}
+
+//flush
+DatabaseUtil.closeAllEMFs();
+//the db will not sync to disk even after a close in some cases. Wait a bit.
+Thread.sleep(5000);

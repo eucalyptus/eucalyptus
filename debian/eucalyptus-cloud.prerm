@@ -1,0 +1,14 @@
+#!/bin/sh
+
+if [ "$1" = "remove" ]
+then
+  /usr/sbin/euca_conf --disable cloud
+  if which invoke-rc.d >/dev/null 2>&1; then
+      invoke-rc.d eucalyptus-cloud restart || true
+  else
+      /etc/init.d/eucalyptus-cloud restart || true
+  fi
+
+fi
+
+#DEBHELPER#

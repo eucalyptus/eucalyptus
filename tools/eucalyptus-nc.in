@@ -111,13 +111,6 @@ if [ -z "$EUCALYPTUS" ] ; then
 fi
 export EUCALYPTUS
 
-# just a quick way to check if we have the package still installed: at
-# times we can still have the init.d script
-if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
-	echo "Some eucalyptus components are missing"
-	exit 1
-fi
-
 create_httpd_config() {
 	IPS="all"
 	
@@ -135,9 +128,19 @@ create_httpd_config() {
 
 # crude way to start the axis2c services
 do_start() {
+	# fixes #469984
+	IPTABLES="`which iptables 2> /dev/null`"
+	if [ -n "$IPTABLES" ]; then
+		[ -x $IPTABLES ] && $IPTABLES -L -n > /dev/null 2> /dev/null
+	fi
+
 	if [ ! -x $HTTPD ]; then
 		echo
 		echo "cannot find httpd (was set to <$HTTPD>)!"
+		exit 1
+	fi
+	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+		echo "Some eucalyptus components are missing"
 		exit 1
 	fi
 
@@ -283,20 +286,16 @@ HTTPD_HOME="/"
 for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 	for x in `/bin/ls $y 2> /dev/null`; do
 		# this is for the RPM installed pacakges
-		if [ "$x" = "euca-libvirt" ]; then
-			export LIBVIRT_HOME="$y/$x"
-		fi
 		if [ "$x" = "euca-axis2c" ]; then
-			export AXIS2C_HOME="$y/$x"
+			if [ -e $y/$x/lib/libmod_axis2.so ]; then
+				export AXIS2C_HOME="$y/$x"
+			fi
 		fi
 		# this is for system or source installed
 		if [ "`echo $x | cut -f 1 -d -`" = "axis2c" ]; then
 			if [ -e $y/$x/lib/libmod_axis2.so ]; then
 				export AXIS2C_HOME="$y/$x"
 			fi
-		fi
-		if [ "`echo $x | cut -f 1 -d -`" = "libvirt" ]; then
-			export LIBVIRT_HOME="$y/$x"
 		fi
 	done
 done
@@ -317,12 +316,6 @@ fi
 if [ -z "${HTTPD}" ]; then
 	echo "apache2/httpd daemon not found!"
 	exit 1
-fi
-
-# if we have a custom libvirt let's use it
-if [ -n "$LIBVIRT_HOME" ]; then
-	export LD_LIBRARY_PATH="$LIBVIRT_HOME/lib:$LIBVIRT_HOME/usr/lib:$LD_LIBRARY_PATH"
-	export PATH="$LIBVIRT_HOME/bin:$PATH"
 fi
 
 # set the library path correctly

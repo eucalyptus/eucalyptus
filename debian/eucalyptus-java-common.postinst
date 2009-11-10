@@ -1,0 +1,23 @@
+#!/bin/sh
+
+#DEBHELPER#
+
+if [ "$1" = "configure" ]; then
+  update-rc.d eucalyptus-cloud start 20 2 3 4 5 . stop 20 0 1 6 . >/dev/null
+#  sed -i 's/VNET_INTERFACE="peth0"/VNET_INTERFACE="eth0"/g' /etc/eucalyptus/eucalyptus.conf
+
+  if which invoke-rc.d >/dev/null 2>&1; then
+    invoke-rc.d eucalyptus-cloud stop > /dev/null 2>&1 ||true
+  else
+    /etc/init.d/eucalyptus-cloud stop > /dev/null 2>&1 ||true
+  fi
+
+  if which invoke-rc.d >/dev/null 2>&1; then
+      invoke-rc.d eucalyptus-cloud start
+  else
+      /etc/init.d/eucalyptus-cloud start
+  fi
+
+fi
+
+exit 0

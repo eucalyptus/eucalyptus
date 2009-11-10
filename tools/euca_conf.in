@@ -126,7 +126,7 @@ usage () {
 	echo "   --cc-port <port>                 set CC port"
 	echo "   --nc-port <port>                 set NC port"
 	echo "   --instances <path>               set the INSTANCE path"
-	echo "   --cloud-port <port1> <port2>     set the 2 cloud ports"
+#	echo "   --cloud-port <port1> <port2>     set the 2 cloud ports"
 	echo "   --hypervisor <kvm|xen>           set hypervisor to use"
 	echo "   --user <euca_user>               set the user to use"
 	echo "   --dhcpd <dhcpd>                  set the dhcpd binary to <name>"
@@ -723,8 +723,8 @@ done
 
 # modify the current conf file based on an older configuration, or from import file
 if [ -n "$UPGRADE_CONF" -o -n "$IMPORTFILE" ]; then
-	VARS="EUCA_USER ENABLE_WS_SECURITY DISABLE_EBS HYPERVISOR LOGLEVEL CLOUD_PORT CLOUD_SSL_PORT SWAP_SIZE CC_PORT SCHEDPOLICY NODES NC_SERVICE NC_PORT MAX_MEM MAX_CORES INSTANCE_PATH VNET_INTERFACE VNET_BRIDGE VNET_DHCPDAEMON"
-	VNET_VARS="VNET_MODE VNET_SUBNET VNET_NETMASK VNET_DNS VNET_ADDRSPERNET VNET_PUBLICIPS VNET_BROADCAST VNET_ROUTER VNET_MACMAP"
+	VARS="EUCA_USER ENABLE_WS_SECURITY DISABLE_EBS HYPERVISOR LOGLEVEL SWAP_SIZE CC_PORT MANUAL_INSTANCES_CLEANUP NC_CACHE_SIZE SCHEDPOLICY NODES NC_SERVICE NC_PORT MAX_MEM MAX_CORES INSTANCE_PATH VNET_BRIDGE VNET_DHCPDAEMON VNET_DHCPUSER"
+	VNET_VARS="VNET_MODE VNET_SUBNET VNET_NETMASK VNET_DNS VNET_ADDRSPERNET VNET_PUBLICIPS VNET_BROADCAST VNET_ROUTER VNET_MACMAP VNET_INTERFACE"
 	
 	if [ -n "$UPGRADE_CONF" ]; then
 	# source the old config
@@ -771,7 +771,12 @@ if [ -n "$UPGRADE_CONF" -o -n "$IMPORTFILE" ]; then
 	    y="$(echo \$${x})"
 	    eval y="$y"
 	    if [ -n "$y" ]; then
-		echo "$x=\"${y}\"" >> $FILE
+		if [ "$x" = "VNET_INTERFACE" ]; then
+			change_var_value $FILE VNET_PRIVINTERFACE "${y}"
+			change_var_value $FILE VNET_PUBINTERFACE "${y}"
+		else
+			echo "$x=\"${y}\"" >> $FILE
+		fi
 	    fi
 	done
 fi
