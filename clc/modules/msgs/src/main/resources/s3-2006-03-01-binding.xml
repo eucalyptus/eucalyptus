@@ -538,7 +538,7 @@
 
 	<mapping name="LoggingEnabled" class="edu.ucsb.eucalyptus.msgs.LoggingEnabled">
 		<value name="TargetBucket" field="targetBucket" />
-		<value name="TargetPrefix" field="targetPrefix" />
+		<value name="TargetPrefix" field="targetPrefix" usage="optional"/>
 		<structure map-as="edu.ucsb.eucalyptus.msgs.TargetGrants"
 			field="targetGrants" usage="optional" />
 	</mapping>
@@ -550,7 +550,7 @@
 			usage="optional" />
 	</mapping>
 
-	<mapping name="GetBucketLoggingStatusResponse"
+	<mapping name="BucketLoggingStatus"
 		class="edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusResponseType">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.LoggingEnabled"
 			field="loggingEnabled" usage="optional" />

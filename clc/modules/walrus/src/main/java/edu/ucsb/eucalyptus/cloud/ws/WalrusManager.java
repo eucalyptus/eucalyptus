@@ -99,6 +99,7 @@ import edu.ucsb.eucalyptus.cloud.BucketAlreadyOwnedByYouException;
 import edu.ucsb.eucalyptus.cloud.BucketNotEmptyException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
 import edu.ucsb.eucalyptus.cloud.InvalidRangeException;
+import edu.ucsb.eucalyptus.cloud.InvalidTargetBucketForLoggingException;
 import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
 import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.NotModifiedException;
@@ -163,6 +164,7 @@ import edu.ucsb.eucalyptus.msgs.SetRESTBucketAccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.SetRESTObjectAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.SetRESTObjectAccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.Status;
+import edu.ucsb.eucalyptus.msgs.TargetGrants;
 import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileIO;
@@ -1873,13 +1875,87 @@ public class WalrusManager {
 		}
 	}
 
-	public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) {
+	public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws EucalyptusCloudException {
 		SetBucketLoggingStatusResponseType reply = (SetBucketLoggingStatusResponseType) request.getReply();
+		String bucket = request.getBucket();
+		String targetBucket = request.getLoggingEnabled().getTargetBucket();
+		String targetPrefix = request.getLoggingEnabled().getTargetPrefix();
+		List<Grant> targetGrantsList = null;
+		TargetGrants targetGrants = request.getLoggingEnabled().getTargetGrants();
+		if(targetGrants != null)
+			targetGrantsList = targetGrants.getGrants();
+		if(targetPrefix == null)
+			targetPrefix = "";
+
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		try {
+			BucketInfo bucketInfo = db.getUnique(new BucketInfo(bucket));			
+			try {
+				BucketInfo targetBucketInfo = db.getUnique(new BucketInfo(targetBucket));
+				if(!targetBucketInfo.hasLoggingPerms()) {
+					db.rollback();
+					throw new InvalidTargetBucketForLoggingException(targetBucket); 
+				}
+				bucketInfo.setTargetBucket(targetBucket);
+				bucketInfo.setTargetPrefix(targetPrefix);
+				bucketInfo.setLoggingEnabled(true);
+				if(targetGrantsList != null) {
+					targetBucketInfo.addGrants(targetGrantsList);
+				}
+			} catch(EucalyptusCloudException ex) {
+				db.rollback();
+				throw new InvalidTargetBucketForLoggingException(targetBucket);
+			} 
+		} catch(EucalyptusCloudException ex) {
+			db.rollback();
+			throw new NoSuchBucketException(bucket);
+		} 
+		db.commit();		
 		return reply;
 	}
 
-	public GetBucketLoggingStatusResponseType getBucketLoggingStatus(GetBucketLoggingStatusType request) {
+	public GetBucketLoggingStatusResponseType getBucketLoggingStatus(GetBucketLoggingStatusType request) throws EucalyptusCloudException {
 		GetBucketLoggingStatusResponseType reply = (GetBucketLoggingStatusResponseType) request.getReply();
+		String bucket = request.getBucket();
+
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		try {
+			BucketInfo bucketInfo = db.getUnique(new BucketInfo(bucket));
+			if(bucketInfo.getLoggingEnabled()) {
+				String targetBucket = bucketInfo.getTargetBucket();
+				ArrayList<Grant> grants = new ArrayList<Grant>();
+				try {
+					BucketInfo targetBucketInfo = db.getUnique(new BucketInfo(targetBucket));
+					List<GrantInfo> grantInfos = targetBucketInfo.getGrants();
+					for (GrantInfo grantInfo: grantInfos) {
+						String uId = grantInfo.getUserId();
+						try {
+							User grantUserInfo = CredentialProvider.getUser( uId );
+							targetBucketInfo.readPermissions(grants);
+							addPermission(grants, grantUserInfo, grantInfo);
+						} catch ( NoSuchUserException e ) {
+							db.rollback( );
+							throw new AccessDeniedException("Bucket", targetBucket);
+						}
+					}
+				} catch(EucalyptusCloudException ex) {
+					db.rollback();
+					throw new InvalidTargetBucketForLoggingException(targetBucket);
+				}
+
+
+				reply.getLoggingEnabled().setTargetBucket(bucketInfo.getTargetBucket());
+				reply.getLoggingEnabled().setTargetPrefix(bucketInfo.getTargetPrefix());
+
+				TargetGrants targetGrants = new TargetGrants();
+				targetGrants.setGrants(grants);
+				reply.getLoggingEnabled().setTargetGrants(targetGrants);
+			}
+		} catch(EucalyptusCloudException ex) {
+			db.rollback();
+			throw new NoSuchBucketException(bucket);
+		} 
+		db.commit();		
 		return reply;
 	}
 }
