@@ -257,10 +257,21 @@ int check_directory(char *dir) {
   }
   
   rc = lstat(dir, &mystat);
-  if (rc < 0 || !S_ISDIR(mystat.st_mode)) {
-    return(1);
+  if (rc < 0)
+    return 1;
+
+  if (!S_ISDIR(mystat.st_mode)) {
+    if (S_ISLNK(mystat.st_mode)) { // links to dirs are OK
+      char tmp [4096];
+      snprintf (tmp, 4096, "%s/", dir);
+      lstat (tmp, &mystat);
+      if (S_ISDIR(mystat.st_mode)) {
+        return 0;
+      }
+    }
+    return 1;
   }
-  return(0);
+  return 0;
 }
 
 int check_file_newer_than(char *file, time_t mtime) {
