@@ -350,7 +350,15 @@ static int ensure_subdirectory_exists (const char * path)
 }
 
 /* returns size of the file in bytes if OK, otherwise a negative error */
-static long long get_cached_file (const char * src_url, const char * dst_path, const char * cache_key, sem * s, int convert_to_disk, long long limit_mb, long long swap_size_mb) 
+static long long cached_file (
+        const char * src_url, 
+        const char * dst_path, 
+        const char * cache_key, 
+        sem * s, 
+        int convert_to_disk, 
+        long long limit_mb, 
+        long long swap_size_mb,
+        long long ephemeral_size_mb) 
 {
     char tmp_digest_path [SIZE];
 	char cached_dir      [SIZE]; 
@@ -410,7 +418,7 @@ retry:
                 if (convert_to_disk) {
                     full_size_b += swap_size_mb*MEGABYTE + MEGABYTE; /* TODO: take into account extra padding required for disks (over partitions) */
                 }
-                if ( full_size_b/MEGABYTE + 1 > limit_mb ) {
+                if ( limit_mb > 0 && full_size_b/MEGABYTE + 1 > limit_mb ) {
                     logprintfl (EUCAFATAL, "error: insufficient disk capacity remaining (%lldMB) in VM Type for component %s\n", limit_mb, dst_path);
                     action = ABORT;
                     
@@ -552,8 +560,10 @@ retry:
     }
 
     if (e==OK && file_size_b > 0 && convert_to_disk ) { // if all went well above
-        long long ephemeral_mb = limit_mb - swap_size_mb - (file_size_b+digest_size_b)/MEGABYTE;
-        if ( swap_size_mb>0L || ephemeral_mb>0L ) {
+        if ( swap_size_mb>0L || ephemeral_size_mb>0L ) {
+                if (ephemeral_size_mb<0) {
+                        ephemeral_size_mb=0;
+                }
             sem_p (s);
             if ((e=vrun("%s %s %lld %lld", disk_convert_command_path, dst_path, swap_size_mb, ephemeral_mb))!=0) {
                 logprintfl (EUCAERROR, "error: failed to add swap or ephemeral to the disk image\n");
@@ -576,12 +586,15 @@ retry:
     return 0L;
 }
 
-int build_disk_image (char *userId, 
-    char *imageId, char *imageURL, char *image_path,
-    char *kernelId, char *kernelURL, char *kernel_path,
-    char *ramdiskId, char *ramdiskURL, char *ramdisk_path,
-    const char *keyName, 
-    long long total_disk_limit_mb, long long swap_size_mb) 
+int build_disk_image (
+        char *userId, 
+        char *imageId, char *imageURL, char *image_path,
+        char *kernelId, char *kernelURL, char *kernel_path,
+        char *ramdiskId, char *ramdiskURL, char *ramdisk_path,
+        const char *keyName, 
+        long long total_disk_limit_mb, 
+        long long swap_size_mb,
+        long long ephemeral_size_mb) 
 {
     long long image_size_b = 0L;
     long long kernel_size_b = 0L;
@@ -594,7 +607,7 @@ int build_disk_image (char *userId,
     /* get the necessary files from Walrus, caching them if possible */
     char * image_name;
     int mount_offset = 0;
-    long long limit_mb = total_disk_limit_mb - swap_size_mb;
+    long long limit_mb = total_disk_limit_mb - swap_size_mb; // OK if total is negative (unlimited)
     /*
     if (convert_to_disk) {
         image_name = "disk";
@@ -606,7 +619,7 @@ int build_disk_image (char *userId,
     */
 
 #define CHECK_LIMIT(WHAT) \
-    if (limit_mb < 1L) { \
+    if (total_disk_limit_mb>0L && limit_mb < 1L) { \
         logprintfl (EUCAFATAL, "error: insufficient disk capacity remaining (%lldMB) in VM Type for component %s\n", limit_mb, WHAT); \
         return e; \
     }
@@ -615,15 +628,15 @@ int build_disk_image (char *userId,
 //    static long long get_cached_file (const char * src_url, const char * dst_path, const char * cache_key, sem * s, int convert_to_disk, long long limit_mb, long long swap_size_mb) 
 
     /* do kernel & ramdisk first, since either the disk or the ephemeral partition will take up the rest */
-    if ((kernel_size_b=get_cached_file (kernelURL, kernel_path, kernelId, img_sem, 0, limit_mb, swap_size_mb))<1L) return e;
+    if ((kernel_size_b=get_cached_file (kernelURL, kernel_path, kernelId, img_sem, 0, limit_mb, swap_size_mb, ephemeral_size_mb))<1L) return e;
     limit_mb -= kernel_size_b/MEGABYTE;
     CHECK_LIMIT("kernel")
     if (ramdiskId && strlen (ramdiskId) ) {
-        if ((ramdisk_size_b=get_cached_file (ramdiskURL, ramdisk_path, ramdiskId, img_sem, 0, limit_mb, swap_size_mb))<1L) return e;
+        if ((ramdisk_size_b=get_cached_file (ramdiskURL, ramdisk_path, ramdiskId, img_sem, 0, limit_mb, swap_size_mb, ephemeral_size_mb))<1L) return e;
         limit_mb -= ramdisk_size_b/MEGABYTE;
         CHECK_LIMIT("ramdisk")
     }
-    if ((image_size_b=get_cached_file (imageURL, image_path, imageId, img_sem, 0, limit_mb, swap_size_mb))<1L) return e;
+    if ((image_size_b=get_cached_file (imageURL, image_path, imageId, img_sem, 0, limit_mb, swap_size_mb, ephemeral_size_mb))<1L) return e;
     limit_mb -= image_size_b/MEGABYTE;
 
     logprintfl (EUCAINFO, "preparing images...\n");
@@ -768,7 +781,15 @@ static int upload_vmdk (const char * disk_path, const char * vmdk_path, const im
     return 0;
 }
 
-int img_convert (img_spec * root, img_spec * kernel, img_spec * ramdisk, img_spec * dest, const char * key, int rsize_mb, int ssize_mb, int esize_mb)
+int img_convert (
+        img_spec * root, 
+        img_spec * kernel, 
+        img_spec * ramdisk, 
+        img_spec * dest, 
+        const char * key, 
+        int rlimit_mb, 
+        int ssize_mb, 
+        int esize_mb)
 {
     int rc, force = 0;
     char path [512];
@@ -789,7 +810,7 @@ int img_convert (img_spec * root, img_spec * kernel, img_spec * ramdisk, img_spe
     
     // see if we have a saved copy of this exact disk image
     char hash [SIZE]; 
-    gen_hash (hash, sizeof(hash), root->id, kernel->id, ramdisk->id, key, rsize_mb, ssize_mb, esize_mb);
+    gen_hash (hash, sizeof(hash), root->id, kernel->id, ramdisk->id, key, rlimit_mb, ssize_mb, esize_mb);
     char cached_path      [SIZE]; snprintf (cached_path,      SIZE, "%s/%s-disk",      g_env.wloc.path, hash);
     char cached_path_vmdk [SIZE]; snprintf (cached_path_vmdk, SIZE, "%s/%s-disk.vmdk", g_env.wloc.path, hash);
     
@@ -810,7 +831,7 @@ int img_convert (img_spec * root, img_spec * kernel, img_spec * ramdisk, img_spe
             root->id, root->location.url, image_path,
             kernel->id, kernel->location.url, kernel_path,
             ramdisk->id, ramdisk->location.url, ramdisk_path,
-            key, rsize_mb+ssize_mb, ssize_mb);
+            key, rlimit_mb, ssize_mb, esize_mb);
         if (rc) {
             logprintfl (EUCAFATAL, "failed to download the necessary components\n");
             goto cleanup;
@@ -824,7 +845,8 @@ int img_convert (img_spec * root, img_spec * kernel, img_spec * ramdisk, img_spe
 
 	// if ephemeral is specified as -1, then we set it to the space remaining in the root partition
 	if (esize_mb<0) {
-	  esize_mb = rsize_mb - (file_size (image_path) + file_size (kernel_path) + file_size (ramdisk_path));
+	  esize_mb = rlimit_mb - (file_size (image_path) + file_size (kernel_path) + file_size (ramdisk_path));
+	  // if root limit is -1 (unspecified) or if there is no room left, then there won't be ephemeral disk
 	  if (esize_mb<0) {
 	    esize_mb = 0;
 	  }

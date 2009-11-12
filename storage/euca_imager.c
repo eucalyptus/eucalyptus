@@ -79,7 +79,7 @@ int main (int argc, char * argv[])
     char ksrc [256], kid [256] = "";
     char rsrc [256], rid [256] = "";
     char  dst [256], did [256] = "";
-    int rsize = -1; // -1 = unlimited
+    int rlimit = -1; // -1 = unlimited
     int ssize = 0;
     int esize = 0;
     char * key_file = NULL;
@@ -129,7 +129,7 @@ int main (int argc, char * argv[])
 
             case 'S':
             strnsubchr (sizeof(s), s, optarg, ',', ' ');
-            if (sscanf (s, "%d %d %d", &rsize, &ssize, &esize)!=3)
+            if (sscanf (s, "%d %d %d", &rlimit, &ssize, &esize)!=3)
                 usage ("failed to parse -S parameter");
             break;
 
@@ -182,10 +182,10 @@ int main (int argc, char * argv[])
         } else {
             fp = fopen (key_file, "r");
         }
-        key = fp2str (fp);
-        if (key==NULL) {
+        if (fp==NULL) {
             err ("failed to read the key file %s", key_file);
         }
+        key = fp2str (fp); // will be NULL if file is empty, which is equivalent to no -k option
     }
     
     // initialize the image converter environment, checking up on certs along the way
@@ -240,7 +240,7 @@ int main (int argc, char * argv[])
     destination.type = VDDK; // TODO: support others eventualy
 
     // do all the hard work
-    int ret = img_convert (&root, &kernel, &ramdisk, &destination, key, rsize, ssize, esize);
+    int ret = img_convert (&root, &kernel, &ramdisk, &destination, key, rlimit, ssize, esize);
     if (ret) err ("download, conversion, or upload failed");
     
     img_cleanup ();

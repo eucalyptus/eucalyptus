@@ -12,7 +12,18 @@
 extern char *helpers[LASTHELPER];
 extern char *helpers_path[LASTHELPER];
 
-int do_convert(char *infile, char *outfile, char *kernel, char *ramdisk, char *modules, int swap, int ephemeral, int bits, int dopause, int force) {
+int do_convert(
+        char *infile, 
+        char *outfile, 
+        char *kernel, 
+        char *ramdisk, 
+        char *modules, 
+        int swap, 
+        int ephemeral, 
+        int bits, 
+        int dopause, 
+        int force) 
+{
     int i, rc, done, first_sector, last_sector;
     off_t disksize=0;
     struct stat mystat;
