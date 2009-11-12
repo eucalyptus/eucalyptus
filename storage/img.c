@@ -350,7 +350,7 @@ static int ensure_subdirectory_exists (const char * path)
 }
 
 /* returns size of the file in bytes if OK, otherwise a negative error */
-static long long cached_file (
+static long long get_cached_file (
         const char * src_url, 
         const char * dst_path, 
         const char * cache_key, 
@@ -565,7 +565,7 @@ retry:
                         ephemeral_size_mb=0;
                 }
             sem_p (s);
-            if ((e=vrun("%s %s %lld %lld", disk_convert_command_path, dst_path, swap_size_mb, ephemeral_mb))!=0) {
+            if ((e=vrun("%s %s %lld %lld", disk_convert_command_path, dst_path, swap_size_mb, ephemeral_size_mb))!=0) {
                 logprintfl (EUCAERROR, "error: failed to add swap or ephemeral to the disk image\n");
             }
             sem_v (s);
