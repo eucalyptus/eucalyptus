@@ -845,7 +845,7 @@ int img_convert (
 
 	// if ephemeral is specified as -1, then we set it to the space remaining in the root partition
 	if (esize_mb<0) {
-	  esize_mb = rlimit_mb - (file_size (image_path) + file_size (kernel_path) + file_size (ramdisk_path));
+	  esize_mb = rlimit_mb - (file_size (image_path) + file_size (kernel_path) + file_size (ramdisk_path))/MEGABYTE;
 	  // if root limit is -1 (unspecified) or if there is no room left, then there won't be ephemeral disk
 	  if (esize_mb<0) {
 	    esize_mb = 0;
