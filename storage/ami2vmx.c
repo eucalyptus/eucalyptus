@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <stdarg.h>
 #include <ami2vmx.h>
-#include "misc.h" // logprintfle
+#include "misc.h" // logprintfl
 
 char *helpers[LASTHELPER] = {"losetup", "mount", "kvm-img,qemu-img", "grub", "parted", "mv", "dd", "sync", "mkdir", "cp", "rsync", "umount", "cat", "euca_rootwrap", "euca_mountwrap"};
 char *helpers_path[LASTHELPER];
