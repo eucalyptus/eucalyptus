@@ -4,8 +4,8 @@
 
 include ../Makedefs
 
-STORAGE_LIBS = ${LIBS} -lcurl
-IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o walrus.o img.o cache.o ami2vmx.o do_convert.o
+STORAGE_LIBS = -lcurl
+IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o walrus.o img.o cache.o ami2vmx.o do_convert.o http.o
 
 all: storage.o walrus.o Wclient euca_imager
 
@@ -20,8 +20,8 @@ Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o
 walrus.o: walrus.c walrus.h
 	$(CC) $(CFLAGS) $(INCLUDES) -c walrus.c 
 
-test: test.c storage.h storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o
-	$(CC) $(CFLAGS) $(INCLUDES) test.c storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o $(STORAGE_LIBS) -o test
+test: test.c storage.h storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o http.o
+	$(CC) $(CFLAGS) $(INCLUDES) test.c storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o http.o $(STORAGE_LIBS) -o test
 
 .c.o: 
 	$(CC) -c $(CFLAGS) $(INCLUDES) $<

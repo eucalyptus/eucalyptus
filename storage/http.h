@@ -57,24 +57,7 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include "storage.h"
-#include "http.h"
-
-int main (int argc, char **argv) 
-{
-    printf ("argc=%d\n", argc);
-
-    if (argc==5) {
-        return http_put (argv[1], argv[2], argv[3], argv[4]);
-
-    } else {
-        printf ("=====> testing storage.c\n");
-        int err = test_cache ();
-        printf ("  error=%d\n", err);
-        return err;
-    }
-}
+#ifndef HTTP_H
+#define HTTP_H
+int http_put (const char * file_name, const char * url, const char * login, const char * password);
+#endif /* HTTP_H */

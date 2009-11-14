@@ -18,6 +18,7 @@
 #include "cache.h"
 #include "img.h"
 #include "ipc.h"
+#include "http.h" // http_put
 
 static img_env g_env = { initialized: 0 };
 static sem * img_sem;
@@ -753,27 +754,20 @@ static int gen_vmdk (const char * disk_path, const char * vmdk_path)
 static int upload_vmdk (const char * disk_path, const char * vmdk_path, const img_spec * dest)
 {
     const img_loc * loc = &(dest->location);
-    char cmd[1024];
     char url[1024];
 
-    #define CURL "/usr/bin/curl --silent --insecure --user '%s:%s' '%s' -T '%s'"
-    
     logprintfl (EUCAINFO, "uploading disk backing files to destination\n");    
     
     // EXAMPLE: https://192.168.7.236/folder/i-4DD50852?dcPath=ha-datacenter&dsName=S1
     snprintf (url, sizeof(url), "https://%s/%s/%s/%s?dcPath=%s&dsName=%s", loc->vsphere_host, loc->path, dest->id, "disk-flat.vmdk", loc->vsphere_dcPath, loc->vsphere_dsName);
-    snprintf (cmd, sizeof(cmd), CURL, loc->creds.login, loc->creds.password, url, disk_path);
-    logprintfl (EUCADEBUG, "\t%s\n", cmd);
-    int rc = system (cmd);
+    int rc = http_put (disk_path, url, loc->creds.login, loc->creds.password);
     if (rc) {
         logprintfl (EUCAFATAL, "upload of disk file failed\n");
         return 1;        
     }
     
     snprintf (url, sizeof(url), "https://%s/%s/%s/%s?dcPath=%s&dsName=%s", loc->vsphere_host, loc->path, dest->id, "disk.vmdk", loc->vsphere_dcPath, loc->vsphere_dsName);
-    snprintf (cmd, sizeof(cmd), CURL, loc->creds.login, loc->creds.password, url, vmdk_path);
-    logprintfl (EUCADEBUG, "\t%s\n", cmd);
-    rc = system (cmd);    
+    rc = http_put (vmdk_path, url, loc->creds.login, loc->creds.password);
     if (rc) {
         logprintfl (EUCAFATAL, "upload of disk file metadata failed\n");
         return 1;        
