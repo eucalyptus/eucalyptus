@@ -1966,9 +1966,12 @@ public class WalrusManager {
 					for (GrantInfo grantInfo: grantInfos) {
 						String uId = grantInfo.getUserId();
 						try {
-							User grantUserInfo = CredentialProvider.getUser( uId );
-							targetBucketInfo.readPermissions(grants);
-							addPermission(grants, grantUserInfo, grantInfo);
+							if(uId != null) {
+								User grantUserInfo = CredentialProvider.getUser( uId );
+								addPermission(grants, grantUserInfo, grantInfo);
+							} else {
+								addPermission(grants, grantInfo);
+							}
 						} catch ( NoSuchUserException e ) {
 							db.rollback( );
 							throw new AccessDeniedException("Bucket", targetBucket);
