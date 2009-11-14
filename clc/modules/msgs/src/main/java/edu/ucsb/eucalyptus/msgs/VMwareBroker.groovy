@@ -2,6 +2,8 @@ package edu.ucsb.eucalyptus.msgs
 
 import org.apache.log4j.Logger;
 
+import edu.ucsb.eucalyptus.cloud.ws.VMwareBrokerProperties;
+
 /*
  * Software License Agreement (BSD License)
  *
