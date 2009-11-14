@@ -421,11 +421,17 @@ public class BucketInfo {
 	}
 
 	public boolean hasLoggingPerms() {
+		boolean hasReadACPPerms = false;
+		boolean hasWritePerms = false;
 		for(GrantInfo grantInfo : grants) {
 			if(WalrusProperties.LOGGING_GROUP.equals(grantInfo.getGrantGroup())) {
-				if(grantInfo.canReadACP() && grantInfo.canWrite())
-					return true;
+				if(grantInfo.canReadACP())
+					hasReadACPPerms = true;
+				else if(grantInfo.canWrite())
+					hasWritePerms = true;
 			}
+			if(hasReadACPPerms && hasWritePerms)
+				return true;
 		}
 		return false;
 	}
