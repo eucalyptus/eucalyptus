@@ -377,13 +377,3 @@ public class EucalyptusNCNcXXXResponseType extends VMwareBrokerResponseType {
 }
 */
 
-// pull VNET_MODE out of eucalyptus.conf
-public class EucalyptusConf {
-	public static String getNetworkMode() {
-		def conf = new File("${System.getenv('EUCALYPTUS')}/etc/eucalyptus/eucalyptus.conf");
-		conf.text.find(/^VNET_MODE="(.*)"/) { fullline, mode ->      
-			return mode.toString()
-		}
-	}
-}
-
