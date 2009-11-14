@@ -138,6 +138,7 @@ import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
+import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsList;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
@@ -172,6 +173,7 @@ import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
+import edu.ucsb.eucalyptus.cloud.BucketLogData;
 
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger( WalrusManager.class );
@@ -295,6 +297,7 @@ public class WalrusManager {
 			bucket.addGrants(userId, grantInfos, accessControlList);
 			bucket.setGrants(grantInfos);
 			bucket.setBucketSize(0L);
+			bucket.setLoggingEnabled(false);
 			bucket.setHidden(false);
 			if(locationConstraint != null)
 				bucket.setLocation(locationConstraint);
@@ -448,12 +451,16 @@ public class WalrusManager {
 			if (bucket.canReadACP(userId)) {
 				ownerId = bucket.getOwnerId();
 				ArrayList<Grant> grants = new ArrayList<Grant>();
+				bucket.readPermissions(grants);
 				for (GrantInfo grantInfo: grantInfos) {
 					String uId = grantInfo.getUserId();
 					try {
-						User grantUserInfo = CredentialProvider.getUser( uId );
-						bucket.readPermissions(grants);
-						addPermission(grants, grantUserInfo, grantInfo);
+						if(uId != null) {
+							User grantUserInfo = CredentialProvider.getUser( uId );
+							addPermission(grants, grantUserInfo, grantInfo);
+						} else {
+							addPermission(grants, grantInfo);
+						}
 					} catch ( NoSuchUserException e ) {
 						db.rollback( );
 						throw new AccessDeniedException("Bucket", bucketName);
@@ -506,6 +513,33 @@ public class WalrusManager {
 		}
 	}
 
+	private static void addPermission(ArrayList<Grant>grants, GrantInfo grantInfo) {
+		if(grantInfo.getGrantGroup() != null) {
+			Group group = new Group(grantInfo.getGrantGroup());
+
+			if (grantInfo.canRead() && grantInfo.canWrite() && grantInfo.canReadACP() && grantInfo.isWriteACP()) {
+				grants.add(new Grant(new Grantee(group), "FULL_CONTROL"));
+				return;
+			}
+
+			if (grantInfo.canRead()) {
+				grants.add(new Grant(new Grantee(group), "READ"));
+			}
+
+			if (grantInfo.canWrite()) {
+				grants.add(new Grant(new Grantee(group), "WRITE"));
+			}
+
+			if (grantInfo.canReadACP()) {
+				grants.add(new Grant(new Grantee(group), "READ_ACP"));
+			}
+
+			if (grantInfo.isWriteACP()) {
+				grants.add(new Grant(new Grantee(group), "WRITE_ACP"));
+			}
+		}
+	}
+
 	public PutObjectResponseType putObject(PutObjectType request) throws EucalyptusCloudException {
 		PutObjectResponseType reply = (PutObjectResponseType) request.getReply();
 		String userId = request.getUserId();
@@ -534,6 +568,7 @@ public class WalrusManager {
 		if(bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
 			if (bucket.canWrite(userId)) {
+				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 
 				ObjectInfo foundObject = null;
 				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
@@ -1888,28 +1923,29 @@ public class WalrusManager {
 			targetPrefix = "";
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		BucketInfo bucketInfo, targetBucketInfo;
 		try {
-			BucketInfo bucketInfo = db.getUnique(new BucketInfo(bucket));			
-			try {
-				BucketInfo targetBucketInfo = db.getUnique(new BucketInfo(targetBucket));
-				if(!targetBucketInfo.hasLoggingPerms()) {
-					db.rollback();
-					throw new InvalidTargetBucketForLoggingException(targetBucket); 
-				}
-				bucketInfo.setTargetBucket(targetBucket);
-				bucketInfo.setTargetPrefix(targetPrefix);
-				bucketInfo.setLoggingEnabled(true);
-				if(targetGrantsList != null) {
-					targetBucketInfo.addGrants(targetGrantsList);
-				}
-			} catch(EucalyptusCloudException ex) {
-				db.rollback();
-				throw new InvalidTargetBucketForLoggingException(targetBucket);
-			} 
+			bucketInfo = db.getUnique(new BucketInfo(bucket));
 		} catch(EucalyptusCloudException ex) {
 			db.rollback();
 			throw new NoSuchBucketException(bucket);
 		} 
+		try {
+			targetBucketInfo = db.getUnique(new BucketInfo(targetBucket));
+		} catch(EucalyptusCloudException ex) {
+			db.rollback();
+			throw new NoSuchBucketException(bucket);
+		} 
+		if(!targetBucketInfo.hasLoggingPerms()) {
+			db.rollback();
+			throw new InvalidTargetBucketForLoggingException(targetBucket); 
+		}
+		bucketInfo.setTargetBucket(targetBucket);
+		bucketInfo.setTargetPrefix(targetPrefix);
+		bucketInfo.setLoggingEnabled(true);
+		if(targetGrantsList != null) {
+			targetBucketInfo.addGrants(targetGrantsList);
+		}
 		db.commit();		
 		return reply;
 	}
@@ -1942,8 +1978,6 @@ public class WalrusManager {
 					db.rollback();
 					throw new InvalidTargetBucketForLoggingException(targetBucket);
 				}
-
-
 				reply.getLoggingEnabled().setTargetBucket(bucketInfo.getTargetBucket());
 				reply.getLoggingEnabled().setTargetPrefix(bucketInfo.getTargetPrefix());
 

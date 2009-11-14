@@ -1,3 +1,4 @@
+
 package edu.ucsb.eucalyptus.msgs
 
 /*******************************************************************************
@@ -62,12 +63,14 @@ package edu.ucsb.eucalyptus.msgs
 *******************************************************************************/
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.channel.Channel;
+import edu.ucsb.eucalyptus.cloud.BucketLogData;
 
 /*
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 public class WalrusResponseType extends EucalyptusMessage {
+	BucketLogData logData;
 	def WalrusResponseType() {}
 }
 
@@ -76,6 +79,8 @@ public class WalrusRequestType extends EucalyptusMessage {
 	protected Date timeStamp;
 	protected String signature;
 	protected String credential;
+	BucketLogData logData;
+	
 	def WalrusRequestType() {}
 	
 	def WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
@@ -575,12 +580,27 @@ public class GetBucketLocationResponseType extends WalrusResponseType {
 
 public class TargetGrants extends EucalyptusData {
 	ArrayList<Grant> grants = new ArrayList<Grant>();
+
+	def TargetGrants() {}
+	def TargetGrants(List<Grant> grants) {
+		this.grants = grants;
+	}
 }
 
 public class LoggingEnabled extends EucalyptusData {
 	String targetBucket;
 	String targetPrefix;
 	TargetGrants targetGrants;
+
+	def LoggingEnabled() {}
+	def LoggingEnabled(TargetGrants grants) {
+		targetGrants = grants;
+	}
+	def LoggingEnabled(String bucket, String prefix, TargetGrants grants) {
+		targetBucket = bucket;
+		targetPrefix = prefix;
+		targetGrants = grants;
+	}
 }
 
 public class GetBucketLoggingStatusType extends WalrusRequestType {

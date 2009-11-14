@@ -337,8 +337,8 @@ public class BucketInfo {
 							globalWrite = true;
 						else if(permission.equals("WRITE_ACP"))
 							globalWriteACP = true;
+						foundGrant = grant;
 					}
-					foundGrant = grant;
 				}
 			}
 		}

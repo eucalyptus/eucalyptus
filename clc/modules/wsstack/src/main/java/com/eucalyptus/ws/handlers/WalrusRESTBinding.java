@@ -116,7 +116,9 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
+import edu.ucsb.eucalyptus.msgs.LoggingEnabled;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
+import edu.ucsb.eucalyptus.msgs.TargetGrants;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
@@ -414,8 +416,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
 					putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
 					handleFirstChunk(httpRequest, (ChannelBuffer)formFields.get(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk"), contentLength);
+				} else if(WalrusProperties.HTTPVerb.PUT.toString().equals(verb) && 
+						params.containsKey(WalrusProperties.OperationParameter.logging.toString())) {
+					//read logging params
+					getTargetBucketParams(operationParams, httpRequest);
 				}
-
 			} else {
 				operationKey = SERVICE + verb;
 			}
@@ -592,6 +597,56 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				operationParams.put("LocationConstraint", locationConstraint);
 		}
 		return operationName;	
+	}
+
+	private void getTargetBucketParams(Map operationParams,
+			MappingHttpRequest httpRequest) throws BindingException {
+		String message = getMessageString(httpRequest);
+		if(message.length() > 0) {
+			try {
+				XMLParser xmlParser = new XMLParser(message);
+				String targetBucket = xmlParser.getValue("//TargetBucket");
+				String targetPrefix = xmlParser.getValue("//TargetPrefix");
+				ArrayList<Grant> grants = new ArrayList<Grant>();
+
+				List<String> permissions = xmlParser.getValues("//TargetGrants/Grant/Permission");
+				if(permissions == null)
+					throw new BindingException("malformed access control list");
+
+				DTMNodeList grantees = xmlParser.getNodes("//TargetGrants/Grant/Grantee");
+				if(grantees == null)
+					throw new BindingException("malformed access control list");
+
+				for(int i = 0 ; i < grantees.getLength() ; ++i) {
+					String id = xmlParser.getValue(grantees.item(i), "ID");
+					if(id.length() > 0) {
+						String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
+						Grant grant = new Grant();
+						Grantee grantee = new Grantee();
+						grantee.setCanonicalUser(new CanonicalUserType(id, canonicalUserName));
+						grant.setGrantee(grantee);
+						grant.setPermission(permissions.get(i));
+						grants.add(grant);
+					} else {
+						String groupUri = xmlParser.getValue(grantees.item(i), "URI");
+						if(groupUri.length() == 0)
+							throw new BindingException("malformed access control list");
+						Grant grant = new Grant();
+						Grantee grantee = new Grantee();
+						grantee.setGroup(new Group(groupUri));
+						grant.setGrantee(grantee);
+						grant.setPermission(permissions.get(i));
+						grants.add(grant);
+					}
+				}
+				TargetGrants targetGrants = new TargetGrants(grants);
+				LoggingEnabled loggingEnabled = new LoggingEnabled(targetBucket, targetPrefix, new TargetGrants(grants));
+				operationParams.put("LoggingEnabled", loggingEnabled);
+			} catch(Exception ex) {
+				LOG.warn(ex);
+				throw new BindingException("Unable to parse access control policy " + ex.getMessage());
+			}
+		}
 	}
 
 	private void parseExtendedHeaders(Map operationParams, String headerString, String value) {
