@@ -2,8 +2,6 @@ package edu.ucsb.eucalyptus.msgs
 
 import org.apache.log4j.Logger;
 
-import edu.ucsb.eucalyptus.cloud.ws.VMwareBrokerProperties;
-
 /*
  * Software License Agreement (BSD License)
  *
@@ -381,7 +379,7 @@ public class EucalyptusNCNcXXXResponseType extends VMwareBrokerResponseType {
 
 public class EucalyptusConf {
 	def static String getNetworkMode() {
-		def conf = new File(VMwareBrokerProperties.CC_CONFIG);
+		def conf = new File("${System.getenv('EUCALYPTUS')}/etc/eucalyptus/eucalyptus.conf");
 		conf.text.find(/^VNET_MODE="(.*)"/) { fullline, mode ->      
 			return mode.toString()
 		}
