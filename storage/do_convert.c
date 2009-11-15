@@ -119,12 +119,14 @@ int do_convert(
     }
   
     // now we have a disk image
+    
     char dtemplate[] = "/tmp/euca.XXXXXX";
     tmpdir = mkdtemp(dtemplate);
     if (tmpdir==NULL) {
             logprintfl (EUCAINFO, "ERROR: mkdtemp() failed: %s\n", strerror(errno));
             return(1);    
     }
+    
     {
         int done=0;
 

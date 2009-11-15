@@ -264,13 +264,6 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 
         if (result) { // curl error (connection or transfer failed)
             logprintfl (EUCAERROR,     "walrus_request(): %s (%d)\n", error_msg, result);
-            if (retries > 0) {
-                logprintfl (EUCAERROR, "                  download retry %d of %d will commence in %d seconds\n", retries, TOTAL_RETRIES, timeout);
-            }
-            sleep (timeout);
-            fseek (fp, 0L, SEEK_SET);
-            timeout <<= 1;
-            retries--;
 
         } else {
             long httpcode;
@@ -281,17 +274,26 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
             case 200L: /* all good */
                 logprintfl (EUCAINFO, "walrus_request(): saved image in %s\n", outfile);
                 code = OK;
-		retries = 0;
                 break;
 	    case 408L: /* timeout, retry */
-	      logprintfl (EUCAWARN, "walrus_request(): server responded with HTTP code %ld (timeout), retrying\n", httpcode);
-	      logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
+	      logprintfl (EUCAWARN, "walrus_request(): server responded with HTTP code %ld (timeout)\n", httpcode);
+	      //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
 	      break;
             default: /* some kind of error */
-                logprintfl (EUCAERROR, "walrus_request(): server responded with HTTP code %ld, retrying\n", httpcode);
-                logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
+                logprintfl (EUCAERROR, "walrus_request(): server responded with HTTP code %ld\n", httpcode);
+                //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
+                retries=0;
             }
         }
+        
+        if (code!=OK && retries>0) {
+            logprintfl (EUCAERROR, "                  download retry %d of %d will commence in %d seconds\n", retries, TOTAL_RETRIES, timeout);
+            sleep (timeout);
+            fseek (fp, 0L, SEEK_SET);
+            timeout <<= 1;
+        }
+        
+        retries--;
     } while (code!=OK && retries>0);
     fclose (fp);
 

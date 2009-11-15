@@ -12,7 +12,7 @@ if [ ! -e $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
         exit 1
 fi
 
-# add all jars in $EUCALYPTUS/usr/share/eucalyptus
+# add most jars in $EUCALYPTUS/usr/share/eucalyptus
 for FILE in $EUCALYPTUS/usr/share/eucalyptus/*.jar; do    
     if [ "$FILE" == "$EUCALYPTUS/usr/share/eucalyptus/commons-logging-1.1.1.jar" ]; then
         continue
@@ -22,8 +22,14 @@ for FILE in $EUCALYPTUS/usr/share/eucalyptus/*.jar; do
         continue
     fi
 
-	export CLASSPATH=${FILE}:${CLASSPATH}
+    if [ "$FILE" == "$EUCALYPTUS/usr/share/eucalyptus/slf4j-log4j12-1.5.2.jar" ]; then
+        continue
+    fi
+
+    export CLASSPATH=${FILE}:${CLASSPATH}
 done
+
+# make sure a couple of them are in the front
 export CLASSPATH="$EUCALYPTUS/usr/share/eucalyptus/jcl-over-slf4j-1.5.2.jar:$CLASSPATH"
 export CLASSPATH="$EUCALYPTUS/usr/share/eucalyptus/vijava220090625.jar:$CLASSPATH"
 
