@@ -60,13 +60,18 @@
  *******************************************************************************/
 package com.eucalyptus.ws.util;
 
-import java.net.InetAddress;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
+import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Calendar;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -74,28 +79,30 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
-import edu.ucsb.eucalyptus.msgs.PutObjectInlineResponseType;
-import edu.ucsb.eucalyptus.msgs.PutObjectInlineType;
-import edu.ucsb.eucalyptus.msgs.WalrusUsageStatsRecord;
+import edu.ucsb.eucalyptus.msgs.AddObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.AddObjectType;
 
 public class WalrusBucketLogger {
 	private Logger LOG = Logger.getLogger( WalrusBucketLogger.class );
-	private static WalrusBucketLogger singleton;
+	private static WalrusBucketLogger singleton = new WalrusBucketLogger();
 	private static final int LOG_THRESHOLD = 0;
 
 	private LinkedBlockingQueue<BucketLogData> logData;
+	private ConcurrentHashMap<String, LogFileEntry> logFileMap;
 	ScheduledExecutorService logger;
 
 	public WalrusBucketLogger() {
 		logData = new LinkedBlockingQueue<BucketLogData>();
-		logger = Executors.newScheduledThreadPool(1);
-		logger.schedule(new Runnable() {
+		logFileMap = new ConcurrentHashMap<String, LogFileEntry>();
+		logger = Executors.newSingleThreadScheduledExecutor();
+		logger.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {
 				if(logData.size() > LOG_THRESHOLD) {
@@ -104,17 +111,61 @@ public class WalrusBucketLogger {
 					List<BucketLogData> data = new ArrayList<BucketLogData>();
 					logData.drainTo(data);
 					for(BucketLogData entry : data) {
-						try {
-							PutObjectInlineType putRequest = new PutObjectInlineType();
-							putRequest.setBucket(entry.getTargetBucket());
-							putRequest.setKey(entry.getTargetPrefix() + "blah");
-							PutObjectInlineResponseType putResponse = (PutObjectInlineResponseType) dispatcher.send(putRequest);
-						} catch(EucalyptusCloudException ex) {
+						String bucket = entry.getTargetBucket();
+						Calendar calendar = Calendar.getInstance();
+						String key = entry.getTargetPrefix() + 
+						calendar.get(Calendar.YEAR) + "-" +
+						calendar.get(Calendar.MONTH) + "-" +
+						calendar.get(Calendar.DAY_OF_MONTH) + "-" + 
+						calendar.get(Calendar.MINUTE) + "-" +
+						calendar.get(Calendar.SECOND) + "-" +
+						UUID.randomUUID().toString();
 
+						if(!logFileMap.containsKey(bucket)) {
+							//check if bucket exists, if not create it.
+							try {
+								String logFileName = "logentry-" + UUID.randomUUID().toString();
+								FileChannel channel = new FileOutputStream(new File(WalrusProperties.bucketRootDirectory + 
+										"/" + bucket + "/" + logFileName)).getChannel();
+								logFileMap.put(bucket, new LogFileEntry(logFileName, channel));
+							} catch (FileNotFoundException e) {
+								LOG.error(e);
+							}
+						}
+						try {
+							LogFileEntry logFileEntry = logFileMap.get(bucket);
+							FileChannel logChannel = logFileEntry.getChannel();
+							String tmplogstring = "hiiii";
+							logChannel.write(ByteBuffer.wrap(tmplogstring.getBytes()), logChannel.size());
+							MessageDigest digest = Hashes.Digest.MD5.get();
+							digest.update(tmplogstring.getBytes());
+							String etag = Hashes.bytesToHex(digest.digest());
+							AddObjectType request = new AddObjectType();
+							request.setUserId("admin");
+							request.setEffectiveUserId("eucalyptus");
+							request.setBucket(bucket);
+							request.setKey(key);
+							request.setObjectName(logFileEntry.getLogFileName());
+							request.setEtag(etag);
+							try {
+								AddObjectResponseType addObjectResponse = (AddObjectResponseType) dispatcher.send(request);
+							} catch (EucalyptusCloudException e) {
+								LOG.error(e);
+							}
+						} catch (IOException e) {
+							LOG.error(e);
 						}
 					}
+					for(String bucket : logFileMap.keySet()) {
+						try {
+							logFileMap.get(bucket).getChannel().close();
+						} catch (IOException e) {
+							LOG.error(e);						
+						}
+					}
+					logFileMap.clear();
 				}
-			}}, 5, TimeUnit.SECONDS);
+			}}, 1, 1, TimeUnit.SECONDS);
 	}
 
 	public static WalrusBucketLogger getInstance() {
@@ -134,5 +185,23 @@ public class WalrusBucketLogger {
 
 	public BucketLogData makeLogEntry(String requestId) {
 		return new BucketLogData(requestId);
-	}		
+	}
+
+	private class LogFileEntry {
+		private String logFileName;
+		private FileChannel channel;
+
+		public LogFileEntry(String logFileName, FileChannel channel) {
+			this.logFileName = logFileName;
+			this.channel = channel;
+		}
+
+		public FileChannel getChannel() {
+			return channel;
+		}
+
+		public String getLogFileName() {
+			return logFileName;
+		}
+	}
 }

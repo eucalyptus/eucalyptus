@@ -153,6 +153,7 @@ public class WalrusRESTLogger extends MessageStackHandler {
 				BucketLogData logData = response.getLogData();
 				if(logData != null) {
 					WalrusBucketLogger.getInstance().addLogEntry(logData);
+					response.setLogData(null);
 				}
 			}
 		}

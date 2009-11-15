@@ -8,7 +8,7 @@ import java.util.Date;
 
 public class BucketLogData {
 	private static final String ENTRY_FORMAT = "%s %s %s %s %s %s %s %s %s %s %s %f %f %f %f %s %s"; 
-private String requestId;
+	private String requestId;
 	private String targetBucket;
 	private String targetPrefix;
 	private String ownerId;
@@ -34,7 +34,7 @@ private String requestId;
 	public BucketLogData(String requestId) {
 		this.requestId = requestId;
 	}
-	
+
 	public String getRequestId() {
 		return requestId;
 	}
@@ -186,29 +186,25 @@ private String requestId;
 	public void setUserAgent(String userAgent) {
 		this.userAgent = userAgent;
 	}
-	
-	public void dump(FileChannel channel) {
-		try {
-			channel.write(ByteBuffer.wrap(String.format(ENTRY_FORMAT, 
-					getOwnerId(),
-					getBucketName(),
-					"[" + getTimestamp() + "]",
-					getSourceAddress(),
-					getAccessorId(),
-					getRequestId(),
-					getOperation(),
-					getKey(),
-					getUri(),
-					getStatus(),
-					getError(),
-					getBytesSent(),
-					getObjectSize(),
-					getTotalTime(),
-					getTurnAroundTime(),
-					getReferrer(),
-					getUserAgent()).getBytes()));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+
+	public String toFormattedString () {		
+		return	String.format(ENTRY_FORMAT, 
+				getOwnerId(),
+				getBucketName(),
+				"[" + getTimestamp() + "]",
+				getSourceAddress(),
+				getAccessorId(),
+				getRequestId(),
+				getOperation(),
+				getKey(),
+				getUri(),
+				getStatus(),
+				getError(),
+				getBytesSent(),
+				getObjectSize(),
+				getTotalTime(),
+				getTurnAroundTime(),
+				getReferrer(),
+				getUserAgent());
 	}
 }

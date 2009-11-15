@@ -114,6 +114,8 @@ import edu.ucsb.eucalyptus.cloud.entities.TorrentInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
+import edu.ucsb.eucalyptus.msgs.AddObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.AddObjectType;
 import edu.ucsb.eucalyptus.msgs.BucketListEntry;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
 import edu.ucsb.eucalyptus.msgs.CopyObjectResponseType;
@@ -590,6 +592,8 @@ public class WalrusManager {
 				}
 				//write object to bucket
 				String objectName;
+				if(logData != null)
+					reply.setLogData(logData);
 				if (foundObject == null) {
 					//not found. create an object info
 					foundObject = new ObjectInfo(bucketName, objectKey);
@@ -684,6 +688,13 @@ public class WalrusManager {
 								if(WalrusProperties.trackUsageStatistics) {
 									walrusStatistics.updateBytesIn(size);
 									walrusStatistics.updateSpaceUsed(size);
+								}
+								if(logData != null) {
+									logData.setObjectSize(size);
+									logData.setBucketName(bucketName);
+									logData.setTargetBucket(bucket.getTargetBucket());
+									logData.setTargetPrefix(bucket.getTargetPrefix());
+									logData.setKey(objectKey);
 								}
 								dbObject.commit();
 							} else {
@@ -895,7 +906,7 @@ public class WalrusManager {
 					}
 					md5 = Hashes.getHexString(Hashes.Digest.MD5.get().digest(base64Data));
 					foundObject.setEtag(md5);
-					Long size = Long.parseLong(request.getContentLength());
+					Long size = (long)base64Data.length;
 					foundObject.setSize(size);
 					if(WalrusProperties.shouldEnforceUsageLimits && !request.isAdministrator()) {
 						Long bucketSize = bucket.getBucketSize();
@@ -940,8 +951,14 @@ public class WalrusManager {
 		return reply;
 	}
 
-	public void addObject(String userId, String bucketName, String key) throws EucalyptusCloudException {
+	public AddObjectResponseType addObject(AddObjectType request) throws EucalyptusCloudException {
 
+		AddObjectResponseType reply = (AddObjectResponseType) request.getReply();
+		String bucketName = request.getBucket();
+		String key = request.getKey();
+		String userId = request.getUserId();
+		String objectName = request.getObjectName();
+		
 		AccessControlListType accessControlList = new AccessControlListType();
 		if (accessControlList == null) {
 			accessControlList = new AccessControlListType();
@@ -967,6 +984,7 @@ public class WalrusManager {
 				}
 				//write object to bucket
 				ObjectInfo objectInfo = new ObjectInfo(bucketName, key);
+				objectInfo.setObjectName(objectName);
 				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 				objectInfo.addGrants(userId, grantInfos, accessControlList);
 				objectInfo.setGrants(grantInfos);
@@ -974,9 +992,10 @@ public class WalrusManager {
 
 				objectInfo.setObjectKey(key);
 				objectInfo.setOwnerId(userId);
-				objectInfo.setSize(storageManager.getSize(bucketName, key));
-				objectInfo.setEtag("");
+				objectInfo.setSize(storageManager.getSize(bucketName, objectName));
+				objectInfo.setEtag(request.getEtag());
 				objectInfo.setLastModified(new Date());
+				objectInfo.setStorageClass("STANDARD");
 			} else {
 				db.rollback();
 				throw new AccessDeniedException("Bucket", bucketName);
@@ -986,6 +1005,7 @@ public class WalrusManager {
 			throw new NoSuchBucketException(bucketName);
 		}
 		db.commit();
+		return reply;
 	}
 
 	public DeleteObjectResponseType deleteObject(DeleteObjectType request) throws EucalyptusCloudException {
