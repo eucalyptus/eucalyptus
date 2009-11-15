@@ -130,6 +130,7 @@ int http_put (const char * file_path, const char * url, const char * login, cons
     curl_easy_setopt (curl, CURLOPT_UPLOAD, 1L);
     curl_easy_setopt (curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)mystat.st_size);
     curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0L); // TODO: make this optional?
+    curl_easy_setopt (curl, CURLOPT_SSL_VERIFYHOST, 0L);
 
     if (login!=NULL && password!=NULL) {
         char userpwd [STRSIZE];
