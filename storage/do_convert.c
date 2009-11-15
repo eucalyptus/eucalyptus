@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <stdarg.h>
 #include <ami2vmx.h>
+#include <string.h>
+#include <errno.h>
 #include "misc.h" // logprintfl
 
 extern char *helpers[LASTHELPER];
@@ -119,6 +121,10 @@ int do_convert(
     // now we have a disk image
     char dtemplate[] = "/tmp/euca.XXXXXX";
     tmpdir = mkdtemp(dtemplate);
+    if (tmpdir==NULL) {
+            logprintfl (EUCAINFO, "ERROR: mkdtemp() failed: %s\n", strerror(errno));
+            return(1);    
+    }
     {
         int done=0;
 
@@ -222,9 +228,9 @@ int do_convert(
             goto clean_up;
         }
         if (ramdisk) {
-            fprintf(FH, "default 0\ntimeout 5\n\ntitle TheOS\nroot (hd0,0)\nkernel /boot/%s root=/dev/sda1 ro\ninitrd /boot/%s\n", kfile, rfile);
+            fprintf(FH, "default=0\ntimeout=5\n\ntitle TheOS\nroot (hd0,0)\nkernel /boot/%s root=/dev/sda1 ro\ninitrd /boot/%s\n", kfile, rfile);
         } else {
-            fprintf(FH, "default 0\ntimeout 5\n\ntitle TheOS\nroot (hd0,0)\nkernel /boot/%s root=/dev/sda1 ro\n", kfile);
+            fprintf(FH, "default=0\ntimeout=5\n\ntitle TheOS\nroot (hd0,0)\nkernel /boot/%s root=/dev/sda1 ro\n", kfile);
         }
         fflush(FH);
         output = pruntf("%s %s %s %s/boot/grub/menu.lst", helpers_path[ROOTWRAP], helpers_path[CP], ftemplate, tmpdir);
