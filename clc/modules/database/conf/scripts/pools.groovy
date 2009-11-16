@@ -7,7 +7,7 @@ poolProps = [
   'proxool.simultaneous-build-throttle': '16',
   'proxool.minimum-connection-count': '16',
   'proxool.maximum-connection-count': '128',
-  /*'proxool.house-keeping-test-sql': 'select CURRENT_DATE',*/
+  /* TODO: DOES NOT WORK W/ HSQLDB 'proxool.house-keeping-test-sql': 'select CURRENT_DATE',*/
   'user': 'sa',
   'password': ''/*Hashes.getHexSignature( )*/,
 ]
