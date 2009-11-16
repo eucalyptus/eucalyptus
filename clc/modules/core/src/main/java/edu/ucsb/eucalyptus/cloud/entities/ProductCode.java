@@ -70,6 +70,7 @@ import javax.persistence.Entity;
 import javax.persistence.Table;
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "image_product_code" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ProductCode {

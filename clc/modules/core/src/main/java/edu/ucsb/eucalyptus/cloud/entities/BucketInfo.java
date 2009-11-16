@@ -76,11 +76,13 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.util.WalrusProperties;
 
 import javax.persistence.*;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 @Entity
+@PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Buckets" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class BucketInfo {

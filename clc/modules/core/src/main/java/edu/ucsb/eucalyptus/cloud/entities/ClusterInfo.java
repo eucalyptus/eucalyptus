@@ -70,6 +70,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import javax.persistence.*;
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "clusters" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ClusterInfo {

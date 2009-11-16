@@ -66,20 +66,17 @@ package com.eucalyptus.bootstrap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
-import org.hsqldb.DatabaseURL;
 import org.hsqldb.Server;
-import org.hsqldb.ServerConstants;
 import org.hsqldb.persist.HsqlProperties;
 
-import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.util.DatabaseUtil;
 import com.eucalyptus.util.DebugUtil;
+import com.eucalyptus.util.FailScriptFailException;
 import com.eucalyptus.util.GroovyUtil;
-import com.eucalyptus.util.LogUtil;
 
 @Provides( resource = Resource.Database )
 @Depends( resources = Resource.SystemCredentials, local = Component.eucalyptus )
@@ -90,9 +87,6 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   public static DatabaseBootstrapper getInstance( ) {
     synchronized ( LocalDatabaseBootstrapper.class ) {
       if ( singleton == null ) {
-        for( DatabaseUtil.PoolConfig p : DatabaseUtil.PoolConfig.values( ) ) {
-          LOG.debug( String.format( "Default pool config: %s=%s", p.getKey( ), p.getValue( ) ) ); 
-        }
         singleton = new LocalDatabaseBootstrapper( );
         SystemBootstrapper.setDatabaseBootstrapper( singleton );
       }
@@ -123,7 +117,9 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
 
   @Override
   public boolean load( Resource current ) throws Exception {
-    LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
+    try {
+      LOG.debug( "Initializing SSL just in case: " + Class.forName( "com.eucalyptus.auth.util.SslSetup" ) );
+    } catch ( Throwable t ) {}
     try {
       DatabaseConfig.initialize( );
     } catch ( Exception e ) {
@@ -165,6 +161,13 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
     this.db = new Server( );
     this.db.setProperties( new HsqlProperties( DatabaseConfig.getProperties( ) ) );
     SystemBootstrapper.makeSystemThread( this ).start( );
+    try {
+      GroovyUtil.evaluateScript( "db.groovy" );//TODO: move this ASAP!
+    } catch ( FailScriptFailException e ) {
+      LOG.fatal( e, e );
+      LOG.fatal( "Failed to initialize the persistence layer." );
+      System.exit( -1 );
+    }
   }
 
   @Override

@@ -41,21 +41,21 @@ public class GroovyUtil {
     return groovyObject;
   }
 
-  public static void evaluateScript( String fileName ) throws FailScriptFailException {
+  public static Object evaluateScript( String fileName ) throws FailScriptFailException {
     FileReader fileReader = null;
     try {
       fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName );
-	  getGroovyEngine().eval( fileReader );
+      return getGroovyEngine().eval( fileReader );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
       throw new FailScriptFailException( "Executing the requested script failed: " + fileName, e );
     } finally {
-    	if(fileReader != null)
-			try {
-				fileReader.close();
-			} catch (IOException e) {
-				LOG.error(e);
-			}
+      if(fileReader != null)
+      try {
+        fileReader.close();
+      } catch (IOException e) {
+        LOG.error(e);
+      }
     }
   }
 

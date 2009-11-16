@@ -72,6 +72,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import javax.persistence.*;
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "system_info" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class SystemConfiguration {

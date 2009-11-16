@@ -70,10 +70,12 @@ import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import javax.persistence.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "user_groups" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class UserGroupInfo {

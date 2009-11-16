@@ -79,8 +79,6 @@ import org.hibernate.exception.JDBCConnectionException;
 import com.eucalyptus.bootstrap.Component;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.mchange.v2.resourcepool.CannotAcquireResourceException;
-import com.mchange.v2.resourcepool.TimeoutException;
 
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
@@ -90,7 +88,7 @@ public class EntityWrapper<TYPE> {
   private TxHandle tx;
 
   public EntityWrapper( ) {
-    this( "eucalyptus" );
+    this( "eucalyptus_general" );
   }
 
   @SuppressWarnings( "unchecked" )
@@ -133,10 +131,9 @@ public class EntityWrapper<TYPE> {
 
   @SuppressWarnings( "unchecked" )
   private void exceptionCaught( Throwable e ) {
-    Throwable cause = DebugUtil.checkForCauseOfInterest( e, JDBCConnectionException.class, CannotAcquireResourceException.class, TimeoutException.class, IllegalStateException.class );
+    Throwable cause = DebugUtil.checkForCauseOfInterest( e, JDBCConnectionException.class, IllegalStateException.class );
     if ( !( cause instanceof ExceptionNotRelatedException ) ) {
       LOG.error( cause, cause );
-      DatabaseUtil.handleConnectionError( cause );
     }
   }
 

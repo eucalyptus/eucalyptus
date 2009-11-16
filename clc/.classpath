@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" output="modules/msgs/build" path="modules/msgs/src/main/java"/>
+	<classpathentry kind="src" path="modules/database/conf/scripts"/>
+	<classpathentry kind="src" output="modules/database/build" path="modules/database/src/main/java"/>
 	<classpathentry kind="src" output="modules/core/build" path="modules/core/src/main/java"/>
 	<classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/main/java"/>
 	<classpathentry kind="src" output="modules/interface/build" path="modules/interface/src/main/java"/>

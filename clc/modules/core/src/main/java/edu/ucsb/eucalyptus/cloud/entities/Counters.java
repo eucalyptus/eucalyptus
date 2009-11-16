@@ -77,10 +77,12 @@ import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusProperties;
 
 import javax.persistence.*;
+
 import java.util.List;
 import java.util.zip.Adler32;
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "counters" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class Counters {

@@ -73,7 +73,8 @@ public enum SubDirectory {
   WWW( BaseDirectory.CONF, "www" ),
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
   KEYS( BaseDirectory.VAR, "keys" ),
-  SCRIPTS( BaseDirectory.CONF, "scripts" );
+  SCRIPTS( BaseDirectory.CONF, "scripts" ),
+  LIB( BaseDirectory.HOME, "/usr/share/eucalyptus" );
   BaseDirectory parent;
   String        dir;
 

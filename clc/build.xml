@@ -82,6 +82,7 @@
   <!--================================== build targets ==================================-->
   <target name="build-msgs">
     <ant dir="modules/msgs" inheritall="false" target="builder"/>
+    <ant dir="modules/database" inheritall="false" target="builder"/>
     <ant dir="modules/authentication" inheritall="false" target="builder"/>
     <ant dir="modules/cloud" inheritall="false" target="builder"/>
     <ant dir="modules/configuration" inheritall="false" target="builder"/>
@@ -117,6 +118,7 @@
   <!--================================== clean targets ==================================-->
   <target name="clean-msgs">
     <ant dir="modules/msgs" inheritall="false" target="clean"/>
+    <ant dir="modules/database" inheritall="false" target="clean"/>
     <ant dir="modules/cloud" inheritall="false" target="clean"/>
     <ant dir="modules/authentication" inheritall="false" target="clean"/>
     <ant dir="modules/configuration" inheritall="false" target="clean"/>
@@ -185,6 +187,7 @@
     <mkdir dir="${euca.var.dir}/webapps"/>
     <mkdir dir="${euca.var.dir}/modules"/>
     <ant dir="modules/msgs" inheritall="false" target="install"/>
+    <ant dir="modules/database" inheritall="false" target="install"/>
     <ant dir="modules/cloud" inheritall="false" target="install"/>
     <ant dir="modules/authentication" inheritall="false" target="install"/>
     <ant dir="modules/configuration" inheritall="false" target="install"/>

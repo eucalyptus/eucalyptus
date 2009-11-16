@@ -72,12 +72,14 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.*;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
 
 @Entity
+@PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Objects" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ObjectInfo implements Comparable {

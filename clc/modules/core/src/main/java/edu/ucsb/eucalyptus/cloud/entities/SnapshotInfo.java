@@ -71,9 +71,11 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.util.StorageProperties;
 
 import javax.persistence.*;
+
 import java.util.Date;
 
 @Entity
+@PersistenceContext(name="eucalyptus_storage")
 @Table( name = "Snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class SnapshotInfo {

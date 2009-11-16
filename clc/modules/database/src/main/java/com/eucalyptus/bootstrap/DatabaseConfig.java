@@ -71,7 +71,6 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 import org.hsqldb.ServerConstants;
 
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.SubDirectory;
 
@@ -124,7 +123,10 @@ public class DatabaseConfig {
     Component.db.setHostAddress( "127.0.0.1" );
     System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
     LOG.info( LogUtil.header( "Setting up database: " ) );
-    System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
+    try {
+      LOG.debug( "Initializing db password: " + Class.forName( "com.eucalyptus.auth.util.Hashes" ) );
+    } catch ( Throwable t ) {}
+
     for( Internal dbName : Internal.values( ) ) {
       LOG.info( dbName.getProperties( ) );
       dbName.prepareDatabase( );
