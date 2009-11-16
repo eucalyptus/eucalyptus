@@ -139,7 +139,9 @@ public class WalrusRESTLogger extends MessageStackHandler {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage();
 			if(httpRequest.getMessage() instanceof WalrusRequestType) {
 				WalrusRequestType request = (WalrusRequestType) httpRequest.getMessage();
-				request.setLogData(WalrusBucketLogger.getInstance().makeLogEntry(UUID.randomUUID().toString()));
+				BucketLogData logData = WalrusBucketLogger.getInstance().makeLogEntry(UUID.randomUUID().toString());
+				
+				request.setLogData(logData);
 			}			
 		}
 	}

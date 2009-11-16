@@ -135,10 +135,10 @@ public class WalrusBucketLogger {
 						try {
 							LogFileEntry logFileEntry = logFileMap.get(bucket);
 							FileChannel logChannel = logFileEntry.getChannel();
-							String tmplogstring = "hiiii";
-							logChannel.write(ByteBuffer.wrap(tmplogstring.getBytes()), logChannel.size());
+							String logString = entry.toFormattedString();
+							logChannel.write(ByteBuffer.wrap(logString.getBytes()), logChannel.size());
 							MessageDigest digest = Hashes.Digest.MD5.get();
-							digest.update(tmplogstring.getBytes());
+							digest.update(logString.getBytes());
 							String etag = Hashes.bytesToHex(digest.digest());
 							AddObjectType request = new AddObjectType();
 							request.setUserId("admin");
@@ -148,7 +148,7 @@ public class WalrusBucketLogger {
 							request.setObjectName(logFileEntry.getLogFileName());
 							request.setEtag(etag);
 							try {
-								AddObjectResponseType addObjectResponse = (AddObjectResponseType) dispatcher.send(request);
+								dispatcher.send(request);
 							} catch (EucalyptusCloudException e) {
 								LOG.error(e);
 							}

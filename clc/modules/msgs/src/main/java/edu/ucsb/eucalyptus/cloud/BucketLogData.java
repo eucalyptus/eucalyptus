@@ -7,7 +7,7 @@ import java.nio.channels.FileChannel;
 import java.util.Date;
 
 public class BucketLogData {
-	private static final String ENTRY_FORMAT = "%s %s %s %s %s %s %s %s %s %s %s %f %f %f %f %s %s"; 
+	private static final String ENTRY_FORMAT = "%s %s %s %s %s %s %s %s %s %s %s %d %d %d %d %s %s %n"; 
 	private String requestId;
 	private String targetBucket;
 	private String targetPrefix;
@@ -29,6 +29,9 @@ public class BucketLogData {
 	private String userAgent;
 
 	public BucketLogData() {
+		status = "-";
+		error = "-";
+		referrer = "-";
 	}
 
 	public BucketLogData(String requestId) {
@@ -187,7 +190,7 @@ public class BucketLogData {
 		this.userAgent = userAgent;
 	}
 
-	public String toFormattedString () {		
+	public String toFormattedString () {
 		return	String.format(ENTRY_FORMAT, 
 				getOwnerId(),
 				getBucketName(),
