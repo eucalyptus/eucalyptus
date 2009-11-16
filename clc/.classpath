@@ -31,7 +31,6 @@
 	<classpathentry kind="lib" path="lib/bcel-5.2.jar"/>
 	<classpathentry kind="lib" path="lib/bcprov.jar"/>
 	<classpathentry kind="lib" path="lib/bsf-2.4.0.jar"/>
-	<classpathentry kind="lib" path="lib/c3p0-0.9.1.2.jar"/>
 	<classpathentry kind="lib" path="lib/cglib-2.1.3.jar"/>
 	<classpathentry kind="lib" path="lib/commons-beanutils-1.8.0-BETA.jar"/>
 	<classpathentry kind="lib" path="lib/commons-cli-1.1.jar"/>
@@ -70,6 +69,7 @@
 	<classpathentry kind="lib" path="lib/gwt-dev-linux-1.6.4.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-servlet-1.6.4.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-user-1.6.4.jar"/>
+	<classpathentry kind="lib" path="lib/hibernate-proxool-3.3.2.GA.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldbutil-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/inetlib-1.1.1.jar"/>
@@ -98,13 +98,16 @@
 	<classpathentry kind="lib" path="lib/junit-3.8.2.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="lib/mvel-1.3.14.jar"/>
-	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar" sourcepath="/home/decker/jbproject/netty-3.1.0.CR1"/>
+	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar"/>
 	<classpathentry kind="lib" path="lib/openjdk-crypto.jar"/>
+	<classpathentry kind="lib" path="lib/proxool-0.8.3.jar"/>
 	<classpathentry kind="lib" path="lib/regexp-1.4.jar"/>
 	<classpathentry kind="lib" path="lib/serializer.jar"/>
 	<classpathentry kind="lib" path="lib/servlet-api-2.5.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-1.5.2.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.2.jar"/>
+	<classpathentry kind="lib" path="lib/stax2-api-3.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/woodstox-core-asl-4.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/wsdl4j-1.6.2.jar"/>
 	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar"/>
 	<classpathentry kind="lib" path="lib/xalan2.jar"/>
