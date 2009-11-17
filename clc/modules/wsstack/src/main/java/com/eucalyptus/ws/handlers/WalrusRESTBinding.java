@@ -83,7 +83,9 @@ import org.apache.tools.ant.util.DateUtils;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -96,6 +98,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.HoldMe;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.BindingException;
@@ -136,9 +139,32 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static final String OBJECT = "object";
 	private static final Map<String, String> operationMap = populateOperationMap();
 	private static WalrusDataMessenger putMessenger;
-	private static WalrusDataMessenger getMessenger;
 	public static final int DATA_MESSAGE_SIZE = 102400;
+	private String key;
+	private String randomKey;
 	private LinkedBlockingQueue<WalrusDataMessage> putQueue;
+
+	@Override
+	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
+		LOG.trace( LogUtil.dumpObject( channelEvent ) );
+		if ( channelEvent instanceof MessageEvent ) {
+			final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
+			try {
+				this.incomingMessage( channelHandlerContext, msgEvent );
+			} catch ( Throwable e ) {
+				LOG.error( e, e );
+				Channels.fireExceptionCaught( channelHandlerContext, e );
+				return;
+			} 
+		} else if (channelEvent.toString().contains("DISCONNECTED") || 
+				channelEvent.toString().contains("CLOSED")) {
+			if(key != null && randomKey != null) {
+				putMessenger.removeQueue(key, randomKey);
+				putQueue = null;
+			}
+		}
+		channelHandlerContext.sendUpstream( channelEvent );
+	}
 
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
@@ -272,7 +298,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		}
 
 		addLogData(eucaMsg, bindingArguments);
-		
+
 		//TODO: Refactor this to be more general
 		List<String> failedMappings = populateObject( eucaMsg, fieldMap, params);
 		populateObjectFromBindingMap(eucaMsg, fieldMap, httpRequest, bindingArguments);
@@ -426,8 +452,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					if(formFields.containsKey(WalrusProperties.CONTENT_TYPE)) {
 						operationParams.put("ContentType", formFields.get(WalrusProperties.CONTENT_TYPE));
 					}
-					String key = target[0] + "." + objectKey;
-					String randomKey = key + "." + Hashes.getRandom(10);
+					key = target[0] + "." + objectKey;
+					randomKey = key + "." + Hashes.getRandom(10);
 					if(contentLengthString != null)
 						operationParams.put("ContentLength", (new Long(contentLength).toString()));
 					operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
@@ -499,8 +525,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 					} else {
 						//handle PUTs
-						String key = target[0] + "." + objectKey;
-						String randomKey = key + "." + Hashes.getRandom(10);
+						key = target[0] + "." + objectKey;
+						randomKey = key + "." + Hashes.getRandom(10);
 						String contentType = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
 						if(contentType != null)
 							operationParams.put("ContentType", contentType);
@@ -1079,14 +1105,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			LOG.error(ex, ex);
 		}
 
-	}
-
-
-	public static synchronized WalrusDataMessenger getReadMessenger() {
-		if (getMessenger == null) {
-			getMessenger = new WalrusDataMessenger();
-		}
-		return getMessenger;
 	}
 
 
