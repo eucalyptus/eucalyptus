@@ -58,30 +58,71 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-/*
- * Author: Neil Soman neil@eucalyptus.com
- */
+package com.eucalyptus.ws.handlers;
 
-package com.eucalyptus.ws.stages;
+import java.util.Calendar;
+import java.util.UUID;
 
-import org.jboss.netty.channel.ChannelPipeline;
+import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 
-import com.eucalyptus.ws.handlers.EucalyptusQueryBinding;
-import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
-import com.eucalyptus.ws.handlers.WalrusRESTBinding;
-import com.eucalyptus.ws.handlers.WalrusRESTLogger;
+import com.eucalyptus.auth.User;
+import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.ws.MappingHttpResponse;
+import com.eucalyptus.ws.util.WalrusBucketLogger;
 
-public class WalrusRESTBindingStage implements UnrollableStage {
+import edu.ucsb.eucalyptus.cloud.BucketLogData;
+import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
+import edu.ucsb.eucalyptus.msgs.WalrusResponseType;
 
+public class WalrusRESTLogger extends MessageStackHandler {
 	@Override
-	public String getStageName( ) {
-		return "walrus-rest-binding";
+	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
+			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage();
+			if(httpRequest.getMessage() instanceof WalrusRequestType) {
+				WalrusRequestType request = (WalrusRequestType) httpRequest.getMessage();
+				BucketLogData logData = request.getLogData();
+				if(logData != null) {
+					logData.setTotalTime(System.currentTimeMillis());
+					logData.setUri(httpRequest.getUri());
+					String referrer = httpRequest.getHeader(HttpHeaders.Names.REFERER);
+					if(referrer != null)
+						logData.setReferrer(referrer);
+					String userAgent = httpRequest.getHeader(HttpHeaders.Names.USER_AGENT);
+					if(userAgent != null)
+						logData.setUserAgent(userAgent);
+					logData.setTimestamp(String.format("[%1$td/%1$tb/%1$tY:%1$tH:%1$tM:%1$tS %1$tz]", Calendar.getInstance()));
+					User user = httpRequest.getUser();
+					if(user != null)
+						logData.setAccessorId(user.getUserName());
+					if(request.getBucket() != null)
+						logData.setBucketName(request.getBucket());
+					if(request.getKey() != null) 
+						logData.setKey(request.getKey());
+					logData.setSourceAddress(ctx.getChannel().getRemoteAddress().toString());
+				}
+			}			
+		}
 	}
 
 	@Override
-	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast( "walrus-rest-binding", new WalrusRESTBinding( ) );
-		pipeline.addLast( "walrus-rest-logger", new WalrusRESTLogger( ) );
+	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
+			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
+			if(httpResponse.getMessage() instanceof WalrusResponseType) {
+				WalrusResponseType response = (WalrusResponseType) httpResponse.getMessage();
+				BucketLogData logData = response.getLogData();
+				if(logData != null) {
+					logData.setBytesSent(httpResponse.getContent().readableBytes());
+					long startTime = logData.getTotalTime();
+					logData.setTotalTime(System.currentTimeMillis() - startTime);
+					WalrusBucketLogger.getInstance().addLogEntry(logData);					
+					response.setLogData(null);
+				}
+			}
+		}
 	}
-
 }

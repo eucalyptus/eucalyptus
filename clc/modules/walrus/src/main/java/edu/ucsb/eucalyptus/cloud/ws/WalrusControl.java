@@ -75,6 +75,8 @@ import com.eucalyptus.util.WalrusProperties;
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.NotImplementedException;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
+import edu.ucsb.eucalyptus.msgs.AddObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.AddObjectType;
 import edu.ucsb.eucalyptus.msgs.CacheImageResponseType;
 import edu.ucsb.eucalyptus.msgs.CacheImageType;
 import edu.ucsb.eucalyptus.msgs.CheckImageResponseType;
@@ -303,8 +305,8 @@ public class WalrusControl {
 		return walrusManager.putObjectInline(request);
 	}
 
-	public void AddObject (String userId, String bucketName, String key) throws EucalyptusCloudException {
-		walrusManager.addObject(userId, bucketName, key);
+	public AddObjectResponseType AddObject (AddObjectType request) throws EucalyptusCloudException {
+		return walrusManager.addObject(request);
 	}
 
 	public DeleteObjectResponseType DeleteObject (DeleteObjectType request) throws EucalyptusCloudException {
@@ -357,15 +359,11 @@ public class WalrusControl {
 	}
 
 	public GetBucketLoggingStatusResponseType GetBucketLoggingStatus(GetBucketLoggingStatusType request) throws EucalyptusCloudException {
-		GetBucketLoggingStatusResponseType reply = (GetBucketLoggingStatusResponseType) request.getReply();
-
-		throw new NotImplementedException("GetBucketLoggingStatus");
+		return walrusManager.getBucketLoggingStatus(request);
 	}
 
 	public SetBucketLoggingStatusResponseType SetBucketLoggingStatus(SetBucketLoggingStatusType request) throws EucalyptusCloudException {
-		SetBucketLoggingStatusResponseType reply = (SetBucketLoggingStatusResponseType) request.getReply();
-
-		throw new NotImplementedException("SetBucketLoggingStatus");
+		return walrusManager.setBucketLoggingStatus(request);
 	}
 
 	public GetDecryptedImageResponseType GetDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {

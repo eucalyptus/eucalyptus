@@ -294,6 +294,8 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			String userName = CredentialProvider.getUserName( accessKeyID );
 			User user = CredentialProvider.getUser( userName );  
 			httpRequest.setUser( user );
+		} catch(AuthenticationException e) {
+			throw e;
 		} catch(Exception ex) {
 			throw new AuthenticationException( "User authentication failed. Unable to obtain query key" );
 		}
