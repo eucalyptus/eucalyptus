@@ -205,6 +205,7 @@ check_heartbeat() {
 check_ws() {
 	local URL="$1"
 	local ret=""
+	local soap_error=""
 
 	if [ -z "$URL" ]; then
 		echo "check_ws: need a URL!"
@@ -219,18 +220,19 @@ check_ws() {
 		fi
 		eval "$2=\"`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name><euca:detail>\(.*\)</euca:detail>.*;\1 \2;'`\""
 		ret="$?"
-		return $ret
 	else
 		if [ "$VERBOSE" = "Y" ]; then
 			echo "$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'"
 		fi
-		ret="`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'`"
+		soap_error="`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"`"
+		ret="$?"
+		soap_error="`echo $soap_error |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'`"
+		if test -n "$soap_error" ; then
+			echo $soap_error
+			ret="1"
+		fi
 	fi
-	if test -n "$ret" ; then
-		echo $ret
-		return 1
-	fi
-	return 0
+	return $ret
 }
 
 component_sync_keys() {

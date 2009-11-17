@@ -91,9 +91,25 @@ my $PARTED=untaint(`which parted`);
 my $MV=untaint(`which mv`);
 my $FILE=untaint(`which file`);
 
-if (!$partition || !-f $partition || !-x $LOSETUP || !-x $DD || !-x $PARTED || !-x $SYNC) {
-    print STDERR "USAGE: partition2disk <path/to/disk_or_partition_file> [swap-size-MB] [ephemeral-size-MB]\n";
+if ( !-x $LOSETUP ) {
+    print STDERR "Missing losetup!\n";
     exit(1);
+}
+if ( !-x $PARTED ) {
+    print STDERR "Missing parted!\n";
+    exit(2);
+}
+if ( !-x $DD ) {
+    print STDERR "Missing dd!\n";
+    exit(3);
+}
+if ( !-x $SYNC ) {
+    print STDERR "Missing sync!\n";
+    exit(4);
+}
+if (!$partition || !-f $partition) {
+    print STDERR "USAGE: partition2disk <path/to/disk_or_partition_file> [swap-size-MB] [ephemeral-size-MB]\n";
+    exit(5);
 }
 
 my $root_size_b = -s "$partition";
