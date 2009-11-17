@@ -13,8 +13,8 @@ public class BucketLogData {
 	private String targetPrefix;
 	private String ownerId;
 	private String bucketName;
-	private Date timestamp;
-	private InetAddress sourceAddress;
+	private String timestamp;
+	private String sourceAddress;
 	private String accessorId;
 	private String operation;
 	private String key;
@@ -29,12 +29,18 @@ public class BucketLogData {
 	private String userAgent;
 
 	public BucketLogData() {
+		key = "-";
 		status = "-";
 		error = "-";
 		referrer = "-";
+		userAgent = "-";
+		status = "-";
+		accessorId = "Anonymous";
+		status = "200";
 	}
 
 	public BucketLogData(String requestId) {
+		this();
 		this.requestId = requestId;
 	}
 
@@ -78,19 +84,19 @@ public class BucketLogData {
 		this.bucketName = bucketName;
 	}
 
-	public Date getTimestamp() {
+	public String getTimestamp() {
 		return timestamp;
 	}
 
-	public void setTimestamp(Date timestamp) {
+	public void setTimestamp(String timestamp) {
 		this.timestamp = timestamp;
 	}
 
-	public InetAddress getSourceAddress() {
+	public String getSourceAddress() {
 		return sourceAddress;
 	}
 
-	public void setSourceAddress(InetAddress sourceAddress) {
+	public void setSourceAddress(String sourceAddress) {
 		this.sourceAddress = sourceAddress;
 	}
 

@@ -93,7 +93,8 @@ public class WalrusBucketLogger {
 	private Logger LOG = Logger.getLogger( WalrusBucketLogger.class );
 	private static WalrusBucketLogger singleton = new WalrusBucketLogger();
 	private static final int LOG_THRESHOLD = 0;
-
+	private static final int LOG_PERIODICITY = 1;
+	
 	private LinkedBlockingQueue<BucketLogData> logData;
 	private ConcurrentHashMap<String, LogFileEntry> logFileMap;
 	ScheduledExecutorService logger;
@@ -112,19 +113,14 @@ public class WalrusBucketLogger {
 					logData.drainTo(data);
 					for(BucketLogData entry : data) {
 						String bucket = entry.getTargetBucket();
-						Calendar calendar = Calendar.getInstance();
-						String key = entry.getTargetPrefix() + 
-						calendar.get(Calendar.YEAR) + "-" +
-						calendar.get(Calendar.MONTH) + "-" +
-						calendar.get(Calendar.DAY_OF_MONTH) + "-" + 
-						calendar.get(Calendar.MINUTE) + "-" +
-						calendar.get(Calendar.SECOND) + "-" +
-						UUID.randomUUID().toString();
+						String uuid = UUID.randomUUID().toString();
+						String key = entry.getTargetPrefix() + String.format("%1$tY-%1$tm-%1$td-%1$tH-%1$tM-%1$tS-", Calendar.getInstance()) 
+						+ uuid;
 
 						if(!logFileMap.containsKey(bucket)) {
 							//check if bucket exists, if not create it.
 							try {
-								String logFileName = "logentry-" + UUID.randomUUID().toString();
+								String logFileName = "logentry-" + uuid;
 								FileChannel channel = new FileOutputStream(new File(WalrusProperties.bucketRootDirectory + 
 										"/" + bucket + "/" + logFileName)).getChannel();
 								logFileMap.put(bucket, new LogFileEntry(logFileName, channel));
@@ -137,9 +133,11 @@ public class WalrusBucketLogger {
 							FileChannel logChannel = logFileEntry.getChannel();
 							String logString = entry.toFormattedString();
 							logChannel.write(ByteBuffer.wrap(logString.getBytes()), logChannel.size());
+							
 							MessageDigest digest = Hashes.Digest.MD5.get();
 							digest.update(logString.getBytes());
 							String etag = Hashes.bytesToHex(digest.digest());
+							
 							AddObjectType request = new AddObjectType();
 							request.setUserId("admin");
 							request.setEffectiveUserId("eucalyptus");
@@ -165,7 +163,7 @@ public class WalrusBucketLogger {
 					}
 					logFileMap.clear();
 				}
-			}}, 1, 1, TimeUnit.SECONDS);
+			}}, 1, LOG_PERIODICITY, TimeUnit.SECONDS);
 	}
 
 	public static WalrusBucketLogger getInstance() {

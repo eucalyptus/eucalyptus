@@ -71,6 +71,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import net.sf.json.JSONArray;
@@ -103,11 +104,13 @@ import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.ws.util.WalrusBucketLogger;
 import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.annotation.HttpEmbedded;
 import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
+import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
@@ -121,6 +124,7 @@ import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
 import edu.ucsb.eucalyptus.msgs.TargetGrants;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
+import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import groovy.lang.GroovyObject;
@@ -243,7 +247,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		String servicePath = httpRequest.getServicePath();
 		Map bindingArguments = new HashMap();
 		final String operationName = getOperation(httpRequest, bindingArguments);
-
 		if(operationName == null)
 			throw new InvalidOperationException("Could not determine operation name for " + servicePath);
 
@@ -261,14 +264,15 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			//:: get the map of parameters to fields :://
 			fieldMap = this.buildFieldMap( targetType );
 			//:: get an instance of the message :://
-			eucaMsg = ( EucalyptusMessage ) targetType.newInstance();
+			eucaMsg =  (EucalyptusMessage) targetType.newInstance();
 		}
 		catch ( Exception e )
 		{
 			throw new BindingException( "Failed to construct message of type " + operationName );
 		}
 
-
+		addLogData(eucaMsg, bindingArguments);
+		
 		//TODO: Refactor this to be more general
 		List<String> failedMappings = populateObject( eucaMsg, fieldMap, params);
 		populateObjectFromBindingMap(eucaMsg, fieldMap, httpRequest, bindingArguments);
@@ -299,6 +303,19 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 		return eucaMsg;
 
+	}
+
+	private void addLogData(EucalyptusMessage eucaMsg,
+			Map bindingArguments) {
+		if(eucaMsg instanceof WalrusRequestType) {
+			String operation = (String) bindingArguments.remove("Operation");
+			if(operation != null) {
+				WalrusRequestType request = (WalrusRequestType) eucaMsg;
+				BucketLogData logData = WalrusBucketLogger.getInstance().makeLogEntry(UUID.randomUUID().toString());
+				logData.setOperation("REST." + operation);
+				request.setLogData(logData);
+			}
+		}
 	}
 
 	private void setRequiredParams(final GroovyObject msg, User user) {
@@ -372,7 +389,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			if(!target[0].equals("")) {
 				operationKey = BUCKET + verb;
 				operationParams.put("Bucket", target[0]);
-
+				operationParams.put("Operation", verb.toUpperCase() + "." + "BUCKET");
 				if(verb.equals(WalrusProperties.HTTPVerb.POST.toString())) {
 					//TODO: handle POST.
 					Map formFields = httpRequest.getFormFields();
@@ -435,7 +452,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			}
 			operationParams.put("Bucket", target[0]);
 			operationParams.put("Key", objectKey);
-
+			operationParams.put("Operation", verb.toUpperCase() + "." + "OBJECT");
 
 			if(!params.containsKey(WalrusProperties.OperationParameter.acl.toString())) {
 				if (verb.equals(WalrusProperties.HTTPVerb.PUT.toString())) {

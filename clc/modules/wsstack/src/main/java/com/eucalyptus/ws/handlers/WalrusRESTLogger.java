@@ -60,92 +60,54 @@
  *******************************************************************************/
 package com.eucalyptus.ws.handlers;
 
-import java.io.ByteArrayOutputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.Calendar;
 import java.util.UUID;
-import java.util.concurrent.LinkedBlockingQueue;
 
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
-
-import org.apache.axiom.om.OMElement;
 import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
-import org.apache.xml.dtm.ref.DTMNodeList;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.util.HoldMe;
-import com.eucalyptus.util.StorageProperties;
-import com.eucalyptus.util.WalrusProperties;
-import com.eucalyptus.ws.BindingException;
-import com.eucalyptus.ws.InvalidOperationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
-import com.eucalyptus.ws.binding.Binding;
-import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
-import com.eucalyptus.ws.util.XMLParser;
-import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.annotation.HttpEmbedded;
-import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
-import edu.ucsb.eucalyptus.msgs.AccessControlListType;
-import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
-import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.Grant;
-import edu.ucsb.eucalyptus.msgs.Grantee;
-import edu.ucsb.eucalyptus.msgs.Group;
-import edu.ucsb.eucalyptus.msgs.LoggingEnabled;
-import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
-import edu.ucsb.eucalyptus.msgs.TargetGrants;
-import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
-import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusResponseType;
-import edu.ucsb.eucalyptus.util.WalrusDataMessage;
-import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
-import groovy.lang.GroovyObject;
 
 public class WalrusRESTLogger extends MessageStackHandler {
-	private static Logger LOG = Logger.getLogger( WalrusRESTLogger.class );
-
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage();
 			if(httpRequest.getMessage() instanceof WalrusRequestType) {
 				WalrusRequestType request = (WalrusRequestType) httpRequest.getMessage();
-				BucketLogData logData = WalrusBucketLogger.getInstance().makeLogEntry(UUID.randomUUID().toString());
-				
-				request.setLogData(logData);
+				BucketLogData logData = request.getLogData();
+				if(logData != null) {
+					logData.setTotalTime(System.currentTimeMillis());
+					logData.setUri(httpRequest.getUri());
+					String referrer = httpRequest.getHeader(HttpHeaders.Names.REFERER);
+					if(referrer != null)
+						logData.setReferrer(referrer);
+					String userAgent = httpRequest.getHeader(HttpHeaders.Names.USER_AGENT);
+					if(userAgent != null)
+						logData.setUserAgent(userAgent);
+					logData.setTimestamp(String.format("[%1$td/%1$tb/%1$tY:%1$tH:%1$tM:%1$tS %1$tz]", Calendar.getInstance()));
+					User user = httpRequest.getUser();
+					if(user != null)
+						logData.setAccessorId(user.getUserName());
+					if(request.getBucket() != null)
+						logData.setBucketName(request.getBucket());
+					if(request.getKey() != null) 
+						logData.setKey(request.getKey());
+					logData.setSourceAddress(ctx.getChannel().getRemoteAddress().toString());
+				}
 			}			
 		}
 	}
-	
+
 	@Override
 	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
@@ -154,7 +116,10 @@ public class WalrusRESTLogger extends MessageStackHandler {
 				WalrusResponseType response = (WalrusResponseType) httpResponse.getMessage();
 				BucketLogData logData = response.getLogData();
 				if(logData != null) {
-					WalrusBucketLogger.getInstance().addLogEntry(logData);
+					logData.setBytesSent(httpResponse.getContent().readableBytes());
+					long startTime = logData.getTotalTime();
+					logData.setTotalTime(System.currentTimeMillis() - startTime);
+					WalrusBucketLogger.getInstance().addLogEntry(logData);					
 					response.setLogData(null);
 				}
 			}

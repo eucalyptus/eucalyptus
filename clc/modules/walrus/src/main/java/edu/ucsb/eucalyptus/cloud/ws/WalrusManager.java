@@ -367,7 +367,6 @@ public class WalrusManager {
 		BucketInfo searchBucket = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(searchBucket);
 
-
 		if(bucketList.size() > 0) {
 			BucketInfo bucketFound = bucketList.get(0);
 			if (bucketFound.canWrite(userId)) {
@@ -416,6 +415,11 @@ public class WalrusManager {
 					status.setCode(204);
 					status.setDescription("No Content");
 					reply.setStatus(status);
+					BucketLogData logData = bucketFound.getLoggingEnabled() ? request.getLogData() : null;
+					if(logData != null) {
+						updateLogData(bucketFound, logData);
+						reply.setLogData(logData);
+					}
 				} else {
 					db.rollback();
 					throw new BucketNotEmptyException(bucketName);
@@ -451,6 +455,12 @@ public class WalrusManager {
 			BucketInfo bucket = bucketList.get(0);
 			List<GrantInfo> grantInfos = bucket.getGrants();
 			if (bucket.canReadACP(userId)) {
+				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+				if(logData != null) {
+					updateLogData(bucket, logData);
+					reply.setLogData(logData);
+				}
+				
 				ownerId = bucket.getOwnerId();
 				ArrayList<Grant> grants = new ArrayList<Grant>();
 				bucket.readPermissions(grants);
@@ -571,6 +581,8 @@ public class WalrusManager {
 			BucketInfo bucket = bucketList.get(0);
 			if (bucket.canWrite(userId)) {
 				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+				if(logData != null)
+					reply.setLogData(logData);
 
 				ObjectInfo foundObject = null;
 				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
@@ -592,8 +604,6 @@ public class WalrusManager {
 				}
 				//write object to bucket
 				String objectName;
-				if(logData != null)
-					reply.setLogData(logData);
 				if (foundObject == null) {
 					//not found. create an object info
 					foundObject = new ObjectInfo(bucketName, objectKey);
@@ -691,10 +701,7 @@ public class WalrusManager {
 								}
 								if(logData != null) {
 									logData.setObjectSize(size);
-									logData.setBucketName(bucketName);
-									logData.setTargetBucket(bucket.getTargetBucket());
-									logData.setTargetPrefix(bucket.getTargetPrefix());
-									logData.setKey(objectKey);
+									updateLogData(bucket, logData);
 								}
 								dbObject.commit();
 							} else {
@@ -796,7 +803,8 @@ public class WalrusManager {
 		reply.setMetaData(putObjectResponse.getMetaData());
 		reply.setErrorCode(putObjectResponse.getErrorCode());
 		reply.setStatusMessage(putObjectResponse.getStatusMessage());
-
+		reply.setLogData(putObjectResponse.getLogData());
+		
 		String successActionRedirect = request.getSuccessActionRedirect();
 		if(successActionRedirect != null) {
 			try {
@@ -929,6 +937,12 @@ public class WalrusManager {
 					foundObject.setStorageClass("STANDARD");
 					lastModified = new Date();
 					foundObject.setLastModified(lastModified);
+					BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+					if(logData != null) {
+						updateLogData(bucket, logData);
+						logData.setObjectSize(size);
+						reply.setLogData(logData);
+					}					
 				} catch (/*TODO: NEIL, check if it is IOException*/Exception ex) {
 					LOG.error(ex);
 					db.rollback();
@@ -1041,6 +1055,11 @@ public class WalrusManager {
 					objectDeleter.start();
 					reply.setCode("200");
 					reply.setDescription("OK");
+					BucketLogData logData = bucketInfo.getLoggingEnabled() ? request.getLogData() : null;
+					if(logData != null) {
+						updateLogData(bucketInfo, logData);
+						reply.setLogData(logData);
+					}					
 				} else {
 					db.rollback();
 					throw new AccessDeniedException("Key", objectKey);
@@ -1106,6 +1125,11 @@ public class WalrusManager {
 		if(bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
 			if(bucket.canRead(userId)) {
+				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+				if(logData != null) {
+					updateLogData(bucket, logData);
+					reply.setLogData(logData);
+				}				
 				if(request.isAdministrator()) {
 					EntityWrapper<WalrusSnapshotInfo> dbSnap = db.recast(WalrusSnapshotInfo.class);
 					WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
@@ -1233,6 +1257,14 @@ public class WalrusManager {
 			if(objectInfos.size() > 0) {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(objectInfo.canReadACP(userId)) {
+					BucketInfo bucket = bucketList.get(0);
+					BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+					if(logData != null) {
+						updateLogData(bucket, logData);
+						logData.setObjectSize(objectInfo.getSize());
+						reply.setLogData(logData);
+					}
+					
 					ownerId = objectInfo.getOwnerId();
 					ArrayList<Grant> grants = new ArrayList<Grant>();
 					List<GrantInfo> grantInfos = objectInfo.getGrants();
@@ -1296,6 +1328,11 @@ public class WalrusManager {
 				bucket.setGrants(grantInfos);
 				reply.setCode("204");
 				reply.setDescription("OK");
+				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+				if(logData != null) {
+					updateLogData(bucket, logData);
+					reply.setLogData(logData);
+				}				
 			} else {
 				db.rollback();
 				throw new AccessDeniedException("Bucket", bucketName);
@@ -1332,6 +1369,11 @@ public class WalrusManager {
 				bucket.setGrants(grantInfos);
 				reply.setCode("204");
 				reply.setDescription("OK");
+				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+				if(logData != null) {
+					updateLogData(bucket, logData);
+					reply.setLogData(logData);
+				}			
 			} else {
 				db.rollback();
 				throw new AccessDeniedException("Bucket", bucketName);
@@ -1391,6 +1433,13 @@ public class WalrusManager {
 				}
 				reply.setCode("204");
 				reply.setDescription("OK");
+				BucketInfo bucket = bucketList.get(0);
+				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+				if(logData != null) {
+					updateLogData(bucket, logData);
+					logData.setObjectSize(objectInfo.getSize());
+					reply.setLogData(logData);
+				}				
 			} else {
 				db.rollback();
 				throw new NoSuchEntityException(objectKey);
@@ -1451,6 +1500,13 @@ public class WalrusManager {
 				} else {
 					LOG.warn("Bittorrent support has been disabled. Please check pre-requisites");
 				}
+				BucketInfo bucket = bucketList.get(0);
+				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+				if(logData != null) {
+					updateLogData(bucket, logData);
+					logData.setObjectSize(objectInfo.getSize());
+					reply.setLogData(logData);
+				}				
 				reply.setCode("204");
 				reply.setDescription("OK");
 			} else {
@@ -1558,6 +1614,13 @@ public class WalrusManager {
 								if(WalrusProperties.trackUsageStatistics) {
 									walrusStatistics.updateBytesOut(torrentLength);
 								}
+								BucketInfo bucket = bucketList.get(0);
+								BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+								if(logData != null) {
+									updateLogData(bucket, logData);
+									logData.setObjectSize(torrentLength);
+									reply.setLogData(logData);
+								}								
 								return reply;
 							} else {
 								db.rollback();
@@ -1766,6 +1829,11 @@ public class WalrusManager {
 		if(bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
 			if(bucket.canRead(userId)) {
+				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+				if(logData != null) {
+					updateLogData(bucket, logData);
+					reply.setLogData(logData);
+				}				
 				String location = bucket.getLocation();
 				if(location == null) {
 					location = "NotSupported";
@@ -2014,5 +2082,11 @@ public class WalrusManager {
 		} 
 		db.commit();		
 		return reply;
+	}
+	
+	private void updateLogData(BucketInfo bucket, BucketLogData logData) {
+		logData.setOwnerId(bucket.getOwnerId());
+		logData.setTargetBucket(bucket.getTargetBucket());
+		logData.setTargetPrefix(bucket.getTargetPrefix());
 	}
 }
