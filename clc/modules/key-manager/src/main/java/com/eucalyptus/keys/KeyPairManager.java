@@ -77,20 +77,25 @@ public class KeyPairManager {
 
   public CreateKeyPairResponseType CreateKeyPair( CreateKeyPairType request ) throws EucalyptusCloudException {
     CreateKeyPairResponseType reply = ( CreateKeyPairResponseType ) request.getReply( );
-    PrivateKey pk = KeyPairUtil.createUserKeyPair( request.getUserId( ), request.getKeyName( ) );
-    reply.setKeyFingerprint( Hashes.getFingerPrint( pk ) );
-    ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-    PEMWriter privOut = new PEMWriter( new OutputStreamWriter( byteOut ) );
     try {
-      privOut.writeObject( pk );
-      privOut.close();
-    } catch ( IOException e ) {
-      LOG.error( e );
-      throw new EucalyptusCloudException( e );
+      KeyPairUtil.getUserKeyPair( request.getUserId( ), request.getKeyName( ) );
+    } catch ( Exception e1 ) {
+      PrivateKey pk = KeyPairUtil.createUserKeyPair( request.getUserId( ), request.getKeyName( ) );
+      reply.setKeyFingerprint( Hashes.getFingerPrint( pk ) );
+      ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+      PEMWriter privOut = new PEMWriter( new OutputStreamWriter( byteOut ) );
+      try {
+        privOut.writeObject( pk );
+        privOut.close();
+      } catch ( IOException e ) {
+        LOG.error( e );
+        throw new EucalyptusCloudException( e );
+      }
+      reply.setKeyName( request.getKeyName( ) );
+      reply.setKeyMaterial( byteOut.toString( ) );
+      return reply;
     }
-    reply.setKeyName( request.getKeyName( ) );
-    reply.setKeyMaterial( byteOut.toString( ) );
-    return reply;
+    throw new EucalyptusCloudException( "Creation failed.  Keypair already exists: " + request.getKeyName( ) );
   }
 
 }

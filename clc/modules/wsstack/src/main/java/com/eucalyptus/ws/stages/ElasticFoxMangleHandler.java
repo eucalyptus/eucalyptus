@@ -123,7 +123,7 @@ public class ElasticFoxMangleHandler extends MessageStackHandler {
   }
 
   private String purifyImageIn( String id ) {
-    id = "e" + id.substring( 1, 4 ) + id.substring( 4 ).toUpperCase( );
+    id = id == null ? null : "e" + id.substring( 1, 4 ) + id.substring( 4 ).toUpperCase( );
     return id;
   }
 
