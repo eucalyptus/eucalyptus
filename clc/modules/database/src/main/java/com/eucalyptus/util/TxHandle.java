@@ -49,7 +49,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
 
   public boolean isExpired() {
     long splitTime = split( );
-    return (splitTime-DatabaseUtil.MAX_OPEN_TIME)>this.startTime.getTimeInMillis( );
+    return (splitTime-30000)>this.startTime.getTimeInMillis( );
   }
 
   public long splitOperation( ) {
