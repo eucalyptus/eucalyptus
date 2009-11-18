@@ -68,8 +68,6 @@ import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
 import com.eucalyptus.bootstrap.Component;
 
-import com.eucalyptus.util.EntityWrapper;
-
 public class INTERNAL extends EucalyptusMessage {
   
   def INTERNAL() {

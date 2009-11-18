@@ -61,6 +61,8 @@ package edu.ucsb.eucalyptus.msgs
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
+import java.util.Date;
+
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.channel.Channel;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
@@ -85,7 +87,12 @@ public class WalrusRequestType extends EucalyptusMessage {
 
 	def WalrusRequestType() {}
 
-	def WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
+  def WalrusRequestType( String bucket, String key ) {
+    this.bucket = bucket;
+    this.key = key;
+  }
+
+  def WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
 		this.accessKeyID = accessKeyID;
 		this.timeStamp = timeStamp;
 		this.signature = signature;
@@ -341,6 +348,11 @@ public class WalrusDataRequestType extends WalrusRequestType {
 
 	def WalrusDataRequestType() {
 	}
+
+  def WalrusDataRequestType( String bucket, String key ) {
+    super( bucket, key );
+  }  
+  
 }
 
 public class WalrusDataResponseType extends WalrusResponseType {

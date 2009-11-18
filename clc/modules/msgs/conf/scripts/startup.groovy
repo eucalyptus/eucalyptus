@@ -58,7 +58,7 @@ try {
   try {//FIXME: fix this nicely
     CredentialProvider.addUser("admin",true);
   } catch ( UserExistsException e1 ) {
-    LOG.error(e1);
+    e1.printStackTrace();
   }
   try {
     db.getSession( ).persist( new Counters( ) );

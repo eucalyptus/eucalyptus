@@ -150,7 +150,7 @@ public class WalrusControl {
 	private static WalrusBlockStorageManager walrusBlockStorageManager;
 	private static WalrusImageManager walrusImageManager;
 
-	static {
+	public static void deferedInitializer() {
 		configure();
 		storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
 		walrusImageManager = new WalrusImageManager(storageManager, imageMessenger);
