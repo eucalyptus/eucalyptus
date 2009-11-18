@@ -1,5 +1,5 @@
-import com.eucalyptus.util.SubDirectory;
-import javax.persistence.*;        
+import com.eucalyptus.util.*;
+import javax.persistence.*;  
 
 entity_list = []                   
 euca_jar_files = new File(SubDirectory.LIB.toString()).listFiles().findAll{ it.name.matches(".*eucalyptus-.*\\.jar") };
@@ -22,7 +22,6 @@ euca_classes.each{
   } ); 
 };
 
-println entity_list
 entity_class_list = []             
 entity_list.each{                  
   try {                            
@@ -31,5 +30,4 @@ entity_list.each{
   } catch (Throwable t){
   }          
 }                                  
-println entity_class_list
 entity_class_list 

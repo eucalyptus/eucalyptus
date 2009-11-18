@@ -121,10 +121,8 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
       LOG.debug( "Initializing SSL just in case: " + Class.forName( "com.eucalyptus.auth.util.SslSetup" ) );
     } catch ( Throwable t ) {}
     try {
-      DatabaseConfig.initialize( );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-    }
+      LOG.debug( "Initializing db password: " + Class.forName( "com.eucalyptus.auth.util.Hashes" ) );
+    } catch ( Throwable t ) {}
     createDatabase( );
     return true;
   }
@@ -157,12 +155,19 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
     }
   }
 
-  private void createDatabase( ) {
+  private void createDatabase( ) {    
+    try {
+      GroovyUtil.evaluateScript( "before_database.groovy" );//TODO: move this ASAP!
+    } catch ( FailScriptFailException e ) {
+      LOG.fatal( e, e );
+      LOG.fatal( "Failed to initialize the database layer." );
+      System.exit( -1 );
+    }
     this.db = new Server( );
     this.db.setProperties( new HsqlProperties( DatabaseConfig.getProperties( ) ) );
     SystemBootstrapper.makeSystemThread( this ).start( );
     try {
-      GroovyUtil.evaluateScript( "db.groovy" );//TODO: move this ASAP!
+      GroovyUtil.evaluateScript( "after_database.groovy" );//TODO: move this ASAP!
     } catch ( FailScriptFailException e ) {
       LOG.fatal( e, e );
       LOG.fatal( "Failed to initialize the persistence layer." );
