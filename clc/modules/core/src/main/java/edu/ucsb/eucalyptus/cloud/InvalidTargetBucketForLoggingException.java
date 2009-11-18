@@ -59,67 +59,35 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
-package com.eucalyptus.ws.util;
 
-import java.util.List;
+package edu.ucsb.eucalyptus.cloud;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import com.eucalyptus.ws.HttpException;
-import com.google.common.collect.Lists;
+@SuppressWarnings("serial")
+public class InvalidTargetBucketForLoggingException extends WalrusException {
 
-
-public class HttpUtils {
-
-  public static String readLine( ChannelBuffer buffer, int maxLineLength ) throws HttpException {
-    StringBuilder sb = new StringBuilder( 64 );
-    int lineLength = 0;
-    while ( true ) {
-      byte nextByte = buffer.readByte( );
-      if ( nextByte == HttpUtils.CR ) {
-        nextByte = buffer.readByte( );
-        if ( nextByte == HttpUtils.LF ) { return sb.toString( ); }
-      } else if ( nextByte == HttpUtils.LF ) {
-        return sb.toString( );
-      } else {
-        if ( lineLength >= maxLineLength ) { throw new HttpException( "HTTP input line longer than " + maxLineLength + " bytes." ); }
-        lineLength++;
-        sb.append( ( char ) nextByte );
-      }
-    }
+  public InvalidTargetBucketForLoggingException()
+  {
+    super( "InvalidTargetBucketForLogging" );
   }
-  private static List<String> httpVerbPrefix = Lists.newArrayList( HttpMethod.CONNECT.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.GET.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.PUT.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.POST.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.HEAD.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.OPTIONS.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.TRACE.getName( ).substring( 0, 3 ) );
-                                                                   
-                                                                   
-  public static boolean maybeSsl( ChannelBuffer buffer ) throws HttpException {
-    buffer.markReaderIndex( );
-    StringBuffer sb = new StringBuffer( );
-    for( int lineLength = 0; lineLength++ < 3; sb.append( (char) buffer.readByte() ) );
-    buffer.resetReaderIndex( );
-    return !httpVerbPrefix.contains( sb.toString( ) );
-  }
-
   
-  public static final byte SP = 32;
-  public static final byte HT = 9;
-  public static final byte CR = 13;
-  public static final byte EQUALS = 61;
-  public static final byte LF = 10;
-  public static final byte[] CRLF = new byte[] { CR, LF };
-  public static final byte COLON = 58;
-  public static final byte SEMICOLON = 59;
-  public static final byte COMMA = 44;
-  public static final byte DOUBLE_QUOTE = '"';
-  public static final String DEFAULT_CHARSET = "UTF-8";
-
+  public InvalidTargetBucketForLoggingException(String bucket)
+  {    
+    super("InvalidTargetBucketForLogging", "The target bucket for logging does not exist, is not owned by you, or does not have the appropriate grants for the log-delivery group.", "Bucket", bucket, HttpResponseStatus.BAD_REQUEST);    
+  }
+  
+    
+  public InvalidTargetBucketForLoggingException(Throwable ex)
+  {
+    super("InvalidTargetBucketForLogging", ex);
+  }
+  
+  public InvalidTargetBucketForLoggingException(String message, Throwable ex)
+  {
+    super(message, ex);
+  }
 }

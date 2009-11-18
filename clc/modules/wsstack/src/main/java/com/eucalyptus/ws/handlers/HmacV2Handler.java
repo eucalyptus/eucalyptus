@@ -142,9 +142,9 @@ public class HmacV2Handler extends MessageStackHandler {
         int sigVersion = Integer.parseInt( sigVersionString );
         if ( sigVersion == 1 ) {
           String canonicalString = HmacUtils.makeSubjectString( parameters );
-          LOG.debug( "VERSION1-STRING:        " + canonicalString );
+          LOG.trace( "VERSION1-STRING:        " + canonicalString );
           String computedSig = HmacUtils.getSignature( secretKey, canonicalString, Hashes.Mac.HmacSHA1 );
-          LOG.debug( "VERSION1-SHA1:        " + computedSig + " -- " + sig );
+          LOG.trace( "VERSION1-SHA1:        " + computedSig + " -- " + sig );
           String decodedSig = URLDecoder.decode( sig ).replaceAll( "=", "" );
           if ( !computedSig.equals( sig.replaceAll( "=", "" ) ) && !computedSig.equals( decodedSig ) && !computedSig.equals( sig ) ) {
             throw new AuthenticationException( "User authentication failed." );
@@ -154,10 +154,10 @@ public class HmacV2Handler extends MessageStackHandler {
           String canonicalStringWithPort = HmacUtils.makeV2SubjectString( verb, headerHost + ":" + headerPort, addr, parameters );
           String computedSig = HmacUtils.getSignature( secretKey, canonicalString, Hashes.Mac.HmacSHA256 );
           String computedSigWithPort = HmacUtils.getSignature( secretKey, canonicalStringWithPort, Hashes.Mac.HmacSHA256 );
-          LOG.debug( "VERSION2-STRING:        " + canonicalString );
-          LOG.debug( "VERSION2-SHA256:        " + computedSig + " -- " + sig );
-          LOG.debug( "VERSION2-STRING-PORT:        " + canonicalString );
-          LOG.debug( "VERSION2-SHA256-PORT: " + computedSigWithPort + " -- " + sig );
+          LOG.trace( "VERSION2-STRING:        " + canonicalString );
+          LOG.trace( "VERSION2-SHA256:        " + computedSig + " -- " + sig );
+          LOG.trace( "VERSION2-STRING-PORT:        " + canonicalString );
+          LOG.trace( "VERSION2-SHA256-PORT: " + computedSigWithPort + " -- " + sig );
           if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
             sig = URLDecoder.decode( sig ).replaceAll("=","");
             computedSig = HmacUtils.getSignature( secretKey, canonicalString.replaceAll("\\+","%20"), Hashes.Mac.HmacSHA256 ).replaceAll("\\+"," ");

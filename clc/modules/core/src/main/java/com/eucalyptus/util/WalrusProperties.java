@@ -122,19 +122,19 @@ public class WalrusProperties {
 	public static final String STREAMING_HTTP_GET = "STREAMING_HTTP_GET";
 	public static final String STREAMING_HTTP_PUT = "STREAMING_HTTP_PUT";
 	public static final String AMZ_ACL = "x-amz-acl";
+	
 	public static final String ALL_USERS_GROUP = "http://acs.amazonaws.com/groups/global/AllUsers";
-	public static final String AUTHENTICATED_USERS_GROUP = "'http://acs.amazonaws.com/groups/global/AuthenticatedUsers";
-
+	public static final String AUTHENTICATED_USERS_GROUP = "http://acs.amazonaws.com/groups/global/AuthenticatedUsers";
+	public static final String LOGGING_GROUP = "http://acs.amazonaws.com/groups/s3/LogDelivery";
+	
 	public static final String IGNORE_PREFIX = "x-ignore-";
 	public static final String COPY_SOURCE = "x-amz-copy-source";
 	public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
 	public static final String ADMIN = "admin";
-	//public static String WALRUS_REF = "vm://BukkitInternal";
 
-	public static String TRACKER_BINARY_DIR = "/usr/bin";
-	public static String TRACKER_BINARY = TRACKER_BINARY_DIR + "/bttrack";
-	public static String TORRENT_CREATOR_BINARY = TRACKER_BINARY_DIR + "/btmakemetafile";
-	public static String TORRENT_CLIENT_BINARY = TRACKER_BINARY_DIR + "/btdownloadheadless";
+	public static String TRACKER_BINARY = "bttrack";
+	public static String TORRENT_CREATOR_BINARY = "btmakemetafile";
+	public static String TORRENT_CLIENT_BINARY = "btdownloadheadless";
 	public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
 	public static String TRACKER_URL = "http://localhost:6969/announce";
 	public static String TRACKER_PORT = "6969";

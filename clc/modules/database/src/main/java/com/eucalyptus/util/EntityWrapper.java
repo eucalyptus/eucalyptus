@@ -79,6 +79,8 @@ import org.hibernate.exception.JDBCConnectionException;
 import com.eucalyptus.bootstrap.Component;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.mchange.v2.resourcepool.CannotAcquireResourceException;
+import com.mchange.v2.resourcepool.TimeoutException;
 
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
@@ -88,7 +90,7 @@ public class EntityWrapper<TYPE> {
   private TxHandle tx;
 
   public EntityWrapper( ) {
-    this( "eucalyptus_general" );
+    this( "eucalyptus" );
   }
 
   @SuppressWarnings( "unchecked" )
@@ -101,14 +103,14 @@ public class EntityWrapper<TYPE> {
       this.exceptionCaught( e );
       throw (RuntimeException) e ;
     }
-    LOG.debug( EventRecord.here( Component.db, DbEvent.CREATE.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
+    LOG.trace( EventRecord.here( Component.db, DbEvent.CREATE.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
   }
 
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
     LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.begin( ), tx.getTxUuid( ) ) );
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-    List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).add( qbe ).list( );
+    List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setCacheable( true ).add( qbe ).list( );
     LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
@@ -131,9 +133,10 @@ public class EntityWrapper<TYPE> {
 
   @SuppressWarnings( "unchecked" )
   private void exceptionCaught( Throwable e ) {
-    Throwable cause = DebugUtil.checkForCauseOfInterest( e, JDBCConnectionException.class, IllegalStateException.class );
+    Throwable cause = DebugUtil.checkForCauseOfInterest( e, JDBCConnectionException.class, CannotAcquireResourceException.class, TimeoutException.class, IllegalStateException.class );
     if ( !( cause instanceof ExceptionNotRelatedException ) ) {
       LOG.error( cause, cause );
+      DatabaseUtil.handleConnectionError( cause );
     }
   }
 
@@ -220,7 +223,11 @@ public class EntityWrapper<TYPE> {
       return this.name( ) + ":END";
     }
     public String getMessage( ) {
-      return EntityWrapper.getMyStackTraceElement( ).toString( );
+      if( DebugUtil.TRACE ) {
+        return EntityWrapper.getMyStackTraceElement( ).toString( );
+      } else {
+        return "n.a";
+      }
     }
   }
 

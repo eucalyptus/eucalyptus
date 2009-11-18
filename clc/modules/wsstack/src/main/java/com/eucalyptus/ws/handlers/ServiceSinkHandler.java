@@ -63,6 +63,8 @@
  */
 package com.eucalyptus.ws.handlers;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -104,7 +106,7 @@ import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 @ChannelPipelineCoverage( "one" )
 public class ServiceSinkHandler extends SimpleChannelHandler {
   private static Logger                          LOG          = Logger.getLogger( ServiceSinkHandler.class );
-  private long                                   startTime;
+  private AtomicLong  startTime = new AtomicLong(0l);
   private final ChannelLocal<MappingHttpMessage> requestLocal = new ChannelLocal<MappingHttpMessage>( );
   
   private NioMessageReceiver                     msgReceiver;
@@ -161,7 +163,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
       reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
     }
-    LOG.info( EventRecord.here( Component.eucalyptus, EventType.MSG_SERVICED, reply.getClass( ).getSimpleName( ) ) );
+    LOG.info( EventRecord.here( Component.eucalyptus, EventType.MSG_SERVICED, reply.getClass( ).getSimpleName( ), Long.toString( System.currentTimeMillis( ) - this.startTime.get( ) ) ) );
     final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
     final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
     response.setMessage( reply );
@@ -175,7 +177,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
     if ( e instanceof ExceptionEvent ) {
       this.exceptionCaught( ctx, ( ExceptionEvent ) e );
     } else if ( e instanceof MessageEvent ) {
-      this.startTime = System.currentTimeMillis( );
+      this.startTime.compareAndSet( 0l, System.currentTimeMillis( ) );
       final MessageEvent event = ( MessageEvent ) e;
       if ( event.getMessage( ) instanceof MappingHttpMessage ) {
         final MappingHttpMessage request = ( MappingHttpMessage ) event.getMessage( );
