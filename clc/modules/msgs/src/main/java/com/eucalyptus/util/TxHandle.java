@@ -29,7 +29,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
 
   private volatile long splitTime = 0l;
   public TxHandle( String ctx ) {
-    this.txUuid = String.format("%s:%s:%s",ctx, EntityWrapper.getMyStackTraceElement( ), UUID.randomUUID( ).toString( ) );
+    this.txUuid = String.format("%s:%s:%s",ctx, DebugUtil.TRACE ? EntityWrapper.getMyStackTraceElement( ) : "n.a", UUID.randomUUID( ).toString( ) );
     this.startTime = Calendar.getInstance( );
     this.stopWatch = new StopWatch( );
     this.stopWatch.start( );

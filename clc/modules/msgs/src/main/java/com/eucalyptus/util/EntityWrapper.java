@@ -103,14 +103,14 @@ public class EntityWrapper<TYPE> {
       this.exceptionCaught( e );
       throw (RuntimeException) e ;
     }
-    LOG.debug( EventRecord.here( Component.db, DbEvent.CREATE.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
+    LOG.trace( EventRecord.here( Component.db, DbEvent.CREATE.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
   }
 
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
     LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.begin( ), tx.getTxUuid( ) ) );
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-    List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).add( qbe ).list( );
+    List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setCacheable( true ).add( qbe ).list( );
     LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
@@ -223,7 +223,11 @@ public class EntityWrapper<TYPE> {
       return this.name( ) + ":END";
     }
     public String getMessage( ) {
-      return EntityWrapper.getMyStackTraceElement( ).toString( );
+      if( DebugUtil.TRACE ) {
+        return EntityWrapper.getMyStackTraceElement( ).toString( );
+      } else {
+        return "n.a";
+      }
     }
   }
 
