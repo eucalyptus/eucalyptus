@@ -63,6 +63,10 @@
 		<class>edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo</class>
 		<class>edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo</class>
 		<class>edu.ucsb.eucalyptus.cloud.entities.StorageStatsInfo</class>
+		<class>edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo</class>
+		<class>edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo</class>
+		<class>edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo</class>
+		<class>edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo</class>
 		<properties>
 			<property name="hibernate.connection.provider_class"
 				value="org.hibernate.connection.C3P0ConnectionProvider" />

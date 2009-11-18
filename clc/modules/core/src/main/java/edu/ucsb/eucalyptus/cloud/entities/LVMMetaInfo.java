@@ -79,11 +79,7 @@ public class LVMMetaInfo {
     @Column(name = "lvm_meta_info_id")
     private Long id = -1l;
     @Column(name = "hostname")
-    private String hostName;
-    @Column(name = "major_number")
-    private Integer majorNumber;
-    @Column(name = "minor_number")
-    private Integer minorNumber;
+	protected String hostName;
 
     public LVMMetaInfo() {}
 
@@ -97,22 +93,6 @@ public class LVMMetaInfo {
 
     public void setHostName(String hostName) {
         this.hostName = hostName;
-    }
-
-    public Integer getMajorNumber() {
-        return majorNumber;
-    }
-
-    public void setMajorNumber(Integer majorNumber) {
-        this.majorNumber = majorNumber;
-    }
-
-    public Integer getMinorNumber() {
-        return minorNumber;
-    }
-
-    public void setMinorNumber(Integer minorNumber) {
-        this.minorNumber = minorNumber;
     }
 
 	@Override
@@ -139,7 +119,5 @@ public class LVMMetaInfo {
 		} else if (!hostName.equals(other.hostName))
 			return false;
 		return true;
-	}
-    
-    
+	} 
 }

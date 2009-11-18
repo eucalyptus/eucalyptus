@@ -81,7 +81,7 @@ public class LVMVolumeInfo {
     @Column(name = "lvm_volume_id")
     private Long id = -1l;
     @Column(name = "volume_name")
-    private String volumeId;
+	protected String volumeId;
     @Column(name = "sc_name")
     private String scName;
     @Column(name = "lodev_name")
