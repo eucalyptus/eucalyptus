@@ -100,6 +100,9 @@ struct nc_state_t {
 	char virsh_cmd_path[CHAR_BUFFER_SIZE];
 	char xm_cmd_path[CHAR_BUFFER_SIZE];
 	char detach_cmd_path[CHAR_BUFFER_SIZE];
+	char connect_storage_cmd_path[CHAR_BUFFER_SIZE];
+	char disconnect_storage_cmd_path[CHAR_BUFFER_SIZE];
+	char get_storage_cmd_path[CHAR_BUFFER_SIZE];
 };
 
 
@@ -212,5 +215,10 @@ int get_instance_xml(		const char *gen_libvirt_cmd_path,
 void * monitoring_thread(	void *arg);
 void * startup_thread(		void *arg);
 
+int check_iscsi(char* dev_string);
+void parse_target(char *dev_string);
+char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string);
+int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string);
+char* get_iscsi_target(const char *storage_cmd_path, char *dev_string);
 #endif /* INCLUDE */
 
