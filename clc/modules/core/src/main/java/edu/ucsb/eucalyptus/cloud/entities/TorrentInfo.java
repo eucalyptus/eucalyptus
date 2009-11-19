@@ -71,6 +71,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import javax.persistence.*;
 
 @Entity
+@PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Torrents" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class TorrentInfo {

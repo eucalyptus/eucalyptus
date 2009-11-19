@@ -68,7 +68,7 @@ public class ConfigurationUtil {
     String directory = SubDirectory.KEYS.toString( ) + File.separator + newComponent.getName( );
     File keyDir = new File( directory );
     Configuration.LOG.info( "creating keys in " + directory );
-    if ( !keyDir.mkdir( ) ) { throw new EucalyptusCloudException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) ); }
+    if ( !keyDir.mkdir( ) && !keyDir.exists( ) ) { throw new EucalyptusCloudException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) ); }
     FileWriter out = null;
     try {
       KeyTool keyTool = new KeyTool( );

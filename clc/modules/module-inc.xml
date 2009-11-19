@@ -111,7 +111,7 @@
   </path>
   <!--================================== copy conf ==================================-->
   <target name="copy-conf">
-    <copy todir="${euca.conf.dir}">
+    <copy todir="${euca.conf.dir}" verbose="true">
       <fileset dir="conf">
         <include name="**/*"/>
       </fileset>

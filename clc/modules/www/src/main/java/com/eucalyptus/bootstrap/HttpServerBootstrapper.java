@@ -61,17 +61,21 @@
 package com.eucalyptus.bootstrap;
 
 import java.net.URL;
+import java.util.concurrent.Executor;
 
 import org.apache.log4j.Logger;
 import org.mortbay.jetty.Server;
 import org.mortbay.xml.XmlConfiguration;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Provides( component = Component.jetty )
 @Depends( local=Component.eucalyptus )
 public class HttpServerBootstrapper extends Bootstrapper {
   private static Logger                   LOG = Logger.getLogger( HttpServerBootstrapper.class );
   private static Server jettyServer;
-
+  private ExecutorService exec;
   @Override
   public boolean load( Resource current ) throws Exception {
     jettyServer = new org.mortbay.jetty.Server( );
@@ -84,8 +88,18 @@ public class HttpServerBootstrapper extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     LOG.info( "Starting admin interface." );
-    jettyServer.start( );
-    return false;
+    exec = Executors.newFixedThreadPool( 1 );
+    exec.execute( new Runnable( ) {
+      @Override
+      public void run( ) {
+        try {
+          jettyServer.start( );
+        } catch ( Exception e ) {
+          LOG.debug( e, e );
+        }
+      }
+    });
+    return true;
   }
 
 }

@@ -73,6 +73,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -89,6 +90,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "addresses" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class Address implements HasName {

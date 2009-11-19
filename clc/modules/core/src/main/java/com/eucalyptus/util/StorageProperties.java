@@ -105,7 +105,8 @@ public class StorageProperties {
     public static String STORAGE_IP = "127.0.0.1";
 
 	static {
-		updateWalrusUrl();
+	  //TODO: this will need to be called from a bootstrapper once the persistence context is actually setup.
+	  //		updateWalrusUrl();
 	}
 
 	public static void updateName() {

@@ -80,6 +80,7 @@ import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;

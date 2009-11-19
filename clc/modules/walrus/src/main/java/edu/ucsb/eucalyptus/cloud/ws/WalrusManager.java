@@ -182,7 +182,10 @@ public class WalrusManager {
 
 	private StorageManager storageManager;
 	private WalrusImageManager walrusImageManager;
-	private static WalrusStatistics walrusStatistics = new WalrusStatistics();
+	private static WalrusStatistics walrusStatistics = null;
+  public static void deferedInitializer() {
+    walrusStatistics = new WalrusStatistics();
+  }
 
 	public WalrusManager(StorageManager storageManager, WalrusImageManager walrusImageManager) {
 		this.storageManager = storageManager;

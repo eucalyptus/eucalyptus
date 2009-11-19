@@ -480,13 +480,15 @@ void java_load_bootstrapper(void) {
 
 char* java_library_path(euca_opts *args) {
 #define JAVA_PATH_LEN 16384
-    char lib_dir[256],etc_dir[256],*jar_list=(char*)malloc(JAVA_PATH_LEN*sizeof(char));
+    char lib_dir[256],etc_dir[256],script_dir[256],*jar_list=(char*)malloc(JAVA_PATH_LEN*sizeof(char));
     __die(( strlen(GETARG(args,home))+strlen(EUCA_LIB_DIR)>=254),"Directory path too long: %s/%s", GETARG(args,home), EUCA_LIB_DIR);
     snprintf(lib_dir,255,"%s%s",GETARG(args,home),EUCA_LIB_DIR);
     snprintf(etc_dir,255,"%s%s",GETARG(args,home),EUCA_ETC_DIR);
+    snprintf(script_dir,255,"%s%s",GETARG(args,home),EUCA_SCRIPT_DIR);
     if(!CHECK_ISDIR(lib_dir) ) __die(1,"Can't find library directory %s", lib_dir );
     int wb = 0;
-    wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,"-Djava.class.path=%s",etc_dir);
+    wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,"-Djava.class.path=%s:",etc_dir);
+    wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,"%s",script_dir);
     DIR* lib_dir_p = opendir(lib_dir);
     struct direct *dir_ent;
     while ((dir_ent = readdir(lib_dir_p))!=0)  {

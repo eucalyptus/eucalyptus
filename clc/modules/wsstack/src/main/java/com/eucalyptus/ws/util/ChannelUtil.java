@@ -30,15 +30,14 @@ import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.ws.client.NioBootstrap;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
+import com.eucalyptus.ws.handlers.http.NioSslHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
 
 public class ChannelUtil {
   static class NioServerPipelineFactory implements ChannelPipelineFactory {
     public ChannelPipeline getPipeline( ) throws Exception {
       final ChannelPipeline pipeline = Channels.pipeline( );
-      // SSLEngine engine = NioSslHandler.getServerContext().createSSLEngine();
-      // engine.setUseClientMode(false);
-      // pipeline.addLast("ssl", new NioSslHandler(engine));
+      pipeline.addLast("ssl", new NioSslHandler());
       ChannelUtil.addPipelineMonitors( pipeline );
       pipeline.addLast( "decoder", new NioHttpDecoder( ) );
       pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
@@ -130,7 +129,8 @@ public class ChannelUtil {
     try {
       if ( serverBossThreadPool == null ) {
         // TODO: i'm the booowwssss.
-        serverBossThreadPool = Executors.newCachedThreadPool( ChannelUtil.getSystemThreadFactory( ) );
+        serverBossThreadPool = new OrderedMemoryAwareThreadPoolExecutor( SERVER_POOL_MAX_THREADS, SERVER_POOL_MAX_MEM_PER_CONN, SERVER_POOL_TOTAL_MEM,
+                                                                         SERVER_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
       }
     } finally {
       canHas.unlock( );

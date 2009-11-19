@@ -91,7 +91,7 @@ public class NioMessageReceiver extends AbstractMessageReceiver {
 
  public void doConnect() throws ConnectException {
    PipelineRegistry.getInstance( ).register( new InternalSoapPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) ) );
-   PipelineRegistry.getInstance( ).register( new InternalQueryPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) ) );
+//   PipelineRegistry.getInstance( ).register( new InternalQueryPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) ) );
  }
 
  public void doStart() {

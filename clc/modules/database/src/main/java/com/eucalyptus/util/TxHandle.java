@@ -29,7 +29,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
 
   private volatile long splitTime = 0l;
   public TxHandle( String ctx ) {
-    this.txUuid = String.format("%s:%s:%s",ctx, EntityWrapper.getMyStackTraceElement( ), UUID.randomUUID( ).toString( ) );
+    this.txUuid = String.format("%s:%s:%s",ctx, DebugUtil.TRACE ? EntityWrapper.getMyStackTraceElement( ) : "n.a", UUID.randomUUID( ).toString( ) );
     this.startTime = Calendar.getInstance( );
     this.stopWatch = new StopWatch( );
     this.stopWatch.start( );
@@ -49,7 +49,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
 
   public boolean isExpired() {
     long splitTime = split( );
-    return (splitTime-DatabaseUtil.MAX_OPEN_TIME)>this.startTime.getTimeInMillis( );
+    return (splitTime-30000)>this.startTime.getTimeInMillis( );
   }
 
   public long splitOperation( ) {

@@ -71,6 +71,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import javax.persistence.*;
 
 @Entity
+@PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "ImageCache" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ImageCacheInfo implements Comparable {
