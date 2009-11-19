@@ -102,6 +102,7 @@ public class StorageProperties {
 	public static String iface = "eth0";
 	public static boolean zeroFillVolumes = false;
 	public static boolean trackUsageStatistics = true;
+    public static String STORAGE_IP = "127.0.0.1";
 
 	static {
 		updateWalrusUrl();

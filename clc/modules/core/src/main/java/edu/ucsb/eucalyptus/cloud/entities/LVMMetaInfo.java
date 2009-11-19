@@ -65,23 +65,27 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import java.io.Serializable;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 
-@Entity
-@Table( name = "LVMMetadata" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class LVMMetaInfo {
-    @Id
-    @GeneratedValue
-    @Column(name = "lvm_meta_info_id")
-    private Long id = -1l;
+@MappedSuperclass
+public class LVMMetaInfo implements Serializable {
+	@Id
+	@GeneratedValue(generator = "system-uuid")
+	@GenericGenerator(name="system-uuid", strategy = "uuid")
+	@Column( name = "id" )
+	String id;
     @Column(name = "hostname")
 	protected String hostName;
 
-    public LVMMetaInfo() {}
+    public LVMMetaInfo() {
+    	super();
+    }
 
     public LVMMetaInfo(String hostName) {
         this.hostName = hostName;

@@ -42,9 +42,6 @@ import javax.persistence.*;
 @Entity
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ISCSIMetaInfo extends LVMMetaInfo {
-    @Id
-    @GeneratedValue
-    private Long id = -1l;
     @Column(name = "store_prefix")
     private String store_prefix;
     @Column(name = "store_number")

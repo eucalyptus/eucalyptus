@@ -42,9 +42,6 @@ import javax.persistence.*;
 @Entity
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ISCSIVolumeInfo extends LVMVolumeInfo {
-    @Id
-    @GeneratedValue
-    private Long id = -1l;
     private String storeName;
     private Integer tid;
     private Integer lun;

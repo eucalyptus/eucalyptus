@@ -313,12 +313,15 @@ public class BlockStorage {
 		List <VolumeInfo> volumeInfos = db.query(volumeInfo);
 		if(volumeInfos.size() > 0) {
 			VolumeInfo foundVolumeInfo = volumeInfos.get(0);
-			List<String> returnValues = blockManager.getVolume(volumeId);
+			String deviceName = blockManager.getVolumeProperty(volumeId);
 			reply.setVolumeId(foundVolumeInfo.getVolumeId());
 			reply.setSize(foundVolumeInfo.getSize().toString());
 			reply.setStatus(foundVolumeInfo.getStatus());
 			reply.setSnapshotId(foundVolumeInfo.getSnapshotId());
-			reply.setActualDeviceName(StorageProperties.ETHERD_PREFIX + returnValues.get(0) + "." + returnValues.get(1));
+			if(deviceName != null)
+				reply.setActualDeviceName(deviceName);
+			else
+				reply.setActualDeviceName("invalid");
 		} else {
 			db.rollback();
 			throw new NoSuchVolumeException(volumeId);
@@ -735,9 +738,9 @@ public class BlockStorage {
 		volume.setCreateTime(DateUtils.format(volInfo.getCreateTime().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
 		volume.setSize(String.valueOf(volInfo.getSize()));
 		volume.setSnapshotId(volInfo.getSnapshotId());
-		List<String> returnValues = blockManager.getVolume(volumeId);
-		if(returnValues.size() > 0)
-			volume.setActualDeviceName(StorageProperties.ETHERD_PREFIX + returnValues.get(0) + "." + returnValues.get(1));
+		String deviceName = blockManager.getVolumeProperty(volumeId);
+		if(deviceName != null)
+			volume.setActualDeviceName(deviceName);
 		else
 			volume.setActualDeviceName("invalid");
 		return volume;

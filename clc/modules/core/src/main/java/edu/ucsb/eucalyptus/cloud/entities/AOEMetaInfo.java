@@ -42,9 +42,6 @@ import javax.persistence.*;
 @Entity
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class AOEMetaInfo extends LVMMetaInfo {
-    @Id
-    @GeneratedValue
-    private Long id = -1l;
     @Column(name = "major_number")
     private Integer majorNumber;
     @Column(name = "minor_number")

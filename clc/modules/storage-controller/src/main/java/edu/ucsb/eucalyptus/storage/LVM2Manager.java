@@ -87,6 +87,7 @@ import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.ws.VolumeManager;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -126,6 +127,11 @@ public class LVM2Manager implements LogicalStorageManager {
 				throw new EucalyptusCloudException("Is lvm installed?");
 			} else {
 				LOG.info(returnValue);
+			}
+			if(System.getProperty("euca.disable.iscsi") != null) {
+				exportManager = new AOEManager();
+			} else {
+				exportManager = new ISCSIManager();
 			}
 			exportManager.checkPreconditions();
 		} catch(ExecutionException ex) {
@@ -237,11 +243,6 @@ public class LVM2Manager implements LogicalStorageManager {
 	public void initialize() {
 		if(!initialized) {
 			System.loadLibrary("lvm2control");
-			if(System.getProperty("euca.disable.iscsi") != null) {
-				exportManager = new AOEManager();
-			} else {
-				exportManager = new ISCSIManager();
-			}
 			initialized = true;
 		}
 	}
@@ -259,25 +260,11 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public void cleanVolume(String volumeId) {
-		//TODO: fixme
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(volumeId);
 		if(lvmVolInfo != null) {
-			//remove aoe export
 			String loDevName = lvmVolInfo.getLoDevName();
-			int pid = lvmVolInfo.getVbladePid();
-			if(pid > 0) {
-				String returnValue = aoeStatus(pid);
-				if(returnValue.length() > 0) {
-					exportManager.unexportVolume(pid);
-					int majorNumber = lvmVolInfo.getMajorNumber();
-					int minorNumber = lvmVolInfo.getMinorNumber();
-					File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
-					if(vbladePidFile.exists()) {
-						vbladePidFile.delete();
-					}
-				}
-			}
+			volumeManager.unexportVolume(lvmVolInfo);
 			String vgName = lvmVolInfo.getVgName();
 			String lvName = lvmVolInfo.getLvName();
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
@@ -308,7 +295,7 @@ public class LVM2Manager implements LogicalStorageManager {
 
 	public native void registerSignals();
 
-	
+
 	//TODO: move to respective managers
 	private synchronized List<Integer> allocateDeviceNumbers() throws EucalyptusCloudException {
 		int majorNumber = -1;
@@ -485,10 +472,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			createLogicalVolume(loDevName, vgName, lvName);
 			//export logical volume
 			try {
-				int vbladePid = volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
-				if(vbladePid < 0) {
-					throw new EucalyptusCloudException("Unable to export volume: " + volumeId);
-				}
+				volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
 			} catch(EucalyptusCloudException ex) {
 				LOG.error(ex);
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
@@ -507,6 +491,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			lvmVolumeInfo.setSize(size);
 		} catch(ExecutionException ex) {
 			String error = "Unable to run command: " + ex.getMessage();
+			volumeManager.abort();
 			LOG.error(error);
 			throw new EucalyptusCloudException(error);
 		}
@@ -540,10 +525,7 @@ public class LVM2Manager implements LogicalStorageManager {
 					duplicateLogicalVolume(foundSnapshotInfo.getLoFileName(), absoluteLVName);
 					//export logical volume
 					try {
-						int vbladePid = volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
-						if(vbladePid < 0) {
-							throw new EucalyptusCloudException("Unable to export volume: " + volumeId);
-						}
+						volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
 					} catch(EucalyptusCloudException ex) {
 						String returnValue = removeLogicalVolume(absoluteLVName);
 						returnValue = removeVolumeGroup(vgName);
@@ -578,14 +560,14 @@ public class LVM2Manager implements LogicalStorageManager {
 		String snapshotRawFileName = StorageProperties.storageRootDirectory + "/" + snapshotId;
 		File snapshotFile = new File(snapshotRawFileName);
 		if(snapshotFile.exists()) {
-			EntityWrapper<LVMVolumeInfo> db = StorageController.getEntityWrapper();
-			LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotId);
+			VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+			LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
+			lvmVolumeInfo.setVolumeId(snapshotId);
 			lvmVolumeInfo.setLoFileName(snapshotRawFileName);
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 			lvmVolumeInfo.setSize((int)(snapshotFile.length() / StorageProperties.GB));
-			lvmVolumeInfo.setVbladePid(-1);			
-			db.add(lvmVolumeInfo);
-			db.commit();			
+			volumeManager.add(lvmVolumeInfo);
+			volumeManager.finish();
 		} else {
 			throw new EucalyptusCloudException("Snapshot backing file does not exist for: " + snapshotId);
 		}
@@ -622,7 +604,6 @@ public class LVM2Manager implements LogicalStorageManager {
 				lvmVolumeInfo.setLvName(lvName);
 				lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 				lvmVolumeInfo.setSize(size);
-				lvmVolumeInfo.setVbladePid(-1);
 				volumeManager.add(lvmVolumeInfo);
 				volumeManager.finish();
 			} catch(ExecutionException ex) {
@@ -663,21 +644,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			String vgName = foundLVMVolumeInfo.getVgName();
 			String lvName = foundLVMVolumeInfo.getLvName();
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-
-
-			Integer pid = foundLVMVolumeInfo.getVbladePid();
-			if(pid > 0) {
-				String returnValue = aoeStatus(pid);
-				if(returnValue.length() > 0) {
-					exportManager.unexportVolume(pid);
-					int majorNumber = foundLVMVolumeInfo.getMajorNumber();
-					int minorNumber = foundLVMVolumeInfo.getMinorNumber();
-					File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
-					if(vbladePidFile.exists()) {
-						vbladePidFile.delete();
-					}
-				}
-			}
+			volumeManager.unexportVolume(foundLVMVolumeInfo);
 			try {
 				String returnValue = removeLogicalVolume(absoluteLVName);
 				if(returnValue.length() == 0) {
@@ -712,8 +679,8 @@ public class LVM2Manager implements LogicalStorageManager {
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 		ArrayList<String> returnValues = new ArrayList<String>();
 		if(foundLVMVolumeInfo != null) {
-			LVMVolumeInfo snapshotInfo = new LVMVolumeInfo(snapshotId);
-			snapshotInfo.setSnapshotOf(volumeId);
+			LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
+			snapshotInfo.setVolumeId(snapshotId);
 			File snapshotDir = new File(StorageProperties.storageRootDirectory);
 			snapshotDir.mkdirs();
 
@@ -753,7 +720,6 @@ public class LVM2Manager implements LogicalStorageManager {
 				}
 				snapshotInfo.setLoFileName(snapRawFileName);
 				snapshotInfo.setStatus(StorageProperties.Status.available.toString());
-				snapshotInfo.setVbladePid(-1);
 				snapshotInfo.setSize(size);
 				returnValues.add(vgName);
 				returnValues.add(lvName);
@@ -798,18 +764,11 @@ public class LVM2Manager implements LogicalStorageManager {
 		volumeManager.finish();
 	}
 
-	public List<String> getVolume(String volumeId) throws EucalyptusCloudException {
-		ArrayList<String> returnValues = new ArrayList<String>();
-
+	public String getVolumeProperty(String volumeId) throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
-		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
-
-		if(foundLVMVolumeInfo != null) {
-			returnValues.add(String.valueOf(foundLVMVolumeInfo.getMajorNumber()));
-			returnValues.add(String.valueOf(foundLVMVolumeInfo.getMinorNumber()));
-		}
+		String returnValue = volumeManager.getVolumeProperty(volumeId);
 		volumeManager.finish();
-		return returnValues;
+		return returnValue;
 	}
 
 	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException {
@@ -819,10 +778,9 @@ public class LVM2Manager implements LogicalStorageManager {
 		for(String snapshotFileName: snapshotFileNames) {
 			try {
 				String loDevName = createLoopback(snapshotFileName);
-				LVMVolumeInfo lvmVolumeInfo = new LVMVolumeInfo(snapshotSet.get(i++));
+				LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
+				lvmVolumeInfo.setVolumeId(snapshotSet.get(i++));
 				lvmVolumeInfo.setLoDevName(loDevName);
-				lvmVolumeInfo.setMajorNumber(-1);
-				lvmVolumeInfo.setMinorNumber(-1);
 				lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 				volumeManager.add(lvmVolumeInfo);
 			} catch(ExecutionException ex) {
@@ -847,7 +805,6 @@ public class LVM2Manager implements LogicalStorageManager {
 				if(!new File(absoluteLoFileName).exists()) {
 					LOG.error("Backing volume: " + absoluteLoFileName + " not found. Invalidating volume."); 
 					foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
-					foundVolumeInfo.setVbladePid(-1);
 					continue;
 				}
 				try {
@@ -863,56 +820,20 @@ public class LVM2Manager implements LogicalStorageManager {
 		}
 		//now enable them
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
-			int pid = foundVolumeInfo.getVbladePid();
-			if(pid > 0) {
-				//enable logical volumes
-				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() + PATH_SEPARATOR + foundVolumeInfo.getLvName();
-				try {
-					enableLogicalVolume(absoluteLVName);
-				} catch(ExecutionException ex) {
-					String error = "Unable to run command: " + ex.getMessage();
-					LOG.error(error);
-					continue;
-				}
-				String returnValue = aoeStatus(pid);
-				if(returnValue.length() == 0) {
-					int majorNumber = foundVolumeInfo.getMajorNumber();
-					int minorNumber = foundVolumeInfo.getMinorNumber();
-					pid = exportManager.exportVolume(StorageProperties.iface, absoluteLVName, majorNumber, minorNumber);
-					foundVolumeInfo.setVbladePid(pid);
-					File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
-					FileOutputStream fileOutStream = null;
-					try {
-						fileOutStream = new FileOutputStream(vbladePidFile);
-						String pidString = String.valueOf(pid);
-						fileOutStream.write(pidString.getBytes());
-						fileOutStream.close();
-					} catch (Exception ex) {
-						if(fileOutStream != null)
-							try {
-								fileOutStream.close();
-							} catch (IOException e) {
-								LOG.error(e);
-							}
-							LOG.error("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
-					}
-				}
-			}
+			try {
+				volumeManager.exportVolume(foundVolumeInfo);
+			} catch(EucalyptusCloudException ex) {
+				LOG.error("Unable to reload volume: " + foundVolumeInfo.getVolumeId() + ex);
+			}		
 		}
 		volumeManager.finish();
 	}
 
 	public List<String> getSnapshotValues(String snapshotId) throws EucalyptusCloudException {
-		ArrayList<String> returnValues = new ArrayList<String>();
-
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
-		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(snapshotId);
-		if(foundLVMVolumeInfo != null) {
-			returnValues.add(foundLVMVolumeInfo.getVgName());
-			returnValues.add(foundLVMVolumeInfo.getLvName());
-		}
-		volumeManager.finish();
-		return returnValues;
+        List<String> returnValues = volumeManager.getSnapshotValues(snapshotId);
+        volumeManager.finish();
+        return returnValues;
 	}
 
 	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException {
@@ -959,6 +880,100 @@ public class LVM2Manager implements LogicalStorageManager {
 
 		private VolumeEntityWrapperManager() {
 			entityWrapper = StorageController.getEntityWrapper();
+		}
+
+		public List<String> getSnapshotValues(String snapshotId) {
+            ArrayList<String> returnValues = new ArrayList<String>();
+            LVMVolumeInfo lvmVolumeInfo = getVolumeInfo(snapshotId);
+            if(lvmVolumeInfo instanceof AOEVolumeInfo) {
+                returnValues.add(lvmVolumeInfo.getVgName());
+                returnValues.add(lvmVolumeInfo.getLvName());
+            }
+            return returnValues;
+		}
+
+		public void exportVolume(LVMVolumeInfo lvmVolumeInfo) throws EucalyptusCloudException {
+			if(exportManager instanceof AOEManager) {
+				AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) lvmVolumeInfo;
+
+				int pid = aoeVolumeInfo.getVbladePid();
+				if(pid > 0) {
+					//enable logical volumes
+					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + aoeVolumeInfo.getVgName() + PATH_SEPARATOR + aoeVolumeInfo.getLvName();
+					try {
+						enableLogicalVolume(absoluteLVName);
+					} catch(ExecutionException ex) {
+						String error = "Unable to run command: " + ex.getMessage();
+						LOG.error(error);
+						return;
+					}
+					String returnValue = aoeStatus(pid);
+					if(returnValue.length() == 0) {
+						int majorNumber = aoeVolumeInfo.getMajorNumber();
+						int minorNumber = aoeVolumeInfo.getMinorNumber();
+						pid = exportManager.exportVolume(StorageProperties.iface, absoluteLVName, majorNumber, minorNumber);
+						aoeVolumeInfo.setVbladePid(pid);
+						File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+						FileOutputStream fileOutStream = null;
+						try {
+							fileOutStream = new FileOutputStream(vbladePidFile);
+							String pidString = String.valueOf(pid);
+							fileOutStream.write(pidString.getBytes());
+							fileOutStream.close();
+						} catch (Exception ex) {
+							if(fileOutStream != null)
+								try {
+									fileOutStream.close();
+								} catch (IOException e) {
+									LOG.error(e);
+								}
+								LOG.error("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
+						}
+					}
+				}
+			} else if(exportManager instanceof ISCSIManager) {
+				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
+				String password = Hashes.getRandom(16);
+				iscsiVolumeInfo.setEncryptedPassword(encryptTargetPassword(password));
+				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + iscsiVolumeInfo.getVgName() + PATH_SEPARATOR + iscsiVolumeInfo.getLvName();
+				((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser(), password);
+			}	
+		}
+
+		public String getVolumeProperty(String volumeId) {
+			LVMVolumeInfo lvmVolumeInfo = getVolumeInfo(volumeId);
+			if(exportManager instanceof AOEManager) {
+				AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) lvmVolumeInfo;
+				return StorageProperties.ETHERD_PREFIX + aoeVolumeInfo.getMajorNumber() + "." + aoeVolumeInfo.getMinorNumber();
+			} else if(exportManager instanceof ISCSIManager) {
+				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
+				String storeName = iscsiVolumeInfo.getStoreName();
+				String encryptedPassword = iscsiVolumeInfo.getEncryptedPassword();
+				return StorageProperties.STORAGE_IP + "," + storeName + "," + encryptedPassword;
+			}
+			return null;
+		}
+
+		public void unexportVolume(LVMVolumeInfo volumeInfo) {
+			if(volumeInfo instanceof AOEVolumeInfo) {
+				AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) volumeInfo;
+				int pid = aoeVolumeInfo.getVbladePid();
+				if(pid > 0) {
+					String returnValue = aoeStatus(pid);
+					if(returnValue.length() > 0) {
+						exportManager.unexportVolume(pid);
+						int majorNumber = aoeVolumeInfo.getMajorNumber();
+						int minorNumber = aoeVolumeInfo.getMinorNumber();
+						File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+						if(vbladePidFile.exists()) {
+							vbladePidFile.delete();
+						}
+					}
+				}
+			} else if(volumeInfo instanceof ISCSIVolumeInfo) {
+				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
+				((ISCSIManager)exportManager).unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
+			}			
 		}
 
 		private void finish() {
