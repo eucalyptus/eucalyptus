@@ -104,7 +104,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	private static Logger LOG = Logger.getLogger(LVM2Manager.class);
 	public static String eucaHome = System.getProperty("euca.home");
 	private static final long LVM_HEADER_LENGTH = 4 * StorageProperties.MB;
-	public StorageExportManager exportManager;
+	public static StorageExportManager exportManager;
 
 	public void checkPreconditions() throws EucalyptusCloudException {
 		//check if binaries exist, commands can be executed, etc.
