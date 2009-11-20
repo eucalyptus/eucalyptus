@@ -949,7 +949,7 @@ public class LVM2Manager implements LogicalStorageManager {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
 				String storeName = iscsiVolumeInfo.getStoreName();
 				String encryptedPassword = iscsiVolumeInfo.getEncryptedPassword();
-				return StorageProperties.STORAGE_IP + "," + storeName + "," + encryptedPassword;
+				return StorageProperties.STORAGE_HOST + "," + storeName + "," + encryptedPassword;
 			}
 			return null;
 		}

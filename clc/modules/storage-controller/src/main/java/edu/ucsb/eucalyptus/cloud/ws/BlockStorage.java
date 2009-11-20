@@ -157,16 +157,18 @@ public class BlockStorage {
 	}
 
 	private static void configure() {
+		StorageProperties.updateWalrusUrl();
 		StorageInfo storageInfo = getConfig();
 		StorageProperties.MAX_TOTAL_VOLUME_SIZE = storageInfo.getMaxTotalVolumeSizeInGb();
 		StorageProperties.iface = storageInfo.getStorageInterface();
 		StorageProperties.MAX_VOLUME_SIZE = storageInfo.getMaxVolumeSizeInGB();
 		StorageProperties.storageRootDirectory = storageInfo.getVolumesDir();
 		StorageProperties.zeroFillVolumes = storageInfo.getZeroFillVolumes();
+		StorageProperties.updateStorageHost();
 	}
 
 	private static StorageInfo getConfig() {
-		StorageProperties.updateName();
+		StorageProperties.updateName();		
 		EntityWrapper<StorageInfo> db = StorageController.getEntityWrapper();
 		StorageInfo storageInfo;
 		try {
