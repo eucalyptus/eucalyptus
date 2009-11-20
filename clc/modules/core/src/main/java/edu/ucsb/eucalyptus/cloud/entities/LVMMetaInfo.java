@@ -73,8 +73,6 @@ import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "LVMMetadata" )
 @MappedSuperclass
 public class LVMMetaInfo implements Serializable {
 	@Id

@@ -76,8 +76,6 @@ import com.eucalyptus.util.StorageProperties;
 
 import javax.persistence.*;
 
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "LVMVolumes" )
 @MappedSuperclass
 public class LVMVolumeInfo implements Serializable {
 	@Id

@@ -44,6 +44,7 @@ import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
+import edu.ucsb.eucalyptus.ic.StorageController;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -137,7 +138,7 @@ public class ISCSIManager implements StorageExportManager {
 
 	@Override
 	public void configure() {
-		EntityWrapper<ISCSIMetaInfo> db = new EntityWrapper<ISCSIMetaInfo>();
+		EntityWrapper<ISCSIMetaInfo> db = StorageController.getEntityWrapper();
 		ISCSIMetaInfo metaInfo = new ISCSIMetaInfo();
 		try {
 			List<ISCSIMetaInfo> metaInfoList = db.query(metaInfo);
@@ -147,12 +148,12 @@ public class ISCSIManager implements StorageExportManager {
 				metaInfo.setStoreUser("eucalyptus");
 				metaInfo.setTid(1);
 				db.add(metaInfo);
+				db.commit();		
 			}
 		} catch(Exception e) {
 			db.rollback();
 			LOG.error(e);
 		}
-		db.commit();		
 	}
 
 }

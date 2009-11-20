@@ -39,10 +39,9 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.*;
 
-
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "ISCSIMetaInfo" )
 @Entity
+@PersistenceContext(name="eucalyptus_storage")
+@Table( name = "ISCSIMetadata" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ISCSIMetaInfo extends LVMMetaInfo {
     @Column(name = "store_prefix")
