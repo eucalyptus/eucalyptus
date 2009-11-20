@@ -70,12 +70,22 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import javax.crypto.Cipher;
 
+import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
+
+import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
@@ -831,9 +841,9 @@ public class LVM2Manager implements LogicalStorageManager {
 
 	public List<String> getSnapshotValues(String snapshotId) throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
-        List<String> returnValues = volumeManager.getSnapshotValues(snapshotId);
-        volumeManager.finish();
-        return returnValues;
+		List<String> returnValues = volumeManager.getSnapshotValues(snapshotId);
+		volumeManager.finish();
+		return returnValues;
 	}
 
 	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException {
@@ -883,13 +893,13 @@ public class LVM2Manager implements LogicalStorageManager {
 		}
 
 		public List<String> getSnapshotValues(String snapshotId) {
-            ArrayList<String> returnValues = new ArrayList<String>();
-            LVMVolumeInfo lvmVolumeInfo = getVolumeInfo(snapshotId);
-            if(lvmVolumeInfo instanceof AOEVolumeInfo) {
-                returnValues.add(lvmVolumeInfo.getVgName());
-                returnValues.add(lvmVolumeInfo.getLvName());
-            }
-            return returnValues;
+			ArrayList<String> returnValues = new ArrayList<String>();
+			LVMVolumeInfo lvmVolumeInfo = getVolumeInfo(snapshotId);
+			if(lvmVolumeInfo instanceof AOEVolumeInfo) {
+				returnValues.add(lvmVolumeInfo.getVgName());
+				returnValues.add(lvmVolumeInfo.getLvName());
+			}
+			return returnValues;
 		}
 
 		public void exportVolume(LVMVolumeInfo lvmVolumeInfo) throws EucalyptusCloudException {
@@ -1035,23 +1045,19 @@ public class LVM2Manager implements LogicalStorageManager {
 		}
 
 		private String encryptTargetPassword(String password) throws EucalyptusCloudException {
-			/*List<ClusterStateType> clusters = Clusters.getInstance().getClusters();
-		if(clusters.size() > 0) {
-			ClusterStateType cluster = clusters.get(0);
+			EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
 			try {
-				PublicKey ncPublicKey = ServiceKeyStore.getInstance().getCertificate("nc-" + cluster.getName()).getPublicKey();
+				ClusterCredentials credentials = credDb.getUnique( new ClusterCredentials( StorageProperties.NAME ) );
+				PublicKey ncPublicKey = X509Cert.toCertificate(credentials.getNodeCertificate()).getPublicKey();
+				credDb.commit();
 				Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
-				return new String(Base64.encode(cipher.doFinal(password.getBytes())));
-			} catch(Exception ex) {
-				LOG.error(ex);
-				return null;
+				return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
+			} catch ( Exception e ) {
+				LOG.error( "Unable to encrypt storage target password" );
+				credDb.rollback( );
+				throw new EucalyptusCloudException(e.getMessage(), e);
 			}
-		}
-		String errorString = "No clusters have been added. Cannot export volumes until at least one cluster has been added";
-		LOG.error(errorString);
-		throw new EucalyptusCloudException(errorString);*/
-			return password;
 		}
 
 		private int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
