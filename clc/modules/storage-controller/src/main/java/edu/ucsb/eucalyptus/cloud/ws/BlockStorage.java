@@ -135,7 +135,7 @@ public class BlockStorage {
 	static BlockStorageChecker checker;
 	static BlockStorageStatistics blockStorageStatistics;
 
-	static {
+	public static void deferedInitializer() {
 		volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();

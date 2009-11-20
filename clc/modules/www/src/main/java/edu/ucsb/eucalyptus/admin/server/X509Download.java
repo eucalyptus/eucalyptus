@@ -89,6 +89,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
+import java.security.KeyStore;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -200,6 +201,7 @@ public class X509Download extends HttpServlet {
     sb.append( "\nexport EC2_URL=" + EucalyptusProperties.getCloudUrl( ) );
     sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
     sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
+    sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );
     sb.append( "\nexport EUCALYPTUS_CERT=${EUCA_KEY_DIR}/cloud-cert.pem" );
     sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
     sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
@@ -216,6 +218,15 @@ public class X509Download extends HttpServlet {
     zipOut.write( Hashes.getPemBytes( cloudCert ) );
     zipOut.closeEntry( );
 
+    zipOut.putNextEntry( new ZipEntry( "jssecacerts" ) );
+    KeyStore tempKs = KeyStore.getInstance("jks");
+    tempKs.load( null );
+    tempKs.setCertificateEntry( "eucalyptus", cloudCert );
+    ByteArrayOutputStream bos = new ByteArrayOutputStream( );
+    tempKs.store( bos, "changeit".toCharArray( ) );
+    zipOut.write( bos.toByteArray( ) );
+    zipOut.closeEntry( );
+    
     /** write the private key to the zip stream **/
     zipOut.putNextEntry( new ZipEntry( baseName + "-pk.pem" ) );
     zipOut.write( Hashes.getPemBytes( keyPair.getPrivate( ) ) );

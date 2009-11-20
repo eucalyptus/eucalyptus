@@ -67,6 +67,7 @@ import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -87,19 +88,20 @@ import com.eucalyptus.ws.AuthenticationException;
 
 public class HmacUtils {
   private static Logger            LOG     = Logger.getLogger( HmacUtils.class );
-  public static SimpleDateFormat[] iso8601 = {
-      new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss" ),
-      new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ssZ" ),
-      new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSSZ" ),
-      new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'" ),
-      new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'Z" ),
-      new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss'Z'" ),
-      new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss'Z'Z" ) };
+  public static String[] iso8601 = {
+      "yyyy-MM-dd'T'HH:mm:ss",
+      "yyyy-MM-dd'T'HH:mm:ssZ",
+      "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+      "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+      "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'Z",
+      "yyyy-MM-dd'T'HH:mm:ss'Z'",
+      "yyyy-MM-dd'T'HH:mm:ss'Z'Z" };
 
   public static Calendar parseTimestamp( final String timestamp ) throws AuthenticationException {
     Calendar ts = Calendar.getInstance( );
-    for ( SimpleDateFormat tsFormat : iso8601 ) {
+    for ( String tsPattern : iso8601 ) {
       try {
+        SimpleDateFormat tsFormat = new SimpleDateFormat( tsPattern );
         tsFormat.setTimeZone( TimeZone.getTimeZone( "GMT" ) );
         ts.setTime( tsFormat.parse( timestamp ) );
         return ts;
@@ -154,7 +156,7 @@ public class HmacUtils {
       sb.append( "&" ).append( urlEncode( firstKey ) ).append( "=" ).append( urlEncode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
     }
     String subject = prefix + sb.toString( );
-    LOG.debug( "VERSION2: " + subject );
+    LOG.trace( "VERSION2: " + subject );
     return subject;
   }
 

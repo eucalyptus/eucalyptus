@@ -75,6 +75,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.MappedSuperclass;
+import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Column;
@@ -199,6 +200,7 @@ public class RemoteConfiguration extends EphemeralConfiguration {
 }
 
 @Entity
+@PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_clusters" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
@@ -241,6 +243,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
 }
 
 @Entity
+@PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_sc" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class StorageControllerConfiguration extends ComponentConfiguration implements Serializable {
@@ -255,6 +258,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
   }
 }
 @Entity
+@PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_walrus" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class WalrusConfiguration extends ComponentConfiguration implements Serializable {
@@ -272,6 +276,7 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
 
 
 @Entity
+@PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_system" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class System implements Serializable {

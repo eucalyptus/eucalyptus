@@ -66,7 +66,12 @@ public class SslSetup {
   public static SSLContext getServerContext( ) {
     return SERVER_CONTEXT;
   }
-  
+
+  public static SSLEngine getServerEngine() {
+    SSLEngine engine = SslSetup.getServerContext( ).createSSLEngine( );
+    engine.setUseClientMode( false );
+    return engine;
+  }
   public static SSLContext getClientContext( ) {
     return CLIENT_CONTEXT;
   }

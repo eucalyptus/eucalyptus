@@ -82,6 +82,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.CredentialProvider;
 
 @Entity
+@PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Grants" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class GrantInfo {

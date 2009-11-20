@@ -104,7 +104,8 @@ public class StorageProperties {
 	public static boolean trackUsageStatistics = true;
 
 	static {
-		updateWalrusUrl();
+	  //TODO: this will need to be called from a bootstrapper once the persistence context is actually setup.
+	  //		updateWalrusUrl();
 	}
 
 	public static void updateName() {

@@ -73,6 +73,7 @@ import com.eucalyptus.util.StorageProperties;
 import javax.persistence.*;
 
 @Entity
+@PersistenceContext(name="eucalyptus_storage")
 @Table( name = "LVMVolumes" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class LVMVolumeInfo {

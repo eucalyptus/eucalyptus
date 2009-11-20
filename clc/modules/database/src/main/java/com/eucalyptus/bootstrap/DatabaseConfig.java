@@ -64,31 +64,16 @@
 package com.eucalyptus.bootstrap;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
 import org.hsqldb.ServerConstants;
 
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.SubDirectory;
 
 public class DatabaseConfig {
-  private static String DEFAULT = 
-    "CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" + 
-    "CREATE USER SA PASSWORD \"%s\"\n" + 
-    "GRANT DBA TO SA\n" + 
-    "SET WRITE_DELAY 100 MILLIS\n" + 
-    "SET SCHEMA PUBLIC\n";
-  static {
-    if( !System.getProperties( ).contains( PropertyKey.HOST ) ) System.setProperty( PropertyKey.HOST.toString( ), "127.0.0.1" );
-    if( !System.getProperties( ).contains( PropertyKey.PORT ) ) System.setProperty( PropertyKey.PORT.toString( ), "9001" );
-    if( !System.getProperties( ).contains( PropertyKey.PASSWORD ) )System.setProperty( PropertyKey.PASSWORD.toString( ), "" );
-  }
   private static DatabaseConfig singleton = new DatabaseConfig();
-  private static Logger LOG = Logger.getLogger( DatabaseConfig.Internal.class );
+  private static Logger LOG = Logger.getLogger( DatabaseConfig.class );
   public static DatabaseConfig getInstance() {
     return singleton;
   }
@@ -98,15 +83,6 @@ public class DatabaseConfig {
   
   enum Internal {
     general,images,auth,config,walrus,storage,dns;
-    public void prepareDatabase( ) throws IOException {
-      File dbFile = new File( SubDirectory.DB.toString( ) + File.separator + this.getDatabaseName( ) + ".script" );
-      if ( !dbFile.exists( ) ) {
-        FileWriter dbOut = new FileWriter( dbFile );
-        dbOut.write( String.format( DEFAULT, System.getProperty( "euca.db.password" ) ) );
-        dbOut.flush( );
-        dbOut.close( );
-      }
-    }
     public String getDatabaseName() {
       return Component.eucalyptus.name( ) + "_" + this.name();
     }
@@ -115,19 +91,6 @@ public class DatabaseConfig {
       props.setProperty( ServerConstants.SC_KEY_DATABASE + "." + this.ordinal( ), SubDirectory.DB.toString( ) + File.separator + this.getDatabaseName( ) );
       props.setProperty( ServerConstants.SC_KEY_DBNAME + "."+ this.ordinal( ), this.getDatabaseName( ) );
       return props;
-    }
-  }
-  
-  public static void initialize() throws IOException {
-    Component.db.markLocal( );
-    Component.db.markEnabled( );
-    Component.db.setHostAddress( "127.0.0.1" );
-    System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
-    LOG.info( LogUtil.header( "Setting up database: " ) );
-    System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
-    for( Internal dbName : Internal.values( ) ) {
-      LOG.info( dbName.getProperties( ) );
-      dbName.prepareDatabase( );
     }
   }
   
@@ -142,37 +105,5 @@ public class DatabaseConfig {
     }
     return props;
   }
-  
-  enum PropertyKey {
-    HOST("euca.db.host"),URL("euca.db.url"),PORT("euca.db.port"),PASSWORD("euca.db.password");
-    private String property;
-
-    private PropertyKey( String property ) {
-      this.property = property;
-    }
-    @Override
-    public String toString() {
-      return this.property;
-    }    
-  }
-  
-
-  //TODO: handle persistence.xml issues here
-  /*
-   * hsqldb.script_format=0
-   * runtime.gc_interval=0
-   * sql.enforce_strict_size=false
-   * hsqldb.cache_size_scale=8
-   * readonly=false
-   * hsqldb.nio_data_file=true
-   * hsqldb.cache_scale=14
-   * version=1.8.0
-   * hsqldb.default_table_type=memory
-   * hsqldb.cache_file_scale=1
-   * hsqldb.log_size=200
-   * modified=yes
-   * hsqldb.cache_version=1.7.0
-   * hsqldb.original_version=1.8.0
-   * hsqldb.compatible_version=1.8.0
-   */
+    
 }

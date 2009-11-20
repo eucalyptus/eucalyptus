@@ -75,6 +75,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
+import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.util.LogUtil;
 
 public abstract class MessageStackHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
@@ -82,7 +83,9 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
 
   @Override
   public void handleDownstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-    LOG.trace( LogUtil.dumpObject( channelEvent ) );
+    if( DebugUtil.TRACE) {
+      LOG.trace( LogUtil.dumpObject( channelEvent ) );
+    }
     try {
       if ( channelEvent instanceof MessageEvent ) {
         final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
@@ -114,7 +117,9 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
 
   @Override
   public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-    LOG.trace( LogUtil.dumpObject( channelEvent ) );
+    if( DebugUtil.TRACE) {
+      LOG.trace( LogUtil.dumpObject( channelEvent ) );
+    }
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
       try {

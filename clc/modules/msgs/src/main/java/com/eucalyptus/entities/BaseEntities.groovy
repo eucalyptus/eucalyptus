@@ -1,6 +1,7 @@
 package com.eucalyptus.entities;
 
 import javax.persistence.MappedSuperclass;
+import javax.persistence.PersistenceContext;
 import javax.persistence.Transient;
 import javax.persistence.Table;
 import javax.persistence.Id;
@@ -86,6 +87,7 @@ public abstract class UserMetadata extends AbstractPersistent implements Seriali
 }
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "metadata_keypair" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class SshKeyPair extends UserMetadata implements Serializable {
@@ -148,6 +150,7 @@ public class SshKeyPair extends UserMetadata implements Serializable {
 
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class NetworkRulesGroup extends UserMetadata implements Serializable {
@@ -215,6 +218,7 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
 }
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "network_rule_peer_network" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class NetworkPeer {  
@@ -267,6 +271,7 @@ public class NetworkPeer {
 }
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "metadata_network_rule" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class NetworkRule {
@@ -350,6 +355,7 @@ public class NetworkRule {
 }
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "metadata_network_rule_ip_range" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class IpRange {
