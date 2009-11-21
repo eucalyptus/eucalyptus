@@ -336,7 +336,7 @@ public class LVM2Manager implements LogicalStorageManager {
 
 	private synchronized void allocateNewTarget(ISCSIVolumeInfo volumeInfo) throws EucalyptusCloudException {
 		ISCSIMetaInfo metaInfo = new ISCSIMetaInfo();
-		EntityWrapper<ISCSIMetaInfo> db = new EntityWrapper<ISCSIMetaInfo>();
+		EntityWrapper<ISCSIMetaInfo> db = StorageController.getEntityWrapper();
 		List<ISCSIMetaInfo> metaInfoList = db.query(metaInfo);
 		if(metaInfoList.size() > 0) {
 			ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
@@ -952,14 +952,16 @@ public class LVM2Manager implements LogicalStorageManager {
 
 		public String getVolumeProperty(String volumeId) {
 			LVMVolumeInfo lvmVolumeInfo = getVolumeInfo(volumeId);
-			if(exportManager instanceof AOEManager) {
-				AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) lvmVolumeInfo;
-				return StorageProperties.ETHERD_PREFIX + aoeVolumeInfo.getMajorNumber() + "." + aoeVolumeInfo.getMinorNumber();
-			} else if(exportManager instanceof ISCSIManager) {
-				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
-				String storeName = iscsiVolumeInfo.getStoreName();
-				String encryptedPassword = iscsiVolumeInfo.getEncryptedPassword();
-				return StorageProperties.STORAGE_HOST + "," + storeName + "," + encryptedPassword;
+			if(lvmVolumeInfo != null) {
+				if(exportManager instanceof AOEManager) {
+					AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) lvmVolumeInfo;
+					return StorageProperties.ETHERD_PREFIX + aoeVolumeInfo.getMajorNumber() + "." + aoeVolumeInfo.getMinorNumber();
+				} else if(exportManager instanceof ISCSIManager) {
+					ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
+					String storeName = iscsiVolumeInfo.getStoreName();
+					String encryptedPassword = iscsiVolumeInfo.getEncryptedPassword();
+					return StorageProperties.STORAGE_HOST + "," + storeName + "," + encryptedPassword;
+				}
 			}
 			return null;
 		}
