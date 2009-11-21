@@ -47,9 +47,9 @@ public class GroovyUtil {
       try {
         fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName + ".groovy" );
         return getGroovyEngine().eval( fileReader );
-      } catch ( Throwable e ) {
-      fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName );
-      return getGroovyEngine().eval( fileReader );
+      } catch ( FileNotFoundException e ) {
+        fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName );
+        return getGroovyEngine().eval( fileReader );
       } 
     } catch ( Throwable e ) {
       LOG.debug( e, e );

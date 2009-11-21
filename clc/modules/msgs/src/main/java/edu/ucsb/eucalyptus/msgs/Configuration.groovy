@@ -72,11 +72,10 @@ public class ComponentInfoType extends EucalyptusData {
 public class NodeComponentInfoType extends EucalyptusData {
   String clusterName;  
   String name;
-  String detail;
+  ArrayList<String> instances = new ArrayList<String>();
   public NodeComponentInfoType(){}
-  public NodeComponentInfoType(String name, String detail, String clusterName){
+  public NodeComponentInfoType(String name, String clusterName){
     this.name = name; 
-    this.detail = detail;
     this.clusterName = clusterName;
   }
 }
