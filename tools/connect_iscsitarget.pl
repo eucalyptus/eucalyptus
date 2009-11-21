@@ -35,6 +35,10 @@ $password = decrypt_password($encrypted_password);
 
 login_target($ip, $store, $password);
 
+#wait for device to be ready
+
+sleep 1;
+
 print get_device_name($store);
 
 sub parse_devstring {
