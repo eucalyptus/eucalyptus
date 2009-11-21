@@ -244,9 +244,11 @@ do_start() {
 
 	if [ "$DISABLE_DNS" = "Y" ]; then
 		OPTS="$OPTS --remote-dns"
-	elif [ "$DISABLE_EBS" = "Y" ]; then
-		OPTS="$OPTS --disable-ebs"
-	elif [ "$DISABLE_ISCSI" = "Y" ]; then
+	fi
+	if [ "$DISABLE_EBS" = "Y" ]; then
+		OPTS="$OPTS --disable-storage"
+	fi
+	if [ "$DISABLE_ISCSI" = "Y" ]; then
 		OPTS="$OPTS --disable-iscsi"
 	fi
 
