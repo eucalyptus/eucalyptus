@@ -72,6 +72,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -102,11 +103,7 @@ public class StorageProperties {
 	public static String iface = "eth0";
 	public static boolean zeroFillVolumes = false;
 	public static boolean trackUsageStatistics = true;
-
-	static {
-	  //TODO: this will need to be called from a bootstrapper once the persistence context is actually setup.
-	  //		updateWalrusUrl();
-	}
+	public static String STORAGE_HOST = "127.0.0.1";
 
 	public static void updateName() {
 		if(!Component.eucalyptus.isLocal()) {
@@ -117,10 +114,29 @@ public class StorageProperties {
 				SystemUtil.shutdownWithError("Storage controller name cannot be determined. Shutting down.");
 			}
 		} else {
-			StorageProperties.NAME = SC_LOCAL_NAME;
+			try {
+				List<StorageControllerConfiguration> configs = Configuration.getStorageControllerConfigurations();
+				for(StorageControllerConfiguration config : configs) {
+					if(NetworkUtil.testLocal(config.getHostName())) {
+						StorageProperties.NAME = config.getName();
+						return;
+					}
+				}
+			} catch (EucalyptusCloudException e) {
+				LOG.error(e);
+			}
 		}
-
 	}
+
+	public static void updateStorageHost() {
+		try {
+			StorageControllerConfiguration config = Configuration.getStorageControllerConfiguration(StorageProperties.NAME);
+			STORAGE_HOST = config.getHostName();
+		} catch (EucalyptusCloudException e) {
+			LOG.error(e);
+		}
+	}
+
 	public static void updateWalrusUrl() {
 		List<WalrusConfiguration> walrusConfigs;
 		try {
