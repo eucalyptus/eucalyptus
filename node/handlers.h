@@ -100,9 +100,9 @@ struct nc_state_t {
 	char virsh_cmd_path[CHAR_BUFFER_SIZE];
 	char xm_cmd_path[CHAR_BUFFER_SIZE];
 	char detach_cmd_path[CHAR_BUFFER_SIZE];
-	char connect_storage_cmd_path[CHAR_BUFFER_SIZE];
-	char disconnect_storage_cmd_path[CHAR_BUFFER_SIZE];
-	char get_storage_cmd_path[CHAR_BUFFER_SIZE];
+	char connect_storage_cmd_path[BIG_CHAR_BUFFER_SIZE];
+	char disconnect_storage_cmd_path[BIG_CHAR_BUFFER_SIZE];
+	char get_storage_cmd_path[BIG_CHAR_BUFFER_SIZE];
 };
 
 

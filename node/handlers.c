@@ -1092,13 +1092,13 @@ void parse_target(char *dev_string) {
 
 char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
     char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
-    char buf [CHAR_BUFFER_SIZE];
+    char buf [BIG_CHAR_BUFFER_SIZE];
     char *retval;
     if (!home) {
         home = strdup(""); /* root by default */
     }
     
-    snprintf (buf, CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
+    snprintf (buf, BIG_CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
     logprintfl (EUCAINFO, "connect_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if ((retval = system_output(buf)) == NULL) {
 	logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
@@ -1124,13 +1124,13 @@ int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
 
 char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
     char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
-    char buf [CHAR_BUFFER_SIZE];
+    char buf [BIG_CHAR_BUFFER_SIZE];
     char *retval;
     if (!home) {
         home = strdup(""); /* root by default */
     }
     
-    snprintf (buf, CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
+    snprintf (buf, BIG_CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
     logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if ((retval = system_output(buf)) == NULL) {
 	logprintfl (EUCAERROR, "ERROR: get_iscsi_target failed\n");
