@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.config;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -74,6 +75,7 @@ import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.NetworkUtil;
 
 import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
@@ -82,6 +84,9 @@ import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
 import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
+import edu.ucsb.eucalyptus.msgs.DescribeNodesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeNodesType;
+import edu.ucsb.eucalyptus.msgs.NodeComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
@@ -219,7 +224,11 @@ public class Configuration {
       throw new EucalyptusCloudException( e1.getMessage( ), e1 );
     }
   }
-
+  public DescribeNodesResponseType listComponents( DescribeNodesType request ) throws EucalyptusCloudException {
+    DescribeNodesResponseType reply = (DescribeNodesResponseType) request.getReply( );
+    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) GroovyUtil.evaluateScript( "describe_nodes" ) );
+    return reply;
+  }
   public DescribeComponentsResponseType listComponents( DescribeComponentsType request ) throws EucalyptusCloudException {
     DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
     ComponentConfiguration searchConfig;
