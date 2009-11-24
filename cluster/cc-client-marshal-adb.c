@@ -138,7 +138,7 @@ int cc_getConsoleOutput(char *instId, axutil_env_t *env, axis2_stub_t *stub) {
 
   tit = adb_getConsoleOutputType_create(env);
   adb_getConsoleOutputType_set_instanceId(tit, env, instId);
-  adb_getConsoleOutputType_set_userId(tit, env, "eucalyptus");
+  adb_getConsoleOutputType_set_userId(tit, env, "admin");
   {
     char cidstr[9];
     bzero(cidstr, 9);
