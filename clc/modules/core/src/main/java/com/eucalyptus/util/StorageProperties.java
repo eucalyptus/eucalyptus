@@ -137,6 +137,10 @@ public class StorageProperties {
 		}
 	}
 
+	public static void updateStorageHost(String hostName) {
+		STORAGE_HOST = hostName;
+	}
+
 	public static void updateWalrusUrl() {
 		List<WalrusConfiguration> walrusConfigs;
 		try {
