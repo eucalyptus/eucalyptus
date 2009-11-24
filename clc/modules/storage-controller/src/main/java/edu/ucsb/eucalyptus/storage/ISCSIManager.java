@@ -44,6 +44,8 @@ import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
@@ -156,4 +158,25 @@ public class ISCSIManager implements StorageExportManager {
 		}
 	}
 
+	@Override
+	public synchronized void allocateTarget(LVMVolumeInfo volumeInfo) {
+		if(volumeInfo instanceof ISCSIVolumeInfo) {
+			ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;		
+			ISCSIMetaInfo metaInfo = new ISCSIMetaInfo();
+			EntityWrapper<ISCSIMetaInfo> db = StorageController.getEntityWrapper();
+			List<ISCSIMetaInfo> metaInfoList = db.query(metaInfo);
+			if(metaInfoList.size() > 0) {
+				ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
+				int storeNumber = foundMetaInfo.getStoreNumber();
+				int tid = foundMetaInfo.getTid();
+				iscsiVolumeInfo.setStoreName(foundMetaInfo.getStore_prefix() + storeNumber);
+				iscsiVolumeInfo.setStoreUser(foundMetaInfo.getStoreUser());
+				iscsiVolumeInfo.setTid(tid);
+				iscsiVolumeInfo.setLun(0);
+				foundMetaInfo.setStoreNumber(++storeNumber);
+				foundMetaInfo.setTid(++tid);
+			}
+			db.commit();
+		}
+	}
 }

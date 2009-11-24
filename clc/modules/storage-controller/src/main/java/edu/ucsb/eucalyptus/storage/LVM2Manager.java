@@ -108,7 +108,6 @@ public class LVM2Manager implements LogicalStorageManager {
 	public static final String PATH_SEPARATOR = "/";
 	public static boolean initialized = false;
 	public static final int MAX_LOOP_DEVICES = 256;
-	public static final int MAX_MINOR_NUMBER = 16;
 	private  static final String blockSize = "1M";
 	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
 	public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
@@ -304,53 +303,6 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public native void registerSignals();
-
-
-	//TODO: move to respective managers
-	private synchronized List<Integer> allocateDeviceNumbers() throws EucalyptusCloudException {
-		int majorNumber = -1;
-		int minorNumber = -1;
-		List<Integer> deviceNumbers = new ArrayList<Integer>();
-		AOEMetaInfo metaInfo = new AOEMetaInfo();
-		EntityWrapper<AOEMetaInfo> db = StorageController.getEntityWrapper();
-		List<AOEMetaInfo> metaInfoList = db.query(metaInfo);
-		if(metaInfoList.size() > 0) {
-			AOEMetaInfo foundMetaInfo = metaInfoList.get(0);
-			majorNumber = foundMetaInfo.getMajorNumber();
-			minorNumber = foundMetaInfo.getMinorNumber();
-			do {
-				if(minorNumber >= MAX_MINOR_NUMBER - 1) {
-					++majorNumber;
-				}
-				minorNumber = (minorNumber + 1) % MAX_MINOR_NUMBER;
-				LOG.info("Trying e" + majorNumber + "." + minorNumber);
-			} while(new File(StorageProperties.ETHERD_PREFIX + majorNumber + "." + minorNumber).exists());
-			foundMetaInfo.setMajorNumber(majorNumber);
-			foundMetaInfo.setMinorNumber(minorNumber);
-		}
-		deviceNumbers.add(majorNumber);
-		deviceNumbers.add(minorNumber);
-		db.commit();
-		return deviceNumbers;
-	}
-
-	private synchronized void allocateNewTarget(ISCSIVolumeInfo volumeInfo) throws EucalyptusCloudException {
-		ISCSIMetaInfo metaInfo = new ISCSIMetaInfo();
-		EntityWrapper<ISCSIMetaInfo> db = StorageController.getEntityWrapper();
-		List<ISCSIMetaInfo> metaInfoList = db.query(metaInfo);
-		if(metaInfoList.size() > 0) {
-			ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
-			int storeNumber = foundMetaInfo.getStoreNumber();
-			int tid = foundMetaInfo.getTid();
-			volumeInfo.setStoreName(foundMetaInfo.getStore_prefix() + storeNumber);
-			volumeInfo.setStoreUser(foundMetaInfo.getStoreUser());
-			volumeInfo.setTid(tid);
-			volumeInfo.setLun(0);
-			foundMetaInfo.setStoreNumber(++storeNumber);
-			foundMetaInfo.setTid(++tid);
-		}
-		db.commit();
-	}
 
 	public void dupFile(String oldFileName, String newFileName) {
 		FileOutputStream fileOutputStream = null;
@@ -1065,9 +1017,9 @@ public class LVM2Manager implements LogicalStorageManager {
 		private int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
 			if(exportManager instanceof AOEManager) {
 				AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) lvmVolumeInfo;
-				List<Integer> deviceNumbers = allocateDeviceNumbers();
-				int majorNumber = deviceNumbers.get(0);
-				int minorNumber = deviceNumbers.get(1);
+				exportManager.allocateTarget(aoeVolumeInfo);
+				int majorNumber = aoeVolumeInfo.getMajorNumber();
+				int minorNumber = aoeVolumeInfo.getMinorNumber();
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 				int pid = exportManager.exportVolume(StorageProperties.iface, absoluteLVName, majorNumber, minorNumber);
 				boolean success = false;
@@ -1113,12 +1065,10 @@ public class LVM2Manager implements LogicalStorageManager {
 				if(pid < 0)
 					throw new EucalyptusCloudException("invalid vblade pid: " + pid);
 				aoeVolumeInfo.setVbladePid(pid);
-				aoeVolumeInfo.setMajorNumber(majorNumber);
-				aoeVolumeInfo.setMinorNumber(minorNumber);
 				return pid;
 			} else if(exportManager instanceof ISCSIManager) {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
-				allocateNewTarget(iscsiVolumeInfo);
+				exportManager.allocateTarget(iscsiVolumeInfo);
 				String password = Hashes.getRandom(16);
 				iscsiVolumeInfo.setEncryptedPassword(encryptTargetPassword(password));
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;

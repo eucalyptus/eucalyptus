@@ -65,9 +65,12 @@
 
 package edu.ucsb.eucalyptus.storage;
 
+import java.io.File;
 import java.util.List;
 
 import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
+import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -81,6 +84,7 @@ import com.eucalyptus.util.StorageProperties;
 
 public class AOEManager implements StorageExportManager {
 	private static Logger LOG = Logger.getLogger(AOEManager.class);
+	public static final int MAX_MINOR_NUMBER = 16;
 	public native int exportVolume(String iface, String lvName, int major, int minor);
 
 	@Override
@@ -148,5 +152,34 @@ public class AOEManager implements StorageExportManager {
 			LOG.error(e);
 		}
 		db.commit();		
+	}
+
+	@Override
+	public synchronized void allocateTarget(LVMVolumeInfo volumeInfo) {
+		if(volumeInfo instanceof AOEVolumeInfo) {
+			AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) volumeInfo;
+			int majorNumber = -1;
+			int minorNumber = -1;
+			AOEMetaInfo metaInfo = new AOEMetaInfo();
+			EntityWrapper<AOEMetaInfo> db = StorageController.getEntityWrapper();
+			List<AOEMetaInfo> metaInfoList = db.query(metaInfo);
+			if(metaInfoList.size() > 0) {
+				AOEMetaInfo foundMetaInfo = metaInfoList.get(0);
+				majorNumber = foundMetaInfo.getMajorNumber();
+				minorNumber = foundMetaInfo.getMinorNumber();
+				do {
+					if(minorNumber >= MAX_MINOR_NUMBER - 1) {
+						++majorNumber;
+					}
+					minorNumber = (minorNumber + 1) % MAX_MINOR_NUMBER;
+					LOG.info("Trying e" + majorNumber + "." + minorNumber);
+				} while(new File(StorageProperties.ETHERD_PREFIX + majorNumber + "." + minorNumber).exists());
+				foundMetaInfo.setMajorNumber(majorNumber);
+				foundMetaInfo.setMinorNumber(minorNumber);
+			}
+			aoeVolumeInfo.setMajorNumber(majorNumber);
+			aoeVolumeInfo.setMinorNumber(minorNumber);
+			db.commit();		
+		}
 	}
 }
