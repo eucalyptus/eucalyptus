@@ -10,9 +10,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
-import org.hibernate.ejb.EntityManagerFactoryImpl;
 
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -160,12 +158,6 @@ public class DebugUtil implements EventListener {
 
   public static void printDebugDetails( ) {
     Times.print( );
-    TxHandle.printTxStatus( );
-    DatabaseUtil.printConnectionPoolStatus( );
-    for( String persistenceContext : DatabaseUtil.getPersistenceContexts( ) ) {
-      EntityManagerFactoryImpl anemf = ( EntityManagerFactoryImpl ) DatabaseUtil.getEntityManagerFactory( persistenceContext );
-      LOG.debug( LogUtil.subheader( persistenceContext + " hibernate statistics: " + anemf.getSessionFactory( ).getStatistics( ) ) );
-    }
   }
 
   public static void hup() {

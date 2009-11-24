@@ -244,8 +244,12 @@ do_start() {
 
 	if [ "$DISABLE_DNS" = "Y" ]; then
 		OPTS="$OPTS --remote-dns"
-	elif [ "$DISABLE_EBS" = "Y" ]; then
-		OPTS="$OPTS --disable-ebs"
+	fi
+	if [ "$DISABLE_EBS" = "Y" ]; then
+		OPTS="$OPTS --disable-storage"
+	fi
+	if [ "$DISABLE_ISCSI" = "Y" ]; then
+		OPTS="$OPTS --disable-iscsi"
 	fi
 
     # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1

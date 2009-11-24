@@ -63,10 +63,14 @@
  */
 package com.eucalyptus.ws.util;
 
+import java.util.List;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import com.eucalyptus.ws.HttpException;
+import com.google.common.collect.Lists;
 
 
 public class HttpUtils {
@@ -88,7 +92,24 @@ public class HttpUtils {
       }
     }
   }
+  private static List<String> httpVerbPrefix = Lists.newArrayList( HttpMethod.CONNECT.getName( ).substring( 0, 3 ),
+                                                                   HttpMethod.GET.getName( ).substring( 0, 3 ),
+                                                                   HttpMethod.PUT.getName( ).substring( 0, 3 ),
+                                                                   HttpMethod.POST.getName( ).substring( 0, 3 ),
+                                                                   HttpMethod.HEAD.getName( ).substring( 0, 3 ),
+                                                                   HttpMethod.OPTIONS.getName( ).substring( 0, 3 ),
+                                                                   HttpMethod.TRACE.getName( ).substring( 0, 3 ) );
+                                                                   
+                                                                   
+  public static boolean maybeSsl( ChannelBuffer buffer ) throws HttpException {
+    buffer.markReaderIndex( );
+    StringBuffer sb = new StringBuffer( );
+    for( int lineLength = 0; lineLength++ < 3; sb.append( (char) buffer.readByte() ) );
+    buffer.resetReaderIndex( );
+    return !httpVerbPrefix.contains( sb.toString( ) );
+  }
 
+  
   public static final byte SP = 32;
   public static final byte HT = 9;
   public static final byte CR = 13;

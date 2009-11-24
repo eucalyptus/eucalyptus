@@ -76,6 +76,7 @@ import javax.persistence.Table;
 import java.util.*;
 
 @Entity
+@PersistenceContext(name="eucalyptus_storage")
 @Table( name = "Volumes" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class VolumeInfo {

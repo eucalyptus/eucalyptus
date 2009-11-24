@@ -133,7 +133,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           try {
             OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );
             omMsg.serialize( byteOut );
-          } catch ( Exception e ) {
+          } catch ( Throwable e ) {
             binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://ec2.amazonaws.com/doc/2009-04-04/" ) );
             OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );
             omMsg.serialize( byteOut );

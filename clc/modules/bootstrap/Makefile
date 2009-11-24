@@ -45,7 +45,7 @@ eucalyptus-cloud: $(OBJS)
 ggo:
 	gengetopt --input=arguments.ggo --file-name=eucalyptus-opts --func-name=arguments --arg-struct-name=eucalyptus_opts
 
-install:
+install: eucalyptus-cloud
 	$(INSTALL) -d $(sbindir)
 	$(INSTALL) -m 0755 eucalyptus-cloud $(sbindir)/eucalyptus-cloud
 

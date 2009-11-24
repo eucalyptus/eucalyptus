@@ -24,7 +24,7 @@ option "disable-cloud"       -   "Disable loading cloud services altogether."   
 option "disable-walrus"       -   "Disable loading walrus services altogether."   flag   off
 option "disable-dns"       -   "Disable loading DNS services altogether."   flag   off
 option "disable-storage"       -   "Disable loading storage services altogether."   flag   off
-
+option "disable-iscsi"       -   "Disable ISCSI support for dynamic block storage."   flag   off
 
 section "Eucalyptus Runtime Options"
 option "check"       C   "Check on Eucalyptus."   flag   off

@@ -64,6 +64,7 @@ permission notice:
 #include "eucalyptus.h"
 
 #define CHAR_BUFFER_SIZE 512
+#define BIG_CHAR_BUFFER_SIZE 1024
 
 typedef struct ncMetadata_t {
     char *correlationId;

@@ -4,6 +4,7 @@ import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.DebugUtil;
 
 import edu.ucsb.eucalyptus.constants.EventType;
 
@@ -25,8 +26,12 @@ public class EventRecord extends EucalyptusMessage {
     this.eventCorrelationId = eventCorrelationId;
     this.eventId = eventId;
     this.other = ":" + other;
-    StackTraceElement ste = Thread.currentThread().getStackTrace( )[distance];
-    this.caller = String.format( "%s.%s.%d", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
+    if( DebugUtil.DEBUG ) {
+      StackTraceElement ste = Thread.currentThread().getStackTrace( )[distance];
+      this.caller = String.format( "%s.%s.%d", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
+    } else {
+      this.caller = "n.a";
+    }
   }
   
   private static EucalyptusMessage getBogusMessage( ) {

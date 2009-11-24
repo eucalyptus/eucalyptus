@@ -105,7 +105,7 @@ import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 
 public class VolumeManager {
-  static String PERSISTENCE_CONTEXT = "eucalyptus_volumes";
+  static String PERSISTENCE_CONTEXT = "eucalyptus_images";
 
   private static String ID_PREFIX = "vol";
   private static Logger LOG = Logger.getLogger( VolumeManager.class );

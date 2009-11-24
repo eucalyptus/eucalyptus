@@ -70,8 +70,10 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
 
 @Entity
+@PersistenceContext(name="eucalyptus_images")
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class Volume extends AbstractIsomorph {
 

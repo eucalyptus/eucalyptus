@@ -74,10 +74,13 @@ import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.Admin;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
+import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -276,4 +279,13 @@ public class ClusterEndpoint implements Startable {
     return info;
   }
 
+  public DescribeRegionsResponseType DescribeRegions(DescribeRegionsType request) {
+      DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
+      try {
+        SystemConfiguration config = EucalyptusProperties.getSystemConfiguration( );
+        reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", EucalyptusProperties.getCloudUrl( ) ) );
+        reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", EucalyptusProperties.getWalrusUrl( ) ) );
+      } catch ( EucalyptusCloudException e ) {}
+      return reply;
+  }
 }

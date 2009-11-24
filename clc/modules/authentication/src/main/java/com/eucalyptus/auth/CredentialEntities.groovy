@@ -89,6 +89,7 @@ import javax.persistence.Version;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Version;
+import javax.persistence.PersistenceContext;
 
 import org.hibernate.sql.Alias
 
@@ -96,6 +97,7 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
+@PersistenceContext(name="eucalyptus_auth")
 @Table( name = "auth_users" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class User extends AbstractPersistent implements Serializable {
@@ -143,6 +145,7 @@ public class User extends AbstractPersistent implements Serializable {
 }
 
 @Entity
+@PersistenceContext(name="eucalyptus_auth")
 @Table(name="auth_x509")
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class X509Cert extends AbstractPersistent implements Serializable {
@@ -187,6 +190,7 @@ public class X509Cert extends AbstractPersistent implements Serializable {
 }
 
 @Entity
+@PersistenceContext(name="eucalyptus_auth")
 @Table( name = "auth_clusters" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ClusterCredentials extends AbstractPersistent implements Serializable {

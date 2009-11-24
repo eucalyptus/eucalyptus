@@ -76,7 +76,8 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 public class VmTypes {
 
-  private static VmTypes                         singleton = new VmTypes( );
+  private static VmTypes                         singleton;
+  
   private ConcurrentNavigableMap<String, VmType> vmTypeMap;
 
   private VmTypes( ) {
@@ -84,11 +85,18 @@ public class VmTypes {
     this.update( );
   }
 
+  private static VmTypes getSingleton( ) {
+    synchronized(VmTypes.class) {
+      singleton = singleton == null ? new VmTypes( ) : singleton;
+    }
+    return singleton;
+  }
+
   public static synchronized void update( Set<VmType> newVmTypes ) throws EucalyptusCloudException {
     NavigableSet<VmType> newList = VmTypes.list( );
     if ( newVmTypes.size( ) != newList.size( ) ) throw new EucalyptusCloudException( "Proposed VmTypes fail to satisfy well-ordering requirement." );
     for ( VmType newVm : newVmTypes ) {
-      if ( !singleton.vmTypeMap.containsValue( newVm ) ) {
+      if ( !getSingleton( ).vmTypeMap.containsValue( newVm ) ) {
         EntityWrapper<VmType> db = new EntityWrapper<VmType>( );
         try {
           VmType oldVm = db.getUnique( new VmType( newVm.getName( ) ) );
@@ -132,13 +140,13 @@ public class VmTypes {
   }
 
   public static synchronized VmType getVmType( String name ) {
-    singleton.update( );
-    return singleton.vmTypeMap.get( name );
+    getSingleton( ).update( );
+    return getSingleton( ).vmTypeMap.get( name );
   }
 
   public static synchronized NavigableSet<VmType> list( ) {
-    singleton.update( );
-    return new TreeSet<VmType>( singleton.vmTypeMap.values( ) );
+    getSingleton( ).update( );
+    return new TreeSet<VmType>( getSingleton( ).vmTypeMap.values( ) );
   }
 
 }

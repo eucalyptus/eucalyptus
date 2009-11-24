@@ -96,6 +96,8 @@ import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.RemoteConfiguration;
+import com.eucalyptus.util.FailScriptFailException;
+import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.BindingException;
@@ -139,6 +141,12 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     LOG.info( LogUtil.subheader( "Using " + addr.getHostName( ) + " as the database address." ) );
     Component.db.setHostAddress( addr.getHostName( ) );
     Component.db.markEnabled( );
+    try {
+      GroovyUtil.evaluateScript( "after_database.groovy" );
+    } catch ( FailScriptFailException e1 ) {
+      LOG.debug( e1, e1 );
+      System.exit( 123 );
+    }
     Component.dns.setHostAddress( addr.getHostName( ) );
     Component.eucalyptus.setHostAddress( addr.getHostName( ) );
     Component.cluster.setHostAddress( addr.getHostName( ) );

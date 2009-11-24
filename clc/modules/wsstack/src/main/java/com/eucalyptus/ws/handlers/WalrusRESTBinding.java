@@ -71,6 +71,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import net.sf.json.JSONArray;
@@ -82,7 +83,9 @@ import org.apache.tools.ant.util.DateUtils;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -95,6 +98,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.HoldMe;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.BindingException;
@@ -103,11 +107,13 @@ import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.ws.util.WalrusBucketLogger;
 import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.annotation.HttpEmbedded;
 import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
+import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
@@ -116,9 +122,12 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
+import edu.ucsb.eucalyptus.msgs.LoggingEnabled;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
+import edu.ucsb.eucalyptus.msgs.TargetGrants;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
+import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import groovy.lang.GroovyObject;
@@ -130,9 +139,32 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static final String OBJECT = "object";
 	private static final Map<String, String> operationMap = populateOperationMap();
 	private static WalrusDataMessenger putMessenger;
-	private static WalrusDataMessenger getMessenger;
 	public static final int DATA_MESSAGE_SIZE = 102400;
+	private String key;
+	private String randomKey;
 	private LinkedBlockingQueue<WalrusDataMessage> putQueue;
+
+	@Override
+	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
+		LOG.trace( LogUtil.dumpObject( channelEvent ) );
+		if ( channelEvent instanceof MessageEvent ) {
+			final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
+			try {
+				this.incomingMessage( channelHandlerContext, msgEvent );
+			} catch ( Throwable e ) {
+				LOG.error( e, e );
+				Channels.fireExceptionCaught( channelHandlerContext, e );
+				return;
+			} 
+		} else if (channelEvent.toString().contains("DISCONNECTED") || 
+				channelEvent.toString().contains("CLOSED")) {
+			if(key != null && randomKey != null) {
+				putMessenger.removeQueue(key, randomKey);
+				putQueue = null;
+			}
+		}
+		channelHandlerContext.sendUpstream( channelEvent );
+	}
 
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
@@ -241,7 +273,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		String servicePath = httpRequest.getServicePath();
 		Map bindingArguments = new HashMap();
 		final String operationName = getOperation(httpRequest, bindingArguments);
-
 		if(operationName == null)
 			throw new InvalidOperationException("Could not determine operation name for " + servicePath);
 
@@ -259,13 +290,14 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			//:: get the map of parameters to fields :://
 			fieldMap = this.buildFieldMap( targetType );
 			//:: get an instance of the message :://
-			eucaMsg = ( EucalyptusMessage ) targetType.newInstance();
+			eucaMsg =  (EucalyptusMessage) targetType.newInstance();
 		}
 		catch ( Exception e )
 		{
 			throw new BindingException( "Failed to construct message of type " + operationName );
 		}
 
+		addLogData(eucaMsg, bindingArguments);
 
 		//TODO: Refactor this to be more general
 		List<String> failedMappings = populateObject( eucaMsg, fieldMap, params);
@@ -297,6 +329,19 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 		return eucaMsg;
 
+	}
+
+	private void addLogData(EucalyptusMessage eucaMsg,
+			Map bindingArguments) {
+		if(eucaMsg instanceof WalrusRequestType) {
+			String operation = (String) bindingArguments.remove("Operation");
+			if(operation != null) {
+				WalrusRequestType request = (WalrusRequestType) eucaMsg;
+				BucketLogData logData = WalrusBucketLogger.getInstance().makeLogEntry(UUID.randomUUID().toString());
+				logData.setOperation("REST." + operation);
+				request.setLogData(logData);
+			}
+		}
 	}
 
 	private void setRequiredParams(final GroovyObject msg, User user) {
@@ -370,7 +415,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			if(!target[0].equals("")) {
 				operationKey = BUCKET + verb;
 				operationParams.put("Bucket", target[0]);
-
+				operationParams.put("Operation", verb.toUpperCase() + "." + "BUCKET");
 				if(verb.equals(WalrusProperties.HTTPVerb.POST.toString())) {
 					//TODO: handle POST.
 					Map formFields = httpRequest.getFormFields();
@@ -407,15 +452,18 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					if(formFields.containsKey(WalrusProperties.CONTENT_TYPE)) {
 						operationParams.put("ContentType", formFields.get(WalrusProperties.CONTENT_TYPE));
 					}
-					String key = target[0] + "." + objectKey;
-					String randomKey = key + "." + Hashes.getRandom(10);
+					key = target[0] + "." + objectKey;
+					randomKey = key + "." + Hashes.getRandom(10);
 					if(contentLengthString != null)
 						operationParams.put("ContentLength", (new Long(contentLength).toString()));
 					operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
 					putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
 					handleFirstChunk(httpRequest, (ChannelBuffer)formFields.get(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk"), contentLength);
+				} else if(WalrusProperties.HTTPVerb.PUT.toString().equals(verb) && 
+						params.containsKey(WalrusProperties.OperationParameter.logging.toString())) {
+					//read logging params
+					getTargetBucketParams(operationParams, httpRequest);
 				}
-
 			} else {
 				operationKey = SERVICE + verb;
 			}
@@ -430,7 +478,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			}
 			operationParams.put("Bucket", target[0]);
 			operationParams.put("Key", objectKey);
-
+			operationParams.put("Operation", verb.toUpperCase() + "." + "OBJECT");
 
 			if(!params.containsKey(WalrusProperties.OperationParameter.acl.toString())) {
 				if (verb.equals(WalrusProperties.HTTPVerb.PUT.toString())) {
@@ -477,8 +525,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 					} else {
 						//handle PUTs
-						String key = target[0] + "." + objectKey;
-						String randomKey = key + "." + Hashes.getRandom(10);
+						key = target[0] + "." + objectKey;
+						randomKey = key + "." + Hashes.getRandom(10);
 						String contentType = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
 						if(contentType != null)
 							operationParams.put("ContentType", contentType);
@@ -592,6 +640,56 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				operationParams.put("LocationConstraint", locationConstraint);
 		}
 		return operationName;	
+	}
+
+	private void getTargetBucketParams(Map operationParams,
+			MappingHttpRequest httpRequest) throws BindingException {
+		String message = getMessageString(httpRequest);
+		if(message.length() > 0) {
+			try {
+				XMLParser xmlParser = new XMLParser(message);
+				String targetBucket = xmlParser.getValue("//TargetBucket");
+				String targetPrefix = xmlParser.getValue("//TargetPrefix");
+				ArrayList<Grant> grants = new ArrayList<Grant>();
+
+				List<String> permissions = xmlParser.getValues("//TargetGrants/Grant/Permission");
+				if(permissions == null)
+					throw new BindingException("malformed access control list");
+
+				DTMNodeList grantees = xmlParser.getNodes("//TargetGrants/Grant/Grantee");
+				if(grantees == null)
+					throw new BindingException("malformed access control list");
+
+				for(int i = 0 ; i < grantees.getLength() ; ++i) {
+					String id = xmlParser.getValue(grantees.item(i), "ID");
+					if(id.length() > 0) {
+						String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
+						Grant grant = new Grant();
+						Grantee grantee = new Grantee();
+						grantee.setCanonicalUser(new CanonicalUserType(id, canonicalUserName));
+						grant.setGrantee(grantee);
+						grant.setPermission(permissions.get(i));
+						grants.add(grant);
+					} else {
+						String groupUri = xmlParser.getValue(grantees.item(i), "URI");
+						if(groupUri.length() == 0)
+							throw new BindingException("malformed access control list");
+						Grant grant = new Grant();
+						Grantee grantee = new Grantee();
+						grantee.setGroup(new Group(groupUri));
+						grant.setGrantee(grantee);
+						grant.setPermission(permissions.get(i));
+						grants.add(grant);
+					}
+				}
+				TargetGrants targetGrants = new TargetGrants(grants);
+				LoggingEnabled loggingEnabled = new LoggingEnabled(targetBucket, targetPrefix, new TargetGrants(grants));
+				operationParams.put("LoggingEnabled", loggingEnabled);
+			} catch(Exception ex) {
+				LOG.warn(ex);
+				throw new BindingException("Unable to parse access control policy " + ex.getMessage());
+			}
+		}
 	}
 
 	private void parseExtendedHeaders(Map operationParams, String headerString, String value) {
@@ -1007,14 +1105,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			LOG.error(ex, ex);
 		}
 
-	}
-
-
-	public static synchronized WalrusDataMessenger getReadMessenger() {
-		if (getMessenger == null) {
-			getMessenger = new WalrusDataMessenger();
-		}
-		return getMessenger;
 	}
 
 

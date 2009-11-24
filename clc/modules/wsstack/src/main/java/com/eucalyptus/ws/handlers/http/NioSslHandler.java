@@ -1,47 +1,37 @@
 package com.eucalyptus.ws.handlers.http;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.ssl.SslHandler;
 
+import com.eucalyptus.auth.util.SslSetup;
+import com.eucalyptus.ws.util.HttpUtils;
+
+@ChannelPipelineCoverage("one")
 public class NioSslHandler extends SslHandler {
-
-  public NioSslHandler( SSLEngine engine ) {
-    super( engine );
+  private AtomicBoolean first = new AtomicBoolean( true );
+  
+  public NioSslHandler( ) {
+    super( SslSetup.getServerEngine( ) );
   }
-
-  @Override
-  public void channelBound( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    super.channelBound( ctx, e );
-  }
-
-  @Override
-  public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    super.channelOpen( ctx, e );
-  }
-
+    
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    if( e instanceof MessageEvent ) {
-      Object o = ((MessageEvent) e).getMessage( );      
-      if( ! (o instanceof ChannelBuffer ) ) {
-        ctx.getPipeline( ).removeFirst( );//this should be me.
-        ctx.sendUpstream(e);
-        return;
-      } else { //we punt on HTTP and only delegate SSL.
-      }
+    Object o = null;
+    if ( e instanceof MessageEvent
+        && first.compareAndSet( true, false )
+        && ( o = ( ( MessageEvent ) e ).getMessage( ) ) instanceof ChannelBuffer 
+        && !HttpUtils.maybeSsl( ( ChannelBuffer ) o ) ) {
+      ctx.getPipeline( ).removeFirst( );
+      ctx.sendUpstream( e );
+    } else {
+      super.handleUpstream( ctx, e );
     }
-    super.handleUpstream( ctx, e );
   }
-
-
+  
 }
