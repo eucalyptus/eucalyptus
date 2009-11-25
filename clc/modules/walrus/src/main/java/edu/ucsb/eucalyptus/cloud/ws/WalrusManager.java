@@ -1577,7 +1577,7 @@ public class WalrusManager {
 							} catch (EucalyptusCloudException ex) {
 								String torrentFile = objectName + ".torrent";
 								String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
-								TorrentCreator torrentCreator = new TorrentCreator(absoluteObjectPath, objectKey, objectName, torrentFilePath, WalrusProperties.TRACKER_URL);
+								TorrentCreator torrentCreator = new TorrentCreator(absoluteObjectPath, objectKey, objectName, torrentFilePath, WalrusProperties.getTrackerUrl());
 								try {
 									torrentCreator.create();
 								} catch(Exception e) {

@@ -44,8 +44,13 @@ public class GroovyUtil {
   public static Object evaluateScript( String fileName ) throws FailScriptFailException {
     FileReader fileReader = null;
     try {
-      fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName );
-      return getGroovyEngine().eval( fileReader );
+      try {
+        fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName + ".groovy" );
+        return getGroovyEngine().eval( fileReader );
+      } catch ( FileNotFoundException e ) {
+        fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName );
+        return getGroovyEngine().eval( fileReader );
+      } 
     } catch ( Throwable e ) {
       LOG.debug( e, e );
       throw new FailScriptFailException( "Executing the requested script failed: " + fileName, e );

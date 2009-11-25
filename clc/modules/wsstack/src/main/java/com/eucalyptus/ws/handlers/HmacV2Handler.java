@@ -160,10 +160,14 @@ public class HmacV2Handler extends MessageStackHandler {
           LOG.trace( "VERSION2-SHA256-PORT: " + computedSigWithPort + " -- " + sig );
           if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
             sig = URLDecoder.decode( sig ).replaceAll("=","");
-            computedSig = HmacUtils.getSignature( secretKey, canonicalString.replaceAll("\\+","%20"), Hashes.Mac.HmacSHA256 ).replaceAll("\\+"," ");
-            computedSigWithPort = HmacUtils.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%20"), Hashes.Mac.HmacSHA256 ).replaceAll("\\+"," ");
+            computedSig = HmacUtils.getSignature( secretKey, canonicalString.replaceAll("\\+","%2B"), Hashes.Mac.HmacSHA256 ).replaceAll("\\+"," ");
+            computedSigWithPort = HmacUtils.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%2B"), Hashes.Mac.HmacSHA256 ).replaceAll("\\+"," ");
             if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
-              throw new AuthenticationException( "User authentication failed." );              
+              computedSig = HmacUtils.getSignature( secretKey, canonicalString.replaceAll("\\+","%20"), Hashes.Mac.HmacSHA256 ).replaceAll("\\+"," ");
+              computedSigWithPort = HmacUtils.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%20"), Hashes.Mac.HmacSHA256 ).replaceAll("\\+"," ");
+              if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
+                throw new AuthenticationException( "User authentication failed." );
+              }
             }
           }
         }

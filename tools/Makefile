@@ -43,6 +43,9 @@ install: build
 	@$(INSTALL) -m 755 populate_arp.pl $(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_conf $(sbindir)
 	@$(INSTALL) -m 755 euca_sync_key $(sbindir)
+	@$(INSTALL) -m 755 connect_iscsitarget.pl $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 disconnect_iscsitarget.pl $(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 get_iscsitarget.pl $(datarootdir)/eucalyptus
 
 uninstall: 
 	@$(RM) -f $(etcdir)/init.d/eucalyptus-cloud
