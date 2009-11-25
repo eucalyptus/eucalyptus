@@ -81,6 +81,11 @@ public class BucketNotEmptyException extends WalrusException {
     super("BucketNotEmpty", "The bucket you tried to delete is not empty.", "Bucket", bucket, HttpResponseStatus.CONFLICT);
   }
 
+  public BucketNotEmptyException(String bucket, BucketLogData logData)
+  {
+    super("BucketNotEmpty", "The bucket you tried to delete is not empty.", "Bucket", bucket, HttpResponseStatus.CONFLICT, logData);
+  }
+
   public BucketNotEmptyException(Throwable ex)
   {
     super("Bucket Not Empty", ex);

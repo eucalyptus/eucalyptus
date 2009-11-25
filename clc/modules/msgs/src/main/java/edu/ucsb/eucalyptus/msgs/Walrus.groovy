@@ -223,7 +223,8 @@ public class WalrusErrorMessageType extends EucalyptusMessage {
 	protected String resource;
 	protected String requestId;
 	protected String hostId;
-
+	BucketLogData logData;
+	
 	def WalrusErrorMessageType() {}
 
 	def WalrusErrorMessageType(String message,
@@ -232,7 +233,8 @@ public class WalrusErrorMessageType extends EucalyptusMessage {
 			String resourceType,
 			String resource,
 			String requestId,
-			String hostId) {
+			String hostId,
+			BucketLogData logData) {
 		this.message = message;
 		this.code = code;
 		this.status = status;
@@ -240,6 +242,7 @@ public class WalrusErrorMessageType extends EucalyptusMessage {
 		this.resource = resource;
 		this.requestId = requestId;
 		this.hostId = hostId;
+		this.logData = logData;
 	}
 
 	public HttpResponseStatus getStatus() {
