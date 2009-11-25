@@ -261,19 +261,25 @@ public class WalrusManager {
 		return reply;
 	}
 
+	public CreateBucketResponseType createBucket(CreateBucketType request) throws EucalyptusCloudException {
+		CreateBucketResponseType reply = (CreateBucketResponseType) request.getReply();
+		String userId = request.getUserId();
 
-	private void makeBucket(String userId, String bucketName, String locationConstraint, AccessControlListType accessControlList, boolean isAdministrator) throws EucalyptusCloudException {
+		String bucketName = request.getBucket();
+		String locationConstraint = request.getLocationConstraint();
+
 		if(userId == null) {
 			throw new AccessDeniedException("Bucket", bucketName);
 		}
 
+		AccessControlListType accessControlList = request.getAccessControlList();
 		if (accessControlList == null) {
 			accessControlList = new AccessControlListType();
 		}
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 
-		if(WalrusProperties.shouldEnforceUsageLimits && !isAdministrator) {
+		if(WalrusProperties.shouldEnforceUsageLimits && !request.isAdministrator()) {
 			BucketInfo searchBucket = new BucketInfo();
 			searchBucket.setOwnerId(userId);
 			List<BucketInfo> bucketList = db.query(searchBucket);
@@ -309,38 +315,19 @@ public class WalrusManager {
 			else
 				bucket.setLocation("US");
 			db.add(bucket);
+			//call the storage manager to save the bucket to disk
+			try {
+				storageManager.createBucket(bucketName);
+				if(WalrusProperties.trackUsageStatistics) 
+					walrusStatistics.incrementBucketCount();
+			} catch (IOException ex) {
+				LOG.error(ex);
+				db.rollback();
+				throw new EucalyptusCloudException("Unable to create bucket: " + bucketName);
+			}
 		}
 		db.commit();
-	}
-
-	public CreateBucketResponseType createBucket(CreateBucketType request) throws EucalyptusCloudException {
-		CreateBucketResponseType reply = (CreateBucketResponseType) request.getReply();
-		String userId = request.getUserId();
-
-		String bucketName = request.getBucket();
-		String locationConstraint = request.getLocationConstraint();
-
-		if(userId == null) {
-			throw new AccessDeniedException("Bucket", bucketName);
-		}
-
-		AccessControlListType accessControlList = request.getAccessControlList();
-		if (accessControlList == null) {
-			accessControlList = new AccessControlListType();
-		}
-
-		makeBucket(userId, bucketName, locationConstraint, accessControlList, request.isAdministrator());
-
-		//call the storage manager to save the bucket to disk
-		try {
-			storageManager.createBucket(bucketName);
-			if(WalrusProperties.trackUsageStatistics) 
-				walrusStatistics.incrementBucketCount();
-		} catch (IOException ex) {
-			LOG.error(ex);
-			throw new EucalyptusCloudException(bucketName);
-		}
-
+		
 		if(WalrusProperties.enableVirtualHosting) {
 			UpdateARecordType updateARecord = new UpdateARecordType();
 			updateARecord.setUserId(userId);
