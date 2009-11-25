@@ -60,6 +60,7 @@
  *******************************************************************************/
 package com.eucalyptus.ws.handlers;
 
+import java.net.InetSocketAddress;
 import java.util.Calendar;
 import java.util.UUID;
 
@@ -67,6 +68,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.User;
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -102,7 +104,10 @@ public class WalrusRESTLogger extends MessageStackHandler {
 						logData.setBucketName(request.getBucket());
 					if(request.getKey() != null) 
 						logData.setKey(request.getKey());
-					logData.setSourceAddress(ctx.getChannel().getRemoteAddress().toString());
+					if(ctx.getChannel().getRemoteAddress() instanceof InetSocketAddress) {
+						InetSocketAddress sockAddress = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
+						logData.setSourceAddress(sockAddress.getAddress().getHostAddress());
+					}
 				}
 			}			
 		}
@@ -119,6 +124,9 @@ public class WalrusRESTLogger extends MessageStackHandler {
 					logData.setBytesSent(httpResponse.getContent().readableBytes());
 					long startTime = logData.getTotalTime();
 					logData.setTotalTime(System.currentTimeMillis() - startTime);
+					HttpResponseStatus status = httpResponse.getStatus();
+					if(status != null)
+						logData.setStatus(Integer.toString(status.getCode()));
 					WalrusBucketLogger.getInstance().addLogEntry(logData);					
 					response.setLogData(null);
 				}

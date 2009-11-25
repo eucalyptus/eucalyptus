@@ -83,6 +83,11 @@ public class AccessDeniedException extends WalrusException {
   {
 	  super("AccessDenied", "Access Denied", entityType, entity, HttpResponseStatus.FORBIDDEN);
   }
+  
+  public AccessDeniedException(String entityType, String entity, BucketLogData logData)
+  {
+	  super("AccessDenied", "Access Denied", entityType, entity, HttpResponseStatus.FORBIDDEN, logData);
+  }
 
   public AccessDeniedException(Throwable ex)
   {
