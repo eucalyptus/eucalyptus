@@ -1123,7 +1123,7 @@ public class WalrusManager {
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
 		ArrayList<PrefixEntry> prefixes = new ArrayList<PrefixEntry>();
-
+		
 		if(bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
 			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;

@@ -76,6 +76,7 @@ import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
+import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusResponseType;
 
@@ -121,16 +122,28 @@ public class WalrusRESTLogger extends MessageStackHandler {
 				WalrusResponseType response = (WalrusResponseType) httpResponse.getMessage();
 				BucketLogData logData = response.getLogData();
 				if(logData != null) {
-					logData.setBytesSent(httpResponse.getContent().readableBytes());
-					long startTime = logData.getTotalTime();
-					logData.setTotalTime(System.currentTimeMillis() - startTime);
-					HttpResponseStatus status = httpResponse.getStatus();
-					if(status != null)
-						logData.setStatus(Integer.toString(status.getCode()));
-					WalrusBucketLogger.getInstance().addLogEntry(logData);					
+					computeStats(logData, httpResponse);
 					response.setLogData(null);
+				}
+			} else if(httpResponse.getMessage() instanceof WalrusErrorMessageType) {
+				WalrusErrorMessageType errorMessage = (WalrusErrorMessageType) httpResponse.getMessage();
+				BucketLogData logData = errorMessage.getLogData();
+				if(logData != null) {
+					computeStats(logData, httpResponse);
+					logData.setError(errorMessage.getCode());
+					errorMessage.setLogData(null);
 				}
 			}
 		}
+	}
+
+	private void computeStats(BucketLogData logData, MappingHttpResponse httpResponse) {
+		logData.setBytesSent(httpResponse.getContent().readableBytes());
+		long startTime = logData.getTotalTime();
+		logData.setTotalTime(System.currentTimeMillis() - startTime);
+		HttpResponseStatus status = httpResponse.getStatus();
+		if(status != null)
+			logData.setStatus(Integer.toString(status.getCode()));
+		WalrusBucketLogger.getInstance().addLogEntry(logData);					
 	}
 }
