@@ -79,6 +79,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -88,13 +91,16 @@ import com.eucalyptus.ws.client.ServiceDispatcher;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.msgs.AddObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.AddObjectType;
+import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
+import edu.ucsb.eucalyptus.msgs.Grant;
+import edu.ucsb.eucalyptus.msgs.Grantee;
 
 public class WalrusBucketLogger {
 	private Logger LOG = Logger.getLogger( WalrusBucketLogger.class );
 	private static WalrusBucketLogger singleton = new WalrusBucketLogger();
 	private static final int LOG_THRESHOLD = 100;
 	private static final int LOG_PERIODICITY = 10;
-	
+
 	private LinkedBlockingQueue<BucketLogData> logData;
 	private ConcurrentHashMap<String, LogFileEntry> logFileMap;
 	ScheduledExecutorService logger;
@@ -133,11 +139,11 @@ public class WalrusBucketLogger {
 							FileChannel logChannel = logFileEntry.getChannel();
 							String logString = entry.toFormattedString();
 							logChannel.write(ByteBuffer.wrap(logString.getBytes()), logChannel.size());
-							
+
 							MessageDigest digest = Hashes.Digest.MD5.get();
 							digest.update(logString.getBytes());
 							String etag = Hashes.bytesToHex(digest.digest());
-							
+
 							AddObjectType request = new AddObjectType();
 							request.setUserId("admin");
 							request.setEffectiveUserId("eucalyptus");
@@ -145,6 +151,16 @@ public class WalrusBucketLogger {
 							request.setKey(key);
 							request.setObjectName(logFileEntry.getLogFileName());
 							request.setEtag(etag);
+							String ownerId = entry.getOwnerId();
+							try {
+								User userInfo = CredentialProvider.getUser(ownerId);
+								ArrayList<Grant> grants = new ArrayList<Grant>();
+								grants.add(new Grant(new Grantee(new CanonicalUserType(userInfo.getQueryId(), ownerId)), 
+										"FULL_CONTROL"));
+								request.getAccessControlList().setGrants(grants);
+							} catch (NoSuchUserException e1) {
+								LOG.error(e1);
+							}
 							try {
 								dispatcher.send(request);
 							} catch (EucalyptusCloudException e) {

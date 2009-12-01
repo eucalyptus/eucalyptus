@@ -632,6 +632,7 @@ public class AddObjectResponseType extends WalrusDataResponseType {
 public class AddObjectType extends WalrusDataRequestType {
 	String objectName;
 	String etag;
+	AccessControlListType accessControlList = new AccessControlListType();	
 }
 
 public class UpdateWalrusConfigurationType extends WalrusRequestType {

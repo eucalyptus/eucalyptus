@@ -962,7 +962,7 @@ public class WalrusManager {
 		String userId = request.getUserId();
 		String objectName = request.getObjectName();
 
-		AccessControlListType accessControlList = new AccessControlListType();
+		AccessControlListType accessControlList = request.getAccessControlList();
 		if (accessControlList == null) {
 			accessControlList = new AccessControlListType();
 		}
@@ -1170,7 +1170,7 @@ public class WalrusManager {
 										if(!foundPrefix) {
 											prefixes.add(new PrefixEntry(prefixString));
 											if(maxKeys >= 0) {
-												if(howManyProcessed++ > maxKeys) {
+												if(howManyProcessed++ >= maxKeys) {
 													reply.setIsTruncated(true);
 													break;
 												}
@@ -1182,7 +1182,7 @@ public class WalrusManager {
 							}
 						}
 						if(maxKeys >= 0) {
-							if(howManyProcessed++ > maxKeys) {
+							if(howManyProcessed++ >= maxKeys) {
 								reply.setIsTruncated(true);
 								break;
 							}
