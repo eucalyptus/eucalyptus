@@ -962,7 +962,7 @@ public class WalrusManager {
 		String userId = request.getUserId();
 		String objectName = request.getObjectName();
 
-		AccessControlListType accessControlList = new AccessControlListType();
+		AccessControlListType accessControlList = request.getAccessControlList();
 		if (accessControlList == null) {
 			accessControlList = new AccessControlListType();
 		}
