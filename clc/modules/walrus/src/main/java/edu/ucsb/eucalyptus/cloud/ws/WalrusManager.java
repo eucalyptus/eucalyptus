@@ -1611,7 +1611,7 @@ public class WalrusManager {
 									logData.setObjectSize(torrentLength);
 									reply.setLogData(logData);
 								}								
-								return reply;
+								return null;
 							} else {
 								db.rollback();
 								String errorString = "Could not get torrent file " + torrentFilePath;
@@ -1643,7 +1643,7 @@ public class WalrusManager {
 								db.rollback();
 								LOG.error(ex);
 								//set error code
-								return reply;
+								return null;
 							}
 						} else {
 							//support for large objects
@@ -1669,7 +1669,7 @@ public class WalrusManager {
 					status.setCode(200);
 					status.setDescription("OK");
 					reply.setStatus(status);
-					return reply;
+					return null;
 				} else {
 					db.rollback();
 					throw new AccessDeniedException("Key", objectKey, logData);
@@ -1803,8 +1803,7 @@ public class WalrusManager {
 			db.rollback();
 			throw new NoSuchBucketException(bucketName);
 		}
-		db.commit();
-		return reply;
+		return null;
 	}
 
 	public GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request) throws EucalyptusCloudException {
