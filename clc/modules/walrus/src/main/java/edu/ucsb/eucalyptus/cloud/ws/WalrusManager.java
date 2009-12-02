@@ -1594,15 +1594,6 @@ public class WalrusManager {
 								storageManager.sendObject(request.getChannel(), httpResponse, bucketName, torrentFile, torrentLength, null, 
 										DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
 										"application/x-bittorrent", "attachment; filename=" + objectKey + ".torrent;", request.getIsCompressed());
-								//TODO: this should reflect params for the torrent?
-								reply.setEtag("");
-								reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
-								reply.setSize(torrentLength);
-								Status status = new Status();
-								status.setCode(200);
-								status.setDescription("OK");
-								reply.setStatus(status);
-								reply.setContentType("binary/octet-stream");
 								if(WalrusProperties.trackUsageStatistics) {
 									walrusStatistics.updateBytesOut(torrentLength);
 								}
@@ -1642,8 +1633,7 @@ public class WalrusManager {
 							} catch (IOException ex) {
 								db.rollback();
 								LOG.error(ex);
-								//set error code
-								return null;
+								throw new EucalyptusCloudException("Unable to read object: " + bucketName + "/" + objectName);
 							}
 						} else {
 							//support for large objects
@@ -1652,12 +1642,14 @@ public class WalrusManager {
 							}
 							storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, size, etag, 
 									DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-									contentType, contentDisposition, request.getIsCompressed());                            
+									contentType, contentDisposition, request.getIsCompressed());  
+							return null;
 						}
 					} else {
 						storageManager.sendHeaders(request.getChannel(), httpResponse, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-								contentType, contentDisposition);                            
+								contentType, contentDisposition);
+						return null;
 
 					}
 					reply.setEtag(etag);
@@ -1669,7 +1661,7 @@ public class WalrusManager {
 					status.setCode(200);
 					status.setDescription("OK");
 					reply.setStatus(status);
-					return null;
+					return reply;
 				} else {
 					db.rollback();
 					throw new AccessDeniedException("Key", objectKey, logData);
@@ -1771,26 +1763,14 @@ public class WalrusManager {
 						}
 						storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-								contentType, contentDisposition, request.getIsCompressed());                            
+								contentType, contentDisposition, request.getIsCompressed());  
+						return null;
 					} else {
 						storageManager.sendHeaders(request.getChannel(), httpResponse, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-								contentType, contentDisposition);                            
+								contentType, contentDisposition);
+						return null;
 					}
-					reply.setEtag(etag);
-					reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
-					if(byteRangeEnd > -1) {
-						if(byteRangeEnd <= size && ((byteRangeEnd - byteRangeStart) > 0))
-							reply.setSize(byteRangeEnd - byteRangeStart);
-						else
-							reply.setSize(0L);
-					} else {
-						reply.setSize(size);
-					}
-					status.setCode(200);
-					status.setDescription("OK");
-					reply.setContentType("binary/octet-stream");                    
-					reply.setStatus(status);
 				} else {
 					db.rollback();
 					throw new AccessDeniedException("Key", objectKey);
@@ -1803,7 +1783,6 @@ public class WalrusManager {
 			db.rollback();
 			throw new NoSuchBucketException(bucketName);
 		}
-		return null;
 	}
 
 	public GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request) throws EucalyptusCloudException {
