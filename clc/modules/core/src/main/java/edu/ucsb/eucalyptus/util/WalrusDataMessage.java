@@ -100,7 +100,7 @@ public class WalrusDataMessage {
     public WalrusDataMessage() {}
 
     public static WalrusDataMessage EOF() {
-        return new WalrusDataMessage(Header.EOF, new byte[0]);
+        return new WalrusDataMessage(Header.EOF, String.valueOf(System.currentTimeMillis()).getBytes());
     }
 
     public static WalrusDataMessage InterruptTransaction() {

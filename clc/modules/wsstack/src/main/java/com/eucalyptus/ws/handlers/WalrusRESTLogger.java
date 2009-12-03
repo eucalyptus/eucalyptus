@@ -89,7 +89,9 @@ public class WalrusRESTLogger extends MessageStackHandler {
 				WalrusRequestType request = (WalrusRequestType) httpRequest.getMessage();
 				BucketLogData logData = request.getLogData();
 				if(logData != null) {
-					logData.setTotalTime(System.currentTimeMillis());
+					long currentTime = System.currentTimeMillis();
+					logData.setTotalTime(currentTime);
+					logData.setTurnAroundTime(currentTime);
 					logData.setUri(httpRequest.getUri());
 					String referrer = httpRequest.getHeader(HttpHeaders.Names.REFERER);
 					if(referrer != null)
@@ -140,7 +142,10 @@ public class WalrusRESTLogger extends MessageStackHandler {
 	private void computeStats(BucketLogData logData, MappingHttpResponse httpResponse) {
 		logData.setBytesSent(httpResponse.getContent().readableBytes());
 		long startTime = logData.getTotalTime();
-		logData.setTotalTime(System.currentTimeMillis() - startTime);
+		long currentTime = System.currentTimeMillis();
+		logData.setTotalTime(currentTime - startTime);
+		long startTurnAroundTime = logData.getTurnAroundTime();
+		logData.setTurnAroundTime(Math.min((currentTime - startTurnAroundTime), logData.getTotalTime()));
 		HttpResponseStatus status = httpResponse.getStatus();
 		if(status != null)
 			logData.setStatus(Integer.toString(status.getCode()));
