@@ -68,6 +68,7 @@ permission notice:
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <signal.h>
 
 #include "axis2_skel_EucalyptusCC.h"
 
@@ -692,6 +693,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
     }
     sem_post(configLock);
   }
+  logprintfl(EUCADEBUG,"DescribeResources(): resources %d/%d %d/%d %d/%d %d/%d %d/%d\n", (*outTypesAvail)[0], (*outTypesMax)[0], (*outTypesAvail)[1], (*outTypesMax)[1], (*outTypesAvail)[2], (*outTypesMax)[2], (*outTypesAvail)[3], (*outTypesMax)[3], (*outTypesAvail)[4], (*outTypesMax)[4]);
 
   logprintfl(EUCADEBUG,"DescribeResources(): done\n");
   
@@ -2009,16 +2011,30 @@ int initialize(void) {
 }
 
 void *monitor_thread(void *in) {
+  int rc;
   ncMetadata ccMeta;
   ccMeta.correlationId = strdup("monitor");
   ccMeta.userId = strdup("eucalyptus");
 
   while(1) {
+    // set up default signal handler for this child process (for SIGTERM)
+    struct sigaction newsigact;
+    newsigact.sa_handler = SIG_DFL;
+    newsigact.sa_flags = 0;
+    sigemptyset(&newsigact.sa_mask);
+    sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
+    sigaction(SIGTERM, &newsigact, NULL);
+
     logprintfl(EUCADEBUG, "monitor running\n");
 
-    refresh_resources(&ccMeta, 60, 1);
-    refresh_instances(&ccMeta, 60, 1);
-    
+    rc = refresh_resources(&ccMeta, 60, 1);
+    if (rc) {
+      logprintfl(EUCAWARN, "call to refresh_resources() failed in monitor thread\n");
+    }
+    rc = refresh_instances(&ccMeta, 60, 1);
+    if (rc) {
+      logprintfl(EUCAWARN, "call to refresh_instances() failed in monitor thread\n");
+    }
     logprintfl(EUCADEBUG, "monitor done\n");
     sleep(6);
   }
@@ -2026,13 +2042,20 @@ void *monitor_thread(void *in) {
 }
 
 int init_pthreads() {
-  
+  // start any background threads
   sem_wait(configLock);
-  logprintfl(EUCADEBUG, "THREADVAL: %8X\n", config->threads[0]);
   if (config->threads[MONITOR] == 0) {
     int pid;
     pid = fork();
     if (!pid) {
+      // set up default signal handler for this child process (for SIGTERM)
+      struct sigaction newsigact;
+      newsigact.sa_handler = SIG_DFL;
+      newsigact.sa_flags = 0;
+      sigemptyset(&newsigact.sa_mask);
+      sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
+      sigaction(SIGTERM, &newsigact, NULL);
+
       monitor_thread(NULL);
       exit(0);
     } else {
@@ -2189,6 +2212,12 @@ int init_config(void) {
 	config->numResources = numHosts;
 	memcpy(config->resourcePool, res, sizeof(resource) * numHosts);
 	free(res);
+	{
+	  ncMetadata ccMeta;
+	  ccMeta.correlationId = strdup("monitor");
+	  ccMeta.userId = strdup("eucalyptus");
+	  refresh_resources(&ccMeta, 60, 0);
+	}
 	sem_post(configLock);
       }
     }

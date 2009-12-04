@@ -220,6 +220,5 @@ int powerUp(resource *node);
 int changeState(resource *in, int newstate);
 
 void *monitor_thread(void *);
-
 #endif
 
