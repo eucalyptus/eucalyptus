@@ -69,23 +69,15 @@ import java.security.cert.X509Certificate;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.ClusterCredentials;
 
-baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
+baseDir = "/disk2/1.6.1-upgrade";//"${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
 targetDbPrefix= "eucalyptus"
-
-	def getSql() {
-	source = new org.hsqldb.jdbc.jdbcDataSource();
-	source.database = "jdbc:hsqldb:file:${baseDir}/eucalyptus";
-	source.user = 'sa';
-	source.password = '';
-	return new Sql(source);
-}
 
 def getSqlStorage() {
 	source = new org.hsqldb.jdbc.jdbcDataSource();
 	source.database = "jdbc:hsqldb:file:${baseDir}/eucalyptus_storage";
 	source.user = 'sa';
-	source.password = '';
+	source.password = System.getenv('EUCALYPTUS_DB');
 	return new Sql(source);
 }
 
@@ -93,20 +85,10 @@ def getSqlWalrus() {
 	source = new org.hsqldb.jdbc.jdbcDataSource();
 	source.database = "jdbc:hsqldb:file:${baseDir}/eucalyptus_walrus";
 	source.user = 'sa';
-	source.password = '';
+	source.password = System.getenv('EUCALYPTUS_DB');
 	return new Sql(source);
 }
 
-def getSqlVolumes() {
-	source = new org.hsqldb.jdbc.jdbcDataSource();
-	source.database = "jdbc:hsqldb:file:${baseDir}/eucalyptus_volumes";
-	source.user = 'sa';
-	source.password = '';
-	return new Sql(source);
-}
-
-db = getSql();
-dbVolumes = getSqlVolumes( );
 dbStorage = getSqlStorage();
 dbWalrus = getSqlWalrus();
 
@@ -119,17 +101,19 @@ System.setProperty("euca.db.host", "jdbc:hsqldb:file:${targetDir}/${targetDbPref
 System.setProperty("euca.db.password", "${System.getenv('EUCALYPTUS_DB')}");
 System.setProperty("euca.log.level", 'INFO');
 
-dbWalrus.rows('SELECT * FROM BUCKETS').each{ 
+new "/disk1/eucalyptus/src/main-bucket-logging/clc/modules/database/conf/scripts/after_database.groovy".run()
+
+def updateBuckets() {
 	EntityWrapper<BucketInfo> dbBucket = WalrusControl.getEntityManager();
-	try {
-		
-		dbBucket.merge(bucket);
-		dbBucket.commit( );
-	} catch (Throwable t) {
-		t.printStackTrace();
-		dbBucket.rollback();
+	BucketInfo bucketInfo = new BucketInfo();
+	List<BucketInfo> buckets = dbBucket.query(bucketInfo);
+	for(BucketInfo bucket : buckets) {
+		bucket.setLoggingEnabled(false);		
 	}
+	dbBucket.commit();
 }
+
+updateBuckets();
 
 dbStorage.rows('SELECT * FROM LVMMETADATA').each {
 	EntityWrapper<AOEMetaInfo> dbStorage = StorageController.getEntityWrapper();
