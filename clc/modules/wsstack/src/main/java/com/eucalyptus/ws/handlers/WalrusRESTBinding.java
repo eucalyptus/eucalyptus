@@ -64,6 +64,7 @@ import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -131,6 +132,7 @@ import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import groovy.lang.GroovyObject;
+import org.apache.commons.httpclient.util.DateUtil;
 
 public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static Logger LOG = Logger.getLogger( WalrusRESTBinding.class );
@@ -692,7 +694,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		}
 	}
 
-	private void parseExtendedHeaders(Map operationParams, String headerString, String value) {
+	private void parseExtendedHeaders(Map operationParams, String headerString, String value) throws BindingException {
 		if(headerString.equals(WalrusProperties.ExtendedGetHeaders.Range.toString())) {
 			String prefix = "bytes=";
 			assert(value.startsWith(prefix));
@@ -708,9 +710,16 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), Long.parseLong(values[1]));
 		} else if(WalrusProperties.ExtendedHeaderDateTypes.contains(headerString)) {
 			try {
-				operationParams.put(headerString, DateUtils.parseIso8601DateTimeOrDate(value));
+				List<String> dateFormats = new ArrayList<String>();
+				dateFormats.add(DateUtil.PATTERN_RFC1123);
+				operationParams.put(headerString, DateUtil.parseDate(value, dateFormats));
 			} catch(Exception ex) {
-				ex.printStackTrace();
+				try {
+					operationParams.put(headerString, DateUtils.parseIso8601DateTime(value));
+				} catch (ParseException e) {
+					LOG.error(e);
+					throw new BindingException(e);
+				}
 			}
 		} else {
 			operationParams.put(headerString, value);
