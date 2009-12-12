@@ -91,6 +91,7 @@ static char *sc_instance_path = "";
 static char disk_convert_command_path [BUFSIZE] = "";
 static int scConfigInit=0;
 static sem * sc_sem;
+static sem * disk_sem;
 
 int scInitConfig (void)
 {
@@ -103,6 +104,10 @@ int scInitConfig (void)
     }
     
     if ((sc_sem = sem_alloc (1, "eucalyptus-storage-semaphore")) == NULL) { /* TODO: use this semaphore to fix the race */
+        logprintfl (EUCAERROR, "failed to create and initialize a semaphore\n");
+        return 1;
+    }
+    if ((disk_sem = sem_alloc (1, "mutex")) == NULL) { /* TODO: use this semaphore to fix the race */
         logprintfl (EUCAERROR, "failed to create and initialize a semaphore\n");
         return 1;
     }
@@ -817,10 +822,12 @@ retry:
         /* for KVM, convert partition into disk */
         if (e==OK && convert_to_disk) { 
             sem_p (s);
+            sem_p (disk_sem);
             /* for the cached disk swap==0 and ephemeral==0 as we'll append them below */
             if ((e=vrun("%s %s %d %d", disk_convert_command_path, file_path, 0, 0))!=0) {
                 logprintfl (EUCAERROR, "error: partition-to-disk image conversion command failed\n");
             }
+	    sem_v(disk_sem);
             sem_v (s);
             
             /* recalculate file size now that it was converted */
@@ -833,6 +840,7 @@ retry:
             }
         }
 
+	sem_p (disk_sem);
         /* cache the partition or disk, if possible */
         if ( e==OK && should_cache ) {
             if ( (e=vrun ("cp -a %s %s", file_path, cached_path)) != 0) {
@@ -842,6 +850,7 @@ retry:
                 logprintfl (EUCAERROR, "failed to copy digest file %s into cache at %s\n", tmp_digest_path, digest_path);
             }
         }
+	sem_v (disk_sem);
         
         sem_p (sc_sem);
         if (should_cache) {
@@ -915,10 +924,13 @@ retry:
             
         } else { /* all good - copy it, finally */
             ensure_subdirectory_exists (file_path); /* creates missing directories */            
+	    sem_p (disk_sem);
             if ( (e=vrun ("cp -a %s %s", cached_path, file_path)) != 0) {
-                logprintfl (EUCAERROR, "failed to copy file %s from cache at %s\n", file_path, cached_path);
+  	        logprintfl (EUCAERROR, "failed to copy file %s from cache at %s\n", file_path, cached_path);
+		sem_v (disk_sem);
                 return 0L;
             }
+	    sem_v (disk_sem);
         }
         break;
         
@@ -931,9 +943,11 @@ retry:
         long long ephemeral_mb = limit_mb - swap_size_mb - (file_size_b+digest_size_b)/MEGABYTE;
         if ( swap_size_mb>0L || ephemeral_mb>0L ) {
             sem_p (s);
+            sem_p (disk_sem);
             if ((e=vrun("%s %s %lld %lld", disk_convert_command_path, file_path, swap_size_mb, ephemeral_mb))!=0) {
                 logprintfl (EUCAERROR, "error: failed to add swap or ephemeral to the disk image\n");
             }
+            sem_v (disk_sem);
             sem_v (s);
 
             /* recalculate file size (again!) now that it was converted */
@@ -1043,25 +1057,33 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
     if (!convert_to_disk) {
         /* create swap partition */
         if (swap_size_mb>0) { 
+	    sem_p (disk_sem);
             if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/swap 2>/dev/null", swap_size_mb, rundir_path)) != 0) { 
                 logprintfl (EUCAINFO, "creation of swap (dd) at %s/swap failed\n", rundir_path);
+	        sem_v (disk_sem);
                 return e;
             }
             if ((e=vrun ("mkswap %s/swap >/dev/null", rundir_path)) != 0) {
                 logprintfl (EUCAINFO, "initialization of swap (mkswap) at %s/swap failed\n", rundir_path);
+		sem_v (disk_sem);
                 return e;		
             }
+	    sem_v (disk_sem);
         }
         /* create ephemeral partition */
         if (limit_mb>0) {
+	    sem_p (disk_sem);
             if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/ephemeral 2>/dev/null", limit_mb, rundir_path )) != 0) {
                 logprintfl (EUCAINFO, "creation of ephemeral disk (dd) at %s/ephemeral failed\n", rundir_path);
+		sem_v (disk_sem);
                 return e;
             }
             if ((e=vrun ("mkfs.ext3 -F %s/ephemeral >/dev/null 2>&1", rundir_path)) != 0) {
                 logprintfl (EUCAINFO, "initialization of ephemeral disk (mkfs.ext3) at %s/ephemeral failed\n", rundir_path);
+		sem_v (disk_sem);
                 return e;		
             }
+	    sem_v (disk_sem);
         }
     }
     

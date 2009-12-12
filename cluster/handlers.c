@@ -717,7 +717,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
   int i, rc;
   int pid, status, ret=0;
   int filedes[2];  
-  time_t op_start, op_timer;
+  time_t op_start, op_timer, op_pernode;
   ncStub *ncs;
   ncResource *ncRes;
 
@@ -763,8 +763,9 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 	} else {
 	  bzero(ncRes, sizeof(ncResource));
 	  op_timer = timeout - (time(NULL) - op_start);
-	  logprintfl(EUCADEBUG, "\ttime left for next op: %d\n", op_timer);
-	  rc = timeread(filedes[0], ncRes, sizeof(ncResource), minint(op_timer / (config->numResources - i), OP_TIMEOUT_PERNODE));
+	  op_pernode = (op_timer/(config->numResources-i)) > OP_TIMEOUT_PERNODE ? (op_timer/(config->numResources-i)) : OP_TIMEOUT_PERNODE;
+	  logprintfl(EUCADEBUG, "\ttime left for next op: %d\n", op_pernode);
+	  rc = timeread(filedes[0], ncRes, sizeof(ncResource), op_pernode);
 	  close(filedes[0]);
 	  if (rc <= 0) {
 	    // timeout or read went badly
@@ -831,13 +832,14 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
   ccInstance *myInstance=NULL, *cacheInstance=NULL;
   int i, k, numInsts, found, ncOutInstsLen, rc, pid;
   virtualMachine ccvm;
-  time_t op_start, op_timer;
+  time_t op_start, op_timer, op_pernode;
 
   ncInstance **ncOutInsts=NULL;
   ncStub *ncs;
   
   op_start = time(NULL);
   op_timer = timeout;
+  logprintfl(EUCADEBUG,"refresh_instances(): called\n");
 
   if (dolock) {
     sem_wait(configLock);  
@@ -888,8 +890,9 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	close(filedes[1]);
 	
 	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	logprintfl(EUCADEBUG, "\t %d %d %d %d timeout(%d/%d)\n", op_timer, config->numResources, i, OP_TIMEOUT_PERNODE, minint(op_timer / (config->numResources - i), OP_TIMEOUT_PERNODE), OP_TIMEOUT_PERNODE);
-	rbytes = timeread(filedes[0], &len, sizeof(int), minint(op_timer / (config->numResources - i), OP_TIMEOUT_PERNODE));
+	op_pernode = (op_timer/(config->numResources-i)) > OP_TIMEOUT_PERNODE ? (op_timer/(config->numResources-i)) : OP_TIMEOUT_PERNODE;
+	logprintfl(EUCADEBUG, "\ttimeout(%d/%d) len\n", op_pernode, OP_TIMEOUT);
+	rbytes = timeread(filedes[0], &len, sizeof(int), op_pernode);
 	if (rbytes <= 0) {
 	  // read went badly
 	  kill(pid, SIGKILL);
@@ -906,7 +909,9 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	    for (j=0; j<len; j++) {
 	      inst = malloc(sizeof(ncInstance));
 	      op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	      rbytes = timeread(filedes[0], inst, sizeof(ncInstance), minint(op_timer / (config->numResources - i), OP_TIMEOUT_PERNODE));
+	      op_pernode = (op_timer/(config->numResources-i)) > OP_TIMEOUT_PERNODE ? (op_timer/(config->numResources-i)) : OP_TIMEOUT_PERNODE;
+	      logprintfl(EUCADEBUG, "\ttimeout(%d/%d) inst\n", op_pernode, OP_TIMEOUT);
+	      rbytes = timeread(filedes[0], inst, sizeof(ncInstance), op_pernode);
 	      ncOutInsts[j] = inst;
 	    }
 	  }
@@ -920,8 +925,8 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	      config->resourcePool[i].idleStart = time(NULL);
 	    } else if ((time(NULL) - config->resourcePool[i].idleStart) > config->idleThresh) {
 	      // call powerdown
-	      rc = powerDown(ccMeta, &(config->resourcePool[i]));
-	      if (rc) {
+	      
+	      if (powerDown(ccMeta, &(config->resourcePool[i]))) {
 		logprintfl(EUCAWARN, "powerDown for %s failed\n", config->resourcePool[i].hostname);
 	      }
 	    }
@@ -954,10 +959,12 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	    myInstance->networkIndex = -1;
 	    
 	    cacheInstance=NULL;
+	    /*
 	    if (!find_instanceCacheId(ncOutInsts[j]->instanceId, &cacheInstance)) {
 	      logprintfl(EUCADEBUG, "\t%s in cache\n", ncOutInsts[j]->instanceId);
 	      memcpy(myInstance, cacheInstance, sizeof(ccInstance));
 	    }
+	    */
 	    
 	    rc = ccInstance_to_ncInstance(myInstance, ncOutInsts[j]);
 	    // instance info that the CC maintains
@@ -1003,7 +1010,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
   if (dolock) {
     sem_post(configLock);
   }
-  
+  logprintfl(EUCADEBUG,"refresh_instances(): done\n");  
   return(0);
 }
 
@@ -2802,8 +2809,8 @@ void print_instanceCache(void) {
 
   sem_wait(instanceCacheLock);
   for (i=0; i<MAXINSTANCES; i++) {
-    if (instanceCache->instances[i].instanceId[0] != '\0') {
-      logprintfl(EUCADEBUG,"\tcache: %d %s %s %s\n", instanceCache->numInsts, instanceCache->instances[i].instanceId, instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp);
+    if (instanceCache->valid[i]) {
+      logprintfl(EUCADEBUG,"\tcache: %d/%d %s %s %s %s\n", i, instanceCache->numInsts, instanceCache->instances[i].instanceId, instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp, instanceCache->instances[i].state);
     }
   }
   sem_post(instanceCacheLock);
@@ -2813,13 +2820,17 @@ void invalidate_instanceCache(void) {
   int i;
   
   sem_wait(instanceCacheLock);
+  bzero(instanceCache->valid, sizeof(int)*MAXINSTANCES);
   instanceCache->numInsts = 0;
+  instanceCache->instanceCacheUpdate = 0;
+  /*  instanceCache->numInsts = 0;
   for (i=0; i<MAXINSTANCES; i++) {
     if (instanceCache->instances[i].instanceId[0] != '\0') {
       // del from cache
       instanceCache->instances[i].instanceId[0] = '\0';
     }
   }
+  */
   sem_post(instanceCacheLock);
   
 }
@@ -2834,7 +2845,7 @@ int refresh_instanceCache(char *instanceId, ccInstance *in){
   sem_wait(instanceCacheLock);
   done=0;
   for (i=0; i<MAXINSTANCES && !done; i++) {
-    if (instanceCache->instances[i].instanceId[0] != '\0') {
+    if (instanceCache->valid[i]) {
       if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
 	// in cache
 	logprintfl(EUCADEBUG, "refreshing instance '%s'\n", instanceId);
@@ -2861,7 +2872,7 @@ int add_instanceCache(char *instanceId, ccInstance *in){
   sem_wait(instanceCacheLock);
   done=0;
   for (i=0; i<MAXINSTANCES && !done; i++) {
-    if (instanceCache->instances[i].instanceId[0] != '\0') {
+    if (instanceCache->valid[i]) {
       if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
 	// already in cache
 	sem_post(instanceCacheLock);
@@ -2872,8 +2883,7 @@ int add_instanceCache(char *instanceId, ccInstance *in){
       done++;
     }
   }
-  if (!done) {
-  }
+  instanceCache->valid[firstNull] = 1;
   allocate_ccInstance(&(instanceCache->instances[firstNull]), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL, in->ramdiskURL, in->ownerId, in->state, in->ts, in->reservationId, &(in->ccnet), &(in->ccvm), in->ncHostIdx, in->keyName, in->serviceTag, in->userData, in->launchIndex, in->groupNames, in->volumes, in->volumesSize, in->networkIndex);
   instanceCache->numInsts++;
   sem_post(instanceCacheLock);
@@ -2885,10 +2895,11 @@ int del_instanceCacheId(char *instanceId) {
 
   sem_wait(instanceCacheLock);
   for (i=0; i<MAXINSTANCES; i++) {
-    if (instanceCache->instances[i].instanceId[0] != '\0') {
+    if (instanceCache->valid[i]) {
       if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
 	// del from cache
 	bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
+	instanceCache->valid[i] = 0;
 	instanceCache->numInsts--;
 	sem_post(instanceCacheLock);
 	return(0);
@@ -2910,7 +2921,7 @@ int find_instanceCacheId(char *instanceId, ccInstance **out) {
   *out = NULL;
   done=0;
   for (i=0; i<MAXINSTANCES && !done; i++) {
-    if (instanceCache->instances[i].instanceId[0] != '\0') {
+    if (instanceCache->valid[i]) {
       if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
 	// found it
 	*out = malloc(sizeof(ccInstance));
@@ -2938,7 +2949,7 @@ int find_instanceCacheIP(char *ip, ccInstance **out) {
   *out = NULL;
   done=0;
   for (i=0; i<MAXINSTANCES && !done; i++) {
-    if (instanceCache->instances[i].ccnet.publicIp[0] != '\0' || instanceCache->instances[i].ccnet.privateIp[0] != '\0') {
+    if (instanceCache->valid[i] && (instanceCache->instances[i].ccnet.publicIp[0] != '\0' || instanceCache->instances[i].ccnet.privateIp[0] != '\0')) {
       if (!strcmp(instanceCache->instances[i].ccnet.publicIp, ip) || !strcmp(instanceCache->instances[i].ccnet.privateIp, ip)) {
 	// found it
 	*out = malloc(sizeof(ccInstance));

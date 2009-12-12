@@ -139,9 +139,9 @@ typedef struct resource_t {
 
 typedef struct ccInstanceCache_t {
   ccInstance instances[MAXINSTANCES];
+  int valid[MAXINSTANCES];
   int numInsts;
   int instanceCacheUpdate;
-  pthread_mutex_t lock;
 } ccInstanceCache;
 
 typedef struct ccConfig_t {
@@ -155,9 +155,7 @@ typedef struct ccConfig_t {
   int schedPolicy, schedState;
   int idleThresh, wakeThresh;
   time_t configMtime;
-  //  pthread_t threads[3];
   int threads[3];
-  pthread_mutex_t lock;
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE};

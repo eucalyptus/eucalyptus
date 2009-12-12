@@ -241,7 +241,7 @@ do_stop() {
 		rm -f $pidfile
 		return 
 	fi
-        # now kill the services                                                                                                                                          
+        # now kill the services
         pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid"
         pids=""
         for pidfile in $pidfiles ; do

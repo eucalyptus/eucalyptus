@@ -69,7 +69,7 @@ permission notice:
 
 void test_sem_fork (void) 
 {
-    sem * s = sem_alloc (1, "eucalyptus-util-test");
+  sem * s = sem_alloc (1, "eucalyptus-util-test");
     
     printf ("---> testing semaphores between processes\n");
     
