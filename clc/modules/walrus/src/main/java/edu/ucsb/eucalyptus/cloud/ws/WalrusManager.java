@@ -67,6 +67,8 @@ package edu.ucsb.eucalyptus.cloud.ws;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -331,7 +333,14 @@ public class WalrusManager {
 		if(WalrusProperties.enableVirtualHosting) {
 			UpdateARecordType updateARecord = new UpdateARecordType();
 			updateARecord.setUserId(userId);
-			String address = WalrusProperties.WALRUS_IP;
+			URI walrusUri;
+			String address = null;
+			try {
+				walrusUri = new URI(EucalyptusProperties.getWalrusUrl());
+				address = walrusUri.getHost();
+			} catch (URISyntaxException e) {
+				throw new EucalyptusCloudException("Could not get Walrus URL");
+			}
 			String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
 			updateARecord.setAddress(address);
 			updateARecord.setName(bucketName + "." + zone);
