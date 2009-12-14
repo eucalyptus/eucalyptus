@@ -86,7 +86,6 @@ public class WalrusProperties {
 	public static String DB_NAME             = "eucalyptus_walrus";
 	public static final String VIRTUAL_SUBDOMAIN = "I_R_Bukkit";
 	public static String WALRUS_SUBDOMAIN = "walrus";
-	public static String WALRUS_IP = "127.0.0.1";
 	public static final long G = 1024*1024*1024;
 	public static final long M = 1024*1024;
 	public static final long K = 1024;

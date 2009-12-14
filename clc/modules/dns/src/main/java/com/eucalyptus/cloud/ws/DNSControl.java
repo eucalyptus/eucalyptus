@@ -110,6 +110,7 @@ public class DNSControl {
 	}
 
 	public static void populateRecords() {
+		DNSProperties.update();
 		EntityWrapper<ZoneInfo> db = DNSControl.getEntityWrapper();
 		try {
 			ZoneInfo zInfo = new ZoneInfo();
