@@ -30,7 +30,7 @@ permission notice:
   conditions are met:
 
     Redistributions of source code must retain the above copyright notice,
-    this list of conditions and the following disclaimer.
+    his list of conditions and the following disclaimer.
 
     Redistributions in binary form must reproduce the above copyright
     notice, this list of conditions and the following disclaimer in the
@@ -95,6 +95,9 @@ static int doInitialize (struct nc_state_t *nc)
 	/* set up paths of Eucalyptus commands NC relies on */
 	snprintf (nc->gen_libvirt_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
 	snprintf (nc->get_info_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
+	snprintf (nc->connect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
+	snprintf (nc->disconnect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
+	snprintf (nc->get_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
 
@@ -369,8 +372,19 @@ doAttachVolume (	struct nc_state_t *nc,
 
             int err = 0;
             char xml [1024];
-            snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
-
+            int is_iscsi_target = 0;
+            char *local_iscsi_dev;
+            if(check_iscsi(remoteDev)) {
+                is_iscsi_target = 1;
+                /*get credentials, decrypt them*/
+                //parse_target(remoteDev);
+                /*login to target*/
+                if((local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, remoteDev)) == NULL)
+                    return ERROR;
+                snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+            } else {
+                snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+	    }
             /* protect KVM calls, just in case */
             sem_p (hyp_sem);
             err = virDomainAttachDevice (dom, xml);
@@ -382,6 +396,9 @@ doAttachVolume (	struct nc_state_t *nc,
                 logprintfl (EUCAINFO, "attached %s to %s in domain %s\n", remoteDev, localDevReal, instanceId);
             }
             virDomainFree(dom);
+            if(is_iscsi_target) {
+                free(local_iscsi_dev);
+            }
         } else {
             if (instance->state != BOOTING) {
                 logprintfl (EUCAWARN, "warning: domain %s not running on hypervisor, cannot attach device\n", instanceId);
@@ -446,8 +463,19 @@ doDetachVolume (	struct nc_state_t *nc,
         if (dom) {
             int err = 0;
             char xml [1024];
-            snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
-
+            int is_iscsi_target = 0;
+            char *local_iscsi_dev;
+            if(check_iscsi(remoteDev)) {
+                is_iscsi_target = 1;
+                /*get credentials, decrypt them*/
+                //parse_target(remoteDev);
+                /*logout from target*/
+                if((local_iscsi_dev = get_iscsi_target(nc->get_storage_cmd_path, remoteDev)) == NULL)
+                    return ERROR;
+                snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+            } else {
+   		snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+	    }
             /* protect KVM calls, just in case */
             sem_p (hyp_sem);
             err = virDomainDetachDevice (dom, xml);
@@ -459,6 +487,13 @@ doDetachVolume (	struct nc_state_t *nc,
                 logprintfl (EUCAINFO, "detached %s as %s in domain %s\n", remoteDev, localDevReal, instanceId);
             }
             virDomainFree(dom);
+            if(is_iscsi_target) {
+                if(disconnect_iscsi_target(nc->disconnect_storage_cmd_path, remoteDev) != 0) {
+                    logprintfl (EUCAERROR, "disconnect_iscsi_target failed for %s\n", remoteDev);
+                    ret = ERROR;
+                }
+                free(local_iscsi_dev);
+            }
         } else {
             if (instance->state != BOOTING) {
                 logprintfl (EUCAWARN, "warning: domain %s not running on hypervisor, cannot detach device\n", instanceId);

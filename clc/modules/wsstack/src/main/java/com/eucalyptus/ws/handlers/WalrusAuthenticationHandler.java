@@ -252,8 +252,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				//query string authentication
 				String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
 				try {
-					String signature = URLDecoder.decode(parameters.remove(SecurityParameter.Signature.toString()), "UTF-8");
-					signature = signature.replaceAll(" ", "+");
+					String signature = URLDecoder.decode(parameters.remove(SecurityParameter.Signature.toString()), "UTF-8").replace("%20", "+").replace("%2A", "*").replace("~", "%7E").replace(" ", "+");
 					if(signature == null) {
 						throw new AuthenticationException("User authentication failed. Null signature.");
 					}
@@ -294,6 +293,8 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			String userName = CredentialProvider.getUserName( accessKeyID );
 			User user = CredentialProvider.getUser( userName );  
 			httpRequest.setUser( user );
+		} catch(AuthenticationException e) {
+			throw e;
 		} catch(Exception ex) {
 			throw new AuthenticationException( "User authentication failed. Unable to obtain query key" );
 		}

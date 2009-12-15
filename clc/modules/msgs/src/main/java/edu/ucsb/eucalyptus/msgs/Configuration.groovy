@@ -69,6 +69,16 @@ public class ComponentInfoType extends EucalyptusData {
   public ComponentInfoType(){}
   public ComponentInfoType(String name, String detail){this.name = name; this.detail = detail;}
 }
+public class NodeComponentInfoType extends EucalyptusData {
+  String clusterName;  
+  String name;
+  ArrayList<String> instances = new ArrayList<String>();
+  public NodeComponentInfoType(){}
+  public NodeComponentInfoType(String name, String clusterName){
+    this.name = name; 
+    this.clusterName = clusterName;
+  }
+}
 
 public class ConfigurationMessage extends EucalyptusMessage {
   String getComponentName(){
@@ -110,6 +120,10 @@ public class DeregisterClusterType extends DeregisterComponentType {}
 public class DeregisterClusterResponseType extends DeregisterComponentResponseType {}
 public class DescribeClustersType extends DescribeComponentsType {}
 public class DescribeClustersResponseType extends DescribeComponentsResponseType {}
+public class DescribeNodesType extends ConfigurationMessage  {}
+public class DescribeNodesResponseType extends ConfigurationMessage {
+  ArrayList<NodeComponentInfoType> registered = new ArrayList<NodeComponentInfoType>();
+}
 
 public class RegisterStorageControllerType extends RegisterComponentType {}
 public class RegisterStorageControllerResponseType extends RegisterComponentResponseType {}

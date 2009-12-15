@@ -77,10 +77,12 @@ import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusProperties;
 
 import javax.persistence.*;
+
 import java.util.List;
 import java.util.zip.Adler32;
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "counters" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class Counters {
@@ -132,7 +134,7 @@ public class Counters {
     if ( tempId < 0 )
     {
       Counters find = null;
-      EntityManager em = DatabaseUtil.getEntityManagerFactory( Component.eucalyptus.name( ) ).createEntityManager(  );
+      EntityManager em = DatabaseUtil.getEntityManagerFactory( Component.eucalyptus.name( ) +"_general").createEntityManager(  );
       Session session = (Session) em.getDelegate();
       List<Counters> found = ( List<Counters> ) session.createSQLQuery( "select * from counters" ).addEntity( Counters.class ).list();
       if( found.isEmpty() )
@@ -152,7 +154,7 @@ public class Counters {
     }
     else if ( tempId % modulus == 0 )
     {
-      EntityManager em = DatabaseUtil.getEntityManagerFactory( Component.eucalyptus.name( ) ).createEntityManager(  );
+      EntityManager em = DatabaseUtil.getEntityManagerFactory( Component.eucalyptus.name( ) +"_general").createEntityManager(  );
       Session session = (Session) em.getDelegate();
       Transaction tx = session.beginTransaction();
       tx.begin();

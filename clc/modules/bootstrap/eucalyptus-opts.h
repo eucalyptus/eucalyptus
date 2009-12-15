@@ -82,6 +82,8 @@ struct eucalyptus_opts
   const char *disable_dns_help; /**< @brief Disable loading DNS services altogether. help description.  */
   int disable_storage_flag;	/**< @brief Disable loading storage services altogether. (default=off).  */
   const char *disable_storage_help; /**< @brief Disable loading storage services altogether. help description.  */
+  int disable_iscsi_flag;	/**< @brief Disable ISCSI support for block storage. (default=off).  */
+  const char *disable_iscsi_help; /**< @brief Disable ISCSI support for block storage. help description.  */
   int check_flag;	/**< @brief Check on Eucalyptus. (default=off).  */
   const char *check_help; /**< @brief Check on Eucalyptus. help description.  */
   int stop_flag;	/**< @brief Stop Eucalyptus. (default=off).  */
@@ -136,6 +138,7 @@ struct eucalyptus_opts
   unsigned int disable_walrus_given ;	/**< @brief Whether disable-walrus was given.  */
   unsigned int disable_dns_given ;	/**< @brief Whether disable-dns was given.  */
   unsigned int disable_storage_given ;	/**< @brief Whether disable-storage was given.  */
+  unsigned int disable_iscsi_given ;	/**< @brief Whether disable-iscsi was given.  */
   unsigned int check_given ;	/**< @brief Whether check was given.  */
   unsigned int stop_given ;	/**< @brief Whether stop was given.  */
   unsigned int fork_given ;	/**< @brief Whether fork was given.  */

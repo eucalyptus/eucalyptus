@@ -1073,3 +1073,70 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 
 	return ret;
 }
+
+int check_iscsi(char* dev_string) {
+    if(strchr(dev_string, ',') == NULL)
+	return 0;
+    return 1;
+}
+
+void parse_target(char *dev_string) {
+    char *delimiter = ",";
+    char *brk, *part;
+    char dev_name[256];
+    snprintf(dev_name, 256, "%s", dev_string);
+
+    for (part = strtok_r(dev_name, delimiter, &brk); part != NULL; part = strtok_r(NULL, delimiter, &brk)) {
+    }  
+}
+
+char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+    char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    char buf [BIG_CHAR_BUFFER_SIZE];
+    char *retval;
+    if (!home) {
+        home = strdup(""); /* root by default */
+    }
+    
+    snprintf (buf, BIG_CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
+    logprintfl (EUCAINFO, "connect_iscsi_target invoked (dev_string=%s)\n", dev_string);
+    if ((retval = system_output(buf)) == NULL) {
+	logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
+    } else {
+	logprintfl (EUCAINFO, "Attached device: %s\n", retval);
+    } 
+    return retval;
+}
+
+int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+    char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    if (!home) {
+        home = strdup(""); /* root by default */
+    }
+    
+    logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
+    if (vrun("%s %s", storage_cmd_path, dev_string) != 0) {
+	logprintfl (EUCAERROR, "ERROR: disconnect_iscsi_target failed\n");
+	return -1;
+    }
+    return 0;
+}
+
+char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+    char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    char buf [BIG_CHAR_BUFFER_SIZE];
+    char *retval;
+    if (!home) {
+        home = strdup(""); /* root by default */
+    }
+    
+    snprintf (buf, BIG_CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
+    logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);
+    if ((retval = system_output(buf)) == NULL) {
+	logprintfl (EUCAERROR, "ERROR: get_iscsi_target failed\n");
+    } else {
+	logprintfl (EUCAINFO, "Device: %s\n", retval);
+    } 
+    return retval;
+}
+

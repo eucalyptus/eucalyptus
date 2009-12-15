@@ -71,9 +71,11 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 @Entity
+@PersistenceContext(name="eucalyptus_general")
 @Table( name = "vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class VmType implements Comparable {

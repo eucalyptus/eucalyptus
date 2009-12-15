@@ -74,6 +74,7 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
+import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.handlers.ServiceSinkHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
@@ -98,7 +99,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   
   public boolean accepts( final HttpRequest message ) {
     final boolean result = this.checkAccepts( message );
-    if ( result ) {
+    if ( result && DebugUtil.DEBUG ) {
       LOG.debug( EventRecord.here( this.getClass(), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ) );
     }
     return result;
@@ -118,17 +119,19 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   public void unroll( final ChannelPipeline pipeline ) {
     try {
       for ( final UnrollableStage s : this.stages ) {
-        pipeline.addLast( "pre-" + s.getStageName( ), new UnrollableStage.StageBottomHandler( s ) );
+//        pipeline.addLast( "pre-" + s.getStageName( ), new UnrollableStage.StageBottomHandler( s ) );
         s.unrollStage( pipeline );
-        pipeline.addLast( "post-" + s.getStageName( ), new UnrollableStage.StageTopHandler( s ) );
+//        pipeline.addLast( "post-" + s.getStageName( ), new UnrollableStage.StageTopHandler( s ) );
       }
       if ( this.msgReceiver != null ) {
         pipeline.addLast( "service-sink", new ServiceSinkHandler( this.msgReceiver ) );
       } else {
         pipeline.addLast( "service-sink", new ServiceSinkHandler( ) );
       }
-      for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
-        LOG.trace( EventRecord.here( this.getClass(), EventType.PIPELINE_HANDLER, e.getKey(), e.getValue( ).getClass( ).getSimpleName( ) ) );
+      if( DebugUtil.TRACE ) {
+        for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
+          LOG.trace( EventRecord.here( this.getClass(), EventType.PIPELINE_HANDLER, e.getKey(), e.getValue( ).getClass( ).getSimpleName( ) ) );
+        }
       }
     } catch ( final Exception e ) {
       LOG.error( "Error unrolling pipeline: " + this.getPipelineName( ) );

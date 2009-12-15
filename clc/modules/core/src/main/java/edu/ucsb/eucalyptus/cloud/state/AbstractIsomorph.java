@@ -69,6 +69,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 
 import java.util.*;
 
+@PersistenceContext(name="eucalyptus_images")
 @MappedSuperclass
 public abstract class AbstractIsomorph extends AbstractPersistent {
   private String userName;

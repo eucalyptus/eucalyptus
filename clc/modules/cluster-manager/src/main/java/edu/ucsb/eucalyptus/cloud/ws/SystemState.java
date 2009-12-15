@@ -247,6 +247,7 @@ public class SystemState {
     VmInstance vm = null;
     try {
       vm = VmInstances.getInstance( ).lookup( runVm.getInstanceId( ) );
+      vm.setServiceTag( runVm.getServiceTag( ) );
       if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
         long splitTime = vm.getSplitTime( );
         if ( splitTime > SHUT_DOWN_TIME ) {

@@ -83,8 +83,8 @@ import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 public class TransientZone extends Zone {
   private static Logger LOG = Logger.getLogger( TransientZone.class );
   private static int ttl               = 604800;
-  public static Zone INSTANCE_EXTERNAL = getInstanceExternalZone( );
-  public static Zone INSTANCE_INTERNAL = getInstanceInternalZone( );
+  private static Zone INSTANCE_EXTERNAL = null;
+  private static Zone INSTANCE_INTERNAL = null;
   
   public TransientZone( Name name, Record[] records ) throws IOException {
     super(name,records);

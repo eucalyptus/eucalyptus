@@ -88,41 +88,10 @@ public class DNSProperties {
 	public static String NS_HOST = "nshost." + DOMAIN;
 	public static String NS_IP = "127.0.0.1";
 
-	static {
-		updateHost();
-	}
-
 	public static void update() {
 		SystemConfiguration systemConfiguration = EucalyptusProperties.getSystemConfiguration();
 		DOMAIN = systemConfiguration.getDnsDomain();
 		NS_HOST = systemConfiguration.getNameserver();
 		NS_IP = systemConfiguration.getNameserverAddress();
 	}
-
-	private static void updateHost () {
-		InetAddress ipAddr = null;
-		List<NetworkInterface> ifaces = null;
-		try {
-			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-			for ( NetworkInterface iface : ifaces )
-				try {
-					if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-						for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-							if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address) ) {
-								ipAddr = iaddr;
-							} else if ( iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address ) ) {
-								ipAddr = iaddr;
-							}
-						}
-					}
-				}
-			catch ( SocketException e1 ) {}
-		}
-		catch ( SocketException e1 ) {}
-		if(ipAddr != null) {
-			DNSProperties.NS_IP = ipAddr.getHostAddress();
-			DNSProperties.NS_HOST = ipAddr.getCanonicalHostName();
-		}
-	}
-
 }

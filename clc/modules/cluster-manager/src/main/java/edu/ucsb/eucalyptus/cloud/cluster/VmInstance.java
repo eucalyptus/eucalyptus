@@ -106,6 +106,7 @@ public class VmInstance implements HasName {
   private volatile int                  networkIndex;
 
   private String               userData;
+  private String               serviceTag;
   private String               reason;
   private VmImageInfo          imageInfo;
   private VmKeyInfo            keyInfo;
@@ -430,6 +431,14 @@ public class VmInstance implements HasName {
                           this.networkConfig, this.networkIndex, this.networks, this.ownerId, this.placement,
                           this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch,
                           this.userData, this.vmTypeInfo, this.volumes );
+  }
+
+  public void setServiceTag( String serviceTag ) {
+    this.serviceTag = serviceTag;
+  }
+
+  public String getServiceTag( ) {
+    return serviceTag;
   }
     
 }

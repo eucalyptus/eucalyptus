@@ -72,6 +72,7 @@ import org.apache.log4j.Logger;
 import org.mule.api.MuleContext;
 
 import com.eucalyptus.util.DebugUtil;
+import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 
