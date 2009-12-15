@@ -86,21 +86,14 @@ import java.util.List;
 import java.util.Map;
 
 public class VmInstance implements HasName {
-
   private static Logger        LOG         = Logger.getLogger( VmInstance.class );
 
   public static String         DEFAULT_IP  = "0.0.0.0";
-
-  // :: parent ref :://
   private String               reservationId;
-  // :: unique index in reservation :://
   private int                  launchIndex;
-  // :: my id :://
   private String               instanceId;
-  // :: owner :://
   private String               ownerId;
   private String               placement;
-
   private Date                 launchTime;
   private StopWatch            stopWatch;
   private volatile int                  networkIndex;

@@ -64,18 +64,18 @@
 package edu.ucsb.eucalyptus.cloud;
 
 import edu.ucsb.eucalyptus.cloud.cluster.*;
-import edu.ucsb.eucalyptus.cloud.entities.Address;
 import edu.ucsb.eucalyptus.util.*;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import groovy.lang.*;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.net.util.AddressUtil;
 import com.eucalyptus.util.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusProperties;
@@ -129,13 +129,13 @@ public class SLAs {
   }
   
   public void doAddressAllocation( VmAllocationInfo vmAllocInfo ) throws NotEnoughResourcesAvailable {
-    if( EucalyptusProperties.disableNetworking ) return;
+    if( !Clusters.getInstance( ).hasNetworking( ) ) return;
     if ( "public".equals( vmAllocInfo.getRequest().getAddressingType() ) || vmAllocInfo.getRequest().getAddressingType() == null ) {
       List<ResourceToken> allocTokeList = vmAllocInfo.getAllocationTokens();
       List<Address> addressList = Lists.newArrayList();
       try {
         for ( ResourceToken token : allocTokeList ) {
-          addressList.addAll( AddressUtil.tryAssignSystemAddresses( token ) );
+          addressList.addAll( Addresses.getAddressManager( ).allocateSystemAddresses( token.getCluster( ), token.getAmount( ) ) );
         }
       } catch ( Exception e ) {
         throw new NotEnoughResourcesAvailable( e.getMessage( ), e );
@@ -169,7 +169,7 @@ public class SLAs {
     for ( ResourceToken token : rscTokens ) {
       NetworkToken netToken = allocateClusterVlan( userId, token.getCluster( ), firstNet.getName( ) );
       token.getNetworkTokens( ).add( netToken );
-      if( !EucalyptusProperties.disableNetworking ) {
+      if( Clusters.getInstance( ).hasNetworking( ) ) {
         for ( int i = 0; i < token.getAmount( ); i++ ) {
           Integer addrIndex = firstNet.allocateNetworkIndex( token.getCluster( ) );
           if ( addrIndex == null ) {

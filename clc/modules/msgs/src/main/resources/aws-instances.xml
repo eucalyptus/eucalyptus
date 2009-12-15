@@ -183,7 +183,7 @@
         </collection>
     </mapping>
 
-    <mapping name="DescribeInstances" class="edu.ucsb.eucalyptus.msgs.DescribeInstancesType">
+    <mapping name="DescribeInstances" class="edu.ucsb.eucalyptus.msgs.DescribeInstancesType"  extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet" item-type="java.lang.String">
             <structure name="item">
                 <value name="instanceId"/>

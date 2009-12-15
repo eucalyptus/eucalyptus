@@ -99,11 +99,6 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
       for ( Cluster c : ccList ) {
         ccNum -= c.getState( ).getMode( );
       }
-      if ( ccNum != 0 ) {
-        EucalyptusProperties.disableNetworking = true;
-      } else {
-        EucalyptusProperties.disableNetworking = false;
-      }
       this.verified = true;
     } else {
       LOG.warn( "Received unknown message type. " + e.getMessage( ) );

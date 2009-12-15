@@ -118,9 +118,10 @@ public class EntityWrapper<TYPE> {
     List<TYPE> res = this.query( example );
     if ( res.size( ) != 1 ) {
       String msg = null;
-      msg = example.toString( );
-      if ( msg != null && msg.startsWith( example.getClass( ).getCanonicalName( ) ) ) {
+      try {
         msg = LogUtil.dumpObject( example );
+      } catch ( Exception e ) {
+        msg = example.toString( );
       }
       LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.fail( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
       throw new EucalyptusCloudException( "Error locating information for " + msg );

@@ -63,17 +63,14 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.cloud.entities.Address;
-import edu.ucsb.eucalyptus.constants.VmState;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.EucalyptusClusterException;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.Client;
-
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Address.Transition;
+import com.eucalyptus.util.LogUtil;
+import edu.ucsb.eucalyptus.constants.VmState;
+import edu.ucsb.eucalyptus.msgs.AssignAddressType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType> {
   private static Logger LOG = Logger.getLogger( AssignAddressCallback.class );
@@ -94,14 +91,14 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
       VmInstance vm = VmInstances.getInstance( ).lookup( msg.getInstanceId( ) );
       VmState vmState = vm.getState( );
       if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
-        LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigning, LogUtil.FAIL,
+        LOG.debug( EventRecord.here( AssignAddressCallback.class, Transition.assigning, LogUtil.FAIL,
                                      parentAddr.toString( ) ) );
         this.parentAddr.clearPending( );
         this.parentAddr.release( );
         throw new IllegalStateException( "Ignoring assignment to a vm which is not running: " + msg );
       } else {
         this.parentVm.getNetworkConfig( ).setIgnoredPublicIp( msg.getSource( ) );
-        LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigning, parentAddr.toString( ) ) );
+        LOG.debug( EventRecord.here( AssignAddressCallback.class, Transition.assigning, parentAddr.toString( ) ) );
       }
     } catch ( Exception e ) {
       LOG.debug( e, e );
@@ -119,6 +116,7 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
       } else {
         LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigned,
                                      LogUtil.lineObject( parentAddr ) ) );
+        this.parentVm.getNetworkConfig( ).setIgnoredPublicIp( this.parentAddr.getName( ) );
       }
     } finally {
       this.parentAddr.clearPending( );
@@ -129,7 +127,7 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   public void fail( Throwable e ) {
     //FIXME: assign fails: clean up state.
     this.parentAddr.clearPending( );
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
     LOG.debug( e, e );
   }
   

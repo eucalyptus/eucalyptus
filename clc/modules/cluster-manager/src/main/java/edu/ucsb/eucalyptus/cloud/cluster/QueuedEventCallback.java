@@ -64,11 +64,8 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import java.net.InetSocketAddress;
-import java.security.GeneralSecurityException;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -79,7 +76,10 @@ import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.FailureCallback;
+import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -89,22 +89,49 @@ import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
-
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
   static Logger                 LOG     = Logger.getLogger( QueuedEventCallback.class );
   private AtomicReference<TYPE> request = new AtomicReference<TYPE>( null );
   private ChannelFuture         connectFuture;
   private NioBootstrap          clientBootstrap;
+  @SuppressWarnings( "unchecked" )
+  private SuccessCallback       successCallback;
+  private FailureCallback<TYPE> failCallback;
   
+  @SuppressWarnings( "unchecked" )
+  public QueuedEventCallback<TYPE> onSuccess( SuccessCallback c ) {
+    this.successCallback = c;
+    return this;
+  }
+  public QueuedEventCallback<TYPE> onFailure( FailureCallback<TYPE> c ) {
+    this.failCallback = c;
+    return this;
+  }
+  
+  public void dispatch( String clusterName ) {
+    dispatch( Clusters.getInstance( ).lookup( clusterName ) );
+  }
+  public void dispatch( Cluster cluster ) {
+    cluster.getMessageQueue( ).enqueue( QueuedEvent.make( this, this.getRequest( ) ) );
+  }
+  
+  public void send( String clusterName ) {
+    send( Clusters.getInstance( ).lookup( clusterName ) );
+  }
+  public void send( Cluster cluster ) {
+    this.fire( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), this.getRequest( ) );
+  }
+  
+  @SuppressWarnings( "unchecked" )
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
       try {
         this.verify( ( EucalyptusMessage ) response.getMessage( ) );
+        this.successCallback.apply( response.getMessage( ) );
       } catch ( Throwable e1 ) {
         LOG.debug( e1, e1 );
         this.fail( e1 );
@@ -140,15 +167,14 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
     super.exceptionCaught( ctx, e );
   }
   
-  public void fire( String hostname, int port, String servicePath, TYPE msg ) {
+  public void fire( final String hostname, final int port, final String servicePath, final TYPE msg ) {
     try {
       NioClientPipeline clientPipeline = new ClusterClientPipeline( this );
       this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
       InetSocketAddress addr = new InetSocketAddress( hostname, port );
       this.request.set( msg );
       this.connectFuture = this.clientBootstrap.connect( addr );
-      HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, addr.getHostName( ),
-        addr.getPort( ), servicePath, msg );
+      HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, addr.getHostName( ), addr.getPort( ), servicePath, msg );
       this.prepare( msg );
       this.connectFuture.addListener( ChannelUtil.WRITE( request ) );
     } catch ( Throwable e ) {
@@ -156,6 +182,9 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
         this.fail( e );
       } catch ( Exception e1 ) {
         LOG.debug( e1, e1 );
+      }
+      if ( this.failCallback != null ) {
+        this.failCallback.failure( this, e );
       }
       this.queueResponse( e );
       this.connectFuture.addListener( ChannelFutureListener.CLOSE );
@@ -165,16 +194,17 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   @Override
   public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     if ( !this.writeComplete ) {
-      this.queueResponse( new EucalyptusClusterException(
-        "Channel was closed before the write operation could be completed: " + LogUtil.dumpObject( this.getRequest( ) ) ) );
+      this.queueResponse( new EucalyptusClusterException( "Channel was closed before the write operation could be completed: "
+                                                          + LogUtil.dumpObject( this.getRequest( ) ) ) );
     } else if ( writeComplete && this.getRequest( ) == null ) {
-      this.queueResponse( new EucalyptusClusterException(
-        "Channel was closed before the read operation could be completed: " + LogUtil.dumpObject( this.getRequest( ) ) ) );      
+      this.queueResponse( new EucalyptusClusterException( "Channel was closed before the read operation could be completed: "
+                                                          + LogUtil.dumpObject( this.getRequest( ) ) ) );
     }
     super.channelClosed( ctx, e );
   }
   
-  private volatile boolean writeComplete = false;  
+  private volatile boolean writeComplete = false;
+  
   @Override
   public void writeComplete( ChannelHandlerContext ctx, WriteCompletionEvent e ) throws Exception {
     super.writeComplete( ctx, e );

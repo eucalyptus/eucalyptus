@@ -190,7 +190,12 @@ public class EucalyptusMessage implements Cloneable, Serializable {
     ByteArrayOutputStream temp = new ByteArrayOutputStream();
     Class targetClass = this.getClass();
     while ( !targetClass.getSimpleName().endsWith("Type") ) targetClass = targetClass.getSuperclass();
-    IBindingFactory bindingFactory = BindingDirectory.getFactory("msgs_eucalyptus_ucsb_edu", targetClass);
+    IBindingFactory bindingFactory = null;
+    try {
+      bindingFactory = BindingDirectory.getFactory("msgs_eucalyptus_ucsb_edu", targetClass);
+    } catch( Throwable t ) {
+      bindingFactory = BindingDirectory.getFactory("eucalyptus_ucsb_edu", targetClass);
+    }
     IMarshallingContext mctx = bindingFactory.createMarshallingContext();
     mctx.setIndent(2);
     mctx.marshalDocument(this, "UTF-8", null, temp);
@@ -339,6 +344,9 @@ public class NetworkConfigType extends EucalyptusData {
     '}';
   }
   
+  public boolean isConfigured() {
+    return !( ipAddress == ignoredPublicIp) && !("0.0.0.0" == ignoredPublicIp)
+  }
   
 }
 

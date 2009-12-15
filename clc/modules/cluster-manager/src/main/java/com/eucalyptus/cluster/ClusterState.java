@@ -63,25 +63,23 @@
  */
 package com.eucalyptus.cluster;
 
-import java.util.List;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.net.util.ClusterAddressInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
-import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.cloud.cluster.OrphanAddressCallback;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
@@ -91,6 +89,44 @@ public class ClusterState {
   private static NavigableSet<Integer> availableVlans = populate();
   private Integer mode = 1;
   private Integer addressCapacity;
+  private Boolean publicAddressing = false;
+  private Boolean addressingInitialized = false;
+  private ConcurrentNavigableMap<String,Integer> orphans = new ConcurrentSkipListMap<String, Integer>( );
+  
+  public void clearOrphan( ClusterAddressInfo address ) {
+    Integer delay = orphans.remove( address.getAddress( ) );
+    if( delay > 2 ) {
+      LOG.warn( "Forgetting stale orphan address mapping from cluster " + clusterName + " for " + address.toString( ) );
+    }
+  }
+  public void handleOrphan( ClusterAddressInfo address ) {
+    Integer orphanCount = 1;
+    orphanCount = orphans.putIfAbsent( address.getAddress( ), orphanCount );
+    orphanCount = ( orphanCount == null ) ? 1 : orphanCount;
+    orphans.put( address.getAddress( ), orphanCount + 1 );
+    LOG.warn( "Found orphaned public ip address: " + address + " count=" + orphanCount );
+    if ( orphanCount > 10 ) {
+      new OrphanAddressCallback( address ).dispatch( this.clusterName );
+      orphans.remove( address.getAddress( ) );
+    }
+  }
+
+  
+  public Boolean hasPublicAddressing( ) {
+    return this.publicAddressing;
+  }
+
+  public Boolean isAddressingInitialized( ) {
+    return this.addressingInitialized;
+  }
+
+  public void setAddressingInitialized( Boolean addressingInitialized ) {
+    this.addressingInitialized = addressingInitialized;
+  }
+
+  public void setPublicAddressing( Boolean publicAddressing ) {
+    this.publicAddressing = publicAddressing;
+  }
 
   public static void trim( ) {
     NavigableSet<Integer> newVlanList = Sets.newTreeSet( );

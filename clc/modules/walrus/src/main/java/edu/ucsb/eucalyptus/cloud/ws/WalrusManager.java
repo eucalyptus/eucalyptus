@@ -1645,7 +1645,7 @@ public class WalrusManager {
 					if(request.getGetData()) {
 						if(request.getInlineData()) {
 							try {
-								byte[] bytes = new byte[102400/*TODO: NEIL WalrusQueryDispatcher.DATA_MESSAGE_SIZE*/];
+								byte[] bytes = new byte[4194304/*TODO: NEIL WalrusQueryDispatcher.DATA_MESSAGE_SIZE*/];
 								int bytesRead = 0;
 								String base64Data = "";
 								while((bytesRead = storageManager.readObject(bucketName, objectName, bytes, bytesRead)) > 0) {
