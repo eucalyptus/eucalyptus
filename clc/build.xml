@@ -75,7 +75,7 @@
   </loadfile>
   <!--================================== other vars ==================================-->
   <property name="jvm.heap" value="256m"/>
-  <property name="deps.url" value="http://mirror.eucalyptus/dependencies/${euca.version}"/>
+  <property name="deps.url" value="http://eucalyptussoftware.com/downloads/dependencies/${euca.version}"/>
   <property name="deps.dir" value="deps"/>
   <property name="deps.lib.dir" value="lib"/>
   <property name="deps.lib" value="cloud-lib"/>
