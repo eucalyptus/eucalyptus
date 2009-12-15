@@ -98,6 +98,7 @@ int scInitConfig (void)
     struct stat mystat;
     char config [BUFSIZE];
     char * s;
+    int concurrent_disk_ops;
 
     if (scConfigInit) {
       return 0;
@@ -108,11 +109,6 @@ int scInitConfig (void)
         return 1;
     }
     
-    /* set the initial value of semaphore to number of 'disk intensive' operations that can run in parallel on this node */
-    if ((disk_sem = sem_alloc (4, "mutex")) == NULL) {
-        logprintfl (EUCAERROR, "failed to create and initialize disk semaphore\n");
-        return 1;
-    }
     /* read in configuration */
     char *home, *tmp;
     tmp = getenv (EUCALYPTUS_ENV_VAR_NAME);
@@ -144,6 +140,17 @@ int scInitConfig (void)
             swap_size_mb = atoll (s); 
             free (s); 
         }
+
+	concurrent_disk_ops = 1;
+	if (get_conf_var(config, CONFIG_CONCURRENT_DISK_OPS, &s)>0) {
+	  concurrent_disk_ops = atoi(s);
+	  free(s);
+	}
+	/* set the initial value of semaphore to number of 'disk intensive' operations that can run in parallel on this node */
+	if ((disk_sem = sem_alloc (concurrent_disk_ops, "mutex")) == NULL) {
+	  logprintfl (EUCAERROR, "failed to create and initialize disk semaphore\n");
+	  return(1);
+	}
     }
     snprintf(add_key_command_path, BUFSIZE, EUCALYPTUS_ADD_KEY, home, home, home);
     
