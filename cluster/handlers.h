@@ -123,6 +123,8 @@ void print_ccInstance(ccInstance *in);
 //void free_ccInstance(ccInstance *inInst);
 
 enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};
+enum {MONITOR, CLEANUP, CONTROL};
+enum {CONFIGLOCK, CACHELOCK, VNETCONFIGLOCK};
 
 typedef struct resource_t {
   char ncURL[128];
@@ -135,6 +137,13 @@ typedef struct resource_t {
   time_t stateChange, idleStart;
 } resource;
 
+typedef struct ccInstanceCache_t {
+  ccInstance instances[MAXINSTANCES];
+  int valid[MAXINSTANCES];
+  int numInsts;
+  int instanceCacheUpdate;
+} ccInstanceCache;
+
 typedef struct ccConfig_t {
   resource resourcePool[MAXNODES];
   char eucahome[1024];
@@ -142,11 +151,11 @@ typedef struct ccConfig_t {
   int lastResourceUpdate;
   int use_wssec;
   char policyFile[1024];
-  int instanceCacheUpdate;
   int initialized;
   int schedPolicy, schedState;
   int idleThresh, wakeThresh;
   time_t configMtime;
+  int threads[3];
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE};
@@ -190,8 +199,11 @@ int initialize(void);
 int init_thread(void);
 int init_localstate(void);
 int init_config(void);
+int init_pthreads(void);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname, int mode);
-int refresh_resources(ncMetadata *ccMeta, int timeout);
+//int setup_shared_buffer(void **buf, char *bufname, size_t bytes, int mode);
+int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock);
+int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock);
 void shawn(void);
 int sem_timewait(sem_t *sem, time_t seconds);
 int sem_timepost(sem_t *sem);
@@ -205,5 +217,6 @@ int powerDown(ncMetadata *ccMeta, resource *node);
 int powerUp(resource *node);
 int changeState(resource *in, int newstate);
 
+void *monitor_thread(void *);
 #endif
 

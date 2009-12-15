@@ -86,7 +86,10 @@ sem * sem_alloc (const int val, const char * name)
 
     if (name && !strcmp(name, "mutex")) { /* use pthread mutex */
       s->usemutex = 1;
+      s->mutcount = val;
+      s->mutwaiters = 0;
       pthread_mutex_init(&(s->mutex), NULL);
+      pthread_cond_init(&(s->cond), NULL);
     } else if (name) { /* named semaphores */
         if ( sem_unlink (name) == 0) { /* clean up in case previous sem holder crashed */
             logprintfl (EUCAINFO, "sem_alloc(): cleaning up old semaphore %s\n", name);
@@ -119,8 +122,17 @@ sem * sem_alloc (const int val, const char * name)
 
 int sem_p (sem * s)
 {
+    int rc;
     if (s && s->usemutex) {
-        return(pthread_mutex_lock(&(s->mutex)));
+        rc = pthread_mutex_lock(&(s->mutex));
+	s->mutwaiters++;
+	while(s->mutcount == 0) {
+	  pthread_cond_wait(&(s->cond), &(s->mutex));
+	}
+	s->mutwaiters--;
+	s->mutcount--;
+	rc = pthread_mutex_unlock(&(s->mutex));
+	return(rc);
     }
 
     if (s && s->posix) {
@@ -137,8 +149,15 @@ int sem_p (sem * s)
 
 int sem_v (sem * s)
 {
+    int rc;
     if (s && s->usemutex) {
-        return(pthread_mutex_unlock(&(s->mutex)));
+        rc = pthread_mutex_lock(&(s->mutex));
+        if (s->mutwaiters > 0) {
+	  rc = pthread_cond_signal(&(s->cond));
+	}
+	s->mutcount++;
+        rc = pthread_mutex_unlock(&(s->mutex));
+	return(rc);
     }
 
     if (s && s->posix) {

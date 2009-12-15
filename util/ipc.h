@@ -69,7 +69,8 @@ typedef struct sem_struct {
     int sysv;
     sem_t * posix;
     pthread_mutex_t mutex;
-    int usemutex;
+    pthread_cond_t cond;
+    int usemutex, mutwaiters, mutcount;
     char * name;
 } sem;
 
