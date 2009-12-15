@@ -82,7 +82,7 @@ public class DatabaseConfig {
   }
   
   enum Internal {
-    general,images,auth,config,walrus,storage,dns;
+    general,images,auth,config,walrus,storage,dns,vmwarebroker;
     public String getDatabaseName() {
       return Component.eucalyptus.name( ) + "_" + this.name();
     }

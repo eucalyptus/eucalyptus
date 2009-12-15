@@ -97,7 +97,7 @@ public class DatabaseConfig {
   }
   
   enum Internal {
-    general,images,auth,config,walrus,storage,dns,vmware_broker;
+    general,images,auth,config,walrus,storage,dns,vmwarebroker;
     public void prepareDatabase( ) throws IOException {
       File dbFile = new File( SubDirectory.DB.toString( ) + File.separator + this.getDatabaseName( ) + ".script" );
       if ( !dbFile.exists( ) ) {

@@ -11,7 +11,7 @@ config = "CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" +
   "GRANT DBA TO SA\n" + 
   "SET WRITE_DELAY 100 MILLIS\n" +  
   "SET SCHEMA PUBLIC\n";
-['general','images','auth','config','walrus','storage','dns'].each{ context_name ->
+['general','images','auth','config','walrus','storage','dns', 'vmwarebroker'].each{ context_name ->
   d = new File("${SubDirectory.DB.toString()}/eucalyptus_${context_name}.script");
   if( !d.exists() ) {
     d.write(config);

@@ -10,7 +10,7 @@ hiber_config = [
   'hibernate.hbm2ddl.auto': 'update',
   'hibernate.generate_statistics': 'true',
 ]
-contexts = ['general','images','auth','config','walrus','storage','dns']
+contexts = ['general','images','auth','config','walrus','storage','dns', 'vmwarebroker']
 contexts.each {  
   pool_config = new pools(new Binding([context_name:it])).run()
   cache_config  = new caches(new Binding([context_name:it])).run()
@@ -37,3 +37,4 @@ contexts.each {
 WalrusControl.deferedInitializer( );
 WalrusManager.deferedInitializer( );
 BlockStorage.deferedInitializer( );
+VMwareControl.deferedInitializer();
