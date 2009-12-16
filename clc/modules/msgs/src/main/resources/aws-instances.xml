@@ -133,7 +133,8 @@
         <structure field="rsvInfo" map-as="edu.ucsb.eucalyptus.msgs.ReservationInfoType"/>
     </mapping>
 
-    <mapping name="RunInstances" class="edu.ucsb.eucalyptus.msgs.RunInstancesType">
+    <mapping name="RunInstances" class="edu.ucsb.eucalyptus.msgs.RunInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="imageId" field="imageId" usage="required"/>
         <value name="minCount" field="minCount" usage="required"/>
         <value name="maxCount" field="maxCount" usage="required"/>
@@ -183,7 +184,8 @@
         </collection>
     </mapping>
 
-    <mapping name="DescribeInstances" class="edu.ucsb.eucalyptus.msgs.DescribeInstancesType"  extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <mapping name="DescribeInstances" class="edu.ucsb.eucalyptus.msgs.DescribeInstancesType"   extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet" item-type="java.lang.String">
             <structure name="item">
                 <value name="instanceId"/>
@@ -200,7 +202,8 @@
         </collection>
     </mapping>
 
-    <mapping name="TerminateInstances" class="edu.ucsb.eucalyptus.msgs.TerminateInstancesType">
+    <mapping name="TerminateInstances" class="edu.ucsb.eucalyptus.msgs.TerminateInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet" item-type="java.lang.String">
             <structure name="item">
                 <value name="instanceId"/>
@@ -213,7 +216,8 @@
         <value name="return" field="_return"/>
     </mapping>
     <!--2007-01-03-->
-    <mapping name="RebootInstances" class="edu.ucsb.eucalyptus.msgs.RebootInstancesType">
+    <mapping name="RebootInstances" class="edu.ucsb.eucalyptus.msgs.RebootInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet" item-type="java.lang.String">
             <structure name="item">
                 <value name="instanceId"/>
@@ -228,7 +232,8 @@
         <value name="output" field="output" usage="optional"/>
     </mapping>
     <!--2007-01-03-->
-    <mapping name="GetConsoleOutput" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputType">
+    <mapping name="GetConsoleOutput" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="instanceId" field="instanceId"/>
     </mapping>
 
