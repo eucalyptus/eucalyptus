@@ -99,7 +99,7 @@ vnetConfig *vnetconfig=NULL;
 sem_t *vnetConfigLock=NULL;
 
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
-  int i, j, rc, start, stop, ret=0;
+  int i, j, rc, start = 0, stop = 0, ret=0;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start, op_timer;
@@ -180,7 +180,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 }
 
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force) {
-  int i, j, rc, start, stop, ret=0;
+  int i, j, rc, start = 0, stop = 0, ret=0;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start, op_timer;
@@ -1568,7 +1568,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  }
 	  myInstance->ncHostIdx = resid;
 	  if (ccvm) memcpy(&(myInstance->ccvm), ccvm, sizeof(virtualMachine));
-	  if (&config->resourcePool[resid].ncURL != NULL) strncpy(myInstance->serviceTag, config->resourcePool[resid].ncURL, 64);
+	  strncpy(myInstance->serviceTag, config->resourcePool[resid].ncURL, 64);
 	  
 	  strncpy(myInstance->ccnet.publicIp, pubip, 16);
 	  strncpy(myInstance->ccnet.privateIp, privip, 16);
@@ -2637,7 +2637,7 @@ int restoreNetworkState() {
 int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHosts) {
   int rc, i;
   char *tmpstr, *ipbuf;
-  char *ncservice;
+  char *ncservice = NULL;
   int ncport;
   char **hosts;
 
