@@ -135,7 +135,16 @@ typedef struct resource_t {
   // state information
   int state, lastState;
   time_t stateChange, idleStart;
-} resource;
+} ccResource;
+int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory, int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart);
+
+typedef struct ccResourceCache_t {
+  ccResource resources[MAXNODES];
+  int valid[MAXNODES];
+  int numResources;
+  int lastResourceUpdate;
+  int resourceCacheUpdate;
+} ccResourceCache;
 
 typedef struct ccInstanceCache_t {
   ccInstance instances[MAXINSTANCES];
@@ -145,10 +154,10 @@ typedef struct ccInstanceCache_t {
 } ccInstanceCache;
 
 typedef struct ccConfig_t {
-  resource resourcePool[MAXNODES];
+  //  ccResource resourcePool[MAXNODES];
+  //  int numResources;
+  //  int lastResourceUpdate;
   char eucahome[1024];
-  int numResources;
-  int lastResourceUpdate;
   int use_wssec;
   char policyFile[1024];
   int initialized;
@@ -186,6 +195,7 @@ int schedule_instance(virtualMachine *vm, char *targetNode, int *outresid);
 int schedule_instance_greedy(virtualMachine *vm, int *outresid);
 int schedule_instance_roundrobin(virtualMachine *vm, int *outresid);
 int schedule_instance_explicit(virtualMachine *vm, char *targetNode, int *outresid);
+
 int add_instanceCache(char *instanceId, ccInstance *in);
 int refresh_instanceCache(char *instanceId, ccInstance *in);
 int del_instanceCacheId(char *instanceId);
@@ -194,6 +204,13 @@ int find_instanceCacheIP(char *ip, ccInstance **out);
 void print_instanceCache(void);
 void invalidate_instanceCache(void);
 int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src);
+
+int add_resourceCache(char *host, ccResource *in);
+int refresh_resourceCache(char *host, ccResource *in);
+int del_resourceCacheHostname(char *host);
+int find_resourceCacheHostname(char *host, ccResource **out);
+void print_resourceCache(void);
+void invalidate_resourceCache(void);
 
 int initialize(void);
 int init_thread(void);
@@ -208,14 +225,14 @@ void shawn(void);
 int sem_timewait(sem_t *sem, time_t seconds);
 int sem_timepost(sem_t *sem);
 int timeread(int fd, void *buf, size_t bytes, int timeout);
-int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHosts);
+int refreshNodes(ccConfig *config, char *configFile, ccResource **res, int *numHosts);
 
 int restoreNetworkState();
 int maintainNetworkState();
 
-int powerDown(ncMetadata *ccMeta, resource *node);
-int powerUp(resource *node);
-int changeState(resource *in, int newstate);
+int powerDown(ncMetadata *ccMeta, ccResource *node);
+int powerUp(ccResource *node);
+int changeState(ccResource *in, int newstate);
 
 void *monitor_thread(void *);
 #endif
