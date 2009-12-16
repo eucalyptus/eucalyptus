@@ -4,11 +4,9 @@ import java.util.List;
 import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 
 public class NullSystemAddressManager extends AbstractSystemAddressManager {
@@ -34,15 +32,7 @@ public class NullSystemAddressManager extends AbstractSystemAddressManager {
   @Override
   public void inheritReservedAddresses( List<Address> previouslyReservedAddresses ) {
     for( final Address addr : previouslyReservedAddresses ) {
-      if( addr.isAssigned( ) ) {
-        new UnassignAddressCallback( addr, VmInstances.getInstance( ).lookup( addr.getInstanceId( ) ) ).onSuccess( new SuccessCallback<UnassignAddressResponseType>( ) {
-          @Override
-          public void apply( UnassignAddressResponseType response ) {
-            addr.release( );
-            addr.clearPending( );
-          }
-        }).dispatch( addr.getCluster( ) );
-      } 
+      Addresses.release( addr );
     }
   }
   

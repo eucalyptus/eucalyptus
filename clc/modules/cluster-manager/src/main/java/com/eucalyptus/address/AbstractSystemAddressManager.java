@@ -14,7 +14,6 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.OrphanAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
@@ -22,9 +21,9 @@ import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.constants.VmState;
 
 public abstract class AbstractSystemAddressManager {
-  private static Logger LOG = Logger.getLogger( AbstractSystemAddressManager.class );  
+  static Logger LOG = Logger.getLogger( AbstractSystemAddressManager.class );  
   public Address allocateNext( String userId ) throws NotEnoughResourcesAvailable {
-    Address addr = Addresses.getInstance( ).allocateNext( userId );
+    Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId );
     LOG.debug( "Allocated address for public addressing: " + addr.toString( ) );
     if ( addr == null ) {
       LOG.debug( LogUtil.header( Addresses.getInstance( ).toString( ) ) );
@@ -75,51 +74,6 @@ public abstract class AbstractSystemAddressManager {
     }
   }
   
-  public void dispatchAssignAddress( Address address, VmInstance vm ) {
-    try {
-      new AssignAddressCallback( address, vm ).dispatch( address.getCluster( ) );
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
-    }
-  }
-  
-  public void dispatchUnassignAddress( Address address, VmInstance vm ) {
-    if ( VmInstance.DEFAULT_IP.equals( address.getInstanceAddress( ) ) ) {
-      return;
-    }
-    try {
-      new UnassignAddressCallback( address, vm ).dispatch( address.getCluster( ) );
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
-    }
-  }
-  
-  public void dispatchOrphanUnassignAddress( Address address ) {
-    if ( VmInstance.DEFAULT_IP.equals( address.getInstanceAddress( ) ) ) {
-      return;
-    }
-    try {
-      new OrphanAddressCallback( address ).dispatch( address.getCluster( ) );
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
-    }
-  }
-  
-  
-  public void releaseAddress( final Address currentAddr ) {
-    if ( currentAddr.isAssigned( ) ) {
-      try {
-        VmInstance vm = VmInstances.getInstance( ).lookup( currentAddr.getInstanceId( ) );
-        new UnassignAddressCallback( currentAddr.unassign( ), vm ).send( currentAddr.getCluster( ) );
-        this.assignSystemAddress( vm );
-      } catch ( Throwable e ) {
-        new OrphanAddressCallback( currentAddr.unassign( ) ).send( currentAddr.getCluster( ) );
-      }
-    }
-    currentAddr.release( );
-    currentAddr.clearPending( );
-  }
-  
   protected static class Helper {
     protected static Address lookupOrCreate( Cluster cluster, ClusterAddressInfo addrInfo ) {
       try {
@@ -129,14 +83,14 @@ public abstract class AbstractSystemAddressManager {
         return Addresses.getInstance( ).lookup( addrInfo.getAddress( ) );
       } catch ( NoSuchElementException e ) {}
       try {
-        if( addrInfo.getInstanceIp( ) != null ) {
+        if( addrInfo.getInstanceIp( ) != null &&  !"".equals(addrInfo.getInstanceIp( ))) {
           VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( addrInfo.getInstanceIp( ) );
           return new Address( addrInfo.getAddress( ), cluster.getName( ), Component.eucalyptus.name( ), vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) );/*TODO: this can't be true... all owned by eucalyptus?*/
         } else {
           return new Address( addrInfo.getAddress( ), cluster.getName( ) );
         }
       } catch( NoSuchElementException e ) {
-        new OrphanAddressCallback( addrInfo ).dispatch( cluster );//TODO: review this degenerate case.
+        new UnassignAddressCallback( addrInfo ).dispatch( cluster );//TODO: review this degenerate case.
         Address address = new Address( addrInfo.getAddress( ), cluster.getName( ) );
         return address;
       }

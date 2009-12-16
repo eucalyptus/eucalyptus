@@ -1,6 +1,6 @@
 package com.eucalyptus.cluster;
 
 
-public interface SuccessCallback<RESP> {
-  public void apply( RESP response );
+public interface SuccessCallback<T> {
+  public void apply( T t );
 }

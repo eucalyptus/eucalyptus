@@ -128,7 +128,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     throw new NoSuchElementException( "Can't find registered object with public ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
   }
 
-  public static VmInstance checkPermissionsAndGet( String userId, boolean administrator, String instanceId ) throws EucalyptusCloudException {
+  public static VmInstance restrictedLookup( String userId, boolean administrator, String instanceId ) throws EucalyptusCloudException {
     VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
     if ( !administrator || !vm.getOwnerId( ).equals( userId ) ) {
       throw new EucalyptusCloudException( "Permission denied while trying to lookup vm instance: " + instanceId );

@@ -79,7 +79,7 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
-import edu.ucsb.eucalyptus.cloud.cluster.OrphanAddressCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
@@ -106,7 +106,7 @@ public class ClusterState {
     orphans.put( address.getAddress( ), orphanCount + 1 );
     LOG.warn( "Found orphaned public ip address: " + address + " count=" + orphanCount );
     if ( orphanCount > 10 ) {
-      new OrphanAddressCallback( address ).dispatch( this.clusterName );
+      new UnassignAddressCallback( address ).dispatch( this.clusterName );
       orphans.remove( address.getAddress( ) );
     }
   }
@@ -174,6 +174,7 @@ public class ClusterState {
   }
 
   public NetworkToken getNetworkAllocation( String userName, String networkName ) throws NotEnoughResourcesAvailable {
+    ClusterState.trim( );
     return ClusterState.getNetworkAllocation( userName, clusterName, networkName );
   }
   

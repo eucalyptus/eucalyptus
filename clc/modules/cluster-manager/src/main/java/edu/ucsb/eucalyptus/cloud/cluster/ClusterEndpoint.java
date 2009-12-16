@@ -68,6 +68,7 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.sla.ClusterAllocator;
 import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
@@ -124,8 +125,9 @@ public class ClusterEndpoint implements Startable {
   }
 
   public void enqueue( VmAllocationInfo vmAllocInfo ) {
-    VmAllocationTransaction vmTx = new VmAllocationTransaction( vmAllocInfo );
-    vmTx.start();
+    for( ResourceToken t : vmAllocInfo.getAllocationTokens( ) ) {
+      new ClusterAllocator( t, vmAllocInfo ).start( );
+    }
     RequestContext.getEventContext().setStopFurtherProcessing( true );
   }
 

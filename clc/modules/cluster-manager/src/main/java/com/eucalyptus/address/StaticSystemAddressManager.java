@@ -16,8 +16,7 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
     List<Address> addressList = Lists.newArrayList( );
     for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
       if ( addr.isSystemOwned( ) && !addr.isAssigned( ) ) {
-        addr.assign( Address.PENDING_ASSIGNMENT, Address.PENDING_ASSIGNMENT );
-        addr.clearPending( );
+        addr.pendingAssignment( );
         addressList.add( addr );
         if ( addressList.size( ) == count ) {
           break;
@@ -26,7 +25,6 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
     }
     if ( addressList.size( ) < count ) {
       for ( Address putBackAddr : addressList ) {
-        putBackAddr.unassign( );
         putBackAddr.clearPending( );
       }
       throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );

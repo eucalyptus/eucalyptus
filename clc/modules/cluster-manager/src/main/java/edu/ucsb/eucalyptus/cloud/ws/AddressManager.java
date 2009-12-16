@@ -69,12 +69,10 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
@@ -84,29 +82,31 @@ import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesType;
 import edu.ucsb.eucalyptus.msgs.DisassociateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.DisassociateAddressType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.ReleaseAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
 
 public class AddressManager {
-  
+
+  public enum Events {
+    ALLOCATE, ASSOCIATE, DISASSOCIATE, RELEASE, UNASSIGNFROMVM;
+  }
   public static Logger LOG = Logger.getLogger( AddressManager.class );
   
   public AllocateAddressResponseType AllocateAddress( AllocateAddressType request ) throws EucalyptusCloudException {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
-    
-    Addresses.checkUserLimits( request );
-    
+        
     String userId = request.getUserId( );
     Address address;
     try {
-      address = Addresses.getAddressManager( ).allocateNext( userId );
+      address = Addresses.allocate( userId, request.isAdministrator( ) );
+      LOG.info( EventRecord.here( AddressManager.class, Events.ALLOCATE, address.toString( ) ) );
     } catch ( NotEnoughResourcesAvailable e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e );
     }
     reply.setPublicIp( address.getName( ) );
-    address.clearPending( );
     return reply;
   }
   
@@ -116,22 +116,9 @@ public class AddressManager {
     
     Addresses.updateAddressingMode( );
     
-    Address address = Addresses.checkPermissionsAndGet( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );
-    
-    if ( address.isAssigned( ) ) {
-      try {
-        //TODO: fix this lameness
-        VmInstance oldVm = VmInstances.getInstance( ).lookup( address.getInstanceId( ) );
-        Addresses.getAddressManager( ).dispatchUnassignAddress( address.unassign( ), oldVm );
-        try {
-          Addresses.getAddressManager( ).assignSystemAddress( oldVm );
-        } catch ( NotEnoughResourcesAvailable e ) {
-          LOG.debug( e, e );
-          throw new EucalyptusCloudException( e );
-        }
-      } catch ( NoSuchElementException e ) {}
-    }
-    Addresses.getAddressManager( ).releaseAddress( address );
+    Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );
+    LOG.info( EventRecord.here( AddressManager.class, Events.RELEASE, address.toString( ) ) );
+    Addresses.release( address );
     reply.set_return( true );
     return reply;
   }
@@ -143,7 +130,6 @@ public class AddressManager {
     
     boolean isAdmin = request.isAdministrator( );
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
-      Addresses.checkSanity( address );
       if ( isAdmin || address.getUserId( ).equals( request.getUserId( ) ) ) {
         reply.getAddressesSet( ).add( address.getDescription( isAdmin ) );
       }
@@ -162,41 +148,36 @@ public class AddressManager {
     
     Addresses.updateAddressingMode( );
     
-    LOG.debug( "Associate: " + request.getPublicIp( ) + " => " + request.getInstanceId( ) );
-    Address address = Addresses.checkPermissionsAndGet( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );//TODO: test should throw error.
+    Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );//TODO: test should throw error.
+    VmInstance vm = VmInstances.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getInstanceId( ) );
+    LOG.info( EventRecord.here( AddressManager.class, Events.ASSOCIATE, address.toString( ), vm.toString( ) ) );
     
-    VmInstance vm = VmInstances.checkPermissionsAndGet( request.getUserId( ), request.isAdministrator( ), request.getInstanceId( ) );
     NetworkConfigType netConfig = vm.getNetworkConfig( );
     reply.set_return( true );
     
-    //:: handle the address which may be currently assigned to the vm :://
-    if ( vm.getNetworkConfig( ).isConfigured( ) ) {
-      String currentPublicIp = vm.getNetworkConfig( ).getIgnoredPublicIp( );
+    if ( vm.hasPublicAddress( ) ) {
       try {
-        Address currentAddr = Addresses.getInstance( ).lookup( currentPublicIp );
-        LOG.debug( "Dispatching unassign message for: " + address );
+        Address currentAddr = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
+        LOG.info( EventRecord.here( AddressManager.class, Events.UNASSIGNFROMVM, currentAddr.toString( ), vm.toString( ) ) );
         if ( currentAddr.isAssigned( ) ) {
-          Addresses.getAddressManager( ).dispatchUnassignAddress( address.unassign( ), vm );
+          Addresses.unassign( address );
         }
-      } catch ( Exception e ) {}
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+      }
     }
     
-    //:: handle the vm which the requested address may be assigned to :://
     if ( address.isAssigned( ) && address.getUserId( ).equals( request.getUserId( ) ) && !address.isPending( ) ) {
-      LOG.debug( "Dispatching unassign message for: " + address );
       try {
         VmInstance oldVm = VmInstances.getInstance( ).lookup( address.getInstanceId( ) );
-        if ( address.isAssigned( ) ) {
-          Addresses.getAddressManager( ).dispatchUnassignAddress( address.unassign( ), oldVm );
-        }
-        Addresses.getAddressManager( ).assignSystemAddress( oldVm );
+        LOG.info( EventRecord.here( AddressManager.class, Events.UNASSIGNFROMVM, address.toString( ), oldVm.toString( ) ) );
+        Addresses.unassign( address );
       } catch ( Exception e ) {
         LOG.error( e, e );
       }
     }
-    
-    Addresses.getAddressManager( ).dispatchAssignAddress( address.assign( vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) ), vm );
-    
+    LOG.info( EventRecord.here( AddressManager.class, Events.ASSOCIATE, address.toString( ), vm.toString( ) ) );
+    Addresses.assign( address, vm );    
     return reply;
   }
   
@@ -205,19 +186,10 @@ public class AddressManager {
     reply.set_return( false );
     
     Addresses.updateAddressingMode( );
-    
-    Address address = Addresses.checkPermissionsAndGet( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );
-    VmInstance vm = VmInstances.checkPermissionsAndGet( request.getUserId( ), request.isAdministrator( ), address.getInstanceId( ) );
-    
-    if ( VmInstance.DEFAULT_IP.equals( vm.getInstanceId( ) ) ) return reply;
-    
+    Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );    
     reply.set_return( true );
-    Addresses.getAddressManager( ).dispatchUnassignAddress( address.unassign( ), vm );
-    try {
-      Addresses.getAddressManager( ).assignSystemAddress( vm );
-    } catch ( NotEnoughResourcesAvailable e ) {
-      LOG.debug( e, e );
-    }
+    LOG.info( EventRecord.here( AddressManager.class, Events.DISASSOCIATE, address.toString( ) ) );
+    Addresses.unassign( address );
     return reply;
   }
   

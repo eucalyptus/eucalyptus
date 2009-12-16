@@ -344,10 +344,6 @@ public class NetworkConfigType extends EucalyptusData {
     '}';
   }
   
-  public boolean isConfigured() {
-    return !( ipAddress == ignoredPublicIp) && !("0.0.0.0" == ignoredPublicIp)
-  }
-  
 }
 
 public class NetworkParameters extends EucalyptusData {

@@ -9,11 +9,9 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 
 public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
@@ -26,9 +24,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
     for ( Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
       if ( cluster.equals( addr.getCluster( ) ) ) {
         addressList.add( addr.allocate( Component.eucalyptus.name( ) ) );
-        addr.clearPending( );
-        addr.assign( Address.PENDING_ASSIGNMENT, Address.PENDING_ASSIGNMENT );
-        addr.clearPending( );
+        addr.pendingAssignment( );
         if ( --count == 0 ) {
           break;
         }
@@ -47,7 +43,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   @Override
   public void assignSystemAddress( VmInstance vm ) throws NotEnoughResourcesAvailable {
     Address addr = this.allocateNext( Component.eucalyptus.name( ) );
-    new AssignAddressCallback( addr.assign( vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) ), vm ).dispatch( addr.getCluster( ) );
+    Addresses.assign( addr, vm );
   }
   
   @Override
@@ -64,15 +60,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   @Override
   public void inheritReservedAddresses( List<Address> previouslyReservedAddresses ) {
     for ( final Address addr : previouslyReservedAddresses ) {
-      if ( addr.isAssigned( ) ) {
-        new UnassignAddressCallback( addr, VmInstances.getInstance( ).lookup( addr.getInstanceId( ) ) ).onSuccess( new SuccessCallback<UnassignAddressResponseType>( ) {
-          @Override
-          public void apply( UnassignAddressResponseType response ) {
-            addr.release( );
-            addr.clearPending( );
-          }
-        } ).dispatch( addr.getCluster( ) );
-      }
+      Addresses.release( addr );
     }
   }
   

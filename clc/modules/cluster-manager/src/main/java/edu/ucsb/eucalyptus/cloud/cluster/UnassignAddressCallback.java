@@ -65,56 +65,48 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.Address.Transition;
+import com.eucalyptus.net.util.ClusterAddressInfo;
+import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
-import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
 public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddressType> {
   
   private static Logger LOG = Logger.getLogger( UnassignAddressCallback.class );
-  private Address       parentAddr;
-  private VmInstance    parentVm;
+  private Address       address;
   
-  public UnassignAddressCallback( final Address address, final VmInstance vm ) {
-    this.parentAddr = address;
-    this.parentVm = vm;
-    super.setRequest( new UnassignAddressType( parentAddr.getName( ), vm.getNetworkConfig( ).getIpAddress( ) ) );
+  public UnassignAddressCallback( String addr ) {
+    this.address = Addresses.getInstance( ).lookup( addr );
   }
-
+  public UnassignAddressCallback( ClusterAddressInfo addrInfo ) {
+    this( addrInfo.getAddress( ) );
+    super.setRequest( new UnassignAddressType( addrInfo.getAddress( ), addrInfo.getInstanceIp( ) ) );
+  }
+  public UnassignAddressCallback( final Address address ) {
+    this.address = address;
+    super.setRequest( new UnassignAddressType( address.getName( ), address.getInstanceAddress( ) ) );
+  }
   
   @Override
   public void prepare( UnassignAddressType msg ) throws Exception {
-    LOG.info( EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, parentAddr.toString( ) ) );
+    LOG.info( EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ) );
   }
   
   @Override
   public void verify( EucalyptusMessage msg ) {
-    LOG.info( EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, parentAddr.toString( ) ) );
-    String ipAddress = this.getRequest( ).getSource( );
-    if ( this.parentVm != null ) {
-      this.clearVm( ipAddress, this.parentVm );
-    } else {
-      for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-        this.clearVm( ipAddress, vm );
-      }
-    }
-    this.parentAddr.clearPending( );
-  }
-  
-  private void clearVm( String ipAddress, VmInstance vm ) {
-    NetworkConfigType netConfig = vm.getNetworkConfig( );
-    if ( netConfig.getIpAddress( ).equals( this.getRequest( ).getDestination( ) ) && ( netConfig.getIgnoredPublicIp( ).equals( ipAddress ) ) ) {
-      netConfig.setIgnoredPublicIp( netConfig.getIpAddress( ) );
-    }
+    LOG.info( EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ) );
+    this.address.clearPending( );
   }
   
   @Override
   public void fail( Throwable e ) {
-    LOG.debug( EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, parentAddr.toString( ) ) );
+    LOG.info( EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ) );
     LOG.warn( e, e );
-    this.parentAddr.clearPending( );
+    this.address.clearPending( );
+    LOG.warn( "Address potentially in an inconsistent state: " + LogUtil.dumpObject( this.address ) );
   }
   
 }

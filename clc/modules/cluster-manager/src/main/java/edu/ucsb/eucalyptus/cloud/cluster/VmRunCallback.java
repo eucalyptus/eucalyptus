@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.sla.ClusterAllocator;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
@@ -147,7 +148,7 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
     }
     for( String addr : this.token.getAddresses() ) {
       try {
-        Addresses.getAddressManager( ).releaseAddress( Addresses.getInstance().lookup( addr ) );
+        Addresses.release( Addresses.getInstance().lookup( addr ) );
         LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
       } catch ( NoSuchElementException e1 ) {}
     }

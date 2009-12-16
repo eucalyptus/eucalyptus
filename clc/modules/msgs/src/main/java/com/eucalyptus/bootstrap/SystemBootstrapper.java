@@ -63,20 +63,9 @@
  */
 package com.eucalyptus.bootstrap;
 
-import java.io.Serializable;
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.log4j.Logger;
-import org.mule.api.MuleContext;
-
 import com.eucalyptus.util.DebugUtil;
-import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.Lists;
-
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class SystemBootstrapper {
   private static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );

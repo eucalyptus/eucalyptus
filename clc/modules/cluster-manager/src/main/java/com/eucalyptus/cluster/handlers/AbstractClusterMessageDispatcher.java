@@ -122,7 +122,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   
   public void write( final Object o ) {
     if( !this.inFlightMessage.compareAndSet( false, true ) ) {
-      LOG.debug( EventRecord.caller( AbstractClusterMessageDispatcher.class, EventType.MSG_REJECTED, LogUtil.lineObject( o ) ) );    
+      LOG.debug( EventRecord.caller( AbstractClusterMessageDispatcher.class, EventType.MSG_REJECTED, LogUtil.dumpObject( o ) ) );    
       return;
     } else {
       ChannelFuture channelConnectFuture = this.clientBootstrap.connect( this.remoteAddr );
@@ -130,7 +130,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
       channelConnectFuture.addListener( ChannelFutureListener.CLOSE_ON_FAILURE );
       channelConnectFuture.addListener( ChannelUtil.WRITE_AND_CALLBACK( request, new ChannelFutureListener( ) {
         @Override public void operationComplete( ChannelFuture future ) throws Exception {
-          LOG.debug( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_SENT, LogUtil.lineObject( o ) ) );
+          LOG.debug( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_SENT, LogUtil.dumpObject( o ) ) );
         } } ) );
     }
   }

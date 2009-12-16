@@ -433,5 +433,9 @@ public class VmInstance implements HasName {
   public String getServiceTag( ) {
     return serviceTag;
   }
-    
+
+  public boolean hasPublicAddress() {
+    NetworkConfigType conf = getNetworkConfig( );
+    return !( DEFAULT_IP.equals(conf.getIgnoredPublicIp( )) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
+  }
 }

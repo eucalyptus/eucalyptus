@@ -93,6 +93,11 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
   static Logger                 LOG     = Logger.getLogger( QueuedEventCallback.class );
+  public static class NOOP extends QueuedEventCallback {
+    public void fail( Throwable throwable ) {}
+    public void prepare( Object msg ) throws Exception {}
+    public void verify( EucalyptusMessage msg ) throws Exception {}
+  }
   private AtomicReference<TYPE> request = new AtomicReference<TYPE>( null );
   private ChannelFuture         connectFuture;
   private NioBootstrap          clientBootstrap;
@@ -130,14 +135,21 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
       try {
-        this.verify( ( EucalyptusMessage ) response.getMessage( ) );
+        EucalyptusMessage msg = ( EucalyptusMessage ) response.getMessage( );
+        if( !msg.get_return( ) ) {
+          throw new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
+        }
+        this.verify( msg );
         this.successCallback.apply( response.getMessage( ) );
       } catch ( Throwable e1 ) {
-        LOG.debug( e1, e1 );
         this.fail( e1 );
         super.queueResponse( e1 );
         e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-        throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e1.getMessage( ), e1 );
+        if( e1 instanceof EucalyptusClusterException ) {
+          throw (EucalyptusClusterException)e1;
+        } else {
+          throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e1.getMessage( ), e1 );
+        }
       }
     }
     super.messageReceived( ctx, e );

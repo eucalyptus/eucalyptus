@@ -205,10 +205,10 @@ public class SystemState {
         if ( vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) {
           if ( address.isSystemOwned( ) ) {
             LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
-            Addresses.getAddressManager( ).releaseAddress( address );
+            Addresses.release( address );
           } else if ( address.isAssigned( ) ) {
             LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
-            new UnassignAddressCallback( address.unassign( ), vm ).dispatch( address.getCluster( ) );
+            Addresses.unassign( address );
           }
         }
       } catch ( NoSuchElementException e ) {
@@ -457,37 +457,19 @@ public class SystemState {
   public static RebootInstancesResponseType handle( RebootInstancesType request ) throws Exception {
     RebootInstancesResponseType reply = ( RebootInstancesResponseType ) request.getReply( );
     reply.set_return( true );
-    if ( request.isAdministrator( ) ) {
-      for ( String instanceId : request.getInstancesSet( ) ) {
-        try {
+    for ( String instanceId : request.getInstancesSet( ) ) {
+      try {
           VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
-          SystemState.dispatchReboot( v.getPlacement( ), v.getInstanceId( ), new INTERNAL( ) );
-        } catch ( NoSuchElementException e ) {
-          throw new EucalyptusCloudException( e.getMessage( ) );
-        }
-        return reply;
+          if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
+            SystemState.dispatchReboot( v.getPlacement( ), v.getInstanceId( ), new INTERNAL( ) );
+          } 
+      } catch ( NoSuchElementException e ) {
+        throw new EucalyptusCloudException( e.getMessage( ) );
       }
-    }
-    
-    StateSnapshot state = SystemState.getSnapshot( RULE_FILE );
-    try {
-      QueryResults res = state.findInstances( request.getUserId( ), request.getInstancesSet( ) );
-      if ( res.size( ) == 0 ) {
-        reply.set_return( false );
-        return reply;
-      }
-      Iterator iter = res.iterator( );
-      while ( iter.hasNext( ) ) {
-        QueryResult result = ( QueryResult ) iter.next( );
-        VmInstance v = ( VmInstance ) result.get( "vm" );
-        SystemState.dispatchReboot( v.getPlacement( ), v.getInstanceId( ), new INTERNAL( ) );
-      }
-    } finally {
-      state.destroy( );
     }
     return reply;
   }
-  
+    
   public static ArrayList<ReservationInfoType> handle( String userId, List<String> instancesSet, boolean isAdmin ) throws Exception {
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
     if ( isAdmin ) {

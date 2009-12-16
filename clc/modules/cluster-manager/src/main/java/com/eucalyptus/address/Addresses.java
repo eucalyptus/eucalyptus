@@ -65,17 +65,19 @@ package com.eucalyptus.address;
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentNavigableMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.net.util.ClusterAddressInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
@@ -86,7 +88,8 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 @SuppressWarnings( "serial" )
 public class Addresses extends AbstractNamedRegistry<Address> {
-  public static Logger    LOG       = Logger.getLogger( Addresses.class );
+
+  public static Logger     LOG       = Logger.getLogger( Addresses.class );
   private static Addresses singleton = Addresses.getInstance( );
   
   public static Addresses getInstance( ) {
@@ -95,102 +98,165 @@ public class Addresses extends AbstractNamedRegistry<Address> {
     }
     return singleton;
   }
-  private static AbstractSystemAddressManager systemAddressManager;//TODO: set a default value here.
-  public static AbstractSystemAddressManager getAddressManager() {
-    return systemAddressManager;    
+  
+  private static AbstractSystemAddressManager systemAddressManager; //TODO: set a default value here.
+                                                                    
+  private static AbstractSystemAddressManager getAddressManager( ) {
+    synchronized ( Addresses.class ) {
+      if ( systemAddressManager == null ) {
+        systemAddressManager = getProvider( );
+      }
+    }
+    return systemAddressManager;
+  }
+  
+  public static void update( Cluster cluster, List<ClusterAddressInfo> ccList ) {
+    getAddressManager( ).update( cluster, ccList );
   }
 
   @SuppressWarnings( { "unchecked" } )
-  private static Map<String,Class> managerMap = new HashMap<String,Class>() {{ //TODO: this is primitive and temporary.
-    put( "truetrue", DynamicSystemAddressManager.class );
-    put( "truefalse", StaticSystemAddressManager.class );
-    put( "falsefalse", NullSystemAddressManager.class );
-    put( "falsetrue", NullSystemAddressManager.class );
-  }};
-
+  private static Map<String, Class> managerMap = new HashMap<String, Class>( ) {
+                                                 { //TODO: this is primitive and temporary.
+                                                   put( "truetrue", DynamicSystemAddressManager.class );
+                                                   put( "truefalse", StaticSystemAddressManager.class );
+                                                   put( "falsefalse", NullSystemAddressManager.class );
+                                                   put( "falsetrue", NullSystemAddressManager.class );
+                                                 }
+                                               };
+                                               public static List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
+                                                 return getAddressManager( ).allocateSystemAddresses( cluster, count );
+                                               }
+  
   private static AbstractSystemAddressManager getProvider( ) {
-    String provider = "" + edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( ) + 
-    Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>() {
-      @Override
-      public boolean apply( Cluster arg0 ) {
-        return arg0.getState().isAddressingInitialized( ) ? arg0.getState( ).hasPublicAddressing( ) : true;
-      }
-    } );
+    String provider = "" + edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( )
+                      + Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
+                        @Override
+                        public boolean apply( Cluster arg0 ) {
+                          return arg0.getState( ).isAddressingInitialized( ) ? arg0.getState( ).hasPublicAddressing( ) : true;
+                        }
+                      } );
     try {
-      if( !Addresses.systemAddressManager.getClass( ).equals( managerMap.get(provider) ) ) {
-        return ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
+      if ( Addresses.systemAddressManager == null ) {
+        Addresses.systemAddressManager = ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
+      } else if ( !Addresses.systemAddressManager.getClass( ).equals( managerMap.get( provider ) ) ) {
+        LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
+        AbstractSystemAddressManager oldMgr = Addresses.systemAddressManager;
+        Addresses.systemAddressManager = ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
+        Addresses.systemAddressManager.inheritReservedAddresses( oldMgr.getReservedAddresses( ) );
       }
     } catch ( Throwable e ) {
       LOG.debug( e, e );
-    } 
+    }
     return Addresses.systemAddressManager;
   }
   
-  
-  public static int getSystemReservedAddressCount() {
+  public static int getSystemReservedAddressCount( ) {
     return edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getSystemReservedPublicAddresses( );
   }
-
-  public static int getUserMaxAddresses() {
-    return edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getMaxUserPublicAddresses();
+  
+  public static int getUserMaxAddresses( ) {
+    return edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getMaxUserPublicAddresses( );
   }
-
+  
   //TODO: add config change event listener ehre.
   public static void updateAddressingMode( ) {
-    List<Address> rsvAddr = systemAddressManager.getReservedAddresses( );
-    AbstractSystemAddressManager newMgr = Addresses.getProvider(  );
-    if( systemAddressManager !=  newMgr ) {
-      LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
-      newMgr.inheritReservedAddresses( systemAddressManager.getReservedAddresses( ) );
-      systemAddressManager = newMgr;
-    }
+    getProvider( );
   }
-
-  public static void checkUserLimits( EucalyptusMessage request ) throws EucalyptusCloudException {
+  
+  private static void policyLimits( String userId, boolean isAdministrator ) throws EucalyptusCloudException {
     int addrCount = 0;
-    for( Address a : Addresses.getInstance().listValues() ) {
-      if( request.getUserId().equals( a.getUserId() ) ) addrCount++;
+    for ( Address a : Addresses.getInstance( ).listValues( ) ) {
+      if ( userId.equals( a.getUserId( ) ) ) addrCount++;
     }
-    if( addrCount >= Addresses.getUserMaxAddresses( ) && !request.isAdministrator() )
+    if ( addrCount >= Addresses.getUserMaxAddresses( ) && !isAdministrator ) {
       throw new EucalyptusCloudException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
+    }
+    
   }
-
-  public static Address checkPermissionsAndGet( String userId, boolean isAdmin, String addr ) throws EucalyptusCloudException {
+  public static Address restrictedLookup( String userId, boolean isAdmin, String addr ) throws EucalyptusCloudException {
     Address address = null;
     try {
-      address = Addresses.getInstance().lookup( addr );
+      address = Addresses.getInstance( ).lookup( addr );
     } catch ( NoSuchElementException e ) {
       throw new EucalyptusCloudException( "Permission denied while trying to release address: " + addr );
     }
-    if( !isAdmin && !address.getUserId().equals( userId ) ) {
+    if ( !isAdmin && !address.getUserId( ).equals( userId ) ) {
       throw new EucalyptusCloudException( "Permission denied while trying to release address: " + addr );
     } else if ( address.isPending( ) ) {
-      throw new EucalyptusCloudException( "A previous assign/unassign is still pending for this address: " + address.getName( ) );      
+      throw new EucalyptusCloudException( "A previous assign/unassign is still pending for this address: " + address.getName( ) );
     } else if ( address.isSystemOwned( ) && !isAdmin ) {
-      throw new EucalyptusCloudException( "Cannot manipulate system owned address: " + address.getName() );
+      throw new EucalyptusCloudException( "Cannot manipulate system owned address: " + address.getName( ) );
     }
     return address;
   }
-
-  public static void checkSanity() {
-    //TODO: check all addresses here.
+  
+  public static void checkSanity( ) {
+  //TODO: check all addresses here.
   }
   
-  public static void checkSanity( Address address ) {
-    if( address.isAssigned( ) ) {
+  private static void checkSanity( Address address ) {
+    if ( address.isAssigned( ) ) {
       VmInstance vm = null;
       try {
-        vm = VmInstances.getInstance().lookup( address.getInstanceId() );
+        vm = VmInstances.getInstance( ).lookup( address.getInstanceId( ) );
+        if ( VmState.TERMINATED.equals( vm.getState( ) ) || VmState.BURIED.equals( vm.getState( ) ) ) {
+          Addresses.release( address );
+        }
       } catch ( NoSuchElementException e ) {}
-      if( vm == null || VmState.TERMINATED.equals( vm.getState( ) ) || VmState.BURIED.equals( vm.getState( ) ) ) {  
-        Addresses.getAddressManager( ).releaseAddress( address );
+    }
+  }
+  
+  public static Address allocate( String userId, boolean isAdministrator ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
+    Addresses.policyLimits( userId, isAdministrator );
+    return Addresses.getAddressManager( ).allocateNext( userId );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void assign( final Address addr, final VmInstance vm ) {
+    addr.assign( vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) ).getCallback( ).onSuccess( new SuccessCallback() {
+      public void apply( Object response ) {
+        vm.getNetworkConfig( ).setIgnoredPublicIp( addr.getName( ) );
       }
+    }).dispatch( addr.getCluster( ) );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void unassign( final Address addr ) {
+    final String instanceId = addr.getInstanceId( );
+    try {
+      addr.unassign( ).getCallback( ).onSuccess( new SuccessCallback( ) {
+        public void apply( Object response ) {
+          Addresses.system( VmInstances.getInstance( ).lookup( instanceId ) );
+        }
+      } ).dispatch( addr.getCluster( ) );
+    } catch( Exception e ) {
+      LOG.debug( e,e );
     }
   }
 
-  public Address allocateNext( String userId ) {
-    ConcurrentNavigableMap<String, Address> unusedAddresses = Addresses.getInstance( ).getDisabledMap( );
-    Map.Entry<String, Address> addressEntry = unusedAddresses.pollFirstEntry( );
-    return addressEntry != null ? addressEntry.getValue( ).allocate( userId ) : null;
+  public static void system( VmInstance vm ) {
+    try {
+      Addresses.getInstance( ).getAddressManager( ).assignSystemAddress( vm );
+    } catch ( NotEnoughResourcesAvailable e ) {
+      LOG.warn( "No addresses are available to provide a system address for: " + LogUtil.dumpObject( vm ) );
+      LOG.debug( e, e );
+    }
+  }
+  public static void release( final Address addr ) {
+    if ( addr.isAssigned( ) ) {
+      final String instanceId = addr.getInstanceId( );
+      try {
+        addr.unassign( ).getCallback( ).onSuccess( new SuccessCallback( ) {
+          public void apply( Object response ) {
+            addr.release( );
+            Addresses.system( VmInstances.getInstance( ).lookup( instanceId ) );
+          }
+        } ).dispatch( addr.getCluster( ) );
+      } catch( Exception e ) {
+        LOG.debug( e,e );
+      }
+    } else {
+      addr.release( );
+    }
   }
 }

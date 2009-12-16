@@ -63,6 +63,8 @@
  */
 package com.eucalyptus.address;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.Column;
@@ -73,11 +75,16 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
+import org.bouncycastle.jce.provider.symmetric.AES.CBC;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.LogUtil;
+import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
@@ -86,45 +93,80 @@ import edu.ucsb.eucalyptus.msgs.EventRecord;
 @Table( name = "addresses" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class Address implements HasName {
-  private static Logger                       LOG                     = Logger.getLogger( Address.class );
+  public enum State {
+    broken, unallocated, allocated, assigned, impending;
+  }
+  
+  public enum Transition {
+    allocating {
+      public Class getCallback( ) {
+        return QueuedEventCallback.NOOP.class;
+      }
+    }, unallocating {
+      public Class getCallback( ) {
+        return QueuedEventCallback.NOOP.class;
+      }
+    }, assigning {
+      @Override
+      public Class getCallback( ) {
+        return AssignAddressCallback.class;
+      }
+    }, unassigning {
+      @Override
+      public Class getCallback( ) {
+        return UnassignAddressCallback.class;
+      }
+    }, system {
+      public Class getCallback( ) {
+        return QueuedEventCallback.NOOP.class;
+      }
+    }, quiescent {
+      public Class getCallback( ) {
+        return QueuedEventCallback.NOOP.class;
+      }
+    };
+    public abstract Class getCallback();
+  }
+  
+  private static Logger                  LOG                     = Logger.getLogger( Address.class );
   @Id
   @GeneratedValue
   @Column( name = "address_id" )
-  private Long                                id                      = -1l;
+  private Long                           id                      = -1l;
   @Column( name = "address_name" )
-  private String                              name;
+  private String                         name;
   @Column( name = "address_cluster" )
-  private String                              cluster;
+  private String                         cluster;
   @Column( name = "address_owner_id" )
-  private String                              userId;
+  private String                         userId;
   @Transient
-  private String                              instanceId;
+  private String                         instanceId;
   @Transient
-  private String                              instanceAddress;
+  private String                         instanceAddress;
   @Transient
-  public static String                        UNALLOCATED_USERID      = "nobody";
+  public static String                   UNALLOCATED_USERID      = "nobody";
   @Transient
-  public static String                        UNASSIGNED_INSTANCEID   = "available";
+  public static String                   UNASSIGNED_INSTANCEID   = "available";
   @Transient
-  public static String                        UNASSIGNED_INSTANCEADDR = "0.0.0.0";
+  public static String                   UNASSIGNED_INSTANCEADDR = "0.0.0.0";
   @Transient
-  public static String                        PENDING_ASSIGNMENT      = "pending";
+  public static String                   PENDING_ASSIGNMENT      = "pending";
   @Transient
-  private AtomicMarkableReference<State>      state;
+  private AtomicMarkableReference<State> state;
   @Transient
-  private final GuardedTransition<Transition> QUIESCENT               = new GuardedTransition<Transition>( Transition.quiescent ) {
-                                                                        @Override
-                                                                        public void apply( ) {}
-                                                                      };
+  private final SplitTransition          QUIESCENT               = new SplitTransition( Transition.quiescent ) {
+                                                                   public void bottom( ) {}
+                                                                   public void top( ) {}
+                                                                 };
   @Transient
-  private GuardedTransition                   transition;
+  private volatile SplitTransition       transition;
   
   public Address( ) {
     this.transition = QUIESCENT;
     this.state = new AtomicMarkableReference<State>( State.unallocated, false );
   }
   public Address( final String name ) {
-    super();
+    this( );
     this.name = name;
   }
   public Address( String address, String cluster ) {
@@ -144,7 +186,7 @@ public class Address implements HasName {
     this.instanceAddress = instanceAddress;
     this.init( );
   }
-
+  
   public void init( ) {//Should only EVER be called externally after loading from the db
     if ( UNALLOCATED_USERID.equals( this.userId ) ) {
       this.state.set( State.unallocated, true );
@@ -169,29 +211,21 @@ public class Address implements HasName {
     LOG.debug( "Initialized address: " + this.toString( ) );
   }
   
-  private boolean transition( State expectedState, State newState, boolean expectedMark, boolean newMark, GuardedTransition<Transition> initialTransition, GuardedTransition<Transition> deferedTransition ) {
+  private boolean transition( State expectedState, State newState, boolean expectedMark, boolean newMark, SplitTransition transition ) {
+    this.transition = transition;
     LOG.debug( EventRecord.caller( this.getClass( ), this.state.getReference( ), this.toString( ) ) );
     if ( !this.state.compareAndSet( expectedState, newState, expectedMark, newMark ) ) {
-      throw new IllegalStateException( String.format( "Cannot mark address as %s:%s when it is %s (not %s): %s", newState, initialTransition.getName( ),
-                                                      this.state.getReference( ), expectedState, this.toString( ) ) );
+      throw new IllegalStateException( String.format( "Cannot mark address as %s[%s.%s->%s.%s] when it is %s.%s: %s", transition.getName( ), expectedState,
+                                                      expectedMark, newState, newMark, this.state.getReference( ), this.state.isMarked( ), this.toString( ) ) );
     }
-    LOG.debug( "Before transition: " + this );
-    LOG.debug( "Top-half of transition is: " + initialTransition.getName( ) );
-    initialTransition.apply( );
-    LOG.debug( "Started transition: " + this );
-    this.transition = deferedTransition;
-    LOG.debug( "Bottom-half of transition: " + this.transition.getName( ) );
+    LOG.debug( EventRecord.caller( this.getClass( ), this.state.getReference( ), "TOP", this.transition.getName( ).name( ), this.toString( ) ) );
+    this.transition.top( );
     return true;
   }
   
-  public boolean isAllocated( ) {
-    return !State.unallocated.equals( this.state.getReference( ) );
-  }
-  
   public Address allocate( final String userId ) {
-    this.transition( State.unallocated, State.allocated, false, true, new GuardedTransition<Transition>( Transition.allocating ) {
-      @Override
-      public void apply( ) {
+    this.transition( State.unallocated, State.allocated, false, true, new SplitTransition( Transition.allocating ) {
+      public void top( ) {
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         Address.this.userId = userId;
@@ -201,22 +235,24 @@ public class Address implements HasName {
         } catch ( NoSuchElementException e ) {
           LOG.debug( e );
         }
+        Address.this.state.attemptMark( State.allocated, false );
       }
-    }, QUIESCENT );
+      public void bottom( ) {}
+    } );
     return this;
   }
   
   public Address release( ) {//TODO: rename this to unallocating
-    this.transition( State.allocated, State.unallocated, false, true, new GuardedTransition<Transition>( Transition.unallocating ) {
-      @Override
-      public void apply( ) {
+    this.transition( State.allocated, State.unallocated, false, true, new SplitTransition( Transition.unallocating ) {
+      public void top( ) {
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         Address.this.userId = UNALLOCATED_USERID;
         Address.removeAddress( Address.this.name );
         Address.this.state.attemptMark( State.unallocated, false );
       }
-    }, QUIESCENT );
+      public void bottom( ) {}
+    } );
     return this;
   }
   
@@ -238,12 +274,9 @@ public class Address implements HasName {
   
   public Address unassign( ) {
     this.transition( State.assigned, State.allocated, false, true, //
-                     new GuardedTransition<Transition>( Transition.unassigning ) {
-                       @Override
-                       public void apply( ) {}
-                     }, new GuardedTransition<Transition>( Transition.quiescent ) {
-                       @Override
-                       public void apply( ) {
+                     new SplitTransition( Transition.unassigning ) {
+                       public void top( ) {}
+                       public void bottom( ) {
                          Address.this.instanceId = UNASSIGNED_INSTANCEADDR;
                          Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
                        }
@@ -251,44 +284,66 @@ public class Address implements HasName {
     return this;
   }
   
+  public Address pendingAssignment( ) {
+    this.transition( State.allocated, State.impending, false, true, //
+                     new SplitTransition( Transition.system ) {
+                       public void bottom( ) {
+                         Address.this.state.set( State.allocated, false );
+                       }
+                       public void top( ) {}
+                     } );
+    return this;
+  }
   public Address assign( final String instanceId, final String instanceAddr ) {
+    this.state.compareAndSet( State.impending, State.allocated, true, false );
     this.transition( State.allocated, State.assigned, false, true, //
-                     new GuardedTransition<Transition>( Transition.assigning ) {
-                       public void apply( ) {
+                     new SplitTransition( Transition.assigning ) {
+                       public void top( ) {
                          Address.this.setInstanceId( instanceId );
                          Address.this.setInstanceAddress( instanceAddr );
                        }
-                     }, QUIESCENT );
+                       public void bottom( ) {}
+                     } );
     return this;
   }
   
+  public Transition getTransition( ) {
+    return this.transition.getName( );
+  }
+  
+  public QueuedEventCallback getCallback( ) {
+    try {
+      Class cbClass = this.transition.getName( ).getCallback( ).getClass( );
+      Constructor cbCons = cbClass.getConstructor( Address.class );
+      return (QueuedEventCallback) cbCons.newInstance( this );
+    } catch ( Exception e ) {
+      return new QueuedEventCallback.NOOP( );
+    }
+  }
   public Address clearPending( ) {
     if ( !this.state.isMarked( ) ) {
       throw new IllegalStateException( "Trying to clear an address which is not currently pending." );
     } else {
-      this.transition.apply( );
-      LOG.debug( EventRecord.caller( this.getClass( ), this.state.getReference( ), this.toString( ) ) );
-      this.state.attemptMark( this.state.getReference( ), false );
+      LOG.debug( EventRecord.caller( this.getClass( ), this.state.getReference( ), "BOTTOM", this.transition.getName( ).name( ), this.toString( ) ) );
+      this.transition.bottom( );
+      this.transition = QUIESCENT;
+      this.state.set( this.state.getReference( ), false );
     }
     return this;
   }
   
+  public boolean isAllocated( ) {
+    return this.state.getReference( ).ordinal( ) > State.unallocated.ordinal( );
+  }
+  
   public boolean isSystemOwned( ) {
-    return Component.eucalyptus.name( ).equals( this.getUserId( ) );
+    return Component.eucalyptus.name( ).equals( this.getUserId( ) ) && this.isAllocated( );
   }
   public boolean isAssigned( ) {
-    return State.assigned.equals( this.state.getReference( ) );
+    return this.state.getReference( ).ordinal( ) > State.allocated.ordinal( ); 
   }
   public boolean isPending( ) {
     return this.state.isMarked( );
-  }
-  
-  public enum State {
-    unallocated, allocated, assigned;
-  }
-  
-  public enum Transition {
-    allocating, unallocating, assigning, unassigning, quiescent;
   }
   
   private static void addAddress( Address address ) {
@@ -342,9 +397,10 @@ public class Address implements HasName {
   }
   @Override
   public String toString( ) {
-    return String.format( "Address [name=%s, cluster=%s, userId=%s, instanceAddress=%s, instanceId=%s, state=%s, pending=%s, transition=%s]", this.getName( ),
-                          this.getCluster( ), this.getUserId( ), this.getInstanceAddress( ), this.getInstanceId( ), this.state.getReference( ),
-                          this.state.isMarked( ), this.transition.getName( ) );
+    return LogUtil.dumpObject( this );
+    //    return String.format( "Address [name=%s, cluster=%s, userId=%s, instanceAddress=%s, instanceId=%s, state=%s, pending=%s, transition=%s]", this.getName( ),
+    //                          this.getCluster( ), this.getUserId( ), this.getInstanceAddress( ), this.getInstanceId( ), this.state.getReference( ),
+    //                          this.state.isMarked( ), this.transition.getName( ) );
   }
   public int compareTo( final Object o ) {
     Address that = ( Address ) o;
@@ -373,16 +429,17 @@ public class Address implements HasName {
     return new DescribeAddressesResponseItemType( name, desc );
   }
   
-  public abstract class GuardedTransition<T extends Enum<T>> {
-    private T t;
+  public abstract class SplitTransition {
+    private Transition t;
     
-    public GuardedTransition( T t ) {
+    public SplitTransition( Transition t ) {
       this.t = t;
     }
-    private T getName( ) {
+    private Transition getName( ) {
       return this.t;
     }
-    public abstract void apply( );
+    public abstract void top( );
+    public abstract void bottom( );
   }
   
 }
