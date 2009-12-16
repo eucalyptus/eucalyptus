@@ -987,7 +987,7 @@ public class LVM2Manager implements LogicalStorageManager {
 				ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo();
 				return entityWrapper.query(ISCSIVolumeInfo);
 			}
-			return null;
+			return new ArrayList<LVMVolumeInfo>();
 		}
 
 		private void add(LVMVolumeInfo volumeInfo) {
