@@ -315,18 +315,22 @@ refresh_instance_info(	struct nc_state_t *nc,
 	  if (!strcmp(nc_state.vnetconfig->mode, "SYSTEM") || !strcmp(nc_state.vnetconfig->mode, "STATIC")) {
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.publicMac, &ip);
             if (!rc) {
-	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
-	      strncpy(instance->ncnet.publicIp, ip, 32);
-	      if (ip) free(ip);
+	      if(ip) {
+	        logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
+	        strncpy(instance->ncnet.publicIp, ip, 32);
+	        free(ip);
+	      }
             }
 	  }
         }
         if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 32)) {
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
-                logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
-                strncpy(instance->ncnet.privateIp, ip, 32);
-	        if (ip) free(ip);
+		if(ip) {
+                  logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
+                  strncpy(instance->ncnet.privateIp, ip, 32);
+	          free(ip);
+		}
             }
         }
     }
@@ -1091,12 +1095,8 @@ void parse_target(char *dev_string) {
 }
 
 char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
-    char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
     char buf [BIG_CHAR_BUFFER_SIZE];
     char *retval;
-    if (!home) {
-        home = strdup(""); /* root by default */
-    }
     
     snprintf (buf, BIG_CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
     logprintfl (EUCAINFO, "connect_iscsi_target invoked (dev_string=%s)\n", dev_string);
@@ -1109,11 +1109,6 @@ char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
 }
 
 int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
-    char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
-    if (!home) {
-        home = strdup(""); /* root by default */
-    }
-    
     logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if (vrun("%s %s", storage_cmd_path, dev_string) != 0) {
 	logprintfl (EUCAERROR, "ERROR: disconnect_iscsi_target failed\n");
@@ -1123,12 +1118,8 @@ int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
 }
 
 char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
-    char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
     char buf [BIG_CHAR_BUFFER_SIZE];
     char *retval;
-    if (!home) {
-        home = strdup(""); /* root by default */
-    }
     
     snprintf (buf, BIG_CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
     logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);
