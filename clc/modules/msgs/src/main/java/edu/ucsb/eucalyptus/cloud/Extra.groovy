@@ -512,7 +512,11 @@ public class ResourceToken implements Comparable {
   }
 
   public NetworkToken getPrimaryNetwork() {
-    return this.networkTokens.size( ) > 0 ? this.networkTokens.get( 0 ) : null;
+    try {
+      return this.networkTokens.get(0);
+    } catch( Throwable e ) {
+      return null;
+    }
   }
 
   @Override

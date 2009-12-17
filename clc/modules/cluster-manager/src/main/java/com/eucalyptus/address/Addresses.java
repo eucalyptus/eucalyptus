@@ -123,7 +123,8 @@ public class Addresses extends AbstractNamedRegistry<Address> {
                                                    put( "falsetrue", NullSystemAddressManager.class );
                                                  }
                                                };
-                                               public static List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
+  
+  public static List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
                                                  return getAddressManager( ).allocateSystemAddresses( cluster, count );
                                                }
   
@@ -182,8 +183,8 @@ public class Addresses extends AbstractNamedRegistry<Address> {
     }
     if ( !isAdmin && !address.getUserId( ).equals( userId ) ) {
       throw new EucalyptusCloudException( "Permission denied while trying to release address: " + addr );
-    } else if ( address.isPending( ) ) {
-      throw new EucalyptusCloudException( "A previous assign/unassign is still pending for this address: " + address.getName( ) );
+//    } else if ( address.isPending( ) ) {
+//      throw new EucalyptusCloudException( "A previous assign/unassign is still pending for this address: " + address.getName( ) );
     } else if ( address.isSystemOwned( ) && !isAdmin ) {
       throw new EucalyptusCloudException( "Cannot manipulate system owned address: " + address.getName( ) );
     }
@@ -243,6 +244,11 @@ public class Addresses extends AbstractNamedRegistry<Address> {
     }
   }
   public static void release( final Address addr ) {
+    try {
+      addr.clearPending( );//clear the state here irregardless
+    } catch ( IllegalStateException e1 ) {
+      LOG.debug( e1, e1 );
+    }
     if ( addr.isAssigned( ) ) {
       final String instanceId = addr.getInstanceId( );
       try {

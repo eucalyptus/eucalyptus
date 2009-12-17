@@ -194,7 +194,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   }
   @Override
   public void writeRequested( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
-    LOG.debug( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_PENDING,
+    LOG.trace( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_PENDING,
                                  e.getMessage( ).toString( ) ) );
     super.writeRequested( ctx, e );
   }

@@ -65,13 +65,10 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import org.drools.QueryResult;
-import org.drools.QueryResults;
 import org.mule.RequestContext;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
@@ -82,7 +79,6 @@ import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -97,7 +93,6 @@ import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.RebootCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.StopNetworkCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.TerminateCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.constants.EventType;
@@ -472,15 +467,15 @@ public class SystemState {
     
   public static ArrayList<ReservationInfoType> handle( String userId, List<String> instancesSet, boolean isAdmin ) throws Exception {
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
-    if ( isAdmin ) {
-      for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-        if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) continue;
-        if ( rsvMap.get( v.getReservationId( ) ) == null ) {
-          ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwnerId( ), v.getNetworkNames( ) );
-          rsvMap.put( reservation.getReservationId( ), reservation );
-        }
-        rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
+    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
+      if ( (!isAdmin && !userId.equals(v.getOwnerId()) || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) )continue;
+      if ( rsvMap.get( v.getReservationId( ) ) == null ) {
+        ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwnerId( ), v.getNetworkNames( ) );
+        rsvMap.put( reservation.getReservationId( ), reservation );
       }
+      rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
+    }
+    if( isAdmin ) {
       for ( VmInstance v : VmInstances.getInstance( ).listDisabledValues( ) ) {
         if ( VmState.BURIED.equals( v.getState( ) ) ) continue;
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) continue;
@@ -490,36 +485,8 @@ public class SystemState {
         }
         rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
       }
-      return new ArrayList<ReservationInfoType>( rsvMap.values( ) );
-    }
-    
-    StateSnapshot state = SystemState.getSnapshot( RULE_FILE );
-    for ( VmInstance v : VmInstances.getInstance( ).getDisabledEntries( ) ) {
-      if ( !VmState.BURIED.equals( v.getState( ) ) ) {
-        state.insert( v );
-      }
-    }
-    
-    try {
-      QueryResults res = state.findInstances( userId, instancesSet );
-      Iterator iter = res.iterator( );
-      while ( iter.hasNext( ) ) {
-        QueryResult result = ( QueryResult ) iter.next( );
-        VmInstance v = ( VmInstance ) result.get( "vm" );
-        if ( rsvMap.get( v.getReservationId( ) ) == null ) {
-          ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwnerId( ), v.getNetworkNames( ) );
-          rsvMap.put( reservation.getReservationId( ), reservation );
-        }
-        rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
-      }
-    } finally {
-      state.destroy( );
     }
     return new ArrayList<ReservationInfoType>( rsvMap.values( ) );
-  }
-  
-  public static StateSnapshot getSnapshot( String rules ) throws Exception {
-    return new StateSnapshot( rules );
   }
   
   public static Network getUserNetwork( String userId, String networkName ) throws EucalyptusCloudException {

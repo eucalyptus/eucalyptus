@@ -39,11 +39,8 @@ public abstract class AbstractSystemAddressManager {
   
   public void update( Cluster cluster, List<ClusterAddressInfo> ccList ) {
     if ( !cluster.getState( ).isAddressingInitialized( ) ) {
-      try {
-        Helper.loadStoredAddresses( cluster );
-      } catch ( Throwable e ) {
-        LOG.warn( "Error while trying to load stored cluster address info for " + cluster.toString( ), e );
-      }
+      Helper.loadStoredAddresses( cluster );
+      cluster.getState( ).setAddressingInitialized( true );
     }
     for( ClusterAddressInfo addrInfo : ccList ) {
       Address address = Helper.lookupOrCreate( cluster, addrInfo );
@@ -96,18 +93,26 @@ public abstract class AbstractSystemAddressManager {
       }
     }
     protected static void loadStoredAddresses( Cluster cluster ) {
-      EntityWrapper<Address> db = new EntityWrapper<Address>( );
-      Address clusterAddr = new Address( );
-      clusterAddr.setCluster( cluster.getName( ) );
-      List<Address> addrList = Lists.newArrayList( );
       try {
-        addrList = db.query( clusterAddr );
-        db.commit( );
-      } catch ( Exception e1 ) {
-        db.rollback( );
-      }
-      for( Address addr : addrList ) {
-        addr.init( );
+        EntityWrapper<Address> db = new EntityWrapper<Address>( );
+        Address clusterAddr = new Address( );
+        clusterAddr.setCluster( cluster.getName( ) );
+        List<Address> addrList = Lists.newArrayList( );
+        try {
+          addrList = db.query( clusterAddr );
+          db.commit( );
+        } catch ( Exception e1 ) {
+          db.rollback( );
+        }
+        for( Address addr : addrList ) {
+          try {
+            Addresses.getInstance( ).lookup( addr.getName( ) );
+          } catch ( Exception e ) {
+            addr.init( );
+          }
+        }
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
       }
     }
     protected static boolean checkActiveVm( ) {//TODO: review this degenerate case.
