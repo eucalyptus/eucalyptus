@@ -271,6 +271,7 @@ sync_keys() {
 	local DESTDIR=""
 	local REMOTE=""
 	local FILES=""
+	local FILE=""
 
 	if [ "$SYNC" = "N" ]; then
 	    return 0
@@ -1052,7 +1053,7 @@ checkLocalService() {
 	
 	CMD="$WGET -T 10 -t 1 -O - -q --no-check-certificate https://127.0.0.1:8443/register | grep CloudVersion >/dev/null"
     elif [ "$SERVICE" = "CC" ]; then
-	CMD="$WGET -T 10 -t 1 -O - -q http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC"
+	CMD="$WGET -T 10 -t 1 -O - -q http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC >/dev/null"
     fi
     
     if [ -n "${FAKEREG}" ]; then
@@ -1362,7 +1363,7 @@ if [ -n "$NODEMODE" ]; then
 			echo "SUCCESS: removed node '${NEWNODE}' from '$FILE'"
 			continue
 		fi
-	
+
 		# let's sync keys with the nodes
 		if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWNODE} node-cert.pem cluster-cert.pem node-pk.pem cloud-cert.pem; then
 			echo
