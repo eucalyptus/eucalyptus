@@ -79,6 +79,7 @@ import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -125,6 +126,7 @@ import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
+@NeedsDeferredInitialization
 public class BlockStorage {
 
 	private static Logger LOG = Logger.getLogger(BlockStorage.class);
@@ -135,7 +137,7 @@ public class BlockStorage {
 	static BlockStorageChecker checker;
 	static BlockStorageStatistics blockStorageStatistics;
 
-	public static void deferedInitializer() {
+	public static void deferredInitializer() {
 		volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();

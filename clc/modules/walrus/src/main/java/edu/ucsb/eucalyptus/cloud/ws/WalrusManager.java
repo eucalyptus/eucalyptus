@@ -88,6 +88,7 @@ import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -179,13 +180,14 @@ import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 
+@NeedsDeferredInitialization
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger( WalrusManager.class );
 
 	private StorageManager storageManager;
 	private WalrusImageManager walrusImageManager;
 	private static WalrusStatistics walrusStatistics = null;
-	public static void deferedInitializer() {
+	public static void deferredInitializer() {
 		walrusStatistics = new WalrusStatistics();
 	}
 
