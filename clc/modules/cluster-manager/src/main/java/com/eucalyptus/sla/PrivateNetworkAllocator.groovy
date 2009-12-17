@@ -28,8 +28,7 @@ public class PrivateNetworkAllocator implements ResourceAllocator {
         firstNet = Networks.getInstance( ).lookup( firstNet.name );
       }
       ClusterState clusterState = Clusters.getInstance( ).lookup( it.cluster ).state;
-      NetworkToken networkToken = clusterState.getNetworkAllocation( vmInfo.request.userId, network.name );
-      LOG.info( EventRecord.create( SubnetIndexAllocator.class, TokenState.accepted, networkToken.toString( ) ) );
+      NetworkToken networkToken = clusterState.getNetworkAllocation( vmInfo.request.userId, firstNet.name );
       it.networkTokens += networkToken;
     }
   }
