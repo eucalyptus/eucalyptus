@@ -1588,12 +1588,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  }
 	  myInstance->ncHostIdx = resid;
 	  if (ccvm) memcpy(&(myInstance->ccvm), ccvm, sizeof(virtualMachine));
-<<<<<<< TREE
-	  if (resourceCache->resources[resid].ncURL) strncpy(myInstance->serviceTag, resourceCache->resources[resid].ncURL, 64);
-=======
 	  strncpy(myInstance->serviceTag, config->resourcePool[resid].ncURL, 64);
->>>>>>> MERGE-SOURCE
-	  
 	  strncpy(myInstance->ccnet.publicIp, pubip, 16);
 	  strncpy(myInstance->ccnet.privateIp, privip, 16);
 	  strncpy(myInstance->ccnet.publicMac, mac, 24);
