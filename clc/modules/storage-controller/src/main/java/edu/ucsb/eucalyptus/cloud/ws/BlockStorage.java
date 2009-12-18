@@ -144,6 +144,7 @@ public class BlockStorage {
 		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
 		if(StorageProperties.trackUsageStatistics) 
 			blockStorageStatistics = new BlockStorageStatistics();
+		initialize();
 	}
 
 	public static void initialize() {

@@ -11,6 +11,9 @@ import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.util.UserManagement;
+import com.eucalyptus.bootstrap.DeferredInitializer;
+
+DeferredInitializer.getInstance().run();
 
 EntityWrapper<User> dbu = Credentials.getEntityWrapper( );
 try {
@@ -71,5 +74,6 @@ try {
   }
   return true;
 }
+
 
 
