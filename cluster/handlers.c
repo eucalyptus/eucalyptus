@@ -106,7 +106,7 @@ sem_t *vnetConfigLock=NULL;
 
 
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
-  int i, j, rc, start, stop, ret=0;
+  int i, j, rc, start = 0, stop = 0, ret=0;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start, op_timer;
@@ -132,9 +132,11 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   rc = find_instanceCacheId(instanceId, &myInstance);
   if (!rc) {
     // found the instance in the cache
-    start = myInstance->ncHostIdx;
-    stop = start+1;
-    if (myInstance) free(myInstance);
+    if (myInstance) {
+      start = myInstance->ncHostIdx;
+      stop = start+1;
+      free(myInstance);
+    }
   } else {
     start = 0;
     stop = resourceCache->numResources;
@@ -188,7 +190,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 }
 
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force) {
-  int i, j, rc, start, stop, ret=0;
+  int i, j, rc, start = 0, stop = 0, ret=0;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start, op_timer;
@@ -214,9 +216,11 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   rc = find_instanceCacheId(instanceId, &myInstance);
   if (!rc) {
     // found the instance in the cache
-    start = myInstance->ncHostIdx;
-    stop = start+1;
-    if (myInstance) free(myInstance);
+    if (myInstance) {
+      start = myInstance->ncHostIdx;
+      stop = start+1;
+      free(myInstance);
+    }
   } else {
     start = 0;
     stop = resourceCache->numResources;
@@ -508,7 +512,8 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   } else {
     
     sem_wait(vnetConfigLock);
-    rc = vnetStopNetwork(vnetconfig, vlan, ccMeta->userId, netName);
+    if(ccMeta != NULL)
+      rc = vnetStopNetwork(vnetconfig, vlan, ccMeta->userId, netName);
     ret = rc;
     sem_post(vnetConfigLock);
   }
@@ -841,7 +846,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 
 int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
   ccInstance *myInstance=NULL, *cacheInstance=NULL;
-  int i, k, numInsts, found, ncOutInstsLen, rc, pid;
+  int i, k, numInsts = 0, found, ncOutInstsLen, rc, pid;
   virtualMachine ccvm;
   time_t op_start, op_timer, op_pernode;
 
@@ -1001,7 +1006,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		}
 	      }
 	    }
-	    if (cacheInstance) free(cacheInstance);
+	//    if (cacheInstance) free(cacheInstance);
 	    refresh_instanceCache(myInstance->instanceId, myInstance);
 	    logprintfl(EUCADEBUG, "returning instance state: %s/%s\n", myInstance->instanceId, myInstance->state);
 	    free(myInstance);
@@ -1583,7 +1588,11 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  }
 	  myInstance->ncHostIdx = resid;
 	  if (ccvm) memcpy(&(myInstance->ccvm), ccvm, sizeof(virtualMachine));
+<<<<<<< TREE
 	  if (resourceCache->resources[resid].ncURL) strncpy(myInstance->serviceTag, resourceCache->resources[resid].ncURL, 64);
+=======
+	  strncpy(myInstance->serviceTag, config->resourcePool[resid].ncURL, 64);
+>>>>>>> MERGE-SOURCE
 	  
 	  strncpy(myInstance->ccnet.publicIp, pubip, 16);
 	  strncpy(myInstance->ccnet.privateIp, privip, 16);
@@ -2691,7 +2700,7 @@ int restoreNetworkState() {
 int refreshNodes(ccConfig *config, char *configFile, ccResource **res, int *numHosts) {
   int rc, i;
   char *tmpstr, *ipbuf;
-  char *ncservice;
+  char *ncservice = NULL;
   int ncport;
   char **hosts;
 
@@ -2704,7 +2713,8 @@ int refreshNodes(ccConfig *config, char *configFile, ccResource **res, int *numH
     logprintfl(EUCAFATAL,"parsing config file (%s) for NC_SERVICE\n", configFile);
     return(1);
   } else {
-    ncservice = strdup(tmpstr);
+    if(tmpstr)
+      ncservice = strdup(tmpstr);
   }
   if (tmpstr) free(tmpstr);
 
@@ -2715,7 +2725,8 @@ int refreshNodes(ccConfig *config, char *configFile, ccResource **res, int *numH
     logprintfl(EUCAFATAL,"parsing config file (%s) for NC_PORT\n", configFile);
     return(1);
   } else {
-    ncport = atoi(tmpstr);
+    if(tmpstr)
+      ncport = atoi(tmpstr);
   }
   if (tmpstr) free(tmpstr);
 
