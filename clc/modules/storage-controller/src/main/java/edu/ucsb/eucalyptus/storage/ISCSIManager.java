@@ -71,7 +71,7 @@ public class ISCSIManager implements StorageExportManager {
 		try
 		{
 			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "ietadm", "--op", "new", "--tid=" + tid, "--params", "Name=" + name});
+			Process proc = rt.exec(new String[]{"sudo", "ietadm", "--op", "new", "--tid=" + tid, "--params", "Name=" + name});
 			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
 			StreamConsumer output = new StreamConsumer(proc.getInputStream());
 			error.start();
@@ -82,7 +82,7 @@ public class ISCSIManager implements StorageExportManager {
 			if(errorValue.length() > 0)
 				throw new EucalyptusCloudException(errorValue);
 
-			proc = rt.exec(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "ietadm", "--op", "new", "--tid=" + tid, "--user", "--params", "IncomingUser=" + user + ",Password=" + password});
+			proc = rt.exec(new String[]{"sudo", "ietadm", "--op", "new", "--tid=" + tid, "--user", "--params", "IncomingUser=" + user + ",Password=" + password});
 			error = new StreamConsumer(proc.getErrorStream());
 			output = new StreamConsumer(proc.getInputStream());
 			error.start();
@@ -93,7 +93,7 @@ public class ISCSIManager implements StorageExportManager {
 			if(errorValue.length() > 0)
 				throw new EucalyptusCloudException(errorValue);
 
-			proc = rt.exec(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "ietadm", "--op", "new", "--tid=" + tid, "--lun=" + lun, "--params", "Path=" + path});
+			proc = rt.exec(new String[]{"sudo", "ietadm", "--op", "new", "--tid=" + tid, "--lun=" + lun, "--params", "Path=" + path});
 			error = new StreamConsumer(proc.getErrorStream());
 			output = new StreamConsumer(proc.getInputStream());
 			error.start();
@@ -112,14 +112,14 @@ public class ISCSIManager implements StorageExportManager {
 		try
 		{
 			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "ietadm", "--op", "delete", "--tid=" + tid, "--lun=" + lun});
+			Process proc = rt.exec(new String[]{"sudo", "ietadm", "--op", "delete", "--tid=" + tid, "--lun=" + lun});
 			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
 			StreamConsumer output = new StreamConsumer(proc.getInputStream());
 			error.start();
 			output.start();
 			proc.waitFor();
 
-			proc = rt.exec(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "ietadm", "--op", "delete", "--tid=" + tid});
+			proc = rt.exec(new String[]{"sudo", "ietadm", "--op", "delete", "--tid=" + tid});
 			error = new StreamConsumer(proc.getErrorStream());
 			output = new StreamConsumer(proc.getInputStream());
 			error.start();
