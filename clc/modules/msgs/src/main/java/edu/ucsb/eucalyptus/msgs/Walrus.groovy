@@ -615,7 +615,7 @@ public class GetBucketLoggingStatusType extends WalrusRequestType {
 }
 
 public class GetBucketLoggingStatusResponseType extends WalrusResponseType {
-	LoggingEnabled loggingEnabled = new LoggingEnabled();
+	LoggingEnabled loggingEnabled;
 }
 
 public class SetBucketLoggingStatusType extends WalrusRequestType {

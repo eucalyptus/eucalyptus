@@ -93,8 +93,10 @@ sem * sem_realloc (const int val, const char * name, int flags)
     
     if (name && !strcmp(name, "mutex")) { /* use pthread mutex */
       s->usemutex = 1;
+      s->mutcount = val;
+      s->mutwaiters = 0;
       pthread_mutex_init(&(s->mutex), NULL);
-      
+      pthread_cond_init(&(s->cond), NULL);
     } else if (name) { /* named semaphores */
         if (s->flags & O_EXCL) {
             if ( sem_unlink (name) == 0) { /* clean up in case previous sem holder crashed */
@@ -129,10 +131,19 @@ sem * sem_realloc (const int val, const char * name, int flags)
 
 int sem_p (sem * s)
 {
-        if (s && s->usemutex) {
-            return(pthread_mutex_lock(&(s->mutex)));
-        }
-        
+    int rc;
+    if (s && s->usemutex) {
+        rc = pthread_mutex_lock(&(s->mutex));
+	s->mutwaiters++;
+	while(s->mutcount == 0) {
+	  pthread_cond_wait(&(s->cond), &(s->mutex));
+	}
+	s->mutwaiters--;
+	s->mutcount--;
+	rc = pthread_mutex_unlock(&(s->mutex));
+	return(rc);
+    }
+
     if (s && s->posix) {
         return sem_wait (s->posix);
     }
@@ -147,10 +158,17 @@ int sem_p (sem * s)
 
 int sem_v (sem * s)
 {
-        if (s && s->usemutex) {
-            return(pthread_mutex_unlock(&(s->mutex)));
-        }
-        
+    int rc;
+    if (s && s->usemutex) {
+        rc = pthread_mutex_lock(&(s->mutex));
+        if (s->mutwaiters > 0) {
+	  rc = pthread_cond_signal(&(s->cond));
+	}
+	s->mutcount++;
+        rc = pthread_mutex_unlock(&(s->mutex));
+	return(rc);
+    }
+
     if (s && s->posix) {
         return sem_post (s->posix);
     }

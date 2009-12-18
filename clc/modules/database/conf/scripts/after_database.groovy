@@ -1,6 +1,7 @@
 import org.hibernate.ejb.*
 import com.eucalyptus.util.*
 import edu.ucsb.eucalyptus.cloud.ws.*;
+import com.eucalyptus.bootstrap.DeferredInitializer;
 
 hiber_config = [
   'hibernate.archive.autodetection': 'jar, class, hbm',
@@ -34,7 +35,4 @@ contexts.each {
     System.exit(1)
   }
 }
-WalrusControl.deferedInitializer( );
-WalrusManager.deferedInitializer( );
-BlockStorage.deferedInitializer( );
-VMwareControl.deferedInitializer();
+DeferredInitializer.getInstance().run();
