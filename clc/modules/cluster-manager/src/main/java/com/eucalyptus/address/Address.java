@@ -154,7 +154,7 @@ public class Address implements HasName {
   @Transient
   private AtomicMarkableReference<State> state;
   @Transient
-  private final SplitTransition          QUIESCENT               = new SplitTransition( Transition.quiescent ) {
+  private transient final SplitTransition          QUIESCENT               = new SplitTransition( Transition.quiescent ) {
                                                                    public void bottom( ) {}
                                                                    public void top( ) {}
                                                                  };
@@ -313,10 +313,11 @@ public class Address implements HasName {
   
   public QueuedEventCallback getCallback( ) {
     try {
-      Class cbClass = this.transition.getName( ).getCallback( ).getClass( );
+      Class cbClass = this.transition.getName( ).getCallback( );
       Constructor cbCons = cbClass.getConstructor( Address.class );
       return (QueuedEventCallback) cbCons.newInstance( this );
     } catch ( Exception e ) {
+      LOG.debug( e, e );
       return new QueuedEventCallback.NOOP( );
     }
   }

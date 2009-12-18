@@ -91,6 +91,7 @@ import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
+@SuppressWarnings( "unchecked" )
 public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
   static Logger                 LOG     = Logger.getLogger( QueuedEventCallback.class );
   public static class NOOP extends QueuedEventCallback {
@@ -102,8 +103,8 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   private ChannelFuture         connectFuture;
   private NioBootstrap          clientBootstrap;
   @SuppressWarnings( "unchecked" )
-  private SuccessCallback       successCallback;
-  private FailureCallback<TYPE> failCallback;
+  private SuccessCallback       successCallback = SuccessCallback.NOOP;
+  private FailureCallback<TYPE> failCallback = FailureCallback.NOOP;
   
   @SuppressWarnings( "unchecked" )
   public QueuedEventCallback<TYPE> onSuccess( SuccessCallback c ) {
@@ -140,9 +141,19 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
           throw new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
         }
         this.verify( msg );
-        this.successCallback.apply( response.getMessage( ) );
+        try {
+          this.successCallback.apply( msg );
+        } catch ( Throwable e1 ) {
+          LOG.debug( e1, e1 );
+          this.failCallback.failure( this, e1 );
+        }
       } catch ( Throwable e1 ) {
         this.fail( e1 );
+        try {
+          this.failCallback.failure( this, e1 );
+        } catch ( Throwable e2 ) {
+          LOG.debug( e2, e2 );
+        }
         super.queueResponse( e1 );
         e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
         if( e1 instanceof EucalyptusClusterException ) {
@@ -195,9 +206,7 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
       } catch ( Exception e1 ) {
         LOG.debug( e1, e1 );
       }
-      if ( this.failCallback != null ) {
-        this.failCallback.failure( this, e );
-      }
+      this.failCallback.failure( this, e );
       this.queueResponse( e );
       this.connectFuture.addListener( ChannelFutureListener.CLOSE );
     }

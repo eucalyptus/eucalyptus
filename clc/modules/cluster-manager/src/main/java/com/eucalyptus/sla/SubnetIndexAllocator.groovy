@@ -16,7 +16,7 @@ public class SubnetIndexAllocator implements ResourceAllocator {
     Network firstNet = vmInfo.getNetworks( ).first();
     vmInfo.allocationTokens.each { ResourceToken it ->
       it.amount.times{ i -> 
-        Integer addrIndex = firstNet.allocateNetworkIndex( token.getCluster( ) );
+        Integer addrIndex = firstNet.allocateNetworkIndex( it.getCluster( ) );
         if ( addrIndex == null ) throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + firstNet.getNetworkName( ) );
         it.getPrimaryNetwork( ).indexes += addrIndex;
       }
@@ -30,7 +30,7 @@ public class SubnetIndexAllocator implements ResourceAllocator {
       it.getPrimaryNetwork()?.getIndexes( ).each{ Integer i ->
         firstNet?.returnNetworkIndex( i );
       }
-      firstNet?.getIndexes( ).clear( );
+      it.getPrimaryNetwork()?.getIndexes( ).clear( );
     }
   }
   

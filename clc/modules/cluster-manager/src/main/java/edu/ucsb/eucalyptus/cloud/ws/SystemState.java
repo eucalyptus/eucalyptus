@@ -76,6 +76,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterMessageQueue;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -181,13 +182,18 @@ public class SystemState {
   
   private static void cleanUp( final VmInstance vm ) {
     SystemState.returnNetworkIndex( vm );
-    try {
-      Clusters.dispatchClusterEvent( vm.getPlacement( ), new TerminateCallback( ), Admin.makeMsg( TerminateInstancesType.class, vm.getInstanceId( ) ) );
-      try {} catch ( Exception e ) {}
-    } catch ( Exception e ) {
-      LOG.debug( e );
-    }
-    SystemState.returnPublicAddress( vm );
+    final Address address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
+    new TerminateCallback( vm.getInstanceId() ).onSuccess( new SuccessCallback() {
+      public void apply( Object t ) {
+        if( address.isSystemOwned( ) ) {
+          LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
+          Addresses.release( address ); 
+        } else {
+          LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
+          Addresses.unassign( address );
+        }
+      }}).dispatch( vm.getPlacement( ) );
+//    SystemState.returnPublicAddress( vm );
   }
   
   private static void returnPublicAddress( final VmInstance vm ) {

@@ -68,10 +68,13 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FailScriptFailException;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
+import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class VmAdmissionControl {
@@ -122,6 +125,7 @@ public class VmAdmissionControl {
         throw new EucalyptusCloudException( e.getMessage( ), e );
       }
     }
+    LOG.trace( EventRecord.here( this.getClass(), EventType.VM_RESERVED, LogUtil.dumpObject( vmAllocInfo ) ) );
     return vmAllocInfo;
   }
   

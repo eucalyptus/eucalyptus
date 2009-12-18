@@ -151,7 +151,7 @@ public class ClusterState {
         availableVlans.add( i );
       }
     }
-    LOG.debug( EventRecord.here( Component.cluster, "CONFIG_VLANS", Integer.toString( min ), Integer.toString( max ), availableVlans.toString( ) ) ); 
+    LOG.debug( EventRecord.here( Component.cluster, "CONFIG_VLANS", Integer.toString( min ), Integer.toString( max ), availableVlans.toString( ).substring( 0, 50>availableVlans.toString( ).length( )?availableVlans.toString( ).length( ):50 ) ) );
   }
   
   private static NavigableSet<Integer> populate( ) {

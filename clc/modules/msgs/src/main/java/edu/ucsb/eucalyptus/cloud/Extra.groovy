@@ -320,6 +320,7 @@ public class Network implements HasName {
   String name;
   String networkName;
   String userName;
+  Integer max;
   ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
   private ConcurrentMap<String, NetworkToken> clusterTokens = new ConcurrentHashMap<String,NetworkToken>();
   private NavigableSet<Integer> availableNetworkIndexes = new ConcurrentSkipListSet<Integer>();
@@ -332,7 +333,13 @@ public class Network implements HasName {
     this.userName = userName;
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
-    for( int i = 2; i < 256; i++ ) {//FIXME: potentially a network can be more than a /24. update w/ real constraints at runtime.
+    try {
+      Network me = Networks.getInstance().lookup( this.networkName );
+      this.max = me.max;
+    } catch (Throwable t) {
+      this.max = 256;
+    }
+    for( int i = 2; i < max; i++ ) {//FIXME: potentially a network can be more than a /24. update w/ real constraints at runtime.
       this.availableNetworkIndexes.add( i );
     }
   }
@@ -357,6 +364,7 @@ public class Network implements HasName {
   }
   
   public void trim( Integer max ) {
+    this.max = max;
     this.availableNetworkIndexes.tailSet( max-1, true ).clear( );
     this.availableNetworkIndexes.headSet( 2 ).clear();
   }

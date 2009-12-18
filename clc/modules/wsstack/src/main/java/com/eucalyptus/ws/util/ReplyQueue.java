@@ -103,7 +103,6 @@ public class ReplyQueue {
   @SuppressWarnings( "unchecked" )
   public void handle( EucalyptusMessage responseMessage ) {
     String corrId = responseMessage.getCorrelationId( );
-    LOG.info("Message: " + responseMessage.getClass().getCanonicalName( ) + ":" + responseMessage.getCorrelationId( ) );
     ChannelHandlerContext ctx = pending.remove( corrId );
     if ( ctx == null ) {
       LOG.warn( "Received a reply for absent client:  No channel to write response message." );
