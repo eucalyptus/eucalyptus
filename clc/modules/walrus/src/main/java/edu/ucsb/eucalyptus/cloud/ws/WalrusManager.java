@@ -149,6 +149,7 @@ import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
 import edu.ucsb.eucalyptus.msgs.ListBucketResponseType;
 import edu.ucsb.eucalyptus.msgs.ListBucketType;
 import edu.ucsb.eucalyptus.msgs.ListEntry;
+import edu.ucsb.eucalyptus.msgs.LoggingEnabled;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
 import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.PostObjectType;
@@ -1991,14 +1992,6 @@ public class WalrusManager {
 	public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws EucalyptusCloudException {
 		SetBucketLoggingStatusResponseType reply = (SetBucketLoggingStatusResponseType) request.getReply();
 		String bucket = request.getBucket();
-		String targetBucket = request.getLoggingEnabled().getTargetBucket();
-		String targetPrefix = request.getLoggingEnabled().getTargetPrefix();
-		List<Grant> targetGrantsList = null;
-		TargetGrants targetGrants = request.getLoggingEnabled().getTargetGrants();
-		if(targetGrants != null)
-			targetGrantsList = targetGrants.getGrants();
-		if(targetPrefix == null)
-			targetPrefix = "";
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo, targetBucketInfo;
@@ -2008,21 +2001,34 @@ public class WalrusManager {
 			db.rollback();
 			throw new NoSuchBucketException(bucket);
 		} 
-		try {
-			targetBucketInfo = db.getUnique(new BucketInfo(targetBucket));
-		} catch(EucalyptusCloudException ex) {
-			db.rollback();
-			throw new NoSuchBucketException(bucket);
-		} 
-		if(!targetBucketInfo.hasLoggingPerms()) {
-			db.rollback();
-			throw new InvalidTargetBucketForLoggingException(targetBucket); 
-		}
-		bucketInfo.setTargetBucket(targetBucket);
-		bucketInfo.setTargetPrefix(targetPrefix);
-		bucketInfo.setLoggingEnabled(true);
-		if(targetGrantsList != null) {
-			targetBucketInfo.addGrants(targetGrantsList);
+
+		if(request.getLoggingEnabled() != null) {
+			String targetBucket = request.getLoggingEnabled().getTargetBucket();
+			String targetPrefix = request.getLoggingEnabled().getTargetPrefix();
+			List<Grant> targetGrantsList = null;
+			TargetGrants targetGrants = request.getLoggingEnabled().getTargetGrants();
+			if(targetGrants != null)
+				targetGrantsList = targetGrants.getGrants();
+			if(targetPrefix == null)
+				targetPrefix = "";
+			try {
+				targetBucketInfo = db.getUnique(new BucketInfo(targetBucket));
+			} catch(EucalyptusCloudException ex) {
+				db.rollback();
+				throw new NoSuchBucketException(targetBucket);
+			} 
+			if(!targetBucketInfo.hasLoggingPerms()) {
+				db.rollback();
+				throw new InvalidTargetBucketForLoggingException(targetBucket); 
+			}
+			bucketInfo.setTargetBucket(targetBucket);
+			bucketInfo.setTargetPrefix(targetPrefix);
+			bucketInfo.setLoggingEnabled(true);
+			if(targetGrantsList != null) {
+				targetBucketInfo.addGrants(targetGrantsList);
+			}
+		} else {
+			bucketInfo.setLoggingEnabled(false);
 		}
 		db.commit();		
 		return reply;
@@ -2059,12 +2065,14 @@ public class WalrusManager {
 					db.rollback();
 					throw new InvalidTargetBucketForLoggingException(targetBucket);
 				}
-				reply.getLoggingEnabled().setTargetBucket(bucketInfo.getTargetBucket());
-				reply.getLoggingEnabled().setTargetPrefix(bucketInfo.getTargetPrefix());
+				LoggingEnabled loggingEnabled = new LoggingEnabled();
+				loggingEnabled.setTargetBucket(bucketInfo.getTargetBucket());
+				loggingEnabled.setTargetPrefix(bucketInfo.getTargetPrefix());
 
 				TargetGrants targetGrants = new TargetGrants();
 				targetGrants.setGrants(grants);
-				reply.getLoggingEnabled().setTargetGrants(targetGrants);
+				loggingEnabled.setTargetGrants(targetGrants);
+				reply.setLoggingEnabled(loggingEnabled);
 			}
 		} catch(EucalyptusCloudException ex) {
 			db.rollback();

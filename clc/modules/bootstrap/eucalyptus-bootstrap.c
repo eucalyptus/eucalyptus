@@ -564,9 +564,7 @@ int java_init(euca_opts *args, java_home_t *data) {
     if(args->remote_walrus_flag) {
      	JVM_ARG(opt[++x],"-Deuca.remote.walrus=true");
     }
-    if(args->disable_iscsi_flag) {
-         	JVM_ARG(opt[++x],"-Deuca.disable.iscsi=true");
-    }
+    JVM_ARG(opt[++x],"-Deuca.disable.iscsi=true");
     if(args->debug_flag) {
     	JVM_ARG(opt[++x],"-Xdebug");
     	JVM_ARG(opt[++x],"-Xrunjdwp:transport=dt_socket,server=y,suspend=%2$s,address=%1$d",GETARG(args,debug_port),(args->debug_suspend_flag?"y":"n"));

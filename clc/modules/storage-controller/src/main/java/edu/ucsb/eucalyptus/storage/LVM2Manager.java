@@ -138,6 +138,7 @@ public class LVM2Manager implements LogicalStorageManager {
 				LOG.info(returnValue);
 			}
 			if(System.getProperty("euca.disable.iscsi") != null) {
+				LOG.info("Using AOEManager");
 				exportManager = new AOEManager();
 			} else {
 				exportManager = new ISCSIManager();
