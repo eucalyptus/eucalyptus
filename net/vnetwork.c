@@ -1962,33 +1962,6 @@ int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netN
   return(vnetStopNetworkManaged(vnetconfig, vlan, userName, netName));
 }
 
-
-int fill_arp(char *subnet) {
-  int pid, status, rc;
-
-  if (!subnet) return(1);
-  
-  pid = fork();
-  if (!pid) {
-    char arga[1024];
-    char cmd[1024];
-    int sid;
-    sid = setsid();
-    rc = chdir("/");
-    close(0);
-    close(1);
-    close(2);
-    snprintf(arga, 1024, "%s.255", subnet);
-    snprintf(cmd, 1024, "ping -b -c 1 %s", arga);
-    rc = system(cmd);
-    exit(0);
-    exit(execlp("ping", "ping", "-b", "-c", "1", arga, NULL));
-  }
-  wait(&status);
-
-  return(0);
-}
-
 int instId2mac(char *instId, char *outmac) {
   char *p, dst[24];
   int i;
