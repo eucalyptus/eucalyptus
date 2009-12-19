@@ -59,78 +59,16 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- *
- * Author: Neil Soman neil@eucalyptus.com
- *
- * Parts of this code are licensed under the BSD license and carry the following copyright,
- * Copyright (c) 1999-2004 Brian Wellington (bwelling@xbill.org)
- * @author Brian Wellington <bwelling@xbill.org>         
- *
+ * Author: Neil Soman <neil@eucalyptus.com>
  */
+package com.eucalyptus.bootstrap;
 
-package com.eucalyptus.cloud.ws;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import org.apache.log4j.Logger;
-import org.xbill.DNS.Message;
-
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-
-
-public class UDPHandler extends ConnectionHandler {
-    private static Logger LOG = Logger.getLogger( UDPHandler.class );
-
-    DatagramSocket socket;
-    public UDPHandler(DatagramSocket s) {
-        this.socket = s;
-    }
-
-    public void run() {
-        try {
-            final short udpLength = 512;
-            byte [] in = new byte[udpLength];
-            DatagramPacket indp = new DatagramPacket(in, in.length);
-            DatagramPacket outdp = null;
-            while (true) {
-                indp.setLength(in.length);
-                try {
-                    socket.receive(indp);
-                }
-                catch (InterruptedIOException e) {
-                    continue;
-                }
-                Message query;
-                byte [] response = null;
-                try {
-                    query = new Message(in);
-                    response = generateReply(query, in,
-                            indp.getLength(),
-                            null);
-                    if (response == null)
-                        continue;
-                }
-                catch (IOException e) {
-                    response = formerrMessage(in);
-                }
-                if (outdp == null)
-                    outdp = new DatagramPacket(response,
-                            response.length,
-                            indp.getAddress(),
-                            indp.getPort());
-                else {
-                    outdp.setData(response);
-                    outdp.setLength(response.length);
-                    outdp.setAddress(indp.getAddress());
-                    outdp.setPort(indp.getPort());
-                }
-                socket.send(outdp);
-            }
-        }
-        catch (IOException e) {
-            LOG.error(e);
-        }
-
-    }
+@Target({ ElementType.TYPE, ElementType.FIELD })
+@Retention(RetentionPolicy.RUNTIME)
+public @interface NeedsDeferredInitialization {
 }

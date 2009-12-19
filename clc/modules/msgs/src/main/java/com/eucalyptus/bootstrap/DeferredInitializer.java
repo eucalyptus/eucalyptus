@@ -58,56 +58,59 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
+/*
+ * Author: Neil Soman <neil@eucalyptus.com>
+ */
 package com.eucalyptus.bootstrap;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
-import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
+import com.google.common.collect.Lists;
 
-@Provides(resource=Resource.PrivilegedContext, component=Component.storage)
-@Depends(local=Component.storage)
-public class BlockStorageBootstrapper extends Bootstrapper {
-	private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );
-	private static BlockStorageBootstrapper singleton;
+public class DeferredInitializer {
+	private static Logger LOG = Logger.getLogger( DeferredInitializer.class );
+	private List<Class> klasses;
 
-	public static Bootstrapper getInstance( ) {
-		synchronized ( BlockStorageBootstrapper.class ) {
-			if ( singleton == null ) {
-				singleton = new BlockStorageBootstrapper( );
-				LOG.info( "Creating Block Storage Bootstrapper instance." );
-			} else {
-				LOG.info( "Returning Block Storage Bootstrapper instance." );
-			}
+	private static DeferredInitializer singleton = DeferredInitializer.getInstance( );
+
+	public static DeferredInitializer getInstance( ) {
+		synchronized ( DeferredInitializer.class ) {
+			if ( singleton == null ) singleton = new DeferredInitializer( );
 		}
 		return singleton;
 	}
 
-	@Override
-	public boolean check( ) throws Exception {
-		return true;
+	private DeferredInitializer() {
+		klasses = Lists.newArrayList();
 	}
 
-	@Override
-	public boolean destroy( ) throws Exception {
-		return true;
+	public void add(Class klass) {
+		klasses.add(klass);
 	}
 
-	@Override
-	public boolean load(Resource current ) throws Exception {
-		BlockStorageManagerFactory.getBlockStorageManager().checkPreconditions();
-		return true;
+	public void run() {
+		for (Class klass : klasses) {
+			try {
+				Method initializer = klass.getMethod("deferredInitializer", null);
+				try {
+					initializer.invoke(null, null);
+				} catch (IllegalArgumentException e) {
+					LOG.error(e, e);
+				} catch (IllegalAccessException e) {
+					LOG.error(e, e);
+				} catch (InvocationTargetException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} catch (SecurityException e) {
+				LOG.error(e, e);
+			} catch (NoSuchMethodException e) {
+				LOG.error(e, e);
+			} 
+		}
 	}
-
-	@Override
-	public boolean start( ) throws Exception {
-		return true;
-	}
-
-	@Override
-	public boolean stop( ) throws Exception {
-		return true;
-	}
-
 }
