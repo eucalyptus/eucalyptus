@@ -87,8 +87,6 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
   int vlan=0, numaddrs=1, len, i;
   char cmd[256];
 
-
-      
   if (param_check("vnetInit", vnetconfig, mode, eucahome, path, role, pubInterface, numberofaddrs, network, netmask, broadcast, nameserver, router, daemon, bridgedev)) return;
   
   if (!vnetconfig->initialized) {
@@ -1107,7 +1105,8 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   snprintf (buf, 512, "%s/usr/lib/eucalyptus/euca_rootwrap %s -cf %s/euca-dhcp.conf -lf %s/euca-dhcp.leases -pf %s/euca-dhcp.pid -tf %s/euca-dhcp.trace %s", vnetconfig->eucahome, vnetconfig->dhcpdaemon, vnetconfig->path, vnetconfig->path, vnetconfig->path, vnetconfig->path, dstring);
   
   logprintfl(EUCAINFO, "executing: %s\n", buf);
-  rc = system (buf);
+  //rc = system(buf);
+  rc = daemonrun(buf, NULL);
   logprintfl(EUCAINFO, "\tRC from cmd: %d\n", rc);
   
   return(rc);
@@ -1558,7 +1557,6 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
 
   snprintf(pidfile, 1024, "%s/var/run/eucalyptus/vtund-server.pid", vnetconfig->eucahome);
   snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap vtund -s -n -f %s/var/lib/eucalyptus/keys/vtunall.conf", vnetconfig->eucahome, vnetconfig->eucahome);
-  //  logprintfl(EUCADEBUG, "Running: %s,%s,%s\n", cmd, pidfile, rootwrap);
   rc = daemonmaintain(cmd, "vtund", pidfile, 0, rootwrap);
   if (rc) {
     logprintfl(EUCAERROR, "cannot run tunnel server: '%s'\n", cmd);
