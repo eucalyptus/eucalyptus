@@ -181,7 +181,7 @@ import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 
-@NeedsDeferredInitialization
+@NeedsDeferredInitialization(component = Component.walrus)
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger( WalrusManager.class );
 
