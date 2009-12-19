@@ -167,7 +167,8 @@ typedef struct ccConfig_t {
   int threads[3];
 } ccConfig;
 
-enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE};
+enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
+static char *SCHEDPOLICIES[SCHEDLAST] = {"GREEDY", "ROUNDROBIN", "POWERSAVE"};
 
 int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen);
 int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort);

@@ -2589,6 +2589,9 @@ int init_config(void) {
   config->wakeThresh = wakeThresh;
   config->configMtime = configMtime;
   config->initialized = 1;
+
+  logprintfl(EUCAINFO, "init_config(): CC Configuration: eucahome=%s, policyfile=%s, ws-security=%s, schedulerPolicy=%s, idleThreshold=%d, wakeThreshold=%d\n", SP(config->eucahome), SP(config->policyFile), use_wssec ? "ENABLED" : "DISABLED", SP(SCHEDPOLICIES[config->schedPolicy]), config->idleThresh, config->wakeThresh);
+
   sem_post(configLock);
     
   // update resourceCache
