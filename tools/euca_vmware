@@ -34,7 +34,7 @@ export CLASSPATH="$EUCALYPTUS/usr/share/eucalyptus/jcl-over-slf4j-1.5.2.jar:$CLA
 export CLASSPATH="$EUCALYPTUS/usr/share/eucalyptus/vijava220090625.jar:$CLASSPATH"
 
 DEFINES="-Xbootclasspath/p:$EUCALYPTUS/usr/share/eucalyptus/openjdk-crypto.jar -Djava.security.policy=$EUCALYPTUS/etc/eucalyptus/cloud.d/security.policy -Deuca.home=$EUCALYPTUS -Deuca.var.dir=$EUCALYPTUS/var/lib/eucalyptus -Deuca.conf.dir=$EUCALYPTUS/etc/eucalyptus/cloud.d -Deuca.lib.dir=$EUCALYPTUS/usr/share/eucalyptus -Deuca.log.dir=$EUCALYPTUS/var/log/eucalyptus"
-CMD="java $DEFINES edu.ucsb.eucalyptus.cloud.ws.VMwareClient $@"
+CMD="java $DEFINES com.eucalyptus.cloud.ws.VMwareClient $@"
 
 #echo $CLASSPATH
 #echo $CMD
