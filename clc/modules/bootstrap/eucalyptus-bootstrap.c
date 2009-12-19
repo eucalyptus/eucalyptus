@@ -552,6 +552,9 @@ int java_init(euca_opts *args, java_home_t *data) {
     if(args->disable_walrus_flag) {
      	JVM_ARG(opt[++x],"-Deuca.disable.walrus=true");
     }
+    if(args->disable_vmwarebroker_flag) {
+       	JVM_ARG(opt[++x],"-Deuca.disable.vmwarebroker=true");
+    }
     if(args->remote_dns_flag) {
     	JVM_ARG(opt[++x],"-Deuca.remote.dns=true");
     }
@@ -565,7 +568,7 @@ int java_init(euca_opts *args, java_home_t *data) {
      	JVM_ARG(opt[++x],"-Deuca.remote.walrus=true");
     }
     if(args->disable_iscsi_flag) {
-         	JVM_ARG(opt[++x],"-Deuca.disable.iscsi=true");
+       	JVM_ARG(opt[++x],"-Deuca.disable.iscsi=true");
     }
     if(args->debug_flag) {
     	JVM_ARG(opt[++x],"-Xdebug");
