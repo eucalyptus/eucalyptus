@@ -126,7 +126,7 @@ import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
-@NeedsDeferredInitialization
+@NeedsDeferredInitialization(component = Component.storage)
 public class BlockStorage {
 
 	private static Logger LOG = Logger.getLogger(BlockStorage.class);
