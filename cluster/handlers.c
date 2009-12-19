@@ -2279,13 +2279,15 @@ int init_config(void) {
 	resourceCache->numResources = numHosts;
 	memcpy(resourceCache->resources, res, sizeof(ccResource) * numHosts);
 	free(res);
+	sem_post(resourceCacheLock);
 	{
 	  ncMetadata ccMeta;
 	  ccMeta.correlationId = strdup("monitor");
 	  ccMeta.userId = strdup("eucalyptus");
-	  refresh_resources(&ccMeta, 60, 0);
+	  refresh_resources(&ccMeta, 60, 1);
+	  free(ccMeta.correlationId);
+	  free(ccMeta.userId);
 	}
-	sem_post(resourceCacheLock);
       }
     }
     return(ret);
@@ -2781,6 +2783,15 @@ void shawn() {
   if (rc) {
     logprintfl(EUCAERROR, "network state maintainance failed\n");
   }
+  
+  //  logprintfl(EUCADEBUG, "msync()ing...called\n");
+  //  TIMERSTART(msyncer);
+  msync(instanceCache, sizeof(ccInstanceCache), MS_ASYNC);
+  msync(resourceCache, sizeof(ccResourceCache), MS_ASYNC);
+  msync(config, sizeof(ccConfig), MS_ASYNC);
+  msync(vnetconfig, sizeof(vnetConfig), MS_ASYNC);
+  //  TIMERSTOP(msyncer);
+  //  logprintfl(EUCADEBUG, "msync()ing...done\n");
 }
 
 int timeread(int fd, void *buf, size_t bytes, int timeout) {

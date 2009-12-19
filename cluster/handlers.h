@@ -67,7 +67,7 @@ permission notice:
 #include <vnetwork.h>
 
 #define OP_TIMEOUT 60
-#define OP_TIMEOUT_PERNODE 10
+#define OP_TIMEOUT_PERNODE 20
 
 enum {SHARED_MEM, SHARED_FILE};
 
