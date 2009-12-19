@@ -70,6 +70,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
@@ -212,10 +213,10 @@ public class ClusterAllocator extends Thread {
     VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, networkIndexes );
     QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, token ).onSuccess( new SuccessCallback<VmRunResponseType>( ) {
       @Override public void apply( VmRunResponseType response ) {
-        for ( VmInfo vmInfo : response.getVms( ) ) {
+        for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
           Address addr = Addresses.getInstance().lookup( addresses.remove( 0 ) );
           VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
-          Addresses.assign( addr, vm );
+          AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
       }
     }});
     this.msgMap.put( State.CREATE_VMS, QueuedEvent.make( cb, run ) );

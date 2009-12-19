@@ -436,6 +436,6 @@ public class VmInstance implements HasName {
 
   public boolean hasPublicAddress() {
     NetworkConfigType conf = getNetworkConfig( );
-    return !( DEFAULT_IP.equals(conf.getIgnoredPublicIp( )) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
+    return conf != null && !( DEFAULT_IP.equals(conf.getIgnoredPublicIp( )) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
   }
 }

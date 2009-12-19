@@ -63,10 +63,13 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.Address.Transition;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;
@@ -85,43 +88,64 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   
   @Override
   public void prepare( AssignAddressType msg ) throws Exception {
-    try {
-      VmInstance vm = VmInstances.getInstance( ).lookup( msg.getInstanceId( ) );
-      VmState vmState = vm.getState( );
-      if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
-        LOG.debug( EventRecord.here( AssignAddressCallback.class, Transition.assigning, LogUtil.FAIL, address.toString( ) ) );
-        this.address.clearPending( );
-        this.address.release( );
-        throw new IllegalStateException( "Ignoring assignment to a vm which is not running: " + msg );
-      }
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      this.address.clearPending( );
-      throw e;
+    if( !this.checkVmState( ) ) {
+      throw new IllegalStateException( "Ignoring assignment to a vm which is not running: " + this.getRequest( ) );      
+    } else {
+      LOG.debug( EventRecord.here( AssignAddressCallback.class, Transition.assigning, address.toString( ) ) );
     }
-    LOG.debug( EventRecord.here( AssignAddressCallback.class, Transition.assigning, address.toString( ) ) );
   }
   
   @Override
   public void verify( EucalyptusMessage msg ) throws Exception {
-    this.address.clearPending( );
-    LOG.info( EventRecord.here( AssignAddressCallback.class, Address.State.assigned, LogUtil.dumpObject( address ) ) );
     try {
-      VmInstance vm = VmInstances.getInstance( ).lookup( this.address.getInstanceId( ) );
-      vm.getNetworkConfig( ).setIgnoredPublicIp( this.address.getName( ) );
-    } catch ( Exception e ) {
-      Addresses.unassign( address );
-      LOG.debug( e, e );
+      this.updateState( );
+      this.address.clearPending( );
+    } catch ( Exception e1 ) {
+      LOG.debug( e1, e1 );
+      AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
     }
   }
   
   @Override
   public void fail( Throwable e ) {
-    LOG.info( EventRecord.here( AssignAddressCallback.class, Address.State.assigned, LogUtil.FAIL, LogUtil.dumpObject( address ) ) );
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
     LOG.debug( e, e );
-    this.address.clearPending( );
-    this.address.unassign( );
+    this.cleanupState( );
+  }
+
+  private boolean checkVmState( ) {
+    try {
+      VmInstance vm = VmInstances.getInstance( ).lookup( super.getRequest().getInstanceId( ) );
+      VmState vmState = vm.getState( );
+      if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
+        vm.getNetworkConfig( ).setIgnoredPublicIp( VmInstance.DEFAULT_IP );
+        return false;
+      } else {
+        vm.getNetworkConfig( ).setIgnoredPublicIp( this.address.getName( ) );
+        return true;
+      }
+    } catch ( NoSuchElementException e ) {
+      return false;
+    }
   }
   
+  private void updateState( ) {
+    if( !this.checkVmState( ) ) {
+      throw new IllegalStateException( "Failed to find the vm for this assignment: " + this.getRequest( ) );
+    } else {
+      LOG.info( EventRecord.here( AssignAddressCallback.class, Address.State.assigned, LogUtil.dumpObject( address ) ) );
+    }
+  }
+
+  private void cleanupState( ) {
+    LOG.debug( EventRecord.here( AssignAddressCallback.class, Transition.assigning, LogUtil.FAIL, address.toString( ) ) );
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
+    if( this.address.isPending( ) ) {
+      this.address.clearPending( );
+    } else if( this.address.isSystemOwned( ) ) {
+      Addresses.release( address );
+    } else if( this.address.isAssigned( ) ) {
+      AddressCategory.unassign( address );
+    }
+  }
+
 }

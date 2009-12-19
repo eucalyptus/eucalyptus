@@ -14,6 +14,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
@@ -33,6 +34,7 @@ public abstract class AbstractSystemAddressManager {
   }
 
   public abstract void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable;
+//  public abstract void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable;
   public abstract List<Address> getReservedAddresses();
   public abstract void inheritReservedAddresses( List<Address> previouslyReservedAddresses );
   public abstract List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable;

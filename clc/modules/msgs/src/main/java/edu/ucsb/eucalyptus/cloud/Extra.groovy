@@ -325,7 +325,7 @@ public class Network implements HasName {
   private ConcurrentMap<String, NetworkToken> clusterTokens = new ConcurrentHashMap<String,NetworkToken>();
   private NavigableSet<Integer> availableNetworkIndexes = new ConcurrentSkipListSet<Integer>();
   private NavigableSet<Integer> assignedNetworkIndexes = new ConcurrentSkipListSet<Integer>();
-  Integer vlan = null;
+  Integer vlan = null;//TODO: needs to be attomic, see ClusterState
 
   def Network() {}
 
@@ -356,7 +356,7 @@ public class Network implements HasName {
       }
     }
   }
-
+  
   public NetworkToken getClusterToken( String cluster ) {
     NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan ) );
     if( token == null ) token = this.clusterTokens.get( cluster );
@@ -379,7 +379,7 @@ public class Network implements HasName {
       LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
     } else {
       this.assignedNetworkIndexes.add( nextIndex );
-      this.clusterTokens.get( cluster ).getIndexes().add( nextIndex );
+      this.getClusterToken( cluster )?.getIndexes().add( nextIndex );
       LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
     }
     return nextIndex;

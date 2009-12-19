@@ -174,23 +174,21 @@ public class ClusterState {
   }
 
   public NetworkToken getNetworkAllocation( String userName, String networkName ) throws NotEnoughResourcesAvailable {
-    ClusterState.trim( );
     return ClusterState.getNetworkAllocation( userName, clusterName, networkName );
   }
   
   private static NetworkToken getNetworkAllocation( String userName, String clusterName, String networkName ) throws NotEnoughResourcesAvailable {
-    Network network = null;
+    ClusterState.trim( );
     try {
-      network = Networks.getInstance( ).lookup( networkName );
+      Network network = Networks.getInstance( ).lookup( networkName );
       Integer vlan = network.getVlan( );
       if( vlan == null ) {
         vlan = ClusterState.availableVlans.pollFirst();
-        if( vlan == null ) throw new NotEnoughResourcesAvailable( "Not enough resources available: vlan tags" );
         network.setVlan( vlan );
+        if( vlan == null ) throw new NotEnoughResourcesAvailable( "Not enough resources available: vlan tags" );
       }
-      NetworkToken token = new NetworkToken( clusterName, userName, network.getNetworkName( ), network.getVlan( ) );
+      NetworkToken token = network.getClusterToken( clusterName );
       LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, token ) );
-      network.addTokenIfAbsent( token );
       return token;
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );

@@ -71,6 +71,7 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterMessageQueue;
@@ -181,19 +182,26 @@ public class SystemState {
   }
   
   private static void cleanUp( final VmInstance vm ) {
+    Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
+    QueuedEventCallback cb = new TerminateCallback( vm.getInstanceId( ) );
     SystemState.returnNetworkIndex( vm );
-    final Address address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
-    new TerminateCallback( vm.getInstanceId() ).onSuccess( new SuccessCallback() {
-      public void apply( Object t ) {
-        if( address.isSystemOwned( ) ) {
-          LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
-          Addresses.release( address ); 
-        } else {
-          LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
-          Addresses.unassign( address );
-        }
-      }}).dispatch( vm.getPlacement( ) );
-//    SystemState.returnPublicAddress( vm );
+    try {
+      final Address address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
+      cb.onSuccess( new SuccessCallback() {
+        public void apply( Object t ) {
+          if( address.isSystemOwned( ) ) {
+            LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
+            Addresses.release( address ); 
+          } else {
+            LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
+            AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+          }
+        }});
+    } catch ( NoSuchElementException e ) {
+    } catch ( Throwable e1 ) {
+      LOG.debug( e1, e1 );
+    }
+    cb.dispatch( cluster );
   }
   
   private static void returnPublicAddress( final VmInstance vm ) {
@@ -209,11 +217,10 @@ public class SystemState {
             Addresses.release( address );
           } else if ( address.isAssigned( ) ) {
             LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
-            Addresses.unassign( address );
+            AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
           }
         }
       } catch ( NoSuchElementException e ) {
-        //this case is OK and we silently ignore it.
       } catch ( Throwable e1 ) {
         LOG.debug( e1, e1 );
       }
@@ -350,7 +357,7 @@ public class SystemState {
           } catch ( EucalyptusCloudException e ) {
             LOG.error( e );
             ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-            SystemState.dispatch( runVm.getPlacement( ), new TerminateCallback( ), Admin.makeMsg( TerminateInstancesType.class, runVm.getInstanceId( ) ) );
+            new TerminateCallback( runVm.getInstanceId( ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.error( e );
           }
@@ -365,7 +372,7 @@ public class SystemState {
       VmInstances.getInstance( ).register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-      SystemState.dispatch( runVm.getPlacement( ), new TerminateCallback( ), Admin.makeMsg( TerminateInstancesType.class, runVm.getInstanceId( ) ) );
+      new TerminateCallback( runVm.getInstanceId( ) ).dispatch( runVm.getPlacement( ) );
     }
   }
   
@@ -403,12 +410,6 @@ public class SystemState {
       }
     }
     return reply;
-  }
-  
-  private static <E extends EucalyptusMessage> void dispatch( String clusterName, QueuedEventCallback event, E msg ) {
-    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-    ClusterMessageQueue clusterMq = cluster.getMessageQueue( );
-    clusterMq.enqueue( QueuedEvent.make( event, msg ) );
   }
   
   private static void checkNetwork( Cluster cluster, Network net ) {

@@ -9,6 +9,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
@@ -39,12 +40,17 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
     } 
     return addressList;
   }
-  
   @Override
   public void assignSystemAddress( VmInstance vm ) throws NotEnoughResourcesAvailable {
     Address addr = this.allocateNext( Component.eucalyptus.name( ) );
-    Addresses.assign( addr, vm );
+    AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
   }
+  
+//  @Override
+//  public void assignSystemAddress( VmInstance vm ) throws NotEnoughResourcesAvailable {
+//    Address addr = this.allocateNext( Component.eucalyptus.name( ) );
+//    Addresses.assign( addr, vm );
+//  }
   
   @Override
   public List<Address> getReservedAddresses( ) {

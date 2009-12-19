@@ -101,7 +101,7 @@ public class Addresses extends AbstractNamedRegistry<Address> {
   
   private static AbstractSystemAddressManager systemAddressManager; //TODO: set a default value here.
                                                                     
-  private static AbstractSystemAddressManager getAddressManager( ) {
+  static AbstractSystemAddressManager getAddressManager( ) {
     synchronized ( Addresses.class ) {
       if ( systemAddressManager == null ) {
         systemAddressManager = getProvider( );
@@ -212,29 +212,28 @@ public class Addresses extends AbstractNamedRegistry<Address> {
     return Addresses.getAddressManager( ).allocateNext( userId );
   }
 
-  @SuppressWarnings( "unchecked" )
-  public static void assign( final Address addr, final VmInstance vm ) {
-    addr.assign( vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) ).getCallback( ).onSuccess( new SuccessCallback() {
-      public void apply( Object response ) {
-        vm.getNetworkConfig( ).setIgnoredPublicIp( addr.getName( ) );
-      }
-    }).dispatch( addr.getCluster( ) );
-  }
+//TODO: delete me after verify all is well.
+//  @SuppressWarnings( "unchecked" )
+//  public static void assign( final Address addr, final VmInstance vm ) {
+//    AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
+//  }
+//TODO: delete me after verify all is well.
+//  @SuppressWarnings( "unchecked" )
+//  public static void unassign( final Address addr ) {
+//    try {
+//      AddressCategory.unassign( addr ).dispatch( addr.getCluster( ) );
+//    } catch( Exception e ) {
+//      LOG.debug( e,e );
+//    }
+//  }
 
-  @SuppressWarnings( "unchecked" )
-  public static void unassign( final Address addr ) {
-    final String instanceId = addr.getInstanceId( );
-    try {
-      addr.unassign( ).getCallback( ).onSuccess( new SuccessCallback( ) {
-        public void apply( Object response ) {
-          Addresses.system( VmInstances.getInstance( ).lookup( instanceId ) );
-        }
-      } ).dispatch( addr.getCluster( ) );
-    } catch( Exception e ) {
-      LOG.debug( e,e );
-    }
-  }
+//TODO: delete me after verify all is well.
+//  @SuppressWarnings( "unchecked" )
+//  public static void reassign( final Address oldAddr, final Address newAddr ) throws EucalyptusCloudException {
+//    AddressCategory.reassign( oldAddr, newAddr );
+//  }
 
+  //TODO: add return of callback, use reassign, special case for now
   public static void system( VmInstance vm ) {
     try {
       Addresses.getInstance( ).getAddressManager( ).assignSystemAddress( vm );
@@ -243,6 +242,7 @@ public class Addresses extends AbstractNamedRegistry<Address> {
       LOG.debug( e, e );
     }
   }
+
   public static void release( final Address addr ) {
     try {
       addr.clearPending( );//clear the state here irregardless
@@ -252,7 +252,7 @@ public class Addresses extends AbstractNamedRegistry<Address> {
     if ( addr.isAssigned( ) ) {
       final String instanceId = addr.getInstanceId( );
       try {
-        addr.unassign( ).getCallback( ).onSuccess( new SuccessCallback( ) {
+        AddressCategory.unassign( addr ).onSuccess( new SuccessCallback( ) {
           public void apply( Object response ) {
             addr.release( );
             Addresses.system( VmInstances.getInstance( ).lookup( instanceId ) );
