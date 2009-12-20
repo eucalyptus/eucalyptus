@@ -204,8 +204,10 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   }
   @Override
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
-    LOG.debug( e.getCause( ), e.getCause( ) );
-    this.clearPending( ctx.getChannel( ) );
+    if(this.inFlightMessage.get( )) {
+      LOG.debug( e.getCause( ), e.getCause( ) );
+      this.clearPending( ctx.getChannel( ) );
+    }
   }
   
   public Cluster getCluster( ) {

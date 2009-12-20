@@ -177,7 +177,7 @@ public class AddressManager {
           AddressCategory.unassign( oldAddr ).onSuccess( assignTarget ).dispatch( oldAddr.getCluster( ) );
           if( system ) {
             LOG.info( EventRecord.here( AddressManager.class, Events.RELEASE, oldAddr.toString( ) ) );
-            oldAddr.release( );
+            Addresses.release( oldAddr );
           }
         } else {
           assignTarget.apply( t );

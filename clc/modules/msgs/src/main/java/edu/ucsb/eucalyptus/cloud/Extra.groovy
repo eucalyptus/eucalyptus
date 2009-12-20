@@ -71,6 +71,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ConcurrentSkipListSet
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.EucalyptusProperties;
@@ -325,7 +326,7 @@ public class Network implements HasName {
   private ConcurrentMap<String, NetworkToken> clusterTokens = new ConcurrentHashMap<String,NetworkToken>();
   private NavigableSet<Integer> availableNetworkIndexes = new ConcurrentSkipListSet<Integer>();
   private NavigableSet<Integer> assignedNetworkIndexes = new ConcurrentSkipListSet<Integer>();
-  Integer vlan = null;//TODO: needs to be attomic, see ClusterState
+  AtomicInteger vlan;
 
   def Network() {}
 
@@ -342,8 +343,18 @@ public class Network implements HasName {
     for( int i = 2; i < max; i++ ) {//FIXME: potentially a network can be more than a /24. update w/ real constraints at runtime.
       this.availableNetworkIndexes.add( i );
     }
+    this.vlan = new AtomicInteger(Integer.valueOf(0));
   }
   
+  public void setVlan( Integer i ) {
+    this.setVlanIfZero( i );
+  }
+  public boolean initVlan( Integer i ) {
+    return this.vlan.compareAndSet(Integer.valueOf(0),i); 
+  }
+  public Integer getVlan() {
+    return this.vlan.get();
+  }
   public void extantNetworkIndex( String cluster, Integer index ) {
     if( index < 2 ) {
       this.availableNetworkIndexes.remove( index );
@@ -358,7 +369,7 @@ public class Network implements HasName {
   }
   
   public NetworkToken getClusterToken( String cluster ) {
-    NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan ) );
+    NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan.get() ) );
     if( token == null ) token = this.clusterTokens.get( cluster );
     return token;
   }
@@ -401,8 +412,8 @@ public class Network implements HasName {
   }
 
   public NetworkToken addTokenIfAbsent(NetworkToken token) {
-    if( this.vlan == null ) {
-      this.vlan = token.getVlan( );
+    if( this.vlan.get() == 0 ) {
+      this.vlan.compareAndSet(0,token.getVlan( ));
     }
     NetworkToken clusterToken = this.clusterTokens.putIfAbsent( token.getCluster(), token );
     if( clusterToken == null ) clusterToken = this.clusterTokens.get( token.getCluster() );
@@ -486,13 +497,13 @@ public class NetworkToken implements Comparable {
   @Override
   public int compareTo(Object o) {
     NetworkToken that = (NetworkToken) o;
-    return (!this.cluster.equals(that.cluster) && (this.vlan.equals( that.vlan ) ) ) ? this.vlan - that.vlan : this.cluster.compareTo(that.cluster);
+    return (!this.cluster.equals(that.cluster) && (this.getVlan().equals( that.getVlan() ) ) ) ? this.getVlan() - that.getVlan() : this.cluster.compareTo(that.cluster);
   }
 
   @Override
   public String toString( ) {
     return String.format( "NetworkToken [cluster=%s, indexes=%s, name=%s, networkName=%s, userName=%s, vlan=%s]",
-                          this.cluster, this.indexes, this.name, this.networkName, this.userName, this.vlan );
+                          this.cluster, this.indexes, this.name, this.networkName, this.userName, this.vlan);
   }
 }
 
@@ -520,11 +531,7 @@ public class ResourceToken implements Comparable {
   }
 
   public NetworkToken getPrimaryNetwork() {
-    try {
-      return this.networkTokens.get(0);
-    } catch( Throwable e ) {
-      return null;
-    }
+    return this.networkTokens.size()>0?this.networkTokens.get(0):null;
   }
 
   @Override

@@ -69,9 +69,10 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
           net = new Network( netInfo.getUserName( ), netInfo.getNetworkName( ) );
         }
         active.add( net.getName( ) );
-        net.setVlan( netInfo.getVlan() );
-        NetworkToken netToken = new NetworkToken( this.getCluster( ).getName( ), netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getVlan( ) );
-        netToken = net.addTokenIfAbsent( netToken );
+        if( net.getVlan().equals( Integer.valueOf(0) ) && net.initVlan( netInfo.getVlan() ) ) {
+          NetworkToken netToken = new NetworkToken( this.getCluster( ).getName( ), netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getVlan( ) );
+          netToken = net.addTokenIfAbsent( netToken );
+        }
       }
       
       for( Network net : Networks.getInstance( ).listValues( Networks.State.ACTIVE ) ) {

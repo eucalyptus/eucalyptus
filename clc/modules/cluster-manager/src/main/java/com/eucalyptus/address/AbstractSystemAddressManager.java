@@ -45,30 +45,34 @@ public abstract class AbstractSystemAddressManager {
       cluster.getState( ).setAddressingInitialized( true );
     }
     for( ClusterAddressInfo addrInfo : ccList ) {
-      Address address = Helper.lookupOrCreate( cluster, addrInfo );
-      if( address.isAllocated( ) && Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) ) {
-        address.allocate( Component.eucalyptus.name( ) );
-        address.clearPending( );
-        cluster.getState( ).clearOrphan( addrInfo );
-      } else if ( address.isAssigned( ) ) {
-        try {
-          VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( addrInfo.getInstanceIp( ) );
-          if ( !address.isAssigned( ) ) {
-            address.assign( vm.getInstanceId( ), addrInfo.getInstanceIp( ) );
-            address.clearPending( );
-          }
+      try {
+        Address address = Helper.lookupOrCreate( cluster, addrInfo );
+        if( address.isAllocated( ) && Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) ) {
+          address.allocate( Component.eucalyptus.name( ) );
+          address.clearPending( );
           cluster.getState( ).clearOrphan( addrInfo );
-        } catch ( NoSuchElementException e ) {
-          InetAddress addr = null;
+        } else if ( address.isAssigned( ) ) {
           try {
-            addr = Inet4Address.getByName( addrInfo.getInstanceIp( ) );
-          } catch ( UnknownHostException e1 ) {
-            LOG.debug( e1, e1 );
-          }
-          if ( addr == null || !addr.isLoopbackAddress( )  ) {
-            cluster.getState().handleOrphan( addrInfo );
+            VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( addrInfo.getInstanceIp( ) );
+            if ( !address.isAssigned( ) ) {
+              address.assign( vm.getInstanceId( ), addrInfo.getInstanceIp( ) );
+              address.clearPending( );
+            }
+            cluster.getState( ).clearOrphan( addrInfo );
+          } catch ( NoSuchElementException e ) {
+            InetAddress addr = null;
+            try {
+              addr = Inet4Address.getByName( addrInfo.getInstanceIp( ) );
+            } catch ( UnknownHostException e1 ) {
+              LOG.debug( e1, e1 );
+            }
+            if ( addr == null || !addr.isLoopbackAddress( )  ) {
+              cluster.getState().handleOrphan( addrInfo );
+            }
           }
         }
+      } catch ( Throwable e ) {
+        LOG.debug( e, e );
       }
     }
   }
@@ -113,7 +117,7 @@ public abstract class AbstractSystemAddressManager {
             addr.init( );
           }
         }
-      } catch ( Exception e ) {
+      } catch ( Throwable e ) {
         LOG.debug( e, e );
       }
     }

@@ -28,18 +28,17 @@ public class PrivateNetworkAllocator implements ResourceAllocator {
         firstNet = Networks.getInstance( ).lookup( firstNet.name );
       }
       ClusterState clusterState = Clusters.getInstance( ).lookup( it.cluster ).state;
-      NetworkToken networkToken = clusterState.getNetworkAllocation( vmInfo.request.userId, firstNet.name );
+      NetworkToken networkToken = clusterState.getNetworkAllocation( vmInfo.request.userId, it.cluster, firstNet.name );
       it.networkTokens += networkToken;
     }
   }
   
   public void fail( VmAllocationInfo vmInfo, Throwable t ) {
     Network firstNet = vmInfo.networks.first();
-    vmInfo.getAllocationTokens( ).each{ it -> 
-      it.getPrimaryNetwork( )?.getIndexes( ).each{
-        firstNet?.returnNetworkIndex( i );
-      }
+    vmInfo.getAllocationTokens( ).findAll{ ResourceToken it -> 
+      it.getPrimaryNetwork() != null
+    }.each{ NetworkToken token -> 
+      Clusters.getInstance( ).lookup( token.cluster )?.state.releaseNetworkAllocation( token );
     }
-    
   }
 }  

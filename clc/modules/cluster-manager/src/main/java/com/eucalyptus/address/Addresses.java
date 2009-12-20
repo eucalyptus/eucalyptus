@@ -80,6 +80,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
@@ -88,7 +89,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 @SuppressWarnings( "serial" )
 public class Addresses extends AbstractNamedRegistry<Address> {
-
+  
   public static Logger     LOG       = Logger.getLogger( Addresses.class );
   private static Addresses singleton = Addresses.getInstance( );
   
@@ -113,7 +114,7 @@ public class Addresses extends AbstractNamedRegistry<Address> {
   public static void update( Cluster cluster, List<ClusterAddressInfo> ccList ) {
     getAddressManager( ).update( cluster, ccList );
   }
-
+  
   @SuppressWarnings( { "unchecked" } )
   private static Map<String, Class> managerMap = new HashMap<String, Class>( ) {
                                                  { //TODO: this is primitive and temporary.
@@ -125,8 +126,8 @@ public class Addresses extends AbstractNamedRegistry<Address> {
                                                };
   
   public static List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
-                                                 return getAddressManager( ).allocateSystemAddresses( cluster, count );
-                                               }
+    return getAddressManager( ).allocateSystemAddresses( cluster, count );
+  }
   
   private static AbstractSystemAddressManager getProvider( ) {
     String provider = "" + edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( )
@@ -183,8 +184,8 @@ public class Addresses extends AbstractNamedRegistry<Address> {
     }
     if ( !isAdmin && !address.getUserId( ).equals( userId ) ) {
       throw new EucalyptusCloudException( "Permission denied while trying to release address: " + addr );
-//    } else if ( address.isPending( ) ) {
-//      throw new EucalyptusCloudException( "A previous assign/unassign is still pending for this address: " + address.getName( ) );
+      //    } else if ( address.isPending( ) ) {
+      //      throw new EucalyptusCloudException( "A previous assign/unassign is still pending for this address: " + address.getName( ) );
     } else if ( address.isSystemOwned( ) && !isAdmin ) {
       throw new EucalyptusCloudException( "Cannot manipulate system owned address: " + address.getName( ) );
     }
@@ -211,28 +212,7 @@ public class Addresses extends AbstractNamedRegistry<Address> {
     Addresses.policyLimits( userId, isAdministrator );
     return Addresses.getAddressManager( ).allocateNext( userId );
   }
-
-//TODO: delete me after verify all is well.
-//  @SuppressWarnings( "unchecked" )
-//  public static void assign( final Address addr, final VmInstance vm ) {
-//    AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
-//  }
-//TODO: delete me after verify all is well.
-//  @SuppressWarnings( "unchecked" )
-//  public static void unassign( final Address addr ) {
-//    try {
-//      AddressCategory.unassign( addr ).dispatch( addr.getCluster( ) );
-//    } catch( Exception e ) {
-//      LOG.debug( e,e );
-//    }
-//  }
-
-//TODO: delete me after verify all is well.
-//  @SuppressWarnings( "unchecked" )
-//  public static void reassign( final Address oldAddr, final Address newAddr ) throws EucalyptusCloudException {
-//    AddressCategory.reassign( oldAddr, newAddr );
-//  }
-
+  
   //TODO: add return of callback, use reassign, special case for now
   public static void system( VmInstance vm ) {
     try {
@@ -242,27 +222,40 @@ public class Addresses extends AbstractNamedRegistry<Address> {
       LOG.debug( e, e );
     }
   }
-
+  
   public static void release( final Address addr ) {
     try {
       addr.clearPending( );//clear the state here irregardless
     } catch ( IllegalStateException e1 ) {
       LOG.debug( e1, e1 );
-    }
-    if ( addr.isAssigned( ) ) {
-      final String instanceId = addr.getInstanceId( );
+    } finally {
       try {
-        AddressCategory.unassign( addr ).onSuccess( new SuccessCallback( ) {
-          public void apply( Object response ) {
-            addr.release( );
-            Addresses.system( VmInstances.getInstance( ).lookup( instanceId ) );
-          }
-        } ).dispatch( addr.getCluster( ) );
-      } catch( Exception e ) {
-        LOG.debug( e,e );
+        if ( addr.isAssigned( ) ) {
+          SuccessCallback unassign = getReleaseCallback( addr );
+          AddressCategory.unassign( addr ).onSuccess( unassign ).dispatch( addr.getCluster( ) );
+        }
+      } catch ( IllegalStateException e ) {
+        LOG.debug( e, e );
       }
-    } else {
-      addr.release( );
+    }
+  }
+  
+  private static SuccessCallback getReleaseCallback( final Address addr ) {
+    final String instanceId = addr.getInstanceId( );
+    try {
+      final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
+      return new SuccessCallback( ) {
+        public void apply( Object response ) {
+          addr.release( );
+          Addresses.system( vm );
+        }
+      };
+    } catch ( NoSuchElementException e ) {
+      return new SuccessCallback( ) {
+        public void apply( Object response ) {
+          addr.release( );
+        }
+      };
     }
   }
 }

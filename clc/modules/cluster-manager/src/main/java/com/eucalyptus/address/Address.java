@@ -64,7 +64,6 @@
 package com.eucalyptus.address;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.Column;
@@ -75,7 +74,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import org.bouncycastle.jce.provider.symmetric.AES.CBC;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.Component;
@@ -157,6 +155,9 @@ public class Address implements HasName {
   private transient final SplitTransition          QUIESCENT               = new SplitTransition( Transition.quiescent ) {
                                                                    public void bottom( ) {}
                                                                    public void top( ) {}
+                                                                   public String toString() {
+                                                                    return "";
+                                                                   }
                                                                  };
   @Transient
   private volatile SplitTransition       transition;
@@ -326,9 +327,12 @@ public class Address implements HasName {
       throw new IllegalStateException( "Trying to clear an address which is not currently pending." );
     } else {
       LOG.debug( EventRecord.caller( this.getClass( ), this.state.getReference( ), "BOTTOM", this.transition.getName( ).name( ), this.toString( ) ) );
-      this.transition.bottom( );
-      this.transition = QUIESCENT;
-      this.state.set( this.state.getReference( ), false );
+      try {
+        this.transition.bottom( );
+      } finally {
+        this.transition = QUIESCENT;
+        this.state.set( this.state.getReference( ), false );        
+      }
     }
     return this;
   }
@@ -338,7 +342,7 @@ public class Address implements HasName {
   }
   
   public boolean isSystemOwned( ) {
-    return Component.eucalyptus.name( ).equals( this.getUserId( ) ) && this.isAllocated( );
+    return Component.eucalyptus.name( ).equals( this.getUserId( ) );
   }
   public boolean isAssigned( ) {
     return this.state.getReference( ).ordinal( ) > State.allocated.ordinal( ); 
@@ -399,9 +403,6 @@ public class Address implements HasName {
   @Override
   public String toString( ) {
     return LogUtil.dumpObject( this );
-    //    return String.format( "Address [name=%s, cluster=%s, userId=%s, instanceAddress=%s, instanceId=%s, state=%s, pending=%s, transition=%s]", this.getName( ),
-    //                          this.getCluster( ), this.getUserId( ), this.getInstanceAddress( ), this.getInstanceId( ), this.state.getReference( ),
-    //                          this.state.isMarked( ), this.transition.getName( ) );
   }
   public int compareTo( final Object o ) {
     Address that = ( Address ) o;
@@ -432,15 +433,20 @@ public class Address implements HasName {
   
   public abstract class SplitTransition {
     private Transition t;
-    
+    private State previous;
     public SplitTransition( Transition t ) {
       this.t = t;
+      this.previous = Address.this.state!=null?Address.this.state.getReference( ):State.unallocated;
     }
     private Transition getName( ) {
       return this.t;
     }
     public abstract void top( );
     public abstract void bottom( );
+    @Override
+    public String toString( ) {
+      return String.format( "[SplitTransition previous=%s, transition=%s, next=%s, pending=%s]", this.previous, this.t, Address.this.state.getReference( ), Address.this.state.isMarked( ) );
+    }
   }
   
 }
