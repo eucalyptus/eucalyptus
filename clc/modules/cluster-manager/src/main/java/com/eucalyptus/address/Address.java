@@ -278,7 +278,7 @@ public class Address implements HasName {
                      new SplitTransition( Transition.unassigning ) {
                        public void top( ) {}
                        public void bottom( ) {
-                         Address.this.instanceId = UNASSIGNED_INSTANCEADDR;
+                         Address.this.instanceId = UNASSIGNED_INSTANCEID;
                          Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
                        }
                      } );

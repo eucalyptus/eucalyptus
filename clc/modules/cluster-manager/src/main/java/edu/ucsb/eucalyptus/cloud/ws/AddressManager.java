@@ -160,22 +160,22 @@ public class AddressManager {
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
     
-    final SuccessCallback assignTarget = new SuccessCallback() {
+    final SuccessCallback assignTarget = new SuccessCallback( ) {
       public void apply( Object t ) {
         LOG.info( EventRecord.here( AddressManager.class, Events.ASSOCIATE, address.toString( ), vm.toString( ) ) );
         AddressCategory.assign( address, vm ).dispatch( address.getCluster( ) );
-        if( oldVm != null ) {
+        if ( oldVm != null ) {
           Addresses.system( oldVm );
         }
       }
     };
     final SuccessCallback unassignBystander = new SuccessCallback( ) {
       public void apply( Object t ) {
-        if( oldAddr != null ) {
+        if ( oldAddr != null ) {
           boolean system = oldAddr.isSystemOwned( );
           LOG.info( EventRecord.here( AddressManager.class, Events.DISASSOCIATE, oldAddr.toString( ) ) );
           AddressCategory.unassign( oldAddr ).onSuccess( assignTarget ).dispatch( oldAddr.getCluster( ) );
-          if( system ) {
+          if ( system ) {
             LOG.info( EventRecord.here( AddressManager.class, Events.RELEASE, oldAddr.toString( ) ) );
             Addresses.release( oldAddr );
           }
@@ -184,14 +184,14 @@ public class AddressManager {
         }
       }
     };
-    if( address.isAssigned( ) ) {
+    if ( address.isAssigned( ) ) {
       address.unassign( ).getCallback( ).onSuccess( unassignBystander ).dispatch( oldAddr.getCluster( ) );
     } else {
       unassignBystander.apply( null );
     }
     return reply;
   }
-
+  
   private Address findVmExistingAddress( final VmInstance vm ) {
     Address oldAddr = null;
     if ( vm.hasPublicAddress( ) ) {
@@ -225,8 +225,16 @@ public class AddressManager {
     Addresses.updateAddressingMode( );
     Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );
     reply.set_return( true );
-    LOG.info( EventRecord.here( AddressManager.class, Events.DISASSOCIATE, address.toString( ) ) );
-    AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+    if( address.isSystemOwned( ) && !request.isAdministrator( ) ) {
+      throw new EucalyptusCloudException( "Only administrators can unassign system owned addresses: " + address.toString( ) );
+    } else {
+      try {
+        AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+        LOG.info( EventRecord.here( AddressManager.class, Events.DISASSOCIATE, address.toString( ) ) );
+      } catch ( Throwable e ) {
+        LOG.debug( e, e );
+      }
+    }
     return reply;
   }
   
