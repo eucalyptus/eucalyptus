@@ -108,6 +108,7 @@ usage () {
 	echo "   -d <dir>                         point EUCALYPTUS to <dir>"
 	echo "   --no-rsync                       don't use rsync"
 	echo "   --no-scp                         don't use scp"
+	echo "   --skip-scp-hostcheck             skip scp interactive host keycheck"
 	echo "   --get-credentials <zipfile>      download credentials to <zipfile>"
 	echo "   --register-nodes \"host host ...\" add new nodes to EUCALYPTUS"
 	echo "   --deregister-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
@@ -408,6 +409,11 @@ while [ $# -gt 0 ]; do
 	fi
 	if [ "$1" = "-noscp" -o "$1" = "--no-scp" ]; then 
 	    SCP=""
+	    shift
+	    continue
+	fi
+	if [ "$1" = "--skip-scp-hostcheck" ]; then 
+	    SCP_OPT="-oStrictHostKeyChecking=no"
 	    shift
 	    continue
 	fi
