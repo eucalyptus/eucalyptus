@@ -92,6 +92,7 @@ import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
 import edu.ucsb.eucalyptus.msgs.RegisterStorageControllerType;
 import edu.ucsb.eucalyptus.msgs.RegisterWalrusType;
+import edu.ucsb.eucalyptus.msgs.RegisterVMwareBrokerType;
 
 public class Configuration {
   static Logger         LOG                 = Logger.getLogger( Configuration.class );
@@ -106,7 +107,6 @@ public class Configuration {
   public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
     reply.set_return( true );
-    boolean isGood;
     try {
       if( !NetworkUtil.testGoodAddress( request.getHost( ) ) ) {
         throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );        
@@ -130,6 +130,8 @@ public class Configuration {
       throw new EucalyptusCloudException( "You do not have a local storage controller enabled (or it is not installed)." );
     } else if ( request instanceof RegisterWalrusType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.walrus.isLocal( ) ) { 
       throw new EucalyptusCloudException( "You do not have a local walrus enabled (or it is not installed)." );
+    } else if ( request instanceof RegisterVMwareBrokerType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.vmwarebroker.isLocal( ) ) { 
+        throw new EucalyptusCloudException( "You do not have a local vmware broker enabled (or it is not installed)." );    
     } else if ( request instanceof RegisterStorageControllerType ) {
       try {
         Configuration.getClusterConfiguration( request.getName( ) );
@@ -160,6 +162,8 @@ public class Configuration {
     if ( Component.walrus.equals( newComponent.getComponent( ) ) && NetworkUtil.testLocal( newComponent.getHostName( ) ) ) {
       e = StartComponentEvent.getLocal( newComponent );
     } else if ( Component.storage.equals( newComponent.getComponent( ) ) && ( NetworkUtil.testLocal( newComponent.getHostName( ) ) ) ) {
+        e = StartComponentEvent.getLocal( newComponent );
+    } else if ( Component.vmwarebroker.equals( newComponent.getComponent( ) ) && ( NetworkUtil.testLocal( newComponent.getHostName( ) ) ) ) {
       e = StartComponentEvent.getLocal( newComponent );
     } else {
       e = StartComponentEvent.getRemote( newComponent );
@@ -215,6 +219,8 @@ public class Configuration {
       e = StopComponentEvent.getLocal( componentConfig );
     } else if ( Component.storage.equals( componentConfig.getComponent( ) ) && NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) {
       e = StopComponentEvent.getLocal( componentConfig );
+    } else if ( Component.vmwarebroker.equals( componentConfig.getComponent( ) ) && NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) {
+        e = StopComponentEvent.getLocal( componentConfig );
     } else {
       e = StopComponentEvent.getRemote( componentConfig );
     }

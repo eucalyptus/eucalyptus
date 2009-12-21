@@ -80,7 +80,7 @@ public enum Component {
   db( "jdbc:hsqldb:hsqls://127.0.0.1:9001/eucalyptus" ),
   cluster( "vm://ClusterSink" ),
   jetty( "vm://HttpServer" ),
-  vmwarebroker("vm://VMwareControl"),
+  vmwarebroker("vm://VMwareBrokerInternal"),
   any( true );
   private static Logger      LOG         = Logger.getLogger( Component.class );
   private boolean            local       = false;

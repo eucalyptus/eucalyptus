@@ -31,6 +31,7 @@ public class ConfigurationUtil {
       put( "Cluste", ClusterConfiguration.class );
       put( "Storag", StorageControllerConfiguration.class );
       put( "Walrus", WalrusConfiguration.class );
+      put( "VMware", VMwareBrokerConfiguration.class);
     }
   };
 

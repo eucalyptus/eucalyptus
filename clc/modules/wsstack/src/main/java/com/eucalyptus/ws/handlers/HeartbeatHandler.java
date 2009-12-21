@@ -142,7 +142,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     Component.db.setHostAddress( addr.getHostName( ) );
     Component.db.markEnabled( );
     try {
-      GroovyUtil.evaluateScript( "after_database.groovy" );
+       if(Component.eucalyptus.isLocal())
+         GroovyUtil.evaluateScript( "after_database.groovy" );
     } catch ( FailScriptFailException e1 ) {
       LOG.debug( e1, e1 );
       System.exit( 123 );
@@ -167,6 +168,9 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
     if( !initializedComponents.contains( Component.walrus.name( ) ) ) {
       Component.walrus.markDisabled( );
+    }
+    if( !initializedComponents.contains( Component.vmwarebroker.name( ) ) ) {
+        Component.vmwarebroker.markDisabled( );
     }
     System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
     System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );

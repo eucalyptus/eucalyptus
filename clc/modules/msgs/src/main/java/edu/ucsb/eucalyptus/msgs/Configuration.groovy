@@ -139,6 +139,12 @@ public class DeregisterWalrusResponseType extends DeregisterComponentResponseTyp
 public class DescribeWalrusesType extends DescribeComponentsType {}
 public class DescribeWalrusesResponseType extends DescribeComponentsResponseType {}
 
+public class RegisterVMwareBrokerType extends RegisterComponentType {}
+public class RegisterVMwareBrokerResponseType extends RegisterComponentResponseType {}
+public class DeregisterVMwareBrokerType extends DeregisterComponentType {}
+public class DeregisterVMwareBrokerResponseType extends DeregisterComponentResponseType {}
+public class DescribeVMwareBrokersType extends DescribeComponentsType {}
+public class DescribeVMwareBrokersResponseType extends DescribeComponentsResponseType {}
 
 
 
