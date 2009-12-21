@@ -86,6 +86,7 @@ int InitWSSEC(axutil_env_t *env, axis2_stub_t *stub, char *policyFile);
     logprintfl(EUCADEBUG, "OP TIME (%s): %f\n", #a, b - a);   \
   }
 
+#define SP(a) a ? a : "UNSET"
 
 enum {EUCADEBUG2, EUCADEBUG, EUCAINFO, EUCAWARN, EUCAERROR, EUCAFATAL};
 

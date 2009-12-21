@@ -887,6 +887,13 @@ int daemonrun(char *incmd, char *pidfile) {
   if (!pid) {
     char *tok=NULL, *ptr=NULL;
     int idx, rc;
+    struct sigaction newsigact;
+
+    newsigact.sa_handler = SIG_DFL;
+    newsigact.sa_flags = 0;
+    sigemptyset(&newsigact.sa_mask);
+    sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
+    sigaction(SIGTERM, &newsigact, NULL);
     
     rc = daemon(0,0);
     // become parent of session
