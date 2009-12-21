@@ -141,7 +141,7 @@ import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 
-@NeedsDeferredInitialization
+@NeedsDeferredInitialization(component = Component.walrus)
 public class WalrusControl {
 
 	private static Logger LOG = Logger.getLogger( WalrusControl.class );
