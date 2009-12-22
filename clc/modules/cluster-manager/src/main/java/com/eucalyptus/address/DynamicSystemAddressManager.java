@@ -34,7 +34,6 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
     if ( count != 0 ) {
       for( Address addr : addressList ) {
         addr.release( );
-        addr.clearPending( );
       }
       throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
     } 
@@ -45,13 +44,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
     Address addr = this.allocateNext( Component.eucalyptus.name( ) );
     AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
   }
-  
-//  @Override
-//  public void assignSystemAddress( VmInstance vm ) throws NotEnoughResourcesAvailable {
-//    Address addr = this.allocateNext( Component.eucalyptus.name( ) );
-//    Addresses.assign( addr, vm );
-//  }
-  
+    
   @Override
   public List<Address> getReservedAddresses( ) {
     return Lists.newArrayList( Iterables.filter( Addresses.getInstance( ).listValues( ), new Predicate<Address>( ) {
