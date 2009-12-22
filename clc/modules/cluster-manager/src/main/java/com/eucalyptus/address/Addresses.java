@@ -102,7 +102,7 @@ public class Addresses extends AbstractNamedRegistry<Address> {
   
   private static AbstractSystemAddressManager systemAddressManager; //TODO: set a default value here.
                                                                     
-  static AbstractSystemAddressManager getAddressManager( ) {
+  public static AbstractSystemAddressManager getAddressManager( ) {
     synchronized ( Addresses.class ) {
       if ( systemAddressManager == null ) {
         systemAddressManager = getProvider( );
@@ -110,11 +110,7 @@ public class Addresses extends AbstractNamedRegistry<Address> {
     }
     return systemAddressManager;
   }
-  
-  public static void update( Cluster cluster, List<ClusterAddressInfo> ccList ) {
-    getAddressManager( ).update( cluster, ccList );
-  }
-  
+    
   @SuppressWarnings( { "unchecked" } )
   private static Map<String, Class> managerMap = new HashMap<String, Class>( ) {
                                                  { //TODO: this is primitive and temporary.

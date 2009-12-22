@@ -172,10 +172,10 @@ public class Address implements HasName {
   }
   public Address( String address, String cluster ) {
     this( address );
-    this.cluster = cluster;
     this.userId = UNALLOCATED_USERID;
     this.instanceId = UNASSIGNED_INSTANCEID;
     this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+    this.cluster = cluster;
     this.init( );
   }
   

@@ -113,6 +113,7 @@ public abstract class AbstractSystemAddressManager {
         for( Address addr : addrList ) {
           try {
             Addresses.getInstance( ).lookup( addr.getName( ) );
+            addr.init( );
           } catch ( Exception e ) {
             addr.init( );
           }

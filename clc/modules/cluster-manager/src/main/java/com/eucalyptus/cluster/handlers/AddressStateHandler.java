@@ -64,7 +64,7 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
 
       if ( reply.get_return( ) ) {
         List<ClusterAddressInfo> addrInfo = ClusterAddressInfo.fromLists( reply.getAddresses( ), reply.getMapping( ) );
-        Addresses.update( this.getCluster( ), addrInfo );
+        Addresses.getAddressManager( ).update( this.getCluster( ), addrInfo );
       } else {
         LOG.warn( "Response from cluster [" + this.getCluster( ).getName( ) + "]: " + reply.getStatusMessage( ) );
       }
