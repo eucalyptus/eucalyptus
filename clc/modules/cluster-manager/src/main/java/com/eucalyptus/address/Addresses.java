@@ -239,10 +239,14 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
           SuccessCallback release = getReleaseCallback( addr );
           AddressCategory.unassign( addr ).onSuccess( release ).dispatch( addr.getCluster( ) );
         } else {
-          if( !addr.isSystemOwned( ) ) {
-            addr.release( );
-          } else {
-            Addresses.getAddressManager( ).releaseSystemAddress( addr );
+          try {
+            if( !addr.isSystemOwned( ) ) {
+              addr.release( );
+            } else {
+              Addresses.getAddressManager( ).releaseSystemAddress( addr );
+            }
+          } catch ( Throwable e ) {
+            LOG.debug( e, e );
           }
         }
       } catch ( IllegalStateException e ) {
@@ -257,10 +261,14 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
       return new SuccessCallback( ) {
         public void apply( Object response ) {
-          if( !addr.isSystemOwned( ) ) {
-            addr.release( );
-          } else {
-            Addresses.getAddressManager( ).releaseSystemAddress( addr );
+          try {
+            if( !addr.isSystemOwned( ) ) {
+              addr.release( );
+            } else {
+              Addresses.getAddressManager( ).releaseSystemAddress( addr );
+            }
+          } catch ( Throwable e ) {
+            LOG.debug( e, e );
           }
           Addresses.system( vm );
         }
