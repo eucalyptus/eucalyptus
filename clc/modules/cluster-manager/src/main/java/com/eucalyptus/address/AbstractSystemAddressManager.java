@@ -88,6 +88,7 @@ public abstract class AbstractSystemAddressManager {
       if( addrInfo.getInstanceIp( ) != null &&  !"".equals(addrInfo.getInstanceIp( ))) {
         try {
           VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( addrInfo.getInstanceIp( ) );
+          vm.getNetworkConfig( ).setIgnoredPublicIp( addrInfo.getAddress( ) );
           if( !addr.isAllocated( ) ) {
             try {
               addr.allocate( Component.eucalyptus.name( ) );
