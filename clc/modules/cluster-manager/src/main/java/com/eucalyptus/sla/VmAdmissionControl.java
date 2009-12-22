@@ -118,9 +118,17 @@ public class VmAdmissionControl {
         }
       } catch ( Throwable e ) {
         LOG.debug( e, e );
-        allocator.fail( vmAllocInfo, e );
+        try {
+          allocator.fail( vmAllocInfo, e );
+        } catch ( Throwable e1 ) {
+          LOG.debug( e1, e1 );
+        }
         for( ResourceAllocator rollback : Iterables.reverse( finished ) ) {
-          rollback.fail( vmAllocInfo, e );
+          try {
+            rollback.fail( vmAllocInfo, e );
+          } catch ( Throwable e1 ) {
+            LOG.debug( e1, e1 );
+          }
         }
         throw new EucalyptusCloudException( e.getMessage( ), e );
       }

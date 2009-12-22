@@ -359,8 +359,8 @@ public class Network implements HasName {
     if( index < 2 ) {
       this.availableNetworkIndexes.remove( index );
     } else {
-      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.allocated, "network=${this.name}","cluster=${cluster}","networkIndex=${index}") );
       if( !this.assignedNetworkIndexes.contains( index ) && this.availableNetworkIndexes.remove( index ) ) {
+        LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.allocated, "network=${this.name}","cluster=${cluster}","networkIndex=${index}") );
         this.assignedNetworkIndexes.add( index );
         NetworkToken token = this.getClusterToken( cluster );
         token.indexes.add( index );
@@ -372,6 +372,11 @@ public class Network implements HasName {
     NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan.get() ) );
     if( token == null ) token = this.clusterTokens.get( cluster );
     return token;
+  }
+  
+  public NetworkToken createNetworkToken( String cluster ) {
+    getClusterToken( cluster );
+    return new NetworkToken( cluster, this.userName, this.networkName, this.vlan.get() );
   }
   
   public void trim( Integer max ) {
