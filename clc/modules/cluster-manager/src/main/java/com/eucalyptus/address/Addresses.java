@@ -144,11 +144,11 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       if ( Addresses.systemAddressManager == null ) {
         Addresses.systemAddressManager = ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
       } else if ( !Addresses.systemAddressManager.getClass( ).equals( managerMap.get( provider ) ) ) {
-        LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
         AbstractSystemAddressManager oldMgr = Addresses.systemAddressManager;
         Addresses.systemAddressManager = ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
         Addresses.systemAddressManager.inheritReservedAddresses( oldMgr.getReservedAddresses( ) );
       }
+      LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }
