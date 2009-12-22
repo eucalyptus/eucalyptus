@@ -205,7 +205,12 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   @Override
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
     if(this.inFlightMessage.get( )) {
-      LOG.debug( e.getCause( ), e.getCause( ) );
+      if( e != null && e.getCause() != null ) {
+        LOG.debug( e.getCause( ), e.getCause( ) );
+      } else {
+        Exception ex = new RuntimeException("Exception even has a null-valued cause.");
+        LOG.error( ex, ex );
+      }
       this.clearPending( ctx.getChannel( ) );
     }
   }

@@ -130,6 +130,7 @@ public class SystemBootstrapper {
       DebugUtil.TRACE = doDebug;
     } catch( Throwable t ) {
       t.printStackTrace( );
+      System.exit(1);
     }
     try {
       LOG.info( LogUtil.header( "Initializing resource providers." ) );
@@ -141,6 +142,7 @@ public class SystemBootstrapper {
       return true;
     } catch ( Throwable e ) {
       LOG.fatal( e, e );
+      System.exit(1);
       return false;
     }
   }
@@ -171,15 +173,17 @@ public class SystemBootstrapper {
             try {
               LOG.info( "-> load: " + b.getClass( ) );
               boolean result = b.load( r );
-            } catch ( Exception e ) {
+            } catch ( Throwable e ) {
               LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
+              LOG.fatal( e, e );
               return false;
             }
           }
         }
       }
     } catch ( Throwable e ) {
-      LOG.info( e, e );
+      LOG.fatal( e, e );
+      System.exit(1);
     }
     return true;
   }
@@ -207,8 +211,8 @@ public class SystemBootstrapper {
         }
       }
     } catch ( Throwable e ) {
-      LOG.info( e, e );
-      System.exit( 123 );
+      LOG.fatal( e, e );
+      System.exit(1);
     }
     return true;
   }

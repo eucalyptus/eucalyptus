@@ -146,10 +146,10 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         }
       } else {
         e.getFuture( ).cancel( );
-        LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage:" + msge.getMessage( ).getClass( ) );
+        LOG.warn( "Non-specific type being written to the channel. Not dropping this message causes breakage:" + msge.getMessage( ).getClass( ) );
       }
       if( e.getFuture( ).isCancelled( ) ) {
-        LOG.debug( "Cancelling send on : " + LogUtil.dumpObject( e ) );
+        LOG.trace( "Cancelling send on : " + LogUtil.dumpObject( e ) );
       } 
     } else {
       ctx.sendDownstream( e );
@@ -191,7 +191,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           msg.setUserId( user.getUserName( ) );
           msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getUserName( ) );
         }
-        LOG.debug( EventRecord.here( Component.eucalyptus, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
+        LOG.trace( EventRecord.here( Component.eucalyptus, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
         ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
         if ( this.msgReceiver == null ) {
           Messaging.dispatch( "vm://RequestQueue", msg );
@@ -203,7 +203,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
       } else if( e instanceof IdleStateEvent ) {
-        LOG.debug( "Closing idle connection: " + e );
+        LOG.warn( "Closing idle connection: " + e );
         e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
         ctx.sendUpstream( e );
       }
@@ -220,7 +220,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ReplyQueue.removeReplyListener( origRequest.getCorrelationId( ) );
       }
     } catch ( Throwable e1 ) {
-      LOG.debug( "Failed to remove the channel context on connection close.", e1 );
+      LOG.warn( "Failed to remove the channel context on connection close.", e1 );
     }
     super.channelClosed( ctx, e );
   }

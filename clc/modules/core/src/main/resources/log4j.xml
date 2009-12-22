@@ -123,15 +123,15 @@
         <priority value="DEBUG"/>
         <appender-ref ref="logfile"/>
     </category>
-    <category name="com.eucalyptus.cluster.AbstractClusterMessageDispatcher" additivity="true">
-        <priority value="DEBUG"/>
-        <appender-ref ref="logfile"/>
-    </category>
     <!-- 
       ~ NOTE: The following suppress very verbose but potentially useful output.
       ~ Consider removing or changing these if you are having unexplained failures. 
       -->
     <!-- 
+    <category name="com.eucalyptus.cluster.AbstractClusterMessageDispatcher" additivity="true">
+        <priority value="DEBUG"/>
+        <appender-ref ref="logfile"/>
+    </category>
     <category name="edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback" additivity="false">
         <priority value="DEBUG"/>
         <appender-ref ref="logfile"/>

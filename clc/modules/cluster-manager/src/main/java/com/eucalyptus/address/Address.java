@@ -163,8 +163,6 @@ public class Address implements HasName {
   private volatile SplitTransition       transition;
   
   public Address( ) {
-    this.transition = QUIESCENT;
-    this.state = new AtomicMarkableReference<State>( State.unallocated, false );
   }
   public Address( final String name ) {
     this( );
@@ -176,6 +174,8 @@ public class Address implements HasName {
     this.instanceId = UNASSIGNED_INSTANCEID;
     this.instanceAddress = UNASSIGNED_INSTANCEADDR;
     this.cluster = cluster;
+    this.transition = QUIESCENT;
+    this.state = new AtomicMarkableReference<State>( State.unallocated, false );
     this.init( );
   }
   
@@ -185,10 +185,21 @@ public class Address implements HasName {
     this.userId = userId;
     this.instanceId = instanceId;
     this.instanceAddress = instanceAddress;
+    this.transition = QUIESCENT;
+    this.state = new AtomicMarkableReference<State>( State.unallocated, false );
     this.init( );
   }
   
   public void init( ) {//Should only EVER be called externally after loading from the db
+    this.state = new AtomicMarkableReference<State>( State.unallocated, false );
+    this.transition = QUIESCENT;
+    if( this.userId == null ) {
+      this.userId = UNALLOCATED_USERID;
+    }
+    if( this.instanceAddress == null || this.instanceId == null ) {
+      this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+      this.instanceId = UNASSIGNED_INSTANCEID;
+    }
     if ( UNALLOCATED_USERID.equals( this.userId ) ) {
       this.state.set( State.unallocated, true );
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
@@ -201,12 +212,15 @@ public class Address implements HasName {
       this.state.set( State.assigned, false );
     } else {
       this.state.set( State.allocated, true );
-      Addresses.getInstance( ).register( this );
       if ( this.isSystemOwned( ) ) {
-        this.release( );
-        this.clearPending( );
+        Addresses.getInstance( ).registerDisabled( this );
+        this.userId = UNALLOCATED_USERID;
+        this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+        this.instanceId = UNASSIGNED_INSTANCEID;
+        Address.removeAddress( this.name );
       } else {
-        this.state.set( State.allocated, false );
+        Addresses.getInstance( ).register( this );
+        this.state.set( State.allocated, false );        
       }
     }
     LOG.debug( "Initialized address: " + this.toString( ) );

@@ -34,7 +34,6 @@ public abstract class AbstractSystemAddressManager {
   }
 
   public abstract void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable;
-//  public abstract void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable;
   public abstract List<Address> getReservedAddresses();
   public abstract void inheritReservedAddresses( List<Address> previouslyReservedAddresses );
   public abstract List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable;
@@ -70,6 +69,8 @@ public abstract class AbstractSystemAddressManager {
               cluster.getState().handleOrphan( addrInfo );
             }
           }
+        } else if ( addrInfo.getInstanceIp( ) != null || !"".equals( addrInfo.getInstanceIp( ) ) ) {
+          
         }
       } catch ( Throwable e ) {
         LOG.debug( e, e );
@@ -80,17 +81,30 @@ public abstract class AbstractSystemAddressManager {
   protected static class Helper {
     protected static Address lookupOrCreate( Cluster cluster, ClusterAddressInfo addrInfo ) {
       try {
-        return Addresses.getInstance( ).lookupDisabled( addrInfo.getAddress( ) );
-      } catch ( NoSuchElementException e2 ) {}
-      try {
-        return Addresses.getInstance( ).lookup( addrInfo.getAddress( ) );
-      } catch ( NoSuchElementException e ) {}
-      try {
         if( addrInfo.getInstanceIp( ) != null &&  !"".equals(addrInfo.getInstanceIp( ))) {
           VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( addrInfo.getInstanceIp( ) );
-          return new Address( addrInfo.getAddress( ), cluster.getName( ), Component.eucalyptus.name( ), vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) );/*TODO: this can't be true... all owned by eucalyptus?*/
+          try {
+            Address addr = Addresses.getInstance( ).lookupDisabled( addrInfo.getAddress( ) );
+            addr.allocate( Component.eucalyptus.name( ) );
+            addr.assign( vm.getInstanceId( ), addrInfo.getInstanceIp( ) ).clearPending( );
+          } catch ( NoSuchElementException e2 ) {
+            try {
+              Address addr = Addresses.getInstance( ).lookup( addrInfo.getAddress( ) );
+              if( !addr.isAssigned( ) ) {
+                addr.assign( vm.getInstanceId( ), addrInfo.getInstanceIp( ) ).clearPending( );
+              }
+              return addr;
+            } catch ( NoSuchElementException e ) {
+              return new Address( addrInfo.getAddress( ), cluster.getName( ), Component.eucalyptus.name( ), vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) );/*TODO: this can't be true... all owned by eucalyptus?*/              
+            }
+          }
         } else {
-          return new Address( addrInfo.getAddress( ), cluster.getName( ) );
+          Address addr = new Address( addrInfo.getAddress( ), cluster.getName( ) );
+          try {
+            addr.init( );
+          } catch ( Throwable e ) {
+            LOG.debug( e, e );
+          }
         }
       } catch( NoSuchElementException e ) {
         new UnassignAddressCallback( addrInfo ).dispatch( cluster );//TODO: review this degenerate case.
@@ -105,7 +119,7 @@ public abstract class AbstractSystemAddressManager {
         clusterAddr.setCluster( cluster.getName( ) );
         List<Address> addrList = Lists.newArrayList( );
         try {
-          addrList = db.query( clusterAddr );
+           addrList = db.query( clusterAddr );
           db.commit( );
         } catch ( Exception e1 ) {
           db.rollback( );
@@ -114,7 +128,7 @@ public abstract class AbstractSystemAddressManager {
           try {
             Addresses.getInstance( ).lookup( addr.getName( ) );
             addr.init( );
-          } catch ( Exception e ) {
+          } catch ( Throwable e ) {
             addr.init( );
           }
         }
