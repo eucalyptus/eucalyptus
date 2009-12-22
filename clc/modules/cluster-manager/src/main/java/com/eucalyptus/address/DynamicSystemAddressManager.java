@@ -59,7 +59,9 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   @Override
   public void inheritReservedAddresses( List<Address> previouslyReservedAddresses ) {
     for ( final Address addr : previouslyReservedAddresses ) {
-      Addresses.release( addr );
+      if( !addr.isAssigned( ) ) {
+        Addresses.release( addr );
+      }
     }
   }
   @Override public void releaseSystemAddress( Address addr ) {
