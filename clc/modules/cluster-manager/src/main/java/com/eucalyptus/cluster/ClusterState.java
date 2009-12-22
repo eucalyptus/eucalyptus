@@ -179,7 +179,7 @@ public class ClusterState {
     ClusterState.trim( );
     try {
       Network network = getVlanAssignedNetwork( networkName );      
-      NetworkToken token = network.getClusterToken( clusterName );
+      NetworkToken token = network.createNetworkToken( clusterName );
       LOG.debug( EventRecord.here( ClusterState.class, EucalyptusProperties.TokenState.preallocate, token.toString( ) ) );
       return token;
     } catch ( NoSuchElementException e ) {
