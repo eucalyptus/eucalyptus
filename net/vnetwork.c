@@ -1071,6 +1071,9 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
     snprintf(rootwrap, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap", vnetconfig->eucahome);
     snprintf(buf, 512, "%s/var/run/eucalyptus/net/euca-dhcp.pid", vnetconfig->eucahome);
     rc = safekillfile(buf, vnetconfig->dhcpdaemon, 9, rootwrap);
+    if (rc) {
+      logprintfl(EUCAWARN, "vnetKickDHCP(): failed to kill previous dhcp daemon\n");
+    }
     usleep(250000);
   }
   
@@ -1104,8 +1107,8 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   snprintf (buf, 512, "%s/usr/lib/eucalyptus/euca_rootwrap %s -cf %s/euca-dhcp.conf -lf %s/euca-dhcp.leases -pf %s/euca-dhcp.pid -tf %s/euca-dhcp.trace %s", vnetconfig->eucahome, vnetconfig->dhcpdaemon, vnetconfig->path, vnetconfig->path, vnetconfig->path, vnetconfig->path, dstring);
   
   logprintfl(EUCAINFO, "vnetKickDHCP(): executing: %s\n", buf);
-  //rc = system(buf);
-  rc = daemonrun(buf, NULL);
+  // cannot use 'daemonrun()' here, dhcpd3 is too picky about FDs and signal handlers...
+  rc = system(buf);
   logprintfl(EUCAINFO, "vnetKickDHCP(): RC from cmd: %d\n", rc);
   
   return(rc);
