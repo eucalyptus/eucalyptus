@@ -34,7 +34,19 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
   }
   
   @Override
-  public void assignSystemAddress( VmInstance vm ) {}
+  public void assignSystemAddress( VmInstance vm ) throws NotEnoughResourcesAvailable {
+    Address addr = this.getNext( );
+    AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
+  }
+  
+  private Address getNext() throws NotEnoughResourcesAvailable {
+    for( Address a : Addresses.getInstance( ).listValues( ) ) {
+      if( a.isSystemOwned( ) && !a.isAssigned( ) ) {
+        return a.pendingAssignment( );
+      }
+    }
+    throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
+  }
   
   @Override
   public List<Address> getReservedAddresses( ) {
@@ -52,10 +64,9 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
     LOG.debug( "Allocating additional " + allocCount + " addresses in static public addresing mode" );
     allocCount = Addresses.getInstance( ).listDisabledValues( ).size( ) < allocCount ? Addresses.getInstance( ).listDisabledValues( ).size( ) : allocCount;
     if ( allocCount > 0 ) {
-      List<Address> addressList = Lists.newArrayList( );
       for ( int i = 0; i < allocCount; i++ ) {
         try {
-          Address addr = this.allocateNext( Component.eucalyptus.name( ) );
+          this.allocateNext( Component.eucalyptus.name( ) );
         } catch ( NotEnoughResourcesAvailable e ) {
           break;
         }
