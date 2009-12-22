@@ -74,6 +74,10 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.net.util.ClusterAddressInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
@@ -88,7 +92,7 @@ import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 @SuppressWarnings( "serial" )
-public class Addresses extends AbstractNamedRegistry<Address> {
+public class Addresses extends AbstractNamedRegistry<Address> implements EventListener {
   
   public static Logger     LOG       = Logger.getLogger( Addresses.class );
   private static Addresses singleton = Addresses.getInstance( );
@@ -96,6 +100,7 @@ public class Addresses extends AbstractNamedRegistry<Address> {
   public static Addresses getInstance( ) {
     synchronized ( Addresses.class ) {
       if ( singleton == null ) singleton = new Addresses( );
+      ListenerRegistry.getInstance( ).register( SystemConfigurationEvent.class, singleton );
     }
     return singleton;
   }
@@ -254,6 +259,14 @@ public class Addresses extends AbstractNamedRegistry<Address> {
           addr.release( );
         }
       };
+    }
+  }
+
+  @Override public void advertiseEvent( Event event ) {}
+
+  @Override public void fireEvent( Event event ) {
+    if( event instanceof SystemConfigurationEvent ) {
+      Addresses.getProvider( );
     }
   }
 }

@@ -83,6 +83,7 @@ import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.GenericEvent;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
@@ -537,7 +538,7 @@ public class EucalyptusManagement {
 			DNSProperties.update();
 		}
     try {
-      ListenerRegistry.getInstance( ).fireEvent( new GenericEvent<SystemConfiguration>( sysConf ) );
+      ListenerRegistry.getInstance( ).fireEvent( new SystemConfigurationEvent( sysConf ) );
     } catch ( EventVetoedException e ) {
       LOG.debug( e, e );
     }
