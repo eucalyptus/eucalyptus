@@ -62,5 +62,8 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
       Addresses.release( addr );
     }
   }
+  @Override public void releaseSystemAddress( Address addr ) {
+    addr.release( );
+  }
   
 }

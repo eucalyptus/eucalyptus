@@ -257,7 +257,7 @@ public class Address implements HasName {
     return this;
   }
   
-  public Address release( ) {//TODO: rename this to unallocating
+  public Address release( ) {
     this.transition( State.allocated, State.unallocated, false, true, new SplitTransition( Transition.unallocating ) {
       public void top( ) {
         Address.this.instanceId = UNASSIGNED_INSTANCEID;

@@ -36,5 +36,7 @@ public class NullSystemAddressManager extends AbstractSystemAddressManager {
       Addresses.release( addr );
     }
   }
+
+  @Override public void releaseSystemAddress( Address addr ) {}
   
 }

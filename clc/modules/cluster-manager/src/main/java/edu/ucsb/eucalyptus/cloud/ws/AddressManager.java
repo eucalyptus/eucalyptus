@@ -110,6 +110,7 @@ public class AddressManager {
     reply.setPublicIp( address.getName( ) );
     return reply;
   }
+  
   public ReleaseAddressResponseType ReleaseAddress( ReleaseAddressType request ) throws EucalyptusCloudException {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
@@ -120,6 +121,7 @@ public class AddressManager {
     reply.set_return( true );
     return reply;
   }
+
   public DescribeAddressesResponseType DescribeAddresses( DescribeAddressesType request ) throws EucalyptusCloudException {
     DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply( );
     Addresses.updateAddressingMode( );
@@ -137,6 +139,7 @@ public class AddressManager {
     }
     return reply;
   }
+
   @SuppressWarnings( "unchecked" ) public AssociateAddressResponseType AssociateAddress( AssociateAddressType request ) throws Exception {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
@@ -152,7 +155,7 @@ public class AddressManager {
       public void apply( Object t ) {
         if ( system ) {
           LOG.info( EventRecord.here( AddressManager.class, Events.RELEASE, oldAddr.toString( ) ) );
-          oldAddr.release( );
+          Addresses.getAddressManager( ).releaseSystemAddress( oldAddr );
         }
         LOG.info( EventRecord.here( AddressManager.class, Events.ASSOCIATE, address.toString( ), vm.toString( ) ) );
         AddressCategory.assign( address, vm ).dispatch( address.getCluster( ) );
@@ -218,7 +221,7 @@ public class AddressManager {
         if ( address.isSystemOwned( ) ) {
           AddressCategory.unassign( address ).onSuccess( new SuccessCallback( ) {
             public void apply( Object t ) {
-              address.release( );
+              Addresses.getAddressManager( ).releaseSystemAddress( address );
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
               } catch ( NoSuchElementException e ) {}

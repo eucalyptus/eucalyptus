@@ -252,14 +252,22 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
       return new SuccessCallback( ) {
         public void apply( Object response ) {
-          addr.release( );
+          if( !addr.isSystemOwned( ) ) {
+            addr.release( );
+          } else {
+            Addresses.getAddressManager( ).releaseSystemAddress( addr );
+          }
           Addresses.system( vm );
         }
       };
     } catch ( NoSuchElementException e ) {
       return new SuccessCallback( ) {
         public void apply( Object response ) {
-          addr.release( );
+          if( !addr.isSystemOwned( ) ) {
+            addr.release( );
+          } else {
+            Addresses.getAddressManager( ).releaseSystemAddress( addr );
+          }
         }
       };
     }

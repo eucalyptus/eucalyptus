@@ -35,6 +35,7 @@ public abstract class AbstractSystemAddressManager {
   }
 
   public abstract void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable;
+  public abstract void releaseSystemAddress( final Address addr );
   public abstract List<Address> getReservedAddresses();
   public abstract void inheritReservedAddresses( List<Address> previouslyReservedAddresses );
   public abstract List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable;
@@ -111,7 +112,7 @@ public abstract class AbstractSystemAddressManager {
               new UnassignAddressCallback( addrInfo ).onSuccess( new SuccessCallback() {
                 @Override public void apply( Object t ) {
                   if( isSystemOwned ) {
-                    a.release( );
+                    Addresses.getAddressManager( ).releaseSystemAddress( a );
                   }
                 }
               } ).dispatch( cluster );
