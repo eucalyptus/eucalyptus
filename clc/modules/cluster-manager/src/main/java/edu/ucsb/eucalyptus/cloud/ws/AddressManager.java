@@ -147,6 +147,7 @@ public class AddressManager {
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
     final boolean system = oldAddr != null ? oldAddr.isSystemOwned( ) : false;
+    reply.set_return( false );
     final SuccessCallback assignTarget = new SuccessCallback( ) {
       public void apply( Object t ) {
         if ( system ) {
