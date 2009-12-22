@@ -142,7 +142,6 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     Component.db.setHostAddress( addr.getHostName( ) );
     Component.db.markEnabled( );
     try {
-       if(Component.eucalyptus.isLocal())
          GroovyUtil.evaluateScript( "after_database.groovy" );
     } catch ( FailScriptFailException e1 ) {
       LOG.debug( e1, e1 );

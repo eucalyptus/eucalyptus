@@ -306,7 +306,7 @@ public class VMwareBrokerConfiguration extends ComponentConfiguration implements
     super( name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public Component getComponent() {
-    return Component.walrus;
+    return Component.vmwarebroker;
   }
 }
 

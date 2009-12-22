@@ -305,6 +305,19 @@ public class Configuration {
     }
   }
 
+  public static List<VMwareBrokerConfiguration> getVMwareBrokerConfigurations( ) throws EucalyptusCloudException {
+	EntityWrapper<VMwareBrokerConfiguration> db = Configuration.getEntityWrapper( );
+	try {
+	  List<VMwareBrokerConfiguration> componentList = db.query( new VMwareBrokerConfiguration( ) );
+	  db.commit( );
+	  return componentList;
+	} catch ( Exception e ) {
+	  db.rollback( );
+	  LOG.error( e, e );
+	  throw new EucalyptusCloudException( e );
+	}
+  }
+
   public static StorageControllerConfiguration getStorageControllerConfiguration( String scName ) throws EucalyptusCloudException {
     List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
     for ( StorageControllerConfiguration sc : scs ) {

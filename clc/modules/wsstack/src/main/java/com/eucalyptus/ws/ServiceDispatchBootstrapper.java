@@ -83,6 +83,7 @@ import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.config.VMwareBrokerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -168,6 +169,25 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
         System.setProperty( "euca.storage.name", sc.getName( ) );
         LOG.info(LogUtil.subheader( "Setting euca.storage.name="+sc.getName( ) + " for: " + LogUtil.dumpObject( sc ) ));
         registerLocalComponent( Component.storage );
+        hasLocal = false;
+      }
+    }
+    
+    List<VMwareBrokerConfiguration> vmwarebrokers = Configuration.getVMwareBrokerConfigurations( );
+    hasLocal = false;
+    for( VMwareBrokerConfiguration vmwarebroker : vmwarebrokers ) {
+      try {
+        if( NetworkUtil.testLocal( vmwarebroker.getHostName( ) )) { 
+          hasLocal = true;
+        } else {
+          registerComponent( Component.vmwarebroker, vmwarebroker );
+        }
+      } catch ( Exception e ) {
+        LOG.error( "Failed to create storage controller "+vmwarebroker.getName( )+" service proxy: " + e );
+      }
+      if( hasLocal ) {
+        Component.vmwarebroker.markLocal( );
+        registerLocalComponent( Component.vmwarebroker );
         hasLocal = false;
       }
     }
