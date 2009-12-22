@@ -1,5 +1,6 @@
 package com.eucalyptus.address;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
@@ -13,6 +14,10 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 public class StaticSystemAddressManager extends AbstractSystemAddressManager {
   private static Logger LOG = Logger.getLogger( StaticSystemAddressManager.class );
   
+  public StaticSystemAddressManager( ) {
+    this.inheritReservedAddresses( new ArrayList<Address>() );
+  }
+
   public List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
     List<Address> addressList = Lists.newArrayList( );
     for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
