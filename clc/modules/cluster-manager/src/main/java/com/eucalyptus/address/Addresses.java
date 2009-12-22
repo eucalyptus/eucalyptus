@@ -233,14 +233,17 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     try {
       addr.clearPending( );//clear the state here irregardless
     } catch ( IllegalStateException e1 ) {
-      LOG.debug( e1, e1 );
     } finally {
       try {
         if ( addr.isAssigned( ) ) {
           SuccessCallback release = getReleaseCallback( addr );
           AddressCategory.unassign( addr ).onSuccess( release ).dispatch( addr.getCluster( ) );
         } else {
-          addr.release();
+          if( !addr.isSystemOwned( ) ) {
+            addr.release( );
+          } else {
+            Addresses.getAddressManager( ).releaseSystemAddress( addr );
+          }
         }
       } catch ( IllegalStateException e ) {
         LOG.debug( e, e );
