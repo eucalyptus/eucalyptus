@@ -15,12 +15,11 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 
-public class StaticSystemAddressManager extends AbstractSystemAddressManager implements EventListener {
+public class StaticSystemAddressManager extends AbstractSystemAddressManager {
   private static Logger LOG = Logger.getLogger( StaticSystemAddressManager.class );
   
   public StaticSystemAddressManager( ) {
     this.inheritReservedAddresses( new ArrayList<Address>() );
-    ListenerRegistry.getInstance( ).register( SystemConfigurationEvent.class, this );
   }
 
   public List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
@@ -60,7 +59,6 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager imp
   
   @Override
   public List<Address> getReservedAddresses( ) {
-    ListenerRegistry.getInstance( ).deregister( SystemConfigurationEvent.class, this );
     return Lists.newArrayList( Iterables.filter( Addresses.getInstance( ).listValues( ), new Predicate<Address>() {
       @Override
       public boolean apply( Address arg0 ) {
@@ -71,8 +69,7 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager imp
   
   @Override
   public void inheritReservedAddresses( List<Address> reservedAddresses ) {
-    ListenerRegistry.getInstance( ).register( SystemConfigurationEvent.class, this );
-    int allocCount = Addresses.getSystemReservedAddressCount( ) - reservedAddresses.size( ) + 1;
+    int allocCount = Addresses.getSystemReservedAddressCount( ) - reservedAddresses.size( );
     LOG.debug( "Allocating additional " + allocCount + " addresses in static public addresing mode" );
     allocCount = Addresses.getInstance( ).listDisabledValues( ).size( ) < allocCount ? Addresses.getInstance( ).listDisabledValues( ).size( ) : allocCount;
     if ( allocCount > 0 ) {
@@ -94,13 +91,5 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager imp
   }
 
   @Override public void releaseSystemAddress( Address addr )  {}
-
-  @Override public void advertiseEvent( Event event ) {}
-
-  @Override public void fireEvent( Event event ) {
-    if( event instanceof SystemConfigurationEvent ) {
-      this.inheritReservedAddresses( this.getReservedAddresses( ) );
-    }
-  }
 
 }

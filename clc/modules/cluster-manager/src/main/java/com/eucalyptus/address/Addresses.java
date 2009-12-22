@@ -149,6 +149,8 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         Addresses.systemAddressManager = ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
         Addresses.systemAddressManager.inheritReservedAddresses( oldMgr.getReservedAddresses( ) );
         LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
+      } else {
+        Addresses.systemAddressManager.inheritReservedAddresses( Addresses.systemAddressManager.getReservedAddresses( ) );
       }
     } catch ( Throwable e ) {
       LOG.debug( e, e );
