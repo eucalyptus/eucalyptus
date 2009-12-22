@@ -233,6 +233,8 @@ public class Addresses extends AbstractNamedRegistry<Address> {
         if ( addr.isAssigned( ) ) {
           SuccessCallback release = getReleaseCallback( addr );
           AddressCategory.unassign( addr ).onSuccess( release ).dispatch( addr.getCluster( ) );
+        } else {
+          addr.release();
         }
       } catch ( IllegalStateException e ) {
         LOG.debug( e, e );
