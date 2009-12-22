@@ -247,7 +247,7 @@ do_start() {
 		fi
 	fi
 
-	if [ "${STORAGE_WS}${CLOUD_WS}${WALRUS_WS}" = "NNN" ]; then
+	if [ "${STORAGE_WS}${CLOUD_WS}${WALRUS_WS}${VMWAREBROKER_WS}" = "NNNN" ]; then
 		# nothing to start
 		NAME="none"
 		return 0
