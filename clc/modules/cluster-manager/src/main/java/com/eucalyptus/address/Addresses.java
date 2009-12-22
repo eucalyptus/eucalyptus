@@ -124,7 +124,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
                                                    put( "truetrue", DynamicSystemAddressManager.class );
                                                    put( "falsetrue", StaticSystemAddressManager.class );
                                                    put( "falsefalse", NullSystemAddressManager.class );
-                                                   put( "falsetrue", NullSystemAddressManager.class );
+                                                   put( "truefalse", NullSystemAddressManager.class );
                                                  }
                                                };
   
