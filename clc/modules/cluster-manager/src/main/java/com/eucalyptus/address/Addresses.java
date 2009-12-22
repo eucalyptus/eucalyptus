@@ -99,8 +99,10 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   
   public static Addresses getInstance( ) {
     synchronized ( Addresses.class ) {
-      if ( singleton == null ) singleton = new Addresses( );
-      ListenerRegistry.getInstance( ).register( SystemConfigurationEvent.class, singleton );
+      if ( singleton == null ) {
+        singleton = new Addresses( );
+        ListenerRegistry.getInstance( ).register( SystemConfigurationEvent.class, singleton );
+      }
     }
     return singleton;
   }
