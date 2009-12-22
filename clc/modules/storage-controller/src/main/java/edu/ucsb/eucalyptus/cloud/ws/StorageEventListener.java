@@ -84,7 +84,6 @@ public class StorageEventListener implements EventListener {
 
 	public static void register() {
 		ListenerRegistry.getInstance( ).register( Component.storage, new StorageEventListener() );
-		ListenerRegistry.getInstance( ).register( Component.walrus, new StorageEventListener() );
 	}
 
 	@Override
@@ -93,7 +92,11 @@ public class StorageEventListener implements EventListener {
 
 	@Override
 	public void fireEvent(Event event) {
-		if(event instanceof StopComponentEvent) {
+		if(event instanceof StartComponentEvent) {
+			StartComponentEvent startComponentEvent = (StartComponentEvent) event;
+			ComponentConfiguration config = startComponentEvent.getConfiguration();
+			StorageProperties.updateStorageHost(config.getHostName());
+		} else if(event instanceof StopComponentEvent) { 
 			StopComponentEvent stopComponentEvent = (StopComponentEvent) event;
 			ComponentConfiguration config = stopComponentEvent.getConfiguration();
 			StorageInfo storageInfo = new StorageInfo();

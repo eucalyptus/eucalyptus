@@ -104,7 +104,7 @@ public interface LogicalStorageManager {
 
     public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
 
-    public List<String> getVolume(String volumeId) throws EucalyptusCloudException;
+    public String getVolumeProperty(String volumeId) throws EucalyptusCloudException;
 
     public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
 

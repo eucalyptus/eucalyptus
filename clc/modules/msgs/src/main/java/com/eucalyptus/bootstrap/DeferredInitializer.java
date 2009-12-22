@@ -59,70 +59,58 @@
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman <neil@eucalyptus.com>
  */
+package com.eucalyptus.bootstrap;
 
-package edu.ucsb.eucalyptus.cloud.entities;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.List;
 
-import java.io.Serializable;
+import org.apache.log4j.Logger;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.GenericGenerator;
+import com.google.common.collect.Lists;
 
-import javax.persistence.*;
+public class DeferredInitializer {
+	private static Logger LOG = Logger.getLogger( DeferredInitializer.class );
+	private List<Class> klasses;
 
-@MappedSuperclass
-public class LVMMetaInfo implements Serializable {
-	@Id
-	@GeneratedValue(generator = "system-uuid")
-	@GenericGenerator(name="system-uuid", strategy = "uuid")
-	@Column( name = "id" )
-	String id;
+	private static DeferredInitializer singleton = DeferredInitializer.getInstance( );
 
-	@Column(name = "hostname")
-	protected String hostName;
-
-	public LVMMetaInfo() {
-		super();
+	public static DeferredInitializer getInstance( ) {
+		synchronized ( DeferredInitializer.class ) {
+			if ( singleton == null ) singleton = new DeferredInitializer( );
+		}
+		return singleton;
 	}
 
-	public LVMMetaInfo(String hostName) {
-		this.hostName = hostName;
+	private DeferredInitializer() {
+		klasses = Lists.newArrayList();
 	}
 
-	public String getHostName() {
-		return hostName;
+	public void add(Class klass) {
+		klasses.add(klass);
 	}
 
-	public void setHostName(String hostName) {
-		this.hostName = hostName;
+	public void run() {
+		for (Class klass : klasses) {
+			try {
+				Method initializer = klass.getMethod("deferredInitializer", null);
+				try {
+					initializer.invoke(null, null);
+				} catch (IllegalArgumentException e) {
+					LOG.error(e, e);
+				} catch (IllegalAccessException e) {
+					LOG.error(e, e);
+				} catch (InvocationTargetException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} catch (SecurityException e) {
+				LOG.error(e, e);
+			} catch (NoSuchMethodException e) {
+				LOG.error(e, e);
+			} 
+		}
 	}
-
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-		+ ((hostName == null) ? 0 : hostName.hashCode());
-		return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		LVMMetaInfo other = (LVMMetaInfo) obj;
-		if (hostName == null) {
-			if (other.hostName != null)
-				return false;
-		} else if (!hostName.equals(other.hostName))
-			return false;
-		return true;
-	} 
 }

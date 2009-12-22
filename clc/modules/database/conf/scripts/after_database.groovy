@@ -34,6 +34,3 @@ contexts.each {
     System.exit(1)
   }
 }
-WalrusControl.deferedInitializer( );
-WalrusManager.deferedInitializer( );
-BlockStorage.deferedInitializer( );

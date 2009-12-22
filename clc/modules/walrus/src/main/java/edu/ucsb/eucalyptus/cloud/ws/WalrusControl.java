@@ -68,6 +68,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -140,6 +141,7 @@ import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 
+@NeedsDeferredInitialization(component = Component.walrus)
 public class WalrusControl {
 
 	private static Logger LOG = Logger.getLogger( WalrusControl.class );
@@ -150,7 +152,7 @@ public class WalrusControl {
 	private static WalrusBlockStorageManager walrusBlockStorageManager;
 	private static WalrusImageManager walrusImageManager;
 
-	public static void deferedInitializer() {
+	public static void deferredInitializer() {
 		configure();
 		storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
 		walrusImageManager = new WalrusImageManager(storageManager, imageMessenger);
@@ -161,7 +163,7 @@ public class WalrusControl {
 			WalrusProperties.shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
 		}
 		try {
-			walrusManager.initialize();
+			walrusManager.check();
 		} catch(EucalyptusCloudException ex) {
 			LOG.error("Error initializing walrus", ex);
 			SystemUtil.shutdownWithError(ex.getMessage());

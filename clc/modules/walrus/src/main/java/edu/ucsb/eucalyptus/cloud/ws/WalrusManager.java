@@ -67,6 +67,8 @@ package edu.ucsb.eucalyptus.cloud.ws;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -86,6 +88,7 @@ import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -147,6 +150,7 @@ import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
 import edu.ucsb.eucalyptus.msgs.ListBucketResponseType;
 import edu.ucsb.eucalyptus.msgs.ListBucketType;
 import edu.ucsb.eucalyptus.msgs.ListEntry;
+import edu.ucsb.eucalyptus.msgs.LoggingEnabled;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
 import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.PostObjectType;
@@ -177,15 +181,16 @@ import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 
+@NeedsDeferredInitialization(component = Component.walrus)
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger( WalrusManager.class );
 
 	private StorageManager storageManager;
 	private WalrusImageManager walrusImageManager;
 	private static WalrusStatistics walrusStatistics = null;
-  public static void deferedInitializer() {
-    walrusStatistics = new WalrusStatistics();
-  }
+	public static void deferredInitializer() {
+		walrusStatistics = new WalrusStatistics();
+	}
 
 	public WalrusManager(StorageManager storageManager, WalrusImageManager walrusImageManager) {
 		this.storageManager = storageManager;
@@ -261,19 +266,25 @@ public class WalrusManager {
 		return reply;
 	}
 
+	public CreateBucketResponseType createBucket(CreateBucketType request) throws EucalyptusCloudException {
+		CreateBucketResponseType reply = (CreateBucketResponseType) request.getReply();
+		String userId = request.getUserId();
 
-	private void makeBucket(String userId, String bucketName, String locationConstraint, AccessControlListType accessControlList, boolean isAdministrator) throws EucalyptusCloudException {
+		String bucketName = request.getBucket();
+		String locationConstraint = request.getLocationConstraint();
+
 		if(userId == null) {
 			throw new AccessDeniedException("Bucket", bucketName);
 		}
 
+		AccessControlListType accessControlList = request.getAccessControlList();
 		if (accessControlList == null) {
 			accessControlList = new AccessControlListType();
 		}
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 
-		if(WalrusProperties.shouldEnforceUsageLimits && !isAdministrator) {
+		if(WalrusProperties.shouldEnforceUsageLimits && !request.isAdministrator()) {
 			BucketInfo searchBucket = new BucketInfo();
 			searchBucket.setOwnerId(userId);
 			List<BucketInfo> bucketList = db.query(searchBucket);
@@ -309,42 +320,30 @@ public class WalrusManager {
 			else
 				bucket.setLocation("US");
 			db.add(bucket);
+			//call the storage manager to save the bucket to disk
+			try {
+				storageManager.createBucket(bucketName);
+				if(WalrusProperties.trackUsageStatistics) 
+					walrusStatistics.incrementBucketCount();
+			} catch (IOException ex) {
+				LOG.error(ex);
+				db.rollback();
+				throw new EucalyptusCloudException("Unable to create bucket: " + bucketName);
+			}
 		}
 		db.commit();
-	}
-
-	public CreateBucketResponseType createBucket(CreateBucketType request) throws EucalyptusCloudException {
-		CreateBucketResponseType reply = (CreateBucketResponseType) request.getReply();
-		String userId = request.getUserId();
-
-		String bucketName = request.getBucket();
-		String locationConstraint = request.getLocationConstraint();
-
-		if(userId == null) {
-			throw new AccessDeniedException("Bucket", bucketName);
-		}
-
-		AccessControlListType accessControlList = request.getAccessControlList();
-		if (accessControlList == null) {
-			accessControlList = new AccessControlListType();
-		}
-
-		makeBucket(userId, bucketName, locationConstraint, accessControlList, request.isAdministrator());
-
-		//call the storage manager to save the bucket to disk
-		try {
-			storageManager.createBucket(bucketName);
-			if(WalrusProperties.trackUsageStatistics) 
-				walrusStatistics.incrementBucketCount();
-		} catch (IOException ex) {
-			LOG.error(ex);
-			throw new EucalyptusCloudException(bucketName);
-		}
 
 		if(WalrusProperties.enableVirtualHosting) {
 			UpdateARecordType updateARecord = new UpdateARecordType();
 			updateARecord.setUserId(userId);
-			String address = WalrusProperties.WALRUS_IP;
+			URI walrusUri;
+			String address = null;
+			try {
+				walrusUri = new URI(EucalyptusProperties.getWalrusUrl());
+				address = walrusUri.getHost();
+			} catch (URISyntaxException e) {
+				throw new EucalyptusCloudException("Could not get Walrus URL");
+			}
 			String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
 			updateARecord.setAddress(address);
 			updateARecord.setName(bucketName + "." + zone);
@@ -372,6 +371,7 @@ public class WalrusManager {
 
 		if(bucketList.size() > 0) {
 			BucketInfo bucketFound = bucketList.get(0);
+			BucketLogData logData = bucketFound.getLoggingEnabled() ? request.getLogData() : null;
 			if (bucketFound.canWrite(userId)) {
 				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 				ObjectInfo searchObject = new ObjectInfo();
@@ -418,18 +418,17 @@ public class WalrusManager {
 					status.setCode(204);
 					status.setDescription("No Content");
 					reply.setStatus(status);
-					BucketLogData logData = bucketFound.getLoggingEnabled() ? request.getLogData() : null;
 					if(logData != null) {
 						updateLogData(bucketFound, logData);
 						reply.setLogData(logData);
 					}
 				} else {
 					db.rollback();
-					throw new BucketNotEmptyException(bucketName);
+					throw new BucketNotEmptyException(bucketName, logData);
 				}
 			} else {
 				db.rollback();
-				throw new AccessDeniedException("Bucket", bucketName);
+				throw new AccessDeniedException("Bucket", bucketName, logData);
 			}
 		} else {
 			db.rollback();
@@ -452,18 +451,18 @@ public class WalrusManager {
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
 		AccessControlListType accessControlList = new AccessControlListType();
+		BucketLogData logData;
 
 		if (bucketList.size() > 0) {
 			//construct access control policy from grant infos
 			BucketInfo bucket = bucketList.get(0);
+			logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			List<GrantInfo> grantInfos = bucket.getGrants();
 			if (bucket.canReadACP(userId)) {
-				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 				if(logData != null) {
 					updateLogData(bucket, logData);
 					reply.setLogData(logData);
-				}
-				
+				}				
 				ownerId = bucket.getOwnerId();
 				ArrayList<Grant> grants = new ArrayList<Grant>();
 				bucket.readPermissions(grants);
@@ -478,7 +477,7 @@ public class WalrusManager {
 						}
 					} catch ( NoSuchUserException e ) {
 						db.rollback( );
-						throw new AccessDeniedException("Bucket", bucketName);
+						throw new AccessDeniedException("Bucket", bucketName, logData);
 					}
 				}
 				accessControlList.setGrants(grants);
@@ -495,7 +494,7 @@ public class WalrusManager {
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch ( NoSuchUserException e ) {
 			db.rollback( );
-			throw new AccessDeniedException("Bucket", bucketName);
+			throw new AccessDeniedException("Bucket", bucketName, logData);
 		}
 		reply.setAccessControlPolicy(accessControlPolicy);
 		db.commit();
@@ -582,8 +581,8 @@ public class WalrusManager {
 
 		if(bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			if (bucket.canWrite(userId)) {
-				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 				if(logData != null)
 					reply.setLogData(logData);
 
@@ -598,7 +597,7 @@ public class WalrusManager {
 						if (!objectInfo.canWrite(userId)) {
 							db.rollback();
 							messenger.removeQueue(key, randomKey);
-							throw new AccessDeniedException("Key", objectKey);
+							throw new AccessDeniedException("Key", objectKey, logData);
 						}
 						foundObject = objectInfo;
 						oldBucketSize = -foundObject.getSize();
@@ -707,9 +706,12 @@ public class WalrusManager {
 									updateLogData(bucket, logData);
 								}
 								dbObject.commit();
+								if(logData != null) {
+									logData.setTurnAroundTime(Long.parseLong(new String(dataMessage.getPayload())));
+								}
 							} else {
 								dbObject.rollback();
-								throw new NoSuchEntityException("Could not find object: " + bucketName + "/" + objectKey);
+								throw new NoSuchEntityException("Could not find object: " + bucketName + "/" + objectKey, logData);
 							}
 							//restart all interrupted puts
 							WalrusMonitor monitor = messenger.getMonitor(key);
@@ -759,12 +761,12 @@ public class WalrusManager {
 				} catch (InterruptedException ex) {
 					LOG.error(ex, ex);
 					messenger.removeQueue(key, randomKey);
-					throw new EucalyptusCloudException();
+					throw new EucalyptusCloudException("Transfer interrupted: " + key + "." + randomKey);
 				}
 			} else {
 				db.rollback();
 				messenger.removeQueue(key, randomKey);
-				throw new AccessDeniedException("Bucket", bucketName);
+				throw new AccessDeniedException("Bucket", bucketName, logData);
 			}
 		}   else {
 			db.rollback();
@@ -807,7 +809,7 @@ public class WalrusManager {
 		reply.setErrorCode(putObjectResponse.getErrorCode());
 		reply.setStatusMessage(putObjectResponse.getStatusMessage());
 		reply.setLogData(putObjectResponse.getLogData());
-		
+
 		String successActionRedirect = request.getSuccessActionRedirect();
 		if(successActionRedirect != null) {
 			try {
@@ -862,6 +864,7 @@ public class WalrusManager {
 
 		if(bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			if (bucket.canWrite(userId)) {
 				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 				ObjectInfo searchObjectInfo = new ObjectInfo();
@@ -874,7 +877,7 @@ public class WalrusManager {
 						//key (object) exists. check perms
 						if (!objectInfo.canWrite(userId)) {
 							db.rollback();
-							throw new AccessDeniedException("Key", objectKey);
+							throw new AccessDeniedException("Key", objectKey, logData);
 						}
 						foundObject = objectInfo;
 						oldBucketSize = -foundObject.getSize();
@@ -924,7 +927,7 @@ public class WalrusManager {
 						long newSize = bucketSize + oldBucketSize + size;
 						if(newSize > WalrusProperties.MAX_BUCKET_SIZE) {
 							db.rollback();
-							throw new EntityTooLargeException("Key", objectKey);
+							throw new EntityTooLargeException("Key", objectKey, logData);
 						}
 						bucket.setBucketSize(newSize);
 					}
@@ -940,22 +943,20 @@ public class WalrusManager {
 					foundObject.setStorageClass("STANDARD");
 					lastModified = new Date();
 					foundObject.setLastModified(lastModified);
-					BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 					if(logData != null) {
 						updateLogData(bucket, logData);
 						logData.setObjectSize(size);
 						reply.setLogData(logData);
 					}					
-				} catch (/*TODO: NEIL, check if it is IOException*/Exception ex) {
+				} catch (Exception ex) {
 					LOG.error(ex);
 					db.rollback();
 					throw new EucalyptusCloudException(bucketName);
 				}
 			} else {
 				db.rollback();
-				throw new AccessDeniedException("Bucket", bucketName);
+				throw new AccessDeniedException("Bucket", bucketName, logData);
 			}
-
 		}   else {
 			db.rollback();
 			throw new NoSuchBucketException(bucketName);
@@ -975,8 +976,8 @@ public class WalrusManager {
 		String key = request.getKey();
 		String userId = request.getUserId();
 		String objectName = request.getObjectName();
-		
-		AccessControlListType accessControlList = new AccessControlListType();
+
+		AccessControlListType accessControlList = request.getAccessControlList();
 		if (accessControlList == null) {
 			accessControlList = new AccessControlListType();
 		}
@@ -1037,6 +1038,7 @@ public class WalrusManager {
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucketInfo = bucketList.get(0);
+			BucketLogData logData = bucketInfo.getLoggingEnabled() ? request.getLogData() : null;
 			ObjectInfo foundObject = null;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
@@ -1058,18 +1060,17 @@ public class WalrusManager {
 					objectDeleter.start();
 					reply.setCode("200");
 					reply.setDescription("OK");
-					BucketLogData logData = bucketInfo.getLoggingEnabled() ? request.getLogData() : null;
 					if(logData != null) {
 						updateLogData(bucketInfo, logData);
 						reply.setLogData(logData);
 					}					
 				} else {
 					db.rollback();
-					throw new AccessDeniedException("Key", objectKey);
+					throw new AccessDeniedException("Key", objectKey, logData);
 				}
 			} else {
 				db.rollback();
-				throw new NoSuchEntityException(objectKey);
+				throw new NoSuchEntityException(objectKey, logData);
 			}
 		} else {
 			db.rollback();
@@ -1127,8 +1128,8 @@ public class WalrusManager {
 
 		if(bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			if(bucket.canRead(userId)) {
-				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 				if(logData != null) {
 					updateLogData(bucket, logData);
 					reply.setLogData(logData);
@@ -1184,7 +1185,7 @@ public class WalrusManager {
 										if(!foundPrefix) {
 											prefixes.add(new PrefixEntry(prefixString));
 											if(maxKeys >= 0) {
-												if(howManyProcessed++ > maxKeys) {
+												if(howManyProcessed++ >= maxKeys) {
 													reply.setIsTruncated(true);
 													break;
 												}
@@ -1196,7 +1197,7 @@ public class WalrusManager {
 							}
 						}
 						if(maxKeys >= 0) {
-							if(howManyProcessed++ > maxKeys) {
+							if(howManyProcessed++ >= maxKeys) {
 								reply.setIsTruncated(true);
 								break;
 							}
@@ -1212,7 +1213,7 @@ public class WalrusManager {
 							listEntry.setOwner(new CanonicalUserType(userInfo.getQueryId(), displayName));
 						} catch ( NoSuchUserException e ) {
 							db.rollback( );
-							throw new AccessDeniedException("Bucket", bucketName);
+							throw new AccessDeniedException("Bucket", bucketName, logData);
 						}
 						ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 						objectInfo.returnMetaData(metaData);
@@ -1228,7 +1229,7 @@ public class WalrusManager {
 				}
 			} else {
 				db.rollback();
-				throw new AccessDeniedException("Bucket", bucketName);
+				throw new AccessDeniedException("Bucket", bucketName, logData);
 			}
 		} else {
 			db.rollback();
@@ -1250,10 +1251,12 @@ public class WalrusManager {
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
+		BucketLogData logData;
 
 		AccessControlListType accessControlList = new AccessControlListType();
 		if (bucketList.size() > 0) {
 			//construct access control policy from grant infos
+			logData = bucketList.get(0).getLoggingEnabled() ? request.getLogData() : null;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -1261,13 +1264,12 @@ public class WalrusManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(objectInfo.canReadACP(userId)) {
 					BucketInfo bucket = bucketList.get(0);
-					BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 					if(logData != null) {
 						updateLogData(bucket, logData);
 						logData.setObjectSize(objectInfo.getSize());
 						reply.setLogData(logData);
 					}
-					
+
 					ownerId = objectInfo.getOwnerId();
 					ArrayList<Grant> grants = new ArrayList<Grant>();
 					List<GrantInfo> grantInfos = objectInfo.getGrants();
@@ -1278,17 +1280,17 @@ public class WalrusManager {
 							objectInfo.readPermissions(grants);
 							addPermission(grants, userInfo, grantInfo);
 						} catch ( NoSuchUserException e ) {
-							throw new AccessDeniedException("Key", objectKey);              
+							throw new AccessDeniedException("Key", objectKey, logData);              
 						}
 					}
 					accessControlList.setGrants(grants);
 				} else {
 					db.rollback();
-					throw new AccessDeniedException("Key", objectKey);
+					throw new AccessDeniedException("Key", objectKey, logData);
 				}
 			} else {
 				db.rollback();
-				throw new NoSuchEntityException(objectKey);
+				throw new NoSuchEntityException(objectKey, logData);
 			}
 		}   else {
 			db.rollback();
@@ -1301,7 +1303,7 @@ public class WalrusManager {
 			accessControlPolicy.setOwner(new CanonicalUserType(ownerUserInfo.getQueryId(), ownerUserInfo.getUserName()));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch ( NoSuchUserException e ) {
-			throw new AccessDeniedException("Key", objectKey);
+			throw new AccessDeniedException("Key", objectKey, logData);
 		}
 		reply.setAccessControlPolicy(accessControlPolicy);
 		db.commit();
@@ -1324,6 +1326,7 @@ public class WalrusManager {
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			if (bucket.canWriteACP(userId)) {
 				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 				bucket.resetGlobalGrants();
@@ -1331,14 +1334,13 @@ public class WalrusManager {
 				bucket.setGrants(grantInfos);
 				reply.setCode("204");
 				reply.setDescription("OK");
-				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 				if(logData != null) {
 					updateLogData(bucket, logData);
 					reply.setLogData(logData);
 				}				
 			} else {
 				db.rollback();
-				throw new AccessDeniedException("Bucket", bucketName);
+				throw new AccessDeniedException("Bucket", bucketName, logData);
 			}
 		}   else {
 			db.rollback();
@@ -1365,6 +1367,7 @@ public class WalrusManager {
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			if (bucket.canWriteACP(userId)) {
 				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 				bucket.resetGlobalGrants();
@@ -1372,14 +1375,13 @@ public class WalrusManager {
 				bucket.setGrants(grantInfos);
 				reply.setCode("204");
 				reply.setDescription("OK");
-				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 				if(logData != null) {
 					updateLogData(bucket, logData);
 					reply.setLogData(logData);
 				}			
 			} else {
 				db.rollback();
-				throw new AccessDeniedException("Bucket", bucketName);
+				throw new AccessDeniedException("Bucket", bucketName, logData);
 			}
 		}   else {
 			db.rollback();
@@ -1403,6 +1405,8 @@ public class WalrusManager {
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
 		if (bucketList.size() > 0) {
+			BucketInfo bucket = bucketList.get(0);
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -1410,7 +1414,7 @@ public class WalrusManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if (!objectInfo.canWriteACP(userId)) {
 					db.rollback();
-					throw new AccessDeniedException("Key", objectKey);
+					throw new AccessDeniedException("Key", objectKey, logData);
 				}
 				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 				objectInfo.resetGlobalGrants();
@@ -1436,8 +1440,6 @@ public class WalrusManager {
 				}
 				reply.setCode("204");
 				reply.setDescription("OK");
-				BucketInfo bucket = bucketList.get(0);
-				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 				if(logData != null) {
 					updateLogData(bucket, logData);
 					logData.setObjectSize(objectInfo.getSize());
@@ -1445,7 +1447,7 @@ public class WalrusManager {
 				}				
 			} else {
 				db.rollback();
-				throw new NoSuchEntityException(objectKey);
+				throw new NoSuchEntityException(objectKey, logData);
 			}
 		}   else {
 			db.rollback();
@@ -1472,6 +1474,8 @@ public class WalrusManager {
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
 		if (bucketList.size() > 0) {
+			BucketInfo bucket = bucketList.get(0);
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -1479,7 +1483,7 @@ public class WalrusManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if (!objectInfo.canWriteACP(userId)) {
 					db.rollback();
-					throw new AccessDeniedException("Key", objectKey);
+					throw new AccessDeniedException("Key", objectKey, logData);
 				}
 				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 				objectInfo.resetGlobalGrants();
@@ -1503,8 +1507,6 @@ public class WalrusManager {
 				} else {
 					LOG.warn("Bittorrent support has been disabled. Please check pre-requisites");
 				}
-				BucketInfo bucket = bucketList.get(0);
-				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 				if(logData != null) {
 					updateLogData(bucket, logData);
 					logData.setObjectSize(objectInfo.getSize());
@@ -1514,7 +1516,7 @@ public class WalrusManager {
 				reply.setDescription("OK");
 			} else {
 				db.rollback();
-				throw new NoSuchEntityException(objectKey);
+				throw new NoSuchEntityException(objectKey, logData);
 			}
 		}   else {
 			db.rollback();
@@ -1546,6 +1548,8 @@ public class WalrusManager {
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
 		if (bucketList.size() > 0) {
+			BucketInfo bucket = bucketList.get(0);
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -1575,7 +1579,7 @@ public class WalrusManager {
 							} catch (EucalyptusCloudException ex) {
 								String torrentFile = objectName + ".torrent";
 								String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
-								TorrentCreator torrentCreator = new TorrentCreator(absoluteObjectPath, objectKey, objectName, torrentFilePath, WalrusProperties.TRACKER_URL);
+								TorrentCreator torrentCreator = new TorrentCreator(absoluteObjectPath, objectKey, objectName, torrentFilePath, WalrusProperties.getTrackerUrl());
 								try {
 									torrentCreator.create();
 								} catch(Exception e) {
@@ -1602,29 +1606,18 @@ public class WalrusManager {
 								Date lastModified = objectInfo.getLastModified();
 								db.commit();
 								long torrentLength = torrent.length();
-								storageManager.sendObject(request.getChannel(), httpResponse, bucketName, torrentFile, torrentLength, null, 
-										DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-										"application/x-bittorrent", "attachment; filename=" + objectKey + ".torrent;", request.getIsCompressed());
-								//TODO: this should reflect params for the torrent?
-								reply.setEtag("");
-								reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN));
-								reply.setSize(torrentLength);
-								Status status = new Status();
-								status.setCode(200);
-								status.setDescription("OK");
-								reply.setStatus(status);
-								reply.setContentType("binary/octet-stream");
-								if(WalrusProperties.trackUsageStatistics) {
-									walrusStatistics.updateBytesOut(torrentLength);
-								}
-								BucketInfo bucket = bucketList.get(0);
-								BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 								if(logData != null) {
 									updateLogData(bucket, logData);
 									logData.setObjectSize(torrentLength);
-									reply.setLogData(logData);
 								}								
-								return reply;
+								storageManager.sendObject(request.getChannel(), httpResponse, bucketName, torrentFile, torrentLength, null, 
+										DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
+										"application/x-bittorrent", "attachment; filename=" + objectKey + ".torrent;", request.getIsCompressed(),
+										logData);
+								if(WalrusProperties.trackUsageStatistics) {
+									walrusStatistics.updateBytesOut(torrentLength);
+								}
+								return null;
 							} else {
 								db.rollback();
 								String errorString = "Could not get torrent file " + torrentFilePath;
@@ -1633,7 +1626,7 @@ public class WalrusManager {
 							}
 						} else {
 							db.rollback();
-							throw new AccessDeniedException("Key", objectKey);
+							throw new AccessDeniedException("Key", objectKey, logData);
 						}
 					}
 					Date lastModified = objectInfo.getLastModified();
@@ -1642,6 +1635,10 @@ public class WalrusManager {
 					String contentType = objectInfo.getContentType();
 					String contentDisposition = objectInfo.getContentDisposition();
 					db.commit();
+					if(logData != null) {
+						updateLogData(bucket, logData);
+						logData.setObjectSize(size);
+					}								
 					if(request.getGetData()) {
 						if(request.getInlineData()) {
 							try {
@@ -1655,8 +1652,7 @@ public class WalrusManager {
 							} catch (IOException ex) {
 								db.rollback();
 								LOG.error(ex);
-								//set error code
-								return reply;
+								throw new EucalyptusCloudException("Unable to read object: " + bucketName + "/" + objectName);
 							}
 						} else {
 							//support for large objects
@@ -1665,12 +1661,14 @@ public class WalrusManager {
 							}
 							storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, size, etag, 
 									DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-									contentType, contentDisposition, request.getIsCompressed());                            
+									contentType, contentDisposition, request.getIsCompressed(), logData);  
+							return null;
 						}
 					} else {
 						storageManager.sendHeaders(request.getChannel(), httpResponse, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-								contentType, contentDisposition);                            
+								contentType, contentDisposition, logData);
+						return null;
 
 					}
 					reply.setEtag(etag);
@@ -1685,11 +1683,11 @@ public class WalrusManager {
 					return reply;
 				} else {
 					db.rollback();
-					throw new AccessDeniedException("Key", objectKey);
+					throw new AccessDeniedException("Key", objectKey, logData);
 				}
 			} else {
 				db.rollback();
-				throw new NoSuchEntityException(objectKey);
+				throw new NoSuchEntityException(objectKey, logData);
 			}
 		} else {
 			db.rollback();
@@ -1724,6 +1722,8 @@ public class WalrusManager {
 
 
 		if (bucketList.size() > 0) {
+			BucketInfo bucket = bucketList.get(0);
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -1778,32 +1778,24 @@ public class WalrusManager {
 					String contentType = objectInfo.getContentType();
 					String contentDisposition = objectInfo.getContentDisposition();
 					db.commit();
+					if(logData != null) {
+						updateLogData(bucket, logData);
+						logData.setObjectSize(size);
+					}										
 					if(request.getGetData()) {
 						if(WalrusProperties.trackUsageStatistics) {
 							walrusStatistics.updateBytesOut(size);
 						}
 						storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-								contentType, contentDisposition, request.getIsCompressed());                            
+								contentType, contentDisposition, request.getIsCompressed(), logData);  
+						return null;
 					} else {
 						storageManager.sendHeaders(request.getChannel(), httpResponse, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-								contentType, contentDisposition);                            
+								contentType, contentDisposition, logData);
+						return null;
 					}
-					reply.setEtag(etag);
-					reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
-					if(byteRangeEnd > -1) {
-						if(byteRangeEnd <= size && ((byteRangeEnd - byteRangeStart) > 0))
-							reply.setSize(byteRangeEnd - byteRangeStart);
-						else
-							reply.setSize(0L);
-					} else {
-						reply.setSize(size);
-					}
-					status.setCode(200);
-					status.setDescription("OK");
-					reply.setContentType("binary/octet-stream");                    
-					reply.setStatus(status);
 				} else {
 					db.rollback();
 					throw new AccessDeniedException("Key", objectKey);
@@ -1816,8 +1808,6 @@ public class WalrusManager {
 			db.rollback();
 			throw new NoSuchBucketException(bucketName);
 		}
-		db.commit();
-		return reply;
 	}
 
 	public GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request) throws EucalyptusCloudException {
@@ -1831,8 +1821,8 @@ public class WalrusManager {
 
 		if(bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			if(bucket.canRead(userId)) {
-				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 				if(logData != null) {
 					updateLogData(bucket, logData);
 					reply.setLogData(logData);
@@ -1844,7 +1834,7 @@ public class WalrusManager {
 				reply.setLocationConstraint(location);
 			} else {
 				db.rollback();
-				throw new AccessDeniedException("Bucket", bucketName);
+				throw new AccessDeniedException("Bucket", bucketName, logData);
 			}
 		} else {
 			db.rollback();
@@ -2004,14 +1994,6 @@ public class WalrusManager {
 	public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws EucalyptusCloudException {
 		SetBucketLoggingStatusResponseType reply = (SetBucketLoggingStatusResponseType) request.getReply();
 		String bucket = request.getBucket();
-		String targetBucket = request.getLoggingEnabled().getTargetBucket();
-		String targetPrefix = request.getLoggingEnabled().getTargetPrefix();
-		List<Grant> targetGrantsList = null;
-		TargetGrants targetGrants = request.getLoggingEnabled().getTargetGrants();
-		if(targetGrants != null)
-			targetGrantsList = targetGrants.getGrants();
-		if(targetPrefix == null)
-			targetPrefix = "";
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo, targetBucketInfo;
@@ -2021,21 +2003,34 @@ public class WalrusManager {
 			db.rollback();
 			throw new NoSuchBucketException(bucket);
 		} 
-		try {
-			targetBucketInfo = db.getUnique(new BucketInfo(targetBucket));
-		} catch(EucalyptusCloudException ex) {
-			db.rollback();
-			throw new NoSuchBucketException(bucket);
-		} 
-		if(!targetBucketInfo.hasLoggingPerms()) {
-			db.rollback();
-			throw new InvalidTargetBucketForLoggingException(targetBucket); 
-		}
-		bucketInfo.setTargetBucket(targetBucket);
-		bucketInfo.setTargetPrefix(targetPrefix);
-		bucketInfo.setLoggingEnabled(true);
-		if(targetGrantsList != null) {
-			targetBucketInfo.addGrants(targetGrantsList);
+
+		if(request.getLoggingEnabled() != null) {
+			String targetBucket = request.getLoggingEnabled().getTargetBucket();
+			String targetPrefix = request.getLoggingEnabled().getTargetPrefix();
+			List<Grant> targetGrantsList = null;
+			TargetGrants targetGrants = request.getLoggingEnabled().getTargetGrants();
+			if(targetGrants != null)
+				targetGrantsList = targetGrants.getGrants();
+			if(targetPrefix == null)
+				targetPrefix = "";
+			try {
+				targetBucketInfo = db.getUnique(new BucketInfo(targetBucket));
+			} catch(EucalyptusCloudException ex) {
+				db.rollback();
+				throw new NoSuchBucketException(targetBucket);
+			} 
+			if(!targetBucketInfo.hasLoggingPerms()) {
+				db.rollback();
+				throw new InvalidTargetBucketForLoggingException(targetBucket); 
+			}
+			bucketInfo.setTargetBucket(targetBucket);
+			bucketInfo.setTargetPrefix(targetPrefix);
+			bucketInfo.setLoggingEnabled(true);
+			if(targetGrantsList != null) {
+				targetBucketInfo.addGrants(targetGrantsList);
+			}
+		} else {
+			bucketInfo.setLoggingEnabled(false);
 		}
 		db.commit();		
 		return reply;
@@ -2072,12 +2067,14 @@ public class WalrusManager {
 					db.rollback();
 					throw new InvalidTargetBucketForLoggingException(targetBucket);
 				}
-				reply.getLoggingEnabled().setTargetBucket(bucketInfo.getTargetBucket());
-				reply.getLoggingEnabled().setTargetPrefix(bucketInfo.getTargetPrefix());
+				LoggingEnabled loggingEnabled = new LoggingEnabled();
+				loggingEnabled.setTargetBucket(bucketInfo.getTargetBucket());
+				loggingEnabled.setTargetPrefix(bucketInfo.getTargetPrefix());
 
 				TargetGrants targetGrants = new TargetGrants();
 				targetGrants.setGrants(grants);
-				reply.getLoggingEnabled().setTargetGrants(targetGrants);
+				loggingEnabled.setTargetGrants(targetGrants);
+				reply.setLoggingEnabled(loggingEnabled);
 			}
 		} catch(EucalyptusCloudException ex) {
 			db.rollback();
@@ -2086,7 +2083,7 @@ public class WalrusManager {
 		db.commit();		
 		return reply;
 	}
-	
+
 	private void updateLogData(BucketInfo bucket, BucketLogData logData) {
 		logData.setOwnerId(bucket.getOwnerId());
 		logData.setTargetBucket(bucket.getTargetBucket());

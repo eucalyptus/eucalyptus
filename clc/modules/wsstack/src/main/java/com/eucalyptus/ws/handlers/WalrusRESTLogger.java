@@ -60,6 +60,7 @@
  *******************************************************************************/
 package com.eucalyptus.ws.handlers;
 
+import java.net.InetSocketAddress;
 import java.util.Calendar;
 import java.util.UUID;
 
@@ -67,6 +68,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.User;
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -74,6 +76,7 @@ import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
+import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusResponseType;
 
@@ -86,7 +89,9 @@ public class WalrusRESTLogger extends MessageStackHandler {
 				WalrusRequestType request = (WalrusRequestType) httpRequest.getMessage();
 				BucketLogData logData = request.getLogData();
 				if(logData != null) {
-					logData.setTotalTime(System.currentTimeMillis());
+					long currentTime = System.currentTimeMillis();
+					logData.setTotalTime(currentTime);
+					logData.setTurnAroundTime(currentTime);
 					logData.setUri(httpRequest.getUri());
 					String referrer = httpRequest.getHeader(HttpHeaders.Names.REFERER);
 					if(referrer != null)
@@ -102,7 +107,10 @@ public class WalrusRESTLogger extends MessageStackHandler {
 						logData.setBucketName(request.getBucket());
 					if(request.getKey() != null) 
 						logData.setKey(request.getKey());
-					logData.setSourceAddress(ctx.getChannel().getRemoteAddress().toString());
+					if(ctx.getChannel().getRemoteAddress() instanceof InetSocketAddress) {
+						InetSocketAddress sockAddress = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
+						logData.setSourceAddress(sockAddress.getAddress().getHostAddress());
+					}
 				}
 			}			
 		}
@@ -116,13 +124,31 @@ public class WalrusRESTLogger extends MessageStackHandler {
 				WalrusResponseType response = (WalrusResponseType) httpResponse.getMessage();
 				BucketLogData logData = response.getLogData();
 				if(logData != null) {
-					logData.setBytesSent(httpResponse.getContent().readableBytes());
-					long startTime = logData.getTotalTime();
-					logData.setTotalTime(System.currentTimeMillis() - startTime);
-					WalrusBucketLogger.getInstance().addLogEntry(logData);					
+					computeStats(logData, httpResponse);
 					response.setLogData(null);
+				}
+			} else if(httpResponse.getMessage() instanceof WalrusErrorMessageType) {
+				WalrusErrorMessageType errorMessage = (WalrusErrorMessageType) httpResponse.getMessage();
+				BucketLogData logData = errorMessage.getLogData();
+				if(logData != null) {
+					computeStats(logData, httpResponse);
+					logData.setError(errorMessage.getCode());
+					errorMessage.setLogData(null);
 				}
 			}
 		}
+	}
+
+	private void computeStats(BucketLogData logData, MappingHttpResponse httpResponse) {
+		logData.setBytesSent(httpResponse.getContent().readableBytes());
+		long startTime = logData.getTotalTime();
+		long currentTime = System.currentTimeMillis();
+		logData.setTotalTime(currentTime - startTime);
+		long startTurnAroundTime = logData.getTurnAroundTime();
+		logData.setTurnAroundTime(Math.min((currentTime - startTurnAroundTime), logData.getTotalTime()));
+		HttpResponseStatus status = httpResponse.getStatus();
+		if(status != null)
+			logData.setStatus(Integer.toString(status.getCode()));
+		WalrusBucketLogger.getInstance().addLogEntry(logData);					
 	}
 }

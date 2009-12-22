@@ -77,6 +77,7 @@ public class WalrusException extends EucalyptusCloudException {
 	HttpResponseStatus errStatus;
 	String resourceType;
     String resource;
+    BucketLogData logData;
     
 	public WalrusException()
 	{
@@ -99,6 +100,12 @@ public class WalrusException extends EucalyptusCloudException {
 		this.resourceType = resourceType;
 		this.resource = resource;
 		this.errStatus = status;
+	}
+
+	public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status, BucketLogData logData)
+	{
+		this(code, message, resourceType, resource, status);
+		this.logData = logData;
 	}
 
 	public String getMessage() {
@@ -125,4 +132,12 @@ public class WalrusException extends EucalyptusCloudException {
 	{
 		super(message,ex);
 	}
+
+	public BucketLogData getLogData() {
+		return logData;
+	}
+
+	public void setLogData(BucketLogData logData) {
+		this.logData = logData;
+	}	
 }

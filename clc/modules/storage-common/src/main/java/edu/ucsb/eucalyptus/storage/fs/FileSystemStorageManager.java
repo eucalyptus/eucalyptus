@@ -69,7 +69,10 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.ws.MappingHttpResponse;
+import com.eucalyptus.ws.util.ChannelUtil;
+import com.eucalyptus.ws.util.WalrusBucketLogger;
 
+import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.cloud.ws.CompressedChunkedFile;
 import edu.ucsb.eucalyptus.cloud.ws.ChunkedDataFile;
 import edu.ucsb.eucalyptus.storage.StorageManager;
@@ -106,20 +109,20 @@ public class FileSystemStorageManager implements StorageManager {
 
 	public void checkPreconditions() throws EucalyptusCloudException {
 		try {
-		String eucaHomeDir = System.getProperty("euca.home");
-		if(eucaHomeDir == null) {
-			throw new EucalyptusCloudException("euca.home not set");
-		}
-		eucaHome = eucaHomeDir;
-		if(!new File(eucaHome + EUCA_ROOT_WRAPPER).exists()) {
-			throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist");
-		}
-		String returnValue = getLvmVersion();
-		if(returnValue.length() == 0) {
-			throw new EucalyptusCloudException("Is lvm installed?");
-		} else {
-			LOG.info(returnValue);
-		}
+			String eucaHomeDir = System.getProperty("euca.home");
+			if(eucaHomeDir == null) {
+				throw new EucalyptusCloudException("euca.home not set");
+			}
+			eucaHome = eucaHomeDir;
+			if(!new File(eucaHome + EUCA_ROOT_WRAPPER).exists()) {
+				throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist");
+			}
+			String returnValue = getLvmVersion();
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Is lvm installed?");
+			} else {
+				LOG.info(returnValue);
+			}
 		} catch(ExecutionException ex) {
 			String error = "Unable to run command: " + ex.getMessage();
 			LOG.error(error);
@@ -263,7 +266,7 @@ public class FileSystemStorageManager implements StorageManager {
 		return -1;
 	}
 
-	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
+	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, final BucketLogData logData) {
 		try {
 			RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
@@ -280,14 +283,26 @@ public class FileSystemStorageManager implements StorageManager {
 				file = new ChunkedDataFile(raf, 0, size, 8192);
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 			}
+			if(logData != null) {
+				logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
+			}
 			channel.write(httpResponse);
-			channel.write(file);
+			if(logData != null) {
+				channel.write(file).addListener(new ChannelFutureListener( ) {
+					@Override public void operationComplete( ChannelFuture future ) throws Exception {
+						logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
+						WalrusBucketLogger.getInstance().addLogEntry(logData);					
+					}
+				});
+			} else {
+				channel.write(file);
+			}
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
 		}	
 	}
 
-	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed) {
+	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, final BucketLogData logData) {
 		try {
 			RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
@@ -305,15 +320,27 @@ public class FileSystemStorageManager implements StorageManager {
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf((end - start)));
 			}
 			httpResponse.addHeader("Content-Range", start + "-" + end + "/" + size);
+			if(logData != null) {
+				logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
+			}
 			channel.write(httpResponse);
-			channel.write(file);
+			if(logData != null) {
+				channel.write(file).addListener(new ChannelFutureListener( ) {
+					@Override public void operationComplete( ChannelFuture future ) throws Exception {
+						logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
+						WalrusBucketLogger.getInstance().addLogEntry(logData);					
+					}
+				});
+			} else {
+				channel.write(file);
+			}
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
 		}	
 	}
 
 	public void sendHeaders(Channel channel, DefaultHttpResponse httpResponse, Long size, String etag,
-			String lastModified, String contentType, String contentDisposition) {
+			String lastModified, String contentType, String contentDisposition, final BucketLogData logData) {
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
 		if(etag != null)
@@ -321,7 +348,17 @@ public class FileSystemStorageManager implements StorageManager {
 		httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
 		if(contentDisposition != null)
 			httpResponse.addHeader("Content-Disposition", contentDisposition);
-		channel.write(httpResponse);
+		if(logData != null) {
+			logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
+			channel.write(httpResponse).addListener(new ChannelFutureListener( ) {
+				@Override public void operationComplete( ChannelFuture future ) throws Exception {
+					logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
+					WalrusBucketLogger.getInstance().addLogEntry(logData);					
+				}
+			});
+		} else {
+			channel.write(httpResponse);
+		}
 	}
 
 	private String removeLoopback(String loDevName) throws ExecutionException {
@@ -402,7 +439,7 @@ public class FileSystemStorageManager implements StorageManager {
 
 		if(status != 0) {
 			throw new EucalyptusCloudException("Could not create loopback device for " + fileName +
-					". Please check the max loop value and permissions");
+			". Please check the max loop value and permissions");
 		}
 		return loDevName;
 	}

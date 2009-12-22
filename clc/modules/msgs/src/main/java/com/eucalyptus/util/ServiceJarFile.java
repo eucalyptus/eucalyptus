@@ -79,6 +79,8 @@ import java.util.jar.JarFile;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.DeferredInitializer;
+import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.event.EventListener;
 import com.google.common.collect.Lists;
@@ -114,11 +116,27 @@ public class ServiceJarFile extends JarFile {
         } catch ( Exception e ) {
           LOG.trace( e, e );
         }
+        try {
+	      this.addDeferredInitializers(j);
+		} catch (Exception e) {
+	      LOG.trace( e, e );
+		}
       }
     }
   }
 
-  @SuppressWarnings( "unchecked" )
+  @SuppressWarnings("unchecked")
+private void addDeferredInitializers(JarEntry j) throws Exception {
+	String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( ".class", "" );
+    Class candidate = this.classLoader.loadClass( classGuess );
+    if(candidate.getAnnotation(NeedsDeferredInitialization.class) != null) {
+       NeedsDeferredInitialization needsDeferredInit = (NeedsDeferredInitialization) candidate.getAnnotation(NeedsDeferredInitialization.class);
+       if(needsDeferredInit.component().isEnabled())
+         DeferredInitializer.getInstance().add(candidate);
+    }
+  }
+
+@SuppressWarnings( "unchecked" )
   public List<Bootstrapper> getBootstrappers( ) {
     List<Bootstrapper> ret = Lists.newArrayList( );
     for ( Class c : this.bootstrappers ) {
