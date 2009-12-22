@@ -122,7 +122,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   private static Map<String, Class> managerMap = new HashMap<String, Class>( ) {
                                                  { //TODO: this is primitive and temporary.
                                                    put( "truetrue", DynamicSystemAddressManager.class );
-                                                   put( "truefalse", StaticSystemAddressManager.class );
+                                                   put( "falsetrue", StaticSystemAddressManager.class );
                                                    put( "falsefalse", NullSystemAddressManager.class );
                                                    put( "falsetrue", NullSystemAddressManager.class );
                                                  }
