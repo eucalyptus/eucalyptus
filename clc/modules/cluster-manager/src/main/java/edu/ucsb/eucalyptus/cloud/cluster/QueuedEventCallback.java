@@ -90,6 +90,7 @@ import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 @SuppressWarnings( "unchecked" )
 public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FIXME: the generic here conflicts with a general use for queued event.
@@ -117,9 +118,11 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   }
   
   public void dispatch( String clusterName ) {
+    LOG.debug( EventRecord.caller(QueuedEventCallback.class,this.getRequest().getClass(),LogUtil.dumpObject( this.getRequest() )));
     dispatch( Clusters.getInstance( ).lookup( clusterName ) );
   }
   public void dispatch( Cluster cluster ) {
+    LOG.debug( EventRecord.caller(QueuedEventCallback.class,this.getRequest().getClass(),LogUtil.dumpObject( this.getRequest() )));
     cluster.getMessageQueue( ).enqueue( QueuedEvent.make( this, this.getRequest( ) ) );
   }
   

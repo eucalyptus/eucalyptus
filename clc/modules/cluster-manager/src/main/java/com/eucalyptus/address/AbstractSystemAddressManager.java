@@ -8,6 +8,7 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.net.util.ClusterAddressInfo;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.LogUtil;
@@ -53,10 +54,6 @@ public abstract class AbstractSystemAddressManager {
         } else if ( address.isAssigned( ) ) {
           try {
             VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( addrInfo.getInstanceIp( ) );
-            if ( !address.isAssigned( ) ) {
-              address.assign( vm.getInstanceId( ), addrInfo.getInstanceIp( ) );
-              address.clearPending( );
-            }
             cluster.getState( ).clearOrphan( addrInfo );
           } catch ( NoSuchElementException e ) {
             InetAddress addr = null;
@@ -69,8 +66,6 @@ public abstract class AbstractSystemAddressManager {
               cluster.getState().handleOrphan( addrInfo );
             }
           }
-        } else if ( addrInfo.getInstanceIp( ) != null || !"".equals( addrInfo.getInstanceIp( ) ) ) {
-          
         }
       } catch ( Throwable e ) {
         LOG.debug( e, e );
@@ -80,38 +75,69 @@ public abstract class AbstractSystemAddressManager {
   
   protected static class Helper {
     protected static Address lookupOrCreate( Cluster cluster, ClusterAddressInfo addrInfo ) {
+      Address addr = null;
       try {
-        if( addrInfo.getInstanceIp( ) != null &&  !"".equals(addrInfo.getInstanceIp( ))) {
+        addr = Addresses.getInstance( ).lookupDisabled( addrInfo.getAddress( ) );
+      } catch ( NoSuchElementException e1 ) {
+        try {
+          addr = Addresses.getInstance( ).lookup( addrInfo.getAddress( ) );
+        } catch ( NoSuchElementException e ) {
+          addr = new Address(addrInfo.getAddress( ), cluster.getName( ));
+        }
+      }
+      if( addrInfo.getInstanceIp( ) != null &&  !"".equals(addrInfo.getInstanceIp( ))) {
+        try {
           VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( addrInfo.getInstanceIp( ) );
-          try {
-            Address addr = Addresses.getInstance( ).lookupDisabled( addrInfo.getAddress( ) );
-            addr.allocate( Component.eucalyptus.name( ) );
-            addr.assign( vm.getInstanceId( ), addrInfo.getInstanceIp( ) ).clearPending( );
-          } catch ( NoSuchElementException e2 ) {
+          if( !addr.isAllocated( ) ) {
             try {
-              Address addr = Addresses.getInstance( ).lookup( addrInfo.getAddress( ) );
-              if( !addr.isAssigned( ) ) {
-                addr.assign( vm.getInstanceId( ), addrInfo.getInstanceIp( ) ).clearPending( );
-              }
-              return addr;
-            } catch ( NoSuchElementException e ) {
-              return new Address( addrInfo.getAddress( ), cluster.getName( ), Component.eucalyptus.name( ), vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) );/*TODO: this can't be true... all owned by eucalyptus?*/              
+              addr.allocate( Component.eucalyptus.name( ) );
+            } catch ( Throwable e1 ) {
+              LOG.debug( e1, e1 );
             }
           }
-        } else {
-          Address addr = new Address( addrInfo.getAddress( ), cluster.getName( ) );
-          try {
-            addr.init( );
-          } catch ( Throwable e ) {
-            LOG.debug( e, e );
+          if( !addr.isAssigned() && !addr.isPending() ) {
+            try {
+              addr.assign( vm.getInstanceId( ), addrInfo.getInstanceIp( ) ).clearPending( );
+            } catch ( Throwable e1 ) {
+              LOG.debug( e1, e1 );
+            }
+          }            
+        } catch ( NoSuchElementException e ) {
+          if( !addr.isPending( ) ) {
+            final boolean isSystemOwned = addr.isSystemOwned( );
+            final Address a = addr;
+            try {
+              AddressCategory.unassign( addr ).onSuccess( new SuccessCallback() {
+                @Override public void apply( Object t ) {
+                  if( isSystemOwned ) {
+                    a.release( );
+                  }
+                }
+              } ).dispatch( cluster );
+            } catch ( Throwable e1 ) {
+              LOG.debug( e1, e1 );
+            }
           }
         }
-      } catch( NoSuchElementException e ) {
-        new UnassignAddressCallback( addrInfo ).dispatch( cluster );//TODO: review this degenerate case.
-        Address address = new Address( addrInfo.getAddress( ), cluster.getName( ) );
-        return address;
+      } else {
+        if( !addr.isPending( ) ) {
+          try {
+            VmInstance vm = VmInstances.getInstance( ).lookupByPublicIp( addrInfo.getAddress( ) );
+            vm.getNetworkConfig( ).setIgnoredPublicIp( VmInstance.DEFAULT_IP );
+          } catch ( NoSuchElementException e ) {
+            if( addr.isAssigned( ) ) {
+              try {
+                addr.unassign( ).clearPending( );
+              } catch ( Throwable e1 ) {
+                LOG.debug( e1, e1 );
+              }
+            }
+          }        
+        }
       }
+      return addr;
     }
+
     protected static void loadStoredAddresses( Cluster cluster ) {
       try {
         EntityWrapper<Address> db = new EntityWrapper<Address>( );
