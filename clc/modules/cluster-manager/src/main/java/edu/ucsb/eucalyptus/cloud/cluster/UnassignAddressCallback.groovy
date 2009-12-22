@@ -82,7 +82,11 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   
   public UnassignAddressCallback( String addr, String vmIp ) {
     super.setRequest( new UnassignAddressType( addr, vmIp ) );
-    this.address = Addresses.getInstance( ).lookup( addr );
+    try {
+      this.address = Addresses.getInstance( ).lookup( addr );
+    } catch( Exception e ) {
+      this.address = Addresses.getInstance( ).lookupDisabled( addr );
+    }
   }
   public UnassignAddressCallback( String addr ) {
     this( addr, Addresses.getInstance( ).lookup( addr ).getInstanceAddress() )
