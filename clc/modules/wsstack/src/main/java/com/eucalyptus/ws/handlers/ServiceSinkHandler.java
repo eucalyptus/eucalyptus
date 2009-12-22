@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws.handlers;
 
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.log4j.Logger;
@@ -185,6 +186,9 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         this.requestLocal.set( ctx.getChannel( ), request );
         final EucalyptusMessage msg = ( EucalyptusMessage ) request.getMessage( );
         final String userAgent = request.getHeader( HttpHeaders.Names.USER_AGENT );
+        if( msg.getCorrelationId( ) == null ) {
+          msg.setCorrelationId( UUID.randomUUID().toString( ) );
+        }
         if ( ( userAgent != null ) && userAgent.matches( ".*EucalyptusAdminAccess" ) && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
           msg.setEffectiveUserId( msg.getUserId( ) );
         } else if ( ( user != null ) && ( this.msgReceiver == null ) ) {

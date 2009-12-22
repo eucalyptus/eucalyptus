@@ -263,6 +263,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       if ( HttpMethod.GET.equals( request.getMethod( ) ) ) {
         handleGet( ctx, request );
       } else if ( !initialized ) {
+        initialized = true;
         handleInitialize( ctx, request );
       } else if ( request.getMessage( ) instanceof HeartbeatType ) {
         handleHeartbeat( request );
