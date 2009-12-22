@@ -13,7 +13,7 @@ public class SubnetIndexAllocator implements ResourceAllocator {
   private static Logger LOG = Logger.getLogger( SubnetIndexAllocator.class );
   @Override
   public void allocate( VmAllocationInfo vmInfo ) throws Exception {
-    Network firstNet = vmInfo.getNetworks( ).first();
+    Network firstNet = Networks.getInstance().lookup(vmInfo.getNetworks( ).first().getName());
     vmInfo.allocationTokens.each { ResourceToken it ->
       it.amount.times{ i -> 
         Integer addrIndex = firstNet.allocateNetworkIndex( it.getCluster( ) );
@@ -25,7 +25,7 @@ public class SubnetIndexAllocator implements ResourceAllocator {
   
   @Override
   public void fail( VmAllocationInfo vmInfo, Throwable t ) {
-    Network firstNet = vmInfo.getNetworks().first();
+    Network firstNet = Networks.getInstance().lookup(vmInfo.getNetworks().first().getName());
     vmInfo.allocationTokens.each { ResourceToken it ->
       it.getPrimaryNetwork()?.getIndexes( ).each{ Integer i ->
         firstNet?.returnNetworkIndex( i );
