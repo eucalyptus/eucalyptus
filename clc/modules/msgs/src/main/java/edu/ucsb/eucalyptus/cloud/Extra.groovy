@@ -69,6 +69,7 @@ import edu.ucsb.eucalyptus.msgs.*
 import org.apache.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -430,6 +431,11 @@ public class Network implements HasName {
   }
 
   public boolean hasTokens() {
+    this.clusterTokens.values().each { NetworkToken it ->
+      if(it.getIndexes().isEmpty()) {
+        this.removeToken(it.getCluster());
+      }
+    }    
     return !this.clusterTokens.values( ).isEmpty( );
   }
 
