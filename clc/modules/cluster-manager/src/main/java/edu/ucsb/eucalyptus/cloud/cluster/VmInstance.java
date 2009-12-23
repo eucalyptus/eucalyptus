@@ -89,6 +89,7 @@ public class VmInstance implements HasName {
   private static Logger        LOG         = Logger.getLogger( VmInstance.class );
 
   public static String         DEFAULT_IP  = "0.0.0.0";
+  public static String         DEFAULT_TYPE  = "m1.small";
   private String               reservationId;
   private int                  launchIndex;
   private String               instanceId;
