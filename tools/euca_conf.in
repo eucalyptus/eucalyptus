@@ -1143,7 +1143,7 @@ if [ -n "$CLUSNAME" ]; then
 	fi
 	
         # sync the keys
-	if ! sync_keys "${SOURCEDIR},${DESTDIR}" ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass cloud-cert.pem; then
+	if ! sync_keys "${DESTDIR},${SOURCEDIR}" ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass cloud-cert.pem; then
 	    echo "ERROR: failed to sync keys with ${NEWCLUS}; registration will not be complete until keys can be synced, please try again."
 	    exit 1
 	fi
