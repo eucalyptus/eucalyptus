@@ -70,16 +70,12 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
-import sun.misc.VM;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.cluster.Callback;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.ClusterMessageQueue;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.cluster.UnconditionalCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.network.NetworkGroupUtil;
@@ -122,7 +118,7 @@ public class SystemState {
   
   private static Logger       LOG                 = Logger.getLogger( SystemState.class );
   public static final int     BURY_TIME           = 60 * 60 * 1000;
-  private static final int    SHUT_DOWN_TIME      = 2 * 60 * 1000;
+  private static final int    SHUT_DOWN_TIME      = 10 * 60 * 1000;
   private static final String RULE_FILE           = "/rules/describe/instances.drl";
   private static final String INSTANCE_EXPIRED    = "Instance no longer reported as existing.";
   private static final String INSTANCE_TERMINATED = "User requested shutdown.";
