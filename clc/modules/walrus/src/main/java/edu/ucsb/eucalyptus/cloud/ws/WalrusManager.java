@@ -70,6 +70,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1639,19 +1640,23 @@ public class WalrusManager {
 					}								
 					if(request.getGetData()) {
 						if(request.getInlineData()) {
+							byte[] bytes = new byte[102400];
+							int bytesRead = 0, offset = 0;
+							String base64Data = "";
 							try {
-								byte[] bytes = new byte[102400/*TODO: NEIL WalrusQueryDispatcher.DATA_MESSAGE_SIZE*/];
-								int bytesRead = 0;
-								String base64Data = "";
-								while((bytesRead = storageManager.readObject(bucketName, objectName, bytes, bytesRead)) > 0) {
+								FileIO fileIO = storageManager.prepareForRead(bucketName, objectName);
+								while((bytesRead = fileIO.read(offset)) > 0) {
+									ByteBuffer buffer = fileIO.getBuffer();
+									buffer.get(bytes, 0, bytesRead);
 									base64Data += new String(bytes, 0, bytesRead);
+									offset += bytesRead;
 								}
-								reply.setBase64Data(base64Data);
-							} catch (IOException ex) {
-								db.rollback();
-								LOG.error(ex);
-								throw new EucalyptusCloudException("Unable to read object: " + bucketName + "/" + objectName);
+								fileIO.finish();
+							} catch (Exception e) {
+								LOG.error(e, e);
+								throw new EucalyptusCloudException(e);
 							}
+							reply.setBase64Data(Hashes.base64encode(base64Data));
 						} else {
 							//support for large objects
 							if(WalrusProperties.trackUsageStatistics) {
