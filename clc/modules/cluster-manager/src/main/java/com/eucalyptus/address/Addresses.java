@@ -270,7 +270,9 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
           } catch ( Throwable e ) {
             LOG.debug( e, e );
           }
-          Addresses.system( vm );
+          if( VmState.PENDING.equals( vm.getState() ) || VmState.RUNNING.equals( vm.getState() ) ) {
+            Addresses.system( vm );
+          }
         }
       };
     } catch ( NoSuchElementException e ) {
