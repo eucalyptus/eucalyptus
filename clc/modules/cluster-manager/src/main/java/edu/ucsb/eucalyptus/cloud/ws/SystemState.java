@@ -74,11 +74,13 @@ import sun.misc.VM;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.cluster.Callback;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterMessageQueue;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.SuccessCallback;
+import com.eucalyptus.cluster.UnconditionalCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -185,45 +187,52 @@ public class SystemState {
   }
   
   private static void cleanUp( final VmInstance vm ) {
-    final String networkFqName = vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 );
-    final Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-    final int networkIndex = vm.getNetworkIndex( );
+    String networkFqName = vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 );
+    Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
+    int networkIndex = vm.getNetworkIndex( );
+    Address address = null;
     QueuedEventCallback cb = new TerminateCallback( vm.getInstanceId( ) );
     if ( Clusters.getInstance( ).hasNetworking( ) ) {
       try {
-        final Address address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
-        cb.onSuccess( new SuccessCallback( ) {
-          public void apply( Object t ) {
-
-            if ( address.isSystemOwned( ) ) {
-              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
-              Addresses.release( address );
-            } else {
-              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
-              AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
-            }
-            
-            vm.setNetworkIndex( -1 );
-            try {
-              Network net = Networks.getInstance( ).lookup( networkFqName );
-              if ( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
-                net.returnNetworkIndex( networkIndex );
-                LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ) );
-              }
-              if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-                Clusters.dispatchClusterEvent( cluster, new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ),
-                                                                                                   net.getVlan( ) ) ) );
-              }
-            } catch ( NoSuchElementException e1 ) {} catch ( Throwable e1 ) {
-              LOG.debug( e1, e1 );
-            }
-          }
-        } );
+        address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
       } catch ( NoSuchElementException e ) {} catch ( Throwable e1 ) {
         LOG.debug( e1, e1 );
       }
     }
+    cb.then( SystemState.getCleanUpCallback( address, vm, networkIndex, networkFqName, cluster ) );
     cb.dispatch( cluster );
+  }
+  
+  private static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final int networkIndex, final String networkFqName, final Cluster cluster ) {
+    UnconditionalCallback cleanup = new UnconditionalCallback( ) {
+      public void apply( ) {
+        try {
+          if ( address.isSystemOwned( ) ) {
+            LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
+            Addresses.release( address );
+          } else {
+            LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
+            AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+          }
+        } catch ( Exception e ) {
+          LOG.debug( e, e );
+        }
+        vm.setNetworkIndex( -1 );
+        try {
+          Network net = Networks.getInstance( ).lookup( networkFqName );
+          if ( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
+            net.returnNetworkIndex( networkIndex );
+            LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ) );
+          }
+          if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
+            new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getVlan( ) ) ).dispatch( cluster );
+          }
+        } catch ( NoSuchElementException e1 ) {} catch ( Throwable e1 ) {
+          LOG.debug( e1, e1 );
+        }
+      }
+    };
+    return cleanup;
   }
 
   private static void updateVmInstance( final String originCluster, final VmInfo runVm ) {

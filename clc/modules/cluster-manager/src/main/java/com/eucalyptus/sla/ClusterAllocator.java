@@ -211,7 +211,7 @@ public class ClusterAllocator extends Thread {
       networkIndexes.add( index.toString( ) );
     }
     VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, networkIndexes );
-    QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, token ).onSuccess( new SuccessCallback<VmRunResponseType>( ) {
+    QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, token ).then( new SuccessCallback<VmRunResponseType>( ) {
       @Override public void apply( VmRunResponseType response ) {
         for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
           Address addr = Addresses.getInstance().lookup( addresses.remove( 0 ) );

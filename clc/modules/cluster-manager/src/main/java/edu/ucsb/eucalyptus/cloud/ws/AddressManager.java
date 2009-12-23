@@ -168,14 +168,14 @@ public class AddressManager {
       public void apply( Object t ) {
         if ( oldAddr != null ) {
           LOG.info( EventRecord.here( AddressManager.class, Events.DISASSOCIATE, oldAddr.toString( ) ) );
-          AddressCategory.unassign( oldAddr ).onSuccess( assignTarget ).dispatch( oldAddr.getCluster( ) );
+          AddressCategory.unassign( oldAddr ).then( assignTarget ).dispatch( oldAddr.getCluster( ) );
         } else {
           assignTarget.apply( t );
         }
       }
     };
     if ( address.isAssigned( ) ) {
-      address.unassign( ).getCallback( ).onSuccess( unassignBystander ).dispatch( oldAddr.getCluster( ) );
+      address.unassign( ).getCallback( ).then( unassignBystander ).dispatch( oldAddr.getCluster( ) );
     } else {
       unassignBystander.apply( null );
     }
@@ -219,7 +219,7 @@ public class AddressManager {
       try {
         LOG.info( EventRecord.here( AddressManager.class, Events.DISASSOCIATE, address.toString( ) ) );
         if ( address.isSystemOwned( ) ) {
-          AddressCategory.unassign( address ).onSuccess( new SuccessCallback( ) {
+          AddressCategory.unassign( address ).then( new SuccessCallback( ) {
             public void apply( Object t ) {
               Addresses.getAddressManager( ).releaseSystemAddress( address );
               try {
@@ -228,7 +228,7 @@ public class AddressManager {
             }
           } ).dispatch( address.getCluster( ) );
         } else {
-          AddressCategory.unassign( address ).onSuccess( new SuccessCallback( ) {
+          AddressCategory.unassign( address ).then( new SuccessCallback( ) {
             @Override public void apply( Object t ) {
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );

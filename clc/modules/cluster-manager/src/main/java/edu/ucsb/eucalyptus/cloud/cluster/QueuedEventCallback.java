@@ -80,6 +80,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.FailureCallback;
 import com.eucalyptus.cluster.SuccessCallback;
+import com.eucalyptus.cluster.UnconditionalCallback;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.MappingHttpRequest;
@@ -107,12 +108,17 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
   private SuccessCallback       successCallback = SuccessCallback.NOOP;
   private FailureCallback<TYPE> failCallback = FailureCallback.NOOP;
   
+  public QueuedEventCallback<TYPE> then( UnconditionalCallback c ) {
+    this.successCallback = c;
+    this.failCallback = c;
+    return this;
+  }
   @SuppressWarnings( "unchecked" )
-  public QueuedEventCallback<TYPE> onSuccess( SuccessCallback c ) {
+  public QueuedEventCallback<TYPE> then( SuccessCallback c ) {
     this.successCallback = c;
     return this;
   }
-  public QueuedEventCallback<TYPE> onFailure( FailureCallback<TYPE> c ) {
+  public QueuedEventCallback<TYPE> then( FailureCallback<TYPE> c ) {
     this.failCallback = c;
     return this;
   }

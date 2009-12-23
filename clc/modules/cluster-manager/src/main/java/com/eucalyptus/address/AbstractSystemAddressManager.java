@@ -109,7 +109,7 @@ public abstract class AbstractSystemAddressManager {
             final boolean isSystemOwned = addr.isSystemOwned( );
             final Address a = addr;
             try {
-              new UnassignAddressCallback( addrInfo ).onSuccess( new SuccessCallback() {
+              new UnassignAddressCallback( addrInfo ).then( new SuccessCallback() {
                 @Override public void apply( Object t ) {
                   if( isSystemOwned ) {
                     Addresses.getAddressManager( ).releaseSystemAddress( a );

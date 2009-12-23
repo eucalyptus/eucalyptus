@@ -16,7 +16,7 @@ public class AddressCategory {
   @SuppressWarnings( "unchecked" )
   public static QueuedEventCallback unassign( final Address addr ) {
     final String instanceId = addr.getInstanceId( );
-      return addr.unassign( ).getCallback( ).onSuccess( new SuccessCallback( ) {
+      return addr.unassign( ).getCallback( ).then( new SuccessCallback( ) {
         public void apply( Object response ) {
           try {
             VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
@@ -28,7 +28,7 @@ public class AddressCategory {
   
   @SuppressWarnings( "unchecked" )
   public static QueuedEventCallback assign( final Address addr, final VmInstance vm ) {
-    return addr.assign( vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) ).getCallback( ).onSuccess( new SuccessCallback() {
+    return addr.assign( vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) ).getCallback( ).then( new SuccessCallback() {
       public void apply( Object response ) {
         vm.getNetworkConfig( ).setIgnoredPublicIp( addr.getName( ) );
       }

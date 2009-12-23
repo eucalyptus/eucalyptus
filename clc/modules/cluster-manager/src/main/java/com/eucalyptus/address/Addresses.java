@@ -222,7 +222,9 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   //TODO: add return of callback, use reassign, special case for now
   public static void system( VmInstance vm ) {
     try {
-      Addresses.getInstance( ).getAddressManager( ).assignSystemAddress( vm );
+      if( VmState.PENDING.equals( vm.getState() ) || VmState.RUNNING.equals( vm.getState() ) ) {
+        Addresses.getInstance( ).getAddressManager( ).assignSystemAddress( vm );
+      }
     } catch ( NotEnoughResourcesAvailable e ) {
       LOG.warn( "No addresses are available to provide a system address for: " + LogUtil.dumpObject( vm ) );
       LOG.debug( e, e );
@@ -237,7 +239,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       try {
         if ( addr.isAssigned( ) ) {
           SuccessCallback release = getReleaseCallback( addr );
-          AddressCategory.unassign( addr ).onSuccess( release ).dispatch( addr.getCluster( ) );
+          AddressCategory.unassign( addr ).then( release ).dispatch( addr.getCluster( ) );
         } else {
           try {
             if( !addr.isSystemOwned( ) ) {
@@ -270,9 +272,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
           } catch ( Throwable e ) {
             LOG.debug( e, e );
           }
-          if( VmState.PENDING.equals( vm.getState() ) || VmState.RUNNING.equals( vm.getState() ) ) {
-            Addresses.system( vm );
-          }
+          Addresses.system( vm );
         }
       };
     } catch ( NoSuchElementException e ) {
