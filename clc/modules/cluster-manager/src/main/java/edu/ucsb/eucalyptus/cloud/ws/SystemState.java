@@ -177,6 +177,8 @@ public class SystemState {
       if ( vm.getSplitTime( ) > SHUT_DOWN_TIME && !VmState.BURIED.equals( vm.getState( ) ) ) {
         vm.setState( VmState.BURIED );
         SystemState.cleanUp( vm );
+      } else if ( vm.getSplitTime( ) > BURY_TIME && VmState.BURIED.equals( vm.getState( ) ) ) {
+        VmInstances.getInstance( ).deregister( vm.getName( ) );
       }
     }
   }
