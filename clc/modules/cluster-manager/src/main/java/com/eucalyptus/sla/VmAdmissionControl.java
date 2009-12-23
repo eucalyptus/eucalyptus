@@ -72,6 +72,7 @@ import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
@@ -84,7 +85,9 @@ public class VmAdmissionControl {
   public VmAllocationInfo verify( RunInstancesType request ) throws EucalyptusCloudException {
     //:: encapsulate the request into a VmAllocationInfo object and forward it on :://
     VmAllocationInfo vmAllocInfo = new VmAllocationInfo( request );
-    
+    if( vmAllocInfo.getRequest( ).getInstanceType( ) == null || "".equals( vmAllocInfo.getRequest( ).getInstanceType( ) )) {
+      vmAllocInfo.getRequest( ).setInstanceType( VmInstance.DEFAULT_TYPE );
+    }
     vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount( ) ) );
     
     String userData = vmAllocInfo.getRequest( ).getUserData( );
