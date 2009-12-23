@@ -285,6 +285,7 @@ public class FileSystemStorageManager implements StorageManager {
 			}
 			if(logData != null) {
 				logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
+				logData.setBytesSent(size);
 			}
 			channel.write(httpResponse);
 			if(logData != null) {
@@ -322,6 +323,7 @@ public class FileSystemStorageManager implements StorageManager {
 			httpResponse.addHeader("Content-Range", start + "-" + end + "/" + size);
 			if(logData != null) {
 				logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
+				logData.setBytesSent(size);
 			}
 			channel.write(httpResponse);
 			if(logData != null) {
