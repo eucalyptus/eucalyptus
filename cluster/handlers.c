@@ -1018,7 +1018,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	    }
 	//    if (cacheInstance) free(cacheInstance);
 	    refresh_instanceCache(myInstance->instanceId, myInstance);
-	    logprintfl(EUCADEBUG, "refresh_instances(): storing instance state: %s/%s\n", myInstance->instanceId, myInstance->state);
+	    logprintfl(EUCADEBUG, "refresh_instances(): storing instance state: %s/%s/%s/%s\n", myInstance->instanceId, myInstance->state, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
 	    free(myInstance);
 	  }
 	}
@@ -2115,7 +2115,7 @@ void *monitor_thread(void *in) {
 int init_pthreads() {
   // start any background threads
   sem_wait(configLock);
-  if (config->threads[MONITOR] == 0) {
+  if (config->threads[MONITOR] == 0 || check_process(config->threads[MONITOR], "httpd-cc.conf")) {
     int pid;
     pid = fork();
     if (!pid) {
