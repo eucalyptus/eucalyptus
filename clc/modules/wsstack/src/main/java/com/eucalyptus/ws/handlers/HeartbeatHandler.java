@@ -67,6 +67,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -118,12 +119,13 @@ import edu.ucsb.eucalyptus.msgs.HeartbeatType;
 public class HeartbeatHandler extends SimpleChannelHandler implements UnrollableStage {
   private static Logger  LOG         = Logger.getLogger( HeartbeatHandler.class );
   private Channel        channel;
-  private static boolean initialized = false;
+  private static AtomicBoolean initialized = new AtomicBoolean(false);
+  private static AtomicBoolean pending = new AtomicBoolean(false);
   private static List<String> initializedComponents = Lists.newArrayList( );
   
   public HeartbeatHandler( ) {
     super( );
-    initialized = true;
+    initialized.set( true );
   }
   
   public HeartbeatHandler( Channel channel ) {
@@ -141,12 +143,6 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     LOG.info( LogUtil.subheader( "Using " + addr.getHostName( ) + " as the database address." ) );
     Component.db.setHostAddress( addr.getHostName( ) );
     Component.db.markEnabled( );
-    try {
-      GroovyUtil.evaluateScript( "after_database.groovy" );
-    } catch ( FailScriptFailException e1 ) {
-      LOG.debug( e1, e1 );
-      System.exit( 123 );
-    }
     Component.dns.setHostAddress( addr.getHostName( ) );
     Component.eucalyptus.setHostAddress( addr.getHostName( ) );
     Component.cluster.setHostAddress( addr.getHostName( ) );
@@ -170,6 +166,12 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     }
     System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
     System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
+    try {
+      GroovyUtil.evaluateScript( "after_database.groovy" );
+    } catch ( FailScriptFailException e1 ) {
+      LOG.debug( e1, e1 );
+      System.exit( 123 );
+    }
     boolean foundDb = false;
     try {
       foundDb = NetworkUtil.testReachability( addr.getHostName( ) );
@@ -182,7 +184,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
       ChannelFuture writeFuture = ctx.getChannel( ).write( response );
       writeFuture.addListener( ChannelFutureListener.CLOSE );
-      initialized = true;
+      initialized.set( true );
       if ( this.channel != null ) {
         this.channel.close( );
       }
@@ -262,10 +264,16 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       MappingHttpRequest request = ( ( MappingHttpRequest ) message );
       if ( HttpMethod.GET.equals( request.getMethod( ) ) ) {
         handleGet( ctx, request );
-      } else if ( !initialized ) {
-        initialized = true;
-        handleInitialize( ctx, request );
-      } else if ( request.getMessage( ) instanceof HeartbeatType ) {
+      } else if ( !initialized.get() && pending.compareAndSet( false, true ) ) {
+        try {
+          handleInitialize( ctx, request );
+        } catch( Exception ex ) { 
+          LOG.error( ex, ex );
+          throw ex;
+        } finally {
+          pending.set( false );
+        }
+      } else if ( initialized.get() && request.getMessage( ) instanceof HeartbeatType ) {
         handleHeartbeat( request );
       } else {
         ChannelFuture writeFuture = ctx.getChannel( ).write(
