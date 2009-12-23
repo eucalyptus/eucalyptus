@@ -142,6 +142,7 @@ int logprintf(const char *format, ...);
 int logprintfl(int level, const char *format, ...);
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
 int logfile(char *file, int in_loglevel);
+int check_process(pid_t pid, char *search);
 int check_directory(char *dir);
 int check_file(char *file);
 int check_file_newer_than(char *file, time_t mtime);
