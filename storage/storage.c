@@ -825,7 +825,7 @@ retry:
     
     switch (action) {
     case STAGE:
-        logprintfl (EUCAINFO, "downloding image into %s...\n", file_path);		
+        logprintfl (EUCAINFO, "downloading and preparing image into %s...\n", file_path);		
         e = walrus_image_by_manifest_url (url, file_path, 1);
 
         /* for KVM, convert partition into disk */
@@ -866,7 +866,7 @@ retry:
             unlink (staging_path);            
         }
         if ( e ) {
-            logprintfl (EUCAERROR, "error: failed to download file from Walrus into %s\n", file_path);
+            logprintfl (EUCAERROR, "error: failed to download or prepare into %s\n", file_path);
             unlink (file_path);
             unlink (tmp_digest_path);
             if (should_cache) {
