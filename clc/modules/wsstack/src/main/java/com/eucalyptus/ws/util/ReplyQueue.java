@@ -94,7 +94,7 @@ public class ReplyQueue {
   private static ConcurrentMap<String, ChannelHandlerContext> pending               = new ConcurrentHashMap<String, ChannelHandlerContext>( MAP_CAPACITY, MAP_BIN_AVG_THRESHOLD, MAP_NUM_CONCURRENT );
 
   public static void addReplyListener( String correlationId, ChannelHandlerContext ctx ) {
-    LOG.debug("Adding reply listener: " + correlationId + " with ctx=" + ctx );
+    LOG.trace("Adding reply listener: " + correlationId + " with ctx=" + ctx );
     pending.put( correlationId, ctx );
   }
   public static void removeReplyListener( String correlationId ) {
