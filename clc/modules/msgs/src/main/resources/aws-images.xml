@@ -70,7 +70,8 @@
         <value name="imageId" field="imageId"/>
     </mapping>
 
-    <mapping name="RegisterImage" class="edu.ucsb.eucalyptus.msgs.RegisterImageType">
+    <mapping name="RegisterImage" class="edu.ucsb.eucalyptus.msgs.RegisterImageType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="imageLocation" field="imageLocation"/>
     </mapping>
 
@@ -79,7 +80,8 @@
         <value name="return" field="_return"/>
     </mapping>
 
-    <mapping name="DeregisterImage" class="edu.ucsb.eucalyptus.msgs.DeregisterImageType">
+    <mapping name="DeregisterImage" class="edu.ucsb.eucalyptus.msgs.DeregisterImageType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="imageId" field="imageId"/>
     </mapping>
 
@@ -115,7 +117,8 @@
         <value name="platform" field="platform" usage="optional"/>
     </mapping>
 
-    <mapping name="DescribeImages" class="edu.ucsb.eucalyptus.msgs.DescribeImagesType">
+    <mapping name="DescribeImages" class="edu.ucsb.eucalyptus.msgs.DescribeImagesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <structure usage="optional">
             <collection name="executableBySet" factory="org.jibx.runtime.Utility.arrayListFactory" field="executableBySet" item-type="java.lang.String">
                 <structure name="item">
@@ -138,7 +141,8 @@
             </collection>
         </structure>
     </mapping>
-    <mapping name="DescribeBundleTasks" class="edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType">
+    <mapping name="DescribeBundleTasks" class="edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <structure usage="optional">
             <collection name="bundlesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="bundleIds" item-type="java.lang.String">
                 <structure name="item">

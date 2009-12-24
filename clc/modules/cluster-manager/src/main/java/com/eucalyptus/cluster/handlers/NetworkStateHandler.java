@@ -1,42 +1,26 @@
 package com.eucalyptus.cluster.handlers;
 
 import java.net.SocketException;
-import java.nio.channels.AlreadyConnectedException;
-import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.NoSuchElementException;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.event.Event;
-import com.eucalyptus.util.EucalyptusProperties;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.StopNetworkCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksType;
 import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
-import edu.ucsb.eucalyptus.msgs.StopNetworkType;
-import edu.ucsb.eucalyptus.util.Admin;
 
 @ChannelPipelineCoverage( "one" )
 public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
@@ -70,7 +54,7 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse resp = ( MappingHttpResponse ) e.getMessage( );
       DescribeNetworksResponseType reply = ( DescribeNetworksResponseType ) resp.getMessage( );
-      LOG.debug( reply.toString( "eucalyptus_ucsb_edu") );
+      LOG.trace( reply.toString( "eucalyptus_ucsb_edu") );
       for( Network net : Networks.getInstance( ).listValues( ) ) {
         net.trim( reply.getAddrsPerNetwork( ) );
       }
@@ -85,9 +69,10 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
           net = new Network( netInfo.getUserName( ), netInfo.getNetworkName( ) );
         }
         active.add( net.getName( ) );
-        net.setVlan( netInfo.getVlan() );
-        NetworkToken netToken = new NetworkToken( this.getCluster( ).getName( ), netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getVlan( ) );
-        netToken = net.addTokenIfAbsent( netToken );
+        if( net.getVlan().equals( Integer.valueOf(0) ) && net.initVlan( netInfo.getVlan() ) ) {
+          NetworkToken netToken = new NetworkToken( this.getCluster( ).getName( ), netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getVlan( ) );
+          netToken = net.addTokenIfAbsent( netToken );
+        }
       }
       
       for( Network net : Networks.getInstance( ).listValues( Networks.State.ACTIVE ) ) {
@@ -98,11 +83,6 @@ public class NetworkStateHandler extends AbstractClusterMessageDispatcher {
       int ccNum = ccList.size( );
       for ( Cluster c : ccList ) {
         ccNum -= c.getState( ).getMode( );
-      }
-      if ( ccNum != 0 ) {
-        EucalyptusProperties.disableNetworking = true;
-      } else {
-        EucalyptusProperties.disableNetworking = false;
       }
       this.verified = true;
     } else {

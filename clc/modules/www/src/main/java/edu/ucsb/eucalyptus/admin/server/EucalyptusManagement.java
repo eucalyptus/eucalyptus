@@ -65,51 +65,41 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.security.GeneralSecurityException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.entities.NetworkRulesGroup;
+import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.GenericEvent;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EntityWrapper;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.ImageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
-import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
-
-import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import com.eucalyptus.util.StorageProperties;
 import edu.ucsb.eucalyptus.util.UserManagement;
-import com.eucalyptus.util.WalrusProperties;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.log4j.Logger;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.security.GeneralSecurityException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class EucalyptusManagement {
 
@@ -512,9 +502,10 @@ public class EucalyptusManagement {
 	public static void setSystemConfig( final SystemConfigWeb systemConfig )
 	{
 		EntityWrapper<SystemConfiguration> db = new EntityWrapper<SystemConfiguration>();
+		SystemConfiguration sysConf = null;
 		try
 		{
-			SystemConfiguration sysConf = db.getUnique( new SystemConfiguration() );
+			sysConf = db.getUnique( new SystemConfiguration() );
 			sysConf.setCloudHost( systemConfig.getCloudHost() );
 			sysConf.setDefaultKernel( systemConfig.getDefaultKernelId() );
 			sysConf.setDefaultRamdisk( systemConfig.getDefaultRamdiskId() );
@@ -531,7 +522,7 @@ public class EucalyptusManagement {
 		}
 		catch ( EucalyptusCloudException e )
 		{
-			db.add( new SystemConfiguration(
+			sysConf = new SystemConfiguration(
 					systemConfig.getDefaultKernelId(),
 					systemConfig.getDefaultRamdiskId(),
 					systemConfig.getMaxUserPublicAddresses(),
@@ -541,10 +532,16 @@ public class EucalyptusManagement {
 					systemConfig.getDnsDomain(),
 					systemConfig.getNameserver(),
 					systemConfig.getNameserverAddress(),
-					systemConfig.getCloudHost( )));
+					systemConfig.getCloudHost( ));
+			db.add(sysConf);
 			db.commit();
 			DNSProperties.update();
 		}
+    try {
+      ListenerRegistry.getInstance( ).fireEvent( new SystemConfigurationEvent( sysConf ) );
+    } catch ( EventVetoedException e ) {
+      LOG.debug( e, e );
+    }
 	}
 
 	private static String getExternalIpAddress ()

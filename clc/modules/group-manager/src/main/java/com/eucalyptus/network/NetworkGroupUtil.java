@@ -74,11 +74,16 @@ public class NetworkGroupUtil {
     EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
     NetworkRulesGroup group = new NetworkRulesGroup( userName, groupName, groupDescription );
     try {
-      db.add( group );
-      db.commit( );
-    } catch ( Throwable e ) {
+      db.getUnique( NetworkRulesGroup.named( userName, groupName ) );
       db.rollback( );
-      throw new EucalyptusCloudException( "Error adding network group: group named " +groupName+ " already exists", e );
+      throw new EucalyptusCloudException( "Error adding network group: group named " +groupName+ " already exists" );
+    } catch ( Throwable e ) {
+      try {
+        db.add( group );
+        db.commit( );
+      } catch ( Throwable e1 ) {
+        throw new EucalyptusCloudException( "Error adding network group: group named " +groupName+ " already exists", e );
+      }
     }
     return group;
   }
@@ -111,10 +116,10 @@ public class NetworkGroupUtil {
     return groupInfoList;
   }
   public static boolean isUserGroupRef( String adminGroupName ) {
-    return adminGroupName.indexOf( "-" ) != -1;
+    return adminGroupName.indexOf( "::" ) != -1;
   }
   public static List<SecurityGroupItemType> getUserNetworksAdmin( String adminGroupName ) throws EucalyptusCloudException {
-    return getUserNetworks( adminGroupName.split("-")[0], Lists.newArrayList( adminGroupName.replaceFirst( "\\w*-", "" ) ) );
+    return getUserNetworks( adminGroupName.replaceAll("::\\w*",""), Lists.newArrayList( adminGroupName.replaceFirst( "\\w*::", "" ) ) );
   }
 
   public static List<SecurityGroupItemType> getUserNetworks( String userId, List<String> groupNames ) throws EucalyptusCloudException {

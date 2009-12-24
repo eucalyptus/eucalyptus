@@ -136,7 +136,7 @@ public class StatefulNamedRegistry<T extends HasName, E extends Enum<E>> {
     try {
       for ( Map<String, T> m : this.stateMaps.values( ) ) {
         if ( m.containsKey( name ) ) {
-          LOG.debug( m.get( name ) );
+//          LOG.debug( m.get( name ) );
           return m.get( name );
         }
       }

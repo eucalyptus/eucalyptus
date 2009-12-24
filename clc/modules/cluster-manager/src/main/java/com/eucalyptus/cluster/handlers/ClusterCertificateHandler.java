@@ -59,7 +59,6 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
         this.verified = false;
         try {
           ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
-          ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
           ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
           ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new ResourceStateHandler( this.getCluster( ) ) );
           ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new VmStateHandler( this.getCluster( ) ) );

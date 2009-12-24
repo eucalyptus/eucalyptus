@@ -77,6 +77,7 @@ import com.eucalyptus.util.DatabaseUtil;
 import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.util.FailScriptFailException;
 import com.eucalyptus.util.GroovyUtil;
+import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
 @Provides( resource = Resource.Database )
 @Depends( resources = Resource.SystemCredentials, local = Component.eucalyptus )
@@ -195,7 +196,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
         throw new RuntimeException( t );
       }
       try {
-        Thread.sleep( 1000 );
+        TimeUnit.SECONDS.sleep( 1 );
       } catch ( InterruptedException e ) {
         Thread.currentThread( ).interrupt( );
       }

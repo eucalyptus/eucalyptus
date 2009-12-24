@@ -71,24 +71,23 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.Adler32;
-
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-
 import org.apache.log4j.Logger;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
-
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-
+import edu.emory.mathcs.backport.java.util.Collections;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -112,7 +111,6 @@ public class ImageUtil {
     String imageId = String.format( "%s-%08X", imagePrefix, hash.getValue( ) );
     return imageId;
   }
-  
   public static String newImageId( final String imagePrefix, final String imageLocation ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     ImageInfo query = new ImageInfo( );
@@ -123,13 +121,12 @@ public class ImageUtil {
     LOG.info( "Assigning imageId=" + query.getImageId( ) );
     return query.getImageId( );
   }
-  
   public static boolean verifyManifestSignature( final String signature, final String alias, String pad ) {
     boolean ret = false;
     try {
       Signature sigVerifier = Signature.getInstance( "SHA1withRSA" );
       X509Certificate cert = CredentialProvider.getCertificate( alias );
-      if(cert != null) {
+      if ( cert != null ) {
         PublicKey publicKey = cert.getPublicKey( );
         sigVerifier.initVerify( publicKey );
         sigVerifier.update( pad.getBytes( ) );
@@ -140,18 +137,15 @@ public class ImageUtil {
     }
     return ret;
   }
-  
   public static ArrayList<String> getAncestors( String userId, String manifestPath ) {
     ArrayList<String> ancestorIds = Lists.newArrayList( );
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = WalrusUtil.getManifestData( Component.eucalyptus.name( ), imagePathParts[0],
-                                                         imagePathParts[1] );
+      Document inputSource = WalrusUtil.getManifestData( Component.eucalyptus.name( ), imagePathParts[0], imagePathParts[1] );
       XPath xpath = XPathFactory.newInstance( ).newXPath( );
       NodeList ancestors = null;
       try {
-        ancestors = ( NodeList ) xpath.evaluate( "/manifest/image/ancestry/ancestor_ami_id/text()", inputSource,
-                                                 XPathConstants.NODESET );
+        ancestors = ( NodeList ) xpath.evaluate( "/manifest/image/ancestry/ancestor_ami_id/text()", inputSource, XPathConstants.NODESET );
         if ( ancestors == null ) return ancestorIds;
         for ( int i = 0; i < ancestors.getLength( ); i++ ) {
           for ( String ancestorId : ancestors.item( i ).getNodeValue( ).split( "," ) ) {
@@ -168,13 +162,11 @@ public class ImageUtil {
     }
     return ancestorIds;
   }
-  
   public static Long getSize( String userId, String manifestPath ) {
     Long size = 0l;
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = WalrusUtil.getManifestData( Component.eucalyptus.name( ), imagePathParts[0],
-                                                         imagePathParts[1] );
+      Document inputSource = WalrusUtil.getManifestData( Component.eucalyptus.name( ), imagePathParts[0], imagePathParts[1] );
       XPath xpath = XPathFactory.newInstance( ).newXPath( );
       String rootSize = "0";
       try {
@@ -192,7 +184,6 @@ public class ImageUtil {
     }
     return size;
   }
-  
   public static void checkStoredImage( final ImageInfo imgInfo ) throws EucalyptusCloudException {
     if ( imgInfo != null ) try {
       Document inputSource = null;
@@ -224,7 +215,6 @@ public class ImageUtil {
       throw new EucalyptusCloudException( "Failed check! Invalidating registration: " + imgInfo.getImageLocation( ) );
     }
   }
-  
   public static String getImageUrl( String walrusUrl, final ImageInfo diskInfo ) throws EucalyptusCloudException {
     try {
       URL url = new URL( ImageUtil.getWalrusUrl( ) + diskInfo.getImageLocation( ) );
@@ -233,7 +223,6 @@ public class ImageUtil {
       throw new EucalyptusCloudException( "Failed to parse image location as URL.", e );
     }
   }
-  
   public static String getWalrusUrl( ) throws EucalyptusCloudException {
     try {
       return EucalyptusProperties.getWalrusUrl( ) + "/";
@@ -242,17 +231,14 @@ public class ImageUtil {
       throw new EucalyptusCloudException( "Walrus has not been configured.", e );
     }
   }
-  
   public static boolean isSet( String id ) {
     return id != null && !"".equals( id );
   }
-  
   private static boolean userHasImagePermission( final UserInfo user, final ImageInfo img ) {
-    if ( img.getUserGroups( ).isEmpty( ) && !user.getUserName( ).equals( img.getImageOwnerId( ) ) && !user.isAdministrator( ) && !img.getPermissions( ).contains(
-                                                                                                                                                                  user ) ) return true;
+    if ( img.getUserGroups( ).isEmpty( ) && !user.getUserName( ).equals( img.getImageOwnerId( ) )
+         && !user.isAdministrator( ) && !img.getPermissions( ).contains( user ) ) return true;
     return false;
   }
-  
   private static void invalidateImageById( String searchId ) throws EucalyptusCloudException {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     if ( isSet( searchId ) ) try {
@@ -264,22 +250,18 @@ public class ImageUtil {
       throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
     }
   }
-  
-  public static VmImageInfo getVmImageInfo( final String walrusUrl, final ImageInfo diskInfo,
-                                            final ImageInfo kernelInfo, final ImageInfo ramdiskInfo,
-                                            final ArrayList<String> productCodes ) throws EucalyptusCloudException {
+  public static VmImageInfo getVmImageInfo( final String walrusUrl, final ImageInfo diskInfo, final ImageInfo kernelInfo, final ImageInfo ramdiskInfo, final ArrayList<String> productCodes ) throws EucalyptusCloudException {
     String diskUrl = getImageUrl( walrusUrl, diskInfo );
     String kernelUrl = getImageUrl( walrusUrl, kernelInfo );
     String ramdiskUrl = null;
     if ( ramdiskInfo != null ) ramdiskUrl = getImageUrl( walrusUrl, ramdiskInfo );
-    
     //:: create the response assets now since we might not have a ramdisk anyway :://
     VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId( ), kernelInfo.getImageId( ),
-      ramdiskInfo == null ? null : ramdiskInfo.getImageId( ), diskUrl, kernelUrl,
-      ramdiskInfo == null ? null : ramdiskUrl, productCodes );
+      ramdiskInfo == null ? null : ramdiskInfo.getImageId( ), diskUrl, kernelUrl, ramdiskInfo == null ? null
+                                                                                                     : ramdiskUrl,
+      productCodes );
     return vmImgInfo;
   }
-  
   public static ImageInfo getImageInfobyId( String searchId ) throws EucalyptusCloudException {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     if ( isSet( searchId ) ) try {
@@ -294,7 +276,6 @@ public class ImageUtil {
     }
     throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
   }
-  
   public static String getImageInfobyId( String userSuppliedId, String imageDefaultId, String systemDefaultId ) {
     String searchId = null;
     if ( isSet( userSuppliedId ) )
@@ -313,63 +294,53 @@ public class ImageUtil {
   public static String extractArchitecture( Document inputSource, XPath xpath ) {
     String arch = null;
     try {
-      arch = ( String ) xpath.evaluate( "/manifest/machine_configuration/architecture/text()", inputSource,
-                                        XPathConstants.STRING );
+      arch = ( String ) xpath.evaluate( "/manifest/machine_configuration/architecture/text()", inputSource, XPathConstants.STRING );
     } catch ( XPathExpressionException e ) {
       ImageManager.LOG.warn( e.getMessage( ) );
     }
     return arch;
   }
-  
   public static String extractRamdiskId( Document inputSource, XPath xpath ) {
     String ramdiskId = null;
     try {
-      ramdiskId = ( String ) xpath.evaluate( "/manifest/machine_configuration/ramdisk_id/text()", inputSource,
-                                             XPathConstants.STRING );
+      ramdiskId = ( String ) xpath.evaluate( "/manifest/machine_configuration/ramdisk_id/text()", inputSource, XPathConstants.STRING );
     } catch ( XPathExpressionException e ) {
       ImageManager.LOG.warn( e.getMessage( ) );
     }
     if ( !isSet( ramdiskId ) ) ramdiskId = null;
     return ramdiskId;
   }
-  
   public static String extractKernelId( Document inputSource, XPath xpath ) {
     String kernelId = null;
     try {
-      kernelId = ( String ) xpath.evaluate( "/manifest/machine_configuration/kernel_id/text()", inputSource,
-                                            XPathConstants.STRING );
+      kernelId = ( String ) xpath.evaluate( "/manifest/machine_configuration/kernel_id/text()", inputSource, XPathConstants.STRING );
     } catch ( XPathExpressionException e ) {
       ImageManager.LOG.warn( e.getMessage( ) );
     }
     if ( !isSet( kernelId ) ) kernelId = null;
     return kernelId;
   }
-  
   public static String[] getImagePathParts( String imageLocation ) throws EucalyptusCloudException {
     String[] imagePathParts = imageLocation.split( "/" );
     if ( imagePathParts.length != 2 ) throw new EucalyptusCloudException(
       "Image registration failed:  Invalid image location." );
     return imagePathParts;
   }
-  
   public static void checkBucketAcl( RegisterImageType request, String[] imagePathParts ) throws EucalyptusCloudException {
     String userName = null;
     if ( !request.isAdministrator( ) ) {
       GetBucketAccessControlPolicyResponseType reply = WalrusUtil.getBucketAcl( request, imagePathParts );
-      if(reply != null) {
+      if ( reply != null ) {
         if ( !request.getUserId( ).equals( reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( ) ) ) throw new EucalyptusCloudException(
-        "Image registration failed: you must own the bucket containing the image." );
+          "Image registration failed: you must own the bucket containing the image." );
         userName = reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( );
       }
     }
   }
-  
-  public static void applyImageAttributes( final EntityWrapper<ImageInfo> db, final ImageInfo imgInfo,
-                                           final List<LaunchPermissionItemType> changeList, final boolean adding ) throws EucalyptusCloudException {
+  public static void applyImageAttributes( final EntityWrapper<ImageInfo> db, final ImageInfo imgInfo, final List<LaunchPermissionItemType> changeList, final boolean adding ) throws EucalyptusCloudException {
     for ( LaunchPermissionItemType perm : changeList ) {
       if ( perm.isGroup( ) ) {
         UserGroupInfo target = new UserGroupInfo( perm.getGroup( ) );
-        
         if ( adding && !imgInfo.getUserGroups( ).contains( target ) ) {
           EntityWrapper<UserGroupInfo> dbGroup = db.recast( UserGroupInfo.class );
           try {
@@ -403,10 +374,7 @@ public class ImageUtil {
       }
     }
   }
-  
-  public static boolean modifyImageInfo( final String imageId, final String userId, final boolean isAdmin,
-                                         final List<LaunchPermissionItemType> addList,
-                                         final List<LaunchPermissionItemType> remList ) {
+  public static boolean modifyImageInfo( final String imageId, final String userId, final boolean isAdmin, final List<LaunchPermissionItemType> addList, final List<LaunchPermissionItemType> remList ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     ImageInfo imgInfo = null;
     try {
@@ -415,9 +383,7 @@ public class ImageUtil {
       db.rollback( );
       return false;
     }
-    
     if ( !userId.equals( imgInfo.getImageOwnerId( ) ) && !isAdmin ) return false;
-    
     try {
       applyImageAttributes( db, imgInfo, addList, true );
       applyImageAttributes( db, imgInfo, remList, false );
@@ -429,7 +395,6 @@ public class ImageUtil {
       return false;
     }
   }
-  
   public static Document getManifestDocument( String[] imagePathParts, String userName ) throws EucalyptusCloudException {
     Document inputSource = null;
     try {
@@ -439,7 +404,6 @@ public class ImageUtil {
     }
     return inputSource;
   }
-  
   public static List<ImageDetails> getImageOwnedByUser( List<ImageInfo> imgList, UserInfo user ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     List<ImageDetails> repList = Lists.newArrayList( );
@@ -458,20 +422,19 @@ public class ImageUtil {
     }
     return repList;
   }
-  
-  public static List<ImageDetails> getImagesByOwner( List<ImageInfo> imgList, UserInfo user, ArrayList<String> owners ) {
+  public static List<ImageDetails> getImagesByOwner( final List<ImageInfo> imgList, final UserInfo user, final ArrayList<String> owners ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     List<ImageDetails> repList = Lists.newArrayList( );
     if ( owners.remove( "self" ) ) owners.add( user.getUserName( ) );
     try {
       for ( String userName : owners ) {
-        List<ImageInfo> results = db.query( ImageInfo.byOwnerId( userName ) );
-        for ( ImageInfo img : results ) {
-          ImageDetails imgDetails = img.getAsImageDetails( );
-          if ( img.isAllowed( user ) && ( imgList.isEmpty( ) || imgList.contains( imgDetails.getImageId( ) ) ) ) {
-            repList.add( imgDetails );
+        Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.byOwnerId( userName ) ), new Predicate<ImageInfo>( ) {
+          @Override public boolean apply( ImageInfo arg0 ) {
+            return ( imgList.isEmpty( ) || imgList.contains( arg0 ) )
+                   && ( arg0.getPublic( ) || arg0.isAllowed( user ) );
           }
-        }
+        } );
+        repList.addAll( Lists.transform( Lists.newArrayList( results ), ImageInfo.TO_IMAGE_DETAILS ) );
       }
       db.commit( );
     } catch ( Throwable e ) {
@@ -480,34 +443,27 @@ public class ImageUtil {
     }
     return repList;
   }
-  
   public static List<ImageDetails> getImagesByExec( UserInfo user, ArrayList<String> executable ) {
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     List<ImageDetails> repList = Lists.newArrayList( );
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
       for ( String execUserId : executable ) {
-        try {
-          if ( "all".equals( execUserId ) ) continue;
-          UserInfo execUser = db.recast( UserInfo.class ).getUnique( new UserInfo( execUserId ) );
-          List<ImageInfo> results = db.query( new ImageInfo( ) );
-          for ( ImageInfo img : results ) {
-            ImageDetails imgDetails = img.getAsImageDetails( );
-            if ( img.isAllowed( execUser ) && img.getImageOwnerId( ).equals( user.getUserName( ) ) ) {
-              repList.add( imgDetails );
-            }
+        if ( "all".equals( execUserId ) ) continue;
+        final UserInfo execUser = db.recast( UserInfo.class ).getUnique( UserInfo.named( execUserId ) );
+        Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.ALL ), new Predicate<ImageInfo>( ) {
+          @Override public boolean apply( ImageInfo arg0 ) {
+            return arg0.isAllowed( execUser ) || arg0.getPublic( );
           }
-        } catch ( Throwable e ) {
-          LOG.debug( e, e );
-        }
+        } );
+        repList.addAll( Lists.transform( Lists.newArrayList( results ), ImageInfo.TO_IMAGE_DETAILS ) );
       }
       db.commit( );
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       LOG.debug( e, e );
       db.commit( );
     }
     return repList;
   }
-  
   public static void cleanDeregistered( ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
@@ -522,5 +478,4 @@ public class ImageUtil {
       db.rollback( );
     }
   }
-  
 }
