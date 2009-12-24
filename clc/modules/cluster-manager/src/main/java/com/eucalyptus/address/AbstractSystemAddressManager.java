@@ -89,21 +89,23 @@ public abstract class AbstractSystemAddressManager {
       if( addrInfo.getInstanceIp( ) != null &&  !"".equals(addrInfo.getInstanceIp( ))) {
         try {
           VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( addrInfo.getInstanceIp( ) );
-          vm.getNetworkConfig( ).setIgnoredPublicIp( addrInfo.getAddress( ) );
-          if( !addr.isAllocated( ) ) {
-            try {
-              addr.allocate( Component.eucalyptus.name( ) );
-            } catch ( Throwable e1 ) {
-              LOG.debug( e1, e1 );
+          if( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp( ) ) ) {
+            vm.getNetworkConfig( ).setIgnoredPublicIp( addrInfo.getAddress( ) );
+            if( !addr.isAllocated( ) ) {
+              try {
+                addr.allocate( Component.eucalyptus.name( ) );
+              } catch ( Throwable e1 ) {
+                LOG.debug( e1, e1 );
+              }
             }
+            if( !addr.isAssigned() && !addr.isPending() ) {
+              try {
+                addr.assign( vm.getInstanceId( ), addrInfo.getInstanceIp( ) ).clearPending( );
+              } catch ( Throwable e1 ) {
+                LOG.debug( e1, e1 );
+              }
+            }            
           }
-          if( !addr.isAssigned() && !addr.isPending() ) {
-            try {
-              addr.assign( vm.getInstanceId( ), addrInfo.getInstanceIp( ) ).clearPending( );
-            } catch ( Throwable e1 ) {
-              LOG.debug( e1, e1 );
-            }
-          }            
         } catch ( NoSuchElementException e ) {
           if( !addr.isPending( ) ) {
             final boolean isSystemOwned = addr.isSystemOwned( );
