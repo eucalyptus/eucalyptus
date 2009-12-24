@@ -157,11 +157,16 @@ public abstract class QueuedEventCallback<TYPE> extends NioResponseHandler {//FI
           this.failCallback.failure( this, e1 );
         }
       } catch ( Throwable e1 ) {
-        this.fail( e1 );
         try {
-          this.failCallback.failure( this, e1 );
-        } catch ( Throwable e2 ) {
-          LOG.debug( e2, e2 );
+          this.fail( e1 );
+        } catch ( Throwable e3 ) {
+          LOG.error( e3, e3 );
+        } finally {
+          try {
+            this.failCallback.failure( this, e1 );
+          } catch ( Throwable e2 ) {
+            LOG.debug( e2, e2 );
+          }
         }
         super.queueResponse( e1 );
         e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
