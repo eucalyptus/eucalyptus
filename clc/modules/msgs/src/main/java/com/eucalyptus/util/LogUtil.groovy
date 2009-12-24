@@ -20,9 +20,9 @@ public class LogUtil {
   }
 
   public static String dumpObject( Object o ) {
-    return "\n"+o.dump();
+    return o.dump().replaceAll("<","[").replaceAll(">","]").replaceAll("[\\w\\.]+\\.(\\w+)@\\w*", { Object[] it -> it[1] }).replaceAll("class:class [\\w\\.]+\\.(\\w+),", { Object[] it -> it[1] });
   }
-
+  
   public static String lineObject( Object o ) {
     return String.format("%-200.200s",o.dump().replaceFirst("<\\w*.\\w*@","<"));
   }

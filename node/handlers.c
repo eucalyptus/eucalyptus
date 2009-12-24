@@ -129,12 +129,6 @@ void libvirt_error_handler (	void *userData,
 	if ( error==NULL) {
 		logprintfl (EUCAERROR, "libvirt error handler was given a NULL pointer\n");
 	} else {
-		/* these are common, they appear for evey non-existing
-		 * domain, such as BOOTING/CRASHED/SHUTOFF, which we catch
-		 * elsewhere, so we won't print them */
-		if (error->code==10) {
-			return;
-		}
 		logprintfl (EUCAERROR, "libvirt: %s (code=%d)\n", error->message, error->code);
 	}
 }
@@ -170,7 +164,7 @@ print_running_domains (void)
 	sem_p (inst_sem);
 	for ( head=global_instances; head; head=head->next ) {
 		ncInstance * instance = head->instance;
-		if (instance->state==BOOTING
+		if (instance->state==STAGING || instance->state==BOOTING
 				|| instance->state==RUNNING
 				|| instance->state==BLOCKED
 				|| instance->state==PAUSED) {
@@ -202,6 +196,7 @@ void change_state(	ncInstance *instance,
 {
     instance->state = (int) state;
     switch (state) { /* mapping from NC's internal states into external ones */
+    case STAGING:
     case BOOTING:
     case CANCELED:
         instance->stateCode = PENDING;
@@ -235,8 +230,8 @@ refresh_instance_info(	struct nc_state_t *nc,
     if (! check_hypervisor_conn ())
 	    return;
 
-    /* no need to bug for domains without state */
-    if (now==TEARDOWN)
+    /* no need to bug for domains without state on Hypervisor */
+    if (now==TEARDOWN || now==STAGING)
         return;
     
     sem_p(hyp_sem);
@@ -407,13 +402,13 @@ monitoring_thread (void *arg)
 	    refresh_instance_info (nc, instance);
 
             /* don't touch running or canceled threads */
-            if (instance->state!=BOOTING && 
+            if (instance->state!=STAGING && instance->state!=BOOTING && 
                 instance->state!=SHUTOFF &&
                 instance->state!=SHUTDOWN &&
                 instance->state!=TEARDOWN) continue;
 
             if (instance->state==TEARDOWN) {
-                /* it's been long enugh, we can fugetaboutit */
+                /* it's been long enough, we can forget the instance */
                 if ((now - instance->terminationTime)>teardown_state_duration) {
                     remove_instance (&global_instances, instance);
                     logprintfl (EUCAINFO, "forgetting about instance %s\n", instance->instanceId);
@@ -423,7 +418,7 @@ monitoring_thread (void *arg)
                 continue;
             }
 
-            if (instance->state==BOOTING &&
+            if ((instance->state==STAGING || instance->state==BOOTING) &&
                 (now - instance->launchTime)<unbooted_cleanup_threshold) /* hasn't been long enough */
                 continue; /* let it be */
             
@@ -551,6 +546,7 @@ void *startup_thread (void * arg)
         change_state (instance, SHUTOFF);
     } else {
         logprintfl (EUCAINFO, "started VM instance %s\n", instance->instanceId);
+        change_state (instance, BOOTING);
     }
 
     return NULL;

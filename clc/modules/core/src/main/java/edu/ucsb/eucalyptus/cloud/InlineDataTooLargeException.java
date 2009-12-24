@@ -58,19 +58,34 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
-import edu.ucsb.eucalyptus.cloud.ResourceToken
-import com.eucalyptus.cluster.ClusterState
-import com.eucalyptus.util.NotEnoughResourcesAvailable
-import edu.ucsb.eucalyptus.cloud.cluster.Allocator
-import com.eucalyptus.cluster.ClusterNodeState
+/*
+ *
+ * Author: Sunil Soman sunils@cs.ucsb.edu
+ */
 
-public class LeastFullFirst implements Allocator {
+package edu.ucsb.eucalyptus.cloud;
 
-  public List<ResourceToken> allocate(String requestId, String userName, String type, int min, int max, SortedSet<ClusterNodeState> clusters) throws NotEnoughResourcesAvailable
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
+@SuppressWarnings("serial")
+public class InlineDataTooLargeException extends WalrusException {
+
+  public InlineDataTooLargeException()
   {
-    def amount = [clusters.last().getAvailability(type).getAvailable(), max].min();
-    if ( amount < min ) throw new NotEnoughResourcesAvailable("Not enough resources: vm instances.");
-    return [clusters.last().getResourceAllocation(requestId, userName, type, amount)];
+    super( "InlineDataTooLarge" );
+  }
+  
+  public InlineDataTooLargeException(String value)
+  {
+    super("InlineDataTooLarge", "Inline data exceeds the maximum allowed size.", "Object",  value, HttpResponseStatus.BAD_REQUEST);
   }
 
+  public InlineDataTooLargeException(Throwable ex)
+  {
+    super("InlineDataTooLarge", ex);
+  }
+  public InlineDataTooLargeException(String message, Throwable ex)
+  {
+    super(message,ex);
+  }
 }

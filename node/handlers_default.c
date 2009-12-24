@@ -162,14 +162,14 @@ doTerminateInstance(	struct nc_state_t *nc,
 			virDomainFree(dom); /* necessary? */
 			sem_v(hyp_sem);
 		} else {
-			if (instance->state != BOOTING)
+			if (instance->state != BOOTING && instance->state != STAGING)
 				logprintfl (EUCAWARN, "warning: domain %s to be terminated not running on hypervisor\n", instanceId);
 		}
 	} 
 
 	/* change the state and let the monitoring_thread clean up state */
     sem_p (inst_sem);
-    if (instance->state==BOOTING) {
+    if (instance->state==BOOTING || instance->state==STAGING) {
         change_state (instance, CANCELED);
     } else {
         change_state (instance, SHUTOFF);
