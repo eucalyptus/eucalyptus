@@ -101,6 +101,7 @@ import edu.ucsb.eucalyptus.cloud.BucketAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.BucketAlreadyOwnedByYouException;
 import edu.ucsb.eucalyptus.cloud.BucketNotEmptyException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
+import edu.ucsb.eucalyptus.cloud.InlineDataTooLargeException;
 import edu.ucsb.eucalyptus.cloud.InvalidRangeException;
 import edu.ucsb.eucalyptus.cloud.InvalidTargetBucketForLoggingException;
 import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
@@ -906,7 +907,11 @@ public class WalrusManager {
 				foundObject.setObjectKey(objectKey);
 				try {
 					//writes are unconditional
-					byte[] base64Data = request.getBase64Data().getBytes();
+					if(request.getBase64Data().getBytes().length > WalrusProperties.MAX_INLINE_SIZE) {
+						db.rollback();
+						throw new InlineDataTooLargeException(bucketName + "/" + objectKey);
+					}
+					byte[] base64Data = Hashes.base64decode(request.getBase64Data()).getBytes();
 					foundObject.setObjectName(objectName);
 					try {
 						FileIO fileIO = storageManager.prepareForWrite(bucketName, objectName);
@@ -915,6 +920,7 @@ public class WalrusManager {
 							fileIO.finish();
 						}
 					} catch(Exception ex) {
+						db.rollback();
 						throw new EucalyptusCloudException(ex);
 					}
 					md5 = Hashes.getHexString(Hashes.Digest.MD5.get().digest(base64Data));
@@ -1640,6 +1646,9 @@ public class WalrusManager {
 					}								
 					if(request.getGetData()) {
 						if(request.getInlineData()) {
+							if((size * 4) > WalrusProperties.MAX_INLINE_SIZE) {
+								throw new InlineDataTooLargeException(bucketName + "/" + objectKey);
+							}
 							byte[] bytes = new byte[102400];
 							int bytesRead = 0, offset = 0;
 							String base64Data = "";
