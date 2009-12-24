@@ -102,8 +102,6 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   public void prepare( UnassignAddressType msg ) throws Exception {
     if( this.address.isAssigned() && this.address.isPending()) {
       LOG.info( EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ) );
-    } else {
-      LOG.info( EventRecord.here( UnassignAddressCallback.class, State.broken, address.toString( ) ) );
     }
   }
   
