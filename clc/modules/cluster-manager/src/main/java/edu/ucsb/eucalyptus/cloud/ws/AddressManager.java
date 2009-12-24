@@ -152,8 +152,8 @@ public class AddressManager {
     final Address oldAddr = findVmExistingAddress( vm );
     final boolean system = oldAddr != null ? oldAddr.isSystemOwned( ) : false;
     reply.set_return( true );
-    final SuccessCallback assignTarget = new SuccessCallback( ) {
-      public void apply( Object t ) {
+    final UnconditionalCallback assignTarget = new UnconditionalCallback( ) {
+      public void apply( ) {
         if ( system ) {
           LOG.info( EventRecord.here( AddressManager.class, Events.RELEASE, oldAddr.toString( ) ) );
           Addresses.getAddressManager( ).releaseSystemAddress( oldAddr );
@@ -165,20 +165,20 @@ public class AddressManager {
         }
       }
     };
-    final SuccessCallback unassignBystander = new SuccessCallback( ) {
-      public void apply( Object t ) {
+    final UnconditionalCallback unassignBystander = new UnconditionalCallback( ) {
+      public void apply( ) {
         if ( oldAddr != null ) {
           LOG.info( EventRecord.here( AddressManager.class, Events.DISASSOCIATE, oldAddr.toString( ) ) );
           AddressCategory.unassign( oldAddr ).then( assignTarget ).dispatch( oldAddr.getCluster( ) );
         } else {
-          assignTarget.apply( t );
+          assignTarget.apply();
         }
       }
     };
     if ( address.isAssigned( ) ) {
       address.unassign( ).getCallback( ).then( unassignBystander ).dispatch( oldAddr.getCluster( ) );
     } else {
-      unassignBystander.apply( null );
+      unassignBystander.apply();
     }
     return reply;
   }
@@ -225,7 +225,9 @@ public class AddressManager {
               Addresses.getAddressManager( ).releaseSystemAddress( address );
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
-              } catch ( NoSuchElementException e ) {}
+              } catch ( Exception e ) {
+                LOG.debug( e, e );
+              }
             }
           } ).dispatch( address.getCluster( ) );
         } else {
@@ -233,7 +235,9 @@ public class AddressManager {
             @Override public void apply( ) {
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
-              } catch ( NoSuchElementException e ) {}
+              } catch ( Exception e ) {
+                LOG.debug( e, e );
+              }
             }
           } ).dispatch( address.getCluster( ) );
         }
