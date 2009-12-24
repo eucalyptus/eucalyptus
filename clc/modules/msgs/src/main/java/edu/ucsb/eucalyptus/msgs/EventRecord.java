@@ -29,7 +29,11 @@ public class EventRecord extends EucalyptusMessage {
     this.other = ":" + other;
     if( DebugUtil.DEBUG ) {
       StackTraceElement ste = Thread.currentThread().getStackTrace( )[distance];
-      this.caller = String.format( "%s.%s.%d", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
+      try {
+        this.caller = String.format( "%s.%s.%d", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
+      } catch ( NullPointerException e ) {
+        this.caller = "unknown";
+      }
     } else {
       this.caller = "";
     }
