@@ -73,6 +73,7 @@ import java.util.zip.Adler32;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.util.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.constants.VmState;
 
 public class VmInstances extends AbstractNamedRegistry<VmInstance> {
 
@@ -112,7 +113,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   
   public VmInstance lookupByInstanceIp ( String ip ) throws NoSuchElementException {
     for( VmInstance vm : this.listValues( ) ) {
-      if( ip.equals( vm.getNetworkConfig( ).getIpAddress( ) ) ) {
+      if( ip.equals( vm.getNetworkConfig( ).getIpAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
         return vm;
       }
     }

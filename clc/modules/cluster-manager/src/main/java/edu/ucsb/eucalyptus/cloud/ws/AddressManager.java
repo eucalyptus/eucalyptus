@@ -70,6 +70,7 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.SuccessCallback;
+import com.eucalyptus.cluster.UnconditionalCallback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
@@ -219,8 +220,8 @@ public class AddressManager {
       try {
         LOG.info( EventRecord.here( AddressManager.class, Events.DISASSOCIATE, address.toString( ) ) );
         if ( address.isSystemOwned( ) ) {
-          AddressCategory.unassign( address ).then( new SuccessCallback( ) {
-            public void apply( Object t ) {
+          AddressCategory.unassign( address ).then( new UnconditionalCallback( ) {
+            public void apply( ) {
               Addresses.getAddressManager( ).releaseSystemAddress( address );
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
@@ -228,8 +229,8 @@ public class AddressManager {
             }
           } ).dispatch( address.getCluster( ) );
         } else {
-          AddressCategory.unassign( address ).then( new SuccessCallback( ) {
-            @Override public void apply( Object t ) {
+          AddressCategory.unassign( address ).then( new UnconditionalCallback( ) {
+            @Override public void apply( ) {
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
               } catch ( NoSuchElementException e ) {}

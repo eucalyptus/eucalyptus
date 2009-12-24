@@ -108,7 +108,9 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   public void clearVmAddress() {
     try {
       VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( super.getRequest().getDestination() );
-      vm.getNetworkConfig().setIgnoredPublicIp( VmInstance.DEFAULT_IP );
+      if( vm.getNetworkConfig( ).getIgnoredPublicIp() == super.getRequest().getSource() ) {
+        vm.getNetworkConfig().setIgnoredPublicIp( vm.getNetworkConfig( ).getIpAddress() );
+      }
     } catch(Throwable t) {
       LOG.debug(t,t);
     }
