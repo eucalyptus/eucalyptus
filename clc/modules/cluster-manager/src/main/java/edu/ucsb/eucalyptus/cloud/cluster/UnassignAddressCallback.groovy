@@ -138,7 +138,6 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
     } catch( Throwable t ) {
       LOG.debug(t,t);
     } finally {
-      LOG.info( EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ) );
       if(this.address.isPending( )) {
         this.address.clearPending( );
       }

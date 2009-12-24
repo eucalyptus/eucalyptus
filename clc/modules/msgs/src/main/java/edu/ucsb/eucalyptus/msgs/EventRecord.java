@@ -29,9 +29,9 @@ public class EventRecord extends EucalyptusMessage {
     this.other = ":" + other;
     if( DebugUtil.DEBUG ) {
       StackTraceElement ste = Thread.currentThread().getStackTrace( )[distance];
-      try {
-        this.caller = String.format( "%s.%s.%d", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
-      } catch ( NullPointerException e ) {
+      if( ste != null && ste.getFileName( ) != null ) {
+        this.caller = String.format( "%s.%s.%s", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
+      } else {
         this.caller = "unknown";
       }
     } else {
