@@ -150,21 +150,23 @@ public class AddressManager {
     LOG.info( EventRecord.here( AddressManager.class, Events.ASSOCIATE, address.toString( ), vm.toString( ) ) );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
-    final boolean system = oldAddr != null ? oldAddr.isSystemOwned( ) : false;
+    final boolean oldAddrSystem = oldAddr != null ? oldAddr.isSystemOwned( ) : false;
     reply.set_return( true );
+
     final UnconditionalCallback assignTarget = new UnconditionalCallback( ) {
       public void apply( ) {
-        if ( system ) {
+        LOG.info( EventRecord.here( AddressManager.class, Events.ASSOCIATE, address.toString( ), vm.toString( ) ) );
+        AddressCategory.assign( address, vm ).dispatch( address.getCluster( ) );
+        if ( oldAddrSystem ) {
           LOG.info( EventRecord.here( AddressManager.class, Events.RELEASE, oldAddr.toString( ) ) );
           Addresses.getAddressManager( ).releaseSystemAddress( oldAddr );
         }
-        LOG.info( EventRecord.here( AddressManager.class, Events.ASSOCIATE, address.toString( ), vm.toString( ) ) );
-        AddressCategory.assign( address, vm ).dispatch( address.getCluster( ) );
         if ( oldVm != null ) {
           Addresses.system( oldVm );
         }
       }
     };
+    
     final UnconditionalCallback unassignBystander = new UnconditionalCallback( ) {
       public void apply( ) {
         if ( oldAddr != null ) {
