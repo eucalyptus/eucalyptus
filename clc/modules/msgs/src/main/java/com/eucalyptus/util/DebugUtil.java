@@ -32,7 +32,8 @@ public class DebugUtil implements EventListener {
         return cause;
       }
     }
-    LOG.trace( "-> Ignoring unrelated exception: ex=" + e.getClass( ) + " root=" + rootCause );
+    if(e != null) 
+      LOG.trace( "-> Ignoring unrelated exception: ex=" + e.getClass( ) + " root=" + rootCause );
     return new ExceptionNotRelatedException( interesting.toString( ), e );
   }
   

@@ -1842,7 +1842,6 @@ int vnetAddPublicIP(vnetConfig *vnetconfig, char *inip) {
       minip = dot2hex(ip);
       theip = dot2hex(ptr);
       numips = (theip - minip)+1;
-      logprintfl(EUCADEBUG, "IP RANGE CHECK: %s %s %d\n", hex2dot(minip), hex2dot(theip), numips);
       // check (ip >= 0x7F000000 && ip <= 0x7FFFFFFF) looks for ip in lo range
       if (numips <= 0 || numips > 256 || (minip >= 0x7F000000 && minip <= 0x7FFFFFFF) || (theip >= 0x7F000000 && theip <= 0x7FFFFFFF)) {
 	logprintfl(EUCAERROR, "incorrect PUBLICIPS range specified: %s-%s\n", ip, ptr);
