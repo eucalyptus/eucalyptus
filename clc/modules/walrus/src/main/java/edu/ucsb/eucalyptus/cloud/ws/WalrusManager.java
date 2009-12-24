@@ -907,7 +907,7 @@ public class WalrusManager {
 				foundObject.setObjectKey(objectKey);
 				try {
 					//writes are unconditional
-					if(request.getBase64Data().getBytes().length > WalrusProperties.MAX_INLINE_SIZE) {
+					if(request.getBase64Data().getBytes().length > WalrusProperties.MAX_INLINE_DATA_SIZE) {
 						db.rollback();
 						throw new InlineDataTooLargeException(bucketName + "/" + objectKey);
 					}
@@ -1646,7 +1646,7 @@ public class WalrusManager {
 					}								
 					if(request.getGetData()) {
 						if(request.getInlineData()) {
-							if((size * 4) > WalrusProperties.MAX_INLINE_SIZE) {
+							if((size * 4) > WalrusProperties.MAX_INLINE_DATA_SIZE) {
 								throw new InlineDataTooLargeException(bucketName + "/" + objectKey);
 							}
 							byte[] bytes = new byte[102400];
