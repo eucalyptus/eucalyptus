@@ -133,13 +133,10 @@ typedef enum instance_states_t {
     SHUTOFF,
     CRASHED,
 
-    /* TODO: remove some of these? */
-    NEW, 
-    WAITING,
+    /* start-time states */
+    STAGING,
     BOOTING,
     CANCELED,
-    TERMINATING,
-    AWOL,
 
     /* the only three states reported to CLC */
     PENDING,  /* staging in data, starting to boot, failed to boot */ 
@@ -152,18 +149,15 @@ typedef enum instance_states_t {
 static char * instance_state_names[] = {
     "Unknown",
     "Running",
-    "Running", /* TODO: we need to figure out what to call this. idle? */
+    "Waiting",
     "Paused",
     "Shutdown",
     "Shutoff",
     "Crashed",
 
-    "New",
-    "Waiting",
+    "Staging",
     "Booting",
     "Canceled",
-    "Terminating",
-    "AWOL",
 
     "Pending",
     "Extant",

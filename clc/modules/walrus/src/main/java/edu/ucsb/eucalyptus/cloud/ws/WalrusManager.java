@@ -70,6 +70,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -101,6 +102,7 @@ import edu.ucsb.eucalyptus.cloud.BucketAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.BucketAlreadyOwnedByYouException;
 import edu.ucsb.eucalyptus.cloud.BucketNotEmptyException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
+import edu.ucsb.eucalyptus.cloud.InlineDataTooLargeException;
 import edu.ucsb.eucalyptus.cloud.InvalidRangeException;
 import edu.ucsb.eucalyptus.cloud.InvalidTargetBucketForLoggingException;
 import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
@@ -907,7 +909,11 @@ public class WalrusManager {
 				foundObject.setObjectKey(objectKey);
 				try {
 					//writes are unconditional
-					byte[] base64Data = request.getBase64Data().getBytes();
+					if(request.getBase64Data().getBytes().length > WalrusProperties.MAX_INLINE_DATA_SIZE) {
+						db.rollback();
+						throw new InlineDataTooLargeException(bucketName + "/" + objectKey);
+					}
+					byte[] base64Data = Hashes.base64decode(request.getBase64Data()).getBytes();
 					foundObject.setObjectName(objectName);
 					try {
 						FileIO fileIO = storageManager.prepareForWrite(bucketName, objectName);
@@ -916,6 +922,7 @@ public class WalrusManager {
 							fileIO.finish();
 						}
 					} catch(Exception ex) {
+						db.rollback();
 						throw new EucalyptusCloudException(ex);
 					}
 					md5 = Hashes.getHexString(Hashes.Digest.MD5.get().digest(base64Data));
@@ -1641,19 +1648,26 @@ public class WalrusManager {
 					}								
 					if(request.getGetData()) {
 						if(request.getInlineData()) {
-							try {
-								byte[] bytes = new byte[102400/*TODO: NEIL WalrusQueryDispatcher.DATA_MESSAGE_SIZE*/];
-								int bytesRead = 0;
-								String base64Data = "";
-								while((bytesRead = storageManager.readObject(bucketName, objectName, bytes, bytesRead)) > 0) {
-									base64Data += new String(bytes, 0, bytesRead);
-								}
-								reply.setBase64Data(base64Data);
-							} catch (IOException ex) {
-								db.rollback();
-								LOG.error(ex);
-								throw new EucalyptusCloudException("Unable to read object: " + bucketName + "/" + objectName);
+							if((size * 4) > WalrusProperties.MAX_INLINE_DATA_SIZE) {
+								throw new InlineDataTooLargeException(bucketName + "/" + objectKey);
 							}
+							byte[] bytes = new byte[102400];
+							int bytesRead = 0, offset = 0;
+							String base64Data = "";
+							try {
+								FileIO fileIO = storageManager.prepareForRead(bucketName, objectName);
+								while((bytesRead = fileIO.read(offset)) > 0) {
+									ByteBuffer buffer = fileIO.getBuffer();
+									buffer.get(bytes, 0, bytesRead);
+									base64Data += new String(bytes, 0, bytesRead);
+									offset += bytesRead;
+								}
+								fileIO.finish();
+							} catch (Exception e) {
+								LOG.error(e, e);
+								throw new EucalyptusCloudException(e);
+							}
+							reply.setBase64Data(Hashes.base64encode(base64Data));
 						} else {
 							//support for large objects
 							if(WalrusProperties.trackUsageStatistics) {

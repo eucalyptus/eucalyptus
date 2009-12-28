@@ -91,27 +91,32 @@
         <value name="progress" field="progress" usage="required"/>
     </mapping>
 
-    <mapping name="CreateVolume" class="edu.ucsb.eucalyptus.msgs.CreateVolumeType" ordered="false">
+    <mapping name="CreateVolume" class="edu.ucsb.eucalyptus.msgs.CreateVolumeType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
         <value name="size" field="size" usage="optional"/>
         <value name="availabilityZone" field="availabilityZone" usage="required"/>
         <value name="snapshotId" field="snapshotId" usage="optional"/>
     </mapping>
-    <mapping name="DeleteVolume" class="edu.ucsb.eucalyptus.msgs.DeleteVolumeType" ordered="false">
+    <mapping name="DeleteVolume" class="edu.ucsb.eucalyptus.msgs.DeleteVolumeType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
         <value name="volumeId" field="volumeId" usage="required"/>
     </mapping>
-    <mapping name="AttachVolume" class="edu.ucsb.eucalyptus.msgs.AttachVolumeType" ordered="false">
+    <mapping name="AttachVolume" class="edu.ucsb.eucalyptus.msgs.AttachVolumeType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
         <value name="volumeId" field="volumeId" usage="required"/>
         <value name="instanceId" field="instanceId" usage="required"/>
         <value name="device" field="device" usage="required"/>
     </mapping>
-    <mapping name="DescribeVolumes" class="edu.ucsb.eucalyptus.msgs.DescribeVolumesType" ordered="false">
+    <mapping name="DescribeVolumes" class="edu.ucsb.eucalyptus.msgs.DescribeVolumesType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
         <collection name="volumeSet" field="volumeSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
             <structure name="item">
                 <value name="volumeId"/>
             </structure>
         </collection>
     </mapping>
-    <mapping name="DetachVolume" class="edu.ucsb.eucalyptus.msgs.DetachVolumeType" ordered="false">
+    <mapping name="DetachVolume" class="edu.ucsb.eucalyptus.msgs.DetachVolumeType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
         <value name="volumeId" field="volumeId" usage="required"/>
         <value name="instanceId" field="instanceId" usage="required"/>
         <value name="device" field="device" usage="required"/>
@@ -144,11 +149,13 @@
         </collection>
     </mapping>
 
-    <mapping name="CreateSnapshot" class="edu.ucsb.eucalyptus.msgs.CreateSnapshotType" ordered="false">
+    <mapping name="CreateSnapshot" class="edu.ucsb.eucalyptus.msgs.CreateSnapshotType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
         <value name="volumeId" field="volumeId" usage="required"/>
     </mapping>
 
-    <mapping name="DeleteSnapshot" class="edu.ucsb.eucalyptus.msgs.DeleteSnapshotType" ordered="false">
+    <mapping name="DeleteSnapshot" class="edu.ucsb.eucalyptus.msgs.DeleteSnapshotType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="snapshotId" field="snapshotId" usage="required"/>
     </mapping>
 
@@ -162,7 +169,8 @@
         <value name="return" field="_return" usage="required"/>
     </mapping>
 
-    <mapping name="DescribeSnapshots" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType" ordered="false">
+    <mapping name="DescribeSnapshots" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
         <collection name="snapshotSet" field="snapshotSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
             <structure name="item">
                 <value name="snapshotId"/>

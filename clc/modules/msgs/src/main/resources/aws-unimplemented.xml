@@ -74,7 +74,8 @@
         </structure>
     </mapping>
 
-    <mapping name="DescribeReservedInstancesOfferings" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsType">
+    <mapping name="DescribeReservedInstancesOfferings" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <structure name="reservedInstancesOfferingsSet">
             <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
                 <structure name="item">
@@ -98,7 +99,8 @@
         </structure>
     </mapping>
 
-    <mapping name="DescribeReservedInstances" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesType">
+    <mapping name="DescribeReservedInstances" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <structure name="reservedInstancesSet">
             <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
                 <structure name="item">

@@ -72,7 +72,8 @@
         <value name="keyMaterial" field="keyMaterial"/>
     </mapping>
 
-    <mapping name="CreateKeyPair" class="edu.ucsb.eucalyptus.msgs.CreateKeyPairType">
+    <mapping name="CreateKeyPair" class="edu.ucsb.eucalyptus.msgs.CreateKeyPairType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="keyName" field="keyName"/>
     </mapping>
 
@@ -81,7 +82,8 @@
         <value name="return" field="_return"/>
     </mapping>
 
-    <mapping name="DeleteKeyPair" class="edu.ucsb.eucalyptus.msgs.DeleteKeyPairType">
+    <mapping name="DeleteKeyPair" class="edu.ucsb.eucalyptus.msgs.DeleteKeyPairType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="keyName" field="keyName"/>
     </mapping>
 
@@ -95,7 +97,8 @@
         </structure>
     </mapping>
 
-    <mapping name="DescribeKeyPairs" class="edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType">
+    <mapping name="DescribeKeyPairs" class="edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <structure name="keySet">
             <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="keySet" item-type="java.lang.String">
                 <structure name="item">

@@ -105,7 +105,7 @@ public class PipelineRegistry {
         if( !DebugUtil.DEBUG ) {
           return f;
         } else if ( candidate != null ) {
-          LOG.debug( EventRecord.here( this.getClass(), EventType.PIPELINE_DUPLICATE, f.getPipelineName( ), f.getClass( ).getSimpleName( ) ) );
+          LOG.trace( EventRecord.here( this.getClass(), EventType.PIPELINE_DUPLICATE, f.getPipelineName( ), f.getClass( ).getSimpleName( ) ) );
         } else {
           candidate = f;
         }

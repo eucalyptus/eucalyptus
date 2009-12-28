@@ -72,7 +72,8 @@
         <value name="return" field="_return"/>
     </mapping>
 
-    <mapping name="DeleteSecurityGroup" class="edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType">
+    <mapping name="DeleteSecurityGroup" class="edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="groupName" field="groupName"/>
     </mapping>
 
@@ -83,7 +84,8 @@
         <value name="return" field="_return"/>
     </mapping>
 
-    <mapping name="CreateSecurityGroup" class="edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType">
+    <mapping name="CreateSecurityGroup" class="edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="groupName" field="groupName"/>
         <value name="groupDescription" field="groupDescription"/>
     </mapping>
@@ -99,7 +101,8 @@
         </structure>
     </mapping>
 
-    <mapping name="DescribeSecurityGroups" class="edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType">
+    <mapping name="DescribeSecurityGroups" class="edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <collection name="securityGroupSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="securityGroupSet" item-type="java.lang.String">
             <structure name="item">
                 <value name="groupName"/>
@@ -142,7 +145,8 @@
         <value name="return" field="_return"/>
     </mapping>
 
-    <mapping name="AuthorizeSecurityGroupIngress" class="edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType">
+    <mapping name="AuthorizeSecurityGroupIngress" class="edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="userId" field="groupUserId"/>
         <value name="groupName" field="groupName"/>
         <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
@@ -158,7 +162,8 @@
         <value name="return" field="_return"/>
     </mapping>
 
-    <mapping name="RevokeSecurityGroupIngress" class="edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType">
+    <mapping name="RevokeSecurityGroupIngress" class="edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="userId" field="groupUserId"/>
         <value name="groupName" field="groupName"/>
         <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
