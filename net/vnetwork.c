@@ -1596,6 +1596,7 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
 
   logprintfl(EUCADEBUG, "vnetAddGatewayIP(): running cmd '%s'\n", cmd);
   rc = system(cmd);
+  rc = rc>>8;
   if (rc && rc != 2) {
     logprintfl(EUCAERROR, "vnetAddGatewayIP(): could not bring up new device %s with ip %s\n", devname, newip);
     if (newip) free(newip);
@@ -1608,6 +1609,7 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
   if (check_deviceup(devname)) {
     snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set dev %s up", vnetconfig->eucahome, devname);
     rc = system(cmd);
+    rc = rc>>8;
     if (rc) {
       logprintfl(EUCAERROR, "vnetAddGatewayIP(): could not bring up interface '%s'\n", devname);
       return(1);
