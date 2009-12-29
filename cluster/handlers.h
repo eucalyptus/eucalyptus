@@ -148,7 +148,7 @@ typedef struct ccResourceCache_t {
 
 typedef struct ccInstanceCache_t {
   ccInstance instances[MAXINSTANCES];
-  int valid[MAXINSTANCES];
+  time_t lastseen[MAXINSTANCES];
   int numInsts;
   int instanceCacheUpdate;
 } ccInstanceCache;
@@ -163,7 +163,7 @@ typedef struct ccConfig_t {
   int initialized;
   int schedPolicy, schedState;
   int idleThresh, wakeThresh;
-  time_t configMtime;
+  time_t configMtime, instanceTimeout;
   int threads[3];
 } ccConfig;
 
@@ -204,6 +204,12 @@ int find_instanceCacheId(char *instanceId, ccInstance **out);
 int find_instanceCacheIP(char *ip, ccInstance **out);
 void print_instanceCache(void);
 void invalidate_instanceCache(void);
+int map_instanceCache(int (*match)(ccInstance *, void *), void *matchParam, int (*operate)(ccInstance *, void *), void *operateParam);
+
+int privIpCmp(ccInstance *inst, void *ip);
+int privIpSet(ccInstance *inst, void *ip);
+int pubIpCmp(ccInstance *inst, void *ip);
+int pubIpSet(ccInstance *inst, void *ip);
 int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src);
 
 int add_resourceCache(char *host, ccResource *in);
@@ -225,6 +231,9 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock);
 void shawn(void);
 int sem_timewait(sem_t *sem, time_t seconds);
 int sem_timepost(sem_t *sem);
+int sem_mywait(sem_t *sem);
+int sem_mypost(sem_t *sem);
+
 int timeread(int fd, void *buf, size_t bytes, int timeout);
 int refreshNodes(ccConfig *config, char *configFile, ccResource **res, int *numHosts);
 
