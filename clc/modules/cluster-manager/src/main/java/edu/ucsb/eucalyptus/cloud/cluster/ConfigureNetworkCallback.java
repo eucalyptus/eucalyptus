@@ -83,7 +83,7 @@ public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetw
   }
   @Override
   public void prepare( ConfigureNetworkType msg ) throws Exception {
-    LOG.debug("Sending configure network rules for: " + msg.getUserId( ) + "\n" + LogUtil.lineObject( msg.getRules( ) ) );
+    LOG.debug("Sending configure network rules for: " + msg.getUserId( ) + "\n" + LogUtil.dumpObject( msg.getRules( ) ) );
   }
   @Override
   public void verify( EucalyptusMessage msg ) throws Exception {

@@ -116,7 +116,7 @@ public class GenerateJiBXBinding {
   }
 
   private static void childMapping( Class clazz, String name, String className, String extendsName, boolean isAbstract ) {
-    append( "<mapping " + ( isAbstract ? "abstract=\"true\"" : "name=\"" + name + "\"" ) + " extends=\"" + extendsName + "\" class=\"" + className + "\" >" );
+    append( "<mapping " + ( isAbstract ? "abstract=\"true\"" : "name=\"" + name + "\" extends=\"" + extendsName + "\""  ) + " class=\"" + className + "\" >" );
     indent++;
     append( "<structure map-as=\"" + extendsName + "\"/>" );
     for ( Field f : clazz.getDeclaredFields( ) ) {

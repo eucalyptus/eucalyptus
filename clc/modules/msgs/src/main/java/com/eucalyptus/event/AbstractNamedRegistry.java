@@ -264,6 +264,21 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName> {
   protected ConcurrentNavigableMap<String, TYPE> getDisabledMap( ) {
     return disabledMap;
   }
+
+  public TYPE enableFirst() throws NoSuchElementException {
+    this.canHas.writeLock( ).lock( );
+    try {      
+      Map.Entry<String,TYPE> entry = this.disabledMap.pollFirstEntry( );
+      if( entry == null ) {
+        throw new NoSuchElementException( "Disabled map is empty." );
+      }
+      TYPE first = entry.getValue( );
+      this.activeMap.put( first.getName( ), first );
+      return first;
+    } finally {
+      this.canHas.writeLock( ).unlock( );
+    }
+  }
   
   @Override
   public String toString( ) {

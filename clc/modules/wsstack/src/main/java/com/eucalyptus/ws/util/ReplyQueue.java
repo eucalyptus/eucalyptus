@@ -94,6 +94,7 @@ public class ReplyQueue {
   private static ConcurrentMap<String, ChannelHandlerContext> pending               = new ConcurrentHashMap<String, ChannelHandlerContext>( MAP_CAPACITY, MAP_BIN_AVG_THRESHOLD, MAP_NUM_CONCURRENT );
 
   public static void addReplyListener( String correlationId, ChannelHandlerContext ctx ) {
+    LOG.trace("Adding reply listener: " + correlationId + " with ctx=" + ctx );
     pending.put( correlationId, ctx );
   }
   public static void removeReplyListener( String correlationId ) {
@@ -103,7 +104,6 @@ public class ReplyQueue {
   @SuppressWarnings( "unchecked" )
   public void handle( EucalyptusMessage responseMessage ) {
     String corrId = responseMessage.getCorrelationId( );
-    LOG.info("Message: " + responseMessage.getClass().getCanonicalName( ) + ":" + responseMessage.getCorrelationId( ) );
     ChannelHandlerContext ctx = pending.remove( corrId );
     if ( ctx == null ) {
       LOG.warn( "Received a reply for absent client:  No channel to write response message." );

@@ -124,9 +124,7 @@ public class ClusterMessageQueue implements Runnable {
           } catch ( final Throwable e ) {
             LOG.debug( e, e );
           }
-          LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE_TIME, this.clusterName, Long.toString( msgStart - start ) ) );  
-          LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.SERVICE_TIME, this.clusterName, Long.toString( System.currentTimeMillis( ) - msgStart ) ) );
-          LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE_LENGTH, this.clusterName, Long.toString( this.msgQueue.size( ) ) ) );
+          LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE_TIME, this.clusterName, Long.toString( msgStart - start ), EventType.SERVICE_TIME.name( ), Long.toString( System.currentTimeMillis( ) - msgStart ), EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ) );  
         }
       } catch ( final Throwable e ) {
         LOG.error( e, e );

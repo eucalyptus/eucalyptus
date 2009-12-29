@@ -258,9 +258,8 @@
 		</structure>
 	</mapping>
 
-	<mapping name="DeleteBucket" class="edu.ucsb.eucalyptus.msgs.DeleteBucketType">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
-			usage="optional" />
+	<mapping name="DeleteBucket" class="edu.ucsb.eucalyptus.msgs.DeleteBucketType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
 	</mapping>
 
 	<mapping name="DeleteBucketResponse"
@@ -441,9 +440,8 @@
 		</structure>
 	</mapping>
 
-	<mapping name="DeleteObject" class="edu.ucsb.eucalyptus.msgs.DeleteObjectType">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
-			usage="optional" />
+	<mapping name="DeleteObject" class="edu.ucsb.eucalyptus.msgs.DeleteObjectType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
 	</mapping>
 
 	<mapping name="DeleteObjectResponse"
@@ -583,9 +581,8 @@
 	</mapping>
 
 	<mapping name="DeleteWalrusSnapshot"
-		class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotType">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
-			usage="optional" />
+		class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
 	</mapping>
 
 	<mapping name="DeleteWalrusSnapshotResponse"
@@ -612,11 +609,13 @@
 
 	<mapping name="GetWalrusConfiguration"
 		class="edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
 		<value name="Name" field="name" />
 	</mapping>
 
 	<mapping name="GetWalrusConfigurationResponse"
-		class="edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType">
+		class="edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType" usage="optional"/>
 		<value name="Name" field="name" />
 		<value name="BucketRootDirectory" field="bucketRootDirectory"
 			usage="optional" />

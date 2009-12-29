@@ -20,6 +20,8 @@ LogUtil.logHeader( "Proxool config for ${context_name}" ).log( url ).log( poolPr
 ProxoolFacade.registerConnectionPool(url, p);
 
 [
+  'hibernate.bytecode.use_reflection_optimizer': 'false',
+  'hibernate.cglib.use_reflection_optimizer': 'false',
   'hibernate.dialect': 'org.hibernate.dialect.HSQLDialect',
   'hibernate.connection.provider_class': 'org.hibernate.connection.ProxoolConnectionProvider',
   'hibernate.proxool.pool_alias': "eucalyptus_${context_name}",

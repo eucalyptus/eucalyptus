@@ -127,8 +127,8 @@ public class ObjectTest extends TestCase {
         getObjectRequest.setGetData(true);
         getObjectRequest.setGetMetaData(true);
         getObjectRequest.setInlineData(true);
-        /*GetObjectResponseType getObjectReply = */bukkit.GetObject(getObjectRequest);
-        //System.out.println(getObjectReply);
+        GetObjectResponseType getObjectReply = bukkit.GetObject(getObjectRequest);
+        System.out.println(getObjectReply);
 
         DeleteObjectType deleteObjectRequest = new DeleteObjectType();
 		deleteObjectRequest.setBucket(bucketName);

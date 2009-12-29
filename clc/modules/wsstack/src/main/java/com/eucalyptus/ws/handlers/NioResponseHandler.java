@@ -163,7 +163,7 @@ public class NioResponseHandler extends SimpleChannelHandler {
         if( o instanceof Throwable ) {
           LOG.error( "Caught exception in asynchronous response handler.", (Throwable) o );
         } else {
-          LOG.debug( this.getClass( ).getSimpleName( ) + " Got response of: " + LogUtil.lineObject( o ) );
+          LOG.debug( this.getClass( ).getSimpleName( ) + " Got response of: " + LogUtil.dumpObject( o ) );
         }
       }
       this.ready.signalAll( );

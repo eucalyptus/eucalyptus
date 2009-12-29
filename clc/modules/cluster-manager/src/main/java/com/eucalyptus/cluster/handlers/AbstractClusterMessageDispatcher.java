@@ -53,6 +53,7 @@ import com.eucalyptus.ws.util.ChannelUtil;
 
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
+import edu.ucsb.eucalyptus.msgs.GetKeysResponseType;
 
 public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHandler implements ChannelPipelineFactory, EventListener {
   private static Logger     LOG            = Logger.getLogger( AbstractClusterMessageDispatcher.class );
@@ -122,15 +123,15 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   
   public void write( final Object o ) {
     if( !this.inFlightMessage.compareAndSet( false, true ) ) {
-      LOG.debug( EventRecord.caller( AbstractClusterMessageDispatcher.class, EventType.MSG_REJECTED, LogUtil.lineObject( o ) ) );    
+      LOG.trace( EventRecord.caller( AbstractClusterMessageDispatcher.class, EventType.MSG_REJECTED, LogUtil.dumpObject( o ) ) );    
       return;
     } else {
       ChannelFuture channelConnectFuture = this.clientBootstrap.connect( this.remoteAddr );
-      HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostName, this.port, this.servicePath, o );
+      final HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostName, this.port, this.servicePath, o );
       channelConnectFuture.addListener( ChannelFutureListener.CLOSE_ON_FAILURE );
       channelConnectFuture.addListener( ChannelUtil.WRITE_AND_CALLBACK( request, new ChannelFutureListener( ) {
         @Override public void operationComplete( ChannelFuture future ) throws Exception {
-          LOG.debug( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_SENT, LogUtil.lineObject( o ) ) );
+          LOG.info( EventRecord.here( o.getClass(), EventType.MSG_SENT, LogUtil.dumpObject( o ) ) );
         } } ) );
     }
   }
@@ -160,7 +161,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   
   @Override
   public void channelInterestChanged( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    LOG.debug( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_PENDING, e.toString( ) ) );
+    LOG.trace( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_PENDING, e.toString( ) ) );
     super.channelInterestChanged( ctx, e );
   }
   
@@ -170,6 +171,9 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
       if ( e.getMessage( ) instanceof MappingHttpResponse ) {
         MappingHttpResponse response = ( MappingHttpResponse ) ( ( MessageEvent ) e ).getMessage( );
         if ( HttpResponseStatus.OK.equals( response.getStatus( ) ) ) {
+          if(!( response.getMessage( ) instanceof GetKeysResponseType )) {
+            LOG.info( EventRecord.here( response.getMessage( ).getClass(), EventType.MSG_SENT, LogUtil.dumpObject( response.getMessage( ) ) ) );
+          }
           this.upstreamMessage( ctx, ( MessageEvent ) e );
         } else {
           throw new EucalyptusClusterException( response.getMessageString( ) );
@@ -183,7 +187,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   
   @Override
   public void writeComplete( ChannelHandlerContext ctx, WriteCompletionEvent e ) throws Exception {
-    LOG.debug( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_SERVICED, e.toString( ) ) );
+    LOG.trace( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_SERVICED, e.toString( ) ) );
     super.writeComplete( ctx, e );
   }
     
@@ -194,14 +198,21 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   }
   @Override
   public void writeRequested( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
-    LOG.debug( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_PENDING,
+    LOG.trace( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_PENDING,
                                  e.getMessage( ).toString( ) ) );
     super.writeRequested( ctx, e );
   }
   @Override
   public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
-    LOG.debug( e.getCause( ), e.getCause( ) );
-    this.clearPending( ctx.getChannel( ) );
+    if(this.inFlightMessage.get( )) {
+      if( e != null && e.getCause() != null ) {
+        LOG.debug( e.getCause( ), e.getCause( ) );
+      } else {
+        Exception ex = new RuntimeException("Exception even has a null-valued cause.");
+        LOG.error( ex, ex );
+      }
+      this.clearPending( ctx.getChannel( ) );
+    }
   }
   
   public Cluster getCluster( ) {

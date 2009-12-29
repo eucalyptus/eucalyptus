@@ -69,7 +69,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import com.eucalyptus.ws.handlers.EucalyptusQueryBinding;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.eucalyptus.ws.handlers.WalrusRESTBinding;
-import com.eucalyptus.ws.handlers.WalrusRESTLogger;
+import com.eucalyptus.ws.handlers.WalrusRESTLoggerOutbound;
+import com.eucalyptus.ws.handlers.WalrusRESTLoggerInbound;
 
 public class WalrusRESTBindingStage implements UnrollableStage {
 
@@ -80,8 +81,9 @@ public class WalrusRESTBindingStage implements UnrollableStage {
 
 	@Override
 	public void unrollStage( ChannelPipeline pipeline ) {
+		pipeline.addLast( "walrus-rest-logger-outbound", new WalrusRESTLoggerOutbound( ) );
 		pipeline.addLast( "walrus-rest-binding", new WalrusRESTBinding( ) );
-		pipeline.addLast( "walrus-rest-logger", new WalrusRESTLogger( ) );
+		pipeline.addLast( "walrus-rest-logger-inbound", new WalrusRESTLoggerInbound( ) );
 	}
 
 }

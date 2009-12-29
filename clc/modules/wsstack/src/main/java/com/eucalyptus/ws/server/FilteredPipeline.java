@@ -99,8 +99,8 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   
   public boolean accepts( final HttpRequest message ) {
     final boolean result = this.checkAccepts( message );
-    if ( result && DebugUtil.DEBUG ) {
-      LOG.debug( EventRecord.here( this.getClass(), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ) );
+    if ( result && DebugUtil.TRACE ) {
+      LOG.trace( EventRecord.here( this.getClass(), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ) );
     }
     return result;
   }

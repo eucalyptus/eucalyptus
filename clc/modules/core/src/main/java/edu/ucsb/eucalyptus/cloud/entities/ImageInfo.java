@@ -65,29 +65,38 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import edu.ucsb.eucalyptus.msgs.CacheImageType;
-import edu.ucsb.eucalyptus.msgs.CheckImageType;
-import edu.ucsb.eucalyptus.msgs.FlushCachedImageType;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
-import com.eucalyptus.ws.util.Messaging;
-import com.eucalyptus.util.WalrusProperties;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.Lob;
+import javax.persistence.ManyToMany;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Function;
 
-import javax.persistence.*;
-
-import java.util.ArrayList;
-import java.util.List;
+import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 @Entity
 @PersistenceContext(name="eucalyptus_general")
 @Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ImageInfo {
-
+  @Transient
+  public static ImageInfo ALL = new ImageInfo();
   @Id
   @GeneratedValue
   @Column( name = "image_id" )
@@ -338,5 +347,11 @@ public class ImageInfo {
   @Override
   public String toString() {
     return this.imageId;
+  }
+  public static ImageInfoToDetails TO_IMAGE_DETAILS = new ImageInfoToDetails( );
+  static class ImageInfoToDetails implements Function<ImageInfo,ImageDetails> {
+    @Override public ImageDetails apply( ImageInfo arg0 ) {
+      return arg0.getAsImageDetails( );
+    }    
   }
 }
