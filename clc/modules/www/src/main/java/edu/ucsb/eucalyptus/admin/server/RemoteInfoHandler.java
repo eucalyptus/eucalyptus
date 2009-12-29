@@ -165,48 +165,48 @@ public class RemoteInfoHandler {
 
 	public static synchronized List<StorageInfoWeb> getStorageList( ) throws EucalyptusCloudException {
 		List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
-		try {
-      for( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
-      	if( NetworkUtil.testLocal( cc.getHostName( ) ) && !Component.storage.isEnabled( ) ) {
-      		storageList.add( StorageInfoWeb.DEFAULT_SC );
-      		continue;
-      	}
-      	StorageControllerConfiguration c;
-      	try {
-      		c = Configuration.getStorageControllerConfiguration(  cc.getName( ) );
-      		try {
-      			GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType(c.getName());
-      			if(NetworkUtil.testLocal( cc.getHostName( ) ) && Component.storage.isEnabled()) {
-      				getStorageConfiguration.setName(StorageProperties.SC_LOCAL_NAME);
-      			} 
-      			ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, c.getHostName());
-      			GetStorageConfigurationResponseType getStorageConfigResponse = 
-      				scDispatch.send(getStorageConfiguration, GetStorageConfigurationResponseType.class);
-      			storageList.add(new StorageInfoWeb(c.getName(), 
-      					c.getHostName(), 
-      					c.getPort(), 
-      					getStorageConfigResponse.getStorageRootDirectory(), 
-      					getStorageConfigResponse.getMaxVolumeSize(), 
-      					getStorageConfigResponse.getMaxTotalVolumeSize(), 
-      					getStorageConfigResponse.getStorageInterface(), 
-      					getStorageConfigResponse.getZeroFillVolumes()));
-      		} catch ( Throwable e ) {
-      			LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
-      			storageList.add(new StorageInfoWeb(c.getName(), 
-      					c.getHostName(), 
-      					c.getPort(), 
-      					StorageInfoWeb.DEFAULT_SC.getVolumesPath( ), 
-      					StorageInfoWeb.DEFAULT_SC.getMaxVolumeSizeInGB( ), 
-      					StorageInfoWeb.DEFAULT_SC.getTotalVolumesSizeInGB( ), 
-      					StorageInfoWeb.DEFAULT_SC.getStorageInterface( ), 
-      					StorageInfoWeb.DEFAULT_SC.getZeroFillVolumes()));            
-      		}
-      	} catch ( Exception e1 ) {
-      		storageList.add( StorageInfoWeb.DEFAULT_SC );
-      	}
+    for( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
+    	try {
+        if( NetworkUtil.testLocal( cc.getHostName( ) ) && !Component.storage.isEnabled( ) ) {
+        	storageList.add( StorageInfoWeb.DEFAULT_SC );
+        	continue;
+        }
+      } catch ( Exception e ) {
+        LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
       }
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
+    	StorageControllerConfiguration c;
+    	try {
+    		c = Configuration.getStorageControllerConfiguration(  cc.getName( ) );
+    		try {
+    			GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType(c.getName());
+    			if(NetworkUtil.testLocal( cc.getHostName( ) ) && Component.storage.isEnabled()) {
+    				getStorageConfiguration.setName(StorageProperties.NAME);
+    			} 
+    			ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, c.getHostName());
+    			GetStorageConfigurationResponseType getStorageConfigResponse = 
+    				scDispatch.send(getStorageConfiguration, GetStorageConfigurationResponseType.class);
+    			storageList.add(new StorageInfoWeb(c.getName(), 
+    					c.getHostName(), 
+    					c.getPort(), 
+    					getStorageConfigResponse.getStorageRootDirectory(), 
+    					getStorageConfigResponse.getMaxVolumeSize(), 
+    					getStorageConfigResponse.getMaxTotalVolumeSize(), 
+    					getStorageConfigResponse.getStorageInterface(), 
+    					getStorageConfigResponse.getZeroFillVolumes()));
+    		} catch ( Throwable e ) {
+    			LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
+    			storageList.add(new StorageInfoWeb(c.getName(), 
+    					c.getHostName(), 
+    					c.getPort(), 
+    					StorageInfoWeb.DEFAULT_SC.getVolumesPath( ), 
+    					StorageInfoWeb.DEFAULT_SC.getMaxVolumeSizeInGB( ), 
+    					StorageInfoWeb.DEFAULT_SC.getTotalVolumesSizeInGB( ), 
+    					StorageInfoWeb.DEFAULT_SC.getStorageInterface( ), 
+    					StorageInfoWeb.DEFAULT_SC.getZeroFillVolumes()));            
+    		}
+    	} catch ( Exception e1 ) {
+    		storageList.add( StorageInfoWeb.DEFAULT_SC );
+    	}
     }
 		return storageList;
 	}
