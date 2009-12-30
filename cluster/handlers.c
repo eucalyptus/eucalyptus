@@ -2017,6 +2017,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	}
       }
     }
+    //    del_instanceCacheId(instId);
   }
   
   sem_mypost(RESCACHE);
@@ -3191,7 +3192,7 @@ int add_instanceCache(char *instanceId, ccInstance *in){
   sem_mywait(INSTCACHE);
   done=0;
   for (i=0; i<MAXINSTANCES && !done; i++) {
-    if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
+    if ( (instanceCache->valid[i] == 1 ) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
       // already in cache
       logprintfl(EUCADEBUG, "add_instanceCache(): '%s/%s/%s' already in cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp);
       instanceCache->lastseen[i] = time(NULL);
@@ -3217,7 +3218,7 @@ int del_instanceCacheId(char *instanceId) {
 
   sem_mywait(INSTCACHE);
   for (i=0; i<MAXINSTANCES; i++) {
-    if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
+    if ( (instanceCache->valid[i] == 1) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
       // del from cache
       bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
       instanceCache->lastseen[i] = 0;
