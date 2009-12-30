@@ -149,6 +149,7 @@ typedef struct ccResourceCache_t {
 typedef struct ccInstanceCache_t {
   ccInstance instances[MAXINSTANCES];
   time_t lastseen[MAXINSTANCES];
+  time_t valid[MAXINSTANCES];
   int numInsts;
   int instanceCacheUpdate;
 } ccInstanceCache;
@@ -163,7 +164,7 @@ typedef struct ccConfig_t {
   int initialized;
   int schedPolicy, schedState;
   int idleThresh, wakeThresh;
-  time_t configMtime, instanceTimeout;
+  time_t configMtime, instanceTimeout, ncPollingFrequency;
   int threads[3];
 } ccConfig;
 
@@ -205,7 +206,6 @@ int find_instanceCacheIP(char *ip, ccInstance **out);
 void print_instanceCache(void);
 void invalidate_instanceCache(void);
 int map_instanceCache(int (*match)(ccInstance *, void *), void *matchParam, int (*operate)(ccInstance *, void *), void *operateParam);
-
 int privIpCmp(ccInstance *inst, void *ip);
 int privIpSet(ccInstance *inst, void *ip);
 int pubIpCmp(ccInstance *inst, void *ip);
@@ -225,14 +225,14 @@ int init_localstate(void);
 int init_config(void);
 int init_pthreads(void);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname, int mode);
-//int setup_shared_buffer(void **buf, char *bufname, size_t bytes, int mode);
+void unlock_exit(int);
+void shawn(void);
+
 int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock);
 int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock);
-void shawn(void);
-int sem_timewait(sem_t *sem, time_t seconds);
-int sem_timepost(sem_t *sem);
-int sem_mywait(sem_t *sem);
-int sem_mypost(sem_t *sem);
+
+int sem_mywait(int lockno);
+int sem_mypost(int lockno);
 
 int timeread(int fd, void *buf, size_t bytes, int timeout);
 int refreshNodes(ccConfig *config, char *configFile, ccResource **res, int *numHosts);
