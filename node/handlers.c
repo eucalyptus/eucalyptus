@@ -129,12 +129,6 @@ void libvirt_error_handler (	void *userData,
 	if ( error==NULL) {
 		logprintfl (EUCAERROR, "libvirt error handler was given a NULL pointer\n");
 	} else {
-		/* these are common, they appear for evey non-existing
-		 * domain, such as BOOTING/CRASHED/SHUTOFF, which we catch
-		 * elsewhere, so we won't print them */
-		if (error->code==10) {
-			return;
-		}
 		logprintfl (EUCAERROR, "libvirt: %s (code=%d)\n", error->message, error->code);
 	}
 }
@@ -170,7 +164,7 @@ print_running_domains (void)
 	sem_p (inst_sem);
 	for ( head=global_instances; head; head=head->next ) {
 		ncInstance * instance = head->instance;
-		if (instance->state==BOOTING
+		if (instance->state==STAGING || instance->state==BOOTING
 				|| instance->state==RUNNING
 				|| instance->state==BLOCKED
 				|| instance->state==PAUSED) {
@@ -202,6 +196,7 @@ void change_state(	ncInstance *instance,
 {
     instance->state = (int) state;
     switch (state) { /* mapping from NC's internal states into external ones */
+    case STAGING:
     case BOOTING:
     case CANCELED:
         instance->stateCode = PENDING;
@@ -235,8 +230,8 @@ refresh_instance_info(	struct nc_state_t *nc,
     if (! check_hypervisor_conn ())
 	    return;
 
-    /* no need to bug for domains without state */
-    if (now==TEARDOWN)
+    /* no need to bug for domains without state on Hypervisor */
+    if (now==TEARDOWN || now==STAGING)
         return;
     
     sem_p(hyp_sem);
@@ -315,18 +310,22 @@ refresh_instance_info(	struct nc_state_t *nc,
 	  if (!strcmp(nc_state.vnetconfig->mode, "SYSTEM") || !strcmp(nc_state.vnetconfig->mode, "STATIC")) {
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.publicMac, &ip);
             if (!rc) {
-	      logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
-	      strncpy(instance->ncnet.publicIp, ip, 32);
-	      if (ip) free(ip);
+	      if(ip) {
+	        logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
+	        strncpy(instance->ncnet.publicIp, ip, 32);
+	        free(ip);
+	      }
             }
 	  }
         }
         if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 32)) {
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
-                logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
-                strncpy(instance->ncnet.privateIp, ip, 32);
-	        if (ip) free(ip);
+		if(ip) {
+                  logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
+                  strncpy(instance->ncnet.privateIp, ip, 32);
+	          free(ip);
+		}
             }
         }
     }
@@ -403,13 +402,13 @@ monitoring_thread (void *arg)
 	    refresh_instance_info (nc, instance);
 
             /* don't touch running or canceled threads */
-            if (instance->state!=BOOTING && 
+            if (instance->state!=STAGING && instance->state!=BOOTING && 
                 instance->state!=SHUTOFF &&
                 instance->state!=SHUTDOWN &&
                 instance->state!=TEARDOWN) continue;
 
             if (instance->state==TEARDOWN) {
-                /* it's been long enugh, we can fugetaboutit */
+                /* it's been long enough, we can forget the instance */
                 if ((now - instance->terminationTime)>teardown_state_duration) {
                     remove_instance (&global_instances, instance);
                     logprintfl (EUCAINFO, "forgetting about instance %s\n", instance->instanceId);
@@ -419,7 +418,7 @@ monitoring_thread (void *arg)
                 continue;
             }
 
-            if (instance->state==BOOTING &&
+            if ((instance->state==STAGING || instance->state==BOOTING) &&
                 (now - instance->launchTime)<unbooted_cleanup_threshold) /* hasn't been long enough */
                 continue; /* let it be */
             
@@ -547,6 +546,7 @@ void *startup_thread (void * arg)
         change_state (instance, SHUTOFF);
     } else {
         logprintfl (EUCAINFO, "started VM instance %s\n", instance->instanceId);
+        change_state (instance, BOOTING);
     }
 
     return NULL;
@@ -1091,12 +1091,8 @@ void parse_target(char *dev_string) {
 }
 
 char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
-    char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
     char buf [BIG_CHAR_BUFFER_SIZE];
     char *retval;
-    if (!home) {
-        home = strdup(""); /* root by default */
-    }
     
     snprintf (buf, BIG_CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
     logprintfl (EUCAINFO, "connect_iscsi_target invoked (dev_string=%s)\n", dev_string);
@@ -1109,11 +1105,6 @@ char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
 }
 
 int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
-    char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
-    if (!home) {
-        home = strdup(""); /* root by default */
-    }
-    
     logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if (vrun("%s %s", storage_cmd_path, dev_string) != 0) {
 	logprintfl (EUCAERROR, "ERROR: disconnect_iscsi_target failed\n");
@@ -1123,12 +1114,8 @@ int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
 }
 
 char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
-    char * home = getenv (EUCALYPTUS_ENV_VAR_NAME);
     char buf [BIG_CHAR_BUFFER_SIZE];
     char *retval;
-    if (!home) {
-        home = strdup(""); /* root by default */
-    }
     
     snprintf (buf, BIG_CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
     logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);

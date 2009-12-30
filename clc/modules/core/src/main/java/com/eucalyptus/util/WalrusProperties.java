@@ -106,7 +106,7 @@ public class WalrusProperties {
 	public static final long CACHE_PROGRESS_TIMEOUT = 600000L; //ten minutes
 	public static long IMAGE_CACHE_RETRY_TIMEOUT = 1000L;
 	public static final int IMAGE_CACHE_RETRY_LIMIT = 3;
-
+	public static final long MAX_INLINE_DATA_SIZE = 10 * M;
 	public static final String walrusServicePath = "/services/Walrus";
 	public static int WALRUS_PORT = 8773;
 	public static final String NAMESPACE_VERSION = "2006-03-01";
