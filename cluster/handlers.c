@@ -772,18 +772,23 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
   ccResourceCache resourceCacheLocal;
 
   if (timeout <= 0) timeout = 1;
-
+  
   op_start = time(NULL);
   op_timer = timeout;
   logprintfl(EUCADEBUG,"refresh_resources(): called\n");
 
+  rc = update_config();
+  if (rc) {
+    logprintfl(EUCAWARN, "refresh_resources(): bad return from update_config(), check your config file\n");
+  }
+  
   // critical NC call section
   sem_mywait(NCCALL);
-
+  
   sem_mywait(RESCACHE);
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
   sem_mypost(RESCACHE);
-
+  
   for (i=0; i<resourceCacheLocal.numResources; i++) {
     ncResDst = malloc(sizeof(ncResource));
     if (!ncResDst) {
@@ -2340,6 +2345,61 @@ int init_thread(void) {
   return(0);
 }
 
+int update_config(void) {
+  char configFile[1024], home[1024], *tmpstr=NULL;
+  ccResource *res=NULL;
+  int rc, numHosts, ret;
+  time_t configMtime;
+  struct stat statbuf;
+
+  ret = 0;
+  // read in base config information
+  tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
+  if (!tmpstr) {
+    snprintf(home, 1024, "/");
+  } else {
+    snprintf(home, 1024, "%s", tmpstr);
+  }
+
+  snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, home);
+  
+  // stat the config file, update modification time
+  rc = stat(configFile, &statbuf);
+  if (rc) {
+    logprintfl(EUCAERROR, "update_config(): cannot stat configfile '%s'\n", configFile);
+    return(1);
+  } 
+  configMtime = statbuf.st_mtime;
+  
+  // check to see if the configfile has changed
+  sem_mywait(CONFIG);
+  if (config->configMtime != configMtime) {
+    // something has changed
+    logprintfl(EUCAINFO, "update_config(): config file has been modified, refreshing node list\n");
+    res = NULL;
+    rc = refreshNodes(config, configFile, &res, &numHosts);
+    if (rc) {
+      logprintfl(EUCAERROR, "update_config(): cannot read list of nodes, check your config file\n");
+      sem_mywait(RESCACHE);
+      resourceCache->numResources = 0;
+      bzero(resourceCache->resources, sizeof(ccResource) * MAXNODES);
+      sem_mypost(RESCACHE);
+      ret = 1;
+    } else {
+      sem_mywait(RESCACHE);
+      resourceCache->numResources = numHosts;
+      memcpy(resourceCache->resources, res, sizeof(ccResource) * numHosts);
+      sem_mypost(RESCACHE);
+    }
+    if (res) free(res);
+  }
+  
+  config->configMtime = configMtime;
+  sem_mypost(CONFIG);
+  
+  return(ret);
+}
+
 int init_config(void) {
   ccResource *res=NULL;
   char *tmpstr=NULL;
@@ -2367,53 +2427,15 @@ int init_config(void) {
   snprintf(policyFile, 1024, "%s/var/lib/eucalyptus/keys/nc-client-policy.xml", home);
   snprintf(eucahome, 1024, "%s/", home);
 
-  // stat the config file, update modification time
-  rc = stat(configFile, &statbuf);
-  if (rc) {
-    logprintfl(EUCAERROR, "init_config(): cannot stat configfile '%s'\n", configFile);
-    return(1);
-  } 
-  configMtime = statbuf.st_mtime;
-  
   if (init) {
     // this means that this thread has already been initialized
     ret = 0;
-
-    // check to see if the configfile has changed
-    if (config->configMtime != configMtime) {
-      // something has changed
-      config->configMtime = configMtime;
-      
-      logprintfl(EUCAINFO, "init_config(): config file has been modified, refreshing node list\n");
-      res = NULL;
-      rc = refreshNodes(config, configFile, &res, &numHosts);
+    /*
+      rc = update_config();
       if (rc) {
-	logprintfl(EUCAERROR, "init_config(): cannot read list of nodes, check your config file\n");
-	sem_mywait(RESCACHE);
-	resourceCache->numResources = 0;
-	bzero(resourceCache->resources, sizeof(ccResource) * MAXNODES);
-	sem_mypost(RESCACHE);
-	ret = 1;
-      } else {
-	sem_mywait(RESCACHE);
-	resourceCache->numResources = numHosts;
-	memcpy(resourceCache->resources, res, sizeof(ccResource) * numHosts);
-	free(res);
-	sem_mypost(RESCACHE);
-	{
-	  ncMetadata ccMeta;
-	  ccMeta.correlationId = strdup("monitor");
-	  ccMeta.userId = strdup("eucalyptus");
-	  if (!ccMeta.correlationId || !ccMeta.userId) {
-	    logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
-	    unlock_exit(1);
-	  }
-	  refresh_resources(&ccMeta, 60, 1);
-	  free(ccMeta.correlationId);
-	  free(ccMeta.userId);
-	}
+      logprintfl(EUCAWARN, "init_config(): bad return from update_config(), check your config file\n");
       }
-    }
+    */
     return(ret);
   }
   
@@ -2744,7 +2766,7 @@ int init_config(void) {
   config->schedPolicy = schedPolicy;
   config->idleThresh = idleThresh;
   config->wakeThresh = wakeThresh;
-  config->configMtime = configMtime;
+  //  config->configMtime = configMtime;
   config->instanceTimeout = instanceTimeout;
   config->ncPollingFrequency = ncPollingFrequency;
   config->initialized = 1;
