@@ -113,6 +113,22 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   ncStub *ncs;
   time_t op_start, op_timer;
   
+  /*
+  myInstance = malloc(sizeof(ccInstance));
+  bzero(myInstance, sizeof(ccInstance));
+  snprintf(myInstance->instanceId, 4, "MEH");
+  snprintf(myInstance->ccnet.publicIp, 4, "MEH");
+  snprintf(myInstance->ccnet.privateIp, 4, "MEH");
+
+  for (i=0; i<100; i++) {
+    memcpy(&(instanceCache->instances[i]), myInstance, sizeof(ccInstance));
+    instanceCache->valid[i] = 1;
+    instanceCache->lastseen[i] = time(NULL);
+    instanceCache->numInsts++;
+  }
+  // exit(0);
+  */
+
   i = j = 0;
   myInstance = NULL;
   op_start = time(NULL);
@@ -1033,16 +1049,16 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		  rc = mac2ip(vnetconfig, myInstance->ccnet.publicMac, &ip);
 		  if (!rc) {
 		    strncpy(myInstance->ccnet.publicIp, ip, 24);
-		    free(ip);
 		  }
+		  if (ip) free(ip);
 		}
 	      }
 	      if (!strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
 		rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
 		if (!rc) {
 		  strncpy(myInstance->ccnet.privateIp, ip, 24);
-		  free(ip);
 		}
+		if (ip) free(ip);
 	      }
 	    }
 

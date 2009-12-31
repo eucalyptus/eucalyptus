@@ -1578,7 +1578,7 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
       if (remoteIp) free(remoteIp);
     }
   }
-
+  
   return(0);
 }
 
@@ -2048,6 +2048,8 @@ int mac2ip(vnetConfig *vnetconfig, char *mac, char **ip) {
     return(1);
   }
   
+  *ip = NULL;
+
   if (!strcmp(vnetconfig->mode, "SYSTEM")) {
     // try to fill up the arp cache
     snprintf(cmd, 1023, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/populate_arp.pl", vnetconfig->eucahome, vnetconfig->eucahome);
