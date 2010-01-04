@@ -58,46 +58,26 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-/*
- *
- * Author: Neil Soman neil@eucalyptus.com
- */
-package edu.ucsb.eucalyptus.util;
+package edu.ucsb.eucalyptus.cloud.ws;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+import org.apache.log4j.Logger;
 
-public class EucaSemaphoreDirectory {
-	private static ConcurrentHashMap<String, EucaSemaphore> semaphoreMap = new ConcurrentHashMap<String, EucaSemaphore>();
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.SnapshotTask;
 
-	public static EucaSemaphore getSemaphore(String key) {
-		EucaSemaphore semaphore = semaphoreMap.putIfAbsent(key, new EucaSemaphore(Integer.MAX_VALUE));
-		if (semaphore == null) {
-			semaphore = semaphoreMap.get(key);
-		}
-		return semaphore;
+public class SnapshotService {
+	private Logger LOG = Logger.getLogger( SnapshotService.class );
+	
+	private final ExecutorService pool;
+	private final int NUM_THREADS = 5;
+	
+	public SnapshotService() {
+		pool = Executors.newFixedThreadPool(NUM_THREADS);
 	}
-
-	public static EucaSemaphore getSemaphore(String key, int number) {
-		EucaSemaphore semaphore = semaphoreMap.putIfAbsent(key, new EucaSemaphore(number));
-		if (semaphore == null) {
-			semaphore = semaphoreMap.get(key);
-		}
-		return semaphore;
-	}
-
-	public static EucaSemaphore getSolitarySemaphore(String key) {
-		EucaSemaphore semaphore = semaphoreMap.putIfAbsent(key, new EucaSemaphore(1));
-		if (semaphore == null) {
-			semaphore = semaphoreMap.get(key);
-		}
-		return semaphore;
-	}
-
-	public static void removeSemaphore(String key) {
-		if(semaphoreMap.containsKey(key)) {
-			semaphoreMap.remove(key);
-		}
+	
+	public void add(SnapshotTask creator) {
+		pool.execute(creator);
 	}
 }
