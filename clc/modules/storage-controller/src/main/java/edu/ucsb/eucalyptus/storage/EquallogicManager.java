@@ -67,18 +67,25 @@ package edu.ucsb.eucalyptus.storage;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 
+import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
+import edu.ucsb.eucalyptus.ic.StorageController;
+
 public class EquallogicManager implements LogicalStorageManager {
-	private PSCredentialsManager credentialsManager;
+	private static final Pattern VOLUME_CREATE_PATTERN = Pattern.compile(".*iSCSI target name is (.*)\r");
+	private PSConnectionManager connectionManager;
 	private static EquallogicManager singleton;
 	private static Logger LOG = Logger.getLogger(EquallogicManager.class);
 
@@ -92,7 +99,7 @@ public class EquallogicManager implements LogicalStorageManager {
 	}
 
 	public EquallogicManager() {
-		credentialsManager = new PSCredentialsManager();
+		connectionManager = new PSConnectionManager();
 	}
 
 	@Override
@@ -103,7 +110,7 @@ public class EquallogicManager implements LogicalStorageManager {
 
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {
-		credentialsManager.checkConnection();
+		connectionManager.checkConnection();
 	}
 
 	@Override
@@ -134,8 +141,13 @@ public class EquallogicManager implements LogicalStorageManager {
 	@Override
 	public void createVolume(String volumeId, int size)
 	throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		String iqn = connectionManager.createVolume(volumeId, size);
+		if(iqn != null) {
+			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(volumeId, iqn, size);			
+			EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+			db.add(volumeInfo);
+			db.commit();
+		}
 	}
 
 	@Override
@@ -154,8 +166,13 @@ public class EquallogicManager implements LogicalStorageManager {
 
 	@Override
 	public void deleteVolume(String volumeId) throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		if(connectionManager.deleteVolume(volumeId)) {
+			EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
+			if(volumeInfo != null)
+				db.delete(volumeInfo);
+			db.commit();
+		}
 	}
 
 	@Override
@@ -231,41 +248,74 @@ public class EquallogicManager implements LogicalStorageManager {
 
 	}
 
-	public class PSCredentialsManager {
+	public class PSConnectionManager {
 		private String host;
 		private String username;
 		private String password;
+
 
 		public void checkConnection() throws EucalyptusCloudException {
 			String show = execCommand("show");
 			if(show.length() <= 0) 
 				throw new EucalyptusCloudException("Connection failed.");
 		}
-		
+
 		public String execCommand(String command) throws EucalyptusCloudException {
 			try {
-            JSch jsch = new JSch();
-            Session session;
+				JSch jsch = new JSch();
+				Session session;
 				session = jsch.getSession(username, host);
-            session.setConfig("StrictHostKeyChecking", "no");
-            session.setPassword(password);
-            session.connect();
-            Channel channel = session.openChannel("shell");
-            channel.setInputStream(new ByteArrayInputStream(command.getBytes()));
-            ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
-            channel.setOutputStream(bytesOut);
-            channel.connect();
-            try {
-				Thread.sleep(700);
-			} catch (InterruptedException e) {
-				LOG.error(e);
-			}
-            channel.disconnect();
-            session.disconnect();
-            return bytesOut.toString();
+				session.setConfig("StrictHostKeyChecking", "no");
+				session.setPassword(password);
+				session.connect();
+				Channel channel = session.openChannel("shell");
+				channel.setInputStream(new ByteArrayInputStream(command.getBytes()));
+				ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+				channel.setOutputStream(bytesOut);
+				channel.connect();
+				try {
+					Thread.sleep(700);
+				} catch (InterruptedException e) {
+					LOG.error(e);
+				}
+				channel.disconnect();
+				session.disconnect();
+				return bytesOut.toString();
 			} catch (JSchException e1) {
 				LOG.error(e1, e1);
 				throw new EucalyptusCloudException(e1);
+			}
+		}
+
+		private String matchPattern(String input,
+				Pattern pattern) {
+			Matcher m = pattern.matcher(input);
+			if(m.find()) 
+				return m.group(1);
+			else
+				return null;			
+		}
+
+		public String createVolume(String volumeName, int size) {
+			try {
+				String returnValue = execCommand("stty hardwrap off\u001Avolume create " + volumeName + " " + size + "\u001A");
+				return matchPattern(returnValue, VOLUME_CREATE_PATTERN);
+			} catch (EucalyptusCloudException e) {
+				LOG.error(e);
+				return null;
+			}
+		}
+		
+		public boolean deleteVolume(String volumeName) {
+			try {
+				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeName + " offline\u001Avolume delete " + volumeName + "\u001A");
+				if(returnValue != null)
+					return true;
+				else
+					return false;
+			} catch(EucalyptusCloudException e) {
+				LOG.error(e);
+				return false;
 			}
 		}
 	}

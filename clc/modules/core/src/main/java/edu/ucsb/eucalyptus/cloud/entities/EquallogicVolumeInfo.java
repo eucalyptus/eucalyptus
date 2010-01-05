@@ -39,48 +39,37 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.*;
 
+@SuppressWarnings("serial")
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "EquallogicVolumeInfo" )
 @Entity
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class EquallogicVolumeInfo extends LVMVolumeInfo {
-    private String storeName;
-    private Integer tid;
-    private Integer lun;
+    private String iqn;
     private String storeUser;
     private String encryptedPassword;
-
+    
     public EquallogicVolumeInfo() {}
 
     public EquallogicVolumeInfo(String volumeId) {
         this.volumeId = volumeId;
     }
 
-    public String getStoreName() {
-        return storeName;
-    }
+    public EquallogicVolumeInfo(String volumeId, String iqn, int size) {
+    	this.volumeId = volumeId;
+    	this.iqn = iqn;
+    	this.size = size;
+	}
 
-    public void setStoreName(String storeName) {
-        this.storeName = storeName;
-    }
+	public String getIqn() {
+		return iqn;
+	}
 
-    public Integer getTid() {
-        return tid;
-    }
+	public void setIqn(String iqn) {
+		this.iqn = iqn;
+	}
 
-    public void setTid(Integer tid) {
-        this.tid = tid;
-    }
-
-    public Integer getLun() {
-        return lun;
-    }
-
-    public void setLun(Integer lun) {
-        this.lun = lun;
-    }
-
-    public String getStoreUser() {
+	public String getStoreUser() {
         return storeUser;
     }
 

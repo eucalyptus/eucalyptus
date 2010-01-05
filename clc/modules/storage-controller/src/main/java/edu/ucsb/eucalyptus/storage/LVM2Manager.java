@@ -412,8 +412,6 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	public void createVolume(String volumeId, int size) throws EucalyptusCloudException {
-		File volumeDir = new File(StorageProperties.storageRootDirectory);
-		volumeDir.mkdirs();
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 
 		String vgName = "vg-" + Hashes.getRandom(4);
