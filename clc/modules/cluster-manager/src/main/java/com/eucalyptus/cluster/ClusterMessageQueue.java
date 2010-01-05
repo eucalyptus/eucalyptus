@@ -88,7 +88,7 @@ public class ClusterMessageQueue implements Runnable {
   
   public ClusterMessageQueue( final String clusterName ) {
     this.finished = new AtomicBoolean( false );
-    this.msgQueue = new LinkedBlockingQueue<QueuedEvent>( this.messageQueueSize );
+    this.msgQueue = new LinkedBlockingQueue<QueuedEvent>( );
     this.clusterName = clusterName;
   }
   
