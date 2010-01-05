@@ -136,7 +136,7 @@
 
 	<property name="servlet.dir" value="${euca.var.dir}/webapps" />
 	<target name="install" depends="copy-conf">
-		<copy file="${gwt.war}" todir="${localenv.DESTDIR}${servlet.dir}" />
+		<copy file="${gwt.war}" todir="${servlet.dir}" />
 	</target>
 
 
