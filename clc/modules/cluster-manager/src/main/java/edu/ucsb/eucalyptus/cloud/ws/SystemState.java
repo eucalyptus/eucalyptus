@@ -202,16 +202,18 @@ public class SystemState {
   private static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final int networkIndex, final String networkFqName, final Cluster cluster ) {
     UnconditionalCallback cleanup = new UnconditionalCallback( ) {
       public void apply( ) {
-        try {
-          if ( address.isSystemOwned( ) ) {
-            LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
-            Addresses.release( address );
-          } else {
-            LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
-            AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+        if( address != null ) {
+          try {
+            if ( address.isSystemOwned( ) ) {
+              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
+              Addresses.release( address );
+            } else {
+              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
+              AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+            }
+          } catch (IllegalStateException e) {} catch ( Throwable e ) {
+            LOG.debug( e, e );
           }
-        } catch (IllegalStateException e) {} catch ( Throwable e ) {
-          LOG.debug( e, e );
         }
         vm.setNetworkIndex( -1 );
         try {
