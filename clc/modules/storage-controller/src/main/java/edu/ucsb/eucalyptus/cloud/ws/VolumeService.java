@@ -58,60 +58,26 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
- /*
- * Author: Neil Soman neil@eucalyptus.com
- */
+package edu.ucsb.eucalyptus.cloud.ws;
 
-package edu.ucsb.eucalyptus.cloud.entities;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.apache.log4j.Logger;
 
-import javax.persistence.*;
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.VolumeTask;
 
-@SuppressWarnings("serial")
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "EquallogicVolumeInfo" )
-@Entity
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class EquallogicVolumeInfo extends LVMVolumeInfo {
-    private String iqn;
-    private String storeUser;
-    private String encryptedPassword;
-    
-    public EquallogicVolumeInfo() {}
-
-    public EquallogicVolumeInfo(String volumeId) {
-        this.volumeId = volumeId;
-    }
-
-    public EquallogicVolumeInfo(String volumeId, String iqn, int size) {
-    	this.volumeId = volumeId;
-    	this.iqn = iqn;
-    	this.size = size;
+public class VolumeService {
+	private Logger LOG = Logger.getLogger( VolumeService.class );
+	
+	private final ExecutorService pool;
+	private final int NUM_THREADS = 5;
+	
+	public VolumeService() {
+		pool = Executors.newFixedThreadPool(NUM_THREADS);
 	}
-
-	public String getIqn() {
-		return iqn;
+	
+	public void add(VolumeTask creator) {
+		pool.execute(creator);
 	}
-
-	public void setIqn(String iqn) {
-		this.iqn = iqn;
-	}
-
-	public String getStoreUser() {
-        return storeUser;
-    }
-
-    public void setStoreUser(String storeUser) {
-        this.storeUser = storeUser;
-    }
-
-    public String getEncryptedPassword() {
-        return encryptedPassword;
-    }
-
-    public void setEncryptedPassword(String encryptedPassword) {
-        this.encryptedPassword = encryptedPassword;
-    }
 }
