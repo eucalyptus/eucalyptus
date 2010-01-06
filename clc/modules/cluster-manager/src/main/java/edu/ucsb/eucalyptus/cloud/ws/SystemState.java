@@ -210,7 +210,7 @@ public class SystemState {
             LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
             AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
           }
-        } catch ( Exception e ) {
+        } catch (IllegalStateException e) {} catch ( Throwable e ) {
           LOG.debug( e, e );
         }
         vm.setNetworkIndex( -1 );
