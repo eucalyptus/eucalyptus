@@ -375,9 +375,11 @@ public class SystemState {
           reply.getInstancesSet( ).add(
                                         new TerminateInstancesItemType( v.getInstanceId( ), v.getState( ).getCode( ), v.getState( ).getName( ),
                                                                         VmState.SHUTTING_DOWN.getCode( ), VmState.SHUTTING_DOWN.getName( ) ) );
-          v.setState( VmState.SHUTTING_DOWN );
-          v.resetStopWatch( );
-          SystemState.cleanUp( v );
+          if( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
+            v.setState( VmState.SHUTTING_DOWN );
+            v.resetStopWatch( );
+            SystemState.cleanUp( v );
+          }
         }
       } catch ( NoSuchElementException e ) {
         try {
