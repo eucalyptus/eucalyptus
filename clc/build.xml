@@ -67,6 +67,10 @@
   <condition property="euca.home" value="/opt/eucalyptus" else="${localenv.EUCALYPTUS}">
     <contains string="${euca.home.0}" substring="localenv"/>
   </condition>
+  <property name="DESTDIR.0" value="${localenv.DESTDIR}"/>
+  <condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
+    <contains string="${DESTDIR.0}" substring="localenv"/>
+  </condition>
   <property name="project.basedir" value="${user.dir}"/>
   <loadfile srcfile="${project.basedir}/../VERSION" property="euca.version">
     <filterchain>
@@ -165,27 +169,27 @@
   <property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus"/>
   <target name="install">
     <!-- copy libraries over -->
-    <mkdir dir="${localenv.DESTDIR}${euca.lib.dir}"/>
-    <copy todir="${localenv.DESTDIR}${euca.lib.dir}">
+    <mkdir dir="${DESTDIR}${euca.lib.dir}"/>
+    <copy todir="${DESTDIR}${euca.lib.dir}">
       <fileset dir="${basedir}/target">
         <include name="**/*.jar"/>
       </fileset>
     </copy>
-    <copy todir="${localenv.DESTDIR}${euca.lib.dir}">
+    <copy todir="${DESTDIR}${euca.lib.dir}">
       <fileset dir="${deps.lib.dir}">
         <include name="**/*"/>
       </fileset>
     </copy>
-    <mkdir dir="${localenv.DESTDIR}${euca.conf.dir}"/>
-    <chmod dir="${localenv.DESTDIR}${euca.conf.dir}" perm="0755"/>
-    <mkdir dir="${localenv.DESTDIR}${euca.var.dir}/"/>
-    <mkdir dir="${localenv.DESTDIR}${euca.var.dir}/db"/>
-    <mkdir dir="${localenv.DESTDIR}${euca.var.dir}/keys"/>
+    <mkdir dir="${DESTDIR}${euca.conf.dir}"/>
+    <chmod dir="${DESTDIR}${euca.conf.dir}" perm="0755"/>
+    <mkdir dir="${DESTDIR}${euca.var.dir}/"/>
+    <mkdir dir="${DESTDIR}${euca.var.dir}/db"/>
+    <mkdir dir="${DESTDIR}${euca.var.dir}/keys"/>
     <!--	<chmod dir="${euca.var.dir}/db" perm="0700"/> 
 	<chmod dir="${euca.var.dir}/keys" perm="0700"/> -->
-    <mkdir dir="${localenv.DESTDIR}${euca.log.dir}"/>
-    <mkdir dir="${localenv.DESTDIR}${euca.var.dir}/webapps"/>
-    <mkdir dir="${localenv.DESTDIR}${euca.var.dir}/modules"/>
+    <mkdir dir="${DESTDIR}${euca.log.dir}"/>
+    <mkdir dir="${DESTDIR}${euca.var.dir}/webapps"/>
+    <mkdir dir="${DESTDIR}${euca.var.dir}/modules"/>
     <ant dir="modules/msgs" inheritall="false" target="install"/>
     <ant dir="modules/database" inheritall="false" target="install"/>
     <ant dir="modules/cloud" inheritall="false" target="install"/>
