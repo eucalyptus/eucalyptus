@@ -118,7 +118,8 @@ public class ClusterMessageQueue implements Runnable {
         if ( event != null ) {// msg == null if the queue was empty
           LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
           try {
-            event.getCallback( ).send( this.clusterName );
+//            event.getCallback( ).send( this.clusterName );
+            Clusters.sendClusterEvent( this.clusterName, event );
             event.getCallback( ).waitForResponse( );
             //TODO: handle events which raised I/O exceptions to indicate the cluster state.
           } catch ( final Throwable e ) {
