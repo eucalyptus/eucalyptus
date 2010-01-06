@@ -61,7 +61,6 @@
  /*
  * Author: Neil Soman neil@eucalyptus.com
  */
-
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import org.hibernate.annotations.Cache;
@@ -71,46 +70,66 @@ import javax.persistence.*;
 
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
-@Table( name = "EquallogicVolumeInfo" )
+@Table( name = "EquallogicUserInfo" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class EquallogicVolumeInfo extends LVMVolumeInfo {
-    private String iqn;
-    private String storeUser;
+public class EquallogicUserInfo {
+    @Id
+    @GeneratedValue
+    @Column( name = "equallogic_user_info" )
+    private Long id = -1l;
+
+    private String user;
     private String encryptedPassword;
     
-    public EquallogicVolumeInfo() {}
-
-    public EquallogicVolumeInfo(String volumeId) {
-        this.volumeId = volumeId;
+    public EquallogicUserInfo() {}
+    
+    public EquallogicUserInfo(String user) {
+    	this.user = user;
     }
-
-    public EquallogicVolumeInfo(String volumeId, String iqn, int size) {
-    	this.volumeId = volumeId;
-    	this.iqn = iqn;
-    	this.size = size;
+    
+    public EquallogicUserInfo(String userName, String password) {
+    	this(userName);
+    	this.encryptedPassword = password;
 	}
 
-	public String getIqn() {
-		return iqn;
+	public String getUser() {
+		return user;
 	}
 
-	public void setIqn(String iqn) {
-		this.iqn = iqn;
+	public void setUser(String user) {
+		this.user = user;
 	}
 
-	public String getStoreUser() {
-        return storeUser;
-    }
+	public String getEncryptedPassword() {
+		return encryptedPassword;
+	}
 
-    public void setStoreUser(String storeUser) {
-        this.storeUser = storeUser;
-    }
+	public void setEncryptedPassword(String encryptedPassword) {
+		this.encryptedPassword = encryptedPassword;
+	}
 
-    public String getEncryptedPassword() {
-        return encryptedPassword;
-    }
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((user == null) ? 0 : user.hashCode());
+		return result;
+	}
 
-    public void setEncryptedPassword(String encryptedPassword) {
-        this.encryptedPassword = encryptedPassword;
-    }
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		EquallogicUserInfo other = (EquallogicUserInfo) obj;
+		if (user == null) {
+			if (other.user != null)
+				return false;
+		} else if (!user.equals(other.user))
+			return false;
+		return true;
+	}
 }

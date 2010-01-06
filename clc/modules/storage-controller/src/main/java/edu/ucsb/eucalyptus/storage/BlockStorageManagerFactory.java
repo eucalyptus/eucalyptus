@@ -67,6 +67,7 @@ package edu.ucsb.eucalyptus.storage;
 
 public class BlockStorageManagerFactory {
     public static LogicalStorageManager getBlockStorageManager() {
-        return new LVM2Manager();
+        //return new LVM2Manager();
+    	return new EquallogicManager();
     }
 }

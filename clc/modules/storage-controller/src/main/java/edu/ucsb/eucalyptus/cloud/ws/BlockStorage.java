@@ -150,6 +150,7 @@ public class BlockStorage {
 	}
 
 	public static void initialize() {
+		StorageProperties.updateName();		
 		blockManager.configure();
 		blockManager.initialize();
 		configure();

@@ -66,25 +66,37 @@
 package edu.ucsb.eucalyptus.storage;
 
 import java.io.ByteArrayInputStream;
+import java.security.PublicKey;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.crypto.Cipher;
+
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 
+import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.StorageProperties;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 
+import edu.ucsb.eucalyptus.cloud.entities.EquallogicUserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 
 public class EquallogicManager implements LogicalStorageManager {
 	private static final Pattern VOLUME_CREATE_PATTERN = Pattern.compile(".*iSCSI target name is (.*)\r");
+	private static final Pattern VOLUME_DELETE_PATTERN = Pattern.compile("Volume deletion succeeded.");
+	private static final Pattern USER_CREATE_PATTERN = Pattern.compile(".*Password is (.*)\r");
+		
 	private PSConnectionManager connectionManager;
 	private static EquallogicManager singleton;
 	private static Logger LOG = Logger.getLogger(EquallogicManager.class);
@@ -110,7 +122,7 @@ public class EquallogicManager implements LogicalStorageManager {
 
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {
-		connectionManager.checkConnection();
+		//connectionManager.checkConnection();
 	}
 
 	@Override
@@ -127,8 +139,11 @@ public class EquallogicManager implements LogicalStorageManager {
 
 	@Override
 	public void configure() {
-		// TODO Auto-generated method stub
-
+		try {
+			connectionManager.checkConnection();
+		} catch (EucalyptusCloudException e) {
+			LOG.error(e);
+		}
 	}
 
 	@Override
@@ -206,8 +221,7 @@ public class EquallogicManager implements LogicalStorageManager {
 	@Override
 	public String getVolumeProperty(String volumeId)
 	throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		return null;
+		return connectionManager.getVolumeProperty(volumeId);
 	}
 
 	@Override
@@ -255,9 +269,31 @@ public class EquallogicManager implements LogicalStorageManager {
 
 
 		public void checkConnection() throws EucalyptusCloudException {
+			//for now 
+			host = "192.168.7.188";
+			username = "grpadmin";
+			password = "zoomzoom";
+			
 			String show = execCommand("show");
 			if(show.length() <= 0) 
 				throw new EucalyptusCloudException("Connection failed.");
+			addUser("eucalyptus");
+		}
+
+		public String getVolumeProperty(String volumeId) {
+			EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+			try {
+				EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
+				EntityWrapper<EquallogicUserInfo> dbUser = db.recast(EquallogicUserInfo.class);
+				EquallogicUserInfo userInfo = dbUser.getUnique(new EquallogicUserInfo("eucalyptus"));
+				String property = host + "," + volumeInfo.getIqn() + "," + userInfo.getEncryptedPassword();
+				db.commit();
+				return property;
+			} catch(EucalyptusCloudException ex) {
+				LOG.error(ex);
+				db.rollback();
+				return null;
+			}
 		}
 
 		public String execCommand(String command) throws EucalyptusCloudException {
@@ -274,7 +310,7 @@ public class EquallogicManager implements LogicalStorageManager {
 				channel.setOutputStream(bytesOut);
 				channel.connect();
 				try {
-					Thread.sleep(700);
+					Thread.sleep(1000);
 				} catch (InterruptedException e) {
 					LOG.error(e);
 				}
@@ -298,7 +334,7 @@ public class EquallogicManager implements LogicalStorageManager {
 
 		public String createVolume(String volumeName, int size) {
 			try {
-				String returnValue = execCommand("stty hardwrap off\u001Avolume create " + volumeName + " " + size + "\u001A");
+				String returnValue = execCommand("stty hardwrap off\u001Avolume create " + volumeName + " " + (size * StorageProperties.KB) + "\u001A");
 				return matchPattern(returnValue, VOLUME_CREATE_PATTERN);
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e);
@@ -309,13 +345,50 @@ public class EquallogicManager implements LogicalStorageManager {
 		public boolean deleteVolume(String volumeName) {
 			try {
 				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeName + " offline\u001Avolume delete " + volumeName + "\u001A");
-				if(returnValue != null)
+				if(matchPattern(returnValue, VOLUME_DELETE_PATTERN) != null)
 					return true;
 				else
 					return false;
 			} catch(EucalyptusCloudException e) {
 				LOG.error(e);
 				return false;
+			}
+		}
+		
+		public void addUser(String userName) throws EucalyptusCloudException {
+			EntityWrapper<EquallogicUserInfo> db = StorageController.getEntityWrapper();
+			try {
+				EquallogicUserInfo userInfo = db.getUnique(new EquallogicUserInfo(userName));
+				db.commit();
+			} catch(EucalyptusCloudException ex) {
+				db.rollback();
+				try {
+					String returnValue = execCommand("stty hardwrap off\u001Achapuser create " + userName + "\u001A");
+					String password = matchPattern(returnValue, USER_CREATE_PATTERN);
+					db = StorageController.getEntityWrapper();
+					EquallogicUserInfo userInfo = new EquallogicUserInfo(userName, encryptTargetPassword(password));
+					db.add(userInfo);
+					db.commit();
+				} catch (EucalyptusCloudException e) {
+					LOG.error(e);
+					throw e;
+				}
+			}
+		}
+		
+		private String encryptTargetPassword(String password) throws EucalyptusCloudException {
+			EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
+			try {
+				ClusterCredentials credentials = credDb.getUnique( new ClusterCredentials( StorageProperties.NAME ) );
+				PublicKey ncPublicKey = X509Cert.toCertificate(credentials.getNodeCertificate()).getPublicKey();
+				credDb.commit();
+				Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
+				return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
+			} catch ( Exception e ) {
+				LOG.error( "Unable to encrypt storage target password" );
+				credDb.rollback( );
+				throw new EucalyptusCloudException(e.getMessage(), e);
 			}
 		}
 	}
