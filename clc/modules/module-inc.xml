@@ -67,6 +67,10 @@
   <condition property="euca.home" value="/opt/eucalyptus" else="${localenv.EUCALYPTUS}">
     <contains string="${euca.home.0}" substring="localenv"/>
   </condition>
+  <property name="DESTDIR.0" value="${localenv.DESTDIR}"/>
+  <condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
+    <contains string="${DESTDIR.0}" substring="localenv"/>
+  </condition>
   <property name="project.basedir" value="${basedir}/../../"/>
   <loadfile srcfile="${project.basedir}/../VERSION" property="euca.version">
     <filterchain>
@@ -111,7 +115,7 @@
   </path>
   <!--================================== copy conf ==================================-->
   <target name="copy-conf">
-    <copy todir="${localenv.DESTDIR}${euca.conf.dir}">
+    <copy todir="${DESTDIR}${euca.conf.dir}">
       <fileset dir="conf">
         <include name="**/*"/>
       </fileset>

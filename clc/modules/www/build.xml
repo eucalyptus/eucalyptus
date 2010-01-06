@@ -67,6 +67,12 @@
 	<condition property="osMask" value="linux" else="mac">
 		<os family="mac" />
 	</condition>
+	<property environment="localenv"/>
+	<property name="DESTDIR.0" value="${localenv.DESTDIR}"/>
+	<condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
+	  <contains string="${DESTDIR.0}" substring="localenv"/>
+	</condition>
+
 	<!--================================== BUILD TARGET ==================================-->
 	<target name="builder" depends="init,compile-src,jar,compile-gwt" description="--> build the jar file from source." unless="gwtc.notRequired" />
 	<!--================================== GWT-ONLY TARGET ==================================-->
@@ -136,7 +142,7 @@
 
 	<property name="servlet.dir" value="${euca.var.dir}/webapps" />
 	<target name="install" depends="copy-conf">
-		<copy file="${gwt.war}" todir="${localenv.DESTDIR}${servlet.dir}" />
+		<copy file="${gwt.war}" todir="${DESTDIR}${servlet.dir}" />
 	</target>
 
 
