@@ -124,6 +124,7 @@ public class SystemState {
   private static final String INSTANCE_TERMINATED = "User requested shutdown.";
   
   public static void handle( VmDescribeResponseType request ) {
+    VmInstances.flushBuried( );
     String originCluster = request.getOriginCluster( );
     
     for ( VmInfo runVm : request.getVms( ) )
