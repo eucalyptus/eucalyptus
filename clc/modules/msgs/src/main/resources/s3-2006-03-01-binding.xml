@@ -550,6 +550,26 @@
 		class="edu.ucsb.eucalyptus.msgs.SetBucketLoggingStatusResponseType">
 	</mapping>
 
+	<mapping name="GetBucketVersioningStatus"
+		class="edu.ucsb.eucalyptus.msgs.GetBucketVersioningStatusType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
+			usage="optional" />
+	</mapping>
+
+	<mapping name="VersioningConfiguration"
+		class="edu.ucsb.eucalyptus.msgs.GetBucketVersioningStatusResponseType">
+		<value name="VersioningStatus" field="versioningStatus"/>
+	</mapping>
+
+	<mapping name="SetBucketVersioningStatus"
+		class="edu.ucsb.eucalyptus.msgs.SetBucketVersioningStatusType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<value name="VersioningStatus" field="versioningStatus"/>
+	</mapping>
+
+	<mapping name="SetBucketVersioningStatusResponse"
+		class="edu.ucsb.eucalyptus.msgs.SetBucketVersioningStatusResponseType">
+	</mapping>
+	
 	<mapping name="GetDecryptedImage" class="edu.ucsb.eucalyptus.msgs.GetDecryptedImageType">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType" />
 	</mapping>

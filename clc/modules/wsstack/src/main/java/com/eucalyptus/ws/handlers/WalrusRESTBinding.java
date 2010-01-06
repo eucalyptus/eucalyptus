@@ -248,8 +248,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.DELETE.toString(), "DeleteBucket");
 
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.location.toString(), "GetBucketLocation");
+
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.logging.toString(), "GetBucketLoggingStatus");
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.OperationParameter.logging.toString(), "SetBucketLoggingStatus");
+
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.versioning.toString(), "GetBucketVersioningStatus");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.OperationParameter.versioning.toString(), "SetBucketVersioningStatus");
 
 		//Object operations
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.acl.toString(), "GetObjectAccessControlPolicy");
@@ -461,10 +465,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
 					putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
 					handleFirstChunk(httpRequest, (ChannelBuffer)formFields.get(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk"), contentLength);
-				} else if(WalrusProperties.HTTPVerb.PUT.toString().equals(verb) && 
-						params.containsKey(WalrusProperties.OperationParameter.logging.toString())) {
-					//read logging params
-					getTargetBucketParams(operationParams, httpRequest);
+				} else if(WalrusProperties.HTTPVerb.PUT.toString().equals(verb)) {  
+					if(params.containsKey(WalrusProperties.OperationParameter.logging.toString())) {
+						//read logging params
+						getTargetBucketParams(operationParams, httpRequest);
+					} else if(params.containsKey(WalrusProperties.OperationParameter.versioning.toString())) {
+						getVersioningStatus(operationParams, httpRequest);
+					}
 				}
 			} else {
 				operationKey = SERVICE + verb;
@@ -691,11 +698,28 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				operationParams.put("LoggingEnabled", loggingEnabled);
 			} catch(Exception ex) {
 				LOG.warn(ex);
-				throw new BindingException("Unable to parse access control policy " + ex.getMessage());
+				throw new BindingException("Unable to parse logging configuration " + ex.getMessage());
 			}
 		}
 	}
 
+	private void getVersioningStatus(Map operationParams,
+			MappingHttpRequest httpRequest) throws BindingException {
+		String message = getMessageString(httpRequest);
+		if(message.length() > 0) {
+			try {
+				XMLParser xmlParser = new XMLParser(message);
+				String status = xmlParser.getValue("//Status");
+				if(status == null || status.length() == 0) 
+					return;
+				operationParams.put("VersioningStatus", status);
+			} catch(Exception ex) {
+				LOG.warn(ex);
+				throw new BindingException("Unable to parse versioning status " + ex.getMessage());
+			}
+		}
+	}
+	
 	private void parseExtendedHeaders(Map operationParams, String headerString, String value) throws BindingException {
 		if(headerString.equals(WalrusProperties.ExtendedGetHeaders.Range.toString())) {
 			String prefix = "bytes=";

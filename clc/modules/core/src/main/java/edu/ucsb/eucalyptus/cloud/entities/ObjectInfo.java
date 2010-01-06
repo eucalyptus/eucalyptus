@@ -149,6 +149,12 @@ public class ObjectInfo implements Comparable {
     @Column(name="content_disposition")
     private String contentDisposition;
 
+    @Column(name="is_deleted")
+    private Boolean deleted;
+    
+    @Column(name="version_id")
+    private String versionId;
+
     private static Logger LOG = Logger.getLogger( ObjectInfo.class );
 
     public ObjectInfo() {
@@ -478,7 +484,23 @@ public class ObjectInfo implements Comparable {
         this.contentDisposition = contentDisposition;
     }
     
-    public int compareTo(Object o) {
+    public Boolean getDeleted() {
+		return deleted;
+	}
+
+	public void setDeleted(Boolean deleted) {
+		this.deleted = deleted;
+	}
+
+	public String getVersionId() {
+		return versionId;
+	}
+
+	public void setVersionId(String versionId) {
+		this.versionId = versionId;
+	}
+
+	public int compareTo(Object o) {
         return this.objectKey.compareTo(((ObjectInfo)o).getObjectKey());
     }
 

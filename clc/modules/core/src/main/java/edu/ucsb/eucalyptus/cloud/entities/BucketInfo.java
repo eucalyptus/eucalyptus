@@ -130,6 +130,9 @@ public class BucketInfo {
 	@Column(name="target_prefix")
 	private String targetPrefix;
 
+	@Column(name="versioning")
+	private String versioning;
+
 	@OneToMany( cascade = CascadeType.ALL )
 	@JoinTable(
 			name = "bucket_has_grants",
@@ -484,6 +487,14 @@ public class BucketInfo {
 
 	public void setTargetPrefix(String targetPrefix) {
 		this.targetPrefix = targetPrefix;
+	}
+
+	public String getVersioning() {
+		return versioning;
+	}
+
+	public void setVersioning(String versioning) {
+		this.versioning = versioning;
 	}
 
 	@Override

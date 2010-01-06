@@ -625,6 +625,20 @@ public class SetBucketLoggingStatusType extends WalrusRequestType {
 public class SetBucketLoggingStatusResponseType extends WalrusResponseType {
 }
 
+public class GetBucketVersioningStatusType extends WalrusRequestType {
+}
+
+public class GetBucketVersioningStatusResponseType extends WalrusResponseType {
+	String versioningStatus;
+}
+
+public class SetBucketVersioningStatusType extends WalrusRequestType {
+	String versioningStatus;
+}
+
+public class SetBucketVersioningStatusResponseType extends WalrusResponseType {
+}
+
 public class AddObjectResponseType extends WalrusDataResponseType {
 
 }
