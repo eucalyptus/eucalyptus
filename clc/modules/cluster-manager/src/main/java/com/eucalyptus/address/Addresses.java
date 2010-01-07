@@ -269,7 +269,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
             } else {
               Addresses.getAddressManager( ).releaseSystemAddress( addr );
             }
-          } catch ( Throwable e ) {
+          } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
             LOG.debug( e, e );
           }
           Addresses.system( vm );

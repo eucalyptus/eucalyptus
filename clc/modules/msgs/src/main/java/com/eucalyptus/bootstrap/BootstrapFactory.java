@@ -132,7 +132,19 @@ public class BootstrapFactory {
                   break;
                 }
                 if ( checkDepends( bootstrap ) ) {
-                  r.add( bootstrap );
+                  try {
+                    r.add( bootstrap );
+                  } catch ( Throwable e ) {
+                    LOG.fatal( e, e );
+                    for( Bootstrapper exists : r.getBootstrappers( ) ) {
+                      if( exists.equals( bootstrap ) ) {
+                        LOG.fatal( "Duplicate bootstrapper registration: " + exists.getClass( ) + 
+                        "\n==> Old definition source: " + exists.getClass( ).getProtectionDomain( ).getCodeSource( ).getLocation( ).getPath( ) +
+                        "\n==> New definition source: " + f.getAbsolutePath( ) );
+                      }
+                    }
+                    System.exit( 1 );
+                  }
                   LOG.info( "-> Associated bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " with resource " + r.toString( ) + "." );
                   break;
                 }

@@ -98,6 +98,7 @@ public class HttpUtils {
                                                                    HttpMethod.POST.getName( ).substring( 0, 3 ),
                                                                    HttpMethod.HEAD.getName( ).substring( 0, 3 ),
                                                                    HttpMethod.OPTIONS.getName( ).substring( 0, 3 ),
+                                                                   HttpMethod.DELETE.getName( ).substring( 0, 3 ),
                                                                    HttpMethod.TRACE.getName( ).substring( 0, 3 ) );
                                                                    
                                                                    

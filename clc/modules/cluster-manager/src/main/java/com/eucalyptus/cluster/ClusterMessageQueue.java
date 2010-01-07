@@ -73,6 +73,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.util.LogUtil;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
+import edu.ucsb.eucalyptus.cloud.cluster.TerminateCallback;
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
@@ -88,7 +89,7 @@ public class ClusterMessageQueue implements Runnable {
   
   public ClusterMessageQueue( final String clusterName ) {
     this.finished = new AtomicBoolean( false );
-    this.msgQueue = new LinkedBlockingQueue<QueuedEvent>( this.messageQueueSize );
+    this.msgQueue = new LinkedBlockingQueue<QueuedEvent>( );
     this.clusterName = clusterName;
   }
   
@@ -112,19 +113,19 @@ public class ClusterMessageQueue implements Runnable {
   public void run( ) {
     while ( !this.finished.get( ) ) {
       try {
-        final long start = System.currentTimeMillis( );
         final QueuedEvent event = this.msgQueue.poll( this.pollInterval, TimeUnit.MILLISECONDS );
+        final long start = System.currentTimeMillis( );
         if ( event != null ) {// msg == null if the queue was empty
           LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
-          final long msgStart = System.currentTimeMillis( );
           try {
+//            event.getCallback( ).send( this.clusterName );
             Clusters.sendClusterEvent( this.clusterName, event );
             event.getCallback( ).waitForResponse( );
             //TODO: handle events which raised I/O exceptions to indicate the cluster state.
           } catch ( final Throwable e ) {
             LOG.debug( e, e );
           }
-          LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE_TIME, this.clusterName, Long.toString( msgStart - start ), EventType.SERVICE_TIME.name( ), Long.toString( System.currentTimeMillis( ) - msgStart ), EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ) );  
+          LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.QUEUE_TIME.name( ), Long.toString( start - event.getStartTime( ) ), EventType.SERVICE_TIME.name( ), Long.toString( System.currentTimeMillis( ) - start ), EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ) );  
         }
       } catch ( final Throwable e ) {
         LOG.error( e, e );
