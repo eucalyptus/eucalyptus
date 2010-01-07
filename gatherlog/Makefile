@@ -47,7 +47,7 @@ deploy:
 	$(INSTALL) $(SERVICE_SO) $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
 	$(INSTALL) $(GLWSDL) $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
 #no ws-sec
-	cat generated/services.xml | ../tools/add_wsdllocation.pl $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/$(GLWSDLNAME) > $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_noWS.xml
+	cat generated/services.xml | ../tools/add_wsdllocation.pl $(AXIS2C_SERVICES)/$(SERVICE_NAME)/$(GLWSDLNAME) > $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_noWS.xml
 
 #ws-sec
 #	cat generated/services.xml | ../tools/add_wsdllocation.pl $(AXIS2C_SERVICES)/$(SERVICE_NAME)/$(GLWSDLNAME) | ../tools/add_service_policy.pl ../tools/service-policy-template.xml | sed "s:CLIENT-CERT:cloud-cert.pem:g" | sed "s:CLIENT-KEY:cloud-pk.pem:g" | sed "s:SERVER-CERT:cluster-cert.pem:g" | sed "s:SERVER-KEY:cluster-pk.pem:g" | sed "s:CLIENT-USERNAME:eucalyptus:g" > $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_WS.xml
