@@ -79,6 +79,7 @@ public class QueuedEvent<TYPE> {
 
   private QueuedEventCallback<TYPE> callback;
   private TYPE                      event;
+  private Long                      startTime;
 
   public static <T> QueuedEvent<T> make( final QueuedEventCallback callback, final T event ) {
     return new QueuedEvent<T>( callback, event );
@@ -87,6 +88,11 @@ public class QueuedEvent<TYPE> {
   protected QueuedEvent( final QueuedEventCallback callback, final TYPE event ) {
     this.callback = callback;
     this.event = event;
+    this.startTime = System.currentTimeMillis( );
+  }
+
+  public Long getStartTime( ) {
+    return this.startTime;
   }
 
   public QueuedEventCallback getCallback( ) {

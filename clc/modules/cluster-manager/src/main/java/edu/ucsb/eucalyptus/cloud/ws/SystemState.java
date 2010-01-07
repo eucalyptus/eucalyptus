@@ -124,6 +124,7 @@ public class SystemState {
   private static final String INSTANCE_TERMINATED = "User requested shutdown.";
   
   public static void handle( VmDescribeResponseType request ) {
+    VmInstances.flushBuried( );
     String originCluster = request.getOriginCluster( );
     
     for ( VmInfo runVm : request.getVms( ) )
@@ -202,16 +203,18 @@ public class SystemState {
   private static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final int networkIndex, final String networkFqName, final Cluster cluster ) {
     UnconditionalCallback cleanup = new UnconditionalCallback( ) {
       public void apply( ) {
-        try {
-          if ( address.isSystemOwned( ) ) {
-            LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
-            Addresses.release( address );
-          } else {
-            LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
-            AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+        if( address != null ) {
+          try {
+            if ( address.isSystemOwned( ) ) {
+              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
+              Addresses.release( address );
+            } else {
+              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
+              AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+            }
+          } catch (IllegalStateException e) {} catch ( Throwable e ) {
+            LOG.debug( e, e );
           }
-        } catch ( Exception e ) {
-          LOG.debug( e, e );
         }
         vm.setNetworkIndex( -1 );
         try {
@@ -372,9 +375,11 @@ public class SystemState {
           reply.getInstancesSet( ).add(
                                         new TerminateInstancesItemType( v.getInstanceId( ), v.getState( ).getCode( ), v.getState( ).getName( ),
                                                                         VmState.SHUTTING_DOWN.getCode( ), VmState.SHUTTING_DOWN.getName( ) ) );
-          v.setState( VmState.SHUTTING_DOWN );
-          v.resetStopWatch( );
-          SystemState.cleanUp( v );
+          if( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
+            v.setState( VmState.SHUTTING_DOWN );
+            v.resetStopWatch( );
+            SystemState.cleanUp( v );
+          }
         }
       } catch ( NoSuchElementException e ) {
         try {

@@ -89,6 +89,14 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   @Override
   public void prepare( AssignAddressType msg ) throws Exception {
     if( !this.checkVmState( ) ) {
+      address.clearPending( );
+      try {
+        address.unassign( );
+        if( address.isSystemOwned( ) ) {
+          Addresses.release( address );
+        }
+      } catch ( IllegalStateException e ) {
+      }
       throw new IllegalStateException( "Ignoring assignment to a vm which is not running: " + this.getRequest( ) );      
     } else {
       LOG.debug( EventRecord.here( AssignAddressCallback.class, Transition.assigning, address.toString( ) ) );

@@ -58,109 +58,26 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
- */
-package com.eucalyptus.bootstrap;
+package edu.ucsb.eucalyptus.cloud.ws;
 
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.net.URL;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.apache.log4j.Logger;
-import com.google.common.collect.Lists;
 
-public enum Resource {
-  PrivilegedContext( ),
-  SystemCredentials( ),
-  RemoteConfiguration( ),
-  Database( ),
-  PersistenceContext( ),
-  ClusterCredentials( ),
-  RemoteServices( ),
-  UserCredentials( ),
-  CloudService( ),
-  Verification( ),
-  Anonymous( ),
-  Final( );
-  private String                 resourceName;
-  private static Logger          LOG = Logger.getLogger( Resource.class );
-  private List<Bootstrapper>     bootstrappers;
-  private List<ResourceProvider> providers;
-  
-  private Resource( ) {
-    this.resourceName = String.format( "com.eucalyptus.%sProvider", this.name( ) );
-    this.bootstrappers = Lists.newArrayList( );
-  }
-  
-  public List<ResourceProvider> getProviders( ) {
-    synchronized ( this ) {
-      if ( this.providers == null ) {
-        this.providers = Lists.newArrayList( );
-        Enumeration<URL> p1;
-        try {
-          p1 = Thread.currentThread( ).getContextClassLoader( ).getResources( this.resourceName );
-          try {
-            URL u = null;
-            while ( p1.hasMoreElements( ) ) {
-              u = p1.nextElement( );
-              LOG.debug( "Found resource provider: " + u );
-              Properties props = new Properties( );
-              props.load( u.openStream( ) );
-              ResourceProvider p = new ResourceProvider( this, props, u );
-              providers.add( p );
-            }
-          } catch ( IOException e ) {
-            LOG.error( e, e );
-          }
-        } catch ( IOException e1 ) {
-          LOG.error( e1, e1 );
-        }
-      }
-      return providers;
-    }
-  }
-  
-  public boolean providedBy( Class clazz ) {
-    for ( Annotation a : clazz.getAnnotations( ) ) {
-      if ( a instanceof Provides && this.equals( ( ( Provides ) a ).resource( ) ) ) {
-        return true;
-      }
-    }
-    return false;
-  }
-  
-  public boolean satisfiesDependency( Class clazz ) {
-    Depends d = ( Depends ) clazz.getAnnotation( Depends.class );//TODO: lame AST parser complains about this and requires cast...
-    if ( d != null && Lists.newArrayList( d.resources( ) ).contains( this ) ) {
-      return true;
-    }
-    return false;
-  }
-  
-  public boolean add( Bootstrapper b ) {
-    if ( this.bootstrappers.contains( b ) ) {
-      throw new RuntimeException( "Duplicate bootstrapper registration: " + b.getClass( ).toString( ) );          
-    } else {
-      return this.bootstrappers.add( b );
-    }
-  }
-  
-  public List<Bootstrapper> getBootstrappers( ) {
-    return this.bootstrappers;
-  }
-  
-  public boolean add( ResourceProvider p ) {
-    return this.providers.add( p );
-  }
-  
-  public List<ResourceProvider> initProviders( ) throws IOException {
-    for ( ResourceProvider p : this.providers ) {
-      p.initConfigurationResources( );
-    }
-    return this.providers;
-  }
-  
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.SnapshotTask;
+
+public class SnapshotService {
+	private Logger LOG = Logger.getLogger( SnapshotService.class );
+	
+	private final ExecutorService pool;
+	private final int NUM_THREADS = 5;
+	
+	public SnapshotService() {
+		pool = Executors.newFixedThreadPool(NUM_THREADS);
+	}
+	
+	public void add(SnapshotTask creator) {
+		pool.execute(creator);
+	}
 }

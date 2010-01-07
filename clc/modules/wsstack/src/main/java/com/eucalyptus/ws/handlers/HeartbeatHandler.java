@@ -168,6 +168,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
     try {
       GroovyUtil.evaluateScript( "after_database.groovy" );
+      GroovyUtil.evaluateScript( "after_persistence.groovy" );
     } catch ( FailScriptFailException e1 ) {
       LOG.debug( e1, e1 );
       System.exit( 123 );

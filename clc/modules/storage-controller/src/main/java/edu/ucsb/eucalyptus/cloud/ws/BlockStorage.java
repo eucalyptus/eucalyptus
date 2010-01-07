@@ -76,11 +76,9 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
-import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
-import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -112,8 +110,6 @@ import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.InitializeStorageManagerResponseType;
-import edu.ucsb.eucalyptus.msgs.InitializeStorageManagerType;
 import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationResponseType;
@@ -136,6 +132,8 @@ public class BlockStorage {
 	static LogicalStorageManager blockManager;
 	static BlockStorageChecker checker;
 	static BlockStorageStatistics blockStorageStatistics;
+	static VolumeService volumeService;
+	static SnapshotService snapshotService;
 
 	public static void deferredInitializer() {
 		volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
@@ -144,10 +142,8 @@ public class BlockStorage {
 		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
 		if(StorageProperties.trackUsageStatistics) 
 			blockStorageStatistics = new BlockStorageStatistics();
-		initialize();
-	}
-
-	public static void initialize() {
+		volumeService = new VolumeService();
+		snapshotService = new SnapshotService();
 		blockManager.configure();
 		blockManager.initialize();
 		configure();
@@ -172,7 +168,7 @@ public class BlockStorage {
 
 	private static StorageInfo getConfig() {
 		StorageProperties.updateName();		
-		EntityWrapper<StorageInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<StorageInfo> db = StorageController.getEntityWrapper();	
 		StorageInfo storageInfo;
 		try {
 			storageInfo = db.getUnique(new StorageInfo(StorageProperties.NAME));
@@ -243,12 +239,6 @@ public class BlockStorage {
 			LOG.fatal("Cannot write to volume root directory: " + StorageProperties.storageRootDirectory);
 		}
 
-	}
-
-	public InitializeStorageManagerResponseType InitializeStorageManager(InitializeStorageManagerType request) throws EucalyptusCloudException {
-		InitializeStorageManagerResponseType reply = (InitializeStorageManagerResponseType) request.getReply();
-		initialize();
-		return reply;
 	}
 
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
@@ -355,19 +345,9 @@ public class BlockStorage {
 			//check its status
 			String status = foundVolume.getStatus();
 			if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
-				try {
-					blockManager.deleteVolume(volumeId);
-					volumeStorageManager.deleteObject("", volumeId);
-					db.delete(foundVolume);
-					EucaSemaphoreDirectory.removeSemaphore(volumeId);
-					if(StorageProperties.trackUsageStatistics) { 
-						blockStorageStatistics.decrementVolumeCount();
-						blockStorageStatistics.updateSpaceUsed(-(foundVolume.getSize() * StorageProperties.GB));
-					}
-					reply.set_return(Boolean.TRUE);
-				} catch ( IOException ex) {
-					LOG.error(ex, ex);
-				}
+				VolumeDeleter volumeDeleter = new VolumeDeleter(volumeId);
+				volumeService.add(volumeDeleter);
+				reply.set_return(Boolean.TRUE);
 			}
 		} 
 		db.commit();
@@ -422,7 +402,7 @@ public class BlockStorage {
 				String snapshotSet = "snapset-" + UUID.randomUUID();
 
 				Snapshotter snapshotter = new Snapshotter(snapshotSet, volumeId, snapshotId);
-				snapshotter.start();
+				snapshotService.add(snapshotter);
 				db2.commit();
 				db.commit();
 				reply.setSnapshotId(snapshotId);
@@ -494,28 +474,17 @@ public class BlockStorage {
 		if(snapshotInfos.size() > 0) {
 			SnapshotInfo  foundSnapshotInfo = snapshotInfos.get(0);
 			String status = foundSnapshotInfo.getStatus();
+			db.commit();
 			if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
-				try {
-					SnapshotInfo snapInfo = new SnapshotInfo();
-					snapInfo.setVolumeId(foundSnapshotInfo.getVolumeId());
-					List<SnapshotInfo> snapInfos = db.query(snapInfo);
-					blockManager.deleteSnapshot(snapshotId);
-					snapshotStorageManager.deleteObject("", snapshotId);
-					db.delete(foundSnapshotInfo);
-					db.commit();
-					SnapshotDeleter snapshotDeleter = new SnapshotDeleter(snapshotId);
-					snapshotDeleter.start();				
-				} catch (IOException ex) {
-					LOG.error(ex);
-				}
+				SnapshotDeleter snapshotDeleter = new SnapshotDeleter(snapshotId);
+				snapshotService.add(snapshotDeleter);				
 			} else {
 				//snapshot is still in progress.
 				reply.set_return(false);
-				db.rollback();
 				throw new SnapshotInUseException(snapshotId);
 			}
 		} else {
-			//the SC knows nothing about this snapshot. It should be deleted directly from Walrus
+			//the SC knows nothing about this snapshot. It should be deleted directly from Walrus (not by the SC).
 			db.rollback();
 		}
 		return reply;
@@ -580,94 +549,9 @@ public class BlockStorage {
 
 		//create volume asynchronously
 		VolumeCreator volumeCreator = new VolumeCreator(volumeId, "snapset", snapshotId, sizeAsInt);
-		volumeCreator.start();
+		volumeService.add(volumeCreator);
 
 		return reply;
-	}
-
-	public class VolumeCreator extends Thread {
-		private String volumeId;
-		private String snapshotId;
-		private int size;
-
-		public VolumeCreator(String volumeId, String snapshotSetName, String snapshotId, int size) {
-			this.volumeId = volumeId;
-			this.snapshotId = snapshotId;
-			this.size = size;
-		}
-
-		public void run() {
-			boolean success = true;
-			if(snapshotId != null) {
-				EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
-				try {
-					SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-					List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
-					if(foundSnapshotInfos.size() == 0) {
-						db.commit();
-						getSnapshot(snapshotId);
-						size = blockManager.createVolume(volumeId, snapshotId);
-					} else {
-						SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);
-						if(!foundSnapshotInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
-							success = false;
-							db.rollback();
-							LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
-						} else {
-							db.commit();
-							size = blockManager.createVolume(volumeId, snapshotId);
-						}
-					}
-				} catch(Exception ex) {
-					success = false;
-					LOG.error(ex);
-				}
-			} else {
-				try {
-					assert(size > 0);
-					blockManager.createVolume(volumeId, size);
-				} catch(Exception ex) {
-					success = false;
-					LOG.error(ex);
-				}
-			}
-			EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
-			VolumeInfo volumeInfo = new VolumeInfo(volumeId);
-			try {
-				VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
-				if(foundVolumeInfo != null) {
-					if(success) {
-						if(StorageProperties.shouldEnforceUsageLimits && 
-								StorageProperties.trackUsageStatistics) {
-							int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
-							;							if((totalVolumeSize + size) > StorageProperties.MAX_TOTAL_VOLUME_SIZE ||
-									(size > StorageProperties.MAX_VOLUME_SIZE)) {
-								LOG.error("Volume size limit exceeeded");
-								db.commit();
-								checker.cleanFailedVolume(volumeId);
-								return;
-							}
-						}
-						foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-					} else {
-						foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
-					}
-					if(snapshotId != null) {
-						foundVolumeInfo.setSize(size);
-					}
-				} else {
-					db.rollback();
-					throw new EucalyptusCloudException();
-				}
-				db.commit();
-				if(StorageProperties.trackUsageStatistics) {
-					blockStorageStatistics.incrementVolumeCount();
-					blockStorageStatistics.updateSpaceUsed((size * StorageProperties.GB));
-				}
-			} catch(EucalyptusCloudException ex) {
-				LOG.error(ex);
-			}
-		}
 	}
 
 	private void getSnapshot(String snapshotId) throws EucalyptusCloudException {
@@ -763,7 +647,13 @@ public class BlockStorage {
 		return snapshot;
 	}
 
-	public class Snapshotter extends Thread {
+	public abstract class SnapshotTask implements Runnable {
+	}
+
+	public abstract class VolumeTask implements Runnable {
+	}
+
+	public class Snapshotter extends SnapshotTask {
 		private String volumeId;
 		private String snapshotId;
 		private String volumeBucket;
@@ -775,6 +665,7 @@ public class BlockStorage {
 			this.snapshotId = snapshotId;
 		}
 
+		@Override
 		public void run() {
 			try {
 				EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
@@ -812,14 +703,37 @@ public class BlockStorage {
 		}
 	}
 
-	private class SnapshotDeleter extends Thread {
+	private class SnapshotDeleter extends SnapshotTask {
 		private String snapshotId;
 
 		public SnapshotDeleter(String snapshotId) {
 			this.snapshotId = snapshotId;
 		}
 
+		@Override
 		public void run() {
+			try {
+				blockManager.deleteSnapshot(snapshotId);
+				snapshotStorageManager.deleteObject("", snapshotId);
+			} catch (EucalyptusCloudException e1) {
+				LOG.error(e1);
+				return;
+			} catch (IOException e) {
+				LOG.error(e);
+				return;
+			}
+			SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+			EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+			SnapshotInfo foundSnapshotInfo;
+			try {
+				foundSnapshotInfo = db.getUnique(snapInfo);
+				db.delete(foundSnapshotInfo);
+				db.commit();
+			} catch (EucalyptusCloudException e) {
+				db.rollback();
+				LOG.error(e);
+				return;
+			}
 			HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
 			try {
 				httpWriter.run();
@@ -829,4 +743,126 @@ public class BlockStorage {
 		}
 	}
 
+	public class VolumeCreator extends VolumeTask {
+		private String volumeId;
+		private String snapshotId;
+		private int size;
+
+		public VolumeCreator(String volumeId, String snapshotSetName, String snapshotId, int size) {
+			this.volumeId = volumeId;
+			this.snapshotId = snapshotId;
+			this.size = size;
+		}
+
+		@Override
+		public void run() {
+			boolean success = true;
+			if(snapshotId != null) {
+				EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+				try {
+					SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
+					List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
+					if(foundSnapshotInfos.size() == 0) {
+						db.commit();
+						getSnapshot(snapshotId);
+						size = blockManager.createVolume(volumeId, snapshotId);
+					} else {
+						SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);
+						if(!foundSnapshotInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
+							success = false;
+							db.rollback();
+							LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
+						} else {
+							db.commit();
+							size = blockManager.createVolume(volumeId, snapshotId);
+						}
+					}
+				} catch(Exception ex) {
+					success = false;
+					LOG.error(ex);
+				}
+			} else {
+				try {
+					assert(size > 0);
+					blockManager.createVolume(volumeId, size);
+				} catch(Exception ex) {
+					success = false;
+					LOG.error(ex);
+				}
+			}
+			EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+			VolumeInfo volumeInfo = new VolumeInfo(volumeId);
+			try {
+				VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
+				if(foundVolumeInfo != null) {
+					if(success) {
+						if(StorageProperties.shouldEnforceUsageLimits && 
+								StorageProperties.trackUsageStatistics) {
+							int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
+							if((totalVolumeSize + size) > StorageProperties.MAX_TOTAL_VOLUME_SIZE ||
+									(size > StorageProperties.MAX_VOLUME_SIZE)) {
+								LOG.error("Volume size limit exceeeded");
+								db.commit();
+								checker.cleanFailedVolume(volumeId);
+								return;
+							}
+						}
+						foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+					} else {
+						foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
+					}
+					if(snapshotId != null) {
+						foundVolumeInfo.setSize(size);
+					}
+				} else {
+					throw new EucalyptusCloudException();
+				}
+				db.commit();
+				if(StorageProperties.trackUsageStatistics) {
+					blockStorageStatistics.incrementVolumeCount();
+					blockStorageStatistics.updateSpaceUsed((size * StorageProperties.GB));
+				}
+			} catch(EucalyptusCloudException ex) {
+				db.rollback();
+				LOG.error(ex);
+			}
+		}
+	}
+
+	public class VolumeDeleter extends VolumeTask {
+		private String volumeId;
+
+		public VolumeDeleter(String volumeId) {
+			this.volumeId = volumeId;
+		}
+
+		@Override
+		public void run() {
+			try {
+				blockManager.deleteVolume(volumeId);
+				volumeStorageManager.deleteObject("", volumeId);
+			} catch (EucalyptusCloudException e1) {
+				LOG.error(e1);
+				return;
+			} catch (IOException e) {
+				LOG.error(e);
+				return;
+			}
+			EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+			VolumeInfo foundVolume;
+			try {
+				foundVolume = db.getUnique(new VolumeInfo(volumeId));
+				db.delete(foundVolume);
+				db.commit();
+				EucaSemaphoreDirectory.removeSemaphore(volumeId);
+				if(StorageProperties.trackUsageStatistics) { 
+					blockStorageStatistics.decrementVolumeCount();
+					blockStorageStatistics.updateSpaceUsed(-(foundVolume.getSize() * StorageProperties.GB));
+				}
+			} catch (EucalyptusCloudException e) {
+				db.rollback();
+				LOG.error(e);	
+			}
+		}
+	}
 }
