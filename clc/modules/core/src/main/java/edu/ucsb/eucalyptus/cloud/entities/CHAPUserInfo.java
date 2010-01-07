@@ -72,7 +72,7 @@ import javax.persistence.*;
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "EquallogicUserInfo" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class EquallogicUserInfo {
+public class CHAPUserInfo {
     @Id
     @GeneratedValue
     @Column( name = "equallogic_user_info" )
@@ -81,13 +81,13 @@ public class EquallogicUserInfo {
     private String user;
     private String encryptedPassword;
     
-    public EquallogicUserInfo() {}
+    public CHAPUserInfo() {}
     
-    public EquallogicUserInfo(String user) {
+    public CHAPUserInfo(String user) {
     	this.user = user;
     }
     
-    public EquallogicUserInfo(String userName, String password) {
+    public CHAPUserInfo(String userName, String password) {
     	this(userName);
     	this.encryptedPassword = password;
 	}
@@ -124,7 +124,7 @@ public class EquallogicUserInfo {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		EquallogicUserInfo other = (EquallogicUserInfo) obj;
+		CHAPUserInfo other = (CHAPUserInfo) obj;
 		if (user == null) {
 			if (other.user != null)
 				return false;

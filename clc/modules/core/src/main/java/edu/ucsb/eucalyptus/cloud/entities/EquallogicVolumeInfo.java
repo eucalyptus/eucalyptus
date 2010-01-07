@@ -58,7 +58,7 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
- /*
+/*
  * Author: Neil Soman neil@eucalyptus.com
  */
 
@@ -67,27 +67,41 @@ package edu.ucsb.eucalyptus.cloud.entities;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.util.StorageProperties;
+
 import javax.persistence.*;
 
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "EquallogicVolumeInfo" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class EquallogicVolumeInfo extends LVMVolumeInfo {
-    private String iqn;
-    private String storeUser;
-    private String encryptedPassword;
-    
-    public EquallogicVolumeInfo() {}
+public class EquallogicVolumeInfo {
+	protected String volumeId;
+	private String scName;
+	private String iqn;
+	private String storeUser;
+	private String encryptedPassword;
+	@Column(name = "size")
+	protected Integer size;
+	@Column(name = "status")
+	private String status;
+	@Column(name = "snapshot_of")
+	private String snapshotOf;
 
-    public EquallogicVolumeInfo(String volumeId) {
-        this.volumeId = volumeId;
-    }
+	public EquallogicVolumeInfo() {
+		this.scName = StorageProperties.NAME;
+	}
 
-    public EquallogicVolumeInfo(String volumeId, String iqn, int size) {
-    	this.volumeId = volumeId;
-    	this.iqn = iqn;
-    	this.size = size;
+	public EquallogicVolumeInfo(String volumeId) {
+		this();
+		this.volumeId = volumeId;
+	}
+
+	public EquallogicVolumeInfo(String volumeId, String iqn, int size) {
+		this();
+		this.volumeId = volumeId;
+		this.iqn = iqn;
+		this.size = size;
 	}
 
 	public String getIqn() {
@@ -99,18 +113,84 @@ public class EquallogicVolumeInfo extends LVMVolumeInfo {
 	}
 
 	public String getStoreUser() {
-        return storeUser;
-    }
+		return storeUser;
+	}
 
-    public void setStoreUser(String storeUser) {
-        this.storeUser = storeUser;
-    }
+	public void setStoreUser(String storeUser) {
+		this.storeUser = storeUser;
+	}
 
-    public String getEncryptedPassword() {
-        return encryptedPassword;
-    }
+	public String getEncryptedPassword() {
+		return encryptedPassword;
+	}
 
-    public void setEncryptedPassword(String encryptedPassword) {
-        this.encryptedPassword = encryptedPassword;
-    }
+	public void setEncryptedPassword(String encryptedPassword) {
+		this.encryptedPassword = encryptedPassword;
+	}
+
+	public String getVolumeId() {
+		return volumeId;
+	}
+
+	public void setVolumeId(String volumeId) {
+		this.volumeId = volumeId;
+	}
+
+	public String getScName() {
+		return scName;
+	}
+
+	public void setScName(String scName) {
+		this.scName = scName;
+	}
+
+	public Integer getSize() {
+		return size;
+	}
+
+	public void setSize(Integer size) {
+		this.size = size;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public String getSnapshotOf() {
+		return snapshotOf;
+	}
+
+	public void setSnapshotOf(String snapshotOf) {
+		this.snapshotOf = snapshotOf;
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((volumeId == null) ? 0 : volumeId.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		EquallogicVolumeInfo other = (EquallogicVolumeInfo) obj;
+		if (volumeId == null) {
+			if (other.volumeId != null)
+				return false;
+		} else if (!volumeId.equals(other.volumeId))
+			return false;
+		return true;
+	}
 }

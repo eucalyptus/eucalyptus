@@ -72,6 +72,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.crypto.Cipher;
+import javax.persistence.EntityNotFoundException;
 
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.log4j.Logger;
@@ -83,12 +84,14 @@ import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
+import com.google.common.collect.Lists;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 
-import edu.ucsb.eucalyptus.cloud.entities.EquallogicUserInfo;
+import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
+import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 
@@ -96,7 +99,9 @@ public class EquallogicManager implements LogicalStorageManager {
 	private static final Pattern VOLUME_CREATE_PATTERN = Pattern.compile(".*iSCSI target name is (.*)\r");
 	private static final Pattern VOLUME_DELETE_PATTERN = Pattern.compile("Volume deletion succeeded.");
 	private static final Pattern USER_CREATE_PATTERN = Pattern.compile(".*Password is (.*)\r");
-		
+	private static final Pattern SNAPSHOT_CREATE_PATTERN = Pattern.compile(".*Snapshot name is (.*)\r");
+	private static final Pattern SNAPSHOT_TARGET_NAME_PATTERN = Pattern.compile(".*iSCSI Name: (.*)\r");
+	private static final Pattern SNAPSHOT_DELETE_PATTERN = Pattern.compile("Snapshot deletion succeeded.");
 	private PSConnectionManager connectionManager;
 	private static EquallogicManager singleton;
 	private static Logger LOG = Logger.getLogger(EquallogicManager.class);
@@ -122,7 +127,6 @@ public class EquallogicManager implements LogicalStorageManager {
 
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {
-		//connectionManager.checkConnection();
 	}
 
 	@Override
@@ -149,8 +153,25 @@ public class EquallogicManager implements LogicalStorageManager {
 	@Override
 	public List<String> createSnapshot(String volumeId, String snapshotId)
 	throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		return null;
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		int size = -1;
+		try {
+			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
+			size = volumeInfo.getSize();
+		} catch (EucalyptusCloudException ex) {
+			LOG.error("Unable to find volume: " + volumeId);			
+		} finally {
+			db.commit();
+		}
+		String iqn = connectionManager.createSnapshot(volumeId, snapshotId);
+		if(iqn != null) {
+			EquallogicVolumeInfo snapInfo = new EquallogicVolumeInfo(snapshotId, iqn, size);
+			snapInfo.setSnapshotOf(volumeId);
+			db = StorageController.getEntityWrapper();
+			db.add(snapInfo);
+			db.commit();
+		}
+		return Lists.newArrayList();
 	}
 
 	@Override
@@ -175,17 +196,46 @@ public class EquallogicManager implements LogicalStorageManager {
 	@Override
 	public void deleteSnapshot(String snapshotId)
 	throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		String volumeId;
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();		
+		try {
+			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
+			volumeId = volumeInfo.getSnapshotOf();
+		} catch(EucalyptusCloudException ex) {
+			LOG.error(ex);
+			throw new NoSuchEntityException(snapshotId);
+		} finally {
+			db.commit();
+		}
+		if(connectionManager.deleteSnapshot(volumeId, snapshotId)) {
+			try {
+				db = StorageController.getEntityWrapper();
+				EquallogicVolumeInfo snapInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
+				db.delete(snapInfo);
+			} catch(EucalyptusCloudException ex) {
+				LOG.error(ex);
+				throw ex;
+			} finally {
+				db.commit();
+			}
+		}
 	}
 
 	@Override
 	public void deleteVolume(String volumeId) throws EucalyptusCloudException {
-		if(connectionManager.deleteVolume(volumeId)) {
-			EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		try {
 			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
-			if(volumeInfo != null)
-				db.delete(volumeInfo);
+		} catch(EucalyptusCloudException ex) {
+			LOG.error(ex);
+			throw new NoSuchEntityException(volumeId);
+		} finally {
+			db.commit();
+		}
+		if(connectionManager.deleteVolume(volumeId)) {
+			db = StorageController.getEntityWrapper();
+			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
+			db.delete(volumeInfo);
 			db.commit();
 		}
 	}
@@ -266,26 +316,26 @@ public class EquallogicManager implements LogicalStorageManager {
 		private String host;
 		private String username;
 		private String password;
-
+		private final String TARGET_USERNAME = "eucalyptus"; 
 
 		public void checkConnection() throws EucalyptusCloudException {
 			//for now 
 			host = "192.168.7.188";
 			username = "grpadmin";
 			password = "zoomzoom";
-			
+
 			String show = execCommand("show");
 			if(show.length() <= 0) 
 				throw new EucalyptusCloudException("Connection failed.");
-			addUser("eucalyptus");
+			addUser(TARGET_USERNAME);
 		}
 
 		public String getVolumeProperty(String volumeId) {
 			EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
 			try {
 				EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
-				EntityWrapper<EquallogicUserInfo> dbUser = db.recast(EquallogicUserInfo.class);
-				EquallogicUserInfo userInfo = dbUser.getUnique(new EquallogicUserInfo("eucalyptus"));
+				EntityWrapper<CHAPUserInfo> dbUser = db.recast(CHAPUserInfo.class);
+				CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
 				String property = host + "," + volumeInfo.getIqn() + "," + userInfo.getEncryptedPassword();
 				db.commit();
 				return property;
@@ -335,13 +385,21 @@ public class EquallogicManager implements LogicalStorageManager {
 		public String createVolume(String volumeName, int size) {
 			try {
 				String returnValue = execCommand("stty hardwrap off\u001Avolume create " + volumeName + " " + (size * StorageProperties.KB) + "\u001A");
-				return matchPattern(returnValue, VOLUME_CREATE_PATTERN);
+				String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
+				if(targetName != null) {
+					returnValue = execCommand("volume select " + volumeName + " access create username " + TARGET_USERNAME);
+					if(returnValue.length() == 0) {
+						LOG.error("Unable to set access for volume: " + volumeName);
+						return null;
+					}
+				}
+				return targetName;
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e);
 				return null;
 			}
 		}
-		
+
 		public boolean deleteVolume(String volumeName) {
 			try {
 				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeName + " offline\u001Avolume delete " + volumeName + "\u001A");
@@ -354,11 +412,41 @@ public class EquallogicManager implements LogicalStorageManager {
 				return false;
 			}
 		}
-		
-		public void addUser(String userName) throws EucalyptusCloudException {
-			EntityWrapper<EquallogicUserInfo> db = StorageController.getEntityWrapper();
+
+		public String createSnapshot(String volumeId, String snapshotId) {
 			try {
-				EquallogicUserInfo userInfo = db.getUnique(new EquallogicUserInfo(userName));
+				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeId + " snapshot create-now\u001A");
+				String snapName = matchPattern(returnValue, SNAPSHOT_CREATE_PATTERN);
+				if(snapName != null) {
+					returnValue = execCommand("volume select " + volumeId + " snapshot rename " + snapName + " " + snapshotId + "\u001A");
+					returnValue = execCommand("volume select " + volumeId + " snapshot select " + snapshotId + " online\u001A");
+					returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeId + " snapshot select " + snapshotId + "show\u001A");
+					return matchPattern(returnValue, SNAPSHOT_TARGET_NAME_PATTERN);					
+				}
+				return null;
+			} catch (EucalyptusCloudException e) {
+				LOG.error(e);
+				return null;
+			}
+		}
+
+		public boolean deleteSnapshot(String volumeId, String snapshotId) {
+			try {
+				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeId + " snapshot select " + snapshotId + " offline\u001Avolume select " + volumeId + " snapshot delete " + snapshotId + "\u001A");
+				if(matchPattern(returnValue, SNAPSHOT_DELETE_PATTERN) != null)
+					return true;
+				else
+					return false;
+			} catch(EucalyptusCloudException e) {
+				LOG.error(e);
+				return false;
+			}
+		}
+
+		public void addUser(String userName) throws EucalyptusCloudException {
+			EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
+			try {
+				CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(userName));
 				db.commit();
 			} catch(EucalyptusCloudException ex) {
 				db.rollback();
@@ -366,7 +454,7 @@ public class EquallogicManager implements LogicalStorageManager {
 					String returnValue = execCommand("stty hardwrap off\u001Achapuser create " + userName + "\u001A");
 					String password = matchPattern(returnValue, USER_CREATE_PATTERN);
 					db = StorageController.getEntityWrapper();
-					EquallogicUserInfo userInfo = new EquallogicUserInfo(userName, encryptTargetPassword(password));
+					CHAPUserInfo userInfo = new CHAPUserInfo(userName, encryptTargetPassword(password));
 					db.add(userInfo);
 					db.commit();
 				} catch (EucalyptusCloudException e) {
@@ -375,7 +463,7 @@ public class EquallogicManager implements LogicalStorageManager {
 				}
 			}
 		}
-		
+
 		private String encryptTargetPassword(String password) throws EucalyptusCloudException {
 			EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
 			try {
