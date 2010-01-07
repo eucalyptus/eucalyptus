@@ -484,14 +484,16 @@ char * system_output (char * shell_command )
 }
 
 
-char *getConfString(char *configFile, char *key) {
-  int rc;
-  char *tmpstr;
-  
-  rc = get_conf_var(configFile, key, &tmpstr);
-  if (rc != 1) {
-    logprintfl (EUCAWARN, "%s is not defined in config\n", key);
-    return(NULL);
+char *getConfString(char configFiles[][1024], int numFiles, char *key) {
+  int rc, i, done;
+  char *tmpstr=NULL;
+
+  done=0;
+  for (i=0; i<numFiles && !done; i++) {
+    rc = get_conf_var(configFiles[i], key, &tmpstr);
+    if (rc == 1) {
+      done++;
+    }
   }
   return(tmpstr);
 }

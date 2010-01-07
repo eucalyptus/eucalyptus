@@ -155,10 +155,8 @@ typedef struct ccInstanceCache_t {
 } ccInstanceCache;
 
 typedef struct ccConfig_t {
-  //  ccResource resourcePool[MAXNODES];
-  //  int numResources;
-  //  int lastResourceUpdate;
   char eucahome[1024];
+  char configFiles[2][1024];
   int use_wssec;
   char policyFile[1024];
   int initialized;
@@ -236,7 +234,7 @@ int sem_mywait(int lockno);
 int sem_mypost(int lockno);
 
 int timeread(int fd, void *buf, size_t bytes, int timeout);
-int refreshNodes(ccConfig *config, char *configFile, ccResource **res, int *numHosts);
+int refreshNodes(ccConfig *config, ccResource **res, int *numHosts);
 
 int restoreNetworkState();
 int maintainNetworkState();
