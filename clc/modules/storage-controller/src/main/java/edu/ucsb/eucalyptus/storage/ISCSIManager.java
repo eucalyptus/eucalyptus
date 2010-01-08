@@ -65,8 +65,11 @@
 
 package edu.ucsb.eucalyptus.storage;
 
+import java.io.IOException;
 import java.security.PublicKey;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.crypto.Cipher;
 
@@ -177,7 +180,7 @@ public class ISCSIManager implements StorageExportManager {
 			error.start();
 			output.start();
 			proc.waitFor();
-			
+
 			proc = rt.exec(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)});
 			error = new StreamConsumer(proc.getErrorStream());
 			output = new StreamConsumer(proc.getInputStream());
@@ -188,7 +191,7 @@ public class ISCSIManager implements StorageExportManager {
 			String errorValue = error.getReturnValue();
 			if(errorValue.length() > 0)
 				throw new EucalyptusCloudException(errorValue);
-			
+
 			proc = rt.exec(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid ", String.valueOf(tid)});
 			error = new StreamConsumer(proc.getErrorStream());
 			output = new StreamConsumer(proc.getInputStream());
@@ -229,6 +232,15 @@ public class ISCSIManager implements StorageExportManager {
 		EntityWrapper<CHAPUserInfo> dbUser = StorageController.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
+			//check if account actually exists, if not create it.			
+			if(!checkUser("eucalyptus")) {
+				try {
+					addUser("eucalyptus", userInfo.getPassword());
+				} catch (ExecutionException e1) {
+					LOG.error(e1);					
+					return;
+				}
+			}
 		} catch(EucalyptusCloudException ex) {
 			String password = Hashes.getRandom(16);
 			try {
@@ -238,14 +250,7 @@ public class ISCSIManager implements StorageExportManager {
 				dbUser.rollback();
 				return;
 			}
-			String encryptedPassword;
-			try {
-				encryptedPassword = encryptTargetPassword(password);
-			} catch (EucalyptusCloudException e) {
-				LOG.error("Unable to encrypt target password. Please check credentials. Have you configured a cluster?", e);
-				return;
-			}
-			CHAPUserInfo userInfo = new CHAPUserInfo("eucalyptus", encryptedPassword);
+			CHAPUserInfo userInfo = new CHAPUserInfo("eucalyptus", password);
 			dbUser.add(userInfo);
 		} finally {
 			dbUser.commit();
@@ -290,11 +295,48 @@ public class ISCSIManager implements StorageExportManager {
 		}
 	}
 
+	private boolean checkUser(String username) {
+		Runtime rt = Runtime.getRuntime();
+		Process proc;
+		try {
+			proc = rt.exec(new String[]{"sudo", "tgtadm", "--op", "show", "--mode", "account"});
+			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+			StreamConsumer output = new StreamConsumer(proc.getInputStream());
+			error.start();
+			output.start();
+			proc.waitFor();
+			output.join();
+			String returnValue = output.getReturnValue();
+			if(returnValue.length() > 0) {
+				Pattern p = Pattern.compile(username);
+				Matcher m = p.matcher(returnValue);
+				if(m.find())
+					return true;
+				else
+					return false;
+			}
+		} catch (IOException e) {
+			LOG.error(e);
+			return false;
+		} catch (InterruptedException e) {
+			LOG.error(e);
+			return false;
+		}
+		return false;		
+	}
+
 	public String getEncryptedPassword() throws EucalyptusCloudException {
 		EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo("eucalyptus"));
-			return userInfo.getEncryptedPassword();
+			String encryptedPassword;
+			try {
+				encryptedPassword = encryptTargetPassword(userInfo.getPassword());
+				return encryptedPassword;
+			} catch (EucalyptusCloudException e) {
+				LOG.error("Unable to encrypt target password. Please check credentials. Have you configured a cluster?", e);
+			}
+			return null;
 		} catch(EucalyptusCloudException ex) {
 			throw new EucalyptusCloudException("Unable to find CHAP user: " + "eucalyptus");
 		} finally {

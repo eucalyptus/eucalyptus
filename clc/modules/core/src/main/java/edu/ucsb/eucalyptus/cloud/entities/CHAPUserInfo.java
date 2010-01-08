@@ -79,7 +79,7 @@ public class CHAPUserInfo {
     private Long id = -1l;
 
     private String user;
-    private String encryptedPassword;
+    private String password;
     
     public CHAPUserInfo() {}
     
@@ -89,7 +89,7 @@ public class CHAPUserInfo {
     
     public CHAPUserInfo(String userName, String password) {
     	this(userName);
-    	this.encryptedPassword = password;
+    	this.password = password;
 	}
 
 	public String getUser() {
@@ -100,12 +100,12 @@ public class CHAPUserInfo {
 		this.user = user;
 	}
 
-	public String getEncryptedPassword() {
-		return encryptedPassword;
+	public String getPassword() {
+		return password;
 	}
 
-	public void setEncryptedPassword(String encryptedPassword) {
-		this.encryptedPassword = encryptedPassword;
+	public void setPassword(String encryptedPassword) {
+		this.password = encryptedPassword;
 	}
 
 	@Override
