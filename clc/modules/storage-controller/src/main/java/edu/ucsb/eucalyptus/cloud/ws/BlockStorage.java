@@ -144,9 +144,9 @@ public class BlockStorage {
 			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
+		configure();
 		blockManager.configure();
 		blockManager.initialize();
-		configure();
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 		try {
 			startupChecks();
