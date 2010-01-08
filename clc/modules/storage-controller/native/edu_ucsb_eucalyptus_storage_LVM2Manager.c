@@ -26,7 +26,6 @@ int run_command_and_get_pid(char *cmd, char **args) {
 	}
 
 	if (pid == 0) {
-		//daemonize
 		DIR *proc_fd_dir;
 		struct dirent *fd_dir;
 		int fd_to_close;
@@ -34,7 +33,7 @@ int run_command_and_get_pid(char *cmd, char **args) {
 		int my_pid = getpid();
 
 		umask(0);
-		int sid = setsid();
+    	int sid = setsid();
 		if(sid < 0)
 			exit(-1);
 		char* home = getenv (EUCALYPTUS_ENV_VAR_NAME);
@@ -70,6 +69,7 @@ int run_command_and_get_pid(char *cmd, char **args) {
 		freopen( "/dev/null", "r", stdin);
 		freopen( "/dev/null", "w", stdout);
 		freopen( "/dev/null", "w", stderr);
+
 		exit(execvp(cmd, args));
 	}
 	return pid;
