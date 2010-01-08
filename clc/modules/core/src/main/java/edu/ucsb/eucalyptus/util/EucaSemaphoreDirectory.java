@@ -79,6 +79,14 @@ public class EucaSemaphoreDirectory {
 		return semaphore;
 	}
 
+	public static EucaSemaphore getSemaphore(String key, int number) {
+		EucaSemaphore semaphore = semaphoreMap.putIfAbsent(key, new EucaSemaphore(number));
+		if (semaphore == null) {
+			semaphore = semaphoreMap.get(key);
+		}
+		return semaphore;
+	}
+
 	public static EucaSemaphore getSolitarySemaphore(String key) {
 		EucaSemaphore semaphore = semaphoreMap.putIfAbsent(key, new EucaSemaphore(1));
 		if (semaphore == null) {

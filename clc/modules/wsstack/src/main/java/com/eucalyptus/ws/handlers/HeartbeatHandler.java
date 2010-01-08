@@ -67,6 +67,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -122,7 +123,6 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   private Channel        channel;
   private static AtomicBoolean initialized = new AtomicBoolean(false);
   private static AtomicBoolean pending = new AtomicBoolean(false);
-
   private static List<String> initializedComponents = Lists.newArrayList( );
   
   public HeartbeatHandler( ) {
@@ -173,6 +173,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
     try {
       GroovyUtil.evaluateScript( "after_database.groovy" );
+      GroovyUtil.evaluateScript( "after_persistence.groovy" );
     } catch ( FailScriptFailException e1 ) {
       LOG.debug( e1, e1 );
       System.exit( 123 );

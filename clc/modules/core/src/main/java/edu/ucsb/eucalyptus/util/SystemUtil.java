@@ -85,10 +85,10 @@ public class SystemUtil {
 			StreamConsumer output = new StreamConsumer(proc.getInputStream());
 			error.start();
 			output.start();
-			int pid = proc.waitFor();
+			int returnValue = proc.waitFor();
 			output.join();
-			if(pid != 0)
-				throw new ExecutionException(commandString);
+			if(returnValue != 0)
+				throw new ExecutionException(commandString + " error: " + error.getReturnValue());
 			return output.getReturnValue();
 		} catch (Throwable t) {
 			LOG.error(t, t);

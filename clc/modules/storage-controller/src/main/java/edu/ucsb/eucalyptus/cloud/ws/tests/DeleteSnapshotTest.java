@@ -96,6 +96,6 @@ public class DeleteSnapshotTest extends TestCase {
 
     public void setUp() {
         blockStorage = new BlockStorage();
-        BlockStorage.initialize();
+        BlockStorage.deferredInitializer();
     }    
 }

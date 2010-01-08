@@ -895,10 +895,8 @@ public class LVM2Manager implements LogicalStorageManager {
 				}
 			} else if(exportManager instanceof ISCSIManager) {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
-				String password = Hashes.getRandom(16);
-				iscsiVolumeInfo.setEncryptedPassword(encryptTargetPassword(password));
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + iscsiVolumeInfo.getVgName() + PATH_SEPARATOR + iscsiVolumeInfo.getLvName();
-				((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser(), password);
+				((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
 			}	
 		}
 
@@ -911,7 +909,13 @@ public class LVM2Manager implements LogicalStorageManager {
 				} else if(exportManager instanceof ISCSIManager) {
 					ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
 					String storeName = iscsiVolumeInfo.getStoreName();
-					String encryptedPassword = iscsiVolumeInfo.getEncryptedPassword();
+					String encryptedPassword;
+					try {
+						encryptedPassword = ((ISCSIManager)exportManager).getEncryptedPassword();
+					} catch (EucalyptusCloudException e) {
+						LOG.error(e);
+						return null;
+					}
 					return StorageProperties.STORAGE_HOST + "," + storeName + "," + encryptedPassword;
 				}
 			}
@@ -987,7 +991,7 @@ public class LVM2Manager implements LogicalStorageManager {
 				ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo();
 				return entityWrapper.query(ISCSIVolumeInfo);
 			}
-			return null;
+			return new ArrayList<LVMVolumeInfo>();
 		}
 
 		private void add(LVMVolumeInfo volumeInfo) {
@@ -1069,10 +1073,8 @@ public class LVM2Manager implements LogicalStorageManager {
 			} else if(exportManager instanceof ISCSIManager) {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
 				exportManager.allocateTarget(iscsiVolumeInfo);
-				String password = Hashes.getRandom(16);
-				iscsiVolumeInfo.setEncryptedPassword(encryptTargetPassword(password));
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser(), password);
+				((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
 			}
 			return 0;
 		}

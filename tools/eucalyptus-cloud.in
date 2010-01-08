@@ -221,15 +221,34 @@ do_start() {
 	
 	cd $EUCALYPTUS/etc/eucalyptus
 
+	# options from the configuration file
+	if [ "$DISABLE_DNS" = "Y" ]; then
+		OPTS="$OPTS --remote-dns"
+	fi
+	if [ "$DISABLE_EBS" = "Y" ]; then
+		OPTS="$OPTS --disable-storage"
+	fi
+	if [ "$DISABLE_ISCSI" = "Y" ]; then
+		OPTS="$OPTS --disable-iscsi"
+	fi
+
 	# enabled services
 	if [ "$STORAGE_WS" != "Y" ]; then
-		OPTS="$OPTS --disable-storage"
-		if ! $EUCALYPTUS/usr/sbin/euca_conf --check sc ; then
-			exit 1
+		if [ "$DISABLE_EBS" != "Y" ]; then
+			OPTS="$OPTS --disable-storage"
+		fi
+	else
+		if [ "$DISABLE_EBS" = "Y" ]; then
+			echo "DISABLE_EBS is set in eucalyptus.conf: not starting the sc"
+		else
+			if ! $EUCALYPTUS/usr/sbin/euca_conf --check sc ; then
+				exit 1
+			fi
 		fi
 	fi
 	if [ "$WALRUS_WS" != "Y" ]; then
 		OPTS="$OPTS --disable-walrus"
+	else
 		if ! $EUCALYPTUS/usr/sbin/euca_conf --check walrus ; then
 			exit 1
 		fi
@@ -242,6 +261,7 @@ do_start() {
 	fi
 	if [ "$CLOUD_WS" != "Y" ]; then
 		OPTS="$OPTS --disable-cloud"
+	else
 		if ! $EUCALYPTUS/usr/sbin/euca_conf --check cloud ; then
 			exit 1
 		fi
@@ -251,16 +271,6 @@ do_start() {
 		# nothing to start
 		NAME="none"
 		return 0
-	fi
-
-	if [ "$DISABLE_DNS" = "Y" ]; then
-		OPTS="$OPTS --remote-dns"
-	fi
-	if [ "$DISABLE_EBS" = "Y" ]; then
-		OPTS="$OPTS --disable-storage"
-	fi
-	if [ "$DISABLE_ISCSI" = "Y" ]; then
-		OPTS="$OPTS --disable-iscsi"
 	fi
 
     # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1

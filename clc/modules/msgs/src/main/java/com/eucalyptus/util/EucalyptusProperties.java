@@ -70,7 +70,7 @@ public class EucalyptusProperties {
   private static Logger LOG = Logger.getLogger( EucalyptusProperties.class );
 
 
-  public static boolean disableNetworking    = false;
+//  public static boolean disableNetworking    = false;
   public static boolean disableBlockStorage  = false;
 
   public static String  DEBUG_FSTRING        = "[%12s] %s";

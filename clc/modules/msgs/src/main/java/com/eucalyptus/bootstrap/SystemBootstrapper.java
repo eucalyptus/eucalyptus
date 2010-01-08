@@ -63,20 +63,9 @@
  */
 package com.eucalyptus.bootstrap;
 
-import java.io.Serializable;
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.log4j.Logger;
-import org.mule.api.MuleContext;
-
 import com.eucalyptus.util.DebugUtil;
-import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.Lists;
-
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class SystemBootstrapper {
   private static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );
@@ -133,11 +122,16 @@ public class SystemBootstrapper {
   }
 
   public boolean init( ) throws Exception {
-    boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
-    boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
-    //LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
-    DebugUtil.DEBUG = doDebug;
-    DebugUtil.TRACE = doDebug;
+    try {
+      boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
+      boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
+      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
+      DebugUtil.DEBUG = doDebug;
+      DebugUtil.TRACE = doDebug;
+    } catch( Throwable t ) {
+      t.printStackTrace( );
+      System.exit(1);
+    }
     try {
       LOG.info( LogUtil.header( "Initializing resource providers." ) );
       BootstrapFactory.initResourceProviders( );
@@ -148,6 +142,7 @@ public class SystemBootstrapper {
       return true;
     } catch ( Throwable e ) {
       LOG.fatal( e, e );
+      System.exit(1);
       return false;
     }
   }
@@ -178,15 +173,17 @@ public class SystemBootstrapper {
             try {
               LOG.info( "-> load: " + b.getClass( ) );
               boolean result = b.load( r );
-            } catch ( Exception e ) {
+            } catch ( Throwable e ) {
               LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
+              LOG.fatal( e, e );
               return false;
             }
           }
         }
       }
     } catch ( Throwable e ) {
-      LOG.info( e, e );
+      LOG.fatal( e, e );
+      System.exit(1);
     }
     return true;
   }
@@ -214,8 +211,8 @@ public class SystemBootstrapper {
         }
       }
     } catch ( Throwable e ) {
-      LOG.info( e, e );
-      System.exit( 123 );
+      LOG.fatal( e, e );
+      System.exit(1);
     }
     return true;
   }

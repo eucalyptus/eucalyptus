@@ -76,7 +76,7 @@
         <value name="zoneState" field="zoneState"/>
     </mapping>
     <!--2008-02-01-->
-    <mapping name="DescribeAvailabilityZones" class="edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType">
+    <mapping name="DescribeAvailabilityZones" class="edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <collection name="availabilityZoneSet" field="availabilityZoneSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
             <structure name="item">
                 <value name="zoneName"/>
@@ -96,7 +96,7 @@
         <value name="regionEndpoint" field="regionEndpoint"/>
     </mapping>
     <!--2008-12-01-->
-    <mapping name="DescribeRegions" class="edu.ucsb.eucalyptus.msgs.DescribeRegionsType">
+    <mapping name="DescribeRegions" class="edu.ucsb.eucalyptus.msgs.DescribeRegionsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <collection name="regionSet" field="regions" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
             <structure name="item">
                 <value name="regionName"/>

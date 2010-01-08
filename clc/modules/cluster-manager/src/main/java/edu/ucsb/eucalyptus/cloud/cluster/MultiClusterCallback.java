@@ -22,7 +22,7 @@ public abstract class MultiClusterCallback<TYPE extends EucalyptusMessage> exten
     List<QueuedEventCallback> callbackList = Lists.newArrayList( );
     for ( final Cluster c : Clusters.getInstance( ).listValues( ) ) {
       LOG.debug( "-> Sending " + msg.getClass( ).getSimpleName( ) + " network to: " + c.getUri( ) );
-      LOG.debug( LogUtil.lineObject( msg ) );
+      LOG.debug( LogUtil.dumpObject( msg ) );
       try {
         MultiClusterCallback<TYPE> newThis = this.newInstance( );
         c.getMessageQueue().enqueue( QueuedEvent.make(newThis, msg ) );

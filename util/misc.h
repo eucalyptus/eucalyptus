@@ -78,6 +78,7 @@ permission notice:
     logprintfl(EUCADEBUG, "OP TIME (%s): %f\n", #a, b - a);   \
   }
 
+#define SP(a) a ? a : "UNSET"
 
 enum {EUCADEBUG2, EUCADEBUG, EUCAINFO, EUCAWARN, EUCAERROR, EUCAFATAL};
 
@@ -85,7 +86,7 @@ char * replace_string (char ** stringp, char * source, char * destination );
 int sscanf_lines (char * lines, char * format, void * varp);
 char * fp2str (FILE * fp);
 char * system_output (char * shell_command );
-char *getConfString(char *configFile, char *key);
+char *getConfString(char configFiles[][1024], int numFiles, char *key);
 
 /**
  * Search in file #path# for a variable named #name#. It will put
@@ -134,6 +135,7 @@ int logprintf(const char *format, ...);
 int logprintfl(int level, const char *format, ...);
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
 int logfile(char *file, int in_loglevel);
+int check_process(pid_t pid, char *search);
 int check_directory(char *dir);
 int check_file(char *file);
 int check_file_newer_than(char *file, time_t mtime);

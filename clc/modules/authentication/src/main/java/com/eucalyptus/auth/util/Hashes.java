@@ -212,7 +212,7 @@ public class Hashes {
 
   public static String generateId( final String userId, final String prefix ) {
     Adler32 hash = new Adler32( );
-    String key = userId + System.currentTimeMillis( );
+    String key = userId + (System.currentTimeMillis( ) * Math.random( ));
     hash.update( key.getBytes( ) );
     String imageId = String.format( "%s-%08X", prefix, hash.getValue( ) );
     return imageId;

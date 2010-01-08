@@ -33,6 +33,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
+import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 
 public class NetworkGroupManager {
   private static Logger LOG = Logger.getLogger( NetworkGroupManager.class );
@@ -58,44 +59,48 @@ public class NetworkGroupManager {
   public CreateSecurityGroupResponseType create( CreateSecurityGroupType request ) throws EucalyptusCloudException {
     NetworkGroupUtil.makeDefault( request.getUserId( ) );//ensure the default group exists to cover some old broken installs
     CreateSecurityGroupResponseType reply = (CreateSecurityGroupResponseType)request.getReply( );
-    try {
-      NetworkRulesGroup newGroup = NetworkGroupUtil.createUserNetworkRulesGroup(request.getUserId( ),request.getGroupName( ), request.getGroupDescription( ));
-      reply.set_return( true );
-    } catch ( Exception e ) {
-      LOG.debug(e,e);
-      reply.set_return( false );
-    }
+    NetworkRulesGroup newGroup = NetworkGroupUtil.createUserNetworkRulesGroup(request.getUserId( ),request.getGroupName( ), request.getGroupDescription( ));
+    reply.set_return( true );
     return reply;
   }
   public DeleteSecurityGroupResponseType delete( DeleteSecurityGroupType request ) throws EucalyptusCloudException {
     NetworkGroupUtil.makeDefault( request.getUserId( ) );//ensure the default group exists to cover some old broken installs
     DeleteSecurityGroupResponseType reply = (DeleteSecurityGroupResponseType) request.getReply( ); 
-    if( request.isAdministrator( ) && request.getGroupName( ).indexOf( "-" ) != -1 ) {
-      NetworkGroupUtil.deleteUserNetworkRulesGroup( request.getGroupName( ).split("-")[0], request.getGroupName( ).replaceFirst("\\w*-","") );      
+    if( request.isAdministrator( ) && request.getGroupName( ).indexOf( "::" ) != -1 ) {
+      NetworkGroupUtil.deleteUserNetworkRulesGroup( request.getGroupName( ).replaceAll("::.*",""), request.getGroupName( ).replaceAll("\\w*::","") );      
     } else {
-      try {
-        NetworkGroupUtil.deleteUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
-        reply.set_return( true );
-      } catch ( Exception e ) {
-        LOG.debug(e,e);
-        reply.set_return( true );
-      }
+      NetworkGroupUtil.deleteUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
     }
+    reply.set_return( true );
     return reply;
   }
   
   public DescribeSecurityGroupsResponseType describe( DescribeSecurityGroupsType request ) throws EucalyptusCloudException {
     NetworkGroupUtil.makeDefault( request.getUserId( ) );//ensure the default group exists to cover some old broken installs
+    final List<String> groupNames = request.getSecurityGroupSet( );
     DescribeSecurityGroupsResponseType reply = ( DescribeSecurityGroupsResponseType ) request.getReply();
+    final List<SecurityGroupItemType> replyList = reply.getSecurityGroupInfo( );
     if( request.isAdministrator( ) ) {
       try {
-        reply.getSecurityGroupInfo( ).addAll( NetworkGroupUtil.getUserNetworksAdmin( request.getUserId( ), request.getSecurityGroupSet( ) ) );
+        for( SecurityGroupItemType group : Iterables.filter( NetworkGroupUtil.getUserNetworksAdmin( request.getUserId( ), request.getSecurityGroupSet( ) ), new Predicate<SecurityGroupItemType>() {
+          @Override public boolean apply( SecurityGroupItemType arg0 ) {
+            return groupNames.isEmpty( ) || groupNames.contains( arg0.getGroupName( ) );
+          }
+        }) ) {
+          replyList.add( group );
+        }
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
     } else {
       try {
-        reply.getSecurityGroupInfo( ).addAll( NetworkGroupUtil.getUserNetworks( request.getUserId( ), request.getSecurityGroupSet( ) ) );
+        for( SecurityGroupItemType group : Iterables.filter( NetworkGroupUtil.getUserNetworks( request.getUserId( ), request.getSecurityGroupSet( ) ), new Predicate<SecurityGroupItemType>() {
+          @Override public boolean apply( SecurityGroupItemType arg0 ) {
+            return groupNames.isEmpty( ) || groupNames.contains( arg0.getGroupName( ) );
+          }
+        }) ) {
+          replyList.add( group );
+        }
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }

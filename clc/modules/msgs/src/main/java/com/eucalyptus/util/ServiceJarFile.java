@@ -130,9 +130,9 @@ private void addDeferredInitializers(JarEntry j) throws Exception {
 	String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( ".class", "" );
     Class candidate = this.classLoader.loadClass( classGuess );
     if(candidate.getAnnotation(NeedsDeferredInitialization.class) != null) {
-    	NeedsDeferredInitialization needsDeferredInit = (NeedsDeferredInitialization) candidate.getAnnotation(NeedsDeferredInitialization.class);
-    	if(needsDeferredInit.component().isEnabled())
-    	  DeferredInitializer.getInstance().add(candidate);
+       NeedsDeferredInitialization needsDeferredInit = (NeedsDeferredInitialization) candidate.getAnnotation(NeedsDeferredInitialization.class);
+       if(needsDeferredInit.component().isEnabled())
+         DeferredInitializer.getInstance().add(candidate);
     }
   }
 

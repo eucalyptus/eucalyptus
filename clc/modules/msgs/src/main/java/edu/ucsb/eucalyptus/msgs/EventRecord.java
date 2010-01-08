@@ -14,13 +14,14 @@ public class EventRecord extends EucalyptusMessage {
 
   String component;
   String service;
-  long timestamp = System.currentTimeMillis();
+  long timestamp;
   String eventUserId;
   String eventCorrelationId;
   String eventId;
   String other;
   String caller;
   private EventRecord(final String component, final String eventUserId, final String eventCorrelationId, final String eventId, final String other, int distance ) {
+    this.timestamp = System.currentTimeMillis();
     this.component = component;
     this.eventUserId = eventUserId;
     this.eventCorrelationId = eventCorrelationId;
@@ -28,9 +29,13 @@ public class EventRecord extends EucalyptusMessage {
     this.other = ":" + other;
     if( DebugUtil.DEBUG ) {
       StackTraceElement ste = Thread.currentThread().getStackTrace( )[distance];
-      this.caller = String.format( "%s.%s.%d", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
+      if( ste != null && ste.getFileName( ) != null ) {
+        this.caller = String.format( "%s.%s.%s", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
+      } else {
+        this.caller = "unknown";
+      }
     } else {
-      this.caller = "n.a";
+      this.caller = "";
     }
   }
   
@@ -45,14 +50,15 @@ public class EventRecord extends EucalyptusMessage {
   }
   
   public String toString() {
-    return String.format(":%7.4f:%s/%s:%s:%s:%s%s:", 
-                         this.timestamp / 1000.0f, 
+    return String.format(":%10d:%s:uid:%s:%s:%s%s:", 
+                         this.timestamp, 
                          this.component, 
-                         this.caller, 
                          this.eventUserId, 
                          this.eventCorrelationId, 
                          this.eventId, 
-                         this.other != null ? this.other : "").replaceAll("::*",":");
+                         this.other != null ? this.other : "",
+                         this.caller 
+                         ).replaceAll("::*",":");
   }
 
   public static EventRecord create( final String component, final String eventUserId, final String eventCorrelationId, final Object eventName, final String other, int dist ) {

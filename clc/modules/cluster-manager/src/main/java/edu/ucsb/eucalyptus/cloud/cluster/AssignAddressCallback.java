@@ -63,74 +63,97 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.cloud.entities.Address;
-import edu.ucsb.eucalyptus.constants.VmState;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.EucalyptusClusterException;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.Client;
-
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.Address;
+import com.eucalyptus.address.AddressCategory;
+import com.eucalyptus.address.Addresses;
+import com.eucalyptus.address.Address.Transition;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LogUtil;
+import edu.ucsb.eucalyptus.constants.VmState;
+import edu.ucsb.eucalyptus.msgs.AssignAddressType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType> {
   private static Logger LOG = Logger.getLogger( AssignAddressCallback.class );
   
-  private Address       parentAddr;
-  private VmInstance    parentVm;
+  private Address       address;
   
-  public AssignAddressCallback( Address address, final VmInstance vm ) {
-    this.parentVm = vm;
-    this.parentAddr = address;
-    super.setRequest( new AssignAddressType( address.getName( ), vm.getNetworkConfig( ).getIpAddress( ),
-      vm.getInstanceId( ) ) );
+  public AssignAddressCallback( Address address ) {
+    this.address = address;
+    super.setRequest( new AssignAddressType( address.getName( ), address.getInstanceAddress( ), address.getInstanceId( ) ) );
   }
   
   @Override
   public void prepare( AssignAddressType msg ) throws Exception {
-    try {
-      VmInstance vm = VmInstances.getInstance( ).lookup( msg.getInstanceId( ) );
-      VmState vmState = vm.getState( );
-      if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
-        LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigning, LogUtil.FAIL,
-                                     parentAddr.toString( ) ) );
-        this.parentAddr.clearPending( );
-        this.parentAddr.release( );
-        throw new IllegalStateException( "Ignoring assignment to a vm which is not running: " + msg );
-      } else {
-        this.parentVm.getNetworkConfig( ).setIgnoredPublicIp( msg.getSource( ) );
-        LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigning, parentAddr.toString( ) ) );
+    if( !this.checkVmState( ) ) {
+      address.clearPending( );
+      try {
+        address.unassign( );
+        if( address.isSystemOwned( ) ) {
+          Addresses.release( address );
+        }
+      } catch ( IllegalStateException e ) {
       }
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      this.parentAddr.clearPending( );
-      throw e;
+      throw new IllegalStateException( "Ignoring assignment to a vm which is not running: " + this.getRequest( ) );      
+    } else {
+      LOG.debug( EventRecord.here( AssignAddressCallback.class, Transition.assigning, address.toString( ) ) );
     }
   }
   
   @Override
   public void verify( EucalyptusMessage msg ) throws Exception {
     try {
-      if ( !msg.get_return( ) ) {
-        LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigned, LogUtil.FAIL,
-                                     LogUtil.lineObject( parentAddr ) ) );
-      } else {
-        LOG.debug( EventRecord.here( AssignAddressCallback.class, Address.State.assigned,
-                                     LogUtil.lineObject( parentAddr ) ) );
-      }
-    } finally {
-      this.parentAddr.clearPending( );
+      this.updateState( );
+      this.address.clearPending( );
+    } catch ( Exception e1 ) {
+      LOG.debug( e1, e1 );
+      AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
     }
   }
   
   @Override
   public void fail( Throwable e ) {
-    //FIXME: assign fails: clean up state.
-    this.parentAddr.clearPending( );
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
+    this.cleanupState( );
+  }
+
+  private boolean checkVmState( ) {
+    try {
+      VmInstance vm = VmInstances.getInstance( ).lookup( super.getRequest().getInstanceId( ) );
+      VmState vmState = vm.getState( );
+      if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
+        vm.getNetworkConfig( ).setIgnoredPublicIp( VmInstance.DEFAULT_IP );
+        return false;
+      } else {
+        vm.getNetworkConfig( ).setIgnoredPublicIp( this.address.getName( ) );
+        return true;
+      }
+    } catch ( NoSuchElementException e ) {
+      return false;
+    }
   }
   
+  private void updateState( ) {
+    if( !this.checkVmState( ) ) {
+      throw new IllegalStateException( "Failed to find the vm for this assignment: " + this.getRequest( ) );
+    } else {
+      LOG.info( EventRecord.here( AssignAddressCallback.class, Address.State.assigned, LogUtil.dumpObject( address ) ) );
+    }
+  }
+
+  private void cleanupState( ) {
+    LOG.debug( EventRecord.here( AssignAddressCallback.class, Transition.assigning, LogUtil.FAIL, address.toString( ) ) );
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
+    if( this.address.isPending( ) ) {
+      this.address.clearPending( );
+    } else if( this.address.isSystemOwned( ) ) {
+      Addresses.release( address );
+    } else if( this.address.isAssigned( ) ) {
+      AddressCategory.unassign( address );
+    }
+  }
+
 }

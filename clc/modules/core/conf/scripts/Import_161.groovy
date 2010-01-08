@@ -6,6 +6,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.SubDirectory;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.auth.CredentialProvider;
@@ -69,7 +70,7 @@ import java.security.cert.X509Certificate;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.ClusterCredentials;
 
-baseDir = "/disk2/1.6.1-upgrade";//"${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
+baseDir = "${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/db";
 targetDir = baseDir;
 targetDbPrefix= "eucalyptus"
 
@@ -101,7 +102,7 @@ System.setProperty("euca.db.host", "jdbc:hsqldb:file:${targetDir}/${targetDbPref
 System.setProperty("euca.db.password", "${System.getenv('EUCALYPTUS_DB')}");
 System.setProperty("euca.log.level", 'INFO');
 
-new "/disk1/eucalyptus/src/main-bucket-logging/clc/modules/database/conf/scripts/after_database.groovy".run()
+GroovyUtil.evaluateScript( "after_database.groovy" );
 
 def updateBuckets() {
 	EntityWrapper<BucketInfo> dbBucket = WalrusControl.getEntityManager();

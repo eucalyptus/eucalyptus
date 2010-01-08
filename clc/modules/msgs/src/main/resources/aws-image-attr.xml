@@ -77,7 +77,8 @@
         <value name="return" field="_return"/>
     </mapping>
 
-    <mapping name="ModifyImageAttribute" class="edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType">
+    <mapping name="ModifyImageAttribute" class="edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType"  extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="imageId" field="imageId" usage="required"/>
         <structure usage="optional">
             <structure name="launchPermission" usage="optional">
@@ -130,7 +131,8 @@
         </collection>
     </mapping>
 
-    <mapping name="DescribeImageAttribute" class="edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType">
+    <mapping name="DescribeImageAttribute" class="edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType"  extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="imageId" field="imageId"/>
         <value name="launchPermission" field="launchPermission" usage="optional"/>
         <!--2007-03-01-->
@@ -150,12 +152,14 @@
         <value name="return" field="_return"/>
     </mapping>
 
-    <mapping name="ResetImageAttribute" class="edu.ucsb.eucalyptus.msgs.ResetImageAttributeType">
+    <mapping name="ResetImageAttribute" class="edu.ucsb.eucalyptus.msgs.ResetImageAttributeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="imageId" field="imageId"/>
         <value name="launchPermission" field="launchPermission"/>
     </mapping>
 
-    <mapping name="ConfirmProductInstance" class="edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType">
+    <mapping name="ConfirmProductInstance" class="edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="productCode" field="productCode"/>
         <value name="instanceId" field="instanceId"/>
     </mapping>

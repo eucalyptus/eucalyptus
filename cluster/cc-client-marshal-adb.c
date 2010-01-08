@@ -284,7 +284,7 @@ int cc_configureNetwork(char *sourceNet, char *destName, char *protocol, int min
   cn = adb_configureNetworkType_create(env);
   input = adb_ConfigureNetwork_create(env);
   
-  adb_configureNetworkType_set_userId(cn, env, "eucalyptus");
+  adb_configureNetworkType_set_userId(cn, env, "admin");
   {
     char cidstr[9];
     bzero(cidstr, 9);

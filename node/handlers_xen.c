@@ -191,7 +191,7 @@ doRunInstance(		struct nc_state_t *nc,
         logprintfl (EUCAFATAL, "Error: could not allocate instance struct\n");
         return 2;
     }
-    instance->state = BOOTING; /* TODO: do this in allocate_instance()? */
+    change_state(instance, STAGING);
 
     sem_p (inst_sem); 
     error = add_instance (&global_instances, instance);
@@ -267,7 +267,7 @@ static int doRebootInstance(	struct nc_state_t *nc,
             virDomainFree(dom); /* necessary? */
 	    sem_v(hyp_sem);
         } else {
-            if (instance->state != BOOTING) {
+            if (instance->state != BOOTING && instance->state != STAGING) {
                 logprintfl (EUCAWARN, "warning: domain %s to be rebooted not running on hypervisor\n", instanceId);
             }
         }
@@ -426,7 +426,7 @@ doAttachVolume (	struct nc_state_t *nc,
                 free(local_iscsi_dev);
             }
         } else {
-            if (instance->state != BOOTING) {
+            if (instance->state != BOOTING && instance->state != STAGING) {
                 logprintfl (EUCAWARN, "warning: domain %s not running on hypervisor, cannot attach device\n", instanceId);
             }
             ret = ERROR;
@@ -574,7 +574,7 @@ doDetachVolume (	struct nc_state_t *nc,
                 free(local_iscsi_dev);
             }
 	} else {
-            if (instance->state != BOOTING) {
+            if (instance->state != BOOTING && instance->state != STAGING) {
                 logprintfl (EUCAWARN, "warning: domain %s not running on hypervisor, cannot detach device\n", instanceId);
             }
             ret = ERROR;

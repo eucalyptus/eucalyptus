@@ -61,7 +61,7 @@ public class PutMethodWithProgress extends PutMethod {
 			}
 			chunkedOut.finish();				
 			inputStream.close();
-		} else{
+		} else {
 			return false;
 		}
 		return true;

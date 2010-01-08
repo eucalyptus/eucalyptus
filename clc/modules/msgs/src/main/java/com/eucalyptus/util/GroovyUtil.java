@@ -32,7 +32,11 @@ public class GroovyUtil {
     try {
       ClassLoader parent = ClassLoader.getSystemClassLoader( );
       GroovyClassLoader loader = new GroovyClassLoader( parent );
-      Class groovyClass = loader.parseClass( new File( fileName ) );  
+      File f = new File( fileName );
+      if( !f.exists( ) ) {
+        f = new File( SubDirectory.SCRIPTS + File.separator + fileName + (fileName.endsWith(".groovy")?"":".groovy") );
+      }
+      Class groovyClass = loader.parseClass( f );  
       groovyObject = ( GroovyObject ) groovyClass.newInstance();
     }
     catch ( Exception e ) {
@@ -44,13 +48,8 @@ public class GroovyUtil {
   public static Object evaluateScript( String fileName ) throws FailScriptFailException {
     FileReader fileReader = null;
     try {
-      try {
-        fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName + ".groovy" );
-        return getGroovyEngine().eval( fileReader );
-      } catch ( FileNotFoundException e ) {
-        fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName );
-        return getGroovyEngine().eval( fileReader );
-      } 
+      fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName + (fileName.endsWith(".groovy")?"":".groovy") );
+      return getGroovyEngine().eval( fileReader );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
       throw new FailScriptFailException( "Executing the requested script failed: " + fileName, e );

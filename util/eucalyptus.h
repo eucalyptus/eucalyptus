@@ -65,6 +65,7 @@ permission notice:
 
 /* file paths relative to $EUCALYPTUS */
 #define EUCALYPTUS_CONF_LOCATION   "%s/etc/eucalyptus/eucalyptus.conf"
+#define EUCALYPTUS_CONF_OVERRIDE_LOCATION   "%s/etc/eucalyptus/eucalyptus.local.conf"
 #define EUCALYPTUS_ROOTWRAP        "%s/usr/lib/eucalyptus/euca_rootwrap"
 #define EUCALYPTUS_ADD_KEY         "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/add_key.pl %s/usr/lib/eucalyptus/euca_mountwrap"
 #define EUCALYPTUS_GEN_LIBVIRT_XML "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/gen_libvirt_xml"
@@ -103,6 +104,7 @@ permission notice:
 #define CONFIG_NC_CACHE_SIZE "NC_CACHE_SIZE"
 #define CONFIG_NC_SWAP_SIZE "SWAP_SIZE"
 #define CONFIG_SAVE_INSTANCES "MANUAL_INSTANCES_CLEANUP"
+#define CONFIG_CONCURRENT_DISK_OPS "CONCURRENT_DISK_OPS"
 
 /* name of the administrative user within Eucalyptus */
 #define EUCALYPTUS_ADMIN "eucalyptus"
@@ -132,13 +134,10 @@ typedef enum instance_states_t {
     SHUTOFF,
     CRASHED,
 
-    /* TODO: remove some of these? */
-    NEW, 
-    WAITING,
+    /* start-time states */
+    STAGING,
     BOOTING,
     CANCELED,
-    TERMINATING,
-    AWOL,
 
     /* the only three states reported to CLC */
     PENDING,  /* staging in data, starting to boot, failed to boot */ 
@@ -151,18 +150,15 @@ typedef enum instance_states_t {
 static char * instance_state_names[] = {
     "Unknown",
     "Running",
-    "Running", /* TODO: we need to figure out what to call this. idle? */
+    "Waiting",
     "Paused",
     "Shutdown",
     "Shutoff",
     "Crashed",
 
-    "New",
-    "Waiting",
+    "Staging",
     "Booting",
     "Canceled",
-    "Terminating",
-    "AWOL",
 
     "Pending",
     "Extant",
