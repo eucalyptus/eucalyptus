@@ -252,6 +252,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	public void initialize() {
 		if(!initialized) {
 			System.loadLibrary("lvm2control");
+			registerSignals();
 			initialized = true;
 		}
 	}
