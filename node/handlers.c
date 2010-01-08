@@ -641,7 +641,7 @@ static int init (void)
 {
 	static int initialized = 0;
 	int do_warn = 0, i;
-	char config[CHAR_BUFFER_SIZE],
+	char configFiles[2][1024],
 		log[CHAR_BUFFER_SIZE],
 		*bridge,
 		*hypervisor,
@@ -680,16 +680,17 @@ static int init (void)
 		logprintfl (EUCAWARN, "env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
 
 	/* search for the config file */
-	snprintf(config, CHAR_BUFFER_SIZE, EUCALYPTUS_CONF_LOCATION, nc_state.home);
-	if (stat(config, &mystat)) {
-		logprintfl (EUCAFATAL, "could not open configuration file %s\n", config);
+	snprintf(configFiles[1], CHAR_BUFFER_SIZE, EUCALYPTUS_CONF_LOCATION, nc_state.home);
+	if (stat(configFiles[1], &mystat)) {
+		logprintfl (EUCAFATAL, "could not open configuration file %s\n", configFiles[1]);
 		return 1;
 	}
+	snprintf(configFiles[0], CHAR_BUFFER_SIZE, EUCALYPTUS_CONF_OVERRIDE_LOCATION, nc_state.home);
 
-	logprintfl (EUCAINFO, "NC is looking for configuration in %s\n", config);
+	logprintfl (EUCAINFO, "NC is looking for configuration in %s/%s\n", configFiles[1], configFiles[0]);
 
 	/* reset the log to the right value */
-	tmp = getConfString(config, "LOGLEVEL");
+	tmp = getConfString(configFiles, 2, "LOGLEVEL");
 	i = EUCADEBUG;
 	if (tmp) {
 		if (!strcmp(tmp,"INFO")) {i=EUCAINFO;}
@@ -701,7 +702,8 @@ static int init (void)
 	logfile(log, i);
 
 #define GET_VAR_INT(var,name) \
-	if (get_conf_var(config, name, &s)>0){\
+        s = getConfString(configFiles, 2, name); \
+	if (s){					\
 		var = atoi(s);\
 		free (s);\
 	}
@@ -738,7 +740,10 @@ static int init (void)
 	}
 
 	/* determine the hypervisor to use */
-	if (get_conf_var(config, CONFIG_HYPERVISOR, &hypervisor)<1) {
+	
+	//if (get_conf_var(config, CONFIG_HYPERVISOR, &hypervisor)<1) {
+	hypervisor = getConfString(configFiles, 2, CONFIG_HYPERVISOR);
+	if (!hypervisor) {
 		logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
 		return ERROR_FATAL;
 	}
@@ -778,11 +783,11 @@ static int init (void)
 		return 1;
 	}
 	snprintf (nc_state.config_network_path, CHAR_BUFFER_SIZE, NC_NET_PATH_DEFAULT, nc_state.home);
-	hypervisor = getConfString(config, "VNET_PUBINTERFACE");
+	hypervisor = getConfString(configFiles, 2, "VNET_PUBINTERFACE");
 	if (!hypervisor) 
-		hypervisor = getConfString(config, "VNET_INTERFACE");
-	bridge = getConfString(config, "VNET_BRIDGE");
-	tmp = getConfString(config, "VNET_MODE");
+		hypervisor = getConfString(configFiles, 2, "VNET_INTERFACE");
+	bridge = getConfString(configFiles, 2, "VNET_BRIDGE");
+	tmp = getConfString(configFiles, 2, "VNET_MODE");
 	
 	vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL, NULL);
 	if (hypervisor) free(hypervisor);

@@ -71,8 +71,6 @@
 use strict;
 
 our $quiet = 0;
-our $loopdev = "";
-our $loopdevp = "";
 our $attached = 0;
 
 delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
@@ -84,17 +82,11 @@ if (! defined $swap_size_mb) { $swap_size_mb = 0 }
 my $ephemeral_size_mb = untaint(shift @ARGV);
 if (! defined $ephemeral_size_mb) { $ephemeral_size_mb = 0 }
 
-my $SYNC=untaint(`which sync`);
-my $LOSETUP=untaint(`which losetup`);
 my $DD=untaint(`which dd`);
 my $PARTED=untaint(`which parted`);
 my $MV=untaint(`which mv`);
 my $FILE=untaint(`which file`);
 
-if ( !-x $LOSETUP ) {
-    print STDERR "Missing losetup!\n";
-    exit(1);
-}
 if ( !-x $PARTED ) {
     print STDERR "Missing parted!\n";
     exit(2);
@@ -102,10 +94,6 @@ if ( !-x $PARTED ) {
 if ( !-x $DD ) {
     print STDERR "Missing dd!\n";
     exit(3);
-}
-if ( !-x $SYNC ) {
-    print STDERR "Missing sync!\n";
-    exit(4);
 }
 if (!$partition || !-f $partition) {
     print STDERR "USAGE: partition2disk <path/to/disk_or_partition_file> [swap-size-MB] [ephemeral-size-MB]\n";
@@ -123,7 +111,7 @@ my $last_sector = $first_sector + $root_size_sectors;
 
 my $magic=`$FILE $partition`;
 chomp($magic);
-if (!($magic =~ /boot sector/) && !($magic =~ /Qcow/)) { # if not a disk image already
+if (!($magic =~ /partition [0-99]/) && !($magic =~ /Qcow/)) { # if not a disk image already
 
     # create the disk image
     run ("$DD if=/dev/zero of=$partition.disk bs=1M seek=$disk_size_mb count=1 >/dev/null 2>&1", 2);
@@ -133,37 +121,8 @@ if (!($magic =~ /boot sector/) && !($magic =~ /Qcow/)) { # if not a disk image a
     run ("$PARTED --script $partition.disk mkpart primary ext2 ${first_sector}s ${last_sector}s", 4);
 
     # copy partition 
-    for (my $i=0; $i<10 && !$attached; $i++) {
-        $loopdev=untaint(`$LOSETUP -f`);
-        my $rc = system("$LOSETUP $loopdev $partition.disk");
-        if ($loopdev ne "" && !$rc) {
-            $attached=1;
-        }
-    }
-    if (!$attached) {
-        print STDERR "cannot find free loop device\n";
-        do_exit(9);
-    }
-    
-    $attached = 0;
-    for (my $i=0; $i<10 && !$attached; $i++) {
-        $loopdevp=untaint(`$LOSETUP -f`);
-        my $rc = system("$LOSETUP -o 32256 $loopdevp $partition.disk");
-        if ($loopdevp ne "" && !$rc) {
-            $attached=1;
-        }
-    }
-    if (!$attached) {
-        print STDERR "cannot find free loop device\n";
-        do_exit(10);
-    }
-    run ("$DD if=$partition of=$loopdevp bs=512k", 11);
+    run ("$DD if=$partition of=$partition.disk bs=512 seek=63 conv=notrunc,fsync", 11);
  
-    run ("$SYNC", 16);
-    run ("$LOSETUP -d $loopdev", 12);
-    $loopdev="";
-    run ("$LOSETUP -d $loopdevp", 13);
-    $loopdevp="";
     run ("$MV $partition.disk $partition", 14);
 
 } else { # if already a disk image
@@ -257,12 +216,6 @@ sub tryrun() {
 sub do_exit() {
     my $ecode = shift;
 
-    if ($loopdev ne "") {
-	system("$LOSETUP -d $loopdev");
-    }
-    if ($loopdevp ne "") {
-	system("$LOSETUP -d $loopdevp");
-    }
     if ($ecode && -f "$partition.disk") {
 	unlink("$partition.disk");
     }
