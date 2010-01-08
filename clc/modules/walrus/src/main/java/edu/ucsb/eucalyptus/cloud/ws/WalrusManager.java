@@ -320,6 +320,7 @@ public class WalrusManager {
 			bucket.setGrants(grantInfos);
 			bucket.setBucketSize(0L);
 			bucket.setLoggingEnabled(false);
+			bucket.setVersioning(WalrusProperties.VersioningStatus.Disabled.toString());
 			bucket.setHidden(false);
 			if(locationConstraint != null)
 				bucket.setLocation(locationConstraint);
@@ -591,6 +592,9 @@ public class WalrusManager {
 			if (bucket.canWrite(userId)) {
 				if(logData != null)
 					reply.setLogData(logData);
+				boolean versioning = false;
+				if(WalrusProperties.VersioningStatus.Enabled.toString().equals(bucket.getVersioning()))
+					versioning = true;
 
 				ObjectInfo foundObject = null;
 				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
@@ -692,6 +696,8 @@ public class WalrusManager {
 								foundObject.setStorageClass("STANDARD");
 								foundObject.setContentType(request.getContentType());
 								foundObject.setContentDisposition(request.getContentDisposition());
+								if(versioning)
+									foundObject.setVersionId(Hashes.getDigestBase64(bucketName + objectName, Hashes.Digest.SHA224, true));
 								reply.setSize(size);
 								if(WalrusProperties.shouldEnforceUsageLimits && !request.isAdministrator()) {
 									Long bucketSize = bucket.getBucketSize();
@@ -2117,7 +2123,10 @@ public class WalrusManager {
 			BucketInfo bucketInfo = db.getUnique(new BucketInfo(bucket));
 			if(bucketInfo.getVersioning() != null) {
 				String status = bucketInfo.getVersioning();
-				reply.setVersioningStatus(status);
+				if(WalrusProperties.VersioningStatus.Disabled.toString().equals(status))
+					reply.setVersioningStatus(WalrusProperties.VersioningStatus.Suspended.toString());
+				else
+					reply.setVersioningStatus(status);
 			}
 		} catch(EucalyptusCloudException ex) {
 			db.rollback();
@@ -2142,8 +2151,11 @@ public class WalrusManager {
 
 		if(request.getVersioningStatus() != null) {
 			String status = request.getVersioningStatus();
-			bucketInfo.setVersioning(status);
-		}
+			if(WalrusProperties.VersioningStatus.Enabled.toString().equals(status))
+				bucketInfo.setVersioning(WalrusProperties.VersioningStatus.Enabled.toString());
+			else if(WalrusProperties.VersioningStatus.Suspended.toString().equals(status) && WalrusProperties.VersioningStatus.Enabled.toString().equals(bucketInfo.getVersioning()))
+				bucketInfo.setVersioning(WalrusProperties.VersioningStatus.Suspended.toString());
+		}		
 		db.commit();		
 		return reply;
 	}

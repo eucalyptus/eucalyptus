@@ -140,6 +140,10 @@ public class WalrusProperties {
 	public static String TRACKER_URL = "http://localhost:6969/announce";
 	public static String TRACKER_PORT = "6969";
 
+	public enum VersioningStatus {
+		Enabled, Disabled, Suspended
+	}
+	
 	public enum Headers {
 		Bucket, Key, RandomKey, VolumeId
 	}
