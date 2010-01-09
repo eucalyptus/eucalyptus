@@ -147,11 +147,15 @@ public class VolumeManager {
       try {
         db.getUnique( Volume.named( null, newId ) );
       } catch ( EucalyptusCloudException e ) {
-        newVol = new Volume( request.getUserId(), newId, new Integer( request.getSize() != null ? request.getSize() : "-1" ),
-                             request.getAvailabilityZone(), request.getSnapshotId() );
-        db.add( newVol );
-        db.commit();
-        break;
+        try {
+          newVol = new Volume( request.getUserId(), newId, new Integer( request.getSize() != null ? request.getSize() : "-1" ),
+                               request.getAvailabilityZone(), request.getSnapshotId() );
+          db.add( newVol );
+          db.commit();
+          break;
+        } catch ( Throwable e1 ) {
+          db = VolumeManager.getEntityWrapper();
+        }
       }
     }
     newVol.setState( State.GENERATING );

@@ -133,6 +133,8 @@ public class WalrusProperties {
 	public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
 	public static final String ADMIN = "admin";
 
+	public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
+
 	public static String TRACKER_BINARY = "bttrack";
 	public static String TORRENT_CREATOR_BINARY = "btmakemetafile";
 	public static String TORRENT_CLIENT_BINARY = "btdownloadheadless";

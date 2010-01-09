@@ -593,7 +593,7 @@ public class WalrusManager {
 				if(logData != null)
 					reply.setLogData(logData);
 				boolean versioning = false;
-				if(WalrusProperties.VersioningStatus.Enabled.toString().equals(bucket.getVersioning()))
+				if(bucket.isVersioningEnabled())
 					versioning = true;
 
 				ObjectInfo foundObject = null;
@@ -1567,6 +1567,9 @@ public class WalrusManager {
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
 			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+			boolean versioning = false;
+			if(bucket.isVersioningEnabled())
+				versioning = true;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -1630,7 +1633,7 @@ public class WalrusManager {
 								storageManager.sendObject(request.getChannel(), httpResponse, bucketName, torrentFile, torrentLength, null, 
 										DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
 										"application/x-bittorrent", "attachment; filename=" + objectKey + ".torrent;", request.getIsCompressed(),
-										logData);
+										null, logData);
 								if(WalrusProperties.trackUsageStatistics) {
 									walrusStatistics.updateBytesOut(torrentLength);
 								}
@@ -1655,7 +1658,11 @@ public class WalrusManager {
 					if(logData != null) {
 						updateLogData(bucket, logData);
 						logData.setObjectSize(size);
-					}								
+					}
+					String versionId = null;
+					if(versioning) {
+						versionId = objectInfo.getVersionId() != null ? objectInfo.getVersionId() : "NULL";
+					}
 					if(request.getGetData()) {
 						if(request.getInlineData()) {
 							if((size * 4) > WalrusProperties.MAX_INLINE_DATA_SIZE) {
@@ -1685,13 +1692,13 @@ public class WalrusManager {
 							}
 							storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, size, etag, 
 									DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-									contentType, contentDisposition, request.getIsCompressed(), logData);  
+									contentType, contentDisposition, request.getIsCompressed(), versionId, logData);  
 							return null;
 						}
 					} else {
 						storageManager.sendHeaders(request.getChannel(), httpResponse, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-								contentType, contentDisposition, logData);
+								contentType, contentDisposition, versionId, logData);
 						return null;
 
 					}
@@ -1748,6 +1755,9 @@ public class WalrusManager {
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
 			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+			boolean versioning = false;
+			if(bucket.isVersioningEnabled())
+				versioning = true;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -1806,18 +1816,22 @@ public class WalrusManager {
 						updateLogData(bucket, logData);
 						logData.setObjectSize(size);
 					}										
+					String versionId = null;
+					if(versioning) {
+						versionId = objectInfo.getVersionId() != null ? objectInfo.getVersionId() : "NULL";
+					}
 					if(request.getGetData()) {
 						if(WalrusProperties.trackUsageStatistics) {
 							walrusStatistics.updateBytesOut(size);
 						}
 						storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-								contentType, contentDisposition, request.getIsCompressed(), logData);  
+								contentType, contentDisposition, request.getIsCompressed(), versionId, logData);  
 						return null;
 					} else {
 						storageManager.sendHeaders(request.getChannel(), httpResponse, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-								contentType, contentDisposition, logData);
+								contentType, contentDisposition, versionId, logData);
 						return null;
 					}
 				} else {
