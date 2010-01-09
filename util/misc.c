@@ -275,6 +275,42 @@ int param_check(char *func, ...) {
   return(0);
 }
 
+int check_process(pid_t pid, char *search) {
+  char file[1024], buf[1024];
+  FILE *FH=NULL;
+  int rc, ret=0;
+
+  snprintf(file, 1024, "/proc/%d/cmdline", pid);
+  rc = check_file(file);
+  if (!rc) {
+    // cmdline exists
+    ret = 1;
+    if (search) {
+      // check if cmdline contains 'search'
+      FH = fopen(file, "r");
+      if (FH) {
+	bzero(buf, 1024);
+	while(fgets(buf, 1024, FH)) {
+	  char *p;
+	  while((p = memchr(buf, '\0', 1024))) {
+	    *p = 'X';
+	  }
+	  buf[1023] = '\0';
+	  if (strstr(buf, search)) {
+	    ret = 0;
+	  }
+	}
+	fclose(FH);
+      }
+    } else {
+      ret = 0;
+    }
+  } else {
+    ret = 1;
+  }
+  return(ret);
+}
+
 int check_directory(char *dir) {
   int rc;
   struct stat mystat;
@@ -448,14 +484,16 @@ char * system_output (char * shell_command )
 }
 
 
-char *getConfString(char *configFile, char *key) {
-  int rc;
-  char *tmpstr;
-  
-  rc = get_conf_var(configFile, key, &tmpstr);
-  if (rc != 1) {
-    logprintfl (EUCAWARN, "%s is not defined in config\n", key);
-    return(NULL);
+char *getConfString(char configFiles[][1024], int numFiles, char *key) {
+  int rc, i, done;
+  char *tmpstr=NULL;
+
+  done=0;
+  for (i=0; i<numFiles && !done; i++) {
+    rc = get_conf_var(configFiles[i], key, &tmpstr);
+    if (rc == 1) {
+      done++;
+    }
   }
   return(tmpstr);
 }
@@ -887,6 +925,13 @@ int daemonrun(char *incmd, char *pidfile) {
   if (!pid) {
     char *tok=NULL, *ptr=NULL;
     int idx, rc;
+    struct sigaction newsigact;
+
+    newsigact.sa_handler = SIG_DFL;
+    newsigact.sa_flags = 0;
+    sigemptyset(&newsigact.sa_mask);
+    sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
+    sigaction(SIGTERM, &newsigact, NULL);
     
     rc = daemon(0,0);
     // become parent of session

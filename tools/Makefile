@@ -21,31 +21,31 @@ install: build
 	@if test -e /etc/init.d/eucalyptus ; then \
 		mv /etc/init.d/eucalyptus /etc/init.d/eucalyptus.old ; \
 		echo "Moving away old init.d script"; fi
-	@if test -e $(etcdir)/init.d/eucalyptus ; then \
-		mv $(etcdir)/init.d/eucalyptus $(etcdir)/init.d/eucalyptus.old ; fi
-	@$(INSTALL) -m 755 eucalyptus-cloud $(etcdir)/init.d
-	@$(INSTALL) -m 755 eucalyptus-nc $(etcdir)/init.d
-	@$(INSTALL) -m 755 eucalyptus-cc $(etcdir)/init.d
-	@$(INSTALL) -m 644 httpd.conf $(etcdir)/eucalyptus
-	@if test -e $(etcdir)/eucalyptus/eucalyptus.conf ; then \
-		cp $(etcdir)/eucalyptus/eucalyptus.conf $(etcdir)/eucalyptus/eucalyptus.conf.old ; fi
-	@$(INSTALL) -m 644 eucalyptus.conf $(etcdir)/eucalyptus
-	@$(INSTALL) -m 644 vtunall.conf.template $(etcdir)/eucalyptus
-	@$(INSTALL) -m 755 add_key.pl $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 gen_libvirt_xml $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 gen_kvm_libvirt_xml $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 detach.pl $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 partition2disk $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 get_xen_info $(datarootdir)/eucalyptus/get_xen_info
-	@$(INSTALL) -m 755 get_sys_info $(datarootdir)/eucalyptus/get_sys_info
-	@$(INSTALL) -m 755 euca_ipt $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 euca_upgrade $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 populate_arp.pl $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 euca_conf $(sbindir)
-	@$(INSTALL) -m 755 euca_sync_key $(sbindir)
-	@$(INSTALL) -m 755 connect_iscsitarget.pl $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 disconnect_iscsitarget.pl $(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 get_iscsitarget.pl $(datarootdir)/eucalyptus
+	@if test -e $(DESTDIR)$(etcdir)/init.d/eucalyptus ; then \
+		mv $(DESTDIR)$(etcdir)/init.d/eucalyptus $(DESTDIR)$(etcdir)/init.d/eucalyptus.old ; fi
+	@$(INSTALL) -m 755 eucalyptus-cloud $(DESTDIR)$(etcdir)/init.d
+	@$(INSTALL) -m 755 eucalyptus-nc $(DESTDIR)$(etcdir)/init.d
+	@$(INSTALL) -m 755 eucalyptus-cc $(DESTDIR)$(etcdir)/init.d
+	@$(INSTALL) -m 644 httpd.conf $(DESTDIR)$(etcdir)/eucalyptus
+	@if test -e $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf ; then \
+		cp $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf.old ; fi
+	@$(INSTALL) -m 644 eucalyptus.conf $(DESTDIR)$(etcdir)/eucalyptus
+	@$(INSTALL) -m 644 vtunall.conf.template $(DESTDIR)$(etcdir)/eucalyptus
+	@$(INSTALL) -m 755 add_key.pl $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 gen_libvirt_xml $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 gen_kvm_libvirt_xml $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 detach.pl $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 partition2disk $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 get_xen_info $(DESTDIR)$(datarootdir)/eucalyptus/get_xen_info
+	@$(INSTALL) -m 755 get_sys_info $(DESTDIR)$(datarootdir)/eucalyptus/get_sys_info
+	@$(INSTALL) -m 755 euca_ipt $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 euca_upgrade $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 populate_arp.pl $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 euca_conf $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 755 euca_sync_key $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 755 connect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 disconnect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 get_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
 
 uninstall: 
 	@$(RM) -f $(etcdir)/init.d/eucalyptus-cloud
