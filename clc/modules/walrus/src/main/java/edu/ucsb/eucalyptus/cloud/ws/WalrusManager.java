@@ -616,7 +616,10 @@ public class WalrusManager {
 				}
 				//write object to bucket
 				String objectName;
-				if (foundObject == null) {
+				if (foundObject == null || versioning) {
+					if(foundObject != null) {
+						foundObject.setLast(false);
+					}
 					//not found. create an object info
 					foundObject = new ObjectInfo(bucketName, objectKey);
 					foundObject.setOwnerId(userId);
@@ -696,6 +699,7 @@ public class WalrusManager {
 								foundObject.setStorageClass("STANDARD");
 								foundObject.setContentType(request.getContentType());
 								foundObject.setContentDisposition(request.getContentDisposition());
+								foundObject.setLast(true);
 								if(versioning)
 									foundObject.setVersionId(Hashes.getDigestBase64(bucketName + objectName, Hashes.Digest.SHA224, true));
 								reply.setSize(size);
@@ -1572,6 +1576,7 @@ public class WalrusManager {
 				versioning = true;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+			searchObjectInfo.setLast(true);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 			if(objectInfos.size() > 0) {
 				ObjectInfo objectInfo = objectInfos.get(0);

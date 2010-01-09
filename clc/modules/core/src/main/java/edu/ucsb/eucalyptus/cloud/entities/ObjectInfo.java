@@ -155,6 +155,9 @@ public class ObjectInfo implements Comparable {
     @Column(name="version_id")
     private String versionId;
 
+    @Column(name="is_last")
+    private Boolean last;
+ 
     private static Logger LOG = Logger.getLogger( ObjectInfo.class );
 
     public ObjectInfo() {
@@ -503,6 +506,15 @@ public class ObjectInfo implements Comparable {
 	public int compareTo(Object o) {
         return this.objectKey.compareTo(((ObjectInfo)o).getObjectKey());
     }
+
+	
+	public Boolean getLast() {
+		return last;
+	}
+
+	public void setLast(Boolean last) {
+		this.last = last;
+	}
 
 	@Override
 	public int hashCode() {
