@@ -502,6 +502,48 @@ public class PrefixEntry extends EucalyptusData {
 	}
 }
 
+public class ListVersionsType extends WalrusRequestType {
+	String prefix;
+	String keyMarker;
+	String versionIdMarker;
+	String maxKeys;
+	String delimiter;
+}
+
+public class ListVersionsResponseType extends WalrusResponseType {
+	String name;
+	String prefix;
+	String keyMarker;
+	String versionIdMarker;
+	String nextKeyMarker;
+	String nextVersionIdMarker;
+	int maxKeys;
+	String delimiter;
+	boolean isTruncated;
+	ArrayList<VersionEntry> versions = new ArrayList<VersionEntry>();
+	ArrayList<DeleteMarkerEntry> deleteMarkers = new ArrayList<DeleteMarkerEntry>();
+	ArrayList<PrefixEntry> commonPrefixes = new ArrayList<PrefixEntry>();
+}
+
+public class VersionEntry extends EucalyptusData {
+	String key;
+	String versionId;
+	Boolean isLatest;
+	String lastModified;
+	String etag;
+	long size;
+	String storageClass;
+	CanonicalUserType owner;
+}
+
+public class DeleteMarkerEntry extends EucalyptusData {
+	String key;
+	String versionId;
+	Boolean isLatest;
+	String lastModified;
+	CanonicalUserType owner;
+}
+
 public class SetBucketAccessControlPolicyType extends WalrusRequestType {
 	AccessControlListType accessControlList;
 }

@@ -216,7 +216,7 @@ public class WalrusProperties {
 	}
 
 	public enum OperationParameter {
-		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning;
+		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions;
 	}
 
 	public enum RequiredQueryParams {
