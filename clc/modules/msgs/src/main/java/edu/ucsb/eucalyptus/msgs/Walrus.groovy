@@ -440,6 +440,8 @@ public class CopyObjectType extends WalrusRequestType {
 }
 
 public class CopyObjectResponseType extends WalrusDataResponseType {
+	String copySourceVersionId;
+	String versionId;
 }
 
 public class MetaDataEntry extends EucalyptusData {
@@ -585,6 +587,7 @@ public class SetRESTBucketAccessControlPolicyResponseType extends WalrusResponse
 
 public class SetRESTObjectAccessControlPolicyType extends WalrusRequestType {
 	AccessControlPolicyType accessControlPolicy;
+	String versionId;
 }
 
 public class SetRESTObjectAccessControlPolicyResponseType extends WalrusResponseType {

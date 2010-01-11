@@ -75,6 +75,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.ws.MappingHttpResponse;
 
+import edu.ucsb.eucalyptus.msgs.CopyObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
@@ -121,7 +122,13 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 				}
 				//have to force a close for browsers
 				event.getFuture().addListener(ChannelFutureListener.CLOSE);
-			} else if(msg instanceof EucalyptusErrorMessageType) {
+			} else if(msg instanceof CopyObjectResponseType) {
+				CopyObjectResponseType copyResponse = (CopyObjectResponseType) msg;
+				if(copyResponse.getVersionId() != null)
+					httpResponse.addHeader("x-amz-version-id", copyResponse.getVersionId());
+				if(copyResponse.getCopySourceVersionId() != null)
+					httpResponse.addHeader("x-amz-copy-source-version-id", copyResponse.getCopySourceVersionId());
+			}	else if(msg instanceof EucalyptusErrorMessageType) {			
 				EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) msg;
 				EucalyptusMessage errMsg = WalrusUtil.convertErrorMessage(errorMessage);
 				if(errMsg instanceof WalrusErrorMessageType) {

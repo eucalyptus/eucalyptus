@@ -188,6 +188,7 @@
 			map-as="edu.ucsb.eucalyptus.msgs.AccessControlPolicyType" />
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
 			usage="optional" />
+		<value name="VersionId" field="versionId" usage="optional" />
 	</mapping>
 
 	<mapping name="SetRESTObjectAccessControlPolicyResponse"
