@@ -90,6 +90,8 @@ import edu.ucsb.eucalyptus.msgs.DeleteBucketResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteBucketType;
 import edu.ucsb.eucalyptus.msgs.DeleteObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteObjectType;
+import edu.ucsb.eucalyptus.msgs.DeleteVersionResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteVersionType;
 import edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotType;
 import edu.ucsb.eucalyptus.msgs.FlushCachedImageResponseType;
@@ -382,8 +384,12 @@ public class WalrusControl {
 		return walrusManager.setBucketVersioningStatus(request);
 	}
 	
-	public ListVersionsResponseType ListVersions(ListVersionsType request) {
+	public ListVersionsResponseType ListVersions(ListVersionsType request) throws EucalyptusCloudException {
 		return walrusManager.listVersions(request);
+	}
+	
+	public DeleteVersionResponseType DeleteVersion(DeleteVersionType request) throws EucalyptusCloudException {
+		return walrusManager.deleteVersion(request);
 	}
 
 	public GetDecryptedImageResponseType GetDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {

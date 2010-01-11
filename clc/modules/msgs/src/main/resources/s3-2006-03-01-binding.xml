@@ -450,7 +450,6 @@
 		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
 			usage="optional" />
-		<value name="VersionId" field="versionId" usage="optional" />
 	</mapping>
 
 	<mapping name="DeleteObjectResponse"
@@ -459,6 +458,19 @@
 			<value name="Code" field="code" />
 			<value name="Description" field="description" />
 		</structure>
+	</mapping>
+
+	<mapping name="DeleteVersion" class="edu.ucsb.eucalyptus.msgs.DeleteVersionType"
+		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
+			usage="optional" />
+		<value name="VersionId" field="versionId" usage="optional" />
+	</mapping>
+
+	<mapping name="DeleteVersionResponse"
+		class="edu.ucsb.eucalyptus.msgs.DeleteVersionResponseType">
+		<value name="Code" field="code" />
+		<value name="Description" field="description" />
 	</mapping>
 
 	<mapping name="ListBucket" class="edu.ucsb.eucalyptus.msgs.ListBucketType"

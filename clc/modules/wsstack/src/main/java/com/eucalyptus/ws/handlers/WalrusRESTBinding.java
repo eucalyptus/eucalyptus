@@ -271,6 +271,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.HEAD.toString(), "GetObject");
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + "extended", "GetObjectExtended");
 
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.OperationParameter.versionId.toString(), "DeleteVersion");
 		return newMap;
 	}
 

@@ -458,10 +458,18 @@ public class PutObjectInlineType extends WalrusDataRequestType {
 }
 
 public class DeleteObjectType extends WalrusDeleteType {
-	String versionId;
 }
 
 public class DeleteObjectResponseType extends WalrusDeleteResponseType {
+	String code;
+	String description;
+}
+
+public class DeleteVersionType extends WalrusDeleteType {
+	String versionId;
+}
+
+public class DeleteVersionResponseType extends WalrusDeleteResponseType {
 	String code;
 	String description;
 }
@@ -523,9 +531,9 @@ public class ListVersionsResponseType extends WalrusResponseType {
 	int maxKeys;
 	String delimiter;
 	boolean isTruncated;
-	ArrayList<VersionEntry> versions = new ArrayList<VersionEntry>();
-	ArrayList<DeleteMarkerEntry> deleteMarkers = new ArrayList<DeleteMarkerEntry>();
-	ArrayList<PrefixEntry> commonPrefixes = new ArrayList<PrefixEntry>();
+	ArrayList<VersionEntry> versions;
+	ArrayList<DeleteMarkerEntry> deleteMarkers;
+	ArrayList<PrefixEntry> commonPrefixes;
 }
 
 public class VersionEntry extends EucalyptusData {
