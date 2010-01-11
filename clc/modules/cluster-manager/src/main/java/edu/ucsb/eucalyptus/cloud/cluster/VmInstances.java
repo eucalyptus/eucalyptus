@@ -69,14 +69,19 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import java.security.MessageDigest;
 import java.util.NoSuchElementException;
 import java.util.zip.Adler32;
+import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LogUtil;
+import edu.ucsb.eucalyptus.cloud.ws.SystemState;
+import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.constants.VmState;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class VmInstances extends AbstractNamedRegistry<VmInstance> {
-
+  private static Logger LOG = Logger.getLogger( VmInstances.class );
   private static VmInstances singleton = getInstance();
 
   public static VmInstances getInstance() {
@@ -137,4 +142,15 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     return vm;
   }
 
+  public static void flushBuried() {
+    if( (float)Runtime.getRuntime( ).freeMemory( )/(float)Runtime.getRuntime().maxMemory() < 0.10f ) {
+      for( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
+        if( VmState.BURIED.equals( vm.getState( ) ) || vm.getSplitTime( ) > SystemState.BURY_TIME ) {
+          VmInstances.getInstance( ).deregister( vm.getInstanceId( ) );
+          LOG.info(EventRecord.here(VmInstances.class,EventType.FLUSH_CACHE,LogUtil.dumpObject(vm)));
+        }
+      }
+    }
+  }
+  
 }

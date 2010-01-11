@@ -185,6 +185,13 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
       LOG.fatal( e, e );
       System.exit( -1 );
     }
+    try {
+      GroovyUtil.evaluateScript( "after_persistence.groovy" );//TODO: move this ASAP!
+    } catch ( FailScriptFailException e ) {
+      LOG.fatal( e, e );
+      LOG.fatal( "Failed to initialize the persistence layer." );
+      System.exit( -1 );
+    }
     return true;
   }
 

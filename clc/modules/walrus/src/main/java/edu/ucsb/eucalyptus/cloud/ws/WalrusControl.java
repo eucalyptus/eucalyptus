@@ -118,6 +118,8 @@ import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
 import edu.ucsb.eucalyptus.msgs.ListBucketResponseType;
 import edu.ucsb.eucalyptus.msgs.ListBucketType;
+import edu.ucsb.eucalyptus.msgs.ListVersionsResponseType;
+import edu.ucsb.eucalyptus.msgs.ListVersionsType;
 import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.PostObjectType;
 import edu.ucsb.eucalyptus.msgs.PutObjectInlineResponseType;
@@ -378,6 +380,10 @@ public class WalrusControl {
 
 	public SetBucketVersioningStatusResponseType SetBucketVersioningStatus(SetBucketVersioningStatusType request) throws EucalyptusCloudException {
 		return walrusManager.setBucketVersioningStatus(request);
+	}
+	
+	public ListVersionsResponseType ListVersions(ListVersionsType request) {
+		return walrusManager.listVersions(request);
 	}
 
 	public GetDecryptedImageResponseType GetDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {

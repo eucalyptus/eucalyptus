@@ -154,6 +154,8 @@ import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
 import edu.ucsb.eucalyptus.msgs.ListBucketResponseType;
 import edu.ucsb.eucalyptus.msgs.ListBucketType;
 import edu.ucsb.eucalyptus.msgs.ListEntry;
+import edu.ucsb.eucalyptus.msgs.ListVersionsResponseType;
+import edu.ucsb.eucalyptus.msgs.ListVersionsType;
 import edu.ucsb.eucalyptus.msgs.LoggingEnabled;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
 import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
@@ -593,7 +595,7 @@ public class WalrusManager {
 				if(logData != null)
 					reply.setLogData(logData);
 				boolean versioning = false;
-				if(WalrusProperties.VersioningStatus.Enabled.toString().equals(bucket.getVersioning()))
+				if(bucket.isVersioningEnabled())
 					versioning = true;
 
 				ObjectInfo foundObject = null;
@@ -616,7 +618,10 @@ public class WalrusManager {
 				}
 				//write object to bucket
 				String objectName;
-				if (foundObject == null) {
+				if (foundObject == null || versioning) {
+					if(foundObject != null) {
+						foundObject.setLast(false);
+					}
 					//not found. create an object info
 					foundObject = new ObjectInfo(bucketName, objectKey);
 					foundObject.setOwnerId(userId);
@@ -696,6 +701,7 @@ public class WalrusManager {
 								foundObject.setStorageClass("STANDARD");
 								foundObject.setContentType(request.getContentType());
 								foundObject.setContentDisposition(request.getContentDisposition());
+								foundObject.setLast(true);
 								if(versioning)
 									foundObject.setVersionId(Hashes.getDigestBase64(bucketName + objectName, Hashes.Digest.SHA224, true));
 								reply.setSize(size);
@@ -1560,6 +1566,8 @@ public class WalrusManager {
 		if(getMetaData == null)
 			getMetaData = false;
 
+		String versionIdRequested = request.getVersionId();
+		
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
@@ -1567,8 +1575,12 @@ public class WalrusManager {
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
 			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+			boolean versioning = false;
+			if(bucket.isVersioningEnabled())
+				versioning = true;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+			searchObjectInfo.setLast(true);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 			if(objectInfos.size() > 0) {
 				ObjectInfo objectInfo = objectInfos.get(0);
@@ -1630,7 +1642,7 @@ public class WalrusManager {
 								storageManager.sendObject(request.getChannel(), httpResponse, bucketName, torrentFile, torrentLength, null, 
 										DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
 										"application/x-bittorrent", "attachment; filename=" + objectKey + ".torrent;", request.getIsCompressed(),
-										logData);
+										null, logData);
 								if(WalrusProperties.trackUsageStatistics) {
 									walrusStatistics.updateBytesOut(torrentLength);
 								}
@@ -1655,7 +1667,11 @@ public class WalrusManager {
 					if(logData != null) {
 						updateLogData(bucket, logData);
 						logData.setObjectSize(size);
-					}								
+					}
+					String versionId = null;
+					if(versioning) {
+						versionId = objectInfo.getVersionId() != null ? objectInfo.getVersionId() : "NULL";
+					}
 					if(request.getGetData()) {
 						if(request.getInlineData()) {
 							if((size * 4) > WalrusProperties.MAX_INLINE_DATA_SIZE) {
@@ -1685,13 +1701,13 @@ public class WalrusManager {
 							}
 							storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, size, etag, 
 									DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-									contentType, contentDisposition, request.getIsCompressed(), logData);  
+									contentType, contentDisposition, request.getIsCompressed(), versionId, logData);  
 							return null;
 						}
 					} else {
 						storageManager.sendHeaders(request.getChannel(), httpResponse, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z", 
-								contentType, contentDisposition, logData);
+								contentType, contentDisposition, versionId, logData);
 						return null;
 
 					}
@@ -1748,6 +1764,9 @@ public class WalrusManager {
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
 			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+			boolean versioning = false;
+			if(bucket.isVersioningEnabled())
+				versioning = true;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -1806,18 +1825,22 @@ public class WalrusManager {
 						updateLogData(bucket, logData);
 						logData.setObjectSize(size);
 					}										
+					String versionId = null;
+					if(versioning) {
+						versionId = objectInfo.getVersionId() != null ? objectInfo.getVersionId() : "NULL";
+					}
 					if(request.getGetData()) {
 						if(WalrusProperties.trackUsageStatistics) {
 							walrusStatistics.updateBytesOut(size);
 						}
 						storageManager.sendObject(request.getChannel(), httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-								contentType, contentDisposition, request.getIsCompressed(), logData);  
+								contentType, contentDisposition, request.getIsCompressed(), versionId, logData);  
 						return null;
 					} else {
 						storageManager.sendHeaders(request.getChannel(), httpResponse, size, etag, 
 								DateUtils.format(lastModified.getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-								contentType, contentDisposition, logData);
+								contentType, contentDisposition, versionId, logData);
 						return null;
 					}
 				} else {
@@ -2159,4 +2182,12 @@ public class WalrusManager {
 		db.commit();		
 		return reply;
 	}
+	
+	public ListVersionsResponseType listVersions(ListVersionsType request) {
+		ListVersionsResponseType reply = (ListVersionsResponseType) request.getReply();
+		
+		return reply;
+	}
+	
+	
 }

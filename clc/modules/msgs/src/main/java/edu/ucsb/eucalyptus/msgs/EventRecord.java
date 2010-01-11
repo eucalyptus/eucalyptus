@@ -50,8 +50,8 @@ public class EventRecord extends EucalyptusMessage {
   }
   
   public String toString() {
-    return String.format(":%7.4f:%s:uid:%s:%s:%s%s:", 
-                         this.timestamp / 1000.0f, 
+    return String.format(":%10d:%s:uid:%s:%s:%s%s:", 
+                         this.timestamp, 
                          this.component, 
                          this.eventUserId, 
                          this.eventCorrelationId, 

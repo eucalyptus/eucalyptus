@@ -61,6 +61,7 @@
 package edu.ucsb.eucalyptus.admin.client;
 
 import com.google.gwt.user.client.rpc.IsSerializable;
+import edu.ucsb.eucalyptus.admin.server.RemoteInfoHandler;
 
 public class StorageInfoWeb implements IsSerializable {
 	private String name;
@@ -74,8 +75,20 @@ public class StorageInfoWeb implements IsSerializable {
 	private Boolean committed;
 
 	public StorageInfoWeb() {}
+	
+	public StorageInfoWeb( String name, String host, Integer port ) {
+    this.name = name;
+    this.host = host;
+    this.port = port;
+    this.volumesPath = StorageInfoWeb.DEFAULT_SC.getVolumesPath( );
+    this.maxVolumeSizeInGB = StorageInfoWeb.DEFAULT_SC.getMaxVolumeSizeInGB( );
+    this.totalVolumesSizeInGB = StorageInfoWeb.DEFAULT_SC.getTotalVolumesSizeInGB( );
+    this.storageInterface = StorageInfoWeb.DEFAULT_SC.getStorageInterface( );
+    this.zeroFillVolumes = StorageInfoWeb.DEFAULT_SC.getZeroFillVolumes( );
+    this.committed = StorageInfoWeb.DEFAULT_SC.committed;
+  }
 
-	public StorageInfoWeb( final String name,
+  public StorageInfoWeb( final String name,
 			String host,
 			Integer port,
 			String volumesPath,

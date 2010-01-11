@@ -497,6 +497,18 @@ public class BucketInfo {
 		this.versioning = versioning;
 	}
 
+	public boolean isVersioningEnabled() {
+		return WalrusProperties.VersioningStatus.Enabled.toString().equals(versioning);	
+	}
+	
+	public boolean isVersioningDisabled() {
+		return WalrusProperties.VersioningStatus.Disabled.toString().equals(versioning);	
+	}
+	
+	public boolean isVersioningSuspended() {
+		return WalrusProperties.VersioningStatus.Suspended.toString().equals(versioning);	
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;

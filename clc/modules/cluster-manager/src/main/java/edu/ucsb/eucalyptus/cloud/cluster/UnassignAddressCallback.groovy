@@ -111,7 +111,7 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
       if( vm.getNetworkConfig( ).getIgnoredPublicIp() == super.getRequest().getSource() ) {
         vm.getNetworkConfig().setIgnoredPublicIp( vm.getNetworkConfig( ).getIpAddress() );
       }
-    } catch(Throwable t) {
+    } catch(NoSuchElementException e) {} catch(Throwable t) {
       LOG.debug(t,t);
     }
   }
