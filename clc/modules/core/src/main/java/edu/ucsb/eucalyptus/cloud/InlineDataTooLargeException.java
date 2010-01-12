@@ -60,12 +60,32 @@
 *******************************************************************************/
 /*
  *
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.util;
+package edu.ucsb.eucalyptus.cloud;
 
-public class MessageAdapter
-{
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+@SuppressWarnings("serial")
+public class InlineDataTooLargeException extends WalrusException {
+
+  public InlineDataTooLargeException()
+  {
+    super( "InlineDataTooLarge" );
+  }
+  
+  public InlineDataTooLargeException(String value)
+  {
+    super("InlineDataTooLarge", "Inline data exceeds the maximum allowed size.", "Object",  value, HttpResponseStatus.BAD_REQUEST);
+  }
+
+  public InlineDataTooLargeException(Throwable ex)
+  {
+    super("InlineDataTooLarge", ex);
+  }
+  public InlineDataTooLargeException(String message, Throwable ex)
+  {
+    super(message,ex);
+  }
 }

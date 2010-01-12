@@ -129,12 +129,6 @@ void libvirt_error_handler (	void *userData,
 	if ( error==NULL) {
 		logprintfl (EUCAERROR, "libvirt error handler was given a NULL pointer\n");
 	} else {
-		/* these are common, they appear for evey non-existing
-		 * domain, such as BOOTING/CRASHED/SHUTOFF, which we catch
-		 * elsewhere, so we won't print them */
-		if (error->code==10) {
-			return;
-		}
 		logprintfl (EUCAERROR, "libvirt: %s (code=%d)\n", error->message, error->code);
 	}
 }
@@ -170,7 +164,7 @@ print_running_domains (void)
 	sem_p (inst_sem);
 	for ( head=global_instances; head; head=head->next ) {
 		ncInstance * instance = head->instance;
-		if (instance->state==BOOTING
+		if (instance->state==STAGING || instance->state==BOOTING
 				|| instance->state==RUNNING
 				|| instance->state==BLOCKED
 				|| instance->state==PAUSED) {
@@ -202,6 +196,7 @@ void change_state(	ncInstance *instance,
 {
     instance->state = (int) state;
     switch (state) { /* mapping from NC's internal states into external ones */
+    case STAGING:
     case BOOTING:
     case CANCELED:
         instance->stateCode = PENDING;
@@ -235,8 +230,8 @@ refresh_instance_info(	struct nc_state_t *nc,
     if (! check_hypervisor_conn ())
 	    return;
 
-    /* no need to bug for domains without state */
-    if (now==TEARDOWN)
+    /* no need to bug for domains without state on Hypervisor */
+    if (now==TEARDOWN || now==STAGING)
         return;
     
     sem_p(hyp_sem);
@@ -407,13 +402,13 @@ monitoring_thread (void *arg)
 	    refresh_instance_info (nc, instance);
 
             /* don't touch running or canceled threads */
-            if (instance->state!=BOOTING && 
+            if (instance->state!=STAGING && instance->state!=BOOTING && 
                 instance->state!=SHUTOFF &&
                 instance->state!=SHUTDOWN &&
                 instance->state!=TEARDOWN) continue;
 
             if (instance->state==TEARDOWN) {
-                /* it's been long enugh, we can fugetaboutit */
+                /* it's been long enough, we can forget the instance */
                 if ((now - instance->terminationTime)>teardown_state_duration) {
                     remove_instance (&global_instances, instance);
                     logprintfl (EUCAINFO, "forgetting about instance %s\n", instance->instanceId);
@@ -423,7 +418,7 @@ monitoring_thread (void *arg)
                 continue;
             }
 
-            if (instance->state==BOOTING &&
+            if ((instance->state==STAGING || instance->state==BOOTING) &&
                 (now - instance->launchTime)<unbooted_cleanup_threshold) /* hasn't been long enough */
                 continue; /* let it be */
             
@@ -551,6 +546,7 @@ void *startup_thread (void * arg)
         change_state (instance, SHUTOFF);
     } else {
         logprintfl (EUCAINFO, "started VM instance %s\n", instance->instanceId);
+        change_state (instance, BOOTING);
     }
 
     return NULL;
@@ -645,7 +641,7 @@ static int init (void)
 {
 	static int initialized = 0;
 	int do_warn = 0, i;
-	char config[CHAR_BUFFER_SIZE],
+	char configFiles[2][1024],
 		log[CHAR_BUFFER_SIZE],
 		*bridge,
 		*hypervisor,
@@ -684,16 +680,17 @@ static int init (void)
 		logprintfl (EUCAWARN, "env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
 
 	/* search for the config file */
-	snprintf(config, CHAR_BUFFER_SIZE, EUCALYPTUS_CONF_LOCATION, nc_state.home);
-	if (stat(config, &mystat)) {
-		logprintfl (EUCAFATAL, "could not open configuration file %s\n", config);
+	snprintf(configFiles[1], CHAR_BUFFER_SIZE, EUCALYPTUS_CONF_LOCATION, nc_state.home);
+	if (stat(configFiles[1], &mystat)) {
+		logprintfl (EUCAFATAL, "could not open configuration file %s\n", configFiles[1]);
 		return 1;
 	}
+	snprintf(configFiles[0], CHAR_BUFFER_SIZE, EUCALYPTUS_CONF_OVERRIDE_LOCATION, nc_state.home);
 
-	logprintfl (EUCAINFO, "NC is looking for configuration in %s\n", config);
+	logprintfl (EUCAINFO, "NC is looking for configuration in %s/%s\n", configFiles[1], configFiles[0]);
 
 	/* reset the log to the right value */
-	tmp = getConfString(config, "LOGLEVEL");
+	tmp = getConfString(configFiles, 2, "LOGLEVEL");
 	i = EUCADEBUG;
 	if (tmp) {
 		if (!strcmp(tmp,"INFO")) {i=EUCAINFO;}
@@ -705,7 +702,8 @@ static int init (void)
 	logfile(log, i);
 
 #define GET_VAR_INT(var,name) \
-	if (get_conf_var(config, name, &s)>0){\
+        s = getConfString(configFiles, 2, name); \
+	if (s){					\
 		var = atoi(s);\
 		free (s);\
 	}
@@ -742,7 +740,10 @@ static int init (void)
 	}
 
 	/* determine the hypervisor to use */
-	if (get_conf_var(config, CONFIG_HYPERVISOR, &hypervisor)<1) {
+	
+	//if (get_conf_var(config, CONFIG_HYPERVISOR, &hypervisor)<1) {
+	hypervisor = getConfString(configFiles, 2, CONFIG_HYPERVISOR);
+	if (!hypervisor) {
 		logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
 		return ERROR_FATAL;
 	}
@@ -782,11 +783,11 @@ static int init (void)
 		return 1;
 	}
 	snprintf (nc_state.config_network_path, CHAR_BUFFER_SIZE, NC_NET_PATH_DEFAULT, nc_state.home);
-	hypervisor = getConfString(config, "VNET_PUBINTERFACE");
+	hypervisor = getConfString(configFiles, 2, "VNET_PUBINTERFACE");
 	if (!hypervisor) 
-		hypervisor = getConfString(config, "VNET_INTERFACE");
-	bridge = getConfString(config, "VNET_BRIDGE");
-	tmp = getConfString(config, "VNET_MODE");
+		hypervisor = getConfString(configFiles, 2, "VNET_INTERFACE");
+	bridge = getConfString(configFiles, 2, "VNET_BRIDGE");
+	tmp = getConfString(configFiles, 2, "VNET_MODE");
 	
 	vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL, NULL);
 	if (hypervisor) free(hypervisor);

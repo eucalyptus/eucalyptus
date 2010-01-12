@@ -196,7 +196,9 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
     }
     return vmNetwork;
   }  
-  
+  public static NetworkRulesGroup named( String userName, String groupName ) {
+    return new NetworkRulesGroup( userName, groupName );
+  }
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -208,7 +210,7 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
   public boolean equals( Object obj ) {
     if ( this.is( obj ) ) return true;
     if ( !super.equals( obj ) ) return false;
-    if ( !getClass( ).is( obj.getClass( ) ) ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     NetworkRulesGroup other = ( NetworkRulesGroup ) obj;
     if ( uniqueName == null ) {
       if ( other.uniqueName != null ) return false;

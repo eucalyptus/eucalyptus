@@ -108,6 +108,7 @@ usage () {
 	echo "   -d <dir>                         point EUCALYPTUS to <dir>"
 	echo "   --no-rsync                       don't use rsync"
 	echo "   --no-scp                         don't use scp"
+	echo "   --skip-scp-hostcheck             skip scp interactive host keycheck"
 	echo "   --get-credentials <zipfile>      download credentials to <zipfile>"
 	echo "   --register-nodes \"host host ...\" add new nodes to EUCALYPTUS"
 	echo "   --deregister-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
@@ -187,7 +188,7 @@ check_heartbeat() {
 	fi
 
 	# let's talk to the host and check if something is running
-	ret="`$WGET -o /dev/null -T 10 -t 1 -O - http://${__host}:8773/services/Heartbeat`"
+	ret="`$WGET -q -T 10 -t 1 -O - http://${__host}:8773/services/Heartbeat`"
 	if [ "$?" != "0" -o -z "$ret" ]; then
 		return 1
 	fi
@@ -216,15 +217,15 @@ check_ws() {
 		ret=""
 	elif [ "$2" != "" ]; then
 		if [ "$VERBOSE" = "Y" ]; then
-			echo "$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name><euca:detail>\(.*\)</euca:detail>.*;\1 \2;'"
+			echo "$WGET -q -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name><euca:detail>\(.*\)</euca:detail>.*;\1 \2;'"
 		fi
-		eval "$2=\"`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name><euca:detail>\(.*\)</euca:detail>.*;\1 \2;'`\""
+		eval "$2=\"`$WGET -q -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name><euca:detail>\(.*\)</euca:detail>.*;\1 \2;'`\""
 		ret="$?"
 	else
 		if [ "$VERBOSE" = "Y" ]; then
-			echo "$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'"
+			echo "$WGET -q -T 10 -t 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'"
 		fi
-		soap_error="`$WGET -o /dev/null -T 10 -t 1 -O - \"$URL\"`"
+		soap_error="`$WGET -q -T 10 -t 1 -O - \"$URL\"`"
 		ret="$?"
 		soap_error="`echo $soap_error |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'`"
 		if test -n "$soap_error" ; then
@@ -271,6 +272,7 @@ sync_keys() {
 	local DESTDIR=""
 	local REMOTE=""
 	local FILES=""
+	local FILE=""
 
 	if [ "$SYNC" = "N" ]; then
 	    return 0
@@ -280,19 +282,27 @@ sync_keys() {
 		return 1
 	fi
 
-	SOURCEDIR="$1"
+	SOURCEDIRS="$1"
 	shift
 	DESTDIR="$1"
 	shift
 	REMOTE="$1"
 	shift
 	while [ $# -ge 1 ]; do 
-		if [ ! -e "${SOURCEDIR}/${1}" ]; then
-			echo "warning: ${SOURCEDIR}/${1} doesn't exists!"
-		else
-			FILES="$FILES ${SOURCEDIR}/${1}"
+	    FILE=""
+	    for sd in `echo $SOURCEDIRS | sed "s/,/ /g"`
+	    do
+		if [ -e "${sd}/${1}" ]; then
+		    FILE="${sd}/${1}"
 		fi
-		shift
+	    done
+	    if [ "$FILE" = "" ]; then
+		echo "Warning: cannot file file ${1} in ${SOURCEDIRS}"
+	    else
+		FILES="$FILES $FILE"
+	    fi
+
+	    shift
 	done
 
 	# is REMOTE actually localhost?
@@ -399,6 +409,11 @@ while [ $# -gt 0 ]; do
 	fi
 	if [ "$1" = "-noscp" -o "$1" = "--no-scp" ]; then 
 	    SCP=""
+	    shift
+	    continue
+	fi
+	if [ "$1" = "--skip-scp-hostcheck" ]; then 
+	    SCP_OPT="-oStrictHostKeyChecking=no"
 	    shift
 	    continue
 	fi
@@ -1042,10 +1057,9 @@ checkLocalService() {
 	    done
 	fi
 	
-	CMD="$WGET -T 10 -t 1 -O - -o /dev/null --no-check-certificate https://127.0.0.1:8443/register | grep CloudVersion > /dev/null 2> /dev/null"
-#	CMD="echo CLC CHECK NOT IMPLEMENTED"
+	CMD="$WGET -T 10 -t 1 -O - -q --no-check-certificate https://127.0.0.1:8443/register | grep CloudVersion >/dev/null"
     elif [ "$SERVICE" = "CC" ]; then
-	CMD="$WGET -T 10 -t 1 -O - -o /dev/null http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC > /dev/null"
+	CMD="$WGET -T 10 -t 1 -O - -q http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC >/dev/null"
     fi
     
     if [ -n "${FAKEREG}" ]; then
@@ -1128,13 +1142,10 @@ if [ -n "$CLUSNAME" ]; then
 	    fi
 	fi
 	
-    # sync the keys
-	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass; then
-	    echo "ERROR: failed to sync keys with ${NEWCLUS}."
-	fi
-	if ! sync_keys ${DESTDIR} ${DESTDIR} ${NEWCLUS} cloud-cert.pem; then
-	    echo "ERROR: failed to sync keys with ${NEWCLUS}."
-            exit 1
+        # sync the keys
+	if ! sync_keys "${DESTDIR},${SOURCEDIR}" ${DESTDIR} ${NEWCLUS} node-cert.pem cluster-cert.pem cluster-pk.pem node-pk.pem vtunpass cloud-cert.pem; then
+	    echo "ERROR: failed to sync keys with ${NEWCLUS}; registration will not be complete until keys can be synced, please try again."
+	    exit 1
 	fi
 	echo
 	echo "SUCCESS: new cluster '${CLUSNAME}' on host '${NEWCLUS}' successfully registered."
@@ -1205,12 +1216,12 @@ if [ -n "$WALRUS" -o -n "$WALRUS_MODE" ]; then
 	# check that walrus is at least running on the remote host
 	sleep 3
 	if ! check_heartbeat ${WALRUS} walrus ; then
-		echo "Walrus is not up on host ${WALRUS}: check the logs"
+		echo "WARNING: Walrus is not up on host ${WALRUS};  registration will not be complete until walrus is running."
 	fi
 	
 	# sync the keys
 	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${WALRUS} euca.p12 ; then
-	    echo "ERROR: failed to sync keys with ${WALRUS}."
+	    echo "ERROR: failed to sync keys with ${WALRUS}; registration will not be complete until keys can be synced, please try again."
             exit 1
 	fi
 	echo
@@ -1266,7 +1277,7 @@ if [ -n "$SCNAME" ]; then
     
     # sync the keys
 	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${SCHOST} euca.p12; then
-	    echo "ERROR: failed to sync keys with ${SCHOST}."
+	    echo "ERROR: failed to sync keys with ${SCHOST}; registration will not be complete until keys can be synced, please try again."
 	    exit 1
 	fi
 	echo
@@ -1358,7 +1369,7 @@ if [ -n "$NODEMODE" ]; then
 			echo "SUCCESS: removed node '${NEWNODE}' from '$FILE'"
 			continue
 		fi
-	
+
 		# let's sync keys with the nodes
 		if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWNODE} node-cert.pem cluster-cert.pem node-pk.pem cloud-cert.pem; then
 			echo

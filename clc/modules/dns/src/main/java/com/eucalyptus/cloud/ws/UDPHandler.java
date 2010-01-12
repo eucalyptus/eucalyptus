@@ -64,7 +64,7 @@
  *
  * Parts of this code are licensed under the BSD license and carry the following copyright,
  * Copyright (c) 1999-2004 Brian Wellington (bwelling@xbill.org)
- * @author Brian Wellington &lt;bwelling@xbill.org&gt;         
+ * @author Brian Wellington <bwelling@xbill.org>         
  *
  */
 

@@ -145,12 +145,17 @@ public class VolumeManager {
     while ( true ) {
       newId = Hashes.generateId( request.getUserId(), ID_PREFIX );
       try {
-        db.getUnique( Volume.ownedBy( newId ) );
+        db.getUnique( Volume.named( null, newId ) );
       } catch ( EucalyptusCloudException e ) {
-        newVol = new Volume( request.getUserId(), newId, new Integer( request.getSize() != null ? request.getSize() : "-1" ),
-                             request.getAvailabilityZone(), request.getSnapshotId() );
-        db.add( newVol );
-        break;
+        try {
+          newVol = new Volume( request.getUserId(), newId, new Integer( request.getSize() != null ? request.getSize() : "-1" ),
+                               request.getAvailabilityZone(), request.getSnapshotId() );
+          db.add( newVol );
+          db.commit();
+          break;
+        } catch ( Throwable e1 ) {
+          db = VolumeManager.getEntityWrapper();
+        }
       }
     }
     newVol.setState( State.GENERATING );
@@ -161,10 +166,16 @@ public class VolumeManager {
       StorageUtil.lookup( sc.getHostName( ) ).send( req, CreateStorageVolumeResponseType.class );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
-      db.rollback();
-      throw new EucalyptusCloudException( "Error communicating with Storage Controller: CreateStorageVolume:" + e.getMessage() );
+      try {
+        db = VolumeManager.getEntityWrapper();
+        Volume d = db.getUnique( Volume.named( newVol.getUserName( ), newVol.getDisplayName( ) ) );
+        db.delete( d );
+        db.commit( );
+      } catch ( Throwable e1 ) {
+        LOG.debug( e1, e1 );
+      }
+      throw new EucalyptusCloudException( "Error while communicating with Storage Controller: CreateStorageVolume:" + e.getMessage() );
     }
-    db.commit();
     CreateVolumeResponseType reply = ( CreateVolumeResponseType ) request.getReply();
     reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume() ) );
     return reply;

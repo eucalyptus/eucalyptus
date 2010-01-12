@@ -69,12 +69,19 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import java.security.MessageDigest;
 import java.util.NoSuchElementException;
 import java.util.zip.Adler32;
+import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LogUtil;
+import edu.ucsb.eucalyptus.cloud.ws.SystemState;
+import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.constants.VmState;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class VmInstances extends AbstractNamedRegistry<VmInstance> {
-
+  private static Logger LOG = Logger.getLogger( VmInstances.class );
   private static VmInstances singleton = getInstance();
 
   public static VmInstances getInstance() {
@@ -109,16 +116,16 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     return mac;
   }
   
-  public VmInstance lookupByInstanceIp ( String ip ) {
+  public VmInstance lookupByInstanceIp ( String ip ) throws NoSuchElementException {
     for( VmInstance vm : this.listValues( ) ) {
-      if( ip.equals( vm.getNetworkConfig( ).getIpAddress( ) ) ) {
+      if( ip.equals( vm.getNetworkConfig( ).getIpAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
         return vm;
       }
     }
     throw new NoSuchElementException( "Can't find registered object with ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
   }
 
-  public VmInstance lookupByPublicIp ( String ip ) {
+  public VmInstance lookupByPublicIp ( String ip ) throws NoSuchElementException {
     for( VmInstance vm : this.listValues( ) ) {
       if( ip.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
         return vm;
@@ -127,4 +134,23 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     throw new NoSuchElementException( "Can't find registered object with public ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
   }
 
+  public static VmInstance restrictedLookup( String userId, boolean administrator, String instanceId ) throws EucalyptusCloudException {
+    VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
+    if ( !administrator || !vm.getOwnerId( ).equals( userId ) ) {
+      throw new EucalyptusCloudException( "Permission denied while trying to lookup vm instance: " + instanceId );
+    }
+    return vm;
+  }
+
+  public static void flushBuried() {
+    if( (float)Runtime.getRuntime( ).freeMemory( )/(float)Runtime.getRuntime().maxMemory() < 0.10f ) {
+      for( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
+        if( VmState.BURIED.equals( vm.getState( ) ) || vm.getSplitTime( ) > SystemState.BURY_TIME ) {
+          VmInstances.getInstance( ).deregister( vm.getInstanceId( ) );
+          LOG.info(EventRecord.here(VmInstances.class,EventType.FLUSH_CACHE,LogUtil.dumpObject(vm)));
+        }
+      }
+    }
+  }
+  
 }

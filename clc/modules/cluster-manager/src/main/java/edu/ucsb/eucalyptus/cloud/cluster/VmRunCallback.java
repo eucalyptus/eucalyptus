@@ -63,17 +63,15 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-
+import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.net.util.AddressUtil;
+import com.eucalyptus.sla.ClusterAllocator;
 import com.eucalyptus.util.EucalyptusClusterException;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.Client;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -115,7 +113,13 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
     } 
     try {
       if ( reply != null && reply.get_return() ) {
-        this.assignAddresses( reply );
+        for ( VmInfo vmInfo : reply.getVms() ) {
+          VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
+          vm.getNetworkConfig().setIpAddress( vmInfo.getNetParams().getIpAddress() );
+          if( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) ) {
+            vm.getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
+          }
+        }
       } else {
         this.fail( new EucalyptusClusterException( "RunInstances returned false." + this.getRequest( ) ) );
       }
@@ -125,36 +129,33 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
     }
   }
 
-  private void assignAddresses( VmRunResponseType reply ) {
-    for ( VmInfo vmInfo : reply.getVms() ) {
-      VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
-      vm.getNetworkConfig().setIpAddress( vmInfo.getNetParams().getIpAddress() );
-      if( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) )
-        vm.getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
-    }
-    this.parent.setupAddressMessages( Lists.newArrayList( this.token.getAddresses() ), Lists.newArrayList( reply.getVms() ) );
-  }
 
   @Override
   public void fail( Throwable e ) {
-    LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
     LOG.debug( "-> Release resource tokens for unused resources." );
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
-    } catch ( Exception e2 ) {
+    } catch ( Throwable e2 ) {
       LOG.debug( e2, e2 );
     }
     LOG.debug( "-> Release network index allocation." );
-    NetworkToken net = this.token.getPrimaryNetwork( );
-    Network network = Networks.getInstance( ).lookup( net.getName( ) );
-    for( Integer index : this.token.getPrimaryNetwork( ).getIndexes( ) ) {
-      network.returnNetworkIndex( index );
+    try {
+      NetworkToken net = this.token.getPrimaryNetwork( );
+      Network network = Networks.getInstance( ).lookup( net.getName( ) );
+      for( Integer index : this.token.getPrimaryNetwork( ).getIndexes( ) ) {
+        network.returnNetworkIndex( index );
+      }
+    } catch ( Throwable e2 ) {
+      LOG.debug( e2, e2 );
     }
-    for( String s : this.token.getAddresses() ) {
-      LOG.debug( "-> Release addresses from failed vm run allocation: " + s );
-      AddressUtil.releaseAddress( s );
+    for( String addr : this.token.getAddresses() ) {
+      try {
+        Addresses.release( Addresses.getInstance().lookup( addr ) );
+        LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
+      } catch ( NoSuchElementException e1 ) {}
     }
+    LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
     this.parent.getRollback().lazySet( true );    
   }
 

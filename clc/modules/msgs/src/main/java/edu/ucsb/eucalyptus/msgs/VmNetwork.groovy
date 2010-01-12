@@ -113,7 +113,6 @@ public class StopNetworkType extends EucalyptusMessage {
 }
 
 public class StopNetworkResponseType extends EucalyptusMessage {
-  boolean _return;
 }
 
 public class DescribeNetworksType extends EucalyptusMessage {

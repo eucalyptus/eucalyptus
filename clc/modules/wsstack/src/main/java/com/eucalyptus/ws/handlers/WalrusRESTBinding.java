@@ -651,6 +651,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			try {
 				XMLParser xmlParser = new XMLParser(message);
 				String targetBucket = xmlParser.getValue("//TargetBucket");
+				if(targetBucket == null || targetBucket.length() == 0) 
+					return;
 				String targetPrefix = xmlParser.getValue("//TargetPrefix");
 				ArrayList<Grant> grants = new ArrayList<Grant>();
 

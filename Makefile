@@ -41,17 +41,17 @@ deploy: build
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
 install: deploy
-	@$(INSTALL) -d $(prefix)
-	@$(INSTALL) -d $(etcdir)/eucalyptus/cloud.d
-	@$(INSTALL) -m 0644 VERSION $(etcdir)/eucalyptus/eucalyptus-version
-	@$(INSTALL) -d $(etcdir)/init.d
-	@$(INSTALL) -d $(vardir)/run/eucalyptus/net
-	@$(INSTALL) -d $(vardir)/lib/eucalyptus/keys
-	@$(INSTALL) -d $(vardir)/lib/eucalyptus/CC
-	@$(INSTALL) -d $(vardir)/log/eucalyptus
-	@$(INSTALL) -d $(datarootdir)/eucalyptus
-	@$(INSTALL) -d $(usrdir)/sbin
-	@$(INSTALL) -d $(usrdir)/lib/eucalyptus
+	@$(INSTALL) -d $(DESTDIR)$(prefix)
+	@$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/cloud.d
+	@$(INSTALL) -m 0644 VERSION $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus-version
+	@$(INSTALL) -d $(DESTDIR)$(etcdir)/init.d
+	@$(INSTALL) -d $(DESTDIR)$(vardir)/run/eucalyptus/net
+	@$(INSTALL) -d $(DESTDIR)$(vardir)/lib/eucalyptus/keys
+	@$(INSTALL) -d $(DESTDIR)$(vardir)/lib/eucalyptus/CC
+	@$(INSTALL) -d $(DESTDIR)$(vardir)/log/eucalyptus
+	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -d $(DESTDIR)$(usrdir)/sbin
+	@$(INSTALL) -d $(DESTDIR)$(usrdir)/lib/eucalyptus
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 

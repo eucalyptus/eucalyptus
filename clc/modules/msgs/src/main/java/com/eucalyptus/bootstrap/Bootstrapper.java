@@ -106,5 +106,10 @@ public abstract class Bootstrapper {
     }
     return true;
   }
+  @Override
+  public boolean equals( Object obj ) {
+    return this.getClass().equals(obj.getClass());
+  }
+  
   
 }

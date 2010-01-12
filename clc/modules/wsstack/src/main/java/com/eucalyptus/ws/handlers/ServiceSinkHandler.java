@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws.handlers;
 
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.log4j.Logger;
@@ -146,10 +147,10 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         }
       } else {
         e.getFuture( ).cancel( );
-        LOG.debug( "Non-specific type being written to the channel. Not dropping this message causes breakage:" + msge.getMessage( ).getClass( ) );
+        LOG.warn( "Non-specific type being written to the channel. Not dropping this message causes breakage:" + msge.getMessage( ).getClass( ) );
       }
       if( e.getFuture( ).isCancelled( ) ) {
-        LOG.debug( "Cancelling send on : " + LogUtil.dumpObject( e ) );
+        LOG.trace( "Cancelling send on : " + LogUtil.dumpObject( e ) );
       } 
     } else {
       ctx.sendDownstream( e );
@@ -185,13 +186,16 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         this.requestLocal.set( ctx.getChannel( ), request );
         final EucalyptusMessage msg = ( EucalyptusMessage ) request.getMessage( );
         final String userAgent = request.getHeader( HttpHeaders.Names.USER_AGENT );
+        if( msg.getCorrelationId( ) == null ) {
+          msg.setCorrelationId( UUID.randomUUID().toString( ) );
+        }
         if ( ( userAgent != null ) && userAgent.matches( ".*EucalyptusAdminAccess" ) && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
           msg.setEffectiveUserId( msg.getUserId( ) );
         } else if ( ( user != null ) && ( this.msgReceiver == null ) ) {
           msg.setUserId( user.getUserName( ) );
           msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getUserName( ) );
         }
-        LOG.info( EventRecord.here( Component.eucalyptus, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
+        LOG.trace( EventRecord.here( Component.eucalyptus, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
         ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
         if ( this.msgReceiver == null ) {
           Messaging.dispatch( "vm://RequestQueue", msg );
@@ -203,7 +207,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
       } else if( e instanceof IdleStateEvent ) {
-        LOG.debug( "Closing idle connection: " + e );
+        LOG.warn( "Closing idle connection: " + e );
         e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
         ctx.sendUpstream( e );
       }
@@ -220,7 +224,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ReplyQueue.removeReplyListener( origRequest.getCorrelationId( ) );
       }
     } catch ( Throwable e1 ) {
-      LOG.debug( "Failed to remove the channel context on connection close.", e1 );
+      LOG.warn( "Failed to remove the channel context on connection close.", e1 );
     }
     super.channelClosed( ctx, e );
   }

@@ -137,7 +137,7 @@ public class WalrusUtil {
 		Document inputSource = null;
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-			inputSource = builder.parse( new ByteArrayInputStream( reply.getBase64Data().getBytes() ) );
+			inputSource = builder.parse( new ByteArrayInputStream( Hashes.base64decode(reply.getBase64Data() ).getBytes() ));
 		}
 		catch ( Exception e ) {
 			throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
@@ -170,7 +170,7 @@ public class WalrusUtil {
 		}
 
 		if ( reply == null || reply.getBase64Data() == null ) throw new EucalyptusCloudException( "Invalid manifest reference: " + imgInfo.getImageLocation() );
-		XMLParser parser = new XMLParser( reply.getBase64Data() );
+		XMLParser parser = new XMLParser( Hashes.base64decode(reply.getBase64Data()) );
 		String encryptedKey = parser.getValue( "//ec2_encrypted_key" );
 		String encryptedIV = parser.getValue( "//ec2_encrypted_iv" );
 		String signature = parser.getValue( "//signature" );

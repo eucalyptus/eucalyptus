@@ -70,6 +70,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -88,6 +89,7 @@ import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -100,6 +102,7 @@ import edu.ucsb.eucalyptus.cloud.BucketAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.BucketAlreadyOwnedByYouException;
 import edu.ucsb.eucalyptus.cloud.BucketNotEmptyException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
+import edu.ucsb.eucalyptus.cloud.InlineDataTooLargeException;
 import edu.ucsb.eucalyptus.cloud.InvalidRangeException;
 import edu.ucsb.eucalyptus.cloud.InvalidTargetBucketForLoggingException;
 import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
@@ -149,6 +152,7 @@ import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
 import edu.ucsb.eucalyptus.msgs.ListBucketResponseType;
 import edu.ucsb.eucalyptus.msgs.ListBucketType;
 import edu.ucsb.eucalyptus.msgs.ListEntry;
+import edu.ucsb.eucalyptus.msgs.LoggingEnabled;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
 import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.PostObjectType;
@@ -179,13 +183,14 @@ import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 
+@NeedsDeferredInitialization(component = Component.walrus)
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger( WalrusManager.class );
 
 	private StorageManager storageManager;
 	private WalrusImageManager walrusImageManager;
 	private static WalrusStatistics walrusStatistics = null;
-	public static void deferedInitializer() {
+	public static void deferredInitializer() {
 		walrusStatistics = new WalrusStatistics();
 	}
 
@@ -904,7 +909,11 @@ public class WalrusManager {
 				foundObject.setObjectKey(objectKey);
 				try {
 					//writes are unconditional
-					byte[] base64Data = request.getBase64Data().getBytes();
+					if(request.getBase64Data().getBytes().length > WalrusProperties.MAX_INLINE_DATA_SIZE) {
+						db.rollback();
+						throw new InlineDataTooLargeException(bucketName + "/" + objectKey);
+					}
+					byte[] base64Data = Hashes.base64decode(request.getBase64Data()).getBytes();
 					foundObject.setObjectName(objectName);
 					try {
 						FileIO fileIO = storageManager.prepareForWrite(bucketName, objectName);
@@ -913,6 +922,7 @@ public class WalrusManager {
 							fileIO.finish();
 						}
 					} catch(Exception ex) {
+						db.rollback();
 						throw new EucalyptusCloudException(ex);
 					}
 					md5 = Hashes.getHexString(Hashes.Digest.MD5.get().digest(base64Data));
@@ -1638,19 +1648,26 @@ public class WalrusManager {
 					}								
 					if(request.getGetData()) {
 						if(request.getInlineData()) {
-							try {
-								byte[] bytes = new byte[102400/*TODO: NEIL WalrusQueryDispatcher.DATA_MESSAGE_SIZE*/];
-								int bytesRead = 0;
-								String base64Data = "";
-								while((bytesRead = storageManager.readObject(bucketName, objectName, bytes, bytesRead)) > 0) {
-									base64Data += new String(bytes, 0, bytesRead);
-								}
-								reply.setBase64Data(base64Data);
-							} catch (IOException ex) {
-								db.rollback();
-								LOG.error(ex);
-								throw new EucalyptusCloudException("Unable to read object: " + bucketName + "/" + objectName);
+							if((size * 4) > WalrusProperties.MAX_INLINE_DATA_SIZE) {
+								throw new InlineDataTooLargeException(bucketName + "/" + objectKey);
 							}
+							byte[] bytes = new byte[102400];
+							int bytesRead = 0, offset = 0;
+							String base64Data = "";
+							try {
+								FileIO fileIO = storageManager.prepareForRead(bucketName, objectName);
+								while((bytesRead = fileIO.read(offset)) > 0) {
+									ByteBuffer buffer = fileIO.getBuffer();
+									buffer.get(bytes, 0, bytesRead);
+									base64Data += new String(bytes, 0, bytesRead);
+									offset += bytesRead;
+								}
+								fileIO.finish();
+							} catch (Exception e) {
+								LOG.error(e, e);
+								throw new EucalyptusCloudException(e);
+							}
+							reply.setBase64Data(Hashes.base64encode(base64Data));
 						} else {
 							//support for large objects
 							if(WalrusProperties.trackUsageStatistics) {
@@ -1991,14 +2008,6 @@ public class WalrusManager {
 	public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws EucalyptusCloudException {
 		SetBucketLoggingStatusResponseType reply = (SetBucketLoggingStatusResponseType) request.getReply();
 		String bucket = request.getBucket();
-		String targetBucket = request.getLoggingEnabled().getTargetBucket();
-		String targetPrefix = request.getLoggingEnabled().getTargetPrefix();
-		List<Grant> targetGrantsList = null;
-		TargetGrants targetGrants = request.getLoggingEnabled().getTargetGrants();
-		if(targetGrants != null)
-			targetGrantsList = targetGrants.getGrants();
-		if(targetPrefix == null)
-			targetPrefix = "";
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo, targetBucketInfo;
@@ -2008,21 +2017,34 @@ public class WalrusManager {
 			db.rollback();
 			throw new NoSuchBucketException(bucket);
 		} 
-		try {
-			targetBucketInfo = db.getUnique(new BucketInfo(targetBucket));
-		} catch(EucalyptusCloudException ex) {
-			db.rollback();
-			throw new NoSuchBucketException(bucket);
-		} 
-		if(!targetBucketInfo.hasLoggingPerms()) {
-			db.rollback();
-			throw new InvalidTargetBucketForLoggingException(targetBucket); 
-		}
-		bucketInfo.setTargetBucket(targetBucket);
-		bucketInfo.setTargetPrefix(targetPrefix);
-		bucketInfo.setLoggingEnabled(true);
-		if(targetGrantsList != null) {
-			targetBucketInfo.addGrants(targetGrantsList);
+
+		if(request.getLoggingEnabled() != null) {
+			String targetBucket = request.getLoggingEnabled().getTargetBucket();
+			String targetPrefix = request.getLoggingEnabled().getTargetPrefix();
+			List<Grant> targetGrantsList = null;
+			TargetGrants targetGrants = request.getLoggingEnabled().getTargetGrants();
+			if(targetGrants != null)
+				targetGrantsList = targetGrants.getGrants();
+			if(targetPrefix == null)
+				targetPrefix = "";
+			try {
+				targetBucketInfo = db.getUnique(new BucketInfo(targetBucket));
+			} catch(EucalyptusCloudException ex) {
+				db.rollback();
+				throw new NoSuchBucketException(targetBucket);
+			} 
+			if(!targetBucketInfo.hasLoggingPerms()) {
+				db.rollback();
+				throw new InvalidTargetBucketForLoggingException(targetBucket); 
+			}
+			bucketInfo.setTargetBucket(targetBucket);
+			bucketInfo.setTargetPrefix(targetPrefix);
+			bucketInfo.setLoggingEnabled(true);
+			if(targetGrantsList != null) {
+				targetBucketInfo.addGrants(targetGrantsList);
+			}
+		} else {
+			bucketInfo.setLoggingEnabled(false);
 		}
 		db.commit();		
 		return reply;
@@ -2059,12 +2081,14 @@ public class WalrusManager {
 					db.rollback();
 					throw new InvalidTargetBucketForLoggingException(targetBucket);
 				}
-				reply.getLoggingEnabled().setTargetBucket(bucketInfo.getTargetBucket());
-				reply.getLoggingEnabled().setTargetPrefix(bucketInfo.getTargetPrefix());
+				LoggingEnabled loggingEnabled = new LoggingEnabled();
+				loggingEnabled.setTargetBucket(bucketInfo.getTargetBucket());
+				loggingEnabled.setTargetPrefix(bucketInfo.getTargetPrefix());
 
 				TargetGrants targetGrants = new TargetGrants();
 				targetGrants.setGrants(grants);
-				reply.getLoggingEnabled().setTargetGrants(targetGrants);
+				loggingEnabled.setTargetGrants(targetGrants);
+				reply.setLoggingEnabled(loggingEnabled);
 			}
 		} catch(EucalyptusCloudException ex) {
 			db.rollback();

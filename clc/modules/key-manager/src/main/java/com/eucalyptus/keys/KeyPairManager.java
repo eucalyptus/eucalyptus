@@ -70,7 +70,7 @@ public class KeyPairManager {
       SshKeyPair key = KeyPairUtil.deleteUserKeyPair( request.getUserId( ), request.getKeyName( ) );
       reply.set_return( true );
     } catch ( Exception e1 ) {
-      reply.set_return( false );
+      reply.set_return( true );
     }
     return reply;
   }

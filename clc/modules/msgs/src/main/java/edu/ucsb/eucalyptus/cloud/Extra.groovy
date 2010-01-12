@@ -69,8 +69,10 @@ import edu.ucsb.eucalyptus.msgs.*
 import org.apache.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ConcurrentSkipListSet
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.EucalyptusProperties;
@@ -320,11 +322,12 @@ public class Network implements HasName {
   String name;
   String networkName;
   String userName;
+  Integer max;
   ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
   private ConcurrentMap<String, NetworkToken> clusterTokens = new ConcurrentHashMap<String,NetworkToken>();
   private NavigableSet<Integer> availableNetworkIndexes = new ConcurrentSkipListSet<Integer>();
   private NavigableSet<Integer> assignedNetworkIndexes = new ConcurrentSkipListSet<Integer>();
-  Integer vlan = null;
+  AtomicInteger vlan;
 
   def Network() {}
 
@@ -332,31 +335,53 @@ public class Network implements HasName {
     this.userName = userName;
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
-    for( int i = 2; i < 256; i++ ) {//FIXME: potentially a network can be more than a /24. update w/ real constraints at runtime.
+    try {
+      Network me = Networks.getInstance().lookup( this.networkName );
+      this.max = me.max;
+    } catch (Throwable t) {
+      this.max = 256;
+    }
+    for( int i = 2; i < max; i++ ) {//FIXME: potentially a network can be more than a /24. update w/ real constraints at runtime.
       this.availableNetworkIndexes.add( i );
     }
+    this.vlan = new AtomicInteger(Integer.valueOf(0));
   }
   
+  public void setVlan( Integer i ) {
+    this.setVlanIfZero( i );
+  }
+  public boolean initVlan( Integer i ) {
+    return this.vlan.compareAndSet(Integer.valueOf(0),i); 
+  }
+  public Integer getVlan() {
+    return this.vlan.get();
+  }
   public void extantNetworkIndex( String cluster, Integer index ) {
     if( index < 2 ) {
       this.availableNetworkIndexes.remove( index );
     } else {
-      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.allocated, "network=${this.name}","cluster=${cluster}","networkIndex=${index}") );
-      if( this.availableNetworkIndexes.remove( index ) ) {
+      if( !this.assignedNetworkIndexes.contains( index ) && this.availableNetworkIndexes.remove( index ) ) {
+        LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.allocated, "network=${this.name}","cluster=${cluster}","networkIndex=${index}") );
         this.assignedNetworkIndexes.add( index );
         NetworkToken token = this.getClusterToken( cluster );
         token.indexes.add( index );
       }
     }
   }
-
+  
   public NetworkToken getClusterToken( String cluster ) {
-    NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan ) );
+    NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan.get() ) );
     if( token == null ) token = this.clusterTokens.get( cluster );
     return token;
   }
   
+  public NetworkToken createNetworkToken( String cluster ) {
+    getClusterToken( cluster );
+    return new NetworkToken( cluster, this.userName, this.networkName, this.vlan.get() );
+  }
+  
   public void trim( Integer max ) {
+    this.max = max;
     this.availableNetworkIndexes.tailSet( max-1, true ).clear( );
     this.availableNetworkIndexes.headSet( 2 ).clear();
   }
@@ -371,7 +396,7 @@ public class Network implements HasName {
       LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
     } else {
       this.assignedNetworkIndexes.add( nextIndex );
-      this.clusterTokens.get( cluster ).getIndexes().add( nextIndex );
+      this.getClusterToken( cluster )?.getIndexes().add( nextIndex );
       LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
     }
     return nextIndex;
@@ -393,8 +418,8 @@ public class Network implements HasName {
   }
 
   public NetworkToken addTokenIfAbsent(NetworkToken token) {
-    if( this.vlan == null ) {
-      this.vlan = token.getVlan( );
+    if( this.vlan.get() == 0 ) {
+      this.vlan.compareAndSet(0,token.getVlan( ));
     }
     NetworkToken clusterToken = this.clusterTokens.putIfAbsent( token.getCluster(), token );
     if( clusterToken == null ) clusterToken = this.clusterTokens.get( token.getCluster() );
@@ -406,6 +431,11 @@ public class Network implements HasName {
   }
 
   public boolean hasTokens() {
+    this.clusterTokens.values().each { NetworkToken it ->
+      if(it.getIndexes().isEmpty()) {
+        this.removeToken(it.getCluster());
+      }
+    }    
     return !this.clusterTokens.values( ).isEmpty( );
   }
 
@@ -478,13 +508,13 @@ public class NetworkToken implements Comparable {
   @Override
   public int compareTo(Object o) {
     NetworkToken that = (NetworkToken) o;
-    return (!this.cluster.equals(that.cluster) && (this.vlan.equals( that.vlan ) ) ) ? this.vlan - that.vlan : this.cluster.compareTo(that.cluster);
+    return (!this.cluster.equals(that.cluster) && (this.getVlan().equals( that.getVlan() ) ) ) ? this.getVlan() - that.getVlan() : this.cluster.compareTo(that.cluster);
   }
 
   @Override
   public String toString( ) {
     return String.format( "NetworkToken [cluster=%s, indexes=%s, name=%s, networkName=%s, userName=%s, vlan=%s]",
-                          this.cluster, this.indexes, this.name, this.networkName, this.userName, this.vlan );
+                          this.cluster, this.indexes, this.name, this.networkName, this.userName, this.vlan);
   }
 }
 
@@ -512,7 +542,7 @@ public class ResourceToken implements Comparable {
   }
 
   public NetworkToken getPrimaryNetwork() {
-    return this.networkTokens.size( ) > 0 ? this.networkTokens.get( 0 ) : null;
+    return this.networkTokens.size()>0?this.networkTokens.get(0):null;
   }
 
   @Override

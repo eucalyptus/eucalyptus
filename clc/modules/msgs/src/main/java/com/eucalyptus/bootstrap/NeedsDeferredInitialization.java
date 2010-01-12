@@ -59,35 +59,17 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- *
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * Author: Neil Soman <neil@eucalyptus.com>
  */
+package com.eucalyptus.bootstrap;
 
-package edu.ucsb.eucalyptus.util;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public enum InstanceDefaults
-{
-  KERNEL(""),
-  RAMDISK(""),
-  TYPE("m1.small"),
-  ZONE("default"),
-  DNS_NAME(""),
-  PRIVATE_DNS_NAME(""),
-  KEY_NAME("");
-  private String value;
-
-  InstanceDefaults( final String value )
-  {
-    this.value = value;
-  }
-
-  public String getValue()
-  {
-    return value;
-  }
-
-  public String toString()
-  {
-    return this.getValue();
-  }
+@Target({ ElementType.TYPE, ElementType.FIELD })
+@Retention(RetentionPolicy.RUNTIME)
+public @interface NeedsDeferredInitialization {
+     public Component component() default Component.any;
 }

@@ -83,6 +83,7 @@ public class ElasticFoxPipeline extends EucalyptusQueryPipeline {
   protected boolean checkAccepts( HttpRequest message ) {
     if ( message instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
+      //FIXME: newest firefox breaks...
       String userAgent = httpRequest.getHeader( "User-Agent" );
       if( userAgent != null && userAgent.matches( ".*Elasticfox.*" )){
         httpRequest.setServicePath( httpRequest.getServicePath( ).replaceAll( "Eucalyptus/", "Eucalyptus" ) );

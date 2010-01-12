@@ -60,8 +60,11 @@
 *******************************************************************************/
 package edu.ucsb.eucalyptus.admin.server;
 
+import com.eucalyptus.address.Addresses;
+import com.eucalyptus.address.NullSystemAddressManager;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
@@ -173,7 +176,7 @@ public class Registration extends HttpServlet {
   }
 
   private static String publicAddressConfiguration() {
-    if ( com.eucalyptus.util.EucalyptusProperties.disableNetworking ) {
+    if (Clusters.getInstance( ).hasNetworking( ))/*TODO: fix this lame hack.*/ {
       return "        <Resource>\n" +
              "          <Name>elastic_ips</Name>\n" +
              "        </Resource>\n";

@@ -67,7 +67,7 @@ permission notice:
 #include <vnetwork.h>
 
 #define OP_TIMEOUT 60
-#define OP_TIMEOUT_PERNODE 10
+#define OP_TIMEOUT_PERNODE 20
 
 enum {SHARED_MEM, SHARED_FILE};
 
@@ -135,30 +135,39 @@ typedef struct resource_t {
   // state information
   int state, lastState;
   time_t stateChange, idleStart;
-} resource;
+} ccResource;
+int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory, int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart);
+
+typedef struct ccResourceCache_t {
+  ccResource resources[MAXNODES];
+  int valid[MAXNODES];
+  int numResources;
+  int lastResourceUpdate;
+  int resourceCacheUpdate;
+} ccResourceCache;
 
 typedef struct ccInstanceCache_t {
   ccInstance instances[MAXINSTANCES];
-  int valid[MAXINSTANCES];
+  time_t lastseen[MAXINSTANCES];
+  time_t valid[MAXINSTANCES];
   int numInsts;
   int instanceCacheUpdate;
 } ccInstanceCache;
 
 typedef struct ccConfig_t {
-  resource resourcePool[MAXNODES];
   char eucahome[1024];
-  int numResources;
-  int lastResourceUpdate;
+  char configFiles[2][1024];
   int use_wssec;
   char policyFile[1024];
   int initialized;
   int schedPolicy, schedState;
   int idleThresh, wakeThresh;
-  time_t configMtime;
+  time_t configMtime, instanceTimeout, ncPollingFrequency;
   int threads[3];
 } ccConfig;
 
-enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE};
+enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
+static char *SCHEDPOLICIES[SCHEDLAST] = {"GREEDY", "ROUNDROBIN", "POWERSAVE"};
 
 int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen);
 int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort);
@@ -186,6 +195,7 @@ int schedule_instance(virtualMachine *vm, char *targetNode, int *outresid);
 int schedule_instance_greedy(virtualMachine *vm, int *outresid);
 int schedule_instance_roundrobin(virtualMachine *vm, int *outresid);
 int schedule_instance_explicit(virtualMachine *vm, char *targetNode, int *outresid);
+
 int add_instanceCache(char *instanceId, ccInstance *in);
 int refresh_instanceCache(char *instanceId, ccInstance *in);
 int del_instanceCacheId(char *instanceId);
@@ -193,29 +203,45 @@ int find_instanceCacheId(char *instanceId, ccInstance **out);
 int find_instanceCacheIP(char *ip, ccInstance **out);
 void print_instanceCache(void);
 void invalidate_instanceCache(void);
+int map_instanceCache(int (*match)(ccInstance *, void *), void *matchParam, int (*operate)(ccInstance *, void *), void *operateParam);
+int privIpCmp(ccInstance *inst, void *ip);
+int privIpSet(ccInstance *inst, void *ip);
+int pubIpCmp(ccInstance *inst, void *ip);
+int pubIpSet(ccInstance *inst, void *ip);
 int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src);
+
+int add_resourceCache(char *host, ccResource *in);
+int refresh_resourceCache(char *host, ccResource *in);
+int del_resourceCacheHostname(char *host);
+int find_resourceCacheHostname(char *host, ccResource **out);
+void print_resourceCache(void);
+void invalidate_resourceCache(void);
 
 int initialize(void);
 int init_thread(void);
 int init_localstate(void);
 int init_config(void);
+int update_config(void);
 int init_pthreads(void);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname, int mode);
-//int setup_shared_buffer(void **buf, char *bufname, size_t bytes, int mode);
+void unlock_exit(int);
+void shawn(void);
+
 int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock);
 int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock);
-void shawn(void);
-int sem_timewait(sem_t *sem, time_t seconds);
-int sem_timepost(sem_t *sem);
+
+int sem_mywait(int lockno);
+int sem_mypost(int lockno);
+
 int timeread(int fd, void *buf, size_t bytes, int timeout);
-int refreshNodes(ccConfig *config, char *configFile, resource **res, int *numHosts);
+int refreshNodes(ccConfig *config, ccResource **res, int *numHosts);
 
 int restoreNetworkState();
 int maintainNetworkState();
 
-int powerDown(ncMetadata *ccMeta, resource *node);
-int powerUp(resource *node);
-int changeState(resource *in, int newstate);
+int powerDown(ncMetadata *ccMeta, ccResource *node);
+int powerUp(ccResource *node);
+int changeState(ccResource *in, int newstate);
 
 void *monitor_thread(void *);
 #endif

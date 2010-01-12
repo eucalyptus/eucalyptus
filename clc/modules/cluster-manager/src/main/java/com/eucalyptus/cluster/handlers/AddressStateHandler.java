@@ -1,36 +1,24 @@
 package com.eucalyptus.cluster.handlers;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-
+import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.GenericEvent;
-import com.eucalyptus.net.Addresses;
-import com.eucalyptus.net.util.AddressUtil;
+import com.eucalyptus.net.util.ClusterAddressInfo;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpResponse;
-
 import edu.ucsb.eucalyptus.cloud.Pair;
-import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.cloud.entities.Address;
-import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.DescribePublicAddressesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribePublicAddressesType;
 
@@ -72,17 +60,13 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse resp = ( MappingHttpResponse ) e.getMessage( );
       DescribePublicAddressesResponseType reply = ( DescribePublicAddressesResponseType ) resp.getMessage( );
+      this.getCluster( ).getState( ).setPublicAddressing( reply.get_return( ) );
+
       if ( reply.get_return( ) ) {
-        EucalyptusProperties.disableNetworking = false;
-        if( !AddressUtil.initialize( this.getCluster( ).getName( ), Pair.getPaired( reply.getAddresses( ), reply.getMapping( ) ) ) ) {
-          AddressUtil.update( this.getCluster( ).getName( ), Pair.getPaired( reply.getAddresses( ), reply.getMapping( ) ) );
-        }
-        for( Address a : Addresses.getInstance( ).listValues( ) ) {
-          if( !a.isAllocated( ) ) a.release( );
-        }
+        List<ClusterAddressInfo> addrInfo = ClusterAddressInfo.fromLists( reply.getAddresses( ), reply.getMapping( ) );
+        Addresses.getAddressManager( ).update( this.getCluster( ), addrInfo );
       } else {
         LOG.warn( "Response from cluster [" + this.getCluster( ).getName( ) + "]: " + reply.getStatusMessage( ) );
-        EucalyptusProperties.disableNetworking = true;
       }
       this.verified = true;
     }
