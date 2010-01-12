@@ -71,7 +71,6 @@ public class StorageRequestType extends EucalyptusMessage {
 	def StorageRequestType() {}
 }
 
-
 public class StorageErrorMessageType extends EucalyptusMessage {
 	def StorageErrorMessageType() {
 	}
@@ -86,12 +85,6 @@ public class StorageErrorMessageType extends EucalyptusMessage {
 	public String toString() {
 		return "StrorageErrorMessage:" + message;
 	}
-}
-
-public class InitializeStorageManagerType extends StorageRequestType {
-}
-
-public class InitializeStorageManagerResponseType extends StorageResponseType {
 }
 
 public class GetStorageVolumeType extends StorageRequestType {

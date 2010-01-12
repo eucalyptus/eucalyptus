@@ -96,8 +96,9 @@ static sem * disk_sem;
 int scInitConfig (void)
 {
     struct stat mystat;
-    char config [BUFSIZE];
+    char configFiles[2][1024];
     char * s;
+    int concurrent_disk_ops;
 
     if (scConfigInit) {
       return 0;
@@ -108,11 +109,6 @@ int scInitConfig (void)
         return 1;
     }
     
-    /* set the initial value of semaphore to number of 'disk intensive' operations that can run in parallel on this node */
-    if ((disk_sem = sem_alloc (4, "mutex")) == NULL) {
-        logprintfl (EUCAERROR, "failed to create and initialize disk semaphore\n");
-        return 1;
-    }
     /* read in configuration */
     char *home, *tmp;
     tmp = getenv (EUCALYPTUS_ENV_VAR_NAME);
@@ -125,25 +121,40 @@ int scInitConfig (void)
        logprintfl (EUCAERROR, "out of memory\n");
        return 1;
     }
-    
-    snprintf(config, BUFSIZE, EUCALYPTUS_CONF_LOCATION, home);
-    if (stat(config, &mystat)==0) {
-        logprintfl (EUCAINFO, "SC is looking for configuration in %s\n", config);
-        
-        if (get_conf_var(config, INSTANCE_PATH, &s)>0){ 
-            sc_instance_path = s; 
+   
+    snprintf(configFiles[0], BUFSIZE, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
+    snprintf(configFiles[1], BUFSIZE, EUCALYPTUS_CONF_LOCATION, home);
+    if (stat(configFiles[1], &mystat)==0 || stat(configFiles[0], &mystat) == 0) {
+      logprintfl (EUCAINFO, "SC is looking for configuration in files (%s,%s)\n", configFiles[1], configFiles[0]);
+        s = getConfString(configFiles, 2, INSTANCE_PATH);
+        if (s) {
+	  sc_instance_path = s;
         }
 
-        if (get_conf_var(config, CONFIG_NC_CACHE_SIZE, &s)>0){ 
-            cache_size_mb = atoll (s); 
-            cache_free_mb = cache_size_mb;
-            free (s); 
+        s = getConfString(configFiles, 2, CONFIG_NC_CACHE_SIZE);
+        if (s) {
+	  cache_size_mb = atoll (s); 
+	  cache_free_mb = cache_size_mb;
+	  free (s); 
         }
 
-        if (get_conf_var(config, CONFIG_NC_SWAP_SIZE, &s)>0){ 
-            swap_size_mb = atoll (s); 
-            free (s); 
+	s = getConfString(configFiles, 2, CONFIG_NC_SWAP_SIZE);
+        if (s){ 
+	  swap_size_mb = atoll (s); 
+	  free (s); 
         }
+
+	concurrent_disk_ops = 1;
+	s = getConfString(configFiles, 2, CONFIG_CONCURRENT_DISK_OPS);
+	if (s) {
+	  concurrent_disk_ops = atoi(s);
+	  free(s);
+	}
+	/* set the initial value of semaphore to number of 'disk intensive' operations that can run in parallel on this node */
+	if ((disk_sem = sem_alloc (concurrent_disk_ops, "mutex")) == NULL) {
+	  logprintfl (EUCAERROR, "failed to create and initialize disk semaphore\n");
+	  return(1);
+	}
     }
     snprintf(add_key_command_path, BUFSIZE, EUCALYPTUS_ADD_KEY, home, home, home);
     
@@ -818,7 +829,7 @@ retry:
     
     switch (action) {
     case STAGE:
-        logprintfl (EUCAINFO, "downloding image into %s...\n", file_path);		
+        logprintfl (EUCAINFO, "downloading and preparing image into %s...\n", file_path);		
         e = walrus_image_by_manifest_url (url, file_path, 1);
 
         /* for KVM, convert partition into disk */
@@ -859,7 +870,7 @@ retry:
             unlink (staging_path);            
         }
         if ( e ) {
-            logprintfl (EUCAERROR, "error: failed to download file from Walrus into %s\n", file_path);
+            logprintfl (EUCAERROR, "error: failed to download or prepare into %s\n", file_path);
             unlink (file_path);
             unlink (tmp_digest_path);
             if (should_cache) {

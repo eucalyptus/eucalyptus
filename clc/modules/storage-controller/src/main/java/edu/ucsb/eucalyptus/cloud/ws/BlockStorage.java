@@ -110,8 +110,6 @@ import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.InitializeStorageManagerResponseType;
-import edu.ucsb.eucalyptus.msgs.InitializeStorageManagerType;
 import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationResponseType;
@@ -146,14 +144,9 @@ public class BlockStorage {
 			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
-		initialize();
-	}
-
-	public static void initialize() {
-		StorageProperties.updateName();		
+		configure();
 		blockManager.configure();
 		blockManager.initialize();
-		configure();
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 		try {
 			startupChecks();
@@ -248,12 +241,6 @@ public class BlockStorage {
 
 	}
 
-	public InitializeStorageManagerResponseType InitializeStorageManager(InitializeStorageManagerType request) throws EucalyptusCloudException {
-		InitializeStorageManagerResponseType reply = (InitializeStorageManagerResponseType) request.getReply();
-		initialize();
-		return reply;
-	}
-
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
 		UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
@@ -293,6 +280,7 @@ public class BlockStorage {
 
 	public GetStorageConfigurationResponseType GetStorageConfiguration(GetStorageConfigurationType request) throws EucalyptusCloudException {
 		GetStorageConfigurationResponseType reply = (GetStorageConfigurationResponseType) request.getReply();
+		StorageProperties.updateName();
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		if(StorageProperties.NAME.equals(request.getName())) {

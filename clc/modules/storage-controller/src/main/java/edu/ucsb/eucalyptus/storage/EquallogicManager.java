@@ -339,7 +339,7 @@ public class EquallogicManager implements LogicalStorageManager {
 				EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
 				EntityWrapper<CHAPUserInfo> dbUser = db.recast(CHAPUserInfo.class);
 				CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
-				String property = host + "," + volumeInfo.getIqn() + "," + userInfo.getEncryptedPassword();
+				String property = host + "," + volumeInfo.getIqn() + "," + userInfo.getPassword();
 				db.commit();
 				return property;
 			} catch(EucalyptusCloudException ex) {
