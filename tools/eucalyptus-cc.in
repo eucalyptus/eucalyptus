@@ -211,7 +211,7 @@ do_fullclean() {
             fi
         done
         if [ -n "$pids" ]; then
-            kill -15 $pids
+            kill -15 $pids >/dev/null 2>&1
         fi
 
         for pid in $pids ; do
@@ -225,7 +225,7 @@ do_fullclean() {
                 fi
             done
             if [ $timeout -eq 0 ]; then
-                kill -9 ${pid}
+                kill -9 ${pid} >/dev/null 2>&1
             fi
         done
 
@@ -257,7 +257,7 @@ do_stop() {
             fi
         done
         if [ -n "$pids" ]; then
-            kill -15 $pids
+            kill -15 $pids >/dev/null 2>&1
         fi
 
         for pid in $pids ; do
@@ -271,7 +271,7 @@ do_stop() {
                 fi
             done
             if [ $timeout -eq 0 ]; then
-                kill -9 ${pid}
+                kill -9 ${pid} >/dev/null 2>&1
             fi
         done
 }

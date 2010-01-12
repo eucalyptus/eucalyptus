@@ -1158,6 +1158,7 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   }
   
   for (i=0; i<ccsLen; i++) {
+    logprintfl(EUCADEBUG, "vnetSetCCS(): input CC=%s\n", ccs[i]);
     found=0;
     for (j=0; j<NUMBER_OF_CCS && !found; j++) {
       if (dot2hex(ccs[i]) == vnetconfig->tunnels.ccs[j]) {
@@ -1181,7 +1182,7 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
       }
       if (!found) {
 	// exists locally, but not in new list, remove it
-	logprintfl(EUCADEBUG, "vnetSetCCS(): removing CC %d,%d\n", vnetconfig->tunnels.ccs[i], i);
+	logprintfl(EUCADEBUG, "vnetSetCCS(): removing CC %d\n", i);
 	vnetDelCCS(vnetconfig, vnetconfig->tunnels.ccs[i]);
       }
     }
