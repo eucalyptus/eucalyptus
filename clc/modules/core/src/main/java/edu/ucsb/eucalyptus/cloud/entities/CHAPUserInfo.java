@@ -70,12 +70,12 @@ import javax.persistence.*;
 
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
-@Table( name = "EquallogicUserInfo" )
+@Table( name = "CHAPUserInfo" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class CHAPUserInfo {
     @Id
     @GeneratedValue
-    @Column( name = "equallogic_user_info" )
+    @Column( name = "chap_user_info" )
     private Long id = -1l;
 
     private String user;

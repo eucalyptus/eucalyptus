@@ -102,6 +102,8 @@ public class EquallogicManager implements LogicalStorageManager {
 	private static final Pattern SNAPSHOT_CREATE_PATTERN = Pattern.compile(".*Snapshot name is (.*)\r");
 	private static final Pattern SNAPSHOT_TARGET_NAME_PATTERN = Pattern.compile(".*iSCSI Name: (.*)\r");
 	private static final Pattern SNAPSHOT_DELETE_PATTERN = Pattern.compile("Snapshot deletion succeeded.");
+	private static final Pattern USER_DELETE_PATTERN = Pattern.compile("CHAP user deletion succeeded.");
+	
 	private PSConnectionManager connectionManager;
 	private static EquallogicManager singleton;
 	private static Logger LOG = Logger.getLogger(EquallogicManager.class);
@@ -171,6 +173,7 @@ public class EquallogicManager implements LogicalStorageManager {
 			db.add(snapInfo);
 			db.commit();
 		}
+		//get snapshot from target
 		return Lists.newArrayList();
 	}
 
@@ -421,7 +424,7 @@ public class EquallogicManager implements LogicalStorageManager {
 					returnValue = execCommand("volume select " + volumeId + " snapshot rename " + snapName + " " + snapshotId + "\u001A");
 					returnValue = execCommand("volume select " + volumeId + " snapshot select " + snapshotId + " online\u001A");
 					returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeId + " snapshot select " + snapshotId + "show\u001A");
-					return matchPattern(returnValue, SNAPSHOT_TARGET_NAME_PATTERN);					
+					return matchPattern(returnValue, SNAPSHOT_TARGET_NAME_PATTERN);
 				}
 				return null;
 			} catch (EucalyptusCloudException e) {
@@ -441,6 +444,22 @@ public class EquallogicManager implements LogicalStorageManager {
 				LOG.error(e);
 				return false;
 			}
+		}
+
+		public void deleteUser(String userName) throws EucalyptusCloudException {
+			EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
+			try {
+				CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(userName));
+				String returnValue = execCommand("stty hardwrap off\u001Achapuser delete " + userName + "\u001A");
+				if(matchPattern(returnValue, USER_DELETE_PATTERN) != null) {
+					db.delete(userInfo);
+				}
+			} catch(EucalyptusCloudException ex) {
+				throw new EucalyptusCloudException("Unable to find user: " + userName);
+			} finally {
+				db.commit();
+			}
+			
 		}
 
 		public void addUser(String userName) throws EucalyptusCloudException {
