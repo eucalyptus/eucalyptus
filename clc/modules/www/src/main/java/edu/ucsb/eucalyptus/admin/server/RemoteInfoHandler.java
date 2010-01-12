@@ -211,9 +211,6 @@ public class RemoteInfoHandler {
 
   private static GetStorageConfigurationResponseType sendForStorageInfo( ClusterConfiguration cc, StorageControllerConfiguration c ) throws EucalyptusCloudException {
     GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType(c.getName());
-    if(NetworkUtil.testLocal( cc.getHostName( ) ) && Component.storage.isEnabled()) {
-      getStorageConfiguration.setName(StorageProperties.NAME);
-    } 
     ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, c.getHostName());
     GetStorageConfigurationResponseType getStorageConfigResponse = 
     	scDispatch.send(getStorageConfiguration, GetStorageConfigurationResponseType.class);

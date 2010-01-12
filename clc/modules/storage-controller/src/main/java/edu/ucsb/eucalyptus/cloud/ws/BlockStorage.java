@@ -280,6 +280,7 @@ public class BlockStorage {
 
 	public GetStorageConfigurationResponseType GetStorageConfiguration(GetStorageConfigurationType request) throws EucalyptusCloudException {
 		GetStorageConfigurationResponseType reply = (GetStorageConfigurationResponseType) request.getReply();
+		StorageProperties.updateName();
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		if(StorageProperties.NAME.equals(request.getName())) {
