@@ -356,6 +356,7 @@ public class WalrusManager {
 				LOG.info("Mapping " + updateARecord.getName() + " to " + address);
 			} catch(Exception ex) {
 				LOG.error("Could not update DNS record", ex);
+				throw new EucalyptusCloudException(ex);
 			}
 		}
 
@@ -617,6 +618,7 @@ public class WalrusManager {
 					foundObject.setGrants(grantInfos);
 					objectName = objectKey.replaceAll("/", "-") + Hashes.getRandom(4);
 					foundObject.setObjectName(objectName);
+					foundObject.setSize(0L);
 					dbObject.add(foundObject);
 				} else {
 					//object already exists. see if we can modify acl
