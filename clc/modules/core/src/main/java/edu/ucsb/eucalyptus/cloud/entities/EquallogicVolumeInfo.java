@@ -76,6 +76,11 @@ import javax.persistence.*;
 @Table( name = "EquallogicVolumeInfo" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class EquallogicVolumeInfo {
+    @Id
+    @GeneratedValue
+    @Column( name = "equallogic_volume_info" )
+    private Long id = -1l;
+	
 	protected String volumeId;
 	private String scName;
 	private String iqn;
