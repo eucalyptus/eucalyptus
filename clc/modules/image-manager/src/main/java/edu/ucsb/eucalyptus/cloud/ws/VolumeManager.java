@@ -297,6 +297,7 @@ public class VolumeManager {
 
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName(), vm.getInstanceId(), request.getDevice(), volume.getRemoteDevice() );
     vm.getVolumes().add( attachVol );
+    volume.setState( State.BUSY );
     reply.setAttachedVolume( attachVol );
     return reply;
   }
