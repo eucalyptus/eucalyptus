@@ -675,11 +675,12 @@ public class BlockStorage {
 				} catch(InterruptedException ex) {
 					throw new EucalyptusCloudException("semaphore could not be acquired");
 				}
-				blockManager.createSnapshot(volumeId, snapshotId);
+				List<String> returnValues = blockManager.createSnapshot(volumeId, snapshotId);
 				semaphore.release();
-				List<String> returnValues = blockManager.prepareForTransfer(snapshotId);
+				//List<String> returnValues = blockManager.prepareForTransfer(snapshotId);
 				snapshotFileName = returnValues.get(0);
-				transferSnapshot();				
+				transferSnapshot();
+				blockManager.finishSnapshot(snapshotId);
 			} catch(EucalyptusCloudException ex) {
 				LOG.error(ex);
 			}

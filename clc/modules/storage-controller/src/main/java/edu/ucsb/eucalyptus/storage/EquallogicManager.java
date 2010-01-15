@@ -66,6 +66,7 @@
 package edu.ucsb.eucalyptus.storage;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -91,8 +92,10 @@ import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.BaseDirectory;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
 import com.google.common.collect.Lists;
 import com.jcraft.jsch.Channel;
@@ -104,6 +107,7 @@ import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
+import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class EquallogicManager implements LogicalStorageManager {
 	private static final Pattern VOLUME_CREATE_PATTERN = Pattern.compile(".*iSCSI target name is (.*)\r");
@@ -339,7 +343,7 @@ public class EquallogicManager implements LogicalStorageManager {
 
 		public void checkConnection() throws EucalyptusCloudException {
 			//for now 
-			host = "192.168.7.188";
+			host = "192.168.7.189";
 			username = "grpadmin";
 			password = "zoomzoom";
 
@@ -348,9 +352,30 @@ public class EquallogicManager implements LogicalStorageManager {
 				throw new EucalyptusCloudException("Connection failed.");
 		}
 
-		public String connectTarget(String iqn) {
-			// TODO Auto-generated method stub
-			return null;
+		public String connectTarget(String iqn) throws EucalyptusCloudException {
+			EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
+			try {
+				CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(TARGET_USERNAME));
+				String encryptedPassword = userInfo.getEncryptedPassword();
+				db.commit();
+				try {
+					String deviceName = SystemUtil.run(new String[]{"sudo", "-E", BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
+							host + "," + iqn + "," + encryptedPassword});
+					if(deviceName.length() > 0) {
+						try {
+							SystemUtil.run(new String[]{"sudo", "chown", TARGET_USERNAME, deviceName});
+						} catch (ExecutionException e) {
+							throw new EucalyptusCloudException("Unable to change permission on " + deviceName);
+						}				
+					}
+					return deviceName;
+				} catch (ExecutionException e) {
+					throw new EucalyptusCloudException("Unable to connect to storage target");
+				}				
+			} catch(EucalyptusCloudException ex) {
+				db.rollback();
+				throw new EucalyptusCloudException("Unable to get CHAP password");
+			}
 		}
 
 		public String getVolumeProperty(String volumeId) {
@@ -359,7 +384,7 @@ public class EquallogicManager implements LogicalStorageManager {
 				EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
 				EntityWrapper<CHAPUserInfo> dbUser = db.recast(CHAPUserInfo.class);
 				CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
-				String property = host + "," + volumeInfo.getIqn() + "," + encryptNodeTargetPassword(userInfo.getPassword());
+				String property = host + "," + volumeInfo.getIqn() + "," + encryptNodeTargetPassword(decryptSCTargetPassword(userInfo.getEncryptedPassword()));
 				db.commit();
 				return property;
 			} catch(EucalyptusCloudException ex) {
@@ -544,6 +569,39 @@ public class EquallogicManager implements LogicalStorageManager {
 				throw new EucalyptusCloudException("Unable to decrypt storage target password", ex);
 			}
 		}
+
+		public void disconnectTarget(String iqn) throws EucalyptusCloudException {
+			EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
+			try {
+				CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(TARGET_USERNAME));
+				String encryptedPassword = userInfo.getEncryptedPassword();
+				db.commit();
+				try {
+					SystemUtil.run(new String[]{"sudo", "-E", BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl", 
+							host + "," + iqn + "," + encryptedPassword});
+				} catch (ExecutionException e) {
+					throw new EucalyptusCloudException("Unable to connect to storage target");
+				}				
+			} catch(EucalyptusCloudException ex) {
+				db.rollback();
+				throw new EucalyptusCloudException("Unable to get CHAP password");
+			}
+		}
+	}
+
+	@Override
+	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException {
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		try {
+			EquallogicVolumeInfo snapInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
+			String iqn = snapInfo.getIqn();
+			db.commit();
+			connectionManager.disconnectTarget(iqn);
+		} catch(EucalyptusCloudException ex) {
+			LOG.error(ex);
+			db.rollback();
+			throw new EucalyptusCloudException("Unable to get snapshot: " + snapshotId);
+		} 		
 	}
 }
 

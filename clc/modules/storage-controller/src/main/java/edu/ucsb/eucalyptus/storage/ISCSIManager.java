@@ -235,7 +235,7 @@ public class ISCSIManager implements StorageExportManager {
 			//check if account actually exists, if not create it.			
 			if(!checkUser("eucalyptus")) {
 				try {
-					addUser("eucalyptus", userInfo.getPassword());
+					addUser("eucalyptus", userInfo.getEncryptedPassword());
 				} catch (ExecutionException e1) {
 					LOG.error(e1);					
 					return;
@@ -331,7 +331,7 @@ public class ISCSIManager implements StorageExportManager {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo("eucalyptus"));
 			String encryptedPassword;
 			try {
-				encryptedPassword = encryptTargetPassword(userInfo.getPassword());
+				encryptedPassword = encryptTargetPassword(userInfo.getEncryptedPassword());
 				return encryptedPassword;
 			} catch (EucalyptusCloudException e) {
 				LOG.error("Unable to encrypt target password. Please check credentials. Have you configured a cluster?", e);
