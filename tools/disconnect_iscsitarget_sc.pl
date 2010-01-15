@@ -70,16 +70,14 @@ sub logout_target {
 
     while(<DISCOVERY>) {};
 
-    print $ip, $store, $passwd;
-
-    if(!open USERNAME, "iscsiadm -m node -T $store -p $ip --op=update --name node.session.auth.username --value=$ISCSI_USER |") {
+    if(!open USERNAME, "$ISCSIADM -m node -T $store -p $ip --op=update --name node.session.auth.username --value=$ISCSI_USER |") {
         print "Could not update target username";
         do_exit(1);
     }
 
     while(<USERNAME>) {};
 
-    if(!open PASSWD, "iscsiadm -m node -T $store -p $ip --op=update --name node.session.auth.password --value=$passwd |") {
+    if(!open PASSWD, "$ISCSIADM -m node -T $store -p $ip --op=update --name node.session.auth.password --value=$passwd |") {
         print "Could not update target password";
         do_exit(1);
     }

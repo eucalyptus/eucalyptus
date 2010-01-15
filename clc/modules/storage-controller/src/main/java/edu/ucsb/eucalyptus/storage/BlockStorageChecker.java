@@ -301,7 +301,7 @@ public class BlockStorageChecker {
 				Map<String, String> httpParamaters = new HashMap<String, String>();
 				HttpWriter httpWriter;
 				SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, snapshotFile.length(), StorageProperties.TRANSFER_CHUNK_SIZE);
-				httpWriter = new HttpWriter("PUT", snapshotFile, callback, "snapset-" + UUID.randomUUID(), snapshotId, "StoreSnapshot", null, httpParamaters);
+				httpWriter = new HttpWriter("PUT", snapshotFile, String.valueOf(snapshotFile.length()), callback, "snapset-" + UUID.randomUUID(), snapshotId, "StoreSnapshot", null, httpParamaters);
 				try {
 					httpWriter.run();
 				} catch(Exception ex) {

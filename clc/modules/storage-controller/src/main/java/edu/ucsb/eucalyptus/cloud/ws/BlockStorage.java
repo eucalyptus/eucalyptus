@@ -144,6 +144,7 @@ public class BlockStorage {
 			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
+		String userName = System.getProperty("euca.user");
 		configure();
 		blockManager.configure();
 		blockManager.initialize();
@@ -678,24 +679,26 @@ public class BlockStorage {
 				List<String> returnValues = blockManager.createSnapshot(volumeId, snapshotId);
 				semaphore.release();
 				//List<String> returnValues = blockManager.prepareForTransfer(snapshotId);
+				if(returnValues.size() < 2) {
+					throw new EucalyptusCloudException("Unable to transfer snapshot");
+				}
 				snapshotFileName = returnValues.get(0);
-				transferSnapshot();
+				transferSnapshot(returnValues.get(1));
 				blockManager.finishSnapshot(snapshotId);
-			} catch(EucalyptusCloudException ex) {
+			} catch(Exception ex) {
 				LOG.error(ex);
 			}
 		}
 
-		private void transferSnapshot() {
-			long size = 0;
-
+		private void transferSnapshot(String sizeAsString) {
+			long size = Long.parseLong(sizeAsString);
+			
 			File snapshotFile = new File(snapshotFileName);
 			assert(snapshotFile.exists());
-			size += snapshotFile.length();
 			SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
 			Map<String, String> httpParamaters = new HashMap<String, String>();
 			HttpWriter httpWriter;
-			httpWriter = new HttpWriter("PUT", snapshotFile, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
+			httpWriter = new HttpWriter("PUT", snapshotFile, sizeAsString, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
 			try {
 				httpWriter.run();
 			} catch(Exception ex) {

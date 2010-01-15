@@ -123,7 +123,7 @@ sub get_device_name {
 	    $found_target = 1 if $1 == $store;
 	} elsif($_ =~ /.*Attached scsi disk ([a-zA-Z0-9]+).*\n/) {
 	    if($found_target == 1) {
-		return "/dev/".$1."1";
+		return "/dev/".$1;
 	    }
 	}
     } 
