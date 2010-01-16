@@ -105,7 +105,7 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 public class LVM2Manager implements LogicalStorageManager {
 
 	public static final String lvmRootDirectory = "/dev";
-	public static final String PATH_SEPARATOR = "/";
+	public static final String PATH_SEPARATOR = File.separator;
 	public static boolean initialized = false;
 	public static final int MAX_LOOP_DEVICES = 256;
 	private  static final String blockSize = "1M";
@@ -717,7 +717,13 @@ public class LVM2Manager implements LogicalStorageManager {
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(snapshotId);
 
 		if(foundLVMVolumeInfo != null) {
-			volumeManager.remove(foundLVMVolumeInfo);
+			volumeManager.remove(foundLVMVolumeInfo);			
+			File snapFile = new File (StorageProperties.storageRootDirectory + File.separator + foundLVMVolumeInfo.getVolumeId());
+			if (snapFile.exists()) {
+				if(!snapFile.delete()) {
+					throw new EucalyptusCloudException("Unable to delete: " + snapFile.getAbsolutePath());
+				}
+			}
 		}  else {
 			volumeManager.abort();
 			throw new EucalyptusCloudException("Unable to find snapshot: " + snapshotId);

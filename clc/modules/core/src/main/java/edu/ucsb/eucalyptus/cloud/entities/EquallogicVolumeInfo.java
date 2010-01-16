@@ -92,6 +92,8 @@ public class EquallogicVolumeInfo {
 	private String status;
 	@Column(name = "snapshot_of")
 	private String snapshotOf;
+	@Column(name = "locally_created")
+	private Boolean locallyCreated;
 
 	public EquallogicVolumeInfo() {
 		this.scName = StorageProperties.NAME;
@@ -171,6 +173,14 @@ public class EquallogicVolumeInfo {
 
 	public void setSnapshotOf(String snapshotOf) {
 		this.snapshotOf = snapshotOf;
+	}
+	
+	public Boolean getLocallyCreated() {
+		return locallyCreated;
+	}
+
+	public void setLocallyCreated(Boolean locallyCreated) {
+		this.locallyCreated = locallyCreated;
 	}
 
 	@Override

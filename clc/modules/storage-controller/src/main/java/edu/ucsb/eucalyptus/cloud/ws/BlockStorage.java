@@ -144,7 +144,6 @@ public class BlockStorage {
 			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
-		String userName = System.getProperty("euca.user");
 		configure();
 		blockManager.configure();
 		blockManager.initialize();
@@ -719,12 +718,8 @@ public class BlockStorage {
 		public void run() {
 			try {
 				blockManager.deleteSnapshot(snapshotId);
-				snapshotStorageManager.deleteObject("", snapshotId);
 			} catch (EucalyptusCloudException e1) {
 				LOG.error(e1);
-				return;
-			} catch (IOException e) {
-				LOG.error(e);
 				return;
 			}
 			SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
