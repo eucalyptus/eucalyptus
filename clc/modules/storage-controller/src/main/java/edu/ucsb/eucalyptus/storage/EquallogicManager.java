@@ -215,8 +215,29 @@ public class EquallogicManager implements LogicalStorageManager {
 	@Override
 	public int createVolume(String volumeId, String snapshotId)
 	throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		return 0;
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		boolean locallyCreated = false;
+		String sourceVolume;		
+		int size;
+		try {
+			EquallogicVolumeInfo snapInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
+			db.commit();
+			locallyCreated = snapInfo.getLocallyCreated();
+			sourceVolume = snapInfo.getSnapshotOf();
+			size = snapInfo.getSize();
+		} catch(EucalyptusCloudException ex) {
+			LOG.error(ex);
+			db.rollback();
+			throw ex;
+		}
+		String iqn = connectionManager.createVolume(volumeId, snapshotId, locallyCreated, sourceVolume);
+		if(iqn != null) {
+			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(volumeId, iqn, size);
+			db = StorageController.getEntityWrapper();
+			db.add(volumeInfo);
+			db.commit();
+		}
+		return size;
 	}
 
 	@Override
@@ -362,6 +383,31 @@ public class EquallogicManager implements LogicalStorageManager {
 				throw new EucalyptusCloudException("Connection failed.");
 		}
 
+		public String createVolume(String volumeId, String snapshotId,
+				boolean locallyCreated, String sourceVolume) {
+			if(locallyCreated) {
+				try {
+					String returnValue = execCommand("stty hardwrap off\u001Avolume select " + sourceVolume + 
+							" snapshot select " + snapshotId + " clone " + volumeId + "\u001A");
+					String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
+					if(targetName != null) {
+						returnValue = execCommand("volume select " + volumeId + " access create username " + TARGET_USERNAME + "\u001A");
+						if(returnValue.length() == 0) {
+							LOG.error("Unable to set access for volume: " + volumeId);
+							return null;
+						}
+					}
+					return targetName;
+				} catch (EucalyptusCloudException e) {
+					LOG.error(e);
+					return null;
+				}	
+			} else {
+				//TODO
+				return null;
+			}
+		}
+
 		public String connectTarget(String iqn) throws EucalyptusCloudException {
 			EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
 			try {
@@ -446,7 +492,7 @@ public class EquallogicManager implements LogicalStorageManager {
 				String returnValue = execCommand("stty hardwrap off\u001Avolume create " + volumeName + " " + (size * StorageProperties.KB) + "\u001A");
 				String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
 				if(targetName != null) {
-					returnValue = execCommand("volume select " + volumeName + " access create username " + TARGET_USERNAME);
+					returnValue = execCommand("volume select " + volumeName + " access create username " + TARGET_USERNAME + "\u001A");
 					if(returnValue.length() == 0) {
 						LOG.error("Unable to set access for volume: " + volumeName);
 						return null;
