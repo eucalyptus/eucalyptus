@@ -1090,5 +1090,11 @@ public class LVM2Manager implements LogicalStorageManager {
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public String prepareSnapshot(String snapshotId, int sizeExpected)
+			throws EucalyptusCloudException {
+		return StorageProperties.storageRootDirectory + File.separator + snapshotId;
+	}
 }
 

@@ -138,8 +138,7 @@ public class EquallogicManager implements LogicalStorageManager {
 
 	@Override
 	public void addSnapshot(String snapshotId) throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		finishSnapshot(snapshotId);
 	}
 
 	@Override
@@ -403,8 +402,22 @@ public class EquallogicManager implements LogicalStorageManager {
 					return null;
 				}	
 			} else {
-				//TODO
-				return null;
+				try {
+					String returnValue = execCommand("stty hardwrap off\u001Avolume select " + snapshotId + 
+							" offline\u001Avolume select " + snapshotId + " clone " + volumeId + "\u001A");
+					String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
+					if(targetName != null) {
+						returnValue = execCommand("volume select " + volumeId + " access create username " + TARGET_USERNAME + "\u001A");
+						if(returnValue.length() == 0) {
+							LOG.error("Unable to set access for volume: " + volumeId);
+							return null;
+						}
+					}
+					return targetName;
+				} catch (EucalyptusCloudException e) {
+					LOG.error(e);
+					return null;
+				}	
 			}
 		}
 
@@ -417,13 +430,13 @@ public class EquallogicManager implements LogicalStorageManager {
 				try {
 					String deviceName = SystemUtil.run(new String[]{"sudo", "-E", BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
 							host + "," + iqn + "," + encryptedPassword});
-					if(deviceName.length() > 0) {
+					/*if(deviceName.length() > 0) {
 						try {
 							SystemUtil.run(new String[]{"sudo", "chown", eucalyptusUserName, deviceName});
 						} catch (ExecutionException e) {
 							throw new EucalyptusCloudException("Unable to change permission on " + deviceName);
 						}				
-					}
+					}*/
 					return deviceName;
 				} catch (ExecutionException e) {
 					throw new EucalyptusCloudException("Unable to connect to storage target");
@@ -464,7 +477,7 @@ public class EquallogicManager implements LogicalStorageManager {
 				channel.setOutputStream(bytesOut);
 				channel.connect();
 				try {
-					Thread.sleep(1000);
+					Thread.sleep(2000);
 				} catch (InterruptedException e) {
 					LOG.error(e);
 				}
@@ -674,6 +687,22 @@ public class EquallogicManager implements LogicalStorageManager {
 			db.rollback();
 			throw new EucalyptusCloudException("Unable to get snapshot: " + snapshotId);
 		} 		
+	}
+
+	@Override
+	public String prepareSnapshot(String snapshotId, int sizeExpected)
+	throws EucalyptusCloudException {
+		String iqn = connectionManager.createVolume(snapshotId, sizeExpected);
+		if(iqn != null) {
+			String deviceName = connectionManager.connectTarget(iqn);
+			EquallogicVolumeInfo snapInfo = new EquallogicVolumeInfo(snapshotId, iqn, sizeExpected);
+			snapInfo.setLocallyCreated(false);
+			EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+			db.add(snapInfo);
+			db.commit();
+			return deviceName;
+		}
+		return null;
 	}
 }
 

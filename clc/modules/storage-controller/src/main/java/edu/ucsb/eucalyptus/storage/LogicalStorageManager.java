@@ -112,5 +112,7 @@ public interface LogicalStorageManager {
 
     public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
 
-	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException;    
+	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException;
+
+	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException;    
 }

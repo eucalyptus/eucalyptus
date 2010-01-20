@@ -83,6 +83,7 @@ import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
+import com.google.gwt.dev.util.HttpHeaders;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
@@ -555,25 +556,25 @@ public class BlockStorage {
 		return reply;
 	}
 
-	private void getSnapshot(String snapshotId) throws EucalyptusCloudException {
-		StorageProperties.updateWalrusUrl();
+	//TODO: this depends on which target you are getting the snapshot to and should be handled by a lower level manager.
+	private void getSnapshot(String snapshotId, String snapDestination) throws EucalyptusCloudException {
 		if(!StorageProperties.enableSnapshots) {
 			LOG.error("Snapshot functionality disabled. Please check connection to Walrus");
 			throw new EucalyptusCloudException("could not connect to Walrus.");
 		}
 		String snapshotLocation = "snapshots" + "/" + snapshotId;
-		String absoluteSnapshotPath = StorageProperties.storageRootDirectory + "/" + snapshotId;
+		String absoluteSnapshotPath = snapDestination;
 		File file = new File(absoluteSnapshotPath);
-		if(file.exists()) {
+		/*if(file.exists()) {
 			//something went wrong in the past. remove and retry
 			file.delete();
-		}
-		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true);
+		}*/
+		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", false);
 		snapshotGetter.run();
-		int snapshotSize = (int)(file.length() / StorageProperties.GB);
+		/*int snapshotSize = (int)(file.length() / StorageProperties.GB);
 		if(snapshotSize == 0) {
 			throw new EucalyptusCloudException("could not download snapshot: " + snapshotId + " from Walrus.");
-		} 
+		} */
 		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 		snapshotInfo.setProgress("100");
@@ -582,7 +583,17 @@ public class BlockStorage {
 		blockManager.addSnapshot(snapshotId);
 	}
 
-
+	private int getSnapshotSize(String snapshotId) throws EucalyptusCloudException {
+		StorageProperties.updateWalrusUrl();
+		if(!StorageProperties.enableSnapshots) {
+			LOG.error("Snapshot functionality disabled. Please check connection to Walrus");
+			throw new EucalyptusCloudException("could not connect to Walrus.");
+		}
+		String snapshotLocation = "snapshots" + "/" + snapshotId;
+		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, null, "GetWalrusSnapshotSize", "");
+		int size = Integer.parseInt(snapshotGetter.getResponseHeader("SnapshotSize"));
+		return size;
+	}
 
 	public DescribeStorageVolumesResponseType DescribeStorageVolumes(DescribeStorageVolumesType request) throws EucalyptusCloudException {
 		DescribeStorageVolumesResponseType reply = (DescribeStorageVolumesResponseType) request.getReply();
@@ -763,8 +774,11 @@ public class BlockStorage {
 					SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 					List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
 					if(foundSnapshotInfos.size() == 0) {
-						db.commit();
-						getSnapshot(snapshotId);
+						db.commit();						
+						//get snapshot size from walrus
+						int sizeExpected = getSnapshotSize(snapshotId);
+						String snapDestination = blockManager.prepareSnapshot(snapshotId, sizeExpected);
+						getSnapshot(snapshotId, snapDestination);
 						size = blockManager.createVolume(volumeId, snapshotId);
 					} else {
 						SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);

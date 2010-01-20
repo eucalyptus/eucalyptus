@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.log4j.Logger;
@@ -74,25 +75,28 @@ public class HttpReader extends HttpTransfer {
 		FileOutputStream fileOutputStream = null;
 		BufferedOutputStream bufferedOut = null;
 		try {
-			File compressedFile = new File(file.getAbsolutePath() + ".gz");				
+			File inFile;
+			if(compressed)
+				inFile = new File(file.getAbsolutePath() + ".gz");		
+			else
+				inFile = new File(file.getAbsolutePath());
 			assert(method != null);
 			httpClient.executeMethod(method);
 			InputStream httpIn;
 			httpIn = method.getResponseBodyAsStream();
 			int bytesRead;
-			fileOutputStream = new FileOutputStream(compressedFile);
+			fileOutputStream = new FileOutputStream(inFile);
 			bufferedOut = new BufferedOutputStream(fileOutputStream);
 			while((bytesRead = httpIn.read(bytes)) > 0) {
 				bufferedOut.write(bytes, 0, bytesRead);
 			}
-
 			if(compressed) {
-				SystemUtil.run(new String[]{"/bin/gunzip", compressedFile.getAbsolutePath()});
+				SystemUtil.run(new String[]{"/bin/gunzip", inFile.getAbsolutePath()});
 			}
-			method.releaseConnection();
 		} catch (Exception ex) {
 			LOG.error(ex, ex);
 		} finally {
+			method.releaseConnection();
 			if(bufferedOut != null) {
 				try {
 					bufferedOut.close();
@@ -134,5 +138,17 @@ public class HttpReader extends HttpTransfer {
 		} else if(file != null) {
 			getResponseToFile();
 		}
+	}
+
+	public String getResponseHeader(String headerName) {
+		try {
+			httpClient.executeMethod(method);
+			Header value = method.getResponseHeader(headerName);
+			method.releaseConnection();
+			return value.getValue();
+		} catch(Exception ex) {
+			LOG.error(ex, ex);
+		}
+		return null;
 	}
 }
