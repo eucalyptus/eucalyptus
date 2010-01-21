@@ -1330,12 +1330,19 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
         snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s on", vnetconfig->eucahome, newbrname);
         rc = system(cmd);
         if (rc) {
-          logprintfl(EUCAWARN, "vnetStartNetworkManaged(): could enable stp on bridge %s\n", newbrname);
+          logprintfl(EUCAWARN, "vnetStartNetworkManaged(): could not enable stp on bridge %s\n", newbrname);
         }
+
+        snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl setfd %s 2", vnetconfig->eucahome, newbrname);
+        rc = system(cmd);
+        if (rc) {
+          logprintfl(EUCAWARN, "vnetStartNetworkManaged(): could not set fd time to 2 on bridge %s\n", newbrname);
+        }
+
         snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap brctl sethello %s 2", vnetconfig->eucahome, newbrname);
         rc = system(cmd);
         if (rc) {
-          logprintfl(EUCAWARN, "vnetStartNetworkManaged(): could set hello time to 2 on bridge %s\n", newbrname);
+          logprintfl(EUCAWARN, "vnetStartNetworkManaged(): could not set hello time to 2 on bridge %s\n", newbrname);
         }
       }
       
