@@ -128,6 +128,7 @@ public class ClusterAllocator extends Thread {
           this.setupNetworkMessages( networkToken );
         this.setupVmMessages( vmToken );
       } catch ( Throwable e ) {
+        LOG.debug( e, e );
         try {
           Clusters.getInstance( ).lookup( vmToken.getCluster( ) ).getNodeState( ).releaseToken( vmToken );
         } catch ( Throwable e1 ) {
@@ -196,9 +197,21 @@ public class ClusterAllocator extends Thread {
     for ( String instanceId : token.getInstanceIds() )
       macs.add( VmInstances.getAsMAC( instanceId ) );
 
-    int vlan = token.getPrimaryNetwork( ).getVlan( );
-    if ( vlan < 0 ) vlan = 9;//FIXME: general vlan, should be min-1?
-    List<String> networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getNetworkName( ) );
+    Integer vlan = null;
+    List<String> networkNames = null;
+    ArrayList<String> networkIndexes = null;
+    if( token.getPrimaryNetwork() != null ) {
+      vlan = token.getPrimaryNetwork( ).getVlan( );
+      if ( vlan < 0 ) vlan = 9;//FIXME: general vlan, should be min-1?
+      networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getNetworkName( ) );
+      for( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
+        networkIndexes.add( index.toString( ) );
+      }
+    } else {
+      vlan = -1;
+      networkNames = Lists.newArrayList( "default" );
+      networkIndexes = Lists.newArrayList( "-1" );
+    }
     
     final List<String> addresses = Lists.newArrayList( token.getAddresses( ) );
     RunInstancesType request = this.vmAllocInfo.getRequest();
@@ -206,19 +219,18 @@ public class ClusterAllocator extends Thread {
     VmTypeInfo vmInfo = this.vmAllocInfo.getVmTypeInfo();
     String rsvId = this.vmAllocInfo.getReservationId();
     VmKeyInfo keyInfo = this.vmAllocInfo.getKeyInfo();
-    ArrayList<String> networkIndexes = Lists.newArrayList( );
-    for( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
-      networkIndexes.add( index.toString( ) );
-    }
     VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, networkIndexes );
-    QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, token ).then( new SuccessCallback<VmRunResponseType>( ) {
-      @Override public void apply( VmRunResponseType response ) {
-        for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
-          Address addr = Addresses.getInstance().lookup( addresses.remove( 0 ) );
-          VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
-          AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
-      }
-    }});
+    QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, token );
+    if( !addresses.isEmpty( ) ) {
+      cb.then( new SuccessCallback<VmRunResponseType>( ) {
+        @Override public void apply( VmRunResponseType response ) {
+          for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
+            Address addr = Addresses.getInstance().lookup( addresses.remove( 0 ) );
+            VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
+            AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
+        }
+      }});
+    }
     this.msgMap.put( State.CREATE_VMS, QueuedEvent.make( cb, run ) );
   }
   public void setState( final State state ) {
