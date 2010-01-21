@@ -34,7 +34,16 @@ $dev_string = untaint(shift @ARGV);
 
 ($ip, $store, $encrypted_password) = parse_devstring($dev_string);
 
+if((length($ip) <= 0) || (length($store) <= 0) || length($encrypted_password) <= 0) {
+    print STDERR "Invalid input. Need to specify IP,STORE,ENCRYPTED_PASS\n";
+    do_exit(1);
+}
+
 $password = decrypt_password($encrypted_password, $sc_pk);
+
+if(length($password) <= 0) {
+    print STDERR "Unable to decrypt target password. Aborting.\n";
+}
 
 login_target($ip, $store, $password);
 
@@ -92,7 +101,12 @@ sub login_target {
 	do_exit(1)
     }
 
-    while(<LOGIN>) {};
+    my $login = "";
+    while(<LOGIN>) {$login = $login.$_;};
+    if(length($login) <= 0) {
+	print STDERR "Unable to login to target. Aborting.\n";
+ 	do_exit(1);
+    }
 }
 
 sub decrypt_password {
