@@ -430,13 +430,6 @@ public class EquallogicManager implements LogicalStorageManager {
 				try {
 					String deviceName = SystemUtil.run(new String[]{"sudo", "-E", BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
 							host + "," + iqn + "," + encryptedPassword});
-					/*if(deviceName.length() > 0) {
-						try {
-							SystemUtil.run(new String[]{"sudo", "chown", eucalyptusUserName, deviceName});
-						} catch (ExecutionException e) {
-							throw new EucalyptusCloudException("Unable to change permission on " + deviceName);
-						}				
-					}*/
 					return deviceName;
 				} catch (ExecutionException e) {
 					throw new EucalyptusCloudException("Unable to connect to storage target");

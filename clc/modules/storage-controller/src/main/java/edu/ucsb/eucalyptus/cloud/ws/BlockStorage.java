@@ -569,7 +569,7 @@ public class BlockStorage {
 			//something went wrong in the past. remove and retry
 			file.delete();
 		}*/
-		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", false);
+		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, StorageProperties.storageRootDirectory);
 		snapshotGetter.run();
 		/*int snapshotSize = (int)(file.length() / StorageProperties.GB);
 		if(snapshotSize == 0) {
