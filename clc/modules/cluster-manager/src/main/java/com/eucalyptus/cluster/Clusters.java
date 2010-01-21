@@ -90,7 +90,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
       @Override
       public boolean apply( Cluster arg0 ) {
-        return arg0.getState( ).isAddressingInitialized( ) ? arg0.getState( ).hasPublicAddressing( ) : true;
+        return arg0.getState( ).getMode( ) == 1;
       }
     } );
   }
