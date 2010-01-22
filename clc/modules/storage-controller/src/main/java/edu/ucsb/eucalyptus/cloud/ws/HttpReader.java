@@ -109,7 +109,9 @@ public class HttpReader extends HttpTransfer {
 				} catch (Throwable t) {
 					LOG.error(t);
 				}
-
+				if(!outFile.delete()) {
+					LOG.error("Unable to delete temporary file: " + outFile.getAbsolutePath());
+				}
 			}
 		} catch (Exception ex) {
 			LOG.error(ex, ex);

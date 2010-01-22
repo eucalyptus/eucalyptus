@@ -146,15 +146,59 @@ public class EquallogicManager implements LogicalStorageManager {
 	}
 
 	@Override
-	public void cleanSnapshot(String volumeId) {
-		// TODO Auto-generated method stub
+	public void cleanSnapshot(String snapshotId) {
+		String volumeId;
+		boolean locallyCreated;
 
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();		
+		try {
+			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
+			volumeId = volumeInfo.getSnapshotOf();
+			locallyCreated = volumeInfo.getLocallyCreated();
+		} catch(EucalyptusCloudException ex) {
+			LOG.error("Unable to clean failed snapshot: " + snapshotId);
+			return;
+		} finally {
+			db.commit();
+		}
+
+		if(connectionManager.deleteSnapshot(volumeId, snapshotId, locallyCreated)) {
+			try {
+				db = StorageController.getEntityWrapper();
+				EquallogicVolumeInfo snapInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
+				db.delete(snapInfo);
+			} catch(EucalyptusCloudException ex) {
+				LOG.error("Unable to clean failed snapshot: " + snapshotId);
+				return;
+			} finally {
+				db.commit();
+			}
+		}
 	}
 
 	@Override
 	public void cleanVolume(String volumeId) {
-		// TODO Auto-generated method stub
-
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		try {
+			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
+		} catch(EucalyptusCloudException ex) {
+			LOG.error("Unable to clean failed volume: " + volumeId);
+			return;
+		} finally {
+			db.commit();
+		}
+		if(connectionManager.deleteVolume(volumeId)) {
+			db = StorageController.getEntityWrapper();
+			try {
+				EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
+				db.delete(volumeInfo);
+			} catch(EucalyptusCloudException ex) {
+				LOG.error("Unable to clean failed volume: " + volumeId);
+				return;
+			} finally {
+				db.commit();
+			}
+		}
 	}
 
 	@Override
@@ -514,7 +558,7 @@ public class EquallogicManager implements LogicalStorageManager {
 		public boolean deleteVolume(String volumeName) {
 			try {
 				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeName + " offline\u001Avolume delete " + volumeName + "\u001A");
-				if(returnValue.matches(VOLUME_DELETE_PATTERN.toString()))
+				if(returnValue.split(VOLUME_DELETE_PATTERN.toString()).length > 1)
 					return true;
 				else
 					return false;
@@ -556,7 +600,7 @@ public class EquallogicManager implements LogicalStorageManager {
 			} else {
 				try {
 					String returnValue = execCommand("stty hardwrap off\u001Avolume select " + snapshotId + " offline\u001Avolume delete " + snapshotId + "\u001A");
-					if(returnValue.matches(VOLUME_DELETE_PATTERN.toString()))
+					if(returnValue.split(VOLUME_DELETE_PATTERN.toString()).length > 1)
 						return true;
 					else
 						return false;

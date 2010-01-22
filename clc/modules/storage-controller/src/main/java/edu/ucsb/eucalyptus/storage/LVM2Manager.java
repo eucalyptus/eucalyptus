@@ -290,8 +290,14 @@ public class LVM2Manager implements LogicalStorageManager {
 				LOG.error(error);
 			}
 			volumeManager.remove(lvmVolInfo);
-			volumeManager.finish();
+			File volFile = new File (StorageProperties.storageRootDirectory + File.separator + lvmVolInfo.getVolumeId());
+			if (volFile.exists()) {
+				if(!volFile.delete()) {
+					LOG.error("Unable to delete: " + volFile.getAbsolutePath() + " for failed volume");
+				}
+			}
 		}
+		volumeManager.finish();
 	}
 
 	public void cleanSnapshot(String snapshotId) {
@@ -299,6 +305,12 @@ public class LVM2Manager implements LogicalStorageManager {
 		LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(snapshotId);
 		if(lvmVolInfo != null) {
 			volumeManager.remove(lvmVolInfo);
+			File volFile = new File (StorageProperties.storageRootDirectory + File.separator + lvmVolInfo.getVolumeId());
+			if (volFile.exists()) {
+				if(!volFile.delete()) {
+					LOG.error("Unable to delete: " + volFile.getAbsolutePath() + " for failed snapshot");
+				}
+			}
 		}
 		volumeManager.finish();
 	}

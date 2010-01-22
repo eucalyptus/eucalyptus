@@ -143,11 +143,6 @@ public class BlockStorageChecker {
 			String volumeId = volInfo.getVolumeId();
 			LOG.info("Cleaning failed volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
-			try {
-				volumeStorageManager.deleteObject("", volumeId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(volInfo);
 		}
 		db.commit();
@@ -162,11 +157,6 @@ public class BlockStorageChecker {
 			String volumeId = volInfo.getVolumeId();
 			LOG.info("Cleaning failed volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
-			try {
-				volumeStorageManager.deleteObject("", volumeId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(volInfo);
 		}
 		db.commit();
@@ -180,11 +170,6 @@ public class BlockStorageChecker {
 			VolumeInfo volInfo = volumeInfos.get(0);
 			LOG.info("Cleaning failed volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
-			try {
-				volumeStorageManager.deleteObject("", volumeId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(volInfo);
 		}
 		db.commit();
@@ -199,11 +184,6 @@ public class BlockStorageChecker {
 			String snapshotId = snapInfo.getSnapshotId();
 			LOG.info("Cleaning failed snapshot " + snapshotId);
 			blockManager.cleanSnapshot(snapshotId);
-			try {
-				snapshotStorageManager.deleteObject("", snapshotId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(snapInfo);
 		}
 		db.commit();
@@ -218,11 +198,6 @@ public class BlockStorageChecker {
 			String snapshotId = snapInfo.getSnapshotId();
 			LOG.info("Cleaning failed snapshot " + snapshotId);
 			blockManager.cleanSnapshot(snapshotId);
-			try {
-				snapshotStorageManager.deleteObject("", snapshotId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(snapInfo);
 		}
 		db.commit();
@@ -236,11 +211,6 @@ public class BlockStorageChecker {
 			SnapshotInfo snapInfo = snapshotInfos.get(0);
 			LOG.info("Cleaning failed snapshot " + snapshotId);
 			blockManager.cleanSnapshot(snapshotId);
-			try {
-				snapshotStorageManager.deleteObject("", snapshotId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(snapInfo);
 		}
 		db.commit();
