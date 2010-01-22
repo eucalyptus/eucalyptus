@@ -160,7 +160,7 @@
     </category>
     -->
     <category name="com.eucalyptus.util.EntityWrapper" additivity="true">
-    <--
+    <!--
         <priority value="${euca.log.exhaustive}"/>
     -->
         <priority value="TRACE"/>

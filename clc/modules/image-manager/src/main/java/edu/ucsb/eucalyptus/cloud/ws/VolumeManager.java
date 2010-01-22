@@ -154,6 +154,7 @@ public class VolumeManager {
           db.commit();
           break;
         } catch ( Throwable e1 ) {
+          db.rollback( );
           db = VolumeManager.getEntityWrapper();
         }
       }
@@ -172,6 +173,7 @@ public class VolumeManager {
         db.delete( d );
         db.commit( );
       } catch ( Throwable e1 ) {
+        db.rollback( );
         LOG.debug( e1, e1 );
       }
       throw new EucalyptusCloudException( "Error while communicating with Storage Controller: CreateStorageVolume:" + e.getMessage() );
