@@ -179,7 +179,7 @@ ncResource * allocate_resource(char *nodeStatus,
                                char *publicSubnets);
 void free_resource(ncResource ** res);
 ncVolume * find_volume (ncInstance * instance, char *volumeId);
-ncVolume *  add_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev);
+ncVolume *  add_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev, char *stateName);
 ncVolume * free_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev);
 
 #endif

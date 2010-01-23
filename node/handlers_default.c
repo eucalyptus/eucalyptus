@@ -223,7 +223,6 @@ doDescribeInstances(	struct nc_state_t *nc,
 				/* instance of not relavance right now */
 				continue;
 		}
-
 		(* outInsts)[k++] = instance;
 	}
 	*outInstsLen = k;
