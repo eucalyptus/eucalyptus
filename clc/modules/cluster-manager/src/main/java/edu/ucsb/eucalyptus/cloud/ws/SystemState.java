@@ -224,7 +224,8 @@ public class SystemState {
             LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ) );
           }
           if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-            new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getVlan( ) ) ).dispatch( cluster );
+            StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getVlan( ) ) );
+            stopNet.fireEventAsyncToAllClusters( stopNet.getRequest( ) );
           }
         } catch ( NoSuchElementException e1 ) {} catch ( Throwable e1 ) {
           LOG.debug( e1, e1 );
