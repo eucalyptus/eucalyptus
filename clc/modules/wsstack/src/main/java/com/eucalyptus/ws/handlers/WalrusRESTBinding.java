@@ -73,12 +73,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import org.apache.axiom.om.OMElement;
+import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.apache.xml.dtm.ref.DTMNodeList;
@@ -129,10 +129,11 @@ import edu.ucsb.eucalyptus.msgs.TargetGrants;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
+import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
+import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import groovy.lang.GroovyObject;
-import org.apache.commons.httpclient.util.DateUtil;
 
 public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static Logger LOG = Logger.getLogger( WalrusRESTBinding.class );
@@ -144,7 +145,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	public static final int DATA_MESSAGE_SIZE = 102400;
 	private String key;
 	private String randomKey;
-	private LinkedBlockingQueue<WalrusDataMessage> putQueue;
+	private WalrusDataQueue<WalrusDataMessage> putQueue;
 
 	@Override
 	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
@@ -205,6 +206,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			EucalyptusMessage msg = (EucalyptusMessage) httpResponse.getMessage( );
 			Binding binding;
 			if(!(msg instanceof EucalyptusErrorMessageType)) {
+				if(msg instanceof PutObjectResponseType) {
+					if(putQueue != null) {
+						putQueue = null;
+					}
+				}
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
 			} else {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.ucsb.edu" ) );

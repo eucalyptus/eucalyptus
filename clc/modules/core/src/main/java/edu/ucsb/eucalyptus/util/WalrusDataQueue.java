@@ -60,72 +60,29 @@
  *******************************************************************************/
 /*
  *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman neil@eucalyptus.com
  */
 package edu.ucsb.eucalyptus.util;
 
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import org.apache.log4j.Logger;
 
-// A concurrent hash map that holds a map of queues, which can be used for passing data
-// Currently, the queues are a WalrusDataQueue and producers/consumers do not timeout.
-
-public class WalrusDataMessenger {
-	private static Logger LOG = Logger.getLogger( WalrusDataMessenger.class );
-	private static final int DATA_QUEUE_SIZE = 3;
-
-	private ConcurrentHashMap<String, ConcurrentHashMap<String,WalrusDataQueue<WalrusDataMessage>>> queueMap;
-	private ConcurrentHashMap<String, WalrusMonitor> monitorMap;
-
-	public WalrusDataMessenger() {
-		queueMap = new ConcurrentHashMap<String, ConcurrentHashMap<String,WalrusDataQueue<WalrusDataMessage>>>();
-		monitorMap = new ConcurrentHashMap<String, WalrusMonitor>();
+@SuppressWarnings("serial")
+public class WalrusDataQueue<T> extends LinkedBlockingQueue<T> {
+	public boolean interrupted;
+	
+	public WalrusDataQueue() {
+		super();
 	}
 
-	public WalrusDataQueue<WalrusDataMessage> getQueue(String key1, String key2) {
-		ConcurrentHashMap<String,WalrusDataQueue<WalrusDataMessage>> queues = queueMap.putIfAbsent(key1, new ConcurrentHashMap<String, WalrusDataQueue<WalrusDataMessage>>());
-		if (queues == null) {
-			queues = queueMap.get(key1);
-		}
-		WalrusDataQueue<WalrusDataMessage> queue = queues.putIfAbsent(key2, new WalrusDataQueue<WalrusDataMessage>(DATA_QUEUE_SIZE));
-		if (queue == null) {
-			queue = queues.get(key2);
-		}
-		return queue;
+	public WalrusDataQueue(int dataQueueSize) {
+		super(dataQueueSize);
 	}
-
-	public WalrusDataQueue<WalrusDataMessage> interruptAllAndGetQueue(String key1, String key2) {
-		ConcurrentHashMap<String,WalrusDataQueue<WalrusDataMessage>> queues = queueMap.get(key1);
-		if(queues != null) {
-			for (WalrusDataQueue<WalrusDataMessage> queue: queues.values()) {
-				queue.setInterrupted(true);
-			}
-		}
-		return getQueue(key1, key2);
+	
+	public void setInterrupted(boolean value) {
+		this.interrupted = value;
 	}
-
-	public void removeQueue(String key1, String key2) {
-		if(queueMap.containsKey(key1)) {
-			ConcurrentHashMap<String, WalrusDataQueue<WalrusDataMessage>> queues = queueMap.get(key1);
-			if(queues.containsKey(key2)) {
-				queues.remove(key2);
-			}
-			queueMap.remove(key1);
-		}
-	}
-
-	public WalrusMonitor getMonitor(String key) {
-		WalrusMonitor monitor = monitorMap.putIfAbsent(key, new WalrusMonitor());
-		if (monitor == null) {
-			monitor = monitorMap.get(key);
-		}
-		return monitor;
-	}
-
-	public void removeMonitor(String key) {
-		if(monitorMap.containsKey(key)) {
-			monitorMap.remove(key);
-		}
+	
+	public boolean getInterrupted() {
+		return this.interrupted;
 	}
 }
