@@ -165,6 +165,7 @@ public class BlockStorage {
 		StorageProperties.storageRootDirectory = storageInfo.getVolumesDir();
 		StorageProperties.zeroFillVolumes = storageInfo.getZeroFillVolumes();
 		StorageProperties.updateStorageHost();
+		blockManager.configure();
 	}
 
 	private static StorageInfo getConfig() {
@@ -198,6 +199,7 @@ public class BlockStorage {
 			storageInfo.setVolumesDir(StorageProperties.storageRootDirectory);
 			storageInfo.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
 			db.commit();
+			blockManager.configure();
 		} catch(EucalyptusCloudException ex) {
 			storageInfo = new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
@@ -702,7 +704,7 @@ public class BlockStorage {
 
 		private void transferSnapshot(String sizeAsString) {
 			long size = Long.parseLong(sizeAsString);
-			
+
 			File snapshotFile = new File(snapshotFileName);
 			assert(snapshotFile.exists());
 			SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);

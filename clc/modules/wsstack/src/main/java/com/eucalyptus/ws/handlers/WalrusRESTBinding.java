@@ -125,12 +125,14 @@ import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.msgs.LoggingEnabled;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
+import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.TargetGrants;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
+import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import groovy.lang.GroovyObject;
 import org.apache.commons.httpclient.util.DateUtil;
 
@@ -144,7 +146,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	public static final int DATA_MESSAGE_SIZE = 102400;
 	private String key;
 	private String randomKey;
-	private LinkedBlockingQueue<WalrusDataMessage> putQueue;
+	private WalrusDataQueue<WalrusDataMessage> putQueue;
 
 	@Override
 	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
@@ -204,7 +206,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
 			EucalyptusMessage msg = (EucalyptusMessage) httpResponse.getMessage( );
 			Binding binding;
+
 			if(!(msg instanceof EucalyptusErrorMessageType)) {
+				if(msg instanceof PutObjectResponseType) {
+					if(putQueue != null) {
+						putQueue = null;
+					}
+				}
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
 			} else {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.ucsb.edu" ) );

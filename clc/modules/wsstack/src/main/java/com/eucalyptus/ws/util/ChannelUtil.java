@@ -37,8 +37,8 @@ public class ChannelUtil {
   static class NioServerPipelineFactory implements ChannelPipelineFactory {
     public ChannelPipeline getPipeline( ) throws Exception {
       final ChannelPipeline pipeline = Channels.pipeline( );
-      pipeline.addLast("ssl", new NioSslHandler());
-      ChannelUtil.addPipelineMonitors( pipeline );
+      //pipeline.addLast("ssl", new NioSslHandler());
+      //ChannelUtil.addPipelineMonitors( pipeline );
       pipeline.addLast( "decoder", new NioHttpDecoder( ) );
       pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
       pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
@@ -89,10 +89,10 @@ public class ChannelUtil {
 
   public static ChannelPipeline addPipelineMonitors( ChannelPipeline pipeline, int i ) {
     // TODO: decide on some parameters here.
-    pipeline.addLast("state-monitor", new ChannelStateMonitor( ) );
-    pipeline.addLast("idlehandler", new IdleStateHandler( ChannelUtil.timer, i, i, i ) );
-    pipeline.addLast("readTimeout", new ReadTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
-    pipeline.addLast("writeTimeout", new WriteTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
+    //pipeline.addLast("state-monitor", new ChannelStateMonitor( ) );
+    //pipeline.addLast("idlehandler", new IdleStateHandler( ChannelUtil.timer, i, i, i ) );
+    //pipeline.addLast("readTimeout", new ReadTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
+    //pipeline.addLast("writeTimeout", new WriteTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
     return pipeline;    
   }
 

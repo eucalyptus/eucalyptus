@@ -180,6 +180,7 @@ import edu.ucsb.eucalyptus.storage.fs.FileIO;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
+import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 
@@ -602,7 +603,7 @@ public class WalrusManager {
 							throw new AccessDeniedException("Key", objectKey, logData);
 						}
 						foundObject = objectInfo;
-						//oldBucketSize = -foundObject.getSize();
+						oldBucketSize = -foundObject.getSize();
 						break;
 					}
 				}
@@ -647,8 +648,7 @@ public class WalrusManager {
 				foundObject.replaceMetaData(request.getMetaData());
 				db.commit();
 				//writes are unconditional
-				LinkedBlockingQueue<WalrusDataMessage> putQueue = messenger.getQueue(key, randomKey);
-
+				WalrusDataQueue<WalrusDataMessage> putQueue = messenger.getQueue(key, randomKey);
 				try {
 					WalrusDataMessage dataMessage;
 					String tempObjectName = objectName;
@@ -656,6 +656,27 @@ public class WalrusManager {
 					long size = 0;
 					FileIO fileIO = null;
 					while ((dataMessage = putQueue.take())!=null) {
+						if(putQueue.getInterrupted()) {							
+							if(WalrusDataMessage.isEOF(dataMessage)) {
+								WalrusMonitor monitor = messenger.getMonitor(key);
+								if(monitor.getLastModified() == null) {
+									synchronized (monitor) {
+										monitor.wait();
+									}
+								}
+								lastModified = monitor.getLastModified();
+								md5 = monitor.getMd5();
+								//ok we are done here
+								if(fileIO != null)
+									fileIO.finish();
+								ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, tempObjectName, -1L);
+								objectDeleter.start();
+								LOG.info("Transfer interrupted: "+ key);
+								messenger.removeQueue(key, randomKey);
+								break;	
+							}
+							continue;
+						}
 						if(WalrusDataMessage.isStart(dataMessage)) {
 							tempObjectName = objectName + "." + Hashes.getRandom(12);
 							digest = Hashes.Digest.MD5.get();
@@ -724,26 +745,8 @@ public class WalrusManager {
 								monitor.notifyAll();
 							}
 							messenger.removeQueue(key, randomKey);
-							messenger.removeMonitor(key);
+							//messenger.removeMonitor(key);
 							LOG.info("Transfer complete: " + key);
-							break;
-
-						} else if(WalrusDataMessage.isInterrupted(dataMessage)) {
-
-							//there was a write after this one started
-							//abort writing but wait until the other (last) writer has completed
-							WalrusMonitor monitor = messenger.getMonitor(key);
-							synchronized (monitor) {
-								monitor.wait();
-								lastModified = monitor.getLastModified();
-								md5 = monitor.getMd5();
-							}
-							//ok we are done here
-							if(fileIO != null)
-								fileIO.finish();
-							ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, tempObjectName, -1L);
-							objectDeleter.start();
-							LOG.info("Transfer interrupted: "+ key);
 							break;
 						} else {
 							assert(WalrusDataMessage.isData(dataMessage));

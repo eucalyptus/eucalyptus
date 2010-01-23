@@ -100,6 +100,11 @@ public class StorageProperties {
 	public static boolean enableStorage = false;
 	public static boolean shouldEnforceUsageLimits = true;
 	public static final String ETHERD_PREFIX = "/dev/etherd/e";
+
+	public static String SAN_HOST = "192.168.7.189";
+	public static String SAN_USERNAME = "grpadmin";
+	public static String SAN_PASSWORD = "zoomzoom";
+	
 	public static String iface = "eth0";
 	public static boolean zeroFillVolumes = false;
 	public static boolean trackUsageStatistics = true;

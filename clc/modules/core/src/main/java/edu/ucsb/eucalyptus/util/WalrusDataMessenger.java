@@ -75,37 +75,31 @@ public class WalrusDataMessenger {
 	private static Logger LOG = Logger.getLogger( WalrusDataMessenger.class );
 	private static final int DATA_QUEUE_SIZE = 3;
 
-	private ConcurrentHashMap<String, ConcurrentHashMap<String,LinkedBlockingQueue<WalrusDataMessage>>> queueMap;
+	private ConcurrentHashMap<String, ConcurrentHashMap<String,WalrusDataQueue<WalrusDataMessage>>> queueMap;
 	private ConcurrentHashMap<String, WalrusMonitor> monitorMap;
 
 	public WalrusDataMessenger() {
-		queueMap = new ConcurrentHashMap<String, ConcurrentHashMap<String,LinkedBlockingQueue<WalrusDataMessage>>>();
+		queueMap = new ConcurrentHashMap<String, ConcurrentHashMap<String,WalrusDataQueue<WalrusDataMessage>>>();
 		monitorMap = new ConcurrentHashMap<String, WalrusMonitor>();
 	}
 
-	public LinkedBlockingQueue<WalrusDataMessage> getQueue(String key1, String key2) {
-		ConcurrentHashMap<String,LinkedBlockingQueue<WalrusDataMessage>> queues = queueMap.putIfAbsent(key1, new ConcurrentHashMap<String, LinkedBlockingQueue<WalrusDataMessage>>());
+	public WalrusDataQueue<WalrusDataMessage> getQueue(String key1, String key2) {
+		ConcurrentHashMap<String,WalrusDataQueue<WalrusDataMessage>> queues = queueMap.putIfAbsent(key1, new ConcurrentHashMap<String, WalrusDataQueue<WalrusDataMessage>>());
 		if (queues == null) {
 			queues = queueMap.get(key1);
 		}
-		LinkedBlockingQueue<WalrusDataMessage> queue = queues.putIfAbsent(key2, new LinkedBlockingQueue<WalrusDataMessage>(DATA_QUEUE_SIZE));
+		WalrusDataQueue<WalrusDataMessage> queue = queues.putIfAbsent(key2, new WalrusDataQueue<WalrusDataMessage>(DATA_QUEUE_SIZE));
 		if (queue == null) {
 			queue = queues.get(key2);
 		}
 		return queue;
 	}
 
-	public LinkedBlockingQueue<WalrusDataMessage> interruptAllAndGetQueue(String key1, String key2) {
-		ConcurrentHashMap<String,LinkedBlockingQueue<WalrusDataMessage>> queues = queueMap.get(key1);
+	public WalrusDataQueue<WalrusDataMessage> interruptAllAndGetQueue(String key1, String key2) {
+		ConcurrentHashMap<String,WalrusDataQueue<WalrusDataMessage>> queues = queueMap.get(key1);
 		if(queues != null) {
-			for (LinkedBlockingQueue<WalrusDataMessage> queue: queues.values()) {
-				try {
-					queue.put(WalrusDataMessage.InterruptTransaction());
-				} catch(InterruptedException ex) {
-					LOG.warn(ex, ex);
-					return null;
-				}
-
+			for (WalrusDataQueue<WalrusDataMessage> queue: queues.values()) {
+				queue.setInterrupted(true);
 			}
 		}
 		return getQueue(key1, key2);
@@ -113,7 +107,7 @@ public class WalrusDataMessenger {
 
 	public void removeQueue(String key1, String key2) {
 		if(queueMap.containsKey(key1)) {
-			ConcurrentHashMap<String, LinkedBlockingQueue<WalrusDataMessage>> queues = queueMap.get(key1);
+			ConcurrentHashMap<String, WalrusDataQueue<WalrusDataMessage>> queues = queueMap.get(key1);
 			if(queues.containsKey(key2)) {
 				queues.remove(key2);
 			}

@@ -86,6 +86,7 @@ import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
+import com.ctc.wstx.io.EBCDICCodec;
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.SystemCredentialProvider;
@@ -203,11 +204,7 @@ public class EquallogicManager implements LogicalStorageManager {
 
 	@Override
 	public void configure() {
-		try {
-			connectionManager.checkConnection();
-		} catch (EucalyptusCloudException e) {
-			LOG.error(e);
-		}
+		connectionManager.configure();
 	}
 
 	@Override
@@ -344,21 +341,27 @@ public class EquallogicManager implements LogicalStorageManager {
 	@Override
 	public int getSnapshotSize(String snapshotId)
 	throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		return 0;
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		try {
+			EquallogicVolumeInfo snapInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
+			return snapInfo.getSize();
+		} catch(EucalyptusCloudException ex) {
+			LOG.error(ex);
+			throw ex;
+		}	finally {		
+			db.commit();
+		}
 	}
 
 	@Override
 	public List<String> getSnapshotValues(String snapshotId)
 	throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public List<String> getStatus(List<String> volumeSet)
 	throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -370,8 +373,6 @@ public class EquallogicManager implements LogicalStorageManager {
 
 	@Override
 	public void initialize() {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
@@ -390,20 +391,20 @@ public class EquallogicManager implements LogicalStorageManager {
 
 	@Override
 	public void reload() {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void setStorageInterface(String storageInterface) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void startupChecks() {
-		// TODO Auto-generated method stub
-
+		try {
+			connectionManager.configure();
+			connectionManager.checkConnection();
+		} catch (EucalyptusCloudException e) {
+			LOG.error(e, e);
+		}
 	}
 
 	public class PSConnectionManager {
@@ -412,12 +413,24 @@ public class EquallogicManager implements LogicalStorageManager {
 		private String password;
 		private String eucalyptusUserName;
 		private final String TARGET_USERNAME = "eucalyptus"; 
+		private boolean enabled;
+
+		public PSConnectionManager() {}
+
+		public void configure() {
+			this.host = StorageProperties.SAN_HOST;
+			this.username = StorageProperties.SAN_USERNAME;
+			this.password = StorageProperties.SAN_PASSWORD;
+		}
+
+		public PSConnectionManager(String host, String username, String password) {
+			this.host = host;
+			this.username = username;
+			this.password = password;
+		}
 
 		public void checkConnection() throws EucalyptusCloudException {
 			//for now 
-			host = "192.168.7.189";
-			username = "grpadmin";
-			password = "zoomzoom";
 			eucalyptusUserName = System.getProperty("euca.user");
 			if(eucalyptusUserName == null)
 				throw new EucalyptusCloudException("Unable to get property eucalyptus username");
@@ -428,6 +441,14 @@ public class EquallogicManager implements LogicalStorageManager {
 
 		public String createVolume(String volumeId, String snapshotId,
 				boolean locallyCreated, String sourceVolume) {
+			if(!enabled) {
+				try {
+					addUser(TARGET_USERNAME);
+				} catch (EucalyptusCloudException e) {
+					LOG.error("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");
+					return null;
+				}
+			}
 			if(locallyCreated) {
 				try {
 					String returnValue = execCommand("stty hardwrap off\u001Avolume select " + sourceVolume + 
@@ -537,8 +558,15 @@ public class EquallogicManager implements LogicalStorageManager {
 		}
 
 		public String createVolume(String volumeName, int size) {
+			if(!enabled) {
+				try {
+					addUser(TARGET_USERNAME);
+				} catch (EucalyptusCloudException e) {
+					LOG.error("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");
+					return null;
+				}
+			}
 			try {
-				addUser(TARGET_USERNAME);
 				String returnValue = execCommand("stty hardwrap off\u001Avolume create " + volumeName + " " + (size * StorageProperties.KB) + "\u001A");
 				String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
 				if(targetName != null) {
@@ -569,6 +597,14 @@ public class EquallogicManager implements LogicalStorageManager {
 		}
 
 		public String createSnapshot(String volumeId, String snapshotId) {
+			if(!enabled) {
+				try {
+					addUser(TARGET_USERNAME);
+				} catch (EucalyptusCloudException e) {
+					LOG.error("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");
+					return null;
+				}
+			}
 			try {
 				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeId + " snapshot create-now\u001A");
 				String snapName = matchPattern(returnValue, SNAPSHOT_CREATE_PATTERN);
@@ -641,6 +677,7 @@ public class EquallogicManager implements LogicalStorageManager {
 					CHAPUserInfo userInfo = new CHAPUserInfo(userName, encryptSCTargetPassword(password));
 					db.add(userInfo);
 					db.commit();
+					enabled = true;
 				} catch (EucalyptusCloudException e) {
 					LOG.error(e);
 					throw e;
