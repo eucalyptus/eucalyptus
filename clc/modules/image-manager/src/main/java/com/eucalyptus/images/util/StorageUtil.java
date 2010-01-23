@@ -74,6 +74,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
@@ -100,20 +101,19 @@ public class StorageUtil {
     ServiceDispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
     DescribeStorageVolumesResponseType volState = sc.send( descVols, DescribeStorageVolumesResponseType.class );
     LOG.trace( volState );
-    String volumeState = "unavailable";
     if ( !volState.getVolumeSet().isEmpty() ) {
       StorageVolume vol = volState.getVolumeSet().get( 0 );
-      volumeState = vol.getStatus();
+      if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
+        v.setState( State.BUSY );
+      } else {
+        v.setMappedState( vol.getStatus() );        
+      }
       v.setSize( new Integer( vol.getSize() ) );
       v.setRemoteDevice( vol.getActualDeviceName() );
     }
-    if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-      volumeState = "in-use";
-    }
-    v.setMappedState( volumeState );
     edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
     if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-      aVolume.setStatus( volumeState );
+      aVolume.setStatus( v.mapState( ) );
       aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
     }
     return aVolume;
