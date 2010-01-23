@@ -208,6 +208,9 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	  vnetconfig->networks[vlan].dns = dns;
 	  vnetconfig->networks[vlan].router = rt;
 	  vnetconfig->numaddrs = 0xFFFFFFFF - nm;
+	  if (vnetconfig->numaddrs > NUMBER_OF_PUBLIC_IPS) {
+	    vnetconfig->numaddrs = NUMBER_OF_PUBLIC_IPS;
+	  }
 	}
       }
     } else {
@@ -349,7 +352,7 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) 
   }
   
   if (done) {
-    // duplicate IP fond
+    // duplicate IP found
     logprintfl(EUCAWARN,"vnetAddHost(): attempting to add duplicate macmap entry, ignoring\n");
   } else if (found) {
     strncpy(vnetconfig->networks[vlan].addrs[found].mac, mac, 24);
