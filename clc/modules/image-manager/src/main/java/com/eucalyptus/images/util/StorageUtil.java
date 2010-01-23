@@ -101,7 +101,6 @@ public class StorageUtil {
     ServiceDispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
     DescribeStorageVolumesResponseType volState = sc.send( descVols, DescribeStorageVolumesResponseType.class );
     LOG.trace( volState );
-    String volumeState = "unavailable";
     if ( !volState.getVolumeSet().isEmpty() ) {
       StorageVolume vol = volState.getVolumeSet().get( 0 );
       if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
@@ -114,7 +113,7 @@ public class StorageUtil {
     }
     edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
     if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-      aVolume.setStatus( volumeState );
+      aVolume.setStatus( v.mapState( ) );
       aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
     }
     return aVolume;
