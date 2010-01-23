@@ -134,7 +134,7 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
   public void fail( Throwable e ) {
     LOG.debug( "-> Release resource tokens for unused resources." );
     try {
-      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
+      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
     } catch ( Throwable e2 ) {
       LOG.debug( e2, e2 );
     }
