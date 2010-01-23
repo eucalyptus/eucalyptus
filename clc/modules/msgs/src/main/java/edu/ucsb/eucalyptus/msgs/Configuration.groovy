@@ -70,8 +70,8 @@ public class ComponentInfoType extends EucalyptusData {
   public ComponentInfoType(String name, String detail){this.name = name; this.detail = detail;}
 }
 public class NodeComponentInfoType extends EucalyptusData {
-  String clusterName;  
   String name;
+  String clusterName;  
   ArrayList<String> instances = new ArrayList<String>();
   public NodeComponentInfoType(){}
   public NodeComponentInfoType(String name, String clusterName){
@@ -83,7 +83,7 @@ public class NodeComponentInfoType extends EucalyptusData {
 public class ConfigurationMessage extends EucalyptusMessage {
   String getComponentName(){
     String className = this.getClass().getSimpleName();
-    return className.replaceAll("Describe","").replaceAll("Deregister","").replaceAll("Register","").substring(0,6);
+    return className.replaceAll("Describe","").replaceAll("Deregister","").replaceAll("Register","S").substring(0,6);
   }
 }
 public class RegisterComponentType extends ConfigurationMessage {

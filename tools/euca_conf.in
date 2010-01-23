@@ -111,14 +111,15 @@ usage () {
 	echo "   --get-credentials <zipfile>      download credentials to <zipfile>"
 	echo "   --register-nodes \"host host ...\" add new nodes to EUCALYPTUS"
 	echo "   --deregister-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
-	echo "   --register-cluster <name> <host> add new cluster to EUCALYPTUS"
-	echo "   --deregister-cluster <name>      remove cluster from EUCALYPTUS"
+	echo "   --register-cluster <clustername> <host> add new cluster to EUCALYPTUS"
+	echo "   --deregister-cluster <clustername>      remove cluster from EUCALYPTUS"
 	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
-	echo "   --deregister-walrus <host>       remove walrus to EUCALYPTUS"
+	echo "   --deregister-walrus <host>       remove walrus from EUCALYPTUS"
 	echo "   --register-sc <name> <host>      add storage controller"
-	echo "   --deregister-sc <host>           remove storage controller to EUCALYPTUS"
+	echo "   --deregister-sc <host>           remove storage controller from EUCALYPTUS"
 	echo "   --list-walruses                  list registered walrus(es)"
 	echo "   --list-clusters                  list registered CCs"
+	echo "   --list-nodes                     list registered NCs"
 	echo "   --list-scs                       list registered SCs"
 	echo "   --no-sync                        used only with --register-* to skip syncing keys"
 	echo "   --cc-port <port>                 set CC port"
@@ -216,10 +217,12 @@ check_ws() {
 		ret=""
 	elif [ "$2" != "" ]; then
 		if [ "$VERBOSE" = "Y" ]; then
-			echo "$WGET -q -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name><euca:detail>\(.*\)</euca:detail>.*;\1 \2;'"
+			echo   "$WGET -q -T 10 -t 1 -O - \"$URL\"" "|sed 's/<euca:registered>\\(.*\\)<\\/euca:registered>/\\n\\1\\n/g;s/<euca:name>/\\n>/g;s/<\\/*euca:item>//g;s/<\\/*euca:[^>]*>/ /g'|awk -F\">\" '/>/{print \"   \"$2}')"
 		fi
-		eval "$2=\"`$WGET -q -T 10 -t 1 -O - \"$URL\"|sed 's;</euca:item>;\n;g'|grep euca:name |sed 's;.*<euca:name>\(.*\)</euca:name><euca:detail>\(.*\)</euca:detail>.*;\1 \2;'`\""
-		ret="$?"
+		E=$($WGET -q -T 10 -t 1 -O - "$URL"|\
+			sed 's/<euca:registered>\(.*\)<\/euca:registered>/\n\1\n/g;s/<euca:name>/\n>/g;s/<\/*euca:item>//g;s/<\/*euca:[^>]*>/ /g'|\
+			awk -F">" '/>/{print "   "$2}')
+		eval "$2=\"${E}\""
 	else
 		if [ "$VERBOSE" = "Y" ]; then
 			echo "$WGET -q -T 10 -t 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'"
@@ -398,6 +401,11 @@ while [ $# -gt 0 ]; do
 	fi
 	if [ "$1" = "--list-clusters" ]; then 
 	    LIST="$LIST clusters"
+	    shift
+	    continue
+	fi
+	if [ "$1" = "--list-nodes" ]; then 
+	    LIST="$LIST nodes"
 	    shift
 	    continue
 	fi
@@ -1393,6 +1401,7 @@ if [ -n "$NODEMODE" ]; then
 	done
 fi
 
+
 for x in $LIST ; do
 	LIST_RES=""
 
@@ -1406,16 +1415,7 @@ for x in $LIST ; do
 		if [ -n "$LIST_RES" ]; then
 			echo "registered walruses:"
 		fi
-		tic="N"
-		for x in $LIST_RES ; do
-			if [ "$tic" = "N" ]; then
-				tic="Y"
-				echo -n "   $x "
-			else
-				tic="N"
-				echo "$x"
-			fi
-		done
+		echo "$LIST_RES"
 	fi
 	if [ "$x" = "storages" ]; then
 		if ! createCloudURL "Action" "DescribeStorageControllers" ; then
@@ -1427,16 +1427,7 @@ for x in $LIST ; do
 		if [ -n "$LIST_RES" ]; then
 			echo "registered storage controllers:"
 		fi
-		tic="N"
-		for x in $LIST_RES ; do
-			if [ "$tic" = "N" ]; then
-				tic="Y"
-				echo -n "   $x "
-			else
-				tic="N"
-				echo "$x"
-			fi
-		done
+		echo "$LIST_RES"
 	fi
 	if [ "$x" = "clusters" ]; then
 		if ! createCloudURL "Action" "DescribeClusters" ; then
@@ -1448,18 +1439,22 @@ for x in $LIST ; do
 		if [ -n "$LIST_RES" ]; then
 			echo "registered clusters:"
 		fi
-		tic="N"
-		for x in $LIST_RES ; do
-			if [ "$tic" = "N" ]; then
-				tic="Y"
-				echo -n "   $x "
-			else
-				tic="N"
-				echo "$x"
-			fi
-		done
+		echo "$LIST_RES"
+	fi
+	if [ "$x" = "nodes" ]; then
+		if ! createCloudURL "Action" "DescribeNodes" ; then
+			exit 1
+		fi
+		if ! check_ws "$URL" LIST_RES ; then
+			exit 1
+		fi
+		if [ -n "$LIST_RES" ]; then
+			echo "registered nodes:"
+		fi
+		echo "$LIST_RES"
 	fi
 done
+
 
 # enable/disable services
 if [ -r $EUCALYPTUS/var/lib/eucalyptus/services ]; then
