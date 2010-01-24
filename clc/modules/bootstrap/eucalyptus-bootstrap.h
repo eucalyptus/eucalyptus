@@ -119,7 +119,7 @@ static char *jvm_default_opts[] = {
 	    "-Deuca.lib.dir=%1$s/usr/share/eucalyptus",
 	    "-Deuca.conf.dir=%1$s/etc/eucalyptus/cloud.d",
 	    "-Deuca.log.dir=%1$s/var/log/eucalyptus",
-	    "-Deuca.version=1.6.1",
+	    "-Deuca.version=1.6.2",
 	    NULL,
 };
 static char *libjvm_paths[ ] = {
