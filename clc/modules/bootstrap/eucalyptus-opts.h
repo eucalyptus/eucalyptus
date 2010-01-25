@@ -62,8 +62,14 @@ struct eucalyptus_opts
   char * log_level_arg;	/**< @brief Control the log level for console output. (default='INFO').  */
   char * log_level_orig;	/**< @brief Control the log level for console output. original value given at command line.  */
   const char *log_level_help; /**< @brief Control the log level for console output. help description.  */
-  int exhaustive_flag;	/**< @brief Log information for internal, client, and database connections. (default=off).  */
-  const char *exhaustive_help; /**< @brief Log information for internal, client, and database connections. help description.  */
+  int exhaustive_flag;	/**< @brief Exhaustive connection information for internal, client, and database connections. (default=off).  */
+  const char *exhaustive_help; /**< @brief Exhaustive connection information for internal, client, and database connections. help description.  */
+  int exhaustive_db_flag;	/**< @brief Individually enable exhaustive connection information for database connections. (default=off).  */
+  const char *exhaustive_db_help; /**< @brief Individually enable exhaustive connection information for database connections. help description.  */
+  int exhaustive_user_flag;	/**< @brief Individually enable exhaustive connection information for client connections. (default=off).  */
+  const char *exhaustive_user_help; /**< @brief Individually enable exhaustive connection information for client connections. help description.  */
+  int exhaustive_cc_flag;	/**< @brief Individually enable exhaustive connection information for client connections. (default=off).  */
+  const char *exhaustive_cc_help; /**< @brief Individually enable exhaustive connection information for client connections. help description.  */
   char * log_appender_arg;	/**< @brief Control the destination for console output. (default='console-log').  */
   char * log_appender_orig;	/**< @brief Control the destination for console output. original value given at command line.  */
   const char *log_appender_help; /**< @brief Control the destination for console output. help description.  */
@@ -135,6 +141,9 @@ struct eucalyptus_opts
   unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
   unsigned int log_level_given ;	/**< @brief Whether log-level was given.  */
   unsigned int exhaustive_given ;	/**< @brief Whether exhaustive was given.  */
+  unsigned int exhaustive_db_given ;	/**< @brief Whether exhaustive-db was given.  */
+  unsigned int exhaustive_user_given ;	/**< @brief Whether exhaustive-user was given.  */
+  unsigned int exhaustive_cc_given ;	/**< @brief Whether exhaustive-cc was given.  */
   unsigned int log_appender_given ;	/**< @brief Whether log-appender was given.  */
   unsigned int out_given ;	/**< @brief Whether out was given.  */
   unsigned int err_given ;	/**< @brief Whether err was given.  */

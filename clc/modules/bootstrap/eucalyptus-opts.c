@@ -43,7 +43,10 @@ const char *eucalyptus_opts_full_help[] = {
   "  -D, --define=STRING           Set system properties.",
   "  -v, --verbose                 Verbose bootstrapper output. Note: This only \n                                  controls the level of output from the native \n                                  bootstrapper.  (default=off)",
   "  -l, --log-level=filename      Control the log level for console output.  \n                                  (default=`INFO')",
-  "  -x, --exhaustive              Log information for internal, client, and \n                                  database connections.  (default=off)",
+  "  -x, --exhaustive              Exhaustive connection information for internal, \n                                  client, and database connections.  \n                                  (default=off)",
+  "      --exhaustive-db           Individually enable exhaustive connection \n                                  information for database connections.  \n                                  (default=off)",
+  "      --exhaustive-user         Individually enable exhaustive connection \n                                  information for client connections.  \n                                  (default=off)",
+  "      --exhaustive-cc           Individually enable exhaustive connection \n                                  information for client connections.  \n                                  (default=off)",
   "  -L, --log-appender=log4j-appender-name\n                                Control the destination for console output.  \n                                  (default=`console-log')",
   "  -o, --out=filename            Redirect standard out to file.  (default=`&1')",
   "  -e, --err=filename            Redirect standard error to file.  \n                                  (default=`&2')",
@@ -116,11 +119,14 @@ init_help_array(void)
   eucalyptus_opts_help[35] = eucalyptus_opts_full_help[35];
   eucalyptus_opts_help[36] = eucalyptus_opts_full_help[36];
   eucalyptus_opts_help[37] = eucalyptus_opts_full_help[37];
-  eucalyptus_opts_help[38] = 0; 
+  eucalyptus_opts_help[38] = eucalyptus_opts_full_help[38];
+  eucalyptus_opts_help[39] = eucalyptus_opts_full_help[39];
+  eucalyptus_opts_help[40] = eucalyptus_opts_full_help[40];
+  eucalyptus_opts_help[41] = 0; 
   
 }
 
-const char *eucalyptus_opts_help[39];
+const char *eucalyptus_opts_help[42];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -157,6 +163,9 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->verbose_given = 0 ;
   args_info->log_level_given = 0 ;
   args_info->exhaustive_given = 0 ;
+  args_info->exhaustive_db_given = 0 ;
+  args_info->exhaustive_user_given = 0 ;
+  args_info->exhaustive_cc_given = 0 ;
   args_info->log_appender_given = 0 ;
   args_info->out_given = 0 ;
   args_info->err_given = 0 ;
@@ -201,6 +210,9 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->log_level_arg = gengetopt_strdup ("INFO");
   args_info->log_level_orig = NULL;
   args_info->exhaustive_flag = 0;
+  args_info->exhaustive_db_flag = 0;
+  args_info->exhaustive_user_flag = 0;
+  args_info->exhaustive_cc_flag = 0;
   args_info->log_appender_arg = gengetopt_strdup ("console-log");
   args_info->log_appender_orig = NULL;
   args_info->out_arg = gengetopt_strdup ("&1");
@@ -255,32 +267,35 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->verbose_help = eucalyptus_opts_full_help[9] ;
   args_info->log_level_help = eucalyptus_opts_full_help[10] ;
   args_info->exhaustive_help = eucalyptus_opts_full_help[11] ;
-  args_info->log_appender_help = eucalyptus_opts_full_help[12] ;
-  args_info->out_help = eucalyptus_opts_full_help[13] ;
-  args_info->err_help = eucalyptus_opts_full_help[14] ;
-  args_info->remote_cloud_help = eucalyptus_opts_full_help[16] ;
-  args_info->remote_walrus_help = eucalyptus_opts_full_help[17] ;
-  args_info->remote_dns_help = eucalyptus_opts_full_help[18] ;
-  args_info->remote_storage_help = eucalyptus_opts_full_help[19] ;
-  args_info->disable_cloud_help = eucalyptus_opts_full_help[21] ;
-  args_info->disable_walrus_help = eucalyptus_opts_full_help[22] ;
-  args_info->disable_dns_help = eucalyptus_opts_full_help[23] ;
-  args_info->disable_storage_help = eucalyptus_opts_full_help[24] ;
-  args_info->disable_iscsi_help = eucalyptus_opts_full_help[25] ;
-  args_info->check_help = eucalyptus_opts_full_help[27] ;
-  args_info->stop_help = eucalyptus_opts_full_help[28] ;
-  args_info->fork_help = eucalyptus_opts_full_help[29] ;
-  args_info->pidfile_help = eucalyptus_opts_full_help[30] ;
-  args_info->java_home_help = eucalyptus_opts_full_help[32] ;
-  args_info->jvm_name_help = eucalyptus_opts_full_help[33] ;
-  args_info->jvm_args_help = eucalyptus_opts_full_help[34] ;
+  args_info->exhaustive_db_help = eucalyptus_opts_full_help[12] ;
+  args_info->exhaustive_user_help = eucalyptus_opts_full_help[13] ;
+  args_info->exhaustive_cc_help = eucalyptus_opts_full_help[14] ;
+  args_info->log_appender_help = eucalyptus_opts_full_help[15] ;
+  args_info->out_help = eucalyptus_opts_full_help[16] ;
+  args_info->err_help = eucalyptus_opts_full_help[17] ;
+  args_info->remote_cloud_help = eucalyptus_opts_full_help[19] ;
+  args_info->remote_walrus_help = eucalyptus_opts_full_help[20] ;
+  args_info->remote_dns_help = eucalyptus_opts_full_help[21] ;
+  args_info->remote_storage_help = eucalyptus_opts_full_help[22] ;
+  args_info->disable_cloud_help = eucalyptus_opts_full_help[24] ;
+  args_info->disable_walrus_help = eucalyptus_opts_full_help[25] ;
+  args_info->disable_dns_help = eucalyptus_opts_full_help[26] ;
+  args_info->disable_storage_help = eucalyptus_opts_full_help[27] ;
+  args_info->disable_iscsi_help = eucalyptus_opts_full_help[28] ;
+  args_info->check_help = eucalyptus_opts_full_help[30] ;
+  args_info->stop_help = eucalyptus_opts_full_help[31] ;
+  args_info->fork_help = eucalyptus_opts_full_help[32] ;
+  args_info->pidfile_help = eucalyptus_opts_full_help[33] ;
+  args_info->java_home_help = eucalyptus_opts_full_help[35] ;
+  args_info->jvm_name_help = eucalyptus_opts_full_help[36] ;
+  args_info->jvm_args_help = eucalyptus_opts_full_help[37] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->debug_help = eucalyptus_opts_full_help[35] ;
-  args_info->debug_port_help = eucalyptus_opts_full_help[36] ;
-  args_info->debug_suspend_help = eucalyptus_opts_full_help[37] ;
-  args_info->profile_help = eucalyptus_opts_full_help[38] ;
-  args_info->profiler_home_help = eucalyptus_opts_full_help[39] ;
+  args_info->debug_help = eucalyptus_opts_full_help[38] ;
+  args_info->debug_port_help = eucalyptus_opts_full_help[39] ;
+  args_info->debug_suspend_help = eucalyptus_opts_full_help[40] ;
+  args_info->profile_help = eucalyptus_opts_full_help[41] ;
+  args_info->profiler_home_help = eucalyptus_opts_full_help[42] ;
   
 }
 
@@ -501,6 +516,12 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "log-level", args_info->log_level_orig, 0);
   if (args_info->exhaustive_given)
     write_into_file(outfile, "exhaustive", 0, 0 );
+  if (args_info->exhaustive_db_given)
+    write_into_file(outfile, "exhaustive-db", 0, 0 );
+  if (args_info->exhaustive_user_given)
+    write_into_file(outfile, "exhaustive-user", 0, 0 );
+  if (args_info->exhaustive_cc_given)
+    write_into_file(outfile, "exhaustive-cc", 0, 0 );
   if (args_info->log_appender_given)
     write_into_file(outfile, "log-appender", args_info->log_appender_orig, 0);
   if (args_info->out_given)
@@ -1121,6 +1142,9 @@ arguments_internal (
         { "verbose",	0, NULL, 'v' },
         { "log-level",	1, NULL, 'l' },
         { "exhaustive",	0, NULL, 'x' },
+        { "exhaustive-db",	0, NULL, 0 },
+        { "exhaustive-user",	0, NULL, 0 },
+        { "exhaustive-cc",	0, NULL, 0 },
         { "log-appender",	1, NULL, 'L' },
         { "out",	1, NULL, 'o' },
         { "err",	1, NULL, 'e' },
@@ -1238,7 +1262,7 @@ arguments_internal (
             goto failure;
         
           break;
-        case 'x':	/* Log information for internal, client, and database connections..  */
+        case 'x':	/* Exhaustive connection information for internal, client, and database connections..  */
         
         
           if (update_arg((void *)&(args_info->exhaustive_flag), 0, &(args_info->exhaustive_given),
@@ -1393,8 +1417,44 @@ arguments_internal (
             exit (EXIT_SUCCESS);
           }
 
+          /* Individually enable exhaustive connection information for database connections..  */
+          if (strcmp (long_options[option_index].name, "exhaustive-db") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->exhaustive_db_flag), 0, &(args_info->exhaustive_db_given),
+                &(local_args_info.exhaustive_db_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "exhaustive-db", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Individually enable exhaustive connection information for client connections..  */
+          else if (strcmp (long_options[option_index].name, "exhaustive-user") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->exhaustive_user_flag), 0, &(args_info->exhaustive_user_given),
+                &(local_args_info.exhaustive_user_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "exhaustive-user", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Individually enable exhaustive connection information for client connections..  */
+          else if (strcmp (long_options[option_index].name, "exhaustive-cc") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->exhaustive_cc_flag), 0, &(args_info->exhaustive_cc_given),
+                &(local_args_info.exhaustive_cc_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "exhaustive-cc", '-',
+                additional_error))
+              goto failure;
+          
+          }
           /* Do not try to bootstrap cloud services locally..  */
-          if (strcmp (long_options[option_index].name, "remote-cloud") == 0)
+          else if (strcmp (long_options[option_index].name, "remote-cloud") == 0)
           {
           
           

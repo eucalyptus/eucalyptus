@@ -292,6 +292,8 @@ public class VolumeManager {
 
     if(!volume.getCluster().equals(cluster.getName())) {
     	throw new EucalyptusCloudException("Can only attach volumes in the same cluster: " + request.getVolumeId());
+    } else if("invalid".equals(volume.getRemoteDevice())) {
+      throw new EucalyptusCloudException("Volume is not yet available: " + request.getVolumeId());
     }
     request.setRemoteDevice( volume.getRemoteDevice() );
     QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback(  ), request );
