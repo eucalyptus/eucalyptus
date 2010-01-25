@@ -83,7 +83,7 @@ public class NodeComponentInfoType extends EucalyptusData {
 public class ConfigurationMessage extends EucalyptusMessage {
   String getComponentName(){
     String className = this.getClass().getSimpleName();
-    return className.replaceAll("Describe","").replaceAll("Deregister","").replaceAll("Register","S").substring(0,6);
+    return className.replaceAll("Describe","").replaceAll("Deregister","").replaceAll("Register","").substring(0,6);
   }
 }
 public class RegisterComponentType extends ConfigurationMessage {
