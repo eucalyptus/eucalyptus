@@ -76,6 +76,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
@@ -102,6 +103,7 @@ import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.cloud.BucketNotEmptyException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
 import edu.ucsb.eucalyptus.cloud.InlineDataTooLargeException;
+import edu.ucsb.eucalyptus.cloud.InvalidBucketNameException;
 import edu.ucsb.eucalyptus.cloud.InvalidRangeException;
 import edu.ucsb.eucalyptus.cloud.InvalidTargetBucketForLoggingException;
 import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
@@ -283,6 +285,9 @@ public class WalrusManager {
 			accessControlList = new AccessControlListType();
 		}
 
+		if(!checkBucketName(bucketName))
+			throw new InvalidBucketNameException(bucketName);
+
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 
 		if(WalrusProperties.shouldEnforceUsageLimits && !request.isAdministrator()) {
@@ -335,31 +340,72 @@ public class WalrusManager {
 		db.commit();
 
 		if(WalrusProperties.enableVirtualHosting) {
-			UpdateARecordType updateARecord = new UpdateARecordType();
-			updateARecord.setUserId(userId);
-			URI walrusUri;
-			String address = null;
-			try {
-				walrusUri = new URI(EucalyptusProperties.getWalrusUrl());
-				address = walrusUri.getHost();
-			} catch (URISyntaxException e) {
-				throw new EucalyptusCloudException("Could not get Walrus URL");
-			}
-			String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
-			updateARecord.setAddress(address);
-			updateARecord.setName(bucketName + "." + zone);
-			updateARecord.setTtl(604800);
-			updateARecord.setZone(zone);
-			try {
-				ServiceDispatcher.lookupSingle(Component.dns).send(updateARecord);
-				LOG.info("Mapping " + updateARecord.getName() + " to " + address);
-			} catch(Exception ex) {
-				LOG.error("Could not update DNS record", ex);
+			if(checkDNSNaming(bucketName)) {
+				UpdateARecordType updateARecord = new UpdateARecordType();
+				updateARecord.setUserId(userId);
+				URI walrusUri;
+				String address = null;
+				try {
+					walrusUri = new URI(EucalyptusProperties.getWalrusUrl());
+					address = walrusUri.getHost();
+				} catch (URISyntaxException e) {
+					throw new EucalyptusCloudException("Could not get Walrus URL");
+				}
+				String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
+				updateARecord.setAddress(address);
+				updateARecord.setName(bucketName + "." + zone);
+				updateARecord.setTtl(604800);
+				updateARecord.setZone(zone);
+				try {
+					ServiceDispatcher.lookupSingle(Component.dns).send(updateARecord);
+					LOG.info("Mapping " + updateARecord.getName() + " to " + address);
+				} catch(Exception ex) {
+					LOG.error("Could not update DNS record", ex);
+				}
+			} else {
+				LOG.error("Bucket: " + bucketName + " fails to meet DNS requirements. Unable to create DNS mapping.");
 			}
 		}
 
 		reply.setBucket(bucketName);
 		return reply;
+	}
+
+	private boolean checkBucketName(String bucketName) {
+		if(!(bucketName.matches("^[A-Za-z0-9].*") || bucketName.contains(".") || 
+				bucketName.contains("-")))
+			return false;
+		if(bucketName.length() < 3 || bucketName.length() > 255)
+			return false;
+		String[] addrParts = bucketName.split("\\.");
+		boolean ipFormat = true;
+		if(addrParts.length == 4) {
+			for(String addrPart : addrParts) {
+				try {
+					Integer.parseInt(addrPart);
+				} catch(NumberFormatException ex) {
+					ipFormat = false;
+					break;
+				}
+			}
+		} else {
+			ipFormat = false;
+		}		
+		if(ipFormat)
+			return false;
+		return true;
+	}
+
+	private boolean checkDNSNaming(String bucketName) {
+		if(bucketName.contains("_"))
+			return false;
+		if(bucketName.length() < 3 || bucketName.length() > 63)
+			return false;
+		if(bucketName.endsWith("-"))
+			return false;
+		if(bucketName.contains("-." ) || bucketName.contains(".-"))
+			return false;
+		return true;
 	}
 
 	public DeleteBucketResponseType deleteBucket(DeleteBucketType request) throws EucalyptusCloudException {
