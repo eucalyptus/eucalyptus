@@ -108,7 +108,8 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 	Integer maxVolumeSize;
 	String storageInterface;
 	Boolean zeroFillVolumes;
-
+	String DASPartition;
+	
 	def UpdateStorageConfigurationType() {}
 
 	def UpdateStorageConfigurationType(StorageStateType storageState) {
@@ -118,6 +119,7 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 		this.maxVolumeSize = storageState.getTotalVolumesSizeInGB();
 		this.storageInterface = storageState.getStorageInterface();
 		this.zeroFillVolumes = storageState.getZeroFillVolumes();
+		this.DASPartition = storageState.getDASPartition();
 	}
 }
 
@@ -140,6 +142,7 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 	Integer maxVolumeSize;
 	String storageInterface;
 	Boolean zeroFillVolumes;
+	String DASPartition;
 
 	def GetStorageConfigurationResponseType() {}
 
@@ -148,13 +151,15 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 			Integer maxTotalVolumesSize,
 			Integer maxVolumeSize,
 			String storageInterface,
-			Boolean zeroFillVolumes) {
+			Boolean zeroFillVolumes,
+			String DASPartition) {
 		this.name = name;
 		this.storageRootDirectory = storageRootDirectory;
 		this.maxTotalVolumeSize = maxTotalVolumeSize;
 		this.maxVolumeSize = maxVolumeSize;
 		this.storageInterface = storageInterface;
 		this.zeroFillVolumes = zeroFillVolumes;
+		this.DASPartition = DASPartition;
 	}
 }
 

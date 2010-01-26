@@ -92,7 +92,9 @@ StorageInfo {
 	private String volumesDir;
     @Column(name = "zero_fill_volumes")
     private Boolean zeroFillVolumes;
-    
+    @Column(name = "das_partition")
+    private String DASPartition;
+
 	public StorageInfo(){}
 
 	public StorageInfo( final String name )
@@ -105,13 +107,15 @@ StorageInfo {
 			final String storageInterface, 
 			final Integer maxVolumeSizeInGB,
 			final String volumesDir,
-			final Boolean zeroFillVolumes) {
+			final Boolean zeroFillVolumes,
+			final String DASPartition) {
 		this.name = name;
 		this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
 		this.storageInterface = storageInterface;
 		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
 		this.volumesDir = volumesDir;
 		this.zeroFillVolumes = zeroFillVolumes;
+		this.DASPartition = DASPartition;
 	}
 
 	public Long getId()
@@ -165,6 +169,14 @@ StorageInfo {
 
 	public void setZeroFillVolumes(Boolean zeroFillVolumes) {
 		this.zeroFillVolumes = zeroFillVolumes;
+	}
+
+	public String getDASPartition() {
+		return DASPartition;
+	}
+
+	public void setDASPartition(String dASPartition) {
+		DASPartition = dASPartition;
 	}
 
 	@Override

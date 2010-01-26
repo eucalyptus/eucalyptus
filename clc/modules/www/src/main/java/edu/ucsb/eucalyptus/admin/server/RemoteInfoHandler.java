@@ -155,6 +155,7 @@ public class RemoteInfoHandler {
 			updateStorageConfiguration.setStorageInterface(storageControllerWeb.getStorageInterface());
 			updateStorageConfiguration.setStorageRootDirectory(storageControllerWeb.getVolumesPath());
 			updateStorageConfiguration.setZeroFillVolumes(storageControllerWeb.getZeroFillVolumes());
+			updateStorageConfiguration.setDASPartition(storageControllerWeb.getDASPartition());
 			ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, 
 					storageControllerWeb.getHost());
 			if(Component.eucalyptus.isLocal()) {
@@ -193,6 +194,7 @@ public class RemoteInfoHandler {
             scInfo.setTotalVolumesSizeInGB( getStorageConfigResponse.getMaxTotalVolumeSize( ) );
             scInfo.setStorageInterface( getStorageConfigResponse.getStorageInterface( ) );
             scInfo.setZeroFillVolumes( getStorageConfigResponse.getZeroFillVolumes( ) );
+            scInfo.setDASPartition(getStorageConfigResponse.getDASPartition());
           } else {
             LOG.debug("Unexpected storage controller name: " + getStorageConfigResponse.getName( ), new Exception());
             LOG.debug("Expected configuration for SC related to CC: " + LogUtil.dumpObject( c ) );

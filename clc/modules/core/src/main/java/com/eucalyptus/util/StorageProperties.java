@@ -105,6 +105,9 @@ public class StorageProperties {
 	public static boolean trackUsageStatistics = true;
 	public static String STORAGE_HOST = "127.0.0.1";
 
+	//DAS properties
+	public static String DAS_PARTITION = "/dev/sde";
+	
 	public static void updateName() {
 		if(!Component.eucalyptus.isLocal()) {
 			String scName = System.getProperty("euca.storage.name");

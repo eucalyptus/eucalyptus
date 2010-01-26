@@ -163,6 +163,7 @@ public class BlockStorage {
 		StorageProperties.MAX_VOLUME_SIZE = storageInfo.getMaxVolumeSizeInGB();
 		StorageProperties.storageRootDirectory = storageInfo.getVolumesDir();
 		StorageProperties.zeroFillVolumes = storageInfo.getZeroFillVolumes();
+		StorageProperties.DAS_PARTITION = storageInfo.getDASPartition();
 		StorageProperties.updateStorageHost();
 	}
 
@@ -179,7 +180,8 @@ public class BlockStorage {
 					StorageProperties.iface, 
 					StorageProperties.MAX_VOLUME_SIZE, 
 					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes);
+					StorageProperties.zeroFillVolumes,
+					StorageProperties.DAS_PARTITION);
 			db.add(storageInfo);
 			db.commit();
 		} 
@@ -196,6 +198,7 @@ public class BlockStorage {
 			storageInfo.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
 			storageInfo.setVolumesDir(StorageProperties.storageRootDirectory);
 			storageInfo.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
+			storageInfo.setDASPartition(StorageProperties.DAS_PARTITION);
 			db.commit();
 		} catch(EucalyptusCloudException ex) {
 			storageInfo = new StorageInfo(StorageProperties.NAME, 
@@ -203,7 +206,8 @@ public class BlockStorage {
 					StorageProperties.iface, 
 					StorageProperties.MAX_VOLUME_SIZE, 
 					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes);
+					StorageProperties.zeroFillVolumes,
+					StorageProperties.DAS_PARTITION);
 			db.add(storageInfo);
 			db.commit();
 		} 
@@ -263,7 +267,9 @@ public class BlockStorage {
 			StorageProperties.iface = storageInterface;
 		Boolean zeroFillVolumes = request.getZeroFillVolumes();
 		if(zeroFillVolumes != null)
-			StorageProperties.zeroFillVolumes = zeroFillVolumes;        
+			StorageProperties.zeroFillVolumes = zeroFillVolumes;
+		if(request.getDASPartition() != null)
+			StorageProperties.DAS_PARTITION = request.getDASPartition();
 		check();
 		//test connection to Walrus
 		StorageProperties.updateWalrusUrl();
@@ -289,6 +295,7 @@ public class BlockStorage {
 			reply.setMaxVolumeSize(StorageProperties.MAX_VOLUME_SIZE);
 			reply.setStorageInterface(StorageProperties.iface);
 			reply.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
+			reply.setDASPartition(StorageProperties.DAS_PARTITION);
 			reply.setName(StorageProperties.NAME);
 		}
 		return reply;

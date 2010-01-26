@@ -72,6 +72,7 @@ public class StorageInfoWeb implements IsSerializable {
 	private Integer totalVolumesSizeInGB;
 	private String storageInterface;
 	private Boolean zeroFillVolumes;
+	private String DASPartition;
 	private Boolean committed;
 
 	public StorageInfoWeb() {}
@@ -85,6 +86,7 @@ public class StorageInfoWeb implements IsSerializable {
     this.totalVolumesSizeInGB = StorageInfoWeb.DEFAULT_SC.getTotalVolumesSizeInGB( );
     this.storageInterface = StorageInfoWeb.DEFAULT_SC.getStorageInterface( );
     this.zeroFillVolumes = StorageInfoWeb.DEFAULT_SC.getZeroFillVolumes( );
+    this.DASPartition = StorageInfoWeb.DEFAULT_SC.getDASPartition();
     this.committed = StorageInfoWeb.DEFAULT_SC.committed;
   }
 
@@ -95,7 +97,8 @@ public class StorageInfoWeb implements IsSerializable {
 			Integer maxVolumeSizeInGB,
 			Integer totalVolumesSizeInGB,
 			String storageInterface,
-			Boolean zeroFillVolumes) {
+			Boolean zeroFillVolumes,
+			String DASPartition) {
 		this.name = name;
 		this.host = host;
 		this.port = port;
@@ -104,6 +107,7 @@ public class StorageInfoWeb implements IsSerializable {
 		this.totalVolumesSizeInGB = totalVolumesSizeInGB;
 		this.storageInterface = storageInterface;
 		this.zeroFillVolumes = zeroFillVolumes;
+		this.DASPartition = DASPartition;
 		this.committed = false;
 	}
 
@@ -183,6 +187,14 @@ public class StorageInfoWeb implements IsSerializable {
 		this.zeroFillVolumes = zeroFillVolumes;
 	}
 
+	public String getDASPartition() {
+		return DASPartition;
+	}
+
+	public void setDASPartition(String dASPartition) {
+		DASPartition = dASPartition;
+	}
+
 	@Override
 	public boolean equals( final Object o )
 	{
@@ -202,5 +214,5 @@ public class StorageInfoWeb implements IsSerializable {
 		return name.hashCode();
 	}
 
-	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false);
+	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "/dev/null");
 }
