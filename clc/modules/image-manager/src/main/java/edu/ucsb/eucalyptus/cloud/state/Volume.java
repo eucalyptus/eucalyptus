@@ -185,4 +185,8 @@ public class Volume extends AbstractIsomorph {
   public void setLocalDevice( final String localDevice ) {
     this.localDevice = localDevice;
   }
+  
+  public boolean isReady() {
+	  return this.getState().equals(State.EXTANT);
+  }
 }
