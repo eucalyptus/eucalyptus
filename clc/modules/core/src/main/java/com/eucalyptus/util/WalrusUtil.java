@@ -65,10 +65,12 @@
 
 package com.eucalyptus.util;
 
+import java.io.UnsupportedEncodingException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.URLDecoder;
 import java.util.Collections;
 import java.util.List;
 
@@ -112,5 +114,9 @@ public class WalrusUtil {
 			errMsg = errorMessage;
 		}
 		return errMsg;
+	}
+	
+	public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
+		return URLDecoder.decode(objectKey, "UTF-8").replace("%20", "+").replace("%2A", "*").replace("~", "%7E").replace(" ", "+");
 	}
 }

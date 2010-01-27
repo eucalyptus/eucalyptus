@@ -61,9 +61,11 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
+import java.net.URLDecoder;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -102,12 +104,14 @@ import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.InvalidOperationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler.SecurityParameter;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.collect.Lists;
@@ -484,6 +488,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				objectKey += splitOn + target[i];
 				splitOn = "/";
 			}
+			try {
+				objectKey = WalrusUtil.URLdecode(objectKey);
+			} catch (UnsupportedEncodingException e) {
+				throw new BindingException("Unable to get key: " + e.getMessage());
+			}
 			operationParams.put("Bucket", target[0]);
 			operationParams.put("Key", objectKey);
 			operationParams.put("Operation", verb.toUpperCase() + "." + "OBJECT");
@@ -499,6 +508,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 							for(int i = 1; i < sourceTarget.length; ++i) {
 								sourceObjectKey += sourceSplitOn + sourceTarget[i];
 								sourceSplitOn = "/";
+							}
+							try {
+								sourceObjectKey = WalrusUtil.URLdecode(sourceObjectKey);
+							} catch (UnsupportedEncodingException e) {
+								throw new BindingException("Unable to get source key: " + e.getMessage());
 							}
 							operationParams.put("SourceBucket", sourceTarget[0]);
 							operationParams.put("SourceObject", sourceObjectKey);
