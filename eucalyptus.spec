@@ -19,7 +19,7 @@
 
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       1.6.1
+Version:       1.6.2
 Release:       1
 License:       GPLv3
 Group:         Applications/System
