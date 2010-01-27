@@ -66,6 +66,7 @@ package com.eucalyptus.sla;
 import java.util.List;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FailScriptFailException;
 import com.eucalyptus.util.LogUtil;
@@ -106,7 +107,13 @@ public class VmAdmissionControl {
   }
   
   public VmAllocationInfo evaluate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    List<ResourceAllocator> pending = Lists.newArrayList( new NodeResourceAllocator(), new AddressAllocator(), new PrivateNetworkAllocator( ), new SubnetIndexAllocator( ) );
+    List<ResourceAllocator> pending = Lists.newArrayList( );
+    pending.add( new NodeResourceAllocator() );
+    if( Clusters.getInstance( ).hasNetworking( ) ) {
+      pending.add( new AddressAllocator() );
+      pending.add( new PrivateNetworkAllocator( ) );
+      pending.add( new SubnetIndexAllocator( ) );
+    }
     List<ResourceAllocator> finished = Lists.newArrayList( );
     
     for( ResourceAllocator allocator : pending ) {

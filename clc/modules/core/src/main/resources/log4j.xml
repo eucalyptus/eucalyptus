@@ -80,6 +80,12 @@
         <param name="MaxBackupIndex" value="10"/>
         <layout class="com.eucalyptus.util.EucaLayout"/>
     </appender>
+    <appender name="exhaustive" class="org.apache.log4j.FileAppender">
+        <param name="File" value="${euca.log.dir}/cloud-exhaust.log"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n"/>
+        </layout>
+    </appender>
     <appender name="logfile" class="org.apache.log4j.RollingFileAppender">
         <param name="File" value="${euca.log.dir}/cloud-debug.log"/>
         <param name="MaxFileSize" value="10MB"/>
@@ -127,36 +133,34 @@
       ~ NOTE: The following suppress very verbose but potentially useful output.
       ~ Consider removing or changing these if you are having unexplained failures. 
       -->
-     
     <category name="com.eucalyptus.cluster.AbstractClusterMessageDispatcher" additivity="true">
-        <priority value="DEBUG"/>
-        <appender-ref ref="logfile"/>
+        <priority value="${euca.log.exhaustive.cc}"/>
+        <appender-ref ref="exhaustive"/>
     </category>
     <category name="edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback" additivity="false">
-        <priority value="DEBUG"/>
-        <appender-ref ref="logfile"/>
+        <priority value="${euca.log.exhaustive.cc}"/>
+        <appender-ref ref="exhaustive"/>
     </category>
     <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="false">
-        <priority value="TRACE"/>
-        <appender-ref ref="logfile"/>
+        <priority value="${euca.log.exhaustive.user}"/>
+        <appender-ref ref="exhaustive"/>
     </category>
     <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
-        <priority value="TRACE"/>
-        <appender-ref ref="logfile"/>
+        <priority value="${euca.log.exhaustive.user}"/>
+        <appender-ref ref="exhaustive"/>
     </category>
     <category name="com.eucalyptus.ws.util.HmacUtils" additivity="false">
-        <priority value="TRACE"/>
-        <appender-ref ref="logfile"/>
+        <priority value="${euca.log.exhaustive.user}"/>
+        <appender-ref ref="exhaustive"/>
     </category>
     <category name="com.eucalyptus.ws.handlers.HmacV2Handler" additivity="false">
-        <priority value="TRACE"/>
-        <appender-ref ref="logfile"/>
+        <priority value="${euca.log.exhaustive.user}"/>
+        <appender-ref ref="exhaustive"/>
     </category>
     <category name="com.eucalyptus.util.EntityWrapper" additivity="true">
-        <priority value="TRACE"/>
-        <appender-ref ref="logfile"/>
+        <priority value="${euca.log.exhaustive.db}"/>
+        <appender-ref ref="exhaustive"/>
     </category>
-    
     <category name="org.apache.commons.beanutils.converters" additivity="false">
         <priority value="ERROR"/>
         <appender-ref ref="logfile"/>
