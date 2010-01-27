@@ -35,7 +35,7 @@
 /usr/share/java/asm2.jar /usr/share/eucalyptus/asm2.jar
 /usr/share/java/bcel.jar /usr/share/eucalyptus/bcel.jar
 /usr/share/java/bsf.jar /usr/share/eucalyptus/bsf.jar
-/usr/share/java/c3p0.jar /usr/share/eucalyptus/c3p0.jar
+/usr/share/java/proxool.jar /usr/share/eucalyptus/proxool.jar
 /usr/share/java/cglib.jar /usr/share/eucalyptus/cglib.jar
 /usr/share/java/commons-beanutils.jar /usr/share/eucalyptus/commons-beanutils.jar
 /usr/share/java/commons-cli.jar /usr/share/eucalyptus/commons-cli.jar
