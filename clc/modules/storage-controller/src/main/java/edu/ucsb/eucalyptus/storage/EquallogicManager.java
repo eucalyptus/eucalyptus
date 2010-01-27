@@ -86,7 +86,6 @@ import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.ctc.wstx.io.EBCDICCodec;
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.SystemCredentialProvider;
@@ -701,31 +700,6 @@ public class EquallogicManager implements LogicalStorageManager {
 			}
 		}
 
-		private String encryptSCTargetPassword(String password) throws EucalyptusCloudException {
-			PublicKey scPublicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getKeyPair().getPublic();
-			Cipher cipher;
-			try {
-				cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-				cipher.init(Cipher.ENCRYPT_MODE, scPublicKey);
-				return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
-			} catch (Exception e) {
-				LOG.error("Unable to encrypted storage target password");
-				throw new EucalyptusCloudException(e.getMessage(), e);
-			}
-		}
-
-		private String decryptSCTargetPassword(String encryptedPassword) throws EucalyptusCloudException {
-			PrivateKey scPrivateKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getPrivateKey();
-			try {
-				Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-				cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);
-				return new String(cipher.doFinal(Base64.decode(encryptedPassword)));
-			} catch(Exception ex) {
-				LOG.error(ex);
-				throw new EucalyptusCloudException("Unable to decrypt storage target password", ex);
-			}
-		}
-
 		public void disconnectTarget(String iqn) throws EucalyptusCloudException {
 			EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
 			try {
@@ -777,6 +751,31 @@ public class EquallogicManager implements LogicalStorageManager {
 			return deviceName;
 		}
 		return null;
+	}
+	
+	public String encryptSCTargetPassword(String password) throws EucalyptusCloudException {
+		PublicKey scPublicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getKeyPair().getPublic();
+		Cipher cipher;
+		try {
+			cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+			cipher.init(Cipher.ENCRYPT_MODE, scPublicKey);
+			return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
+		} catch (Exception e) {
+			LOG.error("Unable to encrypted storage target password");
+			throw new EucalyptusCloudException(e.getMessage(), e);
+		}
+	}
+
+	public String decryptSCTargetPassword(String encryptedPassword) throws EucalyptusCloudException {
+		PrivateKey scPrivateKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getPrivateKey();
+		try {
+			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);
+			return new String(cipher.doFinal(Base64.decode(encryptedPassword)));
+		} catch(Exception ex) {
+			LOG.error(ex);
+			throw new EucalyptusCloudException("Unable to decrypt storage target password", ex);
+		}
 	}
 }
 

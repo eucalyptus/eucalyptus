@@ -114,5 +114,9 @@ public interface LogicalStorageManager {
 
 	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException;
 
-	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException;    
+	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException; 
+	
+	public String encryptSCTargetPassword(String password) throws EucalyptusCloudException;
+
+	public String decryptSCTargetPassword(String encryptedPassword) throws EucalyptusCloudException;
 }

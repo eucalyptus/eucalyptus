@@ -164,6 +164,13 @@ public class BlockStorage {
 		StorageProperties.MAX_VOLUME_SIZE = storageInfo.getMaxVolumeSizeInGB();
 		StorageProperties.storageRootDirectory = storageInfo.getVolumesDir();
 		StorageProperties.zeroFillVolumes = storageInfo.getZeroFillVolumes();
+		StorageProperties.SAN_HOST = storageInfo.getSanHost();
+		StorageProperties.SAN_USERNAME = storageInfo.getSanUser();
+		try {
+			StorageProperties.SAN_PASSWORD = blockManager.decryptSCTargetPassword(storageInfo.getSanPassword());
+		} catch (EucalyptusCloudException e) {
+			LOG.fatal("Unable to get password. " + e.getMessage());
+		}
 		StorageProperties.updateStorageHost();
 		blockManager.configure();
 	}
@@ -181,7 +188,10 @@ public class BlockStorage {
 					StorageProperties.iface, 
 					StorageProperties.MAX_VOLUME_SIZE, 
 					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes);
+					StorageProperties.zeroFillVolumes,
+					StorageProperties.SAN_HOST,
+					StorageProperties.SAN_USERNAME,
+					StorageProperties.SAN_PASSWORD);
 			db.add(storageInfo);
 			db.commit();
 		} 
@@ -198,6 +208,13 @@ public class BlockStorage {
 			storageInfo.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
 			storageInfo.setVolumesDir(StorageProperties.storageRootDirectory);
 			storageInfo.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
+			storageInfo.setSanHost(StorageProperties.SAN_HOST);
+			storageInfo.setSanUser(StorageProperties.SAN_USERNAME);
+			try {
+				storageInfo.setSanPassword(blockManager.encryptSCTargetPassword(StorageProperties.SAN_PASSWORD));
+			} catch (EucalyptusCloudException e) {
+				LOG.fatal("Unable to update password. " + e.getMessage());
+			}
 			db.commit();
 			blockManager.configure();
 		} catch(EucalyptusCloudException ex) {
@@ -206,7 +223,10 @@ public class BlockStorage {
 					StorageProperties.iface, 
 					StorageProperties.MAX_VOLUME_SIZE, 
 					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes);
+					StorageProperties.zeroFillVolumes,
+					StorageProperties.SAN_HOST,
+					StorageProperties.SAN_USERNAME,
+					StorageProperties.SAN_PASSWORD);
 			db.add(storageInfo);
 			db.commit();
 		} 
@@ -254,7 +274,6 @@ public class BlockStorage {
 			snapshotStorageManager.setRootDirectory(storageRootDirectory);
 			StorageProperties.storageRootDirectory = storageRootDirectory;
 		}
-
 		Integer maxTotalVolumeSize = request.getMaxTotalVolumeSize();
 		if(maxTotalVolumeSize != null) 
 			StorageProperties.MAX_TOTAL_VOLUME_SIZE = maxTotalVolumeSize;        
@@ -266,7 +285,13 @@ public class BlockStorage {
 			StorageProperties.iface = storageInterface;
 		Boolean zeroFillVolumes = request.getZeroFillVolumes();
 		if(zeroFillVolumes != null)
-			StorageProperties.zeroFillVolumes = zeroFillVolumes;        
+			StorageProperties.zeroFillVolumes = zeroFillVolumes;
+		if(request.getSanHost() != null)
+			StorageProperties.SAN_HOST = request.getSanHost();
+		if(request.getSanUser() != null)
+			StorageProperties.SAN_USERNAME = request.getSanUser();
+		if(request.getSanPassword() != null)
+			StorageProperties.SAN_PASSWORD = request.getSanPassword();
 		check();
 		//test connection to Walrus
 		StorageProperties.updateWalrusUrl();
@@ -292,6 +317,9 @@ public class BlockStorage {
 			reply.setMaxVolumeSize(StorageProperties.MAX_VOLUME_SIZE);
 			reply.setStorageInterface(StorageProperties.iface);
 			reply.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
+			reply.setSanHost(StorageProperties.SAN_HOST);
+			reply.setSanUser(StorageProperties.SAN_USERNAME);
+			reply.setSanPassword(StorageProperties.SAN_PASSWORD);
 			reply.setName(StorageProperties.NAME);
 		}
 		return reply;

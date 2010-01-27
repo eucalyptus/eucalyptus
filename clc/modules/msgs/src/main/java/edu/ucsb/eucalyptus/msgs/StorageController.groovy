@@ -108,7 +108,10 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 	Integer maxVolumeSize;
 	String storageInterface;
 	Boolean zeroFillVolumes;
-
+	String sanHost;
+	String sanUser;
+	String sanPassword;
+	
 	def UpdateStorageConfigurationType() {}
 
 	def UpdateStorageConfigurationType(StorageStateType storageState) {
@@ -118,6 +121,9 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 		this.maxVolumeSize = storageState.getTotalVolumesSizeInGB();
 		this.storageInterface = storageState.getStorageInterface();
 		this.zeroFillVolumes = storageState.getZeroFillVolumes();
+		this.sanHost = storageState.sanHost;
+		this.sanUser = storageState.sanUser;
+		this.sanPassword = storageState.sanPassword;
 	}
 }
 
@@ -140,6 +146,9 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 	Integer maxVolumeSize;
 	String storageInterface;
 	Boolean zeroFillVolumes;
+	String sanHost;
+	String sanUser;
+	String sanPassword;
 
 	def GetStorageConfigurationResponseType() {}
 
@@ -148,13 +157,19 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 			Integer maxTotalVolumesSize,
 			Integer maxVolumeSize,
 			String storageInterface,
-			Boolean zeroFillVolumes) {
+			Boolean zeroFillVolumes,
+			String sanHost,
+			String sanUser,
+			String sanPassword) {
 		this.name = name;
 		this.storageRootDirectory = storageRootDirectory;
 		this.maxTotalVolumeSize = maxTotalVolumeSize;
 		this.maxVolumeSize = maxVolumeSize;
 		this.storageInterface = storageInterface;
 		this.zeroFillVolumes = zeroFillVolumes;
+		this.sanHost = sanHost;
+		this.sanUser = sanUser;
+		this.sanPassword = sanPassword;
 	}
 }
 

@@ -92,6 +92,12 @@ StorageInfo {
 	private String volumesDir;
     @Column(name = "zero_fill_volumes")
     private Boolean zeroFillVolumes;
+    @Column(name = "san_host")
+    private String sanHost;
+    @Column(name = "san_user")
+    private String sanUser;
+    @Column(name = "san_password")
+    private String sanPassword;
     
 	public StorageInfo(){}
 
@@ -105,13 +111,19 @@ StorageInfo {
 			final String storageInterface, 
 			final Integer maxVolumeSizeInGB,
 			final String volumesDir,
-			final Boolean zeroFillVolumes) {
+			final Boolean zeroFillVolumes,
+			final String sanHost,
+			final String sanUser,
+			final String sanPassword) {
 		this.name = name;
 		this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
 		this.storageInterface = storageInterface;
 		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
 		this.volumesDir = volumesDir;
 		this.zeroFillVolumes = zeroFillVolumes;
+		this.sanHost = sanHost;
+		this.sanUser = sanUser;
+		this.sanPassword = sanPassword;
 	}
 
 	public Long getId()
@@ -165,6 +177,30 @@ StorageInfo {
 
 	public void setZeroFillVolumes(Boolean zeroFillVolumes) {
 		this.zeroFillVolumes = zeroFillVolumes;
+	}
+
+	public String getSanHost() {
+		return sanHost;
+	}
+
+	public void setSanHost(String sanHost) {
+		this.sanHost = sanHost;
+	}
+
+	public String getSanUser() {
+		return sanUser;
+	}
+
+	public void setSanUser(String sanUser) {
+		this.sanUser = sanUser;
+	}
+
+	public String getSanPassword() {
+		return sanPassword;
+	}
+
+	public void setSanPassword(String sanPassword) {
+		this.sanPassword = sanPassword;
 	}
 
 	@Override

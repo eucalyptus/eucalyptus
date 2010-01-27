@@ -121,7 +121,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	{
 		this.clusterList.add (new ClusterInfoWeb ("cluster-name", "cc-host", 8774, 10, 4096));
 		//these values are just defaults
-		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false));
+		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanHost", "sanUser", "sanPassword"));
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");
@@ -164,7 +164,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 	private Grid addClusterEntry ( int row, ClusterInfoWeb clusterInfo, final StorageInfoWeb storageInfo)
 	{
-		Grid g = new Grid (15, 2);
+		Grid g = new Grid (18, 2);
 		g.setStyleName( "euca-table" );
 		if (row > 0) {
 			g.setStyleName( "euca-nonfirst-cluster-entry" );
@@ -367,6 +367,35 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		});
 		g.setWidget( i, 1, new Label ("Zero-fill volumes") );
 
+		i++; // next row
+		g.setWidget( i, 0, new Label( "SAN Host:" ) );
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		final TextBox sanHostTextBox = new TextBox();
+		sanHostTextBox.addChangeListener (new ChangeCallback (this, row));
+		sanHostTextBox.setVisibleLength( 30 );
+		sanHostTextBox.setText( storageInfo.getSanHost() );
+		sanHostTextBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+		g.setWidget( i, 1, sanHostTextBox );
+
+		i++; // next row
+		g.setWidget( i, 0, new Label( "SAN User Name:" ) );
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		final TextBox sanUserBox = new TextBox();
+		sanUserBox.addChangeListener (new ChangeCallback (this, row));
+		sanUserBox.setVisibleLength( 30 );
+		sanUserBox.setText( storageInfo.getSanUser() );
+		sanUserBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+		g.setWidget( i, 1, sanUserBox );
+
+		i++; // next row
+		g.setWidget( i, 0, new Label( "SAN Password:" ) );
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		final PasswordTextBox sanPasswordBox = new PasswordTextBox();
+		sanPasswordBox.addChangeListener (new ChangeCallback (this, row));
+		sanPasswordBox.setVisibleLength( 30 );
+		sanPasswordBox.setText( storageInfo.getSanPassword() );
+		sanPasswordBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+		g.setWidget( i, 1, sanPasswordBox );
 
 		return g;
 	}
@@ -424,6 +453,11 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		storage.setMaxVolumeSizeInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
 		p = (HorizontalPanel)g.getWidget(13, 1);
 		storage.setTotalVolumesSizeInGB((Integer.parseInt(((TextBox)p.getWidget(0)).getText())));
+	
+		storage.setSanHost (((TextBox)g.getWidget(15, 1)).getText());
+		storage.setSanUser (((TextBox)g.getWidget(16, 1)).getText());
+		storage.setSanPassword (((TextBox)g.getWidget(17, 1)).getText());
+
 		//    systemConfig.setDoDynamicPublicAddresses( !((TextBox)p.getWidget(0)).isEnabled() ? true : false );
 	}
 

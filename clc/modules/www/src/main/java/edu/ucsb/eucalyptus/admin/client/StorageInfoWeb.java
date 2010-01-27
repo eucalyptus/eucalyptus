@@ -73,6 +73,9 @@ public class StorageInfoWeb implements IsSerializable {
 	private String storageInterface;
 	private Boolean zeroFillVolumes;
 	private Boolean committed;
+	String sanHost;
+	String sanUser;
+	String sanPassword;
 
 	public StorageInfoWeb() {}
 	
@@ -95,7 +98,10 @@ public class StorageInfoWeb implements IsSerializable {
 			Integer maxVolumeSizeInGB,
 			Integer totalVolumesSizeInGB,
 			String storageInterface,
-			Boolean zeroFillVolumes) {
+			Boolean zeroFillVolumes,
+			String sanHost,
+			String sanUser,
+			String sanPassword) {
 		this.name = name;
 		this.host = host;
 		this.port = port;
@@ -104,6 +110,9 @@ public class StorageInfoWeb implements IsSerializable {
 		this.totalVolumesSizeInGB = totalVolumesSizeInGB;
 		this.storageInterface = storageInterface;
 		this.zeroFillVolumes = zeroFillVolumes;
+		this.sanHost = sanHost;
+		this.sanUser = sanUser;
+		this.sanPassword = sanPassword;
 		this.committed = false;
 	}
 
@@ -183,6 +192,30 @@ public class StorageInfoWeb implements IsSerializable {
 		this.zeroFillVolumes = zeroFillVolumes;
 	}
 
+	public String getSanHost() {
+		return sanHost;
+	}
+
+	public void setSanHost(String sanHost) {
+		this.sanHost = sanHost;
+	}
+
+	public String getSanUser() {
+		return sanUser;
+	}
+
+	public void setSanUser(String sanUser) {
+		this.sanUser = sanUser;
+	}
+
+	public String getSanPassword() {
+		return sanPassword;
+	}
+
+	public void setSanPassword(String sanPassword) {
+		this.sanPassword = sanPassword;
+	}
+
 	@Override
 	public boolean equals( final Object o )
 	{
@@ -202,5 +235,5 @@ public class StorageInfoWeb implements IsSerializable {
 		return name.hashCode();
 	}
 
-	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false);
+	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanhost", "sanuser", "sanpassword");
 }
