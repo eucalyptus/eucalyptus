@@ -97,6 +97,7 @@ System.setProperty("euca.home",System.getenv("EUCALYPTUS"))
 System.setProperty("euca.var.dir","${System.getenv('EUCALYPTUS')}/var/lib/eucalyptus/")
 System.setProperty("euca.log.dir", "${System.getenv('EUCALYPTUS')}/var/log/eucalyptus/")
 Component c = Component.db
+c.setUri( "jdbc:hsqldb:file:${targetDir}/${targetDbPrefix}" );
 System.setProperty("euca.db.host", "jdbc:hsqldb:file:${targetDir}/${targetDbPrefix}")
 
 System.setProperty("euca.db.password", "${System.getenv('EUCALYPTUS_DB')}");
