@@ -137,7 +137,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, vblade, lvm2, dmsetup, openssh-serv
  libbcel-java,
  libbsf-java,
  libproxool-java,
- libcglib-java,
+ libcglib-java | libcglib2.1-java,
  libcommons-beanutils-java,
  libcommons-cli-java,
  libcommons-codec-java,
