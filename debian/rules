@@ -14,7 +14,7 @@ export EUCALYPTUS
 export JAVA_HOME
 export AXIS2_CLASSPATH
 DEB_MAKE_CLEAN_TARGET := clean
-DEB_CONFIGURE_EXTRA_FLAGS := --with-axis2=/usr/share/eucalyptus --with-axis2c=/usr/lib/axis2 --with-axis2c-services=$(DEB_DESTDIR)/usr/lib/axis2/services --prefix=$(EUCALYPTUS) --localstatedir=$(EUCALYPTUS)/var/lib
+DEB_CONFIGURE_EXTRA_FLAGS := --with-axis2c=/usr/lib/axis2 --with-axis2c-services=/usr/lib/axis2/services --prefix=$(EUCALYPTUS)
 DEB_DH_SHLIBDEPS_ARGS_ALL = -l/usr/lib/axis2/lib
 
 makebuilddir/eucalyptus-common:: setup-lib
@@ -33,12 +33,6 @@ install/eucalyptus-common::
 	mkdir -p $(DEB_DESTDIR)/var/run/eucalyptus
 	sed -i 's/^FILE=.*$$/FILE="\/etc\/eucalyptus\/eucalyptus.conf"/g' $(DEB_DESTDIR)/usr/sbin/euca_conf
 	rm -f $(DEB_DESTDIR)/etc/init.d/eucalyptus
-
-install/eucalyptus-nc::
-	sed -e "s|$(EUCALYPTUS)||g" -i $(DEB_DESTDIR)/usr/lib/axis2/services/*/*.xml
-	
-install/eucalyptus-cc::
-	sed -e "s|$(EUCALYPTUS)||g" -i $(DEB_DESTDIR)/usr/lib/axis2/services/*/*.xml node/nc-client-policy.xml
 
 clean::
 	rm -rf setup-lib clc/modules/msgs/resources/msgs-binding.xml clc/modules/storage-controller/lib/liblvm2control.so clc/modules/storage-manager/lib/libfsstorage.so clc/modules/www/webapps/root.war node/test_nc node/test config.status clc/modules/storage-controller/include/edu_ucsb_eucalyptus_storage_LVM2Manager.h clc/modules/storage-controller/include/edu_ucsb_eucalyptus_storage_AOEManager.h clc/modules/storage-manager/include/edu_ucsb_eucalyptus_storage_fs_FileSystemStorageManager.h cluster/cc-client-policy.xml node/nc-client-policy.xml util/config.h config.log Makedefs
