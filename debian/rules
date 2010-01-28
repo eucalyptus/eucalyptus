@@ -14,7 +14,7 @@ export EUCALYPTUS
 export JAVA_HOME
 export AXIS2_CLASSPATH
 DEB_MAKE_CLEAN_TARGET := clean
-DEB_CONFIGURE_EXTRA_FLAGS := --with-axis2c=/usr/lib/axis2 --with-axis2c-services=/usr/lib/axis2/services --prefix=$(EUCALYPTUS)
+DEB_CONFIGURE_EXTRA_FLAGS := --with-axis2c=/usr/lib/axis2 --with-axis2c-services=$(DEB_DESTDIR)/usr/lib/axis2/services --prefix=$(EUCALYPTUS)
 DEB_DH_SHLIBDEPS_ARGS_ALL = -l/usr/lib/axis2/lib
 
 makebuilddir/eucalyptus-common:: setup-lib
