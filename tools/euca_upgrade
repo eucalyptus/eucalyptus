@@ -62,7 +62,6 @@
 NEW_EUCA=""
 OLD_EUCA=""
 FORCE=""
-GROOVY="`which groovy 2> /dev/null`"
 OPENSSL="`which openssl 2> /dev/null`"
 DB="N"
 CONF="N"
@@ -147,16 +146,18 @@ if [ -d "$BACKUP" ]; then
     DATESTR=`date +%s`
     mkdir -p /root/eucalyptus.backup.$DATESTR
     cd /root/eucalyptus.backup.$DATESTR
+    echo "Backing up to /root/eucalyptus.backup.$DATESTR"
     EUCABACKUPS=""
     for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version
     do
 	if [ -e $i ]; then
+	    echo "Adding $i"
 	    EUCABACKUPS="$EUCABACKUPS $i"
 	fi
     done
     tar cf - $EUCABACKUPS 2>/dev/null | tar xf - 2>/dev/null
     cd $CWD
-    echo "done."
+    echo "Done."
     exit 0
 fi
 
@@ -176,15 +177,30 @@ else
     new_euca_version="`cat $NEW_EUCA/etc/eucalyptus/eucalyptus-version 2> /dev/null`"
 fi
 if [ ! -e $OLD_EUCA/etc/eucalyptus/eucalyptus-version ]; then
-	echo "cannot locate $OLD_EUCA/etc/eucalyptus/eucalyptus-version, --old must point to a valid eucalyptus installation/backup.  If this is a valid installation and the version file is missing, please create one with the version of eucalyptus you are upgrading from (i.e. '1.6.1')"
+	echo "Cannot locate $OLD_EUCA/etc/eucalyptus/eucalyptus-version, --old must point to a valid eucalyptus installation/backup.  If this is a valid installation and the version file is missing, please create one with the version of eucalyptus you are upgrading from (i.e. '1.6.1')"
 	exit 1;
 else
     old_euca_version="`cat $OLD_EUCA/etc/eucalyptus/eucalyptus-version 2> /dev/null`"
 fi
 
-# valid version upgrade check
+NEW_EUCA_VER_NUM=`echo $new_euca_version | sed "s/\.//g"`
+OLD_EUCA_VER_NUM=`echo $old_euca_version | sed "s/\.//g"`
 
-echo "Upgrading from version $old_euca_version to $new_euca_version"
+# valid version upgrade check
+if [ $new_euca_version = $old_euca_version ]; then
+    SAMEVER="Y"
+else 
+    SAMEVER="N"
+fi
+
+if [ $new_euca_version = "1.6.2" ]; then
+    if [ $old_euca_version != "1.6.1" ]; then
+	echo "Cannot upgrade from $old_euca_version to $new_euca_version, skipping automatic upgrade"
+	exit 0
+    fi
+fi
+
+echo "Upgrading from version $old_euca_version ($OLD_EUCA_VER_NUM) to $new_euca_version ($NEW_EUCA_VER_NUM)"
 #if [ `expr $euca_version "<" 1.6` -eq 1 ]; then
 #	echo "$NEW_EUCA is not a 1.6.x Eucalyptus installation"
 #	exit 2
@@ -192,49 +208,70 @@ echo "Upgrading from version $old_euca_version to $new_euca_version"
 
 # upgrade conf file
 if [ "$CONF" = "Y" ]; then
+    echo "Upgrading configuration file..."
+    if [ "$SAMEVER" = "Y" ]; then
+	cp --preserve -a $OLD_EUCA/etc/eucalyptus/eucalyptus.conf $NEW_EUCA/etc/eucalyptus/eucalyptus.conf
+	echo "Done."
+    else
+	
     # we need euca_conf later (the new version)
-    if [ ! -x $NEW_EUCA/usr/sbin/euca_conf ];
-    then
-	echo "Cannot find new euca_conf!"
-	exit 1
-    fi
-
+	if [ ! -x $NEW_EUCA/usr/sbin/euca_conf ];
+	then
+	    echo "Cannot find new $NEW_EUCA/usr/sbin/euca_conf! Skipping automatic upgrade."
+	    exit 1
+	fi
+	
     # upgrade the conf file
-    export EUCALYPTUS="$NEW_EUCA"
-    echo -n "Upgrading the configuration ..."
-    $EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --upgrade-conf $OLD_EUCA/etc/eucalyptus/eucalyptus.conf $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf 
-    echo "done."
+	export EUCALYPTUS="$NEW_EUCA"
+	$EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --upgrade-conf $OLD_EUCA/etc/eucalyptus/eucalyptus.conf $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf 
+    fi
+    echo "Done."
 fi
 
 if [ "$KEYS" = "Y" ]; then
-    for x in `ls $OLD_EUCA/var/lib/eucalyptus/keys/ | grep -v policy\.xml` ; do
-	if [ -f "$x" ]; then
-	    cp -a --preserve $x $NEW_EUCA/var/lib/eucalyptus/keys/
-	fi
+    echo "Upgrading keys..."
+    for x in `\ls -ad $OLD_EUCA/var/lib/eucalyptus/keys/* | grep -v policy\.xml` ; do
+	cp -a --preserve $x $NEW_EUCA/var/lib/eucalyptus/keys/
     done
+    echo "Done."
 fi
 
 # upgrade the database (and backup)
 if [ "$DB" = "Y" ]; then
-	# check we have the right binaries
-	if [ -z "$OPENSSL" -o -z "$GROOVY" ]; then
-		echo "Missing openssl or groovy!"
-		exit 1
-	fi
+    echo "Upgrading database..."
+    if [ $SAMEVER = "Y" ]; then
+	cp --preserve -a $OLD_EUCA/var/lib/eucalyptus/db/* $NEW_EUCA/var/lib/eucalyptus/db/
+    else
 
-	# upgrade the database
+    # check we have the right binaries
+	if [ -z "$OPENSSL" ]; then
+	    echo "Missing openssl, skipping automatic upgrade."
+	    exit 1
+	fi
+	
+    # upgrade the database
 	export EUCALYPTUS="$NEW_EUCA"
 	for FILE in ${EUCALYPTUS}/usr/share/eucalyptus/*.jar; do
-		export CLASSPATH=${FILE}:${CLASSPATH}
+	    export CLASSPATH=${FILE}:${CLASSPATH}
 	done
-
 	$OPENSSL pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes 2>/dev/null | grep -A30 "friendlyName: eucalyptus" | grep -A26 "BEGIN RSA" > ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
-
+	
 	export EUCALYPTUS_DB="`echo -n eucalyptus | $OPENSSL dgst -sha256 -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem -hex 2>/dev/null`"
 	export EUCALYPTUS_CLUSTER_CERT="`openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/clusters.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes -nokeys 2>/dev/null | sed '1,/friendlyName: cc-/ d ; /friendlyName/,$ d ; /-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' -n | openssl base64 | sed '{:q;N;s/\n//g;s/=/./g;s/+/-/g;s/\//_/g;t q}'`"
 	export EUCALYPTUS_NODE_CERT="`openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/clusters.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes -nokeys 2>/dev/null | sed '1,/friendlyName: nc-/ d ; /friendlyName/,$ d ; /-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' -n | openssl base64 | sed '{:q;N;s/\n//g;s/=/./g;s/+/-/g;s/\//_/g;t q}'`"
-
-	echo -n "Upgrading your database..."
-	$GROOVY ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${EUCA_VER}.groovy >$EUCALYPTUS/var/log/eucalyptus/upgrade.log 2>&1
-	echo "done."
+	
+	echo "Upgrading your database..."
+	if [ -f ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${OLD_EUCA_VER_NUM}.groovy ]; then
+#	$GROOVY ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${OLD_EUCA_VER_NUM}.groovy 
+	    if ( ! java org.codehaus.groovy.tools.GroovyStarter --main groovy.ui.GroovyMain --classpath ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:$CLASSPATH \
+                    -Deuca.old=${OLD_EUCA} -Deuca.new=${NEW_EUCA} -Deuca.home=${NEW_EUCA} \
+                    -Deuca.var.dir=${NEW_EUCA}/var/lib/eucalyptus -Deuca.conf.dir=${NEW_EUCA} -Deuca.log.dir=${NEW_EUCA}/var/log/eucalyptus \
+                    ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${OLD_EUCA_VER_NUM}.groovy | tee $EUCALYPTUS/var/log/eucalyptus/upgrade.log 2>&1 ); then
+		echo "Database upgrade failed! Please check your database before using Eucalyptus."
+	    fi
+	else
+	    echo "Cannot find DB upgrade script from $old_euca_version to $new_euca_version! Skipping DB upgrade."
+	fi
+    fi
+    echo "Done."
 fi

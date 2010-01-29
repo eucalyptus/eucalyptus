@@ -30,6 +30,7 @@ contexts.each {
     DatabaseUtil.registerPersistenceContext("eucalyptus_${it}", config)
   } catch( Throwable t ) {
     t.printStackTrace();
+    LOG.error(t,t);
     System.exit(1)
   }
 }

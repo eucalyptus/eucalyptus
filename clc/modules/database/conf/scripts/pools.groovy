@@ -10,7 +10,7 @@ poolProps = [
   'proxool.maximum-connection-count': '128',
   /* TODO: DOES NOT WORK W/ HSQLDB 'proxool.house-keeping-test-sql': 'select CURRENT_DATE',*/
   'user': 'sa',
-  'password': Hashes.getHexSignature( ),
+  'password': db_pass!=null?db_pass:Hashes.getHexSignature( ),
 ]
 p = new Properties();
 p.putAll(poolProps)
