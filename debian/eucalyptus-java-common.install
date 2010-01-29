@@ -1,7 +1,5 @@
 /usr/share/eucalyptus/antlr.jar
 /usr/share/eucalyptus/eucalyptus-interface-*.jar
-/usr/share/eucalyptus/eucalyptus-walrus-*.jar 
-/usr/share/eucalyptus/eucalyptus-storagecontroller-*.jar
 /usr/share/eucalyptus/eucalyptus-auth-*.jar
 /usr/share/eucalyptus/eucalyptus-core-*.jar
 /usr/share/eucalyptus/eucalyptus-groupmgr-*.jar
