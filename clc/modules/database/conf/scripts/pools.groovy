@@ -3,6 +3,7 @@ import com.eucalyptus.bootstrap.Component;
 import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.util.LogUtil;
 
+db_pass = System.getProperty("euca.db.password")!=null?System.getProperty("euca.db.password"):Hashes.getHexSignature( );
 Class.forName('org.logicalcobwebs.proxool.ProxoolDriver');
 poolProps = [
   'proxool.simultaneous-build-throttle': '16',
@@ -10,7 +11,7 @@ poolProps = [
   'proxool.maximum-connection-count': '128',
   /* TODO: DOES NOT WORK W/ HSQLDB 'proxool.house-keeping-test-sql': 'select CURRENT_DATE',*/
   'user': 'sa',
-  'password': Hashes.getHexSignature( ),
+  'password': db_pass,
 ]
 p = new Properties();
 p.putAll(poolProps)

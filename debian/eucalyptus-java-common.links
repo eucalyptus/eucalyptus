@@ -15,12 +15,12 @@
 /usr/share/java/gnumail-providers.jar /usr/share/eucalyptus/gnumail-providers.jar
 /usr/share/java/inetlib.jar /usr/share/eucalyptus/inetlib.jar
 /usr/share/java/geronimo-jpa-3.0-spec.jar /usr/share/eucalyptus/geronimo-jpa-3.0-spec.jar
-/usr/share/java/google-collect.jar /usr/share/eucalyptus/google-collect.jar
+/usr/share/java/google-collections.jar /usr/share/eucalyptus/google-collections.jar
 /usr/share/java/groovy.jar /usr/share/eucalyptus/groovy.jar
 /usr/share/java/gwt-servlet.jar /usr/share/eucalyptus/gwt-servlet.jar
 /usr/share/java/gwt-user.jar /usr/share/eucalyptus/gwt-user.jar
 /usr/share/java/jaxp-1.3.jar /usr/share/eucalyptus/jaxp-1.3.jar
-/usr/share/java/jetty6.jar /usr/share/eucalyptus/jetty6.jar
+/usr/share/java/jetty.jar /usr/share/eucalyptus/jetty.jar
 /usr/share/java/jibx-run.jar /usr/share/eucalyptus/jibx-run.jar
 /usr/share/java/json-lib.jar /usr/share/eucalyptus/json-lib.jar
 /usr/share/java/junit.jar /usr/share/eucalyptus/junit.jar
@@ -62,8 +62,8 @@
 /usr/share/java/janino.jar /usr/share/eucalyptus/janino.jar
 /usr/share/java/javassist.jar /usr/share/eucalyptus/javassist.jar
 /usr/share/java/jaxen.jar /usr/share/eucalyptus/jaxen.jar
-/usr/share/java/jetty6-sslengine.jar /usr/share/eucalyptus/jetty6-sslengine.jar
-/usr/share/java/jetty6-util.jar /usr/share/eucalyptus/jetty6-util.jar
+/usr/share/java/jetty-sslengine.jar /usr/share/eucalyptus/jetty-sslengine.jar
+/usr/share/java/jetty-util.jar /usr/share/eucalyptus/jetty-util.jar
 /usr/share/java/jibx-bind.jar /usr/share/eucalyptus/jibx-bind.jar
 /usr/share/java/jibx-extras.jar /usr/share/eucalyptus/jibx-extras.jar
 /usr/share/java/jug-asl.jar /usr/share/eucalyptus/jug-asl.jar

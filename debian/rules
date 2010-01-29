@@ -23,6 +23,7 @@ setup-lib:
 	@sed -i 's/EUCALYPTUS_HOME//g' tools/client-policy-template.xml
 	@sed -i 's/AXIS2C_HOME\/lib/\/usr\/lib\/apache2\/modules/g' tools/httpd.conf
 	mkdir -p $(DEB_DESTDIR)/var/run/eucalyptus
+	mkdir -p clc/lib && for i in `cat debian/build-jars`; do if [ -e $$i ]; then ln -fsv $$i $(CURDIR)/clc/lib; fi; done
 	touch setup-lib
 
 install/eucalyptus-java-common::
