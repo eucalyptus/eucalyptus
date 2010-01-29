@@ -189,6 +189,7 @@ make install
 /usr/share/eucalyptus/euca_upgrade
 /usr/lib/eucalyptus/euca_rootwrap
 /usr/lib/eucalyptus/euca_mountwrap
+/etc/bash_completion.d/euca_conf
 /usr/sbin/euca_conf
 /usr/sbin/euca_sync_key
 /usr/sbin/euca_killall
