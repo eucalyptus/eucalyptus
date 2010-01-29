@@ -44,9 +44,9 @@ install: build
 	@$(INSTALL) -m 755 euca_conf $(DESTDIR)$(sbindir)
 	-$(INSTALL) -m 755 euca_conf.complete $(DESTDIR)/etc/bash_completion.d/euca_conf
 	@$(INSTALL) -m 755 euca_sync_key $(DESTDIR)$(sbindir)
-	@$(INSTALL) -m 755 connect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 disconnect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 get_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
+#	@$(INSTALL) -m 755 connect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
+#	@$(INSTALL) -m 755 disconnect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
+#	@$(INSTALL) -m 755 get_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
 
 uninstall: 
 	@$(RM) -f $(etcdir)/init.d/eucalyptus-cloud

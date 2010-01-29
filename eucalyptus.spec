@@ -195,9 +195,9 @@ make install
 /usr/sbin/euca_killall
 /etc/eucalyptus/httpd.conf
 /etc/eucalyptus/eucalyptus-version
-/usr/share/eucalyptus/connect_iscsitarget.pl
-/usr/share/eucalyptus/disconnect_iscsitarget.pl
-/usr/share/eucalyptus/get_iscsitarget.pl
+#/usr/share/eucalyptus/connect_iscsitarget.pl
+#/usr/share/eucalyptus/disconnect_iscsitarget.pl
+#/usr/share/eucalyptus/get_iscsitarget.pl
 
 #%files common-java -f jar_list
 %files common-java
