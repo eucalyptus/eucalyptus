@@ -49,7 +49,7 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     eucalyptus >= 1.6, java-sdk >= 1.6.0, lvm2, groovy
+Requires:     eucalyptus >= 1.6, java-sdk >= 1.6.0, lvm2
 Conflicts:    eucalyptus < 1.6
 Group:        Applications/System
 
@@ -299,14 +299,11 @@ fi
 if [ "$1" = "2" ];
 then
 	/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor xen -bridge %{__bridge}
-#	if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf ]; 
-#	then
-#		cp --preserve -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
-#	fi
 	if [ -f /tmp/eucaback.dir ]; then
 	    BACKDIR=`cat /tmp/eucaback.dir`
 	    if [ -d "$BACKDIR" ]; then
-		echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
+		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
+		/usr/sbin/euca_conf -setup
 	    fi
 	fi
 fi
@@ -329,13 +326,14 @@ then
 	fi
 fi
 %endif
-# upgrade from 1.5
+# upgrade
 if [ "$1" = "2" ];
 then
 	if [ -f /tmp/eucaback.dir ]; then
 	    BACKDIR=`cat /tmp/eucaback.dir`
 	    if [ -d "$BACKDIR" ]; then
-		echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
+		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+		/usr/sbin/euca_conf -setup
 	    fi
 	fi
 
@@ -370,23 +368,15 @@ then
 	fi
 fi
 %endif
-if [ "$1" = "2" ];
-then
-	if [ -f /tmp/eucaback.dir ]; then
-	    BACKDIR=`cat /tmp/eucaback.dir`
-	    if [ -d "$BACKDIR" ]; then
-		echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
-	    fi
-	fi
-#	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/cluster-pk.pem ]; 
-#	then
-#		if [ ! -e /var/lib/eucalyptus/keys/cluster-pk.pem ]; 
-#		then
-#			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/cluster*.pem /var/lib/eucalyptus/keys
-#			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/node*.pem /var/lib/eucalyptus/keys
-#		fi
+#if [ "$1" = "2" ];
+#then
+#	if [ -f /tmp/eucaback.dir ]; then
+#	    BACKDIR=`cat /tmp/eucaback.dir`
+#	    if [ -d "$BACKDIR" ]; then
+#		echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
+#	    fi
 #	fi
-fi
+#fi
 
 %post nc
 chkconfig --add eucalyptus-nc
@@ -408,23 +398,15 @@ then
 	fi
 fi
 %endif
-if [ "$1" = "2" ];
-then
-	if [ -f /tmp/eucaback.dir ]; then
-	    BACKDIR=`cat /tmp/eucaback.dir`
-	    if [ -d "$BACKDIR" ]; then
-		echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
-	    fi
-	fi
-#	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/node-pk.pem ]; 
-#	then
-#		if [ ! -e /var/lib/eucalyptus/keys/node-pk.pem ]; 
-#		then
-#			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/cluster-cert.pem /var/lib/eucalyptus/keys
-#			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/node*.pem /var/lib/eucalyptus/keys
-#		fi
+#if [ "$1" = "2" ];
+#then
+#    if [ -f /tmp/eucaback.dir ]; then
+#	BACKDIR=`cat /tmp/eucaback.dir`
+#	if [ -d "$BACKDIR" ]; then
+#	    echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
 #	fi
-fi
+#    fi
+#fi
 
 
 %postun
@@ -446,7 +428,7 @@ then
 	fi
 %endif
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable cloud
-	if [ -e /etc/init.d/eucalyptus-cloud ];
+	if [ -e /etc/init.d/eucalyptus-cloud -a /etc/eucalyptus/eucalyptus.conf ];
 	then 
 		/etc/init.d/eucalyptus-cloud restart || true
 	fi
@@ -467,7 +449,7 @@ fi
 if [ "$1" = "0" ];
 then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable sc
-	if [ -e /etc/init.d/eucalyptus-cloud ];
+	if [ -e /etc/init.d/eucalyptus-cloud -a /etc/eucalyptus/eucalyptus.conf ];
 	then 
 		/etc/init.d/eucalyptus-cloud restart || true
 	fi
@@ -476,16 +458,20 @@ fi
 %preun common-java
 if [ "$1" = "0" ];
 then
+    if [ -f /etc/eucalyptus/eucalyptus.conf ]; then
 	/etc/init.d/eucalyptus-cloud stop
-	chkconfig --del eucalyptus-cloud
-	rm -f /var/lib/eucalyptus/services
+    fi
+    chkconfig --del eucalyptus-cloud
+    rm -f /var/lib/eucalyptus/services
 fi
 
 %preun cc
 if [ "$1" = "0" ];
 then
-	/etc/init.d/eucalyptus-cc stop
-	chkconfig --del eucalyptus-cc
+    if [ -f /etc/eucalyptus/eucalyptus.conf ]; then
+	/etc/init.d/eucalyptus-cc cleanstop
+    fi
+    chkconfig --del eucalyptus-cc
 %if %is_centos
 	if [ -e /etc/sysconfig/system-config-securitylevel ];
 	then
@@ -497,13 +483,15 @@ fi
 %preun nc
 if [ "$1" = "0" ];
 then
+    if [ -f /etc/eucalyptus/eucalyptus.conf ]; then
 	/etc/init.d/eucalyptus-nc stop
-	chkconfig --del eucalyptus-nc
+    fi
+    chkconfig --del eucalyptus-nc
 %if %is_centos
-	if [ -e /etc/sysconfig/system-config-securitylevel ];
-	then
-		sed -i '/^--port=8775/ d' /etc/sysconfig/system-config-securitylevel
-	fi
+    if [ -e /etc/sysconfig/system-config-securitylevel ];
+    then
+	sed -i '/^--port=8775/ d' /etc/sysconfig/system-config-securitylevel
+    fi
 %endif
 fi
 
