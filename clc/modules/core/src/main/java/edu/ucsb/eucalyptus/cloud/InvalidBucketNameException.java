@@ -59,66 +59,33 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
-package com.eucalyptus.images.util;
 
-import java.util.Map;
+package edu.ucsb.eucalyptus.cloud;
 
-import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.StorageControllerConfiguration;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.collect.Lists;
+@SuppressWarnings("serial")
+public class InvalidBucketNameException extends WalrusException {
 
-import edu.ucsb.eucalyptus.cloud.state.State;
-import edu.ucsb.eucalyptus.cloud.state.Volume;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.StorageVolume;
-
-public class StorageUtil {
-  private static Logger LOG = Logger.getLogger( StorageUtil.class );
-  
-  public static ServiceDispatcher lookup( String hostName ) {
-    return ServiceDispatcher.lookup( Component.storage, hostName );
+  public InvalidBucketNameException()
+  {
+    super( "InvalidBucketName" );
   }
   
-  public static void dispatchAll( EucalyptusMessage message ) throws EucalyptusCloudException {
-    for( ServiceDispatcher sc : ServiceDispatcher.lookupMany( Component.storage ) ) {
-      sc.dispatch( message );
-    }
+  public InvalidBucketNameException(String value)
+  {
+    super("The specified bucket is not valid: " + value, "InvalidBucketName", "Bucket",  value, HttpResponseStatus.BAD_REQUEST);
   }
 
-  public static edu.ucsb.eucalyptus.msgs.Volume getVolumeReply( Map<String, AttachedVolume> attachedVolumes, Volume v ) throws EucalyptusCloudException {
-    StorageControllerConfiguration scConfig = Configuration.getStorageControllerConfiguration( v.getCluster( ) );
-    DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( v.getDisplayName() ) );
-    ServiceDispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
-    DescribeStorageVolumesResponseType volState = sc.send( descVols, DescribeStorageVolumesResponseType.class );
-    LOG.trace( volState );
-    if ( !volState.getVolumeSet().isEmpty() ) {
-      StorageVolume vol = volState.getVolumeSet().get( 0 );
-      if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-        v.setState( State.BUSY );
-      } else {
-        v.setMappedState( vol.getStatus() );        
-      }
-      v.setSize( new Integer( vol.getSize() ) );
-      v.setRemoteDevice( vol.getActualDeviceName() );
-    }
-    edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
-    if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-      aVolume.setStatus( v.mapState( ) );
-      aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
-    }
-    if ( "invalid".equals( v.getRemoteDevice( ) ) ) {
-      aVolume.setStatus( "creating" );
-    }
-    return aVolume;
+  public InvalidBucketNameException(Throwable ex)
+  {
+    super("InvalidBucketName", ex);
+  }
+  public InvalidBucketNameException(String message, Throwable ex)
+  {
+    super(message,ex);
   }
 }

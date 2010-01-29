@@ -154,6 +154,7 @@ public class VolumeManager {
           db.commit();
           break;
         } catch ( Throwable e1 ) {
+          db.rollback( );
           db = VolumeManager.getEntityWrapper();
         }
       }
@@ -172,6 +173,7 @@ public class VolumeManager {
         db.delete( d );
         db.commit( );
       } catch ( Throwable e1 ) {
+        db.rollback( );
         LOG.debug( e1, e1 );
       }
       throw new EucalyptusCloudException( "Error while communicating with Storage Controller: CreateStorageVolume:" + e.getMessage() );
@@ -290,6 +292,8 @@ public class VolumeManager {
 
     if(!volume.getCluster().equals(cluster.getName())) {
     	throw new EucalyptusCloudException("Can only attach volumes in the same cluster: " + request.getVolumeId());
+    } else if("invalid".equals(volume.getRemoteDevice())) {
+      throw new EucalyptusCloudException("Volume is not yet available: " + request.getVolumeId());
     }
     request.setRemoteDevice( volume.getRemoteDevice() );
     QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback(  ), request );

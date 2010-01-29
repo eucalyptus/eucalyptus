@@ -157,7 +157,7 @@ typedef struct ccInstanceCache_t {
 typedef struct ccConfig_t {
   char eucahome[1024];
   char configFiles[2][1024];
-  int use_wssec;
+  int use_wssec, use_tunnels;
   char policyFile[1024];
   int initialized;
   int schedPolicy, schedState;

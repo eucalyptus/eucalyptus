@@ -160,7 +160,7 @@ public class EntityWrapper<TYPE> {
     LOG.trace( EventRecord.here( Component.db, DbEvent.ROLLBACK.begin( ), tx.getTxUuid( ) ) );
     try {
       this.tx.rollback( );
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       LOG.trace( EventRecord.here( Component.db, DbEvent.ROLLBACK.fail( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
       this.exceptionCaught( e );
     }

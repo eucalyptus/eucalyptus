@@ -61,9 +61,11 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
+import java.net.URLDecoder;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -73,12 +75,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import org.apache.axiom.om.OMElement;
+import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.apache.xml.dtm.ref.DTMNodeList;
@@ -102,12 +104,14 @@ import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.InvalidOperationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.binding.Binding;
 import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler.SecurityParameter;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.collect.Lists;
@@ -129,10 +133,11 @@ import edu.ucsb.eucalyptus.msgs.TargetGrants;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
+import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
+import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import groovy.lang.GroovyObject;
-import org.apache.commons.httpclient.util.DateUtil;
 
 public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static Logger LOG = Logger.getLogger( WalrusRESTBinding.class );
@@ -144,7 +149,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	public static final int DATA_MESSAGE_SIZE = 102400;
 	private String key;
 	private String randomKey;
-	private LinkedBlockingQueue<WalrusDataMessage> putQueue;
+	private WalrusDataQueue<WalrusDataMessage> putQueue;
 
 	@Override
 	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
@@ -206,6 +211,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			Binding binding;
 			if(!(msg instanceof EucalyptusErrorMessageType)) {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
+				if(msg instanceof PutObjectResponseType) {
+					if(putQueue != null) {
+						putQueue = null;
+					}
+				}
 			} else {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.ucsb.edu" ) );
 				if(putQueue != null) {
@@ -487,6 +497,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				objectKey += splitOn + target[i];
 				splitOn = "/";
 			}
+			try {
+				objectKey = WalrusUtil.URLdecode(objectKey);
+			} catch (UnsupportedEncodingException e) {
+				throw new BindingException("Unable to get key: " + e.getMessage());
+			}
 			operationParams.put("Bucket", target[0]);
 			operationParams.put("Key", objectKey);
 			operationParams.put("Operation", verb.toUpperCase() + "." + "OBJECT");
@@ -502,6 +517,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 							for(int i = 1; i < sourceTarget.length; ++i) {
 								sourceObjectKey += sourceSplitOn + sourceTarget[i];
 								sourceSplitOn = "/";
+							}
+							try {
+								sourceObjectKey = WalrusUtil.URLdecode(sourceObjectKey);
+							} catch (UnsupportedEncodingException e) {
+								throw new BindingException("Unable to get source key: " + e.getMessage());
 							}
 							operationParams.put("SourceBucket", sourceTarget[0]);
 							operationParams.put("SourceObject", sourceObjectKey);

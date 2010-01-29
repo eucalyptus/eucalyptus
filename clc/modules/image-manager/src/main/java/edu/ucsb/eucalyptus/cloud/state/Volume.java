@@ -119,6 +119,7 @@ public class Volume extends AbstractIsomorph {
       case ANNIHILATING: return "deleting";
       case ANNILATED: return "deleted";
       case FAIL: return "failed";
+      case BUSY: return "in-use";
       default: return "unavailable";
     }
   }
@@ -183,5 +184,9 @@ public class Volume extends AbstractIsomorph {
 
   public void setLocalDevice( final String localDevice ) {
     this.localDevice = localDevice;
+  }
+  
+  public boolean isReady() {
+	  return this.getState().equals(State.EXTANT);
   }
 }

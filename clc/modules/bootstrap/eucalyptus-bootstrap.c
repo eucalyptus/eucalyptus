@@ -535,6 +535,27 @@ int java_init(euca_opts *args, java_home_t *data) {
     for(i=0;i<JVM_MAX_OPTS;i++) opt[i].extraInfo=NULL;
     i = -1;
     while(jvm_default_opts[++i]!= NULL) JVM_ARG(opt[++x],jvm_default_opts[i],GETARG(args,home));
+    if(args->exhaustive_flag) {
+    	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.db=TRACE");
+    	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.user=TRACE");
+    	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.cc=TRACE");
+    } else {
+    	if(args->exhaustive_db_flag) {
+        	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.db=TRACE");
+    	} else {
+        	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.db=FATAL");
+    	}
+    	if(args->exhaustive_cc_flag) {
+        	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.cc=TRACE");
+    	} else {
+        	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.cc=FATAL");
+    	}
+    	if(args->exhaustive_user_flag) {
+        	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.user=TRACE");
+    	} else {
+        	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.user=FATAL");
+    	}
+    }
     JVM_ARG(opt[++x],"-Deuca.log.level=%1$s",GETARG(args,log_level));
     JVM_ARG(opt[++x],"-Deuca.log.appender=%1$s",GETARG(args,log_appender));
     JVM_ARG(opt[++x],"-Deuca.db.port=%1$d",9001);//TODO: add cli parameter
