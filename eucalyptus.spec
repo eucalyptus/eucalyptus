@@ -62,7 +62,7 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the java WS stack.
 
 %package walrus
-Summary:      Elastic Utility Computing Architecture - cloud controller
+Summary:      Elastic Utility Computing Architecture - walrus
 Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, lvm2
 Conflicts:    eucalyptus-walrus < 1.6
 Group:        Applications/System
@@ -76,7 +76,7 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains walrus.
 
 %package sc
-Summary:      Elastic Utility Computing Architecture - walrus
+Summary:      Elastic Utility Computing Architecture - storage controller
 Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, lvm2, vblade
 Conflicts:    eucalyptus-cloud < 1.6
 Group:        Applications/System
@@ -149,6 +149,7 @@ This package contains the internal log service of eucalyptus.
 %setup -n eucalyptus-%{version}
 
 %build
+export DESTDIR=%buildroot
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
 cd clc
 make deps
@@ -156,20 +157,25 @@ cd ..
 make 2> err.log > out.log
 
 %install
+export DESTDIR=%buildroot
 make install
-ls /usr/share/eucalyptus/*jar > jar_list
+#CWD=`pwd`
+#cd $RPM_BUILD_ROOT
+#ls usr/share/eucalyptus/*jar | sed "s/^/\//" > $CWD/jar_list
+#cd $CWD
 
 %clean
-make uninstall
-rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
-# most of the files are taken care of by uninstall, but not the
-# directories
-rm -rf /var/lib/eucalyptus
-rm -rf /var/run/eucalyptus
-rm -rf /usr/lib/eucalyptus
-rm -rf /usr/share/eucalyptus
-rm -rf /etc/eucalyptus
-rm -rf /usr/share/doc/eucalyptus-%{version}
+[ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
+#make uninstall
+#rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
+## most of the files are taken care of by uninstall, but not the
+## directories
+#rm -rf /var/lib/eucalyptus
+#rm -rf /var/run/eucalyptus
+#rm -rf /usr/lib/eucalyptus
+#rm -rf /usr/share/eucalyptus
+#rm -rf /etc/eucalyptus
+#rm -rf /usr/share/doc/eucalyptus-%{version}
 
 %files
 %doc LICENSE INSTALL README CHANGELOG
@@ -188,8 +194,12 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /usr/sbin/euca_killall
 /etc/eucalyptus/httpd.conf
 /etc/eucalyptus/eucalyptus-version
+/usr/share/eucalyptus/connect_iscsitarget.pl
+/usr/share/eucalyptus/disconnect_iscsitarget.pl
+/usr/share/eucalyptus/get_iscsitarget.pl
 
-%files common-java -f jar_list
+#%files common-java -f jar_list
+%files common-java
 /etc/init.d/eucalyptus-cloud
 /etc/eucalyptus/cloud.d
 /var/lib/eucalyptus/db
@@ -197,6 +207,7 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 /var/lib/eucalyptus/webapps
 /usr/lib/eucalyptus/liblvm2control.so
 /usr/sbin/eucalyptus-cloud
+/usr/share/eucalyptus/*jar*
 
 %files cloud
 
@@ -227,8 +238,15 @@ rm -rf /usr/share/doc/eucalyptus-%{version}
 if [ "$1" = "2" ]; 
 then
 	# let's see where we installed
-	cd /
-	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
+	EUCADIRS="/ /opt/eucalyptus/"
+	for i in $EUCADIRS
+	do
+	    if [ -e $i/etc/eucalyptus/eucalyptus-version ]; then
+		EUCADIR=$i
+		break
+	    fi
+	done
+	cd $EUCADIR
 
 	# stop all old services
 	if [ -x etc/init.d/eucalyptus-cloud ];
@@ -243,6 +261,21 @@ then
 	then
 		 etc/init.d/eucalyptus-nc stop
 	fi
+
+	# save a backup of important data
+	DATESTR=`date +%s`
+	echo /root/eucalyptus.backup.$DATESTR > /tmp/eucaback.dir
+	mkdir -p /root/eucalyptus.backup.$DATESTR
+	cd /root/eucalyptus.backup.$DATESTR
+	EUCABACKUPS=""
+	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf
+	do
+	    if [ -e $i ]; then
+		EUCABACKUPS="$EUCABACKUPS $i"
+	    fi
+	done
+	tar cf -  $EUCABACKUPS 2>/dev/null | tar xf - 2>/dev/null
+	cd $EUCADIR
 fi
 
 %post
@@ -264,11 +297,15 @@ then
 fi
 if [ "$1" = "2" ];
 then
-	if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf ]; 
-	then
-		cp --preserve -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
+	/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor xen -bridge %{__bridge}
+#	if [ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf ]; 
+#	then
+#		cp --preserve -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
+#	fi
+	BACKDIR=`cat /tmp/eucaback.dir`
+	if [ -d "$BACKDIR" ]; then
+	    echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
 	fi
-	/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new / --conf
 fi
 
 # final setup and set the new user
@@ -292,18 +329,23 @@ fi
 # upgrade from 1.5
 if [ "$1" = "2" ];
 then
-	cd /
-	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
-	if [ -e var/lib/eucalyptus/db/eucalyptus_volumes.properties ];
-	then
-		# if groovy was installed on the same shell the
-		# environment can be wrong: we need to souce groovy env
-		if [ -e /etc/profile.d/groovy.sh ];
-		then
-			. /etc/profile.d/groovy.sh
-		fi
-		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new / --db
-	fi
+        BACKDIR=`cat /tmp/eucaback.dir`
+        if [ -d "$BACKDIR" ]; then
+            echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+        fi
+
+#	cd /
+#	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
+#	if [ -e var/lib/eucalyptus/db/eucalyptus_volumes.properties ];
+#	then
+#		# if groovy was installed on the same shell the
+#		# environment can be wrong: we need to souce groovy env
+#		if [ -e /etc/profile.d/groovy.sh ];
+#		then
+#			. /etc/profile.d/groovy.sh
+#		fi
+#		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new / --db
+#	fi
 fi
 
 %post walrus
@@ -325,14 +367,19 @@ fi
 %endif
 if [ "$1" = "2" ];
 then
-	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/cluster-pk.pem ]; 
-	then
-		if [ ! -e /var/lib/eucalyptus/keys/cluster-pk.pem ]; 
-		then
-			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/cluster*.pem /var/lib/eucalyptus/keys
-			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/node*.pem /var/lib/eucalyptus/keys
-		fi
-	fi
+        BACKDIR=`cat /tmp/eucaback.dir`
+        if [ -d "$BACKDIR" ]; then
+            echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
+        fi
+
+#	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/cluster-pk.pem ]; 
+#	then
+#		if [ ! -e /var/lib/eucalyptus/keys/cluster-pk.pem ]; 
+#		then
+#			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/cluster*.pem /var/lib/eucalyptus/keys
+#			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/node*.pem /var/lib/eucalyptus/keys
+#		fi
+#	fi
 fi
 
 %post nc
@@ -357,14 +404,19 @@ fi
 %endif
 if [ "$1" = "2" ];
 then
-	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/node-pk.pem ]; 
-	then
-		if [ ! -e /var/lib/eucalyptus/keys/node-pk.pem ]; 
-		then
-			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/cluster-cert.pem /var/lib/eucalyptus/keys
-			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/node*.pem /var/lib/eucalyptus/keys
-		fi
-	fi
+        BACKDIR=`cat /tmp/eucaback.dir`
+        if [ -d "$BACKDIR" ]; then
+            echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
+        fi
+
+#	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/node-pk.pem ]; 
+#	then
+#		if [ ! -e /var/lib/eucalyptus/keys/node-pk.pem ]; 
+#		then
+#			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/cluster-cert.pem /var/lib/eucalyptus/keys
+#			cp --preserve /opt/eucalyptus/var/lib/eucalyptus/keys/node*.pem /var/lib/eucalyptus/keys
+#		fi
+#	fi
 fi
 
 
