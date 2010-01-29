@@ -103,7 +103,13 @@ System.setProperty("euca.db.host", "jdbc:hsqldb:file:${targetDir}/${targetDbPref
 System.setProperty("euca.db.password", "${System.getenv('EUCALYPTUS_DB')}");
 System.setProperty("euca.log.level", 'INFO');
 
-GroovyUtil.evaluateScript( "after_database.groovy" );
+try {
+  GroovyUtil.evaluateScript( "after_database.groovy" );
+} catch( Throwable t ) {
+  t.printStackTrace();
+  t.?getCause().printStackTrace();
+  System.exit(1);
+}
 
 def updateBuckets() {
 	EntityWrapper<BucketInfo> dbBucket = WalrusControl.getEntityManager();
