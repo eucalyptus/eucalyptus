@@ -11,7 +11,7 @@ hiber_config = [
 ]
 contexts = ['general','images','auth','config','walrus','storage','dns']
 contexts.each {  
-  pool_config = new pools(new Binding([context_name:it])).run()
+  pool_config = new pools(new Binding([context_name:it,db_pass:null])).run()
   cache_config  = new caches(new Binding([context_name:it])).run()
   config = new Ejb3Configuration();
   LogUtil.logHeader( "Hibernate for ${it}" ).log(hiber_config.inspect())
