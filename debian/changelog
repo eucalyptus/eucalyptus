@@ -1,3 +1,9 @@
+eucalyptus (1.6.2-1) unstable; urgency=low
+
+  * Test build.
+
+ -- Chris Grzegorczyk <grze@eucalyptus.com>  Thu, 28 Jan 2010 17:27:16 -0800
+
 eucalyptus (1.6.1~bzr1045-0euca1) karmic; urgency=low
 
   * 1.6.1 release 
