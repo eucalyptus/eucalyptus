@@ -57,7 +57,7 @@ try {
       }
     }
   }
-  new after_database(new Binding([db_pass:db_pass])).run();
+  new after_database().run();
 } catch( Throwable t ) {
   t.printStackTrace();
   t?.getCause().printStackTrace();
