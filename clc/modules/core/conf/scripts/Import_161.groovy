@@ -11,8 +11,8 @@ import com.eucalyptus.util.DatabaseUtil;
 
 
 /* euca.*.dir are set by euca_upgrade when calling this script */
-baseDir = "${System.getProperty('euca.old')}/var/lib/eucalyptus/db";
-targetDir = "${System.getProperty('euca.new')}/var/lib/eucalyptus/db";
+baseDir = new File("${System.getProperty('euca.old')}/var/lib/eucalyptus/db").absolutePath;
+targetDir = new File("${System.getProperty('euca.new')}/var/lib/eucalyptus/db").absolutePath;
 targetDbPrefix= "eucalyptus"
 Component c = Component.db
 c.setUri( "jdbc:hsqldb:file:${targetDir}/${targetDbPrefix}" );
@@ -40,18 +40,19 @@ def getSqlWalrus() {
 oldDbStorage = getSqlStorage();
 oldDbWalrus = getSqlWalrus();
 
+println "BASE DIR:   ${baseDir}"
+println "TARGET DIR: ${targetDir}"
 try {
   if( !targetDir.equals(baseDir) ) {
     new File("${baseDir}").eachFileMatch(~/.*\.(script)|.*\.(log)/) { baseDb ->
-      println "\nPreparing ${baseDb.absolutePath}..."
-      targetDb = new File(baseDb.absolutePath.replaceAll(baseDir,targetDir));
+      targetDb = new File(baseDb.path.replaceAll(baseDir,targetDir));
+      println "-> Copying ${baseDb.absolutePath} to ${targetDb.absolutePath}..."
       if(targetDb.exists()) {
         println "Bailing out of upgrade: ${targetDb.absolutePath} already exists!"
         println "It looks like a previous upgrade may have failed!"
         println "You will need to manually cleanup ${targetDir} before proceeding." 
         System.exit(1)
       } else {
-        println "Copying ${baseDb.absolutePath} to ${targetDb.absolutePath}..."
         targetDb.write(baseDb.text);
       }
     }
@@ -62,7 +63,6 @@ try {
   t?.getCause().printStackTrace();
   System.exit(1);
 }
-System.out.println(Thread.currentThread().getStackTrace());
 
 def updateBuckets() {
 	EntityWrapper<BucketInfo> dbBucket = new EntityWrapper<BucketInfo>( WalrusProperties.DB_NAME );
@@ -70,20 +70,20 @@ def updateBuckets() {
 	List<BucketInfo> buckets = dbBucket.query(bucketInfo);
 	for(BucketInfo bucket : buckets) {
 		bucket.setLoggingEnabled(false);		
-	}
+    println "-> Updating BucketInfo: ${bucket.dump()}"
+  }
 	dbBucket.commit();
 }
 
-System.out.println(Thread.currentThread().getStackTrace());
 updateBuckets();
 
-System.out.println(Thread.currentThread().getStackTrace());
 oldDbStorage.rows('SELECT * FROM LVMMETADATA').each {
 	EntityWrapper<AOEMetaInfo> dbStorage = new EntityWrapper<AOEMetaInfo>( StorageProperties.DB_NAME );
 	try {
 		AOEMetaInfo metaInfo = new AOEMetaInfo(it.HOSTNAME);
 		metaInfo.setMajorNumber(it.MAJOR_NUMBER);
 		metaInfo.setMinorNumber(it.MINOR_NUMBER);
+    println "-> Import AOEMetaInfo: ${metaInfo.dump()}"
 		dbStorage.add(metaInfo);
 		dbStorage.commit();
 	} catch(Throwable t) {
@@ -92,7 +92,6 @@ oldDbStorage.rows('SELECT * FROM LVMMETADATA').each {
 	}	
 }
 
-System.out.println(Thread.currentThread().getStackTrace());
 oldDbStorage.rows('SELECT * FROM LVMVOLUMES').each {
 	EntityWrapper<AOEVolumeInfo> dbStorage = new EntityWrapper<AOEVolumeInfo>( StorageProperties.DB_NAME );
 	try {
@@ -109,6 +108,7 @@ oldDbStorage.rows('SELECT * FROM LVMVOLUMES').each {
 		volumeInfo.setSize(it.SIZE);
 		volumeInfo.setStatus(it.STATUS);
 		volumeInfo.setSnapshotOf(it.SNAPSHOT_OF);
+    println "-> Import AOEVolumeInfo: ${volumeInfo.dump()}"
 		dbStorage.add(volumeInfo);
 		dbStorage.commit();
 	} catch(Throwable t) {
@@ -118,10 +118,9 @@ oldDbStorage.rows('SELECT * FROM LVMVOLUMES').each {
 }
 
 //flush
-System.out.println(Thread.currentThread().getStackTrace());
 DatabaseUtil.closeAllEMFs();
 oldDbStorage.close();
 oldDbWalrus.close();
 //the db will not sync to disk even after a close in some cases. Wait a bit.
-System.out.println(Thread.currentThread().getStackTrace());
 Thread.sleep(5000);
+System.exit(0);

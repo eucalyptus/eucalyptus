@@ -240,16 +240,15 @@ fi
 if [ "$DB" = "Y" ]; then
     echo "Upgrading database..."
     if [ $SAMEVER = "Y" ]; then
-	cp --preserve -a $OLD_EUCA/var/lib/eucalyptus/db/* $NEW_EUCA/var/lib/eucalyptus/db/
+    	cp --preserve -a $OLD_EUCA/var/lib/eucalyptus/db/* $NEW_EUCA/var/lib/eucalyptus/db/
     else
-
     # check we have the right binaries
-	if [ -z "$OPENSSL" ]; then
+  	if [ -z "$OPENSSL" ]; then
 	    echo "Missing openssl, skipping automatic upgrade."
 	    exit 1
-	fi
+  	fi
 	
-    # upgrade the database
+  # upgrade the database
 	export EUCALYPTUS="$NEW_EUCA"
 	for FILE in ${EUCALYPTUS}/usr/share/eucalyptus/*.jar; do
 	    export CLASSPATH=${FILE}:${CLASSPATH}
@@ -262,16 +261,16 @@ if [ "$DB" = "Y" ]; then
 	
 	echo "Upgrading your database..."
 	if [ -f ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${OLD_EUCA_VER_NUM}.groovy ]; then
-#	$GROOVY ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${OLD_EUCA_VER_NUM}.groovy 
 	    if ( ! java org.codehaus.groovy.tools.GroovyStarter --main groovy.ui.GroovyMain --classpath ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:$CLASSPATH \
                     -Deuca.old=${OLD_EUCA} -Deuca.new=${NEW_EUCA} -Deuca.home=${NEW_EUCA} \
                     -Deuca.var.dir=${NEW_EUCA}/var/lib/eucalyptus -Deuca.conf.dir=${NEW_EUCA} -Deuca.log.dir=${NEW_EUCA}/var/log/eucalyptus \
-                    ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${OLD_EUCA_VER_NUM}.groovy | tee $EUCALYPTUS/var/log/eucalyptus/upgrade.log 2>&1 ); then
-		echo "Database upgrade failed! Please check your database before using Eucalyptus."
+                    ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${OLD_EUCA_VER_NUM}.groovy 2>&1 | egrep -v "(log4j)|(ehcache)" > $EUCALYPTUS/var/log/eucalyptus/upgrade.log ); then
+    		echo "Database upgrade failed! Please check your database before using Eucalyptus."
+    		exit 1
 	    fi
 	else
 	    echo "Cannot find DB upgrade script from $old_euca_version to $new_euca_version! Skipping DB upgrade."
 	fi
-    fi
-    echo "Done."
+fi
+  echo "Done."
 fi
