@@ -149,7 +149,7 @@ This package contains the internal log service of eucalyptus.
 %setup -n eucalyptus-%{version}
 
 %build
-export DESTDIR=%buildroot
+export DESTDIR=$RPM_BUILD_ROOT
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
 cd clc
 make deps
@@ -157,7 +157,7 @@ cd ..
 make 2> err.log > out.log
 
 %install
-export DESTDIR=%buildroot
+export DESTDIR=$RPM_BUILD_ROOT
 make install
 #CWD=`pwd`
 #cd $RPM_BUILD_ROOT
@@ -269,7 +269,7 @@ then
 	mkdir -p /root/eucalyptus.backup.$DATESTR
 	cd /root/eucalyptus.backup.$DATESTR
 	EUCABACKUPS=""
-	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf
+	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version
 	do
 	    if [ -e $i ]; then
 		EUCABACKUPS="$EUCABACKUPS $i"
@@ -303,9 +303,11 @@ then
 #	then
 #		cp --preserve -f /opt/eucalyptus/etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old 
 #	fi
-	BACKDIR=`cat /tmp/eucaback.dir`
-	if [ -d "$BACKDIR" ]; then
-	    echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
+	if [ -f /tmp/eucaback.dir ]; then
+	    BACKDIR=`cat /tmp/eucaback.dir`
+	    if [ -d "$BACKDIR" ]; then
+		echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
+	    fi
 	fi
 fi
 
@@ -330,10 +332,12 @@ fi
 # upgrade from 1.5
 if [ "$1" = "2" ];
 then
-        BACKDIR=`cat /tmp/eucaback.dir`
-        if [ -d "$BACKDIR" ]; then
-            echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
-        fi
+	if [ -f /tmp/eucaback.dir ]; then
+	    BACKDIR=`cat /tmp/eucaback.dir`
+	    if [ -d "$BACKDIR" ]; then
+		echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
+	    fi
+	fi
 
 #	cd /
 #	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
@@ -368,11 +372,12 @@ fi
 %endif
 if [ "$1" = "2" ];
 then
-        BACKDIR=`cat /tmp/eucaback.dir`
-        if [ -d "$BACKDIR" ]; then
-            echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
-        fi
-
+	if [ -f /tmp/eucaback.dir ]; then
+	    BACKDIR=`cat /tmp/eucaback.dir`
+	    if [ -d "$BACKDIR" ]; then
+		echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
+	    fi
+	fi
 #	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/cluster-pk.pem ]; 
 #	then
 #		if [ ! -e /var/lib/eucalyptus/keys/cluster-pk.pem ]; 
@@ -405,11 +410,12 @@ fi
 %endif
 if [ "$1" = "2" ];
 then
-        BACKDIR=`cat /tmp/eucaback.dir`
-        if [ -d "$BACKDIR" ]; then
-            echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
-        fi
-
+	if [ -f /tmp/eucaback.dir ]; then
+	    BACKDIR=`cat /tmp/eucaback.dir`
+	    if [ -d "$BACKDIR" ]; then
+		echo /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf
+	    fi
+	fi
 #	if [ -e /opt/eucalyptus/var/lib/eucalyptus/keys/node-pk.pem ]; 
 #	then
 #		if [ ! -e /var/lib/eucalyptus/keys/node-pk.pem ]; 
