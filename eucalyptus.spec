@@ -32,7 +32,7 @@ BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euc
 Requires:      vlan
 %endif
 
-Conflicts:     eucalyptus-cloud < 1.6, eucalyptus-cc < 1.6, eucalyptus-nc < 1.6
+Conflicts:     eucalyptus < 1.6.2
 Vendor:        Eucalyptus Systems
 #Icon:          someicon.xpm
 Source:        http://open.eucalyptus.com/downloads/eucalyptus-%{version}.tgz
@@ -49,8 +49,8 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     eucalyptus >= 1.6, java-sdk >= 1.6.0, lvm2
-Conflicts:    eucalyptus < 1.6
+Requires:     eucalyptus = 1.6.2, java-sdk >= 1.6.0, lvm2
+Conflicts:    eucalyptus < 1.6.2
 Group:        Applications/System
 
 %description common-java
@@ -63,8 +63,8 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, lvm2
-Conflicts:    eucalyptus-walrus < 1.6
+Requires:     eucalyptus-common-java = 1.6.2, java-sdk >= 1.6.0, lvm2
+Conflicts:    eucalyptus-walrus < 1.6.2
 Group:        Applications/System
 
 %description walrus
@@ -77,8 +77,8 @@ This package contains walrus.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, lvm2, vblade
-Conflicts:    eucalyptus-cloud < 1.6
+Requires:     eucalyptus-common-java = 1.6.2, java-sdk >= 1.6.0, lvm2, vblade
+Conflicts:    eucalyptus-sc < 1.6.2
 Group:        Applications/System
 
 %description sc
@@ -91,8 +91,8 @@ This package contains the storage controller part of eucalyptus.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0, lvm2
-Conflicts:    eucalyptus-cloud < 1.6
+Requires:     eucalyptus-common-java = 1.6.2, java-sdk >= 1.6.0, lvm2
+Conflicts:    eucalyptus-cloud < 1.6.2
 Group:        Applications/System
 
 %description cloud
@@ -105,8 +105,8 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, eucalyptus-gl >= 1.6, %{__dhcp}, vtun
-Conflicts:    eucalyptus < 1.6, eucalyptus-nc < 1.6
+Requires:     eucalyptus = 1.6.2, eucalyptus-gl = 1.6.2, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, eucalyptus-gl >= 1.6, %{__dhcp}, vtun
+Conflicts:    eucalyptus-cc < 1.6.2, eucalyptus-nc < 1.6.2
 Group:        Applications/System
 
 %description cc
@@ -119,8 +119,8 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-gl >= 1.6, %{__libvirt}, %{__curl}, %{__xen}
-Conflicts:    eucalyptus < 1.6, eucalyptus-cc < 1.6
+Requires:     eucalyptus = 1.6.2, eucalyptus-gl = 1.6.2, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-gl >= 1.6, %{__libvirt}, %{__curl}, %{__xen}
+Conflicts:    eucalyptus-nc < 1.6.2, eucalyptus-cc < 1.6.2
 Group:        Applications/System
 
 %description nc
@@ -133,8 +133,8 @@ This package contains the node controller part of eucalyptus.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus >= 1.6, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
-Conflicts:    eucalyptus < 1.6
+Requires:     eucalyptus = 1.6.2, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Conflicts:    eucalyptus-gl < 1.6.2
 Group:        Applications/System
 
 %description gl
@@ -312,6 +312,16 @@ fi
 /usr/sbin/euca_conf -setup -user eucalyptus
 
 %post common-java
+if [ "$1" = "2" ];
+then
+    if [ -f /tmp/eucaback.dir ]; then
+	BACKDIR=`cat /tmp/eucaback.dir`
+	if [ -d "$BACKDIR" ]; then
+	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+	    /usr/sbin/euca_conf -setup
+	fi
+    fi
+fi
 chkconfig --add eucalyptus-cloud
 
 %post cloud
@@ -327,15 +337,15 @@ then
 fi
 %endif
 # upgrade
-if [ "$1" = "2" ];
-then
-	if [ -f /tmp/eucaback.dir ]; then
-	    BACKDIR=`cat /tmp/eucaback.dir`
-	    if [ -d "$BACKDIR" ]; then
-		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
-		/usr/sbin/euca_conf -setup
-	    fi
-	fi
+#if [ "$1" = "2" ];
+#then
+#	if [ -f /tmp/eucaback.dir ]; then
+#	    BACKDIR=`cat /tmp/eucaback.dir`
+#	    if [ -d "$BACKDIR" ]; then
+#		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+#		/usr/sbin/euca_conf -setup
+#	    fi
+#	fi
 
 #	cd /
 #	[ -e /opt/eucalyptus/etc/eucalyptus/eucalyptus-version ] && cd /opt/eucalyptus
@@ -349,7 +359,7 @@ then
 #		fi
 #		/usr/share/eucalyptus/euca_upgrade --old /opt/eucalyptus --new / --db
 #	fi
-fi
+#fi
 
 %post walrus
 /usr/sbin/euca_conf --enable walrus

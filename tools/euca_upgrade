@@ -230,7 +230,7 @@ fi
 
 if [ "$KEYS" = "Y" ]; then
     echo "Upgrading keys..."
-    for x in `\ls -ad $OLD_EUCA/var/lib/eucalyptus/keys/* | grep -v policy\.xml` ; do
+    for x in `\ls -ad $OLD_EUCA/var/lib/eucalyptus/keys/* 2>&1 | grep -v policy\.xml` ; do
 	cp -a --preserve $x $NEW_EUCA/var/lib/eucalyptus/keys/
     done
     echo "Done."
@@ -242,35 +242,38 @@ if [ "$DB" = "Y" ]; then
     if [ $SAMEVER = "Y" ]; then
     	cp --preserve -a $OLD_EUCA/var/lib/eucalyptus/db/* $NEW_EUCA/var/lib/eucalyptus/db/
     else
-    # check we have the right binaries
+        # check we have the right binaries
   	if [ -z "$OPENSSL" ]; then
 	    echo "Missing openssl, skipping automatic upgrade."
 	    exit 1
   	fi
+	# make sure there are files to upgrade from
+	if ( ls $OLD_EUCA/var/lib/eucalyptus/db/* >/dev/null 2>&1 ); then
 	
-  # upgrade the database
-	export EUCALYPTUS="$NEW_EUCA"
-	for FILE in ${EUCALYPTUS}/usr/share/eucalyptus/*.jar; do
-	    export CLASSPATH=${FILE}:${CLASSPATH}
-	done
-	$OPENSSL pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes 2>/dev/null | grep -A30 "friendlyName: eucalyptus" | grep -A26 "BEGIN RSA" > ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
-	
-	export EUCALYPTUS_DB="`echo -n eucalyptus | $OPENSSL dgst -sha256 -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem -hex 2>/dev/null`"
-	export EUCALYPTUS_CLUSTER_CERT="`openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/clusters.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes -nokeys 2>/dev/null | sed '1,/friendlyName: cc-/ d ; /friendlyName/,$ d ; /-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' -n | openssl base64 | sed '{:q;N;s/\n//g;s/=/./g;s/+/-/g;s/\//_/g;t q}'`"
-	export EUCALYPTUS_NODE_CERT="`openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/clusters.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes -nokeys 2>/dev/null | sed '1,/friendlyName: nc-/ d ; /friendlyName/,$ d ; /-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' -n | openssl base64 | sed '{:q;N;s/\n//g;s/=/./g;s/+/-/g;s/\//_/g;t q}'`"
-	
-	echo "Upgrading your database..."
-	if [ -f ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${OLD_EUCA_VER_NUM}.groovy ]; then
-	    if ( ! java org.codehaus.groovy.tools.GroovyStarter --main groovy.ui.GroovyMain --classpath ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:$CLASSPATH \
+        # upgrade the database
+	    export EUCALYPTUS="$NEW_EUCA"
+	    for FILE in ${EUCALYPTUS}/usr/share/eucalyptus/*.jar; do
+		export CLASSPATH=${FILE}:${CLASSPATH}
+	    done
+	    $OPENSSL pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes 2>/dev/null | grep -A30 "friendlyName: eucalyptus" | grep -A26 "BEGIN RSA" > ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
+	    
+	    export EUCALYPTUS_DB="`echo -n eucalyptus | $OPENSSL dgst -sha256 -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem -hex 2>/dev/null`"
+	    export EUCALYPTUS_CLUSTER_CERT="`openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/clusters.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes -nokeys 2>/dev/null | sed '1,/friendlyName: cc-/ d ; /friendlyName/,$ d ; /-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' -n | openssl base64 | sed '{:q;N;s/\n//g;s/=/./g;s/+/-/g;s/\//_/g;t q}'`"
+	    export EUCALYPTUS_NODE_CERT="`openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/clusters.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes -nokeys 2>/dev/null | sed '1,/friendlyName: nc-/ d ; /friendlyName/,$ d ; /-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' -n | openssl base64 | sed '{:q;N;s/\n//g;s/=/./g;s/+/-/g;s/\//_/g;t q}'`"
+	    
+	    echo "Upgrading your database..."
+	    if [ -f ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${OLD_EUCA_VER_NUM}.groovy ]; then
+		if ( ! java org.codehaus.groovy.tools.GroovyStarter --main groovy.ui.GroovyMain --classpath ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:$CLASSPATH \
                     -Deuca.old=${OLD_EUCA} -Deuca.new=${NEW_EUCA} -Deuca.home=${NEW_EUCA} \
                     -Deuca.var.dir=${NEW_EUCA}/var/lib/eucalyptus -Deuca.conf.dir=${NEW_EUCA} -Deuca.log.dir=${NEW_EUCA}/var/log/eucalyptus \
                     ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${OLD_EUCA_VER_NUM}.groovy 2>&1 | egrep -v "(log4j)|(ehcache)" > $EUCALYPTUS/var/log/eucalyptus/upgrade.log ); then
-    		echo "Database upgrade failed! Please check your database before using Eucalyptus."
-    		exit 1
+    		    echo "Database upgrade failed! Please check your database before using Eucalyptus."
+    		    exit 1
+		fi
+	    else
+		echo "Cannot find DB upgrade script from $old_euca_version to $new_euca_version! Skipping DB upgrade."
 	    fi
-	else
-	    echo "Cannot find DB upgrade script from $old_euca_version to $new_euca_version! Skipping DB upgrade."
 	fi
-fi
-  echo "Done."
+    fi
+    echo "Done."
 fi
