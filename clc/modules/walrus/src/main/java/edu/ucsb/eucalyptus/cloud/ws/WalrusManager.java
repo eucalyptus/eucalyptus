@@ -1489,20 +1489,22 @@ public class WalrusManager {
 		AccessControlListType accessControlList = new AccessControlListType();
 		if (bucketList.size() > 0) {
 			// construct access control policy from grant infos
-			logData = bucketList.get(0).getLoggingEnabled() ? request
+			BucketInfo bucket = bucketList.get(0);
+			logData = bucket.getLoggingEnabled() ? request
 					.getLogData() : null;
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-					String versionId = request.getVersionId();
-					if(versionId == null)
-						searchObjectInfo.setLast(true);
+					if(bucket.isVersioningEnabled()) {
+						if(request.getVersionId() == null)
+							searchObjectInfo.setLast(true);
+					}
+					String versionId = request.getVersionId() != null ? request.getVersionId() : "NULL";
 					searchObjectInfo.setVersionId(versionId);
 					searchObjectInfo.setDeleted(false);
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 						if (objectInfo.canReadACP(userId)) {
-							BucketInfo bucket = bucketList.get(0);
 							if (logData != null) {
 								updateLogData(bucket, logData);
 								logData.setObjectSize(objectInfo.getSize());
@@ -1664,7 +1666,12 @@ public class WalrusManager {
 					.getLogData() : null;
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-					searchObjectInfo.setVersionId(request.getVersionId());
+					if(bucket.isVersioningEnabled()) {
+						if(request.getVersionId() == null)
+							searchObjectInfo.setLast(true);
+					}
+					String versionId = request.getVersionId() != null ? request.getVersionId() : "NULL";
+					searchObjectInfo.setVersionId(versionId);
 					searchObjectInfo.setDeleted(false);
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 					if (objectInfos.size() > 0) {
@@ -1745,7 +1752,12 @@ public class WalrusManager {
 					.getLogData() : null;
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-					searchObjectInfo.setVersionId(request.getVersionId());
+					if(bucket.isVersioningEnabled()) {
+						if(request.getVersionId() == null)
+							searchObjectInfo.setLast(true);
+					}
+					String versionId = request.getVersionId() != null ? request.getVersionId() : "NULL";
+					searchObjectInfo.setVersionId(versionId);
 					searchObjectInfo.setDeleted(false);
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 					if (objectInfos.size() > 0) {
