@@ -1218,25 +1218,53 @@ public class WalrusManager {
 			BucketInfo bucketInfo = bucketList.get(0);
 			BucketLogData logData = bucketInfo.getLoggingEnabled() ? request
 					.getLogData() : null;
-					ObjectInfo foundObject = null;
-					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
-					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-					searchObjectInfo.setDeleted(false);
-					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
-					if (objectInfos.size() > 0) {
-						foundObject = objectInfos.get(0);
-					}
 
-					if (foundObject != null) {
-						if (foundObject.canWrite(userId)) {
-							if (bucketInfo.isVersioningDisabled()) {
-								dbObject.delete(foundObject);
-								String objectName = foundObject.getObjectName();
-								for (GrantInfo grantInfo : foundObject.getGrants()) {
+					if(bucketInfo.isVersioningEnabled()) {
+						EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+						ObjectInfo searchDeletedObjectInfo = new ObjectInfo(bucketName, objectKey);
+						searchDeletedObjectInfo.setDeleted(true);
+						try {
+							dbObject.getUnique(searchDeletedObjectInfo);
+							db.rollback();
+							throw new NoSuchEntityException(objectKey, logData);
+						} catch(NoSuchEntityException ex) {
+							throw ex;
+						} catch(EucalyptusCloudException ex) {
+							ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+							searchObjectInfo.setLast(true);
+							List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+							for(ObjectInfo objInfo : objectInfos) {
+								objInfo.setLast(false);
+							}
+							ObjectInfo deleteMarker = new ObjectInfo(bucketName,
+									objectKey);
+							deleteMarker.setDeleted(true);
+							deleteMarker.setLast(true);
+							deleteMarker.setOwnerId(userId);
+							deleteMarker.setLastModified(new Date());
+							deleteMarker.setVersionId(UUID.randomUUID().toString().replaceAll("-", ""));
+							dbObject.add(deleteMarker);
+							reply.setCode("200");
+							reply.setDescription("OK");
+						}
+					} else {
+						//versioning disabled or suspended.
+						ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+						searchObjectInfo.setVersionId("NULL");
+						EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+						List<ObjectInfo>objectInfos = dbObject.query(searchObjectInfo);
+						if (objectInfos.size() > 0) {
+							ObjectInfo nullObject = objectInfos.get(0);
+							if(nullObject.canWrite(userId)) {
+								dbObject.delete(nullObject);
+								String objectName = nullObject.getObjectName();
+								for (GrantInfo grantInfo : nullObject
+										.getGrants()) {
 									db.getEntityManager().remove(grantInfo);
 								}
-								Long size = foundObject.getSize();
-								bucketInfo.setBucketSize(bucketInfo.getBucketSize()
+								Long size = nullObject.getSize();
+								bucketInfo.setBucketSize(bucketInfo
+										.getBucketSize()
 										- size);
 								ObjectDeleter objectDeleter = new ObjectDeleter(
 										bucketName, objectName, size);
@@ -1248,55 +1276,13 @@ public class WalrusManager {
 									reply.setLogData(logData);
 								}
 							} else {
-								if (bucketInfo.isVersioningEnabled()) {
-									foundObject.setLast(false);
-								} else {
-									// versioning is suspended.
-									searchObjectInfo = new ObjectInfo(bucketName,
-											objectKey);
-									searchObjectInfo.setVersionId("NULL");
-									objectInfos = dbObject.query(searchObjectInfo);
-									if (objectInfos.size() > 0) {
-										ObjectInfo nullObject = objectInfos.get(0);
-										dbObject.delete(nullObject);
-										String objectName = nullObject.getObjectName();
-										for (GrantInfo grantInfo : nullObject
-												.getGrants()) {
-											db.getEntityManager().remove(grantInfo);
-										}
-										Long size = nullObject.getSize();
-										bucketInfo.setBucketSize(bucketInfo
-												.getBucketSize()
-												- size);
-										ObjectDeleter objectDeleter = new ObjectDeleter(
-												bucketName, objectName, size);
-										objectDeleter.start();
-										reply.setCode("200");
-										reply.setDescription("OK");
-										if (logData != null) {
-											updateLogData(bucketInfo, logData);
-											reply.setLogData(logData);
-										}
-									}
-								}
-								ObjectInfo deleteMarker = new ObjectInfo(bucketName,
-										objectKey);
-								deleteMarker.setDeleted(true);
-								deleteMarker.setLast(true);
-								deleteMarker.setOwnerId(foundObject.getOwnerId());
-								deleteMarker.setLastModified(new Date());
-								deleteMarker.setVersionId(Hashes.getDigestBase64(
-										bucketName + foundObject.getObjectName(),
-										Hashes.Digest.SHA224, true));
-								dbObject.add(deleteMarker);
+								db.rollback();
+								throw new AccessDeniedException("Key", objectKey, logData);
 							}
 						} else {
 							db.rollback();
-							throw new AccessDeniedException("Key", objectKey, logData);
+							throw new NoSuchEntityException(objectKey, logData);
 						}
-					} else {
-						db.rollback();
-						throw new NoSuchEntityException(objectKey, logData);
 					}
 		} else {
 			db.rollback();
@@ -1849,6 +1835,8 @@ public class WalrusManager {
 					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 					searchObjectInfo.setVersionId(request.getVersionId());
 					searchObjectInfo.setDeleted(false);
+					if(request.getVersionId() == null)
+						searchObjectInfo.setLast(true);
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
@@ -1980,9 +1968,7 @@ public class WalrusManager {
 							}
 							String versionId = null;
 							if (versioning) {
-								versionId = objectInfo.getVersionId() != null ? objectInfo
-										.getVersionId()
-										: "NULL";
+								versionId = objectInfo.getVersionId();
 							}
 							if (request.getGetData()) {
 								if (request.getInlineData()) {
@@ -2804,6 +2790,7 @@ public class WalrusManager {
 										throw new AccessDeniedException("Bucket",
 												bucketName, logData);
 									}
+									deleteMarkerEntry.setIsLatest(objectInfo.getLast());
 									deleteMarkers.add(deleteMarkerEntry);
 								}
 							}
