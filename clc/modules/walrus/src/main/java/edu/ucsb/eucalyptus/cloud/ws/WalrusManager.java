@@ -2831,8 +2831,11 @@ public class WalrusManager {
 					ObjectInfo foundObject = null;
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-					searchObjectInfo.setVersionId(request.getVersionId());
-					searchObjectInfo.setDeleted(false);
+					if(request.getVersionid() == null) {
+						db.rollback();
+						throw new EucalyptusCloudException("versionId is null");
+					}
+					searchObjectInfo.setVersionId(request.getVersionid());
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 					if (objectInfos.size() > 0) {
 						foundObject = objectInfos.get(0);
@@ -2841,15 +2844,17 @@ public class WalrusManager {
 					if (foundObject != null) {
 						if (foundObject.canWrite(userId)) {
 							dbObject.delete(foundObject);
-							String objectName = foundObject.getObjectName();
-							for (GrantInfo grantInfo : foundObject.getGrants()) {
-								db.getEntityManager().remove(grantInfo);
+							if(!foundObject.getDeleted()) {
+								String objectName = foundObject.getObjectName();							 
+								for (GrantInfo grantInfo : foundObject.getGrants()) {
+									db.getEntityManager().remove(grantInfo);
+								}
+								Long size = foundObject.getSize();
+								bucketInfo.setBucketSize(bucketInfo.getBucketSize() - size);
+								ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
+										objectName, size);
+								objectDeleter.start();
 							}
-							Long size = foundObject.getSize();
-							bucketInfo.setBucketSize(bucketInfo.getBucketSize() - size);
-							ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
-									objectName, size);
-							objectDeleter.start();
 							reply.setCode("200");
 							reply.setDescription("OK");
 							if (logData != null) {

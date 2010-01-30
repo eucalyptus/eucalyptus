@@ -275,10 +275,14 @@ public class ObjectInfo implements Comparable {
 
 
     public boolean canWrite(String userId) {
+        if(deleted) {
+        	return (ownerId == userId);
+        }
+       
         if (globalWrite) {
             return true;
         }
-
+        
         for (GrantInfo grantInfo: grants) {
             if (grantInfo.getUserId().equals(userId)) {
                 if (grantInfo.canWrite()) {
@@ -295,6 +299,10 @@ public class ObjectInfo implements Comparable {
     }
 
     public boolean canRead(String userId) {
+        if(deleted) {
+        	return (ownerId == userId);
+        }
+
         if (globalRead) {
             return true;
         }

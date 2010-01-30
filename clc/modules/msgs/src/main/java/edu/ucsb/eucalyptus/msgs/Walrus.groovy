@@ -468,7 +468,7 @@ public class DeleteObjectResponseType extends WalrusDeleteResponseType {
 }
 
 public class DeleteVersionType extends WalrusDeleteType {
-	String versionId;
+	String versionid;
 }
 
 public class DeleteVersionResponseType extends WalrusDeleteResponseType {

@@ -281,7 +281,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.HEAD.toString(), "GetObject");
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + "extended", "GetObjectExtended");
 
-		newMap.put(OBJECT + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.OperationParameter.versionId.toString(), "DeleteVersion");
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.OperationParameter.versionId.toString().toLowerCase(), "DeleteVersion");
 		return newMap;
 	}
 
@@ -613,7 +613,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				}
 			}
 			if(params.containsKey(WalrusProperties.OperationParameter.versionId.toString())) {
-				operationParams.put("VersionId", params.remove(WalrusProperties.OperationParameter.versionId.toString()));
+				if(!verb.equals(WalrusProperties.HTTPVerb.DELETE.toString()))
+					operationParams.put("VersionId", params.remove(WalrusProperties.OperationParameter.versionId.toString()));
 			}
 		}
 
@@ -743,7 +744,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			}
 		}
 	}
-	
+
 	private void parseExtendedHeaders(Map operationParams, String headerString, String value) throws BindingException {
 		if(headerString.equals(WalrusProperties.ExtendedGetHeaders.Range.toString())) {
 			String prefix = "bytes=";

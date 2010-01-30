@@ -465,7 +465,7 @@
 		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
 			usage="optional" />
-		<value name="VersionId" field="versionId" usage="optional" />
+		<value name="VersionId" field="versionid"/>
 	</mapping>
 
 	<mapping name="DeleteVersionResponse"
