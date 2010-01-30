@@ -1,3 +1,7 @@
+/usr/share/java/hibernate3.jar
+/usr/share/java/hibernate-annotations.jar
+/usr/share/java/hibernate-commons-annotations.jar
+/usr/share/java/hibernate-entitymanager.jar
 /usr/share/java/commons-collections3.jar
 /usr/share/java/geronimo-j2ee-connector-1.5-spec.jar
 /usr/share/java/commons-codec.jar
