@@ -524,6 +524,8 @@ public class ObjectInfo implements Comparable {
 				+ ((bucketName == null) ? 0 : bucketName.hashCode());
 		result = prime * result
 				+ ((objectKey == null) ? 0 : objectKey.hashCode());
+		result = prime * result
+				+ ((versionId == null) ? 0 : versionId.hashCode());
 		return result;
 	}
 
@@ -546,6 +548,11 @@ public class ObjectInfo implements Comparable {
 				return false;
 		} else if (!objectKey.equals(other.objectKey))
 			return false;
+		if (versionId == null) {
+			if (other.versionId != null)
+				return false;
+		} else if (!versionId.equals(other.versionId))
+			return false;
 		return true;
-	}    
+	}
 }
