@@ -8,8 +8,6 @@
 /usr/share/java/commons-lang.jar /usr/share/eucalyptus/commons-lang.jar
 /usr/share/java/commons-pool.jar /usr/share/eucalyptus/commons-pool.jar
 /usr/share/java/dnsjava.jar /usr/share/eucalyptus/dnsjava.jar
-/usr/share/java/drools-core.jar /usr/share/eucalyptus/drools-core.jar
-/usr/share/java/drools-compiler.jar /usr/share/eucalyptus/drools-compiler.jar
 /usr/share/java/ecj.jar /usr/share/eucalyptus/ecj.jar
 /usr/share/java/gnumail.jar /usr/share/eucalyptus/gnumail.jar
 /usr/share/java/gnumail-providers.jar /usr/share/eucalyptus/gnumail-providers.jar
@@ -68,7 +66,6 @@
 /usr/share/java/jibx-extras.jar /usr/share/eucalyptus/jibx-extras.jar
 /usr/share/java/jug-asl.jar /usr/share/eucalyptus/jug-asl.jar
 /usr/share/java/excalibur-logkit.jar /usr/share/eucalyptus/excalibur-logkit.jar
-/usr/share/java/mvel.jar /usr/share/eucalyptus/mvel.jar
 /usr/share/java/regexp.jar /usr/share/eucalyptus/regexp.jar
 /usr/share/java/serializer.jar /usr/share/eucalyptus/serializer.jar
 /usr/share/java/slf4j-api.jar /usr/share/eucalyptus/slf4j-api.jar
