@@ -1,3 +1,11 @@
+/usr/share/java/spring-aop.jar
+/usr/share/java/spring-beans.jar
+/usr/share/java/spring-context.jar
+/usr/share/java/spring-context-support.jar
+/usr/share/java/spring-core.jar
+/usr/share/java/spring-jdbc.jar
+/usr/share/java/spring-tx.jar
+/usr/share/java/spring-web.jar
 /usr/share/java/hibernate3.jar
 /usr/share/java/hibernate-annotations.jar
 /usr/share/java/hibernate-commons-annotations.jar
