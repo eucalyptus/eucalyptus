@@ -15,7 +15,6 @@
 /usr/share/java/commons-codec.jar
 /usr/share/java/commons-io.jar
 /usr/share/java/hsqldb.jar
-/usr/share/java/jibx-bind.jar
 /usr/share/java/backport-util-concurrent.jar
 /usr/share/java/asm2.jar
 /usr/share/java/antlr.jar
@@ -40,7 +39,6 @@
 /usr/share/java/jetty.jar
 /usr/share/java/jetty-sslengine.jar
 /usr/share/java/jetty-util.jar
-/usr/share/java/jibx-run.jar
 /usr/share/java/json-lib.jar
 /usr/share/java/junit.jar
 /usr/share/java/log4j-1.2.jar

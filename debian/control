@@ -20,7 +20,6 @@ Build-Depends: cdbs, debhelper (>= 7), libaxis2c-dev, librampart0, librampart-de
  libproxool-java,
  libdnsjava-java,
  libeucalyptus-commons-ext-java (>=0.5.2),
- libjibx-java,
  libgnumail-java,
  libgeronimo-j2ee-connector-1.5-spec-java,
  libgeronimo-jpa-3.0-spec-java,
