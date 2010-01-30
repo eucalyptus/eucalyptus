@@ -163,7 +163,9 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, vblade, lvm2, dmsetup, openssh-serv
  libslf4j-java,
  libwsdl4j-java,
  libxom-java,
- libxpp3-java
+ libxpp3-java,
+ libspring-beans-2.5-java, libspring-context-support-2.5-java, libspring-context-2.5-java, libspring-core-2.5-java, libspring-web-2.5-java,
+ libhibernate-annotations-java, libhibernate-commons-annotations-java, libhibernate-entitymanager-java, libhibernate3-java, libehcache-java
 Replaces: eucalyptus-javadeps, eucalyptus-common, eucalyptus-cloud 
 Description: Elastic Utility Computing Architecture - Common Java package
  EUCALYPTUS is an open source service overlay that implements elastic
