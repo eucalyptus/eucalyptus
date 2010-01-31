@@ -20,17 +20,17 @@ For the most up-to-date instructions, please visit the Eucalyptus web page
 
 Download either
 
- * eucalyptus-1.6.1-src.tar.gz (Eucalyptus source with included java
+ * eucalyptus-1.6.2-src.tar.gz (Eucalyptus source with included java
    libraries)
 
 or
 
- * eucalyptus-1.6.1-src-online.tar.gz (Eucalyptus source that will
+ * eucalyptus-1.6.2-src-online.tar.gz (Eucalyptus source that will
    download java libraries at build-time)
 
 and for both
 
- * eucalyptus-1.6.1-src-deps.tar.gz (Eucalyptus C library dependency
+ * eucalyptus-1.6.2-src-deps.tar.gz (Eucalyptus C library dependency
    packages)
 
 All packages can be found on the Eucalyptus Web site: 
@@ -40,17 +40,17 @@ All packages can be found on the Eucalyptus Web site:
 Unpack the Eucalyptus source:
 
 {{{
-tar zvxf eucalyptus-1.6.1-src.tar.gz
+tar zvxf eucalyptus-1.6.2-src.tar.gz
 }}}
 
-Now you should have a directory eucalyptus-1.6.1. To simplify the
+Now you should have a directory eucalyptus-1.6.2. To simplify the
 remainder of the installation, define EUCALYPTUS_SRC environment
 variable to be the top of the source tree of eucalyptus and the
 variable EUCALYPTUS to be the directory where eucalyptus will be
 installed (we recommend using `/opt/eucalyptus/`):
 
 {{{
-cd eucalyptus-1.6.1
+cd eucalyptus-1.6.2
 export EUCALYPTUS_SRC=`pwd`
 export EUCALYPTUS=/opt/eucalyptus
 }}}
@@ -60,7 +60,7 @@ export EUCALYPTUS=/opt/eucalyptus
 
 To install Eucalyptus, you need to build packages that Eucalyptus
 depends on, which we provide in the above-mentioned package
-eucalyptus-1.6.1-src-deps.tar.gz.  For the sake of this discussion, we
+eucalyptus-1.6.2-src-deps.tar.gz.  For the sake of this discussion, we
 are going to assume that all packages have been untarred inside
 "$EUCALYPTUS_SRC/eucalyptus-src-deps/" as above and will be installed
 in "$EUCALYPTUS/packages".
@@ -70,7 +70,7 @@ them:
 
 {{{
 cd $EUCALYPTUS_SRC
-tar zvxf ../eucalyptus-1.6.1-src-deps.tar.gz 
+tar zvxf ../eucalyptus-1.6.2-src-deps.tar.gz 
 mkdir -p $EUCALYPTUS/packages/
 }}}
 
